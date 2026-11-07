@@ -29,7 +29,7 @@
 
 ## Install
 
-Atlas installs through [Obtainium](https://github.com/ImranR98/Obtainium), which also keeps it up to date.
+I recommend installing through [Obtainium](https://github.com/ImranR98/Obtainium) so you can receive updates, but you can also download and install the APK from [Releases](https://github.com/juleshall4/atlas/releases). 
 
 1. Install [Obtainium](https://github.com/ImranR98/Obtainium/releases).
 2. In Obtainium, tap **Add App**.
@@ -40,40 +40,6 @@ Atlas installs through [Obtainium](https://github.com/ImranR98/Obtainium), which
    ```
 
 4. Tap **Install**.
-
-## Build from source
-
-The app uses the local [Ink SDK](https://github.com/No-Scrolling/ink). Keep its checkout next to this repository as `../ink`; the package dependency and build commands use that path. Use the SDK version that supports `CanvasPath` and the theme options in `theme.ts` (currently Ink `0.1.0-alpha.11`).
-
-Install the build tools required by that SDK, including Bun, JDK 21, and the Android SDK. Set `JAVA_HOME` to JDK 21 and `ANDROID_HOME` to the Android SDK, then run:
-
-```sh
-bun install --frozen-lockfile
-bun run check
-bun run build --debug
-```
-
-The APK is written to `dist/`. Install it on a connected phone with:
-
-```sh
-adb install -r dist/atlas-2.0.0-debug.apk
-```
-
-The checked-in native libraries and model files are part of the working app. To rebuild the native libraries, see [the native build instructions](native/futo/README.md).
-
-### Release signing
-
-Release signing is configured in `ink.toml` with the `atlas` key alias. The private keystore is `signing/atlas.keystore`, and local credentials are loaded from `signing/credentials.env`. The entire `signing/` folder is ignored by Git.
-
-Build the signed release APK with:
-
-```sh
-bun run release
-```
-
-The result is `dist/atlas-2.0.0.apk`. On another build machine, restore the keystore and supply `INK_KEYSTORE_PASSWORD` and, if different, `INK_KEY_PASSWORD` through the environment. The build script also accepts those environment variables locally.
-
-Back up the keystore and its password securely. Future Atlas updates must use the same release key. The release key differs from the debug key, so a release APK cannot update an installed debug build directly. Do not uninstall a debug build without first exporting any learned words you want to keep.
 
 ## Privacy
 

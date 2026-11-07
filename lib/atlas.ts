@@ -13,9 +13,6 @@ export type State = {
   /** Allowed to display over other apps, which keeps the touchpad with Atlas above text selection popups. */
   overlay: boolean;
   learning: boolean;
-  /** The profile in use: `"off"`, `"atlas"` or the id of a saved profile. */
-  calibration: string;
-  profiles: { id: string; name: string }[];
   /** The letters and space a light touch types, such as `"AI "`. */
   tapKeys: string;
   autoCapitalise: boolean;
@@ -29,7 +26,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "calibration" | "tapKeys" | "autoCapitalise" | "suggestionBar" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "suggestionBar" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];
@@ -114,44 +111,6 @@ export function captureKey(pressed: (key: string) => void) {
     stop();
     void atlas("releaseKey");
   };
-}
-
-export type Calibration = {
-  stage: "touch" | "check" | "passed" | "failed";
-  /** The key to touch, counted across the keyboard's rows. */
-  key: number;
-  keyNumber: number;
-  touch: number;
-  /** The last touch didn't count. */
-  retry: boolean;
-  /** Whether the touches made a profile that can be checked again. */
-  canRepeat: boolean;
-  raw: Point | null;
-  adjusted: Point | null;
-};
-
-export const beginCalibration = () => atlas("calibrationBegin");
-export const repeatCheck = () => atlas("calibrationRepeatCheck");
-export const restartCalibration = () => atlas("calibrationRestart");
-
-/** Follows a calibration until the returned function is called. */
-export function watchCalibration(listener: (calibration: Calibration) => void) {
-  const stop = onNativeMessage("atlas-calibration", message => listener(message as Calibration));
-  void atlas("calibrationListen").then(snapshot => listener(JSON.parse(snapshot)));
-  return () => {
-    stop();
-    void atlas("calibrationUnlisten");
-  };
-}
-
-export async function saveProfile(name: string) {
-  await atlas("calibrationSave", { name });
-  await state.refresh();
-}
-
-export async function deleteProfile(id: string) {
-  await atlas("deleteProfile", { id });
-  await state.refresh();
 }
 
 const traceListeners = new Set<(event: TraceEvent) => void>();

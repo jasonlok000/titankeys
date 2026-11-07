@@ -16,12 +16,10 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
-import com.atlas.engine.Calibration
 import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
 import com.atlas.keyboard.AtlasIme
-import com.atlas.keyboard.CalibrationSession
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.KeyCapture
@@ -44,8 +42,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private var transferring = false
     private val keyCapture = lazy { KeyCapture(activity) { key -> activity.emit(JSONObject().put("type", "atlas-key").put("key", key).toString()) } }
     private var keyCaptureRequested = false
-    private var calibration: CalibrationSession? = null
-    private var calibrationRequested = false
     private val windowFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
         if (hasFocus) activity.window.decorView.post {
             if (visible && watchingRequested && activity.hasWindowFocus()) {
@@ -92,7 +88,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         else if (previewController.isInitialized()) previewController.value.stop()
         if (visible && keyCaptureRequested) keyCapture.value.start()
         else if (keyCapture.isInitialized()) keyCapture.value.stop()
-        if (visible && calibrationRequested) calibration?.start() else calibration?.stop()
     }
 
     override fun onActivityResumed(target: Activity) {
@@ -118,7 +113,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         watchingRequested = false
         previewRequested = false
         keyCaptureRequested = false
-        calibrationRequested = false
         activity.contentResolver.unregisterContentObserver(keyboardSettings)
         activity.application.unregisterActivityLifecycleCallbacks(this)
     }
@@ -223,39 +217,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     syncPreview()
                     "null"
                 }
-                "calibrationBegin" -> {
-                    calibration?.stop()
-                    Calibration.init(activity)
-                    calibration = CalibrationSession(activity) { activity.emit(it.put("type", "atlas-calibration").toString()) }
-                    syncPreview()
-                    "null"
-                }
-                "calibrationListen" -> {
-                    calibrationRequested = true
-                    syncPreview()
-                    session().snapshot().toString()
-                }
-                "calibrationUnlisten" -> {
-                    calibrationRequested = false
-                    syncPreview()
-                    "null"
-                }
-                "calibrationRepeatCheck" -> {
-                    session().repeatCheck()
-                    "null"
-                }
-                "calibrationRestart" -> {
-                    session().restart()
-                    "null"
-                }
-                "calibrationSave" -> {
-                    session().save(data.getString("name"))
-                    "null"
-                }
-                "deleteProfile" -> {
-                    Calibration.delete(data.getString("id"))
-                    "null"
-                }
                 else -> throw IllegalArgumentException("Unknown Atlas operation: $operation")
             }
             if (result != null) complete(NativeResult.Success(result))
@@ -265,8 +226,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     }
 
     override fun cancel(requestId: Long) = Unit
-
-    private fun session() = checkNotNull(calibration) { "Calibration has not started" }
 
     private fun operationResult(error: String?, complete: NativeResultHandler) {
         complete(if (error == null) NativeResult.Success("null")
@@ -282,8 +241,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         val words = JSONArray()
         for ((index, word) in learned.words.withIndex())
             words.put(JSONObject().put("word", word).put("description", learned.swipeStatuses[index]))
-        val profiles = JSONArray()
-        for (profile in Calibration.profiles()) profiles.put(JSONObject().put("id", profile.id).put("name", profile.name))
         return JSONObject()
             .put("version", activity.packageManager.getPackageInfo(activity.packageName, 0).versionName)
             .put("phone", "${Build.MANUFACTURER} ${Build.MODEL}")
@@ -292,8 +249,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("selected", selected)
             .put("overlay", Settings.canDrawOverlays(activity))
             .put("learning", typing.learningEnabled())
-            .put("calibration", Calibration.selectedId())
-            .put("profiles", profiles)
             .put("tapKeys", TypingSettings.tapKeys(activity))
             .put("autoCapitalise", TypingSettings.autoCapitalise(activity))
             .put("suggestionBar", TypingSettings.suggestionBar(activity))
@@ -309,7 +264,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private fun set(key: String, value: Any) {
         when (key) {
             "learning" -> typing.learningEnabled(value as Boolean)
-            "calibration" -> Calibration.select(value as String)
             "tapKeys" -> TypingSettings.tapKeys(activity, value as String)
             "autoCapitalise" -> TypingSettings.autoCapitalise(activity, value as Boolean)
             "suggestionBar" -> TypingSettings.suggestionBar(activity, value as Boolean)

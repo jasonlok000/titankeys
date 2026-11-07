@@ -312,7 +312,7 @@ class Composer(
             return
         }
         val correction = correcting
-        val completed = if (correction != null) completeManualWord(anchor) else null
+        val completed = if (correction != null || startsNewWord(before)) completeManualWord(anchor) else null
         correcting = null
         manualWord.clear()
         val previous = composition as? Composition.Swiped
@@ -367,6 +367,7 @@ class Composer(
                 }
                 return@recognise
             }
+            learnWord(completed, correction)
             recogniseNext()
         }
     }
@@ -388,7 +389,8 @@ class Composer(
             manualWord.clear()
         }
         val completesCorrection = correcting != null && !letterTap && text.first() in ".,!?;:)]}…"
-        val completed = if (completesCorrection) completeManualWord(anchor) else null
+        val finishesWord = letterTap && (correction != null || startsNewWord(anchor.before.orEmpty()))
+        val completed = if (completesCorrection || finishesWord) completeManualWord(anchor) else null
         if (completesCorrection || letterTap) correcting = null
         val dropsSpace = automaticSpace == anchor && anchor.before?.endsWith(" ") == true
             && text[0] in ".,!?;:)]}…"
@@ -541,8 +543,14 @@ class Composer(
                     return
                 }
             }
-            Editor.Enter.Next, Editor.Enter.Previous -> waitForDestination(owner, navigation = true)
-            Editor.Enter.Action -> waitForDestination(owner, navigation = false)
+            Editor.Enter.Next, Editor.Enter.Previous -> {
+                learnWord(completed, correction)
+                waitForDestination(owner, navigation = true)
+            }
+            Editor.Enter.Action -> {
+                learnWord(completed, correction)
+                waitForDestination(owner, navigation = false)
+            }
             Editor.Enter.Rejected -> reset()
         }
         show(emptyList())
@@ -754,6 +762,9 @@ class Composer(
         manualWord.edit(text, null, false)
     }
 
+    /** Swipes and tap keys join the text with no space after some characters, so the word before them is not finished. */
+    private fun startsNewWord(before: String) = SwipeTyping.prefix(before).isNotEmpty()
+
     private fun completeManualWord(anchor: Snapshot): String? {
         val continuesWord = anchor.after?.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true
         if (!field.learning || !anchor.knownSelection || anchor.selected
@@ -770,6 +781,8 @@ class Composer(
         if (correction == null) words.typed(word, rememberCase)
         else if (!word.equals(correction.word, ignoreCase = true)) {
             words.corrected(correction.swipe, correction.context, correction.recognition, word)
+            // The engine only counts a correction that resembles the swipe; the word was still typed.
+            words.typed(word, rememberCase)
         } else if (correction.chosen) {
             words.chosen(correction.swipe, correction.context, correction.recognition, word)
         }

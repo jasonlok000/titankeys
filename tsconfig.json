@@ -1,0 +1,7 @@
+{
+  "extends": "ink/tsconfig",
+  "compilerOptions": {
+    "preserveSymlinks": true
+  },
+  "include": ["app/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx"]
+}

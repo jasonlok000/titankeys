@@ -1,0 +1,828 @@
+package com.atlas.keyboard
+
+import com.atlas.engine.Swipe
+import com.atlas.engine.SwipeTyping
+import com.atlas.engine.TypedPredictions
+import com.atlas.engine.TypedWords
+import java.util.concurrent.atomic.AtomicBoolean
+
+/** The text around the cursor, and the edits the keyboard makes there. */
+interface Editor {
+    data class Identity(val connection: Any, val packageName: String?, val fieldId: Int)
+    data class State(val before: String, val after: String, val selectionStart: Int, val selectionEnd: Int)
+    enum class Enter { Newline, Next, Previous, Action, Rejected }
+
+    fun identity(): Identity?
+    /** A bounded query acknowledged by fresh selection metadata from the app. Null means unverified. */
+    fun state(result: (State?) -> Unit)
+    /** Null means that the editor cannot supply this text, rather than an empty field. */
+    fun before(): String?
+    fun after(): String?
+    /** Deletes around the cursor, then types over any selection. False may include a partial edit. */
+    fun replace(count: Int, text: String, after: Int = 0): Boolean
+    /** Characters deleted before the selection; null means that the resulting edit is unverified. */
+    fun delete(word: Boolean, selectionStart: Int, selectionEnd: Int): Int?
+    fun enter(): Enter
+
+    companion object {
+        const val CONTEXT_LENGTH = 2048
+    }
+}
+
+/** The word engine: swipe recognition, completions and learning. */
+interface Words {
+    class Recognition(val words: List<String>, val token: Any?)
+
+    fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Recognition) -> Unit)
+    fun complete(before: String, cancelled: AtomicBoolean, result: (List<String>) -> Unit)
+    fun typed(word: String, rememberCase: Boolean = true)
+    fun chosen(swipe: Swipe, context: String, recognition: Recognition, word: String)
+    fun corrected(swipe: Swipe, context: String, recognition: Recognition, word: String)
+    fun kept(swipe: Swipe, context: String, recognition: Recognition, word: String)
+}
+
+/** Turns taps, swipes and keys into edits and suggestions for one text field. */
+class Composer(
+    private val editor: Editor,
+    private val words: Words,
+    private val later: (Long, () -> Unit) -> Unit,
+    private val externalChange: () -> Unit,
+    private val autoCapitalise: () -> Boolean,
+    private val show: (List<String>) -> Unit,
+) {
+    private data class Selection(val start: Int, val end: Int)
+    private data class Snapshot(val before: String?, val after: String?, val selection: Selection, val selected: Boolean) {
+        val available get() = before != null && after != null
+        val knownSelection get() = selection.start >= 0 && selection.end >= 0
+    }
+
+    private sealed interface Composition {
+        val alternatives: List<String>
+
+        data object None : Composition {
+            override val alternatives = emptyList<String>()
+        }
+
+        data class Swiped(
+            val word: String,
+            val leadingSpace: String,
+            val trailingSpace: Boolean,
+            val swipe: Swipe,
+            val context: String,
+            val recognition: Words.Recognition,
+            val endedAt: Long,
+            val continuable: Boolean,
+            val snapshot: Snapshot,
+            val chosen: Boolean,
+            override val alternatives: List<String>,
+        ) : Composition {
+            val tail get() = word + if (trailingSpace) " " else ""
+            val inserted get() = leadingSpace + tail
+            var finalised = false
+        }
+
+        class Typed(val prefix: String, val trailingSpace: Boolean, val snapshot: Snapshot,
+                    override val alternatives: List<String>) : Composition
+    }
+
+    private sealed interface PendingInput
+    private data class PendingSwipe(val swipe: Swipe, val startedAt: Long, val endedAt: Long, val metaState: Int) : PendingInput
+    private class PendingText(var text: String, val letterTap: Boolean) : PendingInput
+    private class PendingEdit(val action: () -> Unit, val transferable: Boolean = false) : PendingInput
+    private class FullStop(val time: Long, val snapshot: Snapshot)
+    private class Barrier(val identity: Editor.Identity, val navigation: Boolean = false, val command: Boolean = false)
+
+    private var field = Field.None
+    private var composition: Composition = Composition.None
+    private var epoch = 0
+    private var selection = Selection(-1, -1)
+    private var selectionConfirmed = false
+    private val expectedSelections = ArrayDeque<Selection>()
+    private val pendingInput = ArrayDeque<PendingInput>()
+    private var recognising = false
+    private var executingQueued = false
+    private var draining = false
+    private var drainScheduled = false
+    private var drainTicket = 0
+    private var barrier: Barrier? = null
+    private var identity: Editor.Identity? = null
+    private var recognitionSnapshot: Snapshot? = null
+    private var completion: AtomicBoolean? = null
+    private var completionSnapshot: Snapshot? = null
+    private var editSnapshot: Snapshot? = null
+    private var automaticSpace: Snapshot? = null
+    private var fullStop: FullStop? = null
+    private val manualWord = TypedWords()
+    private var correcting: Composition.Swiped? = null
+
+    var liftOffMillis = 0
+
+    val hasPendingInput get() = recognising || barrier != null || drainScheduled || pendingInput.isNotEmpty()
+    val awaitingDestination get() = barrier?.navigation == true
+
+    fun start(field: Field, selectionStart: Int, selectionEnd: Int) {
+        val next = editor.identity()
+        val transition = barrier
+        val carries = transition?.navigation == true && next != null
+            && !next.packageName.isNullOrEmpty() && next.packageName == transition.identity.packageName
+            && (next.connection !== transition.identity.connection || next.fieldId != transition.identity.fieldId)
+        val carried = if (carries) pendingInput.takeWhile {
+            it is PendingText || it is PendingEdit && it.transferable
+        } else emptyList()
+        this.field = field
+        selection = Selection(selectionStart, selectionEnd)
+        selectionConfirmed = selectionStart >= 0 && selectionEnd >= 0
+        reset()
+        identity = next
+        pendingInput.addAll(carried)
+        recogniseNext()
+        predict()
+    }
+
+    fun stop(terminal: Boolean = false) {
+        if (terminal && sameIdentity(identity, editor.identity())
+            && (composition as? Composition.Swiped)?.chosen == true) leave()
+        field = Field.None
+        if (barrier?.navigation == true) {
+            composition = Composition.None
+            automaticSpace = null
+            fullStop = null
+            editSnapshot = null
+            manualWord.clear()
+            correcting = null
+            expectedSelections.clear()
+            show(emptyList())
+            return
+        }
+        reset()
+    }
+
+    private fun invalidate(discardInput: Boolean = true) {
+        epoch++
+        completion?.set(true)
+        completion = null
+        completionSnapshot = null
+        if (discardInput) {
+            barrier = null
+            drainTicket++
+            drainScheduled = false
+            pendingInput.clear()
+            recognising = false
+            recognitionSnapshot = null
+        }
+    }
+
+    private fun reset() {
+        invalidate()
+        composition = Composition.None
+        automaticSpace = null
+        fullStop = null
+        editSnapshot = null
+        manualWord.clear()
+        correcting = null
+        expectedSelections.clear()
+        show(emptyList())
+    }
+
+    private fun snapshot() = Snapshot(editor.before(), editor.after(), selection,
+        selection.start >= 0 && selection.end >= 0 && selection.start != selection.end)
+
+    private fun sameIdentity(first: Editor.Identity?, second: Editor.Identity?) = first != null && second != null
+        && first.connection === second.connection && first.packageName == second.packageName && first.fieldId == second.fieldId
+
+    /** Own selection notifications may be coalesced, or arrive after a later successful edit. */
+    fun selectionChanged(start: Int, end: Int): Boolean {
+        val waiting = barrier
+        // Outgoing-field callbacks cannot resolve a navigation action; start() or its timeout does.
+        if (waiting?.navigation == true) return false
+        if (waiting?.command == true && sameIdentity(editor.identity(), waiting.identity)) {
+            // The ordered state query acknowledges all effects of this app-handled command together.
+            return false
+        }
+        val updated = Selection(start, end)
+        val anchor = recognitionSnapshot ?: when (val current = composition) {
+            is Composition.Swiped -> current.snapshot
+            is Composition.Typed -> current.snapshot
+            Composition.None -> completionSnapshot ?: automaticSpace ?: fullStop?.snapshot ?: editSnapshot
+        }
+        if (updated != selection && anchor != null && snapshot() == anchor) {
+            confirmState(anchor, notifyExternal = true)
+            return false
+        }
+        val ours = expectedSelections.indexOf(updated)
+        if (ours >= 0 && updated == selection && anchor != null && snapshot() == anchor) {
+            repeat(ours + 1) { expectedSelections.removeFirst() }
+            selectionConfirmed = true
+            return false
+        }
+        if (updated == selection && expectedSelections.isEmpty() && (anchor == null || snapshot() == anchor)) return false
+        selection = updated
+        selectionConfirmed = start >= 0 && end >= 0
+        reset()
+        predict()
+        return true
+    }
+
+    fun swipe(swipe: Swipe, startedAt: Long, endedAt: Long, metaState: Int) {
+        if (!field.words) return
+        if (!hasPendingInput) {
+            invalidate()
+            fullStop = null
+        }
+        if (enqueue(PendingSwipe(swipe, startedAt, endedAt, metaState))) recogniseNext()
+    }
+
+    private fun defer(transferable: Boolean = false, action: () -> Unit): Boolean {
+        if (executingQueued || !hasPendingInput) return false
+        enqueue(PendingEdit(action, transferable))
+        return true
+    }
+
+    private fun enqueue(input: PendingInput): Boolean {
+        if (pendingInput.size >= MAX_PENDING_INPUT) {
+            // Preserve accepted ordinary keys. Under overload, shed only a surplus unstarted swipe.
+            val surplus = pendingInput.lastOrNull { it is PendingSwipe && it !== pendingInput.firstOrNull() }
+            if (input is PendingSwipe || surplus == null) return false
+            pendingInput.remove(surplus)
+        }
+        pendingInput += input
+        return true
+    }
+
+    private fun enqueueText(text: String, letterTap: Boolean) {
+        val units = pendingInput.sumOf { if (it is PendingText) it.text.length else 0 }
+        if (units + text.length > MAX_PENDING_TEXT) return
+        val last = pendingInput.lastOrNull() as? PendingText
+        if (!letterTap && last != null && !last.letterTap && last.text.length + text.length <= MAX_TEXT_CHUNK) {
+            last.text += text
+        } else enqueue(PendingText(text, letterTap))
+    }
+
+    private fun scheduleDrain() {
+        if (drainScheduled) return
+        drainScheduled = true
+        val ticket = ++drainTicket
+        later(0) {
+            if (ticket != drainTicket) return@later
+            drainScheduled = false
+            recogniseNext()
+        }
+    }
+
+    /** Resolve real swipes in order, using the context produced by the preceding accepted edit. */
+    private fun recogniseNext() {
+        if (recognising || barrier != null || draining || drainScheduled) return
+        draining = true
+        val started = System.nanoTime()
+        try {
+            var edits = 0
+            while (pendingInput.isNotEmpty() && pendingInput.first() !is PendingSwipe) {
+                if (edits++ == DRAIN_BUDGET || System.nanoTime() - started >= DRAIN_NANOS) {
+                    scheduleDrain()
+                    return
+                }
+                val pending = pendingInput.removeFirst()
+                executingQueued = true
+                try {
+                    when (pending) {
+                        is PendingEdit -> pending.action()
+                        is PendingText -> type(pending.text, pending.letterTap)
+                        is PendingSwipe -> Unit
+                    }
+                } finally {
+                    executingQueued = false
+                }
+                if (barrier != null || recognising) return
+            }
+        } finally {
+            draining = false
+        }
+        val pending = pendingInput.firstOrNull() as? PendingSwipe ?: return
+        if (!selectionConfirmed) {
+            confirmState(editSnapshot.takeIf { correcting != null })
+            return
+        }
+        fullStop = null
+        val anchor = snapshot()
+        val before = anchor.before
+        if (!anchor.available || !anchor.knownSelection || before == null) {
+            reset()
+            return
+        }
+        val correction = correcting
+        val completed = if (correction != null) completeManualWord(anchor) else null
+        correcting = null
+        manualWord.clear()
+        val previous = composition as? Composition.Swiped
+        var resumes = previous != null && previous.continuable && liftOffMillis > 0
+            && pending.startedAt - previous.endedAt in 0..liftOffMillis.toLong()
+            && anchor == previous.snapshot && before.endsWith(previous.inserted) && !anchor.selected
+        val path = if (resumes) {
+            try {
+                previous!!.swipe.append(pending.swipe)
+            } catch (_: IllegalArgumentException) {
+                resumes = false
+                pending.swipe
+            }
+        } else pending.swipe
+        if (!resumes) leave()
+        composition = Composition.None
+        show(emptyList())
+        val resumed = previous.takeIf { resumes }
+        val context = resumed?.context ?: before
+        val replaced = resumed?.inserted?.length ?: 0
+        val leadingSpace = resumed?.leadingSpace ?: if (anchor.selected) "" else SwipeTyping.prefix(context)
+        val trailingSpace = resumed?.trailingSpace ?: !anchor.selected
+        val current = epoch
+        recognising = true
+        recognitionSnapshot = anchor
+        words.recognise(path, context, field.learning) { recognition ->
+            if (current != epoch || pendingInput.firstOrNull() !== pending) return@recognise
+            if (snapshot() != anchor) {
+                reset()
+                return@recognise
+            }
+            recognising = false
+            recognitionSnapshot = null
+            pendingInput.removeFirst()
+            if (recognition.words.isNotEmpty()) {
+                val sentenceCase = field.sentenceCapitalisation && autoCapitalise()
+                val choices = recognition.words.map {
+                    SwipeTyping.capitalise(it, context, pending.metaState, false, sentenceCase)
+                }
+                val word = choices.first()
+                val inserted = leadingSpace + word + if (trailingSpace) " " else ""
+                if (!edit(replaced, inserted)) return@recognise
+                val accepted = snapshot()
+                automaticSpace = accepted.takeIf { trailingSpace }
+                composition = Composition.Swiped(word, leadingSpace, trailingSpace, path, context, recognition, pending.endedAt,
+                    true, accepted, false, choices)
+                confirmState(accepted) { confirmed ->
+                    if (confirmed) {
+                        learnWord(completed, correction)
+                        show(choices)
+                    }
+                }
+                return@recognise
+            }
+            recogniseNext()
+        }
+    }
+
+    /** Keys wait for pending swipes, retaining the order in which the user entered them. */
+    fun type(text: String, letterTap: Boolean = false) {
+        if (text.isEmpty()) return
+        if (!executingQueued && hasPendingInput) {
+            enqueueText(text, letterTap)
+            return
+        }
+        leave()
+        invalidate(false)
+        fullStop = null
+        val anchor = snapshot()
+        val correction = correcting
+        if (correction != null && anchor != editSnapshot) {
+            correcting = null
+            manualWord.clear()
+        }
+        val completesCorrection = correcting != null && !letterTap && text.first() in ".,!?;:)]}…"
+        val completed = if (completesCorrection) completeManualWord(anchor) else null
+        if (completesCorrection || letterTap) correcting = null
+        val dropsSpace = automaticSpace == anchor && anchor.before?.endsWith(" ") == true
+            && text[0] in ".,!?;:)]}…"
+        val before = anchor.before
+        val cased = if (before != null && field.sentenceCapitalisation && autoCapitalise()) {
+            SwipeTyping.capitalise(text, before)
+        } else text
+        val typed = if (letterTap) {
+            val prefix = if (anchor.selected) "" else SwipeTyping.prefix(before.orEmpty())
+            "$prefix$cased "
+        } else cased
+        if (!edit(if (dropsSpace) 1 else 0, typed)) return
+        automaticSpace = if (letterTap) snapshot() else null
+        composition = Composition.None
+        if (letterTap) manualWord.clear()
+        else if (!completesCorrection) observe(text)
+        if (!completed.isNullOrEmpty()) {
+            confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(completed, correction) }
+            return
+        }
+        predictLater()
+    }
+
+    fun symbol(symbol: String) {
+        if (defer { symbol(symbol) }) return
+        leave()
+        invalidate(false)
+        fullStop = null
+        composition = Composition.None
+        manualWord.clear()
+        correcting = null
+        val before = editor.before().orEmpty()
+        val after = editor.after().orEmpty()
+        val around = symbol == "&" || symbol == "="
+        val trailing = around || symbol == ";" || symbol == "…" || symbol == "•" && (before.isEmpty() || before.endsWith("\n"))
+        val leading = around && before.isNotEmpty() && !Character.isWhitespace(before.codePointBefore(before.length))
+        val reuseSpace = trailing && after.startsWith(" ")
+        val space = reuseSpace || trailing && (after.isEmpty() || !after[0].isWhitespace())
+        val text = (if (leading) " " else "") + symbol + if (space) " " else ""
+        if (!edit(0, text, if (reuseSpace) 1 else 0)) return
+        automaticSpace = null
+        predictLater()
+    }
+
+    fun space(repeated: Boolean, time: Long) {
+        if (defer(transferable = true) { space(repeated, time) }) return
+        leave()
+        invalidate(false)
+        composition = Composition.None
+        val anchor = snapshot()
+        val before = anchor.before.orEmpty()
+        val correction = correcting
+        val completed = completeManualWord(anchor)
+        correcting = null
+        val pending = fullStop
+        fullStop = null
+        when {
+            !field.fullStops || anchor.selected -> if (!edit(0, " ")) return
+            automaticSpace == anchor && before.endsWith(" ") -> {
+                if (!repeated && endsWord(before.dropLast(1))) fullStop = FullStop(time, anchor)
+            }
+            !repeated && pending != null && time - pending.time in 0..FULL_STOP_MILLIS
+                && anchor.available && anchor == pending.snapshot -> if (!edit(1, ". ")) return
+            else -> {
+                if (!edit(0, " ")) return
+                // Read the bounded editor window after insertion; appending would exceed its limit.
+                if (!repeated && endsWord(before)) fullStop = FullStop(time, snapshot())
+            }
+        }
+        automaticSpace = null
+        if (field.learning && !completed.isNullOrEmpty()) {
+            confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(completed, correction) }
+            return
+        }
+        predictLater()
+    }
+
+    fun backspace(word: Boolean) {
+        if (defer { backspace(word) }) return
+        if (!sameIdentity(identity, editor.identity())) {
+            reset()
+            return
+        }
+        // Deleting or cancelling a swipe is not evidence that the word was kept.
+        val source = if (word || !field.learning) null else correcting ?: composition as? Composition.Swiped
+        val expected = if (correcting != null) editSnapshot else source?.snapshot
+        val anchor = source?.let { snapshot().takeIf { it == expected && !it.selected } }
+        invalidate(false)
+        composition = Composition.None
+        automaticSpace = null
+        fullStop = null
+        if (word || correcting != null || source != null) manualWord.clear()
+        else manualWord.edit("\b", null, false)
+        correcting = null
+        val previous = selection
+        val removed = editor.delete(word, previous.start, previous.end)
+        if (removed != null) {
+            expectSelection(previous, removed, 0)
+            editSnapshot = snapshot()
+            if (source != null && anchor != null && removed > 0) trackCorrection(source, anchor, removed)
+        } else {
+            // The app may have delegated or partly applied deletion. Do not replay dependent input.
+            reset()
+            return
+        }
+        show(emptyList())
+        predictLater()
+    }
+
+    private fun trackCorrection(source: Composition.Swiped, beforeDelete: Snapshot, removed: Int) {
+        val afterDelete = editSnapshot ?: return
+        val before = beforeDelete.before ?: return
+        val actual = afterDelete.before ?: return
+        val start = source.snapshot.selection.end - source.tail.length
+        val remaining = afterDelete.selection.end - start
+        if (remaining !in 1..actual.length || removed > before.length || beforeDelete.after != afterDelete.after) return
+        val expected = before.dropLast(removed)
+        if (if (before.length < Editor.CONTEXT_LENGTH) actual != expected else !actual.endsWith(expected)) return
+        val prefix = actual.takeLast(remaining)
+        if (prefix.length != TypedPredictions.prefix(prefix).length) return
+        manualWord.edit(prefix, null, false)
+        correcting = source
+    }
+
+    fun enter() {
+        if (defer { enter() }) return
+        leave()
+        invalidate(false)
+        composition = Composition.None
+        fullStop = null
+        val anchor = snapshot()
+        val correction = correcting
+        val completed = completeManualWord(anchor)
+        correcting = null
+        if (automaticSpace == anchor && anchor.before?.endsWith(" ") == true && !edit(1, "")) return
+        automaticSpace = null
+        val owner = editor.identity()
+        if (!sameIdentity(identity, owner)) {
+            reset()
+            return
+        }
+        val current = epoch
+        val result = editor.enter()
+        if (current != epoch || !sameIdentity(owner, editor.identity())) return
+        when (result) {
+            Editor.Enter.Newline -> {
+                if (!edit(0, "\n")) return
+                if (!completed.isNullOrEmpty()) {
+                    confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(completed, correction) }
+                    return
+                }
+            }
+            Editor.Enter.Next, Editor.Enter.Previous -> waitForDestination(owner, navigation = true)
+            Editor.Enter.Action -> waitForDestination(owner, navigation = false)
+            Editor.Enter.Rejected -> reset()
+        }
+        show(emptyList())
+        predictLater()
+    }
+
+    private fun waitForDestination(owner: Editor.Identity?, navigation: Boolean) {
+        if (owner == null || !sameIdentity(identity, owner)) {
+            reset()
+            return
+        }
+        val waiting = Barrier(owner, navigation)
+        barrier = waiting
+        if (!navigation) pendingInput.clear()
+        later(DESTINATION_TIMEOUT_MILLIS) {
+            if (barrier === waiting) reset()
+        }
+    }
+
+    /** App-handled keys share the edit queue and fence dependent input with an ordered app query. */
+    fun command(destructive: Boolean, fieldLocal: Boolean, action: () -> Boolean) {
+        if (defer { command(destructive, fieldLocal, action) }) return
+        if (!destructive) leave()
+        invalidate(false)
+        composition = Composition.None
+        automaticSpace = null
+        fullStop = null
+        manualWord.clear()
+        correcting = null
+        expectedSelections.clear()
+        val owner = editor.identity()
+        if (owner == null || !sameIdentity(identity, owner)) {
+            reset()
+            return
+        }
+        val waiting = Barrier(owner, command = true)
+        barrier = waiting
+        if (!action()) {
+            reset()
+            return
+        }
+        if (barrier !== waiting) return
+        if (!fieldLocal) {
+            pendingInput.clear()
+            later(DESTINATION_TIMEOUT_MILLIS) { if (barrier === waiting) reset() }
+            return
+        }
+        barrier = null
+        confirmState()
+    }
+
+    private fun confirmState(expected: Snapshot? = null, notifyExternal: Boolean = false,
+                             result: (Boolean) -> Unit = {}) {
+        val owner = editor.identity()
+        if (owner == null || !sameIdentity(identity, owner)) {
+            reset()
+            result(false)
+            return
+        }
+        val waiting = Barrier(owner, command = true)
+        val current = epoch
+        barrier = waiting
+        editor.state { state ->
+            if (barrier !== waiting || current != epoch) return@state
+            barrier = null
+            if (state == null || !sameIdentity(owner, editor.identity())) {
+                selection = Selection(-1, -1)
+                selectionConfirmed = false
+                reset()
+                if (notifyExternal) externalChange()
+                result(false)
+                return@state
+            }
+            selection = Selection(state.selectionStart, state.selectionEnd)
+            selectionConfirmed = true
+            val actual = Snapshot(state.before, state.after, selection, selection.start != selection.end)
+            if (expected != null && actual != expected) {
+                reset()
+                if (notifyExternal) externalChange()
+                result(false)
+                return@state
+            }
+            editSnapshot = actual
+            expectedSelections.clear()
+            result(true)
+            recogniseNext()
+            predictLater()
+        }
+    }
+
+    fun choose(index: Int) {
+        val chosen = composition.alternatives.getOrNull(index) ?: return
+        val offered = composition
+        if (defer {
+            val current = composition
+            if (current === offered || current is Composition.Swiped && offered is Composition.Swiped
+                && current.recognition === offered.recognition) choose(index)
+        }) return
+        val anchor = snapshot()
+        if (!anchor.available || !anchor.knownSelection) return
+        val before = anchor.before ?: return
+        when (val current = composition) {
+            is Composition.Swiped -> {
+                if (anchor != current.snapshot || !before.endsWith(current.inserted) || anchor.selected) return
+                invalidate(false)
+                val tail = chosen + if (current.trailingSpace) " " else ""
+                if (!edit(current.tail.length, tail)) return
+                val accepted = snapshot()
+                composition = current.copy(word = chosen, continuable = false, snapshot = accepted, chosen = true)
+                automaticSpace = accepted.takeIf { current.trailingSpace }
+                confirmState(accepted)
+            }
+            is Composition.Typed -> {
+                val tail = current.prefix + if (current.trailingSpace) " " else ""
+                if (anchor != current.snapshot || !before.endsWith(tail) || anchor.selected) return
+                invalidate(false)
+                val space = if (current.prefix.isEmpty()) SwipeTyping.prefix(before) else ""
+                if (!edit(tail.length, "$space$chosen ")) return
+                composition = Composition.None
+                automaticSpace = snapshot()
+                val correction = correcting?.takeIf { anchor == editSnapshot }
+                manualWord.clear()
+                correcting = null
+                show(emptyList())
+                confirmState(snapshot()) { confirmed ->
+                    if (confirmed) learnWord(chosen, correction, rememberCase = false)
+                }
+            }
+            Composition.None -> Unit
+        }
+    }
+
+    private fun edit(count: Int, text: String, after: Int = 0): Boolean {
+        if (!sameIdentity(identity, editor.identity())) {
+            reset()
+            return false
+        }
+        val previous = selection
+        val anchor = snapshot()
+        val current = epoch
+        val owner = identity
+        val accepted = editor.replace(count, text, after)
+        if (current != epoch || !sameIdentity(owner, editor.identity())) return false
+        if (!accepted) {
+            // A deletion may have succeeded before commitText failed. Never replay the transaction.
+            reset()
+            return false
+        }
+        val actualBefore = editor.before()
+        val actualAfter = editor.after()
+        if (current != epoch || !sameIdentity(owner, editor.identity())) return false
+        val requestedBefore = anchor.before?.let { (it.dropLast(count) + text).takeLast(Editor.CONTEXT_LENGTH) }
+        val requestedAfter = anchor.after?.drop(after)
+        val beforeMatches = requestedBefore == null || actualBefore == null ||
+            if ((anchor.before?.length ?: 0) < Editor.CONTEXT_LENGTH || requestedBefore.length == Editor.CONTEXT_LENGTH)
+                actualBefore == requestedBefore else actualBefore.endsWith(requestedBefore)
+        val afterMatches = requestedAfter == null || actualAfter == null ||
+            if ((anchor.after?.length ?: 0) < AFTER_CONTEXT_LENGTH) actualAfter == requestedAfter
+            else actualAfter.startsWith(requestedAfter)
+        if (!beforeMatches || !afterMatches) {
+            // Filters may have accepted only part of the requested text. Retain the actual edit,
+            // discard its evidence and dependent input, and recover the app's real cursor.
+            reset()
+            selection = Selection(-1, -1)
+            selectionConfirmed = false
+            confirmState()
+            return false
+        }
+        if (!anchor.available || actualBefore == null || actualAfter == null) {
+            // Explicit typing still works in editors without readable context; do not invent a cursor.
+            selection = Selection(-1, -1)
+            selectionConfirmed = false
+            expectedSelections.clear()
+            editSnapshot = snapshot()
+            return true
+        }
+        expectSelection(previous, count, text.length)
+        editSnapshot = snapshot()
+        return true
+    }
+
+    private fun expectSelection(previous: Selection, count: Int, inserted: Int) {
+        if (previous.start >= 0 && previous.end >= 0) {
+            val cursor = minOf(previous.start, previous.end) - count + inserted
+            selection = Selection(cursor, cursor)
+            selectionConfirmed = false
+            if (expectedSelections.size == MAX_PENDING_INPUT) expectedSelections.removeFirst()
+            expectedSelections += selection
+        }
+    }
+
+    /** Submit one final choice for this occurrence, including the latest tentative alternative. */
+    private fun leave() {
+        val swiped = composition as? Composition.Swiped ?: return
+        if (swiped.finalised) return
+        swiped.finalised = true
+        if (!field.learning || !selectionConfirmed || snapshot() != swiped.snapshot || !swiped.snapshot.available
+            || swiped.snapshot.selected || swiped.snapshot.before?.endsWith(swiped.inserted) != true) return
+        if (swiped.chosen) words.chosen(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
+        else words.kept(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
+    }
+
+    private fun observe(text: String) {
+        if (!field.learning || selection.start < 0 || selection.end < 0) {
+            manualWord.clear()
+            return
+        }
+        manualWord.edit(text, null, false)
+    }
+
+    private fun completeManualWord(anchor: Snapshot): String? {
+        val continuesWord = anchor.after?.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true
+        if (!field.learning || !anchor.knownSelection || anchor.selected
+            || correcting != null && (anchor != editSnapshot || continuesWord)) {
+            manualWord.clear()
+            return null
+        }
+        val before = anchor.before
+        return manualWord.edit(" ", before, before != null && before.length < Editor.CONTEXT_LENGTH)
+    }
+
+    private fun learnWord(word: String?, correction: Composition.Swiped?, rememberCase: Boolean = true) {
+        if (!field.learning || word.isNullOrEmpty()) return
+        if (correction == null) words.typed(word, rememberCase)
+        else if (!word.equals(correction.word, ignoreCase = true)) {
+            words.corrected(correction.swipe, correction.context, correction.recognition, word)
+        } else if (correction.chosen) {
+            words.chosen(correction.swipe, correction.context, correction.recognition, word)
+        }
+    }
+
+    private fun predictLater() {
+        val current = epoch
+        later(PREDICTION_DELAY_MILLIS) { if (current == epoch) predict() }
+    }
+
+    private fun predict() {
+        if (composition !is Composition.None || hasPendingInput) return
+        val anchor = snapshot()
+        // Predictions must belong to the last verified owned edit.
+        if (editSnapshot != null && anchor != editSnapshot) return
+        if (!anchor.available || !anchor.knownSelection || anchor.selected) return
+        val before = anchor.before ?: return
+        val after = anchor.after ?: return
+        if (!field.learning) {
+            if (field.starters && before.isEmpty() && after.isEmpty()) {
+                composition = Composition.Typed("", false, anchor, STARTERS)
+                show(STARTERS)
+            }
+            return
+        }
+        if (after.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) return
+        val trailingSpace = before.endsWith(" ") && TypedPredictions.prefix(before.dropLast(1)).isNotEmpty()
+        val context = if (trailingSpace) before.dropLast(1) else before
+        val current = epoch
+        completion?.set(true)
+        val cancelled = AtomicBoolean(false)
+        completion = cancelled
+        completionSnapshot = anchor
+        words.complete(context, cancelled) { suggestions ->
+            if (cancelled.get() || current != epoch || snapshot() != anchor) return@complete
+            composition = Composition.Typed(TypedPredictions.prefix(context), trailingSpace, anchor, suggestions)
+            show(suggestions)
+        }
+    }
+
+    private fun endsWord(text: String): Boolean {
+        if (text.isEmpty()) return false
+        val last = text.codePointBefore(text.length)
+        return Character.isLetterOrDigit(last) || ")]}\"'’”".indexOf(last.toChar()) >= 0
+    }
+
+    companion object {
+        private const val MAX_PENDING_INPUT = 128
+        private const val MAX_PENDING_TEXT = 8192
+        private const val MAX_TEXT_CHUNK = 256
+        private const val DRAIN_BUDGET = 8
+        private const val DRAIN_NANOS = 4_000_000L
+        private const val DESTINATION_TIMEOUT_MILLIS = 500L
+        private const val AFTER_CONTEXT_LENGTH = 32
+        const val FULL_STOP_MILLIS = 400L
+        private const val PREDICTION_DELAY_MILLIS = 60L
+        private val STARTERS = listOf("What", "How", "Where")
+    }
+}

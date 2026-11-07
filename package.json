@@ -1,0 +1,20 @@
+{
+  "name": "atlas",
+  "private": true,
+  "version": "2.0.0",
+  "scripts": {
+    "dev": "../ink/scripts/ink dev",
+    "build": "../ink/scripts/ink build",
+    "check": "bun run typecheck",
+    "typecheck": "tsc --noEmit",
+    "release": "bash tools/release.sh"
+  },
+  "dependencies": {
+    "ink": "file:../ink/packages/ink",
+    "react": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "typescript": "^5.9.3"
+  }
+}

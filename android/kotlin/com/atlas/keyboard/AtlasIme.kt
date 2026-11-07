@@ -1,0 +1,486 @@
+package com.atlas.keyboard
+
+import android.hardware.display.DisplayManager
+import android.inputmethodservice.InputMethodService
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.util.Log
+import android.view.Display
+import android.view.KeyEvent
+import android.view.KeyCharacterMap
+import android.view.MotionEvent
+import android.view.View
+import android.view.WindowInsets
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.CursorAnchorInfo
+import com.atlas.engine.Calibration
+import com.atlas.engine.Swipe
+import com.atlas.engine.SwipeTyping
+import com.atlas.engine.TypingSettings
+import kotlin.math.abs
+
+/**
+ * Atlas: swipe typing on the Titan 2 keyboard's touchpad, with a suggestion strip for the physical
+ * keyboard. The keyboard window stays open while editing so the firmware can route touchpad events.
+ */
+class AtlasIme : InputMethodService() {
+    private val main = Handler(Looper.getMainLooper())
+    private lateinit var touchpad: Touchpad
+    private lateinit var haptics: Haptics
+    private lateinit var composer: Composer
+    private lateinit var editor: ConnectionEditor
+    private val contact = Contact()
+    private val modifiers = Modifiers()
+    private var strip: Strip? = null
+    private var field = Field.None
+    private var editing = false
+    private val consumedKeys = HashSet<Int>()
+    private var deadKeyPending = false
+    private var tapKeys = ""
+    private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
+                               val settlement: Contact.Settlement? = null)
+    private val pendingInput = ArrayDeque<PendingInput>()
+    private var inputGeneration = 0
+    private var drainScheduled = false
+    private val settlements = LinkedHashMap<Contact.Settlement, Runnable>()
+    private val showStrip = Runnable {
+        if (!editing) return@Runnable
+        try {
+            requestShowSelf(0)
+        } catch (error: RuntimeException) {
+            // Titan firmware can drop its current client before Android reports the editor gone.
+            Log.w("Atlas", "Could not show the suggestion strip", error)
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        Calibration.init(this)
+        haptics = Haptics(this)
+        touchpad = Touchpad(getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY))
+        editor = ConnectionEditor(::getCurrentInputConnection, ::getCurrentInputEditorInfo,
+            { delay, action -> main.postDelayed(action, delay) })
+        composer = Composer(editor, EngineWords(SwipeTyping.get(this)),
+            { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
+            { TypingSettings.autoCapitalise(this) }) { strip?.words = it }
+        // The firmware hands touchpad events to the topmost window titled "InputMethod", which is this
+        // keyboard's window. They arrive at the window, not at any view, so catch them there.
+        val window = window.window!!
+        window.callback = TouchpadWindowCallback(window.callback) { event ->
+            (editing && touchpad.accepts(event)).also { if (it) motion(event) }
+        }
+    }
+
+    override fun onCreateInputView(): View = Strip(this, { index -> enqueue { composer.choose(index) } }, ::symbol).also {
+        strip = it
+        it.showSuggestions = TypingSettings.suggestionBar(this)
+        showModifiers()
+    }
+
+    override fun onStartInput(info: EditorInfo, restarting: Boolean) {
+        preserveDestinationInput()
+        editor.cancelState()
+        super.onStartInput(info, restarting)
+        editing = info.inputType != EditorInfo.TYPE_NULL
+        field = if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
+        contact.releaseKeys()
+        clearSettlements()
+        modifiers.clear()
+        deadKeyPending = false
+        showModifiers()
+        composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
+        tapKeys = TypingSettings.tapKeys(this)
+        strip?.showSuggestions = TypingSettings.suggestionBar(this)
+        if (editing) {
+            composer.start(field, info.initialSelStart, info.initialSelEnd)
+            main.post(showStrip)
+        } else composer.stop()
+    }
+
+    override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
+        super.onStartInputView(info, restarting)
+        // Back belongs to the app; the strip comes and goes with the text field instead.
+        backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
+    }
+
+    override fun onWindowShown() {
+        super.onWindowShown()
+        // Android draws its hide and switch-keyboard buttons in this bar; the strip has no room for them.
+        window.window?.insetsController?.hide(WindowInsets.Type.captionBar())
+    }
+
+    override fun onFinishInput() {
+        preserveDestinationInput()
+        // The old connection is still owned here; only a verified final explicit choice is learned.
+        composer.stop(terminal = true)
+        editor.cancelState()
+        editing = false
+        field = Field.None
+        main.removeCallbacks(showStrip)
+        clearSettlements()
+        contact.cancel()
+        deadKeyPending = false
+        super.onFinishInput()
+    }
+
+    override fun onEvaluateInputViewShown() = editing
+
+    override fun onShowInputRequested(flags: Int, configChange: Boolean) = editing
+
+    override fun onEvaluateFullscreenMode() = false
+
+    override fun onUpdateSelection(oldStart: Int, oldEnd: Int, newStart: Int, newEnd: Int, composingStart: Int, composingEnd: Int) {
+        super.onUpdateSelection(oldStart, oldEnd, newStart, newEnd, composingStart, composingEnd)
+        if (editing && composer.selectionChanged(newStart, newEnd)) clearSettlements()
+    }
+
+    override fun onUpdateCursorAnchorInfo(info: CursorAnchorInfo) {
+        super.onUpdateCursorAnchorInfo(info)
+        editor.cursorAnchor(info)
+    }
+
+    /** While the strip is hidden, the touchpad reaches the keyboard through the focused app. */
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if (!editing || !touchpad.accepts(event)) return super.onGenericMotionEvent(event)
+        motion(event)
+        return true
+    }
+
+    private fun motion(event: MotionEvent) {
+        if (!field.words) return
+        val samples = touchpad.samples(event)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                haptics.begin(samples.firstOrNull())
+                contact.down(samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime))
+                contact.move(samples.drop(1))
+                Trace.touch(contact.points, false)
+            }
+            MotionEvent.ACTION_MOVE -> {
+                contact.move(samples)
+                val travel = contact.travel
+                val first = contact.points.firstOrNull()
+                // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
+                if (travel != null && first != null && (travel >= Contact.SWIPE_KEYS
+                    || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
+                Trace.touch(contact.points, false)
+            }
+            MotionEvent.ACTION_UP -> {
+                val points = contact.points
+                contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
+                    if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
+                        contact.settle(pending, pending.deadline)
+                        return@let
+                    }
+                    val input = PendingInput(false, null, settlement = pending)
+                    pendingInput.addLast(input)
+                    val settle = Runnable {
+                        settlements.remove(pending)
+                        val result = contact.settle(pending, SystemClock.uptimeMillis())
+                        input.action = { result?.let(::outcome) }
+                        input.ready = true
+                        drainInput()
+                    }
+                    settlements[pending] = settle
+                    main.postAtTime(settle, pending.deadline)
+                }
+                Trace.touch(if (points.size <= Swipe.MAX_POINTS && samples.all { it.valid }) points else emptyList(), true)
+            }
+            MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
+                contact.cancelActive()
+                Trace.touch(emptyList(), true)
+            }
+        }
+    }
+
+    private fun symbol(symbol: String) {
+        enqueue {
+            haptics.resetTaps()
+            composer.symbol(symbol)
+            modifiers.consume()
+            showModifiers()
+        }
+    }
+
+    private fun clearSettlements() {
+        haptics.resetTaps()
+        inputGeneration++
+        drainScheduled = false
+        settlements.values.forEach(main::removeCallbacks)
+        settlements.clear()
+        val releases = pendingInput.filter { it.event?.action == KeyEvent.ACTION_UP }
+        pendingInput.clear()
+        contact.cancel()
+        // Discarded typing must still release physically held modifiers.
+        releases.forEach { it.action?.invoke() }
+    }
+
+    /** Move only an interpretable ready key prefix into the existing navigation barrier. */
+    private fun preserveDestinationInput() {
+        if (!composer.awaitingDestination || deadKeyPending) return
+        repeat(MAX_PENDING_INPUT + MODIFIER_RELEASE_SLOTS) {
+            val pending = pendingInput.firstOrNull() ?: return
+            if (!pending.ready || pending.settlement != null) return
+            val event = pending.event ?: return
+            when {
+                event.action == KeyEvent.ACTION_UP -> {
+                    if (Modifiers.isModifier(event.keyCode)) modifiers.key(event)
+                }
+                Modifiers.isModifier(event.keyCode) -> modifiers.key(event)
+                event.isCtrlPressed || event.isMetaPressed || KeyEvent.isModifierKey(event.keyCode) -> return
+                event.keyCode == KeyEvent.KEYCODE_SPACE -> {
+                    composer.space(event.repeatCount > 0, event.eventTime)
+                    modifiers.useHeld()
+                }
+                else -> {
+                    val typed = event.getUnicodeChar(event.metaState or modifiers.metaState)
+                    if (typed <= 0 || !Character.isValidCodePoint(typed) || Character.isISOControl(typed)) return
+                    composer.type(String(Character.toChars(typed)))
+                    modifiers.consume()
+                }
+            }
+            pendingInput.removeFirst()
+        }
+    }
+
+    private fun makeRoom(): Boolean {
+        while (pendingInput.size >= MAX_PENDING_INPUT) {
+            val surplus = pendingInput.firstOrNull { it.settlement != null } ?: return false
+            pendingInput.remove(surplus)
+            surplus.settlement?.let {
+                settlements.remove(it)?.let(main::removeCallbacks)
+                contact.settle(it, it.deadline)
+            }
+        }
+        return true
+    }
+
+    private fun enqueue(event: KeyEvent? = null, action: () -> Unit) {
+        // Retain accepted keys under overload; shed a contact first, otherwise refuse only the new item.
+        if (!makeRoom()) {
+            if (event?.action != KeyEvent.ACTION_UP || !Modifiers.isModifier(event.keyCode)) return
+            val previous = pendingInput.lastOrNull { it.event?.keyCode == event.keyCode }?.event
+            val held = if (previous == null) modifiers.isHeld(event.keyCode) else previous.action == KeyEvent.ACTION_DOWN
+            // Reserve one ordered release for each physical Shift/Alt key, never ahead of its down.
+            if (!held || pendingInput.size >= MAX_PENDING_INPUT + MODIFIER_RELEASE_SLOTS) return
+        }
+        pendingInput.addLast(PendingInput(true, action, event))
+        drainInput()
+    }
+
+    private fun drainInput() {
+        if (drainScheduled) return
+        val started = System.nanoTime()
+        var actions = 0
+        while (pendingInput.firstOrNull()?.ready == true) {
+            if (actions++ == DRAIN_BUDGET || System.nanoTime() - started >= DRAIN_NANOS) {
+                drainScheduled = true
+                val generation = inputGeneration
+                main.post {
+                    if (generation != inputGeneration) return@post
+                    drainScheduled = false
+                    drainInput()
+                }
+                return
+            }
+            pendingInput.removeFirst().action?.invoke()
+        }
+    }
+
+    private fun outcome(outcome: Contact.Outcome) {
+        when (outcome) {
+            is Contact.Outcome.Swipe -> {
+                haptics.resetTaps()
+                if (modifiers.alt != Modifiers.Level.Off) {
+                    // Sideways swipes page through the symbols on the strip.
+                    val dx = outcome.points.last().x - outcome.points.first().x
+                    if (abs(dx) >= .18f) {
+                        strip?.turn(if (dx > 0) -1 else 1)
+                        haptics.pulse()
+                    }
+                    return
+                }
+                composer.swipe(letterSpace(outcome.points), outcome.startedAt, outcome.endedAt, modifiers.metaState)
+                modifiers.consume()
+            }
+            is Contact.Outcome.Tap -> {
+                if (!isTapKey(outcome.key)) {
+                    haptics.resetTaps()
+                    return
+                }
+                val key = if (outcome.key == Layout.SPACE) " " else outcome.key
+                haptics.tap(space = key == " ", time = outcome.endedAt)
+                if (key == " ") {
+                    composer.space(repeated = false, time = outcome.endedAt)
+                } else {
+                    val word = if (key == "I" || modifiers.shift != Modifiers.Level.Off) key else key.lowercase()
+                    composer.type(word, letterTap = true)
+                }
+                modifiers.consume()
+            }
+        }
+        showModifiers()
+    }
+
+    private fun isTapKey(key: String): Boolean {
+        if (modifiers.alt != Modifiers.Level.Off) return false
+        return if (key == Layout.SPACE) ' ' in tapKeys else Layout.isLetter(key) && key[0] in tapKeys
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (KeyCapture.waiting?.invoke(event) == true) return true
+        if (!editing || keyCode == KeyEvent.KEYCODE_BACK) return super.onKeyDown(keyCode, event)
+        if (touchpad.isGestureKey(event)) return true
+        contact.key(keyCode, true, event.eventTime)
+        if (pendingInput.isNotEmpty()) {
+            val captured = KeyEvent(event)
+            consumedKeys += keyCode
+            enqueue(captured) {
+                key(captured)
+                showModifiers()
+            }
+            return true
+        }
+        val handled = key(event)
+        if (handled) consumedKeys += keyCode
+        showModifiers()
+        return handled || super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (KeyCapture.waiting?.invoke(event) == true) return true
+        if (!editing || keyCode == KeyEvent.KEYCODE_BACK) {
+            return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
+        }
+        if (touchpad.isGestureKey(event)) return true
+        contact.key(keyCode, false, event.eventTime)
+        if (pendingInput.isNotEmpty()) {
+            val captured = KeyEvent(event)
+            consumedKeys.remove(keyCode)
+            enqueue(captured) {
+                if (Modifiers.isModifier(keyCode)) modifiers.key(captured)
+                showModifiers()
+            }
+            return true
+        }
+        if (Modifiers.isModifier(keyCode)) {
+            modifiers.key(event)
+            showModifiers()
+        }
+        return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
+    }
+
+    /** Captures each app-handled key as a paired command in the composer's ordered input queue. */
+    private fun key(event: KeyEvent): Boolean {
+        haptics.resetTaps()
+        if (Modifiers.isModifier(event.keyCode)) {
+            modifiers.key(event)
+            return true
+        }
+        if (event.isCtrlPressed && event.keyCode != KeyEvent.KEYCODE_DEL || event.isMetaPressed) {
+            modifiers.useHeld()
+            command(event)
+            return true
+        }
+        if (KeyEvent.isModifierKey(event.keyCode)) {
+            modifiers.useHeld()
+            return true
+        }
+        if (deadKeyPending && (event.keyCode == KeyEvent.KEYCODE_SPACE || event.keyCode == KeyEvent.KEYCODE_DEL)) {
+            command(event, textKey = true)
+            if (event.keyCode == KeyEvent.KEYCODE_SPACE) modifiers.consume() else modifiers.useHeld()
+            deadKeyPending = false
+            return true
+        }
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_DEL -> { composer.backspace(event.isCtrlPressed); modifiers.useHeld() }
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { composer.enter(); modifiers.useHeld() }
+            KeyEvent.KEYCODE_SPACE -> { composer.space(event.repeatCount > 0, event.eventTime); modifiers.useHeld() }
+            KeyEvent.KEYCODE_TAB -> { modifiers.useHeld(); command(event) }
+            else -> {
+                val typed = event.getUnicodeChar(event.metaState or modifiers.metaState)
+                val dead = typed and KeyCharacterMap.COMBINING_ACCENT != 0
+                if (dead || deadKeyPending || typed <= 0 || !Character.isValidCodePoint(typed) || Character.isISOControl(typed)) {
+                    val textKey = dead || typed > 0 && Character.isValidCodePoint(typed) && !Character.isISOControl(typed)
+                    command(event, textKey = textKey)
+                    if (textKey) modifiers.consume() else modifiers.useHeld()
+                    if (dead || typed > 0) deadKeyPending = dead
+                    return true
+                }
+                val text = String(Character.toChars(typed))
+                modifiers.consume()
+                // Controlled insertion avoids unacknowledged app key updates overtaking later input.
+                composer.type(text)
+            }
+        }
+        return true
+    }
+
+    private fun command(event: KeyEvent, textKey: Boolean = false) {
+        val meta = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState)
+        val down = KeyEvent(event.downTime, event.eventTime, KeyEvent.ACTION_DOWN, event.keyCode,
+            event.repeatCount, meta, event.deviceId, event.scanCode, event.flags, event.source)
+        val up = KeyEvent(event.downTime, event.eventTime, KeyEvent.ACTION_UP, event.keyCode,
+            0, meta, event.deviceId, event.scanCode, event.flags, event.source)
+        val navigation = event.keyCode in NAVIGATION_KEYS
+        val shortcut = event.isCtrlPressed && !event.isMetaPressed && event.keyCode in FIELD_SHORTCUTS
+        val destructive = textKey || event.keyCode == KeyEvent.KEYCODE_FORWARD_DEL
+            || event.keyCode in DESTRUCTIVE_SHORTCUTS || !navigation && !shortcut
+        composer.command(destructive, textKey || navigation || shortcut || event.keyCode == KeyEvent.KEYCODE_FORWARD_DEL) {
+            val connection = currentInputConnection
+            if (connection == null) false else try {
+                var released = false
+                val sent = try {
+                    connection.sendKeyEvent(down)
+                } finally {
+                    // Always release a dispatched key, including when the down result is ambiguous.
+                    released = connection.sendKeyEvent(up)
+                }
+                sent && released
+            } catch (error: RuntimeException) {
+                Log.w("Atlas", "Could not forward an ordered key", error)
+                false
+            }
+        }
+    }
+
+    private fun showModifiers() {
+        strip?.showSymbols = modifiers.alt != Modifiers.Level.Off
+    }
+
+    /** Converts touchpad points to the recogniser's letter space. */
+    private fun letterSpace(points: List<Sample>): Swipe {
+        val start = points.first().time
+        return Swipe(
+            FloatArray(points.size) { points[it].x },
+            FloatArray(points.size) { points[it].y * 4 / 3 },
+            FloatArray(points.size) { (points[it].time - start).toFloat() },
+        )
+    }
+
+    override fun onDestroy() {
+        editing = false
+        main.removeCallbacksAndMessages(null)
+        settlements.clear()
+        pendingInput.clear()
+        contact.releaseKeys()
+        composer.stop()
+        editor.cancelState()
+        super.onDestroy()
+    }
+
+    companion object {
+        private const val MAX_PENDING_INPUT = 128
+        private const val MODIFIER_RELEASE_SLOTS = 4
+        private const val DRAIN_BUDGET = 8
+        private const val DRAIN_NANOS = 4_000_000L
+        private val NAVIGATION_KEYS = setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MOVE_HOME,
+            KeyEvent.KEYCODE_MOVE_END, KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_PAGE_DOWN)
+        private val FIELD_SHORTCUTS = setOf(KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_X,
+            KeyEvent.KEYCODE_V, KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Y)
+        private val DESTRUCTIVE_SHORTCUTS = setOf(KeyEvent.KEYCODE_X, KeyEvent.KEYCODE_V,
+            KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Y)
+    }
+}

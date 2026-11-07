@@ -1,0 +1,300 @@
+--- a/jni/swipe_jni.cpp
++++ b/jni/swipe_jni.cpp
+@@ -12,6 +12,8 @@
+ #include <cmath>
+ #include <cstdint>
+ #include <cstdio>
++#include <exception>
++#include <memory>
+ #include <string>
+ #include <vector>
+ 
+@@ -28,14 +30,31 @@
+     return reinterpret_cast<SwipeEngine*>(static_cast<uintptr_t>(handle));
+ }
+ 
++static void java_error(JNIEnv* env, const char* message) {
++    if (env->ExceptionCheck()) return;
++    jclass type = env->FindClass("java/lang/IllegalStateException");
++    if (type) env->ThrowNew(type, message);
++}
++
++struct PendingJavaException {};
++static void check_java(JNIEnv* env) {
++    if (env->ExceptionCheck()) throw PendingJavaException{};
++}
++
+ // Helper: pull an optional JNI string into std::string. Empty jstring -> empty.
+ static std::string jstr_or_empty(JNIEnv* env, jstring s) {
++    check_java(env);
+     if (!s) return {};
+     const char* c = env->GetStringUTFChars(s, nullptr);
+-    if (!c) return {};
+-    std::string out(c);
+-    env->ReleaseStringUTFChars(s, c);
+-    return out;
++    if (!c) throw PendingJavaException{};
++    try {
++        std::string out(c);
++        env->ReleaseStringUTFChars(s, c);
++        return out;
++    } catch (...) {
++        env->ReleaseStringUTFChars(s, c);
++        throw;
++    }
+ }
+ 
+ static int pin_to_cores(const char* affinity);
+@@ -70,7 +89,7 @@
+     jint threads, jint beamWidth, jint topK,
+     jboolean useExpansion, jstring freqKeyStr,
+     jstring lmModelPath, jstring lmVocabPath
+-) {
++) try {
+     SwipeEngine::Config config;
+     config.encoder_path  = jstr_or_empty(env, encoderPath);
+     config.decoder_path  = jstr_or_empty(env, decoderPath);
+@@ -85,7 +104,7 @@
+          config.encoder_path.c_str(),
+          config.decoder_path.empty() ? "(none)" : config.decoder_path.c_str());
+ 
+-    auto* engine = new SwipeEngine();
++    auto engine = std::make_unique<SwipeEngine>();
+     bool ok;
+     {
+         LoadOnBigCores pin;
+@@ -93,12 +112,18 @@
+     }
+     if (!ok) {
+         LOGE("nativeInit: engine->init() failed for encoder=%s", config.encoder_path.c_str());
+-        delete engine;
+         return 0;
+     }
+ 
+     LOGI("nativeInit: success, hasDecoder=%d", engine->hasDecoder());
+-    return static_cast<jlong>(reinterpret_cast<uintptr_t>(engine));
++    check_java(env);
++    return static_cast<jlong>(reinterpret_cast<uintptr_t>(engine.release()));
++} catch (const std::exception& error) {
++    java_error(env, error.what());
++    return 0;
++} catch (...) {
++    java_error(env, "Could not initialise swipe recognition");
++    return 0;
+ }
+ 
+ JNIEXPORT jobjectArray JNICALL
+@@ -108,32 +133,47 @@
+     jobjectArray leftSegs, jobjectArray rightSegs,
+     jint topK, jobjectArray contextArray,
+     jint beamWidth, jfloatArray trieWeightArray
+-) {
++) try {
+     auto* engine = to_engine(handle);
+     if (!engine) return nullptr;
+ 
+     auto extractSegs = [&](jobjectArray arr, std::vector<SwipeSegOwned>& out) -> bool {
+         if (!arr) return true;
+         jint n = env->GetArrayLength(arr);
++        check_java(env);
+         out.reserve(n);
+         for (jint i = 0; i < n; ++i) {
+             jobject seg = env->GetObjectArrayElement(arr, i);
++            check_java(env);
+             if (!seg) continue;
+-            jfieldID xFid = env->GetFieldID(env->GetObjectClass(seg), "x", "[F");
+-            jfieldID yFid = env->GetFieldID(env->GetObjectClass(seg), "y", "[F");
+-            jfieldID tFid = env->GetFieldID(env->GetObjectClass(seg), "t", "[F");
++            jclass type = env->GetObjectClass(seg);
++            check_java(env);
++            jfieldID xFid = env->GetFieldID(type, "x", "[F");
++            check_java(env);
++            jfieldID yFid = env->GetFieldID(type, "y", "[F");
++            check_java(env);
++            jfieldID tFid = env->GetFieldID(type, "t", "[F");
++            check_java(env);
++            env->DeleteLocalRef(type);
+             jfloatArray xArr = (jfloatArray)env->GetObjectField(seg, xFid);
++            check_java(env);
+             jfloatArray yArr = (jfloatArray)env->GetObjectField(seg, yFid);
++            check_java(env);
+             jfloatArray tArr = (jfloatArray)env->GetObjectField(seg, tFid);
++            check_java(env);
+ 
+             SwipeSegOwned s;
+             jint len = env->GetArrayLength(xArr);
++            check_java(env);
+             s.x.resize(len);
+             s.y.resize(len);
+             s.t.resize(len);
+             env->GetFloatArrayRegion(xArr, 0, len, s.x.data());
++            check_java(env);
+             env->GetFloatArrayRegion(yArr, 0, len, s.y.data());
++            check_java(env);
+             env->GetFloatArrayRegion(tArr, 0, len, s.t.data());
++            check_java(env);
+ 
+             env->DeleteLocalRef(xArr);
+             env->DeleteLocalRef(yArr);
+@@ -156,26 +196,22 @@
+     std::vector<float> trieWeights;
+     if(trieWeightArray) {
+         jint numTrieWeights = env->GetArrayLength(trieWeightArray);
+-        jfloat * trieWeightsF = env->GetFloatArrayElements(trieWeightArray, nullptr);
+-        for(int i=0; i<numTrieWeights; i++) {
+-            trieWeights.emplace_back(trieWeightsF[i]);
+-        }
+-
+-        env->ReleaseFloatArrayElements(trieWeightArray, trieWeightsF, JNI_ABORT);
++        check_java(env);
++        trieWeights.resize(numTrieWeights);
++        env->GetFloatArrayRegion(trieWeightArray, 0, numTrieWeights, trieWeights.data());
++        check_java(env);
+     }
+ 
+     std::vector<std::string> context_words;
+     if (contextArray) {
+         jint ctx_len = env->GetArrayLength(contextArray);
++        check_java(env);
+         context_words.reserve(ctx_len);
+         for (jint i = 0; i < ctx_len; ++i) {
+             auto jstr = static_cast<jstring>(env->GetObjectArrayElement(contextArray, i));
++            check_java(env);
+             if (jstr) {
+-                const char* cstr = env->GetStringUTFChars(jstr, nullptr);
+-                if (cstr) {
+-                    context_words.emplace_back(cstr);
+-                    env->ReleaseStringUTFChars(jstr, cstr);
+-                }
++                context_words.emplace_back(jstr_or_empty(env, jstr));
+                 env->DeleteLocalRef(jstr);
+             }
+         }
+@@ -191,17 +227,27 @@
+ 
+     int count = static_cast<int>(std::min(results.size(), static_cast<size_t>(topK)));
+     jobjectArray out = env->NewObjectArray(count, resultClass, nullptr);
++    check_java(env);
+ 
+     for (int i = 0; i < count; ++i) {
+         jstring word = env->NewStringUTF(results[i].word.c_str());
++        check_java(env);
+         jobject result = env->NewObject(resultClass, resultCtor, word,
+             results[i].final_score, results[i].ctc_score, results[i].lm_score);
++        check_java(env);
+         env->SetObjectArrayElement(out, i, result);
++        check_java(env);
+         env->DeleteLocalRef(word);
+         env->DeleteLocalRef(result);
+     }
+ 
+     return out;
++} catch (const std::exception& error) {
++    java_error(env, error.what());
++    return nullptr;
++} catch (...) {
++    java_error(env, "Swipe recognition failed");
++    return nullptr;
+ }
+ 
+ JNIEXPORT jobjectArray JNICALL
+@@ -268,15 +314,23 @@
+ JNIEXPORT jfloatArray JNICALL
+ Java_org_futo_ml_inference_SwipeDecoder_nativeGetScoring(
+     JNIEnv* env, jobject /* obj */, jlong handle
+-) {
++) try {
+     auto* engine = to_engine(handle);
+     if (!engine) return nullptr;
+ 
+     const auto scoring = engine->scoring();
+     jfloatArray arr = env->NewFloatArray(4);
++    check_java(env);
+     float values[4] = { scoring.gamma, scoring.lambda, scoring.beta, scoring.alpha };
+     env->SetFloatArrayRegion(arr, 0, 4, values);
++    check_java(env);
+     return arr;
++} catch (const std::exception& error) {
++    java_error(env, error.what());
++    return nullptr;
++} catch (...) {
++    java_error(env, "Could not read swipe scoring");
++    return nullptr;
+ }
+ 
+ JNIEXPORT jboolean JNICALL
+@@ -307,42 +361,32 @@
+     jlongArray trieArray,
+     jstring decoderPath,
+     jstring lmModelPath, jstring lmVocabPath
+-) {
++) try {
+     auto* engine = to_engine(handle);
+     if (!engine) return JNI_FALSE;
+ 
+     SwipeEngine::Mode mode;
+ 
+-    const char* letters_cstr = nullptr;
+-    jfloat* cx = nullptr;
+-    jfloat* cy = nullptr;
+     if (letters && cxArray && cyArray) {
+-        letters_cstr = env->GetStringUTFChars(letters, nullptr);
+-        if (!letters_cstr) return JNI_FALSE;
+         jint numKeys = env->GetArrayLength(cxArray);
+-        cx = env->GetFloatArrayElements(cxArray, nullptr);
+-        cy = env->GetFloatArrayElements(cyArray, nullptr);
+-        if (!cx || !cy) {
+-            if (cx) env->ReleaseFloatArrayElements(cxArray, cx, JNI_ABORT);
+-            if (cy) env->ReleaseFloatArrayElements(cyArray, cy, JNI_ABORT);
+-            env->ReleaseStringUTFChars(letters, letters_cstr);
+-            return JNI_FALSE;
+-        }
+-        mode.layout = make_layout(std::string(letters_cstr), cx, cy, numKeys);
++        check_java(env);
++        std::vector<float> cx(numKeys), cy(numKeys);
++        env->GetFloatArrayRegion(cxArray, 0, numKeys, cx.data());
++        check_java(env);
++        env->GetFloatArrayRegion(cyArray, 0, numKeys, cy.data());
++        check_java(env);
++        mode.layout = make_layout(jstr_or_empty(env, letters), cx.data(), cy.data(), numKeys);
+     }
+ 
+     std::vector<ITrie *> tries;
+     if(trieArray) {
+         jint numTries = env->GetArrayLength(trieArray);
+-        jlong *elements = env->GetLongArrayElements(trieArray, nullptr);
+-        if (elements != nullptr) {
+-            tries.reserve(static_cast<size_t>(numTries));
+-            for (jsize i = 0; i < numTries; ++i) {
+-                tries.push_back(reinterpret_cast<ITrie *>(elements[i]));
+-            }
+-
+-            env->ReleaseLongArrayElements(trieArray, elements, JNI_ABORT);
+-        }
++        check_java(env);
++        std::vector<jlong> elements(numTries);
++        env->GetLongArrayRegion(trieArray, 0, numTries, elements.data());
++        check_java(env);
++        tries.reserve(static_cast<size_t>(numTries));
++        for (jlong pointer : elements) tries.push_back(reinterpret_cast<ITrie *>(pointer));
+     }
+ 
+     mode.dictionaries = tries;
+@@ -358,11 +402,13 @@
+         ok = engine->setMode(mode);
+     }
+ 
+-    if (cx) env->ReleaseFloatArrayElements(cxArray, cx, JNI_ABORT);
+-    if (cy) env->ReleaseFloatArrayElements(cyArray, cy, JNI_ABORT);
+-    if (letters_cstr) env->ReleaseStringUTFChars(letters, letters_cstr);
+-
+     return static_cast<jboolean>(ok);
++} catch (const std::exception& error) {
++    java_error(env, error.what());
++    return JNI_FALSE;
++} catch (...) {
++    java_error(env, "Could not configure swipe recognition");
++    return JNI_FALSE;
+ }
+ 
+ JNIEXPORT void JNICALL

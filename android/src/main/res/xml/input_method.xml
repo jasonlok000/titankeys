@@ -1,0 +1,5 @@
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity="com.vandam.ink.MainActivity"
+    android:suppressesSpellChecker="true">
+    <subtype android:imeSubtypeLocale="en_GB" android:imeSubtypeMode="keyboard" />
+</input-method>

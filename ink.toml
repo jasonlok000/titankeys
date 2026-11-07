@@ -1,0 +1,8 @@
+name = "Atlas"
+package = "com.atlas"
+version = "2.0.0"
+version_code = 50
+
+[signing]
+keystore = "signing/atlas.keystore"
+key_alias = "atlas"

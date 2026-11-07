@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** [Words] backed by the FUTO swipe engine and its learned habits. */
 class EngineWords(private val typing: SwipeTyping) : Words {
     override fun allowed(word: String) = typing.wordAllowed(word)
+    override fun known(word: String) = typing.knownWord(word)
 
     /** What the engine needs to learn from a recognised swipe later. */
     private class Learning(val prediction: SwipeTyping.Prediction, val generation: Long)

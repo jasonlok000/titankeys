@@ -12,6 +12,7 @@ import java.io.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,7 +25,7 @@ public final class SwipeTyping {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final AtomicInteger pendingExamples = new AtomicInteger();
     private SwipeRecognizer recogniser;
-    private TypedPredictions typedPredictions;
+    private volatile TypedPredictions typedPredictions;
     private volatile String loadError;
     private volatile String readiness = "loading";
     private int loadingRetries;
@@ -222,8 +223,9 @@ public final class SwipeTyping {
                 if (cancelled.get()) {
                     timing.finish(); completionTiming.record(timing, false, true, false); return;
                 }
+                Map<String, Double> likely = recogniser == null ? Map.of() : recogniser.nextWords(SentenceContext.words(contextText));
                 result = blockedWords.filter(EnglishSpelling.candidates(typedPredictions.suggest(prefix, personal, day,
-                        word -> blockedWords.entries().isEmpty() || wordAllowed(rendered(word, variant))), variant));
+                        word -> blockedWords.entries().isEmpty() || wordAllowed(rendered(word, variant)), likely), variant));
                 boolean upper = prefix.length() > 1 && prefix.equals(prefix.toUpperCase(Locale.UK));
                 for (int i = 0; i < result.length; i++) {
                     String word = learningEnabled && wordsAvailable ? dictionary.restoreCase(result[i], today()) : result[i];
@@ -253,6 +255,13 @@ public final class SwipeTyping {
     public Words learnedWords() { return wordView; }
     public String[] blockedWords() { return blockedWords.words(); }
     public boolean wordAllowed(String word) { return blockedWords.allowed(word); }
+
+    /** Whether a typed word is complete, so the next suggestions should follow it instead of correcting it. */
+    public boolean knownWord(String word) {
+        TypedPredictions predictions = typedPredictions;
+        if (predictions != null && predictions.contains(word)) return true;
+        return Arrays.stream(wordView.words).anyMatch(word::equalsIgnoreCase);
+    }
 
     public void setWordBlocked(String word, boolean blocked, OperationCallback callback) {
         worker.execute(() -> {

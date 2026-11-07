@@ -13,6 +13,7 @@ public final class SwipeRecognizer implements AutoCloseable {
     private static final float MAX_CONTEXT_SCORE = 1.5f;
     private static final float MAX_SENTENCE_CONTEXT_SCORE = 4f;
     private static final float MAX_PATH_SCORE_GAP = 3f;
+    private static final int NEXT_WORD_CANDIDATES = 3000;
     private org.futo.ml.inference.SwipeDecoder decoder;
     private org.futo.ml.inference.NativeDictionary base, personal;
     private Set<String> learnedWords = Set.of();
@@ -68,6 +69,14 @@ public final class SwipeRecognizer implements AutoCloseable {
                 .toArray(org.futo.ml.inference.SwipeDecoder.Result[]::new);
         return rank(gesture, results, decoder.contextWeight(), decoder.shapeNormalizer(), context.length,
                 personalized ? learnedWords : Set.of());
+    }
+
+    public Map<String, Double> nextWords(String[] context) {
+        if (context.length == 0) return Map.of();
+        Map<String, Double> scores = new HashMap<>();
+        for (org.futo.ml.inference.SwipeDecoder.Result result : decoder.predictNext(context, NEXT_WORD_CANDIDATES))
+            scores.putIfAbsent(TypedPredictions.key(result.word), (double) result.score);
+        return scores;
     }
 
     public static org.futo.ml.inference.SwipeDecoder.Result[] rank(Swipe gesture,

@@ -36,6 +36,7 @@ interface Words {
     fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Recognition) -> Unit)
     fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit)
     fun allowed(word: String): Boolean
+    fun known(word: String): Boolean
     fun typed(word: String, rememberCase: Boolean = true)
     fun chosen(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun corrected(swipe: Swipe, context: String, recognition: Recognition, word: String)
@@ -796,7 +797,8 @@ class Composer(
             return
         }
         if (after.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) return
-        val trailingSpace = before.endsWith(" ") && TypedPredictions.prefix(before.dropLast(1)).isNotEmpty()
+        val lastWord = TypedPredictions.prefix(before.dropLast(1))
+        val trailingSpace = before.endsWith(" ") && lastWord.isNotEmpty() && !words.known(lastWord)
         val context = if (trailingSpace) before.dropLast(1) else before
         val current = epoch
         completion?.set(true)

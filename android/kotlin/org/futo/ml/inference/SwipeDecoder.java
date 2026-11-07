@@ -41,6 +41,12 @@ public final class SwipeDecoder implements AutoCloseable {
         Result[] result = nativeRecognizeSafe(handle, new SwipeSeg[]{new SwipeSeg(x, y, time)}, new SwipeSeg[0], 16, context, 100, weights);
         return result == null ? new Result[0] : result;
     }
+    /** The context model's likeliest next words, best first. Each score is in {@link Result#score}. */
+    public Result[] predictNext(String[] context, int count) {
+        requireOpen();
+        Result[] result = nativePredictNextSafe(handle, context, count);
+        return result == null ? new Result[0] : result;
+    }
     public float contextWeight() { return scoring()[3]; }
     public float shapeNormalizer() { return scoring()[0]; }
     private void requireOpen() { if (handle == 0) throw new IllegalStateException("Swipe decoder closed"); }
@@ -57,5 +63,6 @@ public final class SwipeDecoder implements AutoCloseable {
                                    String frequencyKey, String lm, String vocab);
     private native boolean nativeSetModeSafe(long handle, String letters, float[] x, float[] y, long[] tries, String decoder, String lm, String vocab);
     private native Result[] nativeRecognizeSafe(long handle, SwipeSeg[] left, SwipeSeg[] right, int topK, String[] context, int beamWidth, float[] weights);
+    private native Result[] nativePredictNextSafe(long handle, String[] context, int count);
     private native void nativeDestroySafe(long handle);
 }

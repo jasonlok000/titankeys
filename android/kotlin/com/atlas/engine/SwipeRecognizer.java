@@ -41,6 +41,7 @@ public final class SwipeRecognizer implements AutoCloseable {
 
     static org.futo.ml.inference.NativeDictionary contractionDictionary(org.futo.ml.inference.NativeDictionary base) {
         Map<String, Float> spellings = SwipeSpelling.contractions(base::frequency);
+        spellings.putAll(SwipeSpelling.sameShape(base::frequency));
         String[] words = spellings.keySet().toArray(new String[0]);
         float[] frequencies = new float[words.length];
         for (int i = 0; i < words.length; i++) frequencies[i] = spellings.get(words[i]);

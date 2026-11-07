@@ -101,6 +101,9 @@ export const enableKeyboard = () => atlas("enable");
 export const chooseKeyboard = () => atlas("choose");
 export const allowOverlay = () => atlas("overlay");
 
+/** Calls `focus` whenever the home window regains focus, so its field can take autofocus again. */
+export const onHomeFocus = (focus: () => void) => onNativeMessage("atlas-focus", focus);
+
 export const tapKeyLabel = (key: string) => key === " " ? "Space" : key;
 
 /** Waits for letter keys or Space until the returned function is called. */

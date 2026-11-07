@@ -45,6 +45,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private val windowFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
         if (hasFocus) activity.window.decorView.post {
             if (visible && watchingRequested && activity.hasWindowFocus()) {
+                // Ink may have blurred the field while the window was away; ask the page to autofocus again.
+                activity.emit(JSONObject().put("type", "atlas-focus").toString())
                 val editor = previewEditor(activity.window.decorView)
                 if (editor != null && !editor.hasFocus()) {
                     editor.requestFocus()

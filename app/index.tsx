@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Canvas, CanvasText, Icon, Screen, Stack, Text, replace, useSnapshot } from "ink";
 import { arrowOutward, chevronRight } from "ink/icons";
-import { allowOverlay, chooseKeyboard, enableKeyboard, state } from "../lib/atlas";
+import { allowOverlay, chooseKeyboard, enableKeyboard, onHomeFocus, state } from "../lib/atlas";
 import { TryArea } from "../lib/try";
 
 function Step({ step, title, action, onPress }: {
@@ -29,6 +29,7 @@ function Step({ step, title, action, onPress }: {
 function FrontPage() {
   const [focus, setFocus] = useState(0);
   const refocus = () => setFocus(value => value + 1);
+  useEffect(() => onHomeFocus(refocus), []);
   return <Screen>
     <Stack align="stretch" gap={24} onPress={refocus}>
       <Stack align="stretch">

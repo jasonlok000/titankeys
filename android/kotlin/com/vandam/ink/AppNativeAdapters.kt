@@ -34,7 +34,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private val previewController = lazy { TouchpadPreview(activity) }
     private var watchingRequested = false
     private var previewRequested = false
-    private var visible = activity.hasWindowFocus()
+    // Adapters can be created before the live activity's window gains focus.
+    private var visible = true
     private var transferring = false
     private val keyCapture = lazy { KeyCapture(activity) { key -> activity.emit(JSONObject().put("type", "atlas-key").put("key", key).toString()) } }
     private var keyCaptureRequested = false

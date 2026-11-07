@@ -200,9 +200,9 @@ public final class SwipeTyping {
             }
         });
     }
-    public void complete(String before, AtomicBoolean cancelled, Callback callback) {
+    public void complete(String before, AtomicBoolean cancelled, boolean sentenceCapitalisation, Callback callback) {
         final EnglishSpelling.Variant variant = TypingSettings.spelling(context);
-        final boolean autoCapitalise = TypingSettings.autoCapitalise(context);
+        final boolean autoCapitalise = sentenceCapitalisation && TypingSettings.autoCapitalise(context);
         InferenceTiming.Request timing = new InferenceTiming.Request();
         worker.execute(() -> {
             timing.start();

@@ -34,7 +34,7 @@ interface Words {
     class Recognition(val words: List<String>, val token: Any?)
 
     fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Recognition) -> Unit)
-    fun complete(before: String, cancelled: AtomicBoolean, result: (List<String>) -> Unit)
+    fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit)
     fun typed(word: String, rememberCase: Boolean = true)
     fun chosen(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun corrected(swipe: Swipe, context: String, recognition: Recognition, word: String)
@@ -800,7 +800,7 @@ class Composer(
         val cancelled = AtomicBoolean(false)
         completion = cancelled
         completionSnapshot = anchor
-        words.complete(context, cancelled) { suggestions ->
+        words.complete(context, cancelled, field.sentenceCapitalisation) { suggestions ->
             if (cancelled.get() || current != epoch || snapshot() != anchor) return@complete
             composition = Composition.Typed(TypedPredictions.prefix(context), trailingSpace, anchor, suggestions)
             show(suggestions)

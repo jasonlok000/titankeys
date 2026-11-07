@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Canvas, CanvasText, Icon, Screen, Stack, Text, replace, useSnapshot } from "ink";
 import { arrowOutward, chevronRight } from "ink/icons";
-import { chooseKeyboard, enableKeyboard, state } from "../lib/atlas";
+import { allowOverlay, chooseKeyboard, enableKeyboard, state } from "../lib/atlas";
 import { TryArea } from "../lib/try";
 
 function Step({ step, title, action, onPress }: {
@@ -14,7 +14,7 @@ function Step({ step, title, action, onPress }: {
     <Stack align="center" gap={14}>
       <Stack align="center" gap={8}>
         <Canvas width={596} height={28}>
-          <CanvasText x={0} y={0} width={596} height={28} size={20.67} colour="#7f7f84">{`STEP ${step} OF 2`}</CanvasText>
+          <CanvasText x={0} y={0} width={596} height={28} size={20.67} colour="#7f7f84">{`STEP ${step} OF 3`}</CanvasText>
         </Canvas>
         <Text size={49.33} align="center">{title}</Text>
       </Stack>
@@ -49,8 +49,9 @@ function FrontPage() {
 export default function Home() {
   const result = useSnapshot(state);
   if (result.status !== "ready") return <Screen />;
-  const { enabled, selected } = result.data;
+  const { enabled, selected, overlay } = result.data;
   if (!enabled) return <Step step={1} title="Enable Atlas" action="Open keyboard settings" onPress={enableKeyboard} />;
   if (!selected) return <Step step={2} title="Choose Atlas" action="Open keyboard list" onPress={chooseKeyboard} />;
+  if (!overlay) return <Step step={3} title="Allow overlay" action="Open overlay settings" onPress={allowOverlay} />;
   return <FrontPage />;
 }

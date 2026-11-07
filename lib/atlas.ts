@@ -10,6 +10,8 @@ export type State = {
   android: string;
   enabled: boolean;
   selected: boolean;
+  /** Allowed to display over other apps, which keeps the touchpad with Atlas above text selection popups. */
+  overlay: boolean;
   learning: boolean;
   /** The profile in use: `"off"`, `"atlas"` or the id of a saved profile. */
   calibration: string;
@@ -100,6 +102,7 @@ export async function transferLearning(mode: "import" | "export") {
 
 export const enableKeyboard = () => atlas("enable");
 export const chooseKeyboard = () => atlas("choose");
+export const allowOverlay = () => atlas("overlay");
 
 export const tapKeyLabel = (key: string) => key === " " ? "Space" : key;
 

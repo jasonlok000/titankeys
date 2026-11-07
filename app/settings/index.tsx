@@ -1,6 +1,6 @@
 import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from "ink";
 import { close } from "ink/icons";
-import { chooseKeyboard, enableKeyboard, state, tapKeyLabel, update } from "../../lib/atlas";
+import { allowOverlay, chooseKeyboard, enableKeyboard, state, tapKeyLabel, update } from "../../lib/atlas";
 import { liftLabel } from "./lift";
 import { spellingLabel } from "./spelling";
 import { vibrationLabel } from "./vibration";
@@ -15,6 +15,7 @@ export default function Settings() {
     <Section title="Setup">
       <Field label="Enable Atlas" onPress={enableKeyboard}>{settings.enabled ? "Enabled" : "Not enabled"}</Field>
       <Field label="Choose Atlas" onPress={chooseKeyboard}>{settings.selected ? "Selected" : "Not selected"}</Field>
+      <Field label="Allow overlay" onPress={allowOverlay}>{settings.overlay ? "Allowed" : "Not allowed"}</Field>
     </Section>
     <Section title="Typing">
       <Field label="Spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>

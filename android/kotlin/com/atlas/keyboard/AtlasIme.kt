@@ -30,6 +30,7 @@ class AtlasIme : InputMethodService() {
     private lateinit var haptics: Haptics
     private lateinit var composer: Composer
     private lateinit var editor: ConnectionEditor
+    private lateinit var overlay: TouchpadOverlay
     private val contact = Contact()
     private val modifiers = Modifiers()
     private var strip: Strip? = null
@@ -72,6 +73,9 @@ class AtlasIme : InputMethodService() {
         window.callback = TouchpadWindowCallback(window.callback) { event ->
             (editing && touchpad.accepts(event)).also { if (it) motion(event) }
         }
+        overlay = TouchpadOverlay(this) { event ->
+            (editing && touchpad.accepts(event)).also { if (it) motion(event) }
+        }
     }
 
     override fun onCreateInputView(): View = Strip(this, { index -> enqueue { composer.choose(index) } }, ::symbol).also {
@@ -98,8 +102,10 @@ class AtlasIme : InputMethodService() {
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
             main.post(showStrip)
+            overlay.show()
         } else {
             composer.stop()
+            overlay.hide()
             try {
                 hideWindow()
                 requestHideSelf(0)
@@ -144,6 +150,7 @@ class AtlasIme : InputMethodService() {
         clearSettlements()
         contact.cancel()
         deadKeyPending = false
+        overlay.hide()
         super.onFinishInput()
     }
 
@@ -483,6 +490,7 @@ class AtlasIme : InputMethodService() {
         contact.releaseKeys()
         composer.stop()
         editor.cancelState()
+        overlay.hide()
         super.onDestroy()
     }
 

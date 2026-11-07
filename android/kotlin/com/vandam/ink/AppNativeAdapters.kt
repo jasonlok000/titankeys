@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
 import android.database.ContentObserver
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -177,6 +178,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     activity.getSystemService(InputMethodManager::class.java).showInputMethodPicker()
                     "null"
                 }
+                "overlay" -> {
+                    activity.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:${activity.packageName}")))
+                    "null"
+                }
                 "watch" -> {
                     watchingRequested = true
                     syncPreview()
@@ -284,6 +290,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("android", Build.VERSION.RELEASE)
             .put("enabled", enabled)
             .put("selected", selected)
+            .put("overlay", Settings.canDrawOverlays(activity))
             .put("learning", typing.learningEnabled())
             .put("calibration", Calibration.selectedId())
             .put("profiles", profiles)

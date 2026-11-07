@@ -10,6 +10,8 @@ import android.view.Surface
 import com.atlas.engine.Calibration
 import com.atlas.engine.Swipe
 import com.atlas.engine.TouchAlignment
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /** A touchpad position from 0 to 1 on each axis, with its event time in milliseconds. */
 data class Sample(val x: Float, val y: Float, val time: Long) {
@@ -24,6 +26,9 @@ data class Sample(val x: Float, val y: Float, val time: Long) {
  */
 class Touchpad(private val display: Display) {
     private var offset = 0f
+    private var landscapeScale = false
+    private var onStep = 0
+    private var lastChecked = Float.NaN
 
     /** In Sliding Mode 1 the firmware delivers the touchpad to apps as screen touches, still from its own device. */
     fun accepts(event: MotionEvent) = event.isFromSource(InputDevice.SOURCE_TOUCHPAD) || event.device?.name == DEVICE
@@ -39,9 +44,16 @@ class Touchpad(private val display: Display) {
         val y = range(event, MotionEvent.AXIS_Y, 748.75f)
         val shiftX = event.rawX - event.x
         val shiftY = event.rawY - event.y - offset
+        val scales = firmwareScales(event)
+        if (scales != null) {
+            for (i in 0 until event.historySize) checkScale(event.getHistoricalY(i) + shiftY, scales.first)
+            // Moves can carry a resampled position, which is not a whole raw step.
+            if (event.actionMasked != MotionEvent.ACTION_MOVE) checkScale(event.rawY - offset, scales.first)
+        }
         fun sample(rawX: Float, rawY: Float, time: Long): Sample {
             val padX = (rawX - x.first) / x.second
-            val padY = (rawY - y.first) / y.second
+            val padY = if (scales == null) (rawY - y.first) / y.second
+                else rawY / (if (landscapeScale) scales.second else scales.first) / RAW_MAX_Y
             return Sample(alignment.x(padX, padY), alignment.y(padY), time)
         }
         val samples = ArrayList<Sample>(event.historySize + 1)
@@ -71,6 +83,34 @@ class Touchpad(private val display: Display) {
         }
     }
 
+    /**
+     * After the display returns to portrait, the Titan 2 firmware can keep scaling touchpad height for
+     * the landscape display until its input configuration next refreshes, such as when the screen turns
+     * off. libinputreader TouchInputMapper::configureInputDevice saves a height from the display size
+     * before updating that size, and computeInputTransforms scales portrait touchpad height by it.
+     * Returns the portrait and landscape scales from raw touchpad steps to positions.
+     */
+    private fun firmwareScales(event: MotionEvent): Pair<Float, Float>? {
+        if (Build.DEVICE != "Titan_2" || event.device?.name != DEVICE || display.rotation != Surface.ROTATION_0) return null
+        fun scale(height: Int) = (height - height / 3 - 50) / RAW_HEIGHT
+        return scale(display.mode.physicalHeight) to scale(display.mode.physicalWidth)
+    }
+
+    /**
+     * The touchpad reports whole raw steps, so with the portrait scale every position lands on a step.
+     * A position between steps means the landscape scale is in use. Distinct on-step positions in a row
+     * mean it has been refreshed; a landscape-scaled position lands on a step only by chance, and the
+     * next one between steps switches back.
+     */
+    private fun checkScale(position: Float, portrait: Float) {
+        val steps = position / portrait
+        if (abs(steps - steps.roundToInt()) > .01f) {
+            landscapeScale = true
+            onStep = 0
+        } else if (position != lastChecked && ++onStep >= ON_STEP_TO_CLEAR) landscapeScale = false
+        lastChecked = position
+    }
+
     private fun systemProperty(name: String): String? = try {
         Class.forName("android.os.SystemProperties").getMethod("get", String::class.java).invoke(null, name) as String
     } catch (error: ReflectiveOperationException) {
@@ -79,5 +119,8 @@ class Touchpad(private val display: Display) {
 
     private companion object {
         const val DEVICE = "touchPad"
+        const val RAW_HEIGHT = 600f
+        const val RAW_MAX_Y = RAW_HEIGHT - 1
+        const val ON_STEP_TO_CLEAR = 2
     }
 }

@@ -8,12 +8,6 @@
 
 **The all-in-one toolkit to power up your keyboard phone.**
 
-<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/juleshall4/atlas"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="54" alt="Get it on Obtainium"></a>
-
-**[Features](#features) · [Use](#use) · [Install](#install) · [Privacy](#privacy) · [Credits](#credits)**
-
-</div>
-
 ---
 
 > **Update, November 2026:** Swipe typing is the first feature in Atlas, and it's ready to try on the Unihertz Titan 2 Elite. Slide across the physical keys without pressing them, and Atlas types the word. I'm now working on more features!

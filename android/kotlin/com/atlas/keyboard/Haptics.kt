@@ -32,16 +32,9 @@ class Haptics(private val context: Context) {
     private var travel = 0f
     private var origin: Sample? = null
     private var last: Sample? = null
-    private var spaceTapAt: Long? = null
 
-    fun tap(space: Boolean, time: Long) {
-        val paired = space && spaceTapAt?.let { time - it in 0..Composer.FULL_STOP_MILLIS } == true
-        spaceTapAt = if (space && !paired) time else null
-        if (!paired && enabled(context)) pulse(HapticPreset.Strong)
-    }
-
-    fun resetTaps() {
-        spaceTapAt = null
+    fun tap() {
+        if (enabled(context)) pulse(HapticPreset.Strong)
     }
 
     fun begin(sample: Sample?) {

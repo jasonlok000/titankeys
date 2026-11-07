@@ -1022,7 +1022,7 @@ class Composer(
         private const val DRAIN_NANOS = 4_000_000L
         private const val DESTINATION_TIMEOUT_MILLIS = 500L
         private const val AFTER_CONTEXT_LENGTH = 32
-        const val FULL_STOP_MILLIS = 400L
+        private const val FULL_STOP_MILLIS = 400L
         private const val PREDICTION_DELAY_MILLIS = 60L
         private val STARTERS = listOf("What", "How", "Where")
         private const val MAX_REMEMBERED = 1000

@@ -35,6 +35,7 @@ interface Words {
 
     fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Recognition) -> Unit)
     fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit)
+    fun allowed(word: String): Boolean
     fun typed(word: String, rememberCase: Boolean = true)
     fun chosen(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun corrected(swipe: Swipe, context: String, recognition: Recognition, word: String)
@@ -633,6 +634,7 @@ class Composer(
 
     fun choose(index: Int) {
         val chosen = composition.alternatives.getOrNull(index) ?: return
+        if (!words.allowed(chosen)) return
         val offered = composition
         if (defer {
             val current = composition
@@ -787,8 +789,9 @@ class Composer(
         val after = anchor.after ?: return
         if (!field.learning) {
             if (field.starters && before.isEmpty() && after.isEmpty()) {
-                composition = Composition.Typed("", false, anchor, STARTERS)
-                show(STARTERS)
+                val starters = STARTERS.filter(words::allowed)
+                composition = Composition.Typed("", false, anchor, starters)
+                show(starters)
             }
             return
         }

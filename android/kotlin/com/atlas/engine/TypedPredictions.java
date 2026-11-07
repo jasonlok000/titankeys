@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Locale;
 import java.util.function.ToDoubleFunction;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /** Dictionary-backed completions for physical typing; never rewrites text automatically. */
@@ -35,14 +36,14 @@ public final class TypedPredictions {
         return before.substring(start);
     }
 
-    String[] suggest(String prefix, List<LanguageHabits.Entry> personal, int today) {
+    String[] suggest(String prefix, List<LanguageHabits.Entry> personal, int today, Predicate<String> allowed) {
         String lower = prefix.toLowerCase(Locale.ROOT).replace('\u2019', '\'');
         Map<String, Double> matches = new LinkedHashMap<>();
         Map<String, Double> similar = new LinkedHashMap<>();
         for (Map.Entry<String, Double> entry : vocabulary.entrySet())
-            if (entry.getKey().startsWith(lower)) matches.put(entry.getKey(), entry.getValue());
+            if (entry.getKey().startsWith(lower) && allowed.test(entry.getKey())) matches.put(entry.getKey(), entry.getValue());
         for (LanguageHabits.Entry entry : personal) {
-            if (!entry.active(today) || !SuggestionPolicy.allowed(entry.word)) continue;
+            if (!entry.active(today) || !SuggestionPolicy.allowed(entry.word) || !allowed.test(entry.word)) continue;
             double frequency = entry.frequency(vocabulary.getOrDefault(entry.word, 0d).floatValue(), today);
             if (entry.word.startsWith(lower)) matches.merge(entry.word, frequency + PERSONAL_COMPLETION_BOOST, Math::max);
             else if (entry.support(today) >= SPELLING_SUPPORT && similar(lower, entry.word)) similar.put(entry.word, frequency);

@@ -43,6 +43,7 @@ public final class SwipeTyping {
     private long configuredRevision = -1;
     private int configuredDay = -1, activeCount;
     private volatile Words wordView = new Words(new String[0], new String[0], new String[0]);
+    private volatile BlockedWords blockedWords;
 
     public static final class Words {
         public final String[] words, descriptions, swipeStatuses;
@@ -73,6 +74,7 @@ public final class SwipeTyping {
     }
     private SwipeTyping(Context context) {
         this.context = context;
+        blockedWords = new BlockedWords(context.getSharedPreferences("blocked_words", 0).getStringSet("words", java.util.Set.of()));
         Calibration.init(context);
         learningEnabled = context.getSharedPreferences("word_learning", 0).getBoolean("enabled",
                 context.getSharedPreferences("swipe_calibration", 0).getBoolean("enabled", true));
@@ -105,7 +107,6 @@ public final class SwipeTyping {
         try (Reader vocabulary = new InputStreamReader(context.getAssets().open("swipe/hungry_jellyfish/vocab.txt"), "UTF-8")) {
             typedPredictions = new TypedPredictions(vocabulary, word -> recogniser.frequency(word));
         }
-        if (wordsAvailable && dictionary.removeIf(this::standard)) saveDictionary();
         syncDictionary(); publish();
         loadError = null; readiness = "ready";
         Log.d("TouchpadSwipe", "Swipe engine ready in " + (SystemClock.uptimeMillis() - began) + " ms");
@@ -180,7 +181,7 @@ public final class SwipeTyping {
                 syncDictionary();
                 boolean personalized = learningEnabled && wordsAvailable && personalise && activeCount > 0;
                 SwipeDecoder.Result[] decoded = recogniser.recognise(gesture, contextWords, personalized);
-                String[] words = SuggestionPolicy.filter(EnglishSpelling.candidates(Arrays.stream(decoded).map(result -> result.word).toArray(String[]::new), variant));
+                String[] words = blockedWords.filter(EnglishSpelling.candidates(Arrays.stream(decoded).map(result -> result.word).toArray(String[]::new), variant));
                 if (personalized) for (int i = 0; i < words.length; i++) words[i] = dictionary.restoreCase(words[i], configuredDay);
                 Prediction prediction = new Prediction(words.length == 0 ? "" : words[0], variant,
                         personalized, epoch, generation, decoded);
@@ -188,7 +189,7 @@ public final class SwipeTyping {
                 timing.finish();
                 main.post(() -> {
                     recognitionTiming.record(timing, false, false, true);
-                    callback.result(words, elapsed, null, prediction);
+                    callback.result(blockedWords.filter(words), elapsed, null, prediction);
                 });
             } catch (RuntimeException | LinkageError error) {
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
@@ -220,7 +221,8 @@ public final class SwipeTyping {
                 if (cancelled.get()) {
                     timing.finish(); completionTiming.record(timing, false, true, false); return;
                 }
-                result = SuggestionPolicy.filter(EnglishSpelling.candidates(typedPredictions.suggest(prefix, personal, day), variant));
+                result = blockedWords.filter(EnglishSpelling.candidates(typedPredictions.suggest(prefix, personal, day,
+                        word -> blockedWords.entries().isEmpty() || wordAllowed(rendered(word, variant))), variant));
                 boolean upper = prefix.length() > 1 && prefix.equals(prefix.toUpperCase(Locale.UK));
                 for (int i = 0; i < result.length; i++) {
                     String word = learningEnabled && wordsAvailable ? dictionary.restoreCase(result[i], today()) : result[i];
@@ -237,7 +239,7 @@ public final class SwipeTyping {
             main.post(() -> {
                 boolean isCancelled = cancelled.get();
                 completionTiming.record(timing, error != null, isCancelled, true);
-                if (!isCancelled) callback.result(words, timing.finished - timing.started, error);
+                if (!isCancelled) callback.result(blockedWords.filter(words), timing.finished - timing.started, error);
             });
         });
     }
@@ -248,6 +250,31 @@ public final class SwipeTyping {
     public String learningStatus() { return (learningEnabled ? "Learning on · " : "Language habits paused · ") + learningStatus + wordsSaveError; }
     String accuracyStats() { return accuracyStatus; }
     public Words learnedWords() { return wordView; }
+    public String[] blockedWords() { return blockedWords.words(); }
+    public boolean wordAllowed(String word) { return blockedWords.allowed(word); }
+
+    public void setWordBlocked(String word, boolean blocked, OperationCallback callback) {
+        worker.execute(() -> {
+            String failure = null;
+            boolean persisted = false;
+            try {
+                BlockedWords replacement = blocked ? blockedWords.add(word) : blockedWords.remove(word);
+                if (!context.getSharedPreferences("blocked_words", 0).edit().putStringSet("words", replacement.entries()).commit())
+                    throw new IOException("Could not save blocked words");
+                blockedWords = replacement;
+                learningGeneration++;
+                configuredRevision = -1;
+                persisted = true;
+                syncDictionary();
+            } catch (IllegalArgumentException error) {
+                failure = error.getMessage();
+            } catch (IOException | RuntimeException | LinkageError error) {
+                failure = persisted ? "Blocked words were saved, but the swipe dictionary could not be refreshed."
+                        : "Could not save blocked words. Try again.";
+            }
+            operationResult(callback, failure);
+        });
+    }
     public void learningEnabled(boolean enabled) {
         learningEnabled = enabled; learningGeneration++;
         context.getSharedPreferences("word_learning", 0).edit().putBoolean("enabled", enabled).apply();
@@ -271,6 +298,32 @@ public final class SwipeTyping {
                 failure = persisted ? "Saved words were cleared, but the swipe dictionary could not be refreshed."
                         : "Could not reset saved words. Existing words were kept.";
                 wordsSaveError = persisted ? " · Swipe dictionary refresh failed" : " · Could not reset saved words";
+                if (recogniser != null && !recogniser.isOpen()) unavailable(error);
+            }
+            try { publish(); } finally { operationResult(callback, failure); }
+        });
+    }
+    public void addWord(String word, OperationCallback callback) {
+        learningGeneration++;
+        worker.execute(() -> {
+            boolean persisted = false;
+            String failure = null;
+            try {
+                configs();
+                if (!wordsAvailable) throw new IOException("Saved words unavailable");
+                LanguageHabits replacement = dictionary.copy();
+                if (blockedWords.contains(word)) throw new IllegalArgumentException("This word is blocked. Remove it from Blocked words first.");
+                replacement.add(word.trim(), today());
+                configs.saveWords(replacement);
+                dictionary = replacement; configuredRevision = -1; wordsSaveError = "";
+                persisted = true;
+                refreshDictionary();
+            } catch (IllegalArgumentException error) {
+                failure = error.getMessage();
+            } catch (IOException | RuntimeException | LinkageError error) {
+                failure = persisted ? "The word was saved, but the swipe dictionary could not be refreshed."
+                        : "Could not save the word. Try again.";
+                wordsSaveError = persisted ? " · Swipe dictionary refresh failed" : " · Could not save word";
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
             }
             try { publish(); } finally { operationResult(callback, failure); }
@@ -328,7 +381,6 @@ public final class SwipeTyping {
                 if (input == null) throw new IOException("Could not open the import file");
                 imported = dictionary.copy();
                 imported.merge(LearningConfigs.readExport(input));
-                if (recogniser != null) imported.removeIf(this::standard);
             } catch (IOException | RuntimeException error) {
                 Log.w("TouchpadSwipe", "Could not read learning backup", error);
                 operationResult(callback, "Could not read the backup. Choose a valid Atlas backup file.");
@@ -371,7 +423,8 @@ public final class SwipeTyping {
     static int today() { return (int) (System.currentTimeMillis() / 86400000L); }
     private void syncDictionary() {
         if (recogniser == null || (configuredRevision == dictionary.revision && configuredDay == today())) return;
-        List<LanguageHabits.Entry> active = wordsAvailable ? dictionary.active(today()) : java.util.Collections.emptyList();
+        List<LanguageHabits.Entry> active = wordsAvailable ? dictionary.active(today()).stream()
+                .filter(entry -> wordAllowed(entry.word)).toList() : java.util.Collections.emptyList();
         String[] words = active.stream().map(entry -> entry.word).toArray(String[]::new);
         float[] frequencies = new float[active.size()];
         for (int i = 0; i < frequencies.length; i++) frequencies[i] = active.get(i).frequency(recogniser.frequency(words[i]), today());
@@ -401,7 +454,7 @@ public final class SwipeTyping {
         if (!learningEnabled || !wordsAvailable || generation != learningGeneration || word.isEmpty()) return;
         worker.execute(() -> {
             if (!learningEnabled || !wordsAvailable || generation != learningGeneration || recogniser == null) return;
-            if (standard(word)) return;
+            if (standard(word) || !wordAllowed(word)) return;
             long revision = dictionary.revision;
             dictionary.typed(intended, today(), rememberCase);
             if (revision == dictionary.revision) return;
@@ -429,7 +482,7 @@ public final class SwipeTyping {
         final String[] contextWords = SentenceContext.words(text);
         worker.execute(() -> {
             try {
-                if (!feedbackEnabled() || generation != learningGeneration || recogniser == null || prediction.generation != generation) return;
+                if (!feedbackEnabled() || generation != learningGeneration || recogniser == null || prediction.generation != generation || !wordAllowed(word)) return;
                 long revision = dictionary.revision;
                 boolean direct = evidence == LearningEvidence.CHOICE || evidence == LearningEvidence.CORRECTION;
                 if (evidence == LearningEvidence.KEPT) {

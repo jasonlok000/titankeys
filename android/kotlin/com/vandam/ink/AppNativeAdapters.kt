@@ -111,8 +111,16 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     set(data.getString("key"), data.get("value"))
                     "null"
                 }
+                "addWord" -> {
+                    typing.addWord(data.getString("word")) { error -> operationResult(error, complete) }
+                    null
+                }
                 "removeWord" -> {
                     typing.removeWord(data.getString("word")) { error -> operationResult(error, complete) }
+                    null
+                }
+                "blockWord", "unblockWord" -> {
+                    typing.setWordBlocked(data.getString("word"), operation == "blockWord") { error -> operationResult(error, complete) }
                     null
                 }
                 "clearWords" -> {
@@ -253,6 +261,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("hapticPreset", Haptics.preset(activity).id)
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
             .put("words", words)
+            .put("blockedWords", JSONArray(typing.blockedWords().toList()))
     }
 
     private fun set(key: String, value: Any) {

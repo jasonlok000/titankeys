@@ -51,6 +51,7 @@ fun main() {
             val info = EditorInfo().apply { packageName = "test.external.editor"; fieldId = 1 }
             editor = ConnectionEditor({ connection }, { info }, { _, _ -> })
             val words = object : Words {
+                override fun allowed(word: String) = true
                 override fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Words.Recognition) -> Unit) =
                     result(Words.Recognition(listOf("hello"), null))
                 override fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit) = result(emptyList())

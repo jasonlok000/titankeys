@@ -24,6 +24,7 @@ export type State = {
   hapticPreset: HapticPreset;
   spelling: Spelling;
   words: { word: string; description: string }[];
+  blockedWords: string[];
 };
 
 export type Settings = Pick<State, "learning" | "calibration" | "tapKeys" | "autoCapitalise" | "suggestionBar" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling">;
@@ -48,9 +49,33 @@ export async function update(changes: Partial<Settings>) {
   await state.refresh();
 }
 
+export async function addWord(word: string) {
+  try {
+    await atlas("addWord", { word });
+  } finally {
+    await state.refresh();
+  }
+}
+
 export async function removeWord(word: string) {
   try {
     await atlas("removeWord", { word });
+  } finally {
+    await state.refresh();
+  }
+}
+
+export async function blockWord(word: string) {
+  try {
+    await atlas("blockWord", { word });
+  } finally {
+    await state.refresh();
+  }
+}
+
+export async function unblockWord(word: string) {
+  try {
+    await atlas("unblockWord", { word });
   } finally {
     await state.refresh();
   }

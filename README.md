@@ -1,18 +1,20 @@
 <div align="center">
 
-<img src="assets/icon.svg" width="96" alt="Atlas app icon">
+<img src="assets/icon.svg" width="112" alt="Atlas app icon">
 
 # Atlas
 
-![Version 0.0.0](https://img.shields.io/badge/version-0.0.0-111111)
+![Version 0.0.0](https://img.shields.io/badge/version-0.0.0-111111?style=flat-square)
+
+**The all-in-one toolkit to power up your keyboard phone.**
 
 <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/juleshall4/atlas"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="54" alt="Get it on Obtainium"></a>
 
-The all-in-one toolkit to power up your keyboard phone.
-
-**Update, November 2026:** Swipe typing is the first feature in Atlas, and it's ready to try on the Unihertz Titan 2 Elite. Slide across the physical keys without pressing them, and Atlas types the word. I'm now working on what comes next.
-
 </div>
+
+---
+
+> **Update, November 2026:** Swipe typing is the first feature in Atlas, and it's ready to try on the Unihertz Titan 2 Elite. Slide across the physical keys without pressing them, and Atlas types the word. I'm now working on more features!
 
 ## Features
 
@@ -20,7 +22,7 @@ The all-in-one toolkit to power up your keyboard phone.
 
 Swipe typing currently supports only the Unihertz Titan 2 Elite.
 
-<p>
+<p align="center">
   <img src="assets/home.png" width="32%" alt="Atlas home screen: a swipe trail across the keyboard types hello, with suggestions below">
   <img src="assets/spelling.png" width="32%" alt="Spelling settings: British or American">
   <img src="assets/vibration.png" width="32%" alt="Swipe vibration settings: off, light, default, or strong">
@@ -58,6 +60,8 @@ Atlas installs through [Obtainium](https://github.com/ImranR98/Obtainium), which
 ## Privacy
 
 Everything runs and is stored locally on your device. No data is stored or monitored by me or any third party.
+
+---
 
 ## Credits
 

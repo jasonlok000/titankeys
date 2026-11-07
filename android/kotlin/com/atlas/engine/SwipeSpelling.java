@@ -18,7 +18,8 @@ final class SwipeSpelling {
             "they'd", "they'll", "they're", "they've", "he's", "she's",
             "that'll", "that's", "there'll", "there're", "there's", "there've",
             "what'll", "what're", "what's", "what've", "when's", "where's",
-            "who'll", "who's", "who've", "why's", "how's", "it'll", "he'd", "who'd", "that'd"
+            "who'll", "who's", "who've", "why's", "how's", "it'll", "he'd", "who'd", "that'd",
+            "o'clock", "y'all", "ma'am", "here's", "could've", "should've", "would've", "might've", "must've"
         };
         for (String word : contractions) {
             CONTRACTIONS.put(word.replace("'", "").toLowerCase(Locale.ROOT), word);
@@ -44,6 +45,11 @@ final class SwipeSpelling {
             if (known >= 1) spellings.put(entry.getValue().toLowerCase(Locale.ROOT), Math.min(255, known));
         }
         return spellings;
+    }
+
+    /** Whether these letters or this spelling can only be a contraction, as "dont" and "don't" can. */
+    static boolean onlyContraction(String word) {
+        return CONTRACTIONS.containsKey(word.replace("'", ""));
     }
 
     /** The lowercase contraction for letters that can only be a contraction, otherwise the same word. */

@@ -14,6 +14,8 @@ public final class SwipeRecognizer implements AutoCloseable {
     private static final float MAX_SENTENCE_CONTEXT_SCORE = 4f;
     private static final float MAX_PATH_SCORE_GAP = 3f;
     private static final int NEXT_WORD_CANDIDATES = 3000;
+    // Stands in for the start of a sentence, which the context model would otherwise not score at all.
+    private static final String[] SENTENCE_START = {"so"};
     private org.futo.ml.inference.SwipeDecoder decoder;
     private org.futo.ml.inference.NativeDictionary base, personal, contractions;
     private Set<String> learnedWords = Set.of();
@@ -72,29 +74,36 @@ public final class SwipeRecognizer implements AutoCloseable {
     org.futo.ml.inference.SwipeDecoder.Result[] recognise(Swipe gesture, String[] context, boolean personalized,
             Predicate<String> allowed) {
         org.futo.ml.inference.SwipeDecoder.Result[] results = decoder.recognise(
-                gesture.x, gesture.y, gesture.time, context, new float[]{1, personalized ? 1 : 0, 1});
+                gesture.x, gesture.y, gesture.time, scoringContext(context), new float[]{1, personalized ? 1 : 0, 1});
         rawResults = results.clone();
-        results = java.util.Arrays.stream(contractionSpellings(results)).filter(result -> allowed.test(result.word))
+        results = java.util.Arrays.stream(contractionSpellings(results, decoder.contextWeight())).filter(result -> allowed.test(result.word))
                 .toArray(org.futo.ml.inference.SwipeDecoder.Result[]::new);
         return rank(gesture, results, decoder.contextWeight(), decoder.shapeNormalizer(), context.length,
                 personalized ? learnedWords : Set.of());
     }
 
-    /** Keeps one result per spelling, as "dont" and "don't" display identically. Expects the best score first. */
-    static org.futo.ml.inference.SwipeDecoder.Result[] contractionSpellings(org.futo.ml.inference.SwipeDecoder.Result[] results) {
+    /**
+     * Keeps one result per spelling, as "dont" and "don't" display identically. Expects the best score first.
+     * The context model rates some contractions far too low, such as "I'm", so one with no other reading
+     * is never penalised for its context.
+     */
+    static org.futo.ml.inference.SwipeDecoder.Result[] contractionSpellings(org.futo.ml.inference.SwipeDecoder.Result[] results, float contextWeight) {
         Map<String, org.futo.ml.inference.SwipeDecoder.Result> spellings = new java.util.LinkedHashMap<>();
         for (org.futo.ml.inference.SwipeDecoder.Result result : results) {
             String spelling = SwipeSpelling.contraction(result.word);
-            spellings.putIfAbsent(spelling, new org.futo.ml.inference.SwipeDecoder.Result(
-                    spelling, result.score, result.ctcScore, result.lmScore));
+            boolean neutral = result.lmScore < 0 && SwipeSpelling.onlyContraction(spelling);
+            spellings.putIfAbsent(spelling, new org.futo.ml.inference.SwipeDecoder.Result(spelling,
+                    neutral ? result.score - contextWeight * result.lmScore : result.score,
+                    result.ctcScore, neutral ? 0 : result.lmScore));
         }
         return spellings.values().toArray(new org.futo.ml.inference.SwipeDecoder.Result[0]);
     }
 
+    static String[] scoringContext(String[] context) { return context.length == 0 ? SENTENCE_START : context; }
+
     public Map<String, Double> nextWords(String[] context) {
-        if (context.length == 0) return Map.of();
         Map<String, Double> scores = new HashMap<>();
-        for (org.futo.ml.inference.SwipeDecoder.Result result : decoder.predictNext(context, NEXT_WORD_CANDIDATES))
+        for (org.futo.ml.inference.SwipeDecoder.Result result : decoder.predictNext(scoringContext(context), NEXT_WORD_CANDIDATES))
             scores.putIfAbsent(TypedPredictions.key(result.word), (double) result.score);
         return scores;
     }
@@ -118,7 +127,8 @@ public final class SwipeRecognizer implements AutoCloseable {
                 && endpointDistance(gesture, shapeBest.word, false) <= .25f
                 && endpointDistance(gesture, shapeBest.word, true) <= .25f;
         float contextLimit = MAX_CONTEXT_SCORE;
-        if (clearEndpoints) contextLimit = .5f;
+        // A sentence start is a weak hint, so it gets the same small limit as a clean swipe.
+        if (clearEndpoints || contextWords == 0) contextLimit = .5f;
         else if (contextWords >= 2) contextLimit = MAX_SENTENCE_CONTEXT_SCORE;
         Map<String, EndpointScores> groups = new HashMap<>();
         float[] adjustedScores = new float[results.length];

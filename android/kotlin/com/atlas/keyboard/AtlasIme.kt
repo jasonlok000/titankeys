@@ -219,7 +219,6 @@ class AtlasIme : InputMethodService() {
 
     private fun symbol(symbol: String) {
         enqueue {
-            haptics.resetTaps()
             composer.symbol(symbol)
             modifiers.consume()
             showModifiers()
@@ -227,7 +226,6 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun clearSettlements() {
-        haptics.resetTaps()
         inputGeneration++
         drainScheduled = false
         settlements.values.forEach(main::removeCallbacks)
@@ -314,7 +312,6 @@ class AtlasIme : InputMethodService() {
     private fun outcome(outcome: Contact.Outcome) {
         when (outcome) {
             is Contact.Outcome.Swipe -> {
-                haptics.resetTaps()
                 if (modifiers.alt != Modifiers.Level.Off) {
                     // Sideways swipes page through the symbols on the strip.
                     val dx = outcome.points.last().x - outcome.points.first().x
@@ -328,12 +325,9 @@ class AtlasIme : InputMethodService() {
                 modifiers.consume()
             }
             is Contact.Outcome.Tap -> {
-                if (!isTapKey(outcome.key)) {
-                    haptics.resetTaps()
-                    return
-                }
+                if (!isTapKey(outcome.key)) return
                 val key = if (outcome.key == Layout.SPACE) " " else outcome.key
-                haptics.tap(space = key == " ", time = outcome.endedAt)
+                haptics.tap()
                 if (key == " ") {
                     composer.space(repeated = false, time = outcome.endedAt)
                 } else {
@@ -396,7 +390,6 @@ class AtlasIme : InputMethodService() {
 
     /** Captures each app-handled key as a paired command in the composer's ordered input queue. */
     private fun key(event: KeyEvent): Boolean {
-        haptics.resetTaps()
         if (Modifiers.isModifier(event.keyCode)) {
             modifiers.key(event)
             return true

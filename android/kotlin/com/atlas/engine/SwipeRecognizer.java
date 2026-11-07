@@ -19,6 +19,9 @@ public final class SwipeRecognizer implements AutoCloseable {
     private static final String[] SENTENCE_START = {"so"};
     private static final double LOOK_ALIKE_NEXT_WORD_EVIDENCE = 3;
     private static final int LOOK_ALIKE_CANDIDATES = 8000;
+    private static final int CANDIDATES = 16;
+    // The engine cuts its list after counting context, so a saved word needs a deeper search to stay in it.
+    private static final int SAVED_WORD_CANDIDATES = 48;
     private org.futo.ml.inference.SwipeDecoder decoder;
     private org.futo.ml.inference.NativeDictionary base, personal, contractions;
     private Set<String> learnedWords = Set.of();
@@ -78,12 +81,42 @@ public final class SwipeRecognizer implements AutoCloseable {
     org.futo.ml.inference.SwipeDecoder.Result[] recognise(Swipe gesture, String[] context, boolean personalized,
             Predicate<String> allowed) {
         org.futo.ml.inference.SwipeDecoder.Result[] results = decoder.recognise(
-                gesture.x, gesture.y, gesture.time, scoringContext(context), new float[]{1, personalized ? 1 : 0, 1});
+                gesture.x, gesture.y, gesture.time, scoringContext(context), new float[]{1, personalized ? 1 : 0, 1},
+                personalized ? SAVED_WORD_CANDIDATES : CANDIDATES);
+        if (personalized) results = savedWords(results, learnedWords, decoder.contextWeight());
         rawResults = results.clone();
         results = java.util.Arrays.stream(contractionSpellings(results, decoder.contextWeight())).filter(result -> allowed.test(result.word))
                 .toArray(org.futo.ml.inference.SwipeDecoder.Result[]::new);
         return rank(gesture, results, decoder.contextWeight(), decoder.shapeNormalizer(), context.length,
                 personalized ? learnedWords : Set.of());
+    }
+
+    /**
+     * Keeps the engine's usual words, and any saved word from the deeper search. Saved words are mostly names
+     * that the context model has never seen, so its score for them is a guess from their letters. They take the
+     * best context score instead, and the swipe's shape decides.
+     */
+    static org.futo.ml.inference.SwipeDecoder.Result[] savedWords(org.futo.ml.inference.SwipeDecoder.Result[] results,
+            Set<String> learnedWords, float contextWeight) {
+        int count = Math.min(CANDIDATES, results.length);
+        java.util.List<org.futo.ml.inference.SwipeDecoder.Result> kept = new java.util.ArrayList<>(Arrays.asList(results).subList(0, count));
+        // The engine always keeps its best shape match, in the last place when it would otherwise miss the list.
+        org.futo.ml.inference.SwipeDecoder.Result shapeBest = null;
+        for (org.futo.ml.inference.SwipeDecoder.Result result : results)
+            if (shapeBest == null || result.ctcScore > shapeBest.ctcScore) shapeBest = result;
+        if (shapeBest != null && !kept.contains(shapeBest)) kept.set(count - 1, shapeBest);
+        for (org.futo.ml.inference.SwipeDecoder.Result result : results)
+            if (learnedWords.contains(result.word) && !kept.contains(result)) kept.add(result);
+        float bestContext = Float.NEGATIVE_INFINITY;
+        for (org.futo.ml.inference.SwipeDecoder.Result result : kept) bestContext = Math.max(bestContext, result.lmScore);
+        org.futo.ml.inference.SwipeDecoder.Result[] scored = new org.futo.ml.inference.SwipeDecoder.Result[kept.size()];
+        for (int i = 0; i < scored.length; i++) {
+            org.futo.ml.inference.SwipeDecoder.Result result = kept.get(i);
+            scored[i] = learnedWords.contains(result.word) ? new org.futo.ml.inference.SwipeDecoder.Result(result.word,
+                    result.score + contextWeight * (bestContext - result.lmScore), result.ctcScore, bestContext) : result;
+        }
+        Arrays.sort(scored, (a, b) -> Float.compare(b.score, a.score));
+        return scored;
     }
 
     /**

@@ -10,6 +10,8 @@
 
 <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/juleshall4/atlas"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="54" alt="Get it on Obtainium"></a>
 
+**[Features](#features) · [Use](#use) · [Install](#install) · [Privacy](#privacy) · [Credits](#credits)**
+
 </div>
 
 ---

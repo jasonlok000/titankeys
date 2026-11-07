@@ -2,17 +2,15 @@
 
 <img src="assets/icon.svg" width="112" alt="Atlas app icon">
 
-# Atlas
+### Atlas
 
 ![Version 0.0.0](https://img.shields.io/badge/version-0.0.0-111111?style=flat-square)
 
-**The all-in-one toolkit to power up your keyboard phone.**
+**A toolkit to power up your keyboard phone!**
 
 </div>
 
----
-
-> **Update, November 2026:** Swipe typing is the first feature in Atlas, and it's ready to try on the Unihertz Titan 2 Elite. Slide across the physical keys without pressing them, and Atlas types the word. I'm now working on more features!
+> **Update, November 2026:** Swipe typing is the first feature in Atlas, and it's ready to try on the Unihertz Titan 2 Elite. Slide across the physical keys without pressing them, and Atlas types the word. I'm now working on more features.
 
 ## Features
 
@@ -31,16 +29,6 @@ Swipe typing currently supports only the Unihertz Titan 2 Elite.
 - Lightly tap configured tap keys to type the letter and a space.
 - Atlas learn your vocabulary the more you use it.
 
-#### Use
-
-| To do this | Do this |
-| --- | --- |
-| Swipe a word | Slide across the letters without pressing the keys, then lift. |
-| Pick another word | Tap a suggestion on the strip above the keyboard. |
-| Type a full stop | Press Space twice. |
-| Use Shift or Alt | Press once for the next letter, twice quickly to lock, and again to release. |
-| Find more symbols | Press Alt, then swipe sideways on the keyboard to explore. |
-
 ## Install
 
 Atlas installs through [Obtainium](https://github.com/ImranR98/Obtainium), which also keeps it up to date.
@@ -58,8 +46,6 @@ Atlas installs through [Obtainium](https://github.com/ImranR98/Obtainium), which
 ## Privacy
 
 Everything runs and is stored locally on your device. No data is stored or monitored by me or any third party.
-
----
 
 ## Credits
 

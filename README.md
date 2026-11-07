@@ -16,12 +16,6 @@
 
 ### Swipe typing
 
-<p align="center">
-  <img src="assets/home.png" width="32%" alt="Atlas home screen: a swipe trail across the keyboard types hello, with suggestions below">
-  <img src="assets/spelling.png" width="32%" alt="Spelling settings: British or American">
-  <img src="assets/vibration.png" width="32%" alt="Swipe vibration settings: off, normal, or strong">
-</p>
-
 - Swipe across the physical keys to type.
 - Get suggestions for both swiped and typed words.
 - Lightly tap configured tap keys to type the letter and a space.

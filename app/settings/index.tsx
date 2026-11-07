@@ -29,7 +29,7 @@ export default function Settings() {
       <Field label="Swipe vibration" href="/settings/vibration">{vibrationLabel(settings)}</Field>
     </Section>
     <Section title="Personal">
-      <Field label="Your data" href="/settings/data" />
+      <Field label="Your words" href="/settings/data" />
     </Section>
     <Section title="Help">
       <Field label="Guide" href="/settings/guide" />

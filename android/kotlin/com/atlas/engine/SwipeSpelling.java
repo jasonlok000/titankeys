@@ -3,9 +3,11 @@ package com.atlas.engine;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.ToDoubleFunction;
 
 final class SwipeSpelling {
     private static final Map<String, String> CONTRACTIONS = new HashMap<>();
+    private static final Map<String, Float> SHARED_LETTERS = new HashMap<>();
 
     static {
         String[] contractions = {
@@ -16,11 +18,38 @@ final class SwipeSpelling {
             "they'd", "they'll", "they're", "they've", "he's", "she's",
             "that'll", "that's", "there'll", "there're", "there's", "there've",
             "what'll", "what're", "what's", "what've", "when's", "where's",
-            "who'll", "who's", "who've", "why's", "how's"
+            "who'll", "who's", "who've", "why's", "how's", "it'll", "he'd", "who'd", "that'd"
         };
         for (String word : contractions) {
             CONTRACTIONS.put(word.replace("'", "").toLowerCase(Locale.ROOT), word);
         }
+        // These share their letters with another word, so context chooses. Dictionary frequencies keep the usual order.
+        SHARED_LETTERS.put("it's", 162f);
+        SHARED_LETTERS.put("i'll", 164f);
+        SHARED_LETTERS.put("i'd", 136f);
+        SHARED_LETTERS.put("let's", 145f);
+        SHARED_LETTERS.put("we're", 106f);
+        SHARED_LETTERS.put("we'll", 94f);
+        SHARED_LETTERS.put("we'd", 89f);
+        SHARED_LETTERS.put("he'll", 94f);
+        SHARED_LETTERS.put("she'll", 84f);
+        SHARED_LETTERS.put("she'd", 92f);
+    }
+
+    /** Lowercase spellings to give the decoder, so the context model scores "don't" rather than "dont". */
+    static Map<String, Float> contractions(ToDoubleFunction<String> frequency) {
+        Map<String, Float> spellings = new HashMap<>(SHARED_LETTERS);
+        for (Map.Entry<String, String> entry : CONTRACTIONS.entrySet()) {
+            float known = (float) frequency.applyAsDouble(entry.getKey());
+            if (known >= 1) spellings.put(entry.getValue().toLowerCase(Locale.ROOT), Math.min(255, known));
+        }
+        return spellings;
+    }
+
+    /** The lowercase contraction for letters that can only be a contraction, otherwise the same word. */
+    static String contraction(String word) {
+        String spelling = CONTRACTIONS.get(word);
+        return spelling == null ? word : spelling.toLowerCase(Locale.ROOT);
     }
 
     static String restore(String word) {

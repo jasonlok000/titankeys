@@ -338,7 +338,7 @@ class AtlasIme : InputMethodService() {
                 if (key == " ") {
                     composer.space(repeated = false, time = outcome.endedAt)
                 } else {
-                    val word = if (key == "I" || modifiers.shift != Modifiers.Level.Off) key else key.lowercase()
+                    val word = if ((key == "I" && TypingSettings.autoCapitalise(this)) || modifiers.shift != Modifiers.Level.Off) key else key.lowercase()
                     composer.type(word, letterTap = true)
                 }
                 modifiers.consume()

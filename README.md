@@ -31,13 +31,7 @@ Swipe typing currently supports only the Unihertz Titan 2 Elite.
 - Tap configured lightly to type the letter and a space.
 - Let Atlas learn your words, then export or import them.
 
-Swipe typing is currently optimised for English, with potential support for other languages later.
-
-#### Set up
-
-1. **Enable Atlas:** Turn on Atlas in your on-screen keyboard settings.
-2. **Choose Atlas:** Make Atlas the keyboard you're using.
-3. **Try it:** Swipe a word on the keyboard.
+Swipe typing is currently optimised for English only.
 
 #### Use
 

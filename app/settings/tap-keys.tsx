@@ -15,7 +15,7 @@ export default function TapKeys() {
       if (!keys.includes(key)) save.run({ tapKeys: keys + key });
     });
   }, [adding, keys]);
-  return <Screen title="Tap keys" subtitle="Lightly tap a key you add here to type it.">
+  return <Screen title="Tap keys" subtitle="Type these keys with a light tap instead of a full press.">
     <Row title={adding ? "Press a letter or Space" : "Add key"} endIcon={adding ? undefined : add}
       onPress={() => setAdding(!adding)} />
     {[...keys].map(key => <Row key={key} title={tapKeyLabel(key)}

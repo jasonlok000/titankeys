@@ -8,7 +8,7 @@ export default function Guide() {
       <Row title="Pick another word" subtitle="Tap a suggestion on the strip above the keyboard." wrapSubtitle />
     </Section>
     <Section title="Keys">
-      <Row title="Tap keys" subtitle="Lightly tap a letter you've added to type it." wrapSubtitle />
+      <Row title="Tap keys" subtitle="Type chosen keys with a light tap instead of a full press." wrapSubtitle />
       <Row title="Full stop" subtitle="Press space twice." wrapSubtitle />
       <Row title="Shift and Alt" subtitle="Press once for the next letter, twice quickly to lock, and again to release." wrapSubtitle />
     </Section>

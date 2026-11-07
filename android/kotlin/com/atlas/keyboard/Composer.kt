@@ -35,6 +35,7 @@ interface Words {
 
     fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Recognition) -> Unit)
     fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit)
+    fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit)
     fun allowed(word: String): Boolean
     fun known(word: String): Boolean
     fun typed(word: String, rememberCase: Boolean = true)
@@ -116,6 +117,8 @@ class Composer(
     private var fullStop: FullStop? = null
     private val manualWord = TypedWords()
     private var correcting: Composition.Swiped? = null
+    private var awaitingNextWord: Composition.Swiped? = null
+    private var lookAlikeChangedAt = -1
 
     var liftOffMillis = 0
 
@@ -135,6 +138,7 @@ class Composer(
         selection = Selection(selectionStart, selectionEnd)
         selectionConfirmed = selectionStart >= 0 && selectionEnd >= 0
         reset()
+        lookAlikeChangedAt = -1
         identity = next
         pendingInput.addAll(carried)
         recogniseNext()
@@ -152,6 +156,7 @@ class Composer(
             editSnapshot = null
             manualWord.clear()
             correcting = null
+            awaitingNextWord = null
             expectedSelections.clear()
             show(emptyList())
             return
@@ -182,6 +187,7 @@ class Composer(
         editSnapshot = null
         manualWord.clear()
         correcting = null
+        awaitingNextWord = null
         expectedSelections.clear()
         show(emptyList())
     }
@@ -327,7 +333,11 @@ class Composer(
                 pending.swipe
             }
         } else pending.swipe
-        if (!resumes) leave()
+        if (!resumes) {
+            leave()
+            awaitingNextWord = null
+            holdForNextWord(previous, anchor)
+        }
         composition = Composition.None
         show(emptyList())
         val resumed = previous.takeIf { resumes }
@@ -363,6 +373,7 @@ class Composer(
                     if (confirmed) {
                         learnWord(completed, correction)
                         show(choices)
+                        checkLookAlike()
                     }
                 }
                 return@recognise
@@ -383,6 +394,7 @@ class Composer(
         invalidate(false)
         fullStop = null
         val anchor = snapshot()
+        holdForNextWord(composition as? Composition.Swiped, anchor)
         val correction = correcting
         if (correction != null && anchor != editSnapshot) {
             correcting = null
@@ -422,6 +434,7 @@ class Composer(
         composition = Composition.None
         manualWord.clear()
         correcting = null
+        awaitingNextWord = null
         val before = editor.before().orEmpty()
         val after = editor.after().orEmpty()
         val around = symbol == "&" || symbol == "="
@@ -439,8 +452,9 @@ class Composer(
         if (defer(transferable = true) { space(repeated, time) }) return
         leave()
         invalidate(false)
-        composition = Composition.None
         val anchor = snapshot()
+        holdForNextWord(composition as? Composition.Swiped, anchor)
+        composition = Composition.None
         val before = anchor.before.orEmpty()
         val correction = correcting
         val completed = completeManualWord(anchor)
@@ -482,6 +496,7 @@ class Composer(
         composition = Composition.None
         automaticSpace = null
         fullStop = null
+        awaitingNextWord = null
         if (word || correcting != null || source != null) manualWord.clear()
         else manualWord.edit("\b", null, false)
         correcting = null
@@ -521,6 +536,7 @@ class Composer(
         invalidate(false)
         composition = Composition.None
         fullStop = null
+        awaitingNextWord = null
         val anchor = snapshot()
         val correction = correcting
         val completed = completeManualWord(anchor)
@@ -580,6 +596,7 @@ class Composer(
         fullStop = null
         manualWord.clear()
         correcting = null
+        awaitingNextWord = null
         expectedSelections.clear()
         val owner = editor.identity()
         if (owner == null || !sameIdentity(identity, owner)) {
@@ -682,6 +699,69 @@ class Composer(
             }
             Composition.None -> Unit
         }
+    }
+
+    /** Only a swiped word the user has not chosen themselves can change once the next word arrives. */
+    private fun holdForNextWord(swiped: Composition.Swiped?, anchor: Snapshot) {
+        if (swiped == null) return
+        val held = !swiped.chosen && swiped.trailingSpace && anchor == swiped.snapshot && !anchor.selected
+            && anchor.knownSelection && anchor.before?.endsWith(swiped.inserted) == true
+        awaitingNextWord = swiped.takeIf { held }
+    }
+
+    /** Once the next word is finished, its fit decides between look-alikes such as "we're" and "were". */
+    private fun checkLookAlike() {
+        val earlier = awaitingNextWord ?: return
+        val anchor = snapshot()
+        val before = anchor.before
+        val followed = anchor.selection.end - earlier.snapshot.selection.end
+        if (followed == 0 && !anchor.selected) return
+        if (before == null || anchor.selected || followed !in 1..before.length) {
+            awaitingNextWord = null
+            return
+        }
+        val following = before.takeLast(followed)
+        val next = following.trimEnd(' ', '.', ',', '!', '?', ';', ':')
+        if (next == following) {
+            if (TypedPredictions.prefix(next) != next) awaitingNextWord = null
+            return
+        }
+        awaitingNextWord = null
+        val start = earlier.snapshot.selection.end - earlier.tail.length
+        if (next.isEmpty() || TypedPredictions.prefix(next) != next || start == lookAlikeChangedAt
+            || !before.dropLast(followed).endsWith(earlier.inserted)) return
+        val current = epoch
+        words.lookAlike(earlier.context, earlier.word, next) { replacement ->
+            if (replacement != null && current == epoch && !hasPendingInput && snapshot() == anchor) {
+                replaceLookAlike(earlier, cased(replacement, earlier), following, start, anchor)
+            }
+        }
+    }
+
+    private fun cased(replacement: String, original: Composition.Swiped): String {
+        val word = original.word
+        if (word.length > 2 && word == word.uppercase() && word != word.lowercase()) return replacement.uppercase()
+        val shifted = word.first().isUpperCase() && !word.lowercase().startsWith("i'")
+        val sentenceCase = field.sentenceCapitalisation && autoCapitalise()
+        return SwipeTyping.capitalise(replacement, original.context, 0, shifted, sentenceCase)
+    }
+
+    private fun replaceLookAlike(earlier: Composition.Swiped, replacement: String, following: String, start: Int, anchor: Snapshot) {
+        val showing = composition
+        invalidate(false)
+        if (!edit(earlier.tail.length + following.length, "$replacement $following")) return
+        lookAlikeChangedAt = start
+        val accepted = snapshot()
+        if (automaticSpace == anchor) automaticSpace = accepted
+        fullStop = fullStop?.let { if (it.snapshot == anchor) FullStop(it.time, accepted) else it }
+        if (showing is Composition.Swiped) {
+            val context = accepted.before?.removeSuffix(showing.inserted) ?: showing.context
+            composition = showing.copy(context = context, snapshot = accepted)
+        } else {
+            composition = Composition.None
+            show(emptyList())
+        }
+        confirmState(accepted)
     }
 
     private fun edit(count: Int, text: String, after: Int = 0): Boolean {
@@ -801,6 +881,7 @@ class Composer(
         if (!anchor.available || !anchor.knownSelection || anchor.selected) return
         val before = anchor.before ?: return
         val after = anchor.after ?: return
+        checkLookAlike()
         if (!field.learning) {
             if (field.starters && before.isEmpty() && after.isEmpty()) {
                 val starters = STARTERS.filter(words::allowed)

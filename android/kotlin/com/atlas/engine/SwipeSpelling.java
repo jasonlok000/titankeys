@@ -8,6 +8,7 @@ import java.util.function.ToDoubleFunction;
 final class SwipeSpelling {
     private static final Map<String, String> CONTRACTIONS = new HashMap<>();
     private static final Map<String, Float> SHARED_LETTERS = new HashMap<>();
+    private static final Map<String, String> LOOK_ALIKES = new HashMap<>();
 
     static {
         String[] contractions = {
@@ -35,6 +36,14 @@ final class SwipeSpelling {
         SHARED_LETTERS.put("he'll", 94f);
         SHARED_LETTERS.put("she'll", 84f);
         SHARED_LETTERS.put("she'd", 92f);
+        String[][] lookAlikes = {
+            {"were", "we're"}, {"its", "it's"}, {"well", "we'll"}, {"ill", "i'll"}, {"hell", "he'll"},
+            {"shell", "she'll"}, {"lets", "let's"}, {"shed", "she'd"}, {"wed", "we'd"}, {"id", "i'd"}
+        };
+        for (String[] pair : lookAlikes) {
+            LOOK_ALIKES.put(pair[0], pair[1]);
+            LOOK_ALIKES.put(pair[1], pair[0]);
+        }
     }
 
     /** Lowercase spellings to give the decoder, so the context model scores "don't" rather than "dont". */
@@ -56,6 +65,11 @@ final class SwipeSpelling {
     static String contraction(String word) {
         String spelling = CONTRACTIONS.get(word);
         return spelling == null ? word : spelling.toLowerCase(Locale.ROOT);
+    }
+
+    /** The word spelled with the same letters, as "were" and "we're" are, or null if there is none. */
+    static String lookAlike(String word) {
+        return LOOK_ALIKES.get(word.replace('\u2019', '\'').toLowerCase(Locale.ROOT));
     }
 
     static String restore(String word) {

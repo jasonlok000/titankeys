@@ -4,6 +4,7 @@ import android.content.Context;
 import com.atlas.keyboard.Layout;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -16,6 +17,8 @@ public final class SwipeRecognizer implements AutoCloseable {
     private static final int NEXT_WORD_CANDIDATES = 3000;
     // Stands in for the start of a sentence, which the context model would otherwise not score at all.
     private static final String[] SENTENCE_START = {"so"};
+    private static final double LOOK_ALIKE_EVIDENCE = 2;
+    private static final int LOOK_ALIKE_CANDIDATES = 8000;
     private org.futo.ml.inference.SwipeDecoder decoder;
     private org.futo.ml.inference.NativeDictionary base, personal, contractions;
     private Set<String> learnedWords = Set.of();
@@ -106,6 +109,40 @@ public final class SwipeRecognizer implements AutoCloseable {
         for (org.futo.ml.inference.SwipeDecoder.Result result : decoder.predictNext(scoringContext(context), NEXT_WORD_CANDIDATES))
             scores.putIfAbsent(TypedPredictions.key(result.word), (double) result.score);
         return scores;
+    }
+
+    /** The look-alike of this word that the next word makes clearly more likely, or null to leave it. */
+    public String lookAlike(String[] context, String word, String next) {
+        return lookAlike(decoder, context, word, next);
+    }
+
+    static String lookAlike(org.futo.ml.inference.SwipeDecoder decoder, String[] context, String word, String next) {
+        String other = SwipeSpelling.lookAlike(word);
+        if (other == null) return null;
+        String current = SwipeSpelling.lookAlike(other);
+        double evidence = nextWordChance(decoder, context, other, next) - nextWordChance(decoder, context, current, next);
+        return evidence >= LOOK_ALIKE_EVIDENCE ? other : null;
+    }
+
+    /** The log chance of the next word after this word, across the words the context model suggests. */
+    private static double nextWordChance(org.futo.ml.inference.SwipeDecoder decoder, String[] context, String word, String next) {
+        String[] words = Arrays.copyOf(context, context.length + 1);
+        words[context.length] = SwipeSpelling.restore(word);
+        org.futo.ml.inference.SwipeDecoder.Result[] results = decoder.predictNext(words, LOOK_ALIKE_CANDIDATES);
+        if (results.length == 0) return 0;
+        double best = Double.NEGATIVE_INFINITY;
+        for (org.futo.ml.inference.SwipeDecoder.Result result : results) best = Math.max(best, result.score);
+        double total = 0;
+        double found = results[results.length - 1].score;
+        boolean matched = false;
+        for (org.futo.ml.inference.SwipeDecoder.Result result : results) {
+            total += Math.exp(result.score - best);
+            if (!matched && result.word.equalsIgnoreCase(next)) {
+                found = result.score;
+                matched = true;
+            }
+        }
+        return found - best - Math.log(total);
     }
 
     public static org.futo.ml.inference.SwipeDecoder.Result[] rank(Swipe gesture,

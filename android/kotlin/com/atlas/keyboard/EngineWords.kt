@@ -26,6 +26,9 @@ class EngineWords(private val typing: SwipeTyping) : Words {
     override fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit) =
         typing.complete(before, cancelled, sentenceCapitalisation) { words, _, _ -> if (!cancelled.get()) result(words.toList()) }
 
+    override fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit) =
+        typing.lookAlike(context, word, next) { result(it) }
+
     override fun typed(word: String, rememberCase: Boolean) = typing.typed(word, typing.learningGeneration(), rememberCase)
 
     override fun chosen(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) {

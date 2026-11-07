@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/icon.svg" width="112" alt="Atlas app icon">
+<img src="assets/icon.png" width="112" alt="Atlas app icon">
 
 ### Atlas
 
@@ -40,6 +40,8 @@ You can also download and install the APK from [Releases](https://github.com/jul
 ## Privacy
 
 Everything runs and is stored locally on your device. No data is stored or monitored by me or any third party.
+
+Atlas doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
 
 ## Credits
 

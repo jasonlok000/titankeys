@@ -45,8 +45,10 @@ class AtlasIme : InputMethodService() {
     private var drainScheduled = false
     private val settlements = LinkedHashMap<Contact.Settlement, Runnable>()
     private val showStrip = Runnable {
-        if (!editing) return@Runnable
+        if (!editing || currentInputBinding == null) return@Runnable
         try {
+            // A cancelled show request can leave the client waiting for a window surface.
+            showWindow(true)
             requestShowSelf(0)
         } catch (error: RuntimeException) {
             // Titan firmware can drop its current client before Android reports the editor gone.
@@ -92,6 +94,7 @@ class AtlasIme : InputMethodService() {
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
         strip?.showSuggestions = TypingSettings.suggestionBar(this)
+        main.removeCallbacks(showStrip)
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
             main.post(showStrip)
@@ -108,6 +111,18 @@ class AtlasIme : InputMethodService() {
         super.onWindowShown()
         // Android draws its hide and switch-keyboard buttons in this bar; the strip has no room for them.
         window.window?.insetsController?.hide(WindowInsets.Type.captionBar())
+    }
+
+    override fun onWindowHidden() {
+        super.onWindowHidden()
+        // A delayed hide from the previous app can arrive after this field has started.
+        main.removeCallbacks(showStrip)
+        if (editing) main.post(showStrip)
+    }
+
+    override fun onUnbindInput() {
+        main.removeCallbacks(showStrip)
+        super.onUnbindInput()
     }
 
     override fun onFinishInput() {

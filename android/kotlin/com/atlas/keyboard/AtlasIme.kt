@@ -162,7 +162,7 @@ class AtlasIme : InputMethodService() {
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
-                if (travel != null && first != null && (travel >= Contact.SWIPE_KEYS
+                if (modifiers.alt == Modifiers.Level.Off && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
                 Trace.touch(contact.points, false)
             }
@@ -297,7 +297,7 @@ class AtlasIme : InputMethodService() {
                     val dx = outcome.points.last().x - outcome.points.first().x
                     if (abs(dx) >= .18f) {
                         strip?.turn(if (dx > 0) -1 else 1)
-                        haptics.pulse()
+                        haptics.pulse(HapticPreset.Strong)
                     }
                     return
                 }

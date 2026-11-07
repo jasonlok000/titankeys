@@ -4,6 +4,7 @@ import android.icu.text.BreakIterator
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.inputmethod.CursorAnchorInfo
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import java.util.Locale
@@ -37,6 +38,24 @@ class ConnectionEditor(
             result(null)
             return
         }
+        // Some editors do not publish cursor reports. Read text and selection together when possible.
+        val surrounding = connection.getSurroundingText(Editor.CONTEXT_LENGTH, 32, 0)
+        val snapshot = if (surrounding != null && surrounding.offset >= 0) {
+            state(surrounding.text, surrounding.selectionStart, surrounding.selectionEnd, surrounding.offset)
+        } else {
+            val extracted = connection.getExtractedText(ExtractedTextRequest().apply {
+                hintMaxChars = Editor.CONTEXT_LENGTH + 32
+            }, 0)
+            if (extracted?.text != null && extracted.partialStartOffset == -1)
+                state(extracted.text, extracted.selectionStart, extracted.selectionEnd, extracted.startOffset)
+            else null
+        }
+        if (snapshot != null) {
+            val current = identity()
+            result(if (current != null && current.connection === owner.connection
+                && current.packageName == owner.packageName && current.fieldId == owner.fieldId) snapshot else null)
+            return
+        }
         val request = StateRequest(owner, result)
         stateRequest = request
         if (!connection.requestCursorUpdates(InputConnection.CURSOR_UPDATE_IMMEDIATE,
@@ -49,6 +68,14 @@ class ConnectionEditor(
         later(STATE_TIMEOUT_MILLIS) {
             if (stateRequest === request) cancelState()
         }
+    }
+
+    private fun state(text: CharSequence, selectionStart: Int, selectionEnd: Int, offset: Int): Editor.State? {
+        val start = minOf(selectionStart, selectionEnd)
+        val end = maxOf(selectionStart, selectionEnd)
+        if (offset < 0 || start < 0 || end > text.length) return null
+        return Editor.State(text.subSequence(0, start).toString().takeLast(Editor.CONTEXT_LENGTH),
+            text.subSequence(end, text.length).toString().take(32), offset + selectionStart, offset + selectionEnd)
     }
 
     /** Reports have no request ID. A cancelled request must consume its late report before reuse. */

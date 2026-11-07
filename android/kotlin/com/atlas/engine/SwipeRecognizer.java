@@ -167,12 +167,18 @@ public final class SwipeRecognizer implements AutoCloseable {
         // A sentence start is a weak hint, so it gets the same small limit as a clean swipe.
         if (clearEndpoints || contextWords == 0) contextLimit = .5f;
         else if (contextWords >= 2) contextLimit = MAX_SENTENCE_CONTEXT_SCORE;
+        // Measure each word against the likeliest word, so that two likely words do not tie at the limit.
+        // The gap may reach twice the limit, the same range as limiting scores in both directions.
+        float bestContext = Float.NEGATIVE_INFINITY;
+        for (org.futo.ml.inference.SwipeDecoder.Result result : results) {
+            bestContext = Math.max(bestContext, contextWeight * result.lmScore);
+        }
         Map<String, EndpointScores> groups = new HashMap<>();
         float[] adjustedScores = new float[results.length];
         for (int i = 0; i < results.length; i++) {
             org.futo.ml.inference.SwipeDecoder.Result result = results[i];
             float contextScore = contextWeight * result.lmScore;
-            float boundedContext = Math.max(-contextLimit, Math.min(contextLimit, contextScore));
+            float boundedContext = Math.max(-2 * contextLimit, contextScore - bestContext);
             float penalty = endpointPenalty(gesture, result.word, false) + endpointPenalty(gesture, result.word, true);
             float adjusted = result.score - penalty - contextScore + boundedContext;
             adjustedScores[i] = adjusted;

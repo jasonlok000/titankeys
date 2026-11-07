@@ -6,7 +6,7 @@
 
 ![Version 2.0.0](https://img.shields.io/badge/version-2.0.0-111111?style=flat-square)
 
-**A toolkit to power up your keyboard phone!**
+**A toolkit to power up your Unihertz T2E!**
 
 </div>
 
@@ -15,8 +15,6 @@
 ## Features
 
 ### Swipe typing
-
-Swipe typing currently supports only the Unihertz Titan 2 Elite.
 
 <p align="center">
   <img src="assets/home.png" width="32%" alt="Atlas home screen: a swipe trail across the keyboard types hello, with suggestions below">

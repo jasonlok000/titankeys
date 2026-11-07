@@ -26,12 +26,10 @@ Swipe typing currently supports only the Unihertz Titan 2 Elite.
   <img src="assets/vibration.png" width="32%" alt="Swipe vibration settings: off, light, default, or strong">
 </p>
 
-- Swipe words across the physical keys.
+- Swipe across the physical keys to type.
 - Get suggestions for both swiped and typed words.
-- Tap configured lightly to type the letter and a space.
-- Let Atlas learn your words, then export or import them.
-
-Swipe typing is currently optimised for English only.
+- Lightly tap configured tap keys to type the letter and a space.
+- Atlas learn your vocabulary the more you use it.
 
 #### Use
 

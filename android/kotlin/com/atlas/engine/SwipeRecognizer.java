@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public final class SwipeRecognizer implements AutoCloseable {
     private static final float MAX_CONTEXT_SCORE = 1.5f;
@@ -55,9 +56,16 @@ public final class SwipeRecognizer implements AutoCloseable {
     public float frequency(String word) { return base.frequency(word); }
 
     public org.futo.ml.inference.SwipeDecoder.Result[] recognise(Swipe gesture, String[] context, boolean personalized) {
+        return recognise(gesture, context, personalized, word -> true);
+    }
+
+    org.futo.ml.inference.SwipeDecoder.Result[] recognise(Swipe gesture, String[] context, boolean personalized,
+            Predicate<String> allowed) {
         org.futo.ml.inference.SwipeDecoder.Result[] results = decoder.recognise(
                 gesture.x, gesture.y, gesture.time, context, new float[]{1, personalized ? 1 : 0});
         rawResults = results.clone();
+        results = java.util.Arrays.stream(results).filter(result -> allowed.test(result.word))
+                .toArray(org.futo.ml.inference.SwipeDecoder.Result[]::new);
         return rank(gesture, results, decoder.contextWeight(), decoder.shapeNormalizer(), context.length,
                 personalized ? learnedWords : Set.of());
     }

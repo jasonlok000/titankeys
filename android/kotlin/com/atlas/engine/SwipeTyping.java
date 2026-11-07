@@ -180,7 +180,8 @@ public final class SwipeTyping {
                 if (recogniser == null) throw new IllegalStateException(loadError);
                 syncDictionary();
                 boolean personalized = learningEnabled && wordsAvailable && personalise && activeCount > 0;
-                SwipeDecoder.Result[] decoded = recogniser.recognise(gesture, contextWords, personalized);
+                SwipeDecoder.Result[] decoded = recogniser.recognise(gesture, contextWords, personalized,
+                        word -> wordAllowed(rendered(word, variant)));
                 String[] words = blockedWords.filter(EnglishSpelling.candidates(Arrays.stream(decoded).map(result -> result.word).toArray(String[]::new), variant));
                 if (personalized) for (int i = 0; i < words.length; i++) words[i] = dictionary.restoreCase(words[i], configuredDay);
                 Prediction prediction = new Prediction(words.length == 0 ? "" : words[0], variant,

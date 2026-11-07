@@ -2,6 +2,7 @@ node_modules/
 .ink/
 dist/
 android/build/
+/tests/
 /build/
 /signing/
 /backups/
@@ -9,3 +10,16 @@ android/build/
 __pycache__/
 /tmp/
 design/exports/
+.gradle/
+.kotlin/
+.idea/
+.vscode/
+.claude/
+local.properties
+*.log
+.env*
+*.keystore
+*.jks
+/assets/home.png
+/assets/spelling.png
+/assets/vibration.png

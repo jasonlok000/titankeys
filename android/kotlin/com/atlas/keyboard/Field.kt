@@ -34,7 +34,8 @@ data class Field(
             val starters = variation == InputType.TYPE_TEXT_VARIATION_URI && !private
                 && inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS == 0
             return Field(words = !password, learning = !password && !address && !private,
-                fullStops = !password && !address, starters = starters, sentenceCapitalisation = !password && !address)
+                fullStops = !password && !address, starters = starters,
+                sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0)
         }
     }
 }

@@ -6,6 +6,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** [Words] backed by the FUTO swipe engine and its learned habits. */
 class EngineWords(private val typing: SwipeTyping) : Words {
+    override fun allowed(word: String) = typing.wordAllowed(word)
+    override fun known(word: String) = typing.knownWord(word)
+
     /** What the engine needs to learn from a recognised swipe later. */
     private class Learning(val prediction: SwipeTyping.Prediction, val generation: Long)
 
@@ -20,8 +23,11 @@ class EngineWords(private val typing: SwipeTyping) : Words {
         })
     }
 
-    override fun complete(before: String, cancelled: AtomicBoolean, result: (List<String>) -> Unit) =
-        typing.complete(before, cancelled) { words, _, _ -> if (!cancelled.get()) result(words.toList()) }
+    override fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit) =
+        typing.complete(before, cancelled, sentenceCapitalisation) { words, _, _ -> if (!cancelled.get()) result(words.toList()) }
+
+    override fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit) =
+        typing.lookAlike(context, word, next) { result(it) }
 
     override fun typed(word: String, rememberCase: Boolean) = typing.typed(word, typing.learningGeneration(), rememberCase)
 

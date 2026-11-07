@@ -4,16 +4,23 @@ import android.content.Context;
 import com.atlas.keyboard.Layout;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public final class SwipeRecognizer implements AutoCloseable {
     private static final float MAX_CONTEXT_SCORE = 1.5f;
     private static final float MAX_SENTENCE_CONTEXT_SCORE = 4f;
     private static final float MAX_PATH_SCORE_GAP = 3f;
+    private static final int NEXT_WORD_CANDIDATES = 3000;
+    // Stands in for the start of a sentence, which the context model would otherwise not score at all.
+    private static final String[] SENTENCE_START = {"so"};
+    private static final double LOOK_ALIKE_NEXT_WORD_EVIDENCE = 3;
+    private static final int LOOK_ALIKE_CANDIDATES = 8000;
     private org.futo.ml.inference.SwipeDecoder decoder;
-    private org.futo.ml.inference.NativeDictionary base, personal;
+    private org.futo.ml.inference.NativeDictionary base, personal, contractions;
     private Set<String> learnedWords = Set.of();
     private org.futo.ml.inference.SwipeDecoder.Result[] rawResults = new org.futo.ml.inference.SwipeDecoder.Result[0];
 
@@ -26,9 +33,19 @@ public final class SwipeRecognizer implements AutoCloseable {
         try {
             base = new org.futo.ml.inference.NativeDictionary(new File(file, "english.combined").getPath());
             personal = new org.futo.ml.inference.NativeDictionary(new String[0], new float[0]);
+            contractions = contractionDictionary(base);
             decoder = new org.futo.ml.inference.SwipeDecoder(file.getPath());
-            configure(base.pointer(), personal.pointer());
+            configure(base.pointer(), personal.pointer(), contractions.pointer());
         } catch (RuntimeException | LinkageError error) { close(); throw error; }
+    }
+
+    static org.futo.ml.inference.NativeDictionary contractionDictionary(org.futo.ml.inference.NativeDictionary base) {
+        Map<String, Float> spellings = SwipeSpelling.contractions(base::frequency);
+        spellings.putAll(SwipeSpelling.sameShape(base::frequency));
+        String[] words = spellings.keySet().toArray(new String[0]);
+        float[] frequencies = new float[words.length];
+        for (int i = 0; i < words.length; i++) frequencies[i] = spellings.get(words[i]);
+        return new org.futo.ml.inference.NativeDictionary(words, frequencies);
     }
 
     private void configure(long... pointers) {
@@ -38,10 +55,10 @@ public final class SwipeRecognizer implements AutoCloseable {
     public void personalWords(String[] words, float[] frequencies) {
         Set<String> learned = Set.copyOf(java.util.Arrays.asList(words));
         org.futo.ml.inference.NativeDictionary replacement = new org.futo.ml.inference.NativeDictionary(words, frequencies);
-        try { configure(base.pointer(), replacement.pointer()); }
+        try { configure(base.pointer(), replacement.pointer(), contractions.pointer()); }
         catch (RuntimeException | LinkageError error) {
             // A failed configuration may have changed native pointers before reporting failure.
-            try { configure(base.pointer(), personal.pointer()); }
+            try { configure(base.pointer(), personal.pointer(), contractions.pointer()); }
             catch (RuntimeException | LinkageError restoreError) { error.addSuppressed(restoreError); close(); }
             finally { replacement.close(); }
             throw error;
@@ -55,11 +72,87 @@ public final class SwipeRecognizer implements AutoCloseable {
     public float frequency(String word) { return base.frequency(word); }
 
     public org.futo.ml.inference.SwipeDecoder.Result[] recognise(Swipe gesture, String[] context, boolean personalized) {
+        return recognise(gesture, context, personalized, word -> true);
+    }
+
+    org.futo.ml.inference.SwipeDecoder.Result[] recognise(Swipe gesture, String[] context, boolean personalized,
+            Predicate<String> allowed) {
         org.futo.ml.inference.SwipeDecoder.Result[] results = decoder.recognise(
-                gesture.x, gesture.y, gesture.time, context, new float[]{1, personalized ? 1 : 0});
+                gesture.x, gesture.y, gesture.time, scoringContext(context), new float[]{1, personalized ? 1 : 0, 1});
         rawResults = results.clone();
+        results = java.util.Arrays.stream(contractionSpellings(results, decoder.contextWeight())).filter(result -> allowed.test(result.word))
+                .toArray(org.futo.ml.inference.SwipeDecoder.Result[]::new);
         return rank(gesture, results, decoder.contextWeight(), decoder.shapeNormalizer(), context.length,
                 personalized ? learnedWords : Set.of());
+    }
+
+    /**
+     * Keeps one result per spelling, as "dont" and "don't" display identically. Expects the best score first.
+     * The context model rates some contractions far too low, such as "I'm", so one with no other reading
+     * is never penalised for its context.
+     */
+    static org.futo.ml.inference.SwipeDecoder.Result[] contractionSpellings(org.futo.ml.inference.SwipeDecoder.Result[] results, float contextWeight) {
+        Map<String, org.futo.ml.inference.SwipeDecoder.Result> spellings = new java.util.LinkedHashMap<>();
+        for (org.futo.ml.inference.SwipeDecoder.Result result : results) {
+            String spelling = SwipeSpelling.contraction(result.word);
+            boolean neutral = result.lmScore < 0 && SwipeSpelling.onlyContraction(spelling);
+            spellings.putIfAbsent(spelling, new org.futo.ml.inference.SwipeDecoder.Result(spelling,
+                    neutral ? result.score - contextWeight * result.lmScore : result.score,
+                    result.ctcScore, neutral ? 0 : result.lmScore));
+        }
+        return spellings.values().toArray(new org.futo.ml.inference.SwipeDecoder.Result[0]);
+    }
+
+    static String[] scoringContext(String[] context) { return context.length == 0 ? SENTENCE_START : context; }
+
+    public Map<String, Double> nextWords(String[] context) {
+        Map<String, Double> scores = new HashMap<>();
+        for (org.futo.ml.inference.SwipeDecoder.Result result : decoder.predictNext(scoringContext(context), NEXT_WORD_CANDIDATES))
+            scores.putIfAbsent(TypedPredictions.key(result.word), (double) result.score);
+        return scores;
+    }
+
+    /** The look-alike of this word that the next word makes clearly more likely, or null to leave it. */
+    public String lookAlike(String[] context, String word, String next) {
+        return lookAlike(decoder, context, word, next);
+    }
+
+    /** The next word must point to the look-alike strongly, and must outweigh what the earlier words suggested. */
+    static String lookAlike(org.futo.ml.inference.SwipeDecoder decoder, String[] context, String word, String next) {
+        String other = SwipeSpelling.lookAlike(word);
+        if (other == null) return null;
+        String shown = SwipeSpelling.restore(SwipeSpelling.lookAlike(other));
+        String replacement = SwipeSpelling.restore(other);
+        double after = chance(decoder, followedBy(context, replacement), next) - chance(decoder, followedBy(context, shown), next);
+        if (after < LOOK_ALIKE_NEXT_WORD_EVIDENCE) return null;
+        String[] before = scoringContext(context);
+        double earlier = chance(decoder, before, replacement) - chance(decoder, before, shown);
+        return after + earlier >= 0 ? other : null;
+    }
+
+    private static String[] followedBy(String[] context, String word) {
+        String[] words = Arrays.copyOf(context, context.length + 1);
+        words[context.length] = word;
+        return words;
+    }
+
+    /** The log chance of a word after this context, across the words the context model suggests. */
+    private static double chance(org.futo.ml.inference.SwipeDecoder decoder, String[] context, String word) {
+        org.futo.ml.inference.SwipeDecoder.Result[] results = decoder.predictNext(context, LOOK_ALIKE_CANDIDATES);
+        if (results.length == 0) return 0;
+        double best = Double.NEGATIVE_INFINITY;
+        for (org.futo.ml.inference.SwipeDecoder.Result result : results) best = Math.max(best, result.score);
+        double total = 0;
+        double found = results[results.length - 1].score;
+        boolean matched = false;
+        for (org.futo.ml.inference.SwipeDecoder.Result result : results) {
+            total += Math.exp(result.score - best);
+            if (!matched && result.word.equalsIgnoreCase(word)) {
+                found = result.score;
+                matched = true;
+            }
+        }
+        return found - best - Math.log(total);
     }
 
     public static org.futo.ml.inference.SwipeDecoder.Result[] rank(Swipe gesture,
@@ -81,14 +174,21 @@ public final class SwipeRecognizer implements AutoCloseable {
                 && endpointDistance(gesture, shapeBest.word, false) <= .25f
                 && endpointDistance(gesture, shapeBest.word, true) <= .25f;
         float contextLimit = MAX_CONTEXT_SCORE;
-        if (clearEndpoints) contextLimit = .5f;
+        // A sentence start is a weak hint, so it gets the same small limit as a clean swipe.
+        if (clearEndpoints || contextWords == 0) contextLimit = .5f;
         else if (contextWords >= 2) contextLimit = MAX_SENTENCE_CONTEXT_SCORE;
+        // Measure each word against the likeliest word, so that two likely words do not tie at the limit.
+        // The gap may reach twice the limit, the same range as limiting scores in both directions.
+        float bestContext = Float.NEGATIVE_INFINITY;
+        for (org.futo.ml.inference.SwipeDecoder.Result result : results) {
+            bestContext = Math.max(bestContext, contextWeight * result.lmScore);
+        }
         Map<String, EndpointScores> groups = new HashMap<>();
         float[] adjustedScores = new float[results.length];
         for (int i = 0; i < results.length; i++) {
             org.futo.ml.inference.SwipeDecoder.Result result = results[i];
             float contextScore = contextWeight * result.lmScore;
-            float boundedContext = Math.max(-contextLimit, Math.min(contextLimit, contextScore));
+            float boundedContext = Math.max(-2 * contextLimit, contextScore - bestContext);
             float penalty = endpointPenalty(gesture, result.word, false) + endpointPenalty(gesture, result.word, true);
             float adjusted = result.score - penalty - contextScore + boundedContext;
             adjustedScores[i] = adjusted;
@@ -144,13 +244,13 @@ public final class SwipeRecognizer implements AutoCloseable {
         if (baseline == null) return false;
         org.futo.ml.inference.NativeDictionary probe = new org.futo.ml.inference.NativeDictionary(new String[]{word}, new float[]{64});
         try {
-            configure(base.pointer(), personal.pointer(), probe.pointer());
+            configure(base.pointer(), personal.pointer(), contractions.pointer(), probe.pointer());
             org.futo.ml.inference.SwipeDecoder.Result[] candidates = decoder.recognise(
-                    gesture.x, gesture.y, gesture.time, context, new float[]{0, 0, 1});
+                    gesture.x, gesture.y, gesture.time, context, new float[]{0, 0, 0, 1});
             if (candidates.length == 0) return false;
             return plausible(candidates[0], baseline);
         } finally {
-            try { configure(base.pointer(), personal.pointer()); }
+            try { configure(base.pointer(), personal.pointer(), contractions.pointer()); }
             catch (RuntimeException | LinkageError error) { close(); throw error; }
             finally { probe.close(); }
         }
@@ -169,7 +269,7 @@ public final class SwipeRecognizer implements AutoCloseable {
         return java.util.Arrays.stream(recognise(gesture, context, false)).map(result -> result.word).toArray(String[]::new);
     }
 
-    public boolean isOpen() { return decoder != null && base != null && personal != null; }
+    public boolean isOpen() { return decoder != null && base != null && personal != null && contractions != null; }
 
     @Override public void close() {
         try { if (decoder != null) decoder.close(); }
@@ -178,8 +278,12 @@ public final class SwipeRecognizer implements AutoCloseable {
             try { if (personal != null) personal.close(); }
             finally {
                 personal = null;
-                try { if (base != null) base.close(); }
-                finally { base = null; }
+                try { if (contractions != null) contractions.close(); }
+                finally {
+                    contractions = null;
+                    try { if (base != null) base.close(); }
+                    finally { base = null; }
+                }
             }
         }
     }

@@ -30,6 +30,23 @@ final class LanguageHabits {
     private final LinkedHashMap<String, Entry> words = new LinkedHashMap<>();
     long revision;
 
+    void add(String intended, int today) {
+        String word = SwipeWords.normalise(intended);
+        if (word.isEmpty()) throw new IllegalArgumentException("Enter one word with 2–24 letters. Apostrophes are allowed.");
+        if (!SuggestionPolicy.allowed(word)) throw new IllegalArgumentException("This word cannot be saved.");
+        Entry entry = words.get(word);
+        if (entry == null) entry = create(word, today);
+        if (entry == null) throw new IllegalStateException("The word list is full. Remove a word and try again.");
+        entry.spelling = intended.replace('\u2019', '\'');
+        entry.typedUses = Math.max(USES_TO_ACTIVATE, entry.support(today));
+        entry.confirmations = Math.max(0, entry.confirmations - entry.decay(today));
+        entry.typed = true;
+        entry.held = false;
+        entry.regrets = entry.recoveryConfirmations = entry.recoveryTypedUses = 0;
+        entry.day = today;
+        revision++;
+    }
+
     void confirm(String word, int today) {
         word = SwipeWords.normalise(word);
         if (word.isEmpty() || !SuggestionPolicy.allowed(word)) return;

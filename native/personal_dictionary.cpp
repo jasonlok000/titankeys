@@ -78,6 +78,12 @@ static std::string text(JNIEnv* env, jstring value) {
 static void error(JNIEnv* env, const char* message) {
     if (!env->ExceptionCheck()) env->ThrowNew(env->FindClass("java/lang/IllegalStateException"), message);
 }
+static void add_surface(Dictionary& value, const std::string& path, const std::string& spelling, float freq) {
+    auto& forms = value.surfaces[path];
+    auto found = std::find_if(forms.begin(), forms.end(), [&](const Surface& form) { return form.spelling == spelling; });
+    if (found == forms.end()) forms.push_back({spelling, freq});
+    else found->frequency = std::max(found->frequency, freq);
+}
 extern "C" JNIEXPORT jlong JNICALL
 Java_org_futo_ml_inference_NativeDictionary_nativeLoad(JNIEnv* env, jclass, jstring path) {
     try {
@@ -104,10 +110,11 @@ Java_org_futo_ml_inference_NativeDictionary_nativeCreate(JNIEnv* env, jclass, jo
             if (alpha.size() < 2 || alpha.size() > 24 || !std::isfinite(freq) || freq < 1 || freq > 255) {
                 error(env, "Invalid personal dictionary entry"); return 0;
             }
-            auto& forms = value->surfaces[alpha];
-            auto found = std::find_if(forms.begin(), forms.end(), [&](const Surface& form) { return form.spelling == spelling; });
-            if (found == forms.end()) forms.push_back({spelling, freq});
-            else found->frequency = std::max(found->frequency, freq);
+            add_surface(*value, alpha, spelling, freq);
+            // A swipe rarely shows a repeated letter, so "imma" must also match the path i-m-a.
+            std::string path = alpha;
+            path.erase(std::unique(path.begin(), path.end()), path.end());
+            if (path != alpha && path.size() >= 2) add_surface(*value, path, spelling, freq);
         }
         for (auto& group : value->surfaces) {
             auto& forms = group.second;

@@ -34,7 +34,10 @@ interface Words {
     class Recognition(val words: List<String>, val token: Any?)
 
     fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Recognition) -> Unit)
-    fun complete(before: String, cancelled: AtomicBoolean, result: (List<String>) -> Unit)
+    fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit)
+    fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit)
+    fun allowed(word: String): Boolean
+    fun known(word: String): Boolean
     fun typed(word: String, rememberCase: Boolean = true)
     fun chosen(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun corrected(swipe: Swipe, context: String, recognition: Recognition, word: String)
@@ -114,6 +117,8 @@ class Composer(
     private var fullStop: FullStop? = null
     private val manualWord = TypedWords()
     private var correcting: Composition.Swiped? = null
+    private var awaitingNextWord: Composition.Swiped? = null
+    private var lookAlikeChangedAt = -1
 
     var liftOffMillis = 0
 
@@ -133,6 +138,7 @@ class Composer(
         selection = Selection(selectionStart, selectionEnd)
         selectionConfirmed = selectionStart >= 0 && selectionEnd >= 0
         reset()
+        lookAlikeChangedAt = -1
         identity = next
         pendingInput.addAll(carried)
         recogniseNext()
@@ -150,6 +156,7 @@ class Composer(
             editSnapshot = null
             manualWord.clear()
             correcting = null
+            awaitingNextWord = null
             expectedSelections.clear()
             show(emptyList())
             return
@@ -180,6 +187,7 @@ class Composer(
         editSnapshot = null
         manualWord.clear()
         correcting = null
+        awaitingNextWord = null
         expectedSelections.clear()
         show(emptyList())
     }
@@ -310,7 +318,7 @@ class Composer(
             return
         }
         val correction = correcting
-        val completed = if (correction != null) completeManualWord(anchor) else null
+        val completed = if (correction != null || startsNewWord(before)) completeManualWord(anchor) else null
         correcting = null
         manualWord.clear()
         val previous = composition as? Composition.Swiped
@@ -325,7 +333,11 @@ class Composer(
                 pending.swipe
             }
         } else pending.swipe
-        if (!resumes) leave()
+        if (!resumes) {
+            leave()
+            awaitingNextWord = null
+            holdForNextWord(previous, anchor)
+        }
         composition = Composition.None
         show(emptyList())
         val resumed = previous.takeIf { resumes }
@@ -361,10 +373,12 @@ class Composer(
                     if (confirmed) {
                         learnWord(completed, correction)
                         show(choices)
+                        checkLookAlike()
                     }
                 }
                 return@recognise
             }
+            learnWord(completed, correction)
             recogniseNext()
         }
     }
@@ -380,13 +394,15 @@ class Composer(
         invalidate(false)
         fullStop = null
         val anchor = snapshot()
+        holdForNextWord(composition as? Composition.Swiped, anchor)
         val correction = correcting
         if (correction != null && anchor != editSnapshot) {
             correcting = null
             manualWord.clear()
         }
         val completesCorrection = correcting != null && !letterTap && text.first() in ".,!?;:)]}…"
-        val completed = if (completesCorrection) completeManualWord(anchor) else null
+        val finishesWord = letterTap && (correction != null || startsNewWord(anchor.before.orEmpty()))
+        val completed = if (completesCorrection || finishesWord) completeManualWord(anchor) else null
         if (completesCorrection || letterTap) correcting = null
         val dropsSpace = automaticSpace == anchor && anchor.before?.endsWith(" ") == true
             && text[0] in ".,!?;:)]}…"
@@ -418,6 +434,7 @@ class Composer(
         composition = Composition.None
         manualWord.clear()
         correcting = null
+        awaitingNextWord = null
         val before = editor.before().orEmpty()
         val after = editor.after().orEmpty()
         val around = symbol == "&" || symbol == "="
@@ -435,8 +452,9 @@ class Composer(
         if (defer(transferable = true) { space(repeated, time) }) return
         leave()
         invalidate(false)
-        composition = Composition.None
         val anchor = snapshot()
+        holdForNextWord(composition as? Composition.Swiped, anchor)
+        composition = Composition.None
         val before = anchor.before.orEmpty()
         val correction = correcting
         val completed = completeManualWord(anchor)
@@ -478,6 +496,7 @@ class Composer(
         composition = Composition.None
         automaticSpace = null
         fullStop = null
+        awaitingNextWord = null
         if (word || correcting != null || source != null) manualWord.clear()
         else manualWord.edit("\b", null, false)
         correcting = null
@@ -517,6 +536,7 @@ class Composer(
         invalidate(false)
         composition = Composition.None
         fullStop = null
+        awaitingNextWord = null
         val anchor = snapshot()
         val correction = correcting
         val completed = completeManualWord(anchor)
@@ -539,8 +559,14 @@ class Composer(
                     return
                 }
             }
-            Editor.Enter.Next, Editor.Enter.Previous -> waitForDestination(owner, navigation = true)
-            Editor.Enter.Action -> waitForDestination(owner, navigation = false)
+            Editor.Enter.Next, Editor.Enter.Previous -> {
+                learnWord(completed, correction)
+                waitForDestination(owner, navigation = true)
+            }
+            Editor.Enter.Action -> {
+                learnWord(completed, correction)
+                waitForDestination(owner, navigation = false)
+            }
             Editor.Enter.Rejected -> reset()
         }
         show(emptyList())
@@ -570,6 +596,7 @@ class Composer(
         fullStop = null
         manualWord.clear()
         correcting = null
+        awaitingNextWord = null
         expectedSelections.clear()
         val owner = editor.identity()
         if (owner == null || !sameIdentity(identity, owner)) {
@@ -633,6 +660,7 @@ class Composer(
 
     fun choose(index: Int) {
         val chosen = composition.alternatives.getOrNull(index) ?: return
+        if (!words.allowed(chosen)) return
         val offered = composition
         if (defer {
             val current = composition
@@ -671,6 +699,69 @@ class Composer(
             }
             Composition.None -> Unit
         }
+    }
+
+    /** Only a swiped word the user has not chosen themselves can change once the next word arrives. */
+    private fun holdForNextWord(swiped: Composition.Swiped?, anchor: Snapshot) {
+        if (swiped == null) return
+        val held = !swiped.chosen && swiped.trailingSpace && anchor == swiped.snapshot && !anchor.selected
+            && anchor.knownSelection && anchor.before?.endsWith(swiped.inserted) == true
+        awaitingNextWord = swiped.takeIf { held }
+    }
+
+    /** Once the next word is finished, its fit decides between look-alikes such as "we're" and "were". */
+    private fun checkLookAlike() {
+        val earlier = awaitingNextWord ?: return
+        val anchor = snapshot()
+        val before = anchor.before
+        val followed = anchor.selection.end - earlier.snapshot.selection.end
+        if (followed == 0 && !anchor.selected) return
+        if (before == null || anchor.selected || followed !in 1..before.length) {
+            awaitingNextWord = null
+            return
+        }
+        val following = before.takeLast(followed)
+        val next = following.trimEnd(' ', '.', ',', '!', '?', ';', ':')
+        if (next == following) {
+            if (TypedPredictions.prefix(next) != next) awaitingNextWord = null
+            return
+        }
+        awaitingNextWord = null
+        val start = earlier.snapshot.selection.end - earlier.tail.length
+        if (next.isEmpty() || TypedPredictions.prefix(next) != next || start == lookAlikeChangedAt
+            || !before.dropLast(followed).endsWith(earlier.inserted)) return
+        val current = epoch
+        words.lookAlike(earlier.context, earlier.word, next) { replacement ->
+            if (replacement != null && current == epoch && !hasPendingInput && snapshot() == anchor) {
+                replaceLookAlike(earlier, cased(replacement, earlier), following, start, anchor)
+            }
+        }
+    }
+
+    private fun cased(replacement: String, original: Composition.Swiped): String {
+        val word = original.word
+        if (word.length > 2 && word == word.uppercase() && word != word.lowercase()) return replacement.uppercase()
+        val shifted = word.first().isUpperCase() && !word.lowercase().startsWith("i'")
+        val sentenceCase = field.sentenceCapitalisation && autoCapitalise()
+        return SwipeTyping.capitalise(replacement, original.context, 0, shifted, sentenceCase)
+    }
+
+    private fun replaceLookAlike(earlier: Composition.Swiped, replacement: String, following: String, start: Int, anchor: Snapshot) {
+        val showing = composition
+        invalidate(false)
+        if (!edit(earlier.tail.length + following.length, "$replacement $following")) return
+        lookAlikeChangedAt = start
+        val accepted = snapshot()
+        if (automaticSpace == anchor) automaticSpace = accepted
+        fullStop = fullStop?.let { if (it.snapshot == anchor) FullStop(it.time, accepted) else it }
+        if (showing is Composition.Swiped) {
+            val context = accepted.before?.removeSuffix(showing.inserted) ?: showing.context
+            composition = showing.copy(context = context, snapshot = accepted)
+        } else {
+            composition = Composition.None
+            show(emptyList())
+        }
+        confirmState(accepted)
     }
 
     private fun edit(count: Int, text: String, after: Int = 0): Boolean {
@@ -751,6 +842,9 @@ class Composer(
         manualWord.edit(text, null, false)
     }
 
+    /** Swipes and tap keys join the text with no space after some characters, so the word before them is not finished. */
+    private fun startsNewWord(before: String) = SwipeTyping.prefix(before).isNotEmpty()
+
     private fun completeManualWord(anchor: Snapshot): String? {
         val continuesWord = anchor.after?.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true
         if (!field.learning || !anchor.knownSelection || anchor.selected
@@ -767,6 +861,8 @@ class Composer(
         if (correction == null) words.typed(word, rememberCase)
         else if (!word.equals(correction.word, ignoreCase = true)) {
             words.corrected(correction.swipe, correction.context, correction.recognition, word)
+            // The engine only counts a correction that resembles the swipe; the word was still typed.
+            words.typed(word, rememberCase)
         } else if (correction.chosen) {
             words.chosen(correction.swipe, correction.context, correction.recognition, word)
         }
@@ -785,22 +881,25 @@ class Composer(
         if (!anchor.available || !anchor.knownSelection || anchor.selected) return
         val before = anchor.before ?: return
         val after = anchor.after ?: return
+        checkLookAlike()
         if (!field.learning) {
             if (field.starters && before.isEmpty() && after.isEmpty()) {
-                composition = Composition.Typed("", false, anchor, STARTERS)
-                show(STARTERS)
+                val starters = STARTERS.filter(words::allowed)
+                composition = Composition.Typed("", false, anchor, starters)
+                show(starters)
             }
             return
         }
         if (after.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) return
-        val trailingSpace = before.endsWith(" ") && TypedPredictions.prefix(before.dropLast(1)).isNotEmpty()
+        val lastWord = TypedPredictions.prefix(before.dropLast(1))
+        val trailingSpace = before.endsWith(" ") && lastWord.isNotEmpty() && !words.known(lastWord)
         val context = if (trailingSpace) before.dropLast(1) else before
         val current = epoch
         completion?.set(true)
         val cancelled = AtomicBoolean(false)
         completion = cancelled
         completionSnapshot = anchor
-        words.complete(context, cancelled) { suggestions ->
+        words.complete(context, cancelled, field.sentenceCapitalisation) { suggestions ->
             if (cancelled.get() || current != epoch || snapshot() != anchor) return@complete
             composition = Composition.Typed(TypedPredictions.prefix(context), trailingSpace, anchor, suggestions)
             show(suggestions)

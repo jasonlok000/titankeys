@@ -34,7 +34,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private val previewController = lazy { TouchpadPreview(activity) }
     private var watchingRequested = false
     private var previewRequested = false
-    private var visible = activity.hasWindowFocus()
+    // Adapters can be created before the live activity's window gains focus.
+    private var visible = true
     private var transferring = false
     private val keyCapture = lazy { KeyCapture(activity) { key -> activity.emit(JSONObject().put("type", "atlas-key").put("key", key).toString()) } }
     private var keyCaptureRequested = false
@@ -110,8 +111,16 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     set(data.getString("key"), data.get("value"))
                     "null"
                 }
+                "addWord" -> {
+                    typing.addWord(data.getString("word")) { error -> operationResult(error, complete) }
+                    null
+                }
                 "removeWord" -> {
                     typing.removeWord(data.getString("word")) { error -> operationResult(error, complete) }
+                    null
+                }
+                "blockWord", "unblockWord" -> {
+                    typing.setWordBlocked(data.getString("word"), operation == "blockWord") { error -> operationResult(error, complete) }
                     null
                 }
                 "clearWords" -> {
@@ -252,6 +261,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("hapticPreset", Haptics.preset(activity).id)
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
             .put("words", words)
+            .put("blockedWords", JSONArray(typing.blockedWords().toList()))
     }
 
     private fun set(key: String, value: Any) {

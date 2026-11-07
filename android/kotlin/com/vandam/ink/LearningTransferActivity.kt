@@ -20,13 +20,13 @@ class LearningTransferActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(TextView(this).apply {
             gravity = Gravity.CENTER
-            text = if (exporting) "Exporting learning…" else "Importing learning…"
+            text = if (exporting) "Exporting words…" else "Importing words…"
         })
         if (savedInstanceState != null) return
         val picker = Intent(if (exporting) Intent.ACTION_CREATE_DOCUMENT else Intent.ACTION_OPEN_DOCUMENT)
             .addCategory(Intent.CATEGORY_OPENABLE)
             .setType(if (exporting) "application/json" else "*/*")
-        if (exporting) picker.putExtra(Intent.EXTRA_TITLE, "atlas-learning.json")
+        if (exporting) picker.putExtra(Intent.EXTRA_TITLE, "atlas-words.json")
         try {
             startActivityForResult(picker, PICK_DOCUMENT)
         } catch (_: ActivityNotFoundException) {

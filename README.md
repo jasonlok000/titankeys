@@ -23,7 +23,7 @@
 
 ## Install
 
-I recommend installing through [Obtainium](https://github.com/ImranR98/Obtainium) so you can receive updates.
+I highly recommend installing through [Obtainium](https://github.com/ImranR98/Obtainium) so you can receive updates.
 
 You can also download and install the APK from [Releases](https://github.com/juleshall4/atlas/releases). 
 

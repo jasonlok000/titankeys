@@ -4,7 +4,7 @@
 
 ### Atlas
 
-![Version 2.0.0](https://img.shields.io/badge/version-2.0.0-111111?style=flat-square)
+![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-111111?style=flat-square)
 
 **A toolkit to power up your Unihertz T2E!**
 

@@ -1,83 +1,23 @@
 package com.atlas.engine;
 
-import java.util.Arrays;
-
 /**
  * Continuous position mapping through the measured key positions. Between keys the speed ramps smoothly
  * instead of changing at each key boundary, so a steady swipe stays steady.
  */
 public final class TouchAlignment {
     public static final TouchAlignment IDENTITY = new TouchAlignment();
-    private static final int[] ROW_SIZE = {10, 10, 10, 7};
-    private final float[][] sourceX;
-    private final float[][] targetX;
-    private final float[] sourceY;
-    private final float[] targetY;
     private final Curve[] rows;
     private final Curve vertical;
 
     private TouchAlignment() {
-        sourceX = targetX = null;
-        sourceY = targetY = null;
         rows = null;
         vertical = null;
     }
 
     private TouchAlignment(float[][] sourceX, float[][] targetX, float[] sourceY, float[] targetY) {
-        this.sourceX = sourceX;
-        this.targetX = targetX;
-        this.sourceY = sourceY;
-        this.targetY = targetY;
         rows = new Curve[4];
         for (int row = 0; row < 4; row++) rows[row] = new Curve(sourceX[row], targetX[row]);
         vertical = new Curve(sourceY, targetY);
-    }
-
-    public static TouchAlignment fit(float[][][] samples, float[][] centres) {
-        float[][] sx = new float[4][], tx = new float[4][];
-        float[] sy = new float[4], ty = new float[4];
-        int key = 0;
-        for (int row = 0; row < 4; row++) {
-            float[] xs = new float[ROW_SIZE[row]], ys = new float[ROW_SIZE[row]];
-            float[] targets = new float[xs.length];
-            for (int col = 0; col < xs.length; col++, key++) {
-                float[] x = new float[3], y = new float[3];
-                for (int trial = 0; trial < 3; trial++) {
-                    x[trial] = samples[key][trial][0];
-                    y[trial] = samples[key][trial][1];
-                    if (!inside(x[trial]) || !inside(y[trial])) throw new IllegalArgumentException("Touch outside the reported sensor range. Start again.");
-                }
-                Arrays.sort(x); Arrays.sort(y);
-                if (x[2] - x[0] > .07f || y[2] - y[0] > .14f)
-                    throw new IllegalArgumentException("Touches varied too much. Start again using light, steady contact.");
-                xs[col] = x[1]; ys[col] = y[1]; targets[col] = centres[key][0];
-                ty[row] = centres[key][1];
-                if (col > 0 && xs[col] - xs[col - 1] < .008f)
-                    throw new IllegalArgumentException("Neighbouring keys overlap in the readings. Start again; a position curve cannot separate identical readings.");
-            }
-            Arrays.sort(ys);
-            sy[row] = ys[ys.length / 2];
-            float[][] anchors = anchors(xs, targets);
-            sx[row] = anchors[0]; tx[row] = anchors[1];
-        }
-        float[][] vertical = anchors(sy, ty);
-        return new TouchAlignment(sx, tx, vertical[0], vertical[1]);
-    }
-
-    private static float[][] anchors(float[] source, float[] target) {
-        float[] s = new float[source.length + 2], t = new float[s.length];
-        int count = 1;
-        for (int i = 0; i < source.length; i++) {
-            if (i > 0 && source[i] - source[i - 1] < .008f)
-                throw new IllegalArgumentException("Key positions overlap. Start again with distinct light touches.");
-            // A saturated sensor endpoint still belongs to its outer key.
-            if (source[i] <= .002f || source[i] >= .998f) continue;
-            s[count] = source[i]; t[count++] = target[i];
-        }
-        s[count] = t[count] = 1;
-        s = Arrays.copyOf(s, count + 1); t = Arrays.copyOf(t, count + 1);
-        validate(s, t);
-        return new float[][]{s, t};
     }
 
     private static void validate(float[] source, float[] target) {
@@ -138,7 +78,7 @@ public final class TouchAlignment {
         }
 
         /**
-         * Where the sensor edge maps. The fit pins it to the keyboard edge, which stretches a thin strip
+         * Where the sensor edge maps. The profile pins it to the keyboard edge, which stretches a thin strip
          * of sensor across half a key. A key that saturated the sensor is missing from the anchors, so
          * the edge becomes that key's centre; otherwise the curve continues at its outer key's speed.
          */
@@ -162,19 +102,6 @@ public final class TouchAlignment {
     }
 
     private static boolean inside(float value) { return Float.isFinite(value) && value >= 0 && value <= 1; }
-
-    public String encode() {
-        if (sourceX == null) return "";
-        StringBuilder text = new StringBuilder("1");
-        for (int row = 0; row < 4; row++) { append(text, sourceX[row]); append(text, targetX[row]); }
-        append(text, sourceY); append(text, targetY);
-        return text.toString();
-    }
-
-    private static void append(StringBuilder text, float[] values) {
-        text.append(';');
-        for (float value : values) text.append(value).append(',');
-    }
 
     static TouchAlignment decode(String text) {
         if (text.isEmpty()) return IDENTITY;

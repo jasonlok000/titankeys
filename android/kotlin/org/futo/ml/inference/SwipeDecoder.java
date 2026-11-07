@@ -33,12 +33,16 @@ public final class SwipeDecoder implements AutoCloseable {
         if (!nativeSetModeSafe(handle, letters, x, y, tries, null, null, null)) throw new IllegalStateException("Could not configure FUTO dictionaries");
     }
     public Result[] recognise(float[] x, float[] y, float[] time, String[] context, float[] weights) {
+        return recognise(x, y, time, context, weights, 16);
+    }
+    /** At most {@code count} words, best first. */
+    public Result[] recognise(float[] x, float[] y, float[] time, String[] context, float[] weights, int count) {
         requireOpen();
         Swipe.validate(x, y, time);
         if (context == null || weights == null) throw new IllegalArgumentException("Missing recognition context");
         for (String word : context) if (word == null) throw new IllegalArgumentException("Invalid recognition context");
         for (float weight : weights) if (!Float.isFinite(weight)) throw new IllegalArgumentException("Invalid dictionary weight");
-        Result[] result = nativeRecognizeSafe(handle, new SwipeSeg[]{new SwipeSeg(x, y, time)}, new SwipeSeg[0], 16, context, 100, weights);
+        Result[] result = nativeRecognizeSafe(handle, new SwipeSeg[]{new SwipeSeg(x, y, time)}, new SwipeSeg[0], count, context, 100, weights);
         return result == null ? new Result[0] : result;
     }
     /** The context model's likeliest next words, best first. Each score is in {@link Result#score}. */

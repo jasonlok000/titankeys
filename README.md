@@ -8,6 +8,8 @@
 
 **The all-in-one toolkit to power up your keyboard phone.**
 
+</div>
+
 ---
 
 > **Update, November 2026:** Swipe typing is the first feature in Atlas, and it's ready to try on the Unihertz Titan 2 Elite. Slide across the physical keys without pressing them, and Atlas types the word. I'm now working on more features!

@@ -86,6 +86,17 @@ class Composer(
 
         class Typed(val prefix: String, val trailingSpace: Boolean, val snapshot: Snapshot,
                     override val alternatives: List<String>) : Composition
+
+        /** The cursor is in an earlier swiped word, [before] and [after] letters from its ends. */
+        data class Recalled(val word: Remembered, val before: Int, val after: Int, val snapshot: Snapshot) : Composition {
+            override val alternatives get() = word.alternatives
+        }
+    }
+
+    /** A swiped word still in the field, with the suggestions it offered. [start] follows the keyboard's own edits. */
+    private data class Remembered(val start: Int, val word: String, val alternatives: List<String>, val swipe: Swipe,
+                                  val context: String, val recognition: Words.Recognition) {
+        val end get() = start + word.length
     }
 
     private sealed interface PendingInput
@@ -119,6 +130,8 @@ class Composer(
     private var correcting: Composition.Swiped? = null
     private var awaitingNextWord: Composition.Swiped? = null
     private var lookAlikeChangedAt = -1
+    private val remembered = ArrayList<Remembered>()
+    private var rememberedField: Pair<String?, Int>? = null
 
     var liftOffMillis = 0
 
@@ -140,6 +153,10 @@ class Composer(
         reset()
         lookAlikeChangedAt = -1
         identity = next
+        // Another field, or a password, starts with nothing remembered.
+        val owner = next?.let { it.packageName to it.fieldId }
+        if (!field.learning || owner != rememberedField) remembered.clear()
+        rememberedField = owner
         pendingInput.addAll(carried)
         recogniseNext()
         predict()
@@ -211,6 +228,7 @@ class Composer(
         val anchor = recognitionSnapshot ?: when (val current = composition) {
             is Composition.Swiped -> current.snapshot
             is Composition.Typed -> current.snapshot
+            is Composition.Recalled -> current.snapshot
             Composition.None -> completionSnapshot ?: automaticSpace ?: fullStop?.snapshot ?: editSnapshot
         }
         if (updated != selection && anchor != null && snapshot() == anchor) {
@@ -367,8 +385,10 @@ class Composer(
                 if (!edit(replaced, inserted)) return@recognise
                 val accepted = snapshot()
                 automaticSpace = accepted.takeIf { trailingSpace }
-                composition = Composition.Swiped(word, leadingSpace, trailingSpace, path, context, recognition, pending.endedAt,
+                val swiped = Composition.Swiped(word, leadingSpace, trailingSpace, path, context, recognition, pending.endedAt,
                     true, accepted, false, choices)
+                composition = swiped
+                remember(swiped)
                 confirmState(accepted) { confirmed ->
                     if (confirmed) {
                         learnWord(completed, correction)
@@ -503,6 +523,11 @@ class Composer(
         val previous = selection
         val removed = editor.delete(word, previous.start, previous.end)
         if (removed != null) {
+            if (previous.start >= 0 && previous.end >= 0) {
+                val start = minOf(previous.start, previous.end)
+                val end = maxOf(previous.start, previous.end)
+                shiftRemembered(start - removed, end, -(end - start + removed))
+            } else remembered.clear()
             expectSelection(previous, removed, 0)
             editSnapshot = snapshot()
             if (source != null && anchor != null && removed > 0) trackCorrection(source, anchor, removed)
@@ -677,7 +702,9 @@ class Composer(
                 val tail = chosen + if (current.trailingSpace) " " else ""
                 if (!edit(current.tail.length, tail)) return
                 val accepted = snapshot()
-                composition = current.copy(word = chosen, continuable = false, snapshot = accepted, chosen = true)
+                val swiped = current.copy(word = chosen, continuable = false, snapshot = accepted, chosen = true)
+                composition = swiped
+                remember(swiped)
                 automaticSpace = accepted.takeIf { current.trailingSpace }
                 confirmState(accepted)
             }
@@ -697,8 +724,70 @@ class Composer(
                     if (confirmed) learnWord(chosen, correction, rememberCase = false)
                 }
             }
+            is Composition.Recalled -> {
+                if (anchor != current.snapshot || anchor.selected) return
+                invalidate(false)
+                val start = current.word.start
+                if (!edit(current.before, chosen, current.after)) return
+                val word = current.word.copy(start = start, word = chosen)
+                add(word)
+                manualWord.clear()
+                correcting = null
+                val accepted = snapshot()
+                composition = current.copy(word = word, before = chosen.length, after = 0, snapshot = accepted)
+                // Moving the cursor away is how most people leave this word, so learn the choice now.
+                confirmState(accepted) { confirmed ->
+                    if (confirmed && field.learning && chosen != current.word.word)
+                        words.chosen(word.swipe, word.context, word.recognition, chosen)
+                }
+            }
             Composition.None -> Unit
         }
+    }
+
+    private fun remember(swiped: Composition.Swiped) {
+        val end = swiped.snapshot.selection.end
+        if (!field.learning || end < 0 || swiped.snapshot.selected) return
+        add(Remembered(end - swiped.tail.length, swiped.word, swiped.alternatives, swiped.swipe, swiped.context, swiped.recognition))
+    }
+
+    private fun add(word: Remembered) {
+        remembered.removeAll { it.start < word.end && word.start < it.end }
+        remembered += word
+        if (remembered.size > MAX_REMEMBERED) remembered.removeAt(0)
+    }
+
+    /** Moves remembered words after an edit that replaced [start, end), and forgets the words it touched. */
+    private fun shiftRemembered(start: Int, end: Int, change: Int) {
+        if (remembered.isEmpty() || change == 0 && start == end) return
+        val iterator = remembered.listIterator()
+        while (iterator.hasNext()) {
+            val word = iterator.next()
+            when {
+                word.end <= start -> Unit
+                word.start >= end -> iterator.set(word.copy(start = word.start + change))
+                else -> iterator.remove()
+            }
+        }
+    }
+
+    /** Shows the suggestions again when the cursor returns to a swiped word that is unchanged. */
+    private fun recall(anchor: Snapshot): Boolean {
+        val before = anchor.before ?: return false
+        val after = anchor.after ?: return false
+        if (before.isEmpty() && after.isEmpty()) {
+            remembered.clear()
+            return false
+        }
+        if (remembered.isEmpty()) return false
+        val prefix = TypedPredictions.prefix(before)
+        val suffix = after.takeWhile { it.isLetter() || it == '\'' || it == '’' }
+        if (prefix.isEmpty() && suffix.isEmpty()) return false
+        val start = anchor.selection.start - prefix.length
+        val word = remembered.lastOrNull { it.start == start && it.word == prefix + suffix } ?: return false
+        composition = Composition.Recalled(word, prefix.length, suffix.length, anchor)
+        show(word.alternatives)
+        return true
     }
 
     /** Only a swiped word the user has not chosen themselves can change once the next word arrives. */
@@ -749,14 +838,18 @@ class Composer(
     private fun replaceLookAlike(earlier: Composition.Swiped, replacement: String, following: String, start: Int, anchor: Snapshot) {
         val showing = composition
         invalidate(false)
+        val previous = remembered.lastOrNull { it.start == start && it.word == earlier.word }
         if (!edit(earlier.tail.length + following.length, "$replacement $following")) return
+        previous?.let { add(it.copy(word = replacement)) }
         lookAlikeChangedAt = start
         val accepted = snapshot()
         if (automaticSpace == anchor) automaticSpace = accepted
         fullStop = fullStop?.let { if (it.snapshot == anchor) FullStop(it.time, accepted) else it }
         if (showing is Composition.Swiped) {
             val context = accepted.before?.removeSuffix(showing.inserted) ?: showing.context
-            composition = showing.copy(context = context, snapshot = accepted)
+            val swiped = showing.copy(context = context, snapshot = accepted)
+            composition = swiped
+            remember(swiped)
         } else {
             composition = Composition.None
             show(emptyList())
@@ -777,6 +870,7 @@ class Composer(
         if (current != epoch || !sameIdentity(owner, editor.identity())) return false
         if (!accepted) {
             // A deletion may have succeeded before commitText failed. Never replay the transaction.
+            remembered.clear()
             reset()
             return false
         }
@@ -794,6 +888,7 @@ class Composer(
         if (!beforeMatches || !afterMatches) {
             // Filters may have accepted only part of the requested text. Retain the actual edit,
             // discard its evidence and dependent input, and recover the app's real cursor.
+            remembered.clear()
             reset()
             selection = Selection(-1, -1)
             selectionConfirmed = false
@@ -802,12 +897,18 @@ class Composer(
         }
         if (!anchor.available || actualBefore == null || actualAfter == null) {
             // Explicit typing still works in editors without readable context; do not invent a cursor.
+            remembered.clear()
             selection = Selection(-1, -1)
             selectionConfirmed = false
             expectedSelections.clear()
             editSnapshot = snapshot()
             return true
         }
+        if (previous.start >= 0 && previous.end >= 0) {
+            val start = minOf(previous.start, previous.end)
+            val end = maxOf(previous.start, previous.end)
+            shiftRemembered(start - count, end + after, text.length - (end - start + count + after))
+        } else remembered.clear()
         expectSelection(previous, count, text.length)
         editSnapshot = snapshot()
         return true
@@ -890,6 +991,7 @@ class Composer(
             }
             return
         }
+        if (recall(anchor)) return
         if (after.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) return
         val lastWord = TypedPredictions.prefix(before.dropLast(1))
         val trailingSpace = before.endsWith(" ") && lastWord.isNotEmpty() && !words.known(lastWord)
@@ -923,5 +1025,6 @@ class Composer(
         const val FULL_STOP_MILLIS = 400L
         private const val PREDICTION_DELAY_MILLIS = 60L
         private val STARTERS = listOf("What", "How", "Where")
+        private const val MAX_REMEMBERED = 1000
     }
 }

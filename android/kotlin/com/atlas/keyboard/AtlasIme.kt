@@ -98,7 +98,15 @@ class AtlasIme : InputMethodService() {
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
             main.post(showStrip)
-        } else composer.stop()
+        } else {
+            composer.stop()
+            try {
+                hideWindow()
+                requestHideSelf(0)
+            } catch (error: RuntimeException) {
+                Log.w("Atlas", "Could not hide the suggestion strip", error)
+            }
+        }
     }
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {

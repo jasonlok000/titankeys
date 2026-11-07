@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Canvas, CanvasText, Icon, Screen, Stack, Text, replace, useSnapshot } from "ink";
 import { arrowOutward, chevronRight } from "ink/icons";
 import { chooseKeyboard, enableKeyboard, state } from "../lib/atlas";
@@ -26,8 +27,10 @@ function Step({ step, title, action, onPress }: {
 }
 
 function FrontPage() {
+  const [focus, setFocus] = useState(0);
+  const refocus = () => setFocus(value => value + 1);
   return <Screen>
-    <Stack align="stretch" gap={24}>
+    <Stack align="stretch" gap={24} onPress={refocus}>
       <Stack align="stretch">
         <Canvas width={1} height={42} />
         <Stack axis="horizontal" align="center" justify="space-between">
@@ -38,7 +41,7 @@ function FrontPage() {
           </Stack>
         </Stack>
       </Stack>
-      <TryArea placeholder="Swipe a word on the keyboard" />
+      <TryArea placeholder="Swipe a word on the keyboard" focus={focus} />
     </Stack>
   </Screen>;
 }

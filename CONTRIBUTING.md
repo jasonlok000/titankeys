@@ -50,6 +50,11 @@ I read all feedback. If a report needs work, I open an issue for it.
    - The result that you expect, and the result that you see.
    - A screen recording, if possible.
 
+5. For a feature, write these items:
+   - The problem that you have now.
+   - The change that you want.
+   - Other ways to solve the problem, if you know of them.
+
 ## Get approval
 
 I read each issue. If I approve it, I add a comment that tells who does the work:

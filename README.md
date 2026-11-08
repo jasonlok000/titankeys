@@ -16,6 +16,8 @@
 
 ### Swipe typing
 
+<img src="assets/demo.gif" width="300" alt="Swiping across the Titan 2 Elite's physical keys to type">
+
 - Swipe across the physical keys to type.
 - Get suggestions for both swiped and typed words.
 - Lightly tap configured tap keys to type the letter and a space.

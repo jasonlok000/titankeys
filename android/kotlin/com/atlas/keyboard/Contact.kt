@@ -51,8 +51,8 @@ class Contact {
     private var lastKeyDown = Long.MIN_VALUE
     private var typing = false
 
-    /** The shortest swipe, in key widths. Turning strip pages takes a shorter swipe than typing a word. */
-    var swipeKeys = SWIPE_KEYS
+    /** Alt or Sym is on, so swipes turn strip pages: they can be shorter and start on any key. */
+    var paging = false
 
     /** Whether the current contact could still type, with how far it has moved in key widths. */
     val travel: Float? get() = (state as? State.Touching)?.travel
@@ -127,7 +127,8 @@ class Contact {
         val points = touching.points
         val first = points.first()
         val last = points.last()
-        if (touching.travel >= swipeKeys) {
+        if (touching.travel >= if (paging) PAGE_KEYS else SWIPE_KEYS) {
+            if (paging) return Outcome.Swipe(points.toList(), first.time, last.time)
             touching.pickup.finish()
             val entry = touching.pickup.entry
             if (entry != null) return Outcome.Swipe(listOf(entry) + points.subList(touching.pickup.entryIndex, points.size), first.time, last.time)
@@ -212,6 +213,8 @@ class Contact {
         const val SETTLE_MILLIS = 30L
         /** Movement in key widths before a contact becomes a swipe. */
         const val SWIPE_KEYS = .6f
+        /** How far a swipe must go, in keys across or rows down, to turn a strip page or jump an emoji group. */
+        const val PAGE_KEYS = .45f
         private const val KEY_COOLDOWN_MILLIS = 200L
         /** Key presses this close together count as steady typing. */
         private const val TYPING_GAP_MILLIS = 500L

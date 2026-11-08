@@ -145,6 +145,6 @@ class Strip(
 
     companion object {
         private val WORD_ORDER = listOf(1, 0, 2)
-        private const val SYMBOLS_PER_PAGE = 8
+        private const val SYMBOLS_PER_PAGE = EmojiPages.PER_PAGE
     }
 }

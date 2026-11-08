@@ -552,11 +552,11 @@ class AtlasIme : InputMethodService() {
                     // Sideways swipes page through the symbols or emoji on the strip. The pages follow the finger.
                     val dx = (outcome.points.last().x - outcome.points.first().x) * 10
                     val dy = (outcome.points.last().y - outcome.points.first().y) * 4
-                    if (modifiers.sym != Modifiers.Level.Off && abs(dy) > abs(dx) && abs(dy) >= PAGE_ROWS) {
+                    if (modifiers.sym != Modifiers.Level.Off && abs(dy) > abs(dx) && abs(dy) >= Contact.PAGE_KEYS) {
                         // Up and down swipes, measured in key rows, jump between emoji groups.
                         strip?.jump(if (dy < 0) 1 else -1)
                         haptics.pulse(HapticPreset.Strong)
-                    } else if (abs(dx) >= PAGE_KEYS) {
+                    } else if (abs(dx) >= Contact.PAGE_KEYS) {
                         strip?.turn(if (dx > 0) -1 else 1)
                         haptics.pulse(HapticPreset.Strong)
                     }
@@ -734,7 +734,7 @@ class AtlasIme : InputMethodService() {
     private fun showModifiers() {
         strip?.showSymbols = modifiers.alt != Modifiers.Level.Off
         strip?.showEmoji = modifiers.sym != Modifiers.Level.Off
-        contact.swipeKeys = if (stripPaging) minOf(PAGE_KEYS, PAGE_ROWS) else Contact.SWIPE_KEYS
+        contact.paging = stripPaging
     }
 
     /** Converts touchpad points to the recogniser's letter space. */
@@ -762,16 +762,14 @@ class AtlasIme : InputMethodService() {
     companion object {
         private const val MAX_PENDING_INPUT = 128
         private const val EMOJI_PREFERENCES = "emoji"
-        /** How far a swipe must go, in keys across or rows down, to turn a strip page or jump an emoji group. */
-        private const val PAGE_KEYS = .45f
-        private const val PAGE_ROWS = .45f
         private const val RECENT_EMOJI = "recent"
         private const val BACK_SETTLE_MILLIS = 300L
         private const val SELECT_AFTER_CURSOR_MILLIS = 250L
         private const val FRAME_MILLIS = 16L
         /** Characters read on each side of the cursor to find the word it is in. */
         private const val WORD_REACH = 64
-        private const val MODIFIER_RELEASE_SLOTS = 4
+        /** One for each physical Shift, Alt and Sym key. */
+        private const val MODIFIER_RELEASE_SLOTS = 5
         private const val DRAIN_BUDGET = 8
         private const val DRAIN_NANOS = 4_000_000L
         private val NAVIGATION_KEYS = setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,

@@ -24,6 +24,7 @@
 </p>
 
 - Swipe across the physical keys to type.
+- Rest your finger lightly on the space bar, then move it left or right to move the cursor.
 - Get suggestions for both swiped and typed words.
 - Lightly tap configured tap keys to type the letter and a space.
 - Atlas learns new words the more you use them.

@@ -18,16 +18,6 @@ Atlas has these goals:
 - **Simple:** Write clear code. Clear code is better than clever code.
 - **Made for the Titan 2 Elite:** Each feature must operate well with the physical keyboard.
 
-## Send feedback without GitHub
-
-You do not need a GitHub account to report a bug or suggest an idea.
-
-1. Open Atlas.
-2. Go to **Settings > Send feedback**.
-3. Write your message, then send it.
-
-I read all feedback. If a report needs work, I open an issue for it.
-
 ## Open an issue
 
 1. Search the [issues](https://github.com/juleshall4/atlas/issues) first. Make sure that your issue is not a duplicate.
@@ -146,15 +136,13 @@ I read each pull request. I can ask for changes before I merge it.
 
 ## AI use
 
-You can use AI tools to help you write code. Tell me how you used them.
+Pull requests made with AI help are welcome. Use the tools that help you, and tell me how you used them.
 
 In the pull request description, write these items:
 
 - If you used AI (yes or no).
-- The tools that you used, for example Claude Code or GitHub Copilot.
-- How much you used them, for example "helped find the bug" or "wrote most of the code".
-
-Write the pull request description yourself. Do not use AI to write it.
+- The tools that you used, for example Claude Code, GitHub Copilot, or ChatGPT.
+- How much you used them, for example "wrote the tests", "helped find the bug", or "wrote most of the code".
 
 ## License
 

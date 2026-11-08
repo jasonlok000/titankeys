@@ -55,6 +55,9 @@ class Contact {
     /** Alt or Sym is on, so swipes turn strip pages: they can be shorter and start on any key. */
     var paging = false
 
+    /** Whether the current contact could still type: it did not start during a key press or the pause after one. */
+    val canType: Boolean get() = state is State.Touching
+
     /** Whether the current contact could still type, with how far it has moved in key widths. */
     val travel: Float? get() = (state as? State.Touching)?.travel
 

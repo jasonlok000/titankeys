@@ -312,7 +312,8 @@ class AtlasIme : InputMethodService() {
                 contact.move(samples.drop(1))
                 endCursor()
                 // Alt and Sym turn swipes into strip pages, so the cursor waits until they are off.
-                if (cursorControl && !stripPaging && cursor.down(first)) {
+                // A finger that lands during the pause after a key press cannot start cursor mode, as it cannot swipe.
+                if (cursorControl && !stripPaging && contact.canType && cursor.down(first)) {
                     cursor.move(samples.drop(1))
                     cursorPath = ArrayList(samples.filter { it.valid })
                     main.postAtTime(startCursor, first.time + CursorMode.REST_MILLIS)

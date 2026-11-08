@@ -68,6 +68,8 @@ class AtlasIme : InputMethodService() {
     private var inputGeneration = 0
     private var drainScheduled = false
     private val settlements = LinkedHashMap<Contact.Settlement, Runnable>()
+    private val pieces = SwipePieces({ composer.liftOffMillis.toLong() }, { composer.canContinueSwipe }, ::isTapKey)
+    private var lastTouch: List<Sample>? = null
     private val showStrip = Runnable {
         if (!editing || currentInputBinding == null) return@Runnable
         // Apps can drop a field yet still start input on it, so only a field that answers gets the strip.
@@ -140,6 +142,7 @@ class AtlasIme : InputMethodService() {
         composer = Composer(editor, EngineWords(SwipeTyping.get(this)),
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             { TypingSettings.autoCapitalise(this) }) { strip?.words = it }
+        composer.onStroke = Trace::stroke
         // The firmware hands touchpad events to the topmost window titled "InputMethod", which is this
         // keyboard's window. They arrive at the window, not at any view, so catch them there.
         val window = window.window!!
@@ -317,7 +320,12 @@ class AtlasIme : InputMethodService() {
                     cursorPath = ArrayList(samples.filter { it.valid })
                     main.postAtTime(startCursor, first.time + CursorMode.REST_MILLIS)
                 }
-                Trace.touch(contact.points, false)
+                // A touch that may be the last swipe carrying on keeps that swipe on the trail until it is settled.
+                val carried = lastTouch?.takeIf {
+                    Trace.listening && contact.points.isNotEmpty()
+                        && letterSpace(it).couldContinue(first.x, first.y * 4 / 3, first.time - it.last().time, composer.liftOffMillis.toLong())
+                }.orEmpty()
+                Trace.touch(contact.points, false, carried)
             }
             MotionEvent.ACTION_MOVE -> {
                 cursor.move(samples)
@@ -348,6 +356,7 @@ class AtlasIme : InputMethodService() {
                 endCursor()
                 val points = contact.points
                 contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
+                    lastTouch = pending.points
                     if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
                         contact.settle(pending, pending.deadline)
                         return@let
@@ -356,7 +365,8 @@ class AtlasIme : InputMethodService() {
                     pendingInput.addLast(input)
                     val settle = Runnable {
                         settlements.remove(pending)
-                        val result = contact.settle(pending, SystemClock.uptimeMillis())
+                        val settled = contact.settle(pending, SystemClock.uptimeMillis())
+                        val result = if (pending.cancelled || stripPaging) settled else pieces.settle(pending, settled)
                         input.action = { result?.let(::outcome) }
                         input.ready = true
                         drainInput()
@@ -466,7 +476,9 @@ class AtlasIme : InputMethodService() {
         drainScheduled = false
         settlements.values.forEach(main::removeCallbacks)
         settlements.clear()
-        val releases = pendingInput.filter { it.event?.action == KeyEvent.ACTION_UP }
+        pieces.clear()
+        lastTouch = null
+        val releases =pendingInput.filter { it.event?.action == KeyEvent.ACTION_UP }
         pendingInput.clear()
         contact.cancel()
         // Discarded typing must still release physically held modifiers.
@@ -735,16 +747,6 @@ class AtlasIme : InputMethodService() {
         strip?.showSymbols = modifiers.alt != Modifiers.Level.Off
         strip?.showEmoji = modifiers.sym != Modifiers.Level.Off
         contact.paging = stripPaging
-    }
-
-    /** Converts touchpad points to the recogniser's letter space. */
-    private fun letterSpace(points: List<Sample>): Swipe {
-        val start = points.first().time
-        return Swipe(
-            FloatArray(points.size) { points[it].x },
-            FloatArray(points.size) { points[it].y * 4 / 3 },
-            FloatArray(points.size) { (points[it].time - start).toFloat() },
-        )
     }
 
     override fun onDestroy() {

@@ -6,6 +6,8 @@ export type Spelling = "british" | "american";
 
 export type State = {
   version: string;
+  /** Atlas was updated and its release notes haven't been closed yet. */
+  whatsNew: boolean;
   phone: string;
   android: string;
   enabled: boolean;
@@ -94,6 +96,15 @@ export async function transferLearning(mode: "import" | "export") {
     return result === "true" ? mode : null;
   } finally {
     if (mode === "import") await state.refresh();
+  }
+}
+
+/** Hides the release notes until the next update. */
+export async function markNotesSeen() {
+  try {
+    await atlas("notesSeen");
+  } finally {
+    await state.refresh();
   }
 }
 

@@ -5,9 +5,12 @@
   "scripts": {
     "dev": "../ink/scripts/ink dev",
     "build": "../ink/scripts/ink build",
-    "check": "bun run typecheck",
+    "check": "bun run typecheck && bun test tools/checks && bun run notes",
+    "check:phone": "bash tools/checks/about.sh && bash tools/checks/feedback.sh && python3 tools/checks/home-focus.py",
+    "notes": "bun tools/checks/release-notes.ts",
     "typecheck": "tsc --noEmit",
-    "release": "bash tools/release.sh"
+    "release": "bash tools/release.sh",
+    "debug": "bash tools/debug.sh"
   },
   "dependencies": {
     "ink": "file:../ink/packages/ink",

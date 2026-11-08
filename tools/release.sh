@@ -10,4 +10,5 @@ fi
 export INK_KEYSTORE_PASSWORD
 export INK_KEY_PASSWORD="${INK_KEY_PASSWORD:-$INK_KEYSTORE_PASSWORD}"
 
+bun run notes
 exec bun run build "$@"

@@ -3,6 +3,7 @@ package com.vandam.ink
 import android.app.Activity
 import android.app.Application
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
 import android.net.Uri
@@ -166,6 +167,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     }
                     null
                 }
+                "notesSeen" -> {
+                    appPreferences().edit().putString(SEEN_NOTES, installedVersion()).apply()
+                    "null"
+                }
                 "enable" -> {
                     activity.startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
                     "null"
@@ -244,7 +249,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         for ((index, word) in learned.words.withIndex())
             words.put(JSONObject().put("word", word).put("description", learned.swipeStatuses[index]))
         return JSONObject()
-            .put("version", activity.packageManager.getPackageInfo(activity.packageName, 0).versionName)
+            .put("version", installedVersion())
+            .put("whatsNew", whatsNew())
             .put("phone", "${Build.MANUFACTURER} ${Build.MODEL}")
             .put("android", Build.VERSION.RELEASE)
             .put("enabled", enabled)
@@ -263,6 +269,21 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
     }
 
+    private fun installedVersion(): String = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
+
+    /** Release notes show once after each update. A fresh install has nothing new, so it starts as seen. */
+    private fun whatsNew(): Boolean {
+        val info = activity.packageManager.getPackageInfo(activity.packageName, 0)
+        val preferences = appPreferences()
+        val seen = preferences.getString(SEEN_NOTES, null) ?: if (info.firstInstallTime == info.lastUpdateTime) {
+            preferences.edit().putString(SEEN_NOTES, info.versionName).apply()
+            info.versionName
+        } else null
+        return seen != info.versionName
+    }
+
+    private fun appPreferences() = activity.getSharedPreferences("app", Context.MODE_PRIVATE)
+
     private fun set(key: String, value: Any) {
         when (key) {
             "learning" -> typing.learningEnabled(value as Boolean)
@@ -279,3 +300,5 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         }
     }
 }
+
+private const val SEEN_NOTES = "seen_release_notes"

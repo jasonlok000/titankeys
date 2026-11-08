@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: main
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.4.2'
@@ -31,8 +32,12 @@ jobs:
           branch: release/v${{ inputs.version }}
           title: 'release: v${{ inputs.version }}'
           commit-message: 'release: v${{ inputs.version }}'
-          body: 'Release v${{ inputs.version }}. Merging this PR builds and publishes the signed APK.'
+          body: |
+            Release v${{ inputs.version }}. Merging this PR builds and publishes the signed APK.
+
+            Before merging, rewrite the draft in `release-notes.txt` and delete its draft line. The app shows these notes after the update, and they become the GitHub release notes. Write `skip` under the version heading to release without notes.
           add-paths: |
             ink.toml
             package.json
             README.md
+            release-notes.txt

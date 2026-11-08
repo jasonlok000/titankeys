@@ -1,5 +1,6 @@
 import { appendFile, readFile, writeFile } from "node:fs/promises";
 import { execFileSync, spawnSync } from "node:child_process";
+import { DRAFT_MARKER, parseReleaseNotes, releaseNotesMarkdown } from "../lib/release-notes-format.ts";
 
 const config = Bun.TOML.parse(await readFile("ink.toml", "utf8"));
 const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
@@ -30,6 +31,17 @@ switch (process.argv[2]) {
       `![Version ${version}](https://img.shields.io/badge/version-${badge(version)}-111111`,
     );
     await writeFile("README.md", readme);
+    // Start the notes from the commits since the last release; the release check refuses the draft as is.
+    const previous = run(["git", "tag", "--list", "v*", "--sort=-version:refname"]).split("\n")[0];
+    const subjects = run(["git", "log", "--no-merges", "--reverse", "--format=%s", ...(previous ? [`${previous}..HEAD`] : [])])
+      .split("\n")
+      .filter((subject) => subject && !/^release: v/.test(subject));
+    await writeFile(
+      "release-notes.txt",
+      `# ${version}\n\n${DRAFT_MARKER} rewrite these notes for people using Atlas, then delete this line. ` +
+        `Each line is "Title: what changed". Write skip instead to release without notes. -->\n\n` +
+        `## New\n${subjects.map((subject) => `- ${subject}`).join("\n") || "- "}\n\n## Fixed\n- \n`,
+    );
     break;
   }
   case "metadata": {
@@ -101,6 +113,13 @@ switch (process.argv[2]) {
       })
       .filter(({ subject }) => !/^release: v\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(subject));
 
+    const notes = parseReleaseNotes(await readFile("release-notes.txt", "utf8"));
+    if (notes.version === config.version && !notes.skip && notes.sections.length) {
+      console.log(releaseNotesMarkdown(notes));
+      const changelog = previous ? `${repository}/compare/${previous}...${tag}` : `${repository}/commits/${tag}`;
+      console.log(`\n[Full changelog](${changelog})`);
+      break;
+    }
     console.log("## What's changed\n");
     for (const { hash, subject } of commits) {
       const title = subject.replace(/[\\`*_{}\[\]<>]/g, "\\$&");

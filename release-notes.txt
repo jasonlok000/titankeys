@@ -1,0 +1,5 @@
+# 1.0.1
+
+## Fixed
+- Launcher search: The suggestion bar now stays hidden on your launcher's home screen, like Niagara, so type-to-search stays clean.
+- Suggestion bar: It no longer comes back after an app closes a text box.

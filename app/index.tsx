@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Canvas, CanvasText, Icon, Screen, Stack, Text, replace, useSnapshot } from "ink";
 import { arrowOutward, chevronRight } from "ink/icons";
-import { allowOverlay, chooseKeyboard, enableKeyboard, onHomeFocus, state } from "../lib/atlas";
+import { allowOverlay, chooseKeyboard, enableKeyboard, markNotesSeen, onHomeFocus, state } from "../lib/atlas";
+import { hasReleaseNotes } from "../lib/release-notes";
+import { WhatsNew } from "../lib/whats-new";
 import { TryArea } from "../lib/try";
 
 function Step({ step, title, action, onPress }: {
@@ -50,9 +52,10 @@ function FrontPage() {
 export default function Home() {
   const result = useSnapshot(state);
   if (result.status !== "ready") return <Screen />;
-  const { enabled, selected, overlay } = result.data;
+  const { enabled, selected, overlay, version, whatsNew } = result.data;
   if (!enabled) return <Step step={1} title="Enable Atlas" action="Open keyboard settings" onPress={enableKeyboard} />;
   if (!selected) return <Step step={2} title="Choose Atlas" action="Open keyboard list" onPress={chooseKeyboard} />;
   if (!overlay) return <Step step={3} title="Allow overlay" action="Open overlay settings" onPress={allowOverlay} />;
+  if (whatsNew && hasReleaseNotes(version)) return <WhatsNew version={version} onClose={() => void markNotesSeen()} />;
   return <FrontPage />;
 }

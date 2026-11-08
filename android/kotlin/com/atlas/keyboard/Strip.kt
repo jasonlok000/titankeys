@@ -17,7 +17,7 @@ class Strip(
 ) : LinearLayout(context) {
     private val typeface = resources.getFont(R.font.inter_regular)
     private val symbols = Keys.extraSymbols()
-    private val wordViews = List(3) { index -> item(17f) { choose(index) } }
+    private val wordViews = WORD_ORDER.map { index -> item(17f) { choose(index) } }
     private val symbolViews = List(SYMBOLS_PER_PAGE) { item(20f) { view -> symbol(view.text.toString()) } }
     private var page = 0
     private var navigationInset = 0
@@ -79,7 +79,8 @@ class Strip(
         setPadding(dp(8), 0, dp(8), if (visible) navigationInset else 0)
         // Keep a window for firmware touchpad routing when there is nothing to display.
         minimumHeight = if (visible) 0 else 1
-        for ((index, view) in wordViews.withIndex()) {
+        for ((slot, view) in wordViews.withIndex()) {
+            val index = WORD_ORDER[slot]
             view.visibility = if (showSuggestions && !showSymbols) VISIBLE else GONE
             view.text = words.getOrElse(index) { "" }
             view.isEnabled = index < words.size
@@ -103,6 +104,7 @@ class Strip(
     private fun dp(value: Int) = Math.round(value * resources.displayMetrics.density)
 
     companion object {
+        private val WORD_ORDER = listOf(1, 0, 2)
         private const val SYMBOLS_PER_PAGE = 8
     }
 }

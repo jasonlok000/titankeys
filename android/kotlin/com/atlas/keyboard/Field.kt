@@ -13,7 +13,7 @@ data class Field(
     val learning: Boolean,
     /** Two quick spaces after a word become a full stop. */
     val fullStops: Boolean,
-    /** An empty search bar shows starter words. */
+    /** A search bar that is empty or fully selected shows starter words. */
     val starters: Boolean,
     /** Sentences may start with a capital letter. */
     val sentenceCapitalisation: Boolean,
@@ -35,10 +35,9 @@ data class Field(
             val private = imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
             // Browsers often give search bars the URL type.
             val search = url && inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS == 0
-            val starters = search && !private
             return Field(words = !password, suggestions = !password && !email && (!url || search),
                 learning = !password && !address && !private,
-                fullStops = !password && !address, starters = starters,
+                fullStops = !password && !address, starters = search,
                 sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0)
         }
     }

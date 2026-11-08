@@ -714,7 +714,8 @@ class Composer(
             }
             is Composition.Typed -> {
                 val tail = current.prefix + if (current.trailingSpace) " " else ""
-                if (anchor != current.snapshot || !before.endsWith(tail) || anchor.selected) return
+                // A starter word replaces a selection; any other word would leave it behind.
+                if (anchor != current.snapshot || !before.endsWith(tail) || anchor.selected && tail.isNotEmpty()) return
                 invalidate(false)
                 val space = if (current.prefix.isEmpty()) SwipeTyping.prefix(before) else ""
                 if (!edit(tail.length, "$space$chosen ")) return
@@ -983,16 +984,18 @@ class Composer(
         val anchor = snapshot()
         // Predictions must belong to the last verified owned edit.
         if (editSnapshot != null && anchor != editSnapshot) return
-        if (!anchor.available || !anchor.knownSelection || anchor.selected) return
+        if (!anchor.available || !anchor.knownSelection) return
         val before = anchor.before ?: return
         val after = anchor.after ?: return
-        checkLookAlike()
+        // Browsers select the whole address when you tap it, and typing replaces it, so offer starters then too.
         if (field.starters && before.isEmpty() && after.isEmpty()) {
             val starters = STARTERS.filter(words::allowed)
             composition = Composition.Typed("", false, anchor, starters)
             show(starters)
             return
         }
+        if (anchor.selected) return
+        checkLookAlike()
         if (!field.suggestions) {
             show(emptyList())
             return

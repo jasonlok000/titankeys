@@ -16,6 +16,7 @@ export default function Guide() {
       <Row title="Tap keys" subtitle="Touch these keys lightly to type them. You do not have to push them. Select the keys in Settings." wrapSubtitle />
       <Row title="Full stop" subtitle="Push the space bar two times." wrapSubtitle />
       <Row title="Shift and Alt" subtitle="Push one time for the next letter only. Push two times quickly to lock. Push again to unlock." wrapSubtitle />
+      <Row title="Delete a word" subtitle="Push Alt, then push Backspace." wrapSubtitle />
       <Row title="More symbols" subtitle="When Alt is on, the strip shows more symbols. Move your finger to the left or right across the keyboard to see more." wrapSubtitle />
     </Section>
     <Section title="Problems">

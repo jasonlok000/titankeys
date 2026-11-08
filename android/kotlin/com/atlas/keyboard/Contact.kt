@@ -12,7 +12,11 @@ import kotlin.math.min
  * Pressing a physical key makes the keyboard driver power the touchpad off and report a lift, so a
  * contact that overlaps a key press is never typing. The key event and that lift reach the keyboard
  * through different windows and can arrive in either order, so a finished contact is held for
- * [SETTLE_MILLIS] before it counts, and any key press between its start and its lift cancels it.
+ * [SETTLE_MILLIS] before it counts, and any key press from its start until [SETTLE_MILLIS] after its lift
+ * cancels it.
+ *
+ * New contacts are also ignored for a short time after each key event, and for longer while the user
+ * types steadily, so a finger that brushes the keys between presses does not type.
  */
 class Contact {
     sealed interface Outcome {
@@ -44,6 +48,8 @@ class Contact {
     private val pending = ArrayDeque<Settlement>()
     private val heldKeys = HashSet<Int>()
     private var blockedUntil = Long.MIN_VALUE
+    private var lastKeyDown = Long.MIN_VALUE
+    private var typing = false
 
     /** Whether the current contact could still type, with how far it has moved in key widths. */
     val travel: Float? get() = (state as? State.Touching)?.travel
@@ -101,10 +107,12 @@ class Contact {
     fun key(code: Int, down: Boolean, time: Long) {
         if (down) {
             heldKeys += code
-            for (contact in pending) if (time in contact.startedAt..contact.endedAt) contact.cancelled = true
+            for (contact in pending) if (time in contact.startedAt..contact.endedAt + SETTLE_MILLIS) contact.cancelled = true
             if (state is State.Touching) state = State.Ignored
+            typing = time - lastKeyDown in 0..TYPING_GAP_MILLIS
+            lastKeyDown = time
         } else heldKeys -= code
-        blockedUntil = max(blockedUntil, time + KEY_COOLDOWN_MILLIS)
+        blockedUntil = max(blockedUntil, time + if (typing) TYPING_COOLDOWN_MILLIS else KEY_COOLDOWN_MILLIS)
     }
 
     fun releaseKeys() {
@@ -198,10 +206,13 @@ class Contact {
     }
 
     companion object {
-        const val SETTLE_MILLIS = 20L
+        const val SETTLE_MILLIS = 30L
         /** Movement in key widths before a contact becomes a swipe. */
         const val SWIPE_KEYS = .6f
-        private const val KEY_COOLDOWN_MILLIS = 180L
+        private const val KEY_COOLDOWN_MILLIS = 200L
+        /** Key presses this close together count as steady typing. */
+        private const val TYPING_GAP_MILLIS = 500L
+        private const val TYPING_COOLDOWN_MILLIS = 500L
         private const val SAMPLE_DISTANCE = .025f
         private const val REQUIRED_EVIDENCE = .12f
         private const val STRAIGHT = .819152f

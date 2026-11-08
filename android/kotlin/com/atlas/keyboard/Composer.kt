@@ -987,12 +987,14 @@ class Composer(
         val before = anchor.before ?: return
         val after = anchor.after ?: return
         checkLookAlike()
-        if (!field.learning) {
-            if (field.starters && before.isEmpty() && after.isEmpty()) {
-                val starters = STARTERS.filter(words::allowed)
-                composition = Composition.Typed("", false, anchor, starters)
-                show(starters)
-            } else show(emptyList())
+        if (field.starters && before.isEmpty() && after.isEmpty()) {
+            val starters = STARTERS.filter(words::allowed)
+            composition = Composition.Typed("", false, anchor, starters)
+            show(starters)
+            return
+        }
+        if (!field.suggestions) {
+            show(emptyList())
             return
         }
         if (recall(anchor)) return

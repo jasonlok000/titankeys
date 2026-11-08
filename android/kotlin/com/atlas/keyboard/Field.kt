@@ -7,6 +7,8 @@ import android.view.inputmethod.EditorInfo
 data class Field(
     /** Swipes and touchpad taps type words. */
     val words: Boolean,
+    /** Typed words get suggestions. Nothing is learned unless [learning] is also true. */
+    val suggestions: Boolean,
     /** Typing here may teach the keyboard new words. */
     val learning: Boolean,
     /** Two quick spaces after a word become a full stop. */
@@ -17,7 +19,7 @@ data class Field(
     val sentenceCapitalisation: Boolean,
 ) {
     companion object {
-        val None = Field(words = false, learning = false, fullStops = false, starters = false,
+        val None = Field(words = false, suggestions = false, learning = false, fullStops = false, starters = false,
             sentenceCapitalisation = false)
 
         fun of(inputType: Int, imeOptions: Int): Field {
@@ -26,14 +28,16 @@ data class Field(
             val password = variation == InputType.TYPE_TEXT_VARIATION_PASSWORD
                 || variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
                 || variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
-            val address = variation == InputType.TYPE_TEXT_VARIATION_URI
-                || variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            val url = variation == InputType.TYPE_TEXT_VARIATION_URI
+            val email = variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
                 || variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
+            val address = url || email
             val private = imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
             // Browsers often give search bars the URL type.
-            val starters = variation == InputType.TYPE_TEXT_VARIATION_URI && !private
-                && inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS == 0
-            return Field(words = !password, learning = !password && !address && !private,
+            val search = url && inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS == 0
+            val starters = search && !private
+            return Field(words = !password, suggestions = !password && !email && (!url || search),
+                learning = !password && !address && !private,
                 fullStops = !password && !address, starters = starters,
                 sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0)
         }

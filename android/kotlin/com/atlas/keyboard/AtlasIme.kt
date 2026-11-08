@@ -210,7 +210,8 @@ class AtlasIme : InputMethodService() {
     }
 
     // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way.
-    private fun showSuggestions() = TypingSettings.suggestionBar(this) && !inLauncher
+    // Password, email and number fields get no suggestions, so the bar would only be an empty strip.
+    private fun showSuggestions() = TypingSettings.suggestionBar(this) && !inLauncher && field.suggestions
 
     private fun launcherPackage(): String? {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)

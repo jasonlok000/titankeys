@@ -722,7 +722,7 @@ class Composer(
                 val correction = correcting?.takeIf { anchor == editSnapshot }
                 manualWord.clear()
                 correcting = null
-                show(emptyList())
+                // Keep the old words until the next words arrive, so the bar does not flash empty.
                 confirmState(snapshot()) { confirmed ->
                     if (confirmed) learnWord(chosen, correction, rememberCase = false)
                 }

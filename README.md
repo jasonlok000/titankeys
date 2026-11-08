@@ -55,6 +55,18 @@ Atlas doesn't learn from fields marked as passwords, email addresses, URLs, or p
 
 Atlas asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "Atlas is displaying over other apps" notification while it's there, which you can turn off.
 
+## Contributing
+
+Contributions are welcome. Before you write code, read the [contributing guide](CONTRIBUTING.md). If you use an AI coding agent, give the guide to it too.
+
+1. **Open an issue.** Use an issue for all bugs, ideas, and questions.
+2. **Add a label.** Each issue must have a label, for example `bug` or `enhancement`.
+3. **Wait for approval.** I approve the issue and tell you who does the work.
+4. **Test on a Titan 2 Elite.** Each pull request must have a test on a real device.
+5. **Open a pull request.** Link it to the approved issue.
+
+Not a developer? Send a bug report or an idea from **Settings > Send feedback** in Atlas.
+
 ## Credits
 
 Atlas is powered by and built with these projects:

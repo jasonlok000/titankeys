@@ -26,6 +26,9 @@ public final class TypedPredictions {
     /** Sorted, so the completions of a prefix sit next to each other. */
     private final String[] words;
     private final float[] frequencies;
+    /** The most frequent words, which are all the next word can be when the model has no opinion. */
+    private final int[] common;
+    private static final int COMMON_WORDS = 64;
 
     TypedPredictions(Reader source, ToDoubleFunction<String> frequency) throws IOException {
         this(source, null, frequency);
@@ -48,6 +51,9 @@ public final class TypedPredictions {
         Arrays.sort(words);
         frequencies = new float[words.length];
         for (int i = 0; i < words.length; i++) frequencies[i] = vocabulary.get(words[i]).floatValue();
+        common = java.util.stream.IntStream.range(0, words.length).boxed()
+                .sorted(Comparator.<Integer>comparingDouble(i -> -frequencies[i]).thenComparing(i -> words[i]))
+                .limit(COMMON_WORDS).mapToInt(Integer::intValue).toArray();
     }
 
     private static void add(Map<String, Double> vocabulary, String word, ToDoubleFunction<String> frequency) {
@@ -96,7 +102,14 @@ public final class TypedPredictions {
         Map<String, Double> matches = new LinkedHashMap<>();
         Map<String, Double> personalMatches = new LinkedHashMap<>();
         Map<String, Double> similar = new LinkedHashMap<>();
-        for (int i = lowerBound(lower); i < words.length && words[i].startsWith(lower); i++)
+        if (lower.isEmpty()) {
+            // Ranking every word takes too long for the next word, and only the model's picks and common words can win.
+            for (String word : context.keySet()) {
+                int index = Arrays.binarySearch(words, word);
+                if (index >= 0 && allowed.test(word)) matches.put(word, (double) frequencies[index]);
+            }
+            for (int index : common) if (allowed.test(words[index])) matches.putIfAbsent(words[index], (double) frequencies[index]);
+        } else for (int i = lowerBound(lower); i < words.length && words[i].startsWith(lower); i++)
             if (allowed.test(words[i])) matches.put(words[i], (double) frequencies[i]);
         for (LanguageHabits.Entry entry : personal) {
             if (!entry.active(today) || !SuggestionPolicy.allowed(entry.word) || !allowed.test(entry.word)) continue;

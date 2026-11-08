@@ -105,8 +105,9 @@ public final class SwipeTyping {
         try (Reader vocabulary = new InputStreamReader(context.getAssets().open("swipe/hungry_jellyfish/vocab.txt"), "UTF-8")) {
             ProperNames.load(vocabulary);
         }
-        try (Reader vocabulary = new InputStreamReader(context.getAssets().open("swipe/hungry_jellyfish/vocab.txt"), "UTF-8")) {
-            typedPredictions = new TypedPredictions(vocabulary, word -> recogniser.frequency(word));
+        try (Reader vocabulary = new InputStreamReader(context.getAssets().open("swipe/hungry_jellyfish/vocab.txt"), "UTF-8");
+             Reader dictionary = new InputStreamReader(context.getAssets().open("swipe/english.combined"), "UTF-8")) {
+            typedPredictions = new TypedPredictions(vocabulary, dictionary, word -> recogniser.frequency(word));
         }
         syncDictionary(); publish();
         loadError = null; readiness = "ready";

@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -22,15 +23,46 @@ public final class TypedPredictions {
     private static final int CORRECTIONS = 3;
     /** A fix goes before the completions only when it is clearly more common than all of them. */
     private static final int CORRECTION_LEAD = 40;
-    private final Map<String, Double> vocabulary = new LinkedHashMap<>();
+    /** Sorted, so the completions of a prefix sit next to each other. */
+    private final String[] words;
+    private final float[] frequencies;
 
     TypedPredictions(Reader source, ToDoubleFunction<String> frequency) throws IOException {
+        this(source, null, frequency);
+    }
+
+    /** {@code dictionary} is the full word list in combined format; it adds rarer words such as "nuggets" to the context model's list. */
+    TypedPredictions(Reader source, Reader dictionary, ToDoubleFunction<String> frequency) throws IOException {
+        Map<String, Double> vocabulary = new HashMap<>();
         BufferedReader reader = new BufferedReader(source);
         String line;
-        while ((line = reader.readLine()) != null) {
-            String word = key(line);
-            if (!word.isEmpty() && SuggestionPolicy.allowed(word)) vocabulary.putIfAbsent(word, frequency.applyAsDouble(word));
+        while ((line = reader.readLine()) != null) add(vocabulary, key(line), frequency);
+        if (dictionary != null) {
+            reader = new BufferedReader(dictionary);
+            while ((line = reader.readLine()) != null) {
+                String word = dictionaryWord(line);
+                if (word != null) add(vocabulary, key(word), frequency);
+            }
         }
+        words = vocabulary.keySet().toArray(new String[0]);
+        Arrays.sort(words);
+        frequencies = new float[words.length];
+        for (int i = 0; i < words.length; i++) frequencies[i] = vocabulary.get(words[i]).floatValue();
+    }
+
+    private static void add(Map<String, Double> vocabulary, String word, ToDoubleFunction<String> frequency) {
+        if (!word.isEmpty() && SuggestionPolicy.allowed(word) && !vocabulary.containsKey(word))
+            vocabulary.put(word, frequency.applyAsDouble(word));
+    }
+
+    /** The word on a " word=nuggets,f=72,flags=,…" line, or null for names, unused words, and words marked offensive or not a word. */
+    static String dictionaryWord(String line) {
+        if (!line.startsWith(" word=")) return null;
+        String[] fields = line.trim().split(",");
+        if (fields.length < 3 || !fields[1].startsWith("f=") || !fields[2].startsWith("flags=")) return null;
+        String word = fields[0].substring(5), flags = fields[2].substring(6);
+        if (fields[1].equals("f=0") || flags.contains("offensive") || flags.contains("nonword")) return null;
+        return word.equals(word.toLowerCase(Locale.ROOT)) ? word : null;
     }
 
     static String key(String word) {
@@ -39,7 +71,12 @@ public final class TypedPredictions {
     }
 
     boolean contains(String word) {
-        return vocabulary.containsKey(word.toLowerCase(Locale.ROOT).replace('\u2019', '\''));
+        return Arrays.binarySearch(words, word.toLowerCase(Locale.ROOT).replace('\u2019', '\'')) >= 0;
+    }
+
+    private double frequency(String word) {
+        int index = Arrays.binarySearch(words, word);
+        return index < 0 ? 0 : frequencies[index];
     }
 
     public static String prefix(String before) {
@@ -59,11 +96,11 @@ public final class TypedPredictions {
         Map<String, Double> matches = new LinkedHashMap<>();
         Map<String, Double> personalMatches = new LinkedHashMap<>();
         Map<String, Double> similar = new LinkedHashMap<>();
-        for (Map.Entry<String, Double> entry : vocabulary.entrySet())
-            if (entry.getKey().startsWith(lower) && allowed.test(entry.getKey())) matches.put(entry.getKey(), entry.getValue());
+        for (int i = lowerBound(lower); i < words.length && words[i].startsWith(lower); i++)
+            if (allowed.test(words[i])) matches.put(words[i], (double) frequencies[i]);
         for (LanguageHabits.Entry entry : personal) {
             if (!entry.active(today) || !SuggestionPolicy.allowed(entry.word) || !allowed.test(entry.word)) continue;
-            double frequency = entry.frequency(vocabulary.getOrDefault(entry.word, 0d).floatValue(), today);
+            double frequency = entry.frequency((float) frequency(entry.word), today);
             if (entry.word.startsWith(lower)) personalMatches.put(entry.word, frequency + PERSONAL_COMPLETION_BOOST);
             else if (entry.support(today) >= SPELLING_SUPPORT && similar(lower, entry.word)) similar.put(entry.word, frequency);
         }
@@ -83,7 +120,7 @@ public final class TypedPredictions {
             // With no typed letters there is no evidence for a saved word, so it would crowd every bar.
             if (!lower.isEmpty()) personalMatches.entrySet().stream().sorted(frequency).forEach(entry -> {
                 int index = entry.getKey().equals(lower) ? 0 : !result.isEmpty() && result.get(0).equals(lower) ? 1 : 0;
-                while (index < result.size() && vocabulary.getOrDefault(result.get(index), 0d) >= entry.getValue()) index++;
+                while (index < result.size() && frequency(result.get(index)) >= entry.getValue()) index++;
                 result.add(index, entry.getKey());
             });
         }
@@ -96,17 +133,17 @@ public final class TypedPredictions {
     /** Known words one typo away, as "the" is from "teh", for a typed word the dictionary does not know. */
     private void addCorrections(List<String> result, String lower, Predicate<String> allowed, Map<String, Double> context,
                                 Comparator<Map.Entry<String, Double>> frequency) {
-        if (lower.length() < CORRECTION_LENGTH || vocabulary.containsKey(lower)) return;
+        if (lower.length() < CORRECTION_LENGTH || contains(lower)) return;
         int limit = lower.length() >= 7 ? 2 : 1;
         Map<String, Integer> distances = new HashMap<>();
         Map<String, Double> found = new LinkedHashMap<>();
-        for (Map.Entry<String, Double> entry : vocabulary.entrySet()) {
-            String word = entry.getKey();
-            if (word.length() < 2 || result.contains(word)) continue;
+        for (int i = 0; i < words.length; i++) {
+            String word = words[i];
+            if (word.length() < 2 || !sameStart(lower, word) || result.contains(word)) continue;
             int distance = distance(lower, word, limit);
-            if (distance > limit || !sameStart(lower, word) || !allowed.test(word)) continue;
+            if (distance > limit || !allowed.test(word)) continue;
             distances.put(word, distance);
-            found.put(word, entry.getValue());
+            found.put(word, (double) frequencies[i]);
         }
         Comparator<Map.Entry<String, Double>> likely = Comparator
                 .<Map.Entry<String, Double>>comparingInt(entry -> distances.get(entry.getKey()))
@@ -119,11 +156,20 @@ public final class TypedPredictions {
             fixes.forEach(entry -> result.add(entry.getKey()));
             return;
         }
-        // An unfinished word such as "thi" keeps its completions in view, so only one fix shares the visible slots.
-        double best = result.stream().mapToDouble(word -> vocabulary.getOrDefault(word, 0d)).max().orElse(0);
-        String fix = fixes.get(0).getKey();
-        result.add(fixes.get(0).getValue() >= best + CORRECTION_LEAD ? 0 : 1, fix);
-        fixes.stream().skip(1).forEach(entry -> result.add(entry.getKey()));
+        // An unfinished word such as "thi" keeps its completions in view, so only one weaker fix shares the visible slots.
+        double best = result.stream().mapToDouble(this::frequency).max().orElse(0);
+        int front = 0;
+        boolean shown = false;
+        for (Map.Entry<String, Double> fix : fixes) {
+            if (fix.getValue() >= best + CORRECTION_LEAD) result.add(front++, fix.getKey());
+            else if (!shown) { result.add(front + 1, fix.getKey()); shown = true; }
+            else result.add(fix.getKey());
+        }
+    }
+
+    private int lowerBound(String prefix) {
+        int index = Arrays.binarySearch(words, prefix);
+        return index < 0 ? -index - 1 : index;
     }
 
     /** Typos rarely change the first letter, so a fix keeps it, unless the first two letters swapped as in "hte". */

@@ -383,6 +383,7 @@ class Composer(
             recognising = false
             recognitionSnapshot = null
             pendingInput.removeFirst()
+            Recording.sink?.recognised(recognition.words, resumes)
             onStroke?.invoke(path)
             if (recognition.words.isNotEmpty()) {
                 val sentenceCase = field.sentenceCapitalisation && autoCapitalise()

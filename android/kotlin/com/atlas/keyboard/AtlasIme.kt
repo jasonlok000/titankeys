@@ -301,6 +301,7 @@ class AtlasIme : InputMethodService() {
         if (!field.words) return
         typedInField = true
         val samples = touchpad.samples(event)
+        Recording.sink?.motion(event, samples)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
@@ -566,6 +567,7 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun outcome(outcome: Contact.Outcome) {
+        Recording.sink?.outcome(outcome)
         when (outcome) {
             is Contact.Outcome.Swipe -> {
                 if (stripPaging) {
@@ -607,6 +609,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        Recording.sink?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
         // Android hands back to a shown keyboard first, which would only close the strip.
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) return true
@@ -641,6 +644,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        Recording.sink?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
             passingBack = true

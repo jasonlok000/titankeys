@@ -147,7 +147,7 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    override fun onCreateInputView(): View = Strip(this, { index -> enqueue { composer.choose(index) } }, ::symbol).also {
+    override fun onCreateInputView(): View = Strip(this, { index -> haptics.tap(); enqueue { composer.choose(index) } }, ::symbol).also {
         strip = it
         it.showSuggestions = showSuggestions()
         showModifiers()

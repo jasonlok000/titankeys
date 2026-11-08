@@ -1,12 +1,17 @@
-# 1.1.0
+# 1.2.0
 
 ## New
-- Cursor mode: Rest your finger lightly on the space bar. Do not push it. When you feel a click, move your finger left or right to move the cursor.
-- Update notes: Open Atlas after an update to see what changed.
-- Setup: Two new steps help you set the scroll assistant and turn on Atlas in Accessibility.
-- Guide: The guide uses simpler words. A new part tells you what to do if Atlas does not operate correctly.
-- Front page: The Guide and Settings buttons are now at the top of the page.
+- Emoji: Push Sym to show emoji on the strip. Touch an emoji to type it. Move your finger across the keyboard to see more. Your recent emoji show first.
+- Spelling fixes: When you type with the keys, the strip can show the correct spelling of a word.
+- More word suggestions: Typed words get suggestions from the full dictionary.
+- Delete a word: Push Alt, then push Backspace.
+- Shorter swipes for symbols: When Alt is on, a short swipe shows more symbols.
+- Vibration: The phone vibrates when you touch a word on the strip.
+- Best word in the middle: The best word suggestion is now in the middle of the strip.
+- Guide: New parts tell you how to type emoji, use word suggestions and keep a copy of your words.
 
 ## Fixed
-- Swipe back: One back swipe closes the suggestion bar and goes back in all apps.
-- Capital letters: Atlas starts a field with a capital letter when the field has hidden characters at the start.
+- Accidental touches: A finger that touches the keys while you type does not type a swipe or a tap key.
+- Suggestion bar: The bar does not flash when you push Backspace.
+- Screen readers: Screen readers read the best word first.
+- Tap keys: Settings shows Off when no tap keys are selected.

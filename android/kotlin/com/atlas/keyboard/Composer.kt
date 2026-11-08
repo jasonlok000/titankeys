@@ -539,7 +539,7 @@ class Composer(
             reset()
             return
         }
-        show(emptyList())
+        // Keep the old words until the new ones arrive, so the bar does not flash empty for each deleted letter.
         predictLater()
     }
 
@@ -991,11 +991,14 @@ class Composer(
                 val starters = STARTERS.filter(words::allowed)
                 composition = Composition.Typed("", false, anchor, starters)
                 show(starters)
-            }
+            } else show(emptyList())
             return
         }
         if (recall(anchor)) return
-        if (after.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) return
+        if (after.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) {
+            show(emptyList())
+            return
+        }
         val lastWord = TypedPredictions.prefix(before.dropLast(1))
         val trailingSpace = before.endsWith(" ") && lastWord.isNotEmpty() && !words.known(lastWord)
         val context = if (trailingSpace) before.dropLast(1) else before

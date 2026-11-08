@@ -10,6 +10,7 @@ const licences = [
   { title: "AOSP dictionary", subtitle: "Apache 2.0", url: "https://codeberg.org/Helium314/aosp-dictionaries" },
   { title: "Ink", subtitle: "MIT", url: "https://github.com/No-Scrolling/ink" },
   { title: "Inter", subtitle: "SIL Open Font Licence", url: "https://github.com/rsms/inter" },
+  { title: "Remix Icon", subtitle: "Apache 2.0", url: "https://github.com/Remix-Design/RemixIcon" },
   { title: "Unicode data", subtitle: "Unicode License 3.0", url: "https://www.unicode.org/license.txt" },
 ];
 

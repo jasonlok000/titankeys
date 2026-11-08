@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Canvas, CanvasText, Icon, Screen, Stack, Text, replace, useSnapshot } from "ink";
-import { arrowOutward, chevronRight } from "ink/icons";
+import { arrowOutward } from "ink/icons";
+import guideIcon from "../assets/icons/guide.svg";
+import settingsIcon from "../assets/icons/settings.svg";
 import { allowOverlay, chooseKeyboard, enableKeyboard, markNotesSeen, onHomeFocus, state } from "../lib/atlas";
 import { hasReleaseNotes } from "../lib/release-notes";
 import { WhatsNew } from "../lib/whats-new";
@@ -32,18 +34,12 @@ function FrontPage() {
   const [focus, setFocus] = useState(0);
   const refocus = () => setFocus(value => value + 1);
   useEffect(() => onHomeFocus(refocus), []);
-  return <Screen>
-    <Stack align="stretch" gap={24} onPress={refocus}>
-      <Stack align="stretch">
-        <Canvas width={1} height={42} />
-        <Stack axis="horizontal" align="center" justify="space-between">
-          <Text size={49.33}>Atlas</Text>
-          <Stack axis="horizontal" align="center" gap={6} onPress={() => replace("/settings")}>
-            <Text>Settings</Text>
-            <Icon name={chevronRight} size={28} tone="muted" />
-          </Stack>
-        </Stack>
-      </Stack>
+  return <Screen title="Atlas" rightActions={[
+    { icon: guideIcon, onPress: () => replace({ path: "/settings/guide", params: { from: "home" } }) },
+    { icon: settingsIcon, onPress: () => replace("/settings") },
+  ]}>
+    <Stack align="stretch" onPress={refocus}>
+      <Canvas width={1} height={12} />
       <TryArea placeholder="Swipe a word on the keyboard" focus={focus} />
     </Stack>
   </Screen>;

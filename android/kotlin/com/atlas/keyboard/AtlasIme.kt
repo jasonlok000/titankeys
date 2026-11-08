@@ -39,6 +39,7 @@ class AtlasIme : InputMethodService() {
     private var field = Field.None
     private var editing = false
     private var typedInField = false
+    private var passingBack = false
     private var inLauncher = false
     private val consumedKeys = HashSet<Int>()
     private var deadKeyPending = false
@@ -51,6 +52,8 @@ class AtlasIme : InputMethodService() {
     private val settlements = LinkedHashMap<Contact.Settlement, Runnable>()
     private val showStrip = Runnable {
         if (!editing || currentInputBinding == null) return@Runnable
+        // Apps can drop a field yet still start input on it, so only a field that answers gets the strip.
+        if (currentInputConnection?.getTextBeforeCursor(1, 0) == null) return@Runnable
         try {
             // A cancelled show request can leave the client waiting for a window surface.
             showWindow(true)
@@ -60,6 +63,8 @@ class AtlasIme : InputMethodService() {
             Log.w("Atlas", "Could not show the suggestion strip", error)
         }
     }
+
+    private val sendBack = Runnable { if (editing) sendDownUpKeyEvents(KeyEvent.KEYCODE_BACK) }
 
     override fun onCreate() {
         super.onCreate()
@@ -146,11 +151,19 @@ class AtlasIme : InputMethodService() {
         // A delayed hide from the previous app can arrive after this field has started. Once you have
         // typed, a hide is the app's own, such as a Done key closing a field it then removes.
         main.removeCallbacks(showStrip)
-        if (editing && !typedInField) main.post(showStrip)
+        if (passingBack) {
+            // Now that the strip is gone, the app's own back can run. If its field stays, so does the strip.
+            passingBack = false
+            main.post(sendBack)
+            if (editing) main.postDelayed(showStrip, BACK_SETTLE_MILLIS)
+        } else if (editing && !typedInField) {
+            main.post(showStrip)
+        }
     }
 
     override fun onUnbindInput() {
         main.removeCallbacks(showStrip)
+        main.removeCallbacks(sendBack)
         super.onUnbindInput()
     }
 
@@ -370,6 +383,8 @@ class AtlasIme : InputMethodService() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (KeyCapture.waiting?.invoke(event) == true) return true
+        // Android hands back to a shown keyboard first, which would only close the strip.
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) return true
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) return super.onKeyDown(keyCode, event)
         typedInField = true
         if (touchpad.isGestureKey(event)) return true
@@ -391,6 +406,11 @@ class AtlasIme : InputMethodService() {
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         if (KeyCapture.waiting?.invoke(event) == true) return true
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
+            passingBack = true
+            requestHideSelf(0)
+            return true
+        }
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) {
             return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
         }
@@ -513,6 +533,7 @@ class AtlasIme : InputMethodService() {
 
     companion object {
         private const val MAX_PENDING_INPUT = 128
+        private const val BACK_SETTLE_MILLIS = 300L
         private const val MODIFIER_RELEASE_SLOTS = 4
         private const val DRAIN_BUDGET = 8
         private const val DRAIN_NANOS = 4_000_000L

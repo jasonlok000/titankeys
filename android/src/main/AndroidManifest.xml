@@ -7,7 +7,8 @@
             <category android:name="android.intent.category.HOME" />
         </intent>
     </queries>
-    <application>
+    <!-- Opted in, apps play their own keyboard-dismiss animation on back and never pass back on. -->
+    <application android:enableOnBackInvokedCallback="false">
         <activity
             android:name="com.vandam.ink.LearningTransferActivity"
             android:exported="false"

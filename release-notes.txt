@@ -8,7 +8,6 @@
 - Short swipes for symbols: When Alt is on, a short swipe shows more symbols.
 - Vibration: When you touch a word on the strip, the phone vibrates.
 - Best word: The best word is in the middle of the strip.
-- Guide: The guide tells you how to type emoji. It also tells you how to use word suggestions. It also tells you how to keep a copy of your words.
 
 ## Fixed
 - Unwanted touches: When you type, a finger on the keys does not start a swipe. It also does not type a tap key.

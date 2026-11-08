@@ -2,7 +2,6 @@ node_modules/
 .ink/
 dist/
 android/build/
-/tests/
 /build/
 /signing/
 /backups/

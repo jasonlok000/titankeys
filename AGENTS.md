@@ -1,4 +1,4 @@
-# Agent rules for Atlas
+# Agent rules
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before you change code. Follow its rules and steps, the same as a human contributor.
 

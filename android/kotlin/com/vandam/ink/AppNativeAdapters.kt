@@ -184,6 +184,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                         Uri.parse("package:${activity.packageName}")))
                     "null"
                 }
+                "scrollAssistant" -> {
+                    activity.startActivity(Intent().setClassName("com.agui.settings",
+                        "com.agui.settings.touchpad.ScrollAssistantActivity"))
+                    "null"
+                }
                 "watch" -> {
                     watchingRequested = true
                     syncPreview()
@@ -256,6 +261,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("enabled", enabled)
             .put("selected", selected)
             .put("overlay", Settings.canDrawOverlays(activity))
+            .put("scrollAssistant", scrollAssistant())
             .put("learning", typing.learningEnabled())
             .put("tapKeys", TypingSettings.tapKeys(activity))
             .put("autoCapitalise", TypingSettings.autoCapitalise(activity))
@@ -268,6 +274,13 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
+    }
+
+    /** The Titan's Scroll assistant switch powers the keyboard touchpad, and it ships off. Phones without one pass. */
+    private fun scrollAssistant(): Boolean {
+        val get = Class.forName("android.os.SystemProperties").getMethod("get", String::class.java, String::class.java)
+        if (get.invoke(null, "ro.agui.touchpad_function", "") != "yes") return true
+        return get.invoke(null, "persist.sys.scroll_assistant", "0") == "1"
     }
 
     private fun installedVersion(): String = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""

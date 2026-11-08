@@ -28,6 +28,8 @@
 - Lightly tap configured tap keys to type the letter and a space.
 - Atlas learns new words the more you use them.
 
+> **Limitation:** In the Phone and Settings search bars, swipes can't start on the top row. Unihertz leaves these apps out of Sliding Mode 1.
+
 ## Install
 
 I highly recommend installing through [Obtainium](https://github.com/ImranR98/Obtainium) so you can receive updates.

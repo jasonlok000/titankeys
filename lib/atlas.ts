@@ -14,6 +14,8 @@ export type State = {
   selected: boolean;
   /** Allowed to display over other apps, which keeps the touchpad with Atlas above text selection popups. */
   overlay: boolean;
+  /** The Titan's Scroll assistant switch is on, which powers the keyboard touchpad. */
+  scrollAssistant: boolean;
   learning: boolean;
   /** The letters and space a light touch types, such as `"AI "`. */
   tapKeys: string;
@@ -113,6 +115,7 @@ export async function markNotesSeen() {
 export const enableKeyboard = () => atlas("enable");
 export const chooseKeyboard = () => atlas("choose");
 export const allowOverlay = () => atlas("overlay");
+export const openScrollAssistant = () => atlas("scrollAssistant");
 
 /** Calls `focus` whenever the home window regains focus, so its field can take autofocus again. */
 export const onHomeFocus = (focus: () => void) => onNativeMessage("atlas-focus", focus);

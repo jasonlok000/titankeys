@@ -1,7 +1,8 @@
 import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from "ink";
 import { close } from "ink/icons";
-import { allowOverlay, chooseKeyboard, enableKeyboard, state, tapKeyLabel, update } from "../../lib/atlas";
+import { state, tapKeyLabel, update } from "../../lib/atlas";
 import { liftLabel } from "./lift";
+import { setupLabel } from "./setup";
 import { spellingLabel } from "./spelling";
 import { vibrationLabel } from "./vibration";
 
@@ -12,11 +13,6 @@ export default function Settings() {
   if (result.status !== "ready") return <Screen title="Settings" rightAction={closeAction} />;
   const settings = result.data;
   return <Screen title="Settings" rightAction={closeAction}>
-    <Section title="Setup">
-      <Field label="Enable Atlas" onPress={enableKeyboard}>{settings.enabled ? "Enabled" : "Not enabled"}</Field>
-      <Field label="Choose Atlas" onPress={chooseKeyboard}>{settings.selected ? "Selected" : "Not selected"}</Field>
-      <Field label="Allow overlay" onPress={allowOverlay}>{settings.overlay ? "Allowed" : "Not allowed"}</Field>
-    </Section>
     <Section title="Typing">
       <Field label="Spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
       <Field label="Tap keys" href="/settings/tap-keys">{[...settings.tapKeys].map(tapKeyLabel).join(", ")}</Field>
@@ -35,6 +31,7 @@ export default function Settings() {
       <Field label="Your words" href="/settings/data" />
     </Section>
     <Section title="Help">
+      <Field label="Setup" href="/settings/setup">{setupLabel(settings)}</Field>
       <Field label="Guide" href="/settings/guide" />
       <Field label="Send feedback" href="/settings/feedback" />
       <Field label="About" href="/settings/about" />

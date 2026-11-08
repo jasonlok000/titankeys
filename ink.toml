@@ -1,7 +1,7 @@
 name = "Atlas"
 package = "com.atlas"
-version = "1.0.0"
-version_code = 50
+version = "1.0.1"
+version_code = 51
 # Row images need native decoding; Ink's detection misses them with preserved symlinks.
 capabilities = ["image"]
 

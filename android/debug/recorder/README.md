@@ -38,3 +38,15 @@ Options, each passed as `-e name value`:
 | `timing` | `1` times word suggestions instead of replaying |
 
 To compare two builds, replay the same session on each and compare how often `prompt` is the first word in `top`, and how often it appears at all.
+
+## Sample recording
+
+`samples/session-20261108-114501.jsonl` is one session from a Titan 2 Elite: 300 swiped words (200 normal, 100 rushed) and 25 typed sentences, made by one person using both thumbs. All the words and sentences are the recorder's prompts. Lines marked `redo` or `skip` cancel an earlier attempt at that prompt.
+
+To replay it, push it in place of `session.jsonl` in the commands above:
+
+```bash
+adb push android/debug/recorder/samples/session-20261108-114501.jsonl "$dir/in.jsonl"
+```
+
+Hold back one third of the prompts (`index % 3 == 2`) if you tune anything against it, so that you can check the result on swipes the tuning did not see.

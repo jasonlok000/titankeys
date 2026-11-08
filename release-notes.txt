@@ -1,7 +1,8 @@
-# 1.0.2
+# 1.1.0
 
 ## New
 - Cursor mode: Hold the space bar, then move your finger across the keyboard to move the cursor.
+- Update notes: Open Atlas after an update to see what changed.
 - Setup: Two new steps help you set the scroll assistant and turn on Atlas in Accessibility.
 - Guide: The guide uses simpler words. A new part tells you what to do if Atlas does not operate correctly.
 - Front page: The Guide and Settings buttons are now at the top of the page.

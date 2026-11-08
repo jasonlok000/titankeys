@@ -1,7 +1,7 @@
 {
   "name": "atlas",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.1.0",
   "scripts": {
     "dev": "../ink/scripts/ink dev",
     "build": "../ink/scripts/ink build",

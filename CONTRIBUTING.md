@@ -2,8 +2,6 @@
 
 Thank you for your help with Atlas. This guide tells you how to report a problem, suggest an idea, and send a change.
 
-If you use an AI coding agent, give this file to it. The agent can then follow the same rules and steps as you.
-
 ## Rules
 
 - Open an issue for all bugs, ideas, and questions.

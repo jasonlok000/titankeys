@@ -18,7 +18,7 @@
 
 <p>
   <img src="assets/demo.gif" height="220" alt="Swiping across the Titan 2 Elite's physical keys to type">
-  <img src="assets/screenshots/home.png" height="220" alt="Atlas home screen with a swiped word and suggestions">
+  <img src="assets/screenshots/saved-words.png" height="220" alt="Saved words list with everyday words Atlas has learned">
   <img src="assets/screenshots/welcome.png" height="220" alt="Atlas welcome screen">
   <img src="assets/screenshots/vibration.png" height="220" alt="Swipe vibration settings">
 </p>

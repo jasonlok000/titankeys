@@ -36,6 +36,7 @@ class AtlasIme : InputMethodService() {
     private var strip: Strip? = null
     private var field = Field.None
     private var editing = false
+    private var typedInField = false
     private val consumedKeys = HashSet<Int>()
     private var deadKeyPending = false
     private var tapKeys = ""
@@ -89,6 +90,7 @@ class AtlasIme : InputMethodService() {
         editor.cancelState()
         super.onStartInput(info, restarting)
         editing = info.inputType != EditorInfo.TYPE_NULL
+        if (!restarting) typedInField = false
         field = if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
         contact.releaseKeys()
         clearSettlements()
@@ -129,9 +131,10 @@ class AtlasIme : InputMethodService() {
 
     override fun onWindowHidden() {
         super.onWindowHidden()
-        // A delayed hide from the previous app can arrive after this field has started.
+        // A delayed hide from the previous app can arrive after this field has started. Once you have
+        // typed, a hide is the app's own, such as a Done key closing a field it then removes.
         main.removeCallbacks(showStrip)
-        if (editing) main.post(showStrip)
+        if (editing && !typedInField) main.post(showStrip)
     }
 
     override fun onUnbindInput() {
@@ -179,6 +182,7 @@ class AtlasIme : InputMethodService() {
 
     private fun motion(event: MotionEvent) {
         if (!field.words) return
+        typedInField = true
         val samples = touchpad.samples(event)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
@@ -355,6 +359,7 @@ class AtlasIme : InputMethodService() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (KeyCapture.waiting?.invoke(event) == true) return true
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) return super.onKeyDown(keyCode, event)
+        typedInField = true
         if (touchpad.isGestureKey(event)) return true
         contact.key(keyCode, true, event.eventTime)
         if (pendingInput.isNotEmpty()) {

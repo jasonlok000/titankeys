@@ -1,0 +1,4 @@
+<resources>
+    <!-- The debug build's icon background, so it stands apart from the real Atlas. -->
+    <color name="atlas_debug_background">#E8590C</color>
+</resources>

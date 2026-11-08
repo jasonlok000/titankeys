@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+# APP=com.atlas.debug checks the debug build instead.
+app="${APP:-com.atlas}"
 
 # Exercise the installed app on the Titan 2's 1076 x 1200 display.
 for row in 375 500; do
-  adb shell am force-stop com.atlas
-  adb shell am start -W -n com.atlas/com.vandam.ink.MainActivity \
+  adb shell am force-stop "$app"
+  adb shell am start -W -n "$app"/com.vandam.ink.MainActivity \
     --es com.vandam.ink.notification.HREF /settings/feedback >/dev/null
   sleep 2
   adb shell input tap 300 "$row"
@@ -24,5 +26,5 @@ for row in 375 500; do
   fi
   echo "PASS: feedback row $row opened a draft with the expected subject and recipient"
 done
-adb shell am start -W -n com.atlas/com.vandam.ink.MainActivity \
+adb shell am start -W -n "$app"/com.vandam.ink.MainActivity \
   --es com.vandam.ink.notification.HREF /settings/feedback >/dev/null

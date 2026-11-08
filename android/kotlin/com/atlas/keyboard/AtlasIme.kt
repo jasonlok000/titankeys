@@ -1,5 +1,7 @@
 package com.atlas.keyboard
 
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
@@ -37,6 +39,7 @@ class AtlasIme : InputMethodService() {
     private var field = Field.None
     private var editing = false
     private var typedInField = false
+    private var inLauncher = false
     private val consumedKeys = HashSet<Int>()
     private var deadKeyPending = false
     private var tapKeys = ""
@@ -81,7 +84,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onCreateInputView(): View = Strip(this, { index -> enqueue { composer.choose(index) } }, ::symbol).also {
         strip = it
-        it.showSuggestions = TypingSettings.suggestionBar(this)
+        it.showSuggestions = showSuggestions()
         showModifiers()
     }
 
@@ -92,6 +95,7 @@ class AtlasIme : InputMethodService() {
         editing = info.inputType != EditorInfo.TYPE_NULL
         if (!restarting) typedInField = false
         field = if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
+        inLauncher = editing && info.packageName == launcherPackage()
         contact.releaseKeys()
         clearSettlements()
         modifiers.clear()
@@ -99,7 +103,7 @@ class AtlasIme : InputMethodService() {
         showModifiers()
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
-        strip?.showSuggestions = TypingSettings.suggestionBar(this)
+        strip?.showSuggestions = showSuggestions()
         main.removeCallbacks(showStrip)
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
@@ -115,6 +119,14 @@ class AtlasIme : InputMethodService() {
                 Log.w("Atlas", "Could not hide the suggestion strip", error)
             }
         }
+    }
+
+    // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way.
+    private fun showSuggestions() = TypingSettings.suggestionBar(this) && !inLauncher
+
+    private fun launcherPackage(): String? {
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        return packageManager.resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
     }
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {

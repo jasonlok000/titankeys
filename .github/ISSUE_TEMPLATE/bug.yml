@@ -1,0 +1,35 @@
+name: Bug
+description: Something does not operate correctly.
+labels: [bug]
+body:
+  - type: input
+    attributes:
+      label: Atlas version
+      description: Find it in Settings > About.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps
+      description: The steps that cause the bug.
+      placeholder: |
+        1.
+        2.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected
+      description: The result that you expect.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Actual
+      description: The result that you see.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Screen recording
+      description: Add a screen recording, if possible.

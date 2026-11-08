@@ -60,7 +60,7 @@ Atlas asks to display over other apps because of how the Titan 2 sends touchpad 
 Contributions are welcome. Before you write code, read the [contributing guide](CONTRIBUTING.md).
 
 1. **Open an issue.** Use an issue for all bugs, ideas, and questions.
-2. **Add a label.** Each issue must have a label, for example `bug` or `enhancement`.
+2. **Use a template.** Select **Bug** or **Feature**. The template adds the label.
 3. **Wait for approval.** I approve the issue and tell you who does the work.
 4. **Test on a Titan 2 Elite.** Each pull request must have a test on a real device.
 5. **Open a pull request.** Link it to the approved issue.

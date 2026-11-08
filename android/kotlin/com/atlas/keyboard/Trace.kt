@@ -44,13 +44,30 @@ object Trace {
         }
     }
 
-    fun touch(points: List<Sample>, ended: Boolean) {
+    val listening get() = listeners.isNotEmpty()
+
+    /** Replaces the trail with the path the recogniser read, now that it is settled what was one stroke. */
+    fun stroke(swipe: Swipe) {
+        if (listeners.isEmpty() || source != null) return
+        pending.clear()
+        for (i in swipe.x.indices) pending += Sample(swipe.x[i], swipe.y[i] * 3 / 4, swipe.time[i].toLong())
+        reset = true
+        ended = true
+        if (!scheduled) {
+            scheduled = true
+            main.postDelayed(publish, 16L)
+        }
+    }
+
+    /** [carried] is an earlier touch that this one may be continuing, so the trail keeps it for now. */
+    fun touch(points: List<Sample>, ended: Boolean, carried: List<Sample> = emptyList()) {
         if (listeners.isEmpty()) return
         if (source !== points || points.size < observed) {
             source = points
             observed = 0
             pending.clear()
             reset = true
+            pending += carried.filter { it.valid }
         }
         val count = minOf(points.size, Swipe.MAX_POINTS)
         for (index in observed until count) {

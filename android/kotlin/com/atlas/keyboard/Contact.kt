@@ -41,6 +41,7 @@ class Contact {
         internal val outcome: Outcome?,
         internal val startedAt: Long,
         internal val endedAt: Long,
+        internal val points: List<Sample>,
     ) {
         internal var cancelled = false
     }
@@ -88,7 +89,7 @@ class Contact {
         state = State.Idle
         if (touching == null) return null
         val last = touching.points.last()
-        val settlement = Settlement(now + SETTLE_MILLIS, classify(touching), touching.first.time, last.time)
+        val settlement = Settlement(now + SETTLE_MILLIS, classify(touching), touching.first.time, last.time, touching.points.toList())
         if (pending.size == MAX_PENDING_CONTACTS) pending.removeFirst()
         pending.addLast(settlement)
         return settlement

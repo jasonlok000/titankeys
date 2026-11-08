@@ -65,3 +65,7 @@ Atlas is powered by and built with these projects:
 - [FUTO Swipe models](https://huggingface.co/futo-org/futo-swipe): swipe typing models (FUTO Model Weights)
 - [AOSP dictionaries](https://codeberg.org/Helium314/aosp-dictionaries/src/branch/main/dictionaries/main_en_gb.dict): British English dictionary (Apache 2.0)
 - [Inter](https://github.com/rsms/inter): typeface (SIL Open Font Licence)
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0-only). See the [LICENSE](LICENSE) file for details.

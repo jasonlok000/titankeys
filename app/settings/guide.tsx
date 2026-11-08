@@ -7,16 +7,16 @@ export default function Guide() {
   const closeAction = fromHome ? { icon: close, onPress: () => replace("/") } : undefined;
   return <Screen title="Guide" subtitle="How to use Atlas." rightAction={closeAction}>
     <Section title="Swiping">
-      <Row title="Swipe a word" subtitle="Slide across the letters without pressing the keys, then lift." wrapSubtitle />
-      <Row title="Slip recovery" subtitle="A split-second lift won’t end your swipe or cursor mode." wrapSubtitle />
-      <Row title="Pick another word" subtitle="Tap a suggestion on the strip above the keyboard." wrapSubtitle />
-      <Row title="Move the cursor" subtitle="Rest a finger on space until it clicks, then lean towards either end. Press space to select the word." wrapSubtitle />
+      <Row title="Swipe a word" subtitle="Move your finger across the letters. Do not push the keys. Lift your finger to type the word." wrapSubtitle />
+      <Row title="Slip recovery" subtitle="If your finger leaves the keyboard for a very short time, the swipe or cursor mode continues." wrapSubtitle />
+      <Row title="Pick another word" subtitle="Touch a word on the strip above the keyboard." wrapSubtitle />
+      <Row title="Move the cursor" subtitle="Hold your finger on the space bar until you feel a click. Move your finger to the left or right end to move the cursor. Push the space bar to select the word." wrapSubtitle />
     </Section>
     <Section title="Keys">
-      <Row title="Tap keys" subtitle="Type chosen keys with a light tap instead of a full press." wrapSubtitle />
-      <Row title="Full stop" subtitle="Press space twice." wrapSubtitle />
-      <Row title="Shift and Alt" subtitle="Press once for the next letter, twice quickly to lock, and again to release." wrapSubtitle />
-      <Row title="More symbols" subtitle="While Alt is on, the strip shows extra symbols. Swipe sideways across the keyboard to see more." wrapSubtitle />
+      <Row title="Tap keys" subtitle="Touch these keys lightly to type them. You do not have to push them. Select the keys in Settings." wrapSubtitle />
+      <Row title="Full stop" subtitle="Push the space bar two times." wrapSubtitle />
+      <Row title="Shift and Alt" subtitle="Push one time for the next letter only. Push two times quickly to lock. Push again to unlock." wrapSubtitle />
+      <Row title="More symbols" subtitle="When Alt is on, the strip shows more symbols. Move your finger to the left or right across the keyboard to see more." wrapSubtitle />
     </Section>
   </Screen>;
 }

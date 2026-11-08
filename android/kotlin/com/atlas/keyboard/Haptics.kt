@@ -1,6 +1,7 @@
 package com.atlas.keyboard
 
 import android.content.Context
+import android.os.SystemClock
 import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -29,6 +30,7 @@ class Haptics(private val context: Context) {
     private var preset = HapticPreset.Normal
     private var enabled = true
     private var lastTick = -1L
+    private var clickUntil = 0L
     private var travel = 0f
     private var origin: Sample? = null
     private var last: Sample? = null
@@ -70,17 +72,20 @@ class Haptics(private val context: Context) {
 
     private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
 
-    /** A firm click, clearly stronger than swipe ticks, when cursor mode starts. */
+    /** A swipe tick at full strength when cursor mode starts. */
     fun click() {
         if (!vibrator.hasVibrator()) return
         if (Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return
         val amplitude = if (vibrator.hasAmplitudeControl()) 255 else VibrationEffect.DEFAULT_AMPLITUDE
+        clickUntil = SystemClock.uptimeMillis() + CLICK_MILLIS
         vibrator.vibrate(VibrationEffect.createOneShot(CLICK_MILLIS, amplitude),
             VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_HARDWARE_FEEDBACK).build())
     }
 
     fun pulse(preset: HapticPreset = this.preset) {
         if (!vibrator.hasVibrator()) return
+        // A new vibration would cut the click short, so ticks wait until it has played.
+        if (SystemClock.uptimeMillis() < clickUntil) return
         if (Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return
         val amplitude = if (vibrator.hasAmplitudeControl()) preset.amplitude else VibrationEffect.DEFAULT_AMPLITUDE
         // Hardware feedback keeps ticking while another app is in the foreground.
@@ -89,7 +94,8 @@ class Haptics(private val context: Context) {
     }
 
     companion object {
-        private const val CLICK_MILLIS = 45L
+        /** As short as a swipe tick, so it feels the same, only at full strength. */
+        private const val CLICK_MILLIS = 20L
 
         private fun preferences(context: Context) = context.getSharedPreferences("swipe_haptics", Context.MODE_PRIVATE)
 

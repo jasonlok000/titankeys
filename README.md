@@ -43,7 +43,7 @@ Everything runs and is stored locally on your device. No data is stored or monit
 
 Atlas doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
 
-Atlas asks to display over other apps because of how the Titan 2 sends touchpad input. The phone gives the touchpad to the keyboard's window, unless another window sits above it. When you select text, apps show their Cut and Copy toolbar above the keyboard, and that toolbar would take your swipes. Atlas adds an invisible, one-pixel window above other apps so your swipes still reach the keyboard. It never shows anything, never reads the screen, and lets every screen touch pass through. Android shows a silent "Atlas is displaying over other apps" notification while it's there, which you can turn off.
+Atlas asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "Atlas is displaying over other apps" notification while it's there, which you can turn off.
 
 ## Credits
 

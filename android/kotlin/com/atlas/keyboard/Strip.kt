@@ -44,6 +44,10 @@ class Strip(
 
     init {
         for (view in wordViews + symbolViews) addView(view, LayoutParams(0, dp(56), 1f))
+        // Screen readers go left to right, so point them at the best word first.
+        val ranked = wordViews.withIndex().sortedBy { WORD_ORDER[it.index] }.map { it.value }
+        for (view in ranked) view.id = generateViewId()
+        ranked.zipWithNext { view, next -> view.accessibilityTraversalBefore = next.id }
         // Keep the words clear of the gesture handle, which draws over the bottom of the keyboard.
         setOnApplyWindowInsetsListener { _, insets ->
             navigationInset = insets.getInsets(WindowInsets.Type.navigationBars()).bottom

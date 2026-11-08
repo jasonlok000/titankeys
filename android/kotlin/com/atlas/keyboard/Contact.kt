@@ -1,5 +1,6 @@
 package com.atlas.keyboard
 
+import android.view.KeyEvent
 import com.atlas.engine.Swipe
 import kotlin.math.ceil
 import kotlin.math.hypot
@@ -15,8 +16,8 @@ import kotlin.math.min
  * [SETTLE_MILLIS] before it counts, and any key press from its start until [SETTLE_MILLIS] after its lift
  * cancels it.
  *
- * New contacts are also ignored for a short time after each key event, and for longer while the user
- * types steadily, so a finger that brushes the keys between presses does not type.
+ * New contacts are also ignored for a short time after each key event, so a finger that brushes the
+ * keys between presses does not type. A second Space press in a row adds no pause.
  */
 class Contact {
     sealed interface Outcome {
@@ -48,8 +49,8 @@ class Contact {
     private val pending = ArrayDeque<Settlement>()
     private val heldKeys = HashSet<Int>()
     private var blockedUntil = Long.MIN_VALUE
-    private var lastKeyDown = Long.MIN_VALUE
-    private var typing = false
+    private var lastKeyCode = 0
+    private var doubleSpace = false
 
     /** Alt or Sym is on, so swipes turn strip pages: they can be shorter and start on any key. */
     var paging = false
@@ -112,10 +113,12 @@ class Contact {
             heldKeys += code
             for (contact in pending) if (time in contact.startedAt..contact.endedAt + SETTLE_MILLIS) contact.cancelled = true
             if (state is State.Touching) state = State.Ignored
-            typing = time - lastKeyDown in 0..TYPING_GAP_MILLIS
-            lastKeyDown = time
+            doubleSpace = code == KeyEvent.KEYCODE_SPACE && lastKeyCode == code
+            lastKeyCode = code
         } else heldKeys -= code
-        blockedUntil = max(blockedUntil, time + if (typing) TYPING_COOLDOWN_MILLIS else KEY_COOLDOWN_MILLIS)
+        // A second Space press in a row adds no pause.
+        if (doubleSpace && code == KeyEvent.KEYCODE_SPACE) return
+        blockedUntil = max(blockedUntil, time + KEY_COOLDOWN_MILLIS)
     }
 
     fun releaseKeys() {
@@ -215,10 +218,7 @@ class Contact {
         const val SWIPE_KEYS = .6f
         /** How far a swipe must go, in keys across or rows down, to turn a strip page or jump an emoji group. */
         const val PAGE_KEYS = .45f
-        private const val KEY_COOLDOWN_MILLIS = 200L
-        /** Key presses this close together count as steady typing. */
-        private const val TYPING_GAP_MILLIS = 500L
-        private const val TYPING_COOLDOWN_MILLIS = 500L
+        private const val KEY_COOLDOWN_MILLIS = 150L
         private const val SAMPLE_DISTANCE = .025f
         private const val REQUIRED_EVIDENCE = .12f
         private const val STRAIGHT = .819152f

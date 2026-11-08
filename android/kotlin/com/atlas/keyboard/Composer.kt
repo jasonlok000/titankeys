@@ -717,7 +717,12 @@ class Composer(
                 composition = swiped
                 remember(swiped)
                 automaticSpace = accepted.takeIf { current.trailingSpace }
-                confirmState(accepted)
+                // A chosen word is settled, so the strip moves straight on to what comes next.
+                confirmState(accepted, predictNow = true) { confirmed ->
+                    if (!confirmed || composition !== swiped) return@confirmState
+                    leave()
+                    composition = Composition.None
+                }
             }
             is Composition.Typed -> {
                 val tail = current.prefix + if (current.trailingSpace) " " else ""

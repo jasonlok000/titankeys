@@ -51,6 +51,9 @@ class Contact {
     private var lastKeyDown = Long.MIN_VALUE
     private var typing = false
 
+    /** The shortest swipe, in key widths. Turning strip pages takes a shorter swipe than typing a word. */
+    var swipeKeys = SWIPE_KEYS
+
     /** Whether the current contact could still type, with how far it has moved in key widths. */
     val travel: Float? get() = (state as? State.Touching)?.travel
 
@@ -124,7 +127,7 @@ class Contact {
         val points = touching.points
         val first = points.first()
         val last = points.last()
-        if (touching.travel >= SWIPE_KEYS) {
+        if (touching.travel >= swipeKeys) {
             touching.pickup.finish()
             val entry = touching.pickup.entry
             if (entry != null) return Outcome.Swipe(listOf(entry) + points.subList(touching.pickup.entryIndex, points.size), first.time, last.time)

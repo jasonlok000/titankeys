@@ -15,9 +15,10 @@ export default function Guide() {
     <Section title="Keys">
       <Row title="Tap keys" subtitle="Touch these keys lightly to type them. You do not have to push them. Select the keys in Settings." wrapSubtitle />
       <Row title="Full stop" subtitle="Push the space bar two times." wrapSubtitle />
-      <Row title="Shift and Alt" subtitle="Push one time for the next letter only. Push two times quickly to lock. Push again to unlock." wrapSubtitle />
+      <Row title="Shift, Alt and Sym" subtitle="Push one time for the next letter only. Push two times quickly to lock. Push again to unlock." wrapSubtitle />
       <Row title="Delete a word" subtitle="Push Alt, then push Backspace." wrapSubtitle />
       <Row title="More symbols" subtitle="When Alt is on, the strip shows more symbols. Move your finger to the left or right across the keyboard to see more." wrapSubtitle />
+      <Row title="Emoji" subtitle="Push Sym. The strip shows emoji, with your recent emoji first. Move your finger to the left or right across the keyboard to see more. Move your finger up or down to go to the next group." wrapSubtitle />
     </Section>
     <Section title="Problems">
       <Row title="Check the setup" subtitle="If a part of Atlas does not operate correctly, open Settings and select Setup. Make sure that all steps show Done." wrapSubtitle />

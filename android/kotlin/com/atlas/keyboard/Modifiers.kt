@@ -3,18 +3,21 @@ package com.atlas.keyboard
 import android.view.KeyEvent
 
 /**
- * Sticky Shift and Alt. One press applies to the next character, a second press within
+ * Sticky Shift, Alt and Sym. One press applies to the next character, a second press within
  * [DOUBLE_PRESS_MILLIS] locks it, and a third press releases it. Holding the key works as usual.
+ * Only one of them is on at a time. Sym types nothing itself: it opens the emoji on the strip.
  */
 class Modifiers {
     enum class Level { Off, Once, Locked }
+    enum class Key { Shift, Alt, Sym }
 
     var shift = Level.Off
         private set
     var alt = Level.Off
         private set
-    private var lastShift = 0L
-    private var lastAlt = 0L
+    var sym = Level.Off
+        private set
+    private val last = LongArray(Key.entries.size)
     private val held = HashSet<Int>()
     private val usedWhileHeld = HashSet<Int>()
 
@@ -27,38 +30,39 @@ class Modifiers {
             return KeyEvent.normalizeMetaState(meta)
         }
 
-    /** Pressing Shift or Alt on the touchpad or the keyboard. */
-    fun press(isShift: Boolean, time: Long) {
-        val level = if (isShift) shift else alt
-        val last = if (isShift) lastShift else lastAlt
-        val next = when (level) {
+    private fun level(key: Key) = when (key) {
+        Key.Shift -> shift
+        Key.Alt -> alt
+        Key.Sym -> sym
+    }
+
+    /** Pressing Shift, Alt or Sym on the touchpad or the keyboard. */
+    fun press(key: Key, time: Long) {
+        val next = when (level(key)) {
             Level.Off -> Level.Once
-            Level.Once -> if (time - last < DOUBLE_PRESS_MILLIS) Level.Locked else Level.Off
+            Level.Once -> if (time - last[key.ordinal] < DOUBLE_PRESS_MILLIS) Level.Locked else Level.Off
             Level.Locked -> Level.Off
         }
-        if (isShift) {
-            shift = next; alt = Level.Off; lastShift = time
-        } else {
-            alt = next; shift = Level.Off; lastAlt = time
-        }
+        shift = if (key == Key.Shift) next else Level.Off
+        alt = if (key == Key.Alt) next else Level.Off
+        sym = if (key == Key.Sym) next else Level.Off
+        last[key.ordinal] = time
     }
 
     fun key(event: KeyEvent) {
-        val isShift = event.keyCode == KeyEvent.KEYCODE_SHIFT_LEFT || event.keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT
+        val key = keyOf(event.keyCode) ?: return
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             if (!held.add(event.keyCode)) return
             usedWhileHeld -= event.keyCode
-            press(isShift, event.eventTime)
+            press(key, event.eventTime)
         } else if (event.action == KeyEvent.ACTION_UP) {
             held -= event.keyCode
             // Holding the modifier for a character releases it with the key, like a regular keyboard.
-            if (usedWhileHeld.remove(event.keyCode)) {
-                val sameModifierHeld = held.any { code ->
-                    (code == KeyEvent.KEYCODE_SHIFT_LEFT || code == KeyEvent.KEYCODE_SHIFT_RIGHT) == isShift
-                }
-                if (!sameModifierHeld) {
-                    if (isShift && shift == Level.Once) shift = Level.Off
-                    if (!isShift && alt == Level.Once) alt = Level.Off
+            if (usedWhileHeld.remove(event.keyCode) && held.none { keyOf(it) == key } && level(key) == Level.Once) {
+                when (key) {
+                    Key.Shift -> shift = Level.Off
+                    Key.Alt -> alt = Level.Off
+                    Key.Sym -> sym = Level.Off
                 }
             }
         }
@@ -72,6 +76,7 @@ class Modifiers {
         }
         if (shift == Level.Once) shift = Level.Off
         if (alt == Level.Once) alt = Level.Off
+        if (sym == Level.Once) sym = Level.Off
     }
 
     /** A command or shortcut used a physically held modifier, leaving sticky state alone. */
@@ -84,6 +89,7 @@ class Modifiers {
     fun clear() {
         shift = Level.Off
         alt = Level.Off
+        sym = Level.Off
         held.clear()
         usedWhileHeld.clear()
     }
@@ -91,7 +97,13 @@ class Modifiers {
     companion object {
         const val DOUBLE_PRESS_MILLIS = 300L
 
-        fun isModifier(code: Int) = code == KeyEvent.KEYCODE_SHIFT_LEFT || code == KeyEvent.KEYCODE_SHIFT_RIGHT
-            || code == KeyEvent.KEYCODE_ALT_LEFT || code == KeyEvent.KEYCODE_ALT_RIGHT
+        private fun keyOf(code: Int) = when (code) {
+            KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> Key.Shift
+            KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT -> Key.Alt
+            KeyEvent.KEYCODE_SYM -> Key.Sym
+            else -> null
+        }
+
+        fun isModifier(code: Int) = keyOf(code) != null
     }
 }

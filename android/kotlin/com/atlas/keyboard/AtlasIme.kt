@@ -2,6 +2,7 @@ package com.atlas.keyboard
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Paint
 import android.hardware.display.DisplayManager
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
@@ -21,9 +22,11 @@ import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.SurroundingText
 import com.atlas.engine.Calibration
+import com.atlas.engine.EmojiPages
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
+import java.io.IOException
 import kotlin.math.abs
 
 /**
@@ -50,6 +53,7 @@ class AtlasIme : InputMethodService() {
     private var lastSelectionStart = -1
     private val modifiers = Modifiers()
     private var strip: Strip? = null
+    private var emoji: EmojiPages? = null
     private var field = Field.None
     private var editing = false
     private var typedInField = false
@@ -145,10 +149,28 @@ class AtlasIme : InputMethodService() {
         overlay = TouchpadOverlay(this) { event ->
             (editing && touchpad.accepts(event)).also { if (it) motion(event) }
         }
+        loadEmoji()
     }
 
-    override fun onCreateInputView(): View = Strip(this, { index -> haptics.tap(); enqueue { composer.choose(index) } }, ::symbol).also {
+    /** Reads the emoji list away from the main thread, which also loads the emoji font before Sym is first pressed. */
+    private fun loadEmoji() {
+        Thread {
+            val recents = getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).getString(RECENT_EMOJI, "").orEmpty().split(" ")
+            val paint = Paint()
+            val groups = try {
+                assets.open("emoji.txt").reader().use { EmojiPages.parse(it, paint::hasGlyph) }
+            } catch (error: IOException) {
+                Log.w("Atlas", "Could not read the emoji list", error)
+                return@Thread
+            }
+            main.post { emoji = EmojiPages(groups, recents).also { strip?.emoji = it } }
+        }.start()
+    }
+
+    override fun onCreateInputView(): View = Strip(this, { index -> haptics.tap(); enqueue { composer.choose(index) } },
+        ::symbol, ::pickEmoji).also {
         strip = it
+        it.emoji = emoji
         it.showSuggestions = showSuggestions()
         showModifiers()
     }
@@ -289,8 +311,8 @@ class AtlasIme : InputMethodService() {
                 }
                 contact.move(samples.drop(1))
                 endCursor()
-                // Alt turns sideways swipes into symbol pages, so the cursor waits until it is off.
-                if (cursorControl && modifiers.alt == Modifiers.Level.Off && cursor.down(first)) {
+                // Alt and Sym turn swipes into strip pages, so the cursor waits until they are off.
+                if (cursorControl && !stripPaging && cursor.down(first)) {
                     cursor.move(samples.drop(1))
                     cursorPath = ArrayList(samples.filter { it.valid })
                     main.postAtTime(startCursor, first.time + CursorMode.REST_MILLIS)
@@ -308,7 +330,7 @@ class AtlasIme : InputMethodService() {
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
-                if (modifiers.alt == Modifiers.Level.Off && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
+                if (!stripPaging && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
                 Trace.touch(contact.points, false)
             }
@@ -426,6 +448,19 @@ class AtlasIme : InputMethodService() {
         }
     }
 
+    private fun pickEmoji(picked: String) {
+        enqueue {
+            composer.symbol(picked)
+            emoji?.use(picked)?.let { recents ->
+                getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
+            }
+            modifiers.consume()
+            showModifiers()
+        }
+    }
+
+    private val stripPaging get() = modifiers.alt != Modifiers.Level.Off || modifiers.sym != Modifiers.Level.Off
+
     private fun clearSettlements() {
         inputGeneration++
         drainScheduled = false
@@ -513,10 +548,15 @@ class AtlasIme : InputMethodService() {
     private fun outcome(outcome: Contact.Outcome) {
         when (outcome) {
             is Contact.Outcome.Swipe -> {
-                if (modifiers.alt != Modifiers.Level.Off) {
-                    // Sideways swipes page through the symbols on the strip.
-                    val dx = outcome.points.last().x - outcome.points.first().x
-                    if (abs(dx) >= .18f) {
+                if (stripPaging) {
+                    // Sideways swipes page through the symbols or emoji on the strip. The pages follow the finger.
+                    val dx = (outcome.points.last().x - outcome.points.first().x) * 10
+                    val dy = (outcome.points.last().y - outcome.points.first().y) * 4
+                    if (modifiers.sym != Modifiers.Level.Off && abs(dy) > abs(dx) && abs(dy) >= PAGE_ROWS) {
+                        // Up and down swipes, measured in key rows, jump between emoji groups.
+                        strip?.jump(if (dy < 0) 1 else -1)
+                        haptics.pulse(HapticPreset.Strong)
+                    } else if (abs(dx) >= PAGE_KEYS) {
                         strip?.turn(if (dx > 0) -1 else 1)
                         haptics.pulse(HapticPreset.Strong)
                     }
@@ -542,7 +582,7 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun isTapKey(key: String): Boolean {
-        if (modifiers.alt != Modifiers.Level.Off) return false
+        if (stripPaging) return false
         return if (key == Layout.SPACE) ' ' in tapKeys else Layout.isLetter(key) && key[0] in tapKeys
     }
 
@@ -693,6 +733,8 @@ class AtlasIme : InputMethodService() {
 
     private fun showModifiers() {
         strip?.showSymbols = modifiers.alt != Modifiers.Level.Off
+        strip?.showEmoji = modifiers.sym != Modifiers.Level.Off
+        contact.swipeKeys = if (stripPaging) minOf(PAGE_KEYS, PAGE_ROWS) else Contact.SWIPE_KEYS
     }
 
     /** Converts touchpad points to the recogniser's letter space. */
@@ -719,6 +761,11 @@ class AtlasIme : InputMethodService() {
 
     companion object {
         private const val MAX_PENDING_INPUT = 128
+        private const val EMOJI_PREFERENCES = "emoji"
+        /** How far a swipe must go, in keys across or rows down, to turn a strip page or jump an emoji group. */
+        private const val PAGE_KEYS = .45f
+        private const val PAGE_ROWS = .45f
+        private const val RECENT_EMOJI = "recent"
         private const val BACK_SETTLE_MILLIS = 300L
         private const val SELECT_AFTER_CURSOR_MILLIS = 250L
         private const val FRAME_MILLIS = 16L

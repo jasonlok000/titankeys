@@ -5,7 +5,7 @@
  *   # 1.0.2
  *
  *   ## New
- *   - Move the cursor with space: Hold space and slide across the keyboard.
+ *   - Move the cursor with space: Rest your finger lightly on the space bar, then move it left or right.
  *
  *   ## Fixed
  *   - Launcher search: The suggestion bar stays hidden on launchers like Niagara.

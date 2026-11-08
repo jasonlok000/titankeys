@@ -1,7 +1,7 @@
 # 1.1.0
 
 ## New
-- Cursor mode: Hold the space bar, then move your finger across the keyboard to move the cursor.
+- Cursor mode: Rest your finger lightly on the space bar. Do not push it. When you feel a click, move your finger left or right to move the cursor.
 - Update notes: Open Atlas after an update to see what changed.
 - Setup: Two new steps help you set the scroll assistant and turn on Atlas in Accessibility.
 - Guide: The guide uses simpler words. A new part tells you what to do if Atlas does not operate correctly.

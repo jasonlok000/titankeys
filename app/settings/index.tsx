@@ -1,9 +1,10 @@
 import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from "ink";
 import { close } from "ink/icons";
-import { state, tapKeyLabel, update } from "../../lib/atlas";
+import { state, update } from "../../lib/atlas";
 import { liftLabel } from "./lift";
 import { setupLabel } from "./setup";
 import { spellingLabel } from "./spelling";
+import { tapKeysLabel } from "./tap-keys";
 import { vibrationLabel } from "./vibration";
 
 export default function Settings() {
@@ -15,7 +16,7 @@ export default function Settings() {
   return <Screen title="Settings" rightAction={closeAction}>
     <Section title="Typing">
       <Field label="Spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
-      <Field label="Tap keys" href="/settings/tap-keys">{[...settings.tapKeys].map(tapKeyLabel).join(", ")}</Field>
+      <Field label="Tap keys" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
       <Toggle label="Auto-capitalisation" value={settings.autoCapitalise}
         onChange={autoCapitalise => save.run({ autoCapitalise })} />
       <Toggle label="Suggestion bar" value={settings.suggestionBar}

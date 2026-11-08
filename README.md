@@ -57,7 +57,7 @@ Atlas asks to display over other apps because of how the Titan 2 sends touchpad 
 
 ## Contributing
 
-Contributions are welcome. Before you write code, read the [contributing guide](CONTRIBUTING.md). If you use an AI coding agent, give the guide to it too.
+Contributions are welcome. Before you write code, read the [contributing guide](CONTRIBUTING.md).
 
 1. **Open an issue.** Use an issue for all bugs, ideas, and questions.
 2. **Add a label.** Each issue must have a label, for example `bug` or `enhancement`.

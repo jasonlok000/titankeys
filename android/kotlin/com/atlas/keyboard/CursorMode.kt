@@ -18,6 +18,8 @@ class CursorMode {
     private var state = State.Idle
     private var landed: Sample? = null
     private var position: Sample? = null
+    /** When the finger reached the edge of the keyboard, for the build-up to full speed. */
+    private var edgeSince: Long? = null
 
     val active: Boolean get() = state == State.Active
 
@@ -71,18 +73,31 @@ class CursorMode {
     }
 
     /**
-     * Letters a second for the current lean, or 0 in the middle. Space itself spans [SLOWEST_PER_SECOND] to
-     * [SPACE_PER_SECOND] for fine control; the rest of the bottom row carries on up to [FASTEST_PER_SECOND].
-     * Each stretch grows by the same factor along its length, so every bit further feels like a step up.
+     * Letters a second for the current lean at [now], or 0 in the middle. The speed follows [SPEEDS],
+     * growing by an even factor between each pair of points, so every bit further feels like a step up:
+     * slow and precise just off the middle, and quick by the key beside Space. The range ends at ○ and fn;
+     * holding there or further out builds up to [FASTEST_PER_SECOND] over [RAMP_MILLIS].
      */
-    fun speed(): Float {
-        val depth = depth()?.second ?: return 0f
-        if (depth <= EDGE_KEYS) return SLOWEST_PER_SECOND * (SPACE_PER_SECOND / SLOWEST_PER_SECOND).pow(depth / EDGE_KEYS)
-        val beyond = ((depth - EDGE_KEYS) / (MAX_DEPTH - EDGE_KEYS)).coerceAtMost(1f)
-        return SPACE_PER_SECOND * (FASTEST_PER_SECOND / SPACE_PER_SECOND).pow(beyond)
+    fun speed(now: Long): Float {
+        val depth = depth()?.second ?: run { edgeSince = null; return 0f }
+        val lean = depth.coerceAtMost(MAX_DEPTH)
+        var upper = 1
+        while (upper < SPEEDS.size - 1 && lean > SPEEDS[upper].first) upper++
+        val (fromLean, fromSpeed) = SPEEDS[upper - 1]
+        val (toLean, toSpeed) = SPEEDS[upper]
+        val reached = fromSpeed * (toSpeed / fromSpeed).pow((lean - fromLean) / (toLean - fromLean))
+        if (lean < MAX_DEPTH * AT_EDGE) {
+            edgeSince = null
+            return reached
+        }
+        val since = edgeSince ?: now.also { edgeSince = it }
+        val ramp = ((now - since).toFloat() / RAMP_MILLIS).coerceIn(0f, 1f)
+        // Eased so the build-up starts gently and settles into full speed.
+        return reached + (FASTEST_PER_SECOND - reached) * ramp * ramp * (3 - 2 * ramp)
     }
 
     fun end() {
+        edgeSince = null
         state = State.Idle
         landed = null
         position = null
@@ -111,13 +126,25 @@ class CursorMode {
         private val SPACE_LEFT = Layout.bottomWidths.take(3).sum()
         private val SPACE_RIGHT = SPACE_LEFT + Layout.bottomWidths[3]
         /** How far in from each end of Space the cursor starts moving. */
-        private const val EDGE_KEYS = 1.1f
+        private const val EDGE_KEYS = 1.35f
         /** A little above the bottom row still counts, so a finger drifting up keeps control. */
         private const val BOTTOM_ROW_TOP = .7f
-        /** From where moving starts to the end of the bottom row; Space sits in the middle, so both sides match. */
-        private val MAX_DEPTH = SPACE_LEFT + EDGE_KEYS
-        private const val SLOWEST_PER_SECOND = 2f
-        private const val SPACE_PER_SECOND = 10f
-        private const val FASTEST_PER_SECOND = 35f
+        /**
+         * From where moving starts to the middle of ○ or fn, the second key from each end. Leaning further
+         * counts the same. Space sits in the middle of the row, so both sides match.
+         */
+        private val MAX_DEPTH = SPACE_LEFT + EDGE_KEYS - Layout.bottomWidths[0] - Layout.bottomWidths[1] / 2
+        /** How far out counts as reaching the edge. */
+        private const val AT_EDGE = .97f
+        private const val RAMP_MILLIS = 1000f
+        /** Letters a second at each lean, in key widths past the still spot. */
+        private val SPEEDS = listOf(
+            0f to 1.5f, // just off the middle
+            .5f to 3f, // the precise stretch ends
+            EDGE_KEYS to 14f, // the end of Space
+            EDGE_KEYS + .65f to 22f, // the key beside Space
+            MAX_DEPTH to 28f, // ○ or fn, where holding builds up to full speed
+        )
+        private const val FASTEST_PER_SECOND = 52f
     }
 }

@@ -209,6 +209,8 @@ class Composer(
         show(emptyList())
     }
 
+    private fun closesWord(next: Char?) = next != null && (next.isWhitespace() || next in WORD_CLOSERS)
+
     private fun snapshot() = Snapshot(editor.before(), editor.after(), selection,
         selection.start >= 0 && selection.end >= 0 && selection.start != selection.end)
 
@@ -362,7 +364,8 @@ class Composer(
         val context = resumed?.context ?: before
         val replaced = resumed?.inserted?.length ?: 0
         val leadingSpace = resumed?.leadingSpace ?: if (anchor.selected) "" else SwipeTyping.prefix(context)
-        val trailingSpace = resumed?.trailingSpace ?: !anchor.selected
+        // Mid-sentence the next character may already be a space or punctuation, so another space would double up.
+        val trailingSpace = resumed?.trailingSpace ?: (!anchor.selected && !closesWord(anchor.after?.firstOrNull()))
         val current = epoch
         recognising = true
         recognitionSnapshot = anchor
@@ -1026,5 +1029,7 @@ class Composer(
         private const val PREDICTION_DELAY_MILLIS = 60L
         private val STARTERS = listOf("What", "How", "Where")
         private const val MAX_REMEMBERED = 1000
+        /** Characters that end a word, so a swiped word right before one needs no space after it. */
+        private const val WORD_CLOSERS = ".,!?;:)]}…"
     }
 }

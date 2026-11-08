@@ -17,6 +17,9 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.CursorAnchorInfo
+import android.view.inputmethod.ExtractedTextRequest
+import android.view.inputmethod.InputConnection
+import android.view.inputmethod.SurroundingText
 import com.atlas.engine.Calibration
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
@@ -43,6 +46,8 @@ class AtlasIme : InputMethodService() {
     private var cursorEndedAt = Long.MIN_VALUE
     /** Space was pressed to select a word, so its repeats and release type nothing. */
     private var selectingWithSpace = false
+    /** The selection start the app last reported, for apps that don't say where their text sits. */
+    private var lastSelectionStart = -1
     private val modifiers = Modifiers()
     private var strip: Strip? = null
     private var field = Field.None
@@ -98,7 +103,7 @@ class AtlasIme : InputMethodService() {
             val now = SystemClock.uptimeMillis()
             val direction = cursor.direction()
             if (direction == 0) owed = 1f
-            else if (last != 0L) owed += cursor.speed() * (now - last) / 1000
+            else if (last != 0L) owed += cursor.speed(now) * (now - last) / 1000
             if (direction != 0 && owed >= 1f) {
                 owed = (owed - 1f).coerceAtMost(1f)
                 moveCursor(direction)
@@ -247,6 +252,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onUpdateSelection(oldStart: Int, oldEnd: Int, newStart: Int, newEnd: Int, composingStart: Int, composingEnd: Int) {
         super.onUpdateSelection(oldStart, oldEnd, newStart, newEnd, composingStart, composingEnd)
+        lastSelectionStart = newStart
         if (editing && composer.selectionChanged(newStart, newEnd)) clearSettlements()
     }
 
@@ -391,8 +397,22 @@ class AtlasIme : InputMethodService() {
             while (start > 0 && isWordCharacter(text[start - 1])) start--
             while (end < text.length && isWordCharacter(text[end])) end++
             if (start == end) return@command true
-            connection.setSelection(around.offset + start, around.offset + end)
+            val offset = fieldOffset(connection, around) ?: return@command false
+            connection.setSelection(offset + start, offset + end)
         }
+    }
+
+    /**
+     * Where [around] starts in the field. Apps that don't supply it, such as many built with Jetpack
+     * Compose, report -1; used as is, that shifts the selection a character to the left. The full text
+     * then gives the cursor's place, and failing that, the app's last reported selection.
+     */
+    private fun fieldOffset(connection: InputConnection, around: SurroundingText): Int? {
+        if (around.offset >= 0) return around.offset
+        val extracted = connection.getExtractedText(ExtractedTextRequest(), 0)
+        val cursor = if (extracted != null && extracted.startOffset >= 0 && extracted.selectionStart >= 0)
+            extracted.startOffset + extracted.selectionStart else lastSelectionStart
+        return if (cursor >= around.selectionStart) cursor - around.selectionStart else null
     }
 
     private fun isWordCharacter(character: Char) = Character.isLetterOrDigit(character) || character == '\'' || character == '’'

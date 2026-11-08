@@ -16,8 +16,9 @@ import kotlin.math.min
  * [SETTLE_MILLIS] before it counts, and any key press from its start until [SETTLE_MILLIS] after its lift
  * cancels it.
  *
- * New contacts are also ignored for a short time after each key event, so a finger that brushes the
- * keys between presses does not type. A second Space press in a row adds no pause.
+ * A new contact that starts shortly after a key event, or longer after one while the user types steadily,
+ * only counts once it has moved far, so a finger that brushes the keys between presses does not type.
+ * A second Space press in a row adds no pause.
  */
 class Contact {
     sealed interface Outcome {
@@ -29,10 +30,11 @@ class Contact {
         data object Idle : State
         /** A contact that cannot type: it began during a key press or was interrupted. */
         data object Ignored : State
-        class Touching(val first: Sample) : State {
+        class Touching(val first: Sample, val afterKey: Boolean) : State {
             val points = arrayListOf(first)
             val pickup = Pickup(first)
             var travel = 0f
+            val counts get() = !afterKey || travel >= AFTER_KEY_SWIPE_KEYS
         }
     }
 
@@ -42,6 +44,7 @@ class Contact {
         internal val startedAt: Long,
         internal val endedAt: Long,
         internal val points: List<Sample>,
+        internal val counts: Boolean,
     ) {
         internal var cancelled = false
     }
@@ -52,17 +55,19 @@ class Contact {
     private var blockedUntil = Long.MIN_VALUE
     private var lastKeyCode = 0
     private var doubleSpace = false
+    private var lastKeyDown = Long.MIN_VALUE
+    private var typing = false
 
     /** Alt or Sym is on, so swipes turn strip pages: they can be shorter and start on any key. */
     var paging = false
 
     /** Whether the current contact could still type, with how far it has moved in key widths. */
-    val travel: Float? get() = (state as? State.Touching)?.travel
+    val travel: Float? get() = (state as? State.Touching)?.takeIf { it.counts }?.travel
 
     val points: List<Sample> get() = (state as? State.Touching)?.points ?: emptyList()
 
     fun down(sample: Sample) {
-        state = if (sample.valid && heldKeys.isEmpty() && sample.time >= blockedUntil) State.Touching(sample) else State.Ignored
+        state = if (sample.valid && heldKeys.isEmpty()) State.Touching(sample, sample.time < blockedUntil) else State.Ignored
     }
 
     fun move(samples: List<Sample>) {
@@ -89,7 +94,7 @@ class Contact {
         state = State.Idle
         if (touching == null) return null
         val last = touching.points.last()
-        val settlement = Settlement(now + SETTLE_MILLIS, classify(touching), touching.first.time, last.time, touching.points.toList())
+        val settlement = Settlement(now + SETTLE_MILLIS, classify(touching), touching.first.time, last.time, touching.points.toList(), touching.counts)
         if (pending.size == MAX_PENDING_CONTACTS) pending.removeFirst()
         pending.addLast(settlement)
         return settlement
@@ -116,10 +121,12 @@ class Contact {
             if (state is State.Touching) state = State.Ignored
             doubleSpace = code == KeyEvent.KEYCODE_SPACE && lastKeyCode == code
             lastKeyCode = code
+            typing = time - lastKeyDown in 0..TYPING_GAP_MILLIS
+            lastKeyDown = time
         } else heldKeys -= code
         // A second Space press in a row adds no pause.
         if (doubleSpace && code == KeyEvent.KEYCODE_SPACE) return
-        blockedUntil = max(blockedUntil, time + KEY_COOLDOWN_MILLIS)
+        blockedUntil = max(blockedUntil, time + if (typing) TYPING_COOLDOWN_MILLIS else KEY_COOLDOWN_MILLIS)
     }
 
     fun releaseKeys() {
@@ -128,6 +135,7 @@ class Contact {
     }
 
     private fun classify(touching: State.Touching): Outcome? {
+        if (!touching.counts) return null
         val points = touching.points
         val first = points.first()
         val last = points.last()
@@ -219,7 +227,12 @@ class Contact {
         const val SWIPE_KEYS = .6f
         /** How far a swipe must go, in keys across or rows down, to turn a strip page or jump an emoji group. */
         const val PAGE_KEYS = .45f
-        private const val KEY_COOLDOWN_MILLIS = 150L
+        /** Movement in key widths before a contact that starts during a key cooldown counts. */
+        private const val AFTER_KEY_SWIPE_KEYS = 1.5f
+        private const val KEY_COOLDOWN_MILLIS = 200L
+        /** Key presses this close together count as steady typing. */
+        private const val TYPING_GAP_MILLIS = 500L
+        private const val TYPING_COOLDOWN_MILLIS = 500L
         private const val SAMPLE_DISTANCE = .025f
         private const val REQUIRED_EVIDENCE = .12f
         private const val STRAIGHT = .819152f

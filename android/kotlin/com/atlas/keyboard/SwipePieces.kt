@@ -39,8 +39,8 @@ internal class SwipePieces(
             last = joined.points
             return joined
         }
-        // A configured tap key has to type straight away.
-        if (contact.points.isEmpty() || (outcome is Contact.Outcome.Tap && isTapKey(outcome.key))) return outcome
+        // A configured tap key has to type straight away, and a brush just after a key press is not typing.
+        if (contact.points.isEmpty() || !contact.counts || (outcome is Contact.Outcome.Tap && isTapKey(outcome.key))) return outcome
         val previous = last
         // A piece the composer cannot join would be read as a word of its own.
         if (previous != null && canContinue() && follows(previous, contact.points)) {

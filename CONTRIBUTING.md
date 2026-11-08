@@ -139,9 +139,22 @@ Each pull request must have a test on a real Titan 2 Elite. An emulator does not
    - What you changed.
    - How you tested it on the Titan 2 Elite.
    - A screen recording, if the change is visible.
+   - How you used AI, if you used it. Refer to [AI use](#ai-use).
 4. Write short commit messages in lowercase, for example `fix cursor jump on swipe`.
 
 I read each pull request. I can ask for changes before I merge it.
+
+## AI use
+
+You can use AI tools to help you write code. Tell me how you used them.
+
+In the pull request description, write these items:
+
+- If you used AI (yes or no).
+- The tools that you used, for example Claude Code or GitHub Copilot.
+- How much you used them, for example "helped find the bug" or "wrote most of the code".
+
+Write the pull request description yourself. Do not use AI to write it.
 
 ## License
 

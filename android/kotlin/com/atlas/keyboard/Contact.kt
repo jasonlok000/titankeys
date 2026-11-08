@@ -17,7 +17,7 @@ import kotlin.math.min
  * cancels it.
  *
  * New contacts are also ignored for a short time after each key event, so a finger that brushes the
- * keys between presses does not type. A second Space press in a row adds no pause.
+ * keys between presses does not type. Delete and a second Space press in a row add no pause.
  */
 class Contact {
     sealed interface Outcome {
@@ -116,8 +116,7 @@ class Contact {
             doubleSpace = code == KeyEvent.KEYCODE_SPACE && lastKeyCode == code
             lastKeyCode = code
         } else heldKeys -= code
-        // A second Space press in a row adds no pause.
-        if (doubleSpace && code == KeyEvent.KEYCODE_SPACE) return
+        if (code == KeyEvent.KEYCODE_DEL || doubleSpace && code == KeyEvent.KEYCODE_SPACE) return
         blockedUntil = max(blockedUntil, time + KEY_COOLDOWN_MILLIS)
     }
 

@@ -9,6 +9,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import android.view.Display
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.KeyCharacterMap
 import android.view.MotionEvent
@@ -34,6 +35,14 @@ class AtlasIme : InputMethodService() {
     private lateinit var editor: ConnectionEditor
     private lateinit var overlay: TouchpadOverlay
     private val contact = Contact()
+    private val cursor = CursorMode()
+    /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
+    private var cursorPath = ArrayList<Sample>()
+    private var cursorControl = true
+    /** When cursor mode last ended; a press on Space just after selects the word at the cursor. */
+    private var cursorEndedAt = Long.MIN_VALUE
+    /** Space was pressed to select a word, so its repeats and release type nothing. */
+    private var selectingWithSpace = false
     private val modifiers = Modifiers()
     private var strip: Strip? = null
     private var field = Field.None
@@ -65,6 +74,51 @@ class AtlasIme : InputMethodService() {
     }
 
     private val sendBack = Runnable { if (editing) sendDownUpKeyEvents(KeyEvent.KEYCODE_BACK) }
+
+    private val startCursor = Runnable {
+        if (!cursor.rest(SystemClock.uptimeMillis())) return@Runnable
+        // The contact now steers the cursor, so it must not also type when it lifts.
+        contact.cancelActive()
+        Trace.touch(cursorPath, false)
+        haptics.click()
+        stepCursor.reset()
+        stepCursor.run()
+    }
+
+    /**
+     * Checks the lean every frame so speed follows the finger at once. Leaning in moves one letter straight
+     * away, then letters build up at the current speed.
+     */
+    private val stepCursor = object : Runnable {
+        private var owed = 1f
+        private var last = 0L
+
+        override fun run() {
+            if (!cursor.active) return
+            val now = SystemClock.uptimeMillis()
+            val direction = cursor.direction()
+            if (direction == 0) owed = 1f
+            else if (last != 0L) owed += cursor.speed() * (now - last) / 1000
+            if (direction != 0 && owed >= 1f) {
+                owed = (owed - 1f).coerceAtMost(1f)
+                moveCursor(direction)
+            }
+            last = now
+            main.postDelayed(this, FRAME_MILLIS)
+        }
+
+        fun reset() {
+            owed = 1f
+            last = 0L
+        }
+
+        /** Carries on after a slip, without the extra first step a fresh lean gets. */
+        fun resume() {
+            last = 0L
+            main.removeCallbacks(this)
+            run()
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -108,6 +162,7 @@ class AtlasIme : InputMethodService() {
         showModifiers()
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
+        cursorControl = TypingSettings.cursorControl(this)
         strip?.showSuggestions = showSuggestions()
         main.removeCallbacks(showStrip)
         if (editing) {
@@ -177,6 +232,8 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(showStrip)
         clearSettlements()
         contact.cancel()
+        endCursor()
+        selectingWithSpace = false
         deadKeyPending = false
         overlay.hide()
         super.onFinishInput()
@@ -211,12 +268,35 @@ class AtlasIme : InputMethodService() {
         val samples = touchpad.samples(event)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
                 haptics.begin(samples.firstOrNull())
-                contact.down(samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime))
+                contact.down(first)
+                if (cursor.resume(first)) {
+                    // Back within the slip recovery period: still steering the cursor, never typing.
+                    main.removeCallbacks(endSlippedCursor)
+                    contact.cancelActive()
+                    cursor.move(samples.drop(1))
+                    traceCursor(samples, ended = false)
+                    stepCursor.resume()
+                    return
+                }
                 contact.move(samples.drop(1))
+                endCursor()
+                // Alt turns sideways swipes into symbol pages, so the cursor waits until it is off.
+                if (cursorControl && modifiers.alt == Modifiers.Level.Off && cursor.down(first)) {
+                    cursor.move(samples.drop(1))
+                    cursorPath = ArrayList(samples.filter { it.valid })
+                    main.postAtTime(startCursor, first.time + CursorMode.REST_MILLIS)
+                }
                 Trace.touch(contact.points, false)
             }
             MotionEvent.ACTION_MOVE -> {
+                cursor.move(samples)
+                if (cursor.active) {
+                    traceCursor(samples, ended = false)
+                    return
+                }
+                cursorPath.addAll(samples.filter { it.valid })
                 contact.move(samples)
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
@@ -226,6 +306,17 @@ class AtlasIme : InputMethodService() {
                 Trace.touch(contact.points, false)
             }
             MotionEvent.ACTION_UP -> {
+                if (cursor.active) {
+                    cursorEndedAt = SystemClock.uptimeMillis()
+                    main.removeCallbacks(stepCursor)
+                    cursor.lift()
+                    val slips = composer.liftOffMillis > 0
+                    // Through a slip the path stays open, so a finger that comes back carries on drawing it.
+                    traceCursor(samples, ended = !slips)
+                    if (slips) main.postDelayed(endSlippedCursor, composer.liftOffMillis.toLong()) else endCursor()
+                    return
+                }
+                endCursor()
                 val points = contact.points
                 contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
                     if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
@@ -248,10 +339,63 @@ class AtlasIme : InputMethodService() {
             }
             MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
                 contact.cancelActive()
+                endCursor()
                 Trace.touch(emptyList(), true)
             }
         }
     }
+
+    private val endSlippedCursor = Runnable { endCursor() }
+
+    private fun traceCursor(samples: List<Sample>, ended: Boolean) {
+        val added = samples.filter { it.valid }
+        // The preview draws at most a swipe's worth of points; a long session starts a fresh path.
+        if (cursorPath.size + added.size > Swipe.MAX_POINTS) cursorPath = ArrayList(listOfNotNull(cursorPath.lastOrNull()))
+        cursorPath.addAll(added)
+        Trace.touch(cursorPath, ended)
+    }
+
+    private fun endCursor() {
+        if (cursor.active || cursor.lifted) Trace.touch(cursorPath, true)
+        main.removeCallbacks(endSlippedCursor)
+        main.removeCallbacks(startCursor)
+        main.removeCallbacks(stepCursor)
+        cursor.end()
+    }
+
+    /** Sends one arrow key press, in order with the rest of the typing. */
+    private fun moveCursor(direction: Int) {
+        if (direction == 0) return
+        val time = SystemClock.uptimeMillis()
+        if (Haptics.enabled(this)) haptics.pulse()
+        val code = if (direction > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
+        val arrow = KeyEvent(time, time, KeyEvent.ACTION_DOWN, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+            KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD)
+        enqueue { command(arrow) }
+    }
+
+    /** Pressing Space presses the finger into the touchpad, which lifts it, so either may arrive first. */
+    private fun selectsWord(event: KeyEvent) = event.keyCode == KeyEvent.KEYCODE_SPACE && event.repeatCount == 0
+        && (cursor.active || cursor.lifted || event.eventTime - cursorEndedAt in 0..SELECT_AFTER_CURSOR_MILLIS)
+
+    /** Selects the word at the cursor, or does nothing between words. */
+    private fun selectWord() {
+        composer.command(destructive = false, fieldLocal = true) {
+            val connection = currentInputConnection ?: return@command false
+            connection.finishComposingText()
+            val around = connection.getSurroundingText(WORD_REACH, WORD_REACH, 0) ?: return@command false
+            val text = around.text
+            val cursorAt = around.selectionStart
+            var start = cursorAt
+            var end = around.selectionEnd
+            while (start > 0 && isWordCharacter(text[start - 1])) start--
+            while (end < text.length && isWordCharacter(text[end])) end++
+            if (start == end) return@command true
+            connection.setSelection(around.offset + start, around.offset + end)
+        }
+    }
+
+    private fun isWordCharacter(character: Char) = Character.isLetterOrDigit(character) || character == '\'' || character == '’'
 
     private fun symbol(symbol: String) {
         enqueue {
@@ -389,6 +533,17 @@ class AtlasIme : InputMethodService() {
         typedInField = true
         if (touchpad.isGestureKey(event)) return true
         contact.key(keyCode, true, event.eventTime)
+        if (keyCode == KeyEvent.KEYCODE_SPACE && selectingWithSpace) return true
+        if (selectsWord(event)) {
+            endCursor()
+            cursorEndedAt = Long.MIN_VALUE
+            selectingWithSpace = true
+            consumedKeys += keyCode
+            enqueue { selectWord() }
+            return true
+        }
+        // Any other key press means the finger was pressing, not resting on the touchpad.
+        endCursor()
         if (pendingInput.isNotEmpty()) {
             val captured = KeyEvent(event)
             consumedKeys += keyCode
@@ -416,6 +571,11 @@ class AtlasIme : InputMethodService() {
         }
         if (touchpad.isGestureKey(event)) return true
         contact.key(keyCode, false, event.eventTime)
+        if (keyCode == KeyEvent.KEYCODE_SPACE && selectingWithSpace) {
+            selectingWithSpace = false
+            consumedKeys.remove(keyCode)
+            return true
+        }
         if (pendingInput.isNotEmpty()) {
             val captured = KeyEvent(event)
             consumedKeys.remove(keyCode)
@@ -534,6 +694,10 @@ class AtlasIme : InputMethodService() {
     companion object {
         private const val MAX_PENDING_INPUT = 128
         private const val BACK_SETTLE_MILLIS = 300L
+        private const val SELECT_AFTER_CURSOR_MILLIS = 250L
+        private const val FRAME_MILLIS = 16L
+        /** Characters read on each side of the cursor to find the word it is in. */
+        private const val WORD_REACH = 64
         private const val MODIFIER_RELEASE_SLOTS = 4
         private const val DRAIN_BUDGET = 8
         private const val DRAIN_NANOS = 4_000_000L

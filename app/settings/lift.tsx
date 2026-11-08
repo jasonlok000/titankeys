@@ -11,7 +11,7 @@ export const liftLabel = ({ liftOff, liftOffMillis }: State) => liftOff ? `${lif
 
 export default function Lift() {
   return <ChoicePage title="Continue after brief lift"
-    subtitle="How long you can lift your finger and still finish the word."
+    subtitle="How long you can lift your finger and still finish the word or keep moving the cursor."
     options={options}
     read={({ liftOff, liftOffMillis }) => liftOff ? String(liftOffMillis) : "off"}
     write={value => value === "off" ? { liftOff: false } : { liftOff: true, liftOffMillis: Number(value) }} />;

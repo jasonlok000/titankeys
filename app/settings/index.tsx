@@ -24,6 +24,8 @@ export default function Settings() {
         onChange={autoCapitalise => save.run({ autoCapitalise })} />
       <Toggle label="Suggestion bar" value={settings.suggestionBar}
         onChange={suggestionBar => save.run({ suggestionBar })} />
+      <Toggle label="Cursor control" value={settings.cursorControl}
+        onChange={cursorControl => save.run({ cursorControl })} />
     </Section>
     <Section title="Swipe typing">
       <Field label="Slip recovery period" href="/settings/lift">{liftLabel(settings)}</Field>

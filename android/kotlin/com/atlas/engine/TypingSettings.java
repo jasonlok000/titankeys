@@ -23,6 +23,15 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("suggestion_bar", enabled).apply();
     }
 
+    /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
+    public static boolean cursorControl(Context context) {
+        return preferences(context).getBoolean("cursor_control", true);
+    }
+
+    public static void cursorControl(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("cursor_control", enabled).apply();
+    }
+
     public static boolean liftOffGrace(Context context) { return preferences(context).getBoolean("lift_off_grace", true); }
 
     public static void liftOffGrace(Context context, boolean enabled) {

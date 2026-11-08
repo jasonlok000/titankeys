@@ -70,6 +70,15 @@ class Haptics(private val context: Context) {
 
     private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
 
+    /** A firm click, clearly stronger than swipe ticks, when cursor mode starts. */
+    fun click() {
+        if (!vibrator.hasVibrator()) return
+        if (Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return
+        val amplitude = if (vibrator.hasAmplitudeControl()) 255 else VibrationEffect.DEFAULT_AMPLITUDE
+        vibrator.vibrate(VibrationEffect.createOneShot(CLICK_MILLIS, amplitude),
+            VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_HARDWARE_FEEDBACK).build())
+    }
+
     fun pulse(preset: HapticPreset = this.preset) {
         if (!vibrator.hasVibrator()) return
         if (Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return
@@ -80,6 +89,8 @@ class Haptics(private val context: Context) {
     }
 
     companion object {
+        private const val CLICK_MILLIS = 45L
+
         private fun preferences(context: Context) = context.getSharedPreferences("swipe_haptics", Context.MODE_PRIVATE)
 
         fun preset(context: Context) = HapticPreset.of(preferences(context).getString("haptic_preset_v1", null))

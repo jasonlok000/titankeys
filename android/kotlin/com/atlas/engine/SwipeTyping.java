@@ -572,7 +572,9 @@ public final class SwipeTyping {
         boolean sentenceStart = true;
         for (int end = before.length(); end > 0;) {
             int previous = before.codePointBefore(end);
-            if (endsSentence(previous) || !Character.isWhitespace(previous)) {
+            // Some fields, like WhatsApp search, start with an invisible character such as a zero-width space.
+            boolean invisible = Character.getType(previous) == Character.FORMAT;
+            if (!invisible && (endsSentence(previous) || !Character.isWhitespace(previous))) {
                 sentenceStart = endsSentence(previous);
                 break;
             }

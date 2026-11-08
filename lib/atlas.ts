@@ -16,6 +16,8 @@ export type State = {
   overlay: boolean;
   /** The Titan's Scroll assistant switch is on, which powers the keyboard touchpad. */
   scrollAssistant: boolean;
+  /** Atlas's accessibility service is on, so one back swipe closes the bar and goes back in any app. */
+  backService: boolean;
   learning: boolean;
   /** The letters and space a light touch types, such as `"AI "`. */
   tapKeys: string;
@@ -116,6 +118,7 @@ export const enableKeyboard = () => atlas("enable");
 export const chooseKeyboard = () => atlas("choose");
 export const allowOverlay = () => atlas("overlay");
 export const openScrollAssistant = () => atlas("scrollAssistant");
+export const allowBack = () => atlas("backService");
 
 /** Calls `focus` whenever the home window regains focus, so its field can take autofocus again. */
 export const onHomeFocus = (focus: () => void) => onNativeMessage("atlas-focus", focus);

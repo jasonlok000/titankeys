@@ -1,5 +1,11 @@
-# 1.0.1
+# 1.0.2
+
+## New
+- Cursor mode: Hold the space bar, then move your finger across the keyboard to move the cursor.
+- Setup: Two new steps help you set the scroll assistant and turn on Atlas in Accessibility.
+- Guide: The guide uses simpler words. A new part tells you what to do if Atlas does not operate correctly.
+- Front page: The Guide and Settings buttons are now at the top of the page.
 
 ## Fixed
-- Launcher search: The suggestion bar now stays hidden on your launcher's home screen, like Niagara, so type-to-search stays clean.
-- Suggestion bar: It no longer comes back after an app closes a text box.
+- Swipe back: One back swipe closes the suggestion bar and goes back in all apps.
+- Capital letters: Atlas starts a field with a capital letter when the field has hidden characters at the start.

@@ -21,6 +21,7 @@ import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
 import com.atlas.keyboard.AtlasIme
+import com.atlas.keyboard.BackService
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.KeyCapture
@@ -74,7 +75,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         activity.application.registerActivityLifecycleCallbacks(this)
         activity.window.decorView.viewTreeObserver.addOnWindowFocusChangeListener(windowFocus)
         // Enabling and choosing the keyboard happen outside the app; the screens follow as they change.
-        for (setting in listOf(Settings.Secure.ENABLED_INPUT_METHODS, Settings.Secure.DEFAULT_INPUT_METHOD))
+        for (setting in listOf(Settings.Secure.ENABLED_INPUT_METHODS, Settings.Secure.DEFAULT_INPUT_METHOD,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES))
             activity.contentResolver.registerContentObserver(Settings.Secure.getUriFor(setting), false, keyboardSettings)
         // Settings load without waiting for the swipe engine; tell them when it finishes loading.
         typing.whenReady { _, _, _ -> publishState() }
@@ -189,6 +191,14 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                         "com.agui.settings.touchpad.ScrollAssistantActivity"))
                     "null"
                 }
+                "backService" -> {
+                    // The page for a single service is closed to apps, so the list opens with Atlas highlighted.
+                    val service = ComponentName(activity, BackService::class.java).flattenToString()
+                    activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        .putExtra(":settings:fragment_args_key", service)
+                        .putExtra(":settings:show_fragment_args", Bundle().apply { putString(":settings:fragment_args_key", service) }))
+                    "null"
+                }
                 "watch" -> {
                     watchingRequested = true
                     syncPreview()
@@ -262,6 +272,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("selected", selected)
             .put("overlay", Settings.canDrawOverlays(activity))
             .put("scrollAssistant", scrollAssistant())
+            .put("backService", BackService.enabled(activity))
             .put("learning", typing.learningEnabled())
             .put("tapKeys", TypingSettings.tapKeys(activity))
             .put("autoCapitalise", TypingSettings.autoCapitalise(activity))

@@ -78,7 +78,8 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    private val sendBack = Runnable { if (editing) sendDownUpKeyEvents(KeyEvent.KEYCODE_BACK) }
+    // Apps on Android's newer back handling ignore a back key from a keyboard, so a system back goes first.
+    private val sendBack = Runnable { if (!BackService.back() && editing) sendDownUpKeyEvents(KeyEvent.KEYCODE_BACK) }
 
     private val startCursor = Runnable {
         if (!cursor.rest(SystemClock.uptimeMillis())) return@Runnable

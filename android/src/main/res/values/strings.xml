@@ -1,0 +1,3 @@
+<resources>
+    <string name="back_service_description">Lets one back swipe close the suggestion bar and go back in the app. Atlas only sends back. It does not read your screen.</string>
+</resources>

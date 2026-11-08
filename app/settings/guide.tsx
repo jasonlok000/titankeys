@@ -18,5 +18,8 @@ export default function Guide() {
       <Row title="Shift and Alt" subtitle="Push one time for the next letter only. Push two times quickly to lock. Push again to unlock." wrapSubtitle />
       <Row title="More symbols" subtitle="When Alt is on, the strip shows more symbols. Move your finger to the left or right across the keyboard to see more." wrapSubtitle />
     </Section>
+    <Section title="Problems">
+      <Row title="Check the setup" subtitle="If a part of Atlas does not operate correctly, open Settings and select Setup. Make sure that all steps show Done." wrapSubtitle />
+    </Section>
   </Screen>;
 }

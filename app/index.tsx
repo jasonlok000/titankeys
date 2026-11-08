@@ -3,7 +3,7 @@ import { Canvas, CanvasText, Icon, Screen, Stack, Text, replace, useSnapshot } f
 import { arrowOutward } from "ink/icons";
 import guideIcon from "../assets/icons/guide.svg";
 import settingsIcon from "../assets/icons/settings.svg";
-import { allowOverlay, chooseKeyboard, enableKeyboard, markNotesSeen, onHomeFocus, openScrollAssistant, state } from "../lib/atlas";
+import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, markNotesSeen, onHomeFocus, openScrollAssistant, state } from "../lib/atlas";
 import { hasReleaseNotes } from "../lib/release-notes";
 import { WhatsNew } from "../lib/whats-new";
 import { TryArea } from "../lib/try";
@@ -18,7 +18,7 @@ function Step({ step, title, action, onPress }: {
     <Stack align="center" gap={14}>
       <Stack align="center" gap={8}>
         <Canvas width={596} height={28}>
-          <CanvasText x={0} y={0} width={596} height={28} size={20.67} colour="#7f7f84">{`STEP ${step} OF 4`}</CanvasText>
+          <CanvasText x={0} y={0} width={596} height={28} size={20.67} colour="#7f7f84">{`STEP ${step} OF 5`}</CanvasText>
         </Canvas>
         <Text size={49.33} align="center">{title}</Text>
       </Stack>
@@ -48,11 +48,12 @@ function FrontPage() {
 export default function Home() {
   const result = useSnapshot(state);
   if (result.status !== "ready") return <Screen />;
-  const { enabled, selected, overlay, scrollAssistant, version, whatsNew } = result.data;
+  const { enabled, selected, overlay, scrollAssistant, backService, version, whatsNew } = result.data;
   if (!enabled) return <Step step={1} title="Enable Atlas" action="Open keyboard settings" onPress={enableKeyboard} />;
   if (!selected) return <Step step={2} title="Choose Atlas" action="Open keyboard list" onPress={chooseKeyboard} />;
   if (!overlay) return <Step step={3} title="Allow overlay" action="Open overlay settings" onPress={allowOverlay} />;
   if (!scrollAssistant) return <Step step={4} title="Turn on Scroll assistant" action="Open Scroll assistant" onPress={openScrollAssistant} />;
+  if (!backService) return <Step step={5} title="Turn on Atlas in Accessibility" action="Open accessibility settings" onPress={allowBack} />;
   if (whatsNew && hasReleaseNotes(version)) return <WhatsNew version={version} onClose={() => void markNotesSeen()} />;
   return <FrontPage />;
 }

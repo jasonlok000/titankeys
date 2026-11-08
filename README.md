@@ -32,7 +32,9 @@
 
 ## Install
 
-I highly recommend installing through [Obtainium](https://github.com/ImranR98/Obtainium) so you can receive updates.
+The latest APK can be found here in [releases](https://github.com/juleshall4/atlas/releases).
+
+I recommend installing through [Obtainium](https://github.com/ImranR98/Obtainium) so you can receive updates.
 
 1. Install [Obtainium](https://github.com/ImranR98/Obtainium/releases).
 2. In Obtainium, tap **Add App**.

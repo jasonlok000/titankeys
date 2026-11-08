@@ -141,6 +141,8 @@ In the pull request description, write these items:
 - The tools that you used, for example Claude Code, GitHub Copilot, or ChatGPT.
 - How much you used them, for example "wrote the tests", "helped find the bug", or "wrote most of the code".
 
+Do not add an AI agent as a co-author in your commits. For example, do not add a `Co-Authored-By: Claude` line. You are the author of your commits.
+
 ## License
 
 Atlas uses the GPL-3.0-only license. When you send a contribution, you agree that it uses the same license.

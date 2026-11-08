@@ -647,7 +647,8 @@ class Composer(
         confirmState()
     }
 
-    private fun confirmState(expected: Snapshot? = null, notifyExternal: Boolean = false,
+    /** [predictNow] skips the wait that batches fast typing, for an edit such as a tapped word that ends a burst. */
+    private fun confirmState(expected: Snapshot? = null, notifyExternal: Boolean = false, predictNow: Boolean = false,
                              result: (Boolean) -> Unit = {}) {
         val owner = editor.identity()
         if (owner == null || !sameIdentity(identity, owner)) {
@@ -682,7 +683,7 @@ class Composer(
             expectedSelections.clear()
             result(true)
             recogniseNext()
-            predictLater()
+            if (predictNow) predict() else predictLater()
         }
     }
 
@@ -723,7 +724,7 @@ class Composer(
                 manualWord.clear()
                 correcting = null
                 // Keep the old words until the next words arrive, so the bar does not flash empty.
-                confirmState(snapshot()) { confirmed ->
+                confirmState(snapshot(), predictNow = true) { confirmed ->
                     if (confirmed) learnWord(chosen, correction, rememberCase = false)
                 }
             }

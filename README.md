@@ -16,7 +16,12 @@
 
 ### Swipe typing
 
-<img src="assets/demo.gif" width="300" alt="Swiping across the Titan 2 Elite's physical keys to type">
+<p>
+  <img src="assets/demo.gif" height="220" alt="Swiping across the Titan 2 Elite's physical keys to type">
+  <img src="assets/screenshots/home.png" height="220" alt="Atlas home screen with a swiped word and suggestions">
+  <img src="assets/screenshots/welcome.png" height="220" alt="Atlas welcome screen">
+  <img src="assets/screenshots/vibration.png" height="220" alt="Swipe vibration settings">
+</p>
 
 - Swipe across the physical keys to type.
 - Get suggestions for both swiped and typed words.

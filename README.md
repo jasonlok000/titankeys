@@ -14,9 +14,9 @@
 
 ## Features
 
-### Swipe typing
+<h3 align="center">Swipe typing</h3>
 
-<p>
+<p align="center">
   <img src="assets/demo.gif" height="220" alt="Swiping across the Titan 2 Elite's physical keys to type">
   <img src="assets/screenshots/home.png" height="220" alt="Atlas home screen with a swiped word and suggestions">
   <img src="assets/screenshots/saved-words.png" height="220" alt="Saved words list with everyday words Atlas has learned">

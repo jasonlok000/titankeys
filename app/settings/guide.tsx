@@ -22,6 +22,7 @@ export default function Guide() {
     </Section>
     <Section title="Problems">
       <Row title="Check the setup" subtitle="If a part of Atlas does not operate correctly, open Settings and select Setup. Make sure that all steps show Done." wrapSubtitle />
+      <Row title="Sym does not show emoji" subtitle="Open the phone Settings and find Shortcut keys. Select Sym key. Select Programmable key. Make sure that it shows Sym key below it." wrapSubtitle />
     </Section>
   </Screen>;
 }

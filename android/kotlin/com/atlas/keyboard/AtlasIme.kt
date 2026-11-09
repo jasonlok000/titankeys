@@ -60,6 +60,8 @@ class AtlasIme : InputMethodService() {
     private var lastSelectionStart = -1
     private val modifiers = Modifiers()
     private var strip: Strip? = null
+    /** The words the composer last put on the bar, for a strip that is made after that. */
+    private var barWords = emptyList<String>()
     private var panel: SymPanel? = null
     private var emoji: EmojiPages? = null
     /** The key that last picked from the panel or turned its page, so its repeats type nothing once the panel has closed. */
@@ -265,7 +267,7 @@ class AtlasIme : InputMethodService() {
             { delay, action -> main.postDelayed(action, delay) }, { enterApps })
         composer = Composer(editor, EngineWords(SwipeTyping.get(this)),
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
-            { TypingSettings.autoCapitalise(this) }) { strip?.words = it }
+            { TypingSettings.autoCapitalise(this) }) { barWords = it; strip?.words = it }
         composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
         composer.onStroke = Trace::stroke
         composer.onAutocorrect = haptics::wordChanged
@@ -322,6 +324,8 @@ class AtlasIme : InputMethodService() {
         strip = words
         panel = keys
         keys.emoji = emoji
+        // Android can make this view after the field has started, and again when the screen settings change.
+        words.words = barWords
         words.showSuggestions = showSuggestions()
         showModifiers()
         return LinearLayout(this).apply {

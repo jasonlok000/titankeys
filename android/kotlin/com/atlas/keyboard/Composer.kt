@@ -43,6 +43,8 @@ interface Words {
     fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit)
     fun allowed(word: String): Boolean
     fun known(word: String): Boolean
+    /** The commonest ways to start a sentence, best first. It answers at once, and is empty until the word lists have loaded. */
+    fun sentenceStarts(): List<String> = emptyList()
     fun typed(word: String, rememberCase: Boolean = true)
     /** Takes back the last [typed] use, because the user deleted that word. */
     fun untyped(word: String)
@@ -68,7 +70,7 @@ class Composer(
     private val later: (Long, () -> Unit) -> Unit,
     private val externalChange: () -> Unit,
     private val autoCapitalise: () -> Boolean,
-    private val show: (List<String>) -> Unit,
+    private val showWords: (List<String>) -> Unit,
 ) {
     private data class Selection(val start: Int, val end: Int)
     private data class Snapshot(val before: String?, val after: String?, val selection: Selection, val selected: Boolean) {
@@ -103,6 +105,9 @@ class Composer(
 
         class Typed(val prefix: String, val trailingSpace: Boolean, val snapshot: Snapshot,
                     override val alternatives: List<String>) : Composition
+
+        /** Popular sentence starts, which stand in when there is nothing better to show. */
+        class Starts(val snapshot: Snapshot, override val alternatives: List<String>) : Composition
 
         /** The cursor is in an earlier swiped word, [before] and [after] letters from its ends. */
         data class Recalled(val word: Remembered, val before: Int, val after: Int, val snapshot: Snapshot) : Composition {
@@ -170,6 +175,8 @@ class Composer(
     /** The typed word that was just learned or held, which ends at [end]. Deleting into it takes that back. */
     private class Learned(val word: String, val end: Int, val snapshot: Snapshot, val held: Boolean)
     private var lastLearned: Learned? = null
+    /** The bar holds nothing, or words that came from no text, so new starts can go up without waiting for the models. */
+    private var barIdle = true
 
     var liftOffMillis = 0
     /** Two quick spaces type a full stop, and punctuation typed after a space moves in front of that space. */
@@ -203,12 +210,16 @@ class Composer(
         this.field = field
         selection = Selection(selectionStart, selectionEnd)
         selectionConfirmed = selectionStart >= 0 && selectionEnd >= 0
-        reset()
+        reset(predicts = false)
         lookAlikeChangedAt = -1
         identity = next
         // Another field, or a password, starts with nothing remembered.
         val owner = next?.let { it.packageName to it.fieldId }
-        if (owner != rememberedField) autocorrect?.newField()
+        if (owner != rememberedField) {
+            autocorrect?.newField()
+            // Words from the last field mean nothing here. A restart of this field keeps its words until new ones arrive.
+            show(emptyList())
+        }
         if (!field.learning || owner != rememberedField) remembered.clear()
         rememberedField = owner
         pendingInput.addAll(carried)
@@ -234,7 +245,8 @@ class Composer(
             show(emptyList())
             return
         }
-        reset()
+        reset(predicts = false)
+        show(emptyList())
     }
 
     private fun invalidate(discardInput: Boolean = true) {
@@ -253,7 +265,8 @@ class Composer(
         }
     }
 
-    private fun reset() {
+    /** Starts over. The words on the bar stay until [predict] replaces them, so that the bar does not flash empty. */
+    private fun reset(predicts: Boolean = true) {
         invalidate()
         typedKey = null
         composition = Composition.None
@@ -266,7 +279,7 @@ class Composer(
         awaitingNextWord = null
         expectedSelections.clear()
         settleTypedWords()
-        show(emptyList())
+        if (predicts) predict()
     }
 
     private fun closesWord(next: Char?) = next != null && (next.isWhitespace() || next in WORD_CLOSERS)
@@ -291,6 +304,7 @@ class Composer(
             is Composition.Swiped -> current.snapshot
             is Composition.Typed -> current.snapshot
             is Composition.Recalled -> current.snapshot
+            is Composition.Starts -> current.snapshot
             Composition.None -> completionSnapshot ?: automaticSpace ?: fullStop?.snapshot ?: editSnapshot
         }
         if (updated != selection && anchor != null && snapshot() == anchor) {
@@ -309,7 +323,6 @@ class Composer(
         // An app empties its field when it sends a message. Any other move may be the user going back to change a word.
         if (editor.before()?.isEmpty() == true) keptWords.settle()
         reset()
-        predict()
         return true
     }
 
@@ -425,7 +438,6 @@ class Composer(
             endedBeforeSwipe = null
         }
         composition = Composition.None
-        show(emptyList())
         val resumed = previous.takeIf { resumes }
         val context = resumed?.context ?: before
         val replaced = resumed?.inserted?.length ?: 0
@@ -479,6 +491,7 @@ class Composer(
             }
             learnWord(completed, correction)
             recogniseNext()
+            predict()
         }
     }
 
@@ -743,7 +756,6 @@ class Composer(
             }
             Editor.Enter.Rejected -> reset()
         }
-        show(emptyList())
         predictLater()
     }
 
@@ -848,6 +860,10 @@ class Composer(
         }) return
         log?.picked(index, chosen, offered.alternatives)
         val anchor = snapshot()
+        if (offered is Composition.Starts) {
+            chooseStart(offered, chosen, anchor)
+            return
+        }
         if (!anchor.available || !anchor.knownSelection) return
         val before = anchor.before ?: return
         when (val current = composition) {
@@ -902,8 +918,25 @@ class Composer(
                         words.chosen(word.swipe, word.context, word.recognition, chosen)
                 }
             }
-            Composition.None -> Unit
+            is Composition.Starts, Composition.None -> Unit
         }
+    }
+
+    /**
+     * A start goes in as a swiped word does: after whatever is there, or in place of a selection. It has no tie to the
+     * letters before the cursor, so it replaces none of them, and the tap teaches nothing about those letters or any swipe.
+     */
+    private fun chooseStart(offered: Composition.Starts, chosen: String, anchor: Snapshot) {
+        if (anchor != offered.snapshot) return
+        invalidate(false)
+        val space = if (anchor.selected) "" else SwipeTyping.prefix(anchor.before.orEmpty())
+        val trailingSpace = !closesWord(anchor.after?.firstOrNull())
+        if (!edit(EditCause.Choose, 0, space + chosen + if (trailingSpace) " " else "")) return
+        composition = Composition.None
+        automaticSpace = snapshot().takeIf { trailingSpace }
+        manualWord.clear()
+        correcting = null
+        confirmState(snapshot(), predictNow = true)
     }
 
     private fun remember(swiped: Composition.Swiped) {
@@ -1016,7 +1049,6 @@ class Composer(
             // A swiped word shows only while its swipe has just ended, so this change came from typing.
             onAutocorrect?.invoke()
             composition = Composition.None
-            show(emptyList())
         }
         confirmState(accepted)
     }
@@ -1054,7 +1086,7 @@ class Composer(
             // Filters may have accepted only part of the requested text. Retain the actual edit,
             // discard its evidence and dependent input, and recover the app's real cursor.
             remembered.clear()
-            reset()
+            reset(predicts = false)
             selection = Selection(-1, -1)
             selectionConfirmed = false
             confirmState()
@@ -1351,22 +1383,35 @@ class Composer(
         later(PREDICTION_DELAY_MILLIS) { if (current == epoch) predict() }
     }
 
+    private fun show(suggestions: List<String>) {
+        barIdle = suggestions.isEmpty()
+        showWords(suggestions)
+    }
+
     private fun predict() {
-        if (composition !is Composition.None || hasPendingInput) return
+        if (composition !is Composition.None && composition !is Composition.Starts || hasPendingInput) return
         val anchor = snapshot()
         // Predictions must belong to the last verified owned edit.
         if (editSnapshot != null && anchor != editSnapshot) return
-        if (!anchor.available || !anchor.knownSelection) return
+        if (!anchor.available || !anchor.knownSelection) {
+            offerStarts(anchor)
+            return
+        }
         val before = anchor.before ?: return
         val after = anchor.after ?: return
         // Browsers select the whole address when you tap it, and typing replaces it, so offer starters then too.
-        if (field.starters && before.isEmpty() && after.isEmpty()) {
-            val starters = STARTERS.filter(words::allowed)
+        val starters = if (field.starters && before.isEmpty() && after.isEmpty()) STARTERS.filter(words::allowed) else emptyList()
+        if (starters.isNotEmpty()) {
             composition = Composition.Typed("", false, anchor, starters)
             show(starters)
+            barIdle = true
             return
         }
-        if (anchor.selected) return
+        // Typing or a swipe replaces a selection, and so does a start. Nothing but a start fits one.
+        if (anchor.selected) {
+            offerStarts(anchor)
+            return
+        }
         checkLookAlike()
         if (!field.suggestions) {
             show(emptyList())
@@ -1375,12 +1420,14 @@ class Composer(
         readKeptWords(anchor)
         if (recall(anchor)) return
         if (after.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) {
-            show(emptyList())
+            offerStarts(anchor)
             return
         }
         val lastWord = TypedPredictions.prefix(before.dropLast(1))
         val trailingSpace = before.endsWith(" ") && lastWord.isNotEmpty() && !words.known(lastWord)
         val context = if (trailingSpace) before.dropLast(1) else before
+        // Completions wait for the models, which can take seconds to load.
+        if (barIdle) offerStarts(anchor)
         val current = epoch
         completion?.set(true)
         val cancelled = AtomicBoolean(false)
@@ -1388,6 +1435,10 @@ class Composer(
         completionSnapshot = anchor
         words.complete(context, cancelled, field.sentenceCapitalisation) { suggestions ->
             if (cancelled.get() || current != epoch || snapshot() != anchor) return@complete
+            if (suggestions.isEmpty()) {
+                offerStarts(anchor)
+                return@complete
+            }
             composition = Composition.Typed(TypedPredictions.prefix(context), trailingSpace, anchor, suggestions)
             show(suggestions)
             // The first word is the one most likely to be picked, so have what follows it ready.
@@ -1395,6 +1446,16 @@ class Composer(
                 words.prepare(context.dropLast(TypedPredictions.prefix(context).length) + " " + it + " ", cancelled)
             }
         }
+    }
+
+    /** Puts popular sentence starts on the bar, so that it is not blank. Where suggestions are off, the bar stays empty and hidden. */
+    private fun offerStarts(anchor: Snapshot) {
+        val sentenceCase = field.sentenceCapitalisation && autoCapitalise()
+        val starts = if (!field.suggestions) emptyList() else words.sentenceStarts().ifEmpty { FEW_STARTS }.filter(words::allowed)
+            .map { SwipeTyping.capitalise(it, anchor.before.orEmpty(), 0, false, sentenceCase) }
+        composition = if (starts.isEmpty()) Composition.None else Composition.Starts(anchor, starts)
+        show(starts)
+        barIdle = true
     }
 
     private fun mayLearnFrom(anchor: Snapshot) = field.learning && anchor.available && anchor.knownSelection && !anchor.selected
@@ -1421,6 +1482,8 @@ class Composer(
         private const val FULL_STOP_MILLIS = 400L
         private const val PREDICTION_DELAY_MILLIS = 60L
         private val STARTERS = listOf("What", "How", "Where")
+        /** For the time before the word lists load, and if they can't. Written as inside a sentence. */
+        private val FEW_STARTS = listOf("I", "the", "hello")
         private const val MAX_REMEMBERED = 1000
         /** Characters that end a word, so a swiped word right before one needs no space after it. */
         private const val WORD_CLOSERS = ".,!?;:)]}…"

@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class EngineWords(private val typing: SwipeTyping) : Words {
     override fun allowed(word: String) = typing.wordAllowed(word)
     override fun known(word: String) = typing.knownWord(word)
+    override fun sentenceStarts(): List<String> = typing.sentenceStarts()
 
     /** What the engine needs to learn from a recognised swipe later. */
     private class Learning(val prediction: SwipeTyping.Prediction, val generation: Long)

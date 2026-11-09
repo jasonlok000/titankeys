@@ -24,6 +24,7 @@ import org.futo.ml.inference.SwipeDecoder.Result;
 public final class FirstWordChecks {
     private static final String TRIPLES = "android/assets/autocorrect/en_triples.txt";
     private static final String DICTIONARY = "android/assets/swipe/english.combined";
+    private static final String VOCABULARY = "android/assets/swipe/hungry_jellyfish/vocab.txt";
     private static final String SENTENCES = "android/debug/recorder/samples/sentences-20261108-192726.jsonl";
     private static final Result[] NO_ENGINE_WORDS = new Result[0];
 
@@ -40,7 +41,27 @@ public final class FirstWordChecks {
         laterWordsKeepTheirLimits();
         standInDoesNotOrderFirstWords();
         replay(shapes, counts);
+        popularStarts(counts);
         System.out.println("First word checks passed");
+    }
+
+    private static void popularStarts(Map<String, Double> counts) throws IOException {
+        try (BufferedReader vocabulary = Files.newBufferedReader(Path.of(VOCABULARY), StandardCharsets.UTF_8)) {
+            ProperNames.load(vocabulary);
+        }
+        TypedPredictions words;
+        try (BufferedReader vocabulary = Files.newBufferedReader(Path.of(VOCABULARY), StandardCharsets.UTF_8)) {
+            words = new TypedPredictions(vocabulary, word -> 1);
+        }
+        List<String> starts = FirstWords.popular(counts, words::contains);
+        check(starts.size() > 3 && starts.subList(0, 3).equals(List.of("I", "the", "hello")), "The bar must get the best starts and a greeting: " + starts);
+        for (String word : new String[] { "tom", "Tom", "sami", "mary", "ziri", "yanni", "mennad", "algeria", "he", "she" })
+            check(!starts.contains(word), word + " must not be a start: " + starts);
+        check(starts.stream().noneMatch(word -> word.startsWith("i'")), "I'm must keep its capital: " + starts);
+        check(FirstWords.popular(Map.of(), word -> true).isEmpty(), "No counts must give no starts, so the keyboard's own few show");
+        check(FirstWords.popular(Map.of("yes", 1.0), word -> true).equals(List.of("yes", "hello")), "A greeting goes last on a short list");
+        check(FirstWords.popular(Map.of("hello", 7.0, "i", 6.0, "the", 5.0, "you", 4.0), word -> true).equals(List.of("I", "the", "hello", "you")),
+                "A greeting that ranks well must not show twice");
     }
 
     private static void readsCounts() throws IOException {

@@ -95,7 +95,7 @@ class Haptics(private val context: Context) {
 
     companion object {
         /** A little longer than a swipe tick, at full strength, so the start of cursor mode is clear. */
-        private const val CLICK_MILLIS = 28L
+        private const val CLICK_MILLIS = 34L
 
         private fun preferences(context: Context) = context.getSharedPreferences("swipe_haptics", Context.MODE_PRIVATE)
 

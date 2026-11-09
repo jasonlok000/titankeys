@@ -34,4 +34,5 @@
 - Tap keys: If you do not select tap keys, Settings shows Off.
 - Ctrl and Meta: When you push Ctrl or Meta alone, Atlas does not send a shortcut to the app.
 - Strip after a field closes: When an app closes a field before you type, the strip does not stay on the screen.
+- Return to an app: When you go back to an app, the app keeps its text field open.
 - Guide search: When the search box is empty and you touch outside it, the Search row shows again.

@@ -153,6 +153,7 @@ class AtlasIme : InputMethodService() {
         if (!cursorGesture.confirm()) return@Runnable
         finishHeldTaps(type = false)
         haptics.click()
+        KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
         enqueue { selectWord() }
     }
 
@@ -199,10 +200,12 @@ class AtlasIme : InputMethodService() {
             }
             if (Haptics.enabled(this)) haptics.pulse()
             composer.backspace(true)
+            KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
         }
     }
 
     private fun startCursor(drag: CursorGesture.Drag, samples: List<Sample>) {
+        KeyboardEvents.publish { KeyboardEvent.CursorStarted(drag.words) }
         cursor.start(drag.landed, drag.words)
         cursor.move(samples)
         // The contact now steers the cursor, so it must not also type when it lifts.
@@ -987,6 +990,7 @@ class AtlasIme : InputMethodService() {
                 writeQuickSetting(item, !quickSettingOn(item))
                 readSettings()
                 panel?.render()
+                KeyboardEvents.publish { KeyboardEvent.QuickSettingUsed(item, quickSettingOn(item)) }
             }
         }
         haptics.settingChanged()
@@ -1116,12 +1120,14 @@ class AtlasIme : InputMethodService() {
                 if (outcome.deletesWord) {
                     haptics.tap()
                     composer.backspace(true)
+                    KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return
                 }
                 composer.swipe(letterSpace(outcome.points), outcome.startedAt, outcome.endedAt, modifiers.metaState)
                 modifiers.consume()
             }
             is Contact.Outcome.Tap -> {
+                KeyboardEvents.publish { KeyboardEvent.Tapped(outcome.key) }
                 if (!isTapKey(outcome.key)) return
                 showStripAfterBack()
                 val key = if (outcome.key == Layout.SPACE) " " else outcome.key
@@ -1196,6 +1202,7 @@ class AtlasIme : InputMethodService() {
         if (symbol <= 0 || !Character.isValidCodePoint(symbol) || Character.isISOControl(symbol)) return
         val text = String(Character.toChars(symbol))
         haptics.holdSymbol()
+        KeyboardEvents.publish { KeyboardEvent.HeldSymbol(text) }
         if (watchingKeys) {
             val typed = letter.getUnicodeChar(letter.metaState)
             main.post { replaceAppLetter(typed, text) }
@@ -1212,6 +1219,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
@@ -1456,6 +1464,7 @@ class AtlasIme : InputMethodService() {
         panel?.mode = modifiers.panel
         contact.paging = panelOpen
         updateKeyWatch()
+        KeyboardEvents.publish { KeyboardEvent.ModifierState(modifiers.shift, modifiers.alt, modifiers.panel, modifiers.ctrlHeld) }
     }
 
     private fun showModifierBar() {

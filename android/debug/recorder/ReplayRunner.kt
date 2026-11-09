@@ -155,7 +155,7 @@ class ReplayRunner : Instrumentation() {
         override fun state(result: (Editor.State?) -> Unit) = result(Editor.State(text.takeLast(Editor.CONTEXT_LENGTH), "", text.length, text.length))
         override fun before() = text.takeLast(Editor.CONTEXT_LENGTH)
         override fun after() = ""
-        override fun enter() = Editor.Enter.Newline
+        override fun enter(press: EnterKey.Press) = Editor.Enter.Newline
 
         override fun replace(count: Int, text: String, after: Int): Boolean {
             this.text = this.text.dropLast(count) + text

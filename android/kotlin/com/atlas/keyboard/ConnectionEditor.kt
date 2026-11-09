@@ -155,13 +155,24 @@ class ConnectionEditor(
         return null
     }
 
-    override fun enter(): Editor.Enter {
+    override fun enter(press: EnterKey.Press): Editor.Enter {
         val connection = connection() ?: return Editor.Enter.Rejected
         val info = info()
-        val action = (info?.imeOptions ?: 0) and EditorInfo.IME_MASK_ACTION
-        val newline = info == null || info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION != 0
-            || action == EditorInfo.IME_ACTION_UNSPECIFIED || action == EditorInfo.IME_ACTION_NONE
-        if (newline) return Editor.Enter.Newline
+        val options = info?.imeOptions ?: 0
+        val action = when (press) {
+            EnterKey.Press.NewLine, EnterKey.Press.ShiftNewLine -> return Editor.Enter.Newline
+            EnterKey.Press.Send -> {
+                if (EnterKey.sendsWithKey(info?.packageName))
+                    return if (key(connection, KeyEvent.KEYCODE_ENTER, 0)) Editor.Enter.Action else Editor.Enter.Rejected
+                EnterKey.sendAction(options, info?.actionId ?: 0)
+            }
+            EnterKey.Press.FieldDecides -> {
+                val own = options and EditorInfo.IME_MASK_ACTION
+                if (info == null || options and EditorInfo.IME_FLAG_NO_ENTER_ACTION != 0
+                    || own == EditorInfo.IME_ACTION_UNSPECIFIED || own == EditorInfo.IME_ACTION_NONE) return Editor.Enter.Newline
+                own
+            }
+        }
         if (!connection.performEditorAction(action)) return Editor.Enter.Rejected
         return when (action) {
             EditorInfo.IME_ACTION_NEXT -> Editor.Enter.Next
@@ -170,10 +181,11 @@ class ConnectionEditor(
         }
     }
 
-    private fun key(connection: InputConnection, code: Int, meta: Int) {
+    private fun key(connection: InputConnection, code: Int, meta: Int): Boolean {
         val now = SystemClock.uptimeMillis()
-        connection.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, code, 0, meta))
-        connection.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, code, 0, meta))
+        val down = connection.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, code, 0, meta))
+        val up = connection.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, code, 0, meta))
+        return down && up
     }
 
     companion object {

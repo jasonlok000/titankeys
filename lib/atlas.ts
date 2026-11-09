@@ -3,6 +3,7 @@ import { callNative, onNativeMessage } from "ink/native";
 
 export type HapticPreset = "normal" | "strong";
 export type Spelling = "british" | "american";
+export type EnterKey = "send" | "newline" | "app";
 
 export type State = {
   version: string;
@@ -25,6 +26,8 @@ export type State = {
   suggestionBar: boolean;
   /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
   cursorControl: boolean;
+  /** What Enter does in fields with more than one line. */
+  enterKey: EnterKey;
   liftOff: boolean;
   liftOffMillis: number;
   haptics: boolean;
@@ -37,7 +40,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "suggestionBar" | "cursorControl" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "suggestionBar" | "cursorControl" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];

@@ -757,6 +757,8 @@ class AtlasIme : InputMethodService() {
             modifiers.key(event)
             return true
         }
+        // Enter comes before the Ctrl shortcuts, because the Enter key setting can use Ctrl + Enter.
+        if (!event.isMetaPressed && enter(event)) return true
         if (event.isCtrlPressed && event.keyCode != KeyEvent.KEYCODE_DEL || event.isMetaPressed) {
             modifiers.useHeld()
             command(event)
@@ -779,7 +781,6 @@ class AtlasIme : InputMethodService() {
                 composer.backspace(event.isCtrlPressed || alt)
                 if (alt) modifiers.consume() else modifiers.useHeld()
             }
-            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { composer.enter(); modifiers.useHeld() }
             KeyEvent.KEYCODE_SPACE -> { composer.space(event.repeatCount > 0, event.eventTime); modifiers.useHeld() }
             KeyEvent.KEYCODE_TAB -> { modifiers.useHeld(); command(event) }
             else -> {
@@ -798,6 +799,21 @@ class AtlasIme : InputMethodService() {
                 composer.type(text)
             }
         }
+        return true
+    }
+
+    /** False for any other key, and for a Ctrl + Enter that stays a shortcut for the app. */
+    private fun enter(event: KeyEvent): Boolean {
+        if (event.keyCode != KeyEvent.KEYCODE_ENTER && event.keyCode != KeyEvent.KEYCODE_NUMPAD_ENTER) return false
+        val info = currentInputEditorInfo
+        // A locked Shift is Caps Lock, so Enter still sends.
+        val shift = event.isShiftPressed || modifiers.shift == Modifiers.Level.Once
+        val press = EnterKey.of(TypingSettings.enterKey(this)).press(info?.inputType ?: 0, info?.imeOptions ?: 0,
+            info?.actionId ?: 0, info?.packageName, shift, event.isCtrlPressed)
+        if (press == EnterKey.Press.FieldDecides && event.isCtrlPressed) return false
+        // A held Enter must not send again before the app has cleared the field.
+        if (press != EnterKey.Press.Send || event.repeatCount == 0) composer.enter(press)
+        if (press == EnterKey.Press.ShiftNewLine) modifiers.consume() else modifiers.useHeld()
         return true
     }
 

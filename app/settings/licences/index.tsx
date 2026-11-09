@@ -3,6 +3,7 @@ import { arrowOutward } from "ink/icons";
 
 const licences = [
   { title: "Atlas", subtitle: "GPL-3.0. TitanKeys is a modified version of Atlas.", url: "https://github.com/juleshall4/atlas" },
+  { title: "Pastiera", subtitle: "GPL-3.0. TitanKeys uses its Enter key rules.", url: "https://github.com/palsoftware/pastiera" },
   { title: "FUTO Swipe models", subtitle: "FUTO Model Weights License", url: "https://huggingface.co/futo-org/futo-swipe" },
   { title: "FUTO Swipe library", subtitle: "GPL-3.0. TitanKeys uses a patched copy of its Android code.", url: "https://gitlab.futo.org/keyboard/swipe-library" },
   { title: "FUTO Keyboard", subtitle: "FUTO Source First License", url: "https://github.com/futo-org/android-keyboard" },

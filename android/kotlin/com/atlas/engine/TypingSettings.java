@@ -64,6 +64,15 @@ public final class TypingSettings {
         preferences(context).edit().putString("tap_keys", unique.toString()).apply();
     }
 
+    /** What Enter does in fields with more than one line: "send", "newline" or "app". */
+    public static String enterKey(Context context) {
+        return preferences(context).getString("enter_key", "send");
+    }
+
+    public static void enterKey(Context context, String value) {
+        preferences(context).edit().putString("enter_key", value).apply();
+    }
+
     /** Records touches, keys and typed text in a log on this phone. It is off until the user turns it on. */
     public static boolean rawLog(Context context) {
         return preferences(context).getBoolean("raw_log", false);

@@ -22,7 +22,7 @@ interface Editor {
     fun replace(count: Int, text: String, after: Int = 0): Boolean
     /** Characters deleted before the selection; null means that the resulting edit is unverified. */
     fun delete(word: Boolean, selectionStart: Int, selectionEnd: Int): Int?
-    fun enter(): Enter
+    fun enter(press: EnterKey.Press): Enter
 
     companion object {
         const val CONTEXT_LENGTH = 2048
@@ -582,8 +582,8 @@ class Composer(
         correcting = source
     }
 
-    fun enter() {
-        if (defer(leaves = true) { enter() }) return
+    fun enter(press: EnterKey.Press) {
+        if (defer(leaves = true) { enter(press) }) return
         leave()
         invalidate(false)
         composition = Composition.None
@@ -601,7 +601,7 @@ class Composer(
             return
         }
         val current = epoch
-        val result = editor.enter()
+        val result = editor.enter(press)
         if (current != epoch || !sameIdentity(owner, editor.identity())) return
         when (result) {
             Editor.Enter.Newline -> {

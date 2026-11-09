@@ -105,6 +105,7 @@ object RawLog {
         "autoCapitalise" to TypingSettings.autoCapitalise(context),
         "suggestionBar" to TypingSettings.suggestionBar(context),
         "cursorControl" to TypingSettings.cursorControl(context),
+        "enterKey" to TypingSettings.enterKey(context),
         "spelling" to if (TypingSettings.spelling(context) == EnglishSpelling.Variant.AMERICAN) "american" else "british",
         "learning" to SwipeTyping.get(context).learningEnabled(),
     )

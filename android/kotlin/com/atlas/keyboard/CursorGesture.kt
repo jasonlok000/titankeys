@@ -5,32 +5,35 @@ import kotlin.math.hypot
 import kotlin.math.max
 
 /**
- * Tells the two gestures that control the cursor from every other touch on the bottom row. Both begin with a
- * quick tap anywhere on the row. If a second touch lands just after it and lifts quickly, that selects the word
- * at the cursor. If the second touch is held and dragged sideways, that moves the cursor.
+ * Tells the gestures that control the cursor from every other touch on the bottom row. All begin with a quick tap
+ * anywhere on the row. If a second touch lands just after it and lifts quickly, that selects the word at the cursor.
+ * If the second touch is held and dragged sideways, that moves the cursor. If a third touch lands just after two
+ * quick taps and is dragged sideways, that selects words.
  *
  * The touchpad reports one point only, and a resting finger is reported again as short touches at the same place,
- * which look like repeated taps. So the first tap must come alone, and a double tap only counts once
- * [CONFIRM_MILLIS] have passed with no third touch. A wrong selection is worse than a missed one, so anything
- * in doubt does nothing. Distances are in key widths and rows, as in [Contact]. The numbers come from recordings
- * of these gestures on a Titan 2 Elite.
+ * which look like repeated taps. So the first tap must come alone, a double tap only counts once [CONFIRM_MILLIS]
+ * have passed with no third touch, and a third touch that lifts without a drag does nothing. A wrong selection is
+ * worse than a missed one, so anything in doubt does nothing. Distances are in key widths and rows, as in [Contact].
+ * The numbers come from recordings of these gestures on a Titan 2 Elite.
  */
 class CursorGesture {
+    /** A touch that began to drag sideways, from where it [landed]. After three touches it selects [words]. */
+    data class Drag(val landed: Sample, val words: Boolean)
+
     private sealed interface State {
         data object Idle : State
         class FirstTouch(val landed: Sample) : State {
             var travel = 0f
         }
-        /** The first tap is over, and a second touch can still land. */
-        class Waiting(val landed: Sample, val lifted: Long) : State
-        class SecondTouch(val landed: Sample) : State {
+        /** [taps] quick taps are over, and another touch can still land. A third touch or a key press calls off two. */
+        class Tapped(val taps: Int, val landed: Sample, val lifted: Long) : State
+        /** The touch that came after [taps] quick taps. */
+        class NextTouch(val taps: Int, val landed: Sample) : State {
             var last = landed
             var across = 0f
             var rows = 0f
             var travel = 0f
         }
-        /** Two quick taps are done, and a third touch or a key press can still call them off. */
-        data object Confirming : State
     }
 
     private var state: State = State.Idle
@@ -42,14 +45,14 @@ class CursorGesture {
         val previous = state
         state = when {
             !counts || !sample.valid || sample.y < BOTTOM_ROW_TOP -> State.Idle
-            previous is State.Waiting && follows(previous, sample) -> State.SecondTouch(sample)
+            previous is State.Tapped && follows(previous, sample) -> State.NextTouch(previous.taps, sample)
             sample.time >= firstTapFrom -> State.FirstTouch(sample)
             else -> State.Idle
         }
     }
 
-    /** Returns where the second touch landed, once this movement makes it a sideways drag that moves the cursor. */
-    fun move(samples: List<Sample>): Sample? {
+    /** Returns a [Drag] once this movement makes the second or third touch a sideways drag. */
+    fun move(samples: List<Sample>): Drag? {
         for (sample in samples) {
             val current = state
             if (!sample.valid) {
@@ -57,7 +60,7 @@ class CursorGesture {
                 return null
             }
             if (current is State.FirstTouch) current.travel = max(current.travel, distance(current.landed, sample))
-            if (current !is State.SecondTouch) continue
+            if (current !is State.NextTouch) continue
             // The touchpad reports one point, so a second finger shows up as a sudden jump and not as a drag.
             if (distance(current.last, sample) > JUMP_KEYS) {
                 state = State.Idle
@@ -71,7 +74,7 @@ class CursorGesture {
             if (current.rows > MAX_DRAG_ROWS) state = State.Idle
             else if (current.across >= DRAG_KEYS && current.across >= SIDEWAYS * current.rows) {
                 state = State.Idle
-                return current.landed
+                return Drag(current.landed, words = current.taps == 2)
             }
         }
         return null
@@ -84,10 +87,11 @@ class CursorGesture {
         val current = state
         state = State.Idle
         if (current is State.FirstTouch && time - current.landed.time <= FIRST_TAP_MILLIS && current.travel < TAP_KEYS) {
-            state = State.Waiting(current.landed, time)
+            state = State.Tapped(1, current.landed, time)
         }
-        if (current is State.SecondTouch && time - current.landed.time <= SECOND_TAP_MILLIS && current.travel < TAP_KEYS) {
-            state = State.Confirming
+        // A third touch that lifts here ends with nothing, as it would in a resting finger's series.
+        if (current is State.NextTouch && current.taps == 1 && time - current.landed.time <= SECOND_TAP_MILLIS && current.travel < TAP_KEYS) {
+            state = State.Tapped(2, current.landed, time)
             return true
         }
         return false
@@ -95,7 +99,7 @@ class CursorGesture {
 
     /** True if the double tap still stands [CONFIRM_MILLIS] after it lifted. It can only be used once. */
     fun confirm(): Boolean {
-        if (state != State.Confirming) return false
+        if ((state as? State.Tapped)?.taps != 2) return false
         state = State.Idle
         return true
     }
@@ -108,13 +112,13 @@ class CursorGesture {
 
     /** Whether the taps so far may still become a gesture at [now], so a tap key must not type them yet. */
     fun deciding(now: Long) = when (val current = state) {
-        is State.Waiting -> now < current.lifted + MAX_GAP_MILLIS
-        is State.SecondTouch, State.Confirming -> true
+        is State.Tapped -> current.taps == 2 || now < current.lifted + MAX_GAP_MILLIS
+        is State.NextTouch -> true
         else -> false
     }
 
-    private fun follows(first: State.Waiting, second: Sample) =
-        second.time - first.lifted in MIN_GAP_MILLIS..MAX_GAP_MILLIS && abs(second.x - first.landed.x) * 10 <= MAX_APART_KEYS
+    private fun follows(tap: State.Tapped, next: Sample) =
+        next.time - tap.lifted in MIN_GAP_MILLIS..MAX_GAP_MILLIS && abs(next.x - tap.landed.x) * 10 <= MAX_APART_KEYS
 
     private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
 
@@ -134,9 +138,9 @@ class CursorGesture {
         private const val ALONE_MILLIS = 200L
         /** The first tap must come this long after a key press. */
         private const val AFTER_KEY_MILLIS = 500L
-        /** How long a double tap waits for a third touch, which would make it part of a series. */
+        /** How long a double tap waits for a third touch, which would make it part of a series or a word drag. */
         const val CONFIRM_MILLIS = MAX_GAP_MILLIS
-        /** How far sideways the second touch must go to start moving the cursor. */
+        /** How far sideways the second or third touch must go to start a drag. */
         private const val DRAG_KEYS = .5f
         /** A drag has to be at least this many times wider than it is tall. */
         private const val SIDEWAYS = 2f

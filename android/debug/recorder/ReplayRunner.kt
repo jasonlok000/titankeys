@@ -288,8 +288,8 @@ class ReplayRunner : Instrumentation() {
             typeHeldTaps(time)
         }
 
-        private fun startCursor(from: Sample, samples: List<Sample>) {
-            cursor.start(from)
+        private fun startCursor(drag: CursorGesture.Drag, samples: List<Sample>) {
+            cursor.start(drag.landed, drag.words)
             cursor.move(samples)
             contact.cancelActive()
             heldTaps.clear()

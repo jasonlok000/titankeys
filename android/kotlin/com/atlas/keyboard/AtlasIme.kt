@@ -53,6 +53,8 @@ class AtlasIme : InputMethodService() {
     private var cursorControl = true
     /** Taps on a tap key that may be part of a double tap. Each call gives its input, typed if the argument is true. */
     private val heldTaps = ArrayList<(Boolean) -> Unit>()
+    /** The word that the word drag started from, as its start and end in the field. */
+    private var wordAnchor: Pair<Int, Int>? = null
     /** The selection start the app last reported, for apps that don't say where their text sits. */
     private var lastSelectionStart = -1
     private val modifiers = Modifiers()
@@ -141,14 +143,15 @@ class AtlasIme : InputMethodService() {
 
     private val checkHeldTaps = Runnable { settleHeldTaps() }
 
-    private fun startCursor(from: Sample, samples: List<Sample>) {
-        cursor.start(from)
+    private fun startCursor(drag: CursorGesture.Drag, samples: List<Sample>) {
+        cursor.start(drag.landed, drag.words)
         cursor.move(samples)
         // The contact now steers the cursor, so it must not also type when it lifts.
         contact.cancelActive()
         finishHeldTaps(type = false)
         Trace.touch(cursorPath, false)
         haptics.click()
+        if (drag.words) enqueue { startWordDrag() }
         stepCursor.reset()
         stepCursor.run()
     }
@@ -187,7 +190,7 @@ class AtlasIme : InputMethodService() {
             else if (last != 0L) owed += cursor.speed(now) * (now - last) / 1000
             if (direction != 0 && owed >= 1f) {
                 owed = (owed - 1f).coerceAtMost(1f)
-                moveCursor(direction)
+                if (cursor.words) extendWords(direction) else moveCursor(direction)
             }
             last = now
             main.postDelayed(this, FRAME_MILLIS)
@@ -655,19 +658,40 @@ class AtlasIme : InputMethodService() {
     }
 
     /** Selects the word at the cursor, or does nothing between words. */
-    private fun selectWord() {
+    private fun selectWord() = changeSelection { text, start, end, _ -> WordSelection.at(text, start, end) }
+
+    /** Selects the word at the cursor, the part that a word drag keeps selected. Between words the drag starts from the cursor. */
+    private fun startWordDrag() {
+        wordAnchor = null
+        changeSelection { text, start, end, offset ->
+            val word = WordSelection.at(text, start, end) ?: (start to end)
+            wordAnchor = offset + word.first to offset + word.second
+            word
+        }
+    }
+
+    /** Extends the selection by one word, in order with the rest of the typing. */
+    private fun extendWords(direction: Int) = enqueue {
+        changeSelection { text, start, end, offset ->
+            val anchor = wordAnchor ?: return@changeSelection null
+            val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction)
+            if (range == start to end) return@changeSelection null
+            if (Haptics.enabled(this)) haptics.pulse()
+            range
+        }
+    }
+
+    /**
+     * Selects the range that [choose] picks from the text around the selection, or leaves it if [choose] returns null.
+     * [choose] gets the text, the selection in that text, and where that text starts in the field.
+     */
+    private fun changeSelection(choose: (CharSequence, Int, Int, Int) -> Pair<Int, Int>?) {
         composer.command(destructive = false, fieldLocal = true) {
             val connection = currentInputConnection ?: return@command false
             connection.finishComposingText()
             val around = connection.getSurroundingText(WORD_REACH, WORD_REACH, 0) ?: return@command false
-            val text = around.text
-            val cursorAt = around.selectionStart
-            var start = cursorAt
-            var end = around.selectionEnd
-            while (start > 0 && isWordCharacter(text[start - 1])) start--
-            while (end < text.length && isWordCharacter(text[end])) end++
-            if (start == end) return@command true
             val offset = fieldOffset(connection, around) ?: return@command false
+            val (start, end) = choose(around.text, around.selectionStart, around.selectionEnd, offset) ?: return@command true
             connection.setSelection(offset + start, offset + end)
         }
     }
@@ -684,8 +708,6 @@ class AtlasIme : InputMethodService() {
             extracted.startOffset + extracted.selectionStart else lastSelectionStart
         return if (cursor >= around.selectionStart) cursor - around.selectionStart else null
     }
-
-    private fun isWordCharacter(character: Char) = Character.isLetterOrDigit(character) || character == '\'' || character == '’'
 
     /** Types a symbol or emoji from the panel, then goes back to normal typing. */
     private fun typePanelItem(item: String) {

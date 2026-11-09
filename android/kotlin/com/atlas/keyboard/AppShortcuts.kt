@@ -37,12 +37,18 @@ object AppShortcuts {
         preferences(context).edit().putInt("hyper_key", code).apply()
     }
 
-    /** A key name such as "Func3" from KEYCODE_FUNC3, or "Key 403" for a key Android has no name for. */
+    /** The name on the key, such as "Fn", or one from Android, such as "F12", or "Key 403" when it has none. */
     fun label(code: Int): String {
+        KEY_NAMES[code]?.let { return it }
         val name = KeyEvent.keyCodeToString(code)
         if (!name.startsWith("KEYCODE_")) return "Key $code"
         return name.removePrefix("KEYCODE_").split('_').joinToString(" ") { it.lowercase().replaceFirstChar(Char::uppercase) }
     }
+
+    /** Titan 2 Elite keys, named as printed. The firmware sends Fn as 403, a code that Android has no name for. */
+    private val KEY_NAMES = mapOf(403 to "Fn", KeyEvent.KEYCODE_SYM to "Sym", 342 to "Sym",
+        KeyEvent.KEYCODE_ALT_LEFT to "Alt", KeyEvent.KEYCODE_SHIFT_LEFT to "Shift", KeyEvent.KEYCODE_SHIFT_RIGHT to "Shift",
+        KeyEvent.KEYCODE_BACK to "Back", KeyEvent.KEYCODE_HOME to "Home", KeyEvent.KEYCODE_APP_SWITCH to "Recent apps")
 
     fun app(context: Context, letter: Char): String? = preferences(context).getString("letter_$letter", null)
 

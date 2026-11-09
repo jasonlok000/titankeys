@@ -40,7 +40,7 @@ export const guide: { title: string; rows: GuideRow[] }[] = [
         terms: ["emojis", "emoticons", "smiley", "smileys", "faces", "emoji keyboard", "hearts", "thumbs up", "stickers", "reactions", "icons", "pictures", "sym key"] },
       { title: "Change the keyboard", text: "Push and hold Sym. Then select a different keyboard from the list.",
         terms: ["switch keyboard", "change keyboard", "other keyboard", "another keyboard", "keyboard list", "keyboard picker", "input method", "go back", "hold sym", "long press sym"] },
-      { title: "App shortcuts", text: "Push the hyper key and a letter to open an app. Hold the hyper key, or push it and then push the letter in 1 second. To start, open Settings and turn on App shortcuts. Then select Configure shortcuts to set the hyper key and the apps. To open apps with no animation, turn off Animations.",
+      { title: "App shortcuts", text: "Push the hyper key and a letter to open an app. Hold the hyper key, or push it and then push the letter in 1 second. To set the keys, open Settings and select Hyper key and Apps. To open apps with no animation, turn off Animations.",
         terms: ["hyperkey", "hyper", "launcher", "launch", "open app", "start app", "quick open", "switch app", "keyboard shortcut", "hotkey", "hot key", "raycast", "leader key", "fn key", "func key", "programmable"] },
     ],
   },

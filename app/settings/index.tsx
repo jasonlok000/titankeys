@@ -2,6 +2,7 @@ import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from 
 import { close } from "ink/icons";
 import { state, update } from "../../lib/atlas";
 import { liftLabel } from "./lift";
+import { hyperKeyLabel } from "./hyper-key";
 import { setupLabel } from "./setup";
 import { shortcutsLabel } from "./shortcuts";
 import { spellingLabel } from "./spelling";
@@ -38,8 +39,8 @@ export default function Settings() {
     <Section title="Shortcuts">
       <Toggle label="App shortcuts" value={settings.appShortcuts}
         onChange={appShortcuts => save.run({ appShortcuts })} />
-      {settings.appShortcuts
-        && <Field label="Configure shortcuts" href="/settings/shortcuts">{shortcutsLabel(settings)}</Field>}
+      {settings.appShortcuts && <Field label="Hyper key" href="/settings/hyper-key">{hyperKeyLabel(settings)}</Field>}
+      {settings.appShortcuts && <Field label="Apps" href="/settings/shortcuts">{shortcutsLabel(settings)}</Field>}
       {settings.appShortcuts && <Toggle label="Animations" value={settings.shortcutAnimation}
         onChange={shortcutAnimation => save.run({ shortcutAnimation })} />}
     </Section>

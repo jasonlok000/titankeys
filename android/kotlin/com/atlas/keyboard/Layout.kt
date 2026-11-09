@@ -9,12 +9,16 @@ object Layout {
     const val SPACE = "space"
     const val ALT = "alt"
     const val SYM = "sym"
+    const val FN = "fn"
+    /** Where a finger counts as resting on P and not on the key beside it. See [restingKeyAt]. */
+    private const val P_FROM_LEFT = .875f
+    private const val P_TO_BOTTOM = .3f
 
     val rows = listOf(
         listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
         listOf("A", "S", "D", "F", "G", "H", "J", "K", "L", "⌫"),
         listOf(ALT, "Z", "X", "C", "V", "B", "N", "M", SYM, "↵"),
-        listOf("⇧", "○", "◁", SPACE, "▦", "fn", "⇧"),
+        listOf("⇧", "○", "◁", SPACE, "▦", FN, "⇧"),
     )
     val bottomWidths = floatArrayOf(1.2f, 1.2f, 1.2f, 2.8f, 1.2f, 1.2f, 1.2f)
     /** The letter keys, from the top row down: the order in which the Sym panel fills them. */
@@ -46,6 +50,26 @@ object Layout {
             if (column < right) return rows[3][index]
         }
         return rows[3].last()
+    }
+
+    /**
+     * The key under a finger that rests on the touchpad, for the Sym panel. The touchpad stops at the middle of P, because the
+     * sensor ends there and calibration maps its edge to P's centre, so P has only half a column to be read from and a finger
+     * on it reads partly on the keys beside it. Here P also takes the right of O and the top of Backspace.
+     */
+    fun restingKeyAt(x: Float, y: Float): String {
+        val key = keyAt(x, y)
+        return if (key == "O" && x >= P_FROM_LEFT || key == "⌫" && y < P_TO_BOTTOM) "P" else key
+    }
+
+    /** Whether a touchpad height is on the bottom row of keys. */
+    fun isBottomRow(y: Float) = y >= .75f
+
+    /** The left and right edges of a bottom-row key, from 0 to 1 across the keyboard. */
+    fun bottomSpan(key: String): Pair<Float, Float> {
+        val index = rows[3].indexOf(key)
+        val left = bottomWidths.take(index).sum() / 10
+        return left to left + bottomWidths[index] / 10
     }
 
     /** A letter's centre in touchpad coordinates. */

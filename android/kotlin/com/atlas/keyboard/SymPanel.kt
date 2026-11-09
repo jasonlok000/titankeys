@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
-import android.view.View
 import android.view.WindowInsets
 import android.widget.LinearLayout
 import android.widget.Space
@@ -18,10 +17,12 @@ import kotlin.math.sign
 
 /**
  * The panel that Sym opens: a symbol or an emoji on each letter key of the top three rows, in line with the physical letter
- * keys. The other keys are left empty. A finger that rests on a key shows that key's item larger.
+ * keys. The other keys are left empty. A finger that rests on a key marks that key. The groups of emoji are in a strip along the
+ * bottom, above the bottom row of physical keys, and a finger on that row opens the group at its place.
  *
- * Alt's place shows the quick settings key. On the quick settings page each letter key that has an item shows its short label,
- * dim when the setting is off, and a finger that rests on the key shows the setting's name and state.
+ * Alt's place shows the quick settings key and Sym's place shows what Sym does next, each as an icon. On the quick settings page
+ * each letter key that has an item shows its short label, dim when the setting is off, and a finger that rests on the key shows
+ * the setting's name and state at the top.
  *
  * While Ctrl is held it shows Ctrl's shortcuts instead. Each key that has a shortcut shows its letter, all other keys are blank,
  * and the header says what each shortcut does. The touchpad reports nothing while a physical key other than Shift is held, so
@@ -33,6 +34,8 @@ class SymPanel(
     private val useQuickSetting: (QuickSetting) -> Unit,
     private val quickSettingOn: (QuickSetting) -> Boolean,
     private val pressAlt: () -> Unit,
+    private val pressSym: () -> Unit,
+    private val pageChanged: () -> Unit,
 ) : LinearLayout(context) {
     private val typeface = resources.getFont(R.font.inter_regular)
     private val symbols = EmojiPages(listOf(EmojiPages.Group("Symbols", Keys.extraSymbols())), emptyList())
@@ -47,19 +50,16 @@ class SymPanel(
         // An item, a shortcut's name and the list of shortcuts must all fit the header at any system font size.
         setAutoSizeTextTypeUniformWithConfiguration(PREVIEW_SMALLEST, PREVIEW_LARGEST, 1, TypedValue.COMPLEX_UNIT_SP)
     }
-    /** One mark for each group of emoji. */
+    /** One mark for each group of emoji, across the whole width of the panel. */
     private val categories = LinearLayout(context)
-    /** The categories, with the name of the open one and its page number under them. */
-    private val info = LinearLayout(context).apply {
-        orientation = VERTICAL
-        addView(categories, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-        addView(LinearLayout(context).apply {
-            addView(group, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
-            addView(pageNumber, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
-        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+    /** The name of the open group and its page number. */
+    private val heading = LinearLayout(context).apply {
+        addView(group, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        addView(pageNumber, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
     }
+    private val header = LinearLayout(context)
     private val grid = LinearLayout(context)
-    private val cells = (Layout.panelLetters + Layout.ALT).associateWith(::cell)
+    private val cells = (Layout.panelLetters + Layout.ALT + Layout.SYM).associateWith(::cell)
     private var tabs = emptyList<TextView>()
     private var shownSamples = emptyList<String>()
     private var navigationInset = 0
@@ -111,17 +111,17 @@ class SymPanel(
 
     init {
         orientation = VERTICAL
-        addView(LinearLayout(context).apply {
-            setPadding(dp(8), 0, dp(8), 0)
-            addView(info, LayoutParams(0, LayoutParams.MATCH_PARENT, 3f))
-            addView(preview, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
-        }, LayoutParams(LayoutParams.MATCH_PARENT, dp(HEADER_HEIGHT)))
+        header.setPadding(dp(8), 0, dp(8), 0)
+        header.addView(heading, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        header.addView(preview, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        addView(header, LayoutParams(LayoutParams.MATCH_PARENT, dp(HEADER_HEIGHT)))
         grid.orientation = VERTICAL
         // Each row keeps all ten columns, so that the letter keys stay above the physical letter keys.
         for (row in Layout.rows.take(3)) grid.addView(LinearLayout(context).apply {
             for (key in row) addView(cells[key] ?: Space(context), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         }, LayoutParams(LayoutParams.MATCH_PARENT, dp(ROW_HEIGHT)))
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        addView(categories, LayoutParams(LayoutParams.MATCH_PARENT, dp(CATEGORY_HEIGHT)))
         // Keep the keys clear of the gesture handle, which draws over the bottom of the keyboard.
         setOnApplyWindowInsetsListener { _, insets ->
             navigationInset = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
@@ -142,6 +142,28 @@ class SymPanel(
             slideIn(across, down)
         }
         return moved
+    }
+
+    /** The strip of groups shows, so the bottom row of the touchpad chooses a group. */
+    val hasCategories get() = categories.visibility == VISIBLE
+
+    /** Opens the group at a place along the strip, from 0 at its left end to 1 at its right end. Returns true if the group changes. */
+    fun pickCategory(across: Float) = pages?.let { open(it.groupAt(across)) } == true
+
+    /** Opens the group under a bottom-row key, unless the open group is already under that key. Returns true if the group changes. */
+    fun pickCategoryUnder(key: String): Boolean {
+        val current = pages ?: return false
+        val (left, right) = Layout.bottomSpan(key)
+        return open(current.groupUnder(left, right))
+    }
+
+    private fun open(group: Int): Boolean {
+        val current = pages ?: return false
+        val before = current.groupIndex()
+        if (!current.open(group)) return false
+        render()
+        slideIn(if (group > before) -1f else 1f, 0f)
+        return true
     }
 
     /** The new keys slide in the way the finger went. Android's animator duration setting shortens this or turns it off. */
@@ -177,6 +199,7 @@ class SymPanel(
     private fun touched(key: String) {
         when {
             key == Layout.ALT -> pressAlt()
+            key == Layout.SYM -> pressSym()
             quick -> QuickSetting.on(key)?.let(useQuickSetting)
             else -> item(key)?.let(pick)
         }
@@ -186,9 +209,13 @@ class SymPanel(
     private class Icon(val drawable: Int, val description: String)
 
     private fun icon(key: String) = when {
-        ctrl || key != Layout.ALT -> null
-        mode == Modifiers.Panel.Settings -> Icon(R.drawable.panel_back, "Go back")
-        else -> Icon(R.drawable.panel_settings, "Open quick settings")
+        ctrl -> null
+        key == Layout.ALT -> if (mode == Modifiers.Panel.Settings) Icon(R.drawable.panel_back, "Go back")
+            else Icon(R.drawable.panel_settings, "Open quick settings")
+        // What Sym does next: from the symbols it opens the emoji, and from the other pages it closes the panel.
+        key == Layout.SYM -> if (mode == Modifiers.Panel.Symbols) Icon(R.drawable.panel_emoji, "Show emoji")
+            else Icon(R.drawable.panel_close, "Close the panel")
+        else -> null
     }
 
     /** What a key shows as text, or null if it shows none. */
@@ -204,17 +231,20 @@ class SymPanel(
     /** What the top of the panel says for a key under a finger, or null if it says nothing. */
     private fun detail(key: String) = when {
         ctrl -> Modifiers.CTRL_ACTIONS[key]
-        else -> icon(key)?.description ?: if (quick) QuickSetting.on(key)?.let(::describe) else item(key)
+        quick -> icon(key)?.description ?: QuickSetting.on(key)?.let(::describe)
+        else -> null
     }
 
     private fun dim(key: String) = quick && QuickSetting.on(key)?.let(quickSettingOn) == false
 
-    private fun categoryTab(sample: String) = TextView(context).apply {
+    private fun categoryTab(sample: String, name: String, index: Int) = TextView(context).apply {
         text = sample
         gravity = Gravity.CENTER
         isSingleLine = true
         includeFontPadding = false
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        isFocusable = false
+        contentDescription = "Show $name"
+        setOnClickListener { if (open(index)) pageChanged() }
     }
 
     /** Text that follows the system font size up to [largest] dp, so that it stays inside a row of fixed height. */
@@ -235,8 +265,9 @@ class SymPanel(
         setBackgroundColor(paper)
         setPadding(dp(4), 0, dp(4), navigationInset)
         val current = pages
-        // What the shortcuts do and a setting's name are longer than a symbol, so they take the whole header.
-        info.visibility = if (ctrl || quick) GONE else VISIBLE
+        // Only words need the large text: what the shortcuts do, and a setting's name.
+        heading.visibility = if (ctrl || quick) GONE else VISIBLE
+        preview.visibility = if (ctrl || quick) VISIBLE else GONE
         showCategories(current)
         group.setTextColor(muted)
         group.text = current?.group().orEmpty()
@@ -269,9 +300,11 @@ class SymPanel(
         contentDescription = when {
             ctrl -> "Ctrl shortcuts. $CTRL_LIST. Push a key to use its shortcut."
             quick -> "$QUICK_TITLE. Rest a finger on a key to see its setting. Push the key to change the setting."
-            mode == Modifiers.Panel.Symbols -> "Symbols. Push a key to type its symbol. Swipe up or down on the keyboard to see more."
+            mode == Modifiers.Panel.Symbols -> "Symbols. Push a key to type its symbol. " +
+                "Swipe up or down on the keyboard to see more, or push Backspace or Enter."
             mode == Modifiers.Panel.Emoji -> "Emoji, ${current?.group().orEmpty()}. Push a key to type its emoji. " +
-                "Swipe left or right on the keyboard to change the group, or up or down to see more."
+                "Swipe left or right on the keyboard to change the group, or move a finger along the bottom row. " +
+                "Swipe up or down to see more, or push Backspace or Enter."
             else -> null
         }
         showHover()
@@ -283,10 +316,17 @@ class SymPanel(
         if (samples != shownSamples) {
             shownSamples = samples
             categories.removeAllViews()
-            tabs = samples.map { sample -> categoryTab(sample).also { categories.addView(it, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f)) } }
+            val names = current?.groupNames().orEmpty()
+            tabs = samples.mapIndexed { index, sample ->
+                categoryTab(sample, names[index], index).also { categories.addView(it, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f)) }
+            }
         }
         // Symbols are one group, so they have no categories to choose from.
-        categories.visibility = if (samples.size > 1) VISIBLE else GONE
+        val strip = samples.size > 1
+        categories.visibility = if (strip) VISIBLE else GONE
+        // The strip takes its height from the header, so that the keyboard stays the same size on every page.
+        val headerHeight = dp(if (strip) HEADER_HEIGHT - CATEGORY_HEIGHT else HEADER_HEIGHT)
+        if (header.layoutParams.height != headerHeight) header.layoutParams = header.layoutParams.apply { height = headerHeight }
         val open = current?.groupIndex() ?: -1
         tabs.forEachIndexed { index, tab ->
             tab.sized(CATEGORY_SIZE, CATEGORY_LARGEST)
@@ -294,12 +334,12 @@ class SymPanel(
         }
     }
 
-    /** A cell under a resting finger changes colour, and its item or shortcut shows larger at the top of the panel. */
+    /** A cell under a resting finger changes colour. A setting's or shortcut's name also shows at the top of the panel. */
     private fun showHover() {
-        val shown = detail(hover)
-        preview.text = shown ?: if (ctrl) CTRL_LIST else if (quick) QUICK_TITLE else ""
+        preview.text = detail(hover) ?: if (ctrl) CTRL_LIST else if (quick) QUICK_TITLE else ""
+        val marked = hover.takeIf { label(it) != null || icon(it) != null }
         for ((key, view) in cells) {
-            val hovered = shown != null && key == hover
+            val hovered = key == marked
             view.setBackgroundColor(if (hovered) ink else Color.TRANSPARENT)
             view.setTextColor(if (hovered) paper else if (dim(key)) Color.GRAY else ink)
             view.foregroundTintList = ColorStateList.valueOf(if (hovered) paper else ink)
@@ -315,6 +355,7 @@ class SymPanel(
 
     private companion object {
         const val HEADER_HEIGHT = 56
+        const val CATEGORY_HEIGHT = 32
         const val ROW_HEIGHT = 46
         const val HEADER_SIZE = 14f
         const val HEADER_LARGEST = 18f

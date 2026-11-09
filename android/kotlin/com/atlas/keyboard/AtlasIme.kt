@@ -59,8 +59,10 @@ class AtlasIme : InputMethodService() {
     private var strip: Strip? = null
     private var panel: SymPanel? = null
     private var emoji: EmojiPages? = null
-    /** The key that last picked from the panel, so its repeats type nothing once the panel has closed. */
+    /** The key that last picked from the panel or turned its page, so its repeats type nothing once the panel has closed. */
     private var pickedKey = 0
+    /** The current touch landed on the bottom row with categories on the screen, so it picks a category and is nothing else. */
+    private var pickingCategory = false
     private var field = Field.None
     /** The apps that the user added to the Enter key setting, read when a field starts. */
     private var enterApps = emptyMap<String, EnterKey.SendMethod>()
@@ -264,6 +266,8 @@ class AtlasIme : InputMethodService() {
             useQuickSetting = { item -> enqueue { useQuickSetting(item) } },
             quickSettingOn = ::quickSettingOn,
             pressAlt = { enqueue { modifiers.toggleSettings(); showModifiers() } },
+            pressSym = { enqueue { modifiers.pressSym(); showModifiers() } },
+            pageChanged = haptics::pageChanged,
         )
         strip = words
         panel = keys
@@ -486,7 +490,7 @@ class AtlasIme : InputMethodService() {
         val samples = touchpad.samples(event)
         Recording.sink?.motion(event, samples)
         inputLog()?.motion(event, samples)
-        if (panelShown) hover(event, samples)
+        if (panelShown && hover(event, samples)) return
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
@@ -588,14 +592,25 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    /** A finger that rests on a key shows that key in the panel, until the finger lifts. */
-    private fun hover(event: MotionEvent, samples: List<Sample>) {
+    /**
+     * A finger that rests on a key shows that key in the panel, until the finger lifts. A finger that lands on the bottom row while
+     * the categories show opens the category at its place, and that follows the finger. Returns true for such a touch, which is
+     * then not also a swipe.
+     */
+    private fun hover(event: MotionEvent, samples: List<Sample>): Boolean {
+        val last = samples.lastOrNull { it.valid }
+        if (event.actionMasked == MotionEvent.ACTION_DOWN)
+            pickingCategory = last != null && Layout.isBottomRow(last.y) && panel?.hasCategories == true
+        val picking = pickingCategory
         if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
             panel?.hover = ""
-            return
+            pickingCategory = false
+            return picking
         }
-        val last = samples.lastOrNull { it.valid } ?: return
-        panel?.hover = Layout.keyAt(last.x, last.y)
+        if (last == null) return picking
+        if (!picking) panel?.hover = Layout.restingKeyAt(last.x, last.y)
+        else if (panel?.pickCategory(last.x) == true) haptics.pageChanged()
+        return picking
     }
 
     private val endSlippedCursor = Runnable { stopCursor() }
@@ -1079,11 +1094,21 @@ class AtlasIme : InputMethodService() {
         return true
     }
 
-    /** With the panel on screen, a letter key types the item that it shows. A blank key types nothing. Other keys stay as they are. */
+    /**
+     * With the panel on screen, a letter key types the item that it shows, and a blank key types nothing. Backspace and Enter
+     * turn the page and never reach the text. Space and fn can pick a category. Other keys stay as they are.
+     */
     private fun panelKey(event: KeyEvent): Boolean {
         if (event.repeatCount > 0 && event.keyCode == pickedKey) return true
         pickedKey = 0
-        if (!panelOpen || !isInputViewShown || !HoldEngine.isLetter(event.keyCode) || event.isCtrlPressed || event.isMetaPressed) return false
+        if (!panelOpen) return false
+        Modifiers.panelScroll(event.keyCode)?.let { rows ->
+            pickedKey = event.keyCode
+            if (event.repeatCount == 0 && panel?.swipe(0f, rows) == true) haptics.pageChanged()
+            return true
+        }
+        if (!isInputViewShown || event.isCtrlPressed || event.isMetaPressed) return false
+        if (!HoldEngine.isLetter(event.keyCode)) return categoryKey(event)
         if (event.repeatCount > 0) return true
         val letter = ('A' + (event.keyCode - KeyEvent.KEYCODE_A)).toString()
         if (modifiers.panel == Modifiers.Panel.Settings) QuickSetting.on(letter)?.let { item ->
@@ -1093,6 +1118,18 @@ class AtlasIme : InputMethodService() {
             pickedKey = event.keyCode
             typePanelItem(item)
         }
+        return true
+    }
+
+    /** With categories on the screen, Space and fn open the category at their place on the bottom row, and type nothing. */
+    private fun categoryKey(event: KeyEvent): Boolean {
+        val key = when (event.keyCode) {
+            KeyEvent.KEYCODE_SPACE -> Layout.SPACE
+            Modifiers.FN -> Layout.FN
+            else -> return false
+        }
+        if (panel?.hasCategories != true) return false
+        if (event.repeatCount == 0 && panel?.pickCategoryUnder(key) == true) haptics.pageChanged()
         return true
     }
 

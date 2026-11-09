@@ -114,6 +114,33 @@ public final class EmojiPages {
         return pages.isEmpty() ? 0 : pages.get(page).group();
     }
 
+    /** Each group's name, in the same order as {@link #samples}. */
+    public List<String> groupNames() {
+        return shown.stream().map(Group::name).toList();
+    }
+
+    /** The group at a place along the category strip, from 0 at its left end to 1 at its right end. */
+    public int groupAt(float across) {
+        return Math.max(0, Math.min(shown.size() - 1, (int) Math.floor(across * shown.size())));
+    }
+
+    /**
+     * The group for a key that covers this part of the category strip. If the open group is under the key, it stays open,
+     * so that pushing a key does not move what a finger on that key has already chosen.
+     */
+    public int groupUnder(float left, float right) {
+        int open = groupIndex();
+        if ((open + 1f) / shown.size() > left && (float) open / shown.size() < right) return open;
+        return groupAt((left + right) / 2);
+    }
+
+    /** Opens the first page of a group. Returns true if a different group now shows. */
+    public boolean open(int group) {
+        if (pages.isEmpty() || group < 0 || group >= shown.size() || group == pages.get(page).group()) return false;
+        page = firstPage(group);
+        return true;
+    }
+
     /** Which page of the open group this is, counted from 1. */
     public int pageNumber() {
         return pages.isEmpty() ? 0 : page - firstPage(pages.get(page).group()) + 1;

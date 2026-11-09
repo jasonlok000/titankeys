@@ -91,7 +91,7 @@ class Modifiers {
     }
 
     /** Pressing Sym moves the panel on: symbols, then emoji, then closed. From the quick settings page it closes the panel. */
-    private fun pressSym() {
+    fun pressSym() {
         shift = Level.Off
         alt = Level.Off
         panel = when (panel) {
@@ -227,6 +227,16 @@ class Modifiers {
 
         /** What Ctrl does with each letter that the keyboard treats as a field shortcut. */
         val CTRL_ACTIONS = mapOf("A" to "Select all", "C" to "Copy", "X" to "Cut", "V" to "Paste", "Z" to "Undo", "Y" to "Redo")
+
+        /**
+         * What a key does to the panel's pages, in rows down: Backspace does what a swipe up does, and Enter what a swipe down
+         * does. Returns null for other keys. These two keys never reach the text while the panel is open.
+         */
+        fun panelScroll(code: Int) = when (code) {
+            KeyEvent.KEYCODE_DEL -> -1f
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> 1f
+            else -> null
+        }
 
         /** The meta state of a key pushed while Ctrl is held. Ctrl takes the place of fn, so the key acts as a held shortcut does. */
         fun withCtrl(meta: Int) = meta and KeyEvent.META_FUNCTION_ON.inv() or KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON

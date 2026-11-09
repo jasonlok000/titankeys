@@ -55,6 +55,9 @@ fun main() {
     otherKeysLeaveQuickSettings()
     quickSettingsHoldNoStickyAlt()
     quickSettingsTable()
+    panelScrollKeys()
+    restingOnP()
+    bottomRow()
     onlyOneModifier()
     repeatsAndStrayEvents()
     ctrlOverlayWhileHeld()
@@ -638,6 +641,38 @@ private fun quickSettingsTable() {
         same(item.label.length <= 5 && '\n' !in item.label, true, "${item.title} must have a short label on one line")
         same(item.title.isNotBlank() && item.title.length >= item.label.length, true, "${item.title} must have its full name")
     }
+}
+
+private fun panelScrollKeys() {
+    same(Modifiers.panelScroll(KeyEvent.KEYCODE_DEL), -1f, "Backspace must do what a swipe up does")
+    same(Modifiers.panelScroll(KeyEvent.KEYCODE_ENTER), 1f, "Enter must do what a swipe down does")
+    same(Modifiers.panelScroll(KeyEvent.KEYCODE_NUMPAD_ENTER), 1f, "The other Enter key must do the same")
+    same(Modifiers.panelScroll(LETTER), null, "A letter must not turn the page")
+    same(Modifiers.panelScroll(KeyEvent.KEYCODE_SPACE), null, "Space must not turn the page")
+}
+
+private fun restingOnP() {
+    same(Layout.restingKeyAt(.95f, .15f), "P", "The middle of P must be P")
+    same(Layout.restingKeyAt(.88f, .15f), "P", "A finger at the left of P, read at the right of O, must be P")
+    same(Layout.restingKeyAt(.86f, .15f), "O", "A finger on O must still be O")
+    same(Layout.restingKeyAt(.95f, .28f), "P", "A finger low on P, read at the top of Backspace, must be P")
+    same(Layout.restingKeyAt(.95f, .4f), "⌫", "A finger in the middle of Backspace must stay Backspace")
+    same(Layout.restingKeyAt(.05f, .15f), "Q", "Other keys must not change")
+    same(Layout.restingKeyAt(.88f, .4f), "L", "The key under O must not change")
+    same(Layout.restingKeyAt(.45f, .85f), Layout.SPACE, "The bottom row must not change")
+    same(Layout.restingKeyAt(Float.NaN, .15f), "", "A place off the keyboard must be no key")
+}
+
+private fun bottomRow() {
+    same(Layout.isBottomRow(.74f), false, "The last letter row must not be the bottom row")
+    same(Layout.isBottomRow(.75f), true, "The bottom row must start at three quarters of the height")
+    same(Layout.isBottomRow(1f), true, "The bottom edge is on the bottom row")
+    same(Layout.keyAt(.5f, .8f), Layout.SPACE, "Space must be on the bottom row")
+    val space = Layout.bottomSpan(Layout.SPACE)
+    same(kotlin.math.abs(space.first - .36f) < 1e-5f, true, "Space must start at its place on the row")
+    same(kotlin.math.abs(space.second - .64f) < 1e-5f, true, "Space must end at its place on the row")
+    val fn = Layout.bottomSpan(Layout.FN)
+    same(kotlin.math.abs(fn.first - .76f) < 1e-5f && kotlin.math.abs(fn.second - .88f) < 1e-5f, true, "fn must cover its place on the row")
 }
 
 private fun onlyOneModifier() = Keyboard().run {

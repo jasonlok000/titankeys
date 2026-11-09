@@ -115,6 +115,28 @@ public final class EmojiPagesChecks {
         check(!EmojiPages.turnsPage(1, .2f) && !EmojiPages.turnsPage(-1, 0), "A swipe that is mostly sideways must change the group");
         check(!EmojiPages.turnsPage(1, 1), "A diagonal swipe must change the group, as EmojiPages.swipe does");
 
+        EmojiPages strip = new EmojiPages(groups, List.of());
+        check(strip.groupAt(0) == 0 && strip.groupAt(.32f) == 0, "The left part of the strip must be the first group");
+        check(strip.groupAt(.34f) == 1 && strip.groupAt(.5f) == 1, "The middle of the strip must be the middle group");
+        check(strip.groupAt(.67f) == 2 && strip.groupAt(1) == 2, "The right end of the strip must be the last group");
+        check(strip.groupAt(-.2f) == 0 && strip.groupAt(1.2f) == 2, "A place past either end of the strip must keep to that end");
+        check(strip.open(1) && strip.group().equals("Food") && strip.pageNumber() == 1, "A chosen group must open at its first page");
+        check(!strip.open(1) && strip.group().equals("Food"), "Choosing the open group must report no change");
+        strip.open(0);
+        strip.turn(1);
+        check(strip.pageNumber() == 2 && strip.open(1) && strip.open(0) && strip.page().equals(firstFaces), "Opening a group must not keep the page from before");
+        check(!strip.open(3) && !strip.open(-1) && strip.groupIndex() == 0, "A group that does not exist must change nothing");
+        check(strip.groupNames().equals(List.of("Faces", "Food", "Flags")), "Each group must give its name");
+        strip.open(1);
+        check(strip.groupUnder(.3f, .6f) == 1, "A key over the open group must keep it open");
+        check(strip.groupUnder(.8f, 1) == 2, "A key away from the open group must open the group at the key's centre");
+        check(strip.groupUnder(0, .2f) == 0, "A key at the left end must open the first group");
+        check(none.groupAt(.5f) == 0 && !none.open(0), "With no groups a place along the strip must change nothing");
+
+        EmojiPages paged = new EmojiPages(groups, List.of());
+        check(paged.swipe(0, -1) && paged.pageNumber() == 2, "What Backspace does, a swipe up, must open the next page");
+        check(paged.swipe(0, 1) && paged.pageNumber() == 1, "What Enter does, a swipe down, must open the previous page");
+
         List<String> spare = new ArrayList<>();
         for (int i = 0; i < EmojiPages.PER_PAGE; i++) spare.add("s" + i);
         check(EmojiPages.fillLastPage(symbols.subList(0, 24), spare).size() == EmojiPages.PER_PAGE, "A short page of symbols must fill to a full page");

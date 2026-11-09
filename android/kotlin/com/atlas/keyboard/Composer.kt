@@ -164,6 +164,8 @@ class Composer(
     private var heldWord: String? = null
 
     var liftOffMillis = 0
+    /** Two quick spaces type a full stop, and punctuation typed after a space moves in front of that space. */
+    var autoPunctuation: () -> Boolean = { true }
     /** Told the whole path behind each recognised word, including any pieces joined to it. */
     var onStroke: ((Swipe) -> Unit)? = null
     /** Told when a word changes by itself, unless that lands as a swipe ends, where a vibration would run into the swipe's own. */
@@ -481,6 +483,7 @@ class Composer(
         val corrected = undo
         leave()
         invalidate(false)
+        val typedSpace = fullStop?.snapshot
         fullStop = null
         var anchor = snapshot()
         holdForNextWord(composition as? Composition.Swiped, anchor)
@@ -508,7 +511,8 @@ class Composer(
             anchor = snapshot()
             manualWord.clear()
         }
-        val dropsSpace = automaticSpace == anchor && anchor.before?.endsWith(" ") == true
+        // Like a swiped word's space, a space typed after a word moves behind the punctuation.
+        val dropsSpace = (automaticSpace == anchor || typedSpace == anchor && autoPunctuation()) && anchor.before?.endsWith(" ") == true
             && text[0] in ".,!?;:)]}…"
         val before = anchor.before
         val cased = if (before != null && field.sentenceCapitalisation && autoCapitalise()) {
@@ -584,7 +588,7 @@ class Composer(
             automaticSpace == anchor && before.endsWith(" ") -> {
                 if (!repeated && endsWord(before.dropLast(1))) fullStop = FullStop(time, anchor)
             }
-            !repeated && pending != null && time - pending.time in 0..FULL_STOP_MILLIS
+            !repeated && pending != null && time - pending.time in 0..FULL_STOP_MILLIS && autoPunctuation()
                 && anchor.available && anchor == pending.snapshot -> if (!edit(EditCause.FullStop, 1, ". ")) return
             else -> {
                 if (!edit(EditCause.Space, 0, " ")) return
@@ -831,7 +835,8 @@ class Composer(
             }
             is Composition.Typed -> {
                 val tail = current.prefix + if (current.trailingSpace) " " else ""
-                if (anchor != current.snapshot || !before.endsWith(tail) || anchor.selected) return
+                // A starter word replaces a selection. Any other word would leave it behind.
+                if (anchor != current.snapshot || !before.endsWith(tail) || anchor.selected && tail.isNotEmpty()) return
                 invalidate(false)
                 val space = if (current.prefix.isEmpty()) SwipeTyping.prefix(before) else ""
                 if (!edit(EditCause.Choose, tail.length, "$space$chosen ")) return
@@ -1287,16 +1292,20 @@ class Composer(
         val anchor = snapshot()
         // Predictions must belong to the last verified owned edit.
         if (editSnapshot != null && anchor != editSnapshot) return
-        if (!anchor.available || !anchor.knownSelection || anchor.selected) return
+        if (!anchor.available || !anchor.knownSelection) return
         val before = anchor.before ?: return
         val after = anchor.after ?: return
+        // Browsers select the whole address when you tap it, and typing replaces it, so offer starters then too.
+        if (field.starters && before.isEmpty() && after.isEmpty()) {
+            val starters = STARTERS.filter(words::allowed)
+            composition = Composition.Typed("", false, anchor, starters)
+            show(starters)
+            return
+        }
+        if (anchor.selected) return
         checkLookAlike()
-        if (!field.learning) {
-            if (field.starters && before.isEmpty() && after.isEmpty()) {
-                val starters = STARTERS.filter(words::allowed)
-                composition = Composition.Typed("", false, anchor, starters)
-                show(starters)
-            } else show(emptyList())
+        if (!field.suggestions) {
+            show(emptyList())
             return
         }
         readKeptWords(anchor)

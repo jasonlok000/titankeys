@@ -11,12 +11,14 @@ data class Field(
     val learning: Boolean,
     /** Two quick spaces after a word become a full stop. */
     val fullStops: Boolean,
-    /** An empty search bar shows starter words. */
+    /** A search bar that is empty or fully selected shows starter words. */
     val starters: Boolean,
     /** Sentences may start with a capital letter. */
     val sentenceCapitalisation: Boolean,
     /** Typed words may be fixed when they end. A private field allows this, but nothing is learned from it. */
     val autocorrect: Boolean = false,
+    /** Typed words get suggestions. Nothing is learned unless [learning] is also true. */
+    val suggestions: Boolean = learning,
 ) {
     companion object {
         val None = Field(words = false, learning = false, fullStops = false, starters = false,
@@ -28,20 +30,21 @@ data class Field(
             val password = variation == InputType.TYPE_TEXT_VARIATION_PASSWORD
                 || variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
                 || variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
-            val address = variation == InputType.TYPE_TEXT_VARIATION_URI
-                || variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            val url = variation == InputType.TYPE_TEXT_VARIATION_URI
+            val email = variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
                 || variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
+            val address = url || email
             val private = imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
             // Browsers often give search bars the URL type.
-            val starters = variation == InputType.TYPE_TEXT_VARIATION_URI && !private
-                && inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS == 0
+            val search = url && inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS == 0
             val exact = variation == InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS
                 || variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
                 || variation == InputType.TYPE_TEXT_VARIATION_FILTER
             return Field(words = !password, learning = !password && !address && !private,
-                fullStops = !password && !address, starters = starters,
+                fullStops = !password && !address, starters = search,
                 sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
-                autocorrect = !password && !address && !exact)
+                autocorrect = !password && !address && !exact,
+                suggestions = !password && !email && (!url || search))
         }
 
         /**

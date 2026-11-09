@@ -106,6 +106,7 @@ object RawLog {
         "holdSymbolMillis" to TypingSettings.holdSymbolMillis(context),
         "fnAsCtrl" to TypingSettings.fnAsCtrl(context),
         "autoCapitalise" to TypingSettings.autoCapitalise(context),
+        "autoPunctuation" to TypingSettings.autoPunctuation(context),
         "autocorrect" to TypingSettings.autocorrect(context),
         "suggestionBar" to TypingSettings.suggestionBar(context),
         "cursorControl" to TypingSettings.cursorControl(context),

@@ -189,6 +189,7 @@ class AtlasIme : InputMethodService() {
         composer = Composer(editor, EngineWords(SwipeTyping.get(this)),
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             { TypingSettings.autoCapitalise(this) }) { strip?.words = it }
+        composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
         composer.onStroke = Trace::stroke
         composer.onAutocorrect = haptics::wordChanged
         autocorrect = AutocorrectLoader(this, SwipeTyping.get(this))
@@ -283,7 +284,8 @@ class AtlasIme : InputMethodService() {
     }
 
     // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way until you type.
-    private fun showSuggestions() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText)
+    // Password, email and number fields get no suggestions, so the bar would only be an empty strip.
+    private fun showSuggestions() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText) && field.suggestions
 
     private fun launcherPackage(): String? {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)

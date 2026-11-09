@@ -24,6 +24,8 @@ export default function Settings() {
       <Field label="Enter key" href="/settings/enter-key">{enterKeyLabel(settings)}</Field>
       <Toggle label="Auto-capitalisation" value={settings.autoCapitalise}
         onChange={autoCapitalise => save.run({ autoCapitalise })} />
+      <Toggle label="Auto-punctuation" value={settings.autoPunctuation}
+        onChange={autoPunctuation => save.run({ autoPunctuation })} />
       <Toggle label="Autocorrect" value={settings.autocorrect}
         onChange={autocorrect => save.run({ autocorrect })} />
       <Toggle label="Suggestion bar" value={settings.suggestionBar}

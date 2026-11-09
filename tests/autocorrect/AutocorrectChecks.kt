@@ -489,6 +489,14 @@ private fun composerFlow(world: Realistic) {
     same(typed("THe ").text, "The ", "Shift held too long is fixed")
     same(typed("doesnt ").text, "doesn't ", "A missing apostrophe is fixed")
 
+    // Auto-punctuation.
+    same(typed("hello ,").text, "hello,", "A comma moves in front of a typed space")
+    same(typed("hello  ,").text, "hello  ,", "Only the space straight after the word moves")
+    fun noPunctuation() = Typist(world).also { it.composer.autoPunctuation = { false } }
+    same(noPunctuation().type("hello ,").text, "hello ,", "With the setting off, a typed space stays")
+    same(typed("hello ").quickSpace().text, "hello. ", "Two quick spaces type a full stop")
+    same(noPunctuation().type("hello ").quickSpace().text, "hello  ", "With the setting off, two quick spaces stay spaces")
+
     // Backspace undo.
     same(typed("teh ").backspace().text, "teh", "Backspace straight after a fix restores what was typed")
     same(typed("teh, ").also { it.backspace() }.text, "the,", "Backspace after more keys is a normal Backspace")

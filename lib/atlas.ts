@@ -28,6 +28,8 @@ export type State = {
   /** The keyboard treats fn as Ctrl, so Key Mapper is not needed for this. */
   fnAsCtrl: boolean;
   autoCapitalise: boolean;
+  /** Two quick spaces type a full stop, and typed punctuation moves in front of a space. */
+  autoPunctuation: boolean;
   /** Fixes slips in typed words when they end. Swiped words never change. */
   autocorrect: boolean;
   suggestionBar: boolean;
@@ -47,7 +49,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "autoCapitalise" | "autocorrect" | "suggestionBar" | "cursorControl" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "cursorControl" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];

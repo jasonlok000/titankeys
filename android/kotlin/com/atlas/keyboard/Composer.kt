@@ -98,6 +98,9 @@ class Composer(
     private data class HeldWord(val word: String, val context: String, val inserted: String, val tail: String,
                                 val snapshot: Snapshot, val typed: Boolean)
 
+    /** A decided look-alike, applied once input pauses if the text from [start] still begins with [lead]. */
+    private class Swap(val earlier: HeldWord, val replacement: String, val start: Int, val lead: String, val owner: Editor.Identity?)
+
     /** A swiped word still in the field, with the suggestions it offered. [start] follows the keyboard's own edits. */
     private data class Remembered(val start: Int, val word: String, val alternatives: List<String>, val swipe: Swipe,
                                   val context: String, val recognition: Words.Recognition) {
@@ -136,6 +139,7 @@ class Composer(
     private var awaitingNextWord: HeldWord? = null
     /** A typed word that waits for the next word to start. */
     private var typedWord: HeldWord? = null
+    private var swap: Swap? = null
     private var lookAlikeChangedAt = -1
     private val remembered = ArrayList<Remembered>()
     private var rememberedField: Pair<String?, Int>? = null
@@ -213,6 +217,7 @@ class Composer(
         correcting = null
         awaitingNextWord = null
         typedWord = null
+        swap = null
         expectedSelections.clear()
         show(emptyList())
     }
@@ -539,6 +544,7 @@ class Composer(
         fullStop = null
         awaitingNextWord = null
         typedWord = null
+        swap = null
         if (word || correcting != null || source != null) manualWord.clear()
         else manualWord.edit("\b", null, false)
         correcting = null
@@ -862,12 +868,28 @@ class Composer(
         val start = earlier.snapshot.selection.end - earlier.tail.length
         if (next.isEmpty() || TypedPredictions.prefix(next) != next || start == lookAlikeChangedAt
             || !before.dropLast(followed).endsWith(earlier.inserted)) return
-        val current = epoch
+        val owner = identity
         words.lookAlike(earlier.context, earlier.word, next, earlier.typed) { replacement ->
-            if (replacement != null && current == epoch && !hasPendingInput && snapshot() == anchor) {
-                replaceLookAlike(earlier, cased(replacement, earlier), following, start, anchor)
-            }
+            // Typing may carry on while the model decides, so the swap waits for a pause and checks the text then.
+            if (replacement == null || !sameIdentity(owner, identity)) return@lookAlike
+            swap = Swap(earlier, cased(replacement, earlier), start, earlier.tail + following, owner)
+            applySwap()
         }
+    }
+
+    private fun applySwap() {
+        val pending = swap ?: return
+        if (hasPendingInput) return
+        swap = null
+        val anchor = snapshot()
+        val before = anchor.before ?: return
+        val reach = anchor.selection.end - pending.start
+        if (!sameIdentity(pending.owner, identity) || anchor.selected || !anchor.knownSelection
+            || reach !in pending.lead.length..minOf(before.length, pending.lead.length + MAX_SWAP_DELAY)) return
+        val region = before.takeLast(reach)
+        val earlier = pending.earlier
+        if (!region.startsWith(pending.lead) || !(before.dropLast(reach) + earlier.tail).endsWith(earlier.inserted)) return
+        replaceLookAlike(earlier, pending.replacement, region.drop(earlier.tail.length), pending.start, anchor)
     }
 
     private fun cased(replacement: String, original: HeldWord): String {
@@ -897,6 +919,7 @@ class Composer(
         } else {
             composition = Composition.None
             show(emptyList())
+            predictLater()
         }
         confirmState(accepted)
     }
@@ -1034,6 +1057,8 @@ class Composer(
             return
         }
         if (anchor.selected) return
+        applySwap()
+        if (snapshot() != anchor) return
         checkLookAlike()
         if (!field.suggestions) {
             show(emptyList())
@@ -1082,6 +1107,8 @@ class Composer(
         private const val DESTINATION_TIMEOUT_MILLIS = 500L
         private const val AFTER_CONTEXT_LENGTH = 32
         private const val FULL_STOP_MILLIS = 400L
+        /** How many characters typed after the next word a late look-alike swap still allows. */
+        private const val MAX_SWAP_DELAY = 64
         private const val PREDICTION_DELAY_MILLIS = 60L
         private val STARTERS = listOf("What", "How", "Where")
         private const val MAX_REMEMBERED = 1000

@@ -252,7 +252,7 @@ class SymPanel(
     }
 
     private fun describe(item: QuickSetting) =
-        if (item == QuickSetting.OpenSettings) item.title else "${item.title}: ${if (quickSettingOn(item)) "On" else "Off"}"
+        if (item == QuickSetting.OpenSettings || item == QuickSetting.ChangeKeyboard) item.title else "${item.title}: ${if (quickSettingOn(item)) "On" else "Off"}"
 
     /** What the top of the panel says for a key under a finger, or null if it says nothing. */
     private fun detail(key: String) = when {

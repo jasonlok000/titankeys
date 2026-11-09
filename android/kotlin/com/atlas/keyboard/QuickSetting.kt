@@ -15,7 +15,8 @@ enum class QuickSetting(val key: String, val label: String, val title: String) {
     CursorControl("M", "Move", "Cursor control"),
     DoublePressLocks("L", "Lock", "Two pushes lock Shift and Alt"),
     TouchpadOnlyInFields("T", "Pad", "Touchpad only in text fields"),
-    OpenSettings("O", "Open", "Open TitanKeys settings");
+    OpenSettings("O", "Open", "Open TitanKeys settings"),
+    ChangeKeyboard("K", "Kbd", "Change keyboard");
 
     companion object {
         /** The item on a letter key, or null if the key is blank. */

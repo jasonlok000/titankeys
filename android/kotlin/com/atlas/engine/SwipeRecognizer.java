@@ -1,9 +1,13 @@
 package com.atlas.engine;
 
 import android.content.Context;
+import android.util.Log;
 import com.atlas.keyboard.Layout;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,7 +19,8 @@ public final class SwipeRecognizer implements AutoCloseable {
     private static final float MAX_SENTENCE_CONTEXT_SCORE = 4f;
     private static final float MAX_PATH_SCORE_GAP = 3f;
     private static final int NEXT_WORD_CANDIDATES = 3000;
-    // Stands in for the start of a sentence, which the context model would otherwise not score at all.
+    // The context model scores nothing with no word before the swipe. This word only keeps it running: FirstWords
+    // says which words start a sentence.
     private static final String[] SENTENCE_START = {"so"};
     private static final double LOOK_ALIKE_NEXT_WORD_EVIDENCE = 3;
     private static final int LOOK_ALIKE_CANDIDATES = 8000;
@@ -33,7 +38,7 @@ public final class SwipeRecognizer implements AutoCloseable {
     private static final float MAX_OUTLINE_GAP = .8f;
     private static final float EXPECTED_WORD_BOOST = 16;
     /** How far below the likeliest next word, as a log chance, a word still gets any boost. */
-    private static final float EXPECTED_WORD_RANGE = 7;
+    static final float EXPECTED_WORD_RANGE = 7;
     /** How far behind the closest path an expected word can be. Common words must not win on how common they are. */
     private static final float EXPECTED_WORD_FIT = .1f;
     /** Score for each step, as a log chance, that the sentence prefers a word over the leading one. */
@@ -42,8 +47,11 @@ public final class SwipeRecognizer implements AutoCloseable {
     /** How far behind the leading word's path a word can be and still be promoted. */
     private static final float LEADER_FIT = .3f;
     private static final float ONE_WORD_CONTEXT = .5f;
+    /** How often a word starts a sentence is about as strong a clue as one word before the swipe. */
+    private static final float FIRST_WORD_CONTEXT = .5f;
     private static final int REMEMBERED_CONTEXTS = 6;
     private final SwipeShapes shapes;
+    private final Map<String, Double> firstWords;
     // The words before the cursor stay the same for a whole word, so the context model need not be asked again.
     private final Map<String, Map<String, Double>> rememberedNextWords = new java.util.LinkedHashMap<>(16, .75f, true) {
         @Override protected boolean removeEldestEntry(Map.Entry<String, Map<String, Double>> eldest) {
@@ -81,6 +89,7 @@ public final class SwipeRecognizer implements AutoCloseable {
         values.put("maxLead", MAX_LEAD);
         values.put("leaderFit", LEADER_FIT);
         values.put("oneWordContext", ONE_WORD_CONTEXT);
+        values.put("firstWordContext", FIRST_WORD_CONTEXT);
         return values;
     }
     public float contextWeight() { return decoder.contextWeight(); }
@@ -89,6 +98,7 @@ public final class SwipeRecognizer implements AutoCloseable {
         File file = new File(context.getNoBackupFilesDir(), "swipe-models-v1");
         ModelAssets.install(context.getAssets(), file.toPath());
         shapes = new SwipeShapes(new File(file, "english.combined"));
+        firstWords = firstWords(context);
         try {
             base = new org.futo.ml.inference.NativeDictionary(new File(file, "english.combined").getPath());
             personal = new org.futo.ml.inference.NativeDictionary(new String[0], new float[0]);
@@ -96,6 +106,17 @@ public final class SwipeRecognizer implements AutoCloseable {
             decoder = new org.futo.ml.inference.SwipeDecoder(file.getPath());
             configure(base.pointer(), personal.pointer(), contractions.pointer());
         } catch (RuntimeException | LinkageError error) { close(); throw error; }
+    }
+
+    /** Without the counts a swipe is still read, and the first word of a sentence gets no reward. */
+    private static Map<String, Double> firstWords(Context context) {
+        try (BufferedReader triples = new BufferedReader(new InputStreamReader(
+                context.getAssets().open("autocorrect/en_triples.txt"), StandardCharsets.UTF_8))) {
+            return FirstWords.read(triples);
+        } catch (IOException | RuntimeException error) {
+            Log.w("TouchpadSwipe", "First word counts unavailable", error);
+            return Map.of();
+        }
     }
 
     static org.futo.ml.inference.NativeDictionary contractionDictionary(org.futo.ml.inference.NativeDictionary base) {
@@ -186,14 +207,27 @@ public final class SwipeRecognizer implements AutoCloseable {
     /** Mixes the engine's words with the closest outlines, as each finds words that the other misses. */
     private org.futo.ml.inference.SwipeDecoder.Result[] blend(Swipe gesture,
             org.futo.ml.inference.SwipeDecoder.Result[] ranked, String[] context, Predicate<String> allowed) {
+        boolean firstWord = context.length == 0;
+        return blended(shapes, gesture, ranked, firstWord ? firstWords : nextWords(context), contextStrength(context.length), !firstWord, allowed);
+    }
+
+    static float contextStrength(int contextWords) {
+        return contextWords == 0 ? FIRST_WORD_CONTEXT : contextWords == 1 ? ONE_WORD_CONTEXT : 1;
+    }
+
+    /**
+     * {@code overrule} lets the sentence promote a word over the leading one, on a looser fit. How often a word starts a
+     * sentence is too weak a clue for that, so a first word only gets the boost that needs a close fit.
+     */
+    static org.futo.ml.inference.SwipeDecoder.Result[] blended(SwipeShapes shapes, Swipe gesture,
+            org.futo.ml.inference.SwipeDecoder.Result[] ranked, Map<String, Double> expected, float strength, boolean overrule,
+            Predicate<String> allowed) {
         float[][] path = SwipeShapes.path(gesture);
         SwipeShapes.Fit[] closest = shapes.closest(path, OUTLINE_CANDIDATES);
         if (closest.length == 0) return Arrays.copyOf(ranked, Math.min(3, ranked.length));
         float bestFit = closest[0].score;
-        Map<String, Double> expected = context.length == 0 ? Map.of() : nextWords(context);
         Map<String, Float> closeness = new HashMap<>();
         double mostExpected = expected.isEmpty() ? 0 : java.util.Collections.max(expected.values());
-        float strength = context.length == 1 ? ONE_WORD_CONTEXT : 1;
         float bestCloseness = Float.NEGATIVE_INFINITY;
         for (SwipeShapes.Fit fit : closest) bestCloseness = Math.max(bestCloseness, fit.closeness);
         float highest = ranked.length == 0 ? 0 : ranked[0].score;
@@ -218,7 +252,7 @@ public final class SwipeRecognizer implements AutoCloseable {
         }
         org.futo.ml.inference.SwipeDecoder.Result[] results = blended.values().toArray(new org.futo.ml.inference.SwipeDecoder.Result[0]);
         Arrays.sort(results, (a, b) -> Float.compare(b.score, a.score));
-        if (results.length > 1 && !expected.isEmpty()) {
+        if (overrule && results.length > 1 && !expected.isEmpty()) {
             promoteExpected(results, expected, closeness, strength);
             Arrays.sort(results, (a, b) -> Float.compare(b.score, a.score));
         }
@@ -369,7 +403,7 @@ public final class SwipeRecognizer implements AutoCloseable {
         return java.util.Arrays.copyOf(results, Math.min(3, results.length));
     }
 
-    private static org.futo.ml.inference.SwipeDecoder.Result[] ranked(Swipe gesture,
+    static org.futo.ml.inference.SwipeDecoder.Result[] ranked(Swipe gesture,
             org.futo.ml.inference.SwipeDecoder.Result[] results, float contextWeight, float shapeNormalizer,
             int contextWords, Set<String> learnedWords) {
         results = java.util.Arrays.stream(results).filter(result -> SuggestionPolicy.allowed(result.word))
@@ -382,8 +416,7 @@ public final class SwipeRecognizer implements AutoCloseable {
                 && endpointDistance(gesture, shapeBest.word, false) <= .25f
                 && endpointDistance(gesture, shapeBest.word, true) <= .25f;
         float contextLimit = MAX_CONTEXT_SCORE;
-        // A sentence start is a weak hint, so it gets the same small limit as a clean swipe.
-        if (clearEndpoints || contextWords == 0) contextLimit = .5f;
+        if (clearEndpoints) contextLimit = .5f;
         else if (contextWords >= 2) contextLimit = MAX_SENTENCE_CONTEXT_SCORE;
         // Measure each word against the likeliest word, so that two likely words do not tie at the limit.
         // The gap may reach twice the limit, the same range as limiting scores in both directions.
@@ -392,14 +425,17 @@ public final class SwipeRecognizer implements AutoCloseable {
             bestContext = Math.max(bestContext, contextWeight * result.lmScore);
         }
         Map<String, EndpointScores> groups = new HashMap<>();
+        Map<String, Float> sameLetters = new HashMap<>();
         float[] adjustedScores = new float[results.length];
         for (int i = 0; i < results.length; i++) {
             org.futo.ml.inference.SwipeDecoder.Result result = results[i];
             float contextScore = contextWeight * result.lmScore;
-            float boundedContext = Math.max(-2 * contextLimit, contextScore - bestContext);
+            // What follows the stand-in word says nothing about the first word of a sentence. FirstWords does that in blend.
+            float boundedContext = contextWords == 0 ? 0 : Math.max(-2 * contextLimit, contextScore - bestContext);
             float penalty = endpointPenalty(gesture, result.word, false) + endpointPenalty(gesture, result.word, true);
             float adjusted = result.score - penalty - contextScore + boundedContext;
             adjustedScores[i] = adjusted;
+            sameLetters.merge(result.word.replace("'", ""), adjusted, Math::max);
             EndpointScores group = groups.computeIfAbsent(endpointGroup(result.word), key -> new EndpointScores());
             double pathScore = result.ctcScore / Math.pow(Math.max(1, result.word.replace("'", "").length()), shapeNormalizer);
             group.pathBest = Math.max(group.pathBest, pathScore);
@@ -407,11 +443,14 @@ public final class SwipeRecognizer implements AutoCloseable {
             if (result.score > group.nativeBest) { group.nativeBest = result.score; group.nativePath = pathScore; }
             group.adjustedBest = Math.max(group.adjustedBest, adjusted);
         }
-        // Keep context bounded when a learned word is the best shape match in its group.
+        // Keep context bounded when a learned word is the best shape match in its group. The native gap inside a group
+        // holds the full context score, so a first word must not use it: that score is only what follows the stand-in word.
+        // Words with the same letters have the same path, so at a first word they share a score and FirstWords chooses.
         for (int i = 0; i < results.length; i++) {
             org.futo.ml.inference.SwipeDecoder.Result result = results[i];
             EndpointScores group = groups.get(endpointGroup(result.word));
-            float score = group.learnedPath < group.pathBest && group.nativePath >= group.pathBest - MAX_PATH_SCORE_GAP
+            float score = contextWords == 0 ? sameLetters.get(result.word.replace("'", ""))
+                    : group.learnedPath < group.pathBest && group.nativePath >= group.pathBest - MAX_PATH_SCORE_GAP
                     ? group.adjustedBest + (result.score - group.nativeBest) : adjustedScores[i];
             results[i] = new org.futo.ml.inference.SwipeDecoder.Result(
                     result.word, score, result.ctcScore, result.lmScore);

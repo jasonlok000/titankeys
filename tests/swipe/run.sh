@@ -23,4 +23,5 @@ for model in english.combined honorable_sturgeon magic_macaw hungry_jellyfish; d
 done
 "$adb" shell "cd $device && LD_LIBRARY_PATH=$device/lib CLASSPATH=$device/checks.zip app_process -Djava.library.path=$device/lib $device com.atlas.engine.SavedWordSwipeChecks $device/models"
 "$adb" push android/assets/swipe/hungry_jellyfish/vocab.txt "$device/models/vocab.txt"
+"$adb" push android/assets/autocorrect/en_triples.txt "$device/models/en_triples.txt"
 "$adb" shell "cd $device && LD_LIBRARY_PATH=$device/lib CLASSPATH=$device/checks.zip app_process -Djava.library.path=$device/lib $device com.atlas.engine.ContextSwipeChecks $device/models"

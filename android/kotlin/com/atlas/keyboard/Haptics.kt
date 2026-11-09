@@ -51,6 +51,9 @@ class Haptics(private val context: Context) {
         play(VibrationEffect.createWaveform(preset.wordTimings, amplitudes, -1))
     }
 
+    /** Confirms a new page or group in the Sym panel, with the same feel as a changed word. */
+    fun pageChanged() = wordChanged()
+
     fun begin(sample: Sample?) {
         preset = preset(context)
         enabled = enabled(context)

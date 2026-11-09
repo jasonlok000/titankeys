@@ -745,7 +745,7 @@ class AtlasIme : InputMethodService() {
     private fun swipePanel(points: List<Sample>) {
         val across = (points.last().x - points.first().x) * 10
         val down = (points.last().y - points.first().y) * 4
-        if (maxOf(abs(across), abs(down)) >= Contact.PAGE_KEYS && panel?.swipe(across, down) == true) haptics.pulse(HapticPreset.Strong)
+        if (maxOf(abs(across), abs(down)) >= Contact.PAGE_KEYS && panel?.swipe(across, down) == true) haptics.pageChanged()
     }
 
     private fun isTapKey(key: String): Boolean {

@@ -1,6 +1,7 @@
 package com.atlas.keyboard
 
 import android.view.KeyEvent
+import com.atlas.engine.EmojiPages
 import com.atlas.keyboard.Modifiers.Level
 import com.atlas.keyboard.Modifiers.Panel
 
@@ -60,7 +61,7 @@ fun main() {
     quickSettingsTable()
     panelScrollKeys()
     restingOnP()
-    restingOnThePageArrows()
+    symbolAndEmojiPages()
     bottomRow()
     onlyOneModifier()
     repeatsAndStrayEvents()
@@ -756,7 +757,7 @@ private fun quickSettingsTable() {
     same(QuickSetting.on("Q"), null, "A key with no item must find nothing")
     same(QuickSetting.on(Layout.ALT), null, "The Alt place has no setting")
     for (item in QuickSetting.entries) {
-        same(item.key in Layout.panelLetters, true, "${item.title} must be on a letter key of the panel")
+        same(Layout.isLetter(item.key), true, "${item.title} must be on a letter key of the panel")
         same(item.label.length <= 5 && '\n' !in item.label, true, "${item.title} must have a short label on one line")
         same(item.title.isNotBlank() && item.title.length >= item.label.length, true, "${item.title} must have its full name")
     }
@@ -788,26 +789,24 @@ private fun restingOnP() {
     same(Layout.restingKeyAt(.95f, .4f), "⌫", "A finger in the middle of Backspace must stay Backspace")
     same(Layout.restingKeyAt(.05f, .15f), "Q", "Other keys must not change")
     same(Layout.restingKeyAt(.88f, .4f), "L", "The key under O must not change")
+    same(Layout.restingKeyAt(.88f, .65f), Layout.SYM, "The right of Sym must stay Sym")
+    same(Layout.restingKeyAt(.95f, .65f), Layout.ENTER, "Enter must stay Enter")
     same(Layout.restingKeyAt(.45f, .85f), Layout.SPACE, "The bottom row must not change")
     same(Layout.restingKeyAt(Float.NaN, .15f), "", "A place off the keyboard must be no key")
 }
 
-/** The touchpad ends at the middle of the last column, so a finger on Backspace or Enter often reads over L or Sym. */
-private fun restingOnThePageArrows() {
-    val arrows = true
-    same(Layout.restingKeyAt(.95f, .4f, arrows), Layout.BACKSPACE, "The middle of Backspace must be Backspace")
-    same(Layout.restingKeyAt(.88f, .4f, arrows), Layout.BACKSPACE, "A finger on Backspace, read at the right of L, must be Backspace when the arrows show")
-    same(Layout.restingKeyAt(.86f, .4f, arrows), "L", "A finger on L must still be L")
-    same(Layout.restingKeyAt(.88f, .27f, arrows), "L", "Above the middle of Backspace the right of L must stay L")
-    same(Layout.restingKeyAt(.95f, .65f, arrows), Layout.ENTER, "The middle of Enter must be Enter")
-    same(Layout.restingKeyAt(.88f, .65f, arrows), Layout.ENTER, "A finger on Enter, read at the right of Sym, must be Enter when the arrows show")
-    same(Layout.restingKeyAt(.86f, .65f, arrows), Layout.SYM, "A finger on Sym must still be Sym")
-    same(Layout.restingKeyAt(.95f, .28f, arrows), "P", "The top of Backspace must still be P")
-    same(Layout.restingKeyAt(.88f, .15f, arrows), "P", "The right of O must still be P")
-    same(Layout.restingKeyAt(.45f, .85f, arrows), Layout.SPACE, "The bottom row must not change")
-    same(Layout.restingKeyAt(.88f, .4f), "L", "Without the arrows the right of L must stay L")
-    same(Layout.restingKeyAt(.88f, .65f), Layout.SYM, "Without the arrows the right of Sym must stay Sym")
-    same(Layout.restingKeyAt(.95f, .65f), Layout.ENTER, "Without the arrows Enter must stay Enter")
+/** The symbol and emoji pages read the place under a finger as it is, and hold nothing in the last column. */
+private fun symbolAndEmojiPages() {
+    same(Layout.panelLetters.size, EmojiPages.PER_PAGE, "A page must hold one item for each letter key that shows one")
+    same("P" in Layout.panelLetters, false, "P must hold no symbol or emoji")
+    same(Layout.panelLetters.take(10), listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "A"), "The items must go on from O to A")
+    same(Layout.PAGE_POSITION, "P", "P must show the page position")
+    same(Layout.lastColumn, listOf("P", Layout.BACKSPACE, Layout.ENTER), "The last column must be P, Backspace and Enter")
+    same(Layout.keyAt(.88f, .15f), "O", "The right of O must be O")
+    same(Layout.keyAt(.88f, .4f), "L", "The right of L must be L")
+    same(Layout.keyAt(.88f, .65f), Layout.SYM, "The right of Sym must be Sym")
+    same(Layout.keyAt(.95f, .15f), "P", "The middle of P must be P")
+    same(Layout.keyAt(.95f, .28f), Layout.BACKSPACE, "The top of Backspace must be Backspace")
 }
 
 private fun bottomRow() {

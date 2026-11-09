@@ -16,12 +16,12 @@ public final class EmojiPagesChecks {
         check(groups.get(1).emoji().equals(List.of("🍏", "🍎")), "Emoji the phone cannot show must be left out");
         check(groups.get(2).emoji().equals(List.of("🇬🇧", "🏴‍☠️")), "Multi-part emoji must stay whole");
 
-        check(EmojiPages.PER_PAGE == 26, "A page must hold one item for each letter key");
+        check(EmojiPages.PER_PAGE == 25, "A page must hold one item for each letter key but P");
         List<String> firstFaces = faces.subList(0, EmojiPages.PER_PAGE);
         List<String> lastFaces = faces.subList(EmojiPages.PER_PAGE, faces.size());
 
         EmojiPages pages = new EmojiPages(groups, List.of());
-        check(pages.page().equals(firstFaces), "The first page must hold 26 emoji");
+        check(pages.page().equals(firstFaces), "The first page must hold one full page of emoji");
         check(pages.group().equals("Faces"), "With no recent emoji the list must start at the first group");
         check(pages.pageNumber() == 1 && pages.pageCount() == 2, "The first page of two must count as 1 of 2");
 

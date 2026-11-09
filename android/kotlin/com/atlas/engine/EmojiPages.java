@@ -16,8 +16,8 @@ import java.util.function.Predicate;
  * Up and down swipes turn pages inside a group; sideways swipes change the group. Symbols are one group, with no recent items.
  */
 public final class EmojiPages {
-    /** One item for each letter key. */
-    public static final int PER_PAGE = 26;
+    /** One item for each letter key but P, which shows the page position. */
+    public static final int PER_PAGE = 25;
     /** The Recent group holds one page, so a used emoji stays until a full page of newer ones replaces it. */
     public static final int RECENT_LIMIT = PER_PAGE;
     public static final String RECENT = "Recent";

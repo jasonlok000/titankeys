@@ -784,7 +784,7 @@ class AtlasIme : InputMethodService() {
             return picking
         }
         if (last == null) return picking
-        if (!picking) panel?.hover = Layout.restingKeyAt(last.x, last.y, panel?.pageKeysShown == true)
+        if (!picking) panel?.hover = if (modifiers.panel == Modifiers.Panel.Settings) Layout.restingKeyAt(last.x, last.y) else Layout.keyAt(last.x, last.y)
         else if (panel?.pickCategory(last.x) == true) haptics.pageChanged()
         return picking
     }
@@ -1336,7 +1336,7 @@ class AtlasIme : InputMethodService() {
     }
 
     /**
-     * With the panel on screen, a letter key types the item that it shows, and a blank key types nothing. Backspace and Enter
+     * With the panel on screen, a letter key types the item that it shows, and a key with no item, such as P, types nothing. Backspace and Enter
      * turn the page of emoji, do nothing on the other pages, and never reach the text. Space and fn can pick a category. Other
      * keys stay as they are.
      */

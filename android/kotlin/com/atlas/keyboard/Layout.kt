@@ -12,7 +12,9 @@ object Layout {
     const val FN = "fn"
     const val BACKSPACE = "⌫"
     const val ENTER = "↵"
-    /** Where a finger counts as resting on the last column of keys and not on the key beside it. See [restingKeyAt]. */
+    /** The Sym panel shows the page position on this key, and no symbol or emoji. The touchpad cannot read it well. */
+    const val PAGE_POSITION = "P"
+    /** Where a finger counts as resting on P and not on the key beside it. See [restingKeyAt]. */
     private const val LAST_COLUMN_FROM_LEFT = .875f
     private const val P_TO_BOTTOM = .3f
 
@@ -23,8 +25,10 @@ object Layout {
         listOf("⇧", "○", "◁", SPACE, "▦", FN, "⇧"),
     )
     val bottomWidths = floatArrayOf(1.2f, 1.2f, 1.2f, 2.8f, 1.2f, 1.2f, 1.2f)
-    /** The letter keys, from the top row down: the order in which the Sym panel fills them. */
-    val panelLetters = rows.take(3).flatten().filter { isLetter(it) }
+    /** The letter keys that hold a symbol or an emoji, from the top row down: the order in which the Sym panel fills them. */
+    val panelLetters = rows.take(3).flatten().filter { isLetter(it) && it != PAGE_POSITION }
+    /** The touchpad's sensor ends in this column, so a finger on these keys marks nothing on a page of symbols or emoji. */
+    val lastColumn = rows.take(3).map { it.last() }
 
     /** Letter centres in letter space, indexed by [LETTERS]. */
     @JvmField val KEY_X = FloatArray(26)
@@ -55,20 +59,14 @@ object Layout {
     }
 
     /**
-     * The key under a finger that rests on the touchpad, for the Sym panel. The touchpad stops at the middle of P, because the
-     * sensor ends there and calibration maps its edge to P's centre, so P has only half a column to be read from and a finger
-     * on it reads partly on the keys beside it. Here P also takes the right of O and the top of Backspace. Backspace and Enter are
-     * in that column too, so with [pageKeys], when they show the page arrows, they also take the right of L and of Sym.
+     * The key under a finger that rests on the touchpad, for the quick settings page, where P has a setting. The touchpad stops
+     * at the middle of P, because the sensor ends there and calibration maps its edge to P's centre, so P has only half a column
+     * to be read from and a finger on it reads partly on the keys beside it. Here P also takes the right of O and the top of
+     * Backspace.
      */
-    fun restingKeyAt(x: Float, y: Float, pageKeys: Boolean = false): String {
+    fun restingKeyAt(x: Float, y: Float): String {
         val key = keyAt(x, y)
-        return when {
-            key == "O" && x >= LAST_COLUMN_FROM_LEFT -> "P"
-            key == BACKSPACE && y < P_TO_BOTTOM -> "P"
-            pageKeys && key == "L" && x >= LAST_COLUMN_FROM_LEFT && y >= P_TO_BOTTOM -> BACKSPACE
-            pageKeys && key == SYM && x >= LAST_COLUMN_FROM_LEFT -> ENTER
-            else -> key
-        }
+        return if (key == "O" && x >= LAST_COLUMN_FROM_LEFT || key == BACKSPACE && y < P_TO_BOTTOM) "P" else key
     }
 
     /** Whether a touchpad height is on the bottom row of keys. */

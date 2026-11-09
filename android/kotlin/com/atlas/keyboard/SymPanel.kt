@@ -17,9 +17,10 @@ import kotlin.math.min
 import kotlin.math.sign
 
 /**
- * The panel that Sym opens: a symbol or an emoji on each letter key of the top three rows, in line with the physical letter
- * keys. The other keys are left empty. A finger that rests on a key marks that key. The groups of emoji are in a strip along the
- * bottom, above the bottom row of physical keys, and a finger on that row opens the group at its place.
+ * The panel that Sym opens: a symbol or an emoji on each letter key of the top three rows but P, in line with the physical letter
+ * keys. P shows the position of the open page and only that, and the other keys are left empty. A finger that rests on a key marks
+ * that key, except in the last column, which the touchpad cannot read well. The groups of emoji are in a strip along the bottom,
+ * above the bottom row of physical keys, and a finger on that row opens the group at its place.
  *
  * Alt's place shows the quick settings key and Sym's place shows what Sym does next, each as an icon. When a group of emoji has
  * more than one page, the places of Backspace and Enter show an icon for the page that each key opens. On the quick settings page
@@ -61,7 +62,7 @@ class SymPanel(
     }
     private val header = LinearLayout(context)
     private val grid = LinearLayout(context)
-    private val cells = (Layout.panelLetters + Layout.ALT + Layout.SYM + Layout.BACKSPACE + Layout.ENTER).associateWith(::cell)
+    private val cells = (Layout.panelLetters + Layout.PAGE_POSITION + Layout.ALT + Layout.SYM + Layout.BACKSPACE + Layout.ENTER).associateWith(::cell)
     private var tabs = emptyList<TextView>()
     private var shownSamples = emptyList<String>()
     private var navigationInset = 0
@@ -135,9 +136,6 @@ class SymPanel(
         }
         render()
     }
-
-    /** The places of Backspace and Enter show the page arrows, so a finger that rests there can read a little to their left. */
-    val pageKeysShown get() = pageRows(Layout.BACKSPACE) != null
 
     /** The symbol or emoji on a letter key, or null if the key is blank. */
     fun item(key: String): String? = pages?.page()?.getOrNull(Layout.panelLetters.indexOf(key))
@@ -247,10 +245,17 @@ class SymPanel(
         }
     }
 
+    /** This key shows where the open page is, and does nothing else. */
+    private fun showsPosition(key: String) = pages != null && key == Layout.PAGE_POSITION
+
+    /** Where the open page is in its group, such as 2/9, or null if there is no page. */
+    private fun position() = pages?.takeIf { it.pageCount() > 0 }?.let { "${it.pageNumber()}/${it.pageCount()}" }
+
     /** What a key shows as text, or null if it shows none. */
     private fun label(key: String) = when {
         ctrl -> key.takeIf { it in Modifiers.CTRL_ACTIONS }
         quick -> QuickSetting.on(key)?.label
+        showsPosition(key) -> position()
         else -> item(key)
     }
 
@@ -310,20 +315,22 @@ class SymPanel(
         for ((key, view) in cells) {
             val value = label(key)
             val icon = icon(key)
+            val isPosition = showsPosition(key)
             view.text = value.orEmpty()
             view.foreground = icon?.let { context.getDrawable(it.drawable) }
             // A label must fit its key, so it shrinks where a symbol keeps its size.
-            if (quick) view.setAutoSizeTextTypeUniformWithConfiguration(LABEL_SMALLEST, LABEL_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
+            if (quick || isPosition) view.setAutoSizeTextTypeUniformWithConfiguration(LABEL_SMALLEST, LABEL_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
             else {
                 view.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
                 view.sized(ITEM_SIZE, ITEM_LARGEST)
             }
-            // A shortcut runs from the key, so a touch on the screen does nothing here.
-            view.isEnabled = !ctrl && (value != null || icon != null)
+            // A shortcut runs from the key, so a touch on the screen does nothing here. The page position is only to read.
+            view.isEnabled = !ctrl && !isPosition && (value != null || icon != null)
             view.contentDescription = when {
                 icon != null -> icon.description
                 ctrl -> Modifiers.CTRL_ACTIONS[key]?.let { "Ctrl $key, $it" }
                 quick -> detail(key)
+                isPosition -> value?.let { "Page ${current?.pageNumber()} of ${current?.pageCount()}" }
                 else -> value?.let { "Insert $it" }
             }
         }
@@ -364,14 +371,17 @@ class SymPanel(
         }
     }
 
-    /** A cell under a resting finger changes colour. A setting's or shortcut's name also shows at the top of the panel. */
+    /**
+     * A cell under a resting finger changes colour, except in the last column on a page of symbols or emoji.
+     * A setting's or shortcut's name also shows at the top of the panel.
+     */
     private fun showHover() {
         preview.text = detail(hover) ?: if (ctrl) CTRL_LIST else if (quick) QUICK_TITLE else ""
-        val marked = hover.takeIf { label(it) != null || icon(it) != null }
+        val marked = hover.takeIf { (label(it) != null || icon(it) != null) && (pages == null || it !in Layout.lastColumn) }
         for ((key, view) in cells) {
             val hovered = key == marked
             view.setBackgroundColor(if (hovered) ink else Color.TRANSPARENT)
-            view.setTextColor(if (hovered) paper else if (dim(key)) Color.GRAY else ink)
+            view.setTextColor(if (hovered) paper else if (dim(key)) Color.GRAY else if (showsPosition(key)) muted else ink)
             view.foregroundTintList = ColorStateList.valueOf(if (hovered) paper else ink)
         }
     }

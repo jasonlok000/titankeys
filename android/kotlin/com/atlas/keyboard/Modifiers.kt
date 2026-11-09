@@ -18,7 +18,8 @@ class Modifiers {
     var sym = Level.Off
         private set
     private val last = LongArray(Key.entries.size)
-    private val held = HashSet<Int>()
+    /** Each physical modifier that is down, with the time it was pressed. */
+    private val held = HashMap<Int, Long>()
     private val usedWhileHeld = HashSet<Int>()
 
     val metaState: Int
@@ -50,21 +51,38 @@ class Modifiers {
     }
 
     fun key(event: KeyEvent) {
-        val key = keyOf(event.keyCode) ?: return
-        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-            if (!held.add(event.keyCode)) return
-            usedWhileHeld -= event.keyCode
-            press(key, event.eventTime)
-        } else if (event.action == KeyEvent.ACTION_UP) {
-            held -= event.keyCode
-            // Holding the modifier for a character releases it with the key, like a regular keyboard.
-            if (usedWhileHeld.remove(event.keyCode) && held.none { keyOf(it) == key } && level(key) == Level.Once) {
-                when (key) {
-                    Key.Shift -> shift = Level.Off
-                    Key.Alt -> alt = Level.Off
-                    Key.Sym -> sym = Level.Off
-                }
-            }
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) down(event.keyCode, event.eventTime)
+        else if (event.action == KeyEvent.ACTION_UP) up(event.keyCode, event.eventTime)
+    }
+
+    fun down(code: Int, time: Long) {
+        val key = keyOf(code) ?: return
+        if (code in held) return
+        held[code] = time
+        usedWhileHeld -= code
+        press(key, time)
+    }
+
+    fun up(code: Int, time: Long) {
+        val key = keyOf(code) ?: return
+        val pressedAt = held.remove(code) ?: return
+        val used = usedWhileHeld.remove(code)
+        if (held.keys.any { keyOf(it) == key }) return
+        // Shift only applies while it is held, even when nothing used it: a swipe during the hold is
+        // dropped, and a hold that starts as a double press must not stay locked. The time, not the use,
+        // decides a lock, so a letter that overlaps a quick double press does not undo it. Alt and Sym
+        // stay on after a long press, which leaves their strip open.
+        val heldDown = key == Key.Shift && time - pressedAt >= HOLD_MILLIS
+        // Holding the modifier for a character releases it with the key, like a regular keyboard.
+        val releases = when (level(key)) {
+            Level.Once -> used || heldDown
+            Level.Locked -> heldDown
+            Level.Off -> false
+        }
+        if (releases) when (key) {
+            Key.Shift -> shift = Level.Off
+            Key.Alt -> alt = Level.Off
+            Key.Sym -> sym = Level.Off
         }
     }
 
@@ -81,7 +99,7 @@ class Modifiers {
 
     /** A command or shortcut used a physically held modifier, leaving sticky state alone. */
     fun useHeld() {
-        usedWhileHeld += held
+        usedWhileHeld += held.keys
     }
 
     fun isHeld(code: Int) = code in held
@@ -96,6 +114,8 @@ class Modifiers {
 
     companion object {
         const val DOUBLE_PRESS_MILLIS = 300L
+        /** Shift down for at least this long was held, not pressed. It matches an Android long press. */
+        const val HOLD_MILLIS = 400L
 
         private fun keyOf(code: Int) = when (code) {
             KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> Key.Shift

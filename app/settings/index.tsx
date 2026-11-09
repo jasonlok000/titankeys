@@ -29,8 +29,10 @@ export default function Settings() {
     <Section title="Swipe typing">
       <Toggle label="Swipe typing" value={settings.swipeTyping}
         onChange={swipeTyping => save.run({ swipeTyping })} />
-      <Field label="Slip recovery period" href="/settings/lift">{liftLabel(settings)}</Field>
-      <Field label="Swipe vibration" href="/settings/vibration">{vibrationLabel(settings)}</Field>
+      {(settings.swipeTyping || settings.cursorControl)
+        && <Field label="Slip recovery period" href="/settings/lift">{liftLabel(settings)}</Field>}
+      {settings.swipeTyping
+        && <Field label="Swipe vibration" href="/settings/vibration">{vibrationLabel(settings)}</Field>}
     </Section>
     <Section title="Personal">
       <Field label="Your words" href="/settings/data" />

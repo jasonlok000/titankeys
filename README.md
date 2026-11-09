@@ -59,15 +59,15 @@ Atlas displays over other apps only to get touchpad input from the Titan 2. It n
 
 ## Contributing
 
-Contributions are welcome. Before you write code, read the [contributing guide](CONTRIBUTING.md).
+Thank you for your interest in Atlas! All help is welcome. Before you write code, please read the [contributing guide](CONTRIBUTING.md).
 
-1. **Open an issue.** Use an issue for all bugs, ideas, and questions.
-2. **Use a template.** Select **Bug** or **Feature**. The template adds the label.
-3. **Wait for approval.** I approve the issue and tell you who does the work.
-4. **Test on a Titan 2 Elite.** Each pull request must have a test on a real device.
+1. **Open an issue.** Tell me about bugs, ideas and questions in an issue.
+2. **Use a template.** Select **Bug** or **Feature**. The template adds the label for you.
+3. **Wait for a reply.** I read each issue, approve it, and we agree who does the work.
+4. **Test on a Titan 2 Elite.** Please test each pull request on a real device.
 5. **Open a pull request.** Link it to the approved issue.
 
-Not a developer? Send a bug report or an idea from **Settings > Send feedback** in Atlas.
+Not a developer? You can still help! Send a bug report or an idea from **Settings > Send feedback** in Atlas.
 
 ## Credits
 

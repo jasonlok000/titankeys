@@ -762,11 +762,21 @@ private fun quickSettingsTable() {
 }
 
 private fun panelScrollKeys() {
-    same(Modifiers.panelScroll(KeyEvent.KEYCODE_DEL), -1f, "Backspace must do what a swipe up does")
-    same(Modifiers.panelScroll(KeyEvent.KEYCODE_ENTER), 1f, "Enter must do what a swipe down does")
-    same(Modifiers.panelScroll(KeyEvent.KEYCODE_NUMPAD_ENTER), 1f, "The other Enter key must do the same")
-    same(Modifiers.panelScroll(LETTER), null, "A letter must not turn the page")
-    same(Modifiers.panelScroll(KeyEvent.KEYCODE_SPACE), null, "Space must not turn the page")
+    same(Modifiers.panelScroll(KeyEvent.KEYCODE_DEL, Panel.Emoji), 1f, "On the emoji page Backspace must do what a swipe down does")
+    same(Modifiers.panelScroll(KeyEvent.KEYCODE_ENTER, Panel.Emoji), -1f, "On the emoji page Enter must do what a swipe up does")
+    same(Modifiers.panelScroll(KeyEvent.KEYCODE_NUMPAD_ENTER, Panel.Emoji), -1f, "The other Enter key must do the same")
+    val keys = listOf(KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER)
+    for (code in keys) {
+        same(Modifiers.panelScroll(code, Panel.Symbols), 0f, "On the symbol page key $code must do nothing and not reach the text")
+        same(Modifiers.panelScroll(code, Panel.Settings), 0f, "On the quick settings page key $code must do nothing and not reach the text")
+        same(Modifiers.panelScroll(code, Panel.Closed), null, "With the panel closed key $code must reach the text")
+    }
+    for (panel in Panel.entries) {
+        same(Modifiers.panelScroll(LETTER, panel), null, "A letter must not turn the page")
+        same(Modifiers.panelScroll(KeyEvent.KEYCODE_SPACE, panel), null, "Space must not turn the page")
+    }
+    same(Layout.rows[1].last(), Layout.BACKSPACE, "Backspace must be at the end of the second row")
+    same(Layout.rows[2].last(), Layout.ENTER, "Enter must be at the end of the third row")
 }
 
 private fun restingOnP() {

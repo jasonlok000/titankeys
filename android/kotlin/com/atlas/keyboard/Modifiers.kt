@@ -263,13 +263,21 @@ class Modifiers {
         val CTRL_ACTIONS = mapOf("A" to "Select all", "C" to "Copy", "X" to "Cut", "V" to "Paste", "Z" to "Undo", "Y" to "Redo")
 
         /**
-         * What a key does to the panel's pages, in rows down: Backspace does what a swipe up does, and Enter what a swipe down
-         * does. Returns null for other keys. These two keys never reach the text while the panel is open.
+         * What a key does to the pages of the open [panel], in rows down. On the emoji page Backspace does what a swipe down does,
+         * and Enter what a swipe up does. On the other pages they return 0, which changes nothing. Returns null for other keys and
+         * for a closed panel. These two keys never reach the text while the panel is open.
          */
-        fun panelScroll(code: Int) = when (code) {
-            KeyEvent.KEYCODE_DEL -> -1f
-            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> 1f
-            else -> null
+        fun panelScroll(code: Int, panel: Panel): Float? {
+            val rows = when (code) {
+                KeyEvent.KEYCODE_DEL -> 1f
+                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> -1f
+                else -> return null
+            }
+            return when (panel) {
+                Panel.Closed -> null
+                Panel.Emoji -> rows
+                Panel.Symbols, Panel.Settings -> 0f
+            }
         }
 
         /** The meta state of a key pushed while Ctrl is held. Ctrl takes the place of fn, so the key acts as a held shortcut does. */

@@ -10,14 +10,16 @@ object Layout {
     const val ALT = "alt"
     const val SYM = "sym"
     const val FN = "fn"
+    const val BACKSPACE = "⌫"
+    const val ENTER = "↵"
     /** Where a finger counts as resting on P and not on the key beside it. See [restingKeyAt]. */
     private const val P_FROM_LEFT = .875f
     private const val P_TO_BOTTOM = .3f
 
     val rows = listOf(
         listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
-        listOf("A", "S", "D", "F", "G", "H", "J", "K", "L", "⌫"),
-        listOf(ALT, "Z", "X", "C", "V", "B", "N", "M", SYM, "↵"),
+        listOf("A", "S", "D", "F", "G", "H", "J", "K", "L", BACKSPACE),
+        listOf(ALT, "Z", "X", "C", "V", "B", "N", "M", SYM, ENTER),
         listOf("⇧", "○", "◁", SPACE, "▦", FN, "⇧"),
     )
     val bottomWidths = floatArrayOf(1.2f, 1.2f, 1.2f, 2.8f, 1.2f, 1.2f, 1.2f)
@@ -59,7 +61,7 @@ object Layout {
      */
     fun restingKeyAt(x: Float, y: Float): String {
         val key = keyAt(x, y)
-        return if (key == "O" && x >= P_FROM_LEFT || key == "⌫" && y < P_TO_BOTTOM) "P" else key
+        return if (key == "O" && x >= P_FROM_LEFT || key == BACKSPACE && y < P_TO_BOTTOM) "P" else key
     }
 
     /** Whether a touchpad height is on the bottom row of keys. */

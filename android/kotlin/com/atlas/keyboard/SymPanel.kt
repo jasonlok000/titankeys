@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.WindowInsets
 import android.widget.LinearLayout
 import android.widget.Space
@@ -20,7 +21,8 @@ import kotlin.math.sign
  * keys. The other keys are left empty. A finger that rests on a key marks that key. The groups of emoji are in a strip along the
  * bottom, above the bottom row of physical keys, and a finger on that row opens the group at its place.
  *
- * Alt's place shows the quick settings key and Sym's place shows what Sym does next, each as an icon. On the quick settings page
+ * Alt's place shows the quick settings key and Sym's place shows what Sym does next, each as an icon. When a group of emoji has
+ * more than one page, the places of Backspace and Enter show an icon for the page that each key opens. On the quick settings page
  * each letter key that has an item shows its short label, dim when the setting is off, and a finger that rests on the key shows
  * the setting's name and state at the top.
  *
@@ -59,7 +61,7 @@ class SymPanel(
     }
     private val header = LinearLayout(context)
     private val grid = LinearLayout(context)
-    private val cells = (Layout.panelLetters + Layout.ALT + Layout.SYM).associateWith(::cell)
+    private val cells = (Layout.panelLetters + Layout.ALT + Layout.SYM + Layout.BACKSPACE + Layout.ENTER).associateWith(::cell)
     private var tabs = emptyList<TextView>()
     private var shownSamples = emptyList<String>()
     private var navigationInset = 0
@@ -111,6 +113,9 @@ class SymPanel(
 
     init {
         orientation = VERTICAL
+        // A letter key slides a little past the edge of its row when the page changes.
+        clipChildren = false
+        grid.clipChildren = false
         header.setPadding(dp(8), 0, dp(8), 0)
         header.addView(heading, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         header.addView(preview, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
@@ -166,15 +171,20 @@ class SymPanel(
         return true
     }
 
-    /** The new keys slide in the way the finger went. Android's animator duration setting shortens this or turns it off. */
+    /**
+     * The new letter keys slide in the way the finger went. The icons are not part of a page, so they stay still.
+     * Android's animator duration setting shortens this or turns it off.
+     */
     private fun slideIn(across: Float, down: Float) {
         val distance = dp(SLIDE_DISTANCE).toFloat()
         val upOrDown = EmojiPages.turnsPage(across, down)
-        grid.animate().cancel()
-        grid.translationX = if (upOrDown) 0f else -across.sign * distance
-        grid.translationY = if (upOrDown) -down.sign * distance else 0f
-        grid.alpha = SLIDE_ALPHA
-        grid.animate().translationX(0f).translationY(0f).alpha(1f).setDuration(SLIDE_MILLIS).start()
+        for (key in Layout.panelLetters) cells.getValue(key).apply {
+            animate().cancel()
+            translationX = if (upOrDown) 0f else -across.sign * distance
+            translationY = if (upOrDown) -down.sign * distance else 0f
+            alpha = SLIDE_ALPHA
+            animate().translationX(0f).translationY(0f).alpha(1f).setDuration(SLIDE_MILLIS).start()
+        }
     }
 
     private fun headerText(side: Int) = TextView(context).apply {
@@ -195,14 +205,26 @@ class SymPanel(
         setOnClickListener { touched(key) }
     }
 
-    /** A touch on the screen does what a push of the key does. */
+    /** A touch on the screen does what a push of the key does. Android's click comes when the finger lifts, and not if it slid off the key. */
     private fun touched(key: String) {
+        val rows = pageRows(key)
         when {
             key == Layout.ALT -> pressAlt()
             key == Layout.SYM -> pressSym()
             quick -> QuickSetting.on(key)?.let(useQuickSetting)
+            rows != null -> if (swipe(0f, rows)) pageChanged()
             else -> item(key)?.let(pick)
         }
+    }
+
+    /** What the key at the place of Backspace or Enter does to the pages, in rows down, or null if it changes nothing here. */
+    private fun pageRows(key: String): Float? {
+        val code = when (key) {
+            Layout.BACKSPACE -> KeyEvent.KEYCODE_DEL
+            Layout.ENTER -> KeyEvent.KEYCODE_ENTER
+            else -> return null
+        }
+        return Modifiers.panelScroll(code, mode)?.takeIf { it != 0f && (pages?.pageCount() ?: 0) > 1 }
     }
 
     /** An icon, for a key whose purpose is not a letter or symbol. It is the same size at any system font size. */
@@ -215,7 +237,11 @@ class SymPanel(
         // What Sym does next: from the symbols it opens the emoji, and from the other pages it closes the panel.
         key == Layout.SYM -> if (mode == Modifiers.Panel.Symbols) Icon(R.drawable.panel_emoji, "Show emoji")
             else Icon(R.drawable.panel_close, "Close the panel")
-        else -> null
+        // Rows up is what a swipe up does, which opens the next page.
+        else -> pageRows(key)?.let { rows ->
+            if (rows < 0) Icon(R.drawable.panel_next, "Show the next page")
+            else Icon(R.drawable.panel_previous, "Show the previous page")
+        }
     }
 
     /** What a key shows as text, or null if it shows none. */
@@ -260,7 +286,8 @@ class SymPanel(
     private val muted get() = if (dark) Color.GRAY else Color.DKGRAY
     private val shade get() = if (dark) 0x40FFFFFF else 0x30000000
 
-    private fun render() {
+    /** Shows the panel as it is now, also after a quick setting changes. */
+    fun render() {
         visibility = if (mode == Modifiers.Panel.Closed && !ctrl) GONE else VISIBLE
         setBackgroundColor(paper)
         setPadding(dp(4), 0, dp(4), navigationInset)
@@ -301,7 +328,7 @@ class SymPanel(
             ctrl -> "Ctrl shortcuts. $CTRL_LIST. Push a key to use its shortcut."
             quick -> "$QUICK_TITLE. Rest a finger on a key to see its setting. Push the key to change the setting."
             mode == Modifiers.Panel.Symbols -> "Symbols. Push a key to type its symbol. " +
-                "Swipe up or down on the keyboard to see more, or push Backspace or Enter."
+                "Swipe up or down on the keyboard to see more."
             mode == Modifiers.Panel.Emoji -> "Emoji, ${current?.group().orEmpty()}. Push a key to type its emoji. " +
                 "Swipe left or right on the keyboard to change the group, or move a finger along the bottom row. " +
                 "Swipe up or down to see more, or push Backspace or Enter."

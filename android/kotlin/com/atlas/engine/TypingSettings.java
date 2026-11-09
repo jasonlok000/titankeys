@@ -5,7 +5,7 @@ import android.content.SharedPreferences;
 
 public final class TypingSettings {
     public static final int MIN_LIFT_OFF_MILLIS = 50, MAX_LIFT_OFF_MILLIS = 200, DEFAULT_LIFT_OFF_MILLIS = 90;
-    private static final String DEFAULT_TAP_KEYS = "AI ";
+    private static final String DEFAULT_TAP_KEYS = "";
 
     public static boolean autoCapitalise(Context context) {
         return preferences(context).getBoolean("auto_capitalise", true);

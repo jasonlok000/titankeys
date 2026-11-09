@@ -84,5 +84,16 @@ final class SwipeSpelling {
         return ProperNames.restore(spelling == null ? word : spelling);
     }
 
+    /** A typed word in its dictionary spelling, as swipes show it: "dont" becomes "don't" and "i" becomes "I". */
+    static String respell(String word) {
+        String lower = word.toLowerCase(Locale.ROOT);
+        String spelling = restore(lower);
+        if (spelling.equals(lower)) return word;
+        if (word.equals(lower)) return spelling;
+        // A sentence start may have capitalised the first letter already.
+        boolean titled = word.substring(1).equals(lower.substring(1));
+        return titled ? spelling.substring(0, 1).toUpperCase(Locale.ROOT) + spelling.substring(1) : word;
+    }
+
     private SwipeSpelling() {}
 }

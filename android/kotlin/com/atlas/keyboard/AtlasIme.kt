@@ -139,7 +139,7 @@ class AtlasIme : InputMethodService() {
             { delay, action -> main.postDelayed(action, delay) })
         composer = Composer(editor, EngineWords(SwipeTyping.get(this)),
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
-            { TypingSettings.autoCapitalise(this) }) { strip?.words = it }
+            { TypingSettings.autoCapitalise(this) }, { TypingSettings.autoPunctuation(this) }) { strip?.words = it }
         // The firmware hands touchpad events to the topmost window titled "InputMethod", which is this
         // keyboard's window. They arrive at the window, not at any view, so catch them there.
         val window = window.window!!

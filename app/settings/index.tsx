@@ -19,6 +19,8 @@ export default function Settings() {
       <Field label="Tap keys" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
       <Toggle label="Auto-capitalisation" value={settings.autoCapitalise}
         onChange={autoCapitalise => save.run({ autoCapitalise })} />
+      <Toggle label="Auto-punctuation" value={settings.autoPunctuation}
+        onChange={autoPunctuation => save.run({ autoPunctuation })} />
       <Toggle label="Suggestion bar" value={settings.suggestionBar}
         onChange={suggestionBar => save.run({ suggestionBar })} />
       <Toggle label="Cursor control" value={settings.cursorControl}

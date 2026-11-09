@@ -462,7 +462,7 @@ class Composer(
             if (recognition.words.isNotEmpty()) {
                 val sentenceCase = field.sentenceCapitalisation && autoCapitalise()
                 val choices = recognition.words.map {
-                    SwipeTyping.capitalise(it, context, pending.metaState, false, sentenceCase)
+                    SwipeTyping.capitalise(it, context + leadingSpace, pending.metaState, false, sentenceCase)
                 }
                 val word = choices.first()
                 val inserted = leadingSpace + word + if (trailingSpace) " " else ""
@@ -539,13 +539,11 @@ class Composer(
         val dropsSpace = (automaticSpace == anchor || typedSpace == anchor && autoPunctuation()) && anchor.before?.endsWith(" ") == true
             && text[0] in ".,!?;:)]}…"
         val before = anchor.before
+        val prefix = if (letterTap && !anchor.selected) SwipeTyping.prefix(before.orEmpty()) else ""
         val cased = if (before != null && field.sentenceCapitalisation && autoCapitalise()) {
-            SwipeTyping.capitalise(text, before)
+            SwipeTyping.capitalise(text, before + prefix)
         } else text
-        val typed = if (letterTap) {
-            val prefix = if (anchor.selected) "" else SwipeTyping.prefix(before.orEmpty())
-            "$prefix$cased "
-        } else cased
+        val typed = if (letterTap) "$prefix$cased " else cased
         val cause = if (dropsSpace) EditCause.DropSpace else if (letterTap) EditCause.Tap else EditCause.Key
         if (!edit(cause, if (dropsSpace) 1 else 0, typed)) return
         automaticSpace = if (letterTap) snapshot() else null

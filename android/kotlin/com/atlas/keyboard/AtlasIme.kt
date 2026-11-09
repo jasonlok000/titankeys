@@ -707,7 +707,7 @@ class AtlasIme : InputMethodService() {
             return picking
         }
         if (last == null) return picking
-        if (!picking) panel?.hover = Layout.restingKeyAt(last.x, last.y)
+        if (!picking) panel?.hover = Layout.restingKeyAt(last.x, last.y, panel?.pageKeysShown == true)
         else if (panel?.pickCategory(last.x) == true) haptics.pageChanged()
         return picking
     }

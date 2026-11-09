@@ -12,8 +12,8 @@ object Layout {
     const val FN = "fn"
     const val BACKSPACE = "⌫"
     const val ENTER = "↵"
-    /** Where a finger counts as resting on P and not on the key beside it. See [restingKeyAt]. */
-    private const val P_FROM_LEFT = .875f
+    /** Where a finger counts as resting on the last column of keys and not on the key beside it. See [restingKeyAt]. */
+    private const val LAST_COLUMN_FROM_LEFT = .875f
     private const val P_TO_BOTTOM = .3f
 
     val rows = listOf(
@@ -57,11 +57,18 @@ object Layout {
     /**
      * The key under a finger that rests on the touchpad, for the Sym panel. The touchpad stops at the middle of P, because the
      * sensor ends there and calibration maps its edge to P's centre, so P has only half a column to be read from and a finger
-     * on it reads partly on the keys beside it. Here P also takes the right of O and the top of Backspace.
+     * on it reads partly on the keys beside it. Here P also takes the right of O and the top of Backspace. Backspace and Enter are
+     * in that column too, so with [pageKeys], when they show the page arrows, they also take the right of L and of Sym.
      */
-    fun restingKeyAt(x: Float, y: Float): String {
+    fun restingKeyAt(x: Float, y: Float, pageKeys: Boolean = false): String {
         val key = keyAt(x, y)
-        return if (key == "O" && x >= P_FROM_LEFT || key == BACKSPACE && y < P_TO_BOTTOM) "P" else key
+        return when {
+            key == "O" && x >= LAST_COLUMN_FROM_LEFT -> "P"
+            key == BACKSPACE && y < P_TO_BOTTOM -> "P"
+            pageKeys && key == "L" && x >= LAST_COLUMN_FROM_LEFT && y >= P_TO_BOTTOM -> BACKSPACE
+            pageKeys && key == SYM && x >= LAST_COLUMN_FROM_LEFT -> ENTER
+            else -> key
+        }
     }
 
     /** Whether a touchpad height is on the bottom row of keys. */

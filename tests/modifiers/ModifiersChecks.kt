@@ -60,6 +60,7 @@ fun main() {
     quickSettingsTable()
     panelScrollKeys()
     restingOnP()
+    restingOnThePageArrows()
     bottomRow()
     onlyOneModifier()
     repeatsAndStrayEvents()
@@ -789,6 +790,24 @@ private fun restingOnP() {
     same(Layout.restingKeyAt(.88f, .4f), "L", "The key under O must not change")
     same(Layout.restingKeyAt(.45f, .85f), Layout.SPACE, "The bottom row must not change")
     same(Layout.restingKeyAt(Float.NaN, .15f), "", "A place off the keyboard must be no key")
+}
+
+/** The touchpad ends at the middle of the last column, so a finger on Backspace or Enter often reads over L or Sym. */
+private fun restingOnThePageArrows() {
+    val arrows = true
+    same(Layout.restingKeyAt(.95f, .4f, arrows), Layout.BACKSPACE, "The middle of Backspace must be Backspace")
+    same(Layout.restingKeyAt(.88f, .4f, arrows), Layout.BACKSPACE, "A finger on Backspace, read at the right of L, must be Backspace when the arrows show")
+    same(Layout.restingKeyAt(.86f, .4f, arrows), "L", "A finger on L must still be L")
+    same(Layout.restingKeyAt(.88f, .27f, arrows), "L", "Above the middle of Backspace the right of L must stay L")
+    same(Layout.restingKeyAt(.95f, .65f, arrows), Layout.ENTER, "The middle of Enter must be Enter")
+    same(Layout.restingKeyAt(.88f, .65f, arrows), Layout.ENTER, "A finger on Enter, read at the right of Sym, must be Enter when the arrows show")
+    same(Layout.restingKeyAt(.86f, .65f, arrows), Layout.SYM, "A finger on Sym must still be Sym")
+    same(Layout.restingKeyAt(.95f, .28f, arrows), "P", "The top of Backspace must still be P")
+    same(Layout.restingKeyAt(.88f, .15f, arrows), "P", "The right of O must still be P")
+    same(Layout.restingKeyAt(.45f, .85f, arrows), Layout.SPACE, "The bottom row must not change")
+    same(Layout.restingKeyAt(.88f, .4f), "L", "Without the arrows the right of L must stay L")
+    same(Layout.restingKeyAt(.88f, .65f), Layout.SYM, "Without the arrows the right of Sym must stay Sym")
+    same(Layout.restingKeyAt(.95f, .65f), Layout.ENTER, "Without the arrows Enter must stay Enter")
 }
 
 private fun bottomRow() {

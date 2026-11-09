@@ -136,6 +136,9 @@ class SymPanel(
         render()
     }
 
+    /** The places of Backspace and Enter show the page arrows, so a finger that rests there can read a little to their left. */
+    val pageKeysShown get() = pageRows(Layout.BACKSPACE) != null
+
     /** The symbol or emoji on a letter key, or null if the key is blank. */
     fun item(key: String): String? = pages?.page()?.getOrNull(Layout.panelLetters.indexOf(key))
 

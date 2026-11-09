@@ -78,6 +78,7 @@ class AtlasIme : InputMethodService() {
     private var typedInField = false
     private var fieldStartedAt = 0L
     private var passingBack = false
+    private val backPush = BackPush()
     /** Back hid the strip, so it stays hidden in this field until you tap the field or type. */
     private var hiddenByBack = false
     private var inLauncher = false
@@ -413,6 +414,8 @@ class AtlasIme : InputMethodService() {
     private fun watchedKey(event: KeyEvent): Boolean {
         if (!watchingKeys) return false
         val code = event.keyCode
+        // The app takes Back before the keyboard, so an open panel must close here.
+        if (code == KeyEvent.KEYCODE_BACK && isInputViewShown && backKey(event, event.action == KeyEvent.ACTION_DOWN)) return true
         if (event.action != KeyEvent.ACTION_DOWN) {
             holdEngine.up(code, event.deviceId, event.eventTime)
             return Modifiers.isShiftOrAlt(code) && modifiers.appRelease(code, event.eventTime)
@@ -735,6 +738,16 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(endSlippedCursor)
         main.removeCallbacks(stepCursor)
         cursor.end()
+    }
+
+    /** Closes an open panel, or uses up the rest of the push that closed it. False is an ordinary Back that does not concern a panel. */
+    private fun backKey(event: KeyEvent, down: Boolean): Boolean = when (backPush.event(down, panelOpen, event.eventTime, event.downTime)) {
+        BackPush.Action.ClosePanel -> {
+            closePanel()
+            true
+        }
+        BackPush.Action.UseUp -> true
+        BackPush.Action.Normal -> false
     }
 
     /** Sends one arrow key press, in order with the rest of the typing. */
@@ -1094,7 +1107,10 @@ class AtlasIme : InputMethodService() {
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
         // Android hands back to a shown keyboard first, which would only close the strip.
-        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) return true
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
+            backKey(event, down = true)
+            return true
+        }
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) return super.onKeyDown(keyCode, event)
         typedInField = true
         if (touchpad.isGestureKey(event)) return true
@@ -1134,12 +1150,10 @@ class AtlasIme : InputMethodService() {
         if (KeyCapture.waiting?.invoke(event) == true) return true
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
             // Back closes an open panel and stays in the app.
-            if (panelOpen) {
-                closePanel()
-                return true
+            if (!backKey(event, down = false)) {
+                passingBack = true
+                requestHideSelf(0)
             }
-            passingBack = true
-            requestHideSelf(0)
             return true
         }
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) {

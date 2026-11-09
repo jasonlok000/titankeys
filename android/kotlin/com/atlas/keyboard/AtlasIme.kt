@@ -661,13 +661,14 @@ class AtlasIme : InputMethodService() {
             modifiers.key(event)
             return true
         }
+        // A lone Ctrl or Meta press is not a shortcut. Each shortcut key carries its meta state.
+        if (KeyEvent.isModifierKey(event.keyCode)) {
+            modifiers.useHeld()
+            return true
+        }
         if (event.isCtrlPressed && event.keyCode != KeyEvent.KEYCODE_DEL || event.isMetaPressed) {
             modifiers.useHeld()
             command(event)
-            return true
-        }
-        if (KeyEvent.isModifierKey(event.keyCode)) {
-            modifiers.useHeld()
             return true
         }
         if (deadKeyPending && (event.keyCode == KeyEvent.KEYCODE_SPACE || event.keyCode == KeyEvent.KEYCODE_DEL)) {

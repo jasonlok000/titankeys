@@ -2,13 +2,13 @@ import { Field, Screen, Section, Toggle, useAction, useSnapshot } from "ink";
 import { state, update } from "../../../lib/atlas";
 import { transfer } from "../../../lib/transfer";
 
-export default function YourData() {
+export default function YourWords() {
   const result = useSnapshot(state);
   const save = useAction(update);
   const subtitle = "All your data is stored locally and never shared.";
-  if (result.status !== "ready") return <Screen title="Your data" subtitle={subtitle} />;
+  if (result.status !== "ready") return <Screen title="Your words" subtitle={subtitle} />;
   const { learning } = result.data;
-  return <Screen title="Your data" subtitle={subtitle}>
+  return <Screen title="Your words" subtitle={subtitle}>
     <Section title="Learning">
       <Toggle label="Learn my words" value={learning} onChange={learning => save.run({ learning })} />
     </Section>

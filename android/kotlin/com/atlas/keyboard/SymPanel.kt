@@ -99,6 +99,7 @@ class SymPanel(
             if (field == value) return
             field = value
             showHover()
+            KeyboardEvents.publish { KeyboardEvent.Resting(value) }
         }
 
     private val symPages get() = when (mode) {
@@ -149,6 +150,7 @@ class SymPanel(
             render()
             slideIn(across, down)
         }
+        KeyboardEvents.publish { KeyboardEvent.PanelSwiped(across, down, moved) }
         return moved
     }
 
@@ -171,6 +173,7 @@ class SymPanel(
         if (!current.open(group)) return false
         render()
         slideIn(if (group > before) -1f else 1f, 0f)
+        KeyboardEvents.publish { KeyboardEvent.GroupPicked(group) }
         return true
     }
 

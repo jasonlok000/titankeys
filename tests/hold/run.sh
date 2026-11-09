@@ -16,7 +16,7 @@ engine=$root/com/atlas/engine
 keyboard=$root/com/atlas/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$android" -d "$work" \
   "$root/com/atlas/autocorrect" "$keyboard/Composer.kt" "$keyboard/Layout.kt" "$keyboard/Field.kt" "$keyboard/EnterKey.kt" \
-  "$keyboard/RawLogLine.kt" "$keyboard/Recording.kt" "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/Touchpad.kt" \
+  "$keyboard/RawLogLine.kt" "$keyboard/Recording.kt" "$keyboard/KeyboardEvents.kt" "$keyboard/Modifiers.kt" "$keyboard/QuickSetting.kt" "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/Touchpad.kt" \
   "$keyboard/Haptics.kt" tests/hold/HoldLetterChecks.kt $(find "$engine" "$root/org" -name '*.java')
 javac --release 17 -nowarn -cp "$work:$stdlib:$android" -d "$work" $(find "$engine" "$root/org" -name '*.java')
 java -cp "$work:$stdlib:$android" com.atlas.keyboard.HoldLetterChecksKt

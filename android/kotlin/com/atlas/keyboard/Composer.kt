@@ -457,6 +457,7 @@ class Composer(
             recognitionSnapshot = null
             pendingInput.removeFirst()
             Recording.sink?.recognised(recognition.words, resumes)
+            KeyboardEvents.publish { KeyboardEvent.Recognised(recognition.words) }
             log?.recognised(recognition, resumes)
             onStroke?.invoke(path)
             if (recognition.words.isNotEmpty()) {
@@ -857,6 +858,7 @@ class Composer(
                 && current.recognition === offered.recognition) choose(index)
         }) return
         log?.picked(index, chosen, offered.alternatives)
+        KeyboardEvents.publish { KeyboardEvent.Chosen(chosen) }
         val anchor = snapshot()
         if (offered is Composition.Starts) {
             chooseStart(offered, chosen, anchor)

@@ -220,7 +220,7 @@ class Contact {
         const val SWIPE_KEYS = .6f
         /** How far a swipe must go, in keys across or rows down, to turn a strip page or jump an emoji group. */
         const val PAGE_KEYS = .45f
-        private const val KEY_COOLDOWN_MILLIS = 150L
+        private const val KEY_COOLDOWN_MILLIS = 50L
         private const val SAMPLE_DISTANCE = .025f
         private const val REQUIRED_EVIDENCE = .12f
         private const val STRAIGHT = .819152f

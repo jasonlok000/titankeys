@@ -1,6 +1,6 @@
         <activity
             android:name="com.atlas.keyboard.RecorderActivity"
-            android:label="TitanKeys Recorder"
+            android:label="Run Benchmark"
             android:exported="true"
             android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
             android:theme="@android:style/Theme.Material.NoActionBar"

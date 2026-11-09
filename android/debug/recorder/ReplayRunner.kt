@@ -47,6 +47,8 @@ class ReplayRunner : Instrumentation() {
         val fill = arguments.getString("fill") == "1"
         /** Scores the older Space behaviour, where any resting thumb could select a word. */
         val oldSpace = arguments.getString("oldspace") == "1"
+        /** "atlas" or "titan" checks the benchmark's own replay on a whole recording. */
+        val benchmark = arguments.getString("benchmark")
     }
 
     private lateinit var options: Options
@@ -101,6 +103,21 @@ class ReplayRunner : Instrumentation() {
             return
         }
         val words = EngineWords(typing)
+        options.benchmark?.let { version ->
+            val replay = BenchmarkReplay(targetContext, words)
+            File(directory, options.output).bufferedWriter().use { output ->
+                File(directory, options.input).forEachLine { line ->
+                    val entry = JSONObject(line)
+                    if (entry.has("events") && entry.optString("pace") != "typed") {
+                        output.write(JSONObject().put("index", entry.getInt("index")).put("prompt", entry.getString("prompt"))
+                            .put("pace", entry.optString("pace")).put("text", replay.run(entry.getJSONArray("events"), version == "atlas")).toString())
+                        output.newLine()
+                    }
+                }
+            }
+            result.putString(REPORT_KEY_STREAMRESULT, "Benchmark replay finished\n")
+            return
+        }
         var count = 0
         File(directory, options.output).bufferedWriter().use { output ->
             File(directory, options.input).forEachLine { line ->

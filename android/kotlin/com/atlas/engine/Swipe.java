@@ -47,6 +47,7 @@ public final class Swipe {
      * edge, nearby, heading somewhere that fits the way it left. It is often still moving, while a new word lands still.
      */
     public boolean sameStroke(Swipe next, long gapMillis, long flickerMillis) {
+        if (Behaviour.atlas) return gapMillis >= 0 && gapMillis <= flickerMillis;
         if (next.x.length == 0 || !couldContinue(next.x[0], next.y[0], gapMillis, flickerMillis)) return false;
         if (flicker(next.x[0], next.y[0], gapMillis, flickerMillis)) return true;
         int last = x.length - 1;
@@ -100,7 +101,7 @@ public final class Swipe {
         if (next == null) throw new IllegalArgumentException("Missing swipe continuation");
         next.validate();
         int count = x.length;
-        double gap = Math.max(1, gapMillis);
+        double gap = Behaviour.atlas ? 1 : Math.max(1, gapMillis);
         double duration = (double) time[count - 1] - time[0] + gap
                 + (double) next.time[next.time.length - 1] - next.time[0];
         if (count + next.x.length > MAX_POINTS || duration > MAX_DURATION_MILLIS)

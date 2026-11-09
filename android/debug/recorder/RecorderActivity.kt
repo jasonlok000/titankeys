@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.text.InputType
 import android.view.Gravity
@@ -18,6 +20,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
 import org.json.JSONArray
 import org.json.JSONObject
@@ -43,8 +46,12 @@ class RecorderActivity : Activity(), Recording.Sink {
         var top: List<String> = emptyList()
     }
 
-    private val prompts = RecorderWords.LIST + TYPED_SENTENCES
-    private val preferences by lazy { getSharedPreferences("recorder", MODE_PRIVATE) }
+    private val prompts = BENCHMARK_WORDS
+    private val main = Handler(Looper.getMainLooper())
+    private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val replay by lazy { BenchmarkReplay(this, EngineWords(SwipeTyping.get(this))) }
+    private val results = linkedMapOf<Int, Pair<Boolean, Boolean>>()
+    private val preferences by lazy { getSharedPreferences("benchmark", MODE_PRIVATE) }
     private val directory by lazy { (getExternalFilesDir("recordings") ?: File(filesDir, "recordings")).apply { mkdirs() } }
 
     private lateinit var progress: TextView
@@ -118,7 +125,7 @@ class RecorderActivity : Activity(), Recording.Sink {
         super.onResume()
         Recording.sink = this
         input.requestFocus()
-        if (!keyboardReady()) details.text = "TitanKeys Debug isn't the current keyboard. Tap Switch to change to it."
+        if (!keyboardReady()) details.text = "This app isn't your current keyboard. Tap Switch to change to it."
     }
 
     override fun onPause() {
@@ -167,6 +174,7 @@ class RecorderActivity : Activity(), Recording.Sink {
     }
 
     override fun recognised(words: List<String>, resumed: Boolean) {
+        if (replay.running) return
         attempt.top = words
         attempt.joined = attempt.joined || resumed
         attempt.events.put(JSONObject().put("k", "rec").put("words", JSONArray(words)).put("resumed", resumed))
@@ -184,11 +192,33 @@ class RecorderActivity : Activity(), Recording.Sink {
         append(JSONObject().put("prompt", word).put("index", index).put("pace", pace(index))
             .put("touches", done.touches).put("gaps", done.gaps).put("joined", done.joined)
             .put("top", JSONArray(done.top)).put("text", typed).put("events", done.events))
-        details.text = describe(word, done)
+        val position = index
+        details.text = "Checking..."
+        worker.execute {
+            val message = try {
+                val before = replay.run(done.events, true)
+                val after = replay.run(done.events, false)
+                results[position] = before.equals(word, ignoreCase = true) to after.equals(word, ignoreCase = true)
+                report(word, before, after)
+            } catch (error: Exception) {
+                "Couldn't check that swipe: ${error.message}"
+            }
+            main.post { details.text = message }
+        }
         move(index + 1)
     }
 
-    private fun describe(word: String, done: Attempt): String {
+    /** Both versions read the same touches, so the only difference between the scores is the code. */
+    private fun report(word: String, before: String, after: String): String {
+        val count = results.size
+        val atlas = results.values.count { it.first }
+        val titan = results.values.count { it.second }
+        fun line(name: String, right: Int) = "$name: $right of $count (${right * 100 / count}%)"
+        return "You swiped: $word\nAtlas typed: ${before.ifEmpty { "nothing" }}\nTitanKeys typed: ${after.ifEmpty { "nothing" }}\n\n" +
+            "${line("Atlas", atlas)}\n${line("TitanKeys", titan)}\nAtlas is the version TitanKeys was forked from. TitanKeys is all of its changes combined."
+    }
+
+    private fun unusedDescribe(word: String, done: Attempt): String {
         if (pace(index) == TYPED)
             return "Last sentence: ${done.presses} key presses, ${done.touches} touches, ${done.swipes} read as swipes"
         val verdict = when {
@@ -216,7 +246,7 @@ class RecorderActivity : Activity(), Recording.Sink {
     }
 
     private fun newSession() {
-        val name = "session-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.jsonl"
+        val name = "benchmark-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.jsonl"
         val created = File(directory, name)
         file = created
         preferences.edit().putString("file", name).apply()
@@ -224,6 +254,7 @@ class RecorderActivity : Activity(), Recording.Sink {
             .put("atlas", packageManager.getPackageInfo(packageName, 0).versionName)
             .put("slipMillis", TypingSettings.liftOffGraceMillis(this)))
         details.text = ""
+        results.clear()
         move(0)
     }
 
@@ -266,7 +297,7 @@ class RecorderActivity : Activity(), Recording.Sink {
             word == null -> "Tap Export to save the session."
             pace(index) == TYPED -> "Type this on the keys as you normally would, then press Enter or Next."
             pace(index) == "rushed" -> "Swipe fast. Don't be careful. Then press Enter or Next."
-            else -> "Swipe it at your normal speed, then press Enter or Next."
+            else -> "Swipe it the way you normally would, then press Enter or Next. Don't fix mistakes."
         }
     }
 
@@ -277,11 +308,7 @@ class RecorderActivity : Activity(), Recording.Sink {
     private fun keyboardReady() =
         Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)?.startsWith("$packageName/") == true
 
-    private fun pace(position: Int) = when {
-        position < NORMAL_WORDS -> "normal"
-        position < RecorderWords.LIST.size -> "rushed"
-        else -> TYPED
-    }
+    private fun pace(position: Int) = "benchmark"
 
     private fun point(x: Float, y: Float, time: Long) = JSONArray().put(number(x)).put(number(y)).put(time)
 
@@ -316,6 +343,7 @@ class RecorderActivity : Activity(), Recording.Sink {
             "it was really good to see you", "the new update fixed the problem", "turn left at the next traffic light",
             "they are coming over on saturday", "remember to lock the door when you leave",
         )
+        val BENCHMARK_WORDS = listOf("above", "palace", "among", "turning", "ruling", "park", "exercise", "strongest", "told", "days", "proclaimed", "red", "doctorate", "civil", "star", "use", "learned", "ability", "prevented", "parent", "missions", "priest", "racial", "legal", "hosted", "referring", "completed", "sufficient", "center", "advantages")
         val MUTED = Color.rgb(142, 142, 147)
     }
 }

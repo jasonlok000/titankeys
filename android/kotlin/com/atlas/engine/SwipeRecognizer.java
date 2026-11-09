@@ -113,7 +113,7 @@ public final class SwipeRecognizer implements AutoCloseable {
         Map<String, org.futo.ml.inference.SwipeDecoder.Result> best = new java.util.LinkedHashMap<>();
         // The plain reading goes last, so that the raw results describe the swipe as it was made.
         float speed = keysPerSecond(gesture);
-        Swipe[] readings = speed < MIN_STRETCH_SPEED ? new Swipe[] { gesture } : new Swipe[] { stretched(gesture, speed), gesture };
+        Swipe[] readings = Behaviour.atlas || speed < MIN_STRETCH_SPEED ? new Swipe[] { gesture } : new Swipe[] { stretched(gesture, speed), gesture };
         for (Swipe reading : readings)
             for (org.futo.ml.inference.SwipeDecoder.Result result : read(reading, context, personalized, allowed)) {
                 org.futo.ml.inference.SwipeDecoder.Result previous = best.get(result.word);
@@ -161,7 +161,7 @@ public final class SwipeRecognizer implements AutoCloseable {
             org.futo.ml.inference.SwipeDecoder.Result[] ranked, String[] context, Predicate<String> allowed) {
         float[][] path = SwipeShapes.path(gesture);
         SwipeShapes.Fit[] closest = shapes.closest(path, OUTLINE_CANDIDATES);
-        if (closest.length == 0) return Arrays.copyOf(ranked, Math.min(3, ranked.length));
+        if (Behaviour.atlas || closest.length == 0) return Arrays.copyOf(ranked, Math.min(3, ranked.length));
         float bestFit = closest[0].score;
         Map<String, Double> expected = context.length == 0 ? Map.of() : nextWords(context);
         Map<String, Float> closeness = new HashMap<>();

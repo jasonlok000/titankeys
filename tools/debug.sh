@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 recorder=android/debug/recorder
 keyboard=android/kotlin/com/atlas/keyboard
 backup=$(mktemp -d)
-files=(ink.toml android/src/main/AndroidManifest.xml
+files=(ink.toml android/src/main/AndroidManifest.xml android/debug/recorder/instrumentation.xml
   android/src/main/res/mipmap-anydpi-v26/ic_launcher.xml android/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml)
 for file in "${files[@]}"; do mkdir -p "$backup/$(dirname "$file")"; cp "$file" "$backup/$file"; done
 restore() {
@@ -23,8 +23,11 @@ trap restore EXIT
 # macOS and Linux sed disagree on -i, so write through a temporary file.
 edit() { local file=$1; shift; sed "$@" "$file" > "$file.tmp"; mv "$file.tmp" "$file"; }
 
-edit ink.toml -e 's/^name = .*/name = "TitanKeys Debug"/' -e 's/^package = .*/package = "com.titankeys.debug"/'
-edit android/src/main/AndroidManifest.xml 's/android:label="TitanKeys"/android:label="TitanKeys Debug"/'
+app_name="${APP_NAME:-TitanKeys Debug}"
+app_id="${APP_ID:-com.titankeys.debug}"
+edit ink.toml -e "s/^name = .*/name = \"$app_name\"/" -e "s/^package = .*/package = \"$app_id\"/"
+edit android/src/main/AndroidManifest.xml "s/android:label=\"TitanKeys\"/android:label=\"$app_name\"/"
+edit "$recorder/instrumentation.xml" "s/android:targetPackage=\"com.titankeys.debug\"/android:targetPackage=\"$app_id\"/"
 cp "$recorder"/*.kt "$keyboard/"
 awk 'FNR == NR { entry = entry $0 ORS; next } /<\/application>/ { printf "%s", entry } { print }' \
   "$recorder/manifest.xml" android/src/main/AndroidManifest.xml > android/src/main/AndroidManifest.xml.tmp

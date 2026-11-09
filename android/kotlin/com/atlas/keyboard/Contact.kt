@@ -142,7 +142,7 @@ class Contact {
         if (touching.travel >= if (paging) PAGE_KEYS else SWIPE_KEYS) {
             if (paging) return Outcome.Swipe(points.toList(), first.time, last.time)
             // Checked here because the pickup below trims a swipe to its first letter, which loses its real start.
-            val deletes = isDeleteWordSwipe(points)
+            val deletes = !com.atlas.engine.Behaviour.atlas && isDeleteWordSwipe(points)
             touching.pickup.finish()
             val entry = touching.pickup.entry
             if (entry != null) return Outcome.Swipe(listOf(entry) + points.subList(touching.pickup.entryIndex, points.size), first.time, last.time, deletes)

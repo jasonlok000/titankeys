@@ -50,3 +50,5 @@ adb push android/debug/recorder/samples/session-20261108-114501.jsonl "$dir/in.j
 ```
 
 Hold back one third of the prompts (`index % 3 == 2`) if you tune anything against it, so that you can check the result on swipes the tuning did not see.
+
+`samples/sentences-20261108-192726.jsonl` is a second session by the same person: 24 sentences (126 words), swiped one word at a time, with `pace` set to `sentence`. It tests how well context helps. Each line holds one whole sentence, so `prompt` has several words and `top` has only the last word's suggestions. Some words were deleted and swiped again, so count only the first try at each word, or retries will raise the score.

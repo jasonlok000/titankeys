@@ -3,6 +3,7 @@ package com.atlas.keyboard
 import com.atlas.autocorrect.Autocorrect
 import com.atlas.autocorrect.EndedWord
 import com.atlas.autocorrect.TypedCorrector
+import com.atlas.engine.KeptWords
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypedPredictions
@@ -43,6 +44,8 @@ interface Words {
     fun allowed(word: String): Boolean
     fun known(word: String): Boolean
     fun typed(word: String, rememberCase: Boolean = true)
+    /** The user kept [next] after [previous]. [previous] is null if [next] starts a sentence. */
+    fun keptPair(previous: String?, next: String)
     fun chosen(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun corrected(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun kept(swipe: Swipe, context: String, recognition: Recognition, word: String)
@@ -144,6 +147,7 @@ class Composer(
     private var automaticSpace: Snapshot? = null
     private var fullStop: FullStop? = null
     private val manualWord = TypedWords()
+    private val keptWords = KeptWords { previous, next -> words.keptPair(previous, next) }
     private var correcting: Composition.Swiped? = null
     private var awaitingNextWord: Composition.Swiped? = null
     private var lookAlikeChangedAt = -1
@@ -177,6 +181,7 @@ class Composer(
     val mayLeaveField get() = barrier?.leaves == true || pendingInput.any { it is PendingEdit && it.leaves }
 
     fun start(field: Field, selectionStart: Int, selectionEnd: Int) {
+        keptWords.settle()
         val next = editor.identity()
         val transition = barrier
         val carries = transition?.navigation == true && next != null
@@ -202,6 +207,7 @@ class Composer(
     }
 
     fun stop(terminal: Boolean = false) {
+        keptWords.settle()
         if (terminal && sameIdentity(identity, editor.identity())
             && (composition as? Composition.Swiped)?.chosen == true) leave()
         field = Field.None
@@ -244,6 +250,7 @@ class Composer(
         fullStop = null
         editSnapshot = null
         manualWord.clear()
+        keptWords.clear()
         correcting = null
         awaitingNextWord = null
         expectedSelections.clear()
@@ -288,6 +295,8 @@ class Composer(
         if (updated == selection && expectedSelections.isEmpty() && (anchor == null || snapshot() == anchor)) return false
         selection = updated
         selectionConfirmed = start >= 0 && end >= 0
+        // An app empties its field when it sends a message. Any other move may be the user going back to change a word.
+        if (editor.before()?.isEmpty() == true) keptWords.settle()
         reset()
         predict()
         return true
@@ -447,6 +456,9 @@ class Composer(
                         val reviewer = corrector().takeIf { typedBefore != null }
                         if (reviewer == null || !hold(completed, reviewer)) learnWord(completed, correction)
                         show(choices)
+                        // A swiped word shows its own choices, so no next-word prediction comes along to read the text.
+                        // The look-alike check comes after this because it can change the text, and that must be the last read.
+                        readKeptWords(accepted)
                         checkLookAlike()
                         words.prepare(context + inserted, AtomicBoolean(false))
                         reviewBeforeSwipe(swiped)
@@ -682,10 +694,12 @@ class Composer(
             }
             Editor.Enter.Next, Editor.Enter.Previous -> {
                 learnWord(completed, correction)
+                if (mayLearnFrom(anchor)) keptWords.sent(anchor.before, anchor.selection.end)
                 waitForDestination(owner, navigation = true)
             }
             Editor.Enter.Action -> {
                 learnWord(completed, correction)
+                if (mayLearnFrom(anchor)) keptWords.sent(anchor.before, anchor.selection.end)
                 waitForDestination(owner, navigation = false)
             }
             Editor.Enter.Rejected -> reset()
@@ -716,6 +730,8 @@ class Composer(
         automaticSpace = null
         fullStop = null
         manualWord.clear()
+        // A paste or a cut is the app's change, so what the text says afterwards is not what the user typed.
+        keptWords.clear()
         correcting = null
         awaitingNextWord = null
         expectedSelections.clear()
@@ -948,6 +964,7 @@ class Composer(
         previous?.let { add(it.copy(word = replacement)) }
         lookAlikeChangedAt = start
         val accepted = snapshot()
+        readKeptWords(accepted)
         if (automaticSpace == anchor) automaticSpace = accepted
         fullStop = fullStop?.let { if (it.snapshot == anchor) FullStop(it.time, accepted) else it }
         if (showing is Composition.Swiped) {
@@ -1219,6 +1236,7 @@ class Composer(
     private fun replaceBehind(showing: Composition, anchor: Snapshot, cause: EditCause, count: Int, text: String): Boolean {
         if (!edit(cause, count, text)) return false
         val accepted = snapshot()
+        readKeptWords(accepted)
         if (automaticSpace == anchor) automaticSpace = accepted
         fullStop = fullStop?.let { if (it.snapshot == anchor) FullStop(it.time, accepted) else it }
         if (showing is Composition.Swiped) {
@@ -1281,6 +1299,7 @@ class Composer(
             } else show(emptyList())
             return
         }
+        readKeptWords(anchor)
         if (recall(anchor)) return
         if (after.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) {
             show(emptyList())
@@ -1303,6 +1322,13 @@ class Composer(
                 words.prepare(context.dropLast(TypedPredictions.prefix(context).length) + " " + it + " ", cancelled)
             }
         }
+    }
+
+    private fun mayLearnFrom(anchor: Snapshot) = field.learning && anchor.available && anchor.knownSelection && !anchor.selected
+
+    /** [predict] does not read the text while a swiped word shows, so an edit that can happen then must call this itself. */
+    private fun readKeptWords(anchor: Snapshot) {
+        if (mayLearnFrom(anchor)) keptWords.saw(anchor.before, anchor.selection.end)
     }
 
     private fun endsWord(text: String): Boolean {

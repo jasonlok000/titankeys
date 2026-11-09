@@ -112,6 +112,8 @@ private class FakeEditor : Editor {
 private class FakeWords(private val lists: Lists) : Words {
     val typed = ArrayList<String>()
     val corrected = ArrayList<String>()
+    /** Each pair the next-word predictor was told to learn. "^" stands for the start of a sentence. */
+    val pairs = ArrayList<String>()
     var swiped = ""
     var lookAlike: String? = null
 
@@ -126,6 +128,7 @@ private class FakeWords(private val lists: Lists) : Words {
         typed += word
         if (!lists.words.contains(word)) lists.habits.typed(word)
     }
+    override fun keptPair(previous: String?, next: String) { pairs += "${previous ?: "^"} $next" }
     override fun chosen(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) = Unit
     override fun corrected(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) { corrected += word }
     override fun kept(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) = Unit
@@ -553,6 +556,94 @@ private fun composerFlow(world: Realistic) {
         val typist = Typist(world, world.autocorrect(lists), lists = lists).type("ths is the zorblax now ")
         same(typist.text, "this is the zorblax now ", "A word seen once can still be fixed by the next word")
         same(typist.words.typed.contains("ths"), false, "A word seen once waits for the next word before it is learned")
+    }
+
+    // What the next-word predictor learns.
+    fun pairs(typist: Typist) = typist.words.pairs.toList()
+    same(pairs(typed("one two three four ")), listOf("^ one", "one two"), "A pair counts once two more words have ended")
+    same(pairs(typed("good morning good morning good morning good ")).count { it == "good morning" }, 2, "Repeats count each time")
+    same(pairs(typed("see teh cat sat down now ")), listOf("^ see", "see the", "the cat", "cat sat"), "A fix is learned, not the typo")
+    same(pairs(typed("get dome food and more ")), listOf("^ get", "get some", "some food"), "A second-check fix is learned, not the typo")
+    same(pairs(typed("see teh ").backspace().type(" cat sat down ")), listOf("^ see", "see teh", "teh cat"), "A word the user put back is the word they kept")
+    same(pairs(typed("one two zzz").backspace().backspace().backspace().type("three four five ")),
+        listOf("^ one", "one two", "two three"), "A word the user deleted is not learned")
+    same(pairs(Typist(world).swipe("one").swipe("two").swipe("three").swipe("four")), listOf("^ one", "one two"), "Swiped words are learned")
+    same(pairs(Typist(world).type("one ").swipe("two").type("three four ")), listOf("^ one", "one two"), "Typed and swiped words go together")
+    same(pairs(Typist(world).also { it.words.lookAlike = "we're" }.swipe("were").swipe("going").also { it.words.lookAlike = null }.swipe("to").swipe("go")),
+        listOf("^ we're", "we're going"), "A look-alike that changed is learned as it stands")
+    run {
+        // No word follows in these, so only the edit itself can tell the learner about the new text.
+        fun lookAlike() = Typist(world).also { it.words.lookAlike = "we're" }.swipe("were").swipe("going")
+        val left = lookAlike()
+        same(left.text, "we're going ", "The look-alike changed behind the swiped word")
+        left.composer.stop()
+        same(pairs(left), listOf("^ we're", "we're going"), "Leaving the field learns the look-alike behind a swiped word as it stands")
+
+        val sent = lookAlike()
+        sent.editor.text = ""
+        sent.composer.selectionChanged(0, 0)
+        sent.settle()
+        same(pairs(sent), listOf("^ we're", "we're going"), "An app that sends the text learns the look-alike behind a swiped word as it stands")
+
+        val reviewed = Typist(world).type("get dome ").swipe("food")
+        same(reviewed.text, "get some food ", "The second check changed the word behind the swiped word")
+        reviewed.composer.stop()
+        same(pairs(reviewed), listOf("^ get", "get some", "some food"), "A second-check fix behind a swiped word is learned, not the typo")
+
+        val undone = Typist(world).type("get dome ").swipe("food").backspace()
+        same(undone.text, "get dome food ", "Backspace put the typed word back")
+        undone.composer.stop()
+        same(pairs(undone), listOf("^ get", "get dome", "dome food"), "A word put back behind a swiped word is the word the user kept")
+    }
+    run {
+        val privateField = Field.of(InputType.TYPE_CLASS_TEXT, EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING)
+        val typist = typed("one two three four five ", privateField)
+        typist.composer.stop()
+        same(pairs(typist), emptyList<String>(), "Nothing is learned from a private field")
+        val swiping = Typist(world, field = privateField).swipe("one").swipe("two").swipe("three").swipe("four")
+        swiping.editor.enters = Editor.Enter.Action
+        swiping.composer.enter(EnterKey.Press.Send)
+        swiping.settle()
+        same(pairs(swiping), emptyList<String>(), "Nothing swiped or sent from a private field is learned")
+        val password = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD, 0)
+        same(pairs(typed("one two three four five ", password)), emptyList<String>(), "Nothing is learned from a password field")
+    }
+    run {
+        val send = Typist(world)
+        send.editor.enters = Editor.Enter.Action
+        send.type("good morning")
+        send.composer.enter(EnterKey.Press.Send)
+        send.settle()
+        same(pairs(send), listOf("^ good", "good morning"), "Enter that sends counts every word, the last one too")
+
+        val left = Typist(world).type("good morning ")
+        same(pairs(left), emptyList<String>(), "The last two words wait")
+        left.composer.stop()
+        same(pairs(left), listOf("^ good", "good morning"), "Leaving the field counts the words that waited")
+
+        val emptied = Typist(world).type("good morning ")
+        emptied.editor.text = ""
+        emptied.composer.selectionChanged(0, 0)
+        emptied.settle()
+        same(pairs(emptied), listOf("^ good", "good morning"), "An app that empties its field has sent the words")
+
+        val moved = Typist(world).type("good mornin ")
+        // The fake editor has no text after the cursor, so a cursor moved back shows as shorter text.
+        moved.editor.text = "good"
+        moved.composer.selectionChanged(4, 4)
+        moved.settle()
+        same(pairs(moved), emptyList<String>(), "Moving the cursor back may be to change a word, so the waiting words do not count")
+        moved.composer.stop()
+        same(pairs(moved), emptyList<String>(), "Words dropped by a cursor move do not come back")
+
+        val pasted = Typist(world)
+        pasted.composer.command(true, true) {
+            pasted.editor.text = "words from somewhere else entirely "
+            true
+        }
+        pasted.settle()
+        pasted.type("and then more words ")
+        same(pairs(pasted), listOf("and then"), "Text that the user did not type does not count")
     }
 
     // Words that count as the user's own.

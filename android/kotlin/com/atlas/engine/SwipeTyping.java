@@ -46,6 +46,7 @@ public final class SwipeTyping {
     private volatile Words wordView = new Words(new String[0], new String[0], new String[0]);
     private volatile java.util.Set<String> activeWords = java.util.Set.of();
     private volatile BlockedWords blockedWords;
+    private final NextWordPredictor nextWords;
 
     public static final class Words {
         public final String[] words, descriptions, swipeStatuses;
@@ -78,6 +79,8 @@ public final class SwipeTyping {
     }
     private SwipeTyping(Context context) {
         this.context = context;
+        nextWords = new NextWordPredictor(new UserNGramStore(context), System::currentTimeMillis,
+                word -> wordAllowed(rendered(word, TypingSettings.spelling(context))));
         blockedWords = new BlockedWords(context.getSharedPreferences("blocked_words", 0).getStringSet("words", java.util.Set.of()));
         Calibration.init(context);
         learningEnabled = context.getSharedPreferences("word_learning", 0).getBoolean("enabled",
@@ -255,8 +258,10 @@ public final class SwipeTyping {
                     timing.finish(); completionTiming.record(timing, false, true, false); return;
                 }
                 Map<String, Double> likely = recogniser == null ? Map.of() : recogniser.nextWords(SentenceContext.words(contextText));
-                result = blockedWords.filter(EnglishSpelling.candidates(typedPredictions.suggest(prefix, personal, day,
-                        word -> blockedWords.entries().isEmpty() || wordAllowed(rendered(word, variant)), likely), variant));
+                String[] found = EnglishSpelling.candidates(typedPredictions.suggest(prefix, personal, day,
+                        word -> blockedWords.entries().isEmpty() || wordAllowed(rendered(word, variant)), likely), variant);
+                if (prefix.isEmpty() && learningEnabled) found = NextWordPredictor.combined(found, learnedNextWords(contextText, variant));
+                result = blockedWords.filter(found);
                 boolean upper = prefix.length() > 1 && prefix.equals(prefix.toUpperCase(Locale.UK));
                 for (int i = 0; i < result.length; i++) {
                     String word = learningEnabled && wordsAvailable ? dictionary.restoreCase(result[i], today()) : result[i];
@@ -276,6 +281,26 @@ public final class SwipeTyping {
                 if (!isCancelled) callback.result(blockedWords.filter(words), timing.finished - timing.started, error);
             });
         });
+    }
+
+    /** What the user has kept after this text. A problem with the stored pairs must not cost the model's suggestions. */
+    private List<String> learnedNextWords(String text, EnglishSpelling.Variant variant) {
+        String previous = KeptWords.previousWord(text);
+        if (previous == null) return List.of();
+        try {
+            List<String> learned = previous.isEmpty() ? nextWords.predictSentenceStart() : nextWords.predict(previous);
+            return Arrays.asList(EnglishSpelling.candidates(learned.toArray(new String[0]), variant));
+        } catch (RuntimeException error) {
+            Log.w("TouchpadSwipe", "Could not read the learned next words", error);
+            return List.of();
+        }
+    }
+
+    /** The user kept {@code next} after {@code previous}, which is null if {@code next} starts a sentence. */
+    public void keptPair(String previous, String next) {
+        if (!learningEnabled) return;
+        if (previous == null) nextWords.learnSentenceStart(next);
+        else nextWords.learn(previous, next);
     }
 
     public boolean learningEnabled() { return learningEnabled; }
@@ -324,6 +349,7 @@ public final class SwipeTyping {
                 learningGeneration++;
                 configuredRevision = -1;
                 persisted = true;
+                if (blocked) nextWords.forget(word);
                 syncDictionary();
             } catch (IllegalArgumentException error) {
                 failure = error.getMessage();
@@ -348,6 +374,7 @@ public final class SwipeTyping {
             boolean persisted = false;
             String failure = null;
             try {
+                nextWords.clearAll();
                 LanguageHabits cleared = new LanguageHabits();
                 configs().replaceWords(cleared);
                 dictionary = cleared; wordsAvailable = true; wordsSaveError = ""; configuredRevision = -1;

@@ -33,6 +33,8 @@ class EngineWords(private val typing: SwipeTyping) : Words {
 
     override fun typed(word: String, rememberCase: Boolean) = typing.typed(word, typing.learningGeneration(), rememberCase)
 
+    override fun keptPair(previous: String?, next: String) = typing.keptPair(previous, next)
+
     override fun chosen(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) {
         val learning = recognition.token as? Learning ?: return
         typing.confirm(swipe, context, word, learning.generation, learning.prediction, true)

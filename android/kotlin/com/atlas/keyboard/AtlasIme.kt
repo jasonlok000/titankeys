@@ -57,6 +57,7 @@ class AtlasIme : InputMethodService() {
     private var field = Field.None
     private var editing = false
     private var typedInField = false
+    private var fieldStartedAt = 0L
     private var passingBack = false
     private var inLauncher = false
     private val consumedKeys = HashSet<Int>()
@@ -180,7 +181,10 @@ class AtlasIme : InputMethodService() {
         editor.cancelState()
         super.onStartInput(info, restarting)
         editing = info.inputType != EditorInfo.TYPE_NULL
-        if (!restarting) typedInField = false
+        if (!restarting) {
+            typedInField = false
+            fieldStartedAt = SystemClock.uptimeMillis()
+        }
         field = if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
         inLauncher = editing && info.packageName == launcherPackage()
         contact.releaseKeys()
@@ -232,15 +236,15 @@ class AtlasIme : InputMethodService() {
 
     override fun onWindowHidden() {
         super.onWindowHidden()
-        // A delayed hide from the previous app can arrive after this field has started. Once you have
-        // typed, a hide is the app's own, such as a Done key closing a field it then removes.
+        // A delayed hide from the previous app arrives just after this field starts. A later hide, or one
+        // after you have typed, is the app's own, such as a tap outside the field or a Done key.
         main.removeCallbacks(showStrip)
         if (passingBack) {
             // Now that the strip is gone, the app's own back can run. If its field stays, so does the strip.
             passingBack = false
             main.post(sendBack)
             if (editing) main.postDelayed(showStrip, BACK_SETTLE_MILLIS)
-        } else if (editing && !typedInField) {
+        } else if (editing && !typedInField && SystemClock.uptimeMillis() - fieldStartedAt < STALE_HIDE_MILLIS) {
             main.post(showStrip)
         }
     }
@@ -767,6 +771,8 @@ class AtlasIme : InputMethodService() {
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"
         private const val BACK_SETTLE_MILLIS = 300L
+        /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
+        private const val STALE_HIDE_MILLIS = 500L
         private const val SELECT_AFTER_CURSOR_MILLIS = 250L
         private const val FRAME_MILLIS = 16L
         /** Characters read on each side of the cursor to find the word it is in. */

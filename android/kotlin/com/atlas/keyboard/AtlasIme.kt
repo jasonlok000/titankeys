@@ -48,6 +48,8 @@ class AtlasIme : InputMethodService() {
     private var swipeTyping = true
     /** When cursor mode last ended; a press on Space just after selects the word at the cursor. */
     private var cursorEndedAt = Long.MIN_VALUE
+    /** Whether the last cursor mode moved the cursor; only then does a press on Space select a word. */
+    private var cursorMoved = false
     /** Space was pressed to select a word, so its repeats and release type nothing. */
     private var selectingWithSpace = false
     /** The selection start the app last reported, for apps that don't say where their text sits. */
@@ -89,6 +91,7 @@ class AtlasIme : InputMethodService() {
 
     private val startCursor = Runnable {
         if (!cursor.rest(SystemClock.uptimeMillis())) return@Runnable
+        cursorMoved = false
         // The contact now steers the cursor, so it must not also type when it lifts.
         contact.cancelActive()
         Trace.touch(cursorPath, false)
@@ -319,8 +322,9 @@ class AtlasIme : InputMethodService() {
                 contact.move(samples.drop(1))
                 endCursor()
                 // Alt and Sym turn swipes into strip pages, so the cursor waits until they are off.
-                // A finger that lands during the pause after a key press cannot start cursor mode, as it cannot swipe.
-                if (cursorControl && !stripPaging && contact.canType && cursor.down(first)) {
+                // A finger that lands during or soon after a key press cannot start cursor mode until it lifts,
+                // so a finger that stays on Space after a press does not move the cursor.
+                if (cursorControl && !stripPaging && contact.canStartCursor && cursor.down(first)) {
                     cursor.move(samples.drop(1))
                     cursorPath = ArrayList(samples.filter { it.valid })
                     main.postAtTime(startCursor, first.time + CursorMode.REST_MILLIS)
@@ -403,6 +407,7 @@ class AtlasIme : InputMethodService() {
     /** Sends one arrow key press, in order with the rest of the typing. */
     private fun moveCursor(direction: Int) {
         if (direction == 0) return
+        cursorMoved = true
         val time = SystemClock.uptimeMillis()
         if (Haptics.enabled(this)) haptics.pulse()
         val code = if (direction > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
@@ -411,8 +416,11 @@ class AtlasIme : InputMethodService() {
         enqueue { command(arrow) }
     }
 
-    /** Pressing Space presses the finger into the touchpad, which lifts it, so either may arrive first. */
-    private fun selectsWord(event: KeyEvent) = event.keyCode == KeyEvent.KEYCODE_SPACE && event.repeatCount == 0
+    /**
+     * Pressing Space presses the finger into the touchpad, which lifts it, so either may arrive first. A cursor
+     * mode that did not move the cursor was not wanted, so Space types a space.
+     */
+    private fun selectsWord(event: KeyEvent) = event.keyCode == KeyEvent.KEYCODE_SPACE && event.repeatCount == 0 && cursorMoved
         && (cursor.active || cursor.lifted || event.eventTime - cursorEndedAt in 0..SELECT_AFTER_CURSOR_MILLIS)
 
     /** Selects the word at the cursor, or does nothing between words. */

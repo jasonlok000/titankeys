@@ -9,7 +9,8 @@ import kotlin.math.pow
  * creeps for placing the cursor exactly, and the far edges of the keyboard race across long text. The rest keeps
  * swipes and grazes that cross Space out of cursor mode: the finger must stay within [REST_KEYS] of
  * where it landed for [REST_MILLIS]. Like a swipe, a brief slip off the touchpad doesn't end it: the
- * keyboard holds it through the slip recovery period, and the finger carries on where it lands.
+ * keyboard holds it through the slip recovery period, and the finger carries on where it lands if that is
+ * near the bottom row. A finger that comes back higher up types as usual.
  * Distances are in key widths, as in [Contact].
  */
 class CursorMode {
@@ -50,9 +51,9 @@ class CursorMode {
         position = null
     }
 
-    /** The finger came back after a slip, carrying on cursor mode from where it lands. */
+    /** The finger came back after a slip near the bottom row, carrying on cursor mode from where it lands. */
     fun resume(sample: Sample): Boolean {
-        if (state != State.Lifted || !sample.valid) return false
+        if (state != State.Lifted || !sample.valid || sample.y < BOTTOM_ROW_TOP) return false
         state = State.Active
         position = sample
         return true
@@ -120,7 +121,7 @@ class CursorMode {
     private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
 
     companion object {
-        const val REST_MILLIS = 140L
+        const val REST_MILLIS = 220L
         private const val REST_KEYS = .3f
         /** The ends of Space, in key widths from the left edge of the keyboard. */
         private val SPACE_LEFT = Layout.bottomWidths.take(3).sum()

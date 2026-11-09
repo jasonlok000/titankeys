@@ -18,6 +18,7 @@ import kotlin.math.min
  *
  * New contacts are also ignored for a short time after each key event, so a finger that brushes the
  * keys between presses does not type. Delete and a second Space press in a row add no pause.
+ * Cursor mode waits longer after every key, so a finger still on Space after a press cannot start it.
  */
 class Contact {
     sealed interface Outcome {
@@ -49,6 +50,7 @@ class Contact {
     private val pending = ArrayDeque<Settlement>()
     private val heldKeys = HashSet<Int>()
     private var blockedUntil = Long.MIN_VALUE
+    private var cursorBlockedUntil = Long.MIN_VALUE
     private var lastKeyCode = 0
     private var doubleSpace = false
 
@@ -57,6 +59,9 @@ class Contact {
 
     /** Whether the current contact could still type: it did not start during a key press or the pause after one. */
     val canType: Boolean get() = state is State.Touching
+
+    /** Whether the current contact could start cursor mode: it can type and began after the longer cursor pause. */
+    val canStartCursor: Boolean get() = (state as? State.Touching)?.let { it.first.time >= cursorBlockedUntil } == true
 
     /** Whether the current contact could still type, with how far it has moved in key widths. */
     val travel: Float? get() = (state as? State.Touching)?.travel
@@ -119,6 +124,7 @@ class Contact {
             doubleSpace = code == KeyEvent.KEYCODE_SPACE && lastKeyCode == code
             lastKeyCode = code
         } else heldKeys -= code
+        cursorBlockedUntil = max(cursorBlockedUntil, time + CURSOR_COOLDOWN_MILLIS)
         if (code == KeyEvent.KEYCODE_DEL || doubleSpace && code == KeyEvent.KEYCODE_SPACE) return
         blockedUntil = max(blockedUntil, time + KEY_COOLDOWN_MILLIS)
     }
@@ -221,6 +227,8 @@ class Contact {
         /** How far a swipe must go, in keys across or rows down, to turn a strip page or jump an emoji group. */
         const val PAGE_KEYS = .45f
         private const val KEY_COOLDOWN_MILLIS = 50L
+        /** The pause after any key press or release, Delete and Space included, before cursor mode can start. */
+        private const val CURSOR_COOLDOWN_MILLIS = 150L
         private const val SAMPLE_DISTANCE = .025f
         private const val REQUIRED_EVIDENCE = .12f
         private const val STRAIGHT = .819152f

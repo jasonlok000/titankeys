@@ -18,7 +18,7 @@ export async function transfer(mode: "export" | "import", from: "data" | "failur
   replace(finished[mode]);
 }
 
-/** Leaves a result page for Your data. */
+/** Leaves a result page for Your words. */
 export function returnToData() {
   replace("/settings");
   navigate("/settings/data");

@@ -100,7 +100,8 @@ class AtlasIme : InputMethodService() {
     private val sendBack = Runnable { if (!BackService.back() && editing) sendDownUpKeyEvents(KeyEvent.KEYCODE_BACK) }
 
     private val startCursor = Runnable {
-        if (!cursor.rest(SystemClock.uptimeMillis())) return@Runnable
+        // A key pressed while the finger rests ends the contact, so it cannot start cursor mode.
+        if (!contact.canStartCursor || !cursor.rest(SystemClock.uptimeMillis())) return@Runnable
         cursorMoved = false
         // The contact now steers the cursor, so it must not also type when it lifts.
         contact.cancelActive()
@@ -313,7 +314,7 @@ class AtlasIme : InputMethodService() {
         if (!field.words) return
         typedInField = true
         val samples = touchpad.samples(event)
-        when (event.actionMasked) {
+        when (touchpad.action(event)) {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
                 haptics.begin(samples.firstOrNull())
@@ -330,12 +331,11 @@ class AtlasIme : InputMethodService() {
                 contact.move(samples.drop(1))
                 endCursor()
                 // Alt and Sym turn swipes into strip pages, so the cursor waits until they are off.
-                // A finger that lands during or soon after a key press cannot start cursor mode until it lifts,
-                // so a finger that stays on Space after a press does not move the cursor.
+                // Cursor mode waits until typing ends. The finger that pushed Space cannot start it until it lifts.
                 if (cursorControl && !stripPaging && contact.canStartCursor && cursor.down(first)) {
                     cursor.move(samples.drop(1))
                     cursorPath = ArrayList(samples.filter { it.valid })
-                    main.postAtTime(startCursor, first.time + CursorMode.REST_MILLIS)
+                    main.postAtTime(startCursor, maxOf(first.time + CursorMode.REST_MILLIS, contact.typingUntil))
                 }
                 Trace.touch(contact.points, false)
             }
@@ -351,7 +351,10 @@ class AtlasIme : InputMethodService() {
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
                 if (swipeTyping && !stripPaging && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
-                    || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
+                    || !isTapKey(Layout.keyAt(first.x, first.y)))) {
+                    // While you type, the swipe stays quiet. It starts to vibrate when typing ends.
+                    haptics.move(samples.filter { it.time >= contact.typingUntil })
+                }
                 Trace.touch(contact.points, false)
             }
             MotionEvent.ACTION_UP -> {

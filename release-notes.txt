@@ -6,6 +6,7 @@
 - Cleaner typing: Atlas removes the space before punctuation and corrects words such as "i" and "dont".
 - Delete a word: Push Alt, then push Backspace.
 - Swipe typing setting: You can turn off swipe typing in Settings.
+- Change the keyboard: Push and hold Sym to select a different keyboard.
 
 ## New
 - Emoji: Push Sym to show emoji on the strip. Touch an emoji to type it. To see more emoji, move your finger across the keyboard. Your recent emoji show first.
@@ -21,6 +22,7 @@
 - Punctuation and capitals: When you type with the keys, Atlas removes the space before a comma, full stop, or other punctuation. Atlas also corrects words such as "i" to "I" and "dont" to "don't". If the next word makes it clear, Atlas changes words such as "ill" to "I'll". Swipe typing already does this.
 - Auto-punctuation setting: To stop these changes to punctuation, go to Settings and turn off Auto-punctuation. This also stops the full stop from two spaces.
 - Swipe typing setting: To stop swipes from typing words, go to Settings and turn off Swipe typing. Tap keys and cursor mode continue to operate.
+- Change the keyboard: Push and hold Sym. A list of your keyboards shows. Select a keyboard to use it. A short push on Sym continues to show emoji.
 - Longer words first: When you type with the keys, the strip shows longer words before the word that you typed. For example, "deli" shows "delicious" and "delight" first.
 
 ## Fixed

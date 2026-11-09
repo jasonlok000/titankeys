@@ -36,6 +36,8 @@ export const guide: { title: string; rows: GuideRow[] }[] = [
         terms: ["punctuation", "characters", "special characters", "question mark", "exclamation", "comma", "apostrophe", "quotes", "brackets", "at sign", "hashtag", "hash", "dollar", "pound", "euro", "currency", "slash", "dash", "hyphen", "underscore", "ampersand", "percent", "accents", "maths", "math"] },
       { title: "Emoji", text: "Sym operates like Shift. The strip shows emoji, with recent emoji first. Swipe left or right on the keyboard to see more, or up or down for the next group.",
         terms: ["emojis", "emoticons", "smiley", "smileys", "faces", "emoji keyboard", "hearts", "thumbs up", "stickers", "reactions", "icons", "pictures", "sym key"] },
+      { title: "Change the keyboard", text: "Push and hold Sym. Then select a different keyboard from the list.",
+        terms: ["switch keyboard", "change keyboard", "other keyboard", "another keyboard", "keyboard list", "keyboard picker", "input method", "go back", "hold sym", "long press sym"] },
     ],
   },
   {

@@ -86,6 +86,17 @@ class Modifiers {
 
     fun isHeld(code: Int) = code in held
 
+    /** A held key did a different job, such as a long hold on Sym. Its key turns off and it stops counting as held. */
+    fun cancel(code: Int) {
+        when (keyOf(code) ?: return) {
+            Key.Shift -> shift = Level.Off
+            Key.Alt -> alt = Level.Off
+            Key.Sym -> sym = Level.Off
+        }
+        held -= code
+        usedWhileHeld -= code
+    }
+
     fun clear() {
         shift = Level.Off
         alt = Level.Off

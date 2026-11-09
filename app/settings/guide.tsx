@@ -21,6 +21,10 @@ export default function Guide() {
       <Row title="Delete a word" subtitle="Push Alt, then push Backspace. You can also use Ctrl and Backspace, or flick left from Backspace." wrapSubtitle />
       <Row title="More symbols" subtitle="Push Sym to open the panel. Each key shows a symbol. Rest your finger on a key to see its symbol larger. Push the key to type the symbol. The panel then closes. Swipe up or down on the keyboard to see more." wrapSubtitle />
       <Row title="Emoji" subtitle="Push Sym again to show emoji, with recent emoji first. Push a key to type its emoji. Swipe left or right on the keyboard to change the group, or up or down to see more. Push Sym again to close the panel." wrapSubtitle />
+      <Row title="Ctrl shortcuts" subtitle="Hold Ctrl to see the shortcuts on the keys." />
+      <Row title="See what a shortcut does" subtitle="Hold Ctrl and rest your finger on the key." />
+      <Row title="Use a shortcut" subtitle="Hold Ctrl and push the key." />
+      <Row title="Use fn as Ctrl" subtitle="Turn this on in Settings to use fn in place of Ctrl." />
     </Section>
     <Section title="Your words">
       <Row title="New words" subtitle="TitanKeys learns the new words that you use. To see, add or block words, open Settings and select Your words." wrapSubtitle />
@@ -29,6 +33,7 @@ export default function Guide() {
     <Section title="Problems">
       <Row title="Check the setup" subtitle="If a part of TitanKeys does not operate correctly, open Settings and select Setup. Make sure that all steps show Done." wrapSubtitle />
       <Row title="Sym does not open the panel" subtitle="In the phone Settings, open Shortcut keys. Set Sym key to Programmable key." wrapSubtitle />
+      <Row title="fn does not operate as Ctrl" subtitle="In the phone Settings, open Shortcut keys. Set fn key to Programmable key." />
       <Row title="Swiping does not operate in an app" subtitle="Open Scroll assistant and find the app. Make sure that it shows Sliding Mode 1." wrapSubtitle />
     </Section>
   </Screen>;

@@ -107,10 +107,16 @@ class AtlasIme : InputMethodService() {
 
     /** An app's own hide, such as from a Done key, leaves the window closed, so a panel that opens then must show it. */
     private val showPanel = Runnable {
-        if (!panelOpen || isInputViewShown) return@Runnable
+        if (!panelShown || isInputViewShown) return@Runnable
         showStrip.run()
         // It could not show, so it must not take the next key.
         if (!isInputViewShown) closePanel()
+    }
+
+    private val showCtrlOverlay = Runnable {
+        modifiers.ctrlWaitOver(SystemClock.uptimeMillis())
+        showModifiers()
+        if (modifiers.ctrlOverlay && !isInputViewShown) main.post(showPanel)
     }
 
     // Apps on Android's newer back handling ignore a back key from a keyboard, so a system back goes first.
@@ -236,13 +242,14 @@ class AtlasIme : InputMethodService() {
         launcherFieldHasText = inLauncher && info.initialSelStart > 0
         contact.releaseKeys()
         clearSettlements()
-        modifiers.clear()
+        modifiers.fieldStarted(restarting, editing)
         deadKeyPending = false
         showModifiers()
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
         holdSymbols = TypingSettings.holdSymbols(this)
         holdEngine.threshold(TypingSettings.holdSymbolMillis(this))
+        modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         cursorControl = TypingSettings.cursorControl(this)
         val corrects = TypingSettings.autocorrect(this)
         composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
@@ -400,12 +407,12 @@ class AtlasIme : InputMethodService() {
 
     private fun motion(event: MotionEvent) {
         // The panel works in every field, also where the touchpad types no words.
-        if (!field.words && !panelOpen) return
+        if (!field.words && !panelShown) return
         typedInField = true
         val samples = touchpad.samples(event)
         Recording.sink?.motion(event, samples)
         inputLog()?.motion(event, samples)
-        if (panelOpen) hover(event, samples)
+        if (panelShown) hover(event, samples)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
@@ -589,8 +596,11 @@ class AtlasIme : InputMethodService() {
 
     private val panelOpen get() = modifiers.panel != Modifiers.Panel.Closed
 
-    /** The touchpad types nothing while Alt is on or the panel is open. */
-    private val altOrPanel get() = modifiers.alt != Modifiers.Level.Off || panelOpen
+    /** The Sym panel or the Ctrl overlay is on screen. */
+    private val panelShown get() = panelOpen || modifiers.ctrlOverlay
+
+    /** The touchpad types nothing while Alt is on or a panel is on screen. */
+    private val altOrPanel get() = modifiers.alt != Modifiers.Level.Off || panelShown
 
     private fun clearSettlements() {
         inputGeneration++
@@ -790,7 +800,8 @@ class AtlasIme : InputMethodService() {
         if (!event.isSystem) showStripAfterBack()
         // The touchpad hears the physical press now, even when the letter waits for its release.
         contact.key(keyCode, true, event.eventTime)
-        val heldBack = holdBack(event)
+        val carried = carryCtrl(event)
+        val heldBack = holdBack(carried)
         if (keyCode == KeyEvent.KEYCODE_SPACE && selectingWithSpace) return true
         if (selectsWord(event)) {
             endCursor()
@@ -803,8 +814,13 @@ class AtlasIme : InputMethodService() {
         // Any other key press means the finger was pressing, not resting on the touchpad.
         endCursor()
         if (heldBack) return true
+        if (ctrlKey(event)) {
+            consumedKeys += keyCode
+            return true
+        }
+        if (event.repeatCount == 0) modifiers.keyWithCtrl(event.eventTime)
         if (pendingInput.isNotEmpty()) {
-            val captured = KeyEvent(event)
+            val captured = KeyEvent(carried)
             consumedKeys += keyCode
             enqueue(captured) {
                 key(captured)
@@ -812,7 +828,7 @@ class AtlasIme : InputMethodService() {
             }
             return true
         }
-        val handled = key(event)
+        val handled = key(carried)
         if (handled) consumedKeys += keyCode
         showModifiers()
         return handled || super.onKeyDown(keyCode, event)
@@ -843,6 +859,7 @@ class AtlasIme : InputMethodService() {
             return true
         }
         if (holdEngine.up(keyCode, event.deviceId, event.eventTime)) return true
+        if (ctrlKey(event)) return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
         if (pendingInput.isNotEmpty()) {
             val captured = KeyEvent(event)
             consumedKeys.remove(keyCode)
@@ -857,6 +874,27 @@ class AtlasIme : InputMethodService() {
             showModifiers()
         }
         return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
+    }
+
+    /**
+     * Follows a key that counts as Ctrl, and returns false for any other key. Keys carry Ctrl from the moment they arrive,
+     * so Ctrl does not wait in the input queue.
+     */
+    private fun ctrlKey(event: KeyEvent): Boolean {
+        if (!modifiers.isCtrl(event.keyCode)) return false
+        val shown = modifiers.ctrlOverlay
+        modifiers.key(event)
+        // A finger that rested on the overlay must not type when it lifts.
+        if (shown && !modifiers.ctrlOverlay) contact.cancel()
+        showModifiers()
+        return true
+    }
+
+    /** A key pushed while Ctrl is held carries Ctrl, also when that Ctrl is fn, which the phone reports as its own modifier. */
+    private fun carryCtrl(event: KeyEvent): KeyEvent {
+        if (!modifiers.ctrlHeld || event.isCtrlPressed && !event.isFunctionPressed) return event
+        return KeyEvent(event.downTime, event.eventTime, event.action, event.keyCode, event.repeatCount,
+            Modifiers.withCtrl(event.metaState), event.deviceId, event.scanCode, event.flags, event.source)
     }
 
     /** Captures each app-handled key as a paired command in the composer's ordered input queue. */
@@ -969,9 +1007,12 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun showModifiers() {
-        strip?.visibility = if (panelOpen) View.GONE else View.VISIBLE
+        main.removeCallbacks(showCtrlOverlay)
+        modifiers.ctrlOverlayAt?.let { main.postAtTime(showCtrlOverlay, it) }
+        strip?.visibility = if (panelShown) View.GONE else View.VISIBLE
         panel?.mode = modifiers.panel
-        contact.paging = panelOpen
+        panel?.ctrl = modifiers.ctrlOverlay
+        contact.paging = panelShown
     }
 
     override fun onDestroy() {
@@ -1007,8 +1048,7 @@ class AtlasIme : InputMethodService() {
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MOVE_HOME,
             KeyEvent.KEYCODE_MOVE_END, KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_PAGE_DOWN)
         private val FIELD_LEAVING_KEYS = setOf(KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_TAB)
-        private val FIELD_SHORTCUTS = setOf(KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_X,
-            KeyEvent.KEYCODE_V, KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Y)
+        private val FIELD_SHORTCUTS = Modifiers.CTRL_ACTIONS.keys.map { KeyEvent.KEYCODE_A + (it[0] - 'A') }.toSet()
         private val DESTRUCTIVE_SHORTCUTS = setOf(KeyEvent.KEYCODE_X, KeyEvent.KEYCODE_V,
             KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Y)
     }

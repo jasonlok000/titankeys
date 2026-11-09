@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Checks the Shift, Alt and Sym logic, which doesn't need Android.
+# Checks the Shift, Alt, Sym and Ctrl logic, which doesn't need Android.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}

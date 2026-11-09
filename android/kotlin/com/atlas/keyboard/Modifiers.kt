@@ -7,6 +7,9 @@ import android.view.KeyEvent
  * within [DOUBLE_PRESS_MILLIS] locks it, and a third press releases it. Holding the key works as usual.
  * Each press of Sym moves the panel to its next step, and the panel stays open after Sym is let go.
  * Only one of them is on at a time.
+ *
+ * Ctrl is separate from those: it has no sticky state and applies only while it is held. Once it has been held for
+ * [CTRL_OVERLAY_MILLIS], the Ctrl overlay shows until the last Ctrl key is let go.
  */
 class Modifiers {
     enum class Level { Off, Once, Locked }
@@ -24,6 +27,21 @@ class Modifiers {
     private val held = HashMap<Int, Long>()
     private val usedWhileHeld = HashSet<Int>()
     private var symHeld = false
+    /** Each key that counts as Ctrl and is down. Key Mapper's Ctrl and fn together are still one Ctrl. */
+    private val ctrlKeys = HashSet<Int>()
+
+    /** fn counts as a Ctrl key, for the Use fn as Ctrl setting. */
+    var fnIsCtrl = false
+
+    /** Ctrl has been held long enough to show what its shortcuts do. */
+    var ctrlOverlay = false
+        private set
+
+    /** When the Ctrl overlay shows if Ctrl stays down, or null if it is not waiting to show. */
+    var ctrlOverlayAt: Long? = null
+        private set
+
+    val ctrlHeld get() = ctrlKeys.isNotEmpty()
 
     val metaState: Int
         get() {
@@ -66,7 +84,28 @@ class Modifiers {
     /** Back to normal typing, after an item is picked or the keyboard is hidden. */
     fun closePanel() {
         panel = Panel.Closed
+        closeCtrlOverlay()
     }
+
+    private fun closeCtrlOverlay() {
+        ctrlOverlay = false
+        ctrlOverlayAt = null
+    }
+
+    /** A key pushed before the overlay shows is a quick shortcut, so the overlay waits again and does not flash. */
+    fun keyWithCtrl(time: Long) {
+        if (ctrlOverlayAt != null) ctrlOverlayAt = time + CTRL_OVERLAY_MILLIS
+    }
+
+    /** The overlay's timer has run. It shows if the time has come and Ctrl is still down. */
+    fun ctrlWaitOver(now: Long) {
+        val due = ctrlOverlayAt ?: return
+        if (now < due) return
+        ctrlOverlayAt = null
+        ctrlOverlay = true
+    }
+
+    fun isCtrl(code: Int) = code == KeyEvent.KEYCODE_CTRL_LEFT || code == KeyEvent.KEYCODE_CTRL_RIGHT || fnIsCtrl && code == FN
 
     fun key(event: KeyEvent) {
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) down(event.keyCode, event.eventTime)
@@ -74,6 +113,11 @@ class Modifiers {
     }
 
     fun down(code: Int, time: Long) {
+        if (isCtrl(code)) {
+            if (ctrlKeys.isEmpty()) ctrlOverlayAt = time + CTRL_OVERLAY_MILLIS
+            ctrlKeys += code
+            return
+        }
         if (code == KeyEvent.KEYCODE_SYM) {
             if (!symHeld) pressSym()
             symHeld = true
@@ -87,6 +131,10 @@ class Modifiers {
     }
 
     fun up(code: Int, time: Long) {
+        if (isCtrl(code)) {
+            if (ctrlKeys.remove(code) && ctrlKeys.isEmpty()) closeCtrlOverlay()
+            return
+        }
         if (code == KeyEvent.KEYCODE_SYM) symHeld = false
         val key = keyOf(code) ?: return
         val pressedAt = held.remove(code) ?: return
@@ -126,19 +174,39 @@ class Modifiers {
 
     fun isHeld(code: Int) = code in held || code == KeyEvent.KEYCODE_SYM && symHeld
 
-    fun clear() {
+    /** An app can restart its field after a shortcut. With [keepCtrl], Ctrl stays down through that so that another can follow. */
+    fun clear(keepCtrl: Boolean = false) {
         shift = Level.Off
         alt = Level.Off
         panel = Panel.Closed
         held.clear()
         usedWhileHeld.clear()
         symHeld = false
+        if (keepCtrl) return
+        ctrlKeys.clear()
+        closeCtrlOverlay()
     }
+
+    /**
+     * A field has started. Ctrl stays down through a restart only when the field can still be typed in. The keyboard
+     * does not follow Ctrl in a field that can't, so it would miss the release and leave Ctrl on for every later key.
+     */
+    fun fieldStarted(restarting: Boolean, editing: Boolean) = clear(keepCtrl = restarting && editing)
 
     companion object {
         const val DOUBLE_PRESS_MILLIS = 300L
         /** Shift down for at least this long was held, not pressed. It matches an Android long press. */
         const val HOLD_MILLIS = 400L
+        /** How long Ctrl stays down before the overlay shows, so a quick shortcut does not flash it. */
+        const val CTRL_OVERLAY_MILLIS = 200L
+        /** The key code that the Use fn as Ctrl setting listens for. */
+        const val FN = KeyEvent.KEYCODE_FUNCTION
+
+        /** What Ctrl does with each letter that the keyboard treats as a field shortcut. */
+        val CTRL_ACTIONS = mapOf("A" to "Select all", "C" to "Copy", "X" to "Cut", "V" to "Paste", "Z" to "Undo", "Y" to "Redo")
+
+        /** The meta state of a key pushed while Ctrl is held. Ctrl takes the place of fn, so the key acts as a held shortcut does. */
+        fun withCtrl(meta: Int) = meta and KeyEvent.META_FUNCTION_ON.inv() or KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON
 
         private fun keyOf(code: Int) = when (code) {
             KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> Key.Shift

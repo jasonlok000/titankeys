@@ -90,6 +90,15 @@ public final class TypingSettings {
         preferences(context).edit().putInt("hold_symbol_ms", HoldEngine.clamp(millis)).apply();
     }
 
+    /** The keyboard treats fn as Ctrl, so Key Mapper is not needed for this. It is off until the user turns it on. */
+    public static boolean fnAsCtrl(Context context) {
+        return preferences(context).getBoolean("fn_as_ctrl", false);
+    }
+
+    public static void fnAsCtrl(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("fn_as_ctrl", enabled).apply();
+    }
+
     /** What Enter does in fields with more than one line: "send", "newline" or "app". */
     public static String enterKey(Context context) {
         return preferences(context).getString("enter_key", "send");

@@ -14,6 +14,9 @@ import com.atlas.engine.EmojiPages
 /**
  * The panel that Sym opens: the top three rows of the keyboard, with a symbol or an emoji in place of each letter.
  * The other keys in those rows keep their own labels. A finger that rests on a key shows that key's item larger.
+ *
+ * While Ctrl is held it shows Ctrl's shortcuts instead. Each key that has a shortcut shows its combination, all other keys
+ * are blank, and a finger that rests on a key shows what its shortcut does.
  */
 class SymPanel(
     context: Context,
@@ -38,7 +41,16 @@ class SymPanel(
         set(value) {
             if (field == value) return
             field = value
-            pages?.reset()
+            symPages?.reset()
+            hover = ""
+            render()
+        }
+
+    /** Ctrl's shortcuts cover the symbols or emoji until Ctrl is let go, and those then show again at the same page. */
+    var ctrl = false
+        set(value) {
+            if (field == value) return
+            field = value
             hover = ""
             render()
         }
@@ -51,11 +63,13 @@ class SymPanel(
             showHover()
         }
 
-    private val pages get() = when (mode) {
+    private val symPages get() = when (mode) {
         Modifiers.Panel.Symbols -> symbols
         Modifiers.Panel.Emoji -> emoji
         Modifiers.Panel.Closed -> null
     }
+
+    private val pages get() = if (ctrl) null else symPages
 
     init {
         orientation = VERTICAL
@@ -99,7 +113,8 @@ class SymPanel(
     private fun cell(key: String) = TextView(context).apply {
         typeface = this@SymPanel.typeface
         gravity = Gravity.CENTER
-        isSingleLine = true
+        // A Ctrl combination takes two lines to fit on a key. A symbol or an emoji is too short to wrap.
+        maxLines = 2
         includeFontPadding = false
         isFocusable = false
         if (Layout.isLetter(key)) {
@@ -118,35 +133,46 @@ class SymPanel(
     private val muted get() = if (dark) Color.GRAY else Color.DKGRAY
 
     private fun render() {
-        visibility = if (mode == Modifiers.Panel.Closed) GONE else VISIBLE
+        visibility = if (mode == Modifiers.Panel.Closed && !ctrl) GONE else VISIBLE
         setBackgroundColor(paper)
         setPadding(dp(4), 0, dp(4), navigationInset)
         val current = pages
+        // What a shortcut does is longer than a symbol, so it takes the whole header.
+        group.visibility = if (ctrl) GONE else VISIBLE
+        pageNumber.visibility = group.visibility
         group.setTextColor(muted)
         group.text = current?.group().orEmpty()
         preview.setTextColor(ink)
+        preview.textSize = if (ctrl) ACTION_SIZE else PREVIEW_SIZE
         pageNumber.setTextColor(muted)
         val count = current?.pageCount() ?: 0
         pageNumber.text = if (count > 1) "${current?.pageNumber()}/$count" else ""
         for ((key, view) in cells) {
-            if (!Layout.isLetter(key)) continue
-            val value = item(key)
+            if (!Layout.isLetter(key)) {
+                view.text = if (ctrl) "" else key
+                continue
+            }
+            val action = Modifiers.CTRL_ACTIONS[key]
+            val value = if (ctrl) action?.let { "Ctrl\n$key" } else item(key)
             view.text = value.orEmpty()
-            view.isEnabled = value != null
-            view.contentDescription = value?.let { "Insert $it" }
+            view.textSize = if (ctrl) COMBINATION_SIZE else ITEM_SIZE
+            // A shortcut runs from the key, so a touch on the screen does nothing here.
+            view.isEnabled = !ctrl && value != null
+            view.contentDescription = if (ctrl) action?.let { "Ctrl $key, $it" } else value?.let { "Insert $it" }
         }
-        contentDescription = when (mode) {
-            Modifiers.Panel.Symbols -> "Symbols. Push a key to type its symbol. Swipe up or down on the keyboard to see more."
-            Modifiers.Panel.Emoji -> "Emoji, ${current?.group().orEmpty()}. Push a key to type its emoji. " +
+        contentDescription = when {
+            ctrl -> "Ctrl shortcuts. Rest a finger on a key to see what its shortcut does. Push the key to use it."
+            mode == Modifiers.Panel.Symbols -> "Symbols. Push a key to type its symbol. Swipe up or down on the keyboard to see more."
+            mode == Modifiers.Panel.Emoji -> "Emoji, ${current?.group().orEmpty()}. Push a key to type its emoji. " +
                 "Swipe left or right on the keyboard to change the group, or up or down to see more."
-            Modifiers.Panel.Closed -> null
+            else -> null
         }
         showHover()
     }
 
-    /** A cell under a resting finger changes colour, and its item shows larger at the top of the panel. */
+    /** A cell under a resting finger changes colour, and its item or shortcut shows larger at the top of the panel. */
     private fun showHover() {
-        val shown = item(hover)
+        val shown = if (ctrl) Modifiers.CTRL_ACTIONS[hover] else item(hover)
         preview.text = shown.orEmpty()
         for ((key, view) in cells) {
             val hovered = shown != null && key == hover
@@ -167,7 +193,9 @@ class SymPanel(
         const val ROW_HEIGHT = 46
         const val HEADER_SIZE = 14f
         const val PREVIEW_SIZE = 36f
+        const val ACTION_SIZE = 24f
         const val ITEM_SIZE = 22f
+        const val COMBINATION_SIZE = 12f
         const val LABEL_SIZE = 15f
     }
 }

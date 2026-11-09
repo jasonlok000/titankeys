@@ -30,6 +30,8 @@ export default function Settings() {
         onChange={suggestionBar => save.run({ suggestionBar })} />
       <Toggle label="Cursor control" value={settings.cursorControl}
         onChange={cursorControl => save.run({ cursorControl })} />
+      <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}
+        onChange={fnAsCtrl => save.run({ fnAsCtrl })} />
     </Section>
     <Section title="Swipe typing">
       <Field label="Slip recovery period" href="/settings/lift">{liftLabel(settings)}</Field>

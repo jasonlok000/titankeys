@@ -58,7 +58,10 @@ class Contact {
     private var lastKeyDown = Long.MIN_VALUE
     private var typing = false
 
-    /** The Sym panel is open, so swipes turn its pages: they can be shorter and start on any key. */
+    /**
+     * The Sym panel or the Ctrl overlay is on screen, so a finger counts even while a key is held, such as Ctrl.
+     * Swipes turn the panel's pages: they can be shorter and start on any key.
+     */
     var paging = false
 
     /** Whether the current contact could still type, with how far it has moved in key widths. */

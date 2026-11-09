@@ -3,6 +3,7 @@ package com.atlas.keyboard
 import android.view.KeyEvent
 
 private const val KEY = KeyEvent.KEYCODE_A
+private const val CTRL = KeyEvent.KEYCODE_CTRL_LEFT
 /** One key width and one key row on the touchpad, which runs from 0 to 1 on each axis. */
 private const val KEY_WIDTH = .1f
 private const val ROW_HEIGHT = .25f
@@ -15,6 +16,9 @@ fun main() {
     panelShortSwipe()
     panelSlowPath()
     keyPressCancelsPanelSwipe()
+    touchWaitsForTheCtrlOverlay()
+    ctrlOverlayTakesATouch()
+    ctrlOverlayDropsATouchWhenItCloses()
     println("Contact checks passed")
 }
 
@@ -93,4 +97,35 @@ private fun keyPressCancelsPanelSwipe() {
     val settlement = contact.up(emptyList(), 1_100)!!
     contact.key(KEY, true, 1_110)
     same(contact.settle(settlement, settlement.deadline), null, "Pushing a key as the finger lifts must not also change the page")
+}
+
+private fun touchWaitsForTheCtrlOverlay() {
+    val contact = Contact()
+    contact.key(CTRL, true, 1_000)
+    contact.down(at(.25f, .4f, 1_100))
+    same(contact.travel, null, "A touch while Ctrl waits for the overlay must not type")
+}
+
+private fun ctrlOverlayTakesATouch() {
+    val contact = Contact()
+    contact.key(CTRL, true, 1_000)
+    contact.paging = true
+    contact.down(at(.25f, .4f, 1_250))
+    same(contact.travel, 0f, "The overlay must take a resting finger while Ctrl is held")
+    contact.move(listOf(at(.25f, .4f, 1_700)))
+    val settlement = contact.up(emptyList(), 1_800)
+    same(settlement?.let { contact.settle(it, it.deadline) }, null, "A resting finger in the overlay must do nothing when it lifts")
+}
+
+private fun ctrlOverlayDropsATouchWhenItCloses() {
+    // AtlasIme cancels the contact when Ctrl is let go. The finger then lifts with the overlay closed.
+    val contact = Contact()
+    contact.key(CTRL, true, 1_000)
+    contact.paging = true
+    contact.down(at(.25f, .4f, 1_250))
+    contact.move(listOf(at(.65f, .4f, 1_400)))
+    contact.key(CTRL, false, 1_500)
+    contact.paging = false
+    contact.cancel()
+    same(contact.up(emptyList(), 1_600), null, "A finger that rested on the overlay must not type when it lifts")
 }

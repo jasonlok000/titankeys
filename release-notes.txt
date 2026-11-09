@@ -21,6 +21,7 @@
 - Auto-punctuation setting: To stop these changes to punctuation, go to Settings and turn off Auto-punctuation. This also stops the full stop from two spaces.
 
 ## Fixed
+- Saved words: Words with a typing error do not show in Saved words. Atlas shows a new word after you use it 3 times. When you delete a word immediately after you type it, Atlas does not learn it. Words that you add yourself stay active.
 - Unwanted touches: When you type, a finger on the keys does not start a swipe. It also does not type a tap key.
 - Suggestion bar: When you push Backspace or touch a key, the words stay on the bar until the new words show.
 - Empty suggestion bar: In password, email, and number fields, Atlas does not show the suggestion bar.

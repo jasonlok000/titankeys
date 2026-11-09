@@ -40,6 +40,8 @@ public final class SwipeTyping {
     private volatile boolean wordsAvailable;
     private volatile String wordsSaveError = "";
     private volatile long learningGeneration, accuracyEpoch;
+    /** The last word that {@link #typed} counted. Only the worker uses it. */
+    private String lastTyped;
     private volatile String learningStatus = "Loading personal dictionary…", accuracyStatus = "Loading accuracy stats…";
     private long configuredRevision = -1;
     private int configuredDay = -1, activeCount;
@@ -468,7 +470,7 @@ public final class SwipeTyping {
         String importWarning = configs == null ? "" : configs.importWarning();
         learningStatus = (wordsAvailable ? dictionary.status(today()) : "Saved words unavailable; existing files preserved") + importWarning;
         int day = today();
-        wordView = new Words(dictionary.spellings(), dictionary.descriptions(day), dictionary.swipeStatuses(day));
+        wordView = new Words(dictionary.spellings(day), dictionary.descriptions(day), dictionary.swipeStatuses(day));
         accuracyStatus = accuracy.summary();
     }
 
@@ -484,7 +486,8 @@ public final class SwipeTyping {
             if (standard(word) || !wordAllowed(word)) return;
             long revision = dictionary.revision;
             dictionary.typed(intended, today(), rememberCase);
-            if (revision == dictionary.revision) return;
+            lastTyped = revision == dictionary.revision ? null : word;
+            if (lastTyped == null) return;
             try { syncDictionary(); }
             catch (RuntimeException | LinkageError error) {
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
@@ -493,6 +496,25 @@ public final class SwipeTyping {
             saveDictionary(); publish();
         });
     }
+    /** The user deleted the word they just typed, so that use was a mistake. */
+    public void untyped(String intended, long generation) {
+        String word = SwipeWords.normalise(intended);
+        if (word.isEmpty()) return;
+        worker.execute(() -> {
+            // Only a use that was counted can be taken back.
+            if (!word.equals(lastTyped)) return;
+            lastTyped = null;
+            if (!learningEnabled || !wordsAvailable || generation != learningGeneration || recogniser == null) return;
+            long revision = dictionary.revision;
+            dictionary.untyped(word, today());
+            try { saveLearningChanges(revision); }
+            catch (RuntimeException | LinkageError error) {
+                if (recogniser != null && !recogniser.isOpen()) unavailable(error);
+                Log.w("TouchpadSwipe", "Could not refresh learned words");
+            }
+        });
+    }
+
     public void confirm(Swipe gesture, String text, String intended, long generation, Prediction prediction, boolean candidate) {
         feedback(gesture, text, intended, generation, prediction, candidate ? LearningEvidence.CHOICE : LearningEvidence.CORRECTION);
     }

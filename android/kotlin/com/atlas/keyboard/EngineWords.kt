@@ -30,6 +30,7 @@ class EngineWords(private val typing: SwipeTyping) : Words {
         typing.lookAlike(context, word, next, typed) { result(it) }
 
     override fun typed(word: String, rememberCase: Boolean) = typing.typed(word, typing.learningGeneration(), rememberCase)
+    override fun untyped(word: String) = typing.untyped(word, typing.learningGeneration())
 
     override fun chosen(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) {
         val learning = recognition.token as? Learning ?: return

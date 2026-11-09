@@ -40,6 +40,8 @@ interface Words {
     fun allowed(word: String): Boolean
     fun known(word: String): Boolean
     fun typed(word: String, rememberCase: Boolean = true)
+    /** Takes back the last [typed] use, because the user deleted that word. */
+    fun untyped(word: String)
     fun chosen(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun corrected(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun kept(swipe: Swipe, context: String, recognition: Recognition, word: String)
@@ -140,6 +142,9 @@ class Composer(
     private var awaitingNextWord: HeldWord? = null
     /** A typed word that waits for the next word to start. */
     private var typedWord: HeldWord? = null
+    /** The typed word that was just learned, which ends at [end]. Deleting into it takes the use back. */
+    private class Learned(val word: String, val end: Int, val snapshot: Snapshot)
+    private var learned: Learned? = null
     private var swap: Swap? = null
     private var lookAlikeChangedAt = -1
     private val remembered = ArrayList<Remembered>()
@@ -218,6 +223,7 @@ class Composer(
         correcting = null
         awaitingNextWord = null
         typedWord = null
+        learned = null
         swap = null
         expectedSelections.clear()
         show(emptyList())
@@ -539,6 +545,8 @@ class Composer(
         val source = if (word || !field.learning) null else correcting ?: composition as? Composition.Swiped
         val expected = if (correcting != null) editSnapshot else source?.snapshot
         val anchor = source?.let { snapshot().takeIf { it == expected && !it.selected } }
+        val typed = learned?.takeIf { snapshot() == it.snapshot }
+        learned = null
         invalidate(false)
         composition = Composition.None
         automaticSpace = null
@@ -560,6 +568,7 @@ class Composer(
             expectSelection(previous, removed, 0)
             editSnapshot = snapshot()
             if (source != null && anchor != null && removed > 0) trackCorrection(source, anchor, removed)
+            typed?.let(::untypeIfDeleted)
         } else {
             // The app may have delegated or partly applied deletion. Do not replay dependent input.
             reset()
@@ -1025,13 +1034,34 @@ class Composer(
         return manualWord.edit(" ", before, before != null && before.length < Editor.CONTEXT_LENGTH)
     }
 
+    /** A deleted space only waits; once a letter of the word goes, the word was a mistake. */
+    private fun untypeIfDeleted(typed: Learned) {
+        val after = editSnapshot ?: return
+        if (!after.knownSelection || after.selected) return
+        if (after.selection.end < typed.end) words.untyped(typed.word)
+        else learned = Learned(typed.word, typed.end, after)
+    }
+
+    private fun typeWord(word: String, rememberCase: Boolean) {
+        words.typed(word, rememberCase)
+        learned = null
+        val anchor = snapshot()
+        val before = anchor.before ?: return
+        if (!anchor.knownSelection || anchor.selected) return
+        val index = before.lastIndexOf(word)
+        if (index < 0) return
+        val tail = before.substring(index + word.length)
+        if (tail.length > 2 || tail.any { it.isLetterOrDigit() || it == '\'' || it == '’' }) return
+        learned = Learned(word, anchor.selection.end - tail.length, anchor)
+    }
+
     private fun learnWord(word: String?, correction: Composition.Swiped?, rememberCase: Boolean = true) {
         if (!field.learning || word.isNullOrEmpty()) return
-        if (correction == null) words.typed(word, rememberCase)
+        if (correction == null) typeWord(word, rememberCase)
         else if (!word.equals(correction.word, ignoreCase = true)) {
             words.corrected(correction.swipe, correction.context, correction.recognition, word)
             // The engine only counts a correction that resembles the swipe; the word was still typed.
-            words.typed(word, rememberCase)
+            typeWord(word, rememberCase)
         } else if (correction.chosen) {
             words.chosen(correction.swipe, correction.context, correction.recognition, word)
         }

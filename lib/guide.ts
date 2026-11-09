@@ -40,7 +40,7 @@ export const guide: { title: string; rows: GuideRow[] }[] = [
   },
   {
     title: "Your words", rows: [
-      { title: "New words", text: "Atlas learns the new words that you use. To see, add or block words, open Settings and select Your words.",
+      { title: "New words", text: "When you use a new word 3 times, Atlas learns it. A word that you add yourself stays. To see, add or block words, open Settings and select Your words.",
         terms: ["dictionary", "learn", "learned", "remember words", "custom words", "add word", "block word", "ban word", "remove word", "unwanted word", "keeps suggesting", "slang", "names", "nicknames", "swear words", "personal", "word list", "saved words"] },
       { title: "Backup", text: "To keep a copy of your words, open Your words and select Export words. To add the words again, select Import words.",
         terms: ["back up", "save", "restore", "transfer", "move words", "copy words", "new phone", "reset", "reinstall", "lose words", "lost words", "file", "keep words"] },

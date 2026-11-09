@@ -14,6 +14,7 @@ export default function Guide() {
     </Section>
     <Section title="Keys">
       <Row title="Tap keys" subtitle="Touch these keys lightly to type them. Select the keys in Settings." wrapSubtitle />
+      <Row title="Hold for symbols" subtitle="Hold a letter to type the symbol on its key. Select the time in Settings." />
       <Row title="Full stop" subtitle="Push the space bar two times." wrapSubtitle />
       <Row title="Shift and Alt" subtitle="Push one time for the next letter only. Push two times quickly to lock. Push again to unlock." wrapSubtitle />
       <Row title="Word suggestions" subtitle="The strip shows words and spelling corrections as you type. Touch a word to type it." wrapSubtitle />

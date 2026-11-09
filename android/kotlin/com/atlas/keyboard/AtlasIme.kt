@@ -24,6 +24,7 @@ import android.view.inputmethod.InputConnection
 import android.view.inputmethod.SurroundingText
 import com.atlas.engine.Calibration
 import com.atlas.engine.EmojiPages
+import com.atlas.engine.HoldEngine
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
@@ -71,6 +72,13 @@ class AtlasIme : InputMethodService() {
     private val consumedKeys = HashSet<Int>()
     private var deadKeyPending = false
     private var tapKeys = ""
+    private var holdSymbols = false
+    private val holdEngine = HoldEngine(object : HoldEngine.Output {
+        override fun tap(key: Int) = typeHeldLetter(symbol = false)
+        override fun hold(key: Int) = typeHeldLetter(symbol = true)
+    })
+    /** The press that [holdEngine] is holding back. */
+    private var heldLetter: KeyEvent? = null
     private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
                                val settlement: Contact.Settlement? = null)
     private val pendingInput = ArrayDeque<PendingInput>()
@@ -214,6 +222,8 @@ class AtlasIme : InputMethodService() {
         showModifiers()
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
+        holdSymbols = TypingSettings.holdSymbols(this)
+        holdEngine.threshold(TypingSettings.holdSymbolMillis(this))
         cursorControl = TypingSettings.cursorControl(this)
         val corrects = TypingSettings.autocorrect(this)
         composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
@@ -287,6 +297,8 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onFinishInput() {
+        // A letter still held back was pressed in this field, so it goes here before the field ends.
+        holdEngine.resolve(SystemClock.uptimeMillis())
         preserveDestinationInput()
         // The old connection is still owned here; only a verified final explicit choice is learned.
         composer.stop(terminal = true)
@@ -684,6 +696,58 @@ class AtlasIme : InputMethodService() {
         return if (key == Layout.SPACE) ' ' in tapKeys else Layout.isLetter(key) && key[0] in tapKeys
     }
 
+    /** Only a plain letter from the phone's own keyboard can wait. With Shift, Alt, Sym or a shortcut key it types at once. */
+    private fun canHold(event: KeyEvent): Boolean {
+        if (!holdSymbols || !field.words || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
+        if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
+        if (modifiers.shift != Modifiers.Level.Off || stripPaging || !event.hasNoModifiers() || event.isCapsLockOn) return false
+        // A modifier still in the queue has not changed the levels above yet.
+        if (pendingInput.any { it.event?.keyCode?.let(Modifiers::isModifier) == true }) return false
+        val device = event.device ?: return false
+        if (device.isVirtual || device.isExternal || !event.isFromSource(InputDevice.SOURCE_KEYBOARD)) return false
+        val symbol = event.getUnicodeChar(KeyEvent.META_ALT_ON)
+        return symbol > 0 && !Character.isISOControl(symbol)
+    }
+
+    /** True if this press waits to see if it is a hold. A letter held back before it is typed first. */
+    private fun holdBack(event: KeyEvent): Boolean {
+        val earlier = holdEngine.pending()
+        val consumed = holdEngine.down(event.keyCode, event.deviceId, event.downTime, event.repeatCount > 0, canHold(event))
+        val press = holdEngine.pending()
+        if (press != null && press !== earlier) {
+            heldLetter = KeyEvent(event)
+            // Typing the letter before this one can take a long time, so this reads the clock after that.
+            main.postAtTime({ holdTimer(press) }, holdEngine.timerAt(press, SystemClock.uptimeMillis()))
+        }
+        return consumed
+    }
+
+    /** The app sends each key's release to the keyboard, so the timer first asks if the app is free to do that. */
+    private fun holdTimer(press: HoldEngine.Press) {
+        if (holdEngine.pending() !== press) return
+        val asked = SystemClock.uptimeMillis()
+        currentInputConnection?.getTextBeforeCursor(0, 0)
+        holdEngine.holdDue(press.id, SystemClock.uptimeMillis() - asked)
+    }
+
+    /** Types the held-back press in order with other input. A hold types what the key types with Alt on: its printed symbol. */
+    private fun typeHeldLetter(symbol: Boolean) {
+        val letter = heldLetter ?: return
+        heldLetter = null
+        if (!editing) return
+        val typed = if (symbol) KeyEvent(letter.downTime, letter.eventTime, letter.action, letter.keyCode, 0,
+            letter.metaState or KeyEvent.META_ALT_ON, letter.deviceId, letter.scanCode, letter.flags, letter.source) else letter
+        if (pendingInput.isNotEmpty()) {
+            enqueue(typed) {
+                key(typed)
+                showModifiers()
+            }
+            return
+        }
+        key(typed)
+        showModifiers()
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
@@ -695,7 +759,9 @@ class AtlasIme : InputMethodService() {
         if (touchpad.isGestureKey(event)) return true
         // Keys like volume reach the keyboard too, but they are not typing.
         if (!event.isSystem) showStripAfterBack()
+        // The touchpad hears the physical press now, even when the letter waits for its release.
         contact.key(keyCode, true, event.eventTime)
+        val heldBack = holdBack(event)
         if (keyCode == KeyEvent.KEYCODE_SPACE && selectingWithSpace) return true
         if (selectsWord(event)) {
             endCursor()
@@ -707,6 +773,7 @@ class AtlasIme : InputMethodService() {
         }
         // Any other key press means the finger was pressing, not resting on the touchpad.
         endCursor()
+        if (heldBack) return true
         if (pendingInput.isNotEmpty()) {
             val captured = KeyEvent(event)
             consumedKeys += keyCode
@@ -732,7 +799,7 @@ class AtlasIme : InputMethodService() {
             return true
         }
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) {
-            return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
+            return holdEngine.up(keyCode, event.deviceId, event.eventTime) || consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
         }
         if (touchpad.isGestureKey(event)) return true
         contact.key(keyCode, false, event.eventTime)
@@ -741,6 +808,7 @@ class AtlasIme : InputMethodService() {
             consumedKeys.remove(keyCode)
             return true
         }
+        if (holdEngine.up(keyCode, event.deviceId, event.eventTime)) return true
         if (pendingInput.isNotEmpty()) {
             val captured = KeyEvent(event)
             consumedKeys.remove(keyCode)
@@ -862,6 +930,7 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacksAndMessages(null)
         settlements.clear()
         pendingInput.clear()
+        heldLetter = null
         contact.releaseKeys()
         composer.stop()
         autocorrect.release()

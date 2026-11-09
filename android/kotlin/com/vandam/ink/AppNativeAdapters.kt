@@ -298,6 +298,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("backService", BackService.enabled(activity))
             .put("learning", typing.learningEnabled())
             .put("tapKeys", TypingSettings.tapKeys(activity))
+            .put("holdSymbols", TypingSettings.holdSymbols(activity))
+            .put("holdSymbolMillis", TypingSettings.holdSymbolMillis(activity))
             .put("autoCapitalise", TypingSettings.autoCapitalise(activity))
             .put("autocorrect", TypingSettings.autocorrect(activity))
             .put("suggestionBar", TypingSettings.suggestionBar(activity))
@@ -340,6 +342,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         when (key) {
             "learning" -> typing.learningEnabled(value as Boolean)
             "tapKeys" -> TypingSettings.tapKeys(activity, value as String)
+            "holdSymbols" -> TypingSettings.holdSymbols(activity, value as Boolean)
+            "holdSymbolMillis" -> TypingSettings.holdSymbolMillis(activity, (value as Number).toInt())
             "autoCapitalise" -> TypingSettings.autoCapitalise(activity, value as Boolean)
             "autocorrect" -> TypingSettings.autocorrect(activity, value as Boolean)
             "suggestionBar" -> TypingSettings.suggestionBar(activity, value as Boolean)

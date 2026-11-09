@@ -73,6 +73,23 @@ public final class TypingSettings {
         preferences(context).edit().putString("tap_keys", unique.toString()).apply();
     }
 
+    /** Holding a letter types the symbol printed on its key. It is off until the user turns it on. */
+    public static boolean holdSymbols(Context context) {
+        return preferences(context).getBoolean("hold_symbols", false);
+    }
+
+    public static void holdSymbols(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("hold_symbols", enabled).apply();
+    }
+
+    public static int holdSymbolMillis(Context context) {
+        return HoldEngine.clamp(preferences(context).getInt("hold_symbol_ms", HoldEngine.DEFAULT_MILLIS));
+    }
+
+    public static void holdSymbolMillis(Context context, int millis) {
+        preferences(context).edit().putInt("hold_symbol_ms", HoldEngine.clamp(millis)).apply();
+    }
+
     /** What Enter does in fields with more than one line: "send", "newline" or "app". */
     public static String enterKey(Context context) {
         return preferences(context).getString("enter_key", "send");

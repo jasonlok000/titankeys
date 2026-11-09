@@ -2,6 +2,7 @@ import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from 
 import { close } from "ink/icons";
 import { state, update } from "../../lib/atlas";
 import { enterKeyLabel } from "./enter-key";
+import { holdLabel } from "./hold";
 import { liftLabel } from "./lift";
 import { rawLogLabel } from "./rawlog";
 import { setupLabel } from "./setup";
@@ -19,6 +20,7 @@ export default function Settings() {
     <Section title="Typing">
       <Field label="Spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
       <Field label="Tap keys" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
+      <Field label="Hold for symbols" href="/settings/hold">{holdLabel(settings)}</Field>
       <Field label="Enter key" href="/settings/enter-key">{enterKeyLabel(settings)}</Field>
       <Toggle label="Auto-capitalisation" value={settings.autoCapitalise}
         onChange={autoCapitalise => save.run({ autoCapitalise })} />

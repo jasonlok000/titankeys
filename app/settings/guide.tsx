@@ -11,7 +11,8 @@ export default function Guide() {
       <Row title="Slip recovery" subtitle="If your finger leaves the keyboard for a short time, the swipe continues. Change this time in Settings." wrapSubtitle />
       <Row title="Pick another word" subtitle="Touch a word on the strip above the keyboard." wrapSubtitle />
       <Row title="Turn off swipe typing" subtitle="Turn off Swipe typing in Settings or in the quick settings. The touchpad then types no words. Tap keys and the panel continue to operate." wrapSubtitle />
-      <Row title="Move the cursor" subtitle="Touch the bottom row of keys two times quickly. Do not lift your finger after the second touch. Move your finger to the left or right. To select the word at the cursor, lift your finger after each touch." wrapSubtitle />
+      <Row title="Move the cursor" subtitle="Touch the bottom row of keys two times quickly. Do not lift your finger after the second touch. Move your finger to the left or right of the space bar. The cursor moves slowly near the space bar and quickly near the edge of the keyboard. On the space bar, the cursor stops." wrapSubtitle />
+      <Row title="Select words" subtitle="To select the word at the cursor, touch the bottom row of keys two times quickly. Lift your finger after each touch. To select more words, touch the bottom row three times quickly. Do not lift your finger after the third touch. Move your finger to the left or right of the space bar." wrapSubtitle />
     </Section>
     <Section title="Keys">
       <Row title="Tap keys" subtitle="Touch these keys lightly to type them. Select the keys in Settings." wrapSubtitle />

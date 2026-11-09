@@ -12,5 +12,5 @@ engine=android/kotlin/com/atlas/engine
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   "$engine/Swipe.java" "$engine/Calibration.java" "$engine/TouchAlignment.java" \
   "$keyboard/Contact.kt" "$keyboard/CursorGesture.kt" "$keyboard/CursorMode.kt" "$keyboard/DeleteSwipe.kt" \
-  "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" tests/cursor/CursorChecks.kt
+  "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" "$keyboard/WordSelection.kt" tests/cursor/CursorChecks.kt
 java -cp "$work:$stdlib" com.atlas.keyboard.CursorChecksKt

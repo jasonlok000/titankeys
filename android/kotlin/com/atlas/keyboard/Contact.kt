@@ -43,6 +43,8 @@ class Contact {
             /** Decided once, [RESTING_MILLIS] after it lands. A finger that returns to a rest is resting from the start. */
             var resting = returning
             var judged = returning
+            /** A held delete flick has taken over this contact, so it deletes words until it ends and its lift is nothing. */
+            var deleting = false
             val counts get() = (!afterKey && !resting) || travel >= AFTER_KEY_SWIPE_KEYS
         }
     }
@@ -88,7 +90,18 @@ class Contact {
     /** Whether the current contact could still type, with how far it has moved in key widths. */
     val travel: Float? get() = (state as? State.Touching)?.takeIf { it.counts }?.travel
 
-    val points: List<Sample> get() = (state as? State.Touching)?.points ?: emptyList()
+    val points: List<Sample> get() = (state as? State.Touching)?.takeUnless { it.deleting }?.points ?: emptyList()
+
+    /** Whether the current contact is deleting words. A lift, a key press or a cancel ends it. */
+    val deleting: Boolean get() = (state as? State.Touching)?.deleting == true
+
+    /** The finger stayed on a delete flick, so this contact now deletes words. Returns the flick as it stands, or null if it can no longer delete. */
+    fun holdDelete(now: Long): Outcome.Swipe? {
+        val touching = state as? State.Touching ?: return null
+        if (touching.deleting || !touching.counts || !swipes || paging) return null
+        touching.deleting = true
+        return Outcome.Swipe(touching.points.toList(), touching.first.time, now, deletesWord = true)
+    }
 
     fun down(sample: Sample) {
         if (!sample.valid) {
@@ -135,6 +148,7 @@ class Contact {
     fun move(samples: List<Sample>) {
         samples.lastOrNull { it.valid }?.let { seen = it }
         val touching = state as? State.Touching ?: return
+        if (touching.deleting) return
         for (sample in samples) {
             val valid = sample.valid && sample.time >= touching.points.last().time
             if (valid) judge(touching, sample.time)
@@ -171,7 +185,8 @@ class Contact {
         move(samples)
         val touching = state as? State.Touching
         state = State.Idle
-        if (touching == null) return null
+        // Its words have already gone, so the lift must not delete another one.
+        if (touching == null || touching.deleting) return null
         val last = touching.points.last()
         rememberRest(touching, last.time)
         val settlement = Settlement(now + SETTLE_MILLIS, classify(touching), touching.first.time, last.time, touching.points.toList(), touching.counts)

@@ -205,12 +205,12 @@ public final class SwipeTyping {
         });
     }
     /** Offers the look-alike that fits the next word better, such as "were" for "we're you", or null. */
-    public void lookAlike(String before, String word, String next, java.util.function.Consumer<String> result) {
+    public void lookAlike(String before, String word, String next, boolean typed, java.util.function.Consumer<String> result) {
         final EnglishSpelling.Variant variant = TypingSettings.spelling(context);
         worker.execute(() -> {
             String replacement = null;
             try {
-                String found = recogniser == null ? null : recogniser.lookAlike(SentenceContext.words(before), word, next.replace('\u2019', '\''));
+                String found = recogniser == null ? null : recogniser.lookAlike(SentenceContext.words(before), word, next.replace('\u2019', '\''), typed);
                 if (found != null && wordAllowed(rendered(found, variant))) replacement = rendered(found, variant);
             } catch (RuntimeException | LinkageError error) {
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
@@ -568,6 +568,8 @@ public final class SwipeTyping {
             configs.saveWords(dictionary); wordsSaveError = "";
         } catch (IOException error) { wordsSaveError = " · Could not save words"; }
     }
+
+    public static String respell(String word) { return SwipeSpelling.respell(word); }
 
     public static String capitalise(String text, String before) {
         boolean sentenceStart = true;

@@ -17,6 +17,8 @@
 - Suggestions in more fields: The strip shows words in address bars and private fields. Atlas does not learn words from these fields.
 - Starter words: When you select all the text in a search bar, the strip shows starter words. Private search bars also show starter words.
 - Next words: After you touch a word on the strip, the next words show immediately.
+- Punctuation and capitals: When you type with the keys, Atlas removes the space before a comma, full stop, or other punctuation. Atlas also corrects words such as "i" to "I" and "dont" to "don't". If the next word makes it clear, Atlas changes words such as "ill" to "I'll". Swipe typing already does this.
+- Auto-punctuation setting: To stop these changes to punctuation, go to Settings and turn off Auto-punctuation. This also stops the full stop from two spaces.
 
 ## Fixed
 - Unwanted touches: When you type, a finger on the keys does not start a swipe. It also does not type a tap key.

@@ -49,6 +49,22 @@ public final class ContextSwipeChecks {
         check(SwipeRecognizer.lookAlike(decoder, new String[0], "were", "you") == null, "were you must stay");
         check(SwipeRecognizer.lookAlike(decoder, new String[0], "we're", "going") == null, "we're going must stay");
         check(SwipeRecognizer.lookAlike(decoder, new String[0], "house", "you") == null, "A word with no look-alike must stay");
+        // Typed words change only on strong evidence. Each real word here must stay, even the close ones.
+        String[][] typed = {
+            { "", "were", "going", "we're" }, { "", "were", "gonna", "we're" }, { "", "its", "not", "it's" },
+            { "", "ill", "be", "i'll" }, { "maybe", "ill", "see", "i'll" }, { "", "well", "be", "we'll" },
+            { "", "id", "like", "i'd" }, { "she said", "shed", "come", "she'd" },
+            { "they", "were", "going", null }, { "", "were", "you", null }, { "", "were", "there", null },
+            { "", "were", "all", null }, { "", "were", "either", null }, { "", "well", "look", null },
+            { "", "were", "the", null }, { "the dog wagged", "its", "tail", null }, { "very", "well", "done", null },
+            { "", "well", "it", null }, { "she is", "ill", "and", null }, { "she", "lets", "me", null },
+            { "the garden", "shed", "is", null }, { "your", "id", "card", null }, { "get", "well", "soon", null },
+        };
+        for (String[] example : typed) {
+            String found = SwipeRecognizer.lookAlike(decoder, SentenceContext.words(example[0]), example[1], example[2], true);
+            check(java.util.Objects.equals(found, example[3]), "Typed " + example[0] + " [" + example[1] + "] " + example[2]
+                + " must give " + example[3] + ", not " + found);
+        }
         try (Reader vocabulary = new FileReader(args[0] + "/vocab.txt")) {
             ProperNames.load(vocabulary);
         }

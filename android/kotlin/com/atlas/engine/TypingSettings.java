@@ -15,6 +15,15 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("auto_capitalise", enabled).apply();
     }
 
+    /** Typed words get a full stop from two spaces, lose the space before punctuation, and gain apostrophes. */
+    public static boolean autoPunctuation(Context context) {
+        return preferences(context).getBoolean("auto_punctuation", true);
+    }
+
+    public static void autoPunctuation(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("auto_punctuation", enabled).apply();
+    }
+
     public static boolean suggestionBar(Context context) {
         return preferences(context).getBoolean("suggestion_bar", true);
     }

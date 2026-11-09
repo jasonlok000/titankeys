@@ -18,6 +18,9 @@ public final class SwipeRecognizer implements AutoCloseable {
     // Stands in for the start of a sentence, which the context model would otherwise not score at all.
     private static final String[] SENTENCE_START = {"so"};
     private static final double LOOK_ALIKE_NEXT_WORD_EVIDENCE = 3;
+    // A typed word was not chosen from the earlier words, so they must agree with the next word strongly.
+    // A missed change costs little; a wrong one changes what the user typed, so this stays far from real words.
+    private static final double TYPED_LOOK_ALIKE_EVIDENCE = 5;
     private static final int LOOK_ALIKE_CANDIDATES = 8000;
     private static final int CANDIDATES = 16;
     // The engine cuts its list after counting context, so a saved word needs a deeper search to stay in it.
@@ -146,12 +149,19 @@ public final class SwipeRecognizer implements AutoCloseable {
     }
 
     /** The look-alike of this word that the next word makes clearly more likely, or null to leave it. */
-    public String lookAlike(String[] context, String word, String next) {
-        return lookAlike(decoder, context, word, next);
+    public String lookAlike(String[] context, String word, String next, boolean typed) {
+        return lookAlike(decoder, context, word, next, typed);
     }
 
-    /** The next word must point to the look-alike strongly, and must outweigh what the earlier words suggested. */
     static String lookAlike(org.futo.ml.inference.SwipeDecoder decoder, String[] context, String word, String next) {
+        return lookAlike(decoder, context, word, next, false);
+    }
+
+    /**
+     * The next word must point to the look-alike strongly. A swiped word was already chosen from the earlier words,
+     * so they need only not outweigh it. A typed word was not, so the earlier words must also agree.
+     */
+    static String lookAlike(org.futo.ml.inference.SwipeDecoder decoder, String[] context, String word, String next, boolean typed) {
         String other = SwipeSpelling.lookAlike(word);
         if (other == null) return null;
         String shown = SwipeSpelling.restore(SwipeSpelling.lookAlike(other));
@@ -160,7 +170,7 @@ public final class SwipeRecognizer implements AutoCloseable {
         if (after < LOOK_ALIKE_NEXT_WORD_EVIDENCE) return null;
         String[] before = scoringContext(context);
         double earlier = chance(decoder, before, replacement) - chance(decoder, before, shown);
-        return after + earlier >= 0 ? other : null;
+        return after + earlier >= (typed ? TYPED_LOOK_ALIKE_EVIDENCE : 0) ? other : null;
     }
 
     private static String[] followedBy(String[] context, String word) {

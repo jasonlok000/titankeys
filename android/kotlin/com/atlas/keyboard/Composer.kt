@@ -35,7 +35,8 @@ interface Words {
 
     fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Recognition) -> Unit)
     fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit)
-    fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit)
+    /** [typed] words were typed letter by letter, so the earlier words have not chosen between the look-alikes yet. */
+    fun lookAlike(context: String, word: String, next: String, typed: Boolean, result: (String?) -> Unit)
     fun allowed(word: String): Boolean
     fun known(word: String): Boolean
     fun typed(word: String, rememberCase: Boolean = true)
@@ -93,6 +94,10 @@ class Composer(
         }
     }
 
+    /** A finished word that may still change to its look-alike, such as "were" to "we're", once the next word is done. */
+    private data class HeldWord(val word: String, val context: String, val inserted: String, val tail: String,
+                                val snapshot: Snapshot, val typed: Boolean)
+
     /** A swiped word still in the field, with the suggestions it offered. [start] follows the keyboard's own edits. */
     private data class Remembered(val start: Int, val word: String, val alternatives: List<String>, val swipe: Swipe,
                                   val context: String, val recognition: Words.Recognition) {
@@ -128,7 +133,9 @@ class Composer(
     private var fullStop: FullStop? = null
     private val manualWord = TypedWords()
     private var correcting: Composition.Swiped? = null
-    private var awaitingNextWord: Composition.Swiped? = null
+    private var awaitingNextWord: HeldWord? = null
+    /** A typed word that waits for the next word to start. */
+    private var typedWord: HeldWord? = null
     private var lookAlikeChangedAt = -1
     private val remembered = ArrayList<Remembered>()
     private var rememberedField: Pair<String?, Int>? = null
@@ -205,6 +212,7 @@ class Composer(
         manualWord.clear()
         correcting = null
         awaitingNextWord = null
+        typedWord = null
         expectedSelections.clear()
         show(emptyList())
     }
@@ -442,6 +450,7 @@ class Composer(
             "$prefix$cased "
         } else cased
         if (!edit(replaced, (respelled?.second ?: "") + typed)) return
+        if (!letterTap) checkLookAlike()
         automaticSpace = if (letterTap) snapshot() else null
         composition = Composition.None
         if (letterTap) manualWord.clear()
@@ -501,6 +510,9 @@ class Composer(
                 if (!edit(respelled?.first?.length ?: 0, (respelled?.second ?: "") + " ")) return
                 // Read the bounded editor window after insertion; appending would exceed its limit.
                 if (!repeated && endsWord(before)) fullStop = FullStop(time, snapshot())
+                // The word before this one is finished now, so decide it before this word waits in turn.
+                checkLookAlike()
+                if (!repeated && !anchor.selected) typedWord = holdTyped(before, respelled)
             }
         }
         automaticSpace = null
@@ -526,6 +538,7 @@ class Composer(
         automaticSpace = null
         fullStop = null
         awaitingNextWord = null
+        typedWord = null
         if (word || correcting != null || source != null) manualWord.clear()
         else manualWord.edit("\b", null, false)
         correcting = null
@@ -801,12 +814,31 @@ class Composer(
         return true
     }
 
-    /** Only a swiped word the user has not chosen themselves can change once the next word arrives. */
+    /** Only a swiped or typed word the user has not chosen themselves can change once the next word arrives. */
     private fun holdForNextWord(swiped: Composition.Swiped?, anchor: Snapshot) {
+        val typed = typedWord
+        typedWord = null
+        if (typed != null && anchor == typed.snapshot && !anchor.selected) {
+            awaitingNextWord = typed
+            return
+        }
         if (swiped == null) return
         val held = !swiped.chosen && swiped.trailingSpace && anchor == swiped.snapshot && !anchor.selected
             && anchor.knownSelection && anchor.before?.endsWith(swiped.inserted) == true
-        awaitingNextWord = swiped.takeIf { held }
+        awaitingNextWord = if (held) HeldWord(swiped.word, swiped.context, swiped.inserted, swiped.tail, swiped.snapshot, typed = false) else null
+    }
+
+    /** A word typed letter by letter, then a space. A typed apostrophe shows the spelling is meant, so it stays. */
+    private fun holdTyped(before: String, respelled: Pair<String, String>?): HeldWord? {
+        if (!autoCapitalise()) return null
+        val typed = respelled?.first ?: before.takeLastWhile { it.isLetter() }
+        val word = respelled?.second ?: typed
+        if (word.isEmpty() || !word.all { it.isLetter() }) return null
+        val context = before.dropLast(typed.length)
+        if (context.lastOrNull()?.let { it.isLetterOrDigit() || it == '\'' || it == '’' } == true) return null
+        val accepted = snapshot()
+        if (!accepted.knownSelection || accepted.before?.endsWith("$word ") != true) return null
+        return HeldWord(word, context, "$word ", "$word ", accepted, typed = true)
     }
 
     /** Once the next word is finished, its fit decides between look-alikes such as "we're" and "were". */
@@ -831,14 +863,14 @@ class Composer(
         if (next.isEmpty() || TypedPredictions.prefix(next) != next || start == lookAlikeChangedAt
             || !before.dropLast(followed).endsWith(earlier.inserted)) return
         val current = epoch
-        words.lookAlike(earlier.context, earlier.word, next) { replacement ->
+        words.lookAlike(earlier.context, earlier.word, next, earlier.typed) { replacement ->
             if (replacement != null && current == epoch && !hasPendingInput && snapshot() == anchor) {
                 replaceLookAlike(earlier, cased(replacement, earlier), following, start, anchor)
             }
         }
     }
 
-    private fun cased(replacement: String, original: Composition.Swiped): String {
+    private fun cased(replacement: String, original: HeldWord): String {
         val word = original.word
         if (word.length > 2 && word == word.uppercase() && word != word.lowercase()) return replacement.uppercase()
         val shifted = word.first().isUpperCase() && !word.lowercase().startsWith("i'")
@@ -846,7 +878,7 @@ class Composer(
         return SwipeTyping.capitalise(replacement, original.context, 0, shifted, sentenceCase)
     }
 
-    private fun replaceLookAlike(earlier: Composition.Swiped, replacement: String, following: String, start: Int, anchor: Snapshot) {
+    private fun replaceLookAlike(earlier: HeldWord, replacement: String, following: String, start: Int, anchor: Snapshot) {
         val showing = composition
         invalidate(false)
         val previous = remembered.lastOrNull { it.start == start && it.word == earlier.word }
@@ -856,6 +888,7 @@ class Composer(
         val accepted = snapshot()
         if (automaticSpace == anchor) automaticSpace = accepted
         fullStop = fullStop?.let { if (it.snapshot == anchor) FullStop(it.time, accepted) else it }
+        typedWord = typedWord?.let { if (it.snapshot == anchor) it.copy(snapshot = accepted) else null }
         if (showing is Composition.Swiped) {
             val context = accepted.before?.removeSuffix(showing.inserted) ?: showing.context
             val swiped = showing.copy(context = context, snapshot = accepted)

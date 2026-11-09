@@ -41,8 +41,7 @@ class BackService : AccessibilityService() {
         if (KeyCapture.waiting?.invoke(event) == true) return true
         val code = AppShortcuts.hyperKey(this)
         if (code == AppShortcuts.NONE || event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return false
-        val action = hyper.key(code, event.keyCode, event.action == KeyEvent.ACTION_DOWN, event.repeatCount,
-            event.eventTime, AtlasIme.inTextBox())
+        val action = hyper.key(code, event.keyCode, event.action == KeyEvent.ACTION_DOWN, event.repeatCount, event.eventTime)
         if (action == HyperKey.Action.Pass) return false
         // The keyboard still learns of the press, so the finger on the touchpad does not type.
         AtlasIme.keyTaken(event)

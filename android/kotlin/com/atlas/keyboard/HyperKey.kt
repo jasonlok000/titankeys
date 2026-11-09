@@ -4,7 +4,7 @@ import android.view.KeyEvent
 
 /**
  * Hyper plus a letter opens that letter's app. Hold Hyper and push the letter, or tap Hyper and push the
- * letter within [TAP_MILLIS]. In a text box only holding works, so a slip while typing cannot eat a letter.
+ * letter within [TAP_MILLIS].
  * Hyper itself never reaches apps, and a letter that Hyper takes never types, even with no app set.
  */
 class HyperKey {
@@ -27,15 +27,15 @@ class HyperKey {
     private var tappedUntil = Long.MIN_VALUE
     private val taken = HashSet<Int>()
 
-    fun key(hyper: Int, code: Int, down: Boolean, repeat: Int, time: Long, typing: Boolean): Action {
-        if (code == hyper) return hyper(down, repeat, time, typing)
+    fun key(hyper: Int, code: Int, down: Boolean, repeat: Int, time: Long): Action {
+        if (code == hyper) return hyper(down, repeat, time)
         if (code !in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) {
             if (down) tappedUntil = Long.MIN_VALUE
             return Action.Pass
         }
         if (!down) return if (taken.remove(code)) Action.Take else Action.Pass
         if (repeat > 0) return if (code in taken) Action.Take else Action.Pass
-        val tapped = time <= tappedUntil && !typing
+        val tapped = time <= tappedUntil
         tappedUntil = Long.MIN_VALUE
         if (!held && !tapped) return Action.Pass
         if (held) usedWhileHeld = true
@@ -43,7 +43,7 @@ class HyperKey {
         return Action.Open('A' + (code - KeyEvent.KEYCODE_A))
     }
 
-    private fun hyper(down: Boolean, repeat: Int, time: Long, typing: Boolean): Action {
+    private fun hyper(down: Boolean, repeat: Int, time: Long): Action {
         if (down) {
             if (repeat > 0 || held) return Action.Take
             held = true
@@ -56,7 +56,7 @@ class HyperKey {
             return Action.Ready
         }
         held = false
-        val tap = !usedWhileHeld && !cancelling && !typing
+        val tap = !usedWhileHeld && !cancelling
         cancelling = false
         if (tap) tappedUntil = time + TAP_MILLIS
         return Action.Take

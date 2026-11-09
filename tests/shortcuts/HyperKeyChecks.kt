@@ -6,10 +6,10 @@ import com.atlas.keyboard.HyperKey.Action
 private const val HYPER = 340
 private const val S = KeyEvent.KEYCODE_S
 
-private class Keys(val typing: Boolean = false) {
+private class Keys {
     val hyper = HyperKey()
-    fun down(code: Int, time: Long, repeat: Int = 0) = hyper.key(HYPER, code, true, repeat, time, typing)
-    fun up(code: Int, time: Long) = hyper.key(HYPER, code, false, 0, time, typing)
+    fun down(code: Int, time: Long, repeat: Int = 0) = hyper.key(HYPER, code, true, repeat, time)
+    fun up(code: Int, time: Long) = hyper.key(HYPER, code, false, 0, time)
 }
 
 private fun check(name: String, actual: Any?, expected: Any?) {
@@ -63,22 +63,6 @@ fun main() {
         up(S, 150)
         up(HYPER, 200)
         check("hold used: release does not wait for a letter", down(S, 300), Action.Pass)
-    }
-    Keys(typing = true).run {
-        check("text box: hold is ready", down(HYPER, 0), Action.Ready)
-        check("text box: hold opens", down(S, 100), Action.Open('S'))
-        up(S, 150)
-        up(HYPER, 200)
-    }
-    Keys(typing = true).run {
-        down(HYPER, 0)
-        up(HYPER, 50)
-        check("text box: tap does not wait", down(S, 100), Action.Pass)
-    }
-    HyperKey().run {
-        key(HYPER, HYPER, true, 0, 0, typing = false)
-        key(HYPER, HYPER, false, 0, 50, typing = false)
-        check("tap then text box: letter types", key(HYPER, S, true, 0, 300, typing = true), Action.Pass)
     }
     Keys().run {
         check("Hyper repeat is taken", down(HYPER, 0).let { down(HYPER, 500, repeat = 1) }, Action.Take)

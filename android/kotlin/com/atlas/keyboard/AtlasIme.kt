@@ -836,9 +836,6 @@ class AtlasIme : InputMethodService() {
         /** The running keyboard, for keys that Atlas's accessibility service takes before they reach it. */
         @Volatile private var running: AtlasIme? = null
 
-        /** A text box is open with Atlas. */
-        fun inTextBox() = running?.editing == true
-
         /** A key taken for an app shortcut still ends the touch it overlaps, so the touch does not type. */
         fun keyTaken(event: KeyEvent) {
             val keyboard = running ?: return

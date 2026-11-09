@@ -112,7 +112,7 @@ class Composer(
 
     private sealed interface PendingInput
     private data class PendingSwipe(val swipe: Swipe, val startedAt: Long, val endedAt: Long, val metaState: Int) : PendingInput
-    private class PendingText(var text: String, val letterTap: Boolean) : PendingInput
+    private class PendingText(var text: String, val letterTap: Boolean, val shifted: Boolean) : PendingInput
     private class PendingEdit(val action: () -> Unit, val transferable: Boolean = false) : PendingInput
     private class FullStop(val time: Long, val snapshot: Snapshot)
     private class Barrier(val identity: Editor.Identity, val navigation: Boolean = false, val command: Boolean = false)
@@ -297,13 +297,14 @@ class Composer(
         return true
     }
 
-    private fun enqueueText(text: String, letterTap: Boolean) {
+    private fun enqueueText(text: String, letterTap: Boolean, shifted: Boolean) {
         val units = pendingInput.sumOf { if (it is PendingText) it.text.length else 0 }
         if (units + text.length > MAX_PENDING_TEXT) return
         val last = pendingInput.lastOrNull() as? PendingText
-        if (!letterTap && last != null && !last.letterTap && last.text.length + text.length <= MAX_TEXT_CHUNK) {
+        if (!letterTap && !shifted && last != null && !last.letterTap && !last.shifted
+            && last.text.length + text.length <= MAX_TEXT_CHUNK) {
             last.text += text
-        } else enqueue(PendingText(text, letterTap))
+        } else enqueue(PendingText(text, letterTap, shifted))
     }
 
     private fun scheduleDrain() {
@@ -334,7 +335,7 @@ class Composer(
                 try {
                     when (pending) {
                         is PendingEdit -> pending.action()
-                        is PendingText -> type(pending.text, pending.letterTap)
+                        is PendingText -> type(pending.text, pending.letterTap, pending.shifted)
                         is PendingSwipe -> Unit
                     }
                 } finally {
@@ -401,7 +402,7 @@ class Composer(
             if (recognition.words.isNotEmpty()) {
                 val sentenceCase = field.sentenceCapitalisation && autoCapitalise()
                 val choices = recognition.words.map {
-                    SwipeTyping.capitalise(it, context, pending.metaState, false, sentenceCase)
+                    SwipeTyping.capitalise(it, context + leadingSpace, pending.metaState, false, sentenceCase)
                 }
                 val word = choices.first()
                 val inserted = leadingSpace + word + if (trailingSpace) " " else ""
@@ -426,11 +427,14 @@ class Composer(
         }
     }
 
-    /** Keys wait for pending swipes, retaining the order in which the user entered them. */
-    fun type(text: String, letterTap: Boolean = false) {
+    /**
+     * Keys wait for pending swipes, retaining the order in which the user entered them.
+     * [shifted] text is from one press of Shift; at the start of a sentence it gives lowercase.
+     */
+    fun type(text: String, letterTap: Boolean = false, shifted: Boolean = false) {
         if (text.isEmpty()) return
         if (!executingQueued && hasPendingInput) {
-            enqueueText(text, letterTap)
+            enqueueText(text, letterTap, shifted)
             return
         }
         leave()
@@ -452,15 +456,17 @@ class Composer(
         val dropsSpace = (automaticSpace == anchor || typedSpace == anchor && autoPunctuation()) && anchor.before?.endsWith(" ") == true
             && text[0] in ".,!?;:)]}…"
         val before = anchor.before
-        val respelled = if (!letterTap && !dropsSpace && field.fullStops && text[0] in ".,!?;:)]}…") before?.let(::respell) else null
+        // "i." can start "i.e.", so it waits for a space to become "I.".
+        val abbreviating = text[0] == '.' && before?.takeLastWhile { it.isLetter() || it == '\'' || it == '’' } == "i"
+        val respelled = if (!letterTap && !dropsSpace && !abbreviating && field.fullStops && text[0] in ".,!?;:)]}…") {
+            before?.let(::respell)
+        } else null
         val replaced = (if (dropsSpace) 1 else 0) + (respelled?.first?.length ?: 0)
-        val cased = if (before != null && field.sentenceCapitalisation && autoCapitalise()) {
-            SwipeTyping.capitalise(text, before)
-        } else text
-        val typed = if (letterTap) {
-            val prefix = if (anchor.selected) "" else SwipeTyping.prefix(before.orEmpty())
-            "$prefix$cased "
-        } else cased
+        val prefix = if (letterTap && !anchor.selected) SwipeTyping.prefix(before.orEmpty()) else ""
+        val cased = if (before == null || !field.sentenceCapitalisation || !autoCapitalise()) text
+        else if (shifted) SwipeTyping.uncapitalise(text, before + prefix)
+        else SwipeTyping.capitalise(text, before + prefix)
+        val typed = if (letterTap) "$prefix$cased " else cased
         if (!edit(replaced, (respelled?.second ?: "") + typed)) return
         if (!letterTap) checkLookAlike()
         automaticSpace = if (letterTap) snapshot() else null
@@ -519,7 +525,8 @@ class Composer(
                 && anchor.available && anchor == pending.snapshot -> if (!edit(1, ". ")) return
             else -> {
                 respelled = respell(before)
-                if (!edit(respelled?.first?.length ?: 0, (respelled?.second ?: "") + " ")) return
+                val replaced = respelled ?: pronounBeforeFullStop(before)
+                if (!edit(replaced?.first?.length ?: 0, (replaced?.second ?: "") + " ")) return
                 // Read the bounded editor window after insertion; appending would exceed its limit.
                 if (!repeated && endsWord(before)) fullStop = FullStop(time, snapshot())
                 // The word before this one is finished now, so decide it before this word waits in turn.
@@ -1128,6 +1135,14 @@ class Composer(
         val cased = spelling.filter { it.isLetter() } != word.filter { it.isLetter() }
         if (punctuated && !autoPunctuation() || cased && !autoCapitalise()) return null
         return word to spelling
+    }
+
+    /** "i." followed by a space is the word "I", not the start of "i.e.". */
+    private fun pronounBeforeFullStop(before: String): Pair<String, String>? {
+        if (!before.endsWith("i.") || !autoCapitalise()) return null
+        val previous = before.getOrNull(before.length - 3)
+        if (previous != null && (previous.isLetterOrDigit() || previous in ".'’")) return null
+        return "i." to "I."
     }
 
     private fun endsWord(text: String): Boolean {

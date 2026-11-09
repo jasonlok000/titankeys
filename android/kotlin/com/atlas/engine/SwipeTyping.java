@@ -246,10 +246,13 @@ public final class SwipeTyping {
                 result = blockedWords.filter(EnglishSpelling.candidates(typedPredictions.suggest(prefix, personal, day,
                         word -> blockedWords.entries().isEmpty() || wordAllowed(rendered(word, variant)), likely), variant));
                 boolean upper = prefix.length() > 1 && prefix.equals(prefix.toUpperCase(Locale.UK));
+                // A lowercase start of a sentence was typed with Shift, so suggestions keep it.
+                boolean sentenceCase = autoCapitalise && (prefix.isEmpty() || !Character.isLowerCase(prefix.charAt(0))
+                        || !SentenceCase.startsSentence(contextText));
                 for (int i = 0; i < result.length; i++) {
                     String word = learningEnabled && wordsAvailable ? dictionary.restoreCase(result[i], today()) : result[i];
                     result[i] = upper ? word.toUpperCase(Locale.UK) : capitalise(word, contextText, 0,
-                            !prefix.isEmpty() && Character.isUpperCase(prefix.charAt(0)), autoCapitalise);
+                            !prefix.isEmpty() && Character.isUpperCase(prefix.charAt(0)), sentenceCase);
                 }
             } catch (RuntimeException | LinkageError error) {
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
@@ -593,33 +596,9 @@ public final class SwipeTyping {
 
     public static String respell(String word) { return SwipeSpelling.respell(word); }
 
-    public static String capitalise(String text, String before) {
-        boolean sentenceStart = true;
-        for (int end = before.length(); end > 0;) {
-            int previous = before.codePointBefore(end);
-            // Some fields, like WhatsApp search, start with an invisible character such as a zero-width space.
-            boolean invisible = Character.getType(previous) == Character.FORMAT;
-            if (!invisible && (endsSentence(previous) || !Character.isWhitespace(previous))) {
-                sentenceStart = endsSentence(previous);
-                break;
-            }
-            end -= Character.charCount(previous);
-        }
-        StringBuilder result = new StringBuilder(text.length());
-        for (int index = 0; index < text.length();) {
-            int character = text.codePointAt(index);
-            result.appendCodePoint(sentenceStart ? Character.toTitleCase(character) : character);
-            if (endsSentence(character) || !Character.isWhitespace(character)) {
-                sentenceStart = endsSentence(character);
-            }
-            index += Character.charCount(character);
-        }
-        return result.toString();
-    }
+    public static String capitalise(String text, String before) { return SentenceCase.capitalise(text, before); }
 
-    private static boolean endsSentence(int character) {
-        return ".!?\n\r\u2028\u2029\u3002\uff01\uff1f".indexOf(character) >= 0;
-    }
+    public static String uncapitalise(String text, String before) { return SentenceCase.uncapitalise(text, before); }
 
     public static String capitalise(String str, String str2, int i, boolean z, boolean autoCapitalise) {
         if ((1048576 & i) != 0) {

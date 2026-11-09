@@ -15,11 +15,13 @@ import android.view.KeyEvent
 import android.view.KeyCharacterMap
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.SurroundingText
 import com.atlas.engine.Calibration
 import com.atlas.engine.EmojiPages
@@ -204,6 +206,7 @@ class AtlasIme : InputMethodService() {
         inLauncher = editing && info.packageName == launcherPackage()
         contact.releaseKeys()
         clearSettlements()
+        main.removeCallbacks(pickKeyboard)
         modifiers.clear()
         deadKeyPending = false
         showModifiers()
@@ -627,6 +630,9 @@ class AtlasIme : InputMethodService() {
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) return super.onKeyDown(keyCode, event)
         typedInField = true
         if (touchpad.isGestureKey(event)) return true
+        // Holding Sym opens Android's keyboard list. Any other key first means Sym is only a modifier.
+        if (keyCode != KeyEvent.KEYCODE_SYM) main.removeCallbacks(pickKeyboard)
+        else if (event.repeatCount == 0) main.postDelayed(pickKeyboard, ViewConfiguration.getLongPressTimeout().toLong())
         contact.key(keyCode, true, event.eventTime)
         if (keyCode == KeyEvent.KEYCODE_SPACE && selectingWithSpace) return true
         if (selectsWord(event)) {
@@ -661,6 +667,7 @@ class AtlasIme : InputMethodService() {
             requestHideSelf(0)
             return true
         }
+        if (keyCode == KeyEvent.KEYCODE_SYM) main.removeCallbacks(pickKeyboard)
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) {
             return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
         }
@@ -765,6 +772,14 @@ class AtlasIme : InputMethodService() {
                 false
             }
         }
+    }
+
+    private val pickKeyboard = Runnable {
+        // The picker can take the Sym release, so Sym must not stay held.
+        modifiers.cancel(KeyEvent.KEYCODE_SYM)
+        showModifiers()
+        if (Haptics.enabled(this)) haptics.click()
+        getSystemService(InputMethodManager::class.java).showInputMethodPicker()
     }
 
     private fun showModifiers() {

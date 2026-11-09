@@ -51,6 +51,13 @@ class Haptics(private val context: Context) {
         play(VibrationEffect.createWaveform(preset.wordTimings, amplitudes, -1))
     }
 
+    /** Confirms that a held letter became its symbol: two quick, equal pulses, unlike the single fading buzz of a changed word. */
+    fun holdSymbol() {
+        if (!enabled(context)) return
+        val strength = if (vibrator.hasAmplitudeControl()) minOf(preset(context).amplitude * 2, 255) else VibrationEffect.DEFAULT_AMPLITUDE
+        play(VibrationEffect.createWaveform(longArrayOf(0, 18, 55, 18), intArrayOf(0, strength, 0, strength), -1))
+    }
+
     /** Confirms a new page or group in the Sym panel, with the same feel as a changed word. */
     fun pageChanged() = wordChanged()
 

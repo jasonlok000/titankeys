@@ -1088,6 +1088,7 @@ class AtlasIme : InputMethodService() {
         val symbol = letter.getUnicodeChar(letter.metaState or KeyEvent.META_ALT_ON)
         if (symbol <= 0 || !Character.isValidCodePoint(symbol) || Character.isISOControl(symbol)) return
         val text = String(Character.toChars(symbol))
+        haptics.holdSymbol()
         if (watchingKeys) {
             val typed = letter.getUnicodeChar(letter.metaState)
             main.post { replaceAppLetter(typed, text) }

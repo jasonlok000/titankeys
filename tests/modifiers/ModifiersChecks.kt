@@ -32,6 +32,8 @@ fun main() {
     doublePress()
     doublePressAndTypeQuickly()
     doublePressDoesNotLockWhenOff()
+    quickSecondPressIsTheSameForShiftAndAlt()
+    slowSecondPressTurnsOffWhenLocksIsOff()
     lateSecondPress()
     realHoldThenType()
     realRolledRelease()
@@ -206,10 +208,13 @@ private fun doublePressDoesNotLockWhenOff() = Keyboard().run {
     same(shift, Level.Once, "One press must still capitalise the next character")
     idle(GAP)
     press()
-    same(shift, Level.Off, "A quick second press must only turn Shift off")
+    same(shift, Level.Once, "A quick second press must leave Shift on for one character")
     idle(GAP)
     press()
-    same(shift, Level.Once, "A third press must start again")
+    same(shift, Level.Off, "A third press must turn Shift off")
+    idle(GAP)
+    press()
+    same(shift, Level.Once, "The next press must start again")
     type()
     same(shift, Level.Off, "That press must capitalise only the next character")
     idle(WORD)
@@ -220,10 +225,43 @@ private fun doublePressDoesNotLockWhenOff() = Keyboard().run {
     up(after = WORD)
     same(shift, Level.Off, "A press and then a hold must leave Shift off")
     idle(WORD)
-    press(KeyEvent.KEYCODE_ALT_LEFT)
+    press(ALT)
     idle(GAP)
-    press(KeyEvent.KEYCODE_ALT_LEFT)
-    same(modifiers.alt, Level.Off, "A quick second press must only turn Alt off")
+    press(ALT)
+    same(modifiers.alt, Level.Once, "A quick second press must leave Alt on for one character")
+}
+
+private fun quickSecondPressIsTheSameForShiftAndAlt() {
+    for (code in listOf(SHIFT, ALT)) Keyboard().run {
+        modifiers.doublePressLocks = false
+        fun level() = if (code == SHIFT) shift else modifiers.alt
+        press(code)
+        idle(GAP)
+        press(code)
+        same(level(), Level.Once, "Two quick pushes must leave the key on")
+        idle(WORD)
+        same(level(), Level.Once, "The key must stay on until a character is typed, however long it takes")
+        type()
+        same(level(), Level.Off, "Two quick pushes must apply to exactly the next character")
+        type(3)
+        same(level(), Level.Off, "The key must not come back after that character")
+        idle(WORD)
+        press(code)
+        same(level(), Level.Once, "A later press must start a new one")
+    }
+}
+
+private fun slowSecondPressTurnsOffWhenLocksIsOff() {
+    for (code in listOf(SHIFT, ALT)) Keyboard().run {
+        modifiers.doublePressLocks = false
+        fun level() = if (code == SHIFT) shift else modifiers.alt
+        press(code)
+        idle(Modifiers.DOUBLE_PRESS_MILLIS)
+        press(code)
+        same(level(), Level.Off, "A slow second push must turn the key off")
+        type(2)
+        same(level(), Level.Off, "The key must stay off after a slow second push")
+    }
 }
 
 private fun doublePressAndTypeQuickly() = Keyboard().run {
@@ -297,12 +335,14 @@ private fun realDoublePress() = Keyboard().run {
     idle(110)
     down()
     up(after = 82)
-    same(shift, Level.Off, "With the setting off, two quick real presses must leave Shift off")
+    same(shift, Level.Once, "With the setting off, two quick real presses must stay on for one character")
     idle(120)
-    repeat(5) {
-        type()
-        same(shift, Level.Off, "Each letter after two quick presses must be lowercase")
+    type()
+    same(shift, Level.Off, "Two quick real presses must capitalise only the next character")
+    repeat(4) {
         idle(120)
+        type()
+        same(shift, Level.Off, "Each letter after that must be lowercase")
     }
 }
 

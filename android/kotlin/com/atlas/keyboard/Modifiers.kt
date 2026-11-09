@@ -3,9 +3,9 @@ package com.atlas.keyboard
 import android.view.KeyEvent
 
 /**
- * Sticky Shift and Alt, and the Sym panel. One press of Shift or Alt applies to the next character, and a second press
- * turns it off. With [doublePressLocks], a second press within [DOUBLE_PRESS_MILLIS] locks it instead, and a third press
- * releases it. Holding the key works as usual.
+ * Sticky Shift and Alt, and the Sym panel. One press of Shift or Alt applies to the next character. A second press within
+ * [DOUBLE_PRESS_MILLIS] leaves the key on for exactly that next character, or with [doublePressLocks] locks it until a
+ * third press. A slower second press turns the key off. Holding the key works as usual.
  * Each press of Sym moves the panel to its next step, and the panel stays open after Sym is let go.
  * Only one of them is on at a time. While the panel is open, Alt opens the quick settings page and goes back from it.
  *
@@ -69,15 +69,18 @@ class Modifiers {
             toggleSettings()
             return
         }
-        val next = when (level(key)) {
+        val level = level(key)
+        val quick = time - last[key.ordinal] < DOUBLE_PRESS_MILLIS
+        val next = when (level) {
             Level.Off -> Level.Once
-            Level.Once -> if (doublePressLocks && time - last[key.ordinal] < DOUBLE_PRESS_MILLIS) Level.Locked else Level.Off
+            Level.Once -> if (!quick) Level.Off else if (doublePressLocks) Level.Locked else Level.Once
             Level.Locked -> Level.Off
         }
         shift = if (key == Key.Shift) next else Level.Off
         alt = if (key == Key.Alt) next else Level.Off
         panel = Panel.Closed
-        last[key.ordinal] = time
+        // A quick second press that stays on ends the double press, so the next press turns the key off.
+        last[key.ordinal] = if (level == Level.Once && next == Level.Once) time - DOUBLE_PRESS_MILLIS else time
     }
 
     /** From the symbols or emoji to the quick settings page, or back to the page that it came from. */

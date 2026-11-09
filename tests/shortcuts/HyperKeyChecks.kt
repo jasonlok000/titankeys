@@ -18,7 +18,7 @@ private fun check(name: String, actual: Any?, expected: Any?) {
 
 fun main() {
     Keys().run {
-        check("hold: Hyper down is ready", down(HYPER, 0), Action.Ready)
+        check("hold: Hyper down is taken", down(HYPER, 0), Action.Take)
         check("hold: letter opens", down(S, 100), Action.Open('S'))
         check("hold: letter repeat is taken", down(S, 600, repeat = 1), Action.Take)
         check("hold: letter up is taken", up(S, 700), Action.Take)

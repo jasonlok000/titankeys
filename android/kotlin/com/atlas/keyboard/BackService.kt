@@ -20,7 +20,6 @@ import android.view.accessibility.AccessibilityEvent
  */
 class BackService : AccessibilityService() {
     private val hyper = HyperKey()
-    private val haptics by lazy { Haptics(this) }
 
     override fun onServiceConnected() {
         current = this
@@ -45,14 +44,10 @@ class BackService : AccessibilityService() {
         if (action == HyperKey.Action.Pass) return false
         // The keyboard still learns of the press, so the finger on the touchpad does not type.
         AtlasIme.keyTaken(event)
-        when (action) {
-            HyperKey.Action.Ready -> if (Haptics.enabled(this)) haptics.pulse(Haptics.preset(this))
-            is HyperKey.Action.Open -> try {
-                if (AppShortcuts.open(this, action.letter)) haptics.tap()
-            } catch (error: RuntimeException) {
-                Log.w("Atlas", "Could not open the app for ${action.letter}", error)
-            }
-            else -> Unit
+        if (action is HyperKey.Action.Open) try {
+            AppShortcuts.open(this, action.letter)
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not open the app for ${action.letter}", error)
         }
         return true
     }

@@ -13,8 +13,6 @@ class HyperKey {
         data object Pass : Action
         /** Kept from apps, with nothing else to do. */
         data object Take : Action
-        /** Hyper is ready for a letter. */
-        data object Ready : Action
         /** Kept from apps: open the app for this letter, if it has one. */
         data class Open(val letter: Char) : Action
     }
@@ -51,9 +49,8 @@ class HyperKey {
             if (time <= tappedUntil) {
                 tappedUntil = Long.MIN_VALUE
                 cancelling = true
-                return Action.Take
             }
-            return Action.Ready
+            return Action.Take
         }
         held = false
         val tap = !usedWhileHeld && !cancelling

@@ -12,6 +12,8 @@ internal fun letterSpace(points: List<Sample>): Swipe {
     )
 }
 
+private const val MIN_DELETE_GAP_MILLIS = 250L
+
 /**
  * A finger near the top of the touchpad often loses contact for a moment, which splits a swipe into pieces.
  * A short touch straight after a swipe, or straight before one, can be part of that swipe and not a touch of its own.
@@ -34,12 +36,15 @@ internal class SwipePieces(
         val before = held
         held = null
         if (outcome is Contact.Outcome.Swipe) {
-            if (outcome.deletesWord) {
+            // A stroke this soon after a swipe is more likely the rest of that swipe than a delete.
+            val finished = last?.last()?.time
+            if (outcome.deletesWord && (finished == null || outcome.startedAt - finished >= MIN_DELETE_GAP_MILLIS)) {
                 last = null
                 return outcome
             }
-            val joined = if (before != null && follows(before.points, outcome.points))
-                Contact.Outcome.Swipe(before.points + outcome.points, before.points.first().time, outcome.endedAt) else outcome
+            val word = outcome.copy(deletesWord = false)
+            val joined = if (before != null && follows(before.points, word.points))
+                Contact.Outcome.Swipe(before.points + word.points, before.points.first().time, word.endedAt) else word
             last = joined.points
             return joined
         }

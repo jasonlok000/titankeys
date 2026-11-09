@@ -17,7 +17,7 @@ export default function Guide() {
       <Row title="Full stop" subtitle="Push the space bar two times." wrapSubtitle />
       <Row title="Shift and Alt" subtitle="Push one time for the next letter only. Push two times quickly to lock. Push again to unlock." wrapSubtitle />
       <Row title="Word suggestions" subtitle="The strip shows words and spelling corrections as you type. Touch a word to type it." wrapSubtitle />
-      <Row title="Delete a word" subtitle="Push Alt, then push Backspace. You can also use Ctrl and Backspace, or swipe from Backspace to J along the middle row." wrapSubtitle />
+      <Row title="Delete a word" subtitle="Push Alt, then push Backspace. You can also use Ctrl and Backspace, or flick left from Backspace." wrapSubtitle />
       <Row title="More symbols" subtitle="When Alt is on, the strip shows symbols. Touch a symbol to type it. Swipe left or right on the keyboard to see more." wrapSubtitle />
       <Row title="Emoji" subtitle="Sym operates like Shift. The strip shows emoji, with recent emoji first. Swipe left or right on the keyboard to see more, or up or down for the next group." wrapSubtitle />
     </Section>

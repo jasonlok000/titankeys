@@ -141,12 +141,12 @@ class Contact {
         val last = points.last()
         if (touching.travel >= if (paging) PAGE_KEYS else SWIPE_KEYS) {
             if (paging) return Outcome.Swipe(points.toList(), first.time, last.time)
-            // Checked here because the pickup below trims a swipe to its first letter, which loses the start on Backspace.
-            if (isDeleteWordSwipe(points)) return Outcome.Swipe(points.toList(), first.time, last.time, deletesWord = true)
+            // Checked here because the pickup below trims a swipe to its first letter, which loses its real start.
+            val deletes = isDeleteWordSwipe(points)
             touching.pickup.finish()
             val entry = touching.pickup.entry
-            if (entry != null) return Outcome.Swipe(listOf(entry) + points.subList(touching.pickup.entryIndex, points.size), first.time, last.time)
-            if (Layout.isLetter(Layout.keyAt(first.x, first.y))) return Outcome.Swipe(points.toList(), first.time, last.time)
+            if (entry != null) return Outcome.Swipe(listOf(entry) + points.subList(touching.pickup.entryIndex, points.size), first.time, last.time, deletes)
+            if (deletes || Layout.isLetter(Layout.keyAt(first.x, first.y))) return Outcome.Swipe(points.toList(), first.time, last.time, deletes)
             return null
         }
         val key = Layout.keyAt(first.x, first.y)

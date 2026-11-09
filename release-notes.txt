@@ -1,6 +1,11 @@
 # 1.2.0
 
 ## New
+- Better swiping: TitanKeys joins a swipe that breaks at the top of the keyboard. It also compares each swipe with the shapes of common words.
+- Wider reading: The faster you swipe, the wider TitanKeys reads the swipe. It reads slow swipes as you made them.
+- Delete with one thumb: Flick left from Backspace to delete the previous word.
+- Launcher search: The suggestion bar shows when you start to type in a launcher search.
+- New look: TitanKeys uses the orange of the Titan 2 Elite.
 - Emoji: Push Sym to show emoji on the strip. Touch an emoji to type it. To see more emoji, move your finger across the keyboard. Your recent emoji show first.
 - Spelling: When you type with the keys, the strip can show the correct spelling of a word.
 - Word suggestions: The strip shows more words for the letters that you type. TitanKeys finds these words in the full dictionary.

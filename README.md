@@ -114,7 +114,7 @@ The FUTO engine already uses context natively. **TitanKeys** adds a boost for a 
 
 ### Deleting a word with one thumb
 
-Atlas keeps swiping for typing only, and deletes a word with Alt + Backspace or Ctrl + Backspace, which both still work here. Those are awkward with one hand, so **TitanKeys** adds a swipe from Backspace left to J along the middle row. It didn't trigger on any of 869 recorded touches.
+Atlas keeps swiping for typing only, and deletes a word with Alt + Backspace or Ctrl + Backspace, which both still work here. Those are awkward with one hand, so **TitanKeys** adds a quick, straight flick left from around Backspace, at any length. Fitted to 68 real strokes, it catches 66 of them (97%), and it didn't trigger on any of 875 recorded word touches.
 
 <img src="assets/readme/delete-swipe.gif" width="400" alt="Diagram of a swipe from Backspace left to J deleting the previous word">
 
@@ -166,13 +166,15 @@ TitanKeys asks to display over other apps because of how the Titan 2 sends touch
 
 ## Install
 
-There's no public release yet. To build it yourself, follow the setup in the [contributing guide](CONTRIBUTING.md), then run:
+Download the latest APK from [releases](https://github.com/jasonlok000/titankeys/releases) and install it. TitanKeys installs next to Atlas, so it doesn't replace it or touch Atlas's saved words.
+
+To build it yourself, follow the setup in the [contributing guide](CONTRIBUTING.md), then run:
 
 ```bash
 bash tools/debug.sh --install
 ```
 
-This installs **TitanKeys Debug** next to any other keyboard. It doesn't replace Atlas, and it doesn't touch Atlas's saved words.
+This installs **TitanKeys Debug**, a separate test build.
 
 ## Feedback
 

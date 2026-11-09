@@ -113,7 +113,7 @@ class SymPanel(
     private fun cell(key: String) = TextView(context).apply {
         typeface = this@SymPanel.typeface
         gravity = Gravity.CENTER
-        // A Ctrl combination takes two lines to fit on a key. A symbol or an emoji is too short to wrap.
+        // A Ctrl combination fits on one line, and only wraps with a very large system font.
         maxLines = 2
         includeFontPadding = false
         isFocusable = false
@@ -153,7 +153,8 @@ class SymPanel(
                 continue
             }
             val action = Modifiers.CTRL_ACTIONS[key]
-            val value = if (ctrl) action?.let { "Ctrl\n$key" } else item(key)
+            // Two lines don't fit in the height of a row when the system font is large.
+            val value = if (ctrl) action?.let { "Ctrl $key" } else item(key)
             view.text = value.orEmpty()
             view.textSize = if (ctrl) COMBINATION_SIZE else ITEM_SIZE
             // A shortcut runs from the key, so a touch on the screen does nothing here.

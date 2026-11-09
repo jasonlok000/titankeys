@@ -30,6 +30,8 @@ export default function Settings() {
         onChange={autocorrect => save.run({ autocorrect })} />
       <Toggle label="Suggestion bar" value={settings.suggestionBar}
         onChange={suggestionBar => save.run({ suggestionBar })} />
+      <Toggle label="Empty home search has no bar" value={settings.launcherHidesBar}
+        onChange={launcherHidesBar => save.run({ launcherHidesBar })} />
       <Toggle label="Cursor control" value={settings.cursorControl}
         onChange={cursorControl => save.run({ cursorControl })} />
       <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}

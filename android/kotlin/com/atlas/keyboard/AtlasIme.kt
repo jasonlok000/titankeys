@@ -291,7 +291,7 @@ class AtlasIme : InputMethodService() {
         rawLog?.finish()
         rawLog = if (editing) RawLog.start(this, info, restarting) else null
         composer.log = rawLog
-        inLauncher = editing && info.packageName == launcherPackage()
+        inLauncher = editing && TypingSettings.launcherHidesBar(this) && info.packageName == launcherPackage()
         launcherFieldHasText = inLauncher && info.initialSelStart > 0
         contact.releaseKeys()
         clearSettlements()

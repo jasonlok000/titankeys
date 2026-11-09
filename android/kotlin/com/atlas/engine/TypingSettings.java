@@ -48,6 +48,15 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("suggestion_bar", enabled).apply();
     }
 
+    /** A home screen's search field has no suggestion bar until you type in it. When this is off, it is like any other field. */
+    public static boolean launcherHidesBar(Context context) {
+        return preferences(context).getBoolean("launcher_hides_bar", true);
+    }
+
+    public static void launcherHidesBar(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("launcher_hides_bar", enabled).apply();
+    }
+
     /** Fixes slips in typed words when they end. Swiped words never change. */
     public static boolean autocorrect(Context context) {
         return preferences(context).getBoolean("autocorrect", true);

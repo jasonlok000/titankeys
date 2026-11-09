@@ -110,6 +110,7 @@ object RawLog {
         "autoPunctuation" to TypingSettings.autoPunctuation(context),
         "autocorrect" to TypingSettings.autocorrect(context),
         "suggestionBar" to TypingSettings.suggestionBar(context),
+        "launcherHidesBar" to TypingSettings.launcherHidesBar(context),
         "cursorControl" to TypingSettings.cursorControl(context),
         "touchpadOnlyInFields" to TypingSettings.touchpadOnlyInFields(context),
         "enterKey" to TypingSettings.enterKey(context),

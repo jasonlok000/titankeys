@@ -11,6 +11,7 @@ import java.util.Set;
 
 public final class TypingSettings {
     public static final int MIN_LIFT_OFF_MILLIS = 50, MAX_LIFT_OFF_MILLIS = 200, DEFAULT_LIFT_OFF_MILLIS = 90;
+    public static final String TOUCHPAD_ONLY_IN_FIELDS = "touchpad_only_in_fields";
     private static final String DEFAULT_TAP_KEYS = "";
 
     public static boolean autoCapitalise(Context context) {
@@ -130,6 +131,27 @@ public final class TypingSettings {
 
     public static void enterKey(Context context, String value) {
         preferences(context).edit().putString("enter_key", value).apply();
+    }
+
+    /**
+     * The touchpad overlay stays up when no field is active, so that the firmware gives the touchpad to it and not to the
+     * app under it. It is off until the user turns it on.
+     */
+    public static boolean touchpadOnlyInFields(Context context) {
+        return preferences(context).getBoolean(TOUCHPAD_ONLY_IN_FIELDS, false);
+    }
+
+    public static void touchpadOnlyInFields(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean(TOUCHPAD_ONLY_IN_FIELDS, enabled).apply();
+    }
+
+    /** Hears a setting change at once, for a keyboard that is idle and has no field start to read it from. */
+    public static void listen(Context context, SharedPreferences.OnSharedPreferenceChangeListener listener) {
+        preferences(context).registerOnSharedPreferenceChangeListener(listener);
+    }
+
+    public static void stopListening(Context context, SharedPreferences.OnSharedPreferenceChangeListener listener) {
+        preferences(context).unregisterOnSharedPreferenceChangeListener(listener);
     }
 
     /** Apps the Enter key setting also applies to, each saved as "package=method". The rules are in EnterKey. */

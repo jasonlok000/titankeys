@@ -40,6 +40,8 @@ export type State = {
   suggestionBar: boolean;
   /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
   cursorControl: boolean;
+  /** The touchpad overlay stays up when no field is active, so the touchpad does not scroll apps. Only the phone can prove this. */
+  touchpadOnlyInFields: boolean;
   /** What Enter does in fields with more than one line. */
   enterKey: EnterKey;
   /** Apps that the user added to the Enter key setting, and built-in apps that the user changed. */
@@ -59,7 +61,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "cursorControl" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "cursorControl" | "touchpadOnlyInFields" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];

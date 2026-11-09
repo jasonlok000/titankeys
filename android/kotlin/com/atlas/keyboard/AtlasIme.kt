@@ -409,11 +409,17 @@ class AtlasIme : InputMethodService() {
         if (direction == 0) return
         cursorMoved = true
         val time = SystemClock.uptimeMillis()
-        if (Haptics.enabled(this)) haptics.pulse()
         val code = if (direction > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
         val arrow = KeyEvent(time, time, KeyEvent.ACTION_DOWN, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
             KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD)
-        enqueue { command(arrow) }
+        enqueue {
+            // A cursor at the start or end of the text cannot move, so it stays quiet. An app that does not
+            // answer still gets the pulse.
+            val connection = currentInputConnection
+            val next = if (direction > 0) connection?.getTextAfterCursor(1, 0) else connection?.getTextBeforeCursor(1, 0)
+            if (next?.isEmpty() != true && Haptics.enabled(this)) haptics.pulse()
+            command(arrow)
+        }
     }
 
     /**

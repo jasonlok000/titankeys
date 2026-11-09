@@ -4,6 +4,7 @@ import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import com.atlas.engine.PhoneWords
 import com.atlas.engine.Swipe
+import com.atlas.engine.SwipeTyping
 import com.atlas.keyboard.Composer
 import com.atlas.keyboard.Editor
 import com.atlas.keyboard.EnterKey
@@ -138,7 +139,7 @@ private class FakeWords(private val lists: Lists) : Words {
 
 /** Types into a real Composer, the way the keyboard does for each key. */
 private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.autocorrect(), field: Field = FIELD,
-                     lists: Lists = Lists(world.words)) {
+                     lists: Lists = Lists(world.words), autoCapitalise: Boolean = false) {
     val editor = FakeEditor()
     val words = FakeWords(lists)
     private val posted = ArrayDeque<() -> Unit>()
@@ -147,7 +148,7 @@ private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.aut
     var externalChanges = 0
     /** How many times the keyboard was told to vibrate because a word changed by itself. */
     var vibrations = 0
-    val composer = Composer(editor, words, { _, action -> posted += action }, {}, { false }, {})
+    val composer = Composer(editor, words, { _, action -> posted += action }, {}, { autoCapitalise }, {})
 
     init {
         composer.autocorrect = autocorrect
@@ -498,6 +499,30 @@ private fun composerFlow(world: Realistic) {
     same(noPunctuation().type("hello ,").text, "hello ,", "With the setting off, a typed space stays")
     same(typed("hello ").quickSpace().text, "hello. ", "Two quick spaces type a full stop")
     same(noPunctuation().type("hello ").quickSpace().text, "hello  ", "With the setting off, two quick spaces stay spaces")
+
+    // Capitals. A full stop ends a sentence only with a space after it, and a word that adds its own space counts that space.
+    run {
+        val sentences = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, 0)
+        fun capitals() = Typist(world, autocorrect = null, field = sentences, autoCapitalise = true)
+        same(capitals().type("hi. there").text, "Hi. There", "A letter after a full stop and a space is a capital")
+        same(capitals().type("see atlas.com").text, "See atlas.com", "A letter straight after a full stop stays in lowercase")
+        same(capitals().type("see file.txt").text, "See file.txt", "A file name stays in lowercase")
+        same(capitals().type("use e.g").text, "Use e.g", "The letter after the first full stop of e.g stays in lowercase")
+        same(capitals().type("use e.g. this").text, "Use e.g. this", "A word after e.g. stays in lowercase")
+        same(capitals().type("use i.e. this").text, "Use i.e. this", "A word after i.e. stays in lowercase")
+        same(capitals().type("Hi.").swipe("there").text, "Hi. There ", "A swiped word that adds its space after a full stop is a capital")
+        same(capitals().type("use e.g.").swipe("this").text, "Use e.g. this ", "A swiped word that adds its space after e.g. stays in lowercase")
+        same(capitals().type("Hi.").tap("a").text, "Hi. A ", "A tap that adds its space after a full stop is a capital")
+        same(capitals().type("use e.g.").tap("a").text, "Use e.g. a ", "A tap that adds its space after e.g. stays in lowercase")
+    }
+    same(SwipeTyping.capitalise("there", SwipeTyping.beforeSuggestion("Hi.", ""), 0, false, true), "There",
+        "A pick straight after a full stop gets a space, so it is a capital")
+    same(SwipeTyping.capitalise("this", SwipeTyping.beforeSuggestion("use e.g.", ""), 0, false, true), "this",
+        "A pick straight after e.g. gets a space and stays in lowercase")
+    same(SwipeTyping.capitalise("there", SwipeTyping.beforeSuggestion("Hi. ", ""), 0, false, true), "There",
+        "A pick after a typed space is a capital")
+    same(SwipeTyping.capitalise("com", SwipeTyping.beforeSuggestion("atlas.", "co"), 0, false, true), "com",
+        "A pick that finishes letters after a full stop adds no space and stays in lowercase")
 
     // A word deleted straight after it was typed is not learned.
     typed("blorptastic ").also {

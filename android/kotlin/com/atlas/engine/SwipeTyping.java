@@ -265,9 +265,10 @@ public final class SwipeTyping {
                 if (prefix.isEmpty() && learningEnabled) found = NextWordPredictor.combined(found, learnedNextWords(contextText, variant));
                 result = blockedWords.filter(found);
                 boolean upper = prefix.length() > 1 && prefix.equals(prefix.toUpperCase(Locale.UK));
+                String casedAfter = beforeSuggestion(contextText, prefix);
                 for (int i = 0; i < result.length; i++) {
                     String word = learningEnabled && wordsAvailable ? dictionary.restoreCase(result[i], today()) : result[i];
-                    result[i] = upper ? word.toUpperCase(Locale.UK) : capitalise(word, contextText, 0,
+                    result[i] = upper ? word.toUpperCase(Locale.UK) : capitalise(word, casedAfter, 0,
                             !prefix.isEmpty() && Character.isUpperCase(prefix.charAt(0)), autoCapitalise);
                 }
             } catch (RuntimeException | LinkageError error) {
@@ -652,33 +653,7 @@ public final class SwipeTyping {
         } catch (IOException error) { wordsSaveError = " · Could not save words"; }
     }
 
-    public static String capitalise(String text, String before) {
-        boolean sentenceStart = true;
-        for (int end = before.length(); end > 0;) {
-            int previous = before.codePointBefore(end);
-            // Some fields, like WhatsApp search, start with an invisible character such as a zero-width space.
-            boolean invisible = Character.getType(previous) == Character.FORMAT;
-            if (!invisible && (endsSentence(previous) || !Character.isWhitespace(previous))) {
-                sentenceStart = endsSentence(previous);
-                break;
-            }
-            end -= Character.charCount(previous);
-        }
-        StringBuilder result = new StringBuilder(text.length());
-        for (int index = 0; index < text.length();) {
-            int character = text.codePointAt(index);
-            result.appendCodePoint(sentenceStart ? Character.toTitleCase(character) : character);
-            if (endsSentence(character) || !Character.isWhitespace(character)) {
-                sentenceStart = endsSentence(character);
-            }
-            index += Character.charCount(character);
-        }
-        return result.toString();
-    }
-
-    private static boolean endsSentence(int character) {
-        return ".!?\n\r\u2028\u2029\u3002\uff01\uff1f".indexOf(character) >= 0;
-    }
+    public static String capitalise(String text, String before) { return SentenceCase.capitalise(text, before); }
 
     public static String capitalise(String str, String str2, int i, boolean z, boolean autoCapitalise) {
         if ((1048576 & i) != 0) {
@@ -699,5 +674,10 @@ public final class SwipeTyping {
         }
         char cCharAt = str.charAt(str.length() - 1);
         return (Character.isLetterOrDigit(cCharAt) || ".,!?;:)]".indexOf(cCharAt) >= 0) ? " " : "";
+    }
+
+    /** The text that a suggestion follows. A word picked with no letters typed first gets the space that {@link #prefix} gives. */
+    public static String beforeSuggestion(String contextText, String typed) {
+        return typed.isEmpty() ? contextText + prefix(contextText) : contextText;
     }
 }

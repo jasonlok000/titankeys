@@ -432,6 +432,8 @@ class Composer(
         val dropsSpace = (automaticSpace == anchor || typedSpace == anchor) && anchor.before?.endsWith(" ") == true
             && text[0] in ".,!?;:)]}…"
         val before = anchor.before
+        val respelled = if (!letterTap && !dropsSpace && field.fullStops && text[0] in ".,!?;:)]}…") before?.let(::respell) else null
+        val replaced = (if (dropsSpace) 1 else 0) + (respelled?.first?.length ?: 0)
         val cased = if (before != null && field.sentenceCapitalisation && autoCapitalise()) {
             SwipeTyping.capitalise(text, before)
         } else text
@@ -439,13 +441,13 @@ class Composer(
             val prefix = if (anchor.selected) "" else SwipeTyping.prefix(before.orEmpty())
             "$prefix$cased "
         } else cased
-        if (!edit(if (dropsSpace) 1 else 0, typed)) return
+        if (!edit(replaced, (respelled?.second ?: "") + typed)) return
         automaticSpace = if (letterTap) snapshot() else null
         composition = Composition.None
         if (letterTap) manualWord.clear()
         else if (!completesCorrection) observe(text)
         if (!completed.isNullOrEmpty()) {
-            confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(completed, correction) }
+            confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(respelled?.second ?: completed, correction) }
             return
         }
         predictLater()
@@ -486,6 +488,7 @@ class Composer(
         correcting = null
         val pending = fullStop
         fullStop = null
+        var respelled: Pair<String, String>? = null
         when {
             !field.fullStops || anchor.selected -> if (!edit(0, " ")) return
             automaticSpace == anchor && before.endsWith(" ") -> {
@@ -494,14 +497,15 @@ class Composer(
             !repeated && pending != null && time - pending.time in 0..FULL_STOP_MILLIS
                 && anchor.available && anchor == pending.snapshot -> if (!edit(1, ". ")) return
             else -> {
-                if (!edit(0, " ")) return
+                respelled = respell(before)
+                if (!edit(respelled?.first?.length ?: 0, (respelled?.second ?: "") + " ")) return
                 // Read the bounded editor window after insertion; appending would exceed its limit.
                 if (!repeated && endsWord(before)) fullStop = FullStop(time, snapshot())
             }
         }
         automaticSpace = null
         if (field.learning && !completed.isNullOrEmpty()) {
-            confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(completed, correction) }
+            confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(respelled?.second ?: completed, correction) }
             return
         }
         predictLater()
@@ -1020,6 +1024,14 @@ class Composer(
             composition = Composition.Typed(TypedPredictions.prefix(context), trailingSpace, anchor, suggestions)
             show(suggestions)
         }
+    }
+
+    /** The typed word at the end of [before] and the spelling a swipe gives it, or null if that is the same. */
+    private fun respell(before: String): Pair<String, String>? {
+        if (!autoCapitalise()) return null
+        val word = before.takeLastWhile { it.isLetter() || it == '\'' || it == '’' }
+        if (word.isEmpty()) return null
+        return SwipeTyping.respell(word).takeIf { it != word }?.let { word to it }
     }
 
     private fun endsWord(text: String): Boolean {

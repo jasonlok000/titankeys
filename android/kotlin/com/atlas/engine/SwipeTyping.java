@@ -569,6 +569,8 @@ public final class SwipeTyping {
         } catch (IOException error) { wordsSaveError = " · Could not save words"; }
     }
 
+    public static String respell(String word) { return SwipeSpelling.respell(word); }
+
     public static String capitalise(String text, String before) {
         boolean sentenceStart = true;
         for (int end = before.length(); end > 0;) {

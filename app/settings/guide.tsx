@@ -20,9 +20,8 @@ export default function Guide() {
       <Row title="Word suggestions" subtitle="The strip shows words and spelling corrections as you type. Touch a word to type it." wrapSubtitle />
       <Row title="Delete a word" subtitle="Push Alt, then push Backspace. You can also use Ctrl and Backspace, or flick left from Backspace." wrapSubtitle />
       <Row title="More symbols" subtitle="Push Sym to open the panel. Each key shows a symbol. Rest your finger on a key to see its symbol larger. Push the key to type the symbol. The panel then closes. Swipe up or down on the keyboard to see more." wrapSubtitle />
-      <Row title="Emoji" subtitle="Push Sym again to show emoji, with recent emoji first. Push a key to type its emoji. Swipe left or right on the keyboard to change the group, or up or down to see more. Push Sym again to close the panel." wrapSubtitle />
-      <Row title="Ctrl shortcuts" subtitle="Hold Ctrl to see the shortcuts on the keys." />
-      <Row title="See what a shortcut does" subtitle="Hold Ctrl and rest your finger on the key." />
+      <Row title="Emoji" subtitle="Push Sym again to show emoji. The first group is Recent, after you use an emoji. Push a key to type its emoji. Swipe left or right on the keyboard to change the group, or up or down to see more. The marks at the top show each group. Push Sym again to close the panel." wrapSubtitle />
+      <Row title="Ctrl shortcuts" subtitle="Hold Ctrl to see the shortcuts on the keys. The top of the panel shows what each shortcut does." wrapSubtitle />
       <Row title="Use a shortcut" subtitle="Hold Ctrl and push the key." />
       <Row title="Use fn as Ctrl" subtitle="Turn this on in Settings to use fn in place of Ctrl." />
     </Section>

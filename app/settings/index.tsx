@@ -34,6 +34,8 @@ export default function Settings() {
         onChange={cursorControl => save.run({ cursorControl })} />
       <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}
         onChange={fnAsCtrl => save.run({ fnAsCtrl })} />
+      <Toggle label="Two pushes lock Shift and Alt" value={settings.doublePressLocks}
+        onChange={doublePressLocks => save.run({ doublePressLocks })} />
     </Section>
     <Section title="Swipe typing">
       <Field label="Slip recovery period" href="/settings/lift">{liftLabel(settings)}</Field>

@@ -31,6 +31,7 @@ fun main() {
     pressThenHoldAndSwipe()
     doublePress()
     doublePressAndTypeQuickly()
+    doublePressDoesNotLockWhenOff()
     lateSecondPress()
     lockedThenHold()
     bothShiftKeys()
@@ -69,7 +70,7 @@ private fun same(actual: Any?, expected: Any?, message: String) {
 
 /** Plays key events into one [Modifiers], with a clock that moves forward between them. */
 private class Keyboard {
-    val modifiers = Modifiers()
+    val modifiers = Modifiers().apply { doublePressLocks = true }
     private var now = 1_000L
 
     val shift get() = modifiers.shift
@@ -181,6 +182,33 @@ private fun doublePress() = Keyboard().run {
     idle(WORD)
     press()
     same(shift, Level.Off, "A third press must unlock")
+}
+
+private fun doublePressDoesNotLockWhenOff() = Keyboard().run {
+    same(Modifiers().doublePressLocks, false, "A double press must not lock by default")
+    modifiers.doublePressLocks = false
+    press()
+    same(shift, Level.Once, "One press must still capitalise the next character")
+    idle(GAP)
+    press()
+    same(shift, Level.Off, "A quick second press must only turn Shift off")
+    idle(GAP)
+    press()
+    same(shift, Level.Once, "A third press must start again")
+    type()
+    same(shift, Level.Off, "That press must capitalise only the next character")
+    idle(WORD)
+    press()
+    idle(GAP)
+    down()
+    type(5)
+    up(after = WORD)
+    same(shift, Level.Off, "A press and then a hold must leave Shift off")
+    idle(WORD)
+    press(KeyEvent.KEYCODE_ALT_LEFT)
+    idle(GAP)
+    press(KeyEvent.KEYCODE_ALT_LEFT)
+    same(modifiers.alt, Level.Off, "A quick second press must only turn Alt off")
 }
 
 private fun doublePressAndTypeQuickly() = Keyboard().run {

@@ -3,8 +3,9 @@ package com.atlas.keyboard
 import android.view.KeyEvent
 
 /**
- * Sticky Shift and Alt, and the Sym panel. One press of Shift or Alt applies to the next character, a second press
- * within [DOUBLE_PRESS_MILLIS] locks it, and a third press releases it. Holding the key works as usual.
+ * Sticky Shift and Alt, and the Sym panel. One press of Shift or Alt applies to the next character, and a second press
+ * turns it off. With [doublePressLocks], a second press within [DOUBLE_PRESS_MILLIS] locks it instead, and a third press
+ * releases it. Holding the key works as usual.
  * Each press of Sym moves the panel to its next step, and the panel stays open after Sym is let go.
  * Only one of them is on at a time.
  *
@@ -32,6 +33,9 @@ class Modifiers {
 
     /** fn counts as a Ctrl key, for the Use fn as Ctrl setting. */
     var fnIsCtrl = false
+
+    /** A quick second press locks Shift or Alt, for the setting of the same name. */
+    var doublePressLocks = false
 
     /** Ctrl has been held long enough to show what its shortcuts do. */
     var ctrlOverlay = false
@@ -61,7 +65,7 @@ class Modifiers {
     fun press(key: Key, time: Long) {
         val next = when (level(key)) {
             Level.Off -> Level.Once
-            Level.Once -> if (time - last[key.ordinal] < DOUBLE_PRESS_MILLIS) Level.Locked else Level.Off
+            Level.Once -> if (doublePressLocks && time - last[key.ordinal] < DOUBLE_PRESS_MILLIS) Level.Locked else Level.Off
             Level.Locked -> Level.Off
         }
         shift = if (key == Key.Shift) next else Level.Off

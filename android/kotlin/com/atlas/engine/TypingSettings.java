@@ -24,6 +24,15 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("auto_punctuation", enabled).apply();
     }
 
+    /** Two quick pushes lock Shift or Alt. When this is off, the second push only turns it off. */
+    public static boolean doublePressLocks(Context context) {
+        return preferences(context).getBoolean("double_press_locks", false);
+    }
+
+    public static void doublePressLocks(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("double_press_locks", enabled).apply();
+    }
+
     public static boolean suggestionBar(Context context) {
         return preferences(context).getBoolean("suggestion_bar", true);
     }

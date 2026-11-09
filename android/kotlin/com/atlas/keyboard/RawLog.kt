@@ -105,6 +105,7 @@ object RawLog {
         "holdSymbols" to TypingSettings.holdSymbols(context),
         "holdSymbolMillis" to TypingSettings.holdSymbolMillis(context),
         "fnAsCtrl" to TypingSettings.fnAsCtrl(context),
+        "doublePressLocks" to TypingSettings.doublePressLocks(context),
         "autoCapitalise" to TypingSettings.autoCapitalise(context),
         "autoPunctuation" to TypingSettings.autoPunctuation(context),
         "autocorrect" to TypingSettings.autocorrect(context),

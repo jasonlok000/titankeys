@@ -39,10 +39,10 @@ export default function Settings() {
     <Section title="Shortcuts">
       <Toggle label="App shortcuts" value={settings.appShortcuts}
         onChange={appShortcuts => save.run({ appShortcuts })} />
-      {settings.appShortcuts && <Field label="Hyper key" href="/settings/hyper-key">{hyperKeyLabel(settings)}</Field>}
-      {settings.appShortcuts && <Field label="Apps" href="/settings/shortcuts">{shortcutsLabel(settings)}</Field>}
-      {settings.appShortcuts && <Toggle label="Animations" value={settings.shortcutAnimation}
-        onChange={shortcutAnimation => save.run({ shortcutAnimation })} />}
+      <Field label="Hyper key" href="/settings/hyper-key" disabled={!settings.appShortcuts}>{hyperKeyLabel(settings)}</Field>
+      <Field label="Apps" href="/settings/shortcuts" disabled={!settings.appShortcuts}>{shortcutsLabel(settings)}</Field>
+      <Toggle label="Animations" value={settings.shortcutAnimation} disabled={!settings.appShortcuts}
+        onChange={shortcutAnimation => save.run({ shortcutAnimation })} />
     </Section>
     <Section title="Personal">
       <Field label="Your words" href="/settings/data" />

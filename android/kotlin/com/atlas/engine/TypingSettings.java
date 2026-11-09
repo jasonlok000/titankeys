@@ -31,7 +31,7 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("auto_punctuation", enabled).apply();
     }
 
-    /** Two quick pushes lock Shift or Alt. When this is off, the second push only turns it off. */
+    /** Two quick pushes lock Shift or Alt. When this is off, they leave it on for the next character only. */
     public static boolean doublePressLocks(Context context) {
         return preferences(context).getBoolean("double_press_locks", false);
     }

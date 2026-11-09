@@ -18,7 +18,7 @@ export default function Guide() {
       <Row title="Tap keys" subtitle="Touch these keys lightly to type them. Select the keys in Settings." wrapSubtitle />
       <Row title="Hold for symbols" subtitle="Hold a letter to type the symbol on its key. Select the time in Settings." />
       <Row title="Full stop" subtitle="Push the space bar two times." wrapSubtitle />
-      <Row title="Shift and Alt" subtitle="Push one time for the next letter only. Push again to cancel. To lock with two quick pushes, open Settings and turn on Two pushes lock Shift and Alt." wrapSubtitle />
+      <Row title="Shift and Alt" subtitle="Push one time for the next letter only. Two quick pushes do the same. To cancel, push again after a longer time. To lock with two quick pushes, open Settings and turn on Two pushes lock Shift and Alt." wrapSubtitle />
       <Row title="Word suggestions" subtitle="The strip shows words and spelling corrections as you type. Touch a word to type it." wrapSubtitle />
       <Row title="Delete a word" subtitle="Push Alt, then push Backspace. You can also use Ctrl and Backspace, or flick left from Backspace." wrapSubtitle />
       <Row title="Delete many words" subtitle="Flick left from Backspace. Do not lift your finger. TitanKeys deletes more words, one after the other, and the speed increases. To stop, lift your finger or push a key." wrapSubtitle />

@@ -20,7 +20,7 @@ Atlas has these goals:
 
 ## Open an issue
 
-1. Search the [issues](https://github.com/juleshall4/atlas/issues) first. Make sure that your issue is not a duplicate.
+1. Search the [issues](https://github.com/jasonlok000/titankeys/issues) first. Make sure that your issue is not a duplicate.
 2. Open a new issue.
 3. Add one of these labels:
 

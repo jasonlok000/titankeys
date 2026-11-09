@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 
 /** Dictionary-backed completions and spelling fixes for physical typing; never rewrites text automatically. */
 public final class TypedPredictions {
-    private static final int PERSONAL_COMPLETION_BOOST = 32;
     private static final int SPELLING_SUPPORT = 5;
     private static final int CORRECTION_LENGTH = 3;
     private static final int CORRECTIONS = 3;
@@ -100,7 +99,6 @@ public final class TypedPredictions {
     String[] suggest(String prefix, List<LanguageHabits.Entry> personal, int today, Predicate<String> allowed, Map<String, Double> context) {
         String lower = prefix.toLowerCase(Locale.ROOT).replace('\u2019', '\'');
         Map<String, Double> matches = new LinkedHashMap<>();
-        Map<String, Double> personalMatches = new LinkedHashMap<>();
         Map<String, Double> similar = new LinkedHashMap<>();
         if (lower.isEmpty()) {
             // Ranking every word takes too long for the next word, and only the model's picks and common words can win.
@@ -111,32 +109,22 @@ public final class TypedPredictions {
             for (int index : common) if (allowed.test(words[index])) matches.putIfAbsent(words[index], (double) frequencies[index]);
         } else for (int i = lowerBound(lower); i < words.length && words[i].startsWith(lower); i++)
             if (allowed.test(words[i])) matches.put(words[i], (double) frequencies[i]);
+        // A saved word ranks like any other word, with its own use counted in its frequency.
         for (LanguageHabits.Entry entry : personal) {
             if (!entry.active(today) || !SuggestionPolicy.allowed(entry.word) || !allowed.test(entry.word)) continue;
             double frequency = entry.frequency((float) frequency(entry.word), today);
-            if (entry.word.startsWith(lower)) personalMatches.put(entry.word, frequency + PERSONAL_COMPLETION_BOOST);
+            // With no letters, only the model's picks and common words take part, so other saved words stay out too.
+            if (entry.word.startsWith(lower) && (!lower.isEmpty() || matches.containsKey(entry.word)))
+                matches.merge(entry.word, frequency, Math::max);
             else if (entry.support(today) >= SPELLING_SUPPORT && similar(lower, entry.word)) similar.put(entry.word, frequency);
         }
         Comparator<Map.Entry<String, Double>> frequency = Comparator
                 .<Map.Entry<String, Double>>comparingDouble(Map.Entry::getValue).reversed()
                 .thenComparing(Map.Entry::getKey);
-        List<String> result;
-        if (context.isEmpty()) {
-            personalMatches.forEach((word, boosted) -> matches.merge(word, boosted, Math::max));
-            result = ranked(matches, frequency);
-        } else {
-            personalMatches.keySet().forEach(matches::remove);
-            Comparator<Map.Entry<String, Double>> likely = Comparator
-                    .<Map.Entry<String, Double>>comparingDouble(entry -> context.getOrDefault(entry.getKey(), Double.NEGATIVE_INFINITY))
-                    .reversed().thenComparing(frequency);
-            result = ranked(matches, likely);
-            // With no typed letters there is no evidence for a saved word, so it would crowd every bar.
-            if (!lower.isEmpty()) personalMatches.entrySet().stream().sorted(frequency).forEach(entry -> {
-                int index = 0;
-                while (index < result.size() && frequency(result.get(index)) >= entry.getValue()) index++;
-                result.add(index, entry.getKey());
-            });
-        }
+        Comparator<Map.Entry<String, Double>> likely = Comparator
+                .<Map.Entry<String, Double>>comparingDouble(entry -> context.getOrDefault(entry.getKey(), Double.NEGATIVE_INFINITY))
+                .reversed().thenComparing(frequency);
+        List<String> result = ranked(matches, likely);
         similar.entrySet().stream().sorted(frequency).findFirst()
                 .ifPresent(entry -> result.add(Math.min(2, result.size()), entry.getKey()));
         addCorrections(result, lower, allowed, context, frequency);

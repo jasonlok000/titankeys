@@ -26,7 +26,7 @@ public final class SavedWordsChecks {
         words.write(new DataOutputStream(bytes));
         LanguageHabits restored = new LanguageHabits();
         restored.read(new DataInputStream(new ByteArrayInputStream(bytes.toByteArray())));
-        check(Arrays.equals(restored.spellings(), new String[] { "Atlas", "O'Brien" }),
+        check(Arrays.equals(restored.spellings(day + 28), new String[] { "Atlas", "O'Brien" }),
                 "Added spellings and apostrophes must survive a reload");
         check(restored.active(day + 28).size() == 2, "Added words must remain active after a reload");
         for (String invalid : new String[] { "", "a", "two words", "word1", "abcdefghijklmnopqrstuvwxyz" }) {
@@ -38,8 +38,38 @@ public final class SavedWordsChecks {
             }
         }
         restored.remove("atlas");
-        check(Arrays.equals(restored.spellings(), new String[] { "O'Brien" }), "Added words must be removable");
+        check(Arrays.equals(restored.spellings(day + 28), new String[] { "O'Brien" }), "Added words must be removable");
+        checkLearning(day);
         System.out.println("Saved word checks passed");
+    }
+
+    private static void checkLearning(int day) throws Exception {
+        LanguageHabits words = new LanguageHabits();
+        words.typed("becuase", day, true);
+        check(words.spellings(day).length == 0, "A word typed once must not show in the list");
+        words.typed("becuase", day, true);
+        words.untyped("becuase", day);
+        words.untyped("becuase", day);
+        check(words.entries().isEmpty(), "A typo that the user deleted must leave no trace");
+
+        for (int i = 0; i < 3; i++) words.typed("Zorbly", day, true);
+        check(Arrays.equals(words.spellings(day), new String[] { "Zorbly" }), "A word typed 3 times must show in the list");
+        check(words.active(day + 29).size() == 1, "A learned word must stay active for a month");
+        check(words.active(day + 30).isEmpty() && words.spellings(day + 30).length == 0,
+                "A learned word that is not used for a month must fade");
+
+        words.typed("qwop", day, true);
+        words.typed("plim", day + 30, true);
+        check(words.entries().stream().noneMatch(entry -> entry.word.equals("qwop")), "A faded candidate must be deleted");
+
+        words.add("Liv", day);
+        words.untyped("liv", day);
+        check(words.active(day + 3650).stream().anyMatch(entry -> entry.word.equals("liv")), "An added word must never fade");
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        words.write(new DataOutputStream(bytes));
+        LanguageHabits reloaded = new LanguageHabits();
+        reloaded.read(new DataInputStream(new ByteArrayInputStream(bytes.toByteArray())));
+        check(Arrays.asList(reloaded.spellings(day + 3650)).contains("Liv"), "An added word must never fade after a reload");
     }
 
     private static void check(boolean condition, String message) {

@@ -1,18 +1,8 @@
-# 1.3.0
+# 1.3.1
 
 ## App
 - Change the keyboard: Push and hold Sym to select a different keyboard.
 - Lowercase start: Push Shift at the start of a sentence to type a lowercase letter.
 
-## New
-- Change the keyboard: Push and hold Sym. A list of your keyboards shows. Select a keyboard to use it. A short push on Sym continues to show emoji.
-- Lowercase start: At the start of a sentence, push Shift to type a lowercase letter. Use this for words such as "iPhone" and "eBay".
-
-## Fixed
-- Capitals after "e.g." and "i.e.": Atlas does not start a new sentence after "e.g.", "i.e.", or a full stop with no space, such as in "atlas.com".
-- Pause after typing: After you type with the keys, Atlas waits 0.4 seconds before a tap key types, cursor mode starts, or swipe vibration starts.
-- Two fingers: When you put two fingers on the keys, Atlas does not type a swipe or start cursor mode.
-- Saved words: The strip shows a saved word in the same order as other words. A saved word does not always show first.
-- Word vibration: When you touch a word on the strip, the vibration is the same as the cursor mode start.
-- Settings: When swipe typing is off, Settings does not show Swipe vibration. When swipe typing and cursor mode are off, Settings does not show Slip recovery period.
-- Your words: The screen title is Your words, the same as in Settings.
+## Critical fix
+- Long swipes: This version fixes a critical problem from the two-finger change in 1.3.0. Atlas identified one finger as two fingers and stopped some long swipes, such as "investigating". We are sorry for this problem.

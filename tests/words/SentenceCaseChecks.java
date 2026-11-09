@@ -17,7 +17,18 @@ public final class SentenceCaseChecks {
         check("hi. you", "", "Hi. You");
         check("e.g. you", "", "E.g. you");
         check("hello", "​", "Hello");
+        uncapitalised("Iphone", "", "iphone");
+        uncapitalised("Ebay", "Hi. ", "ebay");
+        uncapitalised("H", "Hi ", "H");
+        uncapitalised("G", "e.", "G");
         System.out.println("Sentence case checks passed");
+    }
+
+    private static void uncapitalised(String text, String before, String expected) {
+        String actual = SentenceCase.uncapitalise(text, before);
+        if (!actual.equals(expected)) {
+            throw new AssertionError("Shift: \"" + before + "\" + \"" + text + "\" gave \"" + actual + "\", expected \"" + expected + "\"");
+        }
     }
 
     private static void check(String text, String before, String expected) {

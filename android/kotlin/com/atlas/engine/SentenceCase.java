@@ -18,6 +18,14 @@ public final class SentenceCase {
         return result.substring(before.length());
     }
 
+    /** Shift at the start of a sentence gives lowercase, so "iPhone" or "eBay" can start one. */
+    public static String uncapitalise(String text, String before) {
+        if (text.isEmpty() || !startsSentence(before)) return text;
+        int first = text.codePointAt(0);
+        return new StringBuilder().appendCodePoint(Character.toLowerCase(first))
+                .append(text, Character.charCount(first), text.length()).toString();
+    }
+
     /** A full stop must have a space after it, so "e.g" and "atlas.com" stay in lowercase. */
     static boolean startsSentence(CharSequence before) {
         boolean spaced = false;

@@ -523,7 +523,7 @@ class AtlasIme : InputMethodService() {
                 else -> {
                     val typed = event.getUnicodeChar(event.metaState or modifiers.metaState)
                     if (typed <= 0 || !Character.isValidCodePoint(typed) || Character.isISOControl(typed)) return
-                    composer.type(String(Character.toChars(typed)))
+                    composer.type(String(Character.toChars(typed)), shifted = modifiers.shift == Modifiers.Level.Once)
                     modifiers.consume()
                 }
             }
@@ -604,7 +604,7 @@ class AtlasIme : InputMethodService() {
                     composer.space(repeated = false, time = outcome.endedAt)
                 } else {
                     val word = if ((key == "I" && TypingSettings.autoCapitalise(this)) || modifiers.shift != Modifiers.Level.Off) key else key.lowercase()
-                    composer.type(word, letterTap = true)
+                    composer.type(word, letterTap = true, shifted = modifiers.shift == Modifiers.Level.Once)
                 }
                 modifiers.consume()
             }
@@ -727,9 +727,10 @@ class AtlasIme : InputMethodService() {
                     return true
                 }
                 val text = String(Character.toChars(typed))
+                val shifted = modifiers.shift == Modifiers.Level.Once
                 modifiers.consume()
                 // Controlled insertion avoids unacknowledged app key updates overtaking later input.
-                composer.type(text)
+                composer.type(text, shifted = shifted)
             }
         }
         return true

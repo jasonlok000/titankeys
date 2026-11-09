@@ -112,7 +112,7 @@ class Composer(
 
     private sealed interface PendingInput
     private data class PendingSwipe(val swipe: Swipe, val startedAt: Long, val endedAt: Long, val metaState: Int) : PendingInput
-    private class PendingText(var text: String, val letterTap: Boolean) : PendingInput
+    private class PendingText(var text: String, val letterTap: Boolean, val shifted: Boolean) : PendingInput
     private class PendingEdit(val action: () -> Unit, val transferable: Boolean = false) : PendingInput
     private class FullStop(val time: Long, val snapshot: Snapshot)
     private class Barrier(val identity: Editor.Identity, val navigation: Boolean = false, val command: Boolean = false)
@@ -297,13 +297,14 @@ class Composer(
         return true
     }
 
-    private fun enqueueText(text: String, letterTap: Boolean) {
+    private fun enqueueText(text: String, letterTap: Boolean, shifted: Boolean) {
         val units = pendingInput.sumOf { if (it is PendingText) it.text.length else 0 }
         if (units + text.length > MAX_PENDING_TEXT) return
         val last = pendingInput.lastOrNull() as? PendingText
-        if (!letterTap && last != null && !last.letterTap && last.text.length + text.length <= MAX_TEXT_CHUNK) {
+        if (!letterTap && !shifted && last != null && !last.letterTap && !last.shifted
+            && last.text.length + text.length <= MAX_TEXT_CHUNK) {
             last.text += text
-        } else enqueue(PendingText(text, letterTap))
+        } else enqueue(PendingText(text, letterTap, shifted))
     }
 
     private fun scheduleDrain() {
@@ -334,7 +335,7 @@ class Composer(
                 try {
                     when (pending) {
                         is PendingEdit -> pending.action()
-                        is PendingText -> type(pending.text, pending.letterTap)
+                        is PendingText -> type(pending.text, pending.letterTap, pending.shifted)
                         is PendingSwipe -> Unit
                     }
                 } finally {
@@ -426,11 +427,14 @@ class Composer(
         }
     }
 
-    /** Keys wait for pending swipes, retaining the order in which the user entered them. */
-    fun type(text: String, letterTap: Boolean = false) {
+    /**
+     * Keys wait for pending swipes, retaining the order in which the user entered them.
+     * [shifted] text is from one press of Shift; at the start of a sentence it gives lowercase.
+     */
+    fun type(text: String, letterTap: Boolean = false, shifted: Boolean = false) {
         if (text.isEmpty()) return
         if (!executingQueued && hasPendingInput) {
-            enqueueText(text, letterTap)
+            enqueueText(text, letterTap, shifted)
             return
         }
         leave()
@@ -459,9 +463,9 @@ class Composer(
         } else null
         val replaced = (if (dropsSpace) 1 else 0) + (respelled?.first?.length ?: 0)
         val prefix = if (letterTap && !anchor.selected) SwipeTyping.prefix(before.orEmpty()) else ""
-        val cased = if (before != null && field.sentenceCapitalisation && autoCapitalise()) {
-            SwipeTyping.capitalise(text, before + prefix)
-        } else text
+        val cased = if (before == null || !field.sentenceCapitalisation || !autoCapitalise()) text
+        else if (shifted) SwipeTyping.uncapitalise(text, before + prefix)
+        else SwipeTyping.capitalise(text, before + prefix)
         val typed = if (letterTap) "$prefix$cased " else cased
         if (!edit(replaced, (respelled?.second ?: "") + typed)) return
         if (!letterTap) checkLookAlike()

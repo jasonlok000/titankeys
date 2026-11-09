@@ -150,6 +150,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onCreate() {
         super.onCreate()
+        running = this
         Calibration.init(this)
         haptics = Haptics(this)
         touchpad = Touchpad(getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY))
@@ -819,6 +820,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onDestroy() {
+        if (running === this) running = null
         editing = false
         main.removeCallbacksAndMessages(null)
         settlements.clear()
@@ -831,6 +833,18 @@ class AtlasIme : InputMethodService() {
     }
 
     companion object {
+        /** The running keyboard, for keys that Atlas's accessibility service takes before they reach it. */
+        @Volatile private var running: AtlasIme? = null
+
+        /** A text box is open with Atlas. */
+        fun inTextBox() = running?.editing == true
+
+        /** A key taken for an app shortcut still ends the touch it overlaps, so the touch does not type. */
+        fun keyTaken(event: KeyEvent) {
+            val keyboard = running ?: return
+            if (keyboard.editing) keyboard.contact.key(event.keyCode, event.action == KeyEvent.ACTION_DOWN, event.eventTime)
+        }
+
         private const val MAX_PENDING_INPUT = 128
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"

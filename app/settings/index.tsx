@@ -3,6 +3,7 @@ import { close } from "ink/icons";
 import { state, update } from "../../lib/atlas";
 import { liftLabel } from "./lift";
 import { setupLabel } from "./setup";
+import { shortcutsLabel } from "./shortcuts";
 import { spellingLabel } from "./spelling";
 import { tapKeysLabel } from "./tap-keys";
 import { vibrationLabel } from "./vibration";
@@ -33,6 +34,9 @@ export default function Settings() {
         && <Field label="Slip recovery period" href="/settings/lift">{liftLabel(settings)}</Field>}
       {settings.swipeTyping
         && <Field label="Swipe vibration" href="/settings/vibration">{vibrationLabel(settings)}</Field>}
+    </Section>
+    <Section title="Shortcuts">
+      <Field label="App shortcuts" href="/settings/shortcuts">{shortcutsLabel(settings)}</Field>
     </Section>
     <Section title="Personal">
       <Field label="Your words" href="/settings/data" />

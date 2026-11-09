@@ -6,6 +6,11 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
         </intent>
+        <!-- App shortcuts list and open apps with a launcher icon. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
     <!-- Opted in, apps play their own keyboard-dismiss animation on back and never pass back on. -->
     <application android:enableOnBackInvokedCallback="false">

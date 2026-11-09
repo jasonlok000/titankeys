@@ -36,7 +36,18 @@ export type State = {
   spelling: Spelling;
   words: { word: string; description: string }[];
   blockedWords: string[];
+  /** The name of the key that opens app shortcuts, or null when shortcuts are off. */
+  hyperKey: string | null;
+  /** Each letter with an app, from A to Z. */
+  shortcuts: Shortcut[];
 };
+
+export type Shortcut = { letter: string; app: string; name: string };
+
+export type App = { app: string; name: string };
+
+/** A key pressed to choose the hyper key, with why it cannot be one. */
+export type HyperKeyPress = { code: number; label: string; problem: string | null };
 
 export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autoPunctuation" | "suggestionBar" | "cursorControl" | "swipeTyping" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling">;
 
@@ -124,12 +135,45 @@ export const allowOverlay = () => atlas("overlay");
 export const openScrollAssistant = () => atlas("scrollAssistant");
 export const allowBack = () => atlas("backService");
 
+/** Sets the key that opens app shortcuts. 0 turns shortcuts off. */
+export async function setHyperKey(code: number) {
+  try {
+    await atlas("hyperKey", { code });
+  } finally {
+    await state.refresh();
+  }
+}
+
+/** Sets the app a letter opens, or removes it with null. */
+export async function setShortcut(letter: string, app: string | null) {
+  try {
+    await atlas("shortcut", { letter, app });
+  } finally {
+    await state.refresh();
+  }
+}
+
+export const apps = resource({
+  key: () => ["apps"],
+  load: async (): Promise<App[]> => JSON.parse(await atlas("apps")),
+})();
+
 export const tapKeyLabel = (key: string) => key === " " ? "Space" : key;
 
 /** Waits for letter keys or Space until the returned function is called. */
 export function captureKey(pressed: (key: string) => void) {
   const stop = onNativeMessage("atlas-key", message => pressed((message as { key: string }).key));
   void atlas("captureKey");
+  return () => {
+    stop();
+    void atlas("releaseKey");
+  };
+}
+
+/** Waits for any key except Back and Home until the returned function is called. */
+export function captureHyperKey(pressed: (key: HyperKeyPress) => void) {
+  const stop = onNativeMessage("atlas-key", message => pressed(message as HyperKeyPress));
+  void atlas("captureKey", { anyKey: true });
   return () => {
     stop();
     void atlas("releaseKey");

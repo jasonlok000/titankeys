@@ -12,14 +12,17 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.inputmethod.InputMethodManager
 import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
+import com.atlas.keyboard.AppShortcuts
 import com.atlas.keyboard.AtlasIme
 import com.atlas.keyboard.BackService
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
+import com.atlas.keyboard.HyperKey
 import com.atlas.keyboard.KeyCapture
 import com.atlas.keyboard.Trace
 import com.atlas.keyboard.TouchpadPreview
@@ -38,8 +41,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     // Adapters can be created before the live activity's window gains focus.
     private var visible = true
     private var transferring = false
-    private val keyCapture = lazy { KeyCapture(activity) { key -> activity.emit(JSONObject().put("type", "atlas-key").put("key", key).toString()) } }
+    private val keyCapture = lazy { KeyCapture(activity, ::keyPressed) }
     private var keyCaptureRequested = false
+    /** The screen waits for any key, to choose the hyper key, instead of a letter or Space. */
+    private var captureAnyKey = false
     private val keyboardSettings = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) = publishState()
     }
@@ -65,7 +70,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         }
         if (visible && previewRequested) previewController.value.start()
         else if (previewController.isInitialized()) previewController.value.stop()
-        if (visible && keyCaptureRequested) keyCapture.value.start()
+        if (visible && keyCaptureRequested) keyCapture.value.apply { anyKey = captureAnyKey }.start()
         else if (keyCapture.isInitialized()) keyCapture.value.stop()
     }
 
@@ -193,6 +198,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     "null"
                 }
                 "captureKey" -> {
+                    if (keyCapture.isInitialized()) keyCapture.value.stop()
+                    captureAnyKey = data.optBoolean("anyKey")
                     keyCaptureRequested = true
                     syncPreview()
                     "null"
@@ -201,6 +208,23 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     keyCaptureRequested = false
                     syncPreview()
                     "null"
+                }
+                "hyperKey" -> {
+                    val code = data.getInt("code")
+                    HyperKey.problem(code)?.let { throw IllegalArgumentException(it) }
+                    AppShortcuts.hyperKey(activity, code)
+                    BackService.filterKeys()
+                    "null"
+                }
+                "shortcut" -> {
+                    val letter = data.getString("letter").single()
+                    AppShortcuts.app(activity, letter, if (data.isNull("app")) null else data.getString("app"))
+                    "null"
+                }
+                "apps" -> {
+                    val apps = JSONArray()
+                    for (app in AppShortcuts.apps(activity)) apps.put(JSONObject().put("app", app.packageName).put("name", app.name))
+                    apps.toString()
                 }
                 else -> throw IllegalArgumentException("Unknown Atlas operation: $operation")
             }
@@ -212,6 +236,14 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
 
     override fun cancel(requestId: Long) = Unit
 
+    private fun keyPressed(code: Int) {
+        val message = JSONObject().put("type", "atlas-key")
+        if (captureAnyKey) message.put("code", code).put("label", AppShortcuts.label(code))
+            .put("problem", HyperKey.problem(code) ?: JSONObject.NULL)
+        else message.put("key", if (code == KeyEvent.KEYCODE_SPACE) " " else ('A' + (code - KeyEvent.KEYCODE_A)).toString())
+        activity.emit(message.toString())
+    }
+
     private fun operationResult(error: String?, complete: NativeResultHandler) {
         complete(if (error == null) NativeResult.Success("null")
             else NativeResult.Failure(NativeErrorKind.UNEXPECTED, error, true))
@@ -222,6 +254,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         val enabled = activity.getSystemService(InputMethodManager::class.java).enabledInputMethodList.any { it.component == keyboard }
         val selected = Settings.Secure.getString(activity.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
             ?.let(ComponentName::unflattenFromString) == keyboard
+        val hyperKey = AppShortcuts.hyperKey(activity)
+        val shortcuts = JSONArray()
+        for ((letter, app) in AppShortcuts.shortcuts(activity))
+            shortcuts.put(JSONObject().put("letter", letter.toString()).put("app", app).put("name", AppShortcuts.name(activity, app)))
         val learned = typing.learnedWords()
         val words = JSONArray()
         for ((index, word) in learned.words.withIndex())
@@ -250,6 +286,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
+            .put("hyperKey", if (hyperKey == AppShortcuts.NONE) JSONObject.NULL else AppShortcuts.label(hyperKey))
+            .put("shortcuts", shortcuts)
     }
 
     /** The Titan's Scroll assistant switch powers the keyboard touchpad, and it ships off. Phones without one pass. */

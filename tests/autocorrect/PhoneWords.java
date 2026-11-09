@@ -66,7 +66,7 @@ public final class PhoneWords {
         /** What the keyboard counts as learned. */
         public boolean active(String word) { return habits.activeWords(DAY).contains(SwipeWords.normalise(word)); }
 
-        /** Whether the word has an entry at all, as the word strip's check does. */
-        public boolean seen(String word) { return Arrays.stream(habits.spellings()).anyMatch(word::equalsIgnoreCase); }
+        /** Whether the word shows in the saved list, as the word strip's check does. */
+        public boolean seen(String word) { return Arrays.stream(habits.spellings(DAY)).anyMatch(word::equalsIgnoreCase); }
     }
 }

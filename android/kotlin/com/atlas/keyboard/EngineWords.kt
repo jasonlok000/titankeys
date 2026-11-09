@@ -32,6 +32,7 @@ class EngineWords(private val typing: SwipeTyping) : Words {
         typing.lookAlike(context, word, next) { result(it) }
 
     override fun typed(word: String, rememberCase: Boolean) = typing.typed(word, typing.learningGeneration(), rememberCase)
+    override fun untyped(word: String) = typing.untyped(word, typing.learningGeneration())
 
     override fun keptPair(previous: String?, next: String) = typing.keptPair(previous, next)
 

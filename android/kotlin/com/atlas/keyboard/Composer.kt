@@ -44,6 +44,8 @@ interface Words {
     fun allowed(word: String): Boolean
     fun known(word: String): Boolean
     fun typed(word: String, rememberCase: Boolean = true)
+    /** Takes back the last [typed] use, because the user deleted that word. */
+    fun untyped(word: String)
     /** The user kept [next] after [previous]. [previous] is null if [next] starts a sentence. */
     fun keptPair(previous: String?, next: String)
     fun chosen(swipe: Swipe, context: String, recognition: Recognition, word: String)
@@ -162,6 +164,9 @@ class Composer(
     private var restoredWord: String? = null
     /** An unknown typed word. The next word can still change it, so it is learned after that. */
     private var heldWord: String? = null
+    /** The typed word that was just learned or held, which ends at [end]. Deleting into it takes that back. */
+    private class Learned(val word: String, val end: Int, val snapshot: Snapshot, val held: Boolean)
+    private var lastLearned: Learned? = null
 
     var liftOffMillis = 0
     /** Two quick spaces type a full stop, and punctuation typed after a space moves in front of that space. */
@@ -613,6 +618,8 @@ class Composer(
             return
         }
         if (!word && undoCorrection()) return
+        val typed = lastLearned?.takeIf { snapshot() == it.snapshot }
+        lastLearned = null
         // Deleting or cancelling a swipe is not evidence that the word was kept.
         val source = if (word || !field.learning) null else correcting ?: composition as? Composition.Swiped
         val expected = if (correcting != null) editSnapshot else source?.snapshot
@@ -637,6 +644,7 @@ class Composer(
             expectSelection(previous, removed, 0)
             editSnapshot = snapshot()
             if (source != null && anchor != null && removed > 0) trackCorrection(source, anchor, removed)
+            typed?.let(::forgetIfDeleted)
         } else {
             // The app may have delegated or partly applied deletion. Do not replay dependent input.
             reset()
@@ -1089,13 +1097,40 @@ class Composer(
         return manualWord.edit(" ", before, before != null && before.length < Editor.CONTEXT_LENGTH)
     }
 
+    /** A deleted space only waits. Once a letter of the word goes, the word was a mistake. */
+    private fun forgetIfDeleted(typed: Learned) {
+        val after = editSnapshot ?: return
+        if (!after.knownSelection || after.selected) return
+        if (after.selection.end >= typed.end) lastLearned = Learned(typed.word, typed.end, after, typed.held)
+        else if (!typed.held) words.untyped(typed.word)
+        else if (heldWord == typed.word) heldWord = null
+    }
+
+    /** Notes where [word] ends in the text, so that deleting it straight away can take it back. */
+    private fun rememberLearned(word: String, held: Boolean) {
+        lastLearned = null
+        val anchor = snapshot()
+        val before = anchor.before ?: return
+        if (!anchor.knownSelection || anchor.selected) return
+        val index = before.lastIndexOf(word)
+        if (index < 0) return
+        val tail = before.substring(index + word.length)
+        if (tail.length > 2 || tail.any { it.isLetterOrDigit() || it == '\'' || it == '’' }) return
+        lastLearned = Learned(word, anchor.selection.end - tail.length, anchor, held)
+    }
+
+    private fun typeWord(word: String, rememberCase: Boolean) {
+        words.typed(word, rememberCase)
+        rememberLearned(word, held = false)
+    }
+
     private fun learnWord(word: String?, correction: Composition.Swiped?, rememberCase: Boolean = true) {
         if (!field.learning || word.isNullOrEmpty()) return
-        if (correction == null) words.typed(word, rememberCase)
+        if (correction == null) typeWord(word, rememberCase)
         else if (!word.equals(correction.word, ignoreCase = true)) {
             words.corrected(correction.swipe, correction.context, correction.recognition, word)
             // The engine only counts a correction that resembles the swipe; the word was still typed.
-            words.typed(word, rememberCase)
+            typeWord(word, rememberCase)
         } else if (correction.chosen) {
             words.chosen(correction.swipe, correction.context, correction.recognition, word)
         }
@@ -1188,6 +1223,7 @@ class Composer(
         if (word.isNullOrEmpty() || corrector.listed(word)) return false
         learnHeldWord()
         heldWord = word
+        rememberLearned(word, held = true)
         return true
     }
 
@@ -1205,6 +1241,7 @@ class Composer(
         endedWord = null
         endedBeforeSwipe = null
         restoredWord = null
+        lastLearned = null
         learnHeldWord()
     }
 

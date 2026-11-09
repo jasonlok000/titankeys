@@ -111,6 +111,7 @@ private class FakeEditor : Editor {
 
 private class FakeWords(private val lists: Lists) : Words {
     val typed = ArrayList<String>()
+    val untyped = ArrayList<String>()
     val corrected = ArrayList<String>()
     /** Each pair the next-word predictor was told to learn. "^" stands for the start of a sentence. */
     val pairs = ArrayList<String>()
@@ -128,6 +129,7 @@ private class FakeWords(private val lists: Lists) : Words {
         typed += word
         if (!lists.words.contains(word)) lists.habits.typed(word)
     }
+    override fun untyped(word: String) { untyped += word }
     override fun keptPair(previous: String?, next: String) { pairs += "${previous ?: "^"} $next" }
     override fun chosen(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) = Unit
     override fun corrected(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) { corrected += word }
@@ -496,6 +498,25 @@ private fun composerFlow(world: Realistic) {
     same(noPunctuation().type("hello ,").text, "hello ,", "With the setting off, a typed space stays")
     same(typed("hello ").quickSpace().text, "hello. ", "Two quick spaces type a full stop")
     same(noPunctuation().type("hello ").quickSpace().text, "hello  ", "With the setting off, two quick spaces stay spaces")
+
+    // A word deleted straight after it was typed is not learned.
+    typed("blorptastic ").also {
+        it.backspace()
+        same(it.words.typed.contains("blorptastic"), false, "Deleting only the space keeps the word waiting")
+        it.type(" next ")
+        must(it.words.typed.contains("blorptastic"), "A word that is still whole after its space came back is learned")
+    }
+    typed("blorptastic ").also {
+        it.backspace().backspace().type(" next ")
+        must(!it.words.typed.contains("blorptastic"), "A held word whose letters were deleted must not be learned")
+    }
+    Typist(world, autocorrect = null).type("blorptastic ").also {
+        must(it.words.typed.contains("blorptastic"), "Without autocorrect the word is learned at its space")
+        it.backspace()
+        same(it.words.untyped.isEmpty(), true, "Deleting only the space takes nothing back")
+        it.backspace()
+        same(it.words.untyped, listOf("blorptastic"), "Deleting into the word takes back its use")
+    }
 
     // Backspace undo.
     same(typed("teh ").backspace().text, "teh", "Backspace straight after a fix restores what was typed")

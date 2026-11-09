@@ -16,7 +16,15 @@ public final class ContextSuggestionChecks {
         check(Arrays.equals(predictions.suggest("th", List.of(), 20000, word -> true, context), new String[] { "thanks", "that", "the" }),
                 "Context must decide the order of completions");
         check(first(predictions.suggest("that", List.of(), 20000, word -> true, Map.of("thanks", 9d))).equals("that"),
-                "The exact typed word must stay first");
+                "The typed word must stay when nothing completes it");
+        TypedPredictions deli = new TypedPredictions(new StringReader("deli\ndelicious\ndelight\nthe\ntheir\n"),
+                word -> switch (word) { case "the" -> 220; case "their" -> 180; case "delicious" -> 90; case "delight" -> 100; default -> 80; });
+        check(Arrays.equals(deli.suggest("deli", List.of(), 20000, word -> true), new String[] { "delight", "delicious", "deli" }),
+                "Longer words must come before the typed word");
+        check(Arrays.equals(deli.suggest("the", List.of(), 20000, word -> true), new String[] { "their", "the" }),
+                "Longer words must come before the typed word, however common it is");
+        check(first(deli.suggest("deli", List.of(), 20000, word -> true, Map.of("delicious", 9d))).equals("delicious"),
+                "Context must choose between the typed word and longer words");
         check(first(predictions.suggest("", List.of(), 20000, word -> true, Map.of("know", 9d))).equals("know"),
                 "With no letters, context must choose the next word");
         check(!Arrays.asList(predictions.suggest("", List.of(), 20000, word -> !word.equals("know"), Map.of("know", 9d))).contains("know"),

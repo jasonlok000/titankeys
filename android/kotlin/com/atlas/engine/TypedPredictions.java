@@ -123,16 +123,16 @@ public final class TypedPredictions {
         List<String> result;
         if (context.isEmpty()) {
             personalMatches.forEach((word, boosted) -> matches.merge(word, boosted, Math::max));
-            result = ranked(matches, lower, frequency);
+            result = ranked(matches, frequency);
         } else {
             personalMatches.keySet().forEach(matches::remove);
             Comparator<Map.Entry<String, Double>> likely = Comparator
                     .<Map.Entry<String, Double>>comparingDouble(entry -> context.getOrDefault(entry.getKey(), Double.NEGATIVE_INFINITY))
                     .reversed().thenComparing(frequency);
-            result = ranked(matches, lower, likely);
+            result = ranked(matches, likely);
             // With no typed letters there is no evidence for a saved word, so it would crowd every bar.
             if (!lower.isEmpty()) personalMatches.entrySet().stream().sorted(frequency).forEach(entry -> {
-                int index = entry.getKey().equals(lower) ? 0 : !result.isEmpty() && result.get(0).equals(lower) ? 1 : 0;
+                int index = 0;
                 while (index < result.size() && frequency(result.get(index)) >= entry.getValue()) index++;
                 result.add(index, entry.getKey());
             });
@@ -140,6 +140,8 @@ public final class TypedPredictions {
         similar.entrySet().stream().sorted(frequency).findFirst()
                 .ifPresent(entry -> result.add(Math.min(2, result.size()), entry.getKey()));
         addCorrections(result, lower, allowed, context, frequency);
+        // The typed word is already in the text, so nobody taps it; "deli" leaves the bar to "delicious" and "delight".
+        if (result.remove(lower)) result.add(lower);
         return result.stream().limit(8).toArray(String[]::new);
     }
 
@@ -212,10 +214,9 @@ public final class TypedPredictions {
         return Math.min(previous[b.length()], limit + 1);
     }
 
-    private static List<String> ranked(Map<String, Double> matches, String lower, Comparator<Map.Entry<String, Double>> ranking) {
+    private static List<String> ranked(Map<String, Double> matches, Comparator<Map.Entry<String, Double>> ranking) {
         return matches.entrySet().stream()
-                .sorted(Comparator.<Map.Entry<String, Double>>comparingInt(entry -> entry.getKey().equals(lower) ? 0 : 1)
-                        .thenComparing(ranking))
+                .sorted(ranking)
                 .limit(8).map(Map.Entry::getKey).collect(Collectors.toCollection(ArrayList::new));
     }
 

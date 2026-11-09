@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { parseReleaseNotes, releaseNotesMarkdown, releaseNotesProblem } from "../../lib/release-notes-format";
+import { appReleaseNotes, parseReleaseNotes, releaseNotesMarkdown, releaseNotesProblem } from "../../lib/release-notes-format";
 import { hasReleaseNotes, releaseNotes } from "../../lib/release-notes";
 
 const cases: [name: string, text: string, problem: string | null][] = [
@@ -25,6 +25,21 @@ for (const [name, text, problem] of cases) {
 test("release notes markdown keeps sections, titles and details", () => {
   const notes = parseReleaseNotes("# 1.0.2\n## New\n- Cursor: Hold space.\n## Fixed\n- Search");
   expect(releaseNotesMarkdown(notes)).toBe("## New\n\n- **Cursor**: Hold space.\n\n## Fixed\n\n- Search");
+});
+
+test("github notes leave out the short app section", () => {
+  const notes = parseReleaseNotes("# 1.0.2\n## App\n- Cursor\n## New\n- Cursor: Hold space.\n## Fixed\n- Search");
+  expect(releaseNotesMarkdown(notes)).toBe("## New\n\n- **Cursor**: Hold space.\n\n## Fixed\n\n- Search");
+});
+
+test("the app shows the short notes and one row for all fixes", () => {
+  const notes = parseReleaseNotes("# 1.0.2\n## App\n- Cursor: Hold space.\n## New\n- Cursor: Hold space, then move.\n## Fixed\n- Search\n- Emoji");
+  expect(appReleaseNotes(notes)).toEqual({ notes: [{ title: "Cursor", detail: "Hold space." }], fixes: true });
+});
+
+test("without an app section the app shows the new notes", () => {
+  const notes = parseReleaseNotes("# 1.0.2\n## New\n- Cursor: Hold space.");
+  expect(appReleaseNotes(notes)).toEqual({ notes: [{ title: "Cursor", detail: "Hold space." }], fixes: false });
 });
 
 test("the app shows What's new for its current version unless the notes say skip", async () => {

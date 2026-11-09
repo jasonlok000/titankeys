@@ -1,5 +1,11 @@
 # 1.2.0
 
+## App
+- Emoji: Push Sym to type emoji from the strip.
+- Better suggestions: The strip shows more words, correct spellings, and words in more fields.
+- Cleaner typing: Atlas removes the space before punctuation and corrects words such as "i" and "dont".
+- Delete a word: Push Alt, then push Backspace.
+
 ## New
 - Emoji: Push Sym to show emoji on the strip. Touch an emoji to type it. To see more emoji, move your finger across the keyboard. Your recent emoji show first.
 - Spelling: When you type with the keys, the strip can show the correct spelling of a word.
@@ -8,11 +14,16 @@
 - Short swipes for symbols: When Alt is on, a short swipe shows more symbols.
 - Vibration: When you touch a word on the strip, the phone vibrates.
 - Best word: The best word is in the middle of the strip.
+- Suggestions in more fields: The strip shows words in address bars and private fields. Atlas does not learn words from these fields.
+- Starter words: When you select all the text in a search bar, the strip shows starter words. Private search bars also show starter words.
+- Next words: After you touch a word on the strip, the next words show immediately.
 - Punctuation and capitals: When you type with the keys, Atlas removes the space before a comma, full stop, or other punctuation. Atlas also corrects words such as "i" to "I" and "dont" to "don't". If the next word makes it clear, Atlas changes words such as "ill" to "I'll". Swipe typing already does this.
 - Auto-punctuation setting: To stop these changes to punctuation, go to Settings and turn off Auto-punctuation. This also stops the full stop from two spaces.
 
 ## Fixed
 - Unwanted touches: When you type, a finger on the keys does not start a swipe. It also does not type a tap key.
-- Suggestion bar: When you push Backspace, the words stay on the bar until the new words show.
+- Suggestion bar: When you push Backspace or touch a key, the words stay on the bar until the new words show.
+- Empty suggestion bar: In password, email, and number fields, Atlas does not show the suggestion bar.
+- Space cursor: A finger that touches the space key immediately after a key press does not move the cursor.
 - Screen readers: A screen reader reads the best word first.
 - Tap keys: If you do not select tap keys, Settings shows Off.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check TitanKeys visibility when returning to an app with a focused text field.
+"""Check TitanKeys visibility when returning to an app with a focused text field, and after Back.
 
 Focus the affected field on a connected Android device, then run:
     python3 tests/ime-window/run.py org.mozilla.firefox
@@ -63,6 +63,16 @@ def main():
             assert (package, actual_type) == (args.package, input_type), "The focused field changed during the check"
         assert visible, f"Atlas window stayed hidden after return {cycle + 1} (home delay {delay}s)"
         print(f"PASS return {cycle + 1}: Atlas visible after {delay}s home delay", flush=True)
+
+    # Back also reaches the app, which can close the screen. Only a field that stays can show the result.
+    shell("input", "keyevent", "BACK")
+    time.sleep(2)
+    package, actual_type, visible = state()
+    if (package, actual_type) != (args.package, input_type):
+        print("SKIP back: the app left the field", flush=True)
+        return
+    assert not visible, "Atlas window came back after Back hid it"
+    print("PASS back: Atlas stayed hidden in the same field", flush=True)
 
 
 if __name__ == "__main__":

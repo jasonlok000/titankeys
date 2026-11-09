@@ -63,6 +63,8 @@ class AtlasIme : InputMethodService() {
     private var editing = false
     private var typedInField = false
     private var passingBack = false
+    /** Back hid the strip, so it stays hidden in this field until you tap the field or type. */
+    private var hiddenByBack = false
     private var inLauncher = false
     private var launcherFieldHasText = false
     private val consumedKeys = HashSet<Int>()
@@ -77,7 +79,7 @@ class AtlasIme : InputMethodService() {
     private val pieces = SwipePieces({ composer.liftOffMillis.toLong() }, { composer.canContinueSwipe }, ::isTapKey)
     private var lastTouch: List<Sample>? = null
     private val showStrip = Runnable {
-        if (!editing || currentInputBinding == null) return@Runnable
+        if (hiddenByBack || !editing || currentInputBinding == null) return@Runnable
         // Apps can drop a field yet still start input on it, so only a field that answers gets the strip.
         if (currentInputConnection?.getTextBeforeCursor(1, 0) == null) return@Runnable
         try {
@@ -190,7 +192,11 @@ class AtlasIme : InputMethodService() {
         editor.cancelState()
         super.onStartInput(info, restarting)
         editing = info.inputType != EditorInfo.TYPE_NULL
-        if (!restarting) typedInField = false
+        if (!restarting) {
+            typedInField = false
+            // Apps also restart input on the field that stays, so only a new start ends what Back did.
+            hiddenByBack = false
+        }
         field = if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
         // Android only calls onFinishInput first when the input is not restarting.
         rawLog?.finish()
@@ -234,7 +240,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        // Back belongs to the app; the strip comes and goes with the text field instead.
+        // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
     }
 
@@ -250,18 +256,27 @@ class AtlasIme : InputMethodService() {
         // typed, a hide is the app's own, such as a Done key closing a field it then removes.
         main.removeCallbacks(showStrip)
         if (passingBack) {
-            // Now that the strip is gone, the app's own back can run. If its field stays, so does the strip.
+            // Now that the strip is gone, the app's own back can run. If its field stays, the strip stays hidden.
             passingBack = false
+            hiddenByBack = editing
             main.post(sendBack)
-            if (editing) main.postDelayed(showStrip, BACK_SETTLE_MILLIS)
         } else if (editing && !typedInField) {
             main.post(showStrip)
         }
     }
 
+    /** A key or swipe in a field that Back left hidden brings the strip back. */
+    private fun showStripAfterBack() {
+        if (!hiddenByBack) return
+        hiddenByBack = false
+        main.post(showStrip)
+    }
+
     override fun onUnbindInput() {
         main.removeCallbacks(showStrip)
         main.removeCallbacks(sendBack)
+        // The app has lost the keyboard, so coming back to it counts as a new start.
+        hiddenByBack = false
         super.onUnbindInput()
     }
 
@@ -287,7 +302,11 @@ class AtlasIme : InputMethodService() {
 
     override fun onEvaluateInputViewShown() = editing
 
-    override fun onShowInputRequested(flags: Int, configChange: Boolean) = editing
+    /** Android calls this when you tap the field, so the tap also brings the strip back after Back. */
+    override fun onShowInputRequested(flags: Int, configChange: Boolean): Boolean {
+        hiddenByBack = false
+        return editing
+    }
 
     override fun onEvaluateFullscreenMode() = false
 
@@ -614,6 +633,7 @@ class AtlasIme : InputMethodService() {
         inputLog()?.outcome(outcome)
         when (outcome) {
             is Contact.Outcome.Swipe -> {
+                showStripAfterBack()
                 if (stripPaging) {
                     // Sideways swipes page through the symbols or emoji on the strip. The pages follow the finger.
                     val dx = (outcome.points.last().x - outcome.points.first().x) * 10
@@ -638,6 +658,7 @@ class AtlasIme : InputMethodService() {
             }
             is Contact.Outcome.Tap -> {
                 if (!isTapKey(outcome.key)) return
+                showStripAfterBack()
                 val key = if (outcome.key == Layout.SPACE) " " else outcome.key
                 haptics.tap()
                 if (key == " ") {
@@ -666,6 +687,8 @@ class AtlasIme : InputMethodService() {
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) return super.onKeyDown(keyCode, event)
         typedInField = true
         if (touchpad.isGestureKey(event)) return true
+        // Keys like volume reach the keyboard too, but they are not typing.
+        if (!event.isSystem) showStripAfterBack()
         contact.key(keyCode, true, event.eventTime)
         if (keyCode == KeyEvent.KEYCODE_SPACE && selectingWithSpace) return true
         if (selectsWord(event)) {
@@ -831,7 +854,6 @@ class AtlasIme : InputMethodService() {
         private const val MAX_PENDING_INPUT = 128
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"
-        private const val BACK_SETTLE_MILLIS = 300L
         private const val SELECT_AFTER_CURSOR_MILLIS = 250L
         private const val FRAME_MILLIS = 16L
         /** Characters read on each side of the cursor to find the word it is in. */

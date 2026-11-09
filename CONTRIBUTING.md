@@ -37,7 +37,7 @@ For a small fix, you do not need an issue or approval. Send a pull request direc
 
 ### Prerequisites
 
-You must use macOS. The setup script downloads the macOS version of the Android NDK.
+I test the setup on macOS. Linux can also operate, but I did not test it.
 
 - [Bun](https://bun.sh/)
 - [Rust](https://rustup.rs/), to run Ink
@@ -64,13 +64,7 @@ You must use macOS. The setup script downloads the macOS version of the Android 
    bun install
    ```
 
-4. Set up the native toolchain:
-
-   ```bash
-   bash tools/setup-native.sh
-   ```
-
-5. Set `JAVA_HOME`, `ANDROID_HOME`, and `KOTLIN_HOME`. For example, with Homebrew:
+4. Set `JAVA_HOME`, `ANDROID_HOME`, and `KOTLIN_HOME`. For example, with Homebrew on macOS:
 
    ```bash
    export JAVA_HOME=/opt/homebrew/opt/openjdk@21
@@ -78,6 +72,14 @@ You must use macOS. The setup script downloads the macOS version of the Android 
    export ANDROID_HOME="$HOME/Library/Android/sdk"
    export KOTLIN_HOME=/opt/homebrew/opt/kotlin/libexec
    ```
+
+### Native code (optional)
+
+You need this step only if you change the C++ code in `native/`. The built native files are in `android/jniLibs/`, so other changes do not need it. This step operates only on macOS.
+
+```bash
+bash tools/setup-native.sh
+```
 
 ## Make your change
 

@@ -20,8 +20,11 @@ restore() {
 }
 trap restore EXIT
 
-sed -i '' -e 's/^name = .*/name = "Atlas Debug"/' -e 's/^package = .*/package = "com.atlas.debug"/' ink.toml
-sed -i '' 's/android:label="Atlas"/android:label="Atlas Debug"/' android/src/main/AndroidManifest.xml
+# sed -i takes different arguments on macOS and Linux, so write to a temporary file.
+edit() { local file=$1; shift; sed "$@" "$file" > "$file.tmp" && mv "$file.tmp" "$file"; }
+
+edit ink.toml -e 's/^name = .*/name = "Atlas Debug"/' -e 's/^package = .*/package = "com.atlas.debug"/'
+edit android/src/main/AndroidManifest.xml 's/android:label="Atlas"/android:label="Atlas Debug"/'
 cp android/debug/ic_launcher.xml android/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
 cp android/debug/ic_launcher.xml android/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
 mkdir -p android/src/main/res/values
@@ -36,7 +39,7 @@ if [[ -z "${INK_KEYSTORE_PASSWORD:-}" && ! -f signing/credentials.env ]]; then
     keytool -genkeypair -keystore "$key" -alias atlas -keyalg RSA -keysize 2048 -validity 10000 \
       -storepass android -keypass android -dname "CN=Atlas Debug" >/dev/null
   fi
-  sed -i '' "s|^keystore = .*|keystore = \"$key\"|" ink.toml
+  edit ink.toml "s|^keystore = .*|keystore = \"$key\"|"
   export INK_KEYSTORE_PASSWORD=android
 fi
 

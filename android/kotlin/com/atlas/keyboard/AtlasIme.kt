@@ -259,7 +259,12 @@ class AtlasIme : InputMethodService() {
 
     override fun onCreateInputView(): View {
         val words = Strip(this) { index -> haptics.wordChanged(); enqueue { composer.choose(index) } }
-        val keys = SymPanel(this) { item -> enqueue { typePanelItem(item) } }
+        val keys = SymPanel(this,
+            pick = { item -> enqueue { typePanelItem(item) } },
+            useQuickSetting = { item -> enqueue { useQuickSetting(item) } },
+            quickSettingOn = ::quickSettingOn,
+            pressAlt = { enqueue { modifiers.toggleSettings(); showModifiers() } },
+        )
         strip = words
         panel = keys
         keys.emoji = emoji
@@ -681,6 +686,52 @@ class AtlasIme : InputMethodService() {
         showModifiers()
     }
 
+    private fun quickSettingOn(item: QuickSetting) = when (item) {
+        QuickSetting.Autocorrect -> TypingSettings.autocorrect(this)
+        QuickSetting.SwipeTyping -> TypingSettings.swipeTyping(this)
+        QuickSetting.SuggestionBar -> TypingSettings.suggestionBar(this)
+        QuickSetting.AutoCapitalise -> TypingSettings.autoCapitalise(this)
+        QuickSetting.AutoPunctuation -> TypingSettings.autoPunctuation(this)
+        QuickSetting.Vibration -> Haptics.enabled(this)
+        QuickSetting.HoldSymbols -> TypingSettings.holdSymbols(this)
+        QuickSetting.CursorControl -> TypingSettings.cursorControl(this)
+        QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this)
+        QuickSetting.TouchpadOnlyInFields -> TypingSettings.touchpadOnlyInFields(this)
+        QuickSetting.OpenSettings -> true
+    }
+
+    private fun writeQuickSetting(item: QuickSetting, on: Boolean) = when (item) {
+        QuickSetting.Autocorrect -> TypingSettings.autocorrect(this, on)
+        QuickSetting.SwipeTyping -> TypingSettings.swipeTyping(this, on)
+        QuickSetting.SuggestionBar -> TypingSettings.suggestionBar(this, on)
+        QuickSetting.AutoCapitalise -> TypingSettings.autoCapitalise(this, on)
+        QuickSetting.AutoPunctuation -> TypingSettings.autoPunctuation(this, on)
+        // The preset is saved apart from this, so turning vibration on again gives the same strength.
+        QuickSetting.Vibration -> Haptics.select(this, Haptics.preset(this), on)
+        QuickSetting.HoldSymbols -> TypingSettings.holdSymbols(this, on)
+        QuickSetting.CursorControl -> TypingSettings.cursorControl(this, on)
+        QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this, on)
+        QuickSetting.TouchpadOnlyInFields -> TypingSettings.touchpadOnlyInFields(this, on)
+        QuickSetting.OpenSettings -> Unit
+    }
+
+    /** Pushing a key on the quick settings page. The change applies at once, and then the panel goes back to normal typing. */
+    private fun useQuickSetting(item: QuickSetting) {
+        if (item == QuickSetting.OpenSettings) openSettings()
+        else {
+            writeQuickSetting(item, !quickSettingOn(item))
+            readSettings()
+        }
+        haptics.settingChanged()
+        closePanel()
+    }
+
+    /** Opens the app at its Settings page, with the same extra that its notifications use to open a page. */
+    private fun openSettings() {
+        val app = packageManager.getLaunchIntentForPackage(packageName) ?: return
+        startActivity(app.putExtra(OPEN_PAGE_EXTRA, "/settings").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
     private val panelOpen get() = modifiers.panel != Modifiers.Panel.Closed
 
     /** The Sym panel or the Ctrl overlay is on screen. */
@@ -1034,7 +1085,11 @@ class AtlasIme : InputMethodService() {
         pickedKey = 0
         if (!panelOpen || !isInputViewShown || !HoldEngine.isLetter(event.keyCode) || event.isCtrlPressed || event.isMetaPressed) return false
         if (event.repeatCount > 0) return true
-        panel?.item(('A' + (event.keyCode - KeyEvent.KEYCODE_A)).toString())?.let { item ->
+        val letter = ('A' + (event.keyCode - KeyEvent.KEYCODE_A)).toString()
+        if (modifiers.panel == Modifiers.Panel.Settings) QuickSetting.on(letter)?.let { item ->
+            pickedKey = event.keyCode
+            useQuickSetting(item)
+        } else panel?.item(letter)?.let { item ->
             pickedKey = event.keyCode
             typePanelItem(item)
         }
@@ -1113,6 +1168,8 @@ class AtlasIme : InputMethodService() {
     }
 
     companion object {
+        /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
+        private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"
         private const val MAX_PENDING_INPUT = 128
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"

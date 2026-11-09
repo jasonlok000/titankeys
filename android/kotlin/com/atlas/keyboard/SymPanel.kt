@@ -1,6 +1,7 @@
 package com.atlas.keyboard
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Color
 import android.text.TextUtils
@@ -19,6 +20,9 @@ import kotlin.math.sign
  * The panel that Sym opens: a symbol or an emoji on each letter key of the top three rows, in line with the physical letter
  * keys. The other keys are left empty. A finger that rests on a key shows that key's item larger.
  *
+ * Alt's place shows the quick settings key. On the quick settings page each letter key that has an item shows its short label,
+ * dim when the setting is off, and a finger that rests on the key shows the setting's name and state.
+ *
  * While Ctrl is held it shows Ctrl's shortcuts instead. Each key that has a shortcut shows its letter, all other keys are blank,
  * and the header says what each shortcut does. The touchpad reports nothing while a physical key other than Shift is held, so
  * a finger that rests on a key cannot show this. The name of one shortcut shows larger only if a touch does arrive.
@@ -26,6 +30,9 @@ import kotlin.math.sign
 class SymPanel(
     context: Context,
     private val pick: (String) -> Unit,
+    private val useQuickSetting: (QuickSetting) -> Unit,
+    private val quickSettingOn: (QuickSetting) -> Boolean,
+    private val pressAlt: () -> Unit,
 ) : LinearLayout(context) {
     private val typeface = resources.getFont(R.font.inter_regular)
     private val symbols = EmojiPages(listOf(EmojiPages.Group("Symbols", Keys.extraSymbols())), emptyList())
@@ -52,7 +59,7 @@ class SymPanel(
         }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
     }
     private val grid = LinearLayout(context)
-    private val cells = Layout.panelLetters.associateWith(::cell)
+    private val cells = (Layout.panelLetters + Layout.ALT).associateWith(::cell)
     private var tabs = emptyList<TextView>()
     private var shownSamples = emptyList<String>()
     private var navigationInset = 0
@@ -67,8 +74,10 @@ class SymPanel(
     var mode = Modifiers.Panel.Closed
         set(value) {
             if (field == value) return
+            // The quick settings page goes in front of the symbols or emoji, so they are still at the same page after it.
+            val fromSettings = field == Modifiers.Panel.Settings
             field = value
-            symPages?.reset()
+            if (!fromSettings) symPages?.reset()
             hover = ""
             render()
         }
@@ -93,10 +102,12 @@ class SymPanel(
     private val symPages get() = when (mode) {
         Modifiers.Panel.Symbols -> symbols
         Modifiers.Panel.Emoji -> emoji
-        Modifiers.Panel.Closed -> null
+        Modifiers.Panel.Closed, Modifiers.Panel.Settings -> null
     }
 
     private val pages get() = if (ctrl) null else symPages
+
+    private val quick get() = !ctrl && mode == Modifiers.Panel.Settings
 
     init {
         orientation = VERTICAL
@@ -155,11 +166,48 @@ class SymPanel(
     private fun cell(key: String) = TextView(context).apply {
         typeface = this@SymPanel.typeface
         gravity = Gravity.CENTER
+        foregroundGravity = Gravity.CENTER
         maxLines = 1
         includeFontPadding = false
         isFocusable = false
-        setOnClickListener { item(key)?.let(pick) }
+        setOnClickListener { touched(key) }
     }
+
+    /** A touch on the screen does what a push of the key does. */
+    private fun touched(key: String) {
+        when {
+            key == Layout.ALT -> pressAlt()
+            quick -> QuickSetting.on(key)?.let(useQuickSetting)
+            else -> item(key)?.let(pick)
+        }
+    }
+
+    /** An icon, for a key whose purpose is not a letter or symbol. It is the same size at any system font size. */
+    private class Icon(val drawable: Int, val description: String)
+
+    private fun icon(key: String) = when {
+        ctrl || key != Layout.ALT -> null
+        mode == Modifiers.Panel.Settings -> Icon(R.drawable.panel_back, "Go back")
+        else -> Icon(R.drawable.panel_settings, "Open quick settings")
+    }
+
+    /** What a key shows as text, or null if it shows none. */
+    private fun label(key: String) = when {
+        ctrl -> key.takeIf { it in Modifiers.CTRL_ACTIONS }
+        quick -> QuickSetting.on(key)?.label
+        else -> item(key)
+    }
+
+    private fun describe(item: QuickSetting) =
+        if (item == QuickSetting.OpenSettings) item.title else "${item.title}: ${if (quickSettingOn(item)) "On" else "Off"}"
+
+    /** What the top of the panel says for a key under a finger, or null if it says nothing. */
+    private fun detail(key: String) = when {
+        ctrl -> Modifiers.CTRL_ACTIONS[key]
+        else -> icon(key)?.description ?: if (quick) QuickSetting.on(key)?.let(::describe) else item(key)
+    }
+
+    private fun dim(key: String) = quick && QuickSetting.on(key)?.let(quickSettingOn) == false
 
     private fun categoryTab(sample: String) = TextView(context).apply {
         text = sample
@@ -187,8 +235,8 @@ class SymPanel(
         setBackgroundColor(paper)
         setPadding(dp(4), 0, dp(4), navigationInset)
         val current = pages
-        // What the shortcuts do is longer than a symbol, so it takes the whole header.
-        info.visibility = if (ctrl) GONE else VISIBLE
+        // What the shortcuts do and a setting's name are longer than a symbol, so they take the whole header.
+        info.visibility = if (ctrl || quick) GONE else VISIBLE
         showCategories(current)
         group.setTextColor(muted)
         group.text = current?.group().orEmpty()
@@ -199,16 +247,28 @@ class SymPanel(
         val count = current?.pageCount() ?: 0
         pageNumber.text = if (count > 1) "${current?.pageNumber()}/$count" else ""
         for ((key, view) in cells) {
-            val action = Modifiers.CTRL_ACTIONS[key]
-            val value = if (ctrl) action?.let { key } else item(key)
+            val value = label(key)
+            val icon = icon(key)
             view.text = value.orEmpty()
-            view.sized(ITEM_SIZE, ITEM_LARGEST)
+            view.foreground = icon?.let { context.getDrawable(it.drawable) }
+            // A label must fit its key, so it shrinks where a symbol keeps its size.
+            if (quick) view.setAutoSizeTextTypeUniformWithConfiguration(LABEL_SMALLEST, LABEL_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
+            else {
+                view.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
+                view.sized(ITEM_SIZE, ITEM_LARGEST)
+            }
             // A shortcut runs from the key, so a touch on the screen does nothing here.
-            view.isEnabled = !ctrl && value != null
-            view.contentDescription = if (ctrl) action?.let { "Ctrl $key, $it" } else value?.let { "Insert $it" }
+            view.isEnabled = !ctrl && (value != null || icon != null)
+            view.contentDescription = when {
+                icon != null -> icon.description
+                ctrl -> Modifiers.CTRL_ACTIONS[key]?.let { "Ctrl $key, $it" }
+                quick -> detail(key)
+                else -> value?.let { "Insert $it" }
+            }
         }
         contentDescription = when {
             ctrl -> "Ctrl shortcuts. $CTRL_LIST. Push a key to use its shortcut."
+            quick -> "$QUICK_TITLE. Rest a finger on a key to see its setting. Push the key to change the setting."
             mode == Modifiers.Panel.Symbols -> "Symbols. Push a key to type its symbol. Swipe up or down on the keyboard to see more."
             mode == Modifiers.Panel.Emoji -> "Emoji, ${current?.group().orEmpty()}. Push a key to type its emoji. " +
                 "Swipe left or right on the keyboard to change the group, or up or down to see more."
@@ -236,12 +296,13 @@ class SymPanel(
 
     /** A cell under a resting finger changes colour, and its item or shortcut shows larger at the top of the panel. */
     private fun showHover() {
-        val shown = if (ctrl) Modifiers.CTRL_ACTIONS[hover] else item(hover)
-        preview.text = shown ?: if (ctrl) CTRL_LIST else ""
+        val shown = detail(hover)
+        preview.text = shown ?: if (ctrl) CTRL_LIST else if (quick) QUICK_TITLE else ""
         for ((key, view) in cells) {
             val hovered = shown != null && key == hover
             view.setBackgroundColor(if (hovered) ink else Color.TRANSPARENT)
-            view.setTextColor(if (hovered) paper else ink)
+            view.setTextColor(if (hovered) paper else if (dim(key)) Color.GRAY else ink)
+            view.foregroundTintList = ColorStateList.valueOf(if (hovered) paper else ink)
         }
     }
 
@@ -263,6 +324,9 @@ class SymPanel(
         const val PREVIEW_LARGEST = 36
         const val ITEM_SIZE = 22f
         const val ITEM_LARGEST = 30f
+        const val LABEL_SMALLEST = 8
+        const val LABEL_LARGEST = 14
+        const val QUICK_TITLE = "Quick settings"
         const val SLIDE_DISTANCE = 12
         const val SLIDE_ALPHA = .5f
         const val SLIDE_MILLIS = 120L

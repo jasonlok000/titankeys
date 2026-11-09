@@ -54,6 +54,9 @@ class Haptics(private val context: Context) {
     /** Confirms a new page or group in the Sym panel, with the same feel as a changed word. */
     fun pageChanged() = wordChanged()
 
+    /** Confirms a push on the quick settings page. It comes after the change, so turning vibration off is silent. */
+    fun settingChanged() = wordChanged()
+
     fun begin(sample: Sample?) {
         preset = preset(context)
         enabled = enabled(context)
@@ -89,7 +92,7 @@ class Haptics(private val context: Context) {
 
     /** A swipe tick at full strength when cursor mode starts. */
     fun click() {
-        if (!vibrator.hasVibrator()) return
+        if (!enabled(context) || !vibrator.hasVibrator()) return
         if (Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return
         val amplitude = if (vibrator.hasAmplitudeControl()) 255 else VibrationEffect.DEFAULT_AMPLITUDE
         clickUntil = SystemClock.uptimeMillis() + CLICK_MILLIS

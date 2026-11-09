@@ -7,11 +7,13 @@ package com.atlas.keyboard
 object Layout {
     const val LETTERS = "abcdefghijklmnopqrstuvwxyz"
     const val SPACE = "space"
+    const val ALT = "alt"
+    const val SYM = "sym"
 
     val rows = listOf(
         listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
         listOf("A", "S", "D", "F", "G", "H", "J", "K", "L", "⌫"),
-        listOf("alt", "Z", "X", "C", "V", "B", "N", "M", "sym", "↵"),
+        listOf(ALT, "Z", "X", "C", "V", "B", "N", "M", SYM, "↵"),
         listOf("⇧", "○", "◁", SPACE, "▦", "fn", "⇧"),
     )
     val bottomWidths = floatArrayOf(1.2f, 1.2f, 1.2f, 2.8f, 1.2f, 1.2f, 1.2f)

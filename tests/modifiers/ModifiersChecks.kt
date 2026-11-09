@@ -50,6 +50,11 @@ fun main() {
     panelStaysWhileTyping()
     closingThePanel()
     panelAndOtherModifiers()
+    altOpensQuickSettings()
+    altGoesBackFromQuickSettings()
+    otherKeysLeaveQuickSettings()
+    quickSettingsHoldNoStickyAlt()
+    quickSettingsTable()
     onlyOneModifier()
     repeatsAndStrayEvents()
     ctrlOverlayWhileHeld()
@@ -480,13 +485,6 @@ private fun panelAndOtherModifiers() {
     Keyboard().run {
         press(SYM)
         idle(WORD)
-        press(ALT)
-        same(modifiers.panel, Panel.Closed, "Alt must close the panel")
-        same(modifiers.alt, Level.Once, "Alt must be on after it closes the panel")
-    }
-    Keyboard().run {
-        press(SYM)
-        idle(WORD)
         press(SHIFT)
         same(modifiers.panel, Panel.Closed, "Shift must close the panel")
         same(shift, Level.Once, "Shift must be on after it closes the panel")
@@ -496,6 +494,149 @@ private fun panelAndOtherModifiers() {
         press(SHIFT)
         type()
         same(shift, Level.Off, "A held Sym must not keep one press of Shift on")
+    }
+}
+
+private fun altOpensQuickSettings() {
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        same(modifiers.panel, Panel.Settings, "Alt must open the quick settings from the symbols")
+        same(modifiers.alt, Level.Off, "Alt must not turn on when it opens the quick settings")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        same(modifiers.panel, Panel.Settings, "Alt must open the quick settings from the emoji")
+    }
+    Keyboard().run {
+        press(ALT)
+        same(modifiers.panel, Panel.Closed, "Alt must not open the panel when the panel is closed")
+        same(modifiers.alt, Level.Once, "Alt must still turn on when the panel is closed")
+    }
+    Keyboard().run {
+        press(SYM)
+        modifiers.toggleSettings()
+        same(modifiers.panel, Panel.Settings, "The Settings key on the screen must do what Alt does")
+        modifiers.closePanel()
+        modifiers.toggleSettings()
+        same(modifiers.panel, Panel.Closed, "The Settings key must do nothing when the panel is closed")
+    }
+}
+
+private fun altGoesBackFromQuickSettings() {
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        idle(WORD)
+        press(ALT)
+        same(modifiers.panel, Panel.Symbols, "A second Alt must go back to the symbols")
+        same(modifiers.alt, Level.Off, "A second Alt must not turn Alt on")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        idle(WORD)
+        press(ALT)
+        same(modifiers.panel, Panel.Emoji, "A second Alt must go back to the emoji")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        idle(GAP)
+        press(ALT)
+        idle(GAP)
+        press(ALT)
+        same(modifiers.panel, Panel.Settings, "A quick third Alt must open the quick settings again, and must not lock Alt")
+        same(modifiers.alt, Level.Off, "Quick Alt pushes must not turn Alt on while the panel is open")
+    }
+}
+
+private fun otherKeysLeaveQuickSettings() {
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        idle(WORD)
+        press(SYM)
+        same(modifiers.panel, Panel.Closed, "Sym must close the panel from the quick settings")
+        idle(WORD)
+        press(SYM)
+        same(modifiers.panel, Panel.Symbols, "After that the cycle must start at the symbols")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        idle(WORD)
+        press(SHIFT)
+        same(modifiers.panel, Panel.Closed, "Shift must close the panel from the quick settings")
+        same(shift, Level.Once, "Shift must be on after it closes the quick settings")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        modifiers.closePanel()
+        same(modifiers.panel, Panel.Closed, "A push on the quick settings page must go back to normal typing")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        modifiers.clear()
+        same(modifiers.panel, Panel.Closed, "A new field must close the quick settings")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        holdForOverlay()
+        same(overlay, true, "The Ctrl overlay must show over the quick settings")
+        same(modifiers.panel, Panel.Settings, "The quick settings must wait under the Ctrl overlay")
+        up(CTRL)
+        same(modifiers.panel, Panel.Settings, "The quick settings must show again when Ctrl is let go")
+    }
+}
+
+private fun quickSettingsHoldNoStickyAlt() = Keyboard().run {
+    press(SYM)
+    idle(WORD)
+    down(ALT)
+    same(modifiers.panel, Panel.Settings, "The page must open when Alt goes down")
+    modifiers.closePanel()
+    up(ALT)
+    same(modifiers.alt, Level.Off, "Alt let go after a push on the page must leave Alt off")
+    idle(WORD)
+    press(ALT)
+    same(modifiers.alt, Level.Once, "The next Alt must be a normal Alt")
+    same(modifiers.panel, Panel.Closed, "The next Alt must not open the panel")
+}
+
+private fun quickSettingsTable() {
+    val expected = mapOf(
+        "A" to QuickSetting.Autocorrect, "S" to QuickSetting.SwipeTyping, "W" to QuickSetting.SuggestionBar,
+        "C" to QuickSetting.AutoCapitalise, "P" to QuickSetting.AutoPunctuation, "V" to QuickSetting.Vibration,
+        "H" to QuickSetting.HoldSymbols, "M" to QuickSetting.CursorControl, "L" to QuickSetting.DoublePressLocks,
+        "T" to QuickSetting.TouchpadOnlyInFields, "O" to QuickSetting.OpenSettings,
+    )
+    same(QuickSetting.entries.associateBy { it.key }, expected, "Each item must be on the letter it is named after, and on one key only")
+    same(QuickSetting.on("A"), QuickSetting.Autocorrect, "A letter must find its item")
+    same(QuickSetting.on("Q"), null, "A key with no item must find nothing")
+    same(QuickSetting.on(Layout.ALT), null, "The Alt place has no setting")
+    for (item in QuickSetting.entries) {
+        same(item.key in Layout.panelLetters, true, "${item.title} must be on a letter key of the panel")
+        same(item.label.length <= 5 && '\n' !in item.label, true, "${item.title} must have a short label on one line")
+        same(item.title.isNotBlank() && item.title.length >= item.label.length, true, "${item.title} must have its full name")
     }
 }
 

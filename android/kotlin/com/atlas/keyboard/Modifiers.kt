@@ -7,7 +7,7 @@ import android.view.KeyEvent
  * turns it off. With [doublePressLocks], a second press within [DOUBLE_PRESS_MILLIS] locks it instead, and a third press
  * releases it. Holding the key works as usual.
  * Each press of Sym moves the panel to its next step, and the panel stays open after Sym is let go.
- * Only one of them is on at a time.
+ * Only one of them is on at a time. While the panel is open, Alt opens the quick settings page and goes back from it.
  *
  * Ctrl is separate from those: it has no sticky state and applies only while it is held. Once it has been held for
  * [CTRL_OVERLAY_MILLIS], the Ctrl overlay shows until the last Ctrl key is let go.
@@ -15,7 +15,7 @@ import android.view.KeyEvent
 class Modifiers {
     enum class Level { Off, Once, Locked }
     enum class Key { Shift, Alt }
-    enum class Panel { Closed, Symbols, Emoji }
+    enum class Panel { Closed, Symbols, Emoji, Settings }
 
     var shift = Level.Off
         private set
@@ -23,6 +23,8 @@ class Modifiers {
         private set
     var panel = Panel.Closed
         private set
+    /** The page that Alt goes back to from the quick settings page. */
+    private var beforeSettings = Panel.Symbols
     private val last = LongArray(Key.entries.size)
     /** Each physical modifier that is down, with the time it was pressed. */
     private val held = HashMap<Int, Long>()
@@ -61,8 +63,12 @@ class Modifiers {
         Key.Alt -> alt
     }
 
-    /** Pressing Shift or Alt on the touchpad or the keyboard. */
+    /** Pressing Shift or Alt on the touchpad or the keyboard. With the panel open, Alt is the quick settings key. */
     fun press(key: Key, time: Long) {
+        if (key == Key.Alt && panel != Panel.Closed) {
+            toggleSettings()
+            return
+        }
         val next = when (level(key)) {
             Level.Off -> Level.Once
             Level.Once -> if (doublePressLocks && time - last[key.ordinal] < DOUBLE_PRESS_MILLIS) Level.Locked else Level.Off
@@ -74,14 +80,24 @@ class Modifiers {
         last[key.ordinal] = time
     }
 
-    /** Pressing Sym moves the panel on: symbols, then emoji, then closed. */
+    /** From the symbols or emoji to the quick settings page, or back to the page that it came from. */
+    fun toggleSettings() {
+        if (panel == Panel.Closed) return
+        if (panel == Panel.Settings) panel = beforeSettings
+        else {
+            beforeSettings = panel
+            panel = Panel.Settings
+        }
+    }
+
+    /** Pressing Sym moves the panel on: symbols, then emoji, then closed. From the quick settings page it closes the panel. */
     private fun pressSym() {
         shift = Level.Off
         alt = Level.Off
         panel = when (panel) {
             Panel.Closed -> Panel.Symbols
             Panel.Symbols -> Panel.Emoji
-            Panel.Emoji -> Panel.Closed
+            Panel.Emoji, Panel.Settings -> Panel.Closed
         }
     }
 

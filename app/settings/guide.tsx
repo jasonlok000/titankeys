@@ -21,6 +21,7 @@ export default function Guide() {
       <Row title="Delete a word" subtitle="Push Alt, then push Backspace. You can also use Ctrl and Backspace, or flick left from Backspace." wrapSubtitle />
       <Row title="More symbols" subtitle="Push Sym to open the panel. Each key shows a symbol. Rest your finger on a key to see its symbol larger. Push the key to type the symbol. The panel then closes. Swipe up or down on the keyboard to see more." wrapSubtitle />
       <Row title="Emoji" subtitle="Push Sym again to show emoji. The first group is Recent, after you use an emoji. Push a key to type its emoji. Swipe left or right on the keyboard to change the group, or up or down to see more. The marks at the top show each group. Push Sym again to close the panel." wrapSubtitle />
+      <Row title="Quick settings" subtitle="When the panel is open, push Alt to see the quick settings. Rest your finger on a key to see its setting and if the setting is on or off. Push the key to change the setting. The panel then closes. A dim key shows a setting that is off. Push O to open all settings. Push Alt again to go back, or push Sym to close the panel." wrapSubtitle />
       <Row title="Ctrl shortcuts" subtitle="Hold Ctrl to see the shortcuts on the keys. The top of the panel shows what each shortcut does." wrapSubtitle />
       <Row title="Use a shortcut" subtitle="Hold Ctrl and push the key." />
       <Row title="Use fn as Ctrl" subtitle="Turn this on in Settings to use fn in place of Ctrl." />

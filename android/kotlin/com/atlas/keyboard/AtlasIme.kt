@@ -68,6 +68,7 @@ class AtlasIme : InputMethodService() {
     private var rawLog: RawLog.Session? = null
     private var editing = false
     private var typedInField = false
+    private var fieldStartedAt = 0L
     private var passingBack = false
     /** Back hid the strip, so it stays hidden in this field until you tap the field or type. */
     private var hiddenByBack = false
@@ -102,6 +103,16 @@ class AtlasIme : InputMethodService() {
         } catch (error: RuntimeException) {
             // Titan firmware can drop its current client before Android reports the editor gone.
             Log.w("Atlas", "Could not show the suggestion strip", error)
+        }
+    }
+
+    private val hideStrip = Runnable {
+        if (editing) return@Runnable
+        try {
+            hideWindow()
+            requestHideSelf(0)
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not hide the suggestion strip", error)
         }
     }
 
@@ -230,6 +241,7 @@ class AtlasIme : InputMethodService() {
         editing = info.inputType != EditorInfo.TYPE_NULL
         if (!restarting) {
             typedInField = false
+            fieldStartedAt = SystemClock.uptimeMillis()
             // Apps also restart input on the field that stays, so only a new start ends what Back did.
             hiddenByBack = false
         }
@@ -256,6 +268,7 @@ class AtlasIme : InputMethodService() {
         if (!corrects) autocorrect.release()
         strip?.showSuggestions = showSuggestions()
         main.removeCallbacks(showStrip)
+        main.removeCallbacks(hideStrip)
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
             main.post(showStrip)
@@ -263,12 +276,9 @@ class AtlasIme : InputMethodService() {
         } else {
             composer.stop()
             overlay.hide()
-            try {
-                hideWindow()
-                requestHideSelf(0)
-            } catch (error: RuntimeException) {
-                Log.w("Atlas", "Could not hide the suggestion strip", error)
-            }
+            // A returning window starts with no field just before its own field takes focus. A strip that
+            // hides for that moment tells the app the keyboard was closed, and the app then drops its field.
+            main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
         }
     }
 
@@ -296,15 +306,15 @@ class AtlasIme : InputMethodService() {
         super.onWindowHidden()
         // A panel that nobody can see must not take the next key.
         closePanel()
-        // A delayed hide from the previous app can arrive after this field has started. Once you have
-        // typed, a hide is the app's own, such as a Done key closing a field it then removes.
+        // A delayed hide from the previous app arrives just after this field starts. A later hide, or one
+        // after you have typed, is the app's own, such as a tap outside the field or a Done key.
         main.removeCallbacks(showStrip)
         if (passingBack) {
             // Now that the strip is gone, the app's own back can run. If its field stays, the strip stays hidden.
             passingBack = false
             hiddenByBack = editing
             main.post(sendBack)
-        } else if (editing && !typedInField) {
+        } else if (editing && !typedInField && SystemClock.uptimeMillis() - fieldStartedAt < STALE_HIDE_MILLIS) {
             main.post(showStrip)
         }
     }
@@ -533,11 +543,16 @@ class AtlasIme : InputMethodService() {
         if (direction == 0) return
         cursorMoved = true
         val time = SystemClock.uptimeMillis()
-        if (Haptics.enabled(this)) haptics.pulse()
         val code = if (direction > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
         val arrow = KeyEvent(time, time, KeyEvent.ACTION_DOWN, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
             KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD)
-        enqueue { command(arrow) }
+        enqueue {
+            // A cursor at the start or end of the text cannot move, so it stays quiet. An app that does not answer still gets the pulse.
+            val connection = currentInputConnection
+            val next = if (direction > 0) connection?.getTextAfterCursor(1, 0) else connection?.getTextBeforeCursor(1, 0)
+            if (next?.isEmpty() != true && Haptics.enabled(this)) haptics.pulse()
+            command(arrow)
+        }
     }
 
     /**
@@ -907,13 +922,14 @@ class AtlasIme : InputMethodService() {
         if (panelKey(event)) return true
         // Enter comes before the Ctrl shortcuts, because the Enter key setting can use Ctrl + Enter.
         if (!event.isMetaPressed && enter(event)) return true
+        // A lone Ctrl or Meta press is not a shortcut. Each shortcut key carries its own meta state.
+        if (KeyEvent.isModifierKey(event.keyCode)) {
+            modifiers.useHeld()
+            return true
+        }
         if (event.isCtrlPressed && event.keyCode != KeyEvent.KEYCODE_DEL || event.isMetaPressed) {
             modifiers.useHeld()
             command(event)
-            return true
-        }
-        if (KeyEvent.isModifierKey(event.keyCode)) {
-            modifiers.useHeld()
             return true
         }
         if (deadKeyPending && (event.keyCode == KeyEvent.KEYCODE_SPACE || event.keyCode == KeyEvent.KEYCODE_DEL)) {
@@ -1036,6 +1052,10 @@ class AtlasIme : InputMethodService() {
         private const val MAX_PENDING_INPUT = 128
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"
+        /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
+        private const val STALE_HIDE_MILLIS = 500L
+        /** The field of a returning window started within 30 ms of its empty start. */
+        private const val NO_FIELD_HIDE_MILLIS = 200L
         private const val SELECT_AFTER_CURSOR_MILLIS = 250L
         private const val FRAME_MILLIS = 16L
         /** Characters read on each side of the cursor to find the word it is in. */

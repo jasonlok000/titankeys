@@ -30,11 +30,14 @@ export type State = {
   haptics: boolean;
   hapticPreset: HapticPreset;
   spelling: Spelling;
+  /** Records touches, keys and typed text in a log on this phone. */
+  rawLog: boolean;
+  rawLogBytes: number;
   words: { word: string; description: string }[];
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "suggestionBar" | "cursorControl" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "suggestionBar" | "cursorControl" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];
@@ -102,6 +105,19 @@ export async function transferLearning(mode: "import" | "export") {
     return result === "true" ? mode : null;
   } finally {
     if (mode === "import") await state.refresh();
+  }
+}
+
+/** Opens the file picker. Returns false if the picker was cancelled. */
+export async function exportRawLog() {
+  return await callNative("atlas", "exportRawLog", {}, { timeoutMs: 600_000 }) === "true";
+}
+
+export async function deleteRawLog() {
+  try {
+    await atlas("deleteRawLog");
+  } finally {
+    await state.refresh();
   }
 }
 

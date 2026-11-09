@@ -146,5 +146,8 @@ class CursorMode {
             MAX_DEPTH to 28f, // ○ or fn, where holding builds up to full speed
         )
         private const val FASTEST_PER_SECOND = 52f
+
+        /** How a resting finger becomes the cursor and not a swipe, for the raw input log. */
+        val tuning: Map<String, Any> get() = mapOf("restMillis" to REST_MILLIS, "restKeys" to REST_KEYS)
     }
 }

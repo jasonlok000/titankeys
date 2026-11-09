@@ -31,7 +31,7 @@ interface Editor {
 
 /** The word engine: swipe recognition, completions and learning. */
 interface Words {
-    class Recognition(val words: List<String>, val token: Any?)
+    class Recognition(val words: List<String>, val token: Any?, val prediction: SwipeTyping.Prediction? = null)
 
     fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Recognition) -> Unit)
     fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit)
@@ -43,6 +43,14 @@ interface Words {
     fun chosen(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun corrected(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun kept(swipe: Swipe, context: String, recognition: Recognition, word: String)
+}
+
+/** Told what the keyboard does to the text, only while the raw input log records the field. */
+interface EditLog {
+    fun recognised(recognition: Words.Recognition, resumed: Boolean)
+    /** [deleted] is -1 if the editor can't say how much it deleted. */
+    fun edited(cause: EditCause, deleted: Int, inserted: String, deletedAfter: Int, accepted: Boolean)
+    fun picked(index: Int, word: String, offered: List<String>)
 }
 
 /** Turns taps, swipes and keys into edits and suggestions for one text field. */
@@ -103,9 +111,10 @@ class Composer(
     private sealed interface PendingInput
     private data class PendingSwipe(val swipe: Swipe, val startedAt: Long, val endedAt: Long, val metaState: Int) : PendingInput
     private class PendingText(var text: String, val letterTap: Boolean) : PendingInput
-    private class PendingEdit(val action: () -> Unit, val transferable: Boolean = false) : PendingInput
+    private class PendingEdit(val action: () -> Unit, val transferable: Boolean = false, val leaves: Boolean = false) : PendingInput
     private class FullStop(val time: Long, val snapshot: Snapshot)
-    private class Barrier(val identity: Editor.Identity, val navigation: Boolean = false, val command: Boolean = false)
+    private class Barrier(val identity: Editor.Identity, val navigation: Boolean = false, val command: Boolean = false,
+                          val leaves: Boolean = false)
 
     private var field = Field.None
     private var composition: Composition = Composition.None
@@ -137,11 +146,15 @@ class Composer(
     var liftOffMillis = 0
     /** Told the whole path behind each recognised word, including any pieces joined to it. */
     var onStroke: ((Swipe) -> Unit)? = null
+    /** Only the keyboard sets this, so replaying a recording never adds to the raw input log. */
+    var log: EditLog? = null
 
     val hasPendingInput get() = recognising || barrier != null || drainScheduled || pendingInput.isNotEmpty()
     /** Whether a touch arriving now could still join the last swipe. A recognition in progress may yet allow it. */
     val canContinueSwipe get() = liftOffMillis > 0 && (hasPendingInput || (composition as? Composition.Swiped)?.continuable == true)
     val awaitingDestination get() = barrier?.navigation == true
+    /** Focus may be moving to another field that Android has not reported yet, so input now may belong to that field. */
+    val mayLeaveField get() = barrier?.leaves == true || pendingInput.any { it is PendingEdit && it.leaves }
 
     fun start(field: Field, selectionStart: Int, selectionEnd: Int) {
         val next = editor.identity()
@@ -265,9 +278,9 @@ class Composer(
         if (enqueue(PendingSwipe(swipe, startedAt, endedAt, metaState))) recogniseNext()
     }
 
-    private fun defer(transferable: Boolean = false, action: () -> Unit): Boolean {
+    private fun defer(transferable: Boolean = false, leaves: Boolean = false, action: () -> Unit): Boolean {
         if (executingQueued || !hasPendingInput) return false
-        enqueue(PendingEdit(action, transferable))
+        enqueue(PendingEdit(action, transferable, leaves))
         return true
     }
 
@@ -384,6 +397,7 @@ class Composer(
             recognitionSnapshot = null
             pendingInput.removeFirst()
             Recording.sink?.recognised(recognition.words, resumes)
+            log?.recognised(recognition, resumes)
             onStroke?.invoke(path)
             if (recognition.words.isNotEmpty()) {
                 val sentenceCase = field.sentenceCapitalisation && autoCapitalise()
@@ -392,7 +406,7 @@ class Composer(
                 }
                 val word = choices.first()
                 val inserted = leadingSpace + word + if (trailingSpace) " " else ""
-                if (!edit(replaced, inserted)) return@recognise
+                if (!edit(EditCause.Swipe, replaced, inserted)) return@recognise
                 val accepted = snapshot()
                 automaticSpace = accepted.takeIf { trailingSpace }
                 val swiped = Composition.Swiped(word, leadingSpace, trailingSpace, path, context, recognition, pending.endedAt,
@@ -445,7 +459,8 @@ class Composer(
             val prefix = if (anchor.selected) "" else SwipeTyping.prefix(before.orEmpty())
             "$prefix$cased "
         } else cased
-        if (!edit(if (dropsSpace) 1 else 0, typed)) return
+        val cause = if (dropsSpace) EditCause.DropSpace else if (letterTap) EditCause.Tap else EditCause.Key
+        if (!edit(cause, if (dropsSpace) 1 else 0, typed)) return
         automaticSpace = if (letterTap) snapshot() else null
         composition = Composition.None
         if (letterTap) manualWord.clear()
@@ -474,7 +489,7 @@ class Composer(
         val reuseSpace = trailing && after.startsWith(" ")
         val space = reuseSpace || trailing && (after.isEmpty() || !after[0].isWhitespace())
         val text = (if (leading) " " else "") + symbol + if (space) " " else ""
-        if (!edit(0, text, if (reuseSpace) 1 else 0)) return
+        if (!edit(EditCause.Symbol, 0, text, if (reuseSpace) 1 else 0)) return
         automaticSpace = null
         predictLater()
     }
@@ -493,14 +508,14 @@ class Composer(
         val pending = fullStop
         fullStop = null
         when {
-            !field.fullStops || anchor.selected -> if (!edit(0, " ")) return
+            !field.fullStops || anchor.selected -> if (!edit(EditCause.Space, 0, " ")) return
             automaticSpace == anchor && before.endsWith(" ") -> {
                 if (!repeated && endsWord(before.dropLast(1))) fullStop = FullStop(time, anchor)
             }
             !repeated && pending != null && time - pending.time in 0..FULL_STOP_MILLIS
-                && anchor.available && anchor == pending.snapshot -> if (!edit(1, ". ")) return
+                && anchor.available && anchor == pending.snapshot -> if (!edit(EditCause.FullStop, 1, ". ")) return
             else -> {
-                if (!edit(0, " ")) return
+                if (!edit(EditCause.Space, 0, " ")) return
                 // Read the bounded editor window after insertion; appending would exceed its limit.
                 if (!repeated && endsWord(before)) fullStop = FullStop(time, snapshot())
             }
@@ -533,6 +548,7 @@ class Composer(
         correcting = null
         val previous = selection
         val removed = editor.delete(word, previous.start, previous.end)
+        log?.edited(if (word) EditCause.BackspaceWord else EditCause.Backspace, removed ?: -1, "", 0, removed != null)
         if (removed != null) {
             if (previous.start >= 0 && previous.end >= 0) {
                 val start = minOf(previous.start, previous.end)
@@ -567,7 +583,7 @@ class Composer(
     }
 
     fun enter() {
-        if (defer { enter() }) return
+        if (defer(leaves = true) { enter() }) return
         leave()
         invalidate(false)
         composition = Composition.None
@@ -577,7 +593,7 @@ class Composer(
         val correction = correcting
         val completed = completeManualWord(anchor)
         correcting = null
-        if (automaticSpace == anchor && anchor.before?.endsWith(" ") == true && !edit(1, "")) return
+        if (automaticSpace == anchor && anchor.before?.endsWith(" ") == true && !edit(EditCause.DropSpace, 1, "")) return
         automaticSpace = null
         val owner = editor.identity()
         if (!sameIdentity(identity, owner)) {
@@ -589,7 +605,7 @@ class Composer(
         if (current != epoch || !sameIdentity(owner, editor.identity())) return
         when (result) {
             Editor.Enter.Newline -> {
-                if (!edit(0, "\n")) return
+                if (!edit(EditCause.Newline, 0, "\n")) return
                 if (!completed.isNullOrEmpty()) {
                     confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(completed, correction) }
                     return
@@ -614,7 +630,7 @@ class Composer(
             reset()
             return
         }
-        val waiting = Barrier(owner, navigation)
+        val waiting = Barrier(owner, navigation, leaves = true)
         barrier = waiting
         if (!navigation) pendingInput.clear()
         later(DESTINATION_TIMEOUT_MILLIS) {
@@ -624,7 +640,7 @@ class Composer(
 
     /** App-handled keys share the edit queue and fence dependent input with an ordered app query. */
     fun command(destructive: Boolean, fieldLocal: Boolean, action: () -> Boolean) {
-        if (defer { command(destructive, fieldLocal, action) }) return
+        if (defer(leaves = !fieldLocal) { command(destructive, fieldLocal, action) }) return
         if (!destructive) leave()
         invalidate(false)
         composition = Composition.None
@@ -639,8 +655,10 @@ class Composer(
             reset()
             return
         }
-        val waiting = Barrier(owner, command = true)
+        val waiting = Barrier(owner, command = true, leaves = !fieldLocal)
         barrier = waiting
+        // The app makes this change itself, so all the log can say is what caused the selection lines that follow.
+        if (destructive) log?.edited(EditCause.Command, 0, "", 0, true)
         if (!action()) {
             reset()
             return
@@ -704,6 +722,7 @@ class Composer(
             if (current === offered || current is Composition.Swiped && offered is Composition.Swiped
                 && current.recognition === offered.recognition) choose(index)
         }) return
+        log?.picked(index, chosen, offered.alternatives)
         val anchor = snapshot()
         if (!anchor.available || !anchor.knownSelection) return
         val before = anchor.before ?: return
@@ -712,7 +731,7 @@ class Composer(
                 if (anchor != current.snapshot || !before.endsWith(current.inserted) || anchor.selected) return
                 invalidate(false)
                 val tail = chosen + if (current.trailingSpace) " " else ""
-                if (!edit(current.tail.length, tail)) return
+                if (!edit(EditCause.Choose, current.tail.length, tail)) return
                 val accepted = snapshot()
                 val swiped = current.copy(word = chosen, continuable = false, snapshot = accepted, chosen = true)
                 composition = swiped
@@ -730,7 +749,7 @@ class Composer(
                 if (anchor != current.snapshot || !before.endsWith(tail) || anchor.selected) return
                 invalidate(false)
                 val space = if (current.prefix.isEmpty()) SwipeTyping.prefix(before) else ""
-                if (!edit(tail.length, "$space$chosen ")) return
+                if (!edit(EditCause.Choose, tail.length, "$space$chosen ")) return
                 composition = Composition.None
                 automaticSpace = snapshot()
                 val correction = correcting?.takeIf { anchor == editSnapshot }
@@ -745,7 +764,7 @@ class Composer(
                 if (anchor != current.snapshot || anchor.selected) return
                 invalidate(false)
                 val start = current.word.start
-                if (!edit(current.before, chosen, current.after)) return
+                if (!edit(EditCause.Choose, current.before, chosen, current.after)) return
                 val word = current.word.copy(start = start, word = chosen)
                 add(word)
                 manualWord.clear()
@@ -856,7 +875,7 @@ class Composer(
         val showing = composition
         invalidate(false)
         val previous = remembered.lastOrNull { it.start == start && it.word == earlier.word }
-        if (!edit(earlier.tail.length + following.length, "$replacement $following")) return
+        if (!edit(EditCause.LookAlike, earlier.tail.length + following.length, "$replacement $following")) return
         previous?.let { add(it.copy(word = replacement)) }
         lookAlikeChangedAt = start
         val accepted = snapshot()
@@ -874,7 +893,7 @@ class Composer(
         confirmState(accepted)
     }
 
-    private fun edit(count: Int, text: String, after: Int = 0): Boolean {
+    private fun edit(cause: EditCause, count: Int, text: String, after: Int = 0): Boolean {
         if (!sameIdentity(identity, editor.identity())) {
             reset()
             return false
@@ -884,6 +903,7 @@ class Composer(
         val current = epoch
         val owner = identity
         val accepted = editor.replace(count, text, after)
+        log?.edited(cause, count, text, after, accepted)
         if (current != epoch || !sameIdentity(owner, editor.identity())) return false
         if (!accepted) {
             // A deletion may have succeeded before commitText failed. Never replay the transaction.

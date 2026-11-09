@@ -14,6 +14,9 @@ internal fun letterSpace(points: List<Sample>): Swipe {
 
 private const val MIN_DELETE_GAP_MILLIS = 250L
 
+/** The number above, for the raw input log. */
+internal val swipePiecesTuning: Map<String, Any> get() = mapOf("minDeleteGapMillis" to MIN_DELETE_GAP_MILLIS)
+
 /**
  * A finger near the top of the touchpad often loses contact for a moment, which splits a swipe into pieces.
  * A short touch straight after a swipe, or straight before one, can be part of that swipe and not a touch of its own.

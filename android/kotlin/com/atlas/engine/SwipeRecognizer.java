@@ -56,6 +56,33 @@ public final class SwipeRecognizer implements AutoCloseable {
     private org.futo.ml.inference.SwipeDecoder.Result[] rawResults = new org.futo.ml.inference.SwipeDecoder.Result[0];
 
     public org.futo.ml.inference.SwipeDecoder.Result[] rawResults() { return rawResults; }
+
+    /** The numbers that shape each result, for the raw input log. */
+    public static Map<String, Number> tuning() {
+        Map<String, Number> values = new java.util.LinkedHashMap<>();
+        values.put("maxContextScore", MAX_CONTEXT_SCORE);
+        values.put("maxSentenceContextScore", MAX_SENTENCE_CONTEXT_SCORE);
+        values.put("maxPathScoreGap", MAX_PATH_SCORE_GAP);
+        values.put("nextWordCandidates", NEXT_WORD_CANDIDATES);
+        values.put("lookAlikeNextWordEvidence", LOOK_ALIKE_NEXT_WORD_EVIDENCE);
+        values.put("lookAlikeCandidates", LOOK_ALIKE_CANDIDATES);
+        values.put("candidates", CANDIDATES);
+        values.put("savedWordCandidates", SAVED_WORD_CANDIDATES);
+        values.put("swipeStretch", SWIPE_STRETCH);
+        values.put("minStretchSpeed", MIN_STRETCH_SPEED);
+        values.put("fullStretchSpeed", FULL_STRETCH_SPEED);
+        values.put("outlineCandidates", OUTLINE_CANDIDATES);
+        values.put("outlineWeight", OUTLINE_WEIGHT);
+        values.put("maxOutlineGap", MAX_OUTLINE_GAP);
+        values.put("expectedWordBoost", EXPECTED_WORD_BOOST);
+        values.put("expectedWordRange", EXPECTED_WORD_RANGE);
+        values.put("expectedWordFit", EXPECTED_WORD_FIT);
+        values.put("leaderBoost", LEADER_BOOST);
+        values.put("maxLead", MAX_LEAD);
+        values.put("leaderFit", LEADER_FIT);
+        values.put("oneWordContext", ONE_WORD_CONTEXT);
+        return values;
+    }
     public float contextWeight() { return decoder.contextWeight(); }
 
     public SwipeRecognizer(Context context) throws IOException {

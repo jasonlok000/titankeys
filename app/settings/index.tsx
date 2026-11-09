@@ -2,6 +2,7 @@ import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from 
 import { close } from "ink/icons";
 import { state, update } from "../../lib/atlas";
 import { liftLabel } from "./lift";
+import { rawLogLabel } from "./rawlog";
 import { setupLabel } from "./setup";
 import { spellingLabel } from "./spelling";
 import { tapKeysLabel } from "./tap-keys";
@@ -30,6 +31,7 @@ export default function Settings() {
     </Section>
     <Section title="Personal">
       <Field label="Your words" href="/settings/data" />
+      <Field label="Raw input log" href="/settings/rawlog">{rawLogLabel(settings)}</Field>
     </Section>
     <Section title="Help">
       <Field label="Setup" href="/settings/setup">{setupLabel(settings)}</Field>

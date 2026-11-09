@@ -40,4 +40,13 @@ internal fun isDeleteWordSwipe(points: List<Sample>): Boolean {
         last.y >= MIDDLE_ROW_TOP && last.y < INNER_END_BOTTOM && abs(last.y - first.y) <= INNER_TILT && wander <= INNER_WANDER
 }
 
+/** The numbers above, for the raw input log. */
+internal val deleteSwipeTuning: Map<String, Any> get() = mapOf(
+    "rightEdge" to RIGHT_EDGE, "edgeStartTop" to EDGE_START_TOP, "edgeStartBottom" to EDGE_START_BOTTOM,
+    "edgeEndTop" to EDGE_END_TOP, "edgeEndBottom" to EDGE_END_BOTTOM, "edgeWander" to EDGE_WANDER,
+    "innerEdge" to INNER_EDGE, "middleRowTop" to MIDDLE_ROW_TOP, "innerStartBottom" to INNER_START_BOTTOM,
+    "innerEndBottom" to INNER_END_BOTTOM, "innerTilt" to INNER_TILT, "innerWander" to INNER_WANDER,
+    "minTravel" to MIN_TRAVEL, "turnBack" to TURN_BACK,
+)
+
 private fun pathKeys(points: List<Sample>) = points.zipWithNext { a, b -> hypot((b.x - a.x) * 10, (b.y - a.y) * 4) }.sum()

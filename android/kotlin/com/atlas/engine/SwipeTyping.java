@@ -68,6 +68,8 @@ public final class SwipeTyping {
             this.firstWord = firstWord; this.variant = variant; this.personalized = personalized;
             this.epoch = epoch; this.generation = generation; this.results = results;
         }
+        /** The decoder's words and scores, best first, before spelling and blocked words apply. */
+        public SwipeDecoder.Result[] decoded() { return results; }
     }
     public static synchronized SwipeTyping get(Context context) {
         if (instance == null) instance = new SwipeTyping(context.getApplicationContext());

@@ -64,6 +64,15 @@ public final class TypingSettings {
         preferences(context).edit().putString("tap_keys", unique.toString()).apply();
     }
 
+    /** Records touches, keys and typed text in a log on this phone. It is off until the user turns it on. */
+    public static boolean rawLog(Context context) {
+        return preferences(context).getBoolean("raw_log", false);
+    }
+
+    public static void rawLog(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("raw_log", enabled).apply();
+    }
+
     private static SharedPreferences preferences(Context context) {
         return context.getSharedPreferences("typing_settings", Context.MODE_PRIVATE);
     }

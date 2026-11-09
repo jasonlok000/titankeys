@@ -37,5 +37,16 @@ data class Field(
                 fullStops = !password && !address, starters = starters,
                 sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0)
         }
+
+        /**
+         * Whether the raw input log may record a field. Only fields that allow learning do, which leaves out passwords,
+         * addresses and private fields. A field marked as a reference is recorded even though it asks for no
+         * personalised learning. The mark overrides nothing else, so a marked password is still never recorded.
+         */
+        fun logged(inputType: Int, imeOptions: Int, privateImeOptions: String?): Boolean =
+            of(inputType, imeOptions).learning || privateImeOptions?.contains(RAW_LOG_REFERENCE) == true
+                && of(inputType, imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING.inv()).learning
+
+        private const val RAW_LOG_REFERENCE = "com.titankeys.rawlog.reference"
     }
 }

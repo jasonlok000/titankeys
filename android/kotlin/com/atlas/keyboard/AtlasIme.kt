@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Paint
 import android.hardware.display.DisplayManager
 import android.inputmethodservice.InputMethodService
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -57,6 +58,8 @@ class AtlasIme : InputMethodService() {
     private var strip: Strip? = null
     private var emoji: EmojiPages? = null
     private var field = Field.None
+    /** The raw input log for this field. It is null when the setting is off or the field must not be recorded. */
+    private var rawLog: RawLog.Session? = null
     private var editing = false
     private var typedInField = false
     private var passingBack = false
@@ -189,6 +192,10 @@ class AtlasIme : InputMethodService() {
         editing = info.inputType != EditorInfo.TYPE_NULL
         if (!restarting) typedInField = false
         field = if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
+        // Android only calls onFinishInput first when the input is not restarting.
+        rawLog?.finish()
+        rawLog = if (editing) RawLog.start(this, info, restarting) else null
+        composer.log = rawLog
         inLauncher = editing && info.packageName == launcherPackage()
         launcherFieldHasText = inLauncher && info.initialSelStart > 0
         contact.releaseKeys()
@@ -265,6 +272,9 @@ class AtlasIme : InputMethodService() {
         editor.cancelState()
         editing = false
         field = Field.None
+        rawLog?.finish()
+        rawLog = null
+        composer.log = null
         main.removeCallbacks(showStrip)
         clearSettlements()
         contact.cancel()
@@ -283,12 +293,38 @@ class AtlasIme : InputMethodService() {
 
     override fun onUpdateSelection(oldStart: Int, oldEnd: Int, newStart: Int, newEnd: Int, composingStart: Int, composingEnd: Int) {
         super.onUpdateSelection(oldStart, oldEnd, newStart, newEnd, composingStart, composingEnd)
+        inputLog()?.selection(newStart, newEnd, composingStart, composingEnd,
+            currentInputConnection?.getTextBeforeCursor(RawLog.BEFORE_LENGTH, 0))
         lastSelectionStart = newStart
         if (inLauncher && (newStart > 0) != launcherFieldHasText) {
             launcherFieldHasText = newStart > 0
             strip?.showSuggestions = showSuggestions()
         }
         if (editing && composer.selectionChanged(newStart, newEnd)) clearSettlements()
+    }
+
+    /**
+     * The raw log for input that arrives now. The keyboard hears that the field changed only after the app has moved,
+     * so input after a key that can move to another field may belong to a password. A gap marker takes its place.
+     */
+    private fun inputLog(): RawLog.Session? {
+        val log = rawLog ?: return null
+        val leavingKey = pendingInput.any { it.event?.action == KeyEvent.ACTION_DOWN && it.event.keyCode in FIELD_LEAVING_KEYS }
+        if (!leavingKey && !composer.mayLeaveField) return log
+        log.skip()
+        return null
+    }
+
+    /** Any app with a focused field can send a command, so a bad one must not stop the keyboard. */
+    override fun onAppPrivateCommand(action: String?, data: Bundle?) {
+        super.onAppPrivateCommand(action, data)
+        if (action != RawLog.MARK_ACTION) return
+        val log = rawLog ?: return
+        try {
+            log.mark(data?.getString("kind"), data?.getString("label"))
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not read a raw log mark", error)
+        }
     }
 
     override fun onUpdateCursorAnchorInfo(info: CursorAnchorInfo) {
@@ -308,6 +344,7 @@ class AtlasIme : InputMethodService() {
         typedInField = true
         val samples = touchpad.samples(event)
         Recording.sink?.motion(event, samples)
+        inputLog()?.motion(event, samples)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
@@ -574,6 +611,7 @@ class AtlasIme : InputMethodService() {
 
     private fun outcome(outcome: Contact.Outcome) {
         Recording.sink?.outcome(outcome)
+        inputLog()?.outcome(outcome)
         when (outcome) {
             is Contact.Outcome.Swipe -> {
                 if (stripPaging) {
@@ -621,6 +659,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
+        inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
         // Android hands back to a shown keyboard first, which would only close the strip.
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) return true
@@ -656,6 +695,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
+        inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
             passingBack = true
@@ -781,6 +821,9 @@ class AtlasIme : InputMethodService() {
         composer.stop()
         editor.cancelState()
         overlay.hide()
+        rawLog?.finish()
+        rawLog = null
+        composer.log = null
         super.onDestroy()
     }
 
@@ -800,6 +843,7 @@ class AtlasIme : InputMethodService() {
         private val NAVIGATION_KEYS = setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MOVE_HOME,
             KeyEvent.KEYCODE_MOVE_END, KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_PAGE_DOWN)
+        private val FIELD_LEAVING_KEYS = setOf(KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_TAB)
         private val FIELD_SHORTCUTS = setOf(KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_X,
             KeyEvent.KEYCODE_V, KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Y)
         private val DESTRUCTIVE_SHORTCUTS = setOf(KeyEvent.KEYCODE_X, KeyEvent.KEYCODE_V,

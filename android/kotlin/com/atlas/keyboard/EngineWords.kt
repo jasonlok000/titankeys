@@ -19,7 +19,7 @@ class EngineWords(private val typing: SwipeTyping) : Words {
                 result(Words.Recognition(words.toList(), null))
 
             override fun result(words: Array<String>, elapsed: Long, error: String?, prediction: SwipeTyping.Prediction) =
-                result(Words.Recognition(words.toList(), if (personalise) Learning(prediction, generation) else null))
+                result(Words.Recognition(words.toList(), if (personalise) Learning(prediction, generation) else null, prediction))
         })
     }
 

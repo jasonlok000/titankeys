@@ -25,6 +25,7 @@ import com.atlas.keyboard.BackService
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.KeyCapture
+import com.atlas.keyboard.RawLog
 import com.atlas.keyboard.Trace
 import com.atlas.keyboard.TouchpadPreview
 import org.json.JSONArray
@@ -169,6 +170,28 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     }
                     null
                 }
+                "exportRawLog" -> {
+                    check(!transferring) { "A transfer is already open." }
+                    transferring = true
+                    try {
+                        RawLogExportActivity.start(activity) { exported, error ->
+                            transferring = false
+                            if (error == null) complete(NativeResult.Success(exported.toString()))
+                            else operationResult(error, complete)
+                        }
+                    } catch (error: Exception) {
+                        transferring = false
+                        throw error
+                    }
+                    null
+                }
+                "deleteRawLog" -> {
+                    Thread {
+                        RawLog.deleteAll(activity)
+                        activity.runOnUiThread { complete(NativeResult.Success("null")) }
+                    }.start()
+                    null
+                }
                 "notesSeen" -> {
                     appPreferences().edit().putString(SEEN_NOTES, installedVersion()).apply()
                     "null"
@@ -283,6 +306,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("haptics", Haptics.enabled(activity))
             .put("hapticPreset", Haptics.preset(activity).id)
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
+            .put("rawLog", TypingSettings.rawLog(activity))
+            .put("rawLogBytes", RawLog.size(activity))
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
     }
@@ -322,6 +347,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "hapticPreset" -> Haptics.select(activity, HapticPreset.of(value as String), Haptics.enabled(activity))
             "spelling" -> TypingSettings.spelling(activity,
                 if (value == "american") EnglishSpelling.Variant.AMERICAN else EnglishSpelling.Variant.BRITISH)
+            "rawLog" -> RawLog.enabled(activity, value as Boolean)
             else -> throw IllegalArgumentException("Unknown setting: $key")
         }
     }

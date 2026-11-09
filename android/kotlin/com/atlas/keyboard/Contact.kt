@@ -239,5 +239,13 @@ class Contact {
         private const val REQUIRED_EVIDENCE = .12f
         private const val STRAIGHT = .819152f
         const val MAX_PENDING_CONTACTS = 16
+
+        /** The numbers that decide what a contact counts as, for the raw input log. */
+        val tuning: Map<String, Any> get() = mapOf(
+            "settleMillis" to SETTLE_MILLIS, "swipeKeys" to SWIPE_KEYS, "pageKeys" to PAGE_KEYS,
+            "afterKeySwipeKeys" to AFTER_KEY_SWIPE_KEYS, "keyCooldownMillis" to KEY_COOLDOWN_MILLIS,
+            "typingGapMillis" to TYPING_GAP_MILLIS, "typingCooldownMillis" to TYPING_COOLDOWN_MILLIS,
+            "sampleDistance" to SAMPLE_DISTANCE, "requiredEvidence" to REQUIRED_EVIDENCE, "straight" to STRAIGHT,
+        )
     }
 }

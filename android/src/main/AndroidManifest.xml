@@ -14,6 +14,11 @@
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
+        <activity
+            android:name="com.vandam.ink.RawLogExportActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <service
             android:name="com.atlas.keyboard.AtlasIme"
             android:label="TitanKeys"

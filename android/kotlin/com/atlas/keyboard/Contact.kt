@@ -19,6 +19,7 @@ import kotlin.math.min
  * New contacts are also ignored for a short time after each key event, so a finger that brushes the
  * keys between presses does not type. Delete and a second Space press in a row add no pause.
  * Cursor mode waits longer after every key, so a finger still on Space after a press cannot start it.
+ * Swipe vibration also pauses after every key, so a finger that moves on the keys during typing stays quiet.
  */
 class Contact {
     sealed interface Outcome {
@@ -62,6 +63,10 @@ class Contact {
 
     /** Whether the current contact could start cursor mode: it can type and began after the longer cursor pause. */
     val canStartCursor: Boolean get() = (state as? State.Touching)?.let { it.first.time >= cursorBlockedUntil } == true
+
+    /** Swipe vibration stays quiet until this time, the end of the pause after the last key. */
+    var vibrationBlockedUntil = Long.MIN_VALUE
+        private set
 
     /** Whether the current contact could still type, with how far it has moved in key widths. */
     val travel: Float? get() = (state as? State.Touching)?.travel
@@ -125,6 +130,7 @@ class Contact {
             lastKeyCode = code
         } else heldKeys -= code
         cursorBlockedUntil = max(cursorBlockedUntil, time + CURSOR_COOLDOWN_MILLIS)
+        vibrationBlockedUntil = max(vibrationBlockedUntil, time + TYPING_MILLIS)
         if (code == KeyEvent.KEYCODE_DEL || doubleSpace && code == KeyEvent.KEYCODE_SPACE) return
         blockedUntil = max(blockedUntil, time + KEY_COOLDOWN_MILLIS)
     }
@@ -229,6 +235,8 @@ class Contact {
         private const val KEY_COOLDOWN_MILLIS = 50L
         /** The pause after any key press or release, Delete and Space included, before cursor mode can start. */
         private const val CURSOR_COOLDOWN_MILLIS = 150L
+        /** The pause after any key press or release before a swipe can vibrate. Typing is active until it ends. */
+        private const val TYPING_MILLIS = 350L
         private const val SAMPLE_DISTANCE = .025f
         private const val REQUIRED_EVIDENCE = .12f
         private const val STRAIGHT = .819152f

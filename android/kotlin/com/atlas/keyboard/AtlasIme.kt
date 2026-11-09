@@ -351,7 +351,10 @@ class AtlasIme : InputMethodService() {
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
                 if (swipeTyping && !stripPaging && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
-                    || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
+                    || !isTapKey(Layout.keyAt(first.x, first.y)))) {
+                    // While you type, the swipe stays quiet. It starts to vibrate when the pause after the last key ends.
+                    haptics.move(samples.filter { it.time >= contact.vibrationBlockedUntil })
+                }
                 Trace.touch(contact.points, false)
             }
             MotionEvent.ACTION_UP -> {

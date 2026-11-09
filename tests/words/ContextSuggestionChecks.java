@@ -43,6 +43,13 @@ public final class ContextSuggestionChecks {
                 "A saved word must remain available alongside context");
         check(!Arrays.asList(predictions.suggest("", saved.active(20000), 20000, word -> true, Map.of("know", 9d))).contains("thx"),
                 "A saved word must not appear in next-word suggestions without any letters");
+        check(Arrays.equals(predictions.suggest("t", saved.active(20000), 20000, word -> true), new String[] { "the", "that", "thx", "thanks" }),
+                "A saved word must rank by frequency like any other word");
+        LanguageHabits used = new LanguageHabits();
+        used.add("thx", 20000);
+        for (int i = 0; i < 16; i++) used.typed("thx", 20000, false);
+        check(first(predictions.suggest("t", used.active(20000), 20000, word -> true, Map.of("thanks", 9d))).equals("thanks"),
+                "A much-used saved word must not outrank the word the context prefers");
         TypedPredictions spelling = new TypedPredictions(new StringReader("the\nthis\nthink\nthing\nbecause\nreceive\ntehran\n"),
                 word -> switch (word) { case "the" -> 250; case "this" -> 240; case "think" -> 200; case "thing" -> 190;
                     case "because" -> 200; case "receive" -> 150; default -> 60; });

@@ -29,9 +29,7 @@
 - Lightly tap configured tap keys to type the letter and a space.
 - Atlas learns new words the more you use them.
 
-> **Limitation:** In the Phone and Settings search bars, swipes can't start on the top row. Unihertz leaves these apps out of Sliding Mode 1.
-
-> **Languages:** Atlas supports only English. Each new language needs its own trained models and a lot of testing, which is a very large task. I will add a language only when it works as well as English.
+> **Languages:** Swiping typing supports only English. Each new language needs its own trained models and a lot of testing, which is a very large task. I will add a language only when it works as well as English.
 
 ## Install
 

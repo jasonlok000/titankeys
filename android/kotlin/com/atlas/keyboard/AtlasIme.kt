@@ -61,6 +61,8 @@ class AtlasIme : InputMethodService() {
     /** The key that last picked from the panel, so its repeats type nothing once the panel has closed. */
     private var pickedKey = 0
     private var field = Field.None
+    /** The apps that the user added to the Enter key setting, read when a field starts. */
+    private var enterApps = emptyMap<String, EnterKey.SendMethod>()
     /** The raw input log for this field. It is null when the setting is off or the field must not be recorded. */
     private var rawLog: RawLog.Session? = null
     private var editing = false
@@ -207,7 +209,7 @@ class AtlasIme : InputMethodService() {
         haptics = Haptics(this)
         touchpad = Touchpad(getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY))
         editor = ConnectionEditor(::getCurrentInputConnection, ::getCurrentInputEditorInfo,
-            { delay, action -> main.postDelayed(action, delay) })
+            { delay, action -> main.postDelayed(action, delay) }, { enterApps })
         composer = Composer(editor, EngineWords(SwipeTyping.get(this)),
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             { TypingSettings.autoCapitalise(this) }) { strip?.words = it }
@@ -290,6 +292,8 @@ class AtlasIme : InputMethodService() {
         modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
         cursorControl = TypingSettings.cursorControl(this)
+        enterApps = EnterKey.apps(TypingSettings.enterApps(this))
+        if (editing && !restarting) rememberEnterApp(info)
         val corrects = TypingSettings.autocorrect(this)
         composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
         if (!corrects) autocorrect.release()
@@ -307,6 +311,15 @@ class AtlasIme : InputMethodService() {
             // hides for that moment tells the app the keyboard was closed, and the app then drops its field.
             main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
         }
+    }
+
+    /** Only the package is kept, so the Enter key setting can offer apps without asking to see every installed app. */
+    private fun rememberEnterApp(info: EditorInfo) {
+        val app = info.packageName ?: return
+        if (app == packageName || !EnterKey.recordsApp(info.inputType, info.imeOptions)) return
+        val recent = TypingSettings.recentEnterApps(this)
+        val updated = EnterKey.recentApps(recent, app)
+        if (updated != recent) TypingSettings.recentEnterApps(this, updated)
     }
 
     // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way until you type.
@@ -1017,7 +1030,7 @@ class AtlasIme : InputMethodService() {
         // A locked Shift is Caps Lock, so Enter still sends.
         val shift = event.isShiftPressed || modifiers.shift == Modifiers.Level.Once
         val press = EnterKey.of(TypingSettings.enterKey(this)).press(info?.inputType ?: 0, info?.imeOptions ?: 0,
-            info?.actionId ?: 0, info?.packageName, shift, event.isCtrlPressed)
+            info?.actionId ?: 0, info?.packageName, shift, event.isCtrlPressed, enterApps)
         if (press == EnterKey.Press.FieldDecides && event.isCtrlPressed) return false
         // A held Enter must not send again before the app has cleared the field.
         val sends = press == EnterKey.Press.Send || press == EnterKey.Press.ShiftSend

@@ -112,6 +112,7 @@ object RawLog {
         "suggestionBar" to TypingSettings.suggestionBar(context),
         "cursorControl" to TypingSettings.cursorControl(context),
         "enterKey" to TypingSettings.enterKey(context),
+        "enterApps" to TypingSettings.enterApps(context).sorted().joinToString(","),
         "spelling" to if (TypingSettings.spelling(context) == EnglishSpelling.Variant.AMERICAN) "american" else "british",
         "learning" to SwipeTyping.get(context).learningEnabled(),
     )

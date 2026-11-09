@@ -1,3 +1,4 @@
+import { Field } from "ink";
 import type { EnterKey, State } from "../../lib/atlas";
 import { ChoicePage } from "../../lib/choice";
 
@@ -11,5 +12,7 @@ export default function EnterKeyPage() {
     subtitle={"This setting changes Enter in messages. Search and other fields with one line do not change.\nAlways send: Push Shift and Enter to add a new line. In notes, Enter adds a new line.\nAlways new line: Push Shift and Enter to send the message. You can also push Ctrl and Enter."}
     options={options}
     read={({ enterKey }) => enterKey}
-    write={enterKey => ({ enterKey })} />;
+    write={enterKey => ({ enterKey })}>
+    <Field label="Message apps" href="/settings/enter-apps" />
+  </ChoicePage>;
 }

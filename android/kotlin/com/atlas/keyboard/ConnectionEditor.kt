@@ -14,6 +14,7 @@ class ConnectionEditor(
     private val connection: () -> InputConnection?,
     private val info: () -> EditorInfo?,
     private val later: (Long, () -> Unit) -> Unit,
+    private val addedApps: () -> Map<String, EnterKey.SendMethod>,
 ) : Editor {
     private class StateRequest(val owner: Editor.Identity, var result: ((Editor.State?) -> Unit)?)
     private var stateRequest: StateRequest? = null
@@ -162,7 +163,7 @@ class ConnectionEditor(
         val action = when (press) {
             EnterKey.Press.NewLine, EnterKey.Press.ShiftNewLine -> return Editor.Enter.Newline
             EnterKey.Press.Send, EnterKey.Press.ShiftSend -> {
-                if (EnterKey.sendsWithKey(info?.packageName))
+                if (EnterKey.sendMethod(info?.packageName, addedApps()) == EnterKey.SendMethod.PlainEnter)
                     return if (key(connection, KeyEvent.KEYCODE_ENTER, 0)) Editor.Enter.Action else Editor.Enter.Rejected
                 EnterKey.sendAction(options, info?.actionId ?: 0)
             }

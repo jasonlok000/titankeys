@@ -3,6 +3,12 @@ package com.atlas.engine;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 public final class TypingSettings {
     public static final int MIN_LIFT_OFF_MILLIS = 50, MAX_LIFT_OFF_MILLIS = 200, DEFAULT_LIFT_OFF_MILLIS = 90;
     private static final String DEFAULT_TAP_KEYS = "";
@@ -124,6 +130,25 @@ public final class TypingSettings {
 
     public static void enterKey(Context context, String value) {
         preferences(context).edit().putString("enter_key", value).apply();
+    }
+
+    /** Apps the Enter key setting also applies to, each saved as "package=method". The rules are in EnterKey. */
+    public static Set<String> enterApps(Context context) {
+        return preferences(context).getStringSet("enter_apps", Collections.emptySet());
+    }
+
+    public static void enterApps(Context context, Set<String> apps) {
+        preferences(context).edit().putStringSet("enter_apps", new HashSet<>(apps)).apply();
+    }
+
+    /** Packages of the apps with a recent multi-line field, newest first. Only the keyboard writes this, and only on this phone. */
+    public static List<String> recentEnterApps(Context context) {
+        String apps = preferences(context).getString("recent_enter_apps", "");
+        return apps.isEmpty() ? Collections.emptyList() : Arrays.asList(apps.split(","));
+    }
+
+    public static void recentEnterApps(Context context, List<String> apps) {
+        preferences(context).edit().putString("recent_enter_apps", String.join(",", apps)).apply();
     }
 
     /** Records touches, keys and typed text in a log on this phone. It is off until the user turns it on. */

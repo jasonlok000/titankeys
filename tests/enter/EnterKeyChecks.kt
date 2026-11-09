@@ -3,6 +3,7 @@ package com.atlas.keyboard
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import com.atlas.keyboard.EnterKey.Press
+import com.atlas.keyboard.EnterKey.SendMethod
 
 private const val SINGLE_LINE = InputType.TYPE_CLASS_TEXT
 private const val MULTI_LINE = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -10,10 +11,12 @@ private const val NO_ENTER = EditorInfo.IME_FLAG_NO_ENTER_ACTION
 private const val SEND = EditorInfo.IME_ACTION_SEND
 private const val NOTES = "com.example.notes"
 private const val MAIL = "com.example.mail"
+private const val ADDED = "com.example.chat"
 
 private val chatApps = listOf("com.whatsapp", "org.telegram.messenger", "org.thoughtcrime.securesms", "com.discord",
     "im.vector.app", "com.google.android.apps.messaging", "ch.threema.app", "ch.threema.app.libre",
-    "com.instagram.android", "com.facebook.orca")
+    "com.instagram.android", "com.facebook.orca", "com.openai.chatgpt", "com.anthropic.claude", "com.reddit.frontpage")
+private val plainEnterApps = listOf("com.discord", "com.openai.chatgpt", "com.anthropic.claude", "com.reddit.frontpage")
 
 /** Every action Android gives a field, with and without the flag that multi-line text views always have. */
 private val allOptions = listOf(EditorInfo.IME_ACTION_UNSPECIFIED, EditorInfo.IME_ACTION_NONE, EditorInfo.IME_ACTION_GO,
@@ -30,7 +33,10 @@ fun main() {
     notesNeverSend()
     otherInputTypes()
     sendActions()
-    plainEnterForDiscord()
+    sendMethods()
+    addedApps()
+    savedApps()
+    recentApps()
     println("Enter key checks passed")
 }
 
@@ -45,7 +51,8 @@ private fun EnterKey.press(
     actionId: Int = 0,
     shift: Boolean = false,
     ctrl: Boolean = false,
-) = press(inputType, imeOptions, actionId, packageName, shift, ctrl)
+    added: Map<String, SendMethod> = emptyMap(),
+) = press(inputType, imeOptions, actionId, packageName, shift, ctrl, added)
 
 private fun defaultOption() {
     same(EnterKey.of(null), EnterKey.AlwaysSend, "Always send is the default")
@@ -127,8 +134,52 @@ private fun sendActions() {
     same(EnterKey.sendAction(EditorInfo.IME_ACTION_DONE, 1234), SEND, "A custom action with no known meaning sends with Send")
 }
 
-private fun plainEnterForDiscord() {
-    same(EnterKey.sendsWithKey("com.discord"), true, "Discord needs a plain Enter key")
-    for (app in chatApps - "com.discord") same(EnterKey.sendsWithKey(app), false, "$app uses the editor action")
-    same(EnterKey.sendsWithKey(null), false, "No package means no plain key")
+private fun sendMethods() {
+    for (app in plainEnterApps) same(EnterKey.sendMethod(app), SendMethod.PlainEnter, "$app sends with a plain Enter key")
+    for (app in chatApps - plainEnterApps.toSet()) same(EnterKey.sendMethod(app), SendMethod.EditorAction, "$app uses the editor action")
+    same(EnterKey.sendMethod("com.whatsapp"), SendMethod.EditorAction, "WhatsApp already works with the editor action")
+    same(EnterKey.sendMethod(null), SendMethod.EditorAction, "No package means no plain key")
+    same(EnterKey.sendMethod(NOTES), SendMethod.EditorAction, "An app that nobody added uses the editor action")
+    same(EnterKey.BUILT_IN.map { it.packageName }.sorted(), chatApps.sorted(), "The settings page lists every built-in app")
+}
+
+private fun addedApps() {
+    val added = mapOf(ADDED to SendMethod.PlainEnter)
+    same(EnterKey.AlwaysNewLine.press(ADDED, added = added), Press.NewLine, "Enter adds a new line in an added app")
+    same(EnterKey.AlwaysNewLine.press(ADDED, shift = true, added = added), Press.ShiftSend, "Shift + Enter sends in an added app")
+    same(EnterKey.AlwaysNewLine.press(ADDED, ctrl = true, added = added), Press.Send, "Ctrl + Enter sends in an added app")
+    same(EnterKey.AlwaysSend.press(ADDED, added = added), Press.Send, "Enter sends in an added app")
+    same(EnterKey.AlwaysSend.press(ADDED, shift = true, added = added), Press.ShiftNewLine, "Shift + Enter adds a new line in an added app")
+    same(EnterKey.AlwaysNewLine.press(ADDED, shift = true), Press.NewLine, "After it is removed, the app never sends")
+    same(EnterKey.AppDecides.press(ADDED, shift = true, added = added), Press.FieldDecides, "App decides changes nothing in an added app")
+    same(EnterKey.AlwaysSend.press(ADDED, SINGLE_LINE, added = added), Press.FieldDecides, "A single-line field keeps its action in an added app")
+    for (key in listOf(EnterKey.AlwaysSend, EnterKey.AlwaysNewLine)) {
+        same(key.press(NOTES, added = added), Press.NewLine, "Adding one app does not make a note send with $key")
+        same(key.press(NOTES, shift = true, added = added), Press.NewLine, "Shift + Enter in a note still adds a new line with $key")
+    }
+    same(EnterKey.sendMethod(ADDED, added), SendMethod.PlainEnter, "An added app uses the method chosen for it")
+    same(EnterKey.sendMethod(ADDED, mapOf(ADDED to SendMethod.EditorAction)), SendMethod.EditorAction, "The other method can be chosen")
+    same(EnterKey.sendMethod("com.openai.chatgpt", mapOf("com.openai.chatgpt" to SendMethod.EditorAction)), SendMethod.EditorAction,
+        "A choice comes before the built-in method")
+    same(EnterKey.sendMethod("com.whatsapp", added), SendMethod.EditorAction, "Adding another app changes nothing for WhatsApp")
+}
+
+private fun savedApps() {
+    same(EnterKey.apps(setOf("a.b=key", "c.d=action")), mapOf("a.b" to SendMethod.PlainEnter, "c.d" to SendMethod.EditorAction), "Saved apps read back")
+    same(EnterKey.apps(setOf("a.b=other", "=key", "no.method", "c.d=")), emptyMap<String, SendMethod>(), "A damaged entry is left out")
+    same(EnterKey.apps(emptySet()), emptyMap<String, SendMethod>(), "No saved apps")
+    val one = EnterKey.savedApps(emptySet(), "a.b", SendMethod.PlainEnter)
+    same(one, setOf("a.b=key"), "An app is added")
+    same(EnterKey.savedApps(one, "a.b", SendMethod.EditorAction), setOf("a.b=action"), "An app has one method at a time")
+    same(EnterKey.savedApps(one, "c.d", SendMethod.EditorAction), setOf("a.b=key", "c.d=action"), "Other apps stay")
+    same(EnterKey.savedApps(one, "a.b", null), emptySet<String>(), "An app is removed")
+}
+
+private fun recentApps() {
+    same(EnterKey.recentApps(listOf("a", "b"), "c"), listOf("c", "a", "b"), "The newest app comes first")
+    same(EnterKey.recentApps(listOf("a", "b"), "b"), listOf("b", "a"), "An app shows one time")
+    same(EnterKey.recentApps(List(40) { "app$it" }, "new").size, 20, "The list has a limit")
+    same(EnterKey.recordsApp(MULTI_LINE, NO_ENTER), true, "A multi-line field can use the setting")
+    same(EnterKey.recordsApp(SINGLE_LINE, 0), false, "A single-line field cannot use the setting")
+    same(EnterKey.recordsApp(MULTI_LINE, EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING), false, "A private field is not recorded")
 }

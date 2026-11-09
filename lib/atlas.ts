@@ -4,6 +4,9 @@ import { callNative, onNativeMessage } from "ink/native";
 export type HapticPreset = "normal" | "strong";
 export type Spelling = "british" | "american";
 export type EnterKey = "send" | "newline" | "app";
+/** How a message goes out in an app: the field's action, or a plain Enter key. */
+export type SendMethod = "action" | "key";
+export type EnterApp = { app: string; name: string; method: SendMethod };
 
 export type State = {
   version: string;
@@ -39,6 +42,11 @@ export type State = {
   cursorControl: boolean;
   /** What Enter does in fields with more than one line. */
   enterKey: EnterKey;
+  /** Apps that the user added to the Enter key setting, and built-in apps that the user changed. */
+  enterApps: EnterApp[];
+  enterAppsBuiltIn: EnterApp[];
+  /** Apps with a recent multi-line field, which the user can add. */
+  recentEnterApps: { app: string; name: string }[];
   liftOff: boolean;
   liftOffMillis: number;
   haptics: boolean;
@@ -70,6 +78,16 @@ onNativeMessage("atlas-state", () => void state.refresh());
 
 export async function update(changes: Partial<Settings>) {
   for (const [key, value] of Object.entries(changes)) await atlas("set", { key, value });
+  await state.refresh();
+}
+
+export async function setEnterApp(app: string, method: SendMethod) {
+  await atlas("setEnterApp", { app, method });
+  await state.refresh();
+}
+
+export async function removeEnterApp(app: string) {
+  await atlas("removeEnterApp", { app });
   await state.refresh();
 }
 

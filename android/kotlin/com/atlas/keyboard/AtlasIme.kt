@@ -46,6 +46,7 @@ class AtlasIme : InputMethodService() {
     private lateinit var editor: ConnectionEditor
     private lateinit var overlay: TouchpadOverlay
     private val contact = Contact()
+    private val deleteHold = DeleteHold(contact)
     private val cursor = CursorMode()
     private val cursorGesture = CursorGesture()
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
@@ -142,6 +143,50 @@ class AtlasIme : InputMethodService() {
     }
 
     private val checkHeldTaps = Runnable { settleHeldTaps() }
+
+    /** Deletes the next word of a held delete flick. Only one edit is on its way at a time, so a lift leaves no words waiting. */
+    private val stepDeleteHold = Runnable {
+        val free = pendingInput.isEmpty() && !composer.hasPendingInput
+        deleteHold.step(SystemClock.uptimeMillis(), free, ::deleteHeldWord)?.let { nextDeleteHoldStep(it) }
+    }
+
+    private fun nextDeleteHoldStep(at: Long) {
+        main.removeCallbacks(stepDeleteHold)
+        main.postAtTime(stepDeleteHold, at)
+    }
+
+    /** The finger moved, so the wait for a hold starts again, or ends if the finger is no longer on a delete flick. */
+    private fun followDeleteHold() {
+        val start = contact.points.firstOrNull()
+        val at = deleteHold.moved(!altOrPanel && start != null && pieces.canDelete(start.time))
+        if (at != null) nextDeleteHoldStep(at) else main.removeCallbacks(stepDeleteHold)
+    }
+
+    private fun endDeleteHold() {
+        main.removeCallbacks(stepDeleteHold)
+        deleteHold.reset()
+    }
+
+    /** Each word goes the way of a normal delete flick. [flick] is the first word's flick, and is null for the words after it. */
+    private fun deleteHeldWord(flick: Contact.Outcome.Swipe?) {
+        if (flick != null) {
+            // The contact was a delete and not part of a word, as it would be at a lift.
+            pieces.clear()
+            lastTouch = null
+            Trace.touch(emptyList(), true)
+            enqueue { outcome(flick) }
+            return
+        }
+        enqueue {
+            // At the start of the text nothing is left to delete, so the hold ends quietly.
+            if (currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true) {
+                contact.cancelActive()
+                return@enqueue
+            }
+            if (Haptics.enabled(this)) haptics.pulse()
+            composer.backspace(true)
+        }
+    }
 
     private fun startCursor(drag: CursorGesture.Drag, samples: List<Sample>) {
         cursor.start(drag.landed, drag.words)
@@ -498,6 +543,7 @@ class AtlasIme : InputMethodService() {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
                 haptics.begin(samples.firstOrNull())
+                endDeleteHold()
                 contact.down(first)
                 if (cursor.resume(first)) {
                     // Back within the slip recovery period: still steering the cursor, never typing.
@@ -535,11 +581,14 @@ class AtlasIme : InputMethodService() {
                 }
                 cursorPath.addAll(samples.filter { it.valid })
                 contact.move(samples)
+                // A held delete flick only waits for the finger to lift.
+                if (contact.deleting) return
                 cursorGesture.move(samples)?.let {
                     startCursor(it, samples)
                     return
                 }
                 settleHeldTaps()
+                followDeleteHold()
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
@@ -548,6 +597,7 @@ class AtlasIme : InputMethodService() {
                 Trace.touch(contact.points, false)
             }
             MotionEvent.ACTION_UP -> {
+                endDeleteHold()
                 val doubleTapped = cursorGesture.up(samples, event.eventTime)
                 if (cursor.active) {
                     main.removeCallbacks(stepCursor)
@@ -589,6 +639,7 @@ class AtlasIme : InputMethodService() {
             }
             MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
                 contact.cancelActive()
+                endDeleteHold()
                 endCursor()
                 Trace.touch(emptyList(), true)
             }

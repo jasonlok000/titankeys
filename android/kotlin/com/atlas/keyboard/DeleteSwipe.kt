@@ -21,6 +21,18 @@ private const val INNER_WANDER = 1.1f
 private const val MIN_TRAVEL = .1f
 private const val TURN_BACK = .05f
 
+/** A finger that stays this long after a delete flick starts deleting more words. Real flicks lift long before this. */
+private const val HOLD_MILLIS = 400L
+/** The finger counts as staying while it is this close to where it stopped, in key widths. */
+private const val HOLD_KEYS = .25f
+/** The wait before the second word, close to how quickly a person flicks again by hand. */
+private const val REPEAT_START_MILLIS = 350L
+/** Each wait is this part of the one before it, so the words go faster and faster. */
+private const val REPEAT_RATIO = .85f
+private const val REPEAT_MIN_MILLIS = 100L
+/** While an earlier edit is still going through, the next word looks again after this time. */
+private const val BUSY_MILLIS = 20L
+
 /**
  * A quick straight flick to the left from the right of the keyboard deletes the previous word with one thumb.
  * The numbers are fitted to real strokes. A thumb doesn't always land on Backspace, so a stroke can also start
@@ -47,6 +59,70 @@ internal val deleteSwipeTuning: Map<String, Any> get() = mapOf(
     "innerEdge" to INNER_EDGE, "middleRowTop" to MIDDLE_ROW_TOP, "innerStartBottom" to INNER_START_BOTTOM,
     "innerEndBottom" to INNER_END_BOTTOM, "innerTilt" to INNER_TILT, "innerWander" to INNER_WANDER,
     "minTravel" to MIN_TRAVEL, "turnBack" to TURN_BACK,
+    "deleteHoldMillis" to HOLD_MILLIS, "deleteHoldKeys" to HOLD_KEYS, "deleteRepeatStartMillis" to REPEAT_START_MILLIS,
+    "deleteRepeatRatio" to REPEAT_RATIO, "deleteRepeatMinMillis" to REPEAT_MIN_MILLIS,
 )
 
 private fun pathKeys(points: List<Sample>) = points.zipWithNext { a, b -> hypot((b.x - a.x) * 10, (b.y - a.y) * 4) }.sum()
+
+/**
+ * A delete flick whose finger stays on the keys deletes more and more words, faster and faster, until the finger lifts.
+ * This class only keeps the times. [contact] knows if the finger is still there, so a lift, a key press or a new field
+ * ends the hold without a call to this class, and a test can run it with no clock.
+ */
+internal class DeleteHold(private val contact: Contact) {
+    private var still: Sample? = null
+    private var deleted = 0
+    private var nextAt = 0L
+
+    /**
+     * Follows the finger after it moves, and reads the flick as a lift would. Returns when the next word is due,
+     * or null if the finger is not on a flick that can repeat. [allowed] is false where a delete flick would not count now.
+     */
+    fun moved(allowed: Boolean): Long? {
+        if (contact.deleting) return nextAt
+        val points = contact.points
+        if (!allowed || !contact.swipes || contact.paging || contact.travel == null || !isDeleteWordSwipe(points)) {
+            still = null
+            return null
+        }
+        val last = points.last()
+        val held = still?.takeIf { hypot((last.x - it.x) * 10, (last.y - it.y) * 4) <= HOLD_KEYS } ?: last
+        still = held
+        return held.time + HOLD_MILLIS
+    }
+
+    /**
+     * The timer ran. Deletes a word if one is due, through [delete]: the flick itself for the first word, then null for each
+     * word after it. Returns when to run again, or null when the hold is over. [free] is false while an earlier
+     * edit is still going through, so that a lift never leaves words waiting to be deleted.
+     */
+    fun step(now: Long, free: Boolean, delete: (Contact.Outcome.Swipe?) -> Unit): Long? {
+        if (!contact.deleting) {
+            if (deleted > 0) return null
+            val at = (still ?: return null).time + HOLD_MILLIS
+            if (now < at) return at
+            if (!free) return now + BUSY_MILLIS
+            delete(contact.holdDelete(now) ?: return null)
+        } else {
+            if (now < nextAt) return nextAt
+            if (!free) return now + BUSY_MILLIS
+            delete(null)
+        }
+        nextAt = now + wait(deleted)
+        deleted++
+        return nextAt
+    }
+
+    private fun wait(word: Int): Long {
+        var millis = REPEAT_START_MILLIS.toFloat()
+        repeat(word) { millis *= REPEAT_RATIO }
+        return max(millis.toLong(), REPEAT_MIN_MILLIS)
+    }
+
+    fun reset() {
+        still = null
+        deleted = 0
+        nextAt = 0
+    }
+}

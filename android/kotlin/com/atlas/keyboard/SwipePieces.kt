@@ -34,14 +34,18 @@ internal class SwipePieces(
         held = null
     }
 
+    /** A stroke this soon after a swipe is more likely the rest of that swipe than a delete. */
+    fun canDelete(startedAt: Long): Boolean {
+        val finished = last?.last()?.time
+        return finished == null || startedAt - finished >= MIN_DELETE_GAP_MILLIS
+    }
+
     /** What this finished contact should count as, once joined to any piece beside it. */
     fun settle(contact: Contact.Settlement, outcome: Contact.Outcome?): Contact.Outcome? {
         val before = held
         held = null
         if (outcome is Contact.Outcome.Swipe) {
-            // A stroke this soon after a swipe is more likely the rest of that swipe than a delete.
-            val finished = last?.last()?.time
-            if (outcome.deletesWord && (finished == null || outcome.startedAt - finished >= MIN_DELETE_GAP_MILLIS)) {
+            if (outcome.deletesWord && canDelete(outcome.startedAt)) {
                 last = null
                 return outcome
             }

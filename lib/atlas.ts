@@ -12,6 +12,8 @@ export type State = {
   version: string;
   /** Atlas was updated and its release notes haven't been closed yet. */
   whatsNew: boolean;
+  /** The interactive guide has not opened yet, so it opens by itself after setup. */
+  guideDue: boolean;
   phone: string;
   android: string;
   enabled: boolean;
@@ -168,6 +170,8 @@ export async function markNotesSeen() {
   }
 }
 
+/** Opens the interactive guide. It starts where you stopped, or from the beginning if you finished it. */
+export const openGuide = () => atlas("guide");
 export const enableKeyboard = () => atlas("enable");
 export const chooseKeyboard = () => atlas("choose");
 export const allowOverlay = () => atlas("overlay");

@@ -24,6 +24,7 @@ import com.atlas.engine.TypingSettings
 import com.atlas.keyboard.AtlasIme
 import com.atlas.keyboard.BackService
 import com.atlas.keyboard.EnterKey
+import com.atlas.keyboard.GuideActivity
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.KeyCapture
@@ -208,6 +209,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     appPreferences().edit().putString(SEEN_NOTES, installedVersion()).apply()
                     "null"
                 }
+                "guide" -> {
+                    GuideActivity.start(activity)
+                    "null"
+                }
                 "enable" -> {
                     activity.startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
                     "null"
@@ -301,6 +306,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         return JSONObject()
             .put("version", installedVersion())
             .put("whatsNew", whatsNew())
+            .put("guideDue", GuideActivity.due(activity))
             .put("phone", "${Build.MANUFACTURER} ${Build.MODEL}")
             .put("android", Build.VERSION.RELEASE)
             .put("enabled", enabled)

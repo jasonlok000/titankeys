@@ -40,7 +40,7 @@ export default function Settings() {
         onChange={appShortcuts => save.run({ appShortcuts })} />
       {settings.appShortcuts
         && <Field label="Configure shortcuts" href="/settings/shortcuts">{shortcutsLabel(settings)}</Field>}
-      {settings.appShortcuts && <Toggle label="Animation" value={settings.shortcutAnimation}
+      {settings.appShortcuts && <Toggle label="Animations" value={settings.shortcutAnimation}
         onChange={shortcutAnimation => save.run({ shortcutAnimation })} />}
     </Section>
     <Section title="Personal">

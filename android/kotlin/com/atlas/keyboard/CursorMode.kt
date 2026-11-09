@@ -121,7 +121,7 @@ class CursorMode {
     private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
 
     companion object {
-        const val REST_MILLIS = 160L
+        const val REST_MILLIS = 180L
         private const val REST_KEYS = .3f
         /** The ends of Space, in key widths from the left edge of the keyboard. */
         private val SPACE_LEFT = Layout.bottomWidths.take(3).sum()

@@ -33,6 +33,25 @@ class Touchpad(private val display: Display) {
     /** In Sliding Mode 1 the firmware delivers the touchpad to apps as screen touches, still from its own device. */
     fun accepts(event: MotionEvent) = event.isFromSource(InputDevice.SOURCE_TOUCHPAD) || event.device?.name == DEVICE
 
+    /** The event's action, with a second finger reported as a cancel, until all fingers lift. */
+    fun action(event: MotionEvent): Int =
+        if (event.actionMasked != MotionEvent.ACTION_UP && twoFingers(event)) MotionEvent.ACTION_CANCEL else event.actionMasked
+
+    /**
+     * The touchpad reports one point, even for two fingers, so Android never sees a second pointer. Two fingers
+     * touch a larger area than one: one finger stays at a raw touch size of 3 or less, two fingers reach 5 to 8.
+     */
+    private fun twoFingers(event: MotionEvent): Boolean {
+        if (event.device?.name != DEVICE) return false
+        // Android scales the raw size by the average of the two position scales (1.125 on the Titan 2).
+        val scale = (range(event, MotionEvent.AXIS_X, X_RANGE).second / RAW_MAX_X
+            + range(event, MotionEvent.AXIS_Y, Y_RANGE).second / RAW_MAX_Y) / 2
+        // Half a step below the limit allows for rounding.
+        val limit = (TWO_FINGER_SIZE - .5f) * scale
+        if (event.getTouchMajor(0) >= limit) return true
+        return (0 until event.historySize).any { event.getHistoricalTouchMajor(0, it) >= limit }
+    }
+
     /** Firmware gesture keys accompany swipes; they are not physical key presses. */
     fun isGestureKey(event: KeyEvent) = event.device?.name == DEVICE
 
@@ -40,8 +59,8 @@ class Touchpad(private val display: Display) {
         if (event.historySize >= Swipe.MAX_POINTS || event.eventTime < 0 || event.eventTime > SystemClock.uptimeMillis())
             return listOf(Sample(Float.NaN, Float.NaN, event.eventTime))
         if (event.actionMasked == MotionEvent.ACTION_DOWN) offset = firmwareOffset(event)
-        val x = range(event, MotionEvent.AXIS_X, 1079f)
-        val y = range(event, MotionEvent.AXIS_Y, 748.75f)
+        val x = range(event, MotionEvent.AXIS_X, X_RANGE)
+        val y = range(event, MotionEvent.AXIS_Y, Y_RANGE)
         val shiftX = event.rawX - event.x
         val shiftY = event.rawY - event.y - offset
         val scales = firmwareScales(event)
@@ -122,5 +141,10 @@ class Touchpad(private val display: Display) {
         const val RAW_HEIGHT = 600f
         const val RAW_MAX_Y = RAW_HEIGHT - 1
         const val ON_STEP_TO_CLEAR = 2
+        const val RAW_MAX_X = 1079f
+        /** The touchpad ranges Android reports, for a device that does not give them. */
+        const val X_RANGE = 1079f
+        const val Y_RANGE = 748.75f
+        const val TWO_FINGER_SIZE = 5
     }
 }

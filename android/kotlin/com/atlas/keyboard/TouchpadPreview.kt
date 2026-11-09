@@ -37,7 +37,7 @@ class TouchpadPreview(private val activity: Activity) {
 
     private fun motion(event: MotionEvent) {
         val samples = touchpad.samples(event)
-        when (event.actionMasked) {
+        when (touchpad.action(event)) {
             MotionEvent.ACTION_DOWN -> {
                 activity.window.decorView.requestUnbufferedDispatch(event)
                 val first = samples.firstOrNull() ?: return

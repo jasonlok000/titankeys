@@ -1139,7 +1139,8 @@ class AtlasIme : InputMethodService() {
         val info = currentInputEditorInfo
         // A locked Shift is Caps Lock, so Enter still sends.
         val shift = event.isShiftPressed || modifiers.shift == Modifiers.Level.Once
-        val press = EnterKey.of(TypingSettings.enterKey(this)).press(info?.inputType ?: 0, info?.imeOptions ?: 0,
+        // The Enter key setting is postponed (issue 26) and has no row in Settings, so each field decides for now.
+        val press = EnterKey.AppDecides.press(info?.inputType ?: 0, info?.imeOptions ?: 0,
             info?.actionId ?: 0, info?.packageName, shift, event.isCtrlPressed, enterApps)
         if (press == EnterKey.Press.FieldDecides && event.isCtrlPressed) return false
         // A held Enter must not send again before the app has cleared the field.

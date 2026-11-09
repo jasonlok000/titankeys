@@ -137,6 +137,8 @@ class Composer(
     var liftOffMillis = 0
     /** Told the whole path behind each recognised word, including any pieces joined to it. */
     var onStroke: ((Swipe) -> Unit)? = null
+    /** Off for the benchmark's own replays, so they aren't mistaken for the person's swipes. */
+    var reportsRecording = true
 
     val hasPendingInput get() = recognising || barrier != null || drainScheduled || pendingInput.isNotEmpty()
     /** Whether a touch arriving now could still join the last swipe. A recognition in progress may yet allow it. */
@@ -383,7 +385,7 @@ class Composer(
             recognising = false
             recognitionSnapshot = null
             pendingInput.removeFirst()
-            Recording.sink?.recognised(recognition.words, resumes)
+            if (reportsRecording) Recording.sink?.recognised(recognition.words, resumes)
             onStroke?.invoke(path)
             if (recognition.words.isNotEmpty()) {
                 val sentenceCase = field.sentenceCapitalisation && autoCapitalise()

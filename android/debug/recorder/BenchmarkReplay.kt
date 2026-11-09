@@ -94,6 +94,7 @@ internal class BenchmarkReplay(private val context: Context, private val words: 
         fun run(): String {
             onMain {
                 composer = Composer(editor, words, { delay, action -> main.postDelayed(action, delay) }, {}, { false }, {})
+                composer.reportsRecording = false
                 composer.liftOffMillis = lift
                 composer.start(FIELD, 0, 0)
             }

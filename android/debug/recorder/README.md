@@ -1,6 +1,6 @@
 # Swipe recorder and replay tools
 
-The `benchmark` branch turns the recorder into a short public test. It asks for 30 words that were never used for tuning, and runs each swipe through both the original Atlas behaviour and TitanKeys. Build it with `APP_NAME="TitanKeys Benchmark" APP_ID=com.titankeys.benchmark bash tools/debug.sh`.
+The `benchmark` branch turns the recorder into a short public test. It asks for 8 sentences that were never used for tuning, shown one word at a time, and runs the same touches through both the original Atlas behaviour and TitanKeys. Build it with `APP_NAME="TitanKeys Benchmark" APP_ID=com.titankeys.benchmark bash tools/debug.sh`.
 
 Tools for measuring swipe accuracy on a real Titan 2 Elite. They build only into TitanKeys Debug. Normal TitanKeys never compiles them.
 

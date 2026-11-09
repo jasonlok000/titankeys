@@ -46,11 +46,18 @@ class RecorderActivity : Activity(), Recording.Sink {
         var top: List<String> = emptyList()
     }
 
-    private val prompts = BENCHMARK_WORDS
+    private val prompts = BENCHMARK_SENTENCES
     private val main = Handler(Looper.getMainLooper())
     private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
     private val replay by lazy { BenchmarkReplay(this, EngineWords(SwipeTyping.get(this))) }
-    private val results = linkedMapOf<Int, Pair<Boolean, Boolean>>()
+    private val results = linkedMapOf<Int, Triple<Int, Int, Int>>()
+    private var wordIndex = 0
+    private var touching = false
+    private val finishSentence = object : Runnable {
+        override fun run() {
+            if (touching) main.postDelayed(this, 300) else next()
+        }
+    }
     private val preferences by lazy { getSharedPreferences("benchmark", MODE_PRIVATE) }
     private val directory by lazy { (getExternalFilesDir("recordings") ?: File(filesDir, "recordings")).apply { mkdirs() } }
 
@@ -148,8 +155,12 @@ class RecorderActivity : Activity(), Recording.Sink {
             MotionEvent.ACTION_DOWN -> {
                 if (current.touches > 0 && current.lastUp >= 0) current.gaps.put(event.eventTime - current.lastUp)
                 current.touches++
+                touching = true
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> current.lastUp = event.eventTime
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                current.lastUp = event.eventTime
+                touching = false
+            }
         }
     }
 
@@ -174,10 +185,10 @@ class RecorderActivity : Activity(), Recording.Sink {
     }
 
     override fun recognised(words: List<String>, resumed: Boolean) {
-        if (replay.running) return
         attempt.top = words
         attempt.joined = attempt.joined || resumed
         attempt.events.put(JSONObject().put("k", "rec").put("words", JSONArray(words)).put("resumed", resumed))
+        if (!resumed) wordFinished()
     }
 
     /** Ends the current word. Everything since the last word is kept, however many touches it took. */
@@ -193,12 +204,14 @@ class RecorderActivity : Activity(), Recording.Sink {
             .put("touches", done.touches).put("gaps", done.gaps).put("joined", done.joined)
             .put("top", JSONArray(done.top)).put("text", typed).put("events", done.events))
         val position = index
+        main.removeCallbacks(finishSentence)
         details.text = "Checking..."
         worker.execute {
             val message = try {
                 val before = replay.run(done.events, true)
                 val after = replay.run(done.events, false)
-                results[position] = before.equals(word, ignoreCase = true) to after.equals(word, ignoreCase = true)
+                val expected = word.split(" ")
+                results[position] = Triple(wordsRight(expected, before), wordsRight(expected, after), expected.size)
                 report(word, before, after)
             } catch (error: Exception) {
                 "Couldn't check that swipe: ${error.message}"
@@ -210,12 +223,45 @@ class RecorderActivity : Activity(), Recording.Sink {
 
     /** Both versions read the same touches, so the only difference between the scores is the code. */
     private fun report(word: String, before: String, after: String): String {
-        val count = results.size
-        val atlas = results.values.count { it.first }
-        val titan = results.values.count { it.second }
-        fun line(name: String, right: Int) = "$name: $right of $count (${right * 100 / count}%)"
-        return "You swiped: $word\nAtlas typed: ${before.ifEmpty { "nothing" }}\nTitanKeys typed: ${after.ifEmpty { "nothing" }}\n\n" +
-            "${line("Atlas", atlas)}\n${line("TitanKeys", titan)}\nAtlas is the version TitanKeys was forked from. TitanKeys is all of its changes combined."
+        return "Sentence: $word\nAtlas typed: ${before.ifEmpty { "nothing" }}\nTitanKeys typed: ${after.ifEmpty { "nothing" }}\n\n${scores()}"
+    }
+
+    private fun scores(): String {
+        val total = results.values.sumOf { it.third }
+        if (total == 0) return "Scores appear after the first sentence."
+        fun line(name: String, right: Int) = "$name: $right of $total words (${right * 100 / total}%)"
+        return "${line("Atlas", results.values.sumOf { it.first })}\n${line("TitanKeys", results.values.sumOf { it.second })}\n" +
+            "Atlas is the version TitanKeys was forked from. TitanKeys is all of its changes combined."
+    }
+
+    private fun wordFinished() {
+        val sentence = prompts.getOrNull(index)?.split(" ") ?: return
+        wordIndex++
+        show()
+        val soFar = JSONArray(attempt.events.toString())
+        worker.execute {
+            val message = try {
+                val before = replay.run(soFar, true)
+                val after = replay.run(soFar, false)
+                "Atlas so far: ${before.ifEmpty { "nothing" }}\nTitanKeys so far: ${after.ifEmpty { "nothing" }}\n\n${scores()}"
+            } catch (error: Exception) {
+                "Couldn't check that swipe: ${error.message}"
+            }
+            main.post { details.text = message }
+        }
+        if (wordIndex >= sentence.size) {
+            main.removeCallbacks(finishSentence)
+            main.postDelayed(finishSentence, 900)
+        }
+    }
+
+    /** How many of the sentence's words were typed, in order. Extra or missing words only lose the words they affect. */
+    private fun wordsRight(expected: List<String>, typed: String): Int {
+        val words = typed.lowercase().split(" ").filter { it.isNotEmpty() }
+        val best = Array(expected.size + 1) { IntArray(words.size + 1) }
+        for (i in expected.indices.reversed()) for (j in words.indices.reversed())
+            best[i][j] = if (expected[i] == words[j]) best[i + 1][j + 1] + 1 else maxOf(best[i + 1][j], best[i][j + 1])
+        return best[0][0]
     }
 
     private fun unusedDescribe(word: String, done: Attempt): String {
@@ -282,22 +328,24 @@ class RecorderActivity : Activity(), Recording.Sink {
 
     private fun move(position: Int) {
         attempt = Attempt()
-        input.setText("")
+        if (!touching) input.setText("")
         index = position
+        wordIndex = 0
         preferences.edit().putInt("index", index).apply()
         show()
     }
 
     private fun show() {
-        progress.text = "${minOf(index + 1, prompts.size)} of ${prompts.size}"
-        val word = prompts.getOrNull(index)
+        val sentence = prompts.getOrNull(index)?.split(" ")
+        progress.text = if (sentence == null) "Finished" else "Sentence ${index + 1} of ${prompts.size}, word ${minOf(wordIndex + 1, sentence.size)} of ${sentence.size}"
+        val word = sentence?.let { it.getOrNull(wordIndex) ?: it.last() }
         prompt.text = word ?: "All done"
         prompt.textSize = if (pace(index) == TYPED && word != null) 22f else 40f
         instruction.text = when {
             word == null -> "Tap Export to save the session."
             pace(index) == TYPED -> "Type this on the keys as you normally would, then press Enter or Next."
             pace(index) == "rushed" -> "Swipe fast. Don't be careful. Then press Enter or Next."
-            else -> "Swipe it the way you normally would, then press Enter or Next. Don't fix mistakes."
+            else -> "Swipe each word the way you normally would. It moves on by itself. Don't press Space, and don't fix mistakes."
         }
     }
 
@@ -343,7 +391,16 @@ class RecorderActivity : Activity(), Recording.Sink {
             "it was really good to see you", "the new update fixed the problem", "turn left at the next traffic light",
             "they are coming over on saturday", "remember to lock the door when you leave",
         )
-        val BENCHMARK_WORDS = listOf("above", "palace", "among", "turning", "ruling", "park", "exercise", "strongest", "told", "days", "proclaimed", "red", "doctorate", "civil", "star", "use", "learned", "ability", "prevented", "parent", "missions", "priest", "racial", "legal", "hosted", "referring", "completed", "sufficient", "center", "advantages")
+        val BENCHMARK_SENTENCES = listOf(
+            "our flight leaves early next monday",
+            "thanks for cooking such great food",
+            "she painted the fence bright yellow",
+            "could you check the printer again",
+            "my sister loves reading mystery novels",
+            "the market closes right after noon",
+            "we should probably order some pizza",
+            "his bicycle needs two new tires",
+        )
         val MUTED = Color.rgb(142, 142, 147)
     }
 }

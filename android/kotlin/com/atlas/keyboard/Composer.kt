@@ -415,6 +415,7 @@ class Composer(
         }
         leave()
         invalidate(false)
+        val typedSpace = fullStop?.snapshot
         fullStop = null
         val anchor = snapshot()
         holdForNextWord(composition as? Composition.Swiped, anchor)
@@ -427,7 +428,8 @@ class Composer(
         val finishesWord = letterTap && (correction != null || startsNewWord(anchor.before.orEmpty()))
         val completed = if (completesCorrection || finishesWord) completeManualWord(anchor) else null
         if (completesCorrection || letterTap) correcting = null
-        val dropsSpace = automaticSpace == anchor && anchor.before?.endsWith(" ") == true
+        // Like a swiped word's space, a space typed after a word moves behind the punctuation.
+        val dropsSpace = (automaticSpace == anchor || typedSpace == anchor) && anchor.before?.endsWith(" ") == true
             && text[0] in ".,!?;:)]}…"
         val before = anchor.before
         val cased = if (before != null && field.sentenceCapitalisation && autoCapitalise()) {

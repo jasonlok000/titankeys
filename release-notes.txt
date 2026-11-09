@@ -3,6 +3,7 @@
 ## App
 - Emoji: Push Sym to type emoji from the strip.
 - Better suggestions: The strip shows more words, correct spellings, and words in more fields.
+- Cleaner typing: Atlas removes the space before punctuation and corrects words such as "i" and "dont".
 - Delete a word: Push Alt, then push Backspace.
 
 ## New

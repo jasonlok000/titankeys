@@ -26,6 +26,7 @@ public final class SwipeTyping {
     private final AtomicInteger pendingExamples = new AtomicInteger();
     private SwipeRecognizer recogniser;
     private volatile TypedPredictions typedPredictions;
+    private volatile List<String> sentenceStarts = List.of();
     private volatile String loadError;
     private volatile String readiness = "loading";
     private int loadingRetries;
@@ -117,6 +118,7 @@ public final class SwipeTyping {
              Reader dictionary = new InputStreamReader(context.getAssets().open("swipe/english.combined"), "UTF-8")) {
             typedPredictions = new TypedPredictions(vocabulary, dictionary, word -> recogniser.frequency(word));
         }
+        sentenceStarts = FirstWords.popular(recogniser.firstWords(), typedPredictions::contains);
         syncDictionary(); publish();
         loadError = null; readiness = "ready";
         Log.d("TouchpadSwipe", "Swipe engine ready in " + (SystemClock.uptimeMillis() - began) + " ms");
@@ -315,6 +317,9 @@ public final class SwipeTyping {
     public boolean wordAllowed(String word) { return blockedWords.allowed(word); }
 
     public TypedPredictions typedPredictions() { return typedPredictions; }
+
+    /** The commonest ways to start a sentence, best first. Empty until the word lists have loaded. */
+    public List<String> sentenceStarts() { return sentenceStarts; }
 
     /** Whether the user added this word or used it enough to count as learned. A word typed once or twice may be a typo. */
     public boolean personalWord(String word) {

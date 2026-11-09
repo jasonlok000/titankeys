@@ -77,23 +77,35 @@ private class FakeEditor : Editor {
     /** Cursor positions that the app has yet to report. On a phone they arrive after the key's handler returns. */
     val reports = ArrayDeque<Int>()
     private var reported = 0
+    var fieldId = 1
+    /** Where the user put the cursor or selection. Null means that the cursor follows the end of the text. */
+    var cursor: Pair<Int, Int>? = null
+    /** The app doesn't say what is in its field. */
+    var unreadable = false
+    /** The app refuses each edit. */
+    var refuses = false
+    private val start get() = cursor?.first ?: text.length
+    private val end get() = cursor?.second ?: text.length
 
     private fun report() {
-        if (text.length != reported) reports += text.length
-        reported = text.length
+        if (start != reported) reports += start
+        reported = start
     }
 
-    override fun identity() = Editor.Identity(owner, "test", 1)
-    override fun state(result: (Editor.State?) -> Unit) = result(Editor.State(text.takeLast(Editor.CONTEXT_LENGTH), "", text.length, text.length))
-    override fun before() = text.takeLast(Editor.CONTEXT_LENGTH)
-    override fun after() = ""
+    override fun identity() = Editor.Identity(owner, "test", fieldId)
+    override fun state(result: (Editor.State?) -> Unit) = result(if (unreadable) null else Editor.State(before()!!, after()!!, start, end))
+    override fun before() = if (unreadable) null else text.take(start).takeLast(Editor.CONTEXT_LENGTH)
+    override fun after() = if (unreadable) null else text.drop(end).take(32)
     override fun enter(press: EnterKey.Press): Editor.Enter {
         enterPresses++
         return enters
     }
 
     override fun replace(count: Int, text: String, after: Int): Boolean {
-        this.text = this.text.dropLast(count) + text
+        if (refuses) return false
+        val kept = start - count
+        this.text = this.text.take(kept) + text + this.text.drop(end + after)
+        cursor = cursor?.let { (kept + text.length).let { at -> at to at } }
         report()
         return true
     }
@@ -115,15 +127,31 @@ private class FakeWords(private val lists: Lists) : Words {
     val corrected = ArrayList<String>()
     /** Each pair the next-word predictor was told to learn. "^" stands for the start of a sentence. */
     val pairs = ArrayList<String>()
+    /** An empty word means that the swipe found nothing. */
     var swiped = ""
     var lookAlike: String? = null
+    var starts = listOf("I", "the", "hello", "you")
+    /** What completion answers. Null means that the models are still loading, so the answer waits in [unanswered]. */
+    var completions: List<String>? = emptyList()
+    val unanswered = ArrayDeque<(List<String>) -> Unit>()
+    /** Swipes wait in [unrecognised] until the test lets them finish. */
+    var holdSwipes = false
+    val unrecognised = ArrayDeque<() -> Unit>()
+    val blocked = HashSet<String>()
 
-    override fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Words.Recognition) -> Unit) =
-        result(Words.Recognition(listOf(swiped), null))
-    override fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit) = result(emptyList())
+    override fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Words.Recognition) -> Unit) {
+        val word = swiped
+        val finish = { result(Words.Recognition(listOfNotNull(word.takeIf { it.isNotEmpty() }), null)) }
+        if (holdSwipes) unrecognised += finish else finish()
+    }
+    override fun sentenceStarts() = starts
+    override fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit) {
+        val words = completions
+        if (words == null) unanswered += result else result(words)
+    }
     override fun prepare(text: String, cancelled: AtomicBoolean) = Unit
     override fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit) = result(lookAlike)
-    override fun allowed(word: String) = true
+    override fun allowed(word: String) = word.lowercase() !in blocked
     override fun known(word: String) = lists.known(word) || lists.habits.seen(word)
     override fun typed(word: String, rememberCase: Boolean) {
         typed += word
@@ -137,17 +165,18 @@ private class FakeWords(private val lists: Lists) : Words {
 }
 
 /** Types into a real Composer, the way the keyboard does for each key. */
-private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.autocorrect(), field: Field = FIELD,
-                     lists: Lists = Lists(world.words)) {
+private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.autocorrect(), val field: Field = FIELD,
+                     lists: Lists = Lists(world.words), autoCapitalise: Boolean = false, val words: FakeWords = FakeWords(lists)) {
     val editor = FakeEditor()
-    val words = FakeWords(lists)
+    /** The words on the suggestion bar. */
+    var bar = emptyList<String>()
     private val posted = ArrayDeque<() -> Unit>()
     private var time = 0L
     /** How many app reports the keyboard took for a change that it did not make. Each one drops its undo and queued keys. */
     var externalChanges = 0
     /** How many times the keyboard was told to vibrate because a word changed by itself. */
     var vibrations = 0
-    val composer = Composer(editor, words, { _, action -> posted += action }, {}, { false }, {})
+    val composer = Composer(editor, words, { _, action -> posted += action }, {}, { autoCapitalise }, { bar = it })
 
     init {
         composer.autocorrect = autocorrect
@@ -207,6 +236,21 @@ private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.aut
         val stroke = Swipe(floatArrayOf(.1f, .4f, .8f), floatArrayOf(.2f, .3f, .4f), floatArrayOf(0f, 100f, 200f))
         composer.swipe(stroke, time, time + 200, 0)
         time += 1000
+        settle()
+        return this
+    }
+
+    /** A touch on a word of the suggestion bar. */
+    fun choose(index: Int): Typist {
+        composer.choose(index)
+        settle()
+        return this
+    }
+
+    /** The user puts the cursor at [start], or selects up to [end]. */
+    fun select(start: Int, end: Int = start): Typist {
+        editor.cursor = start to end
+        composer.selectionChanged(start, end)
         settle()
         return this
     }
@@ -795,6 +839,211 @@ private fun composerFlow(world: Realistic) {
     }
 }
 
+/** Where suggestions are allowed the bar always has words, and popular sentence starts fill it when nothing else can. */
+private fun suggestionBar(world: Realistic) {
+    val sentences = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, 0)
+    val capital = listOf("I", "The", "Hello", "You")
+    val inside = listOf("I", "the", "hello", "you")
+    fun fakeWords() = FakeWords(Lists(world.words))
+    fun typist(words: FakeWords = fakeWords(), field: Field = sentences, capitals: Boolean = true) =
+        Typist(world, null, field, autoCapitalise = capitals, words = words)
+
+    // The models are still loading, so completions wait.
+    run {
+        val words = fakeWords().also { it.completions = null }
+        val loading = typist(words)
+        same(loading.bar, capital, "While the models load, an empty field shows starts at once")
+        loading.type("he")
+        same(loading.bar, inside, "While the models load, typing keeps starts on the bar")
+        loading.choose(1)
+        same(loading.text, "He the ", "A start can be chosen while the models load")
+        words.completions = listOf("real")
+        loading.type("x")
+        same(loading.bar, listOf("real"), "Real words take over once the models answer")
+        val answered = typist(fakeWords().also { it.completions = null })
+        answered.words.unanswered.removeLast()(listOf("real", "words"))
+        same(answered.bar, listOf("real", "words"), "A completion that was waiting replaces the starts")
+    }
+    same(typist(fakeWords().also { it.starts = emptyList() }).bar, listOf("I", "The", "Hello"), "Before the word lists load, the few starts show")
+
+    // No word fits the text.
+    run {
+        val typist = typist().type("Xqzv")
+        same(typist.bar, inside, "A typed word with no suggestions shows starts")
+        typist.choose(1)
+        same(typist.text, "Xqzv the ", "A start goes after the typed word and keeps it")
+        same(typist.bar, inside, "The bar goes on with starts after the choice")
+    }
+
+    // Selected text.
+    run {
+        val typist = typist().type("Hello world. ").select(6, 11)
+        same(typist.bar, inside, "Selected text shows starts, in the case the text before it asks for")
+        typist.choose(1)
+        same(typist.text, "Hello the. ", "A start replaces the selected word and adds no space before a full stop")
+        same(typist().type("Hello there").select(0, 11).also { same(it.bar, capital, "A selection at the start is a sentence start") }.choose(1).text, "The ",
+            "A start replaces all the selected text")
+    }
+
+    // The cursor is against a word.
+    run {
+        val words = fakeWords().also { it.completions = listOf("wrong") }
+        val typist = typist(words).type("Good morning")
+        same(typist.select(5).bar, inside, "A cursor just before a word shows starts")
+        typist.choose(1)
+        same(typist.text, "Good the morning", "A start goes in with a space on each side of it where needed")
+        val inWord = typist(words).type("Good").select(2)
+        same(inWord.bar, inside, "A cursor inside a word shows starts")
+        same(inWord.choose(0).text, "Go I od", "A start splits the word instead of joining it")
+    }
+
+    // The app doesn't say what is in its field.
+    run {
+        val typist = typist()
+        typist.editor.unreadable = true
+        typist.composer.start(typist.field, -1, -1)
+        typist.settle()
+        same(typist.bar, capital, "A field that hides its text still shows starts")
+        same(typist.choose(1).text, "The ", "A start goes into a field that hides its text")
+        same(typist.bar, capital, "The bar stays full after that")
+    }
+
+    // A swipe that found nothing.
+    run {
+        val words = fakeWords().also { it.completions = listOf("real") }
+        val typist = typist(words).type("Hello ")
+        words.completions = emptyList()
+        same(typist.swipe("").bar, inside, "A swipe that finds nothing leaves starts on the bar")
+    }
+
+    // Words stay up while a swipe is read and after the keyboard has finished a key.
+    run {
+        val words = fakeWords().also { it.completions = listOf("real") }
+        val typist = typist(words).type("Hello ")
+        words.holdSwipes = true
+        same(typist.swipe("there").bar, listOf("real"), "The bar keeps its words while a swipe is read")
+        words.unrecognised.removeFirst()()
+        typist.settle()
+        same(typist.bar, listOf("there"), "A swiped word then takes over")
+    }
+
+    // Enter sent the message, but nothing else happened.
+    run {
+        val words = fakeWords().also { it.completions = listOf("real") }
+        val typist = typist(words).type("Hello")
+        typist.editor.enters = Editor.Enter.Action
+        typist.composer.enter(EnterKey.Press.Send)
+        words.completions = emptyList()
+        typist.settle()
+        same(typist.bar, inside, "When Enter changes nothing, the bar is not left empty")
+    }
+
+    // A reset that nothing follows.
+    run {
+        val words = fakeWords()
+        val typist = typist(words).type("Hello ")
+        words.holdSwipes = true
+        typist.swipe("there")
+        typist.editor.text += "x"
+        words.unrecognised.removeFirst()()
+        typist.settle()
+        same(typist.bar, inside, "A swipe that the text outran leaves words on the bar")
+        val refused = typist(fakeWords()).type("Hello ")
+        refused.editor.refuses = true
+        refused.composer.type("a")
+        refused.settle()
+        same(refused.bar, inside, "An edit that the app refused leaves words on the bar")
+    }
+
+    // Every start was blocked, or the search words were.
+    same(typist(fakeWords().also { it.blocked += "the" }).bar, listOf("I", "Hello", "You"), "A blocked word is not offered")
+    run {
+        val search = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI, 0)
+        same(typist(field = search).bar, listOf("What", "How", "Where"), "An empty search bar keeps its own starters")
+        same(typist(field = search, words = fakeWords().also { it.blocked += listOf("what", "how", "where") }).bar, listOf("I", "the", "hello", "you"),
+            "With the search starters blocked, the bar still has words")
+    }
+
+    // A new field does not show what the last one offered.
+    run {
+        val words = fakeWords().also { it.completions = listOf("old") }
+        val typist = typist(words)
+        same(typist.bar, listOf("old"), "The first field shows its own words")
+        words.completions = null
+        typist.composer.start(sentences, 0, 0)
+        same(typist.bar, listOf("old"), "A restart of the same field keeps its words until new ones arrive")
+        typist.editor.fieldId = 2
+        typist.composer.start(sentences, 0, 0)
+        same(typist.bar, capital, "A new field shows starts, not the last field's words")
+    }
+
+    // Capitals.
+    same(typist().bar, capital, "An empty field starts a sentence")
+    same(typist().type("Hi. ").bar, capital, "A full stop starts a sentence")
+    same(typist().type("Hi\n").bar, capital, "A new line starts a sentence")
+    same(typist().type("well ").bar, inside, "Mid-sentence, only I keeps its capital")
+    same(typist(fakeWords().also { it.starts = listOf("I'm", "I've", "the") }).type("well ").bar, listOf("I'm", "I've", "the"), "Mid-sentence, I'm keeps its capital")
+    same(typist(field = Field.of(InputType.TYPE_CLASS_TEXT, 0)).bar, inside, "A field without sentence capitals gets none")
+    same(typist(capitals = false).bar, inside, "With the setting off, nothing gets a capital")
+
+    // Fields where suggestions are off.
+    val noBar = listOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
+        InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD, InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
+        InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_URI or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)
+    for (variation in noBar) {
+        val field = Field.of(InputType.TYPE_CLASS_TEXT or variation, 0)
+        val words = fakeWords().also { it.completions = null }
+        val typist = typist(words, field = field)
+        same(typist.bar, emptyList<String>(), "Variation $variation shows nothing in an empty field")
+        typist.type("abc").select(1, 2)
+        same(typist.bar, emptyList<String>(), "Variation $variation shows nothing for a selection")
+        same(typist.select(1).bar, emptyList<String>(), "Variation $variation shows nothing inside a word")
+        same(typist.choose(0).text, "abc", "Variation $variation has no words to touch")
+    }
+    same(typist(field = Field.None).bar, emptyList<String>(), "A field with no text words shows nothing")
+    same(typist(field = Field.of(InputType.TYPE_CLASS_NUMBER, 0)).bar, emptyList<String>(), "A number field shows nothing")
+
+    // Touching a start.
+    run {
+        val words = fakeWords()
+        val typist = typist(words).choose(1)
+        same(typist.text, "The ", "A start goes in with the space after it")
+        same(words.typed.toList(), emptyList<String>(), "A start teaches no saved word")
+        same(typist.type("cat ").text, "The cat ", "Typing carries on after a start")
+    }
+    run {
+        val words = fakeWords()
+        val typist = typist(words)
+        typist.composer.choose(1)
+        typist.type(",")
+        same(typist.text, "The,", "Punctuation takes the place of a start's space, as it does for any word")
+    }
+    run {
+        val words = fakeWords()
+        val typist = typist(words).swipe("hello")
+        typist.backspace()
+        typist.backspace()
+        same(typist.choose(1).text, "Hell the ", "A start can follow a swiped word that is being fixed")
+        same(words.corrected.toList(), emptyList<String>(), "A start says nothing about the swipe before it")
+        same(words.typed.toList(), emptyList<String>(), "A start does not save what was being fixed")
+    }
+    run {
+        val typist = typist().type("Xqzv")
+        same(typist.choose(1).words.typed.toList(), emptyList<String>(), "A start does not save the word typed before it")
+    }
+    run {
+        val typist = typist()
+        typist.editor.text = "changed"
+        same(typist.choose(1).text, "changed", "A start offered for other text does nothing")
+    }
+    run {
+        val typist = typist()
+        val before = typist.bar
+        must(before.isNotEmpty(), "Starts are on the bar")
+        same(typist.type("H").text, "H", "A key types as it does with any other words on the bar")
+    }
+}
+
 private fun smallerChecks() {
     // A changed word must feel different from a swipe tick, at each vibration setting.
     for (preset in HapticPreset.entries) {
@@ -1184,6 +1433,7 @@ fun main() {
     val world = Realistic()
     smallerChecks()
     composerFlow(world)
+    suggestionBar(world)
     typoBenchmark(world)
     sentenceAware(world)
     fieldReports(world)

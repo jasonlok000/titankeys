@@ -152,6 +152,8 @@ public final class SwipeRecognizer implements AutoCloseable {
 
     public float frequency(String word) { return base.frequency(word); }
 
+    Map<String, Double> firstWords() { return firstWords; }
+
     public org.futo.ml.inference.SwipeDecoder.Result[] recognise(Swipe gesture, String[] context, boolean personalized) {
         return recognise(gesture, context, personalized, word -> true);
     }

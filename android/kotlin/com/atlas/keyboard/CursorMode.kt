@@ -1,21 +1,20 @@
 package com.atlas.keyboard
 
-import kotlin.math.hypot
+import kotlin.math.abs
 import kotlin.math.pow
 
 /**
- * Rest a finger on Space to start cursor mode, then lean it towards either end of Space to move the
- * cursor that way, like a joystick. The whole bottom row sets the speed: just inside the end of Space
- * creeps for placing the cursor exactly, and the far edges of the keyboard race across long text. The rest keeps
- * swipes and grazes that cross Space out of cursor mode: the finger must stay within [REST_KEYS] of
- * where it landed for [REST_MILLIS]. Like a swipe, a brief slip off the touchpad doesn't end it: the
- * keyboard holds it through the slip recovery period, and the finger carries on where it lands.
- * Distances are in key widths, as in [Contact].
+ * A finger that [CursorGesture] started moves the cursor like a joystick: dragged left or right of where it landed,
+ * the cursor goes that way. Direction and speed are measured from that spot, so it doesn't matter where on the
+ * bottom row the finger came down: a short lean creeps for placing the cursor exactly, and a long one races across
+ * long text. Like a swipe, a brief slip off the touchpad doesn't end it: the keyboard holds it through the slip
+ * recovery period, and the finger carries on where it lands. Distances are in key widths, as in [Contact].
  */
 class CursorMode {
-    private enum class State { Idle, Resting, Active, Lifted }
+    private enum class State { Idle, Active, Lifted }
 
     private var state = State.Idle
+    /** Where the finger landed. Direction and speed are measured from here. */
     private var landed: Sample? = null
     private var position: Sample? = null
     /** When the finger reached the edge of the keyboard, for the build-up to full speed. */
@@ -26,21 +25,11 @@ class CursorMode {
     /** The finger slipped off during cursor mode and may still come back. */
     val lifted: Boolean get() = state == State.Lifted
 
-    /** Whether this contact landed on Space and may start cursor mode once it has rested. */
-    fun down(sample: Sample): Boolean {
-        val onSpace = sample.valid && Layout.keyAt(sample.x, sample.y) == Layout.SPACE
-        state = if (onSpace) State.Resting else State.Idle
-        landed = sample.takeIf { onSpace }
-        position = landed
-        return onSpace
-    }
-
-    /** Starts cursor mode if the finger is still resting at [now]. */
-    fun rest(now: Long): Boolean {
-        val first = landed ?: return false
-        if (state != State.Resting || now - first.time < REST_MILLIS) return false
+    /** Starts cursor mode for a finger that landed at [from]. */
+    fun start(from: Sample) {
         state = State.Active
-        return true
+        landed = from
+        position = from
     }
 
     /** The finger left the touchpad; cursor mode waits for it to come back. */
@@ -61,32 +50,31 @@ class CursorMode {
     fun move(samples: List<Sample>) {
         for (sample in samples) {
             if (!sample.valid) continue
-            if (state == State.Resting && distance(landed!!, sample) > REST_KEYS) state = State.Idle
             position = sample
         }
     }
 
-    /** Which way the finger is leaning: -1 left, 1 right, 0 resting in the middle of Space. */
+    /** Which way the finger is leaning: -1 left, 1 right, 0 still near where it landed. */
     fun direction(): Int {
         val depth = depth() ?: return 0
         return if (depth.first) -1 else 1
     }
 
     /**
-     * Letters a second for the current lean at [now], or 0 in the middle. The speed follows [SPEEDS],
+     * Letters a second for the current lean at [now], or 0 when still. The speed follows [SPEEDS],
      * growing by an even factor between each pair of points, so every bit further feels like a step up:
-     * slow and precise just off the middle, and quick by the key beside Space. The range ends at ○ and fn;
+     * slow and precise just off the landing spot, and quick a couple of keys out. The range ends at [MAX_LEAN];
      * holding there or further out builds up to [FASTEST_PER_SECOND] over [RAMP_MILLIS].
      */
     fun speed(now: Long): Float {
         val depth = depth()?.second ?: run { edgeSince = null; return 0f }
-        val lean = depth.coerceAtMost(MAX_DEPTH)
+        val lean = depth.coerceAtMost(MAX_LEAN)
         var upper = 1
         while (upper < SPEEDS.size - 1 && lean > SPEEDS[upper].first) upper++
         val (fromLean, fromSpeed) = SPEEDS[upper - 1]
         val (toLean, toSpeed) = SPEEDS[upper]
         val reached = fromSpeed * (toSpeed / fromSpeed).pow((lean - fromLean) / (toLean - fromLean))
-        if (lean < MAX_DEPTH * AT_EDGE) {
+        if (lean < MAX_LEAN * AT_EDGE) {
             edgeSince = null
             return reached
         }
@@ -103,51 +91,37 @@ class CursorMode {
         position = null
     }
 
-    /** Whether the finger leans left, and how far into the edge zone it is, or null in the middle. */
+    /** Whether the finger leans left, and how far past the still spot it is, or null while it is still. */
     private fun depth(): Pair<Boolean, Float>? {
         val sample = position ?: return null
+        val from = landed ?: return null
         if (!active || sample.y < BOTTOM_ROW_TOP) return null
-        val column = sample.x * 10
-        val left = SPACE_LEFT + EDGE_KEYS - column
-        val right = column - (SPACE_RIGHT - EDGE_KEYS)
-        return when {
-            left > 0 -> true to left
-            right > 0 -> false to right
-            else -> null
-        }
+        val lean = (sample.x - from.x) * 10
+        val past = abs(lean) - STILL_KEYS
+        return if (past > 0) (lean < 0) to past else null
     }
 
-    private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
-
     companion object {
-        const val REST_MILLIS = 140L
-        private const val REST_KEYS = .3f
-        /** The ends of Space, in key widths from the left edge of the keyboard. */
-        private val SPACE_LEFT = Layout.bottomWidths.take(3).sum()
-        private val SPACE_RIGHT = SPACE_LEFT + Layout.bottomWidths[3]
-        /** How far in from each end of Space the cursor starts moving. */
-        private const val EDGE_KEYS = 1.35f
+        /** A finger this close to where it landed is holding still, so the cursor stops. */
+        private const val STILL_KEYS = .3f
         /** A little above the bottom row still counts, so a finger drifting up keeps control. */
         private const val BOTTOM_ROW_TOP = .7f
-        /**
-         * From where moving starts to the middle of ○ or fn, the second key from each end. Leaning further
-         * counts the same. Space sits in the middle of the row, so both sides match.
-         */
-        private val MAX_DEPTH = SPACE_LEFT + EDGE_KEYS - Layout.bottomWidths[0] - Layout.bottomWidths[1] / 2
-        /** How far out counts as reaching the edge. */
+        /** The lean that gets the top speed, the same reach as before. Leaning further counts the same. */
+        private const val MAX_LEAN = 3.15f
+        /** How far out counts as reaching the top speed. */
         private const val AT_EDGE = .97f
         private const val RAMP_MILLIS = 1000f
         /** Letters a second at each lean, in key widths past the still spot. */
         private val SPEEDS = listOf(
-            0f to 1.5f, // just off the middle
+            0f to 1.5f, // just off the still spot
             .5f to 3f, // the precise stretch ends
-            EDGE_KEYS to 14f, // the end of Space
-            EDGE_KEYS + .65f to 22f, // the key beside Space
-            MAX_DEPTH to 28f, // ○ or fn, where holding builds up to full speed
+            1.35f to 14f,
+            2f to 22f,
+            MAX_LEAN to 28f, // where holding builds up to full speed
         )
         private const val FASTEST_PER_SECOND = 52f
 
-        /** How a resting finger becomes the cursor and not a swipe, for the raw input log. */
-        val tuning: Map<String, Any> get() = mapOf("restMillis" to REST_MILLIS, "restKeys" to REST_KEYS)
+        /** How a finger becomes the cursor and not a swipe, for the raw input log. */
+        val tuning: Map<String, Any> get() = CursorGesture.tuning + ("stillKeys" to STILL_KEYS)
     }
 }

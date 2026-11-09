@@ -51,11 +51,11 @@ I recommend installing through [Obtainium](https://github.com/ImranR98/Obtainium
 
 ## Privacy
 
-Everything runs and is stored locally on your device. No data is stored or monitored by me or any third party.
+Everything runs and stays on your device. No one, including me, gets your data.
 
-Atlas doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
+Atlas doesn't learn from password, email, URL or private fields.
 
-Atlas asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "Atlas is displaying over other apps" notification while it's there, which you can turn off.
+Atlas displays over other apps only to get touchpad input from the Titan 2. It never reads the screen. You can turn off the silent notification that Android shows for this.
 
 ## Contributing
 

@@ -52,6 +52,7 @@ class Composer(
     private val later: (Long, () -> Unit) -> Unit,
     private val externalChange: () -> Unit,
     private val autoCapitalise: () -> Boolean,
+    private val autoPunctuation: () -> Boolean,
     private val show: (List<String>) -> Unit,
 ) {
     private data class Selection(val start: Int, val end: Int)
@@ -442,7 +443,7 @@ class Composer(
         val completed = if (completesCorrection || finishesWord) completeManualWord(anchor) else null
         if (completesCorrection || letterTap) correcting = null
         // Like a swiped word's space, a space typed after a word moves behind the punctuation.
-        val dropsSpace = (automaticSpace == anchor || typedSpace == anchor) && anchor.before?.endsWith(" ") == true
+        val dropsSpace = (automaticSpace == anchor || typedSpace == anchor && autoPunctuation()) && anchor.before?.endsWith(" ") == true
             && text[0] in ".,!?;:)]}…"
         val before = anchor.before
         val respelled = if (!letterTap && !dropsSpace && field.fullStops && text[0] in ".,!?;:)]}…") before?.let(::respell) else null
@@ -508,7 +509,7 @@ class Composer(
             automaticSpace == anchor && before.endsWith(" ") -> {
                 if (!repeated && endsWord(before.dropLast(1))) fullStop = FullStop(time, anchor)
             }
-            !repeated && pending != null && time - pending.time in 0..FULL_STOP_MILLIS
+            !repeated && pending != null && time - pending.time in 0..FULL_STOP_MILLIS && autoPunctuation()
                 && anchor.available && anchor == pending.snapshot -> if (!edit(1, ". ")) return
             else -> {
                 respelled = respell(before)
@@ -836,7 +837,7 @@ class Composer(
 
     /** A word typed letter by letter, then a space. A typed apostrophe shows the spelling is meant, so it stays. */
     private fun holdTyped(before: String, respelled: Pair<String, String>?): HeldWord? {
-        if (!autoCapitalise()) return null
+        if (!autoPunctuation()) return null
         val typed = respelled?.first ?: before.takeLastWhile { it.isLetter() }
         val word = respelled?.second ?: typed
         if (word.isEmpty() || !word.all { it.isLetter() }) return null
@@ -1084,12 +1085,19 @@ class Composer(
         }
     }
 
-    /** The typed word at the end of [before] and the spelling a swipe gives it, or null if that is the same. */
+    /**
+     * The typed word at the end of [before] and the spelling a swipe gives it, or null if that is the same.
+     * Each setting covers its own part: "london" needs auto-capitalisation, "dont" auto-punctuation, "im" both.
+     */
     private fun respell(before: String): Pair<String, String>? {
-        if (!autoCapitalise()) return null
         val word = before.takeLastWhile { it.isLetter() || it == '\'' || it == '’' }
         if (word.isEmpty()) return null
-        return SwipeTyping.respell(word).takeIf { it != word }?.let { word to it }
+        val spelling = SwipeTyping.respell(word)
+        if (spelling == word) return null
+        val punctuated = spelling.count { !it.isLetter() } != word.count { !it.isLetter() }
+        val cased = spelling.filter { it.isLetter() } != word.filter { it.isLetter() }
+        if (punctuated && !autoPunctuation() || cased && !autoCapitalise()) return null
+        return word to spelling
     }
 
     private fun endsWord(text: String): Boolean {

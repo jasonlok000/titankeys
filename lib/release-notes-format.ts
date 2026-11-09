@@ -1,8 +1,11 @@
 /**
- * release-notes.txt holds the notes for the current version. The app shows them after an update and
- * the release workflow publishes them on GitHub. The format:
+ * release-notes.txt holds the notes for the current version. The app shows a short version after an
+ * update and the release workflow publishes the full notes on GitHub. The format:
  *
  *   # 1.0.2
+ *
+ *   ## App
+ *   - Space cursor: Move the cursor with the space bar.
  *
  *   ## New
  *   - Move the cursor with space: Rest your finger lightly on the space bar, then move it left or right.
@@ -10,6 +13,8 @@
  *   ## Fixed
  *   - Launcher search: The suggestion bar stays hidden on launchers like Niagara.
  *
+ * The app shows the App section, or the New section when there is no App section, and one "Bug fixes"
+ * row when there is a Fixed section. GitHub gets every section except App.
  * Writing `skip` instead of sections releases the version without notes.
  */
 
@@ -52,6 +57,16 @@ export function parseReleaseNotes(text: string): ReleaseNotes {
   return { version, skip, draft, sections: sections.filter(section => section.notes.length > 0), unknown };
 }
 
+const APP = "app";
+const NEW = "new";
+const FIXED = "fixed";
+const named = (notes: ReleaseNotes, name: string) => notes.sections.find(section => section.title.toLowerCase() === name);
+
+/** The short notes that the app shows, and whether the release also fixes bugs. */
+export function appReleaseNotes(notes: ReleaseNotes): { notes: ReleaseNote[]; fixes: boolean } {
+  return { notes: (named(notes, APP) ?? named(notes, NEW))?.notes ?? [], fixes: !!named(notes, FIXED) };
+}
+
 /** Why these notes cannot ship with `version`, or null when they are ready. */
 export function releaseNotesProblem(notes: ReleaseNotes, version: string): string | null {
   if (notes.version !== version)
@@ -66,6 +81,6 @@ export function releaseNotesProblem(notes: ReleaseNotes, version: string): strin
 
 /** The notes as GitHub release markdown, without the version heading. */
 export function releaseNotesMarkdown(notes: ReleaseNotes): string {
-  return notes.sections.map(section => `## ${section.title}\n\n` + section.notes
+  return notes.sections.filter(section => section.title.toLowerCase() !== APP).map(section => `## ${section.title}\n\n` + section.notes
     .map(note => note.detail ? `- **${note.title}**: ${note.detail}` : `- ${note.title}`).join("\n")).join("\n\n");
 }

@@ -39,8 +39,9 @@ switch (process.argv[2]) {
     await writeFile(
       "release-notes.txt",
       `# ${version}\n\n${DRAFT_MARKER} rewrite these notes for people using Atlas, then delete this line. ` +
-        `Each line is "Title: what changed". Write skip instead to release without notes. -->\n\n` +
-        `## New\n${subjects.map((subject) => `- ${subject}`).join("\n") || "- "}\n\n## Fixed\n- \n`,
+        `Each line is "Title: what changed". The app shows only the short App lines and one "Bug fixes" row; ` +
+        `GitHub shows New and Fixed in full. Write skip instead to release without notes. -->\n\n` +
+        `## App\n- \n\n## New\n${subjects.map((subject) => `- ${subject}`).join("\n") || "- "}\n\n## Fixed\n- \n`,
     );
     break;
   }

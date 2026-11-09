@@ -1,5 +1,10 @@
 # 1.2.0
 
+## App
+- Emoji: Push Sym to type emoji from the strip.
+- Better suggestions: The strip shows more words, correct spellings, and words in more fields.
+- Delete a word: Push Alt, then push Backspace.
+
 ## New
 - Emoji: Push Sym to show emoji on the strip. Touch an emoji to type it. To see more emoji, move your finger across the keyboard. Your recent emoji show first.
 - Spelling: When you type with the keys, the strip can show the correct spelling of a word.

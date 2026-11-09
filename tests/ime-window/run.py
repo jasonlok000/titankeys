@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check Atlas visibility when returning to an app with a focused text field.
+"""Check TitanKeys visibility when returning to an app with a focused text field.
 
 Focus the affected field on a connected Android device, then run:
     python3 tests/ime-window/run.py org.mozilla.firefox
@@ -26,7 +26,7 @@ def state():
     return (
         package.group(1) if package else None,
         int(input_type.group(1), 16) if input_type else 0,
-        "package=com.atlas " in window and "isVisible=true" in window,
+        "package=com.titankeys" in window and "isVisible=true" in window,
     )
 
 
@@ -37,7 +37,7 @@ def main():
     args = parser.parse_args()
     assert args.cycles > 0, "cycles must be positive"
     selected = shell("settings", "get", "secure", "default_input_method").strip()
-    assert selected == "com.atlas/.keyboard.AtlasIme", "Select Atlas before running"
+    assert selected.startswith("com.titankeys") and selected.endswith("AtlasIme"), "Select TitanKeys before running"
     package, input_type, _ = state()
     assert package == args.package and input_type & 0xF == 1, "Focus a text field in the specified app first"
     component = shell(

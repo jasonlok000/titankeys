@@ -134,7 +134,7 @@ public final class SwipeTyping {
         worker.execute(() -> {
             String error = null;
             if (!"ready".equals(readiness)) {
-                if (loadingRetries >= 2) error = "Swipe loading retry limit reached. Restart Atlas to try again.";
+                if (loadingRetries >= 2) error = "Swipe loading retry limit reached. Restart TitanKeys to try again.";
                 else {
                     loadingRetries++; readiness = "loading";
                     try { loadEngine(); }
@@ -406,7 +406,7 @@ public final class SwipeTyping {
                 }
             } catch (IOException | RuntimeException error) {
                 Log.w("TouchpadSwipe", "Could not export learning", error);
-                failure = "Could not export learning. Restart Atlas and try again.";
+                failure = "Could not export learning. Restart TitanKeys and try again.";
             }
             operationResult(callback, failure);
         });
@@ -421,14 +421,14 @@ public final class SwipeTyping {
                 imported.merge(LearningConfigs.readExport(input));
             } catch (IOException | RuntimeException error) {
                 Log.w("TouchpadSwipe", "Could not read learning backup", error);
-                operationResult(callback, "Could not read the backup. Choose a valid Atlas backup file.");
+                operationResult(callback, "Could not read the backup. Choose a valid TitanKeys backup file.");
                 return;
             }
             try {
                 configs().importWords(imported);
             } catch (IOException | RuntimeException error) {
                 Log.w("TouchpadSwipe", "Could not save learning backup", error);
-                operationResult(callback, "Could not finish importing. Restart Atlas to recover your learning data.");
+                operationResult(callback, "Could not finish importing. Restart TitanKeys to recover your learning data.");
                 return;
             }
             learningGeneration++;
@@ -440,7 +440,7 @@ public final class SwipeTyping {
                 syncDictionary();
             } catch (RuntimeException | LinkageError error) {
                 Log.w("TouchpadSwipe", "Could not refresh the imported dictionary", error);
-                failure = "Learning was imported. Restart Atlas to use the imported words.";
+                failure = "Learning was imported. Restart TitanKeys to use the imported words.";
             }
             publish();
             operationResult(callback, failure);

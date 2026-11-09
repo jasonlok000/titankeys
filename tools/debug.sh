@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Builds "Atlas Debug": a separate app with its own package and orange icon, so it installs next to the
-# real Atlas without replacing it or touching its saved words. Pass --install to install it over adb.
-# This build also adds the sample recorder from android/debug/recorder, which normal Atlas never compiles.
+# Builds "TitanKeys Debug": a separate app with its own package and pale icon, so it installs next to the
+# real TitanKeys without replacing it or touching its saved words. Pass --install to install it over adb.
+# This build also adds the sample recorder from android/debug/recorder, which normal TitanKeys never compiles.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -23,8 +23,8 @@ trap restore EXIT
 # macOS and Linux sed disagree on -i, so write through a temporary file.
 edit() { local file=$1; shift; sed "$@" "$file" > "$file.tmp"; mv "$file.tmp" "$file"; }
 
-edit ink.toml -e 's/^name = .*/name = "Atlas Debug"/' -e 's/^package = .*/package = "com.atlas.debug"/'
-edit android/src/main/AndroidManifest.xml 's/android:label="Atlas"/android:label="Atlas Debug"/'
+edit ink.toml -e 's/^name = .*/name = "TitanKeys Debug"/' -e 's/^package = .*/package = "com.titankeys.debug"/'
+edit android/src/main/AndroidManifest.xml 's/android:label="TitanKeys"/android:label="TitanKeys Debug"/'
 cp "$recorder"/*.kt "$keyboard/"
 awk 'FNR == NR { entry = entry $0 ORS; next } /<\/application>/ { printf "%s", entry } { print }' \
   "$recorder/manifest.xml" android/src/main/AndroidManifest.xml > android/src/main/AndroidManifest.xml.tmp

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Check home focus, retained text, and Settings on the Titan 2's 1076 x 1200 display.
 
-Opens Atlas if its home isn't on screen. If the field is empty, the check enters a
-common word and clears it before navigating to Settings. APP=com.atlas.debug checks
+Opens TitanKeys if its home isn't on screen. If the field is empty, the check enters a
+common word and clears it before navigating to Settings. APP=com.titankeys.debug checks
 the debug build instead.
 """
 
@@ -13,7 +13,7 @@ import time
 import xml.etree.ElementTree as ET
 
 HINT = "Swipe a word on the keyboard"
-APP = os.environ.get("APP", "com.atlas")
+APP = os.environ.get("APP", "com.titankeys")
 
 
 def shell(*args):
@@ -58,7 +58,7 @@ def main():
                 time.sleep(1)
     keyboard = shell("settings", "get", "secure", "default_input_method").strip()
     if not keyboard.startswith(f"{APP}/"):
-        raise SystemExit(f"SKIP: {APP} is not the current keyboard ({keyboard}), so Atlas shows setup, not home")
+        raise SystemExit(f"SKIP: {APP} is not the current keyboard ({keyboard}), so TitanKeys shows setup, not home")
     initial = editor()
     assert initial["focused"] == "true", "Home did not regain focus"
     original = initial["text"]
@@ -92,7 +92,7 @@ def main():
     assert "inputType=0x0 " in ime, "Home retained its editor connection in Settings"
     windows = re.split(r"(?=  Window #)", shell("dumpsys", "window", "windows"))
     window = next((w for w in windows if "u0 InputMethod}:" in w), "")
-    assert "isVisible=true" not in window, "Atlas stayed visible in Settings"
+    assert "isVisible=true" not in window, "TitanKeys stayed visible in Settings"
     print("PASS Settings opens without the home editor or keyboard", flush=True)
     tap(970, 190)
     assert editor()["focused"] == "true", "Closing Settings did not focus the home field"

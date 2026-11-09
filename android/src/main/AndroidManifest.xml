@@ -16,7 +16,7 @@
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <service
             android:name="com.atlas.keyboard.AtlasIme"
-            android:label="Atlas"
+            android:label="TitanKeys"
             android:exported="true"
             android:permission="android.permission.BIND_INPUT_METHOD">
             <intent-filter>
@@ -26,7 +26,7 @@
         </service>
         <service
             android:name="com.atlas.keyboard.BackService"
-            android:label="Atlas"
+            android:label="TitanKeys"
             android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>

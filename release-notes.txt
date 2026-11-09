@@ -3,7 +3,7 @@
 ## New
 - Emoji: Push Sym to show emoji on the strip. Touch an emoji to type it. To see more emoji, move your finger across the keyboard. Your recent emoji show first.
 - Spelling: When you type with the keys, the strip can show the correct spelling of a word.
-- Word suggestions: The strip shows more words for the letters that you type. Atlas finds these words in the full dictionary.
+- Word suggestions: The strip shows more words for the letters that you type. TitanKeys finds these words in the full dictionary.
 - Delete a word: Push Alt, then push Backspace.
 - Short swipes for symbols: When Alt is on, a short swipe shows more symbols.
 - Vibration: When you touch a word on the strip, the phone vibrates.

@@ -1,1 +1,1 @@
-    <instrumentation android:name="com.atlas.keyboard.ReplayRunner" android:targetPackage="com.atlas.debug" />
+    <instrumentation android:name="com.atlas.keyboard.ReplayRunner" android:targetPackage="com.titankeys.debug" />

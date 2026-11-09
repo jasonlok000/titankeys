@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}
 adb="$sdk/platform-tools/adb"
-app=com.atlas.debug
+app=com.titankeys.debug
 manifest=android/src/main/AndroidManifest.xml
 check=android/kotlin/com/atlas/keyboard/PreviewChecks.kt
 work=$(mktemp -d)

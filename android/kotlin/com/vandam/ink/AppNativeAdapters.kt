@@ -243,7 +243,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             }
             if (result != null) complete(NativeResult.Success(result))
         } catch (error: Exception) {
-            complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "Atlas request failed", false))
+            complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "TitanKeys request failed", false))
         }
     }
 

@@ -1,83 +1,201 @@
 <div align="center">
 
-<img src="assets/icon.png" width="112" alt="Atlas app icon">
+<img src="assets/icon.png" width="112" alt="TitanKeys app icon">
 
-### Atlas
+### TitanKeys
 
-![Version 1.1.0](https://img.shields.io/badge/version-1.0.1-111111?style=flat-square)
-
-**A toolkit to power up your Unihertz T2E!**
+**Better one-handed swiping for the Unihertz Titan 2 Elite, with two-handed typing kept great.**
 
 </div>
 
-> **Update, November 2026:** Swipe typing is the first feature in Atlas, and it's ready to try on the Unihertz Titan 2 Elite. Slide across the physical keys without pressing them, and Atlas types the word. I'm now working on more features.
-
-## Features
-
-<h3 align="center">Swipe typing</h3>
+> TitanKeys is an independent, modified version of [Atlas](https://github.com/juleshall4/atlas) by Julian Hall. Atlas is the original project and the base of everything here. This fork started in November 2026, and its changes are in the git history. It is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz.
 
 <p align="center">
-  <img src="assets/demo.gif" height="220" alt="Swiping across the Titan 2 Elite's physical keys to type">
-  <img src="assets/screenshots/home.png" height="220" alt="Atlas home screen with a swiped word and suggestions">
-  <img src="assets/screenshots/saved-words.png" height="220" alt="Saved words list with everyday words Atlas has learned">
-  <img src="assets/screenshots/vibration.png" height="220" alt="Swipe vibration settings">
+  <img src="assets/screenshots/titankeys-setup.png" height="320" alt="TitanKeys setup screen in Titan 2 Elite orange">
+  <img src="assets/screenshots/titankeys-settings.png" height="320" alt="TitanKeys settings screen">
+  <img src="assets/screenshots/titankeys-about.png" height="320" alt="TitanKeys about screen, crediting Atlas">
 </p>
 
-- Swipe across the physical keys to type.
-- Rest your finger lightly on the space bar, then move it left or right to move the cursor.
-- Get suggestions for both swiped and typed words.
-- Lightly tap configured tap keys to type the letter and a space.
-- Atlas learns new words the more you use them.
+## Philosophy
 
-> **Limitation:** In the Phone and Settings search bars, swipes can't start on the top row. Unihertz leaves these apps out of Sliding Mode 1.
+The Titan 2 Elite is small enough to use with one hand, so swiping with one thumb should just work. Real thumbs take shortcuts: they cut corners, stop short of the far keys, and slide off the top of the sensor.
 
-## Install
+TitanKeys tries to understand the swipe you meant, not only the path you drew. It does that without making two-handed typing worse, so a resting thumb or a quick brush between key presses shouldn't type anything.
 
-The latest APK can be found here in [releases](https://github.com/juleshall4/atlas/releases).
+Every change is measured on real recorded swipes before it stays.
 
-I recommend installing through [Obtainium](https://github.com/ImranR98/Obtainium) so you can receive updates.
+## TitanKeys and Atlas
 
-1. Install [Obtainium](https://github.com/ImranR98/Obtainium/releases).
-2. In Obtainium, tap **Add App**.
-3. Paste the following URL as the app source, then tap **Add**:
+Atlas is a great keyboard, and TitanKeys only exists because Julian built it and shared it. The two projects just aim for slightly different things. Atlas stays simple and keeps swiping for typing only. TitanKeys takes on more complexity to get more out of quick, one-handed swipes. If you'd rather have something simpler, Atlas is an excellent choice.
 
-   ```text
-   https://github.com/juleshall4/atlas
-   ```
+The comparisons below use Atlas at the commit this fork started from (`0981443`, November 2026). Atlas is actively developed, so some of this may have changed since.
 
-4. Tap **Install**.
+| Real recordings, same touches through both | Atlas | TitanKeys |
+| --- | --- | --- |
+| 300 swiped words: right word first | 171 (57%) | 229 (76%) |
+| 300 swiped words: right word in top 3 | 202 (67%) | 260 (87%) |
+| 100 of those words, held back from tuning: right word first | 62 (62%) | 80 (80%) |
+| 103 swipes that broke into pieces: right word first | 39 (38%) | 72 (70%) |
+| 197 single-touch swipes: right word first | 132 (67%) | 157 (80%) |
+| 126 words swiped in real sentences: right word first, first try | 86 (68%) | 106 (84%) |
+
+All of this is one person's swipes on one phone, and TitanKeys was tuned on those same hands, so your results may differ. A third of the 300 words were held back from tuning so the numbers aren't only fitted to those samples, and the sentences were recorded after tuning. The recordings and replay tools are in [`android/debug/recorder`](android/debug/recorder), so anyone can check these numbers or reuse them.
+
+### A few real swipes
+
+Recorded on the phone and replayed through both. The dotted line is the word that was meant. These are picked to show the difference, and not every word improves: of the 300, 65 got better and 7 got worse.
+
+| Recorded swipe | Atlas typed | TitanKeys typed |
+| --- | --- | --- |
+| <img src="assets/readme/strength.gif" width="340" alt="Animated recorded swipe of strength, in two touches"> | set tenth | strength |
+| <img src="assets/readme/recognition.gif" width="340" alt="Animated recorded swipe of recognition, in two touches"> | trinity on | recognition |
+| <img src="assets/readme/power.gif" width="340" alt="Animated recorded swipe of power"> | pure | power |
+| <img src="assets/readme/village.gif" width="340" alt="Animated recorded swipe of village"> | collar | village |
+
+## What's different
+
+### Keeping a broken swipe together
+
+The sensor ends about halfway up the top row, so a thumb can slip off mid-word and come back. In the recordings, 103 of 300 swipes (34%) broke this way.
+
+**Atlas** joins two touches when the second starts within 90 ms, which keeps the rule simple. **TitanKeys** also looks at where the touch comes back and which way it's heading, so it can allow a longer gap without merging separate words.
+
+| | Atlas | TitanKeys |
+| --- | --- | --- |
+| Broken swipes joined (higher is better) | 56 of 96 (58%) | 86 of 96 (90%) |
+| Separate words wrongly merged (lower is better) | 214 of 1,200 (18%) | 84 of 1,200 (7%) |
+
+| Atlas | TitanKeys |
+| --- | --- |
+| <img src="assets/readme/demo-before.gif" width="400" alt="Trail in the demo clearing at each new touch of a broken swipe"> | <img src="assets/readme/demo-after.gif" width="400" alt="Trail in the demo keeping the whole broken swipe"> |
+
+### Matching a swipe by its shape
+
+**Atlas** lets the FUTO swipe engine choose the words. **TitanKeys** also compares your swipe with the outlines of about 12,400 common words and your saved words, then blends those answers with the engine's list. A swipe that stops short gets smaller but mostly keeps its shape. In 98 of the 127 swipes the engine got wrong (77%), the right word's outline fit better than the outline of the word the engine picked.
+
+| Comparing outlines | Scaled to the same size |
+| --- | --- |
+| <img src="assets/readme/matcher-village.gif" width="400" alt="Animation of a real swipe of village with the outlines of collar and village"> | <img src="assets/readme/matcher-shape-village.gif" width="400" alt="Animation of the swipe and both outlines being scaled to the same size"> |
+
+### Expecting a thumb to stop short
+
+In the recordings, thumbs stopped short of corners by 0.74 keys going right, 0.44 up, 0.24 down and 0.20 left. So where a swipe turns says which key it was aiming for: a thumb that turns at I was probably heading for O.
+
+TitanKeys moves each corner of a word's outline back to where a thumb would really turn. The swipe itself isn't changed. Here's a simulated lazy swipe of "jason":
+
+<img src="assets/readme/jason-why.gif" width="520" alt="Animation of the turning points of jain and jason moving back, so the swipe ends up closest to jason">
+
+### The faster the swipe, the wider the second look
+
+Quick swipes tend to come out narrower than the word they mean. **TitanKeys** reads a swipe a second time stretched wider, and each word keeps its better score. The stretch grows with speed: nothing below 10 keys per second, rising to the full 1.2 times at 16 and above. Slow, careful swipes are read exactly as they were made.
+
+| Swipe speed | Swipes | No stretch: right word first | Gradual stretch: right word first |
+| --- | --- | --- | --- |
+| Under 11 keys per second | 78 | 57 | 58 |
+| 11 to 14 | 105 | 76 | 77 |
+| 14 to 17 | 119 | 95 | 99 |
+| Over 17 | 73 | 55 | 60 |
+
+| partner | perform |
+| --- | --- |
+| <img src="assets/readme/stretch-partner.gif" width="400" alt="Animation of a real swipe of partner being read wider"> | <img src="assets/readme/stretch-perform.gif" width="400" alt="Animation of a real swipe of perform being read wider"> |
+
+### Letting the sentence help
+
+The FUTO engine already uses context natively. **TitanKeys** adds a boost for a word the sentence expects, but only when the path fits it closely, so a likely word can't win on being likely alone. On 126 real swiped words, the boost made 7 better and none worse. A few words from those sentences, with all of the changes on this page together:
+
+| In the sentence | Atlas | TitanKeys |
+| --- | --- | --- |
+| sorry that took so **long** | on | long |
+| call me **back** after lunch | ban | back |
+| good luck with **your** exam | you | your |
+| let me check and **get** back to you | her | get |
+| twelve candles melted **near** the window | beard | near |
+
+### Deleting a word with one thumb
+
+Atlas keeps swiping for typing only, and deletes a word with Alt + Backspace or Ctrl + Backspace, which both still work here. Those are awkward with one hand, so **TitanKeys** adds a swipe from Backspace left to J along the middle row. It didn't trigger on any of 869 recorded touches.
+
+<img src="assets/readme/delete-swipe.gif" width="400" alt="Diagram of a swipe from Backspace left to J deleting the previous word">
+
+### Suggestions in launcher search
+
+Atlas hides the suggestion bar in launcher search, which keeps the home screen clean. **TitanKeys** keeps it hidden while the search is empty and shows it once you start typing, which helps in launchers like Smart Launcher.
+
+<details>
+<summary><strong>Three smaller changes</strong></summary>
+
+The pictures here are diagrams of the behaviour, not recordings, and the words in them are examples.
+
+**Space types a space when your thumb is resting on it,** unless you've actually moved the cursor. Across 25 sentences typed on the keys with two hands, accidental selections went from 5 to 0.
+
+| Atlas | TitanKeys |
+| --- | --- |
+| <img src="assets/readme/space-before.gif" width="400" alt="Diagram: resting on Space and pushing it selects the last word"> | <img src="assets/readme/space-after.gif" width="400" alt="Diagram: resting on Space and pushing it types a space"> |
+
+**Picking a swiped word moves on to next-word suggestions,** as Atlas does for typed words. To switch to another option afterwards, move the cursor back into the word.
+
+| Atlas | TitanKeys |
+| --- | --- |
+| <img src="assets/readme/pick-before.gif" width="400" alt="Diagram: after picking a swiped word, the strip keeps the same options"> | <img src="assets/readme/pick-after.gif" width="400" alt="Diagram: after picking a swiped word, the strip shows next words"> |
+
+**A long stroke still counts right after a key press,** while short brushes are ignored for longer as you type. Across the same 25 typed sentences, accidental swipes went from 3 to 2, and accidental touches read as taps went from 27 to 16.
+
+| Atlas | TitanKeys |
+| --- | --- |
+| <img src="assets/readme/lockout-before.gif" width="400" alt="Timeline diagram of a 150 ms pause after a key press"> | <img src="assets/readme/lockout-after.gif" width="400" alt="Timeline diagram of a stroke counting after 1.5 keys during a longer pause"> |
+
+</details>
+
+### What it costs
+
+These changes aren't free, and Atlas's simpler approach avoids all of this:
+
+- There's more code, and more settings that were tuned on one person's thumbs.
+- 7 of the 300 words got worse, for example has → had and but → by.
+- Separate words swiped very quickly can merge. At gaps of 120 ms or more, 5 of 270 pairs merged (2%), where Atlas merged none. At 90 ms or less it's 28 of 90 (31%), where Atlas merged all 90.
+- Recognition takes a little longer, about 4 ms in testing (13 ms to 17 ms).
 
 ## Privacy
 
 Everything runs and is stored locally on your device. No data is stored or monitored by me or any third party.
 
-Atlas doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
+TitanKeys doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
 
-Atlas asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "Atlas is displaying over other apps" notification while it's there, which you can turn off.
+TitanKeys asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "TitanKeys is displaying over other apps" notification while it's there, which you can turn off.
 
-## Contributing
+## Install
 
-Contributions are welcome. Before you write code, read the [contributing guide](CONTRIBUTING.md).
+There's no public release yet. To build it yourself, follow the setup in the [contributing guide](CONTRIBUTING.md), then run:
 
-1. **Open an issue.** Use an issue for all bugs, ideas, and questions.
-2. **Add a label.** Each issue must have a label, for example `bug` or `enhancement`.
-3. **Wait for approval.** I approve the issue and tell you who does the work.
-4. **Test on a Titan 2 Elite.** Each pull request must have a test on a real device.
-5. **Open a pull request.** Link it to the approved issue.
+```bash
+bash tools/debug.sh --install
+```
 
-Not a developer? Send a bug report or an idea from **Settings > Send feedback** in Atlas.
+This installs **TitanKeys Debug** next to any other keyboard. It doesn't replace Atlas, and it doesn't touch Atlas's saved words.
+
+## Feedback
+
+Bugs and ideas are welcome in [issues](https://github.com/jasonlok000/atlas/issues). If something also happens in Atlas, please report it [there](https://github.com/juleshall4/atlas/issues) too.
+
+Work is shared in both directions. Anything here is free to use in Atlas, and improvements from Atlas are welcome here.
 
 ## Credits
 
-Atlas is powered by and built with these projects:
+TitanKeys is built on the work of these projects:
 
-- [Ink](https://github.com/No-Scrolling/ink): the app framework, an awesome tool built by my best friend, [vandamd](https://github.com/vandamd) (MIT)
+- [Atlas](https://github.com/juleshall4/atlas) by Julian Hall: the original project this is based on (GPL-3.0). Thank you for open sourcing it.
+- [Ink](https://github.com/No-Scrolling/ink): the app framework (MIT)
 - [FUTO Swipe](https://gitlab.futo.org/keyboard/swipe-library): swipe recognition (GPL-3.0)
 - [FUTO Keyboard](https://github.com/futo-org/android-keyboard): contextual prediction (FUTO Source First)
 - [FUTO Swipe models](https://huggingface.co/futo-org/futo-swipe): swipe typing models (FUTO Model Weights)
 - [AOSP dictionaries](https://codeberg.org/Helium314/aosp-dictionaries/src/branch/main/dictionaries/main_en_gb.dict): British English dictionary (Apache 2.0)
 - [Inter](https://github.com/rsms/inter): typeface (SIL Open Font Licence)
 
+TitanKeys is powered by FUTO Swipe. "Titan 2 Elite" is a product of Unihertz.
+
 ## License
 
-This project is licensed under the GNU General Public License v3.0 (GPL-3.0-only). See the [LICENSE](LICENSE) file for details.
+TitanKeys is licensed under the GNU General Public License v3.0 (GPL-3.0-only), the same as Atlas. See the [LICENSE](LICENSE) file.
+
+TitanKeys includes code under the FUTO Source First License, so it can only be modified and distributed for free, for non-commercial purposes. See the [licences](licences) folder for every licence.

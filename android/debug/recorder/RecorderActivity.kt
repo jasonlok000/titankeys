@@ -27,9 +27,9 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Atlas Debug's sample recorder. Shows one word at a time, captures the touchpad and key events of the
+ * TitanKeys Debug's sample recorder. Shows one word at a time, captures the touchpad and key events of the
  * swipe made for it, and writes one JSON line per word. It records only while this screen is in front.
- * The field asks for no personalised learning, so a session never teaches Atlas Debug its prompts.
+ * The field asks for no personalised learning, so a session never teaches TitanKeys Debug its prompts.
  */
 class RecorderActivity : Activity(), Recording.Sink {
     private class Attempt {
@@ -118,7 +118,7 @@ class RecorderActivity : Activity(), Recording.Sink {
         super.onResume()
         Recording.sink = this
         input.requestFocus()
-        if (!keyboardReady()) details.text = "Atlas Debug isn't the current keyboard. Tap Switch to change to it."
+        if (!keyboardReady()) details.text = "TitanKeys Debug isn't the current keyboard. Tap Switch to change to it."
     }
 
     override fun onPause() {

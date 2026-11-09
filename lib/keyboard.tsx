@@ -1,6 +1,7 @@
-import { Canvas, CanvasIcon, CanvasPath, CanvasText, type IconAsset, Rectangle, useColourScheme } from "ink";
+import { Canvas, CanvasIcon, CanvasPath, CanvasText, type IconAsset, Rectangle } from "ink";
 import { arrowBack, backspace, circle, gridView, keyboardReturn, shift, spaceBar } from "ink/icons";
 import type { Point } from "./atlas";
+import { INK, MUTED } from "./brand";
 
 type Label = { text: string } | { icon: IconAsset };
 
@@ -23,10 +24,9 @@ const icon = 22;
 
 /** The Titan 2 keyboard face, with the latest touchpad trail drawn over it. */
 export function KeyboardDiagram({ trail }: { trail: Point[] }) {
-  const dark = useColourScheme() === "dark";
-  const line = dark ? "#444444" : "#BBBBBB";
-  const label = dark ? "#AAAAAA" : "#555555";
-  const ink = dark ? "#FFFFFF" : "#000000";
+  const line = MUTED;
+  const label = MUTED;
+  const ink = INK;
   const keys: { label: Label; x: number; y: number; width: number }[] = rows.flatMap((labels, r) =>
     labels.map((label, c) => ({ label, x: c * key, y: r * row, width: key })));
   let left = 0;

@@ -1,5 +1,5 @@
-name = "Atlas"
-package = "com.atlas"
+name = "TitanKeys"
+package = "com.titankeys"
 version = "1.2.0"
 version_code = 54
 # Row images need native decoding; Ink's detection misses them with preserved symlinks.

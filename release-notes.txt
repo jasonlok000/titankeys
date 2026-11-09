@@ -25,7 +25,7 @@
 
 ## Fixed
 - Saved words: Words with a typing error do not show in Saved words. Atlas shows a new word after you use it 3 times. When you delete a word immediately after you type it, Atlas does not learn it. Words that you add yourself stay active.
-- Unwanted touches: When you type, a finger on the keys does not start a swipe. It also does not type a tap key.
+- Unwanted touches: When you type, a finger on the keys does not start a swipe. It also does not type a tap key. A tap key operates 0.4 seconds after your last key.
 - Suggestion bar: When you push Backspace or touch a key, the words stay on the bar until the new words show.
 - Empty suggestion bar: In password, email, and number fields, Atlas does not show the suggestion bar.
 - Space cursor: A finger that stays on the space key after you push it does not start cursor mode. Lift the finger, then touch the space key again. Cursor mode starts after a longer touch, and the start vibration is stronger. After you type, cursor mode starts 0.4 seconds after your last key. If the cursor did not move, the space key types a space. It does not select a word.

@@ -20,7 +20,8 @@ import kotlin.math.min
  * keys between presses does not type. Delete and a second Space press in a row add no pause.
  *
  * Typing lasts until [TYPING_MILLIS] after the last key event. While typing, swipes still type, but they do not
- * vibrate and cursor mode waits, so a finger that moves on the keys between presses stays quiet. The finger
+ * vibrate, cursor mode waits, and a contact that begins then cannot tap a key, so a finger that brushes the
+ * keys between presses stays quiet. The finger
  * that pushed Space is the one exception: a contact that begins while typing after a Space press cannot
  * start cursor mode at all.
  */
@@ -34,7 +35,8 @@ class Contact {
         data object Idle : State
         /** A contact that cannot type: it began during a key press or was interrupted. */
         data object Ignored : State
-        class Touching(val first: Sample) : State {
+        /** [typing]: it began while typing, so it cannot tap a key. */
+        class Touching(val first: Sample, val typing: Boolean) : State {
             val points = arrayListOf(first)
             val pickup = Pickup(first)
             var travel = 0f
@@ -81,7 +83,7 @@ class Contact {
     fun down(sample: Sample) {
         val free = sample.valid && heldKeys.isEmpty()
         canStartCursor = free && sample.time >= spaceTypingUntil
-        state = if (free && sample.time >= blockedUntil) State.Touching(sample) else State.Ignored
+        state = if (free && sample.time >= blockedUntil) State.Touching(sample, sample.time < typingUntil) else State.Ignored
     }
 
     fun move(samples: List<Sample>) {
@@ -162,6 +164,7 @@ class Contact {
             if (Layout.isLetter(Layout.keyAt(first.x, first.y))) return Outcome.Swipe(points.toList(), first.time, last.time)
             return null
         }
+        if (touching.typing) return null
         val key = Layout.keyAt(first.x, first.y)
         return if (key.isNotEmpty() && key == Layout.keyAt(last.x, last.y)) Outcome.Tap(key, last.time) else null
     }

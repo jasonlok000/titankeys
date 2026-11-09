@@ -3,7 +3,7 @@ import { Canvas, CanvasIcon, CanvasText, Rectangle, Screen, Stack, Text, replace
 import { arrowOutward } from "ink/icons";
 import guideIcon from "../assets/icons/guide.svg";
 import settingsIcon from "../assets/icons/settings.svg";
-import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, markNotesSeen, onHomeFocus, openScrollAssistant, state } from "../lib/atlas";
+import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, markNotesSeen, onHomeFocus, openGuide, openScrollAssistant, state } from "../lib/atlas";
 import { INK, MUTED, ORANGE } from "../lib/brand";
 import { hasReleaseNotes } from "../lib/release-notes";
 import { WhatsNew } from "../lib/whats-new";
@@ -69,15 +69,22 @@ function FrontPage() {
   </Screen>;
 }
 
+/** The interactive guide opens once, by itself, over this orange screen. */
+function GuideStart() {
+  useEffect(() => void openGuide(), []);
+  return <Screen />;
+}
+
 export default function Home() {
   const result = useSnapshot(state);
   if (result.status !== "ready") return <Screen />;
-  const { enabled, selected, overlay, scrollAssistant, backService, version, whatsNew } = result.data;
+  const { enabled, selected, overlay, scrollAssistant, backService, version, whatsNew, guideDue } = result.data;
   if (!enabled) return <Step step={1} title="Enable TitanKeys" hint="Turn it on in your list of keyboards." action="Open keyboard settings" onPress={enableKeyboard} />;
   if (!selected) return <Step step={2} title="Choose TitanKeys" hint="Make it the keyboard you type with." action="Open keyboard list" onPress={chooseKeyboard} />;
   if (!overlay) return <Step step={3} title="Allow overlay" hint="Keeps the touchpad working above text selection." action="Open overlay settings" onPress={allowOverlay} />;
   if (!scrollAssistant) return <Step step={4} title="Turn on Scroll assistant" hint="Swiping needs this to read the touchpad." action="Open Scroll assistant" onPress={openScrollAssistant} />;
   if (!backService) return <Step step={5} title="Turn on TitanKeys in Accessibility" hint="Lets one back swipe close the suggestion bar." action="Open accessibility settings" onPress={allowBack} />;
+  if (guideDue) return <GuideStart />;
   if (whatsNew && hasReleaseNotes(version)) return <WhatsNew version={version} onClose={() => void markNotesSeen()} />;
   return <FrontPage />;
 }

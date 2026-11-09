@@ -19,6 +19,12 @@
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
+        <activity
+            android:name="com.atlas.keyboard.GuideActivity"
+            android:exported="false"
+            android:theme="@style/GuideTheme"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <service
             android:name="com.atlas.keyboard.AtlasIme"
             android:label="TitanKeys"

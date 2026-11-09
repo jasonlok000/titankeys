@@ -1,11 +1,15 @@
 import { Row, Screen, Section, replace, useRouteParams } from "ink";
-import { close } from "ink/icons";
+import { arrowOutward, close } from "ink/icons";
+import { openGuide } from "../../lib/atlas";
 
 export default function Guide() {
   // Opened from the front page, the guide closes back to it, like Settings does.
   const fromHome = useRouteParams().from === "home";
   const closeAction = fromHome ? { icon: close, onPress: () => replace("/") } : undefined;
   return <Screen title="Guide" subtitle="How to use TitanKeys." rightAction={closeAction}>
+    <Section title="Try it">
+      <Row title="Interactive guide" subtitle="Use each feature on the keyboard, one at a time." wrapSubtitle endIcon={arrowOutward} onPress={() => void openGuide()} />
+    </Section>
     <Section title="Swiping">
       <Row title="Swipe a word" subtitle="Move your finger across the letters. Do not push the keys. Lift your finger to type the word." wrapSubtitle />
       <Row title="Slip recovery" subtitle="If your finger leaves the keyboard for a short time, the swipe continues. Change this time in Settings." wrapSubtitle />

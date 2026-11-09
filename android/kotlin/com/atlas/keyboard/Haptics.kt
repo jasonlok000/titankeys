@@ -57,6 +57,19 @@ class Haptics(private val context: Context) {
     /** Confirms a push on the quick settings page. It comes after the change, so turning vibration off is silent. */
     fun settingChanged() = wordChanged()
 
+    /** A finished part of the interactive guide: two ticks, the second one stronger. */
+    fun guideChapter() = waveform(longArrayOf(0, 16, 45, 24), intArrayOf(0, 170, 0, 255))
+
+    /** The end of the interactive guide: ticks that get stronger, then one long pulse. */
+    fun guideFinale() = waveform(longArrayOf(0, 12, 60, 14, 60, 18, 60, 60), intArrayOf(0, 90, 0, 140, 0, 200, 0, 255))
+
+    private fun waveform(timings: LongArray, amplitudes: IntArray) {
+        if (!enabled(context)) return
+        val strengths = if (vibrator.hasAmplitudeControl()) amplitudes
+            else IntArray(amplitudes.size) { if (amplitudes[it] == 0) 0 else VibrationEffect.DEFAULT_AMPLITUDE }
+        play(VibrationEffect.createWaveform(timings, strengths, -1))
+    }
+
     fun begin(sample: Sample?) {
         preset = preset(context)
         enabled = enabled(context)

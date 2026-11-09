@@ -25,6 +25,7 @@
 - Unwanted touches: When you type, a finger on the keys does not start a swipe. It also does not type a tap key.
 - Suggestion bar: When you push Backspace or touch a key, the words stay on the bar until the new words show.
 - Empty suggestion bar: In password, email, and number fields, Atlas does not show the suggestion bar.
-- Space cursor: A finger that touches the space key immediately after a key press does not move the cursor.
+- Space cursor: A finger that stays on the space key after you push it does not start cursor mode. Lift the finger, then touch the space key again. Cursor mode starts after a longer touch. If the cursor did not move, the space key types a space. It does not select a word.
+- Cursor vibration: When the cursor is at the start or end of the text, cursor mode does not vibrate.
 - Screen readers: A screen reader reads the best word first.
 - Tap keys: If you do not select tap keys, Settings shows Off.

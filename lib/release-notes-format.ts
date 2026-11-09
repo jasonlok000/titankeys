@@ -13,8 +13,9 @@
  *   ## Fixed
  *   - Launcher search: The suggestion bar stays hidden on launchers like Niagara.
  *
- * The app shows the App section, or the New section when there is no App section, and one "Bug fixes"
- * row when there is a Fixed section. GitHub gets every section except App.
+ * The app shows the App section, or the New section when there is no App section. GitHub gets every
+ * section except App. Do not write a "Bug fixes" line: the release workflow adds it to the end of the
+ * App section with the number of notes in the Fixed section.
  * Writing `skip` instead of sections releases the version without notes.
  */
 
@@ -62,9 +63,27 @@ const NEW = "new";
 const FIXED = "fixed";
 const named = (notes: ReleaseNotes, name: string) => notes.sections.find(section => section.title.toLowerCase() === name);
 
-/** The short notes that the app shows, and whether the release also fixes bugs. */
-export function appReleaseNotes(notes: ReleaseNotes): { notes: ReleaseNote[]; fixes: boolean } {
-  return { notes: (named(notes, APP) ?? named(notes, NEW))?.notes ?? [], fixes: !!named(notes, FIXED) };
+/** The short notes that the app shows. */
+export function appReleaseNotes(notes: ReleaseNotes): ReleaseNote[] {
+  return (named(notes, APP) ?? named(notes, NEW))?.notes ?? [];
+}
+
+const isBugFixes = (line: string) => /^[-*]\s+bug fixes(:|$)/i.test(line.trim());
+
+/**
+ * The notes with a "Bug fixes" line at the end of the App section that counts the Fixed notes. The release
+ * workflow writes this into release-notes.txt before it builds the app. Any older "Bug fixes" line goes.
+ */
+export function withBugFixes(text: string): string {
+  const fixes = named(parseReleaseNotes(text), FIXED)?.notes.length ?? 0;
+  const lines = text.split("\n").filter(line => !isBugFixes(line));
+  const start = lines.findIndex(line => /^##\s+app\s*$/i.test(line.trim()));
+  if (start < 0 || fixes === 0) return lines.join("\n");
+  let last = start;
+  for (let i = start + 1; i < lines.length && !/^#/.test(lines[i].trim()); i++)
+    if (/^[-*]\s+/.test(lines[i].trim())) last = i;
+  lines.splice(last + 1, 0, `- Bug fixes: This update fixes ${fixes} ${fixes === 1 ? "problem" : "problems"}.`);
+  return lines.join("\n");
 }
 
 /** Why these notes cannot ship with `version`, or null when they are ready. */

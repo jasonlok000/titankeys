@@ -35,7 +35,7 @@ jobs:
           body: |
             Release v${{ inputs.version }}. Merging this PR builds and publishes the signed APK.
 
-            Before merging, rewrite the draft in `release-notes.txt` and delete its draft line. Write a few short lines under App: the app shows them after the update, with one "Bug fixes" row when there is a Fixed section. The New and Fixed sections become the full GitHub release notes. Write `skip` under the version heading to release without notes.
+            Before merging, rewrite the draft in `release-notes.txt` and delete its draft line. Write a few short lines under App: the app shows them after the update. Do not write a "Bug fixes" line: the release adds one to the end of App with the number of lines under Fixed. The New and Fixed sections become the full GitHub release notes. Write `skip` under the version heading to release without notes.
           add-paths: |
             ink.toml
             package.json

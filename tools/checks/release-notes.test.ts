@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { appReleaseNotes, parseReleaseNotes, releaseNotesMarkdown, releaseNotesProblem } from "../../lib/release-notes-format";
+import { appReleaseNotes, parseReleaseNotes, releaseNotesMarkdown, releaseNotesProblem, withBugFixes } from "../../lib/release-notes-format";
 import { hasReleaseNotes, releaseNotes } from "../../lib/release-notes";
 
 const cases: [name: string, text: string, problem: string | null][] = [
@@ -32,14 +32,34 @@ test("github notes leave out the short app section", () => {
   expect(releaseNotesMarkdown(notes)).toBe("## New\n\n- **Cursor**: Hold space.\n\n## Fixed\n\n- Search");
 });
 
-test("the app shows the short notes and one row for all fixes", () => {
+test("the app shows the short notes", () => {
   const notes = parseReleaseNotes("# 1.0.2\n## App\n- Cursor: Hold space.\n## New\n- Cursor: Hold space, then move.\n## Fixed\n- Search\n- Emoji");
-  expect(appReleaseNotes(notes)).toEqual({ notes: [{ title: "Cursor", detail: "Hold space." }], fixes: true });
+  expect(appReleaseNotes(notes)).toEqual([{ title: "Cursor", detail: "Hold space." }]);
+});
+
+test("the release adds a bug fixes line that counts the fixes to the end of the app notes", () => {
+  const text = "# 1.0.2\n\n## App\n- Cursor: Hold space.\n- Emoji: Push Sym.\n\n## New\n- Cursor\n\n## Fixed\n- Search\n- Emoji\n- Tap keys\n";
+  expect(withBugFixes(text)).toBe("# 1.0.2\n\n## App\n- Cursor: Hold space.\n- Emoji: Push Sym.\n- Bug fixes: This update fixes 3 problems.\n\n## New\n- Cursor\n\n## Fixed\n- Search\n- Emoji\n- Tap keys\n");
+});
+
+test("one fix is one problem", () => {
+  expect(withBugFixes("# 1.0.2\n## App\n- Cursor\n## Fixed\n- Search")).toBe("# 1.0.2\n## App\n- Cursor\n- Bug fixes: This update fixes 1 problem.\n## Fixed\n- Search");
+});
+
+test("a bug fixes line that is already there is counted again", () => {
+  const text = "# 1.0.2\n## App\n- Bug fixes: This update fixes 9 problems.\n- Cursor\n## Fixed\n- Search\n- Emoji";
+  expect(withBugFixes(text)).toBe("# 1.0.2\n## App\n- Cursor\n- Bug fixes: This update fixes 2 problems.\n## Fixed\n- Search\n- Emoji");
+  expect(withBugFixes(withBugFixes(text))).toBe(withBugFixes(text));
+});
+
+test("no bug fixes line without fixes or without an app section", () => {
+  expect(withBugFixes("# 1.0.2\n## App\n- Cursor\n## New\n- Cursor")).toBe("# 1.0.2\n## App\n- Cursor\n## New\n- Cursor");
+  expect(withBugFixes("# 1.0.2\n## New\n- Cursor\n## Fixed\n- Search")).toBe("# 1.0.2\n## New\n- Cursor\n## Fixed\n- Search");
 });
 
 test("without an app section the app shows the new notes", () => {
   const notes = parseReleaseNotes("# 1.0.2\n## New\n- Cursor: Hold space.");
-  expect(appReleaseNotes(notes)).toEqual({ notes: [{ title: "Cursor", detail: "Hold space." }], fixes: false });
+  expect(appReleaseNotes(notes)).toEqual([{ title: "Cursor", detail: "Hold space." }]);
 });
 
 test("the app shows What's new for its current version unless the notes say skip", async () => {

@@ -15,4 +15,8 @@ export INK_KEYSTORE_PASSWORD
 export INK_KEY_PASSWORD="${INK_KEY_PASSWORD:-$INK_KEYSTORE_PASSWORD}"
 
 bun run notes
-exec bun run build "$@"
+# Add the "Bug fixes" line, as the GitHub release does, then put the notes back after the build.
+cp release-notes.txt release-notes.txt.bak
+trap 'mv release-notes.txt.bak release-notes.txt' EXIT
+bun .github/ink-release.mjs bug-fixes
+bun run build "$@"

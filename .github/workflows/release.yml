@@ -84,6 +84,9 @@ jobs:
             platform-tools "platforms;android-$PLATFORM_VERSION" \
             "build-tools;$BUILD_TOOLS_VERSION" "ndk;$NDK_VERSION"
           ink doctor
+      - name: Count the bug fixes in the release notes
+        if: steps.app.outputs.changed == 'true'
+        run: bun .github/ink-release.mjs bug-fixes
       - name: Install and check the app
         if: steps.app.outputs.changed == 'true'
         run: |

@@ -1,6 +1,6 @@
 import { appendFile, readFile, writeFile } from "node:fs/promises";
 import { execFileSync, spawnSync } from "node:child_process";
-import { DRAFT_MARKER, parseReleaseNotes, releaseNotesMarkdown } from "../lib/release-notes-format.ts";
+import { DRAFT_MARKER, parseReleaseNotes, releaseNotesMarkdown, withBugFixes } from "../lib/release-notes-format.ts";
 
 const config = Bun.TOML.parse(await readFile("ink.toml", "utf8"));
 const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
@@ -39,7 +39,8 @@ switch (process.argv[2]) {
     await writeFile(
       "release-notes.txt",
       `# ${version}\n\n${DRAFT_MARKER} rewrite these notes for people using Atlas, then delete this line. ` +
-        `Each line is "Title: what changed". The app shows only the short App lines and one "Bug fixes" row; ` +
+        `Each line is "Title: what changed". The app shows only the short App lines, and the release adds ` +
+        `a "Bug fixes" line to them that counts the Fixed lines; ` +
         `GitHub shows New and Fixed in full. Write skip instead to release without notes. -->\n\n` +
         `## App\n- \n\n## New\n${subjects.map((subject) => `- ${subject}`).join("\n") || "- "}\n\n## Fixed\n- \n`,
     );
@@ -88,6 +89,10 @@ switch (process.argv[2]) {
       build_tools: sdk.androidBuildTools,
       cargo_ndk: sdk.cargoNdk,
     });
+    break;
+  }
+  case "bug-fixes": {
+    await writeFile("release-notes.txt", withBugFixes(await readFile("release-notes.txt", "utf8")));
     break;
   }
   case "signing": {

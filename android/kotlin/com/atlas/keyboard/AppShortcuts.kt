@@ -5,14 +5,30 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.view.KeyEvent
 
-/** The hyper key and the app each letter opens. */
+/** Whether app shortcuts are on, the hyper key, and the app each letter opens. */
 object AppShortcuts {
-    /** No hyper key, so shortcuts are off. */
+    /** No hyper key, so no key opens a shortcut. */
     const val NONE = KeyEvent.KEYCODE_UNKNOWN
 
     class App(val packageName: String, val name: String)
 
     private fun preferences(context: Context) = context.getSharedPreferences("app_shortcuts", Context.MODE_PRIVATE)
+
+    fun enabled(context: Context) = preferences(context).getBoolean("enabled", false)
+
+    fun enabled(context: Context, on: Boolean) {
+        preferences(context).edit().putBoolean("enabled", on).apply()
+    }
+
+    /** The app opens with Android's usual animation. Off, it shows at once. */
+    fun animation(context: Context) = preferences(context).getBoolean("animation", true)
+
+    fun animation(context: Context, on: Boolean) {
+        preferences(context).edit().putBoolean("animation", on).apply()
+    }
+
+    /** The key that opens shortcuts, or [NONE] when shortcuts are off or have no key. */
+    fun activeKey(context: Context) = if (enabled(context)) hyperKey(context) else NONE
 
     fun hyperKey(context: Context) = preferences(context).getInt("hyper_key", NONE)
 
@@ -58,16 +74,14 @@ object AppShortcuts {
         packageName
     }
 
-    /**
-     * Opens the letter's app at once, with no open animation, so the shortcut feels instant. Returns false
-     * when the letter has no app or the app is gone.
-     */
+    /** Opens the letter's app. Returns false when the letter has no app or the app is gone. */
     fun open(context: Context, letter: Char): Boolean {
         val packageName = app(context, letter) ?: return false
         val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return false
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
         // A custom animation of none is ignored for a start from a service; only this flag skips it.
-        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-            or Intent.FLAG_ACTIVITY_NO_ANIMATION))
+        if (!animation(context)) intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        context.startActivity(intent)
         return true
     }
 }

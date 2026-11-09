@@ -286,6 +286,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
+            .put("appShortcuts", AppShortcuts.enabled(activity))
+            .put("shortcutAnimation", AppShortcuts.animation(activity))
             .put("hyperKey", if (hyperKey == AppShortcuts.NONE) JSONObject.NULL else AppShortcuts.label(hyperKey))
             .put("shortcuts", shortcuts)
     }
@@ -325,6 +327,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())
             "haptics" -> Haptics.select(activity, Haptics.preset(activity), value as Boolean)
             "hapticPreset" -> Haptics.select(activity, HapticPreset.of(value as String), Haptics.enabled(activity))
+            "appShortcuts" -> {
+                AppShortcuts.enabled(activity, value as Boolean)
+                BackService.filterKeys()
+            }
+            "shortcutAnimation" -> AppShortcuts.animation(activity, value as Boolean)
             "spelling" -> TypingSettings.spelling(activity,
                 if (value == "american") EnglishSpelling.Variant.AMERICAN else EnglishSpelling.Variant.BRITISH)
             else -> throw IllegalArgumentException("Unknown setting: $key")

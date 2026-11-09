@@ -36,7 +36,11 @@ export type State = {
   spelling: Spelling;
   words: { word: string; description: string }[];
   blockedWords: string[];
-  /** The name of the key that opens app shortcuts, or null when shortcuts are off. */
+  /** The hyper key and a letter open an app. */
+  appShortcuts: boolean;
+  /** Apps from shortcuts open with Android's animation. Off, they show at once. */
+  shortcutAnimation: boolean;
+  /** The name of the key that opens app shortcuts, or null when none is set. */
   hyperKey: string | null;
   /** Each letter with an app, from A to Z. */
   shortcuts: Shortcut[];
@@ -49,7 +53,7 @@ export type App = { app: string; name: string };
 /** A key pressed to choose the hyper key, with why it cannot be one. */
 export type HyperKeyPress = { code: number; label: string; problem: string | null };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autoPunctuation" | "suggestionBar" | "cursorControl" | "swipeTyping" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autoPunctuation" | "suggestionBar" | "cursorControl" | "swipeTyping" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "appShortcuts" | "shortcutAnimation">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];

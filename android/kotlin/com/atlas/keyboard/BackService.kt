@@ -15,7 +15,7 @@ import android.view.accessibility.AccessibilityEvent
  * the app's, so a back swipe reaches Atlas instead of the app. A back key from a keyboard skips the
  * stage where apps on Android's newer back handling listen for it, so only a system back reaches them.
  *
- * With a hyper key set, it also sees keys before apps do, so Hyper and a letter open an app anywhere.
+ * With app shortcuts on and a hyper key set, it also sees keys before apps do, so Hyper and a letter open an app anywhere.
  * It asks for keys only then, because each key waits for Atlas while it does. It cannot read the screen.
  */
 class BackService : AccessibilityService() {
@@ -39,7 +39,7 @@ class BackService : AccessibilityService() {
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         if (KeyCapture.waiting?.invoke(event) == true) return true
-        val code = AppShortcuts.hyperKey(this)
+        val code = AppShortcuts.activeKey(this)
         if (code == AppShortcuts.NONE || event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return false
         val action = hyper.key(code, event.keyCode, event.action == KeyEvent.ACTION_DOWN, event.repeatCount, event.eventTime)
         if (action == HyperKey.Action.Pass) return false
@@ -59,7 +59,7 @@ class BackService : AccessibilityService() {
 
     private fun filterKeys() {
         val info = serviceInfo ?: return
-        val wanted = KeyCapture.waiting != null || AppShortcuts.hyperKey(this) != AppShortcuts.NONE
+        val wanted = KeyCapture.waiting != null || AppShortcuts.activeKey(this) != AppShortcuts.NONE
         val flags = if (wanted) info.flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
             else info.flags and AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS.inv()
         if (flags == info.flags) return
@@ -78,7 +78,7 @@ class BackService : AccessibilityService() {
         /** Sends a system back, or returns false when the service is off. */
         fun back(): Boolean = current?.performGlobalAction(GLOBAL_ACTION_BACK) == true
 
-        /** Asks for keys only while a hyper key is set or a screen waits for a key. */
+        /** Asks for keys only while shortcuts are on with a hyper key, or a screen waits for a key. */
         fun filterKeys() {
             current?.filterKeys()
         }

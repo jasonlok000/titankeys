@@ -4,7 +4,7 @@ import { add, close } from "ink/icons";
 import { allowBack, captureHyperKey, captureKey, setHyperKey, setShortcut, state, type State } from "../../../lib/atlas";
 
 export const shortcutsLabel = ({ hyperKey, shortcuts }: State) =>
-  hyperKey ? shortcuts.length === 1 ? "1 app" : `${shortcuts.length} apps` : "Off";
+  hyperKey ? shortcuts.length === 1 ? "1 app" : `${shortcuts.length} apps` : "No hyper key";
 
 export default function Shortcuts() {
   const result = useSnapshot(state);
@@ -27,13 +27,13 @@ export default function Shortcuts() {
     });
   }, [waiting]);
   const subtitle = "Push the hyper key and a letter to open an app. Hold the hyper key, or push it and then push the letter in 1 second.";
-  if (result.status !== "ready") return <Screen title="App shortcuts" subtitle={subtitle} />;
+  if (result.status !== "ready") return <Screen title="Configure shortcuts" subtitle={subtitle} />;
   const { hyperKey, shortcuts, backService } = result.data;
   const toggle = (next: "hyper" | "letter") => {
     setProblem(null);
     setWaiting(waiting === next ? null : next);
   };
-  return <Screen title="App shortcuts" subtitle={subtitle}>
+  return <Screen title="Configure shortcuts" subtitle={subtitle}>
     {!backService && <Row title="Turn on Atlas in Accessibility" subtitle="App shortcuts need this setting." wrapSubtitle
       onPress={allowBack} />}
     <Section title="Hyper key">

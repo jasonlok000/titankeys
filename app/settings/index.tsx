@@ -36,7 +36,12 @@ export default function Settings() {
         && <Field label="Swipe vibration" href="/settings/vibration">{vibrationLabel(settings)}</Field>}
     </Section>
     <Section title="Shortcuts">
-      <Field label="App shortcuts" href="/settings/shortcuts">{shortcutsLabel(settings)}</Field>
+      <Toggle label="App shortcuts" value={settings.appShortcuts}
+        onChange={appShortcuts => save.run({ appShortcuts })} />
+      {settings.appShortcuts
+        && <Field label="Configure shortcuts" href="/settings/shortcuts">{shortcutsLabel(settings)}</Field>}
+      {settings.appShortcuts && <Toggle label="Animation" value={settings.shortcutAnimation}
+        onChange={shortcutAnimation => save.run({ shortcutAnimation })} />}
     </Section>
     <Section title="Personal">
       <Field label="Your words" href="/settings/data" />

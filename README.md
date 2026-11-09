@@ -176,7 +176,7 @@ This installs **TitanKeys Debug** next to any other keyboard. It doesn't replace
 
 ## Feedback
 
-Bugs and ideas are welcome in [issues](https://github.com/jasonlok000/atlas/issues). If something also happens in Atlas, please report it [there](https://github.com/juleshall4/atlas/issues) too.
+Bugs and ideas are welcome in [issues](https://github.com/jasonlok000/titankeys/issues). If something also happens in Atlas, please report it [there](https://github.com/juleshall4/atlas/issues) too.
 
 Work is shared in both directions. Anything here is free to use in Atlas, and improvements from Atlas are welcome here.
 

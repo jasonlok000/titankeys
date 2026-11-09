@@ -3,7 +3,7 @@ import { Row, Screen, openURL, useSnapshot } from "ink";
 import { arrowOutward } from "ink/icons";
 import { state } from "../../lib/atlas";
 
-const issues = "https://github.com/jasonlok000/atlas/issues";
+const issues = "https://github.com/jasonlok000/titankeys/issues";
 
 function draft(title: string, body: string) {
   return `${issues}/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;

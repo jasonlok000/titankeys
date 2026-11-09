@@ -13,7 +13,7 @@ export default function About() {
         <Row image={icon} title="TitanKeys" subtitle={result.status === "ready" ? `Version ${result.data.version}` : undefined} />
         {result.status === "ready" && hasReleaseNotes(result.data.version)
           && <Row title="What's new" endIcon={chevronRight} href="/settings/whats-new" />}
-        <Row title="Source code" endIcon={arrowOutward} onPress={() => void openURL("https://github.com/jasonlok000/atlas")} />
+        <Row title="Source code" endIcon={arrowOutward} onPress={() => void openURL("https://github.com/jasonlok000/titankeys")} />
         <Row title="Based on Atlas" subtitle="A modified version of Atlas by Julian Hall" endIcon={arrowOutward}
           onPress={() => void openURL("https://github.com/juleshall4/atlas")} />
         <Row title="Licences" endIcon={chevronRight} href="/settings/licences" />

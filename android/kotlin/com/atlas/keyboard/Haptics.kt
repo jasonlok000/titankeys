@@ -18,13 +18,16 @@ enum class HapticPreset(val id: String, duration: Int, strength: Int, interval: 
     val intervalMillis = maxOf(interval * 10L, durationMillis + 5)
     /** Travel between ticks, in key widths. */
     val spacing = spacing / 10f
+    /** A changed word: two ticks long at twice the strength, then one tick at tick strength, so it fades where a tick just stops. */
+    val wordTimings = longArrayOf(durationMillis * 2, durationMillis)
+    val wordAmplitudes = intArrayOf(amplitude * 2, amplitude)
 
     companion object {
         fun of(id: String?) = entries.firstOrNull { it.id == id } ?: Normal
     }
 }
 
-/** Ticks during swipes and confirms accepted tap keys. */
+/** Ticks during swipes, and confirms accepted tap keys and changed words. */
 class Haptics(private val context: Context) {
     private val vibrator = context.getSystemService(Vibrator::class.java)
     private var preset = HapticPreset.Normal
@@ -37,6 +40,15 @@ class Haptics(private val context: Context) {
 
     fun tap() {
         if (enabled(context)) pulse(HapticPreset.Strong)
+    }
+
+    /** Confirms a word picked on the strip or changed by autocorrect. */
+    fun wordChanged() {
+        if (!enabled(context)) return
+        val preset = preset(context)
+        val amplitudes = if (vibrator.hasAmplitudeControl()) preset.wordAmplitudes
+            else intArrayOf(VibrationEffect.DEFAULT_AMPLITUDE, VibrationEffect.DEFAULT_AMPLITUDE)
+        play(VibrationEffect.createWaveform(preset.wordTimings, amplitudes, -1))
     }
 
     fun begin(sample: Sample?) {
@@ -83,14 +95,17 @@ class Haptics(private val context: Context) {
     }
 
     fun pulse(preset: HapticPreset = this.preset) {
+        val amplitude = if (vibrator.hasAmplitudeControl()) preset.amplitude else VibrationEffect.DEFAULT_AMPLITUDE
+        play(VibrationEffect.createOneShot(preset.durationMillis, amplitude))
+    }
+
+    private fun play(effect: VibrationEffect) {
         if (!vibrator.hasVibrator()) return
         // A new vibration would cut the click short, so ticks wait until it has played.
         if (SystemClock.uptimeMillis() < clickUntil) return
         if (Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return
-        val amplitude = if (vibrator.hasAmplitudeControl()) preset.amplitude else VibrationEffect.DEFAULT_AMPLITUDE
         // Hardware feedback keeps ticking while another app is in the foreground.
-        vibrator.vibrate(VibrationEffect.createOneShot(preset.durationMillis, amplitude),
-            VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_HARDWARE_FEEDBACK).build())
+        vibrator.vibrate(effect, VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_HARDWARE_FEEDBACK).build())
     }
 
     companion object {

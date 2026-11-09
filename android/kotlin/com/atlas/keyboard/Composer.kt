@@ -162,6 +162,8 @@ class Composer(
     var liftOffMillis = 0
     /** Told the whole path behind each recognised word, including any pieces joined to it. */
     var onStroke: ((Swipe) -> Unit)? = null
+    /** Told when a word changes by itself, unless that lands as a swipe ends, where a vibration would run into the swipe's own. */
+    var onAutocorrect: (() -> Unit)? = null
     /** Only the keyboard sets this, so replaying a recording never adds to the raw input log. */
     var log: EditLog? = null
     /** Only the keyboard sets this, and only while the setting is on, so replaying a recording never changes a word. */
@@ -954,6 +956,8 @@ class Composer(
             composition = swiped
             remember(swiped)
         } else {
+            // A swiped word shows only while its swipe has just ended, so this change came from typing.
+            onAutocorrect?.invoke()
             composition = Composition.None
             show(emptyList())
         }
@@ -1126,6 +1130,7 @@ class Composer(
             return Ended(false, completed)
         }
         if (fix != null) {
+            onAutocorrect?.invoke()
             val typedMark = mark.trimEnd()
             offerUndo(fix.word + mark, fix.typed + typedMark, fix.typed, typedMark.isNotEmpty())
             val last = fix.word.substringAfterLast(' ')
@@ -1143,6 +1148,7 @@ class Composer(
             ?.takeIf { anchor.available && !anchor.selected && text.endsWith(it.original) && words.allowed(it.fix) }
         if (review != null) {
             if (!replaceBehind(Composition.None, anchor, EditCause.Autocorrect, review.original.length, review.replaced)) return null
+            onAutocorrect?.invoke()
             offerUndo(review.replaced, review.original, review.word, true)
             if (review.word.equals(heldWord, ignoreCase = true)) heldWord = null
             if (field.learning) words.typed(review.fix, false)

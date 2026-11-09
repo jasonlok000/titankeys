@@ -153,6 +153,7 @@ class AtlasIme : InputMethodService() {
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             { TypingSettings.autoCapitalise(this) }) { strip?.words = it }
         composer.onStroke = Trace::stroke
+        composer.onAutocorrect = haptics::wordChanged
         autocorrect = AutocorrectLoader(this, SwipeTyping.get(this))
         // The firmware hands touchpad events to the topmost window titled "InputMethod", which is this
         // keyboard's window. They arrive at the window, not at any view, so catch them there.
@@ -181,7 +182,7 @@ class AtlasIme : InputMethodService() {
         }.start()
     }
 
-    override fun onCreateInputView(): View = Strip(this, { index -> haptics.tap(); enqueue { composer.choose(index) } },
+    override fun onCreateInputView(): View = Strip(this, { index -> haptics.wordChanged(); enqueue { composer.choose(index) } },
         ::symbol, ::pickEmoji).also {
         strip = it
         it.emoji = emoji

@@ -8,6 +8,7 @@ import com.atlas.keyboard.Composer
 import com.atlas.keyboard.Editor
 import com.atlas.keyboard.EnterKey
 import com.atlas.keyboard.Field
+import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Words
 import java.io.File
 import java.nio.file.Path
@@ -112,12 +113,13 @@ private class FakeWords(private val lists: Lists) : Words {
     val typed = ArrayList<String>()
     val corrected = ArrayList<String>()
     var swiped = ""
+    var lookAlike: String? = null
 
     override fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Words.Recognition) -> Unit) =
         result(Words.Recognition(listOf(swiped), null))
     override fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit) = result(emptyList())
     override fun prepare(text: String, cancelled: AtomicBoolean) = Unit
-    override fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit) = result(null)
+    override fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit) = result(lookAlike)
     override fun allowed(word: String) = true
     override fun known(word: String) = lists.known(word) || lists.habits.seen(word)
     override fun typed(word: String, rememberCase: Boolean) {
@@ -138,10 +140,13 @@ private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.aut
     private var time = 0L
     /** How many app reports the keyboard took for a change that it did not make. Each one drops its undo and queued keys. */
     var externalChanges = 0
+    /** How many times the keyboard was told to vibrate because a word changed by itself. */
+    var vibrations = 0
     val composer = Composer(editor, words, { _, action -> posted += action }, {}, { false }, {})
 
     init {
         composer.autocorrect = autocorrect
+        composer.onAutocorrect = { vibrations++ }
         composer.start(field, 0, 0)
         settle()
     }
@@ -643,9 +648,41 @@ private fun composerFlow(world: Realistic) {
         same(typist.words.corrected.toList(), listOf("hellp"), "Fixing a swiped word by hand still teaches the swipe engine")
         same(typist.text, "hellp ", "A word being fixed by hand is not corrected")
     }
+
+    // Vibration.
+    same(typed("teh ").vibrations, 1, "A fix at Space vibrates")
+    same(typed("teh,").vibrations, 1, "A fix at punctuation vibrates")
+    same(typed("teh\n").vibrations, 1, "A fix before a new line vibrates")
+    same(typed("teh").also { it.composer.symbol("."); it.settle() }.vibrations, 1, "A fix at a symbol vibrates")
+    same(typed("get dome food ").vibrations, 1, "A second-check fix vibrates")
+    same(typed("hello there ").vibrations, 0, "A word that stays does not vibrate")
+    same(typed("teh ").backspace().vibrations, 1, "Backspace that restores a word does not vibrate")
+    same(Typist(world, null).type("teh ").vibrations, 0, "With the setting off, nothing vibrates")
+    same(Typist(world).type("ths").swipe("is").also { same(it.text, "this is ", "A swiped word fixes the word before it") }.vibrations, 0,
+        "A fix that lands as a swipe ends does not vibrate")
+    same(Typist(world).type("get dome ").swipe("food").also { same(it.text, "get some food ", "A swiped word is context") }.vibrations, 0,
+        "A second-check fix that lands as a swipe ends does not vibrate")
+    run {
+        fun swipedLookAlike() = Typist(world).also { it.words.lookAlike = "we're" }.swipe("were")
+        swipedLookAlike().type("going ").also {
+            same(it.text, "we're going ", "A typed word can change the swiped look-alike before it")
+            same(it.vibrations, 1, "A look-alike that a typed word changes vibrates")
+        }
+        swipedLookAlike().swipe("going").also {
+            same(it.text, "we're going ", "A swiped word can change the swiped look-alike before it")
+            same(it.vibrations, 0, "A look-alike that changes as a swipe ends does not vibrate")
+        }
+    }
 }
 
 private fun smallerChecks() {
+    // A changed word must feel different from a swipe tick, at each vibration setting.
+    for (preset in HapticPreset.entries) {
+        must(preset.wordTimings.sum() >= preset.durationMillis * 2, "A changed word lasts at least twice a tick: $preset")
+        must(preset.wordAmplitudes.first() > preset.amplitude, "A changed word starts stronger than a tick: $preset")
+        must(preset.wordAmplitudes.all { it in 1..255 }, "A changed word stays in the vibrator's range: $preset")
+    }
+
     // NoisyChannel.
     must(NoisyChannel.cost("vrown", "brown", near) < NoisyChannel.cost("prown", "brown", near), "A neighbouring key is a cheaper slip")
     must(NoisyChannel.cost("teh", "the", near) <= 0.5, "Swapped letters are cheap")

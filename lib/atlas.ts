@@ -27,6 +27,8 @@ export type State = {
   suggestionBar: boolean;
   /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
   cursorControl: boolean;
+  /** A swipe across the touchpad types a word. */
+  swipeTyping: boolean;
   liftOff: boolean;
   liftOffMillis: number;
   haptics: boolean;
@@ -36,7 +38,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autoPunctuation" | "suggestionBar" | "cursorControl" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autoPunctuation" | "suggestionBar" | "cursorControl" | "swipeTyping" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];

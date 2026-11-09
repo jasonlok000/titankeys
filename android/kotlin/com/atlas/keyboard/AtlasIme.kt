@@ -45,6 +45,7 @@ class AtlasIme : InputMethodService() {
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
     private var cursorPath = ArrayList<Sample>()
     private var cursorControl = true
+    private var swipeTyping = true
     /** When cursor mode last ended; a press on Space just after selects the word at the cursor. */
     private var cursorEndedAt = Long.MIN_VALUE
     /** Space was pressed to select a word, so its repeats and release type nothing. */
@@ -195,6 +196,7 @@ class AtlasIme : InputMethodService() {
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
         cursorControl = TypingSettings.cursorControl(this)
+        swipeTyping = TypingSettings.swipeTyping(this)
         strip?.showSuggestions = showSuggestions()
         main.removeCallbacks(showStrip)
         if (editing) {
@@ -336,7 +338,7 @@ class AtlasIme : InputMethodService() {
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
-                if (!stripPaging && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
+                if (swipeTyping && !stripPaging && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
                 Trace.touch(contact.points, false)
             }
@@ -568,6 +570,7 @@ class AtlasIme : InputMethodService() {
                     }
                     return
                 }
+                if (!swipeTyping) return
                 composer.swipe(letterSpace(outcome.points), outcome.startedAt, outcome.endedAt, modifiers.metaState)
                 modifiers.consume()
             }

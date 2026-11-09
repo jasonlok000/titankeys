@@ -112,6 +112,7 @@ object RawLog {
         "suggestionBar" to TypingSettings.suggestionBar(context),
         "launcherHidesBar" to TypingSettings.launcherHidesBar(context),
         "cursorControl" to TypingSettings.cursorControl(context),
+        "swipeTyping" to TypingSettings.swipeTyping(context),
         "touchpadOnlyInFields" to TypingSettings.touchpadOnlyInFields(context),
         "enterKey" to TypingSettings.enterKey(context),
         "enterApps" to TypingSettings.enterApps(context).sorted().joinToString(","),

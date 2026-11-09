@@ -298,19 +298,8 @@ class AtlasIme : InputMethodService() {
         modifiers.fieldStarted(restarting, editing)
         deadKeyPending = false
         showModifiers()
-        composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
-        tapKeys = TypingSettings.tapKeys(this)
-        holdSymbols = TypingSettings.holdSymbols(this)
-        holdEngine.threshold(TypingSettings.holdSymbolMillis(this))
-        modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
-        modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
-        cursorControl = TypingSettings.cursorControl(this)
-        enterApps = EnterKey.apps(TypingSettings.enterApps(this))
+        readSettings()
         if (editing && !restarting) rememberEnterApp(info)
-        val corrects = TypingSettings.autocorrect(this)
-        composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
-        if (!corrects) autocorrect.release()
-        strip?.showSuggestions = showSuggestions()
         main.removeCallbacks(showStrip)
         main.removeCallbacks(hideStrip)
         if (editing) {
@@ -323,6 +312,23 @@ class AtlasIme : InputMethodService() {
             main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
         }
         updateOverlay()
+    }
+
+    /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
+    private fun readSettings() {
+        composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
+        tapKeys = TypingSettings.tapKeys(this)
+        holdSymbols = TypingSettings.holdSymbols(this)
+        holdEngine.threshold(TypingSettings.holdSymbolMillis(this))
+        modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
+        modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
+        cursorControl = TypingSettings.cursorControl(this)
+        contact.swipes = TypingSettings.swipeTyping(this)
+        enterApps = EnterKey.apps(TypingSettings.enterApps(this))
+        val corrects = TypingSettings.autocorrect(this)
+        composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
+        if (!corrects) autocorrect.release()
+        strip?.showSuggestions = showSuggestions()
     }
 
     /** Only the package is kept, so the Enter key setting can offer apps without asking to see every installed app. */
@@ -525,7 +531,7 @@ class AtlasIme : InputMethodService() {
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
-                if (!altOrPanel && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
+                if (contact.swipes && !altOrPanel && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
                 Trace.touch(contact.points, false)
             }

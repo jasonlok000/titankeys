@@ -38,6 +38,8 @@ fun main() {
     twoFingersHeldDownTypeNothing()
     longContactsInARowAreNotTwoFingersHeldDown()
     panelHoverKeepsARestingFinger()
+    swipesOffTypeNothing()
+    swipesOffKeepTapsAndThePanel()
     println("Contact checks passed")
 }
 
@@ -339,4 +341,29 @@ private fun panelHoverKeepsARestingFinger() {
     same(contact.up(emptyList(), 2_001)?.let { contact.settle(it, it.deadline) }, null, "A finger that hovered must do nothing when it lifts")
     contact.down(at(.25f, .4f, 2_100))
     same(contact.travel, 0f, "A rest must not carry over to the next touch in the panel")
+}
+
+private fun swipesOffTypeNothing() {
+    val on = Contact()
+    val word = at(.15f, .4f, 1_000) to at(.45f, .4f, 1_200)
+    val flick = at(.95f, .35f, 2_000) to at(.7f, .35f, 2_120)
+    same(on.touch(word.first, word.second) is Contact.Outcome.Swipe, true, "A swipe must count while swipe typing is on")
+    val deletes = on.touch(flick.first, flick.second) as? Contact.Outcome.Swipe
+    same(deletes?.deletesWord, true, "A flick left from Backspace must delete while swipe typing is on")
+    val off = Contact()
+    off.swipes = false
+    same(off.touch(word.first, word.second), null, "A swipe must type nothing while swipe typing is off")
+    same(off.touch(flick.first, flick.second), null, "A flick left from Backspace must delete nothing while swipe typing is off")
+}
+
+private fun swipesOffKeepTapsAndThePanel() {
+    val contact = Contact()
+    contact.swipes = false
+    val tap = contact.touch(at(.05f, .4f, 1_000), at(.05f, .4f, 1_080))
+    same(tap is Contact.Outcome.Tap, true, "A tap must still tap while swipe typing is off")
+    contact.paging = true
+    val page = contact.touch(at(.5f, .2f, 3_000), at(.5f, .2f + ROW_HEIGHT, 3_200))
+    same(page is Contact.Outcome.Swipe, true, "A swipe must still turn the panel's page while swipe typing is off")
+    contact.down(at(.25f, .4f, 4_000))
+    same(contact.travel, 0f, "A finger must still rest on the panel while swipe typing is off")
 }

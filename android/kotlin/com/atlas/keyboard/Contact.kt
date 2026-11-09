@@ -82,6 +82,9 @@ class Contact {
      */
     var paging = false
 
+    /** Turned off with the Swipe typing setting. A swipe then types nothing and deletes nothing. Taps and the panel do not change. */
+    var swipes = true
+
     /** Whether the current contact could still type, with how far it has moved in key widths. */
     val travel: Float? get() = (state as? State.Touching)?.takeIf { it.counts }?.travel
 
@@ -228,6 +231,7 @@ class Contact {
             return if (swiped) Outcome.Swipe(points.toList(), first.time, last.time) else null
         }
         if (touching.travel >= SWIPE_KEYS) {
+            if (!swipes) return null
             // Checked here because the pickup below trims a swipe to its first letter, which loses its real start.
             val deletes = isDeleteWordSwipe(points)
             touching.pickup.finish()

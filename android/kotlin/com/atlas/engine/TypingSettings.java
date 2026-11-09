@@ -66,6 +66,15 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("autocorrect", enabled).apply();
     }
 
+    /** A swipe on the touchpad types a word, and a flick left from Backspace deletes one. Tap keys and the panel do not depend on this. */
+    public static boolean swipeTyping(Context context) {
+        return preferences(context).getBoolean("swipe_typing", true);
+    }
+
+    public static void swipeTyping(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("swipe_typing", enabled).apply();
+    }
+
     /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
     public static boolean cursorControl(Context context) {
         return preferences(context).getBoolean("cursor_control", true);

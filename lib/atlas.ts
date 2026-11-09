@@ -42,6 +42,8 @@ export type State = {
   launcherHidesBar: boolean;
   /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
   cursorControl: boolean;
+  /** A swipe on the touchpad types a word, and a flick left from Backspace deletes one. */
+  swipeTyping: boolean;
   /** The touchpad overlay stays up when no field is active, so the touchpad does not scroll apps. Only the phone can prove this. */
   touchpadOnlyInFields: boolean;
   /** What Enter does in fields with more than one line. */
@@ -63,7 +65,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" |"touchpadOnlyInFields" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];

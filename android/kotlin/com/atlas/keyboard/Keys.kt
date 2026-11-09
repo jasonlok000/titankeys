@@ -3,6 +3,7 @@ package com.atlas.keyboard
 import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
+import com.atlas.engine.EmojiPages
 
 /** Characters printed on the Titan keys, read from the keyboard's own character map. */
 object Keys {
@@ -17,7 +18,7 @@ object Keys {
         return if (code == 0 || code and KeyCharacterMap.COMBINING_ACCENT != 0) null else String(Character.toChars(code))
     }
 
-    /** Symbols the keyboard has no key for, offered in the Sym panel. */
+    /** Symbols the keyboard has no key for, offered in the Sym panel. Less common ones fill the page, so no key is blank. */
     fun extraSymbols(): List<String> {
         val map = characterMap
         val printed = HashSet<String>()
@@ -26,6 +27,7 @@ object Keys {
             letter(letter.toString(), KeyEvent.META_ALT_ON, map)?.let(printed::add)
         }
         "0123456789()_-+@*/:#'\"?!,.".forEach { printed += it.toString() }
-        return "&%£$€=×÷;…—•°[]{}<>\\|~^`.,:!?\"'@#*_-()/".map { it.toString() }.filter { it !in printed }.distinct()
+        fun unprinted(symbols: String) = symbols.map { it.toString() }.filter { it !in printed }.distinct()
+        return EmojiPages.fillLastPage(unprinted("&%£$€=×÷;…—•°[]{}<>\\|~^`.,:!?\"'@#*_-()/"), unprinted("¢¥§¶±≠≈≤≥√∞™®©†¿¡«»‹›“”‘’№"))
     }
 }

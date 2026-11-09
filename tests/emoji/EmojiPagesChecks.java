@@ -71,23 +71,58 @@ public final class EmojiPagesChecks {
         check(none.page().isEmpty() && none.group().isEmpty() && none.pageCount() == 0 && !none.swipe(1, 0) && !none.swipe(0, 1),
                 "An empty list must show nothing and report no change");
 
+        check(pages.samples().equals(List.of(faces.get(0), "🍏", "🇬🇧")), "With no recent emoji each group must give its first emoji as a sample");
+        check(pages.groupIndex() == 0, "The first group must be the open one");
+        pages.jump(1);
+        check(pages.groupIndex() == 1, "The open group's place must follow a jump");
+        pages.jump(-1);
+
         List<String> saved = new ArrayList<>();
-        for (int i = 0; i < 10; i++) saved = pages.use(groups.get(0).emoji().get(i));
+        for (String face : faces) saved = pages.use(face);
         saved = pages.use(faces.get(0));
         check(saved.size() == EmojiPages.RECENT_LIMIT && saved.get(0).equals(faces.get(0)) && saved.indexOf(faces.get(0)) == saved.lastIndexOf(faces.get(0)),
-                "Recent emoji must hold the last 8 distinct emoji, newest first");
+                "Recent emoji must hold one page of distinct emoji, newest first");
         check(pages.group().equals("Faces") && pages.page().equals(firstFaces), "Picking an emoji must not move the open page");
         pages.reset();
-        check(pages.group().equals("Faces") && pages.page().subList(0, EmojiPages.RECENT_LIMIT).equals(saved), "Reopening must start at the recent emoji");
+        check(pages.group().equals(EmojiPages.RECENT) && pages.page().equals(saved), "Reopening must open the Recent group, which holds only the recent emoji");
+        check(pages.pageCount() == 1, "The Recent group must fit on one page");
+        check(pages.samples().equals(List.of(EmojiPages.RECENT_SAMPLE, faces.get(0), "🍏", "🇬🇧")), "The Recent group's mark must be the first sample");
+        check(pages.groupIndex() == 0, "The Recent group must be the first group");
+        pages.jump(1);
+        check(pages.group().equals("Faces") && pages.page().equals(firstFaces), "Recent emoji must not be mixed into the first group");
+        check(pages.groupIndex() == 1, "The first real group must come after the Recent group");
         pages.jump(-1);
-        check(pages.group().equals("Flags"), "The recent emoji must not add a group to jump through");
+        check(pages.group().equals(EmojiPages.RECENT), "A swipe back from the first real group must open the Recent group");
+        pages.jump(-1);
+        check(pages.group().equals("Flags"), "A swipe back from the Recent group must wrap to the last group");
 
         EmojiPages restored = new EmojiPages(groups, List.of("🍎", "🫜", "", "🍎"));
-        List<String> expected = new ArrayList<>(List.of("🍎"));
-        expected.addAll(faces.subList(0, EmojiPages.PER_PAGE - 1));
-        check(restored.page().equals(expected), "A few recent emoji must share the first page with the first group");
-        restored.turn(1);
-        check(restored.page().equals(faces.subList(EmojiPages.PER_PAGE - 1, faces.size())), "The first group must carry on after the recent emoji");
+        check(restored.group().equals(EmojiPages.RECENT) && restored.page().equals(List.of("🍎")), "Saved recent emoji must open as a group, without unknown or repeated emoji");
+        restored.jump(1);
+        check(restored.group().equals("Faces") && restored.page().equals(firstFaces), "A few recent emoji must not change the first group's pages");
+
+        EmojiPages unused = new EmojiPages(groups, List.of());
+        check(unused.group().equals("Faces") && unused.samples().size() == 3, "With no recent emoji there must be no Recent group, and the first real group must open");
+        unused.use(faces.get(1));
+        check(unused.group().equals("Faces"), "The Recent group must not appear while the panel is open");
+        unused.reset();
+        check(unused.group().equals(EmojiPages.RECENT) && unused.page().equals(List.of(faces.get(1))), "The Recent group must appear at the next opening");
+
+        EmojiPages oneSymbolGroup = new EmojiPages(List.of(new EmojiPages.Group("Symbols", List.of("&"))), List.of());
+        check(oneSymbolGroup.samples().size() == 1, "One group must give one sample, so the panel shows no category strip");
+
+        check(EmojiPages.turnsPage(.2f, -1) && EmojiPages.turnsPage(.2f, 1), "A swipe that is mostly up or down must turn the page");
+        check(!EmojiPages.turnsPage(1, .2f) && !EmojiPages.turnsPage(-1, 0), "A swipe that is mostly sideways must change the group");
+        check(!EmojiPages.turnsPage(1, 1), "A diagonal swipe must change the group, as EmojiPages.swipe does");
+
+        List<String> spare = new ArrayList<>();
+        for (int i = 0; i < EmojiPages.PER_PAGE; i++) spare.add("s" + i);
+        check(EmojiPages.fillLastPage(symbols.subList(0, 24), spare).size() == EmojiPages.PER_PAGE, "A short page of symbols must fill to a full page");
+        check(EmojiPages.fillLastPage(symbols.subList(0, 24), spare).subList(0, 24).equals(symbols.subList(0, 24)), "Filling must keep the first items in order");
+        check(EmojiPages.fillLastPage(symbols.subList(0, EmojiPages.PER_PAGE), spare).size() == EmojiPages.PER_PAGE, "A full page must stay as it is");
+        check(EmojiPages.fillLastPage(symbols, spare).size() == EmojiPages.PER_PAGE * 2, "A second page must also fill");
+        check(EmojiPages.fillLastPage(List.of("&"), List.of("&", "%")).equals(List.of("&", "%")), "Filling must not repeat an item");
+        check(EmojiPages.fillLastPage(List.of("&"), List.of()).equals(List.of("&")), "With nothing spare the page must stay short");
 
         if (args.length > 0) {
             try (FileReader asset = new FileReader(args[0], StandardCharsets.UTF_8)) {

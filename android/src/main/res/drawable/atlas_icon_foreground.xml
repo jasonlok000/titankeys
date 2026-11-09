@@ -1,3 +1,5 @@
+<!-- The TitanKeys mark: T and K joined into one shape, with a swipe line cut through it. The gap is real, so the monochrome icon works too. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="1080" android:viewportHeight="1080">
-    <path android:fillColor="#160A04" android:fillType="evenOdd" android:pathData="M396,300 H684 A96,96 0 0 1 780,396 V684 A96,96 0 0 1 684,780 H396 A96,96 0 0 1 300,684 V396 A96,96 0 0 1 396,300 Z M410,412 H670 V482 H575 V680 H505 V482 H410 Z"/>
+    <path android:fillColor="#160A04" android:pathData="M757.7,328.4 L760.8,328.4 L602.1,540 L760.8,751.6 L657.8,751.6 L523.4,572.2 L523.4,751.6 L438.8,751.6 L438.8,600.9 Z M382.7,328.4 L632,328.4 L568.5,413 L523.4,413 L523.4,507.8 L657.8,328.4 L760.8,328.4 L607.4,532.9 L538.3,592 L523.4,572.2 L523.4,604.7 L438.8,677 L438.8,413 L319.2,413 Z"/>
+    <path android:fillColor="#FFF1E6" android:pathData="M289.8,756.2 L303.6,767.2 L808.6,335.8 L794.8,324.7 Z"/>
 </vector>

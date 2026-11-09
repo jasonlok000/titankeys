@@ -12,9 +12,11 @@ export default function Guide() {
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
   const results = searchGuide(query);
+  // Leaving the input empty puts the Search row back.
+  const leave = (value: string) => value.trim() || setSearching(false);
   // Pinned, as in Your words, so the input stays above the results.
   const header = searching
-    ? <TextInput value={query} onChange={setQuery} onSubmit={value => value.trim() || setSearching(false)}
+    ? <TextInput value={query} onChange={setQuery} onSubmit={leave} onBlur={leave}
       placeholder="Search the guide" action="search" autoFocus
       style={{ border: "none", paddingX: 0, paddingY: 0, minHeight: 50, fontSize: 26, placeholderColour: "muted" }} />
     : <Row title="Search" endIcon={search} onPress={() => setSearching(true)} />;

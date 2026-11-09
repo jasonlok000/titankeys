@@ -3,7 +3,7 @@ node_modules/
 dist/
 android/build/
 /build/
-/signing/
+/signing
 /backups/
 .DS_Store
 __pycache__/

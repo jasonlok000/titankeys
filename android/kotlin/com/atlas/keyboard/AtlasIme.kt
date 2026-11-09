@@ -39,6 +39,7 @@ class AtlasIme : InputMethodService() {
     private lateinit var touchpad: Touchpad
     private lateinit var haptics: Haptics
     private lateinit var composer: Composer
+    private lateinit var autocorrect: AutocorrectLoader
     private lateinit var editor: ConnectionEditor
     private lateinit var overlay: TouchpadOverlay
     private val contact = Contact()
@@ -152,6 +153,7 @@ class AtlasIme : InputMethodService() {
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             { TypingSettings.autoCapitalise(this) }) { strip?.words = it }
         composer.onStroke = Trace::stroke
+        autocorrect = AutocorrectLoader(this, SwipeTyping.get(this))
         // The firmware hands touchpad events to the topmost window titled "InputMethod", which is this
         // keyboard's window. They arrive at the window, not at any view, so catch them there.
         val window = window.window!!
@@ -212,6 +214,9 @@ class AtlasIme : InputMethodService() {
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
         cursorControl = TypingSettings.cursorControl(this)
+        val corrects = TypingSettings.autocorrect(this)
+        composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
+        if (!corrects) autocorrect.release()
         strip?.showSuggestions = showSuggestions()
         main.removeCallbacks(showStrip)
         if (editing) {
@@ -858,6 +863,7 @@ class AtlasIme : InputMethodService() {
         pendingInput.clear()
         contact.releaseKeys()
         composer.stop()
+        autocorrect.release()
         editor.cancelState()
         overlay.hide()
         rawLog?.finish()

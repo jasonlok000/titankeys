@@ -1,5 +1,8 @@
 package com.atlas.keyboard
 
+import com.atlas.autocorrect.Autocorrect
+import com.atlas.autocorrect.EndedWord
+import com.atlas.autocorrect.TypedCorrector
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypedPredictions
@@ -113,6 +116,10 @@ class Composer(
     private class PendingText(var text: String, val letterTap: Boolean) : PendingInput
     private class PendingEdit(val action: () -> Unit, val transferable: Boolean = false, val leaves: Boolean = false) : PendingInput
     private class FullStop(val time: Long, val snapshot: Snapshot)
+    /** One Backspace puts [restored] back in place of [replaced], which ends the text in [snapshot]. */
+    private class Undo(val replaced: String, val restored: String, val word: String, val keptAsTyped: Boolean, val snapshot: Snapshot)
+    /** Whether autocorrect changed the text when a typed word ended, and which word to learn now. */
+    private class Ended(val changed: Boolean, val learn: String?)
     private class Barrier(val identity: Editor.Identity, val navigation: Boolean = false, val command: Boolean = false,
                           val leaves: Boolean = false)
 
@@ -142,12 +149,23 @@ class Composer(
     private var lookAlikeChangedAt = -1
     private val remembered = ArrayList<Remembered>()
     private var rememberedField: Pair<String?, Int>? = null
+    private var undo: Undo? = null
+    /** The last typed word to end, until the word after it has ended too. */
+    private var endedWord: EndedWord? = null
+    /** A typed word waiting for a swipe that may still continue, because the swiped word decides whether to change it. */
+    private var endedBeforeSwipe: EndedWord? = null
+    /** A word that Backspace put back, until the next word shows whether the user kept it. */
+    private var restoredWord: String? = null
+    /** An unknown typed word. The next word can still change it, so it is learned after that. */
+    private var heldWord: String? = null
 
     var liftOffMillis = 0
     /** Told the whole path behind each recognised word, including any pieces joined to it. */
     var onStroke: ((Swipe) -> Unit)? = null
     /** Only the keyboard sets this, so replaying a recording never adds to the raw input log. */
     var log: EditLog? = null
+    /** Only the keyboard sets this, and only while the setting is on, so replaying a recording never changes a word. */
+    var autocorrect: Autocorrect? = null
 
     val hasPendingInput get() = recognising || barrier != null || drainScheduled || pendingInput.isNotEmpty()
     /** Whether a touch arriving now could still join the last swipe. A recognition in progress may yet allow it. */
@@ -173,6 +191,7 @@ class Composer(
         identity = next
         // Another field, or a password, starts with nothing remembered.
         val owner = next?.let { it.packageName to it.fieldId }
+        if (owner != rememberedField) autocorrect?.newField()
         if (!field.learning || owner != rememberedField) remembered.clear()
         rememberedField = owner
         pendingInput.addAll(carried)
@@ -193,6 +212,7 @@ class Composer(
             correcting = null
             awaitingNextWord = null
             expectedSelections.clear()
+            settleTypedWords()
             show(emptyList())
             return
         }
@@ -201,6 +221,7 @@ class Composer(
 
     private fun invalidate(discardInput: Boolean = true) {
         epoch++
+        undo = null
         completion?.set(true)
         completion = null
         completionSnapshot = null
@@ -224,6 +245,7 @@ class Composer(
         correcting = null
         awaitingNextWord = null
         expectedSelections.clear()
+        settleTypedWords()
         show(emptyList())
     }
 
@@ -356,9 +378,12 @@ class Composer(
             return
         }
         val correction = correcting
+        settleRestoredWord(anchor)
+        val typedBefore = if (correction == null) typedWordAt(anchor) else null
         val completed = if (correction != null || startsNewWord(before)) completeManualWord(anchor) else null
         correcting = null
         manualWord.clear()
+        if (typedBefore != null) endedWord = EndedWord(typedBefore, null)
         val previous = composition as? Composition.Swiped
         var resumes = previous != null && previous.continuable && liftOffMillis > 0
             && previous.swipe.sameStroke(pending.swipe, pending.startedAt - previous.endedAt, liftOffMillis.toLong())
@@ -375,6 +400,7 @@ class Composer(
             leave()
             awaitingNextWord = null
             holdForNextWord(previous, anchor)
+            endedBeforeSwipe = null
         }
         composition = Composition.None
         show(emptyList())
@@ -415,10 +441,13 @@ class Composer(
                 remember(swiped)
                 confirmState(accepted) { confirmed ->
                     if (confirmed) {
-                        learnWord(completed, correction)
+                        // The swiped word can still change the typed word before it.
+                        val reviewer = corrector().takeIf { typedBefore != null }
+                        if (reviewer == null || !hold(completed, reviewer)) learnWord(completed, correction)
                         show(choices)
                         checkLookAlike()
                         words.prepare(context + inserted, AtomicBoolean(false))
+                        reviewBeforeSwipe(swiped)
                     }
                 }
                 return@recognise
@@ -435,20 +464,36 @@ class Composer(
             enqueueText(text, letterTap)
             return
         }
+        val corrected = undo
         leave()
         invalidate(false)
         fullStop = null
-        val anchor = snapshot()
+        var anchor = snapshot()
         holdForNextWord(composition as? Composition.Swiped, anchor)
         val correction = correcting
         if (correction != null && anchor != editSnapshot) {
             correcting = null
             manualWord.clear()
         }
+        // A full stop inside an address or file name ended no sentence, so the word before it goes back as typed.
+        if (corrected != null && anchor == corrected.snapshot && !letterTap && continuesAddress(corrected.replaced, text)) {
+            if (!edit(EditCause.AutocorrectUndo, corrected.replaced.length, corrected.restored)) return
+            anchor = snapshot()
+            manualWord.clear()
+            endedWord = null
+        }
+        if (letterTap) settleRestoredWord(anchor)
+        val ending = if (!letterTap && text.first() in TYPED_WORD_ENDS) endingWord(anchor, correction) else null
         val completesCorrection = correcting != null && !letterTap && text.first() in ".,!?;:)]}…"
         val finishesWord = letterTap && (correction != null || startsNewWord(anchor.before.orEmpty()))
         val completed = if (completesCorrection || finishesWord) completeManualWord(anchor) else null
         if (completesCorrection || letterTap) correcting = null
+        val fix = ending?.let { findFix(it, anchor) }
+        if (fix != null) {
+            if (!edit(EditCause.Autocorrect, fix.typed.length, fix.word)) return
+            anchor = snapshot()
+            manualWord.clear()
+        }
         val dropsSpace = automaticSpace == anchor && anchor.before?.endsWith(" ") == true
             && text[0] in ".,!?;:)]}…"
         val before = anchor.before
@@ -465,7 +510,8 @@ class Composer(
         composition = Composition.None
         if (letterTap) manualWord.clear()
         else if (!completesCorrection) observe(text)
-        if (!completed.isNullOrEmpty()) {
+        val ended = if (ending != null) wordEnded(ending, fix, typed, null) ?: return else null
+        if (!completed.isNullOrEmpty() || ended?.changed == true) {
             confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(completed, correction) }
             return
         }
@@ -477,10 +523,14 @@ class Composer(
         leave()
         invalidate(false)
         fullStop = null
+        val anchor = snapshot()
+        val ending = if (symbol.firstOrNull()?.let { it in TYPED_WORD_ENDS } == true) endingWord(anchor, correcting) else null
+        val fix = ending?.let { findFix(it, anchor) }
         composition = Composition.None
         manualWord.clear()
         correcting = null
         awaitingNextWord = null
+        if (fix != null && !edit(EditCause.Autocorrect, fix.typed.length, fix.word)) return
         val before = editor.before().orEmpty()
         val after = editor.after().orEmpty()
         val around = symbol == "&" || symbol == "="
@@ -491,6 +541,11 @@ class Composer(
         val text = (if (leading) " " else "") + symbol + if (space) " " else ""
         if (!edit(EditCause.Symbol, 0, text, if (reuseSpace) 1 else 0)) return
         automaticSpace = null
+        val ended = wordEnded(ending, fix, text, null) ?: return
+        if (ended.changed) {
+            confirmState(snapshot())
+            return
+        }
         predictLater()
     }
 
@@ -503,8 +558,11 @@ class Composer(
         composition = Composition.None
         val before = anchor.before.orEmpty()
         val correction = correcting
+        val ending = endingWord(anchor, correction)
         val completed = completeManualWord(anchor)
         correcting = null
+        val fix = ending?.let { findFix(it, anchor) }
+        if (fix != null && !edit(EditCause.Autocorrect, fix.typed.length, fix.word)) return
         val pending = fullStop
         fullStop = null
         when {
@@ -521,8 +579,10 @@ class Composer(
             }
         }
         automaticSpace = null
-        if (field.learning && !completed.isNullOrEmpty()) {
-            confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(completed, correction) }
+        val ended = wordEnded(ending, fix, " ", completed) ?: return
+        val learned = ended.learn
+        if (ended.changed || field.learning && !learned.isNullOrEmpty()) {
+            confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(learned, correction) }
             return
         }
         predictLater()
@@ -534,6 +594,7 @@ class Composer(
             reset()
             return
         }
+        if (!word && undoCorrection()) return
         // Deleting or cancelling a swipe is not evidence that the word was kept.
         val source = if (word || !field.learning) null else correcting ?: composition as? Composition.Swiped
         val expected = if (correcting != null) editSnapshot else source?.snapshot
@@ -591,6 +652,7 @@ class Composer(
         awaitingNextWord = null
         val anchor = snapshot()
         val correction = correcting
+        val ending = endingWord(anchor, correction)
         val completed = completeManualWord(anchor)
         correcting = null
         if (automaticSpace == anchor && anchor.before?.endsWith(" ") == true && !edit(EditCause.DropSpace, 1, "")) return
@@ -605,9 +667,14 @@ class Composer(
         if (current != epoch || !sameIdentity(owner, editor.identity())) return
         when (result) {
             Editor.Enter.Newline -> {
+                // Only a new line stays in this field. An app may act on any other Enter before a fix could land.
+                val fix = ending?.let { findFix(it, anchor) }
+                if (fix != null && !edit(EditCause.Autocorrect, fix.typed.length, fix.word)) return
                 if (!edit(EditCause.Newline, 0, "\n")) return
-                if (!completed.isNullOrEmpty()) {
-                    confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(completed, correction) }
+                val ended = wordEnded(ending, fix, "\n", completed) ?: return
+                val learned = ended.learn
+                if (ended.changed || !learned.isNullOrEmpty()) {
+                    confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(learned, correction) }
                     return
                 }
             }
@@ -973,7 +1040,9 @@ class Composer(
     }
 
     private fun observe(text: String) {
-        if (!field.learning || selection.start < 0 || selection.end < 0) {
+        val corrects = field.autocorrect && autocorrect != null
+        if (corrects) autocorrect?.using?.invoke()
+        if (!field.learning && !corrects || selection.start < 0 || selection.end < 0) {
             manualWord.clear()
             return
         }
@@ -1005,6 +1074,184 @@ class Composer(
             words.chosen(correction.swipe, correction.context, correction.recognition, word)
         }
     }
+
+    private fun corrector(): TypedCorrector? = autocorrect?.takeIf { field.autocorrect }?.corrector
+
+    /** The typed word that ends at the cursor, as it stands in the text. Null if the text there is anything else. */
+    private fun typedWordAt(anchor: Snapshot): String? {
+        val before = anchor.before
+        if (corrector() == null || before == null || !anchor.available || !anchor.knownSelection || anchor.selected) return null
+        if (anchor.after?.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) return null
+        val raw = manualWord.current()
+        val start = before.length - raw.length
+        if (raw.isEmpty() || start < 0 || !before.regionMatches(start, raw, 0, raw.length, ignoreCase = true)) return null
+        if (if (start == 0) before.length >= Editor.CONTEXT_LENGTH else !before[start - 1].isWhitespace()) return null
+        val word = before.substring(start).trimStart(*WORD_OPENERS)
+        return word.takeIf { it.isNotEmpty() && it.all { letter -> letter.isLetterOrDigit() || letter == '\'' || letter == '’' } }
+    }
+
+    /** The typed word that this space or mark ends, if autocorrect may look at it. */
+    private fun endingWord(anchor: Snapshot, correction: Composition.Swiped?): String? {
+        settleRestoredWord(anchor)
+        return if (correction == null) typedWordAt(anchor) else null
+    }
+
+    /** A word that Backspace put back counts as kept if it stays as it was when the next word starts or ends. */
+    private fun settleRestoredWord(anchor: Snapshot) {
+        val word = restoredWord ?: return
+        restoredWord = null
+        val before = anchor.before.orEmpty()
+        val start = before.length - word.length
+        if (start >= 0 && before.endsWith(word) && (start == 0 || !before[start - 1].isLetterOrDigit())) {
+            if (field.learning) autocorrect?.keep(word, before.take(start))
+        } else autocorrect?.notKept(word)
+    }
+
+    private fun findFix(word: String, anchor: Snapshot): TypedCorrector.Fix? {
+        val before = anchor.before ?: return null
+        val fix = corrector()?.check(word, before.dropLast(word.length), endedWord?.word) ?: return null
+        return fix.takeIf { before.endsWith(it.typed) && it.word.split(' ').all(words::allowed) }
+    }
+
+    /**
+     * Runs once the space or mark [mark] that ended the typed word [word] is in the text. It offers [fix] for undo or,
+     * if the first check found none, checks again with the word on each side known. Returns null if an edit failed.
+     */
+    private fun wordEnded(word: String?, fix: TypedCorrector.Fix?, mark: String, completed: String?): Ended? {
+        val autocorrect = autocorrect
+        val corrector = corrector()
+        if (autocorrect == null || corrector == null || word == null) {
+            endedWord = null
+            learnHeldWord()
+            return Ended(false, completed)
+        }
+        if (fix != null) {
+            val typedMark = mark.trimEnd()
+            offerUndo(fix.word + mark, fix.typed + typedMark, fix.typed, typedMark.isNotEmpty())
+            val last = fix.word.substringAfterLast(' ')
+            endedWord = EndedWord(last, fix.typed.takeIf { ' ' !in fix.word && ' ' !in it })
+            learnHeldWord()
+            if (field.learning) {
+                autocorrect.recent.record(last)
+                words.typed(fix.word, false)
+            }
+            return Ended(true, null)
+        }
+        val anchor = snapshot()
+        val text = anchor.before.orEmpty()
+        val review = corrector.review(text.takeLast(REVIEW_LENGTH), text.length >= REVIEW_LENGTH, endedWord, word, true)
+            ?.takeIf { anchor.available && !anchor.selected && text.endsWith(it.original) && words.allowed(it.fix) }
+        if (review != null) {
+            if (!replaceBehind(Composition.None, anchor, EditCause.Autocorrect, review.original.length, review.replaced)) return null
+            offerUndo(review.replaced, review.original, review.word, true)
+            if (review.word.equals(heldWord, ignoreCase = true)) heldWord = null
+            if (field.learning) words.typed(review.fix, false)
+        }
+        learnHeldWord()
+        val latest = if (review?.reviewedLast == true) review.fix else word
+        endedWord = EndedWord(latest, null)
+        if (field.learning) autocorrect.recent.record(latest)
+        if (review?.reviewedLast == true) return Ended(true, null)
+        return Ended(review != null, completed.takeUnless { hold(it, corrector) })
+    }
+
+    /** The next word can still change a word that the list does not hold, so it is held to learn after that. True if held. */
+    private fun hold(word: String?, corrector: TypedCorrector): Boolean {
+        if (word.isNullOrEmpty() || corrector.listed(word)) return false
+        learnHeldWord()
+        heldWord = word
+        return true
+    }
+
+    private fun offerUndo(replaced: String, restored: String, word: String, keptAsTyped: Boolean) {
+        undo = Undo(replaced, restored, word, keptAsTyped, snapshot())
+    }
+
+    private fun learnHeldWord() {
+        heldWord?.let { words.typed(it) }
+        heldWord = null
+    }
+
+    /** Nothing more can happen to the typed words so far. */
+    private fun settleTypedWords() {
+        endedWord = null
+        endedBeforeSwipe = null
+        restoredWord = null
+        learnHeldWord()
+    }
+
+    /** Backspace straight after a fix puts back what the user typed. That word then stays as it is for this session. */
+    private fun undoCorrection(): Boolean {
+        val pending = undo ?: return false
+        undo = null
+        val anchor = snapshot()
+        if (anchor != pending.snapshot || anchor.selected || anchor.before?.endsWith(pending.replaced) != true) return false
+        val showing = composition
+        invalidate(false)
+        if (showing !is Composition.Swiped) {
+            automaticSpace = null
+            fullStop = null
+        }
+        manualWord.clear()
+        correcting = null
+        awaitingNextWord = null
+        heldWord = null
+        endedWord = null
+        endedBeforeSwipe = null
+        if (!replaceBehind(showing, anchor, EditCause.AutocorrectUndo, pending.replaced.length, pending.restored)) return true
+        autocorrect?.undone(pending.word)
+        val accepted = snapshot()
+        if (pending.keptAsTyped) {
+            val before = accepted.before.orEmpty().dropLast(pending.restored.length)
+            if (field.learning) autocorrect?.keep(pending.word, before)
+        } else restoredWord = pending.word
+        confirmState(accepted)
+        return true
+    }
+
+    /** Edits text behind the cursor, and keeps a swiped word that is showing as it was. False if the edit failed. */
+    private fun replaceBehind(showing: Composition, anchor: Snapshot, cause: EditCause, count: Int, text: String): Boolean {
+        if (!edit(cause, count, text)) return false
+        val accepted = snapshot()
+        if (automaticSpace == anchor) automaticSpace = accepted
+        fullStop = fullStop?.let { if (it.snapshot == anchor) FullStop(it.time, accepted) else it }
+        if (showing is Composition.Swiped) {
+            val context = accepted.before?.removeSuffix(showing.inserted) ?: showing.context
+            val swiped = showing.copy(context = context, snapshot = accepted)
+            composition = swiped
+            remember(swiped)
+        } else composition = Composition.None
+        return true
+    }
+
+    /** The swiped word shows what fits around the typed word before it. That is checked once no touch can add to the swipe. */
+    private fun reviewBeforeSwipe(swiped: Composition.Swiped) {
+        val autocorrect = autocorrect ?: return
+        if (field.learning && field.autocorrect) autocorrect.recent.record(swiped.word)
+        val earlier = endedWord ?: endedBeforeSwipe
+        endedWord = null
+        endedBeforeSwipe = earlier
+        if (earlier == null || corrector() == null || !swiped.trailingSpace) return
+        val current = epoch
+        later(liftOffMillis.toLong()) {
+            if (current != epoch || composition !== swiped || hasPendingInput || endedBeforeSwipe !== earlier) return@later
+            endedBeforeSwipe = null
+            val anchor = snapshot()
+            val before = anchor.before ?: return@later
+            if (anchor != swiped.snapshot || anchor.selected) return@later
+            val review = corrector()?.review(before.takeLast(REVIEW_LENGTH), before.length >= REVIEW_LENGTH, earlier, swiped.word, false)
+                ?.takeIf { before.endsWith(it.original) && words.allowed(it.fix) } ?: return@later
+            invalidate(false)
+            if (!replaceBehind(swiped, anchor, EditCause.Autocorrect, review.original.length, review.replaced)) return@later
+            offerUndo(review.replaced, review.original, review.word, true)
+            if (review.word.equals(heldWord, ignoreCase = true)) heldWord = null
+            if (field.learning) words.typed(review.fix, false)
+            confirmState(snapshot())
+        }
+    }
+
+    private fun continuesAddress(replaced: String, text: String) = replaced.endsWith(".") && text.length == 1
+        && (text[0].isLetterOrDigit() || text[0] in "@_-")
 
     private fun predictLater() {
         val current = epoch
@@ -1072,5 +1319,10 @@ class Composer(
         private const val MAX_REMEMBERED = 1000
         /** Characters that end a word, so a swiped word right before one needs no space after it. */
         private const val WORD_CLOSERS = ".,!?;:)]}…"
+        /** Marks that end a typed word, which autocorrect then checks. */
+        private const val TYPED_WORD_ENDS = "$WORD_CLOSERS\"”"
+        private val WORD_OPENERS = charArrayOf('"', '\'', '(', '[', '{', '“', '‘')
+        /** How much text the second check reads. Numen tuned it on this much. */
+        private const val REVIEW_LENGTH = 96
     }
 }

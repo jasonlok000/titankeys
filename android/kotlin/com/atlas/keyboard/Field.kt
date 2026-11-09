@@ -15,6 +15,8 @@ data class Field(
     val starters: Boolean,
     /** Sentences may start with a capital letter. */
     val sentenceCapitalisation: Boolean,
+    /** Typed words may be fixed when they end. A private field allows this, but nothing is learned from it. */
+    val autocorrect: Boolean = false,
 ) {
     companion object {
         val None = Field(words = false, learning = false, fullStops = false, starters = false,
@@ -33,9 +35,13 @@ data class Field(
             // Browsers often give search bars the URL type.
             val starters = variation == InputType.TYPE_TEXT_VARIATION_URI && !private
                 && inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS == 0
+            val exact = variation == InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS
+                || variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
+                || variation == InputType.TYPE_TEXT_VARIATION_FILTER
             return Field(words = !password, learning = !password && !address && !private,
                 fullStops = !password && !address, starters = starters,
-                sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0)
+                sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
+                autocorrect = !password && !address && !exact)
         }
 
         /**

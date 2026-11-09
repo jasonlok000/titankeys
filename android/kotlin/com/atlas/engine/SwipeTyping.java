@@ -44,6 +44,7 @@ public final class SwipeTyping {
     private long configuredRevision = -1;
     private int configuredDay = -1, activeCount;
     private volatile Words wordView = new Words(new String[0], new String[0], new String[0]);
+    private volatile java.util.Set<String> activeWords = java.util.Set.of();
     private volatile BlockedWords blockedWords;
 
     public static final class Words {
@@ -286,6 +287,24 @@ public final class SwipeTyping {
     public String[] blockedWords() { return blockedWords.words(); }
     public boolean wordAllowed(String word) { return blockedWords.allowed(word); }
 
+    public TypedPredictions typedPredictions() { return typedPredictions; }
+
+    /** Whether the user added this word or used it enough to count as learned. A word typed once or twice may be a typo. */
+    public boolean personalWord(String word) {
+        return activeWords.contains(SwipeWords.normalise(word));
+    }
+
+    /** The spelling of a name, such as "Monday" for "monday", or null for any other word. */
+    public String properName(String word) {
+        String spelling = ProperNames.restore(word);
+        return spelling.equals(word) ? null : spelling;
+    }
+
+    /** The word in the English spelling that the settings ask for. */
+    public String preferredSpelling(String word) {
+        return EnglishSpelling.convert(word, TypingSettings.spelling(context));
+    }
+
     /** Whether a typed word is complete, so the next suggestions should follow it instead of correcting it. */
     public boolean knownWord(String word) {
         TypedPredictions predictions = typedPredictions;
@@ -482,6 +501,7 @@ public final class SwipeTyping {
         learningStatus = (wordsAvailable ? dictionary.status(today()) : "Saved words unavailable; existing files preserved") + importWarning;
         int day = today();
         wordView = new Words(dictionary.spellings(), dictionary.descriptions(day), dictionary.swipeStatuses(day));
+        activeWords = dictionary.activeWords(day);
         accuracyStatus = accuracy.summary();
     }
 

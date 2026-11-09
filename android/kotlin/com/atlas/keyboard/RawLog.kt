@@ -103,6 +103,7 @@ object RawLog {
         "liftOffMillis" to TypingSettings.liftOffDurationMillis(context),
         "tapKeys" to TypingSettings.tapKeys(context),
         "autoCapitalise" to TypingSettings.autoCapitalise(context),
+        "autocorrect" to TypingSettings.autocorrect(context),
         "suggestionBar" to TypingSettings.suggestionBar(context),
         "cursorControl" to TypingSettings.cursorControl(context),
         "enterKey" to TypingSettings.enterKey(context),

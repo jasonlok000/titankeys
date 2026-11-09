@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Locale;
 import java.util.function.ToDoubleFunction;
 import java.util.function.Predicate;
+import java.util.function.ObjIntConsumer;
 import java.util.stream.Collectors;
 
 /** Dictionary-backed completions and spelling fixes for physical typing; never rewrites text automatically. */
@@ -76,8 +77,17 @@ public final class TypedPredictions {
                 ? word.toLowerCase(Locale.ROOT) : SwipeWords.normalise(word);
     }
 
-    boolean contains(String word) {
+    public boolean contains(String word) {
         return Arrays.binarySearch(words, word.toLowerCase(Locale.ROOT).replace('\u2019', '\'')) >= 0;
+    }
+
+    /** How common a word is, in any case. 0 means that the list does not hold it. */
+    public int frequencyOf(String word) {
+        return (int) frequency(word.toLowerCase(Locale.ROOT).replace('\u2019', '\''));
+    }
+
+    public void forEachWord(ObjIntConsumer<String> action) {
+        for (int i = 0; i < words.length; i++) action.accept(words[i], (int) frequencies[i]);
     }
 
     private double frequency(String word) {

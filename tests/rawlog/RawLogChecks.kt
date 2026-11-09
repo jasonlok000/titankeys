@@ -90,7 +90,7 @@ private fun lineFormat() {
         """{"k":"text","t":7,"cause":"backspace","via":"letter","auto":false,"del":1,"ins":"","aft":0,"ok":true}""", "A backspace has its own cause")
     same(RawLogLines.edit(EditCause.Choose, 4, "word ", 1, false, 7),
         """{"k":"text","t":7,"cause":"choose","auto":false,"del":4,"ins":"word ","aft":1,"ok":false}""", "A pick has its own cause")
-    for (automatic in listOf(EditCause.LookAlike, EditCause.FullStop, EditCause.DropSpace))
+    for (automatic in listOf(EditCause.LookAlike, EditCause.FullStop, EditCause.DropSpace, EditCause.Autocorrect, EditCause.AutocorrectUndo))
         must(automatic.automatic, "${automatic.name} must be marked as automatic")
     for (user in listOf(EditCause.Swipe, EditCause.Tap, EditCause.Key, EditCause.Symbol, EditCause.Space, EditCause.Newline,
             EditCause.Backspace, EditCause.BackspaceWord, EditCause.Choose, EditCause.Command))

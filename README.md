@@ -192,7 +192,8 @@ TitanKeys is built on the work of these projects:
 - [FUTO Keyboard](https://github.com/futo-org/android-keyboard): contextual prediction (FUTO Source First)
 - [FUTO Swipe models](https://huggingface.co/futo-org/futo-swipe): swipe typing models (FUTO Model Weights)
 - [AOSP dictionaries](https://codeberg.org/Helium314/aosp-dictionaries/src/branch/main/dictionaries/main_en_gb.dict): British English dictionary (Apache 2.0)
-- [Pastiera](https://github.com/palsoftware/pastiera): the Enter key rules and list of chat apps (GPL-3.0)
+- [Pastiera](https://github.com/palsoftware/pastiera): the Enter key rules and list of chat apps, and the base of autocorrect (GPL-3.0)
+- [Numen](https://github.com/jlo-aug/numen): autocorrect for typed words (GPL-3.0). Its word data has its own licences: see [`licences/Numen-autocorrect-data.md`](licences/Numen-autocorrect-data.md)
 - [Inter](https://github.com/rsms/inter): typeface (SIL Open Font Licence)
 
 TitanKeys is powered by FUTO Swipe. "Titan 2 Elite" is a product of Unihertz.

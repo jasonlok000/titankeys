@@ -140,6 +140,7 @@ final class LanguageHabits {
     }
     List<Entry> entries() { return new ArrayList<>(words.values()); }
     List<Entry> active(int day) { ArrayList<Entry> result = new ArrayList<>(); for (Entry entry : words.values()) if (entry.active(day) && SuggestionPolicy.allowed(entry.word)) result.add(entry); return result; }
+    java.util.Set<String> activeWords(int day) { java.util.Set<String> result = new java.util.HashSet<>(); for (Entry entry : active(day)) result.add(entry.word); return result; }
     String restoreCase(String word, int day) {
         Entry entry = words.get(SwipeWords.normalise(word));
         return entry != null && entry.active(day) && !entry.spelling.equals(entry.word) ? entry.spelling : word;

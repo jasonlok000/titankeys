@@ -15,6 +15,8 @@ enum class EditCause(val cause: String, val via: String? = null, val automatic: 
     LookAlike("lookalike", automatic = true),
     FullStop("fullstop", automatic = true),
     DropSpace("spacedrop", automatic = true),
+    Autocorrect("autocorrect", automatic = true),
+    AutocorrectUndo("autocorrectundo", automatic = true),
 }
 
 /** One word the swipe engine considered, with the parts of its score. */

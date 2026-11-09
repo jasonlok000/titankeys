@@ -23,6 +23,15 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("suggestion_bar", enabled).apply();
     }
 
+    /** Fixes slips in typed words when they end. Swiped words never change. */
+    public static boolean autocorrect(Context context) {
+        return preferences(context).getBoolean("autocorrect", true);
+    }
+
+    public static void autocorrect(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("autocorrect", enabled).apply();
+    }
+
     /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
     public static boolean cursorControl(Context context) {
         return preferences(context).getBoolean("cursor_control", true);

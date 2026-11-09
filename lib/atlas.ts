@@ -23,6 +23,8 @@ export type State = {
   /** The letters and space a light touch types, such as `"AI "`. */
   tapKeys: string;
   autoCapitalise: boolean;
+  /** Fixes slips in typed words when they end. Swiped words never change. */
+  autocorrect: boolean;
   suggestionBar: boolean;
   /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
   cursorControl: boolean;
@@ -40,7 +42,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "suggestionBar" | "cursorControl" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autocorrect" | "suggestionBar" | "cursorControl" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];

@@ -1,42 +1,18 @@
-# 1.2.0
+# 1.3.0
 
 ## App
-- Emoji: Push Sym to type emoji from the strip.
-- Better suggestions: The strip shows more words, correct spellings, and words in more fields.
-- Cleaner typing: Atlas removes the space before punctuation and corrects words such as "i" and "dont".
-- Delete a word: Push Alt, then push Backspace.
-- Swipe typing setting: You can turn off swipe typing in Settings.
 - Change the keyboard: Push and hold Sym to select a different keyboard.
+- Lowercase start: Push Shift at the start of a sentence to type a lowercase letter.
 
 ## New
-- Emoji: Push Sym to show emoji on the strip. Touch an emoji to type it. To see more emoji, move your finger across the keyboard. Your recent emoji show first.
-- Spelling: When you type with the keys, the strip can show the correct spelling of a word.
-- Word suggestions: The strip shows more words for the letters that you type. Atlas finds these words in the full dictionary.
-- Delete a word: Push Alt, then push Backspace.
-- Short swipes for symbols: When Alt is on, a short swipe shows more symbols.
-- Vibration: When you touch a word on the strip, the phone vibrates.
-- Best word: The best word is in the middle of the strip.
-- Suggestions in more fields: The strip shows words in address bars and private fields. Atlas does not learn words from these fields.
-- Starter words: When you select all the text in a search bar, the strip shows starter words. Private search bars also show starter words.
-- Next words: After you touch a word on the strip, the next words show immediately.
-- Punctuation and capitals: When you type with the keys, Atlas removes the space before a comma, full stop, or other punctuation. Atlas also corrects words such as "i" to "I" and "dont" to "don't". If the next word makes it clear, Atlas changes words such as "ill" to "I'll". Swipe typing already does this.
-- Auto-punctuation setting: To stop these changes to punctuation, go to Settings and turn off Auto-punctuation. This also stops the full stop from two spaces.
-- Swipe typing setting: To stop swipes from typing words, go to Settings and turn off Swipe typing. Tap keys and cursor mode continue to operate.
 - Change the keyboard: Push and hold Sym. A list of your keyboards shows. Select a keyboard to use it. A short push on Sym continues to show emoji.
-- Longer words first: When you type with the keys, the strip shows longer words before the word that you typed. For example, "deli" shows "delicious" and "delight" first.
+- Lowercase start: At the start of a sentence, push Shift to type a lowercase letter. Use this for words such as "iPhone" and "eBay".
 
 ## Fixed
-- Saved words: Words with a typing error do not show in Saved words. Atlas shows a new word after you use it 3 times. When you delete a word immediately after you type it, Atlas does not learn it. Words that you add yourself stay active.
-- Unwanted touches: When you type, a finger on the keys does not start a swipe. It also does not type a tap key. A tap key operates 0.4 seconds after your last key.
-- Suggestion bar: When you push Backspace or touch a key, the words stay on the bar until the new words show.
-- Empty suggestion bar: In password, email, and number fields, Atlas does not show the suggestion bar.
-- Space cursor: A finger that stays on the space key after you push it does not start cursor mode. Lift the finger, then touch the space key again. Cursor mode starts after a longer touch, and the start vibration is stronger. After you type, cursor mode starts 0.4 seconds after your last key. If the cursor did not move, the space key types a space. It does not select a word.
+- Capitals after "e.g." and "i.e.": Atlas does not start a new sentence after "e.g.", "i.e.", or a full stop with no space, such as in "atlas.com".
+- Pause after typing: After you type with the keys, Atlas waits 0.4 seconds before a tap key types, cursor mode starts, or swipe vibration starts.
 - Two fingers: When you put two fingers on the keys, Atlas does not type a swipe or start cursor mode.
-- Swipe vibration: When you type with the keys, finger movements on the keys do not make the phone vibrate. Swipe vibration starts 0.4 seconds after your last key.
-- Cursor vibration: When the cursor is at the start or end of the text, cursor mode does not vibrate.
-- Screen readers: A screen reader reads the best word first.
-- Tap keys: If you do not select tap keys, Settings shows Off.
-- Ctrl and Meta: When you push Ctrl or Meta alone, Atlas does not send a shortcut to the app.
-- Strip after a field closes: When an app closes a field before you type, the strip does not stay on the screen.
-- Return to an app: When you go back to an app, the app keeps its text field open.
-- Guide search: When the search box is empty and you touch outside it, the Search row shows again.
+- Saved words: The strip shows a saved word in the same order as other words. A saved word does not always show first.
+- Word vibration: When you touch a word on the strip, the vibration is the same as the cursor mode start.
+- Settings: When swipe typing is off, Settings does not show Swipe vibration. When swipe typing and cursor mode are off, Settings does not show Slip recovery period.
+- Your words: The screen title is Your words, the same as in Settings.

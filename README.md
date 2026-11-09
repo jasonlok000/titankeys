@@ -4,7 +4,7 @@
 
 ### Atlas
 
-![Version 1.2.0](https://img.shields.io/badge/version-1.1.0-111111?style=flat-square)
+![Version 1.3.0](https://img.shields.io/badge/version-1.3.0-111111?style=flat-square)
 
 **A toolkit to power up your Unihertz Titan 2 Elite!**
 

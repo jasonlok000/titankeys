@@ -83,6 +83,8 @@ class AtlasIme : InputMethodService() {
     private val holdEngine = HoldEngine(HoldEngine.Output { replaceHeldLetter() })
     /** The press that can still become its symbol. Its letter is already typed. */
     private var heldLetter: KeyEvent? = null
+    /** In this app the Back service hears the keys first, because the app takes key presses before the keyboard. */
+    private var watchingKeys = false
     private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
                                val settlement: Contact.Settlement? = null)
     private val pendingInput = ArrayDeque<PendingInput>()
@@ -338,6 +340,43 @@ class AtlasIme : InputMethodService() {
         composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
         if (!corrects) autocorrect.release()
         strip?.showSuggestions = showSuggestions()
+        updateKeyWatch()
+    }
+
+    /**
+     * Smart Launcher takes every key press in its search field before the keyboard hears it, so a press there cannot start a
+     * hold or count towards Shift and Alt. The Back service hears them first, only in this one app and only when a setting needs them.
+     */
+    private fun updateKeyWatch() {
+        val wanted = editing && currentInputEditorInfo?.packageName == SMART_LAUNCHER && (holdSymbols || !modifiers.doublePressLocks)
+        watchingKeys = BackService.watchKeys(if (wanted) ::watchedKey else null) && wanted
+    }
+
+    /**
+     * Hears a key before Smart Launcher does. The launcher still types its own letters, so this only times holds and
+     * follows Shift and Alt. True takes the key from the app, which is only ever a repeat of a letter that can become a symbol,
+     * or a second push of Shift or Alt. Every key waits for this answer, so slow work goes to the main looper.
+     */
+    private fun watchedKey(event: KeyEvent): Boolean {
+        if (!watchingKeys) return false
+        val code = event.keyCode
+        if (event.action != KeyEvent.ACTION_DOWN) {
+            holdEngine.up(code, event.deviceId, event.eventTime)
+            return Modifiers.isShiftOrAlt(code) && modifiers.appRelease(code, event.eventTime)
+        }
+        if (Modifiers.isShiftOrAlt(code)) {
+            val push = modifiers.appPush(code, event.eventTime, event.repeatCount)
+            if (push == Modifiers.AppPush.HideAndClear) {
+                val meta = if (code == KeyEvent.KEYCODE_SHIFT_LEFT || code == KeyEvent.KEYCODE_SHIFT_RIGHT) KeyEvent.META_SHIFT_ON else KeyEvent.META_ALT_ON
+                main.post { currentInputConnection?.clearMetaKeyStates(meta) }
+            }
+            return push != Modifiers.AppPush.Pass
+        }
+        val repeatOfHold = trackHold(event)
+        // A shortcut types nothing, so like the keyboard's own typing, only a character uses up a press of Shift or Alt.
+        if (event.repeatCount == 0 && !event.isSystem && !KeyEvent.isModifierKey(code)
+            && !event.isCtrlPressed && !event.isMetaPressed) modifiers.consume()
+        return repeatOfHold
     }
 
     /** Only the package is kept, so the Enter key setting can offer apps without asking to see every installed app. */
@@ -412,6 +451,7 @@ class AtlasIme : InputMethodService() {
         editor.cancelState()
         editing = false
         field = Field.None
+        updateKeyWatch()
         rawLog?.finish()
         rawLog = null
         composer.log = null
@@ -937,7 +977,19 @@ class AtlasIme : InputMethodService() {
         val symbol = letter.getUnicodeChar(letter.metaState or KeyEvent.META_ALT_ON)
         if (symbol <= 0 || !Character.isValidCodePoint(symbol) || Character.isISOControl(symbol)) return
         val text = String(Character.toChars(symbol))
-        if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(text) } else composer.replaceLetter(text)
+        if (watchingKeys) {
+            val typed = letter.getUnicodeChar(letter.metaState)
+            main.post { replaceAppLetter(typed, text) }
+        } else if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(text) } else composer.replaceLetter(text)
+    }
+
+    /** The app typed the letter itself, so the composer does not know it. It stays as it is unless it is still the last thing typed. */
+    private fun replaceAppLetter(letter: Int, symbol: String) {
+        if (!editing || !watchingKeys) return
+        composer.command(destructive = true, fieldLocal = true) {
+            val before = currentInputConnection?.getTextBeforeCursor(1, 0) ?: return@command false
+            before.length != 1 || before[0].code != letter || editor.replace(1, symbol, 0)
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -954,7 +1006,8 @@ class AtlasIme : InputMethodService() {
         // The touchpad hears the physical press now, before the key is typed.
         contact.key(keyCode, true, event.eventTime)
         val carried = carryCtrl(event)
-        val repeatOfHold = trackHold(carried)
+        // A key that gets here while the keys are watched has already told the hold timer about its press.
+        val repeatOfHold = !watchingKeys && trackHold(carried)
         // A key press means the finger was pressing, not resting on the touchpad.
         endCursor()
         if (repeatOfHold) return true
@@ -1188,6 +1241,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onDestroy() {
         editing = false
+        updateKeyWatch()
         main.removeCallbacksAndMessages(null)
         settlements.clear()
         pendingInput.clear()
@@ -1207,6 +1261,7 @@ class AtlasIme : InputMethodService() {
     companion object {
         /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"
+        private const val SMART_LAUNCHER = "ginlemon.flowerfree"
         private const val MAX_PENDING_INPUT = 128
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"

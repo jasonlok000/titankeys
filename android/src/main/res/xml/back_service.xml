@@ -2,4 +2,5 @@
     android:description="@string/back_service_description"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:canRetrieveWindowContent="false"
+    android:canRequestFilterKeyEvents="true"
     android:isAccessibilityTool="false" />

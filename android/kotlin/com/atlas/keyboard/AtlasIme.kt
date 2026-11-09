@@ -730,15 +730,17 @@ class AtlasIme : InputMethodService() {
         QuickSetting.OpenSettings -> Unit
     }
 
-    /** Pushing a key on the quick settings page. The change applies at once, and then the panel goes back to normal typing. */
+    /** Pushing a key on the quick settings page. The change applies at once and the page stays open. Only the key that opens Settings leaves. */
     private fun useQuickSetting(item: QuickSetting) {
-        if (item == QuickSetting.OpenSettings) openSettings()
-        else {
+        if (item == QuickSetting.OpenSettings) {
+            openSettings()
+            closePanel()
+        } else {
             writeQuickSetting(item, !quickSettingOn(item))
             readSettings()
+            panel?.render()
         }
         haptics.settingChanged()
-        closePanel()
     }
 
     /** Opens the app at its Settings page, with the same extra that its notifications use to open a page. */
@@ -1096,15 +1098,16 @@ class AtlasIme : InputMethodService() {
 
     /**
      * With the panel on screen, a letter key types the item that it shows, and a blank key types nothing. Backspace and Enter
-     * turn the page and never reach the text. Space and fn can pick a category. Other keys stay as they are.
+     * turn the page of emoji, do nothing on the other pages, and never reach the text. Space and fn can pick a category. Other
+     * keys stay as they are.
      */
     private fun panelKey(event: KeyEvent): Boolean {
         if (event.repeatCount > 0 && event.keyCode == pickedKey) return true
         pickedKey = 0
         if (!panelOpen) return false
-        Modifiers.panelScroll(event.keyCode)?.let { rows ->
+        Modifiers.panelScroll(event.keyCode, modifiers.panel)?.let { rows ->
             pickedKey = event.keyCode
-            if (event.repeatCount == 0 && panel?.swipe(0f, rows) == true) haptics.pageChanged()
+            if (event.repeatCount == 0 && rows != 0f && panel?.swipe(0f, rows) == true) haptics.pageChanged()
             return true
         }
         if (!isInputViewShown || event.isCtrlPressed || event.isMetaPressed) return false

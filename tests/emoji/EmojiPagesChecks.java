@@ -134,8 +134,8 @@ public final class EmojiPagesChecks {
         check(none.groupAt(.5f) == 0 && !none.open(0), "With no groups a place along the strip must change nothing");
 
         EmojiPages paged = new EmojiPages(groups, List.of());
-        check(paged.swipe(0, -1) && paged.pageNumber() == 2, "What Backspace does, a swipe up, must open the next page");
-        check(paged.swipe(0, 1) && paged.pageNumber() == 1, "What Enter does, a swipe down, must open the previous page");
+        check(paged.swipe(0, -1) && paged.pageNumber() == 2, "What Enter does, a swipe up, must open the next page");
+        check(paged.swipe(0, 1) && paged.pageNumber() == 1, "What Backspace does, a swipe down, must open the previous page");
 
         List<String> spare = new ArrayList<>();
         for (int i = 0; i < EmojiPages.PER_PAGE; i++) spare.add("s" + i);

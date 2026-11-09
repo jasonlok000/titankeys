@@ -15,6 +15,8 @@ object Layout {
         listOf("⇧", "○", "◁", SPACE, "▦", "fn", "⇧"),
     )
     val bottomWidths = floatArrayOf(1.2f, 1.2f, 1.2f, 2.8f, 1.2f, 1.2f, 1.2f)
+    /** The letter keys, from the top row down: the order in which the Sym panel fills them. */
+    val panelLetters = rows.take(3).flatten().filter { isLetter(it) }
 
     /** Letter centres in letter space, indexed by [LETTERS]. */
     @JvmField val KEY_X = FloatArray(26)

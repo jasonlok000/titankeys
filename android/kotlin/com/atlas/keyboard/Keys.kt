@@ -17,7 +17,7 @@ object Keys {
         return if (code == 0 || code and KeyCharacterMap.COMBINING_ACCENT != 0) null else String(Character.toChars(code))
     }
 
-    /** Symbols the keyboard has no key for, offered on the strip while Alt is on. */
+    /** Symbols the keyboard has no key for, offered in the Sym panel. */
     fun extraSymbols(): List<String> {
         val map = characterMap
         val printed = HashSet<String>()

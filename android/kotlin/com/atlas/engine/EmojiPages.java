@@ -11,11 +11,12 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 /**
- * The emoji the strip offers while Sym is on, in groups of pages. The recent emoji come first, at the start of the first group.
- * Sideways swipes turn pages through the whole list; up and down swipes jump between groups.
+ * The items that the Sym panel shows, in groups of pages. The recent emoji come first, at the start of the first group.
+ * Up and down swipes turn pages inside a group; sideways swipes change the group. Symbols are one group, with no recent items.
  */
 public final class EmojiPages {
-    public static final int PER_PAGE = 8;
+    /** One item for each letter key. */
+    public static final int PER_PAGE = 26;
     public static final int RECENT_LIMIT = 8;
 
     public record Group(String name, List<String> emoji) {}
@@ -79,21 +80,44 @@ public final class EmojiPages {
         return pages.isEmpty() ? "" : shown.get(pages.get(page).group()).name();
     }
 
-    /** The next or previous page, wrapping at either end. */
-    public void turn(int direction) {
-        if (!pages.isEmpty()) page = Math.floorMod(page + direction, pages.size());
+    /** Which page of the open group this is, counted from 1. */
+    public int pageNumber() {
+        return pages.isEmpty() ? 0 : page - firstPage(pages.get(page).group()) + 1;
     }
 
-    /** The first page of the next or previous group, wrapping at either end. */
-    public void jump(int direction) {
+    /** How many pages the open group has. */
+    public int pageCount() {
+        if (pages.isEmpty()) return 0;
+        int group = pages.get(page).group();
+        return (int) pages.stream().filter(candidate -> candidate.group() == group).count();
+    }
+
+    /** The next or previous page of the open group, wrapping at either end of that group. */
+    public void turn(int direction) {
         if (pages.isEmpty()) return;
-        int group = Math.floorMod(pages.get(page).group() + direction, shown.size());
-        for (int index = 0; index < pages.size(); index++) {
-            if (pages.get(index).group() == group) {
-                page = index;
-                return;
-            }
-        }
+        int first = firstPage(pages.get(page).group());
+        page = first + Math.floorMod(page - first + direction, pageCount());
+    }
+
+    /** The first page of the next or previous group, wrapping at either end. With one group, nothing changes. */
+    public void jump(int direction) {
+        if (shown.size() > 1 && !pages.isEmpty()) page = firstPage(Math.floorMod(pages.get(page).group() + direction, shown.size()));
+    }
+
+    /**
+     * A swipe, in keys across and rows down. The pages follow the finger: sideways changes the group, and up or down
+     * changes the page inside it. Returns true if a different page now shows.
+     */
+    public boolean swipe(float across, float down) {
+        int before = page;
+        if (Math.abs(down) > Math.abs(across)) turn(down < 0 ? 1 : -1);
+        else jump(across > 0 ? -1 : 1);
+        return page != before;
+    }
+
+    private int firstPage(int group) {
+        for (int index = 0; index < pages.size(); index++) if (pages.get(index).group() == group) return index;
+        return page;
     }
 
     /** Records a picked emoji and returns the recent emoji to save. The open page stays the same until {@link #reset}. */

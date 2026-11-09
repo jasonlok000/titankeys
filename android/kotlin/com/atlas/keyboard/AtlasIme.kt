@@ -22,6 +22,7 @@ import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.SurroundingText
+import android.widget.LinearLayout
 import com.atlas.engine.Calibration
 import com.atlas.engine.EmojiPages
 import com.atlas.engine.HoldEngine
@@ -58,7 +59,10 @@ class AtlasIme : InputMethodService() {
     private var lastSelectionStart = -1
     private val modifiers = Modifiers()
     private var strip: Strip? = null
+    private var panel: SymPanel? = null
     private var emoji: EmojiPages? = null
+    /** The key that last picked from the panel, so its repeats type nothing once the panel has closed. */
+    private var pickedKey = 0
     private var field = Field.None
     /** The raw input log for this field. It is null when the setting is off or the field must not be recorded. */
     private var rawLog: RawLog.Session? = null
@@ -99,6 +103,14 @@ class AtlasIme : InputMethodService() {
             // Titan firmware can drop its current client before Android reports the editor gone.
             Log.w("Atlas", "Could not show the suggestion strip", error)
         }
+    }
+
+    /** An app's own hide, such as from a Done key, leaves the window closed, so a panel that opens then must show it. */
+    private val showPanel = Runnable {
+        if (!panelOpen || isInputViewShown) return@Runnable
+        showStrip.run()
+        // It could not show, so it must not take the next key.
+        if (!isInputViewShown) closePanel()
     }
 
     // Apps on Android's newer back handling ignore a back key from a keyboard, so a system back goes first.
@@ -186,16 +198,23 @@ class AtlasIme : InputMethodService() {
                 Log.w("Atlas", "Could not read the emoji list", error)
                 return@Thread
             }
-            main.post { emoji = EmojiPages(groups, recents).also { strip?.emoji = it } }
+            main.post { emoji = EmojiPages(groups, recents).also { panel?.emoji = it } }
         }.start()
     }
 
-    override fun onCreateInputView(): View = Strip(this, { index -> haptics.wordChanged(); enqueue { composer.choose(index) } },
-        ::symbol, ::pickEmoji).also {
-        strip = it
-        it.emoji = emoji
-        it.showSuggestions = showSuggestions()
+    override fun onCreateInputView(): View {
+        val words = Strip(this) { index -> haptics.wordChanged(); enqueue { composer.choose(index) } }
+        val keys = SymPanel(this) { item -> enqueue { typePanelItem(item) } }
+        strip = words
+        panel = keys
+        keys.emoji = emoji
+        words.showSuggestions = showSuggestions()
         showModifiers()
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(keys)
+            addView(words)
+        }
     }
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
@@ -268,6 +287,8 @@ class AtlasIme : InputMethodService() {
 
     override fun onWindowHidden() {
         super.onWindowHidden()
+        // A panel that nobody can see must not take the next key.
+        closePanel()
         // A delayed hide from the previous app can arrive after this field has started. Once you have
         // typed, a hide is the app's own, such as a Done key closing a field it then removes.
         main.removeCallbacks(showStrip)
@@ -314,6 +335,7 @@ class AtlasIme : InputMethodService() {
         endCursor()
         selectingWithSpace = false
         deadKeyPending = false
+        closePanel()
         overlay.hide()
         super.onFinishInput()
     }
@@ -377,11 +399,13 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun motion(event: MotionEvent) {
-        if (!field.words) return
+        // The panel works in every field, also where the touchpad types no words.
+        if (!field.words && !panelOpen) return
         typedInField = true
         val samples = touchpad.samples(event)
         Recording.sink?.motion(event, samples)
         inputLog()?.motion(event, samples)
+        if (panelOpen) hover(event, samples)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
@@ -398,9 +422,9 @@ class AtlasIme : InputMethodService() {
                 }
                 contact.move(samples.drop(1))
                 endCursor()
-                // Alt and Sym turn swipes into strip pages, so the cursor waits until they are off.
+                // With Alt on or the panel open the touchpad does not type, so the cursor waits until they are off.
                 // A finger the contact ignored landed while typing, so it must not start the cursor.
-                if (cursorControl && !stripPaging && contact.travel != null && cursor.down(first)) {
+                if (cursorControl && !altOrPanel && contact.travel != null && cursor.down(first)) {
                     cursor.move(samples.drop(1))
                     cursorPath = ArrayList(samples.filter { it.valid })
                     main.postAtTime(startCursor, first.time + CursorMode.REST_MILLIS)
@@ -423,7 +447,7 @@ class AtlasIme : InputMethodService() {
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
-                if (!stripPaging && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
+                if (!altOrPanel && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
                 Trace.touch(contact.points, false)
             }
@@ -451,7 +475,7 @@ class AtlasIme : InputMethodService() {
                     val settle = Runnable {
                         settlements.remove(pending)
                         val settled = contact.settle(pending, SystemClock.uptimeMillis())
-                        val result = if (pending.cancelled || stripPaging) settled else pieces.settle(pending, settled)
+                        val result = if (pending.cancelled || altOrPanel) settled else pieces.settle(pending, settled)
                         input.action = { result?.let(::outcome) }
                         input.ready = true
                         drainInput()
@@ -467,6 +491,16 @@ class AtlasIme : InputMethodService() {
                 Trace.touch(emptyList(), true)
             }
         }
+    }
+
+    /** A finger that rests on a key shows that key in the panel, until the finger lifts. */
+    private fun hover(event: MotionEvent, samples: List<Sample>) {
+        if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            panel?.hover = ""
+            return
+        }
+        val last = samples.lastOrNull { it.valid } ?: return
+        panel?.hover = Layout.keyAt(last.x, last.y)
     }
 
     private val endSlippedCursor = Runnable { endCursor() }
@@ -539,26 +573,24 @@ class AtlasIme : InputMethodService() {
 
     private fun isWordCharacter(character: Char) = Character.isLetterOrDigit(character) || character == '\'' || character == '’'
 
-    private fun symbol(symbol: String) {
-        enqueue {
-            composer.symbol(symbol)
-            modifiers.consume()
-            showModifiers()
+    /** Types a symbol or emoji from the panel, then goes back to normal typing. */
+    private fun typePanelItem(item: String) {
+        composer.symbol(item)
+        if (modifiers.panel == Modifiers.Panel.Emoji) emoji?.use(item)?.let { recents ->
+            getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
         }
+        closePanel()
     }
 
-    private fun pickEmoji(picked: String) {
-        enqueue {
-            composer.symbol(picked)
-            emoji?.use(picked)?.let { recents ->
-                getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
-            }
-            modifiers.consume()
-            showModifiers()
-        }
+    private fun closePanel() {
+        modifiers.closePanel()
+        showModifiers()
     }
 
-    private val stripPaging get() = modifiers.alt != Modifiers.Level.Off || modifiers.sym != Modifiers.Level.Off
+    private val panelOpen get() = modifiers.panel != Modifiers.Panel.Closed
+
+    /** The touchpad types nothing while Alt is on or the panel is open. */
+    private val altOrPanel get() = modifiers.alt != Modifiers.Level.Off || panelOpen
 
     private fun clearSettlements() {
         inputGeneration++
@@ -586,7 +618,7 @@ class AtlasIme : InputMethodService() {
                     if (Modifiers.isModifier(event.keyCode)) modifiers.key(event)
                 }
                 Modifiers.isModifier(event.keyCode) -> modifiers.key(event)
-                event.isCtrlPressed || event.isMetaPressed || KeyEvent.isModifierKey(event.keyCode) -> return
+                panelOpen || event.isCtrlPressed || event.isMetaPressed || KeyEvent.isModifierKey(event.keyCode) -> return
                 event.keyCode == KeyEvent.KEYCODE_SPACE -> {
                     composer.space(event.repeatCount > 0, event.eventTime)
                     modifiers.useHeld()
@@ -652,18 +684,8 @@ class AtlasIme : InputMethodService() {
         when (outcome) {
             is Contact.Outcome.Swipe -> {
                 showStripAfterBack()
-                if (stripPaging) {
-                    // Sideways swipes page through the symbols or emoji on the strip. The pages follow the finger.
-                    val dx = (outcome.points.last().x - outcome.points.first().x) * 10
-                    val dy = (outcome.points.last().y - outcome.points.first().y) * 4
-                    if (modifiers.sym != Modifiers.Level.Off && abs(dy) > abs(dx) && abs(dy) >= Contact.PAGE_KEYS) {
-                        // Up and down swipes, measured in key rows, jump between emoji groups.
-                        strip?.jump(if (dy < 0) 1 else -1)
-                        haptics.pulse(HapticPreset.Strong)
-                    } else if (abs(dx) >= Contact.PAGE_KEYS) {
-                        strip?.turn(if (dx > 0) -1 else 1)
-                        haptics.pulse(HapticPreset.Strong)
-                    }
+                if (altOrPanel) {
+                    if (panelOpen) swipePanel(outcome.points)
                     return
                 }
                 if (outcome.deletesWord) {
@@ -691,8 +713,15 @@ class AtlasIme : InputMethodService() {
         showModifiers()
     }
 
+    /** Measures a swipe in keys across and rows down, and moves the panel if it went far enough. */
+    private fun swipePanel(points: List<Sample>) {
+        val across = (points.last().x - points.first().x) * 10
+        val down = (points.last().y - points.first().y) * 4
+        if (maxOf(abs(across), abs(down)) >= Contact.PAGE_KEYS && panel?.swipe(across, down) == true) haptics.pulse(HapticPreset.Strong)
+    }
+
     private fun isTapKey(key: String): Boolean {
-        if (stripPaging) return false
+        if (altOrPanel) return false
         return if (key == Layout.SPACE) ' ' in tapKeys else Layout.isLetter(key) && key[0] in tapKeys
     }
 
@@ -700,7 +729,7 @@ class AtlasIme : InputMethodService() {
     private fun canHold(event: KeyEvent): Boolean {
         if (!holdSymbols || !field.words || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
         if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
-        if (modifiers.shift != Modifiers.Level.Off || stripPaging || !event.hasNoModifiers() || event.isCapsLockOn) return false
+        if (modifiers.shift != Modifiers.Level.Off || altOrPanel || !event.hasNoModifiers() || event.isCapsLockOn) return false
         // A modifier still in the queue has not changed the levels above yet.
         if (pendingInput.any { it.event?.keyCode?.let(Modifiers::isModifier) == true }) return false
         val device = event.device ?: return false
@@ -794,6 +823,11 @@ class AtlasIme : InputMethodService() {
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
+            // Back closes an open panel and stays in the app.
+            if (panelOpen) {
+                closePanel()
+                return true
+            }
             passingBack = true
             requestHideSelf(0)
             return true
@@ -829,8 +863,10 @@ class AtlasIme : InputMethodService() {
     private fun key(event: KeyEvent): Boolean {
         if (Modifiers.isModifier(event.keyCode)) {
             modifiers.key(event)
+            if (panelOpen && !isInputViewShown) main.post(showPanel)
             return true
         }
+        if (panelKey(event)) return true
         // Enter comes before the Ctrl shortcuts, because the Enter key setting can use Ctrl + Enter.
         if (!event.isMetaPressed && enter(event)) return true
         if (event.isCtrlPressed && event.keyCode != KeyEvent.KEYCODE_DEL || event.isMetaPressed) {
@@ -872,6 +908,19 @@ class AtlasIme : InputMethodService() {
                 // Controlled insertion avoids unacknowledged app key updates overtaking later input.
                 composer.type(text)
             }
+        }
+        return true
+    }
+
+    /** With the panel on screen, a letter key types the item that it shows. A blank key types nothing. Other keys stay as they are. */
+    private fun panelKey(event: KeyEvent): Boolean {
+        if (event.repeatCount > 0 && event.keyCode == pickedKey) return true
+        pickedKey = 0
+        if (!panelOpen || !isInputViewShown || !HoldEngine.isLetter(event.keyCode) || event.isCtrlPressed || event.isMetaPressed) return false
+        if (event.repeatCount > 0) return true
+        panel?.item(('A' + (event.keyCode - KeyEvent.KEYCODE_A)).toString())?.let { item ->
+            pickedKey = event.keyCode
+            typePanelItem(item)
         }
         return true
     }
@@ -920,9 +969,9 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun showModifiers() {
-        strip?.showSymbols = modifiers.alt != Modifiers.Level.Off
-        strip?.showEmoji = modifiers.sym != Modifiers.Level.Off
-        contact.paging = stripPaging
+        strip?.visibility = if (panelOpen) View.GONE else View.VISIBLE
+        panel?.mode = modifiers.panel
+        contact.paging = panelOpen
     }
 
     override fun onDestroy() {

@@ -58,7 +58,7 @@ class Contact {
     private var lastKeyDown = Long.MIN_VALUE
     private var typing = false
 
-    /** Alt or Sym is on, so swipes turn strip pages: they can be shorter and start on any key. */
+    /** The Sym panel is open, so swipes turn its pages: they can be shorter and start on any key. */
     var paging = false
 
     /** Whether the current contact could still type, with how far it has moved in key widths. */
@@ -67,7 +67,13 @@ class Contact {
     val points: List<Sample> get() = (state as? State.Touching)?.points ?: emptyList()
 
     fun down(sample: Sample) {
-        state = if (sample.valid && heldKeys.isEmpty()) State.Touching(sample, sample.time < blockedUntil) else State.Ignored
+        state = when {
+            !sample.valid -> State.Ignored
+            // The panel needs a resting finger, so a key or its cooldown does not block a touch there.
+            paging -> State.Touching(sample, false)
+            heldKeys.isEmpty() -> State.Touching(sample, sample.time < blockedUntil)
+            else -> State.Ignored
+        }
     }
 
     fun move(samples: List<Sample>) {
@@ -139,8 +145,12 @@ class Contact {
         val points = touching.points
         val first = points.first()
         val last = points.last()
-        if (touching.travel >= if (paging) PAGE_KEYS else SWIPE_KEYS) {
-            if (paging) return Outcome.Swipe(points.toList(), first.time, last.time)
+        // A finger that takes its time is looking at the keys in the panel, so its path turns no page.
+        if (paging) {
+            val swiped = touching.travel >= PAGE_KEYS && last.time - first.time <= PAGE_MILLIS
+            return if (swiped) Outcome.Swipe(points.toList(), first.time, last.time) else null
+        }
+        if (touching.travel >= SWIPE_KEYS) {
             // Checked here because the pickup below trims a swipe to its first letter, which loses its real start.
             val deletes = isDeleteWordSwipe(points)
             touching.pickup.finish()
@@ -227,8 +237,10 @@ class Contact {
         const val SETTLE_MILLIS = 30L
         /** Movement in key widths before a contact becomes a swipe. */
         const val SWIPE_KEYS = .6f
-        /** How far a swipe must go, in keys across or rows down, to turn a strip page or jump an emoji group. */
+        /** How far a swipe must go, in keys across or rows down, to change the page or the group in the Sym panel. */
         const val PAGE_KEYS = .45f
+        /** A contact in the Sym panel that lasts longer than this is a resting finger, not a swipe. */
+        const val PAGE_MILLIS = 500L
         /** Movement in key widths before a contact that starts during a key cooldown counts. */
         private const val AFTER_KEY_SWIPE_KEYS = 1.5f
         private const val KEY_COOLDOWN_MILLIS = 200L
@@ -242,7 +254,7 @@ class Contact {
 
         /** The numbers that decide what a contact counts as, for the raw input log. */
         val tuning: Map<String, Any> get() = mapOf(
-            "settleMillis" to SETTLE_MILLIS, "swipeKeys" to SWIPE_KEYS, "pageKeys" to PAGE_KEYS,
+            "settleMillis" to SETTLE_MILLIS, "swipeKeys" to SWIPE_KEYS, "pageKeys" to PAGE_KEYS, "pageMillis" to PAGE_MILLIS,
             "afterKeySwipeKeys" to AFTER_KEY_SWIPE_KEYS, "keyCooldownMillis" to KEY_COOLDOWN_MILLIS,
             "typingGapMillis" to TYPING_GAP_MILLIS, "typingCooldownMillis" to TYPING_COOLDOWN_MILLIS,
             "sampleDistance" to SAMPLE_DISTANCE, "requiredEvidence" to REQUIRED_EVIDENCE, "straight" to STRAIGHT,

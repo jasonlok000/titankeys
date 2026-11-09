@@ -19,8 +19,8 @@ export default function Guide() {
       <Row title="Shift and Alt" subtitle="Push one time for the next letter only. Push two times quickly to lock. Push again to unlock." wrapSubtitle />
       <Row title="Word suggestions" subtitle="The strip shows words and spelling corrections as you type. Touch a word to type it." wrapSubtitle />
       <Row title="Delete a word" subtitle="Push Alt, then push Backspace. You can also use Ctrl and Backspace, or flick left from Backspace." wrapSubtitle />
-      <Row title="More symbols" subtitle="When Alt is on, the strip shows symbols. Touch a symbol to type it. Swipe left or right on the keyboard to see more." wrapSubtitle />
-      <Row title="Emoji" subtitle="Sym operates like Shift. The strip shows emoji, with recent emoji first. Swipe left or right on the keyboard to see more, or up or down for the next group." wrapSubtitle />
+      <Row title="More symbols" subtitle="Push Sym to open the panel. Each key shows a symbol. Rest your finger on a key to see its symbol larger. Push the key to type the symbol. The panel then closes. Swipe up or down on the keyboard to see more." wrapSubtitle />
+      <Row title="Emoji" subtitle="Push Sym again to show emoji, with recent emoji first. Push a key to type its emoji. Swipe left or right on the keyboard to change the group, or up or down to see more. Push Sym again to close the panel." wrapSubtitle />
     </Section>
     <Section title="Your words">
       <Row title="New words" subtitle="TitanKeys learns the new words that you use. To see, add or block words, open Settings and select Your words." wrapSubtitle />
@@ -28,7 +28,7 @@ export default function Guide() {
     </Section>
     <Section title="Problems">
       <Row title="Check the setup" subtitle="If a part of TitanKeys does not operate correctly, open Settings and select Setup. Make sure that all steps show Done." wrapSubtitle />
-      <Row title="Sym does not show emoji" subtitle="In the phone Settings, open Shortcut keys. Set Sym key to Programmable key." wrapSubtitle />
+      <Row title="Sym does not open the panel" subtitle="In the phone Settings, open Shortcut keys. Set Sym key to Programmable key." wrapSubtitle />
       <Row title="Swiping does not operate in an app" subtitle="Open Scroll assistant and find the app. Make sure that it shows Sliding Mode 1." wrapSubtitle />
     </Section>
   </Screen>;

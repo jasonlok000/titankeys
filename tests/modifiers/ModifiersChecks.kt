@@ -2,6 +2,7 @@ package com.atlas.keyboard
 
 import android.view.KeyEvent
 import com.atlas.keyboard.Modifiers.Level
+import com.atlas.keyboard.Modifiers.Panel
 
 private const val SHIFT = KeyEvent.KEYCODE_SHIFT_LEFT
 private const val OTHER_SHIFT = KeyEvent.KEYCODE_SHIFT_RIGHT
@@ -31,7 +32,13 @@ fun main() {
     lockedThenHold()
     bothShiftKeys()
     shortcutWhileHeld()
-    altAndSym()
+    alt()
+    symCycle()
+    symHasNoLock()
+    panelIsAToggle()
+    panelStaysWhileTyping()
+    closingThePanel()
+    panelAndOtherModifiers()
     onlyOneModifier()
     repeatsAndStrayEvents()
     println("Modifier checks passed")
@@ -195,29 +202,139 @@ private fun shortcutWhileHeld() = Keyboard().run {
     same(shift, Level.Off, "A shortcut uses the held Shift")
 }
 
-private fun altAndSym() {
-    for ((code, level) in listOf<Pair<Int, Keyboard.() -> Level>>(ALT to { modifiers.alt }, SYM to { modifiers.sym })) {
-        Keyboard().run {
-            down(code)
-            up(code, after = WORD)
-            same(level(), Level.Once, "A long press of Alt or Sym must keep the strip open")
-            type()
-            same(level(), Level.Off, "One press of Alt or Sym must end after one character")
-        }
-        Keyboard().run {
-            down(code)
-            type()
-            up(code)
-            same(level(), Level.Off, "Alt or Sym held for a character must end with the key")
-        }
-        Keyboard().run {
-            press(code)
-            idle(GAP)
-            down(code)
-            type()
-            up(code, after = WORD)
-            same(level(), Level.Locked, "A double press of Alt or Sym must lock even when held")
-        }
+private fun alt() {
+    Keyboard().run {
+        down(ALT)
+        up(ALT, after = WORD)
+        same(modifiers.alt, Level.Once, "A long press of Alt must stay on for the next key")
+        type()
+        same(modifiers.alt, Level.Off, "One press of Alt must end after one character")
+    }
+    Keyboard().run {
+        down(ALT)
+        type()
+        up(ALT)
+        same(modifiers.alt, Level.Off, "Alt held for a character must end with the key")
+    }
+    Keyboard().run {
+        press(ALT)
+        idle(GAP)
+        down(ALT)
+        type()
+        up(ALT, after = WORD)
+        same(modifiers.alt, Level.Locked, "A double press of Alt must lock even when held")
+    }
+}
+
+private fun symCycle() = Keyboard().run {
+    same(modifiers.panel, Panel.Closed, "The panel must start closed")
+    press(SYM)
+    same(modifiers.panel, Panel.Symbols, "The first press of Sym must show symbols")
+    idle(WORD)
+    press(SYM)
+    same(modifiers.panel, Panel.Emoji, "The second press of Sym must show emoji")
+    idle(WORD)
+    press(SYM)
+    same(modifiers.panel, Panel.Closed, "The third press of Sym must go back to normal typing")
+    idle(WORD)
+    press(SYM)
+    same(modifiers.panel, Panel.Symbols, "The cycle must start again")
+}
+
+private fun symHasNoLock() = Keyboard().run {
+    press(SYM)
+    idle(GAP)
+    press(SYM)
+    same(modifiers.panel, Panel.Emoji, "A quick second press of Sym must move on, not lock")
+    idle(GAP)
+    press(SYM)
+    same(modifiers.panel, Panel.Closed, "A quick third press of Sym must close the panel")
+}
+
+private fun panelIsAToggle() {
+    Keyboard().run {
+        down(SYM)
+        same(modifiers.panel, Panel.Symbols, "The panel must open when Sym goes down")
+        same(modifiers.isHeld(SYM), true, "Sym must count as held while it is down")
+        up(SYM, after = WORD)
+        same(modifiers.panel, Panel.Symbols, "The panel must stay open after Sym is let go")
+        same(modifiers.isHeld(SYM), false, "Sym must not count as held after it is let go")
+    }
+    Keyboard().run {
+        down(SYM)
+        down(SYM)
+        same(modifiers.panel, Panel.Symbols, "A second down without an up must not move the panel on")
+    }
+    Keyboard().run {
+        press(SYM)
+        up(SYM, after = WORD)
+        same(modifiers.panel, Panel.Symbols, "An up without a down must change nothing")
+    }
+}
+
+private fun panelStaysWhileTyping() = Keyboard().run {
+    press(SYM)
+    type(3)
+    same(modifiers.panel, Panel.Symbols, "Only a pick closes the panel, not other typing")
+    down(SYM)
+    type()
+    up(SYM)
+    same(modifiers.panel, Panel.Emoji, "Holding Sym while typing must not close the panel")
+}
+
+private fun closingThePanel() {
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(SYM)
+        modifiers.closePanel()
+        same(modifiers.panel, Panel.Closed, "A pick must go back to normal typing")
+        idle(WORD)
+        press(SYM)
+        same(modifiers.panel, Panel.Symbols, "After a pick the cycle must start at symbols")
+    }
+    Keyboard().run {
+        press(SYM)
+        modifiers.clear()
+        same(modifiers.panel, Panel.Closed, "Clear must close the panel")
+        down(SYM)
+        same(modifiers.panel, Panel.Symbols, "Clear must forget that Sym was down")
+    }
+}
+
+private fun panelAndOtherModifiers() {
+    Keyboard().run {
+        press(SHIFT)
+        idle(WORD)
+        press(SYM)
+        same(shift, Level.Off, "Sym must turn Shift off")
+        same(modifiers.panel, Panel.Symbols, "Sym must open the panel with Shift on")
+    }
+    Keyboard().run {
+        press(ALT)
+        idle(WORD)
+        press(SYM)
+        same(modifiers.alt, Level.Off, "Sym must turn Alt off")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        same(modifiers.panel, Panel.Closed, "Alt must close the panel")
+        same(modifiers.alt, Level.Once, "Alt must be on after it closes the panel")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(SHIFT)
+        same(modifiers.panel, Panel.Closed, "Shift must close the panel")
+        same(shift, Level.Once, "Shift must be on after it closes the panel")
+    }
+    Keyboard().run {
+        down(SYM)
+        press(SHIFT)
+        type()
+        same(shift, Level.Off, "A held Sym must not keep one press of Shift on")
     }
 }
 

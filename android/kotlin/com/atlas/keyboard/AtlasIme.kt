@@ -1,6 +1,7 @@
 package com.atlas.keyboard
 
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Paint
 import android.hardware.display.DisplayManager
@@ -201,10 +202,22 @@ class AtlasIme : InputMethodService() {
         window.callback = TouchpadWindowCallback(window.callback) { event ->
             (editing && touchpad.accepts(event)).also { if (it) motion(event) }
         }
+        // With no field active, a touchpad event only stops here, so that the app under the overlay does not scroll.
         overlay = TouchpadOverlay(this) { event ->
-            (editing && touchpad.accepts(event)).also { if (it) motion(event) }
+            touchpad.accepts(event).also { if (it && editing) motion(event) }
         }
+        TypingSettings.listen(this, overlaySetting)
+        updateOverlay()
         loadEmoji()
+    }
+
+    /** The settings screen is open when this changes, so the keyboard is idle and no field start would apply it. */
+    private val overlaySetting = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == TypingSettings.TOUCHPAD_ONLY_IN_FIELDS) updateOverlay()
+    }
+
+    private fun updateOverlay() {
+        if (editing || TypingSettings.touchpadOnlyInFields(this)) overlay.show() else overlay.hide()
     }
 
     /** Reads the emoji list away from the main thread, which also loads the emoji font before Sym is first pressed. */
@@ -278,14 +291,13 @@ class AtlasIme : InputMethodService() {
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
             main.post(showStrip)
-            overlay.show()
         } else {
             composer.stop()
-            overlay.hide()
             // A returning window starts with no field just before its own field takes focus. A strip that
             // hides for that moment tells the app the keyboard was closed, and the app then drops its field.
             main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
         }
+        updateOverlay()
     }
 
     /** Only the package is kept, so the Enter key setting can offer apps without asking to see every installed app. */
@@ -369,7 +381,7 @@ class AtlasIme : InputMethodService() {
         selectingWithSpace = false
         deadKeyPending = false
         closePanel()
-        overlay.hide()
+        updateOverlay()
         super.onFinishInput()
     }
 
@@ -1058,6 +1070,7 @@ class AtlasIme : InputMethodService() {
         composer.stop()
         autocorrect.release()
         editor.cancelState()
+        TypingSettings.stopListening(this, overlaySetting)
         overlay.hide()
         rawLog?.finish()
         rawLog = null

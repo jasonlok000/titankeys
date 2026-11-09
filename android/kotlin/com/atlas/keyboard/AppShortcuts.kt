@@ -58,11 +58,16 @@ object AppShortcuts {
         packageName
     }
 
-    /** Opens the letter's app. Returns false when the letter has no app or the app is gone. */
+    /**
+     * Opens the letter's app at once, with no open animation, so the shortcut feels instant. Returns false
+     * when the letter has no app or the app is gone.
+     */
     fun open(context: Context, letter: Char): Boolean {
         val packageName = app(context, letter) ?: return false
         val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return false
-        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED))
+        // A custom animation of none is ignored for a start from a service; only this flag skips it.
+        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+            or Intent.FLAG_ACTIVITY_NO_ANIMATION))
         return true
     }
 }

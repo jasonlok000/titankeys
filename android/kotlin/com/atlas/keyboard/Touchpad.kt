@@ -39,7 +39,7 @@ class Touchpad(private val display: Display) {
 
     /**
      * The touchpad reports one point, even for two fingers, so Android never sees a second pointer. Two fingers
-     * touch a larger area than one: one finger stays at a raw touch size of 3 or less, two fingers reach 5 to 8.
+     * touch a larger area than one: one finger reaches a raw touch size of 5 on a long swipe, two fingers reach 6 to 8.
      */
     private fun twoFingers(event: MotionEvent): Boolean {
         if (event.device?.name != DEVICE) return false
@@ -145,6 +145,6 @@ class Touchpad(private val display: Display) {
         /** The touchpad ranges Android reports, for a device that does not give them. */
         const val X_RANGE = 1079f
         const val Y_RANGE = 748.75f
-        const val TWO_FINGER_SIZE = 5
+        const val TWO_FINGER_SIZE = 6
     }
 }

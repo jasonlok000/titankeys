@@ -1,6 +1,9 @@
 package com.atlas.keyboard
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Paint
@@ -85,6 +88,9 @@ class AtlasIme : InputMethodService() {
     private var launcherFieldHasText = false
     private val consumedKeys = HashSet<Int>()
     private var deadKeyPending = false
+    private val hold = TouchpadHold()
+    /** A process that died with the status on left the firmware's status as it was, so the first field start clears it. */
+    private var statusReported = false
     private var tapKeys = ""
     private var holdSymbols = false
     private val holdEngine = HoldEngine(HoldEngine.Output { replaceHeldLetter() })
@@ -115,7 +121,8 @@ class AtlasIme : InputMethodService() {
     }
 
     private val hideStrip = Runnable {
-        if (editing) return@Runnable
+        // A held status has no strip to hide, and hiding the window would give the touchpad back to the app.
+        if (editing || hold.held) return@Runnable
         try {
             hideWindow()
             requestHideSelf(0)
@@ -285,17 +292,73 @@ class AtlasIme : InputMethodService() {
             touchpad.accepts(event).also { if (it && editing) motion(event) }
         }
         TypingSettings.listen(this, overlaySetting)
+        registerReceiver(screenOn, IntentFilter(Intent.ACTION_SCREEN_ON), RECEIVER_NOT_EXPORTED)
         updateOverlay()
         loadEmoji()
     }
 
     /** The settings screen is open when this changes, so the keyboard is idle and no field start would apply it. */
     private val overlaySetting = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == TypingSettings.TOUCHPAD_ONLY_IN_FIELDS) updateOverlay()
+        if (key != TypingSettings.TOUCHPAD_ONLY_IN_FIELDS) return@OnSharedPreferenceChangeListener
+        updateOverlay()
+        updateHold()
+    }
+
+    private val screenOn = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) = updateHold()
     }
 
     private fun updateOverlay() {
         if (editing || TypingSettings.touchpadOnlyInFields(this)) overlay.show() else overlay.hide()
+    }
+
+    private fun holdWanted() = TouchpadHold.wanted(TypingSettings.touchpadOnlyInFields(this), editing, overlay.up, BackService.enabled(this))
+
+    /** Puts the status that the firmware reads where the setting and the field need it. See [TouchpadHold]. */
+    private fun updateHold() {
+        if (holdWanted()) {
+            // A strip that is still up hides first, and that calls this again.
+            if (hold.held || isInputViewShown || main.hasCallbacks(showHold)) return
+            main.postDelayed(showHold, hold.delay(SystemClock.uptimeMillis()))
+            return
+        }
+        main.removeCallbacks(showHold)
+        val wasHeld = hold.held
+        hold.hidden()
+        // With a field, the strip takes over the window that is already up.
+        if (wasHeld && !editing) hideHeldWindow()
+    }
+
+    private val showHold = Runnable {
+        if (!holdWanted() || hold.held || isInputViewShown || currentInputBinding == null) return@Runnable
+        try {
+            backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
+            showWindow(false)
+            // Only the status is wanted. Before the first frame, this takes the window back off the screen.
+            window.hide()
+            hold.shown(SystemClock.uptimeMillis())
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not report the keyboard status", error)
+        }
+    }
+
+    private fun hideHeldWindow() {
+        try {
+            hideWindow()
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not clear the keyboard status", error)
+        }
+    }
+
+    /** What Back does while the status is held. Nothing shows, so it must not stop at the keyboard. */
+    private fun heldBack(event: KeyEvent, down: Boolean): Boolean = when (TouchpadHold.backStep(event.deviceId != KeyCharacterMap.VIRTUAL_KEYBOARD, down)) {
+        TouchpadHold.Back.ToApp -> false
+        TouchpadHold.Back.Keep -> true
+        TouchpadHold.Back.KeepAndHide -> {
+            hideHeldWindow()
+            main.post(sendBack)
+            true
+        }
     }
 
     /** Reads the emoji list away from the main thread, which also loads the emoji font before Sym is first pressed. */
@@ -377,6 +440,12 @@ class AtlasIme : InputMethodService() {
             main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
         }
         updateOverlay()
+        if (!statusReported) {
+            statusReported = true
+            // A new back disposition sends the current status, which clears a status that a dead process left on.
+            backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
+        }
+        updateHold()
     }
 
     /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
@@ -467,6 +536,8 @@ class AtlasIme : InputMethodService() {
 
     override fun onWindowHidden() {
         super.onWindowHidden()
+        // Android's hide also turned the status off.
+        hold.hidden()
         // A panel that nobody can see must not take the next key.
         closePanel()
         // A delayed hide from the previous app arrives just after this field starts. A later hide, or one
@@ -480,6 +551,7 @@ class AtlasIme : InputMethodService() {
         } else if (editing && !typedInField && SystemClock.uptimeMillis() - fieldStartedAt < STALE_HIDE_MILLIS) {
             main.post(showStrip)
         }
+        updateHold()
     }
 
     /** A key or swipe in a field that Back left hidden brings the strip back. */
@@ -518,6 +590,7 @@ class AtlasIme : InputMethodService() {
         deadKeyPending = false
         closePanel()
         updateOverlay()
+        updateHold()
         super.onFinishInput()
     }
 
@@ -1107,6 +1180,7 @@ class AtlasIme : InputMethodService() {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
+        if (keyCode == KeyEvent.KEYCODE_BACK && hold.held && !editing) return heldBack(event, down = true)
         // Android hands back to a shown keyboard first, which would only close the strip.
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
             backKey(event, down = true)
@@ -1149,6 +1223,7 @@ class AtlasIme : InputMethodService() {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
+        if (keyCode == KeyEvent.KEYCODE_BACK && hold.held && !editing) return heldBack(event, down = false)
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
             // Back closes an open panel and stays in the app.
             if (!backKey(event, down = false)) {
@@ -1355,6 +1430,9 @@ class AtlasIme : InputMethodService() {
 
     override fun onDestroy() {
         editing = false
+        // A held status must not outlive the keyboard.
+        if (hold.held) hideHeldWindow()
+        unregisterReceiver(screenOn)
         updateKeyWatch()
         main.removeCallbacksAndMessages(null)
         settlements.clear()

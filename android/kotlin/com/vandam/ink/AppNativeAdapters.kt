@@ -12,11 +12,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.view.View
-import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import android.view.inputmethod.InputMethodManager
-import android.widget.EditText
 import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
@@ -44,36 +40,14 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private var transferring = false
     private val keyCapture = lazy { KeyCapture(activity) { key -> activity.emit(JSONObject().put("type", "atlas-key").put("key", key).toString()) } }
     private var keyCaptureRequested = false
-    private val windowFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
-        if (hasFocus) activity.window.decorView.post {
-            if (visible && watchingRequested && activity.hasWindowFocus()) {
-                // Ink may have blurred the field while the window was away; ask the page to autofocus again.
-                activity.emit(JSONObject().put("type", "atlas-focus").toString())
-                val editor = previewEditor(activity.window.decorView)
-                if (editor != null && !editor.hasFocus()) {
-                    editor.requestFocus()
-                    val input = activity.getSystemService(InputMethodManager::class.java)
-                    input.restartInput(editor)
-                    input.showSoftInput(editor, InputMethodManager.SHOW_IMPLICIT)
-                }
-            }
-        }
-    }
     private val keyboardSettings = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) = publishState()
     }
 
     private fun publishState() = activity.emit(JSONObject().put("type", "atlas-state").toString())
 
-    private fun previewEditor(view: View): EditText? = when {
-        view is EditText && view.isShown -> view
-        view is ViewGroup -> (0 until view.childCount).firstNotNullOfOrNull { previewEditor(view.getChildAt(it)) }
-        else -> null
-    }
-
     init {
         activity.application.registerActivityLifecycleCallbacks(this)
-        activity.window.decorView.viewTreeObserver.addOnWindowFocusChangeListener(windowFocus)
         // Enabling and choosing the keyboard happen outside the app; the screens follow as they change.
         for (setting in listOf(Settings.Secure.ENABLED_INPUT_METHODS, Settings.Secure.DEFAULT_INPUT_METHOD,
                 Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES))
@@ -112,7 +86,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
 
     override fun onActivityDestroyed(target: Activity) {
         if (target !== activity) return
-        activity.window.decorView.viewTreeObserver.removeOnWindowFocusChangeListener(windowFocus)
         visible = false
         syncPreview()
         watchingRequested = false
@@ -207,16 +180,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 "unwatch" -> {
                     watchingRequested = false
                     syncPreview()
-                    // Give Android a non-editor destination instead of leaving the hidden preview served.
-                    val root = activity.window.decorView as ViewGroup
-                    val descendants = root.descendantFocusability
-                    root.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
-                    try {
-                        root.isFocusableInTouchMode = true
-                        root.requestFocus()
-                    } finally {
-                        root.descendantFocusability = descendants
-                    }
                     "null"
                 }
                 "preview" -> {

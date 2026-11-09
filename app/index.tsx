@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
 import { Canvas, CanvasText, Icon, Screen, Stack, Text, replace, useSnapshot } from "ink";
 import { arrowOutward } from "ink/icons";
 import guideIcon from "../assets/icons/guide.svg";
 import settingsIcon from "../assets/icons/settings.svg";
-import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, markNotesSeen, onHomeFocus, openScrollAssistant, state } from "../lib/atlas";
+import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, markNotesSeen, openScrollAssistant, state } from "../lib/atlas";
 import { hasReleaseNotes } from "../lib/release-notes";
 import { WhatsNew } from "../lib/whats-new";
 import { TryArea } from "../lib/try";
@@ -31,16 +30,13 @@ function Step({ step, title, action, onPress }: {
 }
 
 function FrontPage() {
-  const [focus, setFocus] = useState(0);
-  const refocus = () => setFocus(value => value + 1);
-  useEffect(() => onHomeFocus(refocus), []);
   return <Screen title="Atlas" rightActions={[
     { icon: guideIcon, onPress: () => replace({ path: "/settings/guide", params: { from: "home" } }) },
     { icon: settingsIcon, onPress: () => replace("/settings") },
   ]}>
-    <Stack align="stretch" onPress={refocus}>
+    <Stack align="stretch">
       <Canvas width={1} height={12} />
-      <TryArea placeholder="Swipe a word on the keyboard" focus={focus} />
+      <TryArea placeholder="Swipe a word on the keyboard" />
     </Stack>
   </Screen>;
 }

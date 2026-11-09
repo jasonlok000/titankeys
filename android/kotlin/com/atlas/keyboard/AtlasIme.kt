@@ -86,6 +86,16 @@ class AtlasIme : InputMethodService() {
         }
     }
 
+    private val hideStrip = Runnable {
+        if (editing) return@Runnable
+        try {
+            hideWindow()
+            requestHideSelf(0)
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not hide the suggestion strip", error)
+        }
+    }
+
     // Apps on Android's newer back handling ignore a back key from a keyboard, so a system back goes first.
     private val sendBack = Runnable { if (!BackService.back() && editing) sendDownUpKeyEvents(KeyEvent.KEYCODE_BACK) }
 
@@ -202,6 +212,7 @@ class AtlasIme : InputMethodService() {
         swipeTyping = TypingSettings.swipeTyping(this)
         strip?.showSuggestions = showSuggestions()
         main.removeCallbacks(showStrip)
+        main.removeCallbacks(hideStrip)
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
             main.post(showStrip)
@@ -209,12 +220,9 @@ class AtlasIme : InputMethodService() {
         } else {
             composer.stop()
             overlay.hide()
-            try {
-                hideWindow()
-                requestHideSelf(0)
-            } catch (error: RuntimeException) {
-                Log.w("Atlas", "Could not hide the suggestion strip", error)
-            }
+            // A returning window starts with no field just before its own field takes focus. A strip that
+            // hides for that moment tells the app the keyboard was closed, and the app then drops its field.
+            main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
         }
     }
 
@@ -790,6 +798,8 @@ class AtlasIme : InputMethodService() {
         private const val BACK_SETTLE_MILLIS = 300L
         /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
         private const val STALE_HIDE_MILLIS = 500L
+        /** The field of a returning window started within 30 ms of its empty start. */
+        private const val NO_FIELD_HIDE_MILLIS = 200L
         private const val SELECT_AFTER_CURSOR_MILLIS = 250L
         private const val FRAME_MILLIS = 16L
         /** Characters read on each side of the cursor to find the word it is in. */

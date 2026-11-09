@@ -8,7 +8,7 @@
 - Short swipes for symbols: When Alt is on, a short swipe shows more symbols.
 - Vibration: When you touch a word on the strip, the phone vibrates.
 - Best word: The best word is in the middle of the strip.
-- Punctuation and capitals: When you type with the keys, Atlas removes the space before a comma, full stop, or other punctuation. Atlas also corrects words such as "i" to "I" and "dont" to "don't". Swipe typing already does this.
+- Punctuation and capitals: When you type with the keys, Atlas removes the space before a comma, full stop, or other punctuation. Atlas also corrects words such as "i" to "I" and "dont" to "don't". If the next word makes it clear, Atlas changes words such as "ill" to "I'll". Swipe typing already does this.
 
 ## Fixed
 - Unwanted touches: When you type, a finger on the keys does not start a swipe. It also does not type a tap key.

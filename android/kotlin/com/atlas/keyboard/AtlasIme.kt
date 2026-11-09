@@ -22,6 +22,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.SurroundingText
 import android.widget.LinearLayout
 import com.atlas.engine.Calibration
@@ -712,7 +713,7 @@ class AtlasIme : InputMethodService() {
         QuickSetting.CursorControl -> TypingSettings.cursorControl(this)
         QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this)
         QuickSetting.TouchpadOnlyInFields -> TypingSettings.touchpadOnlyInFields(this)
-        QuickSetting.OpenSettings -> true
+        QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard -> true
     }
 
     private fun writeQuickSetting(item: QuickSetting, on: Boolean) = when (item) {
@@ -727,18 +728,31 @@ class AtlasIme : InputMethodService() {
         QuickSetting.CursorControl -> TypingSettings.cursorControl(this, on)
         QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this, on)
         QuickSetting.TouchpadOnlyInFields -> TypingSettings.touchpadOnlyInFields(this, on)
-        QuickSetting.OpenSettings -> Unit
+        QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard -> Unit
     }
 
     /** Pushing a key on the quick settings page. The change applies at once, and then the panel goes back to normal typing. */
     private fun useQuickSetting(item: QuickSetting) {
-        if (item == QuickSetting.OpenSettings) openSettings()
-        else {
-            writeQuickSetting(item, !quickSettingOn(item))
-            readSettings()
+        when (item) {
+            QuickSetting.OpenSettings -> openSettings()
+            QuickSetting.ChangeKeyboard -> showKeyboardPicker()
+            else -> {
+                writeQuickSetting(item, !quickSettingOn(item))
+                readSettings()
+            }
         }
         haptics.settingChanged()
         closePanel()
+    }
+
+    /**
+     * Shows Android's list of keyboards. The list can take the release of a key that is still down and the field stays
+     * open, so nothing else would end that key. A key that stays down would stop the touchpad from typing.
+     */
+    private fun showKeyboardPicker() {
+        contact.releaseKeys()
+        modifiers.clear()
+        getSystemService(InputMethodManager::class.java).showInputMethodPicker()
     }
 
     /** Opens the app at its Settings page, with the same extra that its notifications use to open a page. */

@@ -9,8 +9,7 @@ import android.view.KeyEvent
  * Each press of Sym moves the panel to its next step, and the panel stays open after Sym is let go.
  * Only one of them is on at a time. While the panel is open, Alt opens the quick settings page and goes back from it.
  *
- * Ctrl is separate from those: it has no sticky state and applies only while it is held. Once it has been held for
- * [CTRL_OVERLAY_MILLIS], the Ctrl overlay shows until the last Ctrl key is let go.
+ * Ctrl is separate from those: it has no sticky state and applies only while it is held.
  */
 class Modifiers {
     enum class Level { Off, Once, Locked }
@@ -43,14 +42,7 @@ class Modifiers {
     /** A quick second press locks Shift or Alt, for the setting of the same name. */
     var doublePressLocks = false
 
-    /** Ctrl has been held long enough to show what its shortcuts do. */
-    var ctrlOverlay = false
-        private set
-
-    /** When the Ctrl overlay shows if Ctrl stays down, or null if it is not waiting to show. */
-    var ctrlOverlayAt: Long? = null
-        private set
-
+    /** A key that counts as Ctrl is down. The modifier bar shows this at once. */
     val ctrlHeld get() = ctrlKeys.isNotEmpty()
 
     val metaState: Int
@@ -66,6 +58,9 @@ class Modifiers {
         Key.Shift -> shift
         Key.Alt -> alt
     }
+
+    /** The key is on and no finger holds it down, so it still applies to what comes next. */
+    fun sticky(key: Key) = level(key) != Level.Off && held.keys.none { keyOf(it) == key }
 
     /** Pressing Shift or Alt on the touchpad or the keyboard. With the panel open, Alt is the quick settings key. */
     fun press(key: Key, time: Long) {
@@ -137,25 +132,6 @@ class Modifiers {
     /** Back to normal typing, after an item is picked or the keyboard is hidden. */
     fun closePanel() {
         panel = Panel.Closed
-        closeCtrlOverlay()
-    }
-
-    private fun closeCtrlOverlay() {
-        ctrlOverlay = false
-        ctrlOverlayAt = null
-    }
-
-    /** A key pushed before the overlay shows is a quick shortcut, so the overlay waits again and does not flash. */
-    fun keyWithCtrl(time: Long) {
-        if (ctrlOverlayAt != null) ctrlOverlayAt = time + CTRL_OVERLAY_MILLIS
-    }
-
-    /** The overlay's timer has run. It shows if the time has come and Ctrl is still down. */
-    fun ctrlWaitOver(now: Long) {
-        val due = ctrlOverlayAt ?: return
-        if (now < due) return
-        ctrlOverlayAt = null
-        ctrlOverlay = true
     }
 
     fun isCtrl(code: Int) = code == KeyEvent.KEYCODE_CTRL_LEFT || code == KeyEvent.KEYCODE_CTRL_RIGHT || fnIsCtrl && code == FN
@@ -167,7 +143,6 @@ class Modifiers {
 
     fun down(code: Int, time: Long) {
         if (isCtrl(code)) {
-            if (ctrlKeys.isEmpty()) ctrlOverlayAt = time + CTRL_OVERLAY_MILLIS
             ctrlKeys += code
             return
         }
@@ -188,7 +163,7 @@ class Modifiers {
 
     fun up(code: Int, time: Long) {
         if (isCtrl(code)) {
-            if (ctrlKeys.remove(code) && ctrlKeys.isEmpty()) closeCtrlOverlay()
+            ctrlKeys.remove(code)
             return
         }
         if (code == KeyEvent.KEYCODE_SYM) symHeld = false
@@ -241,7 +216,6 @@ class Modifiers {
         symHeld = false
         if (keepCtrl) return
         ctrlKeys.clear()
-        closeCtrlOverlay()
     }
 
     /**
@@ -254,8 +228,6 @@ class Modifiers {
         const val DOUBLE_PRESS_MILLIS = 300L
         /** Shift down for at least this long was held, not pressed. It matches an Android long press. */
         const val HOLD_MILLIS = 400L
-        /** How long Ctrl stays down before the overlay shows, so a quick shortcut does not flash it. */
-        const val CTRL_OVERLAY_MILLIS = 200L
         /** The key code that the Use fn as Ctrl setting listens for. */
         const val FN = KeyEvent.KEYCODE_FUNCTION
 

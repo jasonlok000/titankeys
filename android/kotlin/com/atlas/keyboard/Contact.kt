@@ -79,7 +79,7 @@ class Contact {
     private var restCovered = false
 
     /**
-     * The Sym panel or the Ctrl overlay is on screen, so a finger counts even while a key is held, such as Ctrl.
+     * The Sym panel is on screen, so a finger counts even while a key is held.
      * Swipes turn the panel's pages: they can be shorter and start on any key.
      */
     var paging = false

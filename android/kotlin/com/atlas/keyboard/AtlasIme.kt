@@ -98,6 +98,8 @@ class AtlasIme : InputMethodService() {
     private var heldLetter: KeyEvent? = null
     /** In this app the Back service hears the keys first, because the app takes key presses before the keyboard. */
     private var watchingKeys = false
+    /** The key under a finger on the touchpad, for the modifier bar, or an empty string. */
+    private var restingKey = ""
     private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
                                val settlement: Contact.Settlement? = null)
     private val pendingInput = ArrayDeque<PendingInput>()
@@ -133,17 +135,13 @@ class AtlasIme : InputMethodService() {
 
     /** An app's own hide, such as from a Done key, leaves the window closed, so a panel that opens then must show it. */
     private val showPanel = Runnable {
-        if (!panelShown || isInputViewShown) return@Runnable
+        if (!panelOpen || isInputViewShown) return@Runnable
         showStrip.run()
         // It could not show, so it must not take the next key.
         if (!isInputViewShown) closePanel()
     }
 
-    private val showCtrlOverlay = Runnable {
-        modifiers.ctrlWaitOver(SystemClock.uptimeMillis())
-        showModifiers()
-        if (modifiers.ctrlOverlay && !isInputViewShown) main.post(showPanel)
-    }
+    private val refreshModifiers = Runnable { showModifiers() }
 
     // Apps on Android's newer back handling ignore a back key from a keyboard, so a system back goes first.
     private val sendBack = Runnable { if (!BackService.back() && editing) sendDownUpKeyEvents(KeyEvent.KEYCODE_BACK) }
@@ -482,6 +480,7 @@ class AtlasIme : InputMethodService() {
      */
     private fun watchedKey(event: KeyEvent): Boolean {
         if (!watchingKeys) return false
+        main.post(refreshModifiers)
         val code = event.keyCode
         // The app takes Back before the keyboard, so an open panel must close here.
         if (code == KeyEvent.KEYCODE_BACK && isInputViewShown && backKey(event, event.action == KeyEvent.ACTION_DOWN)) return true
@@ -654,12 +653,13 @@ class AtlasIme : InputMethodService() {
 
     private fun motion(event: MotionEvent) {
         // The panel works in every field, also where the touchpad types no words.
-        if (!field.words && !panelShown) return
+        if (!field.words && !panelOpen) return
         typedInField = true
         val samples = touchpad.samples(event)
         Recording.sink?.motion(event, samples)
         inputLog()?.motion(event, samples)
-        if (panelShown && hover(event, samples)) return
+        if (panelOpen && hover(event, samples)) return
+        if (!panelOpen) followRestingKey(event, samples)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
@@ -787,6 +787,19 @@ class AtlasIme : InputMethodService() {
         if (!picking) panel?.hover = if (modifiers.panel == Modifiers.Panel.Settings) Layout.restingKeyAt(last.x, last.y) else Layout.keyAt(last.x, last.y)
         else if (panel?.pickCategory(last.x) == true) haptics.pageChanged()
         return picking
+    }
+
+    /** A finger that rests on a key shows in the modifier bar what that key gives, until the finger lifts. */
+    private fun followRestingKey(event: MotionEvent, samples: List<Sample>) {
+        val last = samples.lastOrNull { it.valid }
+        val key = when {
+            event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL -> ""
+            last == null -> return
+            else -> Layout.keyAt(last.x, last.y)
+        }
+        if (key == restingKey) return
+        restingKey = key
+        showModifierBar()
     }
 
     private val endSlippedCursor = Runnable { stopCursor() }
@@ -973,11 +986,8 @@ class AtlasIme : InputMethodService() {
 
     private val panelOpen get() = modifiers.panel != Modifiers.Panel.Closed
 
-    /** The Sym panel or the Ctrl overlay is on screen. */
-    private val panelShown get() = panelOpen || modifiers.ctrlOverlay
-
     /** The touchpad types nothing while Alt is on or a panel is on screen. */
-    private val altOrPanel get() = modifiers.alt != Modifiers.Level.Off || panelShown
+    private val altOrPanel get() = modifiers.alt != Modifiers.Level.Off || panelOpen
 
     private fun clearSettlements() {
         inputGeneration++
@@ -1204,7 +1214,6 @@ class AtlasIme : InputMethodService() {
             consumedKeys += keyCode
             return true
         }
-        if (event.repeatCount == 0) modifiers.keyWithCtrl(event.eventTime)
         if (pendingInput.isNotEmpty()) {
             val captured = KeyEvent(carried)
             consumedKeys += keyCode
@@ -1266,10 +1275,7 @@ class AtlasIme : InputMethodService() {
      */
     private fun ctrlKey(event: KeyEvent): Boolean {
         if (!modifiers.isCtrl(event.keyCode)) return false
-        val shown = modifiers.ctrlOverlay
         modifiers.key(event)
-        // A finger that rested on the overlay must not type when it lifts.
-        if (shown && !modifiers.ctrlOverlay) contact.cancel()
         showModifiers()
         return true
     }
@@ -1421,12 +1427,14 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun showModifiers() {
-        main.removeCallbacks(showCtrlOverlay)
-        modifiers.ctrlOverlayAt?.let { main.postAtTime(showCtrlOverlay, it) }
-        strip?.visibility = if (panelShown) View.GONE else View.VISIBLE
+        strip?.visibility = if (panelOpen) View.GONE else View.VISIBLE
+        showModifierBar()
         panel?.mode = modifiers.panel
-        panel?.ctrl = modifiers.ctrlOverlay
-        contact.paging = panelShown
+        contact.paging = panelOpen
+    }
+
+    private fun showModifierBar() {
+        strip?.modifiers = ModifierBar.of(modifiers, restingKey) { Keys.letter(it, KeyEvent.META_ALT_ON) }
     }
 
     override fun onDestroy() {

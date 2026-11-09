@@ -65,18 +65,22 @@ fun main() {
     bottomRow()
     onlyOneModifier()
     repeatsAndStrayEvents()
-    ctrlOverlayWhileHeld()
-    quickShortcutDoesNotFlash()
-    keyMakesTheOverlayWaitAgain()
-    anotherShortcutCanFollow()
+    ctrlShowsInTheBarAtOnce()
+    theShortcutsFitOneLine()
+    stickyShiftAndCapsShowInTheBar()
+    stickyShiftLeavesTheBarWhenItIsUsed()
+    aCapitalWithShiftHeldLeavesTheWords()
+    altShowsTheSymbolOfAKey()
+    aHeldAltStaysOutOfTheBar()
+    theBarShowsEveryModifierThatIsOn()
     ctrlIsNotAToggle()
-    ctrlCoversTheSymPanel()
+    ctrlLeavesTheSymPanelAlone()
     ctrlLeavesStickyKeysAlone()
     bothCtrlKeys()
     fnIsNotCtrlByDefault()
     fnAsCtrl()
     fnAndKeyMapperAreOneCtrl()
-    closingTheCtrlOverlay()
+    closingThePanelLeavesCtrlHeld()
     clearingCtrl()
     ctrlThroughAFieldStart()
     ctrlMetaState()
@@ -94,7 +98,6 @@ private class Keyboard {
     private var now = 1_000L
 
     val shift get() = modifiers.shift
-    val overlay get() = modifiers.ctrlOverlay
 
     fun down(code: Int = SHIFT) = modifiers.down(code, now)
 
@@ -103,20 +106,12 @@ private class Keyboard {
         modifiers.up(code, now)
     }
 
-    /** Time passes, and the keyboard's timer for the Ctrl overlay runs if it has come due. */
     fun idle(millis: Long) {
         now += millis
-        modifiers.ctrlWaitOver(now)
     }
 
-    /** Pushes a key while Ctrl is down, such as the C of a shortcut. */
-    fun push() = modifiers.keyWithCtrl(now)
-
-    /** Holds [code] until the Ctrl overlay shows. */
-    fun holdForOverlay(code: Int = CTRL) {
-        down(code)
-        idle(Modifiers.CTRL_OVERLAY_MILLIS)
-    }
+    /** The modifier bar, with a finger on [hover]. Here Alt types % on Q and nothing on the other keys. */
+    fun bar(hover: String = "") = ModifierBar.of(modifiers, hover) { key -> "%".takeIf { key == "Q" } }
 
     fun press(code: Int = SHIFT) {
         down(code)
@@ -723,11 +718,10 @@ private fun otherKeysLeaveQuickSettings() {
         press(SYM)
         idle(WORD)
         press(ALT)
-        holdForOverlay()
-        same(overlay, true, "The Ctrl overlay must show over the quick settings")
-        same(modifiers.panel, Panel.Settings, "The quick settings must wait under the Ctrl overlay")
+        down(CTRL)
+        same(modifiers.panel, Panel.Settings, "Ctrl must leave the quick settings open")
         up(CTRL)
-        same(modifiers.panel, Panel.Settings, "The quick settings must show again when Ctrl is let go")
+        same(modifiers.panel, Panel.Settings, "The quick settings must stay when Ctrl is let go")
     }
 }
 
@@ -857,84 +851,102 @@ private fun repeatsAndStrayEvents() {
     }
 }
 
-private fun ctrlOverlayWhileHeld() = Keyboard().run {
+private fun ctrlShowsInTheBarAtOnce() = Keyboard().run {
+    same(bar(), null, "With no modifier on there must be no bar, so the words show")
     down(CTRL)
     same(modifiers.ctrlHeld, true, "Ctrl must count as held while it is down")
-    idle(Modifiers.CTRL_OVERLAY_MILLIS - 1)
-    same(overlay, false, "The overlay must wait for the full time")
-    idle(1)
-    same(overlay, true, "The overlay must show when Ctrl has been held for the full time")
-    same(modifiers.ctrlOverlayAt, null, "The overlay must have no timer once it shows")
+    same(bar()?.chips, listOf(ModifierBar.CTRL), "Ctrl must show as soon as it goes down")
+    same(bar()?.hint, ModifierBar.SHORTCUTS, "With no finger on a key, the bar must list the shortcuts")
+    same(bar("C")?.hint, "C Copy", "A finger on a key with a shortcut must show that shortcut")
+    same(bar("Q")?.hint, ModifierBar.SHORTCUTS, "A finger on a key with no shortcut must leave the list")
     idle(WORD)
-    same(overlay, true, "The overlay must stay for as long as Ctrl is down")
+    same(bar()?.chips, listOf(ModifierBar.CTRL), "Ctrl must stay in the bar for as long as it is down")
     up(CTRL)
-    same(overlay, false, "The overlay must close when Ctrl is let go")
+    same(bar(), null, "The words must come back when Ctrl is let go")
     same(modifiers.ctrlHeld, false, "Ctrl must not stay on after it is let go")
 }
 
-private fun quickShortcutDoesNotFlash() = Keyboard().run {
-    // A quick Ctrl + C: Ctrl is let go 240 ms after it went down, which is longer than the overlay's wait.
-    down(CTRL)
-    idle(80)
-    push()
-    idle(160)
-    same(overlay, false, "A quick shortcut must not flash the overlay")
-    up(CTRL, after = 0)
-    same(overlay, false, "The overlay must stay closed after a quick shortcut")
-    same(modifiers.ctrlOverlayAt, null, "Letting go of Ctrl must end the wait")
+private fun theShortcutsFitOneLine() {
+    same(ModifierBar.SHORTCUTS, "A all  C copy  X cut  V paste  Z undo  Y redo", "The six shortcuts must be short")
+}
+
+private fun stickyShiftAndCapsShowInTheBar() = Keyboard().run {
+    press(SHIFT)
+    same(bar()?.chips, listOf(ModifierBar.SHIFT), "A press of Shift must show Shift")
+    same(bar()?.hint, "", "With no finger on a key there is nothing more to show")
+    same(bar("Q")?.hint, "Q", "A finger on a letter must show its capital")
+    same(bar(Layout.SPACE)?.hint, "", "A finger on a key that is not a letter must show nothing")
+    idle(GAP)
+    press(SHIFT)
+    same(shift, Level.Locked, "A quick second press must lock Shift")
+    same(bar()?.chips, listOf(ModifierBar.CAPS), "A locked Shift must show as Caps and not as Shift")
+    same(bar("Q")?.hint, "Q", "A finger on a letter must show its capital with Caps")
     idle(WORD)
-    same(overlay, false, "The overlay must not show after Ctrl is let go")
+    press(SHIFT)
+    same(bar(), null, "The words must come back when Shift goes off")
 }
 
-private fun keyMakesTheOverlayWaitAgain() = Keyboard().run {
+private fun stickyShiftLeavesTheBarWhenItIsUsed() = Keyboard().run {
+    press(SHIFT)
+    same(bar()?.chips, listOf(ModifierBar.SHIFT), "A press of Shift must show Shift")
+    type()
+    same(bar(), null, "The words must come back after the next letter")
+}
+
+private fun aCapitalWithShiftHeldLeavesTheWords() = Keyboard().run {
+    down(SHIFT)
+    same(bar(), null, "A Shift that is held must not replace the words")
+    type()
+    same(bar(), null, "A capital typed with Shift held must not replace the words")
+    up(SHIFT)
+    same(bar(), null, "The words must stay after Shift is let go")
+}
+
+private fun altShowsTheSymbolOfAKey() = Keyboard().run {
+    press(ALT)
+    same(bar()?.chips, listOf(ModifierBar.ALT), "A press of Alt must show Alt")
+    same(bar("Q")?.hint, "%", "A finger on a letter must show the symbol that Alt types")
+    same(bar("W")?.hint, "", "A letter with no symbol must show nothing")
+    type()
+    same(bar(), null, "The words must come back after the next letter")
+}
+
+private fun aHeldAltStaysOutOfTheBar() = Keyboard().run {
+    down(ALT)
+    same(bar(), null, "An Alt that is held must not replace the words")
+}
+
+private fun theBarShowsEveryModifierThatIsOn() = Keyboard().run {
+    press(SHIFT)
     down(CTRL)
-    idle(100)
-    push()
-    idle(Modifiers.CTRL_OVERLAY_MILLIS - 1)
-    same(overlay, false, "A key pushed before the overlay shows must start the wait again")
-    idle(1)
-    same(overlay, true, "The overlay must show if Ctrl stays down after the key")
-}
-
-private fun anotherShortcutCanFollow() = Keyboard().run {
-    holdForOverlay()
-    repeat(3) {
-        push()
-        idle(WORD)
-        same(overlay, true, "The overlay must stay after a shortcut, so another can follow")
-    }
-    up(CTRL)
-    same(overlay, false, "Only letting go of Ctrl closes the overlay")
+    same(bar()?.chips, listOf(ModifierBar.CTRL, ModifierBar.SHIFT), "Ctrl and Shift must both show, Ctrl first")
+    same(bar()?.hint, ModifierBar.SHORTCUTS, "With Ctrl held the bar must list the shortcuts")
 }
 
 private fun ctrlIsNotAToggle() = Keyboard().run {
     press(CTRL)
     idle(WORD)
-    same(overlay, false, "A press of Ctrl must not open the overlay")
+    same(bar(), null, "A press of Ctrl must not leave the bar on")
     same(modifiers.ctrlHeld, false, "A press of Ctrl must not stay on")
-    holdForOverlay()
-    up(CTRL)
     down(CTRL)
-    same(overlay, false, "A second press must start a new wait, not act as a toggle")
-    idle(Modifiers.CTRL_OVERLAY_MILLIS)
-    same(overlay, true, "A second hold must show the overlay again")
+    same(modifiers.ctrlHeld, true, "A second hold must count as held")
+    up(CTRL)
+    same(modifiers.ctrlHeld, false, "A second hold must end when Ctrl is let go")
 }
 
-private fun ctrlCoversTheSymPanel() {
+private fun ctrlLeavesTheSymPanelAlone() {
     Keyboard().run {
         press(SYM)
         idle(WORD)
-        holdForOverlay()
-        same(overlay, true, "The overlay must show over the Sym panel")
-        same(modifiers.panel, Panel.Symbols, "The Sym panel must wait under the overlay")
+        down(CTRL)
+        same(modifiers.panel, Panel.Symbols, "Ctrl must leave the Sym panel open")
         up(CTRL)
-        same(overlay, false, "The overlay must close when Ctrl is let go")
-        same(modifiers.panel, Panel.Symbols, "The Sym panel must show again when Ctrl is let go")
+        same(modifiers.panel, Panel.Symbols, "The Sym panel must stay when Ctrl is let go")
     }
     Keyboard().run {
-        holdForOverlay()
+        down(CTRL)
         press(SYM)
-        same(overlay, true, "Sym must not close the overlay while Ctrl is down")
+        same(modifiers.ctrlHeld, true, "Sym must not end a held Ctrl")
     }
 }
 
@@ -954,13 +966,13 @@ private fun ctrlLeavesStickyKeysAlone() {
 }
 
 private fun bothCtrlKeys() = Keyboard().run {
-    holdForOverlay(OTHER_CTRL)
-    same(overlay, true, "Right Ctrl must also show the overlay")
+    down(OTHER_CTRL)
+    same(modifiers.ctrlHeld, true, "Right Ctrl must also count as held")
     down(CTRL)
     up(OTHER_CTRL)
-    same(overlay, true, "The overlay must stay while the other Ctrl key is down")
+    same(modifiers.ctrlHeld, true, "Ctrl must stay held while the other Ctrl key is down")
     up(CTRL)
-    same(overlay, false, "The overlay must close with the last Ctrl key")
+    same(modifiers.ctrlHeld, false, "Ctrl must end with the last Ctrl key")
 }
 
 private fun fnIsNotCtrlByDefault() = Keyboard().run {
@@ -969,20 +981,20 @@ private fun fnIsNotCtrlByDefault() = Keyboard().run {
     down(FN)
     idle(WORD)
     same(modifiers.ctrlHeld, false, "With the setting off, fn must not hold Ctrl")
-    same(overlay, false, "With the setting off, fn must not open the overlay")
-    holdForOverlay()
-    same(overlay, true, "With the setting off, the overlay must open for Key Mapper's Ctrl")
+    same(bar(), null, "With the setting off, fn must not show in the bar")
+    down(CTRL)
+    same(modifiers.ctrlHeld, true, "With the setting off, Key Mapper's Ctrl must still count")
 }
 
 private fun fnAsCtrl() = Keyboard().run {
     modifiers.fnIsCtrl = true
     same(modifiers.isCtrl(FN), true, "With the setting on, fn must count as Ctrl")
     same(Modifiers.isModifier(FN), false, "fn must not join the sticky modifiers")
-    holdForOverlay(FN)
-    same(overlay, true, "With the setting on, holding fn must show the overlay")
+    down(FN)
+    same(bar()?.chips, listOf(ModifierBar.CTRL), "With the setting on, holding fn must show Ctrl")
     same(shift, Level.Off, "fn as Ctrl must not turn Shift on")
     up(FN)
-    same(overlay, false, "With the setting on, letting go of fn must close the overlay")
+    same(bar(), null, "With the setting on, letting go of fn must bring the words back")
     same(modifiers.ctrlHeld, false, "With the setting on, fn must not stay on")
 }
 
@@ -994,17 +1006,14 @@ private fun fnAndKeyMapperAreOneCtrl() {
         idle(150)
         down(CTRL)
         idle(50)
-        same(overlay, true, "A second Ctrl must not start the wait again")
         up(FN)
-        same(overlay, true, "The overlay must stay while Key Mapper's Ctrl is down")
         same(modifiers.ctrlHeld, true, "Ctrl must stay held while Key Mapper's Ctrl is down")
         up(CTRL)
-        same(overlay, false, "The overlay must close when both are let go")
         same(modifiers.ctrlHeld, false, "Ctrl must end when both are let go")
     }
     Keyboard().run {
         modifiers.fnIsCtrl = true
-        holdForOverlay(CTRL)
+        down(CTRL)
         down(FN)
         up(CTRL)
         up(FN)
@@ -1012,66 +1021,45 @@ private fun fnAndKeyMapperAreOneCtrl() {
     }
 }
 
-private fun closingTheCtrlOverlay() = Keyboard().run {
-    holdForOverlay()
+private fun closingThePanelLeavesCtrlHeld() = Keyboard().run {
+    down(CTRL)
     modifiers.closePanel()
-    same(overlay, false, "Hiding the keyboard must close the overlay")
-    idle(WORD)
-    same(overlay, false, "The overlay must stay closed for the rest of this hold")
-    same(modifiers.ctrlHeld, true, "Closing the overlay must not change what is physically held")
+    same(modifiers.ctrlHeld, true, "Hiding the keyboard must not change what is physically held")
     up(CTRL)
-    holdForOverlay()
-    same(overlay, true, "The next hold must show the overlay")
+    same(modifiers.ctrlHeld, false, "Letting go of Ctrl must still end it")
 }
 
 private fun clearingCtrl() {
     Keyboard().run {
-        holdForOverlay()
+        down(CTRL)
         modifiers.clear()
-        same(overlay, false, "Clear must close the overlay")
         same(modifiers.ctrlHeld, false, "Clear must forget Ctrl")
         up(CTRL, after = WORD)
-        same(overlay, false, "An up after clear must change nothing")
+        same(modifiers.ctrlHeld, false, "An up after clear must change nothing")
     }
     Keyboard().run {
         down(CTRL)
-        modifiers.clear()
-        idle(WORD)
-        same(overlay, false, "Clear must end the wait")
-    }
-    Keyboard().run {
-        holdForOverlay()
         modifiers.clear(keepCtrl = true)
-        same(overlay, true, "A field that restarts must leave the overlay open")
         same(modifiers.ctrlHeld, true, "A field that restarts must leave Ctrl held")
         up(CTRL)
-        same(overlay, false, "Letting go of Ctrl must still close the overlay after a restart")
-    }
-    Keyboard().run {
-        down(CTRL)
-        modifiers.clear(keepCtrl = true)
-        idle(Modifiers.CTRL_OVERLAY_MILLIS)
-        same(overlay, true, "A field that restarts must not end the wait")
+        same(modifiers.ctrlHeld, false, "Letting go of Ctrl must still end it after a restart")
     }
 }
 
 private fun ctrlThroughAFieldStart() {
     Keyboard().run {
-        holdForOverlay()
+        down(CTRL)
         modifiers.fieldStarted(restarting = true, editing = true)
-        same(overlay, true, "A restart of a field that takes text must leave the overlay open")
         same(modifiers.ctrlHeld, true, "A restart of a field that takes text must leave Ctrl held")
     }
     Keyboard().run {
-        holdForOverlay()
+        down(CTRL)
         modifiers.fieldStarted(restarting = false, editing = true)
-        same(overlay, false, "A new field must close the overlay")
         same(modifiers.ctrlHeld, false, "A new field must forget Ctrl")
     }
     Keyboard().run {
-        holdForOverlay()
+        down(CTRL)
         modifiers.fieldStarted(restarting = true, editing = false)
-        same(overlay, false, "A restart as a field that takes no text must close the overlay")
         same(modifiers.ctrlHeld, false, "A restart as a field that takes no text must forget Ctrl")
         // The keyboard does not hear Ctrl let go here. The field then comes back.
         modifiers.fieldStarted(restarting = true, editing = true)

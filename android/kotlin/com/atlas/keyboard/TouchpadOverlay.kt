@@ -14,12 +14,14 @@ import android.view.WindowManager
  * An app's text selection popups sit above the keyboard's own window and would take them, so this
  * invisible overlay sits above every app window to keep the touchpad with the keyboard.
  *
- * With the setting that keeps the touchpad to text fields, it also stays up when no field is active. The touchpad events
- * then stop here and do not scroll the app under it. That depends on the firmware, so only the phone can prove it.
+ * With the setting that keeps the touchpad to text fields, it also stays up when no field is active. The firmware then
+ * sends touchpad events here only because [TouchpadHold] keeps the keyboard's reported status on, and they stop here.
  */
 class TouchpadOverlay(private val context: Context, private val touchpad: (MotionEvent) -> Boolean) {
     private val windows = context.getSystemService(WindowManager::class.java)
     private var view: View? = null
+
+    val up: Boolean get() = view != null
 
     fun show() {
         if (view != null || !Settings.canDrawOverlays(context)) return

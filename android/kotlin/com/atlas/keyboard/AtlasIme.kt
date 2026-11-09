@@ -590,7 +590,7 @@ class AtlasIme : InputMethodService() {
                     }
                     return
                 }
-                if (isDeleteWordSwipe(outcome.points)) {
+                if (outcome.deletesWord) {
                     haptics.tap()
                     composer.backspace(true)
                     return

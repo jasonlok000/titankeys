@@ -341,7 +341,10 @@ class ReplayRunner : Instrumentation() {
 
         private fun deliver(finished: Contact.Settlement, outcome: Contact.Outcome?) {
             when (val result = if (options.pieces) pieces.settle(finished, outcome) else outcome) {
-                is Contact.Outcome.Swipe -> swipe(result.points, result.startedAt, result.endedAt)
+                is Contact.Outcome.Swipe -> if (result.deletesWord) {
+                    outcomes.put(JSONObject().put("type", "delete").put("end", result.endedAt))
+                    composer.backspace(true)
+                } else swipe(result.points, result.startedAt, result.endedAt)
                 is Contact.Outcome.Tap -> tap(result)
                 null -> Unit
             }

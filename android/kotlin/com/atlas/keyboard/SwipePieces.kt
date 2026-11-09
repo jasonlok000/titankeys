@@ -34,6 +34,10 @@ internal class SwipePieces(
         val before = held
         held = null
         if (outcome is Contact.Outcome.Swipe) {
+            if (outcome.deletesWord) {
+                last = null
+                return outcome
+            }
             val joined = if (before != null && follows(before.points, outcome.points))
                 Contact.Outcome.Swipe(before.points + outcome.points, before.points.first().time, outcome.endedAt) else outcome
             last = joined.points

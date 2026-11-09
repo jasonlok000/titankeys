@@ -23,7 +23,7 @@ import kotlin.math.min
 class Contact {
     sealed interface Outcome {
         data class Tap(val key: String, val endedAt: Long) : Outcome
-        data class Swipe(val points: List<Sample>, val startedAt: Long, val endedAt: Long) : Outcome
+        data class Swipe(val points: List<Sample>, val startedAt: Long, val endedAt: Long, val deletesWord: Boolean = false) : Outcome
     }
 
     private sealed interface State {
@@ -141,6 +141,8 @@ class Contact {
         val last = points.last()
         if (touching.travel >= if (paging) PAGE_KEYS else SWIPE_KEYS) {
             if (paging) return Outcome.Swipe(points.toList(), first.time, last.time)
+            // Checked here because the pickup below trims a swipe to its first letter, which loses the start on Backspace.
+            if (isDeleteWordSwipe(points)) return Outcome.Swipe(points.toList(), first.time, last.time, deletesWord = true)
             touching.pickup.finish()
             val entry = touching.pickup.entry
             if (entry != null) return Outcome.Swipe(listOf(entry) + points.subList(touching.pickup.entryIndex, points.size), first.time, last.time)

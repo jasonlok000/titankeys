@@ -24,6 +24,8 @@ public final class SwipeRecognizer implements AutoCloseable {
     private static final int SAVED_WORD_CANDIDATES = 48;
     // A thumb tends to stop short of the far ends of a swipe, so each one is also read slightly wider.
     private static final float SWIPE_STRETCH = 1.2f;
+    // A slower swipe is placed with more care, so reading it wider only moves it away from the word. In keys a second.
+    private static final float MIN_STRETCH_SPEED = 13;
     private static final int OUTLINE_CANDIDATES = 30;
     private static final float OUTLINE_WEIGHT = 32;
     // An outline misjudges a swipe that lost tracking part way, so it can only push a word down so far.
@@ -109,7 +111,8 @@ public final class SwipeRecognizer implements AutoCloseable {
             Predicate<String> allowed) {
         Map<String, org.futo.ml.inference.SwipeDecoder.Result> best = new java.util.LinkedHashMap<>();
         // The plain reading goes last, so that the raw results describe the swipe as it was made.
-        for (Swipe reading : new Swipe[] { stretched(gesture), gesture })
+        Swipe[] readings = keysPerSecond(gesture) < MIN_STRETCH_SPEED ? new Swipe[] { gesture } : new Swipe[] { stretched(gesture), gesture };
+        for (Swipe reading : readings)
             for (org.futo.ml.inference.SwipeDecoder.Result result : read(reading, context, personalized, allowed)) {
                 org.futo.ml.inference.SwipeDecoder.Result previous = best.get(result.word);
                 if (previous == null || result.score > previous.score) best.put(result.word, result);
@@ -117,6 +120,15 @@ public final class SwipeRecognizer implements AutoCloseable {
         org.futo.ml.inference.SwipeDecoder.Result[] results = best.values().toArray(new org.futo.ml.inference.SwipeDecoder.Result[0]);
         Arrays.sort(results, (a, b) -> Float.compare(b.score, a.score));
         return blend(gesture, results, context, allowed);
+    }
+
+    private static float keysPerSecond(Swipe gesture) {
+        int last = gesture.x.length - 1;
+        if (last < 1) return 0;
+        float keys = 0;
+        for (int i = 1; i <= last; i++)
+            keys += (float) Math.hypot((gesture.x[i] - gesture.x[i - 1]) * 10, (gesture.y[i] - gesture.y[i - 1]) * 3);
+        return keys * 1000 / Math.max(1, gesture.time[last] - gesture.time[0]);
     }
 
     private static Swipe stretched(Swipe gesture) {

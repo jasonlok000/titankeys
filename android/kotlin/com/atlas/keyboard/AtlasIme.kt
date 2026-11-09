@@ -78,11 +78,8 @@ class AtlasIme : InputMethodService() {
     private var deadKeyPending = false
     private var tapKeys = ""
     private var holdSymbols = false
-    private val holdEngine = HoldEngine(object : HoldEngine.Output {
-        override fun tap(key: Int) = typeHeldLetter(symbol = false)
-        override fun hold(key: Int) = typeHeldLetter(symbol = true)
-    })
-    /** The press that [holdEngine] is holding back. */
+    private val holdEngine = HoldEngine(HoldEngine.Output { replaceHeldLetter() })
+    /** The press that can still become its symbol. Its letter is already typed. */
     private var heldLetter: KeyEvent? = null
     private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
                                val settlement: Contact.Settlement? = null)
@@ -236,6 +233,9 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
+        // A press from the field before must not change a letter here.
+        holdEngine.cancel()
+        heldLetter = null
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
@@ -338,8 +338,9 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onFinishInput() {
-        // A letter still held back was pressed in this field, so it goes here before the field ends.
-        holdEngine.resolve(SystemClock.uptimeMillis())
+        // The letter is already typed, so a press that is still down can only stay a letter.
+        holdEngine.cancel()
+        heldLetter = null
         preserveDestinationInput()
         // The old connection is still owned here; only a verified final explicit choice is learned.
         composer.stop(terminal = true)
@@ -627,11 +628,13 @@ class AtlasIme : InputMethodService() {
         settlements.clear()
         pieces.clear()
         lastTouch = null
-        val releases =pendingInput.filter { it.event?.action == KeyEvent.ACTION_UP }
+        val kept = pendingInput.filter { pending ->
+            pending.event?.let { Modifiers.survivesDiscard(it.keyCode, it.action == KeyEvent.ACTION_DOWN) } == true
+        }
         pendingInput.clear()
         contact.cancel()
-        // Discarded typing must still release physically held modifiers.
-        releases.forEach { it.action?.invoke() }
+        // Discarded typing must still apply Shift, Alt and Sym presses and all releases, in order.
+        kept.forEach { it.action?.invoke() }
     }
 
     /** Move only an interpretable ready key prefix into the existing navigation barrier. */
@@ -753,7 +756,7 @@ class AtlasIme : InputMethodService() {
         return if (key == Layout.SPACE) ' ' in tapKeys else Layout.isLetter(key) && key[0] in tapKeys
     }
 
-    /** Only a plain letter from the phone's own keyboard can wait. With Shift, Alt, Sym or a shortcut key it types at once. */
+    /** Only a plain letter from the phone's own keyboard can become its symbol. With Shift, Alt, Sym or a shortcut key it stays a letter. */
     private fun canHold(event: KeyEvent): Boolean {
         if (!holdSymbols || !field.words || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
         if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
@@ -766,8 +769,8 @@ class AtlasIme : InputMethodService() {
         return symbol > 0 && !Character.isISOControl(symbol)
     }
 
-    /** True if this press waits to see if it is a hold. A letter held back before it is typed first. */
-    private fun holdBack(event: KeyEvent): Boolean {
+    /** Starts the hold timer for a letter that can become its symbol. True if this is a repeat of such a key, which types nothing. */
+    private fun trackHold(event: KeyEvent): Boolean {
         val earlier = holdEngine.pending()
         val consumed = holdEngine.down(event.keyCode, event.deviceId, event.downTime, event.repeatCount > 0, canHold(event))
         val press = holdEngine.pending()
@@ -787,22 +790,18 @@ class AtlasIme : InputMethodService() {
         holdEngine.holdDue(press.id, SystemClock.uptimeMillis() - asked)
     }
 
-    /** Types the held-back press in order with other input. A hold types what the key types with Alt on: its printed symbol. */
-    private fun typeHeldLetter(symbol: Boolean) {
+    /**
+     * The key stayed down, so its letter becomes what the key types with Alt on: its printed symbol. The press's own flags
+     * decide the symbol, so a modifier pushed since then does not change it. It stays in order with other input.
+     */
+    private fun replaceHeldLetter() {
         val letter = heldLetter ?: return
         heldLetter = null
         if (!editing) return
-        val typed = if (symbol) KeyEvent(letter.downTime, letter.eventTime, letter.action, letter.keyCode, 0,
-            letter.metaState or KeyEvent.META_ALT_ON, letter.deviceId, letter.scanCode, letter.flags, letter.source) else letter
-        if (pendingInput.isNotEmpty()) {
-            enqueue(typed) {
-                key(typed)
-                showModifiers()
-            }
-            return
-        }
-        key(typed)
-        showModifiers()
+        val symbol = letter.getUnicodeChar(letter.metaState or KeyEvent.META_ALT_ON)
+        if (symbol <= 0 || !Character.isValidCodePoint(symbol) || Character.isISOControl(symbol)) return
+        val text = String(Character.toChars(symbol))
+        if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(text) } else composer.replaceLetter(text)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -816,10 +815,10 @@ class AtlasIme : InputMethodService() {
         if (touchpad.isGestureKey(event)) return true
         // Keys like volume reach the keyboard too, but they are not typing.
         if (!event.isSystem) showStripAfterBack()
-        // The touchpad hears the physical press now, even when the letter waits for its release.
+        // The touchpad hears the physical press now, before the key is typed.
         contact.key(keyCode, true, event.eventTime)
         val carried = carryCtrl(event)
-        val heldBack = holdBack(carried)
+        val repeatOfHold = trackHold(carried)
         if (keyCode == KeyEvent.KEYCODE_SPACE && selectingWithSpace) return true
         if (selectsWord(event)) {
             endCursor()
@@ -831,7 +830,7 @@ class AtlasIme : InputMethodService() {
         }
         // Any other key press means the finger was pressing, not resting on the touchpad.
         endCursor()
-        if (heldBack) return true
+        if (repeatOfHold) return true
         if (ctrlKey(event)) {
             consumedKeys += keyCode
             return true
@@ -867,7 +866,8 @@ class AtlasIme : InputMethodService() {
             return true
         }
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) {
-            return holdEngine.up(keyCode, event.deviceId, event.eventTime) || consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
+            val heldRelease = holdEngine.up(keyCode, event.deviceId, event.eventTime)
+            return consumedKeys.remove(keyCode) || heldRelease || super.onKeyUp(keyCode, event)
         }
         if (touchpad.isGestureKey(event)) return true
         contact.key(keyCode, false, event.eventTime)
@@ -876,7 +876,10 @@ class AtlasIme : InputMethodService() {
             consumedKeys.remove(keyCode)
             return true
         }
-        if (holdEngine.up(keyCode, event.deviceId, event.eventTime)) return true
+        if (holdEngine.up(keyCode, event.deviceId, event.eventTime)) {
+            consumedKeys.remove(keyCode)
+            return true
+        }
         if (ctrlKey(event)) return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
         if (pendingInput.isNotEmpty()) {
             val captured = KeyEvent(event)

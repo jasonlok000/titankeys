@@ -4,13 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Decides if a pressed letter types itself or the symbol printed on its key. Adapted from Titan Hold Symbols.
+ * Decides when a letter that is already typed becomes the symbol printed on its key. Adapted from Titan Hold Symbols.
  *
- * A letter that can wait is held back. The hold timer types its symbol at the hold time while the key is still down,
- * unless its release could still be on the way. Before that, its release, the next key's press or resolve() decide from
- * the events' own times: held for the hold time or longer gives the symbol, and shorter gives the letter. Either way it
- * is typed before the next key continues. The release and any repeats of a held-back key are always consumed, so a held
- * letter types only once.
+ * The keyboard types a letter as soon as its key goes down. A letter that can be replaced stays pending. The hold timer
+ * changes it to its symbol at the hold time while the key is still down, unless its release could still be on the way.
+ * Before that, its release, the next key's press or resolve() decide from the events' own times: held for the hold time
+ * or longer gives the symbol, and shorter leaves the letter. The release and any repeats of such a key are always
+ * consumed, so a held key types only once.
  *
  * Shift, Alt and Sym are not tracked here. The keyboard knows their state, and says a letter is not eligible while one is on.
  */
@@ -22,12 +22,11 @@ public final class HoldEngine {
      * release gets to arrive, and the longest that the app can take to answer and still count as free to send it.
      */
     private static final int RELEASE_LAG_MILLIS = 100;
-    /** A press that arrives this late types at once. */
+    /** A press that arrives this late cannot become a symbol. */
     private static final int MAX_LATE_MILLIS = 2000;
 
     public interface Output {
-        void tap(int key);
-
+        /** The key stayed down, so the letter it typed becomes its symbol. */
         void hold(int key);
     }
 
@@ -48,7 +47,7 @@ public final class HoldEngine {
     }
 
     private final Output output;
-    /** The press time of each held-back key whose release has not arrived, by device and key. */
+    /** The press time of each key that can become a symbol and whose release has not arrived, by device and key. */
     private final Map<Long, Long> swallowed = new HashMap<>();
     private Press pending;
     private long nextId;
@@ -91,25 +90,26 @@ public final class HoldEngine {
     }
 
     /**
-     * Returns true to consume this press. A letter held back earlier is typed before this returns.
-     * Eligible is false for anything that must type at once, such as a letter while Shift is on.
+     * Returns true to consume this press, which is only ever a repeat of a key that can become a symbol. The first press
+     * returns false, so the keyboard types its letter at once. A pending letter held for the hold time is replaced first.
+     * Eligible is false for anything that cannot become a symbol, such as a letter while Shift is on.
      */
     public boolean down(int key, int device, long downTime, boolean repeat, boolean eligible) {
         long slot = slot(device, key);
         Long held = swallowed.get(slot);
         if (held != null) {
-            if (held == downTime) return true; // The held-back key is repeating.
+            if (held == downTime) return true; // The key is repeating, and a held key types only once.
             swallowed.remove(slot);            // A new press, so the old release was lost.
         }
-        if (repeat) return false;              // Another key repeating says nothing about the held-back letter.
+        if (repeat) return false;              // Another key repeating says nothing about the pending letter.
         resolve(downTime);
         if (!isLetter(key) || !eligible) return false;
         pending = new Press(++nextId, key, device, downTime);
         swallowed.put(slot, downTime);
-        return true;
+        return false;
     }
 
-    /** Returns true to consume this release, which is only ever the release of a consumed press. */
+    /** Returns true to consume this release, which is only ever the release of a key that can become a symbol. */
     public boolean up(int key, int device, long eventTime) {
         long slot = slot(device, key);
         if (swallowed.remove(slot) == null) return false;
@@ -126,9 +126,9 @@ public final class HoldEngine {
     }
 
     /**
-     * The hold timer: types the symbol while the key is still down. The release stays consumed.
+     * The hold timer: replaces the letter while the key is still down. The release stays consumed.
      * appMillis is how long the app took to answer just now. A slower app can still be holding the release, so the
-     * letter keeps waiting and resolve() decides from the release's own time. A busy app can't change what is typed.
+     * letter stays pending and resolve() decides from the release's own time. A busy app can't change what is typed.
      */
     public boolean holdDue(long id, long appMillis) {
         if (pending == null || pending.id != id || appMillis > RELEASE_LAG_MILLIS) return false;
@@ -138,12 +138,16 @@ public final class HoldEngine {
         return true;
     }
 
-    /** Types the held-back key as if it was released at this time, on the same clock as the event times. */
+    /** Decides the pending letter as if its key was released at this time, on the same clock as the event times. */
     public void resolve(long at) {
         if (pending == null) return;
         Press press = pending;
         pending = null;
         if (at - press.downTime >= threshold) output.hold(press.key);
-        else output.tap(press.key);
+    }
+
+    /** The field ended, so the pending letter stays as it is. Its repeats and release stay consumed. */
+    public void cancel() {
+        pending = null;
     }
 }

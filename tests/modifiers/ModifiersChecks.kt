@@ -33,6 +33,13 @@ fun main() {
     doublePressAndTypeQuickly()
     doublePressDoesNotLockWhenOff()
     lateSecondPress()
+    realHoldThenType()
+    realRolledRelease()
+    realSinglePress()
+    realDoublePress()
+    realLongHoldWithRepeats()
+    lostRelease()
+    discardedKeys()
     lockedThenHold()
     bothShiftKeys()
     shortcutWhileHeld()
@@ -229,6 +236,101 @@ private fun lateSecondPress() = Keyboard().run {
     idle(Modifiers.DOUBLE_PRESS_MILLIS)
     press()
     same(shift, Level.Off, "A second press after the double press time must turn Shift off")
+}
+
+// The orders and times below come from real key presses on the phone. A letter is typed when its key goes down, and its
+// release does not reach Modifiers, so only a letter's press appears here.
+
+private fun realHoldThenType() = Keyboard().run {
+    modifiers.doublePressLocks = false
+    down()
+    idle(107)
+    type()
+    same(shift, Level.Once, "Shift must stay on while it is held")
+    idle(128)
+    up(after = 121)
+    same(shift, Level.Off, "After Shift is let go the next character must be normal")
+    idle(240)
+    type()
+    same(shift, Level.Off, "Typing the next character must not turn Shift on again")
+}
+
+private fun realRolledRelease() = Keyboard().run {
+    modifiers.doublePressLocks = false
+    down()
+    idle(56)
+    type()
+    // The letter's own release comes after Shift's, which Modifiers does not see.
+    up(after = 113)
+    same(shift, Level.Off, "Shift let go before the letter must still end with the key")
+    idle(240)
+    type()
+    same(shift, Level.Off, "The next character after a rolled release must be normal")
+}
+
+private fun realSinglePress() = Keyboard().run {
+    modifiers.doublePressLocks = false
+    down()
+    up(after = 76)
+    same(shift, Level.Once, "One real press must stay on for the next character")
+    idle(160)
+    type()
+    same(shift, Level.Off, "One real press must capitalise only the next character")
+    idle(250)
+    type()
+    same(shift, Level.Off, "One real press must not come back")
+}
+
+private fun realDoublePress() = Keyboard().run {
+    same(modifiers.doublePressLocks, true, "This helper starts with the setting on")
+    modifiers.doublePressLocks = false
+    down()
+    up(after = 62)
+    idle(110)
+    down()
+    up(after = 82)
+    same(shift, Level.Off, "With the setting off, two quick real presses must leave Shift off")
+    idle(120)
+    repeat(5) {
+        type()
+        same(shift, Level.Off, "Each letter after two quick presses must be lowercase")
+        idle(120)
+    }
+}
+
+private fun realLongHoldWithRepeats() = Keyboard().run {
+    modifiers.doublePressLocks = false
+    down()
+    // The key's repeats start after 400 ms and do not reach down, because Modifiers.key drops them.
+    idle(1165)
+    type()
+    idle(100)
+    up(after = 200)
+    same(shift, Level.Off, "A long hold with repeats must end with the key")
+}
+
+private fun lostRelease() = Keyboard().run {
+    modifiers.doublePressLocks = false
+    down()
+    type()
+    // The release never reached the keyboard, so this press is the next one.
+    idle(2000)
+    down()
+    same(shift, Level.Once, "A press after a lost release must count as a new press")
+    same(modifiers.isHeld(SHIFT), true, "The new press must still be held")
+    up(after = 60)
+    same(shift, Level.Once, "One press after a lost release must stay on for the next character")
+    type()
+    same(shift, Level.Off, "That press must capitalise only the next character")
+}
+
+private fun discardedKeys() {
+    same(Modifiers.survivesDiscard(SHIFT, down = true), true, "A Shift press must survive when typing is dropped")
+    same(Modifiers.survivesDiscard(ALT, down = true), true, "An Alt press must survive when typing is dropped")
+    same(Modifiers.survivesDiscard(SYM, down = true), true, "A Sym press must survive when typing is dropped")
+    same(Modifiers.survivesDiscard(LETTER, down = true), false, "A letter press must go when typing is dropped")
+    same(Modifiers.survivesDiscard(LETTER, down = false), true, "A release must always survive")
+    same(Modifiers.survivesDiscard(SHIFT, down = false), true, "A Shift release must always survive")
 }
 
 private fun lockedThenHold() = Keyboard().run {

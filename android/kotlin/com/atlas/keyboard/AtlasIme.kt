@@ -46,15 +46,12 @@ class AtlasIme : InputMethodService() {
     private lateinit var overlay: TouchpadOverlay
     private val contact = Contact()
     private val cursor = CursorMode()
+    private val cursorGesture = CursorGesture()
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
     private var cursorPath = ArrayList<Sample>()
     private var cursorControl = true
-    /** When cursor mode last ended; a press on Space just after selects the word at the cursor. */
-    private var cursorEndedAt = Long.MIN_VALUE
-    /** Cursor mode has moved the cursor, so a push on Space selects instead of typing a space. */
-    private var cursorMoved = false
-    /** Space was pressed to select a word, so its repeats and release type nothing. */
-    private var selectingWithSpace = false
+    /** Taps on a tap key that may be part of a double tap. Each call gives its input, typed if the argument is true. */
+    private val heldTaps = ArrayList<(Boolean) -> Unit>()
     /** The selection start the app last reported, for apps that don't say where their text sits. */
     private var lastSelectionStart = -1
     private val modifiers = Modifiers()
@@ -133,15 +130,43 @@ class AtlasIme : InputMethodService() {
     // Apps on Android's newer back handling ignore a back key from a keyboard, so a system back goes first.
     private val sendBack = Runnable { if (!BackService.back() && editing) sendDownUpKeyEvents(KeyEvent.KEYCODE_BACK) }
 
-    private val startCursor = Runnable {
-        if (!cursor.rest(SystemClock.uptimeMillis())) return@Runnable
-        cursorMoved = false
+    private val confirmDoubleTap = Runnable {
+        if (!cursorGesture.confirm()) return@Runnable
+        finishHeldTaps(type = false)
+        haptics.click()
+        enqueue { selectWord() }
+    }
+
+    private val checkHeldTaps = Runnable { settleHeldTaps() }
+
+    private fun startCursor(from: Sample, samples: List<Sample>) {
+        cursor.start(from)
+        cursor.move(samples)
         // The contact now steers the cursor, so it must not also type when it lifts.
         contact.cancelActive()
+        finishHeldTaps(type = false)
         Trace.touch(cursorPath, false)
         haptics.click()
         stepCursor.reset()
         stepCursor.run()
+    }
+
+    /** Space set as a tap key would type the first tap of a double tap, so a tap waits until it can't be one. */
+    private fun holdTap(finish: (Boolean) -> Unit) {
+        heldTaps += finish
+        main.removeCallbacks(checkHeldTaps)
+        main.postDelayed(checkHeldTaps, CursorGesture.CONFIRM_MILLIS)
+    }
+
+    private fun settleHeldTaps() {
+        if (heldTaps.isNotEmpty() && !cursorGesture.deciding(SystemClock.uptimeMillis())) finishHeldTaps(type = true)
+    }
+
+    private fun finishHeldTaps(type: Boolean) {
+        main.removeCallbacks(checkHeldTaps)
+        val taps = heldTaps.toList()
+        heldTaps.clear()
+        taps.forEach { it(type) }
     }
 
     /**
@@ -353,7 +378,6 @@ class AtlasIme : InputMethodService() {
         clearSettlements()
         contact.cancel()
         endCursor()
-        selectingWithSpace = false
         deadKeyPending = false
         closePanel()
         overlay.hide()
@@ -441,14 +465,17 @@ class AtlasIme : InputMethodService() {
                     return
                 }
                 contact.move(samples.drop(1))
-                endCursor()
+                stopCursor()
+                main.removeCallbacks(confirmDoubleTap)
+                cursorPath = ArrayList(samples.filter { it.valid })
                 // With Alt on or the panel open the touchpad does not type, so the cursor waits until they are off.
                 // A finger the contact ignored landed while typing, so it must not start the cursor.
-                if (cursorControl && !altOrPanel && contact.travel != null && cursor.down(first)) {
-                    cursor.move(samples.drop(1))
-                    cursorPath = ArrayList(samples.filter { it.valid })
-                    main.postAtTime(startCursor, first.time + CursorMode.REST_MILLIS)
+                cursorGesture.down(first, cursorControl && !altOrPanel && contact.travel != null)
+                cursorGesture.move(samples.drop(1))?.let {
+                    startCursor(it, samples.drop(1))
+                    return
                 }
+                settleHeldTaps()
                 // A touch that may be the last swipe carrying on keeps that swipe on the trail until it is settled.
                 val carried = lastTouch?.takeIf {
                     Trace.listening && contact.points.isNotEmpty()
@@ -464,6 +491,11 @@ class AtlasIme : InputMethodService() {
                 }
                 cursorPath.addAll(samples.filter { it.valid })
                 contact.move(samples)
+                cursorGesture.move(samples)?.let {
+                    startCursor(it, samples)
+                    return
+                }
+                settleHeldTaps()
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
@@ -472,18 +504,19 @@ class AtlasIme : InputMethodService() {
                 Trace.touch(contact.points, false)
             }
             MotionEvent.ACTION_UP -> {
+                val doubleTapped = cursorGesture.up(samples, event.eventTime)
                 if (cursor.active) {
-                    cursorEndedAt = SystemClock.uptimeMillis()
                     main.removeCallbacks(stepCursor)
                     cursor.lift()
                     val slips = composer.liftOffMillis > 0
                     // Through a slip the path stays open, so a finger that comes back carries on drawing it.
                     traceCursor(samples, ended = !slips)
-                    if (slips) main.postDelayed(endSlippedCursor, composer.liftOffMillis.toLong()) else endCursor()
+                    if (slips) main.postDelayed(endSlippedCursor, composer.liftOffMillis.toLong()) else stopCursor()
                     return
                 }
-                endCursor()
+                stopCursor()
                 val points = contact.points
+                if (doubleTapped) main.postAtTime(confirmDoubleTap, event.eventTime + CursorGesture.CONFIRM_MILLIS)
                 contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
                     lastTouch = pending.points
                     if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
@@ -496,13 +529,18 @@ class AtlasIme : InputMethodService() {
                         settlements.remove(pending)
                         val settled = contact.settle(pending, SystemClock.uptimeMillis())
                         val result = if (pending.cancelled || altOrPanel) settled else pieces.settle(pending, settled)
-                        input.action = { result?.let(::outcome) }
-                        input.ready = true
-                        drainInput()
+                        val finish = { type: Boolean ->
+                            input.action = { if (type) result?.let(::outcome) }
+                            input.ready = true
+                            drainInput()
+                        }
+                        if (result is Contact.Outcome.Tap && isTapKey(result.key) && cursorGesture.deciding(SystemClock.uptimeMillis())) holdTap(finish)
+                        else finish(true)
                     }
                     settlements[pending] = settle
                     main.postAtTime(settle, pending.deadline)
                 }
+                settleHeldTaps()
                 Trace.touch(if (points.size <= Swipe.MAX_POINTS && samples.all { it.valid }) points else emptyList(), true)
             }
             MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
@@ -523,7 +561,7 @@ class AtlasIme : InputMethodService() {
         panel?.hover = Layout.keyAt(last.x, last.y)
     }
 
-    private val endSlippedCursor = Runnable { endCursor() }
+    private val endSlippedCursor = Runnable { stopCursor() }
 
     private fun traceCursor(samples: List<Sample>, ended: Boolean) {
         val added = samples.filter { it.valid }
@@ -533,10 +571,17 @@ class AtlasIme : InputMethodService() {
         Trace.touch(cursorPath, ended)
     }
 
+    /** A key press or something else interrupted the touchpad, so this ends cursor mode and calls off a double tap. */
     private fun endCursor() {
+        stopCursor()
+        main.removeCallbacks(confirmDoubleTap)
+        cursorGesture.cancel(SystemClock.uptimeMillis())
+        settleHeldTaps()
+    }
+
+    private fun stopCursor() {
         if (cursor.active || cursor.lifted) Trace.touch(cursorPath, true)
         main.removeCallbacks(endSlippedCursor)
-        main.removeCallbacks(startCursor)
         main.removeCallbacks(stepCursor)
         cursor.end()
     }
@@ -544,7 +589,6 @@ class AtlasIme : InputMethodService() {
     /** Sends one arrow key press, in order with the rest of the typing. */
     private fun moveCursor(direction: Int) {
         if (direction == 0) return
-        cursorMoved = true
         val time = SystemClock.uptimeMillis()
         val code = if (direction > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
         val arrow = KeyEvent(time, time, KeyEvent.ACTION_DOWN, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
@@ -557,13 +601,6 @@ class AtlasIme : InputMethodService() {
             command(arrow)
         }
     }
-
-    /**
-     * Pressing Space presses the finger into the touchpad, which lifts it, so either may arrive first.
-     * A thumb that only rested on Space is about to type a space, so the cursor must have moved first.
-     */
-    private fun selectsWord(event: KeyEvent) = event.keyCode == KeyEvent.KEYCODE_SPACE && event.repeatCount == 0
-        && cursorMoved && (cursor.active || cursor.lifted || event.eventTime - cursorEndedAt in 0..SELECT_AFTER_CURSOR_MILLIS)
 
     /** Selects the word at the cursor, or does nothing between words. */
     private fun selectWord() {
@@ -625,6 +662,8 @@ class AtlasIme : InputMethodService() {
         drainScheduled = false
         settlements.values.forEach(main::removeCallbacks)
         settlements.clear()
+        heldTaps.clear()
+        main.removeCallbacks(checkHeldTaps)
         pieces.clear()
         lastTouch = null
         val releases =pendingInput.filter { it.event?.action == KeyEvent.ACTION_UP }
@@ -820,16 +859,7 @@ class AtlasIme : InputMethodService() {
         contact.key(keyCode, true, event.eventTime)
         val carried = carryCtrl(event)
         val heldBack = holdBack(carried)
-        if (keyCode == KeyEvent.KEYCODE_SPACE && selectingWithSpace) return true
-        if (selectsWord(event)) {
-            endCursor()
-            cursorEndedAt = Long.MIN_VALUE
-            selectingWithSpace = true
-            consumedKeys += keyCode
-            enqueue { selectWord() }
-            return true
-        }
-        // Any other key press means the finger was pressing, not resting on the touchpad.
+        // A key press means the finger was pressing, not resting on the touchpad.
         endCursor()
         if (heldBack) return true
         if (ctrlKey(event)) {
@@ -871,11 +901,6 @@ class AtlasIme : InputMethodService() {
         }
         if (touchpad.isGestureKey(event)) return true
         contact.key(keyCode, false, event.eventTime)
-        if (keyCode == KeyEvent.KEYCODE_SPACE && selectingWithSpace) {
-            selectingWithSpace = false
-            consumedKeys.remove(keyCode)
-            return true
-        }
         if (holdEngine.up(keyCode, event.deviceId, event.eventTime)) return true
         if (ctrlKey(event)) return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
         if (pendingInput.isNotEmpty()) {
@@ -1060,7 +1085,6 @@ class AtlasIme : InputMethodService() {
         private const val STALE_HIDE_MILLIS = 500L
         /** The field of a returning window started within 30 ms of its empty start. */
         private const val NO_FIELD_HIDE_MILLIS = 200L
-        private const val SELECT_AFTER_CURSOR_MILLIS = 250L
         private const val FRAME_MILLIS = 16L
         /** Characters read on each side of the cursor to find the word it is in. */
         private const val WORD_REACH = 64

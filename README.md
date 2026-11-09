@@ -127,7 +127,7 @@ Atlas hides the suggestion bar in launcher search, which keeps the home screen c
 
 The pictures here are diagrams of the behaviour, not recordings, and the words in them are examples.
 
-**Space types a space when your thumb is resting on it,** unless you've actually moved the cursor. Across 25 sentences typed on the keys with two hands, accidental selections went from 5 to 0.
+**Space types a space when your thumb is resting on it.** Across 25 sentences typed on the keys with two hands, accidental selections went from 5 to 0.
 
 | Atlas | TitanKeys |
 | --- | --- |

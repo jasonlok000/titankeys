@@ -10,7 +10,7 @@ export default function Guide() {
       <Row title="Swipe a word" subtitle="Move your finger across the letters. Do not push the keys. Lift your finger to type the word." wrapSubtitle />
       <Row title="Slip recovery" subtitle="If your finger leaves the keyboard for a short time, the swipe continues. Change this time in Settings." wrapSubtitle />
       <Row title="Pick another word" subtitle="Touch a word on the strip above the keyboard." wrapSubtitle />
-      <Row title="Move the cursor" subtitle="Rest your finger on the space bar until you feel a click. Then move your finger to the left or right." wrapSubtitle />
+      <Row title="Move the cursor" subtitle="Touch the bottom row of keys two times quickly. Do not lift your finger after the second touch. Move your finger to the left or right. To select the word at the cursor, lift your finger after each touch." wrapSubtitle />
     </Section>
     <Section title="Keys">
       <Row title="Tap keys" subtitle="Touch these keys lightly to type them. Select the keys in Settings." wrapSubtitle />

@@ -40,11 +40,13 @@ def main():
     assert selected.startswith("com.titankeys") and selected.endswith("AtlasIme"), "Select TitanKeys before running"
     package, input_type, _ = state()
     assert package == args.package and input_type & 0xF == 1, "Focus a text field in the specified app first"
-    component = shell(
-        "cmd", "package", "resolve-activity", "--brief",
+    # A Debug build also has an icon for the recorder, so one match can't be asked for. The app's main screen is first.
+    components = [line.strip() for line in shell(
+        "cmd", "package", "query-activities", "--brief",
         "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER", args.package,
-    ).strip().splitlines()[-1]
-    assert component.startswith(args.package + "/"), "App has no launcher activity"
+    ).splitlines() if line.strip().startswith(args.package + "/")]
+    assert components, "App has no launcher activity"
+    component = components[0]
 
     for cycle in range(args.cycles):
         delay = (0, .1, .8)[cycle % 3]

@@ -16,6 +16,8 @@ class Modifiers {
     enum class Level { Off, Once, Locked }
     enum class Key { Shift, Alt }
     enum class Panel { Closed, Symbols, Emoji, Settings }
+    /** What happens to a push of Shift or Alt in an app that latches them by itself. */
+    enum class AppPush { Pass, Hide, HideAndClear }
 
     var shift = Level.Off
         private set
@@ -32,6 +34,8 @@ class Modifiers {
     private var symHeld = false
     /** Each key that counts as Ctrl and is down. Key Mapper's Ctrl and fn together are still one Ctrl. */
     private val ctrlKeys = HashSet<Int>()
+    /** The Shift and Alt keys whose current press the app must not see. */
+    private val hiddenFromApp = HashSet<Int>()
 
     /** fn counts as a Ctrl key, for the Use fn as Ctrl setting. */
     var fnIsCtrl = false
@@ -81,6 +85,32 @@ class Modifiers {
         panel = Panel.Closed
         // A quick second press that stays on ends the double press, so the next press turns the key off.
         last[key.ordinal] = if (level == Level.Once && next == Level.Once) time - DOUBLE_PRESS_MILLIS else time
+    }
+
+    /**
+     * A push of Shift or Alt in an app that takes key presses before the keyboard and latches them by itself, as Android's
+     * own text fields do. A second push locks there at any speed, so the keyboard follows Shift and Alt from here as well
+     * and tells which pushes the app can see. Only the first press and a lock or unlock that this keyboard also does pass.
+     */
+    fun appPush(code: Int, time: Long, repeat: Int): AppPush {
+        val key = keyOf(code) ?: return AppPush.Pass
+        if (repeat > 0) return if (code in hiddenFromApp) AppPush.Hide else AppPush.Pass
+        val before = level(key)
+        down(code, time)
+        val after = level(key)
+        val push = when {
+            before != Level.Once || after == Level.Locked -> AppPush.Pass
+            after == Level.Once -> AppPush.Hide
+            else -> AppPush.HideAndClear
+        }
+        if (push != AppPush.Pass) hiddenFromApp += code
+        return push
+    }
+
+    /** The release of Shift or Alt in such an app. Returns true if its press was hidden, so that the app must not see this either. */
+    fun appRelease(code: Int, time: Long): Boolean {
+        up(code, time)
+        return hiddenFromApp.remove(code)
     }
 
     /** From the symbols or emoji to the quick settings page, or back to the page that it came from. */
@@ -207,6 +237,7 @@ class Modifiers {
         panel = Panel.Closed
         held.clear()
         usedWhileHeld.clear()
+        hiddenFromApp.clear()
         symHeld = false
         if (keepCtrl) return
         ctrlKeys.clear()
@@ -251,6 +282,8 @@ class Modifiers {
         }
 
         fun isModifier(code: Int) = code == KeyEvent.KEYCODE_SYM || keyOf(code) != null
+
+        fun isShiftOrAlt(code: Int) = keyOf(code) != null
 
         /** Dropped typing must not take a Shift, Alt or Sym press with it, or their state would no longer match the keys. */
         fun survivesDiscard(code: Int, down: Boolean) = !down || isModifier(code)

@@ -3,6 +3,7 @@ package com.atlas.keyboard
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
+import kotlin.math.roundToLong
 
 private const val RIGHT_EDGE = .875f
 private const val EDGE_START_TOP = .1f
@@ -25,11 +26,14 @@ private const val TURN_BACK = .05f
 private const val HOLD_MILLIS = 400L
 /** The finger counts as staying while it is this close to where it stopped, in key widths. */
 private const val HOLD_KEYS = .25f
-/** The wait before the second word, close to how quickly a person flicks again by hand. */
-private const val REPEAT_START_MILLIS = 350L
-/** Each wait is this part of the one before it, so the words go faster and faster. */
-private const val REPEAT_RATIO = .85f
-private const val REPEAT_MIN_MILLIS = 100L
+/** The wait between words after a short flick, close to how quickly a person flicks again by hand. */
+private const val REPEAT_SLOW_MILLIS = 350L
+/** The wait between words after a long flick. */
+private const val REPEAT_FAST_MILLIS = 80L
+/** A flick of this many key widths or fewer is short. Between short and long, the wait follows a straight line. */
+private const val REPEAT_SHORT_KEYS = 2f
+/** A flick of this many key widths or more is long. */
+private const val REPEAT_LONG_KEYS = 7f
 /** While an earlier edit is still going through, the next word looks again after this time. */
 private const val BUSY_MILLIS = 20L
 
@@ -59,21 +63,24 @@ internal val deleteSwipeTuning: Map<String, Any> get() = mapOf(
     "innerEdge" to INNER_EDGE, "middleRowTop" to MIDDLE_ROW_TOP, "innerStartBottom" to INNER_START_BOTTOM,
     "innerEndBottom" to INNER_END_BOTTOM, "innerTilt" to INNER_TILT, "innerWander" to INNER_WANDER,
     "minTravel" to MIN_TRAVEL, "turnBack" to TURN_BACK,
-    "deleteHoldMillis" to HOLD_MILLIS, "deleteHoldKeys" to HOLD_KEYS, "deleteRepeatStartMillis" to REPEAT_START_MILLIS,
-    "deleteRepeatRatio" to REPEAT_RATIO, "deleteRepeatMinMillis" to REPEAT_MIN_MILLIS,
+    "deleteHoldMillis" to HOLD_MILLIS, "deleteHoldKeys" to HOLD_KEYS, "deleteRepeatSlowMillis" to REPEAT_SLOW_MILLIS,
+    "deleteRepeatFastMillis" to REPEAT_FAST_MILLIS, "deleteRepeatShortKeys" to REPEAT_SHORT_KEYS,
+    "deleteRepeatLongKeys" to REPEAT_LONG_KEYS,
 )
 
 private fun pathKeys(points: List<Sample>) = points.zipWithNext { a, b -> hypot((b.x - a.x) * 10, (b.y - a.y) * 4) }.sum()
 
 /**
- * A delete flick whose finger stays on the keys deletes more and more words, faster and faster, until the finger lifts.
- * This class only keeps the times. [contact] knows if the finger is still there, so a lift, a key press or a new field
- * ends the hold without a call to this class, and a test can run it with no clock.
+ * A delete flick whose finger stays on the keys deletes more and more words until the finger lifts, at a steady speed that
+ * the length of the flick sets. This class only keeps the times. [contact] knows if the finger is still there, so a lift,
+ * a key press or a new field ends the hold without a call to this class, and a test can run it with no clock.
  */
 internal class DeleteHold(private val contact: Contact) {
     private var still: Sample? = null
-    private var deleted = 0
+    private var started = false
     private var nextAt = 0L
+    /** The wait between words. It is set while the flick is read, because a contact that deletes keeps no points. */
+    private var repeatMillis = REPEAT_SLOW_MILLIS
 
     /**
      * Follows the finger after it moves, and reads the flick as a lift would. Returns when the next word is due,
@@ -89,6 +96,7 @@ internal class DeleteHold(private val contact: Contact) {
         val last = points.last()
         val held = still?.takeIf { hypot((last.x - it.x) * 10, (last.y - it.y) * 4) <= HOLD_KEYS } ?: last
         still = held
+        repeatMillis = repeatMillis(hypot((held.x - points.first().x) * 10, (held.y - points.first().y) * 4))
         return held.time + HOLD_MILLIS
     }
 
@@ -99,7 +107,7 @@ internal class DeleteHold(private val contact: Contact) {
      */
     fun step(now: Long, free: Boolean, delete: (Contact.Outcome.Swipe?) -> Unit): Long? {
         if (!contact.deleting) {
-            if (deleted > 0) return null
+            if (started) return null
             val at = (still ?: return null).time + HOLD_MILLIS
             if (now < at) return at
             if (!free) return now + BUSY_MILLIS
@@ -109,20 +117,20 @@ internal class DeleteHold(private val contact: Contact) {
             if (!free) return now + BUSY_MILLIS
             delete(null)
         }
-        nextAt = now + wait(deleted)
-        deleted++
+        nextAt = now + repeatMillis
+        started = true
         return nextAt
     }
 
-    private fun wait(word: Int): Long {
-        var millis = REPEAT_START_MILLIS.toFloat()
-        repeat(word) { millis *= REPEAT_RATIO }
-        return max(millis.toLong(), REPEAT_MIN_MILLIS)
+    /** A longer flick waits less between words. */
+    private fun repeatMillis(flickKeys: Float): Long {
+        val longer = ((flickKeys - REPEAT_SHORT_KEYS) / (REPEAT_LONG_KEYS - REPEAT_SHORT_KEYS)).coerceIn(0f, 1f)
+        return (REPEAT_SLOW_MILLIS + (REPEAT_FAST_MILLIS - REPEAT_SLOW_MILLIS) * longer).roundToLong()
     }
 
     fun reset() {
         still = null
-        deleted = 0
+        started = false
         nextAt = 0
     }
 }

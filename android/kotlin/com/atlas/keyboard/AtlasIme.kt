@@ -182,7 +182,7 @@ class AtlasIme : InputMethodService() {
         }.start()
     }
 
-    override fun onCreateInputView(): View = Strip(this, { index -> haptics.tap(); enqueue { composer.choose(index) } },
+    override fun onCreateInputView(): View = Strip(this, { index -> if (Haptics.enabled(this)) haptics.click(); enqueue { composer.choose(index) } },
         ::symbol, ::pickEmoji).also {
         strip = it
         it.emoji = emoji

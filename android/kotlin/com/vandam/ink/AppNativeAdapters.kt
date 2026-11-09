@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.net.Uri
 import android.os.Build
@@ -22,6 +23,7 @@ import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
 import com.atlas.keyboard.AtlasIme
 import com.atlas.keyboard.BackService
+import com.atlas.keyboard.EnterKey
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.KeyCapture
@@ -45,6 +47,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private var transferring = false
     private val keyCapture = lazy { KeyCapture(activity) { key -> activity.emit(JSONObject().put("type", "atlas-key").put("key", key).toString()) } }
     private var keyCaptureRequested = false
+    private val appNames = HashMap<String, String>()
     private val windowFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
         if (hasFocus) activity.window.decorView.post {
             if (visible && watchingRequested && activity.hasWindowFocus()) {
@@ -135,6 +138,15 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 "state" -> state().toString()
                 "set" -> {
                     set(data.getString("key"), data.get("value"))
+                    "null"
+                }
+                "setEnterApp" -> {
+                    val method = requireNotNull(EnterKey.SendMethod.of(data.getString("method"))) { "Unknown send method" }
+                    TypingSettings.enterApps(activity, EnterKey.savedApps(TypingSettings.enterApps(activity), data.getString("app"), method))
+                    "null"
+                }
+                "removeEnterApp" -> {
+                    TypingSettings.enterApps(activity, EnterKey.savedApps(TypingSettings.enterApps(activity), data.getString("app"), null))
                     "null"
                 }
                 "addWord" -> {
@@ -308,6 +320,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("suggestionBar", TypingSettings.suggestionBar(activity))
             .put("cursorControl", TypingSettings.cursorControl(activity))
             .put("enterKey", TypingSettings.enterKey(activity))
+            .also(::putEnterApps)
             .put("liftOff", TypingSettings.liftOffGrace(activity))
             .put("liftOffMillis", TypingSettings.liftOffDurationMillis(activity))
             .put("haptics", Haptics.enabled(activity))
@@ -317,6 +330,33 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("rawLogBytes", RawLog.size(activity))
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
+    }
+
+    private fun putEnterApps(state: JSONObject) {
+        val added = EnterKey.apps(TypingSettings.enterApps(activity))
+        val builtInNames = EnterKey.BUILT_IN.associate { it.packageName to it.name }
+        state.put("enterApps", JSONArray(added.entries.sortedBy { it.key }.map { (app, method) ->
+            enterApp(app, builtInNames[app] ?: appName(app), method)
+        }))
+        state.put("enterAppsBuiltIn", JSONArray(EnterKey.BUILT_IN.filter { it.packageName !in added }.map {
+            enterApp(it.packageName, it.name, it.method)
+        }))
+        state.put("recentEnterApps", JSONArray(TypingSettings.recentEnterApps(activity)
+            .filter { it !in added && it !in builtInNames }
+            .map { JSONObject().put("app", it).put("name", appName(it)) }))
+    }
+
+    private fun enterApp(app: String, name: String, method: EnterKey.SendMethod) =
+        JSONObject().put("app", app).put("name", name).put("method", method.id)
+
+    /** Android lets a keyboard see the apps that it has typed in. If it cannot see one now, the package name is shown. */
+    private fun appName(app: String) = appNames.getOrPut(app) {
+        try {
+            val packages = activity.packageManager
+            packages.getApplicationLabel(packages.getApplicationInfo(app, 0)).toString()
+        } catch (error: PackageManager.NameNotFoundException) {
+            app
+        }
     }
 
     /** The Titan's Scroll assistant switch powers the keyboard touchpad, and it ships off. Phones without one pass. */

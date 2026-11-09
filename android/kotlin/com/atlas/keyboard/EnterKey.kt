@@ -24,10 +24,26 @@ enum class EnterKey(val id: String) {
         ShiftSend,
     }
 
-    fun press(inputType: Int, imeOptions: Int, actionId: Int, packageName: String?, shift: Boolean, ctrl: Boolean): Press {
+    /** How a message goes out in an app. */
+    enum class SendMethod(val id: String) {
+        /** The field's editor action. An app that did not build this in returns success and does nothing. */
+        EditorAction("action"),
+        /** A plain Enter key, for apps that send on the key and not on the action. */
+        PlainEnter("key");
+
+        companion object {
+            fun of(id: String?) = entries.firstOrNull { it.id == id }
+        }
+    }
+
+    /** A chat app that the setting knows without being told. */
+    data class ChatApp(val packageName: String, val name: String, val method: SendMethod)
+
+    fun press(inputType: Int, imeOptions: Int, actionId: Int, packageName: String?, shift: Boolean, ctrl: Boolean,
+              added: Map<String, SendMethod> = emptyMap()): Press {
         // A new line means nothing in a single-line field, so Go, Search, Next and Done stay as they are.
         if (this == AppDecides || !multiLine(inputType)) return Press.FieldDecides
-        val sends = packageName in CHAT_APPS || declaresSend(imeOptions, actionId)
+        val sends = packageName in BUILT_IN_METHODS || packageName in added || declaresSend(imeOptions, actionId)
         return when {
             // A half-written note must never be sent somewhere.
             !sends -> if (ctrl) Press.FieldDecides else Press.NewLine
@@ -40,19 +56,28 @@ enum class EnterKey(val id: String) {
     }
 
     companion object {
-        private const val DISCORD = "com.discord"
-        private val CHAT_APPS = setOf(
-            "com.whatsapp",
-            "org.telegram.messenger",
-            "org.thoughtcrime.securesms",
-            DISCORD,
-            "im.vector.app",
-            "com.google.android.apps.messaging",
-            "ch.threema.app",
-            "ch.threema.app.libre",
-            "com.instagram.android",
-            "com.facebook.orca",
+        private const val MAX_RECENT_APPS = 20
+
+        /**
+         * Apps with no declared action, such as Jetpack Compose fields, return success from the editor action and do nothing,
+         * so they get the plain key. Discord needs it too. Added apps can change this on the phone.
+         */
+        val BUILT_IN = listOf(
+            ChatApp("com.whatsapp", "WhatsApp", SendMethod.EditorAction),
+            ChatApp("org.telegram.messenger", "Telegram", SendMethod.EditorAction),
+            ChatApp("org.thoughtcrime.securesms", "Signal", SendMethod.EditorAction),
+            ChatApp("com.discord", "Discord", SendMethod.PlainEnter),
+            ChatApp("im.vector.app", "Element", SendMethod.EditorAction),
+            ChatApp("com.google.android.apps.messaging", "Google Messages", SendMethod.EditorAction),
+            ChatApp("ch.threema.app", "Threema", SendMethod.EditorAction),
+            ChatApp("ch.threema.app.libre", "Threema Libre", SendMethod.EditorAction),
+            ChatApp("com.instagram.android", "Instagram", SendMethod.EditorAction),
+            ChatApp("com.facebook.orca", "Messenger", SendMethod.EditorAction),
+            ChatApp("com.openai.chatgpt", "ChatGPT", SendMethod.PlainEnter),
+            ChatApp("com.anthropic.claude", "Claude", SendMethod.PlainEnter),
+            ChatApp("com.reddit.frontpage", "Reddit", SendMethod.PlainEnter),
         )
+        private val BUILT_IN_METHODS = BUILT_IN.associate { it.packageName to it.method }
         private val FIELD_ACTIONS = setOf(EditorInfo.IME_ACTION_GO, EditorInfo.IME_ACTION_SEARCH, EditorInfo.IME_ACTION_SEND,
             EditorInfo.IME_ACTION_NEXT, EditorInfo.IME_ACTION_DONE, EditorInfo.IME_ACTION_PREVIOUS)
 
@@ -72,7 +97,28 @@ enum class EnterKey(val id: String) {
             return if (action in FIELD_ACTIONS) action else EditorInfo.IME_ACTION_SEND
         }
 
-        /** Discord sends on a plain Enter key, not on an editor action. */
-        fun sendsWithKey(packageName: String?) = packageName == DISCORD
+        /** How an app sends. What the user chose for an app comes before the built-in method. */
+        fun sendMethod(packageName: String?, added: Map<String, SendMethod> = emptyMap()) =
+            added[packageName] ?: BUILT_IN_METHODS[packageName] ?: SendMethod.EditorAction
+
+        /** Reads the saved apps, each saved as "package=method". A damaged entry is left out. */
+        fun apps(saved: Set<String>): Map<String, SendMethod> = saved.mapNotNull { entry ->
+            val packageName = entry.substringBefore('=', "")
+            val method = SendMethod.of(entry.substringAfter('=', ""))
+            if (packageName.isEmpty() || method == null) null else packageName to method
+        }.toMap()
+
+        /** The saved apps with [packageName] changed to [method], or removed when [method] is null. */
+        fun savedApps(saved: Set<String>, packageName: String, method: SendMethod?): Set<String> =
+            saved.filterNot { it.substringBefore('=', "") == packageName }.toSet() +
+                listOfNotNull(method?.let { "$packageName=${it.id}" })
+
+        /** The most recent apps first, with [packageName] now the newest. */
+        fun recentApps(recent: List<String>, packageName: String): List<String> =
+            (listOf(packageName) + recent.filter { it != packageName }).take(MAX_RECENT_APPS)
+
+        /** The setting can apply in a multi-line field. A private field leaves no record that it was used. */
+        fun recordsApp(inputType: Int, imeOptions: Int) = multiLine(inputType)
+            && imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING == 0
     }
 }

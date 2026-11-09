@@ -23,6 +23,13 @@ fun main() {
     speedIsSlowNextToSpace()
     holdingAtTheEdgeBuildsUp()
     slipCarriesOnFromWhereItLands()
+    slipCarriesOnAnywhereInTime()
+    runningOffTheEndCarriesOn()
+    runningOffTheEndMustComeBackNearby()
+    runningOffTheEndMustComeBackInTime()
+    awayFromTheEndsOnlyASlipCounts()
+    dropoutsFromTheLogResume()
+    wordDragRunsOffTheEndToo()
     dragCanStartLate()
     singleTapDoesNothing()
     slowFirstTouchDoesNothing()
@@ -253,6 +260,76 @@ private fun slipCarriesOnFromWhereItLands() {
     same(cursor.direction(), 0, "A lifted finger must not move the cursor")
     same(cursor.resume(at(8f, 200)), true, "A finger that comes back must carry on")
     same(cursor.direction(), 1, "After a slip, the position where it lands must decide")
+}
+
+private const val SLIP = 90L
+private const val END_ROW = 3.5f
+
+/** A cursor whose finger leaned to [column] and lifted at [time]. */
+private fun liftedAt(column: Float, time: Long) = CursorMode().apply {
+    start(at(5f, 0))
+    move(listOf(at(column, time, END_ROW)))
+    lift()
+}
+
+private fun slipCarriesOnAnywhereInTime() {
+    val cursor = liftedAt(2f, 1_000)
+    same(cursor.holdMillis(SLIP), SLIP, "Away from the ends of the touchpad, the wait must be the slip recovery period")
+    same(cursor.resume(at(7f, 1_080, END_ROW), SLIP), true, "A finger within the slip recovery period must carry on anywhere")
+    same(cursor.direction(), 1, "The place where it lands must decide")
+}
+
+private fun runningOffTheEndCarriesOn() {
+    for (edge in listOf(9.4f, .65f)) {
+        val cursor = liftedAt(edge, 1_000)
+        same(cursor.holdMillis(SLIP), 450L, "At column $edge the keyboard must wait for the finger to come back")
+        val landed = edge + if (edge > 5) -.3f else .3f
+        same(cursor.resume(at(landed, 1_350, END_ROW), SLIP), true, "A finger that runs off column $edge and comes back near it must carry on")
+        same(cursor.active, true, "The cursor must keep following it")
+        same(cursor.direction(), if (edge > 5) 1 else -1, "It must carry on in the same direction")
+    }
+}
+
+private fun runningOffTheEndMustComeBackNearby() {
+    val cursor = liftedAt(9.4f, 1_000)
+    // The touchpad reports one point, so a second finger shows up as a touch somewhere else while the first has lifted.
+    same(cursor.resume(at(5.5f, 1_250, END_ROW), SLIP), false, "A touch far away must be another finger or the next gesture, not the same drag")
+    same(cursor.active, false, "The drag must not carry on for a second finger")
+    val second = liftedAt(9.4f, 1_000)
+    same(second.resume(at(7.9f, 1_200, END_ROW), SLIP), false, "A touch more than a key away must be a new touch")
+    val near = liftedAt(9.4f, 1_000)
+    same(near.resume(at(8.5f, 1_200, END_ROW), SLIP), true, "A touch within a key must carry on")
+    val row = liftedAt(9.4f, 1_000)
+    same(row.resume(at(9.3f, 1_200, 2.3f), SLIP), false, "A touch on another row must be a new touch")
+}
+
+private fun runningOffTheEndMustComeBackInTime() {
+    same(liftedAt(9.4f, 1_000).resume(at(9.3f, 1_450, END_ROW), SLIP), true, "A finger back within the wait must carry on")
+    same(liftedAt(9.4f, 1_000).resume(at(9.3f, 1_451, END_ROW), SLIP), false, "A finger back after the wait must be a new touch")
+}
+
+private fun awayFromTheEndsOnlyASlipCounts() {
+    val cursor = liftedAt(8f, 1_000)
+    same(cursor.holdMillis(SLIP), SLIP, "Away from the ends the wait must be only the slip recovery period")
+    same(cursor.resume(at(8.1f, 1_200, END_ROW), SLIP), false, "After the slip recovery period, a touch away from the ends must be a new touch")
+}
+
+/** The gaps and return points of the three real drags that ran off the end of the touchpad and came back. */
+private fun dropoutsFromTheLogResume() {
+    for ((gap, landed, row) in listOf(Triple(314L, 9.21f, .77f * 4), Triple(323L, 9.27f, .82f * 4), Triple(390L, 9.35f, .81f * 4))) {
+        val cursor = liftedAt(9.39f, 1_000)
+        same(cursor.resume(at(landed, 1_000 + gap, row), SLIP), true, "A real drop of $gap ms must carry on")
+    }
+}
+
+private fun wordDragRunsOffTheEndToo() {
+    val cursor = CursorMode().apply {
+        start(at(5f, 0), words = true)
+        move(listOf(at(9.4f, 1_000, END_ROW)))
+        lift()
+    }
+    same(cursor.resume(at(9.3f, 1_300, END_ROW), SLIP), true, "A word drag must carry on after it runs off the end")
+    same(cursor.words, true, "It must stay a word drag")
 }
 
 private fun dragCanStartLate() {

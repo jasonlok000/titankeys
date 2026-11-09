@@ -593,7 +593,7 @@ class AtlasIme : InputMethodService() {
                 haptics.begin(samples.firstOrNull())
                 endDeleteHold()
                 contact.down(first)
-                if (cursor.resume(first)) {
+                if (cursor.resume(first, composer.liftOffMillis.toLong())) {
                     // Back within the slip recovery period: still steering the cursor, never typing.
                     main.removeCallbacks(endSlippedCursor)
                     contact.cancelActive()
@@ -649,11 +649,12 @@ class AtlasIme : InputMethodService() {
                 val doubleTapped = cursorGesture.up(samples, event.eventTime)
                 if (cursor.active) {
                     main.removeCallbacks(stepCursor)
+                    cursor.move(samples)
                     cursor.lift()
                     val slips = composer.liftOffMillis > 0
                     // Through a slip the path stays open, so a finger that comes back carries on drawing it.
                     traceCursor(samples, ended = !slips)
-                    if (slips) main.postDelayed(endSlippedCursor, composer.liftOffMillis.toLong()) else stopCursor()
+                    if (slips) main.postDelayed(endSlippedCursor, cursor.holdMillis(composer.liftOffMillis.toLong())) else stopCursor()
                     return
                 }
                 stopCursor()

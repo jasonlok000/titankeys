@@ -123,6 +123,8 @@ class Composer(
     private class FullStop(val time: Long, val snapshot: Snapshot)
     /** One Backspace puts [restored] back in place of [replaced], which ends the text in [snapshot]. */
     private class Undo(val replaced: String, val restored: String, val word: String, val keptAsTyped: Boolean, val snapshot: Snapshot)
+    /** The last letter a key typed, in [text], and what typing it changed. Holding the key can still replace it. */
+    private class TypedKey(val text: String, val after: Snapshot, val automaticSpace: Snapshot?, val fullStop: FullStop?, val undo: Undo?)
     /** Whether autocorrect changed the text when a typed word ended, and which word to learn now. */
     private class Ended(val changed: Boolean, val learn: String?)
     private class Barrier(val identity: Editor.Identity, val navigation: Boolean = false, val command: Boolean = false,
@@ -156,6 +158,7 @@ class Composer(
     private val remembered = ArrayList<Remembered>()
     private var rememberedField: Pair<String?, Int>? = null
     private var undo: Undo? = null
+    private var typedKey: TypedKey? = null
     /** The last typed word to end, until the word after it has ended too. */
     private var endedWord: EndedWord? = null
     /** A typed word waiting for a swipe that may still continue, because the swiped word decides whether to change it. */
@@ -252,6 +255,7 @@ class Composer(
 
     private fun reset() {
         invalidate()
+        typedKey = null
         composition = Composition.None
         automaticSpace = null
         fullStop = null
@@ -486,6 +490,8 @@ class Composer(
             return
         }
         val corrected = undo
+        val spaceBefore = automaticSpace
+        val fullStopBefore = fullStop
         leave()
         invalidate(false)
         val typedSpace = fullStop?.snapshot
@@ -530,6 +536,8 @@ class Composer(
         val cause = if (dropsSpace) EditCause.DropSpace else if (letterTap) EditCause.Tap else EditCause.Key
         if (!edit(cause, if (dropsSpace) 1 else 0, typed)) return
         automaticSpace = if (letterTap) snapshot() else null
+        typedKey = if (letterTap) null else TypedKey(typed.substring(typed.offsetByCodePoints(typed.length, -1)), snapshot(),
+            spaceBefore, fullStopBefore, corrected)
         composition = Composition.None
         if (letterTap) manualWord.clear()
         else if (!completesCorrection) observe(text)
@@ -539,6 +547,25 @@ class Composer(
             return
         }
         predictLater()
+    }
+
+    /**
+     * The key that typed the last letter stayed down, so [symbol] takes the letter's place, as if the symbol had been
+     * typed instead. If the letter is no longer the last thing in the text, it stays as it is.
+     */
+    fun replaceLetter(symbol: String) {
+        if (defer { replaceLetter(symbol) }) return
+        val letter = typedKey ?: return
+        typedKey = null
+        val anchor = snapshot()
+        if (anchor != letter.after || !anchor.available || anchor.before?.endsWith(letter.text) != true) return
+        manualWord.edit("\b", null, false)
+        if (!edit(EditCause.Backspace, letter.text.length, "")) return
+        automaticSpace = letter.automaticSpace
+        fullStop = letter.fullStop
+        undo = letter.undo
+        type(symbol)
+        typedKey = null
     }
 
     fun symbol(symbol: String) {

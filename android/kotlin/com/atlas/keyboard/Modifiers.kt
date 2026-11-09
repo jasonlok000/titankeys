@@ -128,7 +128,10 @@ class Modifiers {
             return
         }
         val key = keyOf(code) ?: return
-        if (code in held) return
+        val earlier = held[code]
+        if (earlier == time) return
+        // A new press of a key that is still down means its release was lost. That press ends now, so this one counts.
+        if (earlier != null) up(code, time)
         held[code] = time
         usedWhileHeld -= code
         press(key, time)
@@ -219,5 +222,8 @@ class Modifiers {
         }
 
         fun isModifier(code: Int) = code == KeyEvent.KEYCODE_SYM || keyOf(code) != null
+
+        /** Dropped typing must not take a Shift, Alt or Sym press with it, or their state would no longer match the keys. */
+        fun survivesDiscard(code: Int, down: Boolean) = !down || isModifier(code)
     }
 }

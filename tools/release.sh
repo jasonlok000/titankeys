@@ -2,6 +2,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# A git worktree has no signing folder, so it uses the one in the main checkout.
+main=$(cd "$(git rev-parse --git-common-dir)/.." && pwd)
+[[ ! -e signing && -d "$main/signing" ]] && ln -s "$main/signing" signing
+
 # CI can provide credentials directly; local builds use the ignored signing folder.
 if [[ -z "${INK_KEYSTORE_PASSWORD:-}" && -f signing/credentials.env ]]; then
   source signing/credentials.env

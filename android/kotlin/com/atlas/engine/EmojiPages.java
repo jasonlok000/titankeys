@@ -11,13 +11,18 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 /**
- * The items that the Sym panel shows, in groups of pages. The recent emoji come first, at the start of the first group.
+ * The items that the Sym panel shows, in groups of pages. Recently used emoji are a group of their own, which comes first
+ * and opens by default. Until an emoji has been used there is no such group, and the first group opens.
  * Up and down swipes turn pages inside a group; sideways swipes change the group. Symbols are one group, with no recent items.
  */
 public final class EmojiPages {
     /** One item for each letter key. */
     public static final int PER_PAGE = 26;
-    public static final int RECENT_LIMIT = 8;
+    /** The Recent group holds one page, so a used emoji stays until a full page of newer ones replaces it. */
+    public static final int RECENT_LIMIT = PER_PAGE;
+    public static final String RECENT = "Recent";
+    /** The Recent group's mark in the category strip: a clock. The group's own first emoji changes each time an emoji is used. */
+    public static final String RECENT_SAMPLE = "🕘";
 
     public record Group(String name, List<String> emoji) {}
 
@@ -53,15 +58,29 @@ public final class EmojiPages {
         return groups;
     }
 
+    /** Adds items from {@code spare} until the last page is full, so that no key on it is blank. */
+    public static List<String> fillLastPage(List<String> items, List<String> spare) {
+        List<String> filled = new ArrayList<>(items);
+        int missing = Math.floorMod(-items.size(), PER_PAGE);
+        for (String item : spare) {
+            if (missing == 0) break;
+            if (filled.contains(item)) continue;
+            filled.add(item);
+            missing--;
+        }
+        return filled;
+    }
+
+    /** True if a swipe of this shape turns the page inside a group, false if it changes the group. */
+    public static boolean turnsPage(float across, float down) {
+        return Math.abs(down) > Math.abs(across);
+    }
+
     /** Back to the first page, with the recent emoji as they are now. */
     public void reset() {
         shown.clear();
+        if (!recents.isEmpty()) shown.add(new Group(RECENT, List.copyOf(recents)));
         shown.addAll(groups);
-        if (!shown.isEmpty() && !recents.isEmpty()) {
-            List<String> first = new ArrayList<>(recents);
-            first.addAll(shown.get(0).emoji());
-            shown.set(0, new Group(shown.get(0).name(), List.copyOf(first)));
-        }
         pages.clear();
         for (int group = 0; group < shown.size(); group++) {
             for (int start = 0; start < shown.get(group).emoji().size(); start += PER_PAGE) pages.add(new Page(group, start));
@@ -78,6 +97,21 @@ public final class EmojiPages {
 
     public String group() {
         return pages.isEmpty() ? "" : shown.get(pages.get(page).group()).name();
+    }
+
+    /** One emoji for each group, in order, for the category strip. */
+    public List<String> samples() {
+        List<String> samples = new ArrayList<>();
+        for (Group group : shown) {
+            if (group.name().equals(RECENT)) samples.add(RECENT_SAMPLE);
+            else if (!group.emoji().isEmpty()) samples.add(group.emoji().get(0));
+        }
+        return samples;
+    }
+
+    /** The open group's place in {@link #samples}. */
+    public int groupIndex() {
+        return pages.isEmpty() ? 0 : pages.get(page).group();
     }
 
     /** Which page of the open group this is, counted from 1. */
@@ -110,7 +144,7 @@ public final class EmojiPages {
      */
     public boolean swipe(float across, float down) {
         int before = page;
-        if (Math.abs(down) > Math.abs(across)) turn(down < 0 ? 1 : -1);
+        if (turnsPage(across, down)) turn(down < 0 ? 1 : -1);
         else jump(across > 0 ? -1 : 1);
         return page != before;
     }

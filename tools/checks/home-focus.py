@@ -86,7 +86,7 @@ def main():
         time.sleep(.5)
         assert editor()["text"] == original, "Could not restore the original home text"
 
-    tap(860, 255)
+    tap(955, 190)
     assert not any(node.attrib.get("hint") == HINT for node in hierarchy().iter("node")), "Settings did not open"
     ime = shell("dumpsys", "input_method").partition("mCurrentEditorInfo:")[2]
     assert "inputType=0x0 " in ime, "Home retained its editor connection in Settings"

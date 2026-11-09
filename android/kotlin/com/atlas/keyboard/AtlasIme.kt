@@ -991,8 +991,9 @@ class AtlasIme : InputMethodService() {
             info?.actionId ?: 0, info?.packageName, shift, event.isCtrlPressed)
         if (press == EnterKey.Press.FieldDecides && event.isCtrlPressed) return false
         // A held Enter must not send again before the app has cleared the field.
-        if (press != EnterKey.Press.Send || event.repeatCount == 0) composer.enter(press)
-        if (press == EnterKey.Press.ShiftNewLine) modifiers.consume() else modifiers.useHeld()
+        val sends = press == EnterKey.Press.Send || press == EnterKey.Press.ShiftSend
+        if (!sends || event.repeatCount == 0) composer.enter(press)
+        if (press == EnterKey.Press.ShiftNewLine || press == EnterKey.Press.ShiftSend) modifiers.consume() else modifiers.useHeld()
         return true
     }
 

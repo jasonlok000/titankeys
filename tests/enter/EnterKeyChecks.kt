@@ -64,8 +64,9 @@ private fun alwaysSendInChatApps() = chatApps.forEach { app ->
 private fun alwaysNewLineInChatApps() = chatApps.forEach { app ->
     val key = EnterKey.AlwaysNewLine
     same(key.press(app), Press.NewLine, "Enter adds a new line in $app")
-    same(key.press(app, shift = true), Press.NewLine, "Shift has no meaning here, so it must not be used up in $app")
+    same(key.press(app, shift = true), Press.ShiftSend, "Shift + Enter sends in $app")
     same(key.press(app, ctrl = true), Press.Send, "Ctrl + Enter sends in $app")
+    same(key.press(app, shift = true, ctrl = true), Press.Send, "Ctrl wins over Shift in $app")
 }
 
 private fun appDecidesEverywhere() {
@@ -88,6 +89,7 @@ private fun declaredSend() {
         same(EnterKey.AlwaysSend.press(MAIL, imeOptions = options, shift = true), Press.ShiftNewLine, "Shift + Enter adds a new line")
         same(EnterKey.AlwaysNewLine.press(MAIL, imeOptions = options), Press.NewLine, "Always new line covers all multi-line fields")
         same(EnterKey.AlwaysNewLine.press(MAIL, imeOptions = options, ctrl = true), Press.Send, "Ctrl + Enter sends")
+        same(EnterKey.AlwaysNewLine.press(MAIL, imeOptions = options, shift = true), Press.ShiftSend, "Shift + Enter sends")
     }
     same(EnterKey.AlwaysSend.press(MAIL, actionId = SEND), Press.Send, "A custom action of Send counts as declaring Send")
 }

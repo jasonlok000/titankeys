@@ -161,7 +161,7 @@ class ConnectionEditor(
         val options = info?.imeOptions ?: 0
         val action = when (press) {
             EnterKey.Press.NewLine, EnterKey.Press.ShiftNewLine -> return Editor.Enter.Newline
-            EnterKey.Press.Send -> {
+            EnterKey.Press.Send, EnterKey.Press.ShiftSend -> {
                 if (EnterKey.sendsWithKey(info?.packageName))
                     return if (key(connection, KeyEvent.KEYCODE_ENTER, 0)) Editor.Enter.Action else Editor.Enter.Rejected
                 EnterKey.sendAction(options, info?.actionId ?: 0)

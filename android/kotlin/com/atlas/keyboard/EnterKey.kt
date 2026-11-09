@@ -20,6 +20,8 @@ enum class EnterKey(val id: String) {
         /** A new line that Shift asked for, which uses up a Shift that was pressed once. */
         ShiftNewLine,
         Send,
+        /** A send that Shift asked for, which uses up a Shift that was pressed once. */
+        ShiftSend,
     }
 
     fun press(inputType: Int, imeOptions: Int, actionId: Int, packageName: String?, shift: Boolean, ctrl: Boolean): Press {
@@ -30,7 +32,8 @@ enum class EnterKey(val id: String) {
             // A half-written note must never be sent somewhere.
             !sends -> if (ctrl) Press.FieldDecides else Press.NewLine
             ctrl -> Press.Send
-            this == AlwaysNewLine -> Press.NewLine
+            // Shift does the opposite of the setting.
+            this == AlwaysNewLine -> if (shift) Press.ShiftSend else Press.NewLine
             shift -> Press.ShiftNewLine
             else -> Press.Send
         }

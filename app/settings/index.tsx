@@ -42,7 +42,8 @@ export default function Settings() {
     <Section title="Swipe typing">
       <Toggle label="Swipe typing" value={settings.swipeTyping}
         onChange={swipeTyping => save.run({ swipeTyping })} />
-      <Field label="Slip recovery period" href="/settings/lift">{liftLabel(settings)}</Field>
+      {(settings.swipeTyping || settings.cursorControl)
+        && <Field label="Slip recovery period" href="/settings/lift">{liftLabel(settings)}</Field>}
       <Field label="Swipe vibration" href="/settings/vibration">{vibrationLabel(settings)}</Field>
       <Toggle label="Touchpad only in text fields" value={settings.touchpadOnlyInFields}
         onChange={touchpadOnlyInFields => save.run({ touchpadOnlyInFields })} />

@@ -61,6 +61,7 @@ class AtlasIme : InputMethodService() {
     private var typedInField = false
     private var passingBack = false
     private var inLauncher = false
+    private var launcherFieldHasText = false
     private val consumedKeys = HashSet<Int>()
     private var deadKeyPending = false
     private var tapKeys = ""
@@ -189,6 +190,7 @@ class AtlasIme : InputMethodService() {
         if (!restarting) typedInField = false
         field = if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
         inLauncher = editing && info.packageName == launcherPackage()
+        launcherFieldHasText = inLauncher && info.initialSelStart > 0
         contact.releaseKeys()
         clearSettlements()
         modifiers.clear()
@@ -215,8 +217,8 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way.
-    private fun showSuggestions() = TypingSettings.suggestionBar(this) && !inLauncher
+    // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way until you type.
+    private fun showSuggestions() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText)
 
     private fun launcherPackage(): String? {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
@@ -282,6 +284,10 @@ class AtlasIme : InputMethodService() {
     override fun onUpdateSelection(oldStart: Int, oldEnd: Int, newStart: Int, newEnd: Int, composingStart: Int, composingEnd: Int) {
         super.onUpdateSelection(oldStart, oldEnd, newStart, newEnd, composingStart, composingEnd)
         lastSelectionStart = newStart
+        if (inLauncher && (newStart > 0) != launcherFieldHasText) {
+            launcherFieldHasText = newStart > 0
+            strip?.showSuggestions = showSuggestions()
+        }
         if (editing && composer.selectionChanged(newStart, newEnd)) clearSettlements()
     }
 
@@ -582,6 +588,11 @@ class AtlasIme : InputMethodService() {
                         strip?.turn(if (dx > 0) -1 else 1)
                         haptics.pulse(HapticPreset.Strong)
                     }
+                    return
+                }
+                if (isDeleteWordSwipe(outcome.points)) {
+                    haptics.tap()
+                    composer.backspace(true)
                     return
                 }
                 composer.swipe(letterSpace(outcome.points), outcome.startedAt, outcome.endedAt, modifiers.metaState)

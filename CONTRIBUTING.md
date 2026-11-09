@@ -31,6 +31,8 @@ I read each issue. If I approve it, I add a comment that tells who does the work
 
 If you want to do the work, write this in the issue. Wait until I give the issue to you before you start. This makes sure that your time is not wasted on work that I cannot merge.
 
+For a small fix, you do not need an issue or approval. Send a pull request directly. Examples of small fixes are a typo or an obvious bug that you can fix in one line.
+
 ## Set up your computer
 
 ### Prerequisites
@@ -82,7 +84,7 @@ You must use macOS. The setup script downloads the macOS version of the Android 
 1. Make a branch from `main`. Give the branch a short name, for example `fix-cursor-swipe`.
 2. Make your change. Keep each pull request to one issue.
 3. Follow the style of the code near your change.
-4. Write all text that the user sees in [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/). This includes the guide, settings, and release notes.
+4. Write all text that the user sees in simple, clear English. This includes the guide, settings, and release notes. Before I merge your change, I edit this text to [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/).
 5. Run the checks:
 
    ```bash
@@ -122,7 +124,7 @@ Each pull request must have a test on a real Titan 2 Elite. An emulator does not
 1. Push your branch to your fork.
 2. Open a pull request into `main`.
 3. In the description, write these items:
-   - A link to the approved issue, for example `Closes #12`.
+   - A link to the approved issue, for example `Closes #12`. A small fix does not need an issue.
    - What you changed.
    - How you tested it on the Titan 2 Elite.
    - A screen recording, if the change is visible.

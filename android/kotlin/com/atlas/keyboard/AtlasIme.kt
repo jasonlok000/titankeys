@@ -42,6 +42,7 @@ class AtlasIme : InputMethodService() {
     private lateinit var composer: Composer
     private lateinit var editor: ConnectionEditor
     private lateinit var overlay: TouchpadOverlay
+    private lateinit var watch: TouchWatch
     private val contact = Contact()
     private val cursor = CursorMode()
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
@@ -167,6 +168,8 @@ class AtlasIme : InputMethodService() {
         overlay = TouchpadOverlay(this) { event ->
             (editing && touchpad.accepts(event)).also { if (it) motion(event) }
         }
+        watch = TouchWatch(this) { if (touchpad.accepts(it)) light() }
+        watch.show()
         loadEmoji()
     }
 
@@ -291,7 +294,11 @@ class AtlasIme : InputMethodService() {
 
     override fun onEvaluateInputViewShown() = editing
 
-    override fun onShowInputRequested(flags: Int, configChange: Boolean) = editing
+    override fun onShowInputRequested(flags: Int, configChange: Boolean): Boolean {
+        // A refused show still reports an active window. Hide it again, or the next touch reports no change.
+        if (!editing) main.post { if (!editing) requestHideSelf(0) }
+        return editing
+    }
 
     override fun onEvaluateFullscreenMode() = false
 
@@ -401,6 +408,15 @@ class AtlasIme : InputMethodService() {
     }
 
     private val endSlippedCursor = Runnable { endCursor() }
+
+    /**
+     * Turns on the keyboard light for a touch outside a text field. The Titan lights the keys for a key press, or
+     * when the keyboard reports an active window, so ask to show the keyboard: Atlas refuses, but the request still
+     * reports an active window. In a text field, the Titan keeps the light on by itself.
+     */
+    private fun light() {
+        if (!editing) requestShowSelf(0)
+    }
 
     private fun traceCursor(samples: List<Sample>, ended: Boolean) {
         val added = samples.filter { it.valid }
@@ -827,6 +843,7 @@ class AtlasIme : InputMethodService() {
         composer.stop()
         editor.cancelState()
         overlay.hide()
+        watch.hide()
         super.onDestroy()
     }
 

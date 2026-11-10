@@ -40,6 +40,7 @@ import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
 import java.io.IOException
 import kotlin.math.abs
+import kotlin.random.Random
 
 /**
  * Atlas: swipe typing on the Titan 2 keyboard's touchpad, with a suggestion strip for the physical
@@ -175,10 +176,13 @@ class AtlasIme : InputMethodService() {
         showStrip.run()
     }
 
-    /** The owner's word on Teams, for about a second after the strip comes back from [recycle]. Never over a word's menu. */
+    /**
+     * The owner's word on Teams, for a moment after the strip comes back from [recycle], once in [TEAMS_EGG_CHANCE] times at
+     * random. Never over a word's menu.
+     */
     private fun showTeamsEgg() {
         val strip = strip ?: return
-        if (strip.notice != null) return
+        if (strip.notice != null || Random.nextInt(TEAMS_EGG_CHANCE) != 0) return
         strip.notice = Strip.Notice.TeamsEgg
         main.removeCallbacks(endTeamsEgg)
         main.postDelayed(endTeamsEgg, TEAMS_EGG_MILLIS)
@@ -2165,7 +2169,9 @@ class AtlasIme : InputMethodService() {
         /** How long the strip stays hidden, from the moment its window has gone. */
         private const val RECYCLE_GAP_MILLIS = 150L
         /** How long the strip shows its word on Teams. */
-        private const val TEAMS_EGG_MILLIS = 1000L
+        private const val TEAMS_EGG_MILLIS = 200L
+        /** The word shows after one in this many hides and shows for Teams. */
+        private const val TEAMS_EGG_CHANCE = 10
         /** If the window has not gone by then, the strip comes back anyway. */
         private const val RECYCLE_HIDE_TIMEOUT_MILLIS = 1000L
         /** The height test adds this above the 88 px strip, for a 200 px window. */

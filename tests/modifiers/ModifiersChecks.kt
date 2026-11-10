@@ -62,6 +62,7 @@ fun main() {
     panelScrollKeys()
     restingOnP()
     symbolAndEmojiPages()
+    aFingerOnBackOpensNoGroup()
     bottomRow()
     onlyOneModifier()
     repeatsAndStrayEvents()
@@ -804,6 +805,18 @@ private fun symbolAndEmojiPages() {
     same(Layout.keyAt(.88f, .65f), Layout.SYM, "The right of Sym must be Sym")
     same(Layout.keyAt(.95f, .15f), "P", "The middle of P must be P")
     same(Layout.keyAt(.95f, .28f), Layout.BACKSPACE, "The top of Backspace must be Backspace")
+}
+
+/** Real pushes of Back land on the bottom row first, between .12 and .34 across, and moved at most .055 before the key went down. */
+private fun aFingerOnBackOpensNoGroup() {
+    for (landed in listOf(.119f, .222f, .264f, .336f)) {
+        same(Layout.isBottomRow(.87f), true, "A finger on its way to Back is on the bottom row")
+        same(Layout.movedAlongBottomRow(landed, landed), false, "A finger that only lands must open no group")
+        same(Layout.movedAlongBottomRow(landed, landed + .055f), false, "The most that a real push of Back moved must open no group")
+        same(Layout.movedAlongBottomRow(landed, landed - .055f), false, "The same to the left must open no group")
+        same(Layout.movedAlongBottomRow(landed, landed + .1f), true, "A finger that moves one key along the row must choose a group")
+        same(Layout.movedAlongBottomRow(landed, landed - .1f), true, "The same to the left must choose a group")
+    }
 }
 
 private fun bottomRow() {

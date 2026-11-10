@@ -1,5 +1,7 @@
 package com.atlas.keyboard
 
+import kotlin.math.abs
+
 /**
  * The Titan 2 keyboard face. Touchpad coordinates run from 0 to 1 across the ten columns and down the
  * four rows; the recogniser's letter space stretches the three letter rows over the same 0 to 1.
@@ -17,6 +19,8 @@ object Layout {
     /** Where a finger counts as resting on P and not on the key beside it. See [restingKeyAt]. */
     private const val LAST_COLUMN_FROM_LEFT = .875f
     private const val P_TO_BOTTOM = .3f
+    /** Real pushes of Back moved at most .055 across the touchpad before the key went down. */
+    private const val BOTTOM_ROW_MOVE = .06f
 
     val rows = listOf(
         listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
@@ -76,6 +80,12 @@ object Layout {
 
     /** Whether a touchpad height is on the bottom row of keys. */
     fun isBottomRow(y: Float) = y >= .75f
+
+    /**
+     * Whether a finger that landed on the bottom row at [landedX] has moved along the row, so that it is choosing a group of emoji.
+     * A finger that only lands there can be on its way to push Back, which reads as a touch on this row first.
+     */
+    fun movedAlongBottomRow(landedX: Float, x: Float) = abs(x - landedX) >= BOTTOM_ROW_MOVE
 
     /** The left and right edges of a bottom-row key, from 0 to 1 across the keyboard. */
     fun bottomSpan(key: String): Pair<Float, Float> {

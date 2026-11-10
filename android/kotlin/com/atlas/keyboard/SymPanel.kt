@@ -20,7 +20,7 @@ import kotlin.math.sign
  * The panel that Sym opens: a symbol or an emoji on each letter key of the top three rows but Q, A and P, in line with the physical
  * letter keys. P shows the position of the open page and only that, and the other keys are left empty. A finger that rests on a key
  * marks that key, except in the last column, which the touchpad cannot read well. The groups of emoji are in a strip along the bottom,
- * above the bottom row of physical keys, and a finger on that row opens the group at its place.
+ * above the bottom row of physical keys, and a finger that moves along that row opens the group at its place.
  *
  * Alt's place shows the quick settings key and Sym's place shows what Sym does next, each as an icon. When a group of emoji has
  * more than one page, the places of Backspace and Enter show an icon for the page that each key opens. On the quick settings page

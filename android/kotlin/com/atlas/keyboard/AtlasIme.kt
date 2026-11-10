@@ -72,6 +72,8 @@ class AtlasIme : InputMethodService() {
     private var pickedKey = 0
     /** The current touch landed on the bottom row with categories on the screen, so it picks a category and is nothing else. */
     private var pickingCategory = false
+    private var categoryLandedAt = 0f
+    private var categoryMoved = false
     private var field = Field.None
     /** The apps that the user added to the Enter key setting, read when a field starts. */
     private var enterApps = emptyMap<String, EnterKey.SendMethod>()
@@ -785,13 +787,16 @@ class AtlasIme : InputMethodService() {
 
     /**
      * A finger that rests on a key shows that key in the panel, until the finger lifts. A finger that lands on the bottom row while
-     * the categories show opens the category at its place, and that follows the finger. Returns true for such a touch, which is
-     * then not also a swipe.
+     * the categories show and moves along the row opens the category at its place, and that follows the finger. Returns true for
+     * such a touch, which is then not also a swipe.
      */
     private fun hover(event: MotionEvent, samples: List<Sample>): Boolean {
         val last = samples.lastOrNull { it.valid }
-        if (event.actionMasked == MotionEvent.ACTION_DOWN)
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             pickingCategory = last != null && Layout.isBottomRow(last.y) && panel?.hasCategories == true
+            categoryLandedAt = last?.x ?: 0f
+            categoryMoved = false
+        }
         val picking = pickingCategory
         if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
             panel?.hover = ""
@@ -799,9 +804,13 @@ class AtlasIme : InputMethodService() {
             return picking
         }
         if (last == null) return picking
-        if (!picking) panel?.hover = if (modifiers.panel == Modifiers.Panel.Settings) Layout.restingKeyAt(last.x, last.y) else Layout.keyAt(last.x, last.y)
-        else if (panel?.pickCategory(last.x) == true) haptics.pageChanged()
-        return picking
+        if (!picking) {
+            panel?.hover = if (modifiers.panel == Modifiers.Panel.Settings) Layout.restingKeyAt(last.x, last.y) else Layout.keyAt(last.x, last.y)
+            return false
+        }
+        categoryMoved = categoryMoved || Layout.movedAlongBottomRow(categoryLandedAt, last.x)
+        if (categoryMoved && panel?.pickCategory(last.x) == true) haptics.pageChanged()
+        return true
     }
 
     /** A finger that rests on a key shows in the modifier bar what that key gives, until the finger lifts. */

@@ -27,7 +27,7 @@ h1 { font-size: 2.2em; line-height: 1.15; margin: 0.4em 0 0.2em; }
 h2 { font-size: 1.35em; margin: 2em 0 0.5em; padding-top: 0.6em; border-top: 1px solid var(--line); }
 h3 { font-size: 1.05em; margin: 1.4em 0 0.3em; color: var(--orange); }
 
-.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--cream); font-weight: 600; }
+.brand { display: inline-block; text-decoration: none; color: var(--cream); font-weight: 600; }
 .brand span { color: var(--orange); }
 .lead { font-size: 1.15em; }
 .muted { color: var(--muted); }

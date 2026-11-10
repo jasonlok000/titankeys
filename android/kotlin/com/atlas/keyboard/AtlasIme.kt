@@ -369,12 +369,20 @@ class AtlasIme : InputMethodService() {
         touchpad.accepts(event).also { if (it && editing) motion(event) }
     }
 
-    /** The Back service also puts a window above the notification shade, so that a pop-up notification cannot take the touchpad. */
+    /**
+     * The Back service also puts a window above the notification shade, so that a pop-up notification cannot take the touchpad.
+     * It stays for [HIGH_GRACE_MILLIS] after the field ends: until Android hears that the keyboard has gone, the firmware still
+     * sends the touchpad to the windows, and a swipe that ends as the keyboard goes, or the gap as one field hands over to
+     * the next, would reach the pop-up. With no field it only drops the touchpad events, as the keyboard's own overlay does.
+     */
     private fun updateOverlay() {
         val wanted = editing || TypingSettings.touchpadOnlyInFields(this)
         if (wanted) overlay.show() else overlay.hide()
-        BackService.touchpad(if (wanted) overlayEvent else null)
+        main.removeCallbacks(releaseHighTouchpad)
+        if (wanted) BackService.touchpad(overlayEvent) else main.postDelayed(releaseHighTouchpad, HIGH_GRACE_MILLIS)
     }
+
+    private val releaseHighTouchpad = Runnable { BackService.touchpad(null) }
 
     private fun holdWanted() =
         TouchpadHold.wanted(TypingSettings.touchpadOnlyInFields(this), editing, overlay.up, BackService.enabled(this), hold.lettingGo)
@@ -1649,6 +1657,8 @@ class AtlasIme : InputMethodService() {
         private const val STALE_HIDE_MILLIS = 500L
         /** How long Android has to show the strip before the keyboard shows its window itself. */
         private const val SHOW_FALLBACK_MILLIS = 300L
+        /** How long the window above the notification shade stays after a field ends. */
+        private const val HIGH_GRACE_MILLIS = 2000L
         /** The field of a returning window started within 30 ms of its empty start. */
         private const val NO_FIELD_HIDE_MILLIS = 200L
         private const val FRAME_MILLIS = 16L

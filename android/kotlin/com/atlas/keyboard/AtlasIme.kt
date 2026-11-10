@@ -134,13 +134,13 @@ class AtlasIme : InputMethodService() {
         val root = inputRoot ?: return@Runnable
         if (!isInputViewShown) return@Runnable
         stripLog("nudge: one pixel taller")
-        root.setPadding(0, 0, 0, 1)
+        root.setPadding(0, root.paddingTop, 0, 1)
         main.postDelayed(unNudge, NUDGE_MILLIS)
     }
 
     private val unNudge = Runnable {
         stripLog("nudge: back")
-        inputRoot?.setPadding(0, 0, 0, 0)
+        inputRoot?.let { it.setPadding(0, it.paddingTop, 0, 0) }
     }
 
     /**
@@ -715,6 +715,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
+        applyTallTest()
         stripLog("startInputView restarting=$restarting")
         super.onStartInputView(info, restarting)
         // Back belongs to the app, even though it also hides the strip on the way.
@@ -726,7 +727,7 @@ class AtlasIme : InputMethodService() {
         super.onWindowShown()
         if (recycling) {
             recycling = false
-        } else if (editing && SystemClock.uptimeMillis() - windowHiddenAt < BOUNCE_MILLIS) {
+        } else if (editing && !tallTest() && SystemClock.uptimeMillis() - windowHiddenAt < BOUNCE_MILLIS) {
             val recycles = currentInputEditorInfo?.packageName in BOUNCE_APPS
             main.removeCallbacks(recycle)
             main.removeCallbacks(nudge)
@@ -743,7 +744,7 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(recycle)
         main.removeCallbacks(nudge)
         main.removeCallbacks(unNudge)
-        inputRoot?.setPadding(0, 0, 0, 0)
+        inputRoot?.let { it.setPadding(0, it.paddingTop, 0, 0) }
         // Android's hide also turned the status off.
         hold.hidden()
         // A panel that nobody can see must not take the next key.
@@ -832,6 +833,44 @@ class AtlasIme : InputMethodService() {
         if (now == loggedInsets) return
         loggedInsets = now
         stripLog("insets $now")
+    }
+
+    /**
+     * Teams sometimes takes a tap on its message box while the strip shows as if the keyboard were hidden: it asks for a show,
+     * which does nothing, and moves its box down. The keyboard hears nothing else of that tap, but a text field tells the
+     * keyboard about each tap on it, so in the apps in [BOUNCE_APPS] a tap starts the hide and show of [recycle] too.
+     */
+    @Deprecated("Android still calls it for a tap on a text field")
+    override fun onViewClicked(focusChanged: Boolean) {
+        @Suppress("DEPRECATION")
+        super.onViewClicked(focusChanged)
+        stripLog("viewClicked focusChanged=$focusChanged shown=$isInputViewShown")
+        if (!editing || !isInputViewShown || recycling || tallTest()) return
+        if (currentInputEditorInfo?.packageName !in BOUNCE_APPS) return
+        main.removeCallbacks(recycle)
+        main.postDelayed(recycle, CLICK_RECYCLE_MILLIS)
+    }
+
+    /**
+     * DIAGNOSTIC for #40, Debug build only: adb shell setprop debug.titankeys.tall 1 makes the keyboard's window 200 px tall in
+     * the apps in [BOUNCE_APPS], with an empty band above the strip, and turns [recycle] off there. It tests whether Teams takes
+     * a keyboard as low as the strip for a hidden one. setprop debug.titankeys.tall 0 turns it off.
+     */
+    private fun tallTest() = debugBuild && currentInputEditorInfo?.packageName in BOUNCE_APPS
+        && systemProperty("debug.titankeys.tall") == "1"
+
+    private fun applyTallTest() {
+        val root = inputRoot ?: return
+        val top = if (tallTest()) TALL_TEST_PADDING else 0
+        if (root.paddingTop == top) return
+        stripLog("tall test: top padding $top")
+        root.setPadding(0, top, 0, root.paddingBottom)
+    }
+
+    private fun systemProperty(name: String): String? = try {
+        Class.forName("android.os.SystemProperties").getMethod("get", String::class.java).invoke(null, name) as String
+    } catch (error: ReflectiveOperationException) {
+        null
     }
 
     /** The Debug build is the same app under its own package name, and Android does not mark it debuggable. */
@@ -1775,6 +1814,13 @@ class AtlasIme : InputMethodService() {
         private const val RECYCLE_DELAY_MILLIS = 1200L
         /** How long the strip stays hidden, so that the hide finishes before the show. */
         private const val RECYCLE_GAP_MILLIS = 400L
+        /**
+         * How long after a tap the hide and show waits. Teams cancels its own show at once, and a tap that hides and shows the
+         * keyboard hides it within 330 ms, which waits for that show instead.
+         */
+        private const val CLICK_RECYCLE_MILLIS = 1000L
+        /** The height test adds this above the 88 px strip, for a 200 px window. */
+        private const val TALL_TEST_PADDING = 112
         /**
          * Apps where a quick hide and show leaves the message box under the strip even after the nudge, so the strip hides and shows
          * again once. Add an app here when the nudge alone is seen not to help in it.

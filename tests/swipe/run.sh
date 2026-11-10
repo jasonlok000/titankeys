@@ -6,7 +6,7 @@ kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 android="$sdk/platforms/android-36/android.jar"
 # ONNX Runtime classes, which the engine needs to compile.
-ort=android/libs/onnxruntime-android-1.20.0.jar
+ort=android/libs/onnxruntime-android-1.23.2.jar
 adb="$sdk/platform-tools/adb"
 work=$(mktemp -d)
 device=$("$adb" shell mktemp -d /data/local/tmp/atlas-swipe.XXXXXX)

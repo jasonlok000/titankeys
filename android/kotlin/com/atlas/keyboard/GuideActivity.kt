@@ -1099,7 +1099,7 @@ class GuideActivity : Activity() {
                 input.restartInput(field)
                 offerFor(step)
                 if (need == GuideNeed.FnAsCtrl) showHint("Now hold fn.")
-                haptics.wordChanged()
+                haptics.confirm()
             }
         }
     }

@@ -201,6 +201,8 @@ class Composer(
     var onStroke: ((Swipe) -> Unit)? = null
     /** Told when a word changes by itself, unless that lands as a swipe ends, where a vibration would run into the swipe's own. */
     var onAutocorrect: (() -> Unit)? = null
+    /** Told when an automatic change is undone and the typed word is back. */
+    var onRestored: (() -> Unit)? = null
     /** True when the next swipe should come out as its second guess, which only the interactive guide asks for. See [GuideHooks]. */
     var nearMiss: () -> Boolean = { false }
     /**
@@ -1435,6 +1437,7 @@ class Composer(
         endedBeforeSwipe = null
         val cause = if (pending.expansion) EditCause.ExpandUndo else EditCause.AutocorrectUndo
         if (!replaceBehind(showing, anchor, cause, pending.replaced.length, pending.restored)) return true
+        onRestored?.invoke()
         if (pending.expansion) {
             confirmState(snapshot())
             return true

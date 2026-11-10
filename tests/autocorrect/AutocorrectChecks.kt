@@ -10,6 +10,8 @@ import com.atlas.keyboard.Editor
 import com.atlas.keyboard.EnterKey
 import com.atlas.keyboard.Expansions
 import com.atlas.keyboard.Field
+import com.atlas.keyboard.Feel
+import com.atlas.keyboard.HapticPalette
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Words
 import java.io.File
@@ -1298,11 +1300,10 @@ private fun suggestionBar(world: Realistic) {
 }
 
 private fun smallerChecks() {
-    // A changed word must feel different from a swipe tick, at each vibration setting.
+    // A changed word must feel different from a swipe tick, at each vibration setting (tests/haptics has the rest).
     for (preset in HapticPreset.entries) {
-        must(preset.wordTimings.sum() >= preset.durationMillis * 2, "A changed word lasts at least twice a tick: $preset")
-        must(preset.wordAmplitudes.first() > preset.amplitude, "A changed word starts stronger than a tick: $preset")
-        must(preset.wordAmplitudes.all { it in 1..255 }, "A changed word stays in the vibrator's range: $preset")
+        val tick = HapticPalette.of(HapticPalette.swipeTick(preset))
+        must(HapticPalette.of(Feel.Changed) != tick, "A changed word feels different from a swipe tick: $preset")
     }
 
     // NoisyChannel.

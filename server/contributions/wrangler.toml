@@ -10,6 +10,27 @@ preview_urls = false
 binding = "BATCHES"
 bucket_name = "titankeys-contributions"
 
+# Per-client limits, counted in memory by Cloudflare and keyed by a salted hash of the connecting address, which is
+# never stored. Cloudflare allows a period of 10 or 60 seconds only. The app sends at most 16 batches in one run.
+[[ratelimits]]
+name = "UPLOAD_LIMIT"
+namespace_id = "4201"
+simple = { limit = 20, period = 60 }
+
+[[ratelimits]]
+name = "DELETE_LIMIT"
+namespace_id = "4202"
+simple = { limit = 5, period = 60 }
+
+# The daily upload cap and the total storage cap, held exactly by one small counter.
+[[durable_objects.bindings]]
+name = "CAP"
+class_name = "Cap"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Cap"]
+
 # No request logs, so no internet addresses are kept, as the privacy policy says.
 [observability]
 enabled = false

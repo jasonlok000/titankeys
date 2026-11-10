@@ -25,7 +25,10 @@ object Contributions {
     private const val SENT_AT = "contributions_sent_at"
     /** About 1000 swipes. */
     const val QUEUE_CAP_BYTES = 4L * 1024 * 1024
+    /** Examples in one batch, before gzip. The server takes at most 320 KB, sealed. */
     private const val BATCH_BYTES = 256 * 1024
+    /** A batch always holds at least one example, so no example may be larger than a batch. Real ones are a few KB. */
+    private const val MAX_EXAMPLE_BYTES = 128 * 1024
     private const val BATCHES_PER_RUN = 16
 
     private var queue: ContributionQueue? = null
@@ -103,7 +106,8 @@ object Contributions {
             try {
                 val example = Example(how, word, swipe.x.copyOf(), swipe.y.copyOf(), swipe.time.copyOf(), sizes, rows.toList(), kept,
                     Connected.version(app), models(app), Build.MODEL ?: "", Connected.build(app))
-                if (enabled(app)) queue(app).add(example.line())
+                val line = example.line()
+                if (enabled(app) && line.length <= MAX_EXAMPLE_BYTES) queue(app).add(line)
             } catch (error: Exception) {
                 Log.w(TAG, "Example skipped: ${error.javaClass.simpleName}")
             }
@@ -127,6 +131,7 @@ object Contributions {
                 connection.setRequestProperty("X-Contributor", folder(id))
                 connection.setFixedLengthStreamingMode(sealed.size)
                 connection.outputStream.use { it.write(sealed) }
+                // Busy (429) or full (503): stop, keep the queue, and try at the next run.
                 if (!Connected.ok(connection)) {
                     Log.w(TAG, "The server answered ${connection.responseCode}")
                     return false

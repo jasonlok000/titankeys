@@ -80,7 +80,8 @@ internal class DeleteHold(private val contact: Contact) {
     private var started = false
     private var nextAt = 0L
     /** The wait between words. It is set while the flick is read, because a contact that deletes keeps no points. */
-    private var repeatMillis = REPEAT_SLOW_MILLIS
+    var repeatMillis = REPEAT_SLOW_MILLIS
+        private set
 
     /**
      * Follows the finger after it moves, and reads the flick as a lift would. Returns when the next word is due,

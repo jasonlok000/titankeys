@@ -162,7 +162,8 @@ class AtlasIme : InputMethodService() {
     /** Deletes the next word of a held delete flick. Only one edit is on its way at a time, so a lift leaves no words waiting. */
     private val stepDeleteHold = Runnable {
         val free = pendingInput.isEmpty() && !composer.hasPendingInput
-        deleteHold.step(SystemClock.uptimeMillis(), free, ::deleteHeldWord)?.let { nextDeleteHoldStep(it) }
+        val next = deleteHold.step(SystemClock.uptimeMillis(), free, ::deleteHeldWord)
+        if (next != null) nextDeleteHoldStep(next) else strip?.gesture?.deleteEnded()
     }
 
     private fun nextDeleteHoldStep(at: Long) {
@@ -180,11 +181,13 @@ class AtlasIme : InputMethodService() {
     private fun endDeleteHold() {
         main.removeCallbacks(stepDeleteHold)
         deleteHold.reset()
+        strip?.gesture?.deleteEnded()
     }
 
     /** Each word goes the way of a normal delete flick. [flick] is the first word's flick, and is null for the words after it. */
     private fun deleteHeldWord(flick: Contact.Outcome.Swipe?) {
         if (flick != null) {
+            strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis())
             // The contact was a delete and not part of a word, as it would be at a lift.
             pieces.clear()
             lastTouch = null
@@ -200,6 +203,7 @@ class AtlasIme : InputMethodService() {
             }
             if (Haptics.enabled(this)) haptics.pulse()
             composer.backspace(true)
+            strip?.gesture?.wordDeleted(SystemClock.uptimeMillis())
             KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
         }
     }
@@ -248,13 +252,15 @@ class AtlasIme : InputMethodService() {
             if (!cursor.active) return
             val now = SystemClock.uptimeMillis()
             val direction = cursor.direction()
+            val speed = if (direction != 0 && last != 0L) cursor.speed(now) else 0f
             if (direction == 0) owed = 1f
-            else if (last != 0L) owed += cursor.speed(now) * (now - last) / 1000
+            else owed += speed * (now - last) / 1000
             if (direction != 0 && owed >= 1f) {
                 owed = (owed - 1f).coerceAtMost(1f)
                 if (cursor.words) extendWords(direction) else moveCursor(direction)
             }
             last = now
+            strip?.gesture?.cursorFrame(cursor.column, direction, speed, cursor.words, now)
             main.postDelayed(this, FRAME_MILLIS)
         }
 
@@ -744,6 +750,7 @@ class AtlasIme : InputMethodService() {
                     main.removeCallbacks(stepCursor)
                     cursor.move(samples)
                     cursor.lift()
+                    strip?.gesture?.cursorPaused()
                     val slips = composer.liftOffMillis > 0
                     // Through a slip the path stays open, so a finger that comes back carries on drawing it.
                     traceCursor(samples, ended = !slips)
@@ -852,6 +859,7 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(endSlippedCursor)
         main.removeCallbacks(stepCursor)
         cursor.end()
+        strip?.gesture?.cursorEnded()
     }
 
     /** Closes an open panel, or uses up the rest of the push that closed it. False is an ordinary Back that does not concern a panel. */
@@ -881,7 +889,9 @@ class AtlasIme : InputMethodService() {
     }
 
     /** Selects the word at the cursor, or does nothing between words. */
-    private fun selectWord() = changeSelection { text, start, end, _ -> WordSelection.at(text, start, end) }
+    private fun selectWord() = changeSelection { text, start, end, _ ->
+        WordSelection.at(text, start, end)?.also { strip?.gesture?.wordSelected(SystemClock.uptimeMillis()) }
+    }
 
     /** Selects the word at the cursor, the part that a word drag keeps selected. Between words the drag starts from the cursor. */
     private fun startWordDrag() {
@@ -900,6 +910,7 @@ class AtlasIme : InputMethodService() {
             val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction)
             if (range == start to end) return@changeSelection null
             if (Haptics.enabled(this)) haptics.pulse()
+            strip?.gesture?.wordStep(direction)
             range
         }
     }
@@ -1119,7 +1130,9 @@ class AtlasIme : InputMethodService() {
                 }
                 if (outcome.deletesWord) {
                     haptics.tap()
+                    val nothingLeft = currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true
                     composer.backspace(true)
+                    if (!nothingLeft) strip?.gesture?.wordDeleted(SystemClock.uptimeMillis())
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return
                 }

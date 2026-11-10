@@ -1,17 +1,24 @@
 package com.atlas.keyboard
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.os.SystemClock
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.WindowInsets
 import android.widget.LinearLayout
 import android.widget.TextView
 
-/** The bar above the keyboard: word suggestions, or which modifiers are on. The modifiers take the place of the words, at the same height. */
+/**
+ * The bar above the keyboard: word suggestions, or which modifiers are on. The modifiers take the place of the words, at the same
+ * height. While a special gesture runs, [gesture] draws over them at that height too, and the words wait underneath.
+ */
 class Strip(
     context: Context,
     private val choose: (Int) -> Unit,
@@ -38,6 +45,11 @@ class Strip(
         addView(hint, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
     }
     private var navigationInset = 0
+    private val drawing = GestureDrawing(resources.displayMetrics.density)
+    private val dark get() = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+
+    /** Shows what a special gesture is doing, in the place of the words. It shows only where the strip shows. */
+    val gesture = GestureDisplay { postInvalidateOnAnimation() }
 
     var showSuggestions = true
         set(value) {
@@ -99,7 +111,7 @@ class Strip(
     }
 
     private fun render() {
-        val dark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        gesture.allowed = showSuggestions
         val ink = if (dark) Color.WHITE else Color.BLACK
         val paper = if (dark) Color.BLACK else Color.WHITE
         // A strip that shows nothing has no height, and a bar there would move the app each time a modifier changes.
@@ -127,6 +139,18 @@ class Strip(
         hint.text = bar?.hint.orEmpty()
         hint.setTextColor(ink)
     }
+
+    override fun dispatchDraw(canvas: Canvas) {
+        super.dispatchDraw(canvas)
+        if (!gesture.showing) return
+        val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
+        val more = gesture.advance(SystemClock.uptimeMillis(), scale)
+        if (gesture.showing) drawing.draw(canvas, gesture, width, dp(56), dark)
+        if (more) postInvalidateOnAnimation()
+    }
+
+    /** The words are covered while a gesture shows, so a touch must not choose one that nobody can see. */
+    override fun onInterceptTouchEvent(event: MotionEvent) = gesture.showing || super.onInterceptTouchEvent(event)
 
     override fun onConfigurationChanged(configuration: Configuration) {
         super.onConfigurationChanged(configuration)

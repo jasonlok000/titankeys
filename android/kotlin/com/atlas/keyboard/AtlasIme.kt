@@ -1352,8 +1352,8 @@ class AtlasIme : InputMethodService() {
         KeyboardEvents.publish { KeyboardEvent.HeldSymbol(text) }
         if (field.exact) {
             // The letter went to the app as a key, so a Backspace key takes it back.
-            sendExact(KeyEvent(letter.downTime, letter.eventTime, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL, 0, 0,
-                letter.deviceId, 0, letter.flags, letter.source), 0)
+            logExact("hold ${letter.keyCode} gives its symbol")
+            sendExact(letter, ExactTyping.takeBack)
             commitExact(text)
         } else if (watchingKeys) {
             val typed = letter.getUnicodeChar(letter.metaState)
@@ -1393,7 +1393,10 @@ class AtlasIme : InputMethodService() {
         val repeatOfHold = !watchingKeys && trackHold(carried)
         // A key press means the finger was pressing, not resting on the touchpad.
         endCursor()
-        if (repeatOfHold) return true
+        if (repeatOfHold) {
+            if (field.exact) logExact("key $keyCode repeat ${event.repeatCount} kept by hold")
+            return true
+        }
         if (ctrlKey(event)) {
             consumedKeys += keyCode
             return true
@@ -1448,6 +1451,7 @@ class AtlasIme : InputMethodService() {
         }
         if (Modifiers.isModifier(keyCode)) {
             modifiers.key(event)
+            if (field.exact) logModifiers(event)
             showModifiers()
         }
         return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
@@ -1475,6 +1479,7 @@ class AtlasIme : InputMethodService() {
     private fun key(event: KeyEvent): Boolean {
         if (Modifiers.isModifier(event.keyCode)) {
             modifiers.key(event)
+            if (field.exact) logModifiers(event)
             if (panelOpen && !isInputViewShown) main.post(showPanel)
             return true
         }
@@ -1590,26 +1595,25 @@ class AtlasIme : InputMethodService() {
     private fun exactKey(event: KeyEvent): Boolean {
         if (event.isSystem) return false
         val meta = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState)
-        val typed = event.getUnicodeChar(meta)
-        val symbol = ExactTyping.symbol(meta, typed, event.getUnicodeChar(meta and KeyEvent.META_ALT_MASK.inv()))
-        if (symbol != null) commitExact(symbol) else sendExact(event, meta)
-        val character = typed > 0 && typed and KeyCharacterMap.COMBINING_ACCENT == 0 && !Character.isISOControl(typed)
-        if (character && meta and (KeyEvent.META_CTRL_MASK or KeyEvent.META_META_MASK) == 0) modifiers.consume() else modifiers.useHeld()
+        val plan = ExactTyping.plan(event.keyCode, event.repeatCount, meta, event::getUnicodeChar)
+        logExact("key ${event.keyCode} repeat ${event.repeatCount} meta 0x${Integer.toHexString(meta)}" +
+            if (plan.text != null) " as text from Alt" else "")
+        plan.text?.let(::commitExact)
+        sendExact(event, plan.events)
+        modifiers.consume()
         return true
     }
 
-    /** Sends a press and release of [event]'s key with [meta], inside presses of the Ctrl and Alt keys that [meta] holds. */
-    private fun sendExact(event: KeyEvent, meta: Int) {
+    /** Sends [events] to the app, with the device, flags and source of the key [like]. */
+    private fun sendExact(like: KeyEvent, events: List<ExactTyping.Event>) {
         val connection = currentInputConnection ?: return
-        fun send(action: Int, code: Int, state: Int, repeat: Int = 0) = connection.sendKeyEvent(KeyEvent(event.downTime,
-            event.eventTime, action, code, repeat, state, event.deviceId, if (code == event.keyCode) event.scanCode else 0,
-            event.flags, event.source))
-        val wrappers = ExactTyping.wrappers(meta)
         try {
-            for (key in wrappers) send(KeyEvent.ACTION_DOWN, key, meta)
-            send(KeyEvent.ACTION_DOWN, event.keyCode, meta, event.repeatCount)
-            send(KeyEvent.ACTION_UP, event.keyCode, meta)
-            for (key in wrappers.asReversed()) send(KeyEvent.ACTION_UP, key, meta)
+            for (sent in events) {
+                logExact("sent ${sent.code} ${if (sent.down) "down" else "up"} repeat ${sent.repeat} meta 0x${Integer.toHexString(sent.meta)}")
+                connection.sendKeyEvent(KeyEvent(like.downTime, like.eventTime,
+                    if (sent.down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, sent.code, sent.repeat, sent.meta, like.deviceId,
+                    if (sent.code == like.keyCode) like.scanCode else 0, like.flags, like.source))
+            }
         } catch (error: RuntimeException) {
             Log.w("Atlas", "Could not send an exact key", error)
         }
@@ -1622,6 +1626,17 @@ class AtlasIme : InputMethodService() {
             Log.w("Atlas", "Could not send exact text", error)
         }
     }
+
+    /** Only TitanKeys Debug writes these lines, to find faults in exact typing. They hold key codes and states, never text. */
+    private val exactLogging by lazy { packageName.endsWith(".debug") }
+
+    private fun logExact(line: String) {
+        if (exactLogging) Log.d("AtlasExact", line)
+    }
+
+    /** Shift, Alt and Sym stay with the keyboard in exact typing. This says what they left on. */
+    private fun logModifiers(event: KeyEvent) = logExact("modifier ${event.keyCode} ${if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"}" +
+        " kept: shift ${modifiers.shift} alt ${modifiers.alt} panel ${modifiers.panel}")
 
     private fun command(event: KeyEvent, textKey: Boolean = false) {
         val meta = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState)

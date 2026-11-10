@@ -44,6 +44,31 @@ object ExactTyping {
         return keys
     }
 
+    /** One key event to send: a press or a release of [code] with [meta]. */
+    data class Event(val down: Boolean, val code: Int, val meta: Int, val repeat: Int = 0)
+
+    /**
+     * What one key does: [text] to put in, or else [events] to send. Either way the key uses up a Shift or Alt that was pushed
+     * one time, also a shortcut such as Alt and Tab, so that a one-time Alt never stays on for the key after.
+     */
+    data class Plan(val text: String?, val events: List<Event>)
+
+    /**
+     * What a key does in exact typing. [meta] holds the key's own meta state and the Shift and Alt that the keyboard keeps, and
+     * [charFor] gives the key's character with a meta state. Shift, Alt and Sym themselves never come here: the keyboard keeps
+     * them, so the app sees none of their own presses.
+     */
+    fun plan(code: Int, repeat: Int, meta: Int, charFor: (Int) -> Int): Plan {
+        symbol(meta, charFor(meta), charFor(meta and KeyEvent.META_ALT_MASK.inv()))?.let { return Plan(it, emptyList()) }
+        val wrappers = wrappers(meta)
+        val events = wrappers.map { Event(true, it, meta) } + Event(true, code, meta, repeat) + Event(false, code, meta) +
+            wrappers.asReversed().map { Event(false, it, meta) }
+        return Plan(null, events)
+    }
+
+    /** A held letter went to the app as a key, so a Backspace key takes it back before its symbol goes in. */
+    val takeBack = listOf(Event(true, KeyEvent.KEYCODE_DEL, 0), Event(false, KeyEvent.KEYCODE_DEL, 0))
+
     /** Puts [packageName] first in the apps where a field started recently, newest first and at most [MAX_RECENT_APPS]. */
     fun recentApps(recent: List<String>, packageName: String): List<String> =
         (listOf(packageName) + recent.filter { it != packageName }).take(MAX_RECENT_APPS)

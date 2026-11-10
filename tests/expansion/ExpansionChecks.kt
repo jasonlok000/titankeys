@@ -163,9 +163,6 @@ private fun exactApps() {
         check(app in defaults, "$app is on the list at first")
     check(defaults.all { Regex("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+").matches(it) }, "every default is a package name")
     check("com.sonelli.juicessh" !in defaults, "JuiceSSH has no Play listing to check its name, so it is left out")
-    same(ExactTyping.plan(android.view.KeyEvent.KEYCODE_DPAD_RIGHT, 0, 0) { 0 }.events.map { it.down to it.code },
-        listOf(true to android.view.KeyEvent.KEYCODE_DPAD_RIGHT, false to android.view.KeyEvent.KEYCODE_DPAD_RIGHT),
-        "the touchpad's arrow goes out as one press and release")
     check(!ExactTyping.applies(null, apps), "no app")
 }
 

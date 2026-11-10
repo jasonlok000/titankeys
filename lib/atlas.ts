@@ -66,9 +66,9 @@ export type State = {
   recentEnterApps: { app: string; name: string }[];
   /** Apps with exact typing: each key goes to the app as it is, with no fixes or suggestions. */
   exactApps: App[];
-  /** The touchpad moves the cursor in apps with exact typing. Off, it sends nothing there. */
-  exactTouchpad: boolean;
-  /** Apps where a field started recently and that do not have exact typing, which the user can add. */
+  /** Apps where the bar is not drawn. The keyboard stays active there, one pixel high. */
+  hiddenBarApps: App[];
+  /** Apps where a field started recently, newest first, which the user can add to a list. */
   recentApps: App[];
   /** The character that starts a snippet's shortcut. */
   snippetStart: SnippetStart;
@@ -87,7 +87,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "exactTouchpad" | "snippetStart" | "shortcodes" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];
@@ -125,8 +125,11 @@ export const installedApps = resource({
   load: async (): Promise<App[]> => JSON.parse(await atlas("installedApps")),
 })();
 
-export async function setExactApp(app: string, on: boolean) {
-  await atlas("setExactApp", { app, on });
+/** The lists of apps in Settings: exact typing, and the apps where the bar is hidden. */
+export type AppList = "exact" | "hiddenBar";
+
+export async function setListedApp(list: AppList, app: string, on: boolean) {
+  await atlas("setListedApp", { list, app, on });
   await state.refresh();
 }
 

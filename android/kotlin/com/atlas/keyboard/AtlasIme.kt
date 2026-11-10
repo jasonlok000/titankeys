@@ -56,8 +56,6 @@ class AtlasIme : InputMethodService() {
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
     private var cursorPath = ArrayList<Sample>()
     private var cursorControl = true
-    /** The touchpad moves the cursor in exact typing apps too. Off, it does nothing there but work the panel. */
-    private var exactCursor = false
     /** Taps on a tap key that may be part of a double tap. Each call gives its input, typed if the argument is true. */
     private val heldTaps = ArrayList<(Boolean) -> Unit>()
     /** The word that the word drag started from, as its start and end in the field. */
@@ -83,6 +81,8 @@ class AtlasIme : InputMethodService() {
     }
     private val barHover = SteadyKey(Layout::keyAt)
     private var field = Field.None
+    /** The user chose to hide the bar in this app. The window stays, one pixel high. See [showSuggestions]. */
+    private var barHidden = false
     /** Each emoji by its shortcode name, once the list has loaded. */
     private var shortcodes: Map<String, String> = emptyMap()
     /** The apps that the user added to the Enter key setting, read when a field starts. */
@@ -527,6 +527,7 @@ class AtlasIme : InputMethodService() {
         rawLog = if (editing && !exact && !ownSettings) RawLog.start(this, info, restarting) else null
         composer.log = rawLog
         inLauncher = editing && TypingSettings.launcherHidesBar(this) && info.packageName == launcherPackage()
+        barHidden = info.packageName in TypingSettings.hiddenBarApps(this)
         launcherFieldHasText = inLauncher && info.initialSelStart > 0
         contact.releaseKeys()
         clearSettlements()
@@ -566,7 +567,6 @@ class AtlasIme : InputMethodService() {
         modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
         cursorControl = TypingSettings.cursorControl(this)
-        exactCursor = ExactTyping.touchpadCursor(this)
         // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
         contact.swipes = TypingSettings.swipeTyping(this) && field.words
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
@@ -659,7 +659,9 @@ class AtlasIme : InputMethodService() {
     // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way until you type.
     // Password, email and number fields and exact typing get no suggestions, but the bar still shows, with its word places empty,
     // so that Shift, Alt and Ctrl show on it and the gestures draw there (issue 45).
-    private fun showSuggestions() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText)
+    // In an app where the user hid the bar, the strip draws nothing and keeps one pixel, so the keyboard's window stays up: keys,
+    // holds, Alt and the panel work as before, and the app never sees the keyboard go away. The panel opens over it as usual.
+    private fun showSuggestions() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText) && !barHidden
 
     private fun launcherPackage(): String? {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
@@ -802,8 +804,8 @@ class AtlasIme : InputMethodService() {
 
     private fun motion(event: MotionEvent) {
         // The panel and the cursor work in every field. Where the touchpad types no words, swipes and taps type nothing: see [outcome].
-        // With exact typing the touchpad sends nothing unless its setting is on, so a resting finger never reaches the app.
-        if (field.exact && !exactCursor && !panelOpen) return
+        // With exact typing the touchpad sends nothing, so a resting finger never reaches a terminal or a remote computer.
+        if (field.exact && !panelOpen) return
         typedInField = true
         val samples = touchpad.samples(event)
         Recording.sink?.motion(event, samples)
@@ -1026,14 +1028,6 @@ class AtlasIme : InputMethodService() {
         val code = if (direction > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
         val arrow = KeyEvent(time, time, KeyEvent.ACTION_DOWN, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
             KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD)
-        if (field.exact) {
-            // A terminal or a remote view holds no text to read, and each question to a busy app can wait until it times out,
-            // which stalled the cursor. So the arrow goes straight out, with a plain pulse for each step.
-            if (Haptics.enabled(this)) haptics.pulse()
-            logExact("touchpad arrow $code")
-            sendExact(arrow, ExactTyping.plan(code, 0, 0) { 0 }.events)
-            return
-        }
         enqueue {
             // A cursor at the start or end of the text cannot move, so it stays quiet. An app that does not answer still gets the pulse.
             // Going past a space feels different from a letter, so that you can count words without looking.
@@ -1662,7 +1656,7 @@ class AtlasIme : InputMethodService() {
     private val exactLogging by lazy { packageName.endsWith(".debug") }
 
     private fun logExact(line: String) {
-        if (exactLogging) Log.d("AtlasExact", line)
+        if (exactLogging) Log.i("AtlasExact", line)
     }
 
     /** Shift, Alt and Sym stay with the keyboard in exact typing. This says what they left on. */

@@ -2,6 +2,7 @@ import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from 
 import { close } from "ink/icons";
 import { state, update } from "../../lib/atlas";
 import { exactAppsLabel } from "./exact-apps";
+import { hiddenBarLabel } from "./hidden-bar";
 import { holdLabel } from "./hold";
 import { liftLabel } from "./lift";
 import { rawLogLabel } from "./rawlog";
@@ -38,6 +39,7 @@ export default function Settings() {
         onChange={suggestionBar => save.run({ suggestionBar })} />
       <Toggle label="No suggestions on an empty home search" value={settings.launcherHidesBar}
         onChange={launcherHidesBar => save.run({ launcherHidesBar })} />
+      <Field label="Hide the bar in these apps" href="/settings/hidden-bar">{hiddenBarLabel(settings)}</Field>
     </Section>
     <Section title="Swiping">
       <Toggle label="Swipe to type words" value={settings.swipeTyping}

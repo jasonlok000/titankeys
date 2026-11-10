@@ -227,6 +227,18 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("shortcodes", enabled).apply();
     }
 
+    /**
+     * Apps where the bar is not drawn. The keyboard's window stays, one pixel high, so the keys, the panel and the app's own
+     * view of the keyboard do not change. No apps at first.
+     */
+    public static Set<String> hiddenBarApps(Context context) {
+        return preferences(context).getStringSet("hidden_bar_apps", Collections.emptySet());
+    }
+
+    public static void hiddenBarApps(Context context, Set<String> apps) {
+        preferences(context).edit().putStringSet("hidden_bar_apps", new HashSet<>(apps)).apply();
+    }
+
     /** Packages of the apps where a field started recently, newest first. Only the keyboard writes this, and only on this phone. */
     public static List<String> recentApps(Context context) {
         String apps = preferences(context).getString("recent_apps", "");

@@ -153,11 +153,15 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     TypingSettings.enterApps(activity, EnterKey.savedApps(TypingSettings.enterApps(activity), data.getString("app"), null))
                     "null"
                 }
-                "setExactApp" -> {
+                "setListedApp" -> {
                     val app = data.getString("app")
-                    val apps = ExactTyping.apps(activity).toMutableSet()
-                    if (data.getBoolean("on")) apps += app else apps -= app
-                    ExactTyping.apps(activity, apps)
+                    val on = data.getBoolean("on")
+                    when (val list = data.getString("list")) {
+                        "exact" -> ExactTyping.apps(activity, ExactTyping.apps(activity).toMutableSet().apply { if (on) add(app) else remove(app) })
+                        "hiddenBar" -> TypingSettings.hiddenBarApps(activity,
+                            TypingSettings.hiddenBarApps(activity).toMutableSet().apply { if (on) add(app) else remove(app) })
+                        else -> throw IllegalArgumentException("Unknown app list: $list")
+                    }
                     "null"
                 }
                 "installedApps" -> {
@@ -402,14 +406,16 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     }
 
     private fun putExactApps(state: JSONObject) {
-        val apps = ExactTyping.apps(activity)
-        // Apps on the phone first, by name. A default app that is not on the phone still shows, so that it can be removed.
-        state.put("exactApps", JSONArray(apps.map { JSONObject().put("app", it).put("name", appName(it)).put("installed", installed(it)) }
-            .sortedWith(compareBy({ !it.getBoolean("installed") }, { it.getString("name").lowercase() }))))
-        state.put("exactTouchpad", ExactTyping.touchpadCursor(activity))
-        state.put("recentApps", JSONArray(TypingSettings.recentApps(activity).filter { it !in apps }
+        state.put("exactApps", listedApps(ExactTyping.apps(activity)))
+        state.put("hiddenBarApps", listedApps(TypingSettings.hiddenBarApps(activity)))
+        state.put("recentApps", JSONArray(TypingSettings.recentApps(activity)
             .map { JSONObject().put("app", it).put("name", appName(it)) }))
     }
+
+    /** Apps on the phone first, by name. An app that is not on the phone, such as a default, still shows, so that it can be removed. */
+    private fun listedApps(apps: Set<String>) =
+        JSONArray(apps.map { JSONObject().put("app", it).put("name", appName(it)).put("installed", installed(it)) }
+            .sortedWith(compareBy({ !it.getBoolean("installed") }, { it.getString("name").lowercase() })))
 
     private fun enterApp(app: String, name: String, method: EnterKey.SendMethod) =
         JSONObject().put("app", app).put("name", name).put("method", method.id)
@@ -482,7 +488,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "enterKey" -> TypingSettings.enterKey(activity, value as String)
             "snippetStart" -> TypingSettings.snippetStart(activity, value as String)
             "shortcodes" -> TypingSettings.shortcodes(activity, value as Boolean)
-            "exactTouchpad" -> ExactTyping.touchpadCursor(activity, value as Boolean)
             "liftOff" -> TypingSettings.liftOffGrace(activity, value as Boolean)
             "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())
             "haptics" -> Haptics.select(activity, Haptics.preset(activity), value as Boolean)

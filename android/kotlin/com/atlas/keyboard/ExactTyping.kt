@@ -37,7 +37,6 @@ object ExactTyping {
     )
 
     private const val APPS = "exact_apps"
-    private const val CURSOR = "exact_touchpad_cursor"
 
     private fun preferences(context: Context) = context.getSharedPreferences("typing_settings", Context.MODE_PRIVATE)
 
@@ -46,16 +45,6 @@ object ExactTyping {
 
     fun apps(context: Context, apps: Set<String>) {
         preferences(context).edit().putStringSet(APPS, HashSet(apps)).apply()
-    }
-
-    /**
-     * The touchpad moves the cursor with the arrow keys in exact typing. It is off until the user turns it on, so that a finger
-     * on the keys sends nothing to a terminal or a remote computer.
-     */
-    fun touchpadCursor(context: Context): Boolean = preferences(context).getBoolean(CURSOR, false)
-
-    fun touchpadCursor(context: Context, on: Boolean) {
-        preferences(context).edit().putBoolean(CURSOR, on).apply()
     }
 
     /** Whether a field start gets exact typing: any start in an app on the list. */

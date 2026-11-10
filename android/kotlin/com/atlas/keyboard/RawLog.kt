@@ -96,7 +96,7 @@ object RawLog {
     private fun header(context: Context) = RawLogLines.header(now(), System.currentTimeMillis(),
         context.packageManager.getPackageInfo(context.packageName, 0).versionName, Build.MODEL, Build.VERSION.RELEASE,
         TypingSettings.liftOffGraceMillis(context), settings(context),
-        Contact.tuning + deleteSwipeTuning + PickFlick.tuning + swipePiecesTuning + CursorMode.tuning + SwipeRecognizer.tuning())
+        Contact.tuning + deleteSwipeTuning + swipePiecesTuning + CursorMode.tuning + SwipeRecognizer.tuning())
 
     private fun settings(context: Context): Map<String, Any> = linkedMapOf(
         "liftOff" to TypingSettings.liftOffGrace(context),

@@ -4,7 +4,6 @@ import com.atlas.keyboard.KeyboardEvent.Chosen
 import com.atlas.keyboard.KeyboardEvent.CursorStarted
 import com.atlas.keyboard.KeyboardEvent.DeletedWord
 import com.atlas.keyboard.KeyboardEvent.FieldChanged
-import com.atlas.keyboard.KeyboardEvent.FlickPicked
 import com.atlas.keyboard.KeyboardEvent.HeldSymbol
 import com.atlas.keyboard.KeyboardEvent.ModifierState
 import com.atlas.keyboard.KeyboardEvent.Pushed
@@ -62,11 +61,6 @@ internal sealed interface GuideCue {
     data object NextWord : GuideCue
     /** A finger flicks left from Backspace, and stays there if [hold] is true. */
     data class Flick(val hold: Boolean) : GuideCue
-    /**
-     * A finger flicks up on the left third of the letter keys. The near miss puts the right word second, which the strip shows on
-     * the left.
-     */
-    data object FlickUp : GuideCue
     /** These keys glow in turn. */
     data class Spot(val keys: List<String>) : GuideCue
     /** A finger goes along the bottom row. */
@@ -168,8 +162,6 @@ internal data class GuideSettings(
     val cursorControl: Boolean = true,
     val swipeTyping: Boolean = true,
     val fnAsCtrl: Boolean = false,
-    /** Flick up on the keys to pick a word. It is on at first, and its slide shows only when it is on. */
-    val flickToPick: Boolean = true,
     /** The Sym panel is on the screen now. */
     val panelOpen: Boolean = false,
 ) {
@@ -288,26 +280,6 @@ internal val GUIDE_STEPS = listOf(
         check = { event ->
             when (event) {
                 is Chosen -> GuideVerdict.Done
-                is Recognised -> if (event.words.size < 2) GuideVerdict.Hint("That word had nothing else to offer. Swipe the next one.") else GuideVerdict.Wait
-                else -> GuideVerdict.Wait
-            }
-        },
-    ),
-    GuideStep(
-        id = "pick", chapter = GuideChapter.Story,
-        title = "Or flick up to pick.",
-        body = "Swipe the next word. Then flick up from Z to M under the right word.",
-        done = "Picked without the screen.",
-        help = "Start on the bottom row of letters, and lift on the row above, quickly.",
-        cue = GuideCue.FlickUp,
-        needs = GuideNeed.SwipeTyping,
-        skipWhen = { !it.flickToPick },
-        nearMiss = true,
-        demo = GuideDemo.FixNext,
-        check = { event ->
-            when (event) {
-                is FlickPicked -> GuideVerdict.Done
-                is Chosen -> GuideVerdict.Hint("That was a touch on the screen. Flick up on the keys.")
                 is Recognised -> if (event.words.size < 2) GuideVerdict.Hint("That word had nothing else to offer. Swipe the next one.") else GuideVerdict.Wait
                 else -> GuideVerdict.Wait
             }

@@ -4,7 +4,6 @@ import com.atlas.keyboard.KeyboardEvent.Chosen
 import com.atlas.keyboard.KeyboardEvent.CursorStarted
 import com.atlas.keyboard.KeyboardEvent.DeletedWord
 import com.atlas.keyboard.KeyboardEvent.FieldChanged
-import com.atlas.keyboard.KeyboardEvent.FlickPicked
 import com.atlas.keyboard.KeyboardEvent.HeldSymbol
 import com.atlas.keyboard.KeyboardEvent.ModifierState
 import com.atlas.keyboard.KeyboardEvent.Pushed
@@ -21,7 +20,6 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "type" to listOf(Pushed(29), FieldChanged("Nothing", 7, 7), FieldChanged("Nothing ", 8, 8)),
     "swipe" to swiped(1),
     "strip" to listOf(Chosen("to")),
-    "pick" to listOf(Chosen("to"), FlickPicked(1)),
     "flick" to listOf(DeletedWord(held = false)),
     "steer" to listOf(CursorStarted(false), FieldChanged("Nothing to unlearn", 18, 18),
         FieldChanged("Nothing to unlearn", 14, 14)),
@@ -60,15 +58,11 @@ private fun run(flow: GuideFlow, events: List<KeyboardEvent>, step: String) {
 }
 
 private fun everyStepIsReachable() {
-    val flow = GuideFlow({ GuideSettings(panelOpen = true, flickToPick = true) })
+    val flow = GuideFlow({ GuideSettings(panelOpen = true) })
     for ((step, events) in walk) run(flow, events, step)
     same(flow.step.id, "end", "The walk ends at the ending")
     same(flow.finished, true, "The ending is the end")
     same(walk.map { it.first }, GUIDE_STEPS.dropLast(1).map { it.id }, "The walk covers each step, in order")
-    // Flick up to pick is off at first, and then its slide does not show.
-    val off = GuideFlow({ GuideSettings(panelOpen = true, flickToPick = false) })
-    for ((step, events) in walk.filter { it.first != "pick" }) run(off, events, step)
-    same(off.step.id, "end", "With flick up to pick off, the walk skips its slide")
 }
 
 private fun theStepsHaveOkayWords() {
@@ -115,7 +109,7 @@ private fun oneStepForEachIdea() {
     same(GUIDE_STEPS.count { it.cue is GuideCue.Flick }, 1, "One step deletes, the flick and the hold together")
     same(GUIDE_STEPS.count { it.cue == GuideCue.NextWord }, 2, "Swiping and fixing a word follow the line, and nothing else does")
     same(GUIDE_STEPS.count { it.cue is GuideCue.Taps }, 1, "One step steers and selects from Space")
-    same(GUIDE_STEPS.filter { it.nearMiss }.map { it.id }, listOf("strip", "pick"), "Only the steps that pick from the strip ask for a near miss")
+    same(GUIDE_STEPS.filter { it.nearMiss }.map { it.id }, listOf("strip"), "Only the strip step asks for a near miss")
     same(GuideHooks.takeNearMiss(GuideHooks.FIELD), false, "Nothing is asked for until the step asks")
     GuideHooks.nearMiss = true
     same(GuideHooks.takeNearMiss("some.other.app"), false, "No other field ever gets a near miss")

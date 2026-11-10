@@ -78,21 +78,6 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("swipe_typing", enabled).apply();
     }
 
-    /**
-     * On at first, the owner's choice of 2026-11-10. A flick goes from the bottom row of letters to the row above, within 25
-     * degrees of straight up. See PickFlick.
-     */
-    public static final boolean FLICK_TO_PICK_DEFAULT = true;
-
-    /** A short flick up on the letter keys picks the strip word for that third of the keys: left, middle or right. */
-    public static boolean flickToPick(Context context) {
-        return preferences(context).getBoolean("flick_to_pick", FLICK_TO_PICK_DEFAULT);
-    }
-
-    public static void flickToPick(Context context, boolean enabled) {
-        preferences(context).edit().putBoolean("flick_to_pick", enabled).apply();
-    }
-
     /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
     public static boolean cursorControl(Context context) {
         return preferences(context).getBoolean("cursor_control", true);

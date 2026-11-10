@@ -50,8 +50,6 @@ The strip above the keys shows the other words that a swipe could be. Touch one 
 
 Touch and hold a word on the strip for its menu. **Save** keeps it in your words. **Forget** stops it as a suggestion and as a fix, with Undo for a moment, and **Settings > Your words** gives it back. Select one word in the text, such as a name that never swipes right, and the strip shows it with the same menu.
 
-To pick without the screen, flick up quickly from the bottom row of letters to the row above: Z, X or C picks the left word, V or B the middle word, N or M the right word. Turn it off in Settings with **Flick up on the keys to pick a word**.
-
 ### Delete without reaching up
 
 Flick left from Backspace to delete a word. Keep your finger down to delete more: the longer the flick, the faster it goes.
@@ -180,10 +178,6 @@ Quick swipes tend to come out narrower than the word they mean, so TitanKeys rea
 The flick from Backspace is a quick, straight stroke left from around Backspace, at any length. Fitted to 68 real strokes, it catches 66 of them (97%), and it didn't trigger on any of 875 recorded word touches.
 
 <img src="assets/readme/delete-swipe.gif" width="400" alt="Diagram of a swipe from Backspace left to J deleting the previous word">
-
-### Picking a word with a flick up
-
-The flick up is short, quick and straight: it starts on the bottom row of letters and lifts on the row above, within 25 degrees of straight up and in under 0.3 seconds. "by" and "my" go on to the top row, so they stay swipes. The owner's own flicks set these numbers. Of 5,572 recorded swipes that typed a word, 6 read as a flick, about 1 in 930. Other upward strokes that match are page turns in the Sym panel, where flicks are off. A flick waits for the time a short lift may last, so a swipe that the top of the sensor breaks in two still joins up.
 
 <details>
 <summary><strong>Smaller changes for two-handed typing</strong></summary>

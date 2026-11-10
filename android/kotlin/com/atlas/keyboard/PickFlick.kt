@@ -23,7 +23,8 @@ internal object PickFlick {
     const val MAX_DRIFT = .6f
     /**
      * How far a flick may lean from straight up, in degrees, with keys and rows as equal units. At 20 it caught 11 of the owner's 17
-     * tries, and 34 of 6,286 recorded swipes read as flicks, most of them in two bursts of upward strokes in one minute each.
+     * tries, and 6 of 5,572 recorded swipes that typed a word read as flicks. The other matching strokes turned pages in the Sym panel,
+     * where flicks are off.
      */
     const val MAX_ANGLE_DEGREES = 20f
     private val MAX_SLANT = tan(Math.toRadians(MAX_ANGLE_DEGREES.toDouble())).toFloat()

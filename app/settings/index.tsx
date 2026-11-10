@@ -56,7 +56,7 @@ export default function Settings() {
     </Section>
     <Section title="Your data">
       <Field label="Your words" href="/settings/data" />
-      <Field label="Typing log" href="/settings/rawlog">{rawLogLabel(settings)}</Field>
+      {settings.build !== "play" && <Field label="Typing log" href="/settings/rawlog">{rawLogLabel(settings)}</Field>}
     </Section>
     <Section title="Help">
       <Field label="Setup" href="/settings/setup">{setupLabel(settings)}</Field>

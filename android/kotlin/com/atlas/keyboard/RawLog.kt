@@ -33,9 +33,13 @@ object RawLog {
     /** A gap marker already covers the fields skipped since the last recorded one. */
     private var skipping = false
 
+    /** Whether the log is on. The Google Play build has no typing log, so there it is always off. */
+    fun enabled(context: Context) = !AppBuild.play(context) && TypingSettings.rawLog(context)
+
     /** Turning it off stops recording at once. What is already saved stays until Delete all. */
     @Synchronized
     fun enabled(context: Context, enabled: Boolean) {
+        if (AppBuild.play(context) && enabled) return
         TypingSettings.rawLog(context, enabled)
         if (!enabled) {
             writer?.close()
@@ -59,7 +63,7 @@ object RawLog {
     /** Starts recording the field that is starting, or returns null if it must not be recorded. */
     @Synchronized
     fun start(context: Context, info: EditorInfo, restarting: Boolean): Session? {
-        if (!TypingSettings.rawLog(context)) return null
+        if (!enabled(context)) return null
         val writer = writer(context)
         if (!Field.logged(info.inputType, info.imeOptions, info.privateImeOptions)) {
             if (!skipping) writer.add(RawLogLines.gap("field", 0, now()))

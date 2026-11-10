@@ -1,0 +1,185 @@
+diff --git a/crates/ink-cli/src/android.rs b/crates/ink-cli/src/android.rs
+index 4d49677..55fdaa3 100644
+--- a/crates/ink-cli/src/android.rs
++++ b/crates/ink-cli/src/android.rs
+@@ -17,6 +17,8 @@ const ACTIVITY_CLASS: &str = "com.vandam.ink.MainActivity";
+ pub enum Profile {
+     Debug,
+     Release,
++    /// A release-signed Android App Bundle, as Google Play takes.
++    Bundle,
+ }
+ 
+ impl Profile {
+@@ -24,27 +26,32 @@ impl Profile {
+         match self {
+             Self::Debug => ":app:assembleDebug",
+             Self::Release => ":app:assembleRelease",
++            Self::Bundle => ":app:bundleRelease",
+         }
+     }
+ 
+-    fn directory(self) -> &'static str {
++    /// Where Gradle leaves the build, under the build root.
++    fn output(self) -> &'static str {
+         match self {
+-            Self::Debug => "debug",
+-            Self::Release => "release",
++            Self::Debug => "outputs/apk/debug/app-debug.apk",
++            Self::Release => "outputs/apk/release/app-release.apk",
++            Self::Bundle => "outputs/bundle/release/app-release.aab",
+         }
+     }
+ 
+-    fn apk_name(self) -> &'static str {
++    pub fn label(self) -> &'static str {
+         match self {
+-            Self::Debug => "app-debug.apk",
+-            Self::Release => "app-release.apk",
++            Self::Debug => "development",
++            Self::Release => "release",
++            Self::Bundle => "release bundle",
+         }
+     }
+ 
+-    pub fn label(self) -> &'static str {
++    /// What the build makes, for the result line.
++    pub fn artifact_label(self) -> &'static str {
+         match self {
+-            Self::Debug => "development",
+-            Self::Release => "release",
++            Self::Bundle => "AAB",
++            _ => "APK",
+         }
+     }
+ }
+@@ -109,7 +116,12 @@ pub fn build(project: &Project, profile: Profile, verbose: bool) -> Result<Build
+     let artifact = build_stage("Android", || {
+         assemble(project, profile, verbose, project.light_server())
+     })?;
+-    if let Err(error) = verify_apk(&artifact.apk, verbose) {
++    let verified = if profile == Profile::Bundle {
++        verify_bundle(&artifact.apk, verbose)
++    } else {
++        verify_apk(&artifact.apk, verbose)
++    };
++    if let Err(error) = verified {
+         output::tree_root_field("Verify", "failed", true);
+         return Err(error);
+     }
+@@ -170,13 +182,13 @@ fn assemble(
+         .lock()
+         .context("could not lock the shared native build cache")?;
+     let mut gradle = gradle_command(project, profile, light_server)?;
+-    let message = format!("Building {} APK", profile.label());
++    let message = format!("Building {} {}", profile.label(), if profile == Profile::Bundle { "AAB" } else { "APK" });
+     process::run_quiet(&mut gradle, &message, verbose)?;
+     build_artifact(project, profile)
+ }
+ 
+ fn gradle_command(project: &Project, profile: Profile, light_server: &str) -> Result<Command> {
+-    let release_signing = if profile == Profile::Release {
++    let release_signing = if profile != Profile::Debug {
+         let signing = project.release_signing().context(
+             "release signing is not configured; add [signing] with keystore and key_alias to ink.toml",
+         )?;
+@@ -235,7 +247,7 @@ fn gradle_command(project: &Project, profile: Profile, light_server: &str) -> Re
+             "-PinkAndroidAssets={}",
+             match profile {
+                 Profile::Debug => project.android_assets_path(),
+-                Profile::Release => release_assets_path(project),
++                Profile::Release | Profile::Bundle => release_assets_path(project),
+             }
+             .display()
+         ));
+@@ -299,11 +311,7 @@ fn mirror(source: &Path, destination: &Path, root: &Path) -> Result<()> {
+ }
+ 
+ fn build_artifact(project: &Project, profile: Profile) -> Result<BuildArtifact> {
+-    let apk = project
+-        .root()
+-        .join(".ink/build/android/outputs/apk")
+-        .join(profile.directory())
+-        .join(profile.apk_name());
++    let apk = project.root().join(".ink/build/android").join(profile.output());
+     if !apk.is_file() {
+         bail!("Gradle completed without producing {}", apk.display());
+     }
+@@ -323,8 +331,9 @@ pub fn copy_build(
+     } else {
+         ""
+     };
++    let extension = if profile == Profile::Bundle { "aab" } else { "apk" };
+     let file_name = format!(
+-        "{}-{}{suffix}.apk",
++        "{}-{}{suffix}.{extension}",
+         slug(project.name()),
+         project.version()
+     );
+@@ -634,6 +643,15 @@ fn verify_apk(apk: &Path, verbose: bool) -> Result<()> {
+     Ok(())
+ }
+ 
++/// An App Bundle is signed as a JAR, which apksigner can't check, so the JDK's jarsigner does.
++fn verify_bundle(bundle: &Path, verbose: bool) -> Result<()> {
++    let mut command = Command::new("jarsigner");
++    // Not -strict: Gradle writes the bundle's manifest last, which -strict reports, though the signature is good.
++    command.arg("-verify").arg(bundle);
++    process::run_quiet(&mut command, "Verifying AAB signature", verbose)?;
++    Ok(())
++}
++
+ fn apksigner() -> Result<PathBuf> {
+     let sdk = android_sdk()?;
+     let build_tools = sdk.join("build-tools");
+diff --git a/crates/ink-cli/src/cli.rs b/crates/ink-cli/src/cli.rs
+index 7076e8b..c54fb09 100644
+--- a/crates/ink-cli/src/cli.rs
++++ b/crates/ink-cli/src/cli.rs
+@@ -69,6 +69,9 @@ pub enum InkCommand {
+         /// Build a development APK instead
+         #[arg(long)]
+         debug: bool,
++        /// Build a release-signed Android App Bundle (.aab) for Google Play instead of an APK
++        #[arg(long, conflicts_with = "debug")]
++        bundle: bool,
+     },
+ 
+     /// Build, install and watch on a connected Android device
+diff --git a/crates/ink-cli/src/main.rs b/crates/ink-cli/src/main.rs
+index 95ea0b5..22248ca 100644
+--- a/crates/ink-cli/src/main.rs
++++ b/crates/ink-cli/src/main.rs
+@@ -137,18 +137,21 @@ fn run() -> Result<()> {
+             quality::lint(&project, cli.verbose)?;
+             Ok(())
+         }
+-        InkCommand::Build { debug } => {
++        InkCommand::Build { debug, bundle } => {
+             let project = load_project(cli.directory.as_deref())?;
+             let profile = if debug {
+                 android::Profile::Debug
++            } else if bundle {
++                android::Profile::Bundle
+             } else {
+                 android::Profile::Release
+             };
++            let kind = profile.artifact_label();
+             let artifact = android::build(&project, profile, cli.verbose)?;
+             let output_path = match android::copy_build(&project, profile, &artifact) {
+                 Ok(path) => path,
+                 Err(error) => {
+-                    output::tree_root_field("APK", "failed", true);
++                    output::tree_root_field(kind, "failed", true);
+                     return Err(error);
+                 }
+             };
+@@ -157,7 +160,7 @@ fn run() -> Result<()> {
+                 .strip_prefix(project.root())
+                 .expect("build output is inside the project");
+             output::tree_root_field(
+-                "APK",
++                kind,
+                 format!("{} · {}", relative.display(), file_size(size)),
+                 true,
+             );

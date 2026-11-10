@@ -52,6 +52,8 @@ export type State = {
   orangeAccents: boolean;
   /** Swipes and typing know contacts' given and family names. True only while the setting is on and Android allows it. */
   contactNames: boolean;
+  /** Which build this is: "play" for Google Play, which has no typing log, "github" or "debug". */
+  build: "play" | "github" | "debug";
   /** What Enter does in fields with more than one line. */
   enterKey: EnterKey;
   /** Apps that the user added to the Enter key setting, and built-in apps that the user changed. */

@@ -17,8 +17,8 @@ function Progress({ step }: { step: number }) {
   const segment = (WIDTH - gap * (STEPS - 1)) / STEPS;
   return <Canvas width={WIDTH} height={14}>
     {Array.from({ length: STEPS }, (_, index) => index < step
-      ? <Rectangle key={index} x={index * (segment + gap)} y={0} width={segment} height={14} fill={INK} />
-      : <Rectangle key={index} x={index * (segment + gap) + 1} y={1} width={segment - 2} height={12} stroke={INK} strokeWidth={2} />)}
+      ? <Rectangle key={index} x={index * (segment + gap)} y={0} width={segment} height={14} fill={ORANGE} />
+      : <Rectangle key={index} x={index * (segment + gap) + 1} y={1} width={segment - 2} height={12} stroke={MUTED} strokeWidth={2} />)}
   </Canvas>;
 }
 
@@ -26,9 +26,9 @@ function Action({ label, onPress }: { label: string; onPress: () => void }) {
   const height = 108;
   const icon = 30;
   return <Canvas width={WIDTH} height={height}>
-    <Rectangle x={0} y={0} width={WIDTH} height={height} fill={INK} onPress={onPress} />
-    <CanvasText x={0} y={0} width={WIDTH} height={height} size={32} colour={ORANGE} align="center">{label}</CanvasText>
-    <CanvasIcon x={WIDTH - icon - 32} y={(height - icon) / 2} size={icon} name={arrowOutward} colour={ORANGE} />
+    <Rectangle x={0} y={0} width={WIDTH} height={height} fill={ORANGE} onPress={onPress} />
+    <CanvasText x={0} y={0} width={WIDTH} height={height} size={32} colour={INK} align="center">{label}</CanvasText>
+    <CanvasIcon x={WIDTH - icon - 32} y={(height - icon) / 2} size={icon} name={arrowOutward} colour={INK} />
   </Canvas>;
 }
 
@@ -69,7 +69,7 @@ function FrontPage() {
   </Screen>;
 }
 
-/** The interactive guide opens once, by itself, over this orange screen. */
+/** The interactive guide opens once, by itself, over this ink screen. */
 function GuideStart() {
   useEffect(() => void openGuide(), []);
   return <Screen />;
@@ -79,11 +79,11 @@ export default function Home() {
   const result = useSnapshot(state);
   if (result.status !== "ready") return <Screen />;
   const { enabled, selected, overlay, scrollAssistant, backService, version, whatsNew, guideDue } = result.data;
-  if (!enabled) return <Step step={1} title="Enable TitanKeys" hint="Turn it on in your list of keyboards." action="Open keyboard settings" onPress={enableKeyboard} />;
-  if (!selected) return <Step step={2} title="Choose TitanKeys" hint="Make it the keyboard you type with." action="Open keyboard list" onPress={chooseKeyboard} />;
-  if (!overlay) return <Step step={3} title="Allow overlay" hint="Keeps the touchpad working above text selection." action="Open overlay settings" onPress={allowOverlay} />;
-  if (!scrollAssistant) return <Step step={4} title="Turn on Scroll assistant" hint="Swiping needs this to read the touchpad." action="Open Scroll assistant" onPress={openScrollAssistant} />;
-  if (!backService) return <Step step={5} title="Turn on TitanKeys in Accessibility" hint="Lets one back swipe close the suggestion bar." action="Open accessibility settings" onPress={allowBack} />;
+  if (!enabled) return <Step step={1} title="Turn on TitanKeys" hint="Turn it on in your list of keyboards." action="Open keyboard settings" onPress={enableKeyboard} />;
+  if (!selected) return <Step step={2} title="Make TitanKeys your keyboard" hint="Select it as the keyboard that you type with." action="Open keyboard list" onPress={chooseKeyboard} />;
+  if (!overlay) return <Step step={3} title="Allow display over other apps" hint="This keeps the touchpad on the keyboard when an app shows text selection buttons." action="Open Display over other apps" onPress={allowOverlay} />;
+  if (!scrollAssistant) return <Step step={4} title="Turn on Scroll assistant" hint="Swiping needs it to read the touchpad." action="Open Scroll assistant" onPress={openScrollAssistant} />;
+  if (!backService) return <Step step={5} title="Turn on TitanKeys in Accessibility" hint="Then one push of Back closes the keyboard and goes back in the app. The keys also work in apps that take them first." action="Open Accessibility" onPress={allowBack} />;
   if (guideDue) return <GuideStart />;
   if (whatsNew && hasReleaseNotes(version)) return <WhatsNew version={version} onClose={() => void markNotesSeen()} />;
   return <FrontPage />;

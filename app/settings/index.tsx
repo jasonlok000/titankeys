@@ -17,38 +17,46 @@ export default function Settings() {
   const settings = result.data;
   return <Screen title="Settings" rightAction={closeAction}>
     <Section title="Typing">
-      <Field label="Spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
-      <Field label="Tap keys" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
-      <Field label="Hold for symbols" href="/settings/hold">{holdLabel(settings)}</Field>
-      <Toggle label="Auto-capitalisation" value={settings.autoCapitalise}
-        onChange={autoCapitalise => save.run({ autoCapitalise })} />
-      <Toggle label="Auto-punctuation" value={settings.autoPunctuation}
-        onChange={autoPunctuation => save.run({ autoPunctuation })} />
-      <Toggle label="Autocorrect" value={settings.autocorrect}
+      <Toggle label="Fix typos as you type" value={settings.autocorrect}
         onChange={autocorrect => save.run({ autocorrect })} />
-      <Toggle label="Suggestion bar" value={settings.suggestionBar}
+      <Toggle label="Capital letter to start a sentence" value={settings.autoCapitalise}
+        onChange={autoCapitalise => save.run({ autoCapitalise })} />
+      <Toggle label="Full stop on double space" value={settings.autoPunctuation}
+        onChange={autoPunctuation => save.run({ autoPunctuation })} />
+      <Field label="English spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
+      <Field label="Hold a letter for its symbol" href="/settings/hold">{holdLabel(settings)}</Field>
+      <Field label="Type with a light touch" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
+    </Section>
+    <Section title="Suggestions">
+      <Toggle label="Show word suggestions" value={settings.suggestionBar}
         onChange={suggestionBar => save.run({ suggestionBar })} />
-      <Toggle label="Empty home search has no bar" value={settings.launcherHidesBar}
+      <Toggle label="No suggestions on an empty home search" value={settings.launcherHidesBar}
         onChange={launcherHidesBar => save.run({ launcherHidesBar })} />
-      <Toggle label="Cursor control" value={settings.cursorControl}
+    </Section>
+    <Section title="Swiping">
+      <Toggle label="Swipe to type words" value={settings.swipeTyping}
+        onChange={swipeTyping => save.run({ swipeTyping })} />
+      <Toggle label="Space taps move the cursor" value={settings.cursorControl}
         onChange={cursorControl => save.run({ cursorControl })} />
+      {(settings.swipeTyping || settings.cursorControl)
+        && <Field label="Keep swiping after a short lift" href="/settings/lift">{liftLabel(settings)}</Field>}
+      <Field label="Vibrate while swiping" href="/settings/vibration">{vibrationLabel(settings)}</Field>
+      <Toggle label="Scroll assistant outside text fields" value={!settings.touchpadOnlyInFields}
+        onChange={scroll => save.run({ touchpadOnlyInFields: !scroll })} />
+    </Section>
+    <Section title="Keys">
+      <Toggle label="Double push locks Shift and Alt" value={settings.doublePressLocks}
+        onChange={doublePressLocks => save.run({ doublePressLocks })} />
       <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}
         onChange={fnAsCtrl => save.run({ fnAsCtrl })} />
-      <Toggle label="Two pushes lock Shift and Alt" value={settings.doublePressLocks}
-        onChange={doublePressLocks => save.run({ doublePressLocks })} />
     </Section>
-    <Section title="Swipe typing">
-      <Toggle label="Swipe typing" value={settings.swipeTyping}
-        onChange={swipeTyping => save.run({ swipeTyping })} />
-      {(settings.swipeTyping || settings.cursorControl)
-        && <Field label="Slip recovery period" href="/settings/lift">{liftLabel(settings)}</Field>}
-      <Field label="Swipe vibration" href="/settings/vibration">{vibrationLabel(settings)}</Field>
-      <Toggle label="Touchpad only in text fields" value={settings.touchpadOnlyInFields}
-        onChange={touchpadOnlyInFields => save.run({ touchpadOnlyInFields })} />
+    <Section title="Look">
+      <Toggle label="Orange accents" value={settings.orangeAccents}
+        onChange={orangeAccents => save.run({ orangeAccents })} />
     </Section>
-    <Section title="Personal">
+    <Section title="Your data">
       <Field label="Your words" href="/settings/data" />
-      <Field label="Raw input log" href="/settings/rawlog">{rawLogLabel(settings)}</Field>
+      <Field label="Typing log" href="/settings/rawlog">{rawLogLabel(settings)}</Field>
     </Section>
     <Section title="Help">
       <Field label="Setup" href="/settings/setup">{setupLabel(settings)}</Field>

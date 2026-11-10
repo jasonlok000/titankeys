@@ -225,6 +225,9 @@ private class GuideField(context: Context) : EditText(context) {
  * The interactive guide. It opens after setup and sells the keyboard by having you use it: each step waits for the real gesture
  * on the real keyboard, in a real text field. Everything that a step says and checks is in [GUIDE_STEPS].
  *
+ * A step starts on ink. When you do it, the screen sweeps to orange, the phone gives a pulse and a short line lands. The step then
+ * stays, so you can try the gesture more, until you push Next. Next also moves on from a step that you do not want to do.
+ *
  * Practice text teaches the keyboard nothing: the field asks for no personalised learning, like the recorder's field.
  */
 class GuideActivity : Activity() {
@@ -239,7 +242,7 @@ class GuideActivity : Activity() {
     private lateinit var overlay: GuideOverlay
     private lateinit var column: LinearLayout
     private lateinit var segments: LinearLayout
-    private lateinit var skip: TextView
+    private lateinit var next: TextView
     private lateinit var again: TextView
     private lateinit var close: ImageView
     private lateinit var title: TextView
@@ -265,8 +268,17 @@ class GuideActivity : Activity() {
     private var lastKey: String? = null
     private var travel = 0f
     private var lastPoint: FloatArray? = null
-    private var tone = GuideTone.Orange
+    private var tone = GuideTone.Ink
     private var bottomInset = 0
+    /** The step is done, so the screen is orange and Next is filled. */
+    private var passed = false
+    /** Between two steps, Next does nothing. */
+    private var changing = false
+    /** After the line that lands, the step's words come back, so you can read them while you try more. */
+    private val settleReaction = Runnable {
+        hideReaction()
+        for (view in listOf(title, body)) view.animate().alpha(1f).setDuration(FADE_MILLIS).start()
+    }
 
     private var helpShown = false
     private val showHelp = Runnable {
@@ -283,7 +295,7 @@ class GuideActivity : Activity() {
         super.onCreate(savedInstanceState)
         overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
         overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, 0, 0)
-        window.setBackgroundDrawable(ColorDrawable(GuideColours.ORANGE))
+        window.setBackgroundDrawable(ColorDrawable(GuideColours.INK))
         window.setDecorFitsSystemWindows(false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
@@ -296,9 +308,9 @@ class GuideActivity : Activity() {
             override fun afterTextChanged(s: Editable?) = fieldChanged()
         })
         flow.start(preferences.getString(RESUME, null))
-        applyTone(flow.step.chapter.tone)
+        applyTone(GuideTone.Ink)
         backdrop.show(backgroundOf(tone))
-        for (view in listOf(title, body, hint, offer, skip, again, close, segments, field, keys)) view.alpha = 0f
+        for (view in listOf(title, body, hint, offer, next, again, close, segments, field, keys)) view.alpha = 0f
     }
 
     override fun onResume() {
@@ -376,6 +388,15 @@ class GuideActivity : Activity() {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(20).toFloat()))
             setOnClickListener { offerPressed() }
         }
+        next = TextView(this).apply {
+            text = "Next"
+            typeface = HEAVY
+            gravity = Gravity.CENTER
+            maxLines = 1
+            setPadding(dp(22), dp(10), dp(22), dp(10))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(20).toFloat()))
+            setOnClickListener { nextPressed() }
+        }
         field = GuideField(this).apply {
             typeface = MEDIUM
             setTextColor(GuideColours.INK)
@@ -410,7 +431,6 @@ class GuideActivity : Activity() {
         segments = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         for (index in 0 until flow.chapterCount) segments.addView(View(this),
             LinearLayout.LayoutParams(0, dp(SEGMENT_HEIGHT), 1f).apply { marginEnd = dp(4) })
-        skip = topAction("Skip") { skipStep() }
         again = topAction("Start again") { startAgain() }.apply { visibility = View.GONE }
         close = ImageView(this).apply {
             setImageResource(R.drawable.panel_close)
@@ -422,8 +442,13 @@ class GuideActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             addView(segments, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(again, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(skip, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(close, LinearLayout.LayoutParams(dp(TOP_ACTION), dp(TOP_ACTION)))
+        }
+        // The offer to turn on a setting, if a step needs one, and Next.
+        val actions = LinearLayout(this).apply {
+            gravity = Gravity.CENTER
+            addView(offer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(10) })
+            addView(next, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -432,9 +457,8 @@ class GuideActivity : Activity() {
             addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, BODY_SHARE).apply { topMargin = dp(4) })
             addView(hint, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
             addView(field, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-            addView(offer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(8)
-                gravity = Gravity.CENTER_HORIZONTAL
             })
             addView(keys, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0).apply { topMargin = dp(8) })
         }
@@ -490,25 +514,42 @@ class GuideActivity : Activity() {
 
     private fun backgroundOf(tone: GuideTone) = if (tone == GuideTone.Orange) GuideColours.ORANGE else GuideColours.INK
 
+    /** The words take the colours of the background: cream on ink while you try, ink on orange once it is done. */
     private fun applyTone(next: GuideTone) {
         tone = next
         val onInk = next == GuideTone.Ink
-        val strong = if (onInk) GuideColours.ORANGE else GuideColours.INK
-        val soft = if (onInk) GuideColours.CREAM else GuideColours.INK
+        val strong = if (onInk) GuideColours.CREAM else GuideColours.INK
         title.setTextColor(strong)
-        body.setTextColor(soft)
-        hint.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
-        hint.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, HINT_RADIUS)
+        body.setTextColor(GuideMotion.faded(strong, BODY_ALPHA))
+        // A hint says what happened, calmly: it is not a mistake that counts.
+        hint.setTextColor(strong)
+        hint.background = rounded(GuideMotion.faded(strong, HINT_FILL), HINT_RADIUS)
         offer.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
         offer.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
-        skip.setTextColor(strong)
         again.setTextColor(strong)
         close.imageTintList = ColorStateList.valueOf(strong)
-        reaction.setTextColor(if (onInk) GuideColours.CREAM else GuideColours.INK)
+        reaction.setTextColor(strong)
         keys.tone = next
+        paintNext()
         paintSegments(flow.chapterIndex)
         val appearance = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
         window.insetsController?.setSystemBarsAppearance(if (onInk) 0 else appearance, appearance)
+    }
+
+    /** Next is an outline while the step waits, and filled once the step is done. */
+    private fun paintNext() {
+        val strong = if (tone == GuideTone.Ink) GuideColours.CREAM else GuideColours.INK
+        if (passed) {
+            next.setTextColor(if (tone == GuideTone.Ink) GuideColours.INK else GuideColours.CREAM)
+            next.background = rounded(strong, OFFER_RADIUS)
+        } else {
+            next.setTextColor(GuideMotion.faded(strong, NEXT_WAITING))
+            next.background = GradientDrawable().apply {
+                setColor(Color.TRANSPARENT)
+                setStroke(dp(2), GuideMotion.faded(strong, NEXT_WAITING))
+                cornerRadius = dp(OFFER_RADIUS).toFloat()
+            }
+        }
     }
 
     private fun rounded(colour: Int, radius: Int) = GradientDrawable().apply {
@@ -534,7 +575,7 @@ class GuideActivity : Activity() {
             return
         }
         // The first thing you see: the line crosses the screen and leaves the mark behind.
-        overlay.showMark(GuideColours.INK)
+        overlay.showMark(GuideColours.ORANGE)
         main.postDelayed({
             overlay.hideMark()
             reveal(flow.step)
@@ -543,7 +584,7 @@ class GuideActivity : Activity() {
 
     private fun reveal(step: GuideStep) {
         keys.appear()
-        for (view in listOf(field, keys, skip, again, close, segments)) view.animate().alpha(1f).setDuration(FADE_MILLIS).start()
+        for (view in listOf(field, keys, next, again, close, segments)) view.animate().alpha(1f).setDuration(FADE_MILLIS).start()
         enter(step)
     }
 
@@ -551,6 +592,9 @@ class GuideActivity : Activity() {
         lastPoint = null
         travel = 0f
         helpShown = false
+        passed = false
+        next.visibility = if (step.chapter == GuideChapter.End) View.GONE else View.VISIBLE
+        paintNext()
         keys.show(step.cue)
         offerFor(step)
         swapIn(title, step.title, 0)
@@ -723,19 +767,28 @@ class GuideActivity : Activity() {
         }
     }
 
-    /** The real gesture happened. The screen answers, then moves on. */
+    /**
+     * The real gesture happened. The screen sweeps to orange, the phone gives a pulse, and a line lands. The step stays, so you can
+     * try it more: the keys still answer, and only the checks stop. Next is filled now.
+     */
     private fun stepDone() {
         busy = true
+        passed = true
         main.removeCallbacks(showHelp)
         hideHint()
-        val left = flow.step
-        val finishesChapter = !flow.finished && GUIDE_STEPS.getOrNull(GUIDE_STEPS.indexOf(left) + 1)?.chapter != left.chapter
-        if (finishesChapter) haptics.guideChapter() else haptics.wordChanged()
+        haptics.guideChapter()
         keys.celebrate()
-        if (left.done != null) {
-            showReaction(left.done)
-            main.postDelayed({ moveOn() }, REACTION_MILLIS)
-        } else main.postDelayed({ moveOn() }, BEAT_MILLIS)
+        backdrop.wipeTo(GuideColours.ORANGE)
+        overlay.sweep()
+        main.postDelayed({ if (passed) applyTone(GuideTone.Orange) }, WIPE_MILLIS)
+        showReaction(flow.step.done)
+        main.removeCallbacks(settleReaction)
+        main.postDelayed(settleReaction, REACTION_MILLIS)
+    }
+
+    private fun nextPressed() {
+        if (changing || !ready || flow.finished) return
+        moveOn()
     }
 
     private fun showReaction(text: String) {
@@ -749,25 +802,26 @@ class GuideActivity : Activity() {
         for (view in listOf(title, body)) view.animate().alpha(REACTION_DIM).setDuration(FADE_MILLIS).start()
     }
 
-    /** The story goes on. A new chapter changes the background behind the cream line. */
+    /** The story goes on: back to ink for the next step behind the cream line, or orange for the ending. */
     private fun moveOn() {
+        changing = true
+        busy = true
+        passed = false
         again.visibility = View.GONE
-        val before = flow.step.chapter
-        flow.advance()
-        val next = flow.step
-        if (next.chapter == before) {
-            overlay.sweep(thickness = BEAT_LINE)
-            hideReaction()
-            enter(next)
-            return
-        }
+        main.removeCallbacks(showHelp)
+        main.removeCallbacks(settleReaction)
+        hideHint()
         hideReaction()
+        flow.advance()
+        val coming = flow.step
+        val target = if (coming.chapter == GuideChapter.End) GuideTone.Orange else GuideTone.Ink
         for (view in listOf(title, body)) view.animate().alpha(0f).translationX(-dp(ENTER_OFFSET).toFloat()).setDuration(FADE_MILLIS).start()
-        backdrop.wipeTo(backgroundOf(next.chapter.tone))
-        overlay.sweep()
+        if (target != tone) backdrop.wipeTo(backgroundOf(target))
+        overlay.sweep(thickness = if (target != tone) LINE else BEAT_LINE)
         main.postDelayed({
-            applyTone(next.chapter.tone)
-            if (next.chapter == GuideChapter.End) finale(next) else enter(next)
+            changing = false
+            applyTone(target)
+            if (coming.chapter == GuideChapter.End) finale(coming) else enter(coming)
         }, WIPE_MILLIS)
     }
 
@@ -777,12 +831,12 @@ class GuideActivity : Activity() {
 
     /** The high note: lines cross the screen one after the other, the mark lands, and the keys answer. */
     private fun finale(end: GuideStep) {
-        skip.visibility = View.GONE
+        next.visibility = View.GONE
         again.visibility = View.VISIBLE
         again.text = "Again"
         haptics.guideFinale()
         for (sweep in 0 until FINALE_SWEEPS) overlay.sweep(delay = sweep * FINALE_STAGGER_MILLIS, thickness = BEAT_LINE + sweep * 2f)
-        overlay.showMark(GuideColours.ORANGE)
+        overlay.showMark(GuideColours.INK)
         keys.celebrate()
         main.postDelayed({
             overlay.hideMark()
@@ -794,25 +848,22 @@ class GuideActivity : Activity() {
         }, FINALE_MARK_MILLIS)
     }
 
-    private fun skipStep() {
-        if (busy || flow.finished) return
-        busy = true
-        moveOn()
-    }
-
     private fun startAgain() {
         main.removeCallbacksAndMessages(null)
         busy = true
+        passed = false
+        changing = true
         flow.start()
         preferences.edit().remove(RESUME).apply()
         again.visibility = View.GONE
         again.text = "Start again"
-        skip.visibility = View.VISIBLE
+        hideReaction()
         for (view in listOf(title, body)) view.animate().alpha(0f).setDuration(FADE_MILLIS).start()
-        backdrop.wipeTo(backgroundOf(flow.step.chapter.tone))
+        backdrop.wipeTo(backgroundOf(GuideTone.Ink))
         overlay.sweep()
         main.postDelayed({
-            applyTone(flow.step.chapter.tone)
+            changing = false
+            applyTone(GuideTone.Ink)
             seeding = true
             field.setText("")
             seeding = false
@@ -864,6 +915,11 @@ class GuideActivity : Activity() {
         private const val FIELD_RADIUS = 14
         private const val HINT_RADIUS = 10
         private const val OFFER_RADIUS = 22
+        private const val BODY_ALPHA = .86f
+        private const val HINT_FILL = .14f
+        /** How strong Next is while the step waits. */
+        private const val NEXT_WAITING = .6f
+        private const val LINE = 5f
         private const val SEGMENT_HEIGHT = 4
         private const val SEGMENT_OFF = .25f
         /** Below this much height the screen is too short for the drawing of the keys. */
@@ -882,10 +938,8 @@ class GuideActivity : Activity() {
         private const val REACTION_IN_MILLIS = 300L
         private const val REACTION_OVERSHOOT = 2.2f
         private const val REACTION_DIM = .08f
-        /** How long a finished step's line stays before the story goes on. */
-        private const val REACTION_MILLIS = 920L
-        /** The pause after a step that has no line, so that the answer can be felt. */
-        private const val BEAT_MILLIS = 420L
+        /** How long a finished step's line stays before the step's words come back. */
+        private const val REACTION_MILLIS = 1400L
         /** When the new background has reached the middle of the screen. */
         private const val WIPE_MILLIS = 300L
         private const val BEAT_LINE = 3f

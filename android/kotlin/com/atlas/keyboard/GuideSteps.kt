@@ -16,19 +16,19 @@ import com.atlas.keyboard.KeyboardEvent.Tapped
 import com.atlas.keyboard.Modifiers.Panel
 import kotlin.math.abs
 
-/** The background of a part of the guide: orange with ink words, or ink with orange and cream words. */
+/** The background of the guide: ink while you try a step, and orange once you have done it. */
 internal enum class GuideTone { Orange, Ink }
 
-/** One part of the story. A new chapter sweeps in with its own background. */
-internal enum class GuideChapter(val tone: GuideTone) {
-    Hello(GuideTone.Orange),
-    Swipe(GuideTone.Ink),
-    Flick(GuideTone.Orange),
-    Symbols(GuideTone.Ink),
-    QuickSettings(GuideTone.Orange),
-    Hold(GuideTone.Ink),
-    Cursor(GuideTone.Orange),
-    End(GuideTone.Ink),
+/** One part of the story. The bar at the top shows how far through the chapters you are. */
+internal enum class GuideChapter {
+    Hello,
+    Swipe,
+    Flick,
+    Symbols,
+    QuickSettings,
+    Hold,
+    Cursor,
+    End,
 }
 
 /** What the drawing of the keys shows as a ghost finger, so that the screen says what to do without words. */
@@ -45,15 +45,15 @@ internal sealed interface GuideCue {
     data object SwipeUp : GuideCue
     /** A finger goes along the bottom row. */
     data object SlideRow : GuideCue
-    /** A finger taps the bottom row, then drags past Space if [drag] is true. */
+    /** A finger taps the bottom row, then if [drag] is true stays down, swipes up and leans to one side. */
     data class Taps(val count: Int, val drag: Boolean) : GuideCue
 }
 
 /** A setting that a step needs. If it is off, the step offers to turn it on. */
 internal enum class GuideNeed(val offer: String, val optional: Boolean = false) {
-    HoldSymbols("Turn on Hold for symbols"),
-    CursorControl("Turn on cursor control"),
-    SwipeTyping("Turn on Swipe typing"),
+    HoldSymbols("Turn on Hold a letter for its symbol"),
+    CursorControl("Turn on Space taps move the cursor"),
+    SwipeTyping("Turn on Swipe to type words"),
     /** Some phones already have a Ctrl key, so this only shows with the step's help. */
     FnAsCtrl("Use fn as Ctrl", optional = true),
 }
@@ -98,8 +98,8 @@ internal class GuideStep(
     val chapter: GuideChapter,
     val title: String,
     val body: String,
-    /** A short line that lands when the step is done. Steps with none move straight on. */
-    val done: String? = null,
+    /** A short line that lands when the step is done. The step then stays, so you can try it more, until you push Next. */
+    val done: String,
     /** Shows after a time with no success, for a step where a feature may not be set up. */
     val help: String? = null,
     /** Shows in the field while it is empty. */
@@ -123,22 +123,37 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "touch", chapter = GuideChapter.Hello,
         title = "Touch the keys.",
-        body = "Do not push them. Move one finger across.",
+        body = "Do not push them. Move one finger across, inside the box.",
         done = "Every key is a touchpad.",
         placeholder = "Your words go here.",
         cue = GuideCue.Word("thumb"),
         check = { event -> if (event is Moved && event.keys >= TOUCH_TRAVEL_KEYS) GuideVerdict.Done else GuideVerdict.Wait },
     ),
     GuideStep(
+        id = "type", chapter = GuideChapter.Hello,
+        title = "Type with two thumbs.",
+        body = "Push the keys as usual. Type “teh” and a space. TitanKeys fixes it.",
+        done = "Typos fixed as you type.",
+        seed = "Real keys, smart fixes: ",
+        check = { event ->
+            when {
+                event is FieldChanged && FIXED.containsMatchIn(event.text) -> GuideVerdict.Done
+                event is FieldChanged && UNFIXED.containsMatchIn(event.text) ->
+                    GuideVerdict.Hint("Fix typos as you type is off. Turn it on in Settings or in the quick settings.")
+                else -> GuideVerdict.Wait
+            }
+        },
+    ),
+    GuideStep(
         id = "swipe", chapter = GuideChapter.Swipe,
-        title = "hello",
+        title = "faster",
         body = "Swipe this word. Go from letter to letter, then lift.",
         done = "One swipe. One word.",
-        cue = GuideCue.Word("hello"),
+        cue = GuideCue.Word("faster"),
         needs = GuideNeed.SwipeTyping,
         check = { event ->
             when (event) {
-                is Recognised -> if (event.words.any { it.equals("hello", ignoreCase = true) }) GuideVerdict.Done
+                is Recognised -> if (event.words.any { it.equals("faster", ignoreCase = true) }) GuideVerdict.Done
                     else GuideVerdict.Hint(if (event.words.isEmpty()) "Move across more letters." else "That was “${event.words.first()}”. Try again.")
                 is Tapped -> GuideVerdict.Hint("Do not lift between the letters.")
                 else -> GuideVerdict.Wait
@@ -149,6 +164,7 @@ internal val GUIDE_STEPS = listOf(
         id = "strip", chapter = GuideChapter.Swipe,
         title = "Touch another word.",
         body = "The strip above the keys shows other words.",
+        done = "The right word, one touch away.",
         check = { event -> if (event is Chosen) GuideVerdict.Done else GuideVerdict.Wait },
     ),
     GuideStep(
@@ -156,13 +172,13 @@ internal val GUIDE_STEPS = listOf(
         title = "Flick left from Backspace.",
         body = "One flick deletes one word.",
         done = "Gone.",
-        seed = "One word too many many",
+        seed = "Glass keyboards make typos typos",
         cue = GuideCue.Flick(hold = false),
         needs = GuideNeed.SwipeTyping,
         check = { event ->
             when (event) {
                 is DeletedWord -> GuideVerdict.Done
-                is Recognised -> GuideVerdict.Hint("Start on Backspace. Move to the left quickly.")
+                is Recognised -> GuideVerdict.Hint("That typed a word. Start on Backspace and move left quickly.")
                 else -> GuideVerdict.Wait
             }
         },
@@ -172,15 +188,15 @@ internal val GUIDE_STEPS = listOf(
         title = "Flick. Do not lift.",
         body = "Keep your finger on the keys. A longer flick deletes faster.",
         done = "All gone.",
-        seed = "Flick and hold to make all of these words go away",
+        seed = "Every word that you do not want goes away in one smooth hold",
         cue = GuideCue.Flick(hold = true),
         needs = GuideNeed.SwipeTyping,
         check = { event ->
             when {
                 event is DeletedWord && event.held -> if (++count >= HELD_DELETE_WORDS) GuideVerdict.Done else GuideVerdict.Wait
                 // The first word of a held flick is like a plain flick, so one plain flick does not mean that the finger lifted.
-                event is DeletedWord && ++mark >= 1 -> GuideVerdict.Hint("Keep your finger on the keys after the flick.")
-                event is Recognised -> GuideVerdict.Hint("Start on Backspace. Move to the left quickly.")
+                event is DeletedWord && ++mark >= 1 -> GuideVerdict.Hint("Your finger lifted. Keep it on the keys after the flick.")
+                event is Recognised -> GuideVerdict.Hint("That typed a word. Start on Backspace and move left quickly.")
                 else -> GuideVerdict.Wait
             }
         },
@@ -189,6 +205,7 @@ internal val GUIDE_STEPS = listOf(
         id = "sym-open", chapter = GuideChapter.Symbols,
         title = "Push Sym.",
         body = "The keys show symbols now.",
+        done = "Every symbol. No menus.",
         help = "Nothing? Open the phone Settings, then Shortcut keys. Set Sym key to Programmable key.",
         cue = GuideCue.Spot(listOf(Layout.SYM)),
         check = { event -> if (event is ModifierState && event.panel == Panel.Symbols) GuideVerdict.Done else GuideVerdict.Wait },
@@ -197,6 +214,7 @@ internal val GUIDE_STEPS = listOf(
         id = "sym-rest", chapter = GuideChapter.Symbols,
         title = "Rest a finger on a key.",
         body = "The panel marks the key under your finger.",
+        done = "Look down less.",
         panelHint = PANEL_LOST,
         check = { event ->
             when {
@@ -209,12 +227,13 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "sym-page", chapter = GuideChapter.Symbols,
         title = "Swipe up.",
-        body = "Swipe up or down to see more symbols.",
+        body = "Swipe up or down for more. Backspace and Enter turn pages too.",
+        done = "Pages at a swipe.",
         cue = GuideCue.SwipeUp,
         panelHint = PANEL_LOST,
         check = { event ->
             when {
-                // Any swipe up or down counts, also when the symbols have only one page to show.
+                // Any swipe up or down counts, also when the group has only one page to show.
                 event is PanelSwiped && abs(event.down) > abs(event.across) -> GuideVerdict.Done
                 event is ModifierState && event.panel == Panel.Closed -> GuideVerdict.Hint(PANEL_LOST)
                 else -> GuideVerdict.Wait
@@ -225,28 +244,29 @@ internal val GUIDE_STEPS = listOf(
         id = "emoji-open", chapter = GuideChapter.Symbols,
         title = "Push Sym again.",
         body = "Now the keys show emoji.",
+        done = "Emoji, right on the keys.",
         cue = GuideCue.Spot(listOf(Layout.SYM)),
         panelHint = PANEL_LOST,
         check = { event ->
             when {
                 event is ModifierState && event.panel == Panel.Emoji -> GuideVerdict.Done
-                event is ModifierState && event.panel == Panel.Closed -> GuideVerdict.Hint(PANEL_LOST)
+                event is ModifierState && event.panel == Panel.Closed -> GuideVerdict.Hint("The panel closed. Push Sym two times for the emoji.")
                 else -> GuideVerdict.Wait
             }
         },
     ),
     GuideStep(
         id = "emoji-slide", chapter = GuideChapter.Symbols,
-        title = "Move along the bottom row.",
-        body = "Keep your finger on the bottom row. It changes the group.",
+        title = "Use the bottom row.",
+        body = "Rest or move a finger on the bottom row. It changes the group.",
         done = "You did not touch the screen.",
         cue = GuideCue.SlideRow,
         panelHint = "Push Sym two times for the emoji.",
         check = { event ->
             when {
                 event is GroupPicked -> GuideVerdict.Done
-                event is PanelSwiped -> GuideVerdict.Hint("Put your finger on the bottom row of keys.")
-                event is ModifierState && event.panel == Panel.Closed -> GuideVerdict.Hint("Push Sym two times for the emoji.")
+                event is PanelSwiped -> GuideVerdict.Hint("That was a swipe. Put your finger on the bottom row of keys.")
+                event is ModifierState && event.panel == Panel.Closed -> GuideVerdict.Hint("The panel closed. Push Sym two times for the emoji.")
                 else -> GuideVerdict.Wait
             }
         },
@@ -255,13 +275,14 @@ internal val GUIDE_STEPS = listOf(
         id = "quick-open", chapter = GuideChapter.QuickSettings,
         title = "Push Alt.",
         body = "The panel shows quick settings.",
+        done = "Settings at your fingertips.",
         help = "Rest a finger on a key to read its setting.",
         cue = GuideCue.Spot(listOf(Layout.ALT)),
         panelHint = "Push Sym, then push Alt.",
         check = { event ->
             when {
                 event is ModifierState && event.panel == Panel.Settings -> GuideVerdict.Done
-                event is ModifierState && event.panel == Panel.Closed -> GuideVerdict.Hint("Push Sym, then push Alt.")
+                event is ModifierState && event.panel == Panel.Closed -> GuideVerdict.Hint("The panel closed. Push Sym, then push Alt.")
                 else -> GuideVerdict.Wait
             }
         },
@@ -269,15 +290,16 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "quick-hold", chapter = GuideChapter.QuickSettings,
         title = "Push H.",
-        body = "This turns on Hold for symbols.",
+        body = "This turns on Hold a letter for its symbol.",
+        done = "On, with one key.",
         cue = GuideCue.Spot(listOf("H")),
         skipWhen = { it.holdSymbols },
         panelHint = "Push Sym, then push Alt.",
         check = { event ->
             when {
                 event is QuickSettingUsed && event.item == QuickSetting.HoldSymbols && event.on -> GuideVerdict.Done
-                event is QuickSettingUsed -> GuideVerdict.Hint("That is a different setting. Push H.")
-                event is ModifierState && event.panel == Panel.Closed -> GuideVerdict.Hint("Push Sym, then push Alt.")
+                event is QuickSettingUsed -> GuideVerdict.Hint("That changed ${event.item.title}. Push it again to change it back, then push H.")
+                event is ModifierState && event.panel == Panel.Closed -> GuideVerdict.Hint("The panel closed. Push Sym, then push Alt.")
                 else -> GuideVerdict.Wait
             }
         },
@@ -303,7 +325,7 @@ internal val GUIDE_STEPS = listOf(
         check = { event ->
             when {
                 event is HeldSymbol -> GuideVerdict.Done
-                event is FieldChanged && event.text.isNotEmpty() -> GuideVerdict.Hint("Keep the key down longer.")
+                event is FieldChanged && event.text.isNotEmpty() -> GuideVerdict.Hint("That typed the letter. Keep the key down longer.")
                 else -> GuideVerdict.Wait
             }
         },
@@ -313,17 +335,18 @@ internal val GUIDE_STEPS = listOf(
         title = "Hold Ctrl.",
         body = "The bar shows your shortcuts.",
         done = "All your shortcuts.",
-        help = "No Ctrl key? Turn on Use fn as Ctrl, or skip this step.",
+        help = "No Ctrl key? Turn on Use fn as Ctrl, or push Next.",
         cue = GuideCue.Spot(listOf(Layout.FN)),
         needs = GuideNeed.FnAsCtrl,
         check = { event -> if (event is ModifierState && event.ctrlOverlay) GuideVerdict.Done else GuideVerdict.Wait },
     ),
     GuideStep(
         id = "cursor-word", chapter = GuideChapter.Cursor,
-        title = "Touch two times quickly.",
-        body = "On the bottom row. This selects the word at the cursor.",
-        help = "Lift your finger after each touch.",
-        seed = "Select this word",
+        title = "Touch Space two times.",
+        body = "Quickly, and lift after each touch. It selects the word at the cursor.",
+        done = "No screen needed.",
+        help = "Touch lightly. Do not push the key.",
+        seed = "Select a word without the screen",
         cue = GuideCue.Taps(2, drag = false),
         needs = GuideNeed.CursorControl,
         check = { event ->
@@ -332,11 +355,11 @@ internal val GUIDE_STEPS = listOf(
     ),
     GuideStep(
         id = "cursor-move", chapter = GuideChapter.Cursor,
-        title = "Two touches. Hold and move.",
-        body = "Do not lift after the second touch. Go past Space, left or right.",
+        title = "Two touches. Then swipe up.",
+        body = "Keep it down after the second. Lean left or right. Further is faster.",
         done = "Your finger is the cursor.",
         help = "Lift after the first touch. Do not lift after the second touch.",
-        seed = "Move the cursor along this line",
+        seed = "Your finger is the cursor now, and it never covers the text",
         cue = GuideCue.Taps(2, drag = true),
         needs = GuideNeed.CursorControl,
         check = { event ->
@@ -350,17 +373,18 @@ internal val GUIDE_STEPS = listOf(
                     if (mark < 0) mark = event.start
                     if (abs(event.start - mark) >= CURSOR_TRAVEL_CHARACTERS) GuideVerdict.Done else GuideVerdict.Wait
                 }
+                event is Recognised -> GuideVerdict.Hint("That typed a word. Start with two quick touches on Space.")
                 else -> GuideVerdict.Wait
             }
         },
     ),
     GuideStep(
         id = "cursor-words", chapter = GuideChapter.Cursor,
-        title = "Three touches. Hold and move.",
-        body = "Do not lift after the third touch. Select word by word.",
+        title = "Three touches. Then swipe up.",
+        body = "Lean to select word by word. The middle goes back to the first word.",
         done = "Word by word.",
-        help = "Move to the left or right after the third touch.",
-        seed = "Select many words at one time",
+        help = "Lift after the first two touches. Do not lift after the third touch.",
+        seed = "Select whole phrases in one smooth move",
         cue = GuideCue.Taps(3, drag = true),
         needs = GuideNeed.CursorControl,
         check = { event ->
@@ -369,20 +393,46 @@ internal val GUIDE_STEPS = listOf(
                     armed = true
                     GuideVerdict.Wait
                 }
+                event is CursorStarted -> GuideVerdict.Hint("That was two touches, so it moves the cursor. Lift, then touch three times.")
                 event is FieldChanged && armed && event.end > event.start
                     && event.text.substring(event.start, event.end).trim().contains(' ') -> GuideVerdict.Done
+                event is Recognised -> GuideVerdict.Hint("That typed a word. Start with three quick touches on Space.")
                 else -> GuideVerdict.Wait
             }
         },
     ),
     GuideStep(
         id = "end", chapter = GuideChapter.End,
-        title = "This is TitanKeys.",
-        body = "Made for these keys. Now they are yours.",
-        placeholder = "Swipe anything.",
+        title = "TitanKeys",
+        body = "Built for Titan 2 Elite.",
+        done = "Built for Titan 2 Elite.",
+        placeholder = "Type anything.",
         check = { GuideVerdict.Wait },
     ),
 )
+
+/** The typed word that the typing step asks for, after autocorrect has fixed it, and before. */
+private val FIXED = Regex("\\bthe\\s", RegexOption.IGNORE_CASE)
+private val UNFIXED = Regex("\\bteh\\s", RegexOption.IGNORE_CASE)
+
+/**
+ * Something that is easy to do by chance and stops a step from working. The guide says what happened and how to go back,
+ * and the step goes on as before. A step's own check comes first, so a step that wants one of these things gets it.
+ */
+internal fun commonMistake(step: GuideStep, event: KeyboardEvent): String? {
+    val panelStep = step.chapter == GuideChapter.Symbols || step.chapter == GuideChapter.QuickSettings
+    return when {
+        event is ModifierState && event.panel != Panel.Closed && !panelStep ->
+            "That opened the Sym panel. Push Sym until it closes, then try again."
+        event is ModifierState && event.alt != Modifiers.Level.Off && !panelStep ->
+            "Alt is on, so the touchpad does not type. Push Alt to turn it off."
+        event is CursorStarted && step.chapter != GuideChapter.Cursor ->
+            "That moves the cursor. Quick touches on Space start it. Lift your finger to stop."
+        event is HeldSymbol && step.chapter != GuideChapter.Hold ->
+            "A held key types its symbol. Push the keys quickly for letters."
+        else -> null
+    }
+}
 
 /** The finger must travel this far, in key widths, for the keys to have felt it. */
 private const val TOUCH_TRAVEL_KEYS = 3f
@@ -418,7 +468,13 @@ internal class GuideFlow(
     /** The setting that this step needs and that is off now, if any. */
     val missing get() = step.needs?.takeUnless { settings().has(it) }
 
-    fun event(event: KeyboardEvent): GuideVerdict = if (finished) GuideVerdict.Wait else step.check(memory, event)
+    /** What the step makes of [event]. If it waits, a mistake that is easy to make gets a hint that says what happened. */
+    fun event(event: KeyboardEvent): GuideVerdict {
+        if (finished) return GuideVerdict.Wait
+        val verdict = step.check(memory, event)
+        if (verdict != GuideVerdict.Wait) return verdict
+        return commonMistake(step, event)?.let { GuideVerdict.Hint(it) } ?: GuideVerdict.Wait
+    }
 
     /** Moves to the next step that shows. Returns the step that was left. */
     fun advance(): GuideStep {

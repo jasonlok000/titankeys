@@ -22,7 +22,8 @@ private fun keys(panel: Panel = Panel.Closed, ctrl: Boolean = false) = ModifierS
 /** The real things a person does, in the order of the guide. */
 private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "touch" to listOf(Moved(1f, false), Moved(3.5f, false)),
-    "swipe" to listOf(Recognised(listOf("Hello", "hell"))),
+    "type" to listOf(FieldChanged("Real keys, smart fixes: t", 25, 25), FieldChanged("Real keys, smart fixes: the ", 28, 28)),
+    "swipe" to listOf(Recognised(listOf("Faster", "fast"))),
     "strip" to listOf(Chosen("hell")),
     "flick" to listOf(DeletedWord(held = false)),
     "flick-hold" to listOf(DeletedWord(held = false), DeletedWord(held = true), DeletedWord(held = true), DeletedWord(held = true)),
@@ -36,7 +37,7 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "quick-close" to listOf(keys(Panel.Closed)),
     "hold-letter" to listOf(FieldChanged("j", 1, 1), HeldSymbol("(")),
     "hold-ctrl" to listOf(keys(ctrl = true)),
-    "cursor-word" to listOf(DoubleTapped, FieldChanged("Select this word", 12, 16)),
+    "cursor-word" to listOf(DoubleTapped, FieldChanged("Select a word without the screen", 26, 32)),
     "cursor-move" to listOf(CursorStarted(false), FieldChanged("Move the cursor along this line", 31, 31),
         FieldChanged("Move the cursor along this line", 28, 28)),
     "cursor-words" to listOf(CursorStarted(true), FieldChanged("Select many words at one time", 12, 29)),
@@ -80,13 +81,17 @@ private fun theStepsHaveOkayWords() {
     same(GUIDE_STEPS.map { it.id }.toSet().size, GUIDE_STEPS.size, "Step ids must be unique")
     for (step in GUIDE_STEPS) {
         for (text in listOfNotNull(step.title, step.body, step.done, step.help)) {
-            same(text.any { it.isDigit() }, false, "\"$text\" must not have a number")
+            // The phone's name is the one number that may show.
+            same(text.replace("Titan 2 Elite", "").any { it.isDigit() }, false, "\"$text\" must not have a number")
             same(text.isBlank(), false, "A step must have words")
         }
         same(step.title.length <= 32, true, "Title \"${step.title}\" must stay short")
         same(step.body.length <= 72, true, "Body \"${step.body}\" must stay short")
-        same(step.title.endsWith(".") || step.title == step.title.lowercase(), true, "Title \"${step.title}\" reads as one instruction")
+        if (step.chapter != GuideChapter.End)
+            same(step.title.endsWith(".") || step.title == step.title.lowercase(), true, "Title \"${step.title}\" reads as one instruction")
     }
+    same(GUIDE_STEPS.last().title, "TitanKeys", "The guide ends with the name")
+    same(GUIDE_STEPS.last().body, "Built for Titan 2 Elite.", "The guide ends with what it is built for")
     same(GUIDE_STEPS.last().chapter, GuideChapter.End, "The last step is the ending")
     same(GUIDE_STEPS.map { it.chapter }.distinct().size, GuideChapter.entries.size, "Each chapter has steps")
 }
@@ -95,21 +100,38 @@ private fun wrongEventsDoNotFinish() {
     val flow = GuideFlow({ GuideSettings() })
     same(flow.event(Moved(1f, lifted = true)), GuideVerdict.Wait, "A small touch must not finish the first step")
     flow.advance()
+    same(flow.step.id, "type", "Next is typing")
+    same(flow.event(FieldChanged("Real keys, smart fixes: teh", 27, 27)), GuideVerdict.Wait, "A typo before its space is not done")
+    same(flow.event(FieldChanged("Real keys, smart fixes: teh ", 28, 28)) is GuideVerdict.Hint, true, "A typo that stays says that autocorrect is off")
+    flow.advance()
     same(flow.step.id, "swipe", "Next is the swipe")
-    same(flow.event(Chosen("hello")) is GuideVerdict.Done, false, "Touching a word must not finish the swipe")
-    same(flow.event(FieldChanged("hello", 5, 5)) is GuideVerdict.Done, false, "Typing must not finish the swipe")
+    same(flow.event(Chosen("faster")) is GuideVerdict.Done, false, "Touching a word must not finish the swipe")
+    same(flow.event(FieldChanged("faster", 6, 6)) is GuideVerdict.Done, false, "Typing must not finish the swipe")
 }
 
 private fun hints() {
     val flow = GuideFlow({ GuideSettings() })
-    flow.advance()
-    val wrong = flow.event(Recognised(listOf("hell", "help")))
+    flow.start("swipe")
+    val wrong = flow.event(Recognised(listOf("fade", "fast")))
     same(wrong is GuideVerdict.Hint, true, "A wrong word gives a hint")
-    same((wrong as GuideVerdict.Hint).text.contains("hell"), true, "The hint says what it read")
+    same((wrong as GuideVerdict.Hint).text.contains("fade"), true, "The hint says what it read")
     same(flow.event(Tapped("A")) is GuideVerdict.Hint, true, "A tap on the swipe step gives a hint")
     same(flow.step.id, "swipe", "A hint does not move the guide on")
-    val done = flow.event(Recognised(listOf("Hello")))
+    // Mistakes that are easy to make say what happened, and do not count against you.
+    val sym = flow.event(keys(Panel.Symbols))
+    same(sym is GuideVerdict.Hint && sym.text.contains("Sym"), true, "Opening the panel by chance says so")
+    val alt = flow.event(ModifierState(Level.Off, Level.Once, Panel.Closed, false))
+    same(alt is GuideVerdict.Hint && alt.text.contains("Alt"), true, "Alt by chance says that the touchpad does not type")
+    same(flow.event(CursorStarted(false)) is GuideVerdict.Hint, true, "Starting the cursor by chance says so")
+    same(flow.event(HeldSymbol("(")) is GuideVerdict.Hint, true, "A held symbol by chance says so")
+    val done = flow.event(Recognised(listOf("Faster")))
     same(done, GuideVerdict.Done, "A word in any case finishes the swipe")
+    val panel = GuideFlow({ GuideSettings() })
+    panel.start("sym-open")
+    same(panel.event(keys(Panel.Symbols)), GuideVerdict.Done, "A step that wants the panel is not told off for it")
+    val cursor = GuideFlow({ GuideSettings() })
+    cursor.start("cursor-words")
+    same(cursor.event(CursorStarted(false)) is GuideVerdict.Hint, true, "Two touches on the word step say that it needs three")
 }
 
 private fun aHeldFlickNeedsMoreWords() {

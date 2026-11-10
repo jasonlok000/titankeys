@@ -1,14 +1,16 @@
 import { defineTheme, defineToggle } from "ink/theme";
 
 // The orange of the Titan 2 Elite, sampled from Unihertz's product photos. Same values as lib/brand.ts.
+// Like the interactive guide: cream on ink, with orange only for what stands out.
 const orange = "#EF804E";
 const ink = "#160A04";
-const muted = "#522610";
+const cream = "#FFF1E6";
+const muted = "#A2958C";
 
 export default defineTheme({
   fonts: { body: "./assets/fonts/Inter-Regular.otf", display: "./assets/fonts/Inter-Medium.otf" },
-  // Without its own light colours, a phone in light mode would get the inverse of this orange.
-  colours: { background: orange, foreground: ink, muted, light: { background: orange, foreground: ink, muted } },
+  // Without its own light colours, a phone in light mode would get the inverse of these.
+  colours: { background: ink, foreground: cream, muted, light: { background: ink, foreground: cream, muted } },
   text: { size: 45 },
   spacing: { inset: 92, gap: 69, rowGap: 52 },
   // Ink clips the first row's top edge at the scroll viewport.
@@ -24,8 +26,8 @@ export default defineTheme({
     width: 118,
     height: 69,
     render: ({ on, disabled }) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 76"><g opacity="${disabled ? 0.4 : 1}">
-      <rect x="2.5" y="2.5" width="125" height="71" rx="35.5" fill="${on ? ink : "none"}" stroke="${ink}" stroke-width="5"/>
-      <circle cx="${on ? 92 : 38}" cy="38" r="25" fill="${on ? orange : ink}"/>
+      <rect x="2.5" y="2.5" width="125" height="71" rx="35.5" fill="${on ? orange : "none"}" stroke="${on ? orange : muted}" stroke-width="5"/>
+      <circle cx="${on ? 92 : 38}" cy="38" r="25" fill="${on ? ink : muted}"/>
     </g></svg>`,
   }),
   variants: {

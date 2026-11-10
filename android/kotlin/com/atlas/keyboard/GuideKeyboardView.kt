@@ -4,6 +4,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
@@ -88,9 +89,13 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val areaPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        pathEffect = DashPathEffect(floatArrayOf(dp(AREA_DASH), dp(AREA_GAP)), 0f)
+    }
     private val path = Path()
 
-    var tone = GuideTone.Orange
+    var tone = GuideTone.Ink
         set(value) {
             field = value
             invalidate()
@@ -170,6 +175,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val frameCount = if (GuideMotion.enabled) elapsed / FRAME_MILLIS else 99f
         var moving = cue != GuideCue.Free && GuideMotion.enabled && isShown
         for (key in keys) moving = drawKey(canvas, key, now, frameCount) || moving
+        drawTouchArea(canvas)
         drawGhost(canvas, now)
         moving = drawTrail(canvas, now) || moving
         if (moving) postInvalidateOnAnimation() else lastFrame = 0
@@ -243,6 +249,18 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         drawLabel(canvas, key, label, labelColour)
         canvas.restore()
         return moving
+    }
+
+    /**
+     * A faint dashed box round the part of the keys that the touchpad feels. Its sensor stops at the middle of the outer columns
+     * and of the bottom row, so a finger outside the box is not read well.
+     */
+    private fun drawTouchArea(canvas: Canvas) {
+        val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.CREAM
+        areaPaint.color = GuideMotion.faded(colour, AREA_ALPHA)
+        areaPaint.strokeWidth = dp(AREA_WIDTH)
+        val edge = areaPaint.strokeWidth / 2
+        canvas.drawRoundRect(width * AREA_LEFT, edge, width * AREA_RIGHT, height * AREA_BOTTOM, dp(AREA_RADIUS), dp(AREA_RADIUS), areaPaint)
     }
 
     private fun drawLabel(canvas: Canvas, key: Key, label: String, colour: Int) {
@@ -442,14 +460,21 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         }
         dotPaint.color = GuideMotion.faded(GuideColours.CREAM, if (t < .95f) 1f else (1f - t) / .05f)
         var fingerX = x
+        var fingerY = y
         if (cue.drag && t > tapsEnd) {
+            // The finger stays down, swipes up onto the letters, then leans to one side.
             val travel = ((t - tapsEnd) / (1f - tapsEnd - .08f)).coerceIn(0f, 1f)
-            fingerX = x + (width * DRAG_REACH) * travel
+            val up = (travel / UP_SHARE).coerceAtMost(1f)
+            val across = ((travel - UP_SHARE) / (1f - UP_SHARE)).coerceIn(0f, 1f)
+            val top = height * (ROW_CENTRE - DRAG_UP)
+            fingerY = y + (top - y) * up
+            fingerX = x + (width * DRAG_REACH) * across
             ghostPaint.color = GuideMotion.faded(colour, GHOST_LINE)
             ghostPaint.strokeWidth = dp(GHOST_DONE_WIDTH)
-            canvas.drawLine(x, y, fingerX, y, ghostPaint)
+            canvas.drawLine(x, y, x, fingerY, ghostPaint)
+            if (across > 0f) canvas.drawLine(x, top, fingerX, top, ghostPaint)
         }
-        canvas.drawCircle(fingerX, y, dp(GHOST_FINGER), dotPaint)
+        canvas.drawCircle(fingerX, fingerY, dp(GHOST_FINGER), dotPaint)
     }
 
     private fun cycleMillis() = when (cue) {
@@ -513,5 +538,19 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val SPACE_CENTRE = .5f
         const val ROW_CENTRE = .875f
         const val DRAG_REACH = .32f
+        /** How far up the drag goes, as a part of the drawing's height, and the part of the drag that going up takes. */
+        const val DRAG_UP = .4f
+        const val UP_SHARE = .35f
+
+        // The box round the part of the keys that the touchpad feels, as parts of the drawing's width and height.
+        const val AREA_LEFT = .05f
+        const val AREA_RIGHT = .95f
+        /** The touchpad reports its last point at row 3.54 of the 4 rows. */
+        const val AREA_BOTTOM = 3.54f / 4
+        const val AREA_ALPHA = .42f
+        const val AREA_WIDTH = 1.5f
+        const val AREA_RADIUS = 10f
+        const val AREA_DASH = 6f
+        const val AREA_GAP = 5f
     }
 }

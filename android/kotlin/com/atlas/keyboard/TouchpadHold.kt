@@ -11,27 +11,36 @@ import kotlin.math.max
  * window, so the keyboard calls showWindow(false). It then hides the window's dialog in the same tick, the way Android removes
  * a hidden keyboard's surface. No app and no accessibility service sees a keyboard, and nothing takes space on the screen.
  *
+ * Android hides a keyboard for many reasons, and each hide used to turn the status off until the next report, which also fell to
+ * the hide that Android sends just after a report. A real log had the status off for 420 ms at each close, so a scroll got through.
+ * So while the status is wanted, the keyboard only takes the window off the screen when Android asks for a hide, and the status
+ * stays on. It stops only for Back, as [backStep] says, or when it is no longer wanted.
+ *
  * While the status is on, the firmware's letter shortcuts and its space bar to home stop, because they need the status off.
  *
  * This class holds the decisions, so tests can reach them. The keyboard makes the Android calls.
  */
 class TouchpadHold {
-    /** The keyboard reported the status and nothing has hidden the window since. */
+    /** The keyboard reported the status and nothing has turned it off since. */
     var held = false
         private set
 
-    private var lastShown = NEVER
+    private var backPassed = NEVER
 
-    /** How long to wait before the next report: a short wait, and never sooner than [MIN_GAP_MILLIS] after the last one. */
-    fun delay(now: Long): Long = max(SETTLE_MILLIS, lastShown + MIN_GAP_MILLIS - now)
+    /** How long to wait before the next report: not at all, unless a Back has only just gone on to the app. */
+    fun delay(now: Long): Long = max(0L, backPassed + BACK_MILLIS - now)
 
-    fun shown(now: Long) {
+    fun shown() {
         held = true
-        lastShown = now
     }
 
     fun hidden() {
         held = false
+    }
+
+    /** The keyboard ended the status at [now] to let a Back go on to the app. */
+    fun backPassed(now: Long) {
+        backPassed = now
     }
 
     /** What to do with one Back event while the status is held. */
@@ -40,18 +49,19 @@ class TouchpadHold {
         ToApp,
         /** Keep the event. Nothing else happens yet. */
         Keep,
-        /** Keep the event, hide the window and send a system back. */
+        /** Keep the event, end the status and send a system back. */
         KeepAndHide,
     }
 
     companion object {
         private const val NEVER = Long.MIN_VALUE / 2
 
-        /** Android often sends several hides together, so this waits until they have stopped. */
-        const val SETTLE_MILLIS = 120L
-
-        /** Stops a hide that keeps coming back from turning into a fast loop. */
-        const val MIN_GAP_MILLIS = 300L
+        /**
+         * How long the status waits after it ended for Back. The next report puts Android's Back handler in front of the app's
+         * again, so the system back should reach the app first. On the phone it left about 10 ms after the hide. If an app is
+         * slower, that Back reaches the handler and comes back here as one more [Back.KeepAndHide], so one Back is still one.
+         */
+        const val BACK_MILLIS = 100L
 
         /**
          * True if the status should stay on now. It needs no field and the overlay that catches the events. The Back service must be
@@ -60,10 +70,13 @@ class TouchpadHold {
         fun wanted(settingOn: Boolean, editing: Boolean, overlayUp: Boolean, backServiceOn: Boolean) =
             settingOn && !editing && overlayUp && backServiceOn
 
+        /** True if a hide from Android must leave the status on. With no window up there is no status to keep. */
+        fun keepsStatus(wanted: Boolean, windowUp: Boolean) = wanted && windowUp
+
         /**
          * Android keeps a back handler for a shown keyboard in front of the app's. A push of a real key still reaches the app the
          * usual way, so the keyboard stays out of it. The handler reaches the keyboard as a Back event from no device, and there
-         * the push would end, so the window hides, which removes the handler, and a system back goes on to the app.
+         * the push would end, so the status ends too, which removes the handler, and a system back goes on to the app.
          */
         fun backStep(fromKey: Boolean, down: Boolean): Back = when {
             fromKey -> Back.ToApp

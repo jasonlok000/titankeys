@@ -317,7 +317,7 @@ class AtlasIme : InputMethodService() {
     /** Puts the status that the firmware reads where the setting and the field need it. See [TouchpadHold]. */
     private fun updateHold() {
         if (holdWanted()) {
-            // A strip that is still up hides first, and that calls this again.
+            // A strip that is still up keeps the status on until it hides, and its hide leaves the status on.
             if (hold.held || isInputViewShown || main.hasCallbacks(showHold)) return
             main.postDelayed(showHold, hold.delay(SystemClock.uptimeMillis()))
             return
@@ -335,16 +335,32 @@ class AtlasIme : InputMethodService() {
             backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
             showWindow(false)
             // Only the status is wanted. Before the first frame, this takes the window back off the screen.
-            window.hide()
-            hold.shown(SystemClock.uptimeMillis())
+            holdWindow()
         } catch (error: RuntimeException) {
             Log.w("Atlas", "Could not report the keyboard status", error)
         }
     }
 
+    private fun holdWindow() {
+        window.hide()
+        hold.shown()
+    }
+
+    /** With no field, a hide takes only the window away. Android's own would also turn the status off. See [TouchpadHold]. */
+    override fun hideWindow() {
+        if (!TouchpadHold.keepsStatus(holdWanted(), isInputViewShown)) {
+            super.hideWindow()
+            return
+        }
+        // A panel that nobody can see must not take the next key.
+        closePanel()
+        holdWindow()
+    }
+
+    /** Ends the held status and Android's back handler with it. A hide from Android keeps them, so this does not go through [hideWindow]. */
     private fun hideHeldWindow() {
         try {
-            hideWindow()
+            super.hideWindow()
         } catch (error: RuntimeException) {
             Log.w("Atlas", "Could not clear the keyboard status", error)
         }
@@ -355,6 +371,7 @@ class AtlasIme : InputMethodService() {
         TouchpadHold.Back.ToApp -> false
         TouchpadHold.Back.Keep -> true
         TouchpadHold.Back.KeepAndHide -> {
+            hold.backPassed(SystemClock.uptimeMillis())
             hideHeldWindow()
             main.post(sendBack)
             true

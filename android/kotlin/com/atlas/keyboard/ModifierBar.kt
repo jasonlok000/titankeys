@@ -1,7 +1,10 @@
 package com.atlas.keyboard
 
-/** What the bar in the place of the suggestion strip shows: which modifiers are on, and what they do to a key. */
-data class ModifierBar(val chips: List<String>, val hint: String) {
+/**
+ * What the bar in the place of the suggestion strip shows: which modifiers are on, and what they do to a key. [held] names the
+ * chips whose key a finger holds down now, which show filled. A key that was pushed and let go shows as an outline.
+ */
+data class ModifierBar(val chips: List<String>, val hint: String, val held: Set<String> = emptySet()) {
     companion object {
         const val CTRL = "Ctrl"
         const val SHIFT = "Shift"
@@ -22,23 +25,25 @@ data class ModifierBar(val chips: List<String>, val hint: String) {
          */
         fun of(modifiers: Modifiers, hover: String, symbol: (String) -> String?): ModifierBar? {
             val alt = modifiers.alt != Modifiers.Level.Off
-            val chips = listOfNotNull(
-                CTRL.takeIf { modifiers.ctrlHeld },
-                when (modifiers.shift) {
-                    Modifiers.Level.Off -> null
-                    Modifiers.Level.Once -> SHIFT
-                    Modifiers.Level.Locked -> CAPS
-                },
-                ALT.takeIf { alt },
-            )
+            val shift = when (modifiers.shift) {
+                Modifiers.Level.Off -> null
+                Modifiers.Level.Once -> SHIFT
+                Modifiers.Level.Locked -> CAPS
+            }
+            val chips = listOfNotNull(CTRL.takeIf { modifiers.ctrlHeld }, shift, ALT.takeIf { alt })
             if (chips.isEmpty()) return null
+            val held = setOfNotNull(
+                CTRL.takeIf { modifiers.ctrlHeld },
+                shift?.takeIf { modifiers.holding(Modifiers.Key.Shift) },
+                ALT.takeIf { alt && modifiers.holding(Modifiers.Key.Alt) },
+            )
             val hint = when {
                 modifiers.ctrlHeld -> Modifiers.CTRL_ACTIONS[hover]?.let { "$hover $it" } ?: SHORTCUTS
                 !Layout.isLetter(hover) -> ""
                 alt -> symbol(hover).orEmpty()
                 else -> hover
             }
-            return ModifierBar(chips, hint)
+            return ModifierBar(chips, hint, held)
         }
     }
 }

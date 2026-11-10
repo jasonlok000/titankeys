@@ -46,8 +46,10 @@ export type State = {
   cursorControl: boolean;
   /** A swipe on the touchpad types a word, and a flick left from Backspace deletes one. */
   swipeTyping: boolean;
-  /** The touchpad overlay stays up when no field is active, so the touchpad does not scroll apps. Only the phone can prove this. */
+  /** The touchpad overlay stays up when no field is active, so the touchpad does not scroll apps. Settings shows this reversed, as Scroll assistant outside text fields. */
   touchpadOnlyInFields: boolean;
+  /** A few small marks on the keyboard are orange, such as the key under a finger. Off, they are white or black. */
+  orangeAccents: boolean;
   /** What Enter does in fields with more than one line. */
   enterKey: EnterKey;
   /** Apps that the user added to the Enter key setting, and built-in apps that the user changed. */
@@ -67,7 +69,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];

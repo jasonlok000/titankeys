@@ -1,6 +1,7 @@
 package com.atlas.keyboard
 
 import kotlin.math.exp
+import kotlin.math.floor
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
@@ -16,10 +17,9 @@ import kotlin.math.min
 class GestureDisplay(private val changed: () -> Unit = {}) {
     enum class Scene { None, Cursor, WordDrag, DeleteHold, DeleteFlick, WordSelected }
 
-    private val space = Layout.bottomSpan(Layout.SPACE)
-    /** The dead zone, the ends of Space, from 0 to 1 across the keyboard. */
-    val spaceStart = space.first
-    val spaceEnd = space.second
+    /** The dead zone in the middle of Space, from 0 to 1 across the keyboard. */
+    val spaceStart = CursorMode.DEAD_LEFT / COLUMNS
+    val spaceEnd = CursorMode.DEAD_RIGHT / COLUMNS
 
     /** False where the strip does not show, such as a field with no suggestions. Then nothing shows here. */
     var allowed = true
@@ -45,8 +45,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     /** How fast the gesture goes, from 0 for the slowest to 1 for the fastest. */
     var intensity = 0f
         private set
-    /** How far the slashes have gone, from 0 to 1 of the gap between two slashes. It wraps round. */
+    /** How far the line of text has gone past the caret, from 0 to 1 of a letter. It wraps round into [letters]. */
     var flow = 0f
+        private set
+    /** Whole letters that the line of text has gone past the caret, wrapping round at [PATTERN_LETTERS]. */
+    var letters = 0
         private set
     /** The stretch from the end of Space to the finger, from 0 to 1 across the keyboard. On Space it is only the finger. */
     var bandStart = .5f
@@ -121,6 +124,14 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         if (scene == Scene.Cursor || scene == Scene.WordDrag) leave()
     }
 
+    /** The finger came back to the dead zone, so the selection is the first word of the drag again. */
+    fun wordsReset() {
+        if (scene != Scene.WordDrag || leaving) return
+        wordsLeft = 0
+        wordsRight = 0
+        changed()
+    }
+
     /** One step of a word drag changed the selection. It gives back a word from the far side first, as [WordSelection.extend] does. */
     fun wordStep(direction: Int) {
         if (scene != Scene.WordDrag || leaving) return
@@ -178,7 +189,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         when (scene) {
             Scene.Cursor -> {
                 intensity = ease(intensity, speedTarget, elapsed, EASE_MILLIS, motion)
-                if (motion) flow = (flow + leaning * flowRate(intensity) * seconds).mod(1f)
+                if (motion) {
+                    val next = flow + leaning * flowRate(intensity) * seconds
+                    letters = (letters + floor(next).toInt()).mod(PATTERN_LETTERS)
+                    flow = next.mod(1f)
+                }
             }
             Scene.WordDrag -> {
                 intensity = ease(intensity, speedTarget, elapsed, EASE_MILLIS, motion)
@@ -257,6 +272,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         speedTarget = 0f
         intensity = 0f
         flow = 0f
+        letters = 0
         wordsLeft = 0
         wordsRight = 0
         shownLeft = 0f
@@ -283,6 +299,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     companion object {
         /** How many words fit across the strip. */
         const val VISIBLE_WORDS = 7f
+        /** The letters of each word in the line of text that the cursor moves through, with one space after each word. */
+        val WORD_LETTERS = intArrayOf(3, 5, 2, 4, 6, 3, 4, 2, 5)
+        val PATTERN_LETTERS = WORD_LETTERS.sum() + WORD_LETTERS.size
         private const val WORDS_IN_VIEW = VISIBLE_WORDS - 1f
 
         private const val COLUMNS = 10f
@@ -291,9 +310,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         /** How quickly a value catches up with a new one. */
         private const val EASE_MILLIS = 70f
         private const val STEP_MILLIS = 60f
-        /** A frame that comes late must not make the slashes jump. */
+        /** A frame that comes late must not make the text jump. */
         private const val MAX_FRAME_MILLIS = 48f
-        /** Slashes a second: enough to read one way at low speed, and still clearly one way at top speed. */
+        /** Letters a second past the caret: enough to read one way at low speed, and still clearly one way at top speed. */
         private const val FLOW_SLOWEST = 1.5f
         private const val FLOW_FASTEST = 9f
         /** How far the moving end of a word drag leans towards the next word, in words. */

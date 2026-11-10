@@ -46,9 +46,9 @@ fun main() {
     tooFarApartDoesNothing()
     heldSecondTouchDoesNothing()
     slowSecondTapDoesNothing()
-    swipeUpFromTheBottomRowStaysAWord()
+    swipeUpStartsTheCursor()
     diagonalDragDoesNothing()
-    pathThatLeftTheRowDoesNothing()
+    driftUpThenSidewaysStarts()
     secondFingerJumpDoesNothing()
     keyDuringTheSecondTouchCallsItOff()
     otherRowsDoNothing()
@@ -83,7 +83,7 @@ fun main() {
     thirdTouchTimingMustMatch()
     thirdTouchMustBeClose()
     slowSecondTapHasNoThirdTouch()
-    thirdTouchSwipeStaysAWord()
+    thirdTouchSwipeUpSelectsWords()
     thirdTouchJumpDoesNothing()
     thirdTouchThatIsTooDiagonalDoesNothing()
     keyDuringTheThirdTouchCallsItOff()
@@ -210,19 +210,31 @@ private fun cursorFrom(landing: Float, position: Float) = CursorMode().apply {
     move(listOf(at(position, 100)))
 }
 
-/** Space runs from column 3.6 to column 6.4. */
+/** Space runs from column 3.6 to column 6.4, and the dead zone, a fifth narrower, from 3.88 to 6.12. */
 private fun spaceIsADeadZone() {
-    for (landing in listOf(1f, 3.8f, 5f, 6.2f, 9f)) for (position in listOf(3.65f, 4.2f, 5f, 5.9f, 6.35f)) {
+    close(CursorMode.DEAD_LEFT, 3.88f, "The dead zone must start a tenth of Space inside its left end")
+    close(CursorMode.DEAD_RIGHT, 6.12f, "The dead zone must end a tenth of Space inside its right end")
+    for (landing in listOf(1f, 3.8f, 5f, 6.2f, 9f)) for (position in listOf(3.9f, 4.2f, 5f, 5.9f, 6.1f)) {
         val cursor = cursorFrom(landing, position)
         same(cursor.active, true, "The cursor must be active")
-        same(cursor.direction(), 0, "At column $position on Space the cursor must not move, landing at $landing")
-        same(cursor.speed(100), 0f, "At column $position on Space the speed must be zero, landing at $landing")
+        same(cursor.direction(), 0, "At column $position in the dead zone the cursor must not move, landing at $landing")
+        same(cursor.speed(100), 0f, "At column $position in the dead zone the speed must be zero, landing at $landing")
     }
 }
 
 private fun directionComesFromTheEndsOfSpace() {
     same(cursorFrom(5f, 3.5f).direction(), -1, "Left of Space must move the cursor left")
     same(cursorFrom(5f, 6.5f).direction(), 1, "Right of Space must move the cursor right")
+    same(cursorFrom(5f, 3.75f).direction(), -1, "Near the left end of Space the cursor must already move left")
+    same(cursorFrom(5f, 6.25f).direction(), 1, "Near the right end of Space the cursor must already move right")
+    for (row in listOf(.5f, 1.5f, 2.5f)) {
+        val cursor = CursorMode().apply {
+            start(at(5f, 0))
+            move(listOf(at(2f, 100, row)))
+        }
+        same(cursor.direction(), -1, "A finger on letter row $row must still steer the cursor")
+        close(cursor.speed(100), cursorFrom(5f, 2f).speed(100), "A finger on letter row $row must get the same speed as on the bottom row")
+    }
     // The finger moved towards Space from where it landed, and is still on the same side of Space.
     same(cursorFrom(1f, 3f).direction(), -1, "Left of Space must move left, also if the finger went right from where it landed")
     same(cursorFrom(9f, 7f).direction(), 1, "Right of Space must move right, also if the finger went left from where it landed")
@@ -232,15 +244,15 @@ private fun directionComesFromTheEndsOfSpace() {
 
 private fun speedIsTheSameOnBothSides() {
     for (lean in listOf(.1f, .7f, 1.4f, 2.3f, 3.1f)) {
-        val left = cursorFrom(5f, 3.6f - lean).speed(100)
-        close(left, cursorFrom(5f, 6.4f + lean).speed(100), "Leaning $lean past either end of Space must give the same speed")
-        close(left, cursorFrom(2f, 3.6f - lean).speed(100), "The same position must give the same speed wherever the finger landed")
+        val left = cursorFrom(5f, CursorMode.DEAD_LEFT - lean).speed(100)
+        close(left, cursorFrom(5f, CursorMode.DEAD_RIGHT + lean).speed(100), "Leaning $lean past either end of the dead zone must give the same speed")
+        close(left, cursorFrom(2f, CursorMode.DEAD_LEFT - lean).speed(100), "The same position must give the same speed wherever the finger landed")
     }
 }
 
 private fun speedIsSlowNextToSpace() {
     val leans = listOf(.05f, .4f, .8f, 1.2f, 1.6f, 2.3f, 2.8f)
-    val speeds = leans.map { cursorFrom(5f, 3.6f - it).speed(100) }
+    val speeds = leans.map { cursorFrom(5f, CursorMode.DEAD_LEFT - it).speed(100) }
     same(speeds[0] <= 1.6f, true, "Just past Space the cursor must creep, got ${speeds[0]}")
     same(speeds[2] <= 3.1f, true, "Most of the key beside Space must be slow, got ${speeds[2]}")
     for (i in 1 until speeds.size) same(speeds[i] > speeds[i - 1], true, "Each lean must be quicker than the one before: $speeds")
@@ -483,15 +495,15 @@ private fun slowSecondTapDoesNothing() {
     same(pad.selects(), false, "A slow second tap must not select")
 }
 
-private fun swipeUpFromTheBottomRowStaysAWord() {
+private fun swipeUpStartsTheCursor() {
     val pad = Pad()
     val landed = pad.tapThenLand()
-    pad.move(at(COLUMN + .2f, landed + 20, ROW - .5f))
-    pad.move(at(COLUMN + .9f, landed + 40, ROW - 1f), at(COLUMN + 1.4f, landed + 60, ROW - 2f))
-    same(pad.started, null, "A swipe up into the letters must not start the cursor")
-    val outcome = pad.up(landed + 120)
-    same(outcome is Contact.Outcome.Swipe, true, "A swipe up into the letters must stay a word swipe")
-    same(pad.selects(), false, "A swipe up into the letters must not select")
+    pad.move(at(COLUMN, landed + 20, ROW - .4f))
+    same(pad.started, null, "A short movement up must not start the cursor yet")
+    pad.move(at(COLUMN + .1f, landed + 40, ROW - .7f))
+    same(pad.started, at(COLUMN, landed), "A second touch that goes up must start the cursor")
+    same(pad.words, false, "A second touch that goes up must move the cursor and not select words")
+    same(pad.selects(), false, "A second touch that goes up must not also select one word")
 }
 
 private fun diagonalDragDoesNothing() {
@@ -501,12 +513,13 @@ private fun diagonalDragDoesNothing() {
     same(pad.started, null, "A drag that isn't mostly sideways must not start the cursor")
 }
 
-private fun pathThatLeftTheRowDoesNothing() {
+private fun driftUpThenSidewaysStarts() {
     val pad = Pad()
     val landed = pad.tapThenLand()
     pad.move(at(COLUMN, landed + 100, ROW - .45f))
-    pad.move(at(COLUMN + 2f, landed + 300))
-    same(pad.started, null, "A finger that has gone up must not start the cursor when it comes back")
+    same(pad.started, null, "A small drift up must not start the cursor")
+    pad.move(at(COLUMN + .5f, landed + 200, ROW - .35f), at(COLUMN + 1f, landed + 300, ROW - .25f))
+    same(pad.started, at(COLUMN, landed), "A finger that drifted up a little and then went sideways must start the cursor")
 }
 
 private fun secondFingerJumpDoesNothing() {
@@ -867,14 +880,14 @@ private fun slowSecondTapHasNoThirdTouch() {
     same(pad.started, null, "After a slow second tap a third touch must not start a word drag")
 }
 
-private fun thirdTouchSwipeStaysAWord() {
+private fun thirdTouchSwipeUpSelectsWords() {
     val pad = Pad()
     val landed = pad.twoTapsThenLand()
-    pad.move(at(COLUMN + .2f, landed + 20, ROW - .5f))
-    pad.move(at(COLUMN + .9f, landed + 40, ROW - 1f), at(COLUMN + 1.4f, landed + 60, ROW - 2f))
-    same(pad.started, null, "A swipe up into the letters must not start a word drag")
-    val outcome = pad.up(landed + 120)
-    same(outcome is Contact.Outcome.Swipe, true, "A swipe up into the letters must stay a word swipe")
+    pad.move(at(COLUMN, landed + 20, ROW - .3f))
+    same(pad.started, null, "A short movement up must not start a word drag yet")
+    pad.move(at(COLUMN - .1f, landed + 40, ROW - 1f))
+    same(pad.started, at(COLUMN, landed), "A third touch that goes up must start a word drag")
+    same(pad.words, true, "A third touch that goes up must select words")
 }
 
 private fun thirdTouchJumpDoesNothing() {

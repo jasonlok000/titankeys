@@ -6,10 +6,11 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
- * A finger that [CursorGesture] started moves the cursor like a joystick. All of Space is a dead zone: on it the
- * cursor stays still, wherever the finger landed. Past either end of Space the cursor goes that way: slowly just
- * past the end for placing the cursor exactly, and quickly towards the edge of the keyboard to race across long
- * text. A word drag uses the same zones, and each step extends the selection by a word. Like a swipe, a brief slip
+ * A finger that [CursorGesture] started moves the cursor like a joystick. The middle of Space is a dead zone, a fifth
+ * narrower than Space: on it the cursor stays still, wherever the finger landed. Past either end of the dead zone the
+ * cursor goes that way: slowly near Space for placing the cursor exactly, and quickly towards the edge of the keyboard
+ * to race across long text. Only the place across counts, so the finger can also move up onto the letter rows, where
+ * the touchpad reads it better. A word drag uses the same zones, and each step extends the selection by a word. Like a swipe, a brief slip
  * off the touchpad doesn't end it: the keyboard holds it through the slip recovery period, and the finger carries
  * on where it lands. A finger that leans to the end of the touchpad, or off its bottom edge past Space, can run off
  * it and come back near the same place, much later than a slip, so that also carries on, like a swipe that runs off
@@ -90,7 +91,7 @@ class CursorMode {
         }
     }
 
-    /** Which way the finger is leaning: -1 left of Space, 1 right of Space, 0 on Space. */
+    /** Which way the finger is leaning: -1 left of the dead zone, 1 right of it, 0 in it. */
     fun direction(): Int {
         val depth = depth() ?: return 0
         return if (depth.first) -1 else 1
@@ -131,24 +132,25 @@ class CursorMode {
         liftedFrom = null
     }
 
-    /** Whether the finger leans left, and how far past the end of Space it is, or null while it is on Space. */
+    /** Whether the finger leans left, and how far past the end of the dead zone it is, or null while it is in the dead zone. */
     private fun depth(): Pair<Boolean, Float>? {
         val sample = position ?: return null
-        if (!active || sample.y < BOTTOM_ROW_TOP) return null
+        if (!active) return null
         val column = sample.x * 10
         return when {
-            column < SPACE_LEFT -> true to SPACE_LEFT - column
-            column > SPACE_RIGHT -> false to column - SPACE_RIGHT
+            column < DEAD_LEFT -> true to DEAD_LEFT - column
+            column > DEAD_RIGHT -> false to column - DEAD_RIGHT
             else -> null
         }
     }
 
     companion object {
-        /** The ends of Space, in key widths from the left edge of the keyboard. All of Space between them is the dead zone. */
+        /** The ends of Space, in key widths from the left edge of the keyboard. */
         private val SPACE_LEFT = Layout.bottomWidths.take(3).sum()
         private val SPACE_RIGHT = SPACE_LEFT + Layout.bottomWidths[3]
-        /** A little above the bottom row still counts, so a finger drifting up keeps control. */
-        private const val BOTTOM_ROW_TOP = .7f
+        /** The ends of the dead zone, a tenth of Space inside each end of Space, so that a lean starts near the ends. */
+        val DEAD_LEFT = SPACE_LEFT + (SPACE_RIGHT - SPACE_LEFT) * .1f
+        val DEAD_RIGHT = SPACE_RIGHT - (SPACE_RIGHT - SPACE_LEFT) * .1f
         /** How near the end of the touchpad a lift must be to count as running off it. Real ones left at column 0.65 and column 9.4. */
         private const val EDGE_ZONE_KEYS = .8f
         /**
@@ -160,14 +162,14 @@ class CursorMode {
         private const val EDGE_RETURN_MILLIS = 450L
         /** They came back 0.15 to 0.48 keys from where they left. A new gesture right after a lift at an end landed over 3.5 keys away. */
         private const val EDGE_RETURN_KEYS = 1f
-        /** The lean that gets the top speed. Real drags reached column 0.65 and column 9.4, where the touchpad ends. */
+        /** The lean past the dead zone that gets the top speed. Real drags reached column 0.65 and column 9.4, where the touchpad ends. */
         private const val MAX_LEAN = 2.9f
         /** How far out counts as reaching the top speed. */
         private const val AT_EDGE = .97f
         private const val RAMP_MILLIS = 1000f
-        /** Letters a second at each lean, in key widths past the end of Space. The keys beside Space are 1.2 wide. */
+        /** Letters a second at each lean, in key widths past the end of the dead zone. The keys beside Space are 1.2 wide. */
         private val SPEEDS = listOf(
-            0f to SLOWEST_PER_SECOND, // just past the end of Space
+            0f to SLOWEST_PER_SECOND, // just past the end of the dead zone
             .8f to 3f, // the precise stretch ends
             1.6f to 8f,
             2.3f to 16f,
@@ -178,7 +180,7 @@ class CursorMode {
 
         /** How a finger becomes the cursor and how fast it moves, for the raw input log. */
         val tuning: Map<String, Any> get() = CursorGesture.tuning + mapOf(
-            "spaceLeftKeys" to SPACE_LEFT, "spaceRightKeys" to SPACE_RIGHT, "maxLeanKeys" to MAX_LEAN,
+            "deadLeftKeys" to DEAD_LEFT, "deadRightKeys" to DEAD_RIGHT, "maxLeanKeys" to MAX_LEAN,
             "speedPoints" to SPEEDS.joinToString(" ") { (lean, speed) -> "$lean:$speed" },
             "fastestPerSecond" to FASTEST_PER_SECOND, "wordSpeed" to "sqrt",
             "edgeZoneKeys" to EDGE_ZONE_KEYS, "edgeBottomRow" to EDGE_BOTTOM_ROW, "edgeReturnMillis" to EDGE_RETURN_MILLIS, "edgeReturnKeys" to EDGE_RETURN_KEYS,

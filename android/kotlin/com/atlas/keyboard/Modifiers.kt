@@ -60,6 +60,9 @@ class Modifiers {
         Key.Alt -> alt
     }
 
+    /** A finger holds the physical key down now, as opposed to a push that has ended and still applies. */
+    fun holding(key: Key) = held.keys.any { keyOf(it) == key }
+
     /** Pressing Shift or Alt on the touchpad or the keyboard. With the panel open, Alt is the quick settings key. */
     fun press(key: Key, time: Long) {
         if (key == Key.Alt && panel != Panel.Closed) {

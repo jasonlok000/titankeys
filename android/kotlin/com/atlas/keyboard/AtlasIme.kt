@@ -73,7 +73,13 @@ class AtlasIme : InputMethodService() {
     /** The current touch landed on the bottom row with categories on the screen, so it picks a category and is nothing else. */
     private var pickingCategory = false
     private var categoryLandedAt = 0f
+    /** Where the finger on the bottom row is now, from 0 to 1 across. */
+    private var categoryAt = 0f
     private var categoryMoved = false
+    private val panelHover = SteadyKey { x, y ->
+        if (modifiers.panel == Modifiers.Panel.Settings) Layout.restingKeyAt(x, y) else Layout.keyAt(x, y)
+    }
+    private val barHover = SteadyKey(Layout::keyAt)
     private var field = Field.None
     /** The apps that the user added to the Enter key setting, read when a field starts. */
     private var enterApps = emptyMap<String, EnterKey.SendMethod>()
@@ -242,16 +248,22 @@ class AtlasIme : InputMethodService() {
 
     /**
      * Checks the lean every frame so speed follows the finger at once. Leaning in moves one letter straight
-     * away, then letters build up at the current speed.
+     * away, then letters build up at the current speed. A word drag grows from the word that it began with:
+     * back in the dead zone it is only that word again, and the other side grows from that word.
      */
     private val stepCursor = object : Runnable {
         private var owed = 1f
         private var last = 0L
+        private var side = 0
 
         override fun run() {
             if (!cursor.active) return
             val now = SystemClock.uptimeMillis()
             val direction = cursor.direction()
+            if (cursor.words && direction != side) {
+                if (side != 0) resetWords()
+                side = direction
+            }
             val speed = if (direction != 0 && last != 0L) cursor.speed(now) else 0f
             if (direction == 0) owed = 1f
             else owed += speed * (now - last) / 1000
@@ -267,6 +279,7 @@ class AtlasIme : InputMethodService() {
         fun reset() {
             owed = 1f
             last = 0L
+            side = 0
         }
 
         /** Carries on after a slip, without the extra first step a fresh lean gets. */
@@ -412,6 +425,7 @@ class AtlasIme : InputMethodService() {
             pressAlt = { enqueue { modifiers.toggleSettings(); showModifiers() } },
             pressSym = { enqueue { modifiers.pressSym(); showModifiers() } },
             pageChanged = haptics::pageChanged,
+            marked = { if (Haptics.enabled(this)) haptics.pulse() },
         )
         strip = words
         panel = keys
@@ -813,43 +827,66 @@ class AtlasIme : InputMethodService() {
     }
 
     /**
-     * A finger that rests on a key shows that key in the panel, until the finger lifts. A finger that lands on the bottom row while
-     * the categories show and moves along the row opens the category at its place, and that follows the finger. Returns true for
-     * such a touch, which is then not also a swipe.
+     * A finger that rests on a key shows that key in the panel, held steady as [SteadyKey] says. A finger that lands on the bottom
+     * row while the groups show opens the group at its place when it moves along the row, and that follows the finger. A finger
+     * that stays there for [GROUP_REST_MILLIS] opens it too, so a brief touch does not. Returns true for such a touch, which is then
+     * not also a swipe.
      */
     private fun hover(event: MotionEvent, samples: List<Sample>): Boolean {
         val last = samples.lastOrNull { it.valid }
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             pickingCategory = last != null && Layout.isBottomRow(last.y) && panel?.hasCategories == true
             categoryLandedAt = last?.x ?: 0f
+            categoryAt = categoryLandedAt
             categoryMoved = false
+            main.removeCallbacks(restOnCategory)
+            if (pickingCategory) main.postDelayed(restOnCategory, GROUP_REST_MILLIS)
         }
         val picking = pickingCategory
         if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
-            panel?.hover = ""
+            main.removeCallbacks(restOnCategory)
+            panelHover.lift(event.eventTime)
+            main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
             pickingCategory = false
             return picking
         }
         if (last == null) return picking
         if (!picking) {
-            panel?.hover = if (modifiers.panel == Modifiers.Panel.Settings) Layout.restingKeyAt(last.x, last.y) else Layout.keyAt(last.x, last.y)
+            panelHover.touch(last.x, last.y)
+            panel?.hover = panelHover.key
             return false
         }
+        categoryAt = last.x
         categoryMoved = categoryMoved || Layout.movedAlongBottomRow(categoryLandedAt, last.x)
         if (categoryMoved && panel?.pickCategory(last.x) == true) haptics.pageChanged()
         return true
     }
 
-    /** A finger that rests on a key shows in the modifier bar what that key gives, until the finger lifts. */
+    /** A finger that stayed on the bottom row opens the group under it. A key press lifts the finger first, which calls this off. */
+    private val restOnCategory = Runnable {
+        if (pickingCategory && panelOpen && panel?.pickCategory(categoryAt) == true) haptics.pageChanged()
+    }
+
+    /** A finger that has stayed off the touchpad no longer marks a key. */
+    private val expireHover = Runnable {
+        val now = SystemClock.uptimeMillis()
+        if (panelHover.expire(now)) panel?.hover = ""
+        if (barHover.expire(now)) {
+            restingKey = ""
+            showModifierBar()
+        }
+    }
+
+    /** A finger that rests on a key shows in the modifier bar what that key gives, held steady as [SteadyKey] says. */
     private fun followRestingKey(event: MotionEvent, samples: List<Sample>) {
         val last = samples.lastOrNull { it.valid }
-        val key = when {
-            event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL -> ""
-            last == null -> return
-            else -> Layout.keyAt(last.x, last.y)
+        if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            barHover.lift(event.eventTime)
+            main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
+            return
         }
-        if (key == restingKey) return
-        restingKey = key
+        if (last == null || !barHover.touch(last.x, last.y)) return
+        restingKey = barHover.key
         showModifierBar()
     }
 
@@ -920,6 +957,18 @@ class AtlasIme : InputMethodService() {
         }
     }
 
+    /** Selects only the word that the word drag began with again, in order with the rest of the typing. */
+    private fun resetWords() = enqueue {
+        changeSelection { _, start, end, offset ->
+            val anchor = wordAnchor ?: return@changeSelection null
+            val range = anchor.first - offset to anchor.second - offset
+            if (range == start to end) return@changeSelection null
+            if (Haptics.enabled(this)) haptics.pulse()
+            strip?.gesture?.wordsReset()
+            range
+        }
+    }
+
     /** Extends the selection by one word, in order with the rest of the typing. */
     private fun extendWords(direction: Int) = enqueue {
         changeSelection { text, start, end, offset ->
@@ -984,7 +1033,7 @@ class AtlasIme : InputMethodService() {
         QuickSetting.HoldSymbols -> TypingSettings.holdSymbols(this)
         QuickSetting.CursorControl -> TypingSettings.cursorControl(this)
         QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this)
-        QuickSetting.TouchpadOnlyInFields -> TypingSettings.touchpadOnlyInFields(this)
+        QuickSetting.ScrollAssistant -> !TypingSettings.touchpadOnlyInFields(this)
         QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard -> true
     }
 
@@ -999,7 +1048,7 @@ class AtlasIme : InputMethodService() {
         QuickSetting.HoldSymbols -> TypingSettings.holdSymbols(this, on)
         QuickSetting.CursorControl -> TypingSettings.cursorControl(this, on)
         QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this, on)
-        QuickSetting.TouchpadOnlyInFields -> TypingSettings.touchpadOnlyInFields(this, on)
+        QuickSetting.ScrollAssistant -> TypingSettings.touchpadOnlyInFields(this, !on)
         QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard -> Unit
     }
 
@@ -1537,6 +1586,8 @@ class AtlasIme : InputMethodService() {
         /** The field of a returning window started within 30 ms of its empty start. */
         private const val NO_FIELD_HIDE_MILLIS = 200L
         private const val FRAME_MILLIS = 16L
+        /** How long a finger must stay on the bottom row to open the group under it. A resting finger's touches last about 40 ms. */
+        private const val GROUP_REST_MILLIS = 250L
         /** Characters read on each side of the cursor to find the word it is in. */
         private const val WORD_REACH = 64
         /** One for each physical Shift, Alt and Sym key. */

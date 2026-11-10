@@ -127,8 +127,9 @@ private fun aFingerOffTheKeyboardStaysOnTheTrack() {
 private fun theDeadZoneIsSpace() {
     val display = GestureDisplay()
     val (start, end) = Layout.bottomSpan(Layout.SPACE)
-    near(display.spaceStart, start, "The dead zone must start at the left end of Space", .001f)
-    near(display.spaceEnd, end, "The dead zone must end at the right end of Space", .001f)
+    near(display.spaceStart, CursorMode.DEAD_LEFT / 10, "The dead zone must be the one that the cursor uses", .001f)
+    near(display.spaceEnd, CursorMode.DEAD_RIGHT / 10, "The dead zone must be the one that the cursor uses", .001f)
+    isTrue(display.spaceStart > start && display.spaceEnd < end, "The dead zone must be inside Space")
     isTrue(display.spaceStart < .5f && display.spaceEnd > .5f, "Space must be in the middle")
 }
 
@@ -138,8 +139,9 @@ private fun theSpeedLevelFollowsTheRealCursor() {
     near(GestureDisplay.speedLevel(CursorMode.FASTEST_PER_SECOND, false), 1f, "The fastest speed must be the top of the range")
     same(GestureDisplay.speedLevel(0f, false), 0f, "On Space the level must be zero")
     var previous = -1f
-    var column = 2.9f
-    while (column >= .1f) {
+    // From just past the left end of the dead zone out to where the top speed starts.
+    var column = 3.8f
+    while (column >= 1f) {
         cursor.start(Sample(.3f, .9f, 0))
         cursor.move(listOf(Sample(column / 10, .9f, 10)))
         val level = GestureDisplay.speedLevel(cursor.speed(10), false)

@@ -19,24 +19,23 @@ object Keys {
         return if (code == 0 || code and KeyCharacterMap.COMBINING_ACCENT != 0) null else String(Character.toChars(code))
     }
 
-    /** The symbols of the Sym panel in the order that they show. The most used come first, and the other ones go by kind. */
-    private val SYMBOLS = listOf(
-        "&%£$€=×÷;…—•°[]{}<>\\|~^`.,:!?\"'@#*_-()/",
-        "¢¥§¶±≠≈≤≥√∞™®©†¿¡«»‹›“”‘’№",
-        "–·‡‰′″‽※¦¨´¯¸ªº‚„",
-        "₹₩₽₺₫₱₪₦₴₿฿ƒ¤",
-        "½⅓⅔¼¾⅛¹²³⁴⁵⁶⁷⁸⁹⁰ⁿ₀₁₂₃₄₅₆₇₈₉",
-        "∓∑∏∫∂∆∇∝∈∉∩∪⊂⊃∀∃∅¬∧∨≡≪≫∴∵∠⊥",
-        "αβγδεζηθκλμνξπρστφχψωΓΘΛΞΠΦΨΩ",
-        "←→↑↓↔↕↖↗↘↙⇐⇒⇑⇓⇔↩↪↺↻➜",
-        "★☆●○◎■□▪▫▲△▼▽►◄◆◇♠♣♥♦♪♫♭♯✓✗☐☑☒✦✧⌘⌥⇧⏎",
-    ).joinToString("")
+    /**
+     * The groups of symbols in the Sym panel, in order. The most used come first, and the other groups go by kind. A group's
+     * first symbol is its mark in the strip of groups.
+     */
+    private val SYMBOL_GROUPS = listOf(
+        "Common" to "&%£$€=×÷;…—•°[]{}<>\\|~^`.,:!?\"'@#*_-()/¢¥§¶±≠≈≤≥√∞™®©†¿¡«»‹›“”‘’№",
+        "Punctuation" to "–·‡‰‱′″‴‽※⁂¦‖¨´¯¸ªº‚„",
+        "Currency" to "₹₩₽₺₫₱₪₦₴₿฿ƒ¤₡₲₸₭",
+        "Numbers" to "½⅓⅔¼¾⅛⅜⅝⅞¹²³⁴⁵⁶⁷⁸⁹⁰ⁿ₀₁₂₃₄₅₆₇₈₉",
+        "Maths" to "∑∓∏∫∂∆∇∝∈∉∋∩∪⊂⊃∀∃∄∅¬∧∨⊕⊗≡≢≪≫∼≃≅∴∵∠⊥∥",
+        "Greek" to "αβγδεζηθκλμνξπρστφχψωΓΘΛΞΠΦΨΩ",
+        "Arrows" to "←→↑↓↔↕↖↗↘↙⇐⇒⇑⇓⇔↩↪↺↻➜",
+        "Shapes" to "★☆●○◎■□▪▫▲△▼▽►◄◆◇♠♣♥♦♤♧♡♢♩♪♫♬♭♮♯✓✗☐☑☒✦✧❖⌘⌥⇧⏎",
+    )
 
-    /** Used only as far as the last page needs them. */
-    private const val SPARE_SYMBOLS = "♤♧♡♢♩♬♮‱‖⁂∋∄⊕⊗≢∼≃≅∥⅜⅝⅞₡₲₸₭"
-
-    /** Symbols the keyboard has no key for and the phone can draw, offered in the Sym panel. Spare ones fill the last page, so no key is blank. */
-    fun extraSymbols(): List<String> {
+    /** The symbols that the keyboard has no key for and that the phone can draw, in their groups for the Sym panel. */
+    fun symbolGroups(): List<EmojiPages.Group> {
         val map = characterMap
         val printed = HashSet<String>()
         for (letter in 'A'..'Z') {
@@ -45,7 +44,9 @@ object Keys {
         }
         "0123456789()_-+@*/:#'\"?!,.".forEach { printed += it.toString() }
         val paint = Paint()
-        fun unprinted(symbols: String) = symbols.map { it.toString() }.filter { it !in printed && paint.hasGlyph(it) }.distinct()
-        return EmojiPages.fillLastPage(unprinted(SYMBOLS), unprinted(SPARE_SYMBOLS))
+        return SYMBOL_GROUPS.mapNotNull { (name, symbols) ->
+            val shown = symbols.map { it.toString() }.filter { it !in printed && paint.hasGlyph(it) }.distinct()
+            if (shown.isEmpty()) null else EmojiPages.Group(name, shown)
+        }
     }
 }

@@ -7,8 +7,9 @@ import kotlin.math.max
 /**
  * Tells the gestures that control the cursor from every other touch on the bottom row. All begin with a quick tap
  * anywhere on the row. If a second touch lands just after it and lifts quickly, that selects the word at the cursor.
- * If the second touch is held and dragged sideways, that moves the cursor. If a third touch lands just after two
- * quick taps and is dragged sideways, that selects words.
+ * If the second touch is held and dragged sideways or up, that moves the cursor. If a third touch lands just after two
+ * quick taps and is dragged sideways or up, that selects words. Up takes the finger onto the letter rows, which the
+ * touchpad reads better than the bottom row, and [CursorMode] follows it there.
  *
  * The touchpad reports one point only, and a resting finger is reported again as short touches at the same place,
  * which look like repeated taps. So the first tap must come alone, a double tap only counts once [CONFIRM_MILLIS]
@@ -31,7 +32,7 @@ class CursorGesture {
         class NextTouch(val taps: Int, val landed: Sample) : State {
             var last = landed
             var across = 0f
-            var rows = 0f
+            var up = 0f
             var travel = 0f
         }
     }
@@ -68,11 +69,10 @@ class CursorGesture {
             }
             current.last = sample
             current.across = max(current.across, abs(sample.x - current.landed.x) * 10)
-            current.rows = max(current.rows, abs(sample.y - current.landed.y) * 4)
+            current.up = max(current.up, (current.landed.y - sample.y) * 4)
             current.travel = max(current.travel, distance(current.landed, sample))
             // This looks at how far the path has gone, because a drag can go left and right and end near its start.
-            if (current.rows > MAX_DRAG_ROWS) state = State.Idle
-            else if (current.across >= DRAG_KEYS && current.across >= SIDEWAYS * current.rows) {
+            if (current.up >= UP_ROWS || current.across >= DRAG_KEYS && current.across >= SIDEWAYS * current.up) {
                 state = State.Idle
                 return Drag(current.landed, words = current.taps == 2)
             }
@@ -142,10 +142,10 @@ class CursorGesture {
         const val CONFIRM_MILLIS = MAX_GAP_MILLIS
         /** How far sideways the second or third touch must go to start a drag. */
         private const val DRAG_KEYS = .5f
-        /** A drag has to be at least this many times wider than it is tall. */
+        /** A sideways drag has to be at least this many times wider than it is tall. */
         private const val SIDEWAYS = 2f
-        /** A touch that goes this many rows up or down is a word swipe. Real drags went at most 0.2 before they started. */
-        private const val MAX_DRAG_ROWS = .4f
+        /** How far up the second or third touch must go to start a drag. Real sideways drags went at most 0.2 rows up before they started. */
+        private const val UP_ROWS = .6f
         /** Real drags moved at most 0.43 keys between two points. One finger can't go this far so fast. */
         private const val JUMP_KEYS = 1f
 
@@ -154,7 +154,7 @@ class CursorGesture {
             "firstTapMillis" to FIRST_TAP_MILLIS, "secondTapMillis" to SECOND_TAP_MILLIS, "tapKeys" to TAP_KEYS,
             "minGapMillis" to MIN_GAP_MILLIS, "maxGapMillis" to MAX_GAP_MILLIS, "maxApartKeys" to MAX_APART_KEYS,
             "aloneMillis" to ALONE_MILLIS, "afterKeyMillis" to AFTER_KEY_MILLIS, "confirmMillis" to CONFIRM_MILLIS,
-            "dragKeys" to DRAG_KEYS, "sideways" to SIDEWAYS, "maxDragRows" to MAX_DRAG_ROWS, "jumpKeys" to JUMP_KEYS,
+            "dragKeys" to DRAG_KEYS, "sideways" to SIDEWAYS, "upRows" to UP_ROWS, "jumpKeys" to JUMP_KEYS,
         )
     }
 }

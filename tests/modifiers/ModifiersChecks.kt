@@ -83,7 +83,34 @@ fun main() {
     ctrlThroughAFieldStart()
     ctrlMetaState()
     ctrlActions()
+    steadyKeyIgnoresFlicker()
+    cornersKeepContentClear()
     println("Modifier checks passed")
+}
+
+private fun steadyKeyIgnoresFlicker() {
+    val steady = SteadyKey(Layout::keyAt)
+    same(steady.touch(.15f, .15f), true, "A first touch must mark its key")
+    same(steady.key, "W", "The first touch is on W")
+    same(steady.touch(.201f, .15f), false, "A finger on the line between two keys must keep the key it had")
+    same(steady.key, "W", "The mark must stay on W at the line")
+    same(steady.touch(.25f, .15f), true, "A finger well inside the next key must move the mark")
+    same(steady.key, "E", "The mark must move to E")
+    steady.lift(1_000)
+    same(steady.expire(1_100), false, "A short lift must keep the key, as a resting finger lifts often")
+    same(steady.key, "E", "The key must stay through a short lift")
+    same(steady.touch(.25f, .15f), false, "The finger coming back to the same key changes nothing")
+    steady.lift(2_000)
+    same(steady.expire(2_000 + SteadyKey.LIFT_MILLIS), true, "A finger that stays off must clear the key")
+    same(steady.key, "", "No key must show after the finger has gone")
+}
+
+private fun cornersKeepContentClear() {
+    val corners = Corners(100f)
+    same(corners.inset(0f), 100, "At the bottom edge content must keep the whole radius from the side")
+    same(corners.inset(50f), 14, "Halfway up the corner content must keep the width of the curve there")
+    same(corners.inset(100f), 0, "Above the corner nothing must move")
+    same(Corners.None.inset(0f), 0, "With square corners nothing must move")
 }
 
 private fun same(actual: Any?, expected: Any?, message: String) {
@@ -725,13 +752,13 @@ private fun quickSettingsHoldNoStickyAlt() = Keyboard().run {
 
 private fun quickSettingsTable() {
     val expected = mapOf(
-        "A" to QuickSetting.Autocorrect, "S" to QuickSetting.SwipeTyping, "W" to QuickSetting.SuggestionBar,
-        "C" to QuickSetting.AutoCapitalise, "P" to QuickSetting.AutoPunctuation, "V" to QuickSetting.Vibration,
+        "F" to QuickSetting.Autocorrect, "S" to QuickSetting.SwipeTyping, "W" to QuickSetting.SuggestionBar,
+        "C" to QuickSetting.AutoCapitalise, "D" to QuickSetting.AutoPunctuation, "V" to QuickSetting.Vibration,
         "H" to QuickSetting.HoldSymbols, "M" to QuickSetting.CursorControl, "L" to QuickSetting.DoublePressLocks,
-        "T" to QuickSetting.TouchpadOnlyInFields, "O" to QuickSetting.OpenSettings, "K" to QuickSetting.ChangeKeyboard,
+        "R" to QuickSetting.ScrollAssistant, "O" to QuickSetting.OpenSettings, "K" to QuickSetting.ChangeKeyboard,
     )
     same(QuickSetting.entries.associateBy { it.key }, expected, "Each item must be on the letter it is named after, and on one key only")
-    same(QuickSetting.on("A"), QuickSetting.Autocorrect, "A letter must find its item")
+    same(QuickSetting.on("F"), QuickSetting.Autocorrect, "A letter must find its item")
     same(QuickSetting.on("Q"), null, "A key with no item must find nothing")
     same(QuickSetting.on(Layout.ALT), null, "The Alt place has no setting")
     for (item in QuickSetting.entries) {
@@ -780,8 +807,7 @@ private fun symbolAndEmojiPages() {
     for (key in listOf("Q", "A", "P")) same(key in Layout.panelLetters, false, "$key must hold no symbol or emoji")
     same(Layout.letterKeys.size, 26, "Every letter key must still have a place in the panel")
     same(Layout.panelLetters.take(9), listOf("W", "E", "R", "T", "Y", "U", "I", "O", "S"), "The items must go on from O to S")
-    same(QuickSetting.on("A"), QuickSetting.Autocorrect, "The quick settings page must keep A for Autocorrect")
-    same(QuickSetting.on("P"), QuickSetting.AutoPunctuation, "The quick settings page must keep P for Auto-punctuation")
+    for (key in listOf("Q", "A", "P")) same(QuickSetting.on(key), null, "The quick settings page must leave $key empty, where the touchpad reads badly")
     same(Layout.PAGE_POSITION, "P", "P must show the page position")
     for (key in listOf(Layout.ALT, Layout.SYM, Layout.BACKSPACE, Layout.ENTER)) for (itemPage in listOf(true, false))
         same(Layout.restMarks(key, itemPage), false, "A finger on the icon at $key must mark nothing")
@@ -893,6 +919,7 @@ private fun stickyShiftAndCapsShowInTheBar() = Keyboard().run {
 private fun stickyShiftLeavesTheBarWhenItIsUsed() = Keyboard().run {
     press(SHIFT)
     same(bar()?.chips, listOf(ModifierBar.SHIFT), "A press of Shift must show Shift")
+    same(bar()?.held, emptySet<String>(), "A Shift that was pushed and let go must not show as held")
     type()
     same(bar(), null, "The words must come back after the next letter")
 }
@@ -900,6 +927,7 @@ private fun stickyShiftLeavesTheBarWhenItIsUsed() = Keyboard().run {
 private fun aHeldShiftShowsInTheBar() = Keyboard().run {
     down(SHIFT)
     same(bar()?.chips, listOf(ModifierBar.SHIFT), "A Shift that is held must show at once")
+    same(bar()?.held, setOf(ModifierBar.SHIFT), "A Shift that a finger holds must show as held")
     same(bar("Q")?.hint, "Q", "A finger on a letter must show that letter while Shift is held")
     type()
     same(bar()?.chips, listOf(ModifierBar.SHIFT), "Shift must still show while it is held")
@@ -919,6 +947,7 @@ private fun altShowsTheSymbolOfAKey() = Keyboard().run {
 private fun aHeldAltShowsInTheBar() = Keyboard().run {
     down(ALT)
     same(bar()?.chips, listOf(ModifierBar.ALT), "An Alt that is held must show at once")
+    same(bar()?.held, setOf(ModifierBar.ALT), "An Alt that a finger holds must show as held")
     type()
     up(ALT)
     same(bar(), null, "The words must come back when Alt is let go after a character")

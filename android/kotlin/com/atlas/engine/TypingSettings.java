@@ -153,7 +153,8 @@ public final class TypingSettings {
 
     /**
      * The touchpad overlay stays up when no field is active, so that the firmware gives the touchpad to it and not to the
-     * app under it. It is off until the user turns it on.
+     * app under it. It is off until the user turns it on. Settings shows it the other way round, as Scroll assistant outside
+     * text fields, which is the phone's own name for the touchpad scrolling apps.
      */
     public static boolean touchpadOnlyInFields(Context context) {
         return preferences(context).getBoolean(TOUCHPAD_ONLY_IN_FIELDS, false);
@@ -170,6 +171,15 @@ public final class TypingSettings {
 
     public static void stopListening(Context context, SharedPreferences.OnSharedPreferenceChangeListener listener) {
         preferences(context).unregisterOnSharedPreferenceChangeListener(listener);
+    }
+
+    /** A few small marks on the keyboard are orange, such as the key under a finger. Off, they take the colour of the text. */
+    public static boolean orangeAccents(Context context) {
+        return preferences(context).getBoolean("orange_accents", true);
+    }
+
+    public static void orangeAccents(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("orange_accents", enabled).apply();
     }
 
     /** Apps the Enter key setting also applies to, each saved as "package=method". The rules are in EnterKey. */

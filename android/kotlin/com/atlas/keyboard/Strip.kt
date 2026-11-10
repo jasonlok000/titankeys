@@ -45,8 +45,11 @@ class Strip(
         addView(hint, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
     }
     private var navigationInset = 0
+    private var corners = Corners.None
+    /** How far the content keeps from each side, so that the screen's rounded corners do not cut it. */
+    private var side = 0
     private val drawing = GestureDrawing(resources.displayMetrics.density)
-    private val dark get() = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+    private var look = Look.of(context)
 
     /** Shows what a special gesture is doing, in the place of the words. It shows only where the strip shows. */
     val gesture = GestureDisplay { postInvalidateOnAnimation() }
@@ -79,9 +82,10 @@ class Strip(
         val ranked = wordViews.withIndex().sortedBy { WORD_ORDER[it.index] }.map { it.value }
         for (view in ranked) view.id = generateViewId()
         ranked.zipWithNext { view, next -> view.accessibilityTraversalBefore = next.id }
-        // Keep the words clear of the gesture handle, which draws over the bottom of the keyboard.
+        // Keep the words clear of the gesture handle, which draws over the bottom of the keyboard, and of the rounded corners.
         setOnApplyWindowInsetsListener { _, insets ->
             navigationInset = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
+            corners = Corners.of(insets)
             render()
             insets
         }
@@ -111,13 +115,14 @@ class Strip(
     }
 
     private fun render() {
+        look = Look.of(context)
         gesture.allowed = showSuggestions
-        val ink = if (dark) Color.WHITE else Color.BLACK
-        val paper = if (dark) Color.BLACK else Color.WHITE
         // A strip that shows nothing has no height, and a bar there would move the app each time a modifier changes.
         val bar = modifiers.takeIf { showSuggestions }
-        setBackgroundColor(if (!showSuggestions) Color.TRANSPARENT else if (dark) Color.BLACK else Color.WHITE)
-        setPadding(dp(8), 0, dp(8), if (showSuggestions) navigationInset else 0)
+        setBackgroundColor(if (!showSuggestions) Color.TRANSPARENT else look.paper)
+        // The lowest text sits about 16 dp over the bottom of the strip, where the corners curve in.
+        side = maxOf(dp(8), corners.inset((navigationInset + dp(CONTENT_ABOVE)).toFloat()) + dp(4))
+        setPadding(side, 0, side, if (showSuggestions) navigationInset else 0)
         // Keep a window for firmware touchpad routing when there is nothing to display.
         minimumHeight = if (showSuggestions) 0 else 1
         for ((slot, view) in wordViews.withIndex()) {
@@ -125,19 +130,24 @@ class Strip(
             view.visibility = if (showSuggestions && bar == null) VISIBLE else GONE
             view.text = words.getOrElse(index) { "" }
             view.isEnabled = index < words.size
-            view.setTextColor(ink)
+            view.setTextColor(look.ink)
         }
         modifierRow.visibility = if (bar != null) VISIBLE else GONE
         for ((name, chip) in chips) {
             chip.visibility = if (bar != null && name in bar.chips) VISIBLE else GONE
-            chip.setTextColor(paper)
+            // A key that a finger holds down is filled. One that was pushed and let go is an outline.
+            val held = bar != null && name in bar.held
+            chip.setTextColor(if (held) look.onAccent else look.accent)
             chip.background = GradientDrawable().apply {
                 cornerRadius = dp(6).toFloat()
-                setColor(ink)
+                if (held) setColor(look.accent) else {
+                    setColor(Color.TRANSPARENT)
+                    setStroke(dp(1).coerceAtLeast(2), look.accent)
+                }
             }
         }
         hint.text = bar?.hint.orEmpty()
-        hint.setTextColor(ink)
+        hint.setTextColor(look.ink)
     }
 
     override fun dispatchDraw(canvas: Canvas) {
@@ -145,7 +155,7 @@ class Strip(
         if (!gesture.showing) return
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
         val more = gesture.advance(SystemClock.uptimeMillis(), scale)
-        if (gesture.showing) drawing.draw(canvas, gesture, width, dp(56), dark)
+        if (gesture.showing) drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), dp(56), look)
         if (more) postInvalidateOnAnimation()
     }
 
@@ -162,6 +172,7 @@ class Strip(
     companion object {
         private val WORD_ORDER = listOf(1, 0, 2)
         private const val CHIP_SIZE = 13f
+        private const val CONTENT_ABOVE = 16
         private const val HINT_SMALLEST = 8f
         private const val HINT_LARGEST = 17f
     }

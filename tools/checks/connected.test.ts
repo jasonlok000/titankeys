@@ -59,13 +59,20 @@ describe("announcement feed", () => {
 
 class Bucket {
   objects = new Map<string, Uint8Array>();
+  uploaded = new Map<string, Date>();
   options: unknown[] = [];
-  async put(key: string, body: Uint8Array, options: unknown) { this.objects.set(key, body); this.options.push(options); }
+  /** The time that put() gives a new file, as R2 records it. */
+  now = new Date();
+  async put(key: string, body: Uint8Array, options: unknown) {
+    this.objects.set(key, body);
+    this.uploaded.set(key, this.now);
+    this.options.push(options);
+  }
   async list({ prefix, cursor, limit }: { prefix: string; cursor?: string; limit: number }) {
     const keys = [...this.objects.keys()].filter(key => key.startsWith(prefix)).sort();
     const start = cursor ? Number(cursor) : 0;
     const page = keys.slice(start, start + limit);
-    return { objects: page.map(key => ({ key, size: this.objects.get(key)!.length })), truncated: start + limit < keys.length, cursor: String(start + limit) };
+    return { objects: page.map(key => ({ key, size: this.objects.get(key)!.length, uploaded: this.uploaded.get(key) ?? new Date() })), truncated: start + limit < keys.length, cursor: String(start + limit) };
   }
   async delete(keys: string[]) { for (const key of keys) this.objects.delete(key); }
 }
@@ -138,6 +145,13 @@ describe("contributions server", () => {
     expect(await text("server/contributions/wrangler.toml")).toMatch(/\[observability\]\s*enabled = false/);
   });
 
+  test("refuses everything until its salt is set", async () => {
+    const env = { ...server(), RATE_SALT: undefined };
+    const response = await worker.fetch(post("/v1/batch", sealed(), { "X-Contributor": await folder(contributor) }), env);
+    expect(response.status).toBe(503);
+    expect(env.BATCHES.objects.size).toBe(0);
+  });
+
   test("is write-only: nothing can be read or listed", async () => {
     const env = server();
     for (const request of [
@@ -198,11 +212,35 @@ describe("contributions server", () => {
     expect((await upload()).status).toBe(204);
     const stored = () => Object.values(env.CAP.data.get("months") as Record<string, number>).reduce((a, b) => a + b, 0);
     expect(stored()).toBe(200);
-    // Three batches of 200 bytes are stored now; deleting them frees all 600.
+    // Three batches of 200 bytes are stored now, all uploaded this month; deleting them frees all 600.
     env.CAP.data.set("months", { [month]: 600 });
     expect((await worker.fetch(post("/v1/delete", JSON.stringify({ contributor })), env)).status).toBe(200);
     expect(stored()).toBe(0);
     expect(env.BATCHES.objects.size).toBe(0);
+  });
+
+  test("a delete frees each file's bytes in the month it was uploaded", async () => {
+    const env = server();
+    const hash = await folder(contributor);
+    const upload = () => worker.fetch(post("/v1/batch", sealed(), { "X-Contributor": hash }), env);
+    const month = new Date().toISOString().slice(0, 7);
+    const previous = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 2, 15)).toISOString().slice(0, 7);
+    // One batch uploaded last month (as the counter recorded it), one this month.
+    env.BATCHES.now = new Date(`${previous}-15T12:00:00Z`);
+    await upload();
+    const months = env.CAP.data.get("months") as Record<string, number>;
+    env.CAP.data.set("months", { [previous]: months[month] });
+    env.BATCHES.now = new Date();
+    await upload();
+    expect(env.CAP.data.get("months")).toEqual({ [previous]: 200, [month]: 200 });
+    expect((await worker.fetch(post("/v1/delete", JSON.stringify({ contributor })), env)).status).toBe(200);
+    expect(env.CAP.data.get("months")).toEqual({ [previous]: 0, [month]: 0 });
+    // Two years on, last month ages out: nothing negative is left behind to lower the total.
+    env.CAP.data.set("months", { [previous]: 0, [month]: 0, "2000-01": 5 });
+    await upload();
+    const after = env.CAP.data.get("months") as Record<string, number>;
+    expect(Object.values(after).every(value => value >= 0)).toBe(true);
+    expect(after[month]).toBe(200);
   });
 
   test("accepts the largest batch that the app makes", async () => {

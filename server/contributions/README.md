@@ -42,17 +42,21 @@ Tests: `bun test tools/checks/connected.test.ts` (with a stand-in bucket).
 
 ## Deploy (needs the owner's Cloudflare login)
 
-From this folder, on the build machine:
+From this folder (`server/contributions`), in that order. The owner signs in in the browser at step 1. R2 needs a
+payment method on the account, even on the free tier; the caps above keep the use inside the free amounts.
 
 ```bash
 npx wrangler login
 npx wrangler r2 bucket create titankeys-contributions
 # The policy promises deletion after at most 2 years (730 days).
 npx wrangler r2 bucket lifecycle add titankeys-contributions expire-after-2-years batches/ --expire-days 730
-# A random salt for the rate-limit keys; paste the output of `openssl rand -hex 32` when asked.
+# Before the first deploy: a random salt for the rate-limit keys. Paste the output of `openssl rand -hex 32` when
+# asked. Wrangler offers to create the Worker if it does not exist yet: answer yes.
 npx wrangler secret put RATE_SALT
 npx wrangler deploy
 ```
+
+The salt is never shown again and never leaves Cloudflare. Without it, the Worker answers 503 to every request.
 
 `wrangler deploy` prints the address, such as `https://titankeys-contributions.<account>.workers.dev`. Put it in
 `CONTRIBUTIONS_URL` in `android/kotlin/com/atlas/connected/Connected.kt`: until then the app keeps examples on the

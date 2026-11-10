@@ -39,14 +39,14 @@ export const folder = contributor => sha256(contributor);
 async function clientAllowed(request, env, limiter) {
   if (!limiter) return true;
   const address = request.headers.get("CF-Connecting-IP") ?? "";
-  const { success } = await limiter.limit({ key: await sha256(`${env.RATE_SALT ?? "titankeys"}:${address}`) });
+  const { success } = await limiter.limit({ key: await sha256(`${env.RATE_SALT}:${address}`) });
   return success;
 }
 
-/** Asks the cap counter for room. It answers "ok", "day" (daily cap reached) or "full" (storage cap reached). */
-async function reserve(env, path, bytes) {
+/** Talks to the cap counter. "take" answers "ok", "day" (daily cap reached) or "full" (storage cap reached). */
+async function cap(env, path, body) {
   const counter = env.CAP.get(env.CAP.idFromName("global"));
-  const response = await counter.fetch(`https://cap/${path}`, { method: "POST", body: JSON.stringify({ bytes }) });
+  const response = await counter.fetch(`https://cap/${path}`, { method: "POST", body: JSON.stringify(body) });
   return (await response.json()).result;
 }
 
@@ -59,7 +59,7 @@ async function store(request, env) {
   const body = new Uint8Array(await request.arrayBuffer());
   if (body.length > MAX_BATCH_BYTES) return answer(413, { error: "too large" });
   if (body.length <= HEADER_BYTES + TAG_BYTES || MAGIC.some((byte, i) => body[i] !== byte)) return answer(400, { error: "not a sealed batch" });
-  const room = await reserve(env, "take", body.length);
+  const room = await cap(env, "take", { bytes: body.length });
   if (room !== "ok") return answer(503, { error: room === "day" ? "daily limit reached" : "storage full" });
   const name = `batches/${contributor}/${new Date().toISOString().slice(0, 10)}-${crypto.randomUUID()}.tkc`;
   await env.BATCHES.put(name, body, { httpMetadata: { contentType: "application/octet-stream" } });
@@ -79,26 +79,33 @@ async function remove(request, env) {
   if (typeof contributor !== "string" || !CONTRIBUTOR.test(contributor)) return answer(400, { error: "bad contributor" });
   const prefix = `batches/${await folder(contributor)}/`;
   // Each round deletes what it listed, so the next round lists from the start again: a cursor could skip names.
+  // Freed bytes go back to the month each file was uploaded in, where the counter added them.
   let deleted = 0;
-  let freed = 0;
+  const freed = {};
+  const free = () => Object.keys(freed).length ? cap(env, "free", { months: freed }) : null;
   for (let round = 0; round < MAX_DELETE_ROUNDS; round++) {
     const listed = await env.BATCHES.list({ prefix, limit: 1000 });
     const names = listed.objects.map(object => object.key);
     if (names.length === 0) {
-      if (freed) await reserve(env, "free", freed);
+      await free();
       return answer(200, { deleted });
     }
     await env.BATCHES.delete(names);
     deleted += names.length;
-    freed += listed.objects.reduce((sum, object) => sum + (object.size ?? 0), 0);
+    for (const object of listed.objects) {
+      const month = new Date(object.uploaded ?? Date.now()).toISOString().slice(0, 7);
+      freed[month] = (freed[month] ?? 0) + (object.size ?? 0);
+    }
   }
-  if (freed) await reserve(env, "free", freed);
+  await free();
   // Very many batches: the app asks again, and the next request deletes the rest.
   return answer(503, { deleted });
 }
 
 export default {
   async fetch(request, env) {
+    // Without its salt, the server takes nothing: see the deploy steps in README.md.
+    if (!env.RATE_SALT) return answer(503, { error: "not configured" });
     const { pathname } = new URL(request.url);
     if (request.method === "POST" && pathname === "/v1/batch") return store(request, env);
     if (request.method === "POST" && pathname === "/v1/delete") return remove(request, env);
@@ -110,7 +117,7 @@ export default {
  * One counter for the whole server, so the caps hold exactly: uploads today, and bytes stored. A Durable Object handles
  * one request at a time, so two uploads cannot both take the last place. It stores a date and counts, nothing about any
  * phone. Bytes are kept per month and only the last 24 months count, because R2 deletes files after 2 years by itself.
- * A delete takes its bytes off the current month, which can go below zero; the total never does.
+ * A delete takes each file's bytes off the month it was uploaded in, so nothing is left over when that month ages out.
  */
 export class Cap {
   constructor(state) {
@@ -119,7 +126,7 @@ export class Cap {
 
   async fetch(request) {
     const { pathname } = new URL(request.url);
-    const { bytes } = await request.json();
+    const body = await request.json();
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
     const month = today.slice(0, 7);
@@ -127,10 +134,13 @@ export class Cap {
     const recent = Object.fromEntries(Object.entries(months).filter(([name]) => monthsBetween(name, month) < STORED_MONTHS));
     const stored = Math.max(0, Object.values(recent).reduce((sum, value) => sum + value, 0));
     if (pathname === "/free") {
-      recent[month] = (recent[month] ?? 0) - bytes;
+      // A month that already aged out is gone from the count, so its files need nothing taken off.
+      for (const [name, bytes] of Object.entries(body.months ?? {}))
+        if (name in recent) recent[name] = Math.max(0, recent[name] - bytes);
       await this.storage.put("months", recent);
       return Response.json({ result: "ok" });
     }
+    const { bytes } = body;
     const day = await this.storage.get("day");
     const uploads = day === today ? (await this.storage.get("uploads")) ?? 0 : 0;
     if (uploads >= DAILY_UPLOADS) return Response.json({ result: "day" });

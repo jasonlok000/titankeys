@@ -35,7 +35,9 @@ interface Editor {
 
 /** The word engine: swipe recognition, completions and learning. */
 interface Words {
-    class Recognition(val words: List<String>, val token: Any?, val prediction: SwipeTyping.Prediction? = null)
+    /** [margin] is how far the best word leads the next one. A larger margin means the swipe was read more clearly. */
+    class Recognition(val words: List<String>, val token: Any?, val prediction: SwipeTyping.Prediction? = null,
+                      val margin: Float? = prediction?.margin())
 
     fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Recognition) -> Unit)
     fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit)
@@ -420,80 +422,107 @@ class Composer(
         manualWord.clear()
         if (typedBefore != null) endedWord = EndedWord(typedBefore, null)
         val previous = composition as? Composition.Swiped
-        var resumes = previous != null && previous.continuable && liftOffMillis > 0
-            && previous.swipe.sameStroke(pending.swipe, pending.startedAt - previous.endedAt, liftOffMillis.toLong())
+        val gap = if (previous != null) pending.startedAt - previous.endedAt else -1L
+        val joinable = previous != null && previous.continuable && liftOffMillis > 0
             && anchor == previous.snapshot && before.endsWith(previous.inserted) && !anchor.selected
-        val path = if (resumes) {
-            try {
-                previous!!.swipe.append(pending.swipe, pending.startedAt - previous.endedAt)
-            } catch (_: IllegalArgumentException) {
-                resumes = false
-                pending.swipe
+        val sameStroke = joinable && previous!!.swipe.sameStroke(pending.swipe, gap, liftOffMillis.toLong())
+        val joined = if (joinable && (sameStroke || gap in 0..JOIN_CHECK_MILLIS)) appended(previous!!.swipe, pending.swipe, gap) else null
+
+        /** Reads [path], or uses the reading already made of it, and types the result. */
+        fun read(resumes: Boolean, path: Swipe, known: Words.Recognition? = null) {
+            if (!resumes) {
+                leave()
+                awaitingNextWord = null
+                holdForNextWord(previous, anchor)
+                endedBeforeSwipe = null
             }
-        } else pending.swipe
-        if (!resumes) {
-            leave()
-            awaitingNextWord = null
-            holdForNextWord(previous, anchor)
-            endedBeforeSwipe = null
-        }
-        composition = Composition.None
-        val resumed = previous.takeIf { resumes }
-        val context = resumed?.context ?: before
-        val replaced = resumed?.inserted?.length ?: 0
-        val leadingSpace = resumed?.leadingSpace ?: if (anchor.selected) "" else SwipeTyping.prefix(context)
-        // Mid-sentence the next character may already be a space or punctuation, so another space would double up.
-        val trailingSpace = resumed?.trailingSpace ?: (!anchor.selected && !closesWord(anchor.after?.firstOrNull()))
-        val current = epoch
-        recognising = true
-        recognitionSnapshot = anchor
-        words.recognise(path, context, field.learning) { recognition ->
-            if (current != epoch || pendingInput.firstOrNull() !== pending) return@recognise
-            if (snapshot() != anchor) {
-                reset()
-                return@recognise
-            }
-            recognising = false
-            recognitionSnapshot = null
-            pendingInput.removeFirst()
-            Recording.sink?.recognised(recognition.words, resumes)
-            KeyboardEvents.publish { KeyboardEvent.Recognised(recognition.words) }
-            log?.recognised(recognition, resumes)
-            onStroke?.invoke(path)
-            if (recognition.words.isNotEmpty()) {
-                val sentenceCase = field.sentenceCapitalisation && autoCapitalise()
-                val choices = recognition.words.map {
-                    SwipeTyping.capitalise(it, context + leadingSpace, pending.metaState, false, sentenceCase)
+            composition = Composition.None
+            val resumed = previous.takeIf { resumes }
+            val context = resumed?.context ?: before
+            val replaced = resumed?.inserted?.length ?: 0
+            val leadingSpace = resumed?.leadingSpace ?: if (anchor.selected) "" else SwipeTyping.prefix(context)
+            // Mid-sentence the next character may already be a space or punctuation, so another space would double up.
+            val trailingSpace = resumed?.trailingSpace ?: (!anchor.selected && !closesWord(anchor.after?.firstOrNull()))
+            val current = epoch
+            recognising = true
+            recognitionSnapshot = anchor
+            val finish: (Words.Recognition) -> Unit = finish@{ recognition ->
+                if (current != epoch || pendingInput.firstOrNull() !== pending) return@finish
+                if (snapshot() != anchor) {
+                    reset()
+                    return@finish
                 }
-                val word = choices.first()
-                val inserted = leadingSpace + word + if (trailingSpace) " " else ""
-                if (!edit(EditCause.Swipe, replaced, inserted)) return@recognise
-                val accepted = snapshot()
-                automaticSpace = accepted.takeIf { trailingSpace }
-                val swiped = Composition.Swiped(word, leadingSpace, trailingSpace, path, context, recognition, pending.endedAt,
-                    true, accepted, false, choices)
-                composition = swiped
-                remember(swiped)
-                confirmState(accepted) { confirmed ->
-                    if (confirmed) {
-                        // The swiped word can still change the typed word before it.
-                        val reviewer = corrector().takeIf { typedBefore != null }
-                        if (reviewer == null || !hold(completed, reviewer)) learnWord(completed, correction)
-                        show(choices)
-                        // A swiped word shows its own choices, so no next-word prediction comes along to read the text.
-                        // The look-alike check comes after this because it can change the text, and that must be the last read.
-                        readKeptWords(accepted)
-                        checkLookAlike()
-                        words.prepare(context + inserted, AtomicBoolean(false))
-                        reviewBeforeSwipe(swiped)
+                recognising = false
+                recognitionSnapshot = null
+                pendingInput.removeFirst()
+                Recording.sink?.recognised(recognition.words, resumes)
+                KeyboardEvents.publish { KeyboardEvent.Recognised(recognition.words) }
+                log?.recognised(recognition, resumes)
+                onStroke?.invoke(path)
+                if (recognition.words.isNotEmpty()) {
+                    val sentenceCase = field.sentenceCapitalisation && autoCapitalise()
+                    val choices = recognition.words.map {
+                        SwipeTyping.capitalise(it, context + leadingSpace, pending.metaState, false, sentenceCase)
                     }
+                    val word = choices.first()
+                    val inserted = leadingSpace + word + if (trailingSpace) " " else ""
+                    if (!edit(EditCause.Swipe, replaced, inserted)) return@finish
+                    val accepted = snapshot()
+                    automaticSpace = accepted.takeIf { trailingSpace }
+                    val swiped = Composition.Swiped(word, leadingSpace, trailingSpace, path, context, recognition, pending.endedAt,
+                        true, accepted, false, choices)
+                    composition = swiped
+                    remember(swiped)
+                    confirmState(accepted) { confirmed ->
+                        if (confirmed) {
+                            // The swiped word can still change the typed word before it.
+                            val reviewer = corrector().takeIf { typedBefore != null }
+                            if (reviewer == null || !hold(completed, reviewer)) learnWord(completed, correction)
+                            show(choices)
+                            // A swiped word shows its own choices, so no next-word prediction comes along to read the text.
+                            // The look-alike check comes after this because it can change the text, and that must be the last read.
+                            readKeptWords(accepted)
+                            checkLookAlike()
+                            words.prepare(context + inserted, AtomicBoolean(false))
+                            reviewBeforeSwipe(swiped)
+                        }
+                    }
+                    return@finish
                 }
-                return@recognise
+                learnWord(completed, correction)
+                recogniseNext()
+                predict()
             }
-            learnWord(completed, correction)
-            recogniseNext()
-            predict()
+            if (known != null) finish(known) else words.recognise(path, context, field.learning, finish)
         }
+
+        val firstMargin = previous?.recognition?.margin
+        when {
+            joined != null && sameStroke -> read(true, joined)
+            joined != null && firstMargin != null -> {
+                // A touch this soon can be a lost finger coming back or the next word. Only a clearer reading as one word can tell.
+                val current = epoch
+                recognising = true
+                recognitionSnapshot = anchor
+                words.recognise(joined, previous!!.context, field.learning) { reading ->
+                    if (current != epoch || pendingInput.firstOrNull() !== pending) return@recognise
+                    if (snapshot() != anchor) {
+                        reset()
+                        return@recognise
+                    }
+                    val margin = reading.margin
+                    if (reading.words.isNotEmpty() && margin != null && margin > firstMargin) read(true, joined, reading)
+                    else read(false, pending.swipe)
+                }
+            }
+            else -> read(false, pending.swipe)
+        }
+    }
+
+    private fun appended(first: Swipe, next: Swipe, gapMillis: Long) = try {
+        first.append(next, gapMillis)
+    } catch (_: IllegalArgumentException) {
+        null
     }
 
     /** Keys wait for pending swipes, retaining the order in which the user entered them. */
@@ -1481,6 +1510,8 @@ class Composer(
         private const val AFTER_CONTEXT_LENGTH = 32
         private const val FULL_STOP_MILLIS = 400L
         private const val PREDICTION_DELAY_MILLIS = 60L
+        /** A swipe this soon after the last one may be its other half, so it is also read joined to it. */
+        private const val JOIN_CHECK_MILLIS = 150L
         private val STARTERS = listOf("What", "How", "Where")
         /** For the time before the word lists load, and if they can't. Written as inside a sentence. */
         private val FEW_STARTS = listOf("I", "the", "hello")

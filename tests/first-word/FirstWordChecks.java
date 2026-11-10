@@ -42,7 +42,27 @@ public final class FirstWordChecks {
         standInDoesNotOrderFirstWords();
         replay(shapes, counts);
         popularStarts(counts);
+        alternativesKeepTheFirstWord();
         System.out.println("First word checks passed");
+    }
+
+    private static Result word(String word, float score) {
+        return new Result(word, score, 0, 0);
+    }
+
+    private static void alternativesKeepTheFirstWord() {
+        Result[] shown = { word("the", 10), word("then", 5), word("they", 2) };
+        Result[] wider = { word("there", 20), word("the", 19), word("then", 8) };
+        Result[] placed = SwipeRecognizer.withAlternatives(shown, wider);
+        check(placed.length == 3 && placed[0].word.equals("the"), "The extra reading must not change the first word");
+        check(placed[1].word.equals("there") && placed[2].word.equals("then"), "The extra reading fills the other places");
+        check(placed[0].score == 10 && placed[1].score == 5 && placed[2].score == 2, "Each place keeps its score, so the lead of the first word doesn't change");
+        Result[] onlyWider = SwipeRecognizer.withAlternatives(new Result[0], wider);
+        check(onlyWider.length == 3 && onlyWider[0].word.equals("there"), "A swipe that the plain reading can't read uses the extra reading");
+        Result[] oneWord = SwipeRecognizer.withAlternatives(new Result[] { word("the", 10) }, new Result[] { word("the", 9), word("then", 8) });
+        check(oneWord.length == 2 && oneWord[1].word.equals("then") && oneWord[1].score == 9, "A new place scores below the place before it");
+        Result[] noMore = SwipeRecognizer.withAlternatives(shown, new Result[] { word("the", 9) });
+        check(noMore.length == 3 && noMore[1].word.equals("then") && noMore[2].word.equals("they"), "Places the extra reading can't fill keep their words");
     }
 
     private static void popularStarts(Map<String, Double> counts) throws IOException {

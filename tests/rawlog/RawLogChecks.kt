@@ -73,6 +73,9 @@ private fun lineFormat() {
         1, { Float.NaN }, { Float.NaN }, { 5 }),
         """{"k":"m","a":3,"t":5,"rx":null,"ry":null,"p":[[0,-0.5,0],[1,-0.5,1]],"s":[[null,null,5]]}""",
         "A position that isn't finite must be null")
+    same(RawLogLines.motion(2, 7, 10f, 20f, 2, { 10f }, { 20f }, { 7 }, 1, { .5f }, { .5f }, { 7 }, { if (it == 0) 41.5f else 38f }),
+        """{"k":"m","a":2,"t":7,"rx":10,"ry":20,"p":[[10,20,7],[10,20,7]],"s":[[0.5,0.5,7]],"sz":[41.5,38]}""",
+        "A motion line must give each raw point's contact size after the recorder's fields")
     same(RawLogLines.key(29, true, 1000, false, 193, 2),
         """{"k":"key","c":29,"d":true,"t":1000,"g":false,"meta":193,"repeat":2}""", "A key line must add meta state and repeat count")
     same(RawLogLines.swipe(12, 100, 200, false, 230),
@@ -80,6 +83,8 @@ private fun lineFormat() {
     same(RawLogLines.swipe(12, 100, 200, true, 230),
         """{"k":"out","type":"swipe","n":12,"start":100,"end":200,"deletes":true,"t":230}""", "A delete swipe must be marked")
     same(RawLogLines.tap("A", 200, 230), """{"k":"out","type":"tap","key":"A","end":200,"t":230}""", "A tap line must match the recorder")
+    same(RawLogLines.recognised(listOf("hello"), false, null, 9, ranked = true),
+        """{"k":"rec","words":["hello"],"resumed":false,"ranked":true,"t":9}""", "Engine 2.0's order must be marked")
     same(RawLogLines.recognised(listOf("hello", "hallo"), true, null, 9),
         """{"k":"rec","words":["hello","hallo"],"resumed":true,"t":9}""", "A recognition line must match the recorder")
     same(RawLogLines.recognised(listOf("hello"), false, listOf(RawLogScore("hello", 1.5f, 1f, .5f)), 9),

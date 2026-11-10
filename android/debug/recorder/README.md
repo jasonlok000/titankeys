@@ -55,10 +55,10 @@ Each line is one JSON object and `k` is its kind. Times are in `SystemClock.upti
 | `header` | At the start of each file, and when a setting changes | `format`, `t`, `wall` (wall clock), `atlas` (version), `model`, `android`, `slipMillis`, `settings`, `tuning` |
 | `gap` | Where logging was skipped. Never link anything across one | `t`, `why`: `start` (logging began), `field` (a field that isn't recorded), `leaving` (input after a key that can move to another field, which can belong to a password), `queue` (the writer fell behind), `error` (a write failed). `n` is the number of lines lost, if known |
 | `start`, `end` | `onStartInput` and `onFinishInput` of a recorded field | `t`, and for `start`: `inputType`, `imeOptions`, `reference` (recorded only because of the mark), `restarting`, `selStart`, `selEnd`, `before` |
-| `m` | Each touchpad event | `a`, `t`, `rx`, `ry`, `p` (raw points), `s` (keyboard points) |
+| `m` | Each touchpad event | `a`, `t`, `rx`, `ry`, `p` (raw points), `s` (keyboard points), `sz` (contact size of each raw point, as touch major) |
 | `key` | Each key event | `c`, `d`, `t`, `g` (gesture key), `meta`, `repeat` |
 | `out` | What a contact counted as | `type` (`swipe` or `tap`), `n`, `start`, `end`, `deletes` (only for a delete swipe), `key`, `t` |
-| `rec` | The words offered for a swipe | `words`, `resumed` (joined to the swipe before it), `scores` (the engine's `[word, total, path, context]`, before spelling and blocked words apply), `t` |
+| `rec` | The words offered for a swipe | `words`, `resumed` (joined to the swipe before it), `scores` (the engine's `[word, total, path, context]`, before spelling and blocked words apply), `ranked` (present when swipe engine 2.0 chose the order: `total` is then the ranker's score, and `path` and `context` are the FUTO engine's, or 0 for a word only CleverKeys found), `t` |
 | `text` | Each change the keyboard makes | `t`, `cause`, `via`, `auto`, `del`, `ins`, `aft`, `ok` |
 | `pick` | A word chosen from the strip | `t`, `index`, `word`, `offered` |
 | `sel` | `onUpdateSelection` | `t`, `start`, `end`, `cs`, `ce` (composing region), `before` (up to 256 characters) |

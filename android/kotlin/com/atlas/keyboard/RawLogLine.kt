@@ -81,6 +81,16 @@ internal class RawLogLine(kind: String) {
         text.append(']')
     }
 
+    /** A list of numbers, such as the contact size of each point. */
+    fun values(name: String, count: Int, value: (Int) -> Float) = apply {
+        key(name).append('[')
+        for (index in 0 until count) {
+            if (index > 0) text.append(',')
+            number(value(index).toDouble())
+        }
+        text.append(']')
+    }
+
     fun scores(name: String, values: List<RawLogScore>) = apply {
         key(name).append('[')
         for ((index, value) in values.withIndex()) {
@@ -150,11 +160,16 @@ internal class RawLogLine(kind: String) {
 internal object RawLogLines {
     const val FORMAT = 1
 
+    /** [size] is each raw point's contact size (touch major), which tells a fingertip from a resting thumb. */
     fun motion(action: Int, time: Long, rawX: Float, rawY: Float,
                points: Int, x: (Int) -> Float, y: (Int) -> Float, pointTime: (Int) -> Long,
-               samples: Int, sampleX: (Int) -> Float, sampleY: (Int) -> Float, sampleTime: (Int) -> Long) =
-        RawLogLine("m").put("a", action).put("t", time).put("rx", rawX).put("ry", rawY)
-            .points("p", points, x, y, pointTime).points("s", samples, sampleX, sampleY, sampleTime).toString()
+               samples: Int, sampleX: (Int) -> Float, sampleY: (Int) -> Float, sampleTime: (Int) -> Long,
+               size: ((Int) -> Float)? = null): String {
+        val line = RawLogLine("m").put("a", action).put("t", time).put("rx", rawX).put("ry", rawY)
+            .points("p", points, x, y, pointTime).points("s", samples, sampleX, sampleY, sampleTime)
+        if (size != null) line.values("sz", points, size)
+        return line.toString()
+    }
 
     fun key(code: Int, down: Boolean, time: Long, gesture: Boolean, meta: Int, repeat: Int) =
         RawLogLine("key").put("c", code).put("d", down).put("t", time).put("g", gesture)
@@ -169,9 +184,11 @@ internal object RawLogLines {
     fun tap(key: String, end: Long, time: Long) =
         RawLogLine("out").put("type", "tap").put("key", key).put("end", end).put("t", time).toString()
 
-    fun recognised(words: List<String>, resumed: Boolean, scores: List<RawLogScore>?, time: Long): String {
+    /** [ranked] marks swipe engine 2.0's order, whose totals are the ranker's scores rather than the FUTO engine's. */
+    fun recognised(words: List<String>, resumed: Boolean, scores: List<RawLogScore>?, time: Long, ranked: Boolean = false): String {
         val line = RawLogLine("rec").put("words", words).put("resumed", resumed)
         if (scores != null) line.scores("scores", scores)
+        if (ranked) line.put("ranked", true)
         return line.put("t", time).toString()
     }
 

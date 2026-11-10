@@ -11,8 +11,10 @@ import java.util.Map;
 
 /** Bounded evidence for FUTO word frequencies. It never stores gesture coordinates. */
 final class LanguageHabits {
-    static final int LIMIT = 256;
-    private static final int USES_TO_ACTIVATE = 3;
+    // Only words missing from the dictionary are learned. In the raw logs few such words came up more than twice, so
+    // with three uses needed almost nothing was learned. Two uses, and room for more words, let the list grow.
+    static final int LIMIT = 1000;
+    private static final int USES_TO_ACTIVATE = 2;
     private static final int DAYS_PER_FADE = 30;
     static final class Entry {
         final String word;
@@ -30,7 +32,7 @@ final class LanguageHabits {
         boolean shown(int today) { return added || held || active(today); }
         boolean faded(int today) { return !added && !held && support(today) == 0; }
         float frequency(float base, int today) {
-            return active(today) ? Math.min(255, (base > 0 ? base : 96) + Math.min(96, 8 + Math.max(0, support(today) - 3) * 8)) : 0;
+            return active(today) ? Math.min(255, (base > 0 ? base : 96) + Math.min(96, 8 + Math.max(0, support(today) - USES_TO_ACTIVATE) * 8)) : 0;
         }
     }
     private final LinkedHashMap<String, Entry> words = new LinkedHashMap<>();

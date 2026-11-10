@@ -137,7 +137,8 @@ object RawLog {
                 { if (it < history) event.getHistoricalX(it) else event.x },
                 { if (it < history) event.getHistoricalY(it) else event.y },
                 { if (it < history) event.getHistoricalEventTime(it) else event.eventTime },
-                samples.size, { samples[it].x }, { samples[it].y }, { samples[it].time })
+                samples.size, { samples[it].x }, { samples[it].y }, { samples[it].time },
+                { if (it < history) event.getHistoricalTouchMajor(it) else event.touchMajor })
         }
 
         fun key(event: KeyEvent, gesture: Boolean) = write {
@@ -153,7 +154,7 @@ object RawLog {
 
         override fun recognised(recognition: Words.Recognition, resumed: Boolean) = write {
             val scores = recognition.prediction?.decoded()?.map { RawLogScore(it.word, it.score, it.ctcScore, it.lmScore) }
-            RawLogLines.recognised(recognition.words, resumed, scores, now())
+            RawLogLines.recognised(recognition.words, resumed, scores, now(), recognition.prediction?.ranked() == true)
         }
 
         override fun edited(cause: EditCause, deleted: Int, inserted: String, deletedAfter: Int, accepted: Boolean) = write {

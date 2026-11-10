@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -24,14 +25,17 @@ public final class SwipeRecognizer implements AutoCloseable {
     private static final String[] SENTENCE_START = {"so"};
     private static final double LOOK_ALIKE_NEXT_WORD_EVIDENCE = 3;
     private static final int LOOK_ALIKE_CANDIDATES = 8000;
-    private static final int CANDIDATES = 16;
-    // The engine cuts its list after counting context, so a saved word needs a deeper search to stay in it.
+    // The ranker learned from 48-word readings, and the engine cuts its list after counting context, so a saved word
+    // needs a deep search to stay in it as well.
+    private static final int CANDIDATES = 48;
     private static final int SAVED_WORD_CANDIDATES = 48;
     // A thumb tends to stop short of the far ends of a swipe, so each one is also read slightly wider.
     private static final float SWIPE_STRETCH = 1.2f;
     // Reading wider helps fast swipes most and slow ones not at all, so the stretch grows with speed, in keys a second.
     private static final float MIN_STRETCH_SPEED = 10;
     private static final float FULL_STRETCH_SPEED = 16;
+    /** How far to the right the extra reading looks: 0.6 of a key. */
+    private static final float SHIFT_RIGHT = .06f;
     private static final int OUTLINE_CANDIDATES = 30;
     private static final float OUTLINE_WEIGHT = 32;
     // An outline misjudges a swipe that lost tracking part way, so it can only push a word down so far.
@@ -62,8 +66,15 @@ public final class SwipeRecognizer implements AutoCloseable {
     private org.futo.ml.inference.NativeDictionary base, personal, contractions;
     private Set<String> learnedWords = Set.of();
     private org.futo.ml.inference.SwipeDecoder.Result[] rawResults = new org.futo.ml.inference.SwipeDecoder.Result[0];
+    private org.futo.ml.inference.SwipeDecoder.Result[] plainReading, shiftedReading;
 
     public org.futo.ml.inference.SwipeDecoder.Result[] rawResults() { return rawResults; }
+
+    /** The engine's own lists from the last swipe, read as made and read shifted right, before any ranking. */
+    public org.futo.ml.inference.SwipeDecoder.Result[][] readings() {
+        org.futo.ml.inference.SwipeDecoder.Result[] none = new org.futo.ml.inference.SwipeDecoder.Result[0];
+        return new org.futo.ml.inference.SwipeDecoder.Result[][] { plainReading == null ? none : plainReading, shiftedReading == null ? none : shiftedReading };
+    }
 
     /** The numbers that shape each result, for the raw input log. */
     public static Map<String, Number> tuning() {
@@ -77,6 +88,7 @@ public final class SwipeRecognizer implements AutoCloseable {
         values.put("candidates", CANDIDATES);
         values.put("savedWordCandidates", SAVED_WORD_CANDIDATES);
         values.put("swipeStretch", SWIPE_STRETCH);
+        values.put("shiftRight", SHIFT_RIGHT);
         values.put("minStretchSpeed", MIN_STRETCH_SPEED);
         values.put("fullStretchSpeed", FULL_STRETCH_SPEED);
         values.put("outlineCandidates", OUTLINE_CANDIDATES);
@@ -162,16 +174,57 @@ public final class SwipeRecognizer implements AutoCloseable {
             Predicate<String> allowed) {
         Map<String, org.futo.ml.inference.SwipeDecoder.Result> best = new java.util.LinkedHashMap<>();
         // The plain reading goes last, so that the raw results describe the swipe as it was made.
+        org.futo.ml.inference.SwipeDecoder.Result[] shiftedResults = read(shifted(gesture), context, personalized, allowed);
+        shiftedReading = rawResults;
         float speed = keysPerSecond(gesture);
         Swipe[] readings = speed < MIN_STRETCH_SPEED ? new Swipe[] { gesture } : new Swipe[] { stretched(gesture, speed), gesture };
-        for (Swipe reading : readings)
-            for (org.futo.ml.inference.SwipeDecoder.Result result : read(reading, context, personalized, allowed)) {
-                org.futo.ml.inference.SwipeDecoder.Result previous = best.get(result.word);
-                if (previous == null || result.score > previous.score) best.put(result.word, result);
-            }
+        for (Swipe reading : readings) keepBest(best, read(reading, context, personalized, allowed));
+        plainReading = rawResults;
+        org.futo.ml.inference.SwipeDecoder.Result[] shown = blend(gesture, sorted(best), context, allowed);
+        keepBest(best, shiftedResults);
+        return withAlternatives(shown, blend(gesture, sorted(best), context, allowed));
+    }
+
+    private static void keepBest(Map<String, org.futo.ml.inference.SwipeDecoder.Result> best, org.futo.ml.inference.SwipeDecoder.Result[] results) {
+        for (org.futo.ml.inference.SwipeDecoder.Result result : results) {
+            org.futo.ml.inference.SwipeDecoder.Result previous = best.get(result.word);
+            if (previous == null || result.score > previous.score) best.put(result.word, result);
+        }
+    }
+
+    private static org.futo.ml.inference.SwipeDecoder.Result[] sorted(Map<String, org.futo.ml.inference.SwipeDecoder.Result> best) {
         org.futo.ml.inference.SwipeDecoder.Result[] results = best.values().toArray(new org.futo.ml.inference.SwipeDecoder.Result[0]);
         Arrays.sort(results, (a, b) -> Float.compare(b.score, a.score));
-        return blend(gesture, results, context, allowed);
+        return results;
+    }
+
+    /** Strokes on this touchpad tend to read to the left of the keys, so this finds words that a plain reading misses. */
+    private static Swipe shifted(Swipe gesture) {
+        float[] x = gesture.x.clone();
+        for (int i = 0; i < x.length; i++) x[i] = Math.min(1, x[i] + SHIFT_RIGHT);
+        return new Swipe(x, gesture.y, gesture.time);
+    }
+
+    /**
+     * Keeps the first word of {@code shown} and fills the other places from {@code wider}, which can only add words to choose
+     * from. Each place keeps the score of {@code shown}, because scores of two separate blends can't be compared.
+     */
+    static org.futo.ml.inference.SwipeDecoder.Result[] withAlternatives(org.futo.ml.inference.SwipeDecoder.Result[] shown,
+            org.futo.ml.inference.SwipeDecoder.Result[] wider) {
+        if (shown.length == 0) return wider;
+        java.util.List<org.futo.ml.inference.SwipeDecoder.Result> words = new java.util.ArrayList<>(List.of(shown[0]));
+        for (org.futo.ml.inference.SwipeDecoder.Result[] source : List.of(wider, shown))
+            for (org.futo.ml.inference.SwipeDecoder.Result result : source) {
+                if (words.size() == 3) break;
+                if (words.stream().noneMatch(word -> word.word.equals(result.word))) words.add(result);
+            }
+        org.futo.ml.inference.SwipeDecoder.Result[] placed = new org.futo.ml.inference.SwipeDecoder.Result[words.size()];
+        for (int i = 0; i < placed.length; i++) {
+            org.futo.ml.inference.SwipeDecoder.Result word = words.get(i);
+            float score = i < shown.length ? shown[i].score : placed[i - 1].score - 1;
+            placed[i] = new org.futo.ml.inference.SwipeDecoder.Result(word.word, score, word.ctcScore, word.lmScore);
+        }
+        return placed;
     }
 
     private static float keysPerSecond(Swipe gesture) {

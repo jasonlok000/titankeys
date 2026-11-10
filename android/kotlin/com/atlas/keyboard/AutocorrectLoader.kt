@@ -65,7 +65,8 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
         main.post {
             loading = false
             if (data == null) failed = true
-            else if (request == generation) autocorrect.corrector = TypedCorrector(lexicon, data, autocorrect.rejected, autocorrect.recent)
+            else if (request == generation) autocorrect.corrector = TypedCorrector(lexicon, data, autocorrect.rejected, autocorrect.recent,
+                nextWordChance = typing::nextWordChance)
         }
     }
 

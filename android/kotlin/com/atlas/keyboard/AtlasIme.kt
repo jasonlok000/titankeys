@@ -122,7 +122,11 @@ class AtlasIme : InputMethodService() {
      * already handled a hide, such as Microsoft Teams, otherwise leaves its message box under the strip.
      */
     private val showStrip = Runnable {
-        if (!canShowStrip()) return@Runnable
+        if (!canShowStrip()) {
+            stripLog("showStrip skipped: hiddenByBack=$hiddenByBack editing=$editing bound=${currentInputBinding != null}")
+            return@Runnable
+        }
+        stripLog("showStrip: requestShowSelf, shown=$isInputViewShown")
         try {
             requestShowSelf(0)
         } catch (error: RuntimeException) {
@@ -135,7 +139,9 @@ class AtlasIme : InputMethodService() {
 
     /** A cancelled show request can leave the client waiting for a window surface, so the window shows itself if Android's did not. */
     private val forceStrip = Runnable {
+        stripLog("fallback: shown=$isInputViewShown")
         if (!isInputViewShown && canShowStrip()) {
+            stripLog("fallback: showWindow")
             try {
                 showWindow(true)
                 requestShowSelf(0)
@@ -159,6 +165,7 @@ class AtlasIme : InputMethodService() {
     private val hideStrip = Runnable {
         // A held status has no strip to hide, and hiding the window would give the touchpad back to the app.
         if (editing || hold.held) return@Runnable
+        stripLog("hideStrip: no field")
         try {
             hideWindow()
             requestHideSelf(0)
@@ -421,6 +428,7 @@ class AtlasIme : InputMethodService() {
 
     /** With no field, a hide takes only the window away. Android's own would also turn the status off. See [TouchpadHold]. */
     override fun hideWindow() {
+        stripLog("hideWindow")
         if (!TouchpadHold.keepsStatus(holdWanted(), isInputViewShown)) {
             super.hideWindow()
             return
@@ -504,6 +512,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
+        stripLog("startInput package=${info.packageName} inputType=0x${Integer.toHexString(info.inputType)} restarting=$restarting")
         // A press from the field before must not change a letter here.
         holdEngine.cancel()
         heldLetter = null
@@ -649,18 +658,21 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
+        stripLog("startInputView restarting=$restarting")
         super.onStartInputView(info, restarting)
         // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
     }
 
     override fun onWindowShown() {
+        stripLog("windowShown")
         super.onWindowShown()
         // Android draws its hide and switch-keyboard buttons in this bar; the strip has no room for them.
         window.window?.insetsController?.hide(WindowInsets.Type.captionBar())
     }
 
     override fun onWindowHidden() {
+        stripLog("windowHidden passingBack=$passingBack typed=$typedInField sinceStart=${SystemClock.uptimeMillis() - fieldStartedAt}")
         super.onWindowHidden()
         // Android's hide also turned the status off.
         hold.hidden()
@@ -683,6 +695,7 @@ class AtlasIme : InputMethodService() {
     /** A key or swipe in a field that Back left hidden brings the strip back. */
     private fun showStripAfterBack() {
         if (!hiddenByBack) return
+        stripLog("showStripAfterBack")
         hiddenByBack = false
         main.post(showStrip)
     }
@@ -724,11 +737,38 @@ class AtlasIme : InputMethodService() {
 
     /** Android calls this when you tap the field, so the tap also brings the strip back after Back. */
     override fun onShowInputRequested(flags: Int, configChange: Boolean): Boolean {
+        stripLog("showInputRequested flags=$flags editing=$editing")
         hiddenByBack = false
         return editing
     }
 
     override fun onEvaluateFullscreenMode() = false
+
+    override fun onFinishInputView(finishingInput: Boolean) {
+        stripLog("finishInputView finishingInput=$finishingInput")
+        super.onFinishInputView(finishingInput)
+    }
+
+    private var loggedInsets = ""
+
+    override fun onComputeInsets(outInsets: InputMethodService.Insets) {
+        super.onComputeInsets(outInsets)
+        if (!debugBuild) return
+        val decor = window.window?.decorView
+        val now = "content=${outInsets.contentTopInsets} visible=${outInsets.visibleTopInsets} touchable=${outInsets.touchableInsets}" +
+            " decor=${decor?.height} view=${strip?.height}+${panel?.height}"
+        if (now == loggedInsets) return
+        loggedInsets = now
+        stripLog("insets $now")
+    }
+
+    /** The Debug build is the same app under its own package name, and Android does not mark it debuggable. */
+    private val debugBuild by lazy { packageName.endsWith(".debug") }
+
+    /** DIAGNOSTIC for #40, Debug build only: adb logcat -s AtlasStrip shows how the strip shows and hides. */
+    private fun stripLog(message: String) {
+        if (debugBuild) Log.i("AtlasStrip", message)
+    }
 
     override fun onUpdateSelection(oldStart: Int, oldEnd: Int, newStart: Int, newEnd: Int, composingStart: Int, composingEnd: Int) {
         super.onUpdateSelection(oldStart, oldEnd, newStart, newEnd, composingStart, composingEnd)

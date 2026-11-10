@@ -48,9 +48,9 @@ The Titan's keys are a touchpad too. Slide across the letters of a word without 
 
 The strip above the keys shows the other words that a swipe could be. Touch one to put it in. Before you type, the strip suggests the next word.
 
-Touch and hold a word on the strip to forget it, so it is not suggested or used as a fix again. Undo shows for a moment, and **Settings > Your words** gives the word back.
+Touch and hold a word on the strip for its menu. **Save** keeps it in your words. **Forget** stops it as a suggestion and as a fix, with Undo for a moment, and **Settings > Your words** gives it back. Select one word in the text, such as a name that never swipes right, and the strip shows it with the same menu.
 
-To pick without the screen, flick up quickly on the letter keys: on the left, middle or right third, it picks the word above it. Turn it off in Settings with **Flick up on the keys to pick a word**.
+To pick without the screen, flick up quickly from the bottom row of letters to the row above: Z, X or C picks the left word, V or B the middle word, N or M the right word. Turn it off in Settings with **Flick up on the keys to pick a word**.
 
 ### Delete without reaching up
 
@@ -70,7 +70,7 @@ Push Sym two times for emoji. In the panel, Alt opens quick settings, with a let
 
 ### Paste what you copied
 
-Right after you copy text, the strip shows it: touch it to paste. For older clips, push Sym, then Alt, then X for the clipboard, and push the key of the clip to paste it. Clips go after an hour, unless you pin them: push Enter, then the clip's key. Push Backspace two times to clear all but the pinned clips. TitanKeys keeps no text that an app marks as sensitive, nothing copied from a password field, and nothing leaves the phone.
+Right after you copy text, the strip shows it: touch it to paste. For older clips, push Sym, then A for the clipboard, and push the key of the clip to paste it. Clips go after an hour, unless you pin them: push Enter, then the clip's key. Push Backspace two times to clear all but the pinned clips. TitanKeys keeps no text that an app marks as sensitive, nothing copied from a password field, and nothing leaves the phone.
 
 ## TitanKeys and Atlas
 
@@ -183,7 +183,7 @@ The flick from Backspace is a quick, straight stroke left from around Backspace,
 
 ### Picking a word with a flick up
 
-The flick up is short, quick and straight: it starts on a letter and goes up about one row, within 10 degrees of straight up. A word's swipe almost never does that. "by" and "my" go up two rows, and a short "my" leans too far, so they stay swipes. Of 6,259 recorded swipes, 8 read as a flick. A flick waits for the time a short lift may last, so a swipe that the top of the sensor breaks in two still joins up.
+The flick up is short, quick and straight: it starts on the bottom row of letters and lifts on the row above, within 20 degrees of straight up and in under 0.3 seconds. "by" and "my" go on to the top row, so they stay swipes. The owner's own flicks set these numbers. Some short upward swipes look the same: of 6,286 recorded swipes, 34 read as a flick, most of them in two bursts of upward strokes. A flick waits for the time a short lift may last, so a swipe that the top of the sensor breaks in two still joins up.
 
 <details>
 <summary><strong>Smaller changes for two-handed typing</strong></summary>

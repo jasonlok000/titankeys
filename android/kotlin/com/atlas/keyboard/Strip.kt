@@ -7,15 +7,13 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.SystemClock
-import android.text.SpannableStringBuilder
-import android.text.Spanned
+import android.content.res.ColorStateList
 import android.text.TextUtils
-import android.text.style.ForegroundColorSpan
-import android.text.style.RelativeSizeSpan
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.WindowInsets
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -26,49 +24,90 @@ import android.widget.TextView
 class Strip(
     context: Context,
     private val choose: (Int) -> Unit,
-    /** A word was held to forget it. Returns false if it can't be forgotten. */
+    /** A word on the bar was held, to open its menu. Returns false if it has no menu. */
     private val hold: (Int) -> Boolean = { false },
-    private val undo: () -> Unit = {},
+    /** A button of the word menu or of a notice was touched. */
+    private val act: (Action) -> Unit = {},
     /** The newest clip was touched, to paste it. */
     private val paste: () -> Unit = {},
 ) : LinearLayout(context) {
+    /** What the buttons in the place of the words do. */
+    enum class Action { Save, Forget, Close, Undo, OpenSelected }
+
+    /** A short line in the place of the words: a word's menu, or what just happened to a word. */
+    sealed interface Notice {
+        val word: String
+        /** The menu of a held word. [forget] is false for a word that no list can drop. */
+        data class Menu(override val word: String, val forget: Boolean) : Notice
+        data class Forgot(override val word: String) : Notice
+        data class Saved(override val word: String) : Notice
+    }
+
     private val typeface = resources.getFont(R.font.inter_regular)
     private val wordViews = WORD_ORDER.map { index -> item({ choose(index) }, { hold(index) }) }
-    /** The confirm after a word is held: what was forgotten, and Undo. */
-    private val forgotLabel = TextView(context).apply {
+    /** The word that the field has selected, alone in the middle. A touch or a hold opens its menu. */
+    private val selectedView = item({ act(Action.OpenSelected) }, { act(Action.OpenSelected); true })
+    private val noticeLabel = TextView(context).apply {
         typeface = this@Strip.typeface
-        textSize = 15f
+        textSize = 16f
         gravity = Gravity.CENTER_VERTICAL or Gravity.START
         isSingleLine = true
         ellipsize = TextUtils.TruncateAt.END
         isFocusable = false
+        setPadding(dp(8), 0, dp(8), 0)
+        // A touch beside the buttons is a way out of the menu.
+        setOnClickListener { if (notice is Notice.Menu) act(Action.Close) }
     }
-    private val undoButton = TextView(context).apply {
-        typeface = this@Strip.typeface
-        textSize = 17f
-        gravity = Gravity.CENTER
+    private val noticeButtons = List(MAX_BUTTONS) {
+        TextView(context).apply {
+            typeface = this@Strip.typeface
+            textSize = 16f
+            gravity = Gravity.CENTER
+            isSingleLine = true
+            isFocusable = false
+            setPadding(dp(14), 0, dp(14), 0)
+        }
+    }
+    private val noticeRow = LinearLayout(context).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        addView(noticeLabel, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        for (button in noticeButtons) addView(button, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+    }
+    /** The newest clip, right after a copy: a clipboard icon and the start of the clip. A touch pastes it. */
+    private val clipIcon = ImageView(context).apply {
+        setImageResource(R.drawable.clipboard)
         isFocusable = false
-        text = context.getString(R.string.strip_undo)
-        setPadding(dp(16), 0, dp(16), 0)
-        setOnClickListener { undo() }
     }
-    /** The newest clip, right after a copy. A touch pastes it. */
-    private val clipView = TextView(context).apply {
+    private val clipText = TextView(context).apply {
         typeface = this@Strip.typeface
         textSize = 17f
-        gravity = Gravity.CENTER
-        // One line for the clip, and a second line only for the one-time hint.
-        maxLines = 2
-        includeFontPadding = false
+        isSingleLine = true
         ellipsize = TextUtils.TruncateAt.END
+        includeFontPadding = false
+        isFocusable = false
+    }
+    /** Said once, under the first clip that the strip offers: where the older clips are. */
+    private val clipHintText = TextView(context).apply {
+        typeface = this@Strip.typeface
+        textSize = 12f
+        isSingleLine = true
+        ellipsize = TextUtils.TruncateAt.END
+        includeFontPadding = false
+        isFocusable = false
+        text = context.getString(R.string.strip_clip_hint)
+    }
+    private val clipView = LinearLayout(context).apply {
+        gravity = Gravity.CENTER
         isFocusable = false
         setPadding(dp(12), 0, dp(12), 0)
+        addView(clipIcon, LayoutParams(dp(CLIP_ICON), dp(CLIP_ICON)).apply { marginEnd = dp(10) })
+        addView(LinearLayout(context).apply {
+            orientation = VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(clipText, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+            addView(clipHintText, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) })
+        }, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         setOnClickListener { paste() }
-    }
-    private val forgetRow = LinearLayout(context).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        addView(forgotLabel, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
-        addView(undoButton, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
     }
     private val chips = ModifierBar.ALL.associateWith(::chip)
     private val hint = TextView(context).apply {
@@ -112,8 +151,16 @@ class Strip(
             render()
         }
 
-    /** A word that was just held to forget it. While it is set, the strip shows it with Undo in the place of the words. */
-    var forgotten: String? = null
+    /** A word's menu or a notice about a word, in the place of everything else. */
+    var notice: Notice? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            render()
+        }
+
+    /** The word that the field has selected, shown alone so that it can be saved or forgotten. */
+    var selected: String? = null
         set(value) {
             if (field == value) return
             field = value
@@ -147,8 +194,9 @@ class Strip(
     init {
         for (view in wordViews) addView(view, LayoutParams(0, dp(56), 1f))
         addView(modifierRow, LayoutParams(0, dp(56), 1f))
-        addView(forgetRow, LayoutParams(0, dp(56), 1f))
+        addView(noticeRow, LayoutParams(0, dp(56), 1f))
         addView(clipView, LayoutParams(0, dp(56), 1f))
+        addView(selectedView, LayoutParams(0, dp(56), 1f))
         // Screen readers go left to right, so point them at the best word first.
         val ranked = wordViews.withIndex().sortedBy { WORD_ORDER[it.index] }.map { it.value }
         for (view in ranked) view.id = generateViewId()
@@ -197,9 +245,10 @@ class Strip(
         look = Look.of(context)
         gesture.allowed = showSuggestions
         // A strip that shows nothing has no height, and a bar there would move the app each time a modifier changes.
-        val confirm = forgotten.takeIf { showSuggestions }
+        val confirm = notice.takeIf { showSuggestions }
         val bar = modifiers.takeIf { showSuggestions && confirm == null }
         val offer = clip.takeIf { showSuggestions && confirm == null && bar == null }
+        val chosen = selected.takeIf { showSuggestions && confirm == null && bar == null && offer == null }
         setBackgroundColor(if (!showSuggestions) Color.TRANSPARENT else look.paper)
         // The lowest text sits about 16 dp over the bottom of the strip, where the corners curve in.
         side = maxOf(dp(8), corners.inset((navigationInset + dp(CONTENT_ABOVE)).toFloat()) + dp(4))
@@ -208,7 +257,7 @@ class Strip(
         minimumHeight = if (showSuggestions) 0 else 1
         for ((slot, view) in wordViews.withIndex()) {
             val index = WORD_ORDER[slot]
-            view.visibility = if (showSuggestions && bar == null && confirm == null && offer == null) VISIBLE else GONE
+            view.visibility = if (showSuggestions && bar == null && confirm == null && offer == null && chosen == null) VISIBLE else GONE
             view.text = words.getOrElse(index) { "" }
             view.isEnabled = index < words.size
             view.setTextColor(look.ink)
@@ -229,13 +278,17 @@ class Strip(
         }
         hint.text = bar?.hint.orEmpty()
         hint.setTextColor(look.ink)
-        forgetRow.visibility = if (confirm != null) VISIBLE else GONE
-        forgotLabel.text = confirm?.let { context.getString(R.string.strip_forgot, it) }.orEmpty()
-        forgotLabel.setTextColor(look.ink)
-        undoButton.setTextColor(look.accent)
+        showNotice(confirm)
         clipView.visibility = if (offer != null) VISIBLE else GONE
-        clipView.text = offer?.let { clipText(it) } ?: ""
-        clipView.setTextColor(look.accent)
+        // The start of the clip, cut cleanly at the end of the line.
+        clipText.text = offer?.let { ClipboardHistory.preview(it, CLIP_PREVIEW_LENGTH) }.orEmpty()
+        clipText.setTextColor(look.ink)
+        clipIcon.imageTintList = ColorStateList.valueOf(look.accent)
+        clipHintText.visibility = if (offer != null && clipHint) VISIBLE else GONE
+        clipHintText.setTextColor(look.muted)
+        selectedView.visibility = if (chosen != null) VISIBLE else GONE
+        selectedView.text = chosen.orEmpty()
+        selectedView.setTextColor(look.ink)
     }
 
     override fun dispatchDraw(canvas: Canvas) {
@@ -247,19 +300,35 @@ class Strip(
         if (more) postInvalidateOnAnimation()
     }
 
-    private fun clipText(clip: String): CharSequence {
-        val line = context.getString(R.string.strip_clip, ClipboardHistory.preview(clip, CLIP_PREVIEW_LENGTH))
-        if (!clipHint) return line
-        val text = SpannableStringBuilder(line).append('\n')
-        val start = text.length
-        text.append(context.getString(R.string.strip_clip_hint))
-        text.setSpan(RelativeSizeSpan(HINT_SIZE), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        text.setSpan(ForegroundColorSpan(look.ink), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        return text
+    /** The label and buttons of a word's menu, or of what just happened to a word. */
+    private fun showNotice(shown: Notice?) {
+        noticeRow.visibility = if (shown != null) VISIBLE else GONE
+        noticeLabel.text = when (shown) {
+            is Notice.Menu -> context.getString(R.string.strip_menu_word, shown.word)
+            is Notice.Forgot -> context.getString(R.string.strip_forgot, shown.word)
+            is Notice.Saved -> context.getString(R.string.strip_saved, shown.word)
+            null -> ""
+        }
+        noticeLabel.setTextColor(look.ink)
+        val buttons = when (shown) {
+            is Notice.Menu -> listOfNotNull(Action.Save to R.string.strip_save, (Action.Forget to R.string.strip_forget).takeIf { shown.forget },
+                Action.Close to R.string.strip_back)
+            is Notice.Forgot -> listOf(Action.Undo to R.string.strip_undo)
+            is Notice.Saved, null -> emptyList()
+        }
+        for ((index, button) in noticeButtons.withIndex()) {
+            val action = buttons.getOrNull(index)
+            button.visibility = if (action != null) VISIBLE else GONE
+            if (action == null) continue
+            button.text = context.getString(action.second)
+            // Back is the calm way out, so only the actions take the accent.
+            button.setTextColor(if (action.first == Action.Close) look.muted else look.accent)
+            button.setOnClickListener { act(action.first) }
+        }
     }
 
     /** Whether the words are on show, so a flick up can pick one. */
-    val wordsShowing get() = showSuggestions && modifiers == null && forgotten == null && clip == null && !gesture.showing && isShown
+    val wordsShowing get() = showSuggestions && modifiers == null && notice == null && clip == null && selected == null && !gesture.showing && isShown
 
     /** Marks the word at place [index] on the bar for a moment, so that you see which word a flick picked. */
     fun flash(index: Int) {
@@ -290,9 +359,11 @@ class Strip(
         /** The place on the bar of the word shown left, in the middle and right. The best word is in the middle. */
         val WORD_ORDER = listOf(1, 0, 2)
         private const val FLASH_MILLIS = 300L
-        /** The clip on the strip stops after this many characters, so that it fits one line. */
-        private const val CLIP_PREVIEW_LENGTH = 40
-        private const val HINT_SIZE = .7f
+        /** Enough of the clip for one line. The line itself cuts it cleanly where it ends. */
+        private const val CLIP_PREVIEW_LENGTH = 200
+        private const val CLIP_ICON = 22
+        /** Save, Forget and Back. */
+        private const val MAX_BUTTONS = 3
         private const val FLASH_ALPHA = 0x55000000
         private const val CHIP_SIZE = 13f
         private const val CONTENT_ABOVE = 16

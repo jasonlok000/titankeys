@@ -496,8 +496,8 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
-        val words = Strip(this, { index -> haptics.wordChanged(); enqueue { composer.choose(index) } }, ::holdWord, ::undoForget,
-            { enqueue { pasteOfferedClip() } })
+        val words = Strip(this, { index -> haptics.wordChanged(); enqueue { composer.choose(index) } }, ::holdWord,
+            { action -> enqueue { stripAction(action) } }, { enqueue { pasteOfferedClip() } })
         val keys = SymPanel(this,
             pick = { item -> enqueue { typePanelItem(item) } },
             useQuickSetting = { item -> enqueue { useQuickSetting(item) } },
@@ -508,6 +508,7 @@ class AtlasIme : InputMethodService() {
             marked = { if (Haptics.enabled(this)) haptics.pulse() },
             clipKey = { key -> enqueue { clipKey(key) } },
             holdClip = { key -> enqueue { holdClip(key) } },
+            openClipboard = { enqueue { openClipboardPage(); haptics.pageChanged() } },
         )
         strip = words
         panel = keys
@@ -853,6 +854,16 @@ class AtlasIme : InputMethodService() {
         showClips()
     }
 
+    /** Opens the clipboard page: from A on the symbols or emoji, or X on the quick settings page. */
+    private fun openClipboardPage() {
+        expireClips()
+        clipPinning = false
+        clipClearing = false
+        showClips()
+        modifiers.openClipboard()
+        showModifiers()
+    }
+
     /** A touch held on a clip pins or unpins it, without the Pin key. */
     private fun holdClip(key: String) {
         if (!clipHistory.togglePin(Layout.panelLetters.indexOf(key))) return
@@ -861,30 +872,80 @@ class AtlasIme : InputMethodService() {
         showClips()
     }
 
-    /** A word held on the strip, which waits out its Undo before it is forgotten. */
-    private class PendingForget(val word: String, val typed: String)
-    private var pendingForget: PendingForget? = null
-    private val forgetNow = Runnable { commitForget() }
+    // The word menu (#43): hold a word on the strip, or select one word in the field, to save or forget it.
 
-    /** Holding a word on the strip forgets it, once the Undo has had its time. */
+    /** A word whose menu is open: [typed] is the letters it would replace on the bar, and empty for a selected word. */
+    private class HeldWord(val word: String, val typed: String)
+    private var menuWord: HeldWord? = null
+    /** A forgotten word, which waits out its Undo before the engine forgets it. */
+    private var pendingForget: HeldWord? = null
+    private val forgetNow = Runnable { commitForget() }
+    private val endNotice = Runnable { strip?.notice = null }
+
+    /** Holding a word on the strip opens its menu. */
     private fun holdWord(index: Int): Boolean {
         val (word, typed) = composer.shownWord(index) ?: return false
-        if (SwipeTyping.get(this).forgetKind(word) == ForgetWords.Kind.NONE && !ForgetWords.fix(typed, word)) return false
-        commitForget()
-        haptics.wordForgotten()
-        pendingForget = PendingForget(word, typed)
-        composer.hide(word)
-        strip?.forgotten = word
-        main.postDelayed(forgetNow, FORGET_UNDO_MILLIS)
+        openMenu(HeldWord(word, typed))
         return true
+    }
+
+    private fun openMenu(held: HeldWord) {
+        commitForget()
+        main.removeCallbacks(endNotice)
+        menuWord = held
+        // One tick, the same as a touch on a key.
+        haptics.tap()
+        strip?.notice = Strip.Notice.Menu(held.word, canForget(held))
+    }
+
+    private fun canForget(held: HeldWord) =
+        SwipeTyping.get(this).forgetKind(held.word) != ForgetWords.Kind.NONE || ForgetWords.fix(held.typed, held.word)
+
+    private fun closeMenu() {
+        if (menuWord == null) return
+        menuWord = null
+        if (strip?.notice is Strip.Notice.Menu) strip?.notice = null
+    }
+
+    private fun stripAction(action: Strip.Action) {
+        val held = menuWord
+        when (action) {
+            Strip.Action.OpenSelected -> strip?.selected?.let { openMenu(HeldWord(it, "")) }
+            Strip.Action.Close -> closeMenu()
+            Strip.Action.Undo -> undoForget()
+            Strip.Action.Save -> if (held != null) saveWord(held)
+            Strip.Action.Forget -> if (held != null && canForget(held)) forgetWord(held)
+        }
+    }
+
+    /** Puts the word in Saved words. A blocked word is let back in first, since Save is a clear wish for it. */
+    private fun saveWord(held: HeldWord) {
+        menuWord = null
+        val typing = SwipeTyping.get(this)
+        val add = {
+            typing.addWord(held.word) { error -> if (error != null) Log.w("Atlas", "Could not save a word: $error") }
+        }
+        if (!typing.wordAllowed(held.word)) typing.setWordBlocked(held.word, false) { add() } else add()
+        composer.unhide(held.word)
+        strip?.notice = Strip.Notice.Saved(held.word)
+        main.postDelayed(endNotice, SAVED_NOTICE_MILLIS)
+    }
+
+    /** Forget leaves the word off the bar at once, and the engine forgets it once the Undo has had its time. */
+    private fun forgetWord(held: HeldWord) {
+        menuWord = null
+        pendingForget = held
+        composer.hide(held.word)
+        if (strip?.selected.equals(held.word, ignoreCase = true)) strip?.selected = null
+        strip?.notice = Strip.Notice.Forgot(held.word)
+        main.postDelayed(forgetNow, FORGET_UNDO_MILLIS)
     }
 
     private fun undoForget() {
         val pending = pendingForget ?: return
         pendingForget = null
         main.removeCallbacks(forgetNow)
-        strip?.forgotten = null
-        haptics.wordChanged()
+        strip?.notice = null
         composer.unhide(pending.word)
     }
 
@@ -893,15 +954,26 @@ class AtlasIme : InputMethodService() {
         val pending = pendingForget ?: return
         pendingForget = null
         main.removeCallbacks(forgetNow)
-        strip?.forgotten = null
+        if (strip?.notice is Strip.Notice.Forgot) strip?.notice = null
         SwipeTyping.get(this).forgetWord(pending.word, pending.typed) { error ->
             if (error != null) Log.w("Atlas", "Could not forget a word: $error")
         }
     }
 
+    /** One word selected in the field shows alone on the strip, so that its menu can save or forget it. */
+    private fun showSelectedWord(start: Int, end: Int) {
+        val length = end - start
+        val word = if (start < 0 || length !in 1..MAX_SELECTED_WORD) null
+            else currentInputConnection?.getSelectedText(0)?.toString()?.takeIf { SELECTED_WORD.matches(it) }
+        if (word == null && menuWord?.typed == "" && strip?.notice is Strip.Notice.Menu) closeMenu()
+        strip?.selected = word
+    }
+
     override fun onFinishInput() {
         // A word waiting to be forgotten is forgotten now, before the next field can offer it.
         commitForget()
+        closeMenu()
+        strip?.selected = null
         // A flick that still waits is a swipe like any other, so the field's pending input decides what becomes of it.
         finishFlick(picked = false)
         // The letter is already typed, so a press that is still down can only stay a letter.
@@ -948,6 +1020,7 @@ class AtlasIme : InputMethodService() {
             strip?.showSuggestions = showSuggestions()
         }
         if (editing && composer.selectionChanged(newStart, newEnd)) clearSettlements()
+        if (editing && field.suggestions) showSelectedWord(newStart, newEnd)
     }
 
     /**
@@ -1341,14 +1414,7 @@ class AtlasIme : InputMethodService() {
                 showKeyboardPicker()
                 closePanel()
             }
-            QuickSetting.Clipboard -> {
-                expireClips()
-                clipPinning = false
-                clipClearing = false
-                showClips()
-                modifiers.openClipboard()
-                showModifiers()
-            }
+            QuickSetting.Clipboard -> openClipboardPage()
             else -> {
                 writeQuickSetting(item, !quickSettingOn(item))
                 readSettings()
@@ -1473,7 +1539,10 @@ class AtlasIme : InputMethodService() {
     private fun outcome(outcome: Contact.Outcome) {
         Recording.sink?.outcome(outcome)
         inputLog()?.outcome(outcome)
-        if (!altOrPanel) dismissClipOffer()
+        if (!altOrPanel) {
+            dismissClipOffer()
+            closeMenu()
+        }
         when (outcome) {
             is Contact.Outcome.Swipe -> {
                 showStripAfterBack()
@@ -1602,6 +1671,7 @@ class AtlasIme : InputMethodService() {
         if (!event.isSystem) showStripAfterBack()
         // Typing on means the forgotten word can go, and the strip shows words again. The newest clip goes from the strip too.
         if (!event.isSystem && !Modifiers.isModifier(keyCode)) {
+            closeMenu()
             commitForget()
             dismissClipOffer()
         }
@@ -1780,6 +1850,10 @@ class AtlasIme : InputMethodService() {
         } else if (modifiers.panel == Modifiers.Panel.Clipboard) {
             pickedKey = event.keyCode
             clipKey(letter)
+        } else if (letter == Layout.CLIPBOARD_KEY) {
+            pickedKey = event.keyCode
+            openClipboardPage()
+            haptics.pageChanged()
         } else panel?.item(letter)?.let { item ->
             pickedKey = event.keyCode
             typePanelItem(item)
@@ -1900,6 +1974,12 @@ class AtlasIme : InputMethodService() {
         private const val CLIP_HINT_SHOWN = "hint_shown"
         /** How long after a copy the strip offers the newest clip. */
         private const val CLIP_OFFER_MILLIS = 60_000L
+        /** How long "Saved" shows on the strip after Save in a word's menu. */
+        private const val SAVED_NOTICE_MILLIS = 2000L
+        /** A selection longer than this is no single word. */
+        private const val MAX_SELECTED_WORD = 32
+        /** One word: letters, and apostrophes between them, as in "Lok" or "don't". */
+        private val SELECTED_WORD = Regex("\\p{L}+(['’]\\p{L}+)*")
         /** How long the strip offers Undo after you hold a word to forget it. */
         private const val FORGET_UNDO_MILLIS = 4000L
         /** The field of a returning window started within 30 ms of its empty start. */

@@ -43,6 +43,8 @@ class SymPanel(
     private val clipKey: (String) -> Unit = {},
     /** A touch held on a clip, which pins or unpins it. */
     private val holdClip: (String) -> Unit = {},
+    /** A touch on A, which opens the clipboard from the symbols or emoji. */
+    private val openClipboard: () -> Unit = {},
 ) : LinearLayout(context) {
     private val typeface = resources.getFont(R.font.inter_regular)
     private val symbols = EmojiPages(Keys.symbolGroups(), emptyList())
@@ -219,6 +221,7 @@ class SymPanel(
         when {
             key == Layout.ALT -> pressAlt()
             key == Layout.SYM -> pressSym()
+            opensClipboard(key) -> openClipboard()
             quick -> QuickSetting.on(key)?.let(useQuickSetting)
             clipboard -> clipKey(key)
             rows != null -> if (swipe(0f, rows)) pageChanged()
@@ -239,7 +242,10 @@ class SymPanel(
     /** An icon, for a key whose purpose is not a letter or symbol. It is the same size at any system font size. */
     private class Icon(val drawable: Int, val description: String)
 
+    private fun opensClipboard(key: String) = pages != null && key == Layout.CLIPBOARD_KEY
+
     private fun icon(key: String) = when {
+        opensClipboard(key) -> Icon(R.drawable.clipboard, context.getString(R.string.clipboard_open))
         key == Layout.ALT -> if (quick || clipboard) Icon(R.drawable.panel_back, "Go back")
             else Icon(R.drawable.panel_settings, "Open quick settings")
         // What Sym does next: from the symbols it opens the emoji, and from the other pages it closes the panel.
@@ -329,10 +335,18 @@ class SymPanel(
             val value = label(key)
             val icon = icon(key)
             val isPosition = showsPosition(key)
+            val clip = clipAt(key)
             view.text = value.orEmpty()
             view.foreground = icon?.let { context.getDrawable(it.drawable) }
+            // A clip's label may take two lines, with room at the sides, and a pinned clip has a pin above it.
+            view.maxLines = if (clip != null) 2 else 1
+            view.setPadding(if (clip != null) dp(3) else view.paddingStart, view.paddingTop,
+                if (clip != null) dp(3) else view.paddingEnd, view.paddingBottom)
+            view.setCompoundDrawablesRelative(null, if (clip?.pinned == true) pin() else null, null, null)
+            view.compoundDrawablePadding = dp(1)
             // A label must fit its key, so it shrinks where a symbol keeps its size.
-            if (quick || clipboard || isPosition) view.setAutoSizeTextTypeUniformWithConfiguration(LABEL_SMALLEST, LABEL_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
+            if (clip != null) view.setAutoSizeTextTypeUniformWithConfiguration(CLIP_SMALLEST, CLIP_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
+            else if (quick || clipboard || isPosition) view.setAutoSizeTextTypeUniformWithConfiguration(LABEL_SMALLEST, LABEL_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
             else {
                 view.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
                 view.sized(ITEM_SIZE, ITEM_LARGEST)
@@ -405,7 +419,8 @@ class SymPanel(
                 hovered -> look.onAccent
                 dim(key) -> Color.GRAY
                 showsPosition(key) -> look.muted
-                clipAt(key)?.pinned == true -> look.accent
+                // Clear and Pin are actions, so they take the accent like the buttons on the strip.
+                clipboard && (key == Layout.BACKSPACE || key == Layout.ENTER) -> look.accent
                 else -> look.ink
             })
             view.foregroundTintList = ColorStateList.valueOf(look.ink)
@@ -414,6 +429,12 @@ class SymPanel(
             shownMark = mark
             if (mark.isNotEmpty()) marked()
         }
+    }
+
+    /** The small pin above a pinned clip, in the accent colour. */
+    private fun pin() = context.getDrawable(R.drawable.pin)?.mutate()?.apply {
+        setBounds(0, 0, dp(PIN_SIZE), dp(PIN_SIZE))
+        setTint(look.accent)
     }
 
     override fun onConfigurationChanged(configuration: Configuration) {
@@ -437,6 +458,10 @@ class SymPanel(
         const val ITEM_LARGEST = 30f
         const val LABEL_SMALLEST = 8
         const val LABEL_LARGEST = 14
+        /** A clip's label on its key: two short lines that stay readable. */
+        const val CLIP_SMALLEST = 9
+        const val CLIP_LARGEST = 13
+        const val PIN_SIZE = 10
         const val QUICK_TITLE = "Quick settings"
         const val SLIDE_DISTANCE = 12
         const val SLIDE_ALPHA = .5f

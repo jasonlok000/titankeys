@@ -79,8 +79,8 @@ public final class TypingSettings {
     }
 
     /**
-     * On at first, the owner's choice of 2026-11-10. A flick must be within 10 degrees of straight up, and then 8 of 6,259 recorded
-     * swipes read as one. See PickFlick.MAX_ANGLE_DEGREES.
+     * On at first, the owner's choice of 2026-11-10. A flick goes from the bottom row of letters to the row above, within 20
+     * degrees of straight up. See PickFlick.
      */
     public static final boolean FLICK_TO_PICK_DEFAULT = true;
 

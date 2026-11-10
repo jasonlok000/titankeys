@@ -72,7 +72,8 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
             return if (line.length <= length) line else line.take(length - 1).trimEnd() + "…"
         }
 
-        private const val LABEL_LENGTH = 6
+        /** Two short lines on a key. */
+        private const val LABEL_LENGTH = 12
 
         private fun escape(text: String) = buildString {
             for (character in text) when (character) {

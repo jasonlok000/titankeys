@@ -130,9 +130,19 @@ class Modifiers {
         }
     }
 
-    /** From the quick settings page to the clipboard. Alt then goes back to the symbols or emoji, as from the quick settings. */
+    /**
+     * To the clipboard, from A on the symbols or emoji, or X on the quick settings page. Alt then goes back to the symbols or
+     * emoji, as from the quick settings.
+     */
     fun openClipboard() {
-        if (panel == Panel.Settings) panel = Panel.Clipboard
+        when (panel) {
+            Panel.Settings -> panel = Panel.Clipboard
+            Panel.Symbols, Panel.Emoji -> {
+                beforeSettings = panel
+                panel = Panel.Clipboard
+            }
+            Panel.Closed, Panel.Clipboard -> Unit
+        }
     }
 
     /** Back to normal typing, after an item is picked or the keyboard is hidden. */

@@ -23,15 +23,19 @@ public final class NextWordChecks {
 
     /** #38: how often each word was kept, from the pairs, for completions after letters. */
     private static void keptCounts() {
-        NextWordPredictor predictor = new NextWordPredictor(new FakeStore(), () -> 1_000 * DAY, word -> !word.equalsIgnoreCase("blocked"));
+        FakeStore store = new FakeStore();
+        // The writer waits at this gate, so every pair below is certainly still pending when it is counted.
+        store.gate = new CountDownLatch(1);
+        NextWordPredictor predictor = new NextWordPredictor(store, () -> 1_000 * DAY, word -> !word.equalsIgnoreCase("blocked"));
         predictor.learn("see", "Tomorrow");
         predictor.learn("until", "tomorrow");
         predictor.learnSentenceStart("Tomorrow");
         predictor.learn("the", "tower");
         predictor.learn("so", "blocked");
-        // Before the queue writes, a pair can count twice for a moment, never less.
-        check(predictor.keptStarting("to").getOrDefault("tomorrow", 0) >= 3,
-                "A word kept after any word, or to start a sentence, counts each time, in any case: " + predictor.keptStarting("to"));
+        java.util.Map<String, Integer> waiting = predictor.keptStarting("to");
+        check(waiting.getOrDefault("tomorrow", 0) == 3 && waiting.getOrDefault("tower", 0) == 1,
+                "A pending word kept after any word, or to start a sentence, counts each time, in any case: " + waiting);
+        store.gate.countDown();
         predictor.flush();
         java.util.Map<String, Integer> kept = predictor.keptStarting("to");
         check(kept.get("tomorrow") == 3 && kept.get("tower") == 1 && kept.size() == 2, "Stored counts add up the same: " + kept);

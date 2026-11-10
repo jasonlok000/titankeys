@@ -852,6 +852,12 @@ private fun composerFlow(world: Realistic) {
             "said i'd come" to "said I'd come",
             "and i’m sure" to "and I’m sure",
             "the I key" to "the I key",
+            // Titles are always capitalised; acronyms stay as typed.
+            "and mrs Jones" to "and Mrs Jones",
+            "see dr lee" to "see Dr lee",
+            "the jr team won" to "the Jr team won",
+            "she has a phd now" to "she has a PhD now",
+            "that is ok with me" to "that is ok with me",
             "be curt with them" to "be curt with them",
             "my iphone works" to "my iPhone works",
             "Iphone works" to "iPhone works",

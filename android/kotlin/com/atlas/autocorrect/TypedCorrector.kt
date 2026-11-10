@@ -443,7 +443,10 @@ class TypedCorrector(
     companion object {
         private const val MAX_CANDIDATES = 64
         /** Words that are always written with a capital, however they are typed. */
-        private val ALWAYS_CAPITAL = mapOf("i" to "I", "i'm" to "I'm", "i've" to "I've", "i'll" to "I'll", "i'd" to "I'd")
+        private val ALWAYS_CAPITAL = mapOf("i" to "I", "i'm" to "I'm", "i've" to "I've", "i'll" to "I'll", "i'd" to "I'd",
+            // Titles that are never ordinary words. Acronyms such as OK, PC and CD stay as typed: lowercase is common in chat.
+            // "mr" is left out: it is a common slip for "me", which the benchmark lost to "Mr".
+            "mrs" to "Mrs", "dr" to "Dr", "jr" to "Jr", "phd" to "PhD")
         /** How common a name must be to take its capitals by itself: "England" (141) and "iPhone" (100) are, "Cali" (78) is not. */
         private const val COMMON_NAME_FREQUENCY = 95
         private val SENTENCE_END_MARKS = setOf('.', '!', '?')

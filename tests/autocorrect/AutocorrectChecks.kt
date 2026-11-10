@@ -140,9 +140,13 @@ private class FakeWords(private val lists: Lists) : Words {
     val unrecognised = ArrayDeque<() -> Unit>()
     val blocked = HashSet<String>()
 
+    /** The next swipe readings, each a word and how clearly it was read. When this is empty, a swipe reads as [swiped]. */
+    val readings = ArrayDeque<Pair<String, Float?>>()
+
     override fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Words.Recognition) -> Unit) {
-        val word = swiped
-        val finish = { result(Words.Recognition(listOfNotNull(word.takeIf { it.isNotEmpty() }), null)) }
+        val reading = readings.removeFirstOrNull()
+        val word = reading?.first ?: swiped
+        val finish = { result(Words.Recognition(listOfNotNull(word.takeIf { it.isNotEmpty() }), null, null, reading?.second)) }
         if (holdSwipes) unrecognised += finish else finish()
     }
     override fun sentenceStarts() = starts
@@ -237,6 +241,16 @@ private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.aut
         val stroke = Swipe(floatArrayOf(.1f, .4f, .8f), floatArrayOf(.2f, .3f, .4f), floatArrayOf(0f, 100f, 200f))
         composer.swipe(stroke, time, time + 200, 0)
         time += 1000
+        settle()
+        return this
+    }
+
+    /** A swipe that starts [gap] ms after the last one ended. */
+    fun swipeAfter(gap: Long): Typist {
+        val stroke = Swipe(floatArrayOf(.1f, .4f, .8f), floatArrayOf(.2f, .3f, .4f), floatArrayOf(0f, 100f, 200f))
+        val start = time - 800 + gap
+        composer.swipe(stroke, start, start + 200, 0)
+        time = start + 1000
         settle()
         return this
     }
@@ -654,6 +668,56 @@ private fun composerFlow(world: Realistic) {
         val typist = Typist(world, world.autocorrect(lists), lists = lists).type("ths is the zorblax now ")
         same(typist.text, "this is the zorblax now ", "A word seen once can still be fixed by the next word")
         same(typist.words.typed.contains("ths"), false, "A word seen once waits for the next word before it is learned")
+    }
+
+    // A swipe that lands right after another one may be its other half.
+    fun firstSwipe(word: String, margin: Float?) = Typist(world, null).also {
+        it.composer.liftOffMillis = 90
+        it.words.readings += word to margin
+        it.swipe(word)
+    }
+    firstSwipe("so", 5f).also {
+        it.words.readings += "soup" to 20f
+        it.swipeAfter(100)
+        same(it.text, "soup ", "A close second stroke joins the first when that reads more clearly")
+    }
+    firstSwipe("the", 30f).also {
+        it.words.readings += "theatre" to 2f
+        it.words.readings += "and" to 9f
+        it.swipeAfter(100)
+        same(it.text, "the and ", "A close second stroke stays a new word when joining reads less clearly")
+        same(it.words.readings.size, 0, "Both readings of a close second stroke are made")
+    }
+    firstSwipe("the", 30f).also {
+        it.words.readings += "theatre" to 30f
+        it.words.readings += "and" to 9f
+        it.swipeAfter(100)
+        same(it.text, "the and ", "Joining must read more clearly, not just as clearly")
+    }
+    firstSwipe("the", 5f).also {
+        it.words.readings += "" to 40f
+        it.words.readings += "and" to 9f
+        it.swipeAfter(100)
+        same(it.text, "the and ", "A joined reading that finds no word does not replace the first word")
+    }
+    firstSwipe("the", 5f).also {
+        it.words.readings += "and" to 9f
+        it.swipeAfter(151)
+        same(it.text, "the and ", "A second stroke after the check window stays a new word")
+        same(it.words.readings.size, 0, "A stroke after the check window is read only once")
+    }
+    firstSwipe("the", null).also {
+        it.words.readings += "and" to 9f
+        it.swipeAfter(100)
+        same(it.text, "the and ", "A first word with no clarity score cannot be joined")
+        same(it.words.readings.size, 0, "A stroke that cannot be joined is read only once")
+    }
+    firstSwipe("the", 5f).also {
+        it.composer.liftOffMillis = 0
+        it.words.readings += "and" to 9f
+        it.swipeAfter(100)
+        same(it.text, "the and ", "With slip recovery off, strokes never join")
+        same(it.words.readings.size, 0, "With slip recovery off, a close stroke is read only once")
     }
 
     // What the next-word predictor learns.
@@ -1474,9 +1538,22 @@ private const val MAX_FIELD_REPORT_MISSES = 2
 private const val MAX_FALSE_CHANGES_PER_THOUSAND = 1
 private const val MIN_FIXED_PERCENT = 65
 
+/** The next-word model's say in the channel: it only breaks ties it can see, and does nothing while it is not ready. */
+private fun nextWordChecks() {
+    val channel = NoisyChannel({ listOf("abd", "abe") }, { _, _ -> false }, { _, _ -> 0 }, { _, _, _ -> 0 }, contextWeight = 0.3)
+    same(channel.pick("abc", null, null, null)?.word, "abd", "With no next-word chances, equal slips keep their order")
+    same(channel.pick("abc", null, null, null, chance = { Double.NaN })?.word, "abd", "Chances not worked out yet must change nothing")
+    val favoured = channel.pick("abc", null, null, null, chance = { if (it == "abe") -1.0 else -9.0 })
+    same(favoured?.word, "abe", "The next-word model must break a tie between equal slips")
+    same(favoured?.score, channel.pick("abc", null, null, null)?.score, "The best fit adds nothing, so the score limits keep their meaning")
+    val off = NoisyChannel({ listOf("abd", "abe") }, { _, _ -> false }, { _, _ -> 0 }, { _, _, _ -> 0 }, contextWeight = 0.0)
+    same(off.pick("abc", null, null, null, chance = { if (it == "abe") -1.0 else -9.0 })?.word, "abd", "Weight 0 turns the model off")
+}
+
 fun main() {
     val world = Realistic()
     smallerChecks()
+    nextWordChecks()
     composerFlow(world)
     suggestionBar(world)
     theGuideOffersItsWord(world)

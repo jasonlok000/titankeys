@@ -50,6 +50,11 @@ public final class SwipeTyping {
     private volatile java.util.Set<String> activeWords = java.util.Set.of();
     private volatile BlockedWords blockedWords;
     private final NextWordPredictor nextWords;
+    /** Swipe engine 2.0's models, once loaded. Until then, or if they fail, the FUTO engine works alone. */
+    private volatile SwipeModels models;
+    private final AtomicBoolean modelsLoading = new AtomicBoolean();
+    private volatile String[] personalWords = new String[0];
+    private volatile float[] personalFrequencies = new float[0];
 
     public static final class Words {
         public final String[] words, descriptions, swipeStatuses;
@@ -68,13 +73,22 @@ public final class SwipeTyping {
         final boolean personalized;
         final long epoch, generation;
         final SwipeDecoder.Result[] results;
+        final boolean ranked;
         Prediction(String firstWord, EnglishSpelling.Variant variant, boolean personalized, long epoch,
                    long generation, SwipeDecoder.Result[] results) {
-            this.firstWord = firstWord; this.variant = variant; this.personalized = personalized;
-            this.epoch = epoch; this.generation = generation; this.results = results;
+            this(firstWord, variant, personalized, epoch, generation, results, false);
         }
+        Prediction(String firstWord, EnglishSpelling.Variant variant, boolean personalized, long epoch,
+                   long generation, SwipeDecoder.Result[] results, boolean ranked) {
+            this.firstWord = firstWord; this.variant = variant; this.personalized = personalized;
+            this.epoch = epoch; this.generation = generation; this.results = results; this.ranked = ranked;
+        }
+        /** Whether engine 2.0's ranker chose this order, so the scores are the ranker's. */
+        public boolean ranked() { return ranked; }
         /** The decoder's words and scores, best first, before spelling and blocked words apply. */
         public SwipeDecoder.Result[] decoded() { return results; }
+        /** How far the best word leads the next one, or infinity when no other word was found. */
+        public float margin() { return results.length < 2 ? Float.POSITIVE_INFINITY : results[0].score - results[1].score; }
     }
     public static synchronized SwipeTyping get(Context context) {
         if (instance == null) instance = new SwipeTyping(context.getApplicationContext());
@@ -122,6 +136,36 @@ public final class SwipeTyping {
         syncDictionary(); publish();
         loadError = null; readiness = "ready";
         Log.d("TouchpadSwipe", "Swipe engine ready in " + (SystemClock.uptimeMillis() - began) + " ms");
+        loadModels();
+    }
+
+    /** Loads engine 2.0's models on their own thread, as they take seconds and swiping works without them. */
+    private void loadModels() {
+        if (models != null || !modelsLoading.compareAndSet(false, true)) return;
+        Thread loader = new Thread(() -> {
+            try {
+                SwipeModels loaded = SwipeModels.load(context);
+                loaded.personalWords(personalWords, personalFrequencies);
+                models = loaded;
+            } catch (Exception | LinkageError error) {
+                Log.w("TouchpadSwipe", "Swipe engine 2.0 unavailable; the FUTO engine works alone", error);
+            } finally {
+                modelsLoading.set(false);
+            }
+        }, "swipe-models-2");
+        loader.setPriority(Thread.MIN_PRIORITY);
+        loader.start();
+    }
+
+    /**
+     * The next-word model's log chance of {@code word} straight after {@code before}, or NaN when it has not been worked
+     * out yet. Never waits, so typing is never held up for it.
+     */
+    public double nextWordChance(String before, String word) {
+        SwipeModels loaded = models;
+        if (loaded == null) return Double.NaN;
+        try { return loaded.ifReady(before, word); }
+        catch (RuntimeException error) { return Double.NaN; }
     }
 
     private void unavailable(Throwable error) {
@@ -192,12 +236,18 @@ public final class SwipeTyping {
                 if (recogniser == null) throw new IllegalStateException(loadError);
                 syncDictionary();
                 boolean personalized = learningEnabled && wordsAvailable && personalise && activeCount > 0;
-                SwipeDecoder.Result[] decoded = recogniser.recognise(gesture, contextWords, personalized,
-                        word -> wordAllowed(rendered(word, variant)));
+                java.util.function.Predicate<String> allowed = word -> wordAllowed(rendered(word, variant));
+                SwipeDecoder.Result[] decoded = recogniser.recognise(gesture, contextWords, personalized, allowed);
+                SwipeModels loaded = models;
+                boolean ranked = false;
+                if (loaded != null) {
+                    try { decoded = loaded.rank(decoded, recogniser.readings(), gesture, text, allowed); ranked = true; }
+                    catch (Exception | LinkageError error) { Log.w("TouchpadSwipe", "Swipe ranker skipped", error); }
+                }
                 String[] words = blockedWords.filter(EnglishSpelling.candidates(Arrays.stream(decoded).map(result -> result.word).toArray(String[]::new), variant));
                 if (personalized) for (int i = 0; i < words.length; i++) words[i] = dictionary.restoreCase(words[i], configuredDay);
                 Prediction prediction = new Prediction(words.length == 0 ? "" : words[0], variant,
-                        personalized, epoch, generation, decoded);
+                        personalized, epoch, generation, decoded, ranked);
                 long elapsed = SystemClock.uptimeMillis() - began;
                 timing.finish();
                 main.post(() -> {
@@ -238,6 +288,11 @@ public final class SwipeTyping {
             catch (RuntimeException | LinkageError error) {
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
             }
+            SwipeModels loaded = models;
+            if (loaded != null && !cancelled.get()) {
+                try { loaded.prepare(text); }
+                catch (Exception | LinkageError error) { Log.w("TouchpadSwipe", "Next-word model skipped", error); }
+            }
         });
     }
 
@@ -262,6 +317,14 @@ public final class SwipeTyping {
                     timing.finish(); completionTiming.record(timing, false, true, false); return;
                 }
                 Map<String, Double> likely = recogniser == null ? Map.of() : recogniser.nextWords(SentenceContext.words(contextText));
+                // Before any letter, the next-word model puts the right word in the top three far more often.
+                SwipeModels loaded = models;
+                if (prefix.isEmpty() && loaded != null) {
+                    try {
+                        Map<String, Double> predicted = loaded.nextWords(contextText, typedPredictions::contains);
+                        if (!predicted.isEmpty()) likely = predicted;
+                    } catch (Exception | LinkageError error) { Log.w("TouchpadSwipe", "Next-word model skipped", error); }
+                }
                 String[] found = EnglishSpelling.candidates(typedPredictions.suggest(prefix, personal, day,
                         word -> blockedWords.entries().isEmpty() || wordAllowed(rendered(word, variant)), likely), variant);
                 if (prefix.isEmpty() && learningEnabled) found = NextWordPredictor.combined(found, learnedNextWords(contextText, variant));
@@ -527,6 +590,9 @@ public final class SwipeTyping {
             if (!recogniser.isOpen()) unavailable(error);
             throw error;
         }
+        personalWords = words; personalFrequencies = frequencies;
+        SwipeModels loaded = models;
+        if (loaded != null) loaded.personalWords(words, frequencies);
         activeCount = active.size(); configuredRevision = dictionary.revision; configuredDay = today();
         publish();
     }

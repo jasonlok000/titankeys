@@ -164,6 +164,9 @@ class TypedCorrector(
     private val data: CorrectionData,
     private val rejected: MutableSet<String>,
     private val recent: RecentWords,
+    /** The next-word model's log chance of a word after the text before it, or NaN while it is not worked out. */
+    private val nextWordChance: ((before: String, word: String) -> Double)? = null,
+    contextWeight: Double = NoisyChannel.CONTEXT_WEIGHT,
 ) {
     /** The last [typed] characters of the text should become [word]. */
     class Fix(val typed: String, val word: String)
@@ -171,7 +174,7 @@ class TypedCorrector(
     /** The second check: [original] at the end of the text should become [replaced], because [word] should be [fix]. */
     class Review(val word: String, val fix: String, val original: String, val replaced: String, val reviewedLast: Boolean)
 
-    private val channel = NoisyChannel(::candidates, KeyNeighbours::near, data.pairs::count, data.triples::count)
+    private val channel = NoisyChannel(::candidates, KeyNeighbours::near, data.pairs::count, data.triples::count, contextWeight)
 
     private val context = ContextCorrector(
         frequencyOf = lexicon::frequency,
@@ -252,7 +255,8 @@ class TypedCorrector(
             twoLetterFix(lower, lexicon::frequency, KeyNeighbours::near) { contextFit(it, previous, beforePrevious) }
                 ?.let { return Fix(word, recased(it, word)) }
             if (letters && word.length >= 2) {
-                val fixed = channel.pick(lower, previous, beforePrevious, next = null)?.let(channel::confidentFix)
+                val chance = nextWordChance?.let { model -> { candidate: String -> model(before, candidate) } }
+                val fixed = channel.pick(lower, previous, beforePrevious, next = null, chance = chance)?.let(channel::confidentFix)
                     // A capitalised first word may be a name ("Mennad"): only a likely slip to a common word.
                     ?.takeIf { word.first().isLowerCase() || isPlausibleForCasing(word, spelled(it)) }
                     ?.takeUnless { isLikelyCompound(lower, it) }

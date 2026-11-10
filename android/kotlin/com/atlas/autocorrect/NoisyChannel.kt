@@ -15,7 +15,9 @@ class NoisyChannel(
     private val candidatesOf: (String) -> List<String>,
     private val isNeighborKey: (Char, Char) -> Boolean,
     private val pairCount: (first: String, second: String) -> Int,
-    private val tripleCount: (first: String, second: String, third: String) -> Int
+    private val tripleCount: (first: String, second: String, third: String) -> Int,
+    /** How much the next-word model's log chance counts, against the word counts above. */
+    private val contextWeight: Double = CONTEXT_WEIGHT,
 ) {
     data class Pick(val word: String, val score: Double, val runnerUp: Double, val typedScore: Double)
 
@@ -32,27 +34,44 @@ class NoisyChannel(
         previous: String?,
         beforePrevious: String?,
         next: String?,
-        allowContractions: Boolean = true
+        allowContractions: Boolean = true,
+        /** The next-word model's log chance of a word after the text before it, or NaN when it is not known. */
+        chance: ((String) -> Double)? = null,
     ): Pick? {
         // Texting shorthand has no vowels ("lmk", "smh") and is never a slip.
         if (typed.none { it in "aeiouy" }) return null
-        val scored = candidates(typed, allowContractions)
+        val slips = candidates(typed, allowContractions)
             .asSequence()
             .filter { it != typed }
             .mapNotNull { word ->
                 val cost = cost(typed, word, isNeighborKey)
-                if (cost > MAX_COST) null else word to score(word, cost, previous, beforePrevious, next)
+                if (cost > MAX_COST) null else word to cost
             }
+            .toList()
+        val fit = contextFit(chance, slips.map { it.first } + typed)
+        val scored = slips
+            .map { (word, cost) -> word to score(word, cost, previous, beforePrevious, next) + fit(word) }
             .sortedByDescending { it.second }
             .take(2)
-            .toList()
         val (best, bestScore) = scored.firstOrNull() ?: return null
         return Pick(
             word = best,
             score = bestScore,
             runnerUp = scored.getOrNull(1)?.second ?: Double.NEGATIVE_INFINITY,
-            typedScore = score(typed, 0.0, previous, beforePrevious, next)
+            typedScore = score(typed, 0.0, previous, beforePrevious, next) + fit(typed)
         )
+    }
+
+    /**
+     * The next-word model's say for each of [words]: its log chance against the likeliest of them, so the best fit adds
+     * nothing and the score limits keep their meaning. Nothing at all when the chances are not known yet.
+     */
+    private fun contextFit(chance: ((String) -> Double)?, words: List<String>): (String) -> Double {
+        if (chance == null || contextWeight == 0.0) return { 0.0 }
+        val chances = words.associateWith { chance(it) }
+        if (chances.values.any { it.isNaN() }) return { 0.0 }
+        val best = chances.values.maxOrNull() ?: return { 0.0 }
+        return { word -> contextWeight * maxOf(CONTEXT_FLOOR, (chances[word] ?: best) - best) }
     }
 
     /**
@@ -103,6 +122,11 @@ class NoisyChannel(
         private const val PAIR_WEIGHT = 0.568
         private const val TRIPLE_WEIGHT = 0.533
         private const val NEXT_WEIGHT = 0.777
+        // Tuned on 816 Titan-style slips in the owner's own sentences, each also typed right: at 0.3 everyday slips fixed
+        // rose from 65.6% to 69.5% and prompted from 71.4% to 78.4%, with no more wrong fixes. 0.5 and up added wrong fixes.
+        const val CONTEXT_WEIGHT = 0.3
+        // A word the model finds far less likely than the best is not pushed down further than this.
+        private const val CONTEXT_FLOOR = -12.0
         private const val MAX_COST = 1.4
         private const val MIN_MARGIN = 2.0
         private const val REAL_WORD_BIAS = 3.0

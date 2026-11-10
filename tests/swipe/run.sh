@@ -5,13 +5,15 @@ sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}
 kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 android="$sdk/platforms/android-36/android.jar"
+# ONNX Runtime classes, which the engine needs to compile.
+ort=android/libs/onnxruntime-android-1.20.0.jar
 adb="$sdk/platform-tools/adb"
 work=$(mktemp -d)
 device=$("$adb" shell mktemp -d /data/local/tmp/atlas-swipe.XXXXXX)
 trap 'rm -rf "$work"; "$adb" shell rm -rf "$device"' EXIT
 mkdir "$work/classes"
 "$kotlin/bin/kotlinc" -language-version 2.2 -no-stdlib -no-reflect -classpath "$stdlib" -d "$work/classes" android/kotlin/com/atlas/keyboard/Layout.kt
-javac --release 17 -cp "$work/classes:$android:$stdlib" -d "$work/classes" \
+javac --release 17 -cp "$work/classes:$android:$stdlib:$ort" -d "$work/classes" \
   android/kotlin/com/atlas/engine/*.java android/kotlin/org/futo/ml/inference/*.java tests/swipe/SavedWordSwipeChecks.java tests/swipe/ContextSwipeChecks.java
 jar cf "$work/classes.jar" -C "$work/classes" .
 "$sdk/build-tools/36.0.0/d8" --min-api 34 --lib "$android" --output "$work/checks.zip" "$work/classes.jar" "$stdlib"

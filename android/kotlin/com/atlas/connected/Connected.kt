@@ -29,10 +29,10 @@ object Connected {
     const val PRIVACY_URL = "$SITE/privacy/"
 
     /**
-     * The contributions Worker (server/contributions). Empty until it is deployed with the owner's Cloudflare account:
-     * until then, examples wait on the phone and nothing is sent.
+     * The contributions Worker (server/contributions), on the owner's Cloudflare Free plan account. Set it to "" to
+     * keep examples on the phone and send nothing.
      */
-    const val CONTRIBUTIONS_URL = ""
+    const val CONTRIBUTIONS_URL = "https://titankeys-contributions.everyones-niche.workers.dev"
 
     /** The public key that checks the feed's signature. Its private key is kept off GitHub by the project owner. */
     internal const val FEED_KEY = "MCowBQYDK2VwAyEAbd0H0XoqO1qz3URQ8VPGCChg4cl9X+oCFD1A4ecwSyo="

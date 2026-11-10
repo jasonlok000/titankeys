@@ -170,7 +170,7 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "flick-hold", chapter = GuideChapter.Flick,
         title = "Flick. Do not lift.",
-        body = "Keep your finger on the keys. The words go faster and faster.",
+        body = "Keep your finger on the keys. A longer flick deletes faster.",
         done = "All gone.",
         seed = "Flick and hold to make all of these words go away",
         cue = GuideCue.Flick(hold = true),
@@ -311,7 +311,7 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "hold-ctrl", chapter = GuideChapter.Hold,
         title = "Hold Ctrl.",
-        body = "The panel shows your shortcuts.",
+        body = "The bar shows your shortcuts.",
         done = "All your shortcuts.",
         help = "No Ctrl key? Turn on Use fn as Ctrl, or skip this step.",
         cue = GuideCue.Spot(listOf(Layout.FN)),

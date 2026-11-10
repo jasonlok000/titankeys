@@ -769,7 +769,8 @@ private fun quickSettingsTable() {
         "F" to QuickSetting.Autocorrect, "S" to QuickSetting.SwipeTyping, "W" to QuickSetting.SuggestionBar,
         "C" to QuickSetting.AutoCapitalise, "D" to QuickSetting.AutoPunctuation, "V" to QuickSetting.Vibration,
         "H" to QuickSetting.HoldSymbols, "M" to QuickSetting.CursorControl, "L" to QuickSetting.DoublePressLocks,
-        "R" to QuickSetting.ScrollAssistant, "O" to QuickSetting.OpenSettings, "K" to QuickSetting.ChangeKeyboard,
+        "R" to QuickSetting.ScrollAssistant, "O" to QuickSetting.OpenSettings, "X" to QuickSetting.Clipboard,
+        "K" to QuickSetting.ChangeKeyboard,
     )
     same(QuickSetting.entries.associateBy { it.key }, expected, "Each item must be on the letter it is named after, and on one key only")
     same(QuickSetting.on("F"), QuickSetting.Autocorrect, "A letter must find its item")

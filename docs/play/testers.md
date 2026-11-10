@@ -120,7 +120,7 @@ For the Google Group welcome message, the GitHub README and the feedback page.
 > 3. Open TitanKeys. The guide sets everything up and teaches the gestures in a few minutes.
 > 4. Use it as your keyboard for at least 14 days. Please don't leave the test early: if you leave and rejoin, Google starts your 14 days again.
 > 5. Try as much as you can: typing, swiping, picking words from the strip, flick to delete, steer and select from Space, symbols, emoji and quick settings.
-> 6. Tell me what works and what doesn't: [GitHub issues link], [email], or Play Store > your profile > Manage apps & devices > Beta > TitanKeys > Write feedback.
+> 6. Tell me what works and what doesn't: [GitHub issues link], vignette@everyones-niche.com, or Play Store > your profile > Manage apps & devices > Beta > TitanKeys > Write feedback.
 >
 > You can't post a public review during the test. That opens when TitanKeys is on Play for everyone.
 

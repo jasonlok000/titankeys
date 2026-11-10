@@ -33,7 +33,7 @@ The form describes **the Play build only**, and every version of it on Play. If 
 | Does your app collect or share any of the required user data types? | **Yes** (contributions only) |
 | Is all of the user data collected by your app encrypted in transit? | **Yes.** HTTPS, and each batch is also sealed on the phone with the project's public key (X25519 and AES-GCM). |
 | Account creation | **My app doesn't allow users to create an account.** **Not verified:** the exact wording of this question in the 2026 form. |
-| Do you provide a way for users to request that their data is deleted? | **Yes.** "Delete my contributions" in the app removes everything stored for that contributor ID. Also offer a way by email (see the open questions). |
+| Do you provide a way for users to request that their data is deleted? | **Yes.** "Delete my contributions" in the app removes everything stored for that contributor ID. Also by email to vignette@everyones-niche.com with the contributor ID, as the privacy policy says. |
 | Independent security review | No (optional badge) |
 
 ### Data types
@@ -47,9 +47,11 @@ Answer **"not collected"** for everything except the rows marked **Collected**.
 | Financial info | All | Not collected | |
 | Health and fitness | All | Not collected | |
 | Messages | Emails, SMS or MMS, Other in-app messages | Not collected | No text around the word, and no typed text, is ever sent. |
-| Photos and videos, Audio, Files and docs, Calendar, Contacts | All | Not collected | |
+| Photos and videos, Audio, Files and docs, Calendar | All | Not collected | |
+| Contacts | Contacts | Not collected | Read on the phone only, with the user's opt-in and Android's Contacts permission, to recognise first and last names as words. Never sent or shared. |
 | **App activity** | **App interactions** | **Collected** | The swipe path, with times from the start of the swipe, the touch sizes, the ranker's 18 numbers, and how the word was settled (kept, picked from the strip, or corrected). |
-| App activity | In-app search history, Installed apps, Other actions | Not collected | |
+| App activity | In-app search history, Other actions | Not collected | |
+| App activity | Installed apps | Not collected | Home-screen app names are read on the phone to recognise them as words. Never sent or shared. |
 | **App activity** | **Other user-generated content** | **Collected** | The kept word, only when it is a dictionary word. **Uncertain:** a single dictionary word could also be seen as part of "App interactions". Declaring it here is the cautious choice. |
 | Web browsing | Web browsing history | Not collected | |
 | App info and performance | Crash logs | Not collected | |

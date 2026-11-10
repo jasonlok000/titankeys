@@ -17,10 +17,16 @@ final class BlockedWords {
         this.words = Set.copyOf(normalized);
     }
 
-    BlockedWords add(String word) {
+    /** Whether the list can hold this word: one word with 1 to 24 letters, and apostrophes. */
+    static boolean valid(String word) {
         String normalized = key(word);
         int letters = normalized.replace("'", "").length();
-        if (letters < 1 || letters > 24 || !normalized.matches("[a-z]+('[a-z]+)*"))
+        return letters >= 1 && letters <= 24 && normalized.matches("[a-z]+('[a-z]+)*");
+    }
+
+    BlockedWords add(String word) {
+        String normalized = key(word);
+        if (!valid(word))
             throw new IllegalArgumentException("Enter one word with 1–24 letters. Apostrophes are allowed.");
         Set<String> replacement = new HashSet<>(words);
         replacement.add(normalized);

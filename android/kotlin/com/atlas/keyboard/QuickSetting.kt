@@ -18,6 +18,8 @@ enum class QuickSetting(val key: String, val label: String, val title: String) {
     /** On is the phone's own Scroll assistant outside text fields, the other way round from the setting that it changes. */
     ScrollAssistant("R", "Scrl", "Scroll assistant outside text fields"),
     OpenSettings("O", "Open", "Open TitanKeys settings"),
+    /** X as in cut and copy. It opens the clipboard page, and is no setting. */
+    Clipboard("X", "Clip", "Clipboard"),
     ChangeKeyboard("K", "Kbd", "Change keyboard");
 
     companion object {

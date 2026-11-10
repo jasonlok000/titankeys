@@ -2,6 +2,7 @@ package com.atlas.keyboard
 
 import android.app.Activity
 import android.app.Instrumentation
+import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -79,7 +80,10 @@ class ReplayRunner : Instrumentation() {
         try {
             replayAll(directory, result)
         } finally {
-            TypingSettings.spelling(targetContext, spelling)
+            // Written at once: Android ends the app soon after a replay, before a write in the background would land, and the
+            // user's spelling would stay British.
+            targetContext.getSharedPreferences("typing_settings", Context.MODE_PRIVATE).edit()
+                .putString("spelling", if (spelling == EnglishSpelling.Variant.AMERICAN) "american" else "british").commit()
         }
     }
 

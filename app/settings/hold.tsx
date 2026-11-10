@@ -10,7 +10,7 @@ const options = [
 export const holdLabel = ({ holdSymbols, holdSymbolMillis }: State) => holdSymbols ? `${holdSymbolMillis} ms` : "Off";
 
 export default function Hold() {
-  return <ChoicePage title="Hold a letter for its symbol"
+  return <ChoicePage title="Hold for symbols"
     subtitle="Hold a letter key to type the symbol printed on it. Select how long to hold."
     options={options}
     read={({ holdSymbols, holdSymbolMillis }) => holdSymbols ? String(holdSymbolMillis) : "off"}

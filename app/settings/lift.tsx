@@ -10,7 +10,7 @@ const options = [
 export const liftLabel = ({ liftOff, liftOffMillis }: State) => liftOff ? `${liftOffMillis} ms` : "Off";
 
 export default function Lift() {
-  return <ChoicePage title="Keep swiping after a short lift"
+  return <ChoicePage title="Keep swiping"
     subtitle="If your finger leaves the keys for less than this time, the swipe or the cursor continues."
     options={options}
     read={({ liftOff, liftOffMillis }) => liftOff ? String(liftOffMillis) : "off"}

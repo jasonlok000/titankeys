@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.provider.Settings
-import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.WindowManager
@@ -29,7 +28,6 @@ class BackService : AccessibilityService() {
     private var window: TouchpadOverlay? = null
     /** The screen is off or the lock screen shows, where the touchpad goes where it went before. */
     private var locked = false
-    private var debuggable = false
 
     private val screen = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -44,12 +42,8 @@ class BackService : AccessibilityService() {
 
     override fun onServiceConnected() {
         current = this
-        // The Debug build is the same app under its own package name, and Android does not mark it debuggable.
-        debuggable = packageName.endsWith(".debug")
         locked = getSystemService(KeyguardManager::class.java).isKeyguardLocked
         window = TouchpadOverlay(this, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, HIGH_TITLE) { event ->
-            // For tests on the phone: adb logcat -s AtlasTouchpad shows which gestures this window got.
-            if (debuggable && event.actionMasked == MotionEvent.ACTION_DOWN) Log.i(LOG_TAG, "touchpad down at the window above the shade")
             touchpad?.invoke(event) == true
         }
         val filter = IntentFilter().apply {
@@ -88,7 +82,6 @@ class BackService : AccessibilityService() {
     private fun updateTouchpad() {
         val window = window ?: return
         if (touchpad != null && !locked) window.show() else window.hide()
-        if (debuggable) Log.i(LOG_TAG, "window above the shade ${if (window.up) "up" else "down"}, locked=$locked")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
@@ -111,7 +104,6 @@ class BackService : AccessibilityService() {
     companion object {
         /** The firmware sends the touchpad only to a window whose title contains "InputMethod". */
         private const val HIGH_TITLE = "AtlasInputMethodTouchpadHigh"
-        private const val LOG_TAG = "AtlasTouchpad"
 
         @Volatile private var current: BackService? = null
         @Volatile private var watcher: ((KeyEvent) -> Boolean)? = null

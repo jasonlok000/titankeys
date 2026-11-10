@@ -48,7 +48,7 @@ class TouchSizeActivity : Activity(), Recording.Sink {
     }
 
     /** A point on the touchpad, from 0 to 1 across the keys and down the rows, with its size on the sensor's own scale. */
-    private class Point(val x: Float, val y: Float, val size: Float, val time: Long)
+    private class Point(val x: Float, val y: Float, val size: Float, val major: Float, val time: Long)
 
     private class Touch(val kind: Kind, val start: Long) {
         val points = ArrayList<Point>()
@@ -145,14 +145,21 @@ class TouchSizeActivity : Activity(), Recording.Sink {
 
     override fun motion(event: MotionEvent, samples: List<Sample>) {
         // Read everything now: the keyboard may reuse the event after this returns.
-        val unit = sizeUnit(event)
+        val scale = sensorScale(event)
         val sizes = ArrayList<Float>(event.historySize + 1)
-        for (i in 0 until event.historySize) sizes += event.getHistoricalTouchMajor(i) / unit
-        if (event.actionMasked != MotionEvent.ACTION_CANCEL) sizes += event.touchMajor / unit
+        val majors = ArrayList<Float>(event.historySize + 1)
+        for (i in 0 until event.historySize) {
+            sizes += event.getHistoricalSize(i) * scale
+            majors += event.getHistoricalTouchMajor(i)
+        }
+        if (event.actionMasked != MotionEvent.ACTION_CANCEL) {
+            sizes += event.size * scale
+            majors += event.touchMajor
+        }
         val count = minOf(samples.size, sizes.size)
         val points = (0 until count).map { i ->
             val sample = samples[samples.size - count + i]
-            Point(sample.x, sample.y, sizes[sizes.size - count + i], sample.time)
+            Point(sample.x, sample.y, sizes[sizes.size - count + i], majors[majors.size - count + i], sample.time)
         }.filter { it.x.isFinite() && it.y.isFinite() && it.size.isFinite() }
         val action = event.actionMasked
         val fingers = event.pointerCount
@@ -185,7 +192,9 @@ class TouchSizeActivity : Activity(), Recording.Sink {
         touch.points += points
         touch.end = time
         touch.fingers = max(touch.fingers, fingers)
-        points.lastOrNull()?.let { live.text = "Size ${it.size.roundToInt()}" }
+        points.lastOrNull()?.let {
+            live.text = String.format(Locale.US, "Size %d   (Android touch major %.1f)", it.size.roundToInt(), it.major)
+        }
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
             current = null
             last.text = describe(touch)
@@ -251,11 +260,11 @@ class TouchSizeActivity : Activity(), Recording.Sink {
         val file = File(directory, name)
         file.writeText(JSONObject().put("format", 1).put("model", Build.MODEL).put("android", Build.VERSION.RELEASE)
             .put("app", packageManager.getPackageInfo(packageName, 0).versionName)
-            .put("size", "touch major on the sensor's 0 to 255 scale").toString() + "\n")
+            .put("size", "the sensor's touch major from 0 to 255: Android's size axis times 255").toString() + "\n")
         for (touch in done) {
             val points = JSONArray()
             for (point in touch.points)
-                points.put(JSONArray().put(round(point.x)).put(round(point.y)).put(round(point.size)).put(point.time))
+                points.put(JSONArray().put(round(point.x)).put(round(point.y)).put(round(point.size)).put(round(point.major)).put(point.time))
             file.appendText(JSONObject().put("kind", touch.kind.id).put("start", touch.start).put("end", touch.end)
                 .put("fingers", touch.fingers).put("reading", touch.reading).put("points", points).toString() + "\n")
         }
@@ -279,13 +288,15 @@ class TouchSizeActivity : Activity(), Recording.Sink {
         }
     }
 
-    /** The touchpad reports touch major scaled to the screen. This divides by the scale to get the sensor's own steps. */
-    private fun sizeUnit(event: MotionEvent): Float {
+    /**
+     * Android's size axis is the sensor's touch major divided by its largest value, 255 on the Titan 2 Elite, so this turns it back into
+     * the sensor's own steps. Touch major itself can't be used: Android scales it to the screen, and gives the screen's diagonal as its range.
+     */
+    private fun sensorScale(event: MotionEvent): Float {
         val device = event.device
-        val range = device?.getMotionRange(MotionEvent.AXIS_TOUCH_MAJOR, event.source)
-            ?: device?.getMotionRange(MotionEvent.AXIS_TOUCH_MAJOR)
-        val largest = range?.max?.takeIf { it.isFinite() && it > 0f } ?: DEFAULT_TOUCH_MAJOR_MAX
-        return largest / RAW_SIZE_MAX
+        val range = device?.getMotionRange(MotionEvent.AXIS_SIZE, event.source) ?: device?.getMotionRange(MotionEvent.AXIS_SIZE)
+        val largest = range?.max?.takeIf { it.isFinite() && it > 0f } ?: 1f
+        return RAW_SIZE_MAX / largest
     }
 
     private fun keyboardReady() =
@@ -366,10 +377,8 @@ class TouchSizeActivity : Activity(), Recording.Sink {
     private companion object {
         const val COLUMNS = 10f
         const val ROWS = 4f
-        /** The sensor's own scale for touch major, from its input device description. */
+        /** The largest touch major that the touchpad's sensor reports (ABS_MT_TOUCH_MAJOR in getevent). */
         const val RAW_SIZE_MAX = 255f
-        /** What Android reports as the largest touch major on the Titan 2 Elite, if the device gives no range. */
-        const val DEFAULT_TOUCH_MAJOR_MAX = 1614.435f
         /** A circle's radius for each step of size, as a share of a key's width. */
         const val DOT_PER_SIZE = .06f
         const val SHOWN_TOUCHES = 12

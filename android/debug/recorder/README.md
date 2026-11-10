@@ -16,9 +16,9 @@ Tools for measuring swipe accuracy on a real Titan 2 Elite. They build only into
 1. Make TitanKeys Debug the active keyboard, then open **TitanKeys Touch size**.
 2. Pick a kind of touch: fingertip swipe, flat thumb swipe, thumb rest or fingertip rest. Do it about 10 times on the keys.
 3. The map draws each point as a circle as large as its size. Below, each kind shows its average size, how often each size came up, and how long and how far its touches went.
-4. Use **Export** to save the touches as JSON lines: one line for each touch, with its kind and each point's position, size and time. It keeps no text.
+4. Use **Export** to save the touches as JSON lines: one line for each touch, with its kind and each point's position, size, Android's touch major and time. It keeps no text.
 
-The size is touch major on the sensor's own scale from 0 to 255. Android reports it scaled to the screen; the screen divides by that scale.
+The size is the sensor's touch major, from 0 to 255. The screen reads Android's size axis, which is that value divided by 255, and multiplies it back. Android's touch major axis is scaled to the screen, and its range is the screen's diagonal, so it does not give the sensor's steps. The raw log's `sz` is that scaled touch major.
 
 ## Replay a session
 

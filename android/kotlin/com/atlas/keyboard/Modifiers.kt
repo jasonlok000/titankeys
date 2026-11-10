@@ -86,6 +86,9 @@ class Modifiers {
 
     fun isHeld(code: Int) = code in held
 
+    /** A physical Alt key is down. */
+    val altHeld get() = held.any { keyOf(it) == Key.Alt }
+
     /** A held key did a different job, such as a long hold on Sym. Its key turns off and it stops counting as held. */
     fun cancel(code: Int) {
         when (keyOf(code) ?: return) {

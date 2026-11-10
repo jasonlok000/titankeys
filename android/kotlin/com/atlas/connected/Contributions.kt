@@ -67,6 +67,8 @@ object Contributions {
     fun queuedBytes(context: Context) = queue(context).bytes()
     fun sent(context: Context) = Connected.preferences(context).getInt(SENT, 0)
     fun sentAt(context: Context) = Connected.preferences(context).getLong(SENT_AT, 0)
+    /** The random contributor ID, shown in Settings so that the user can still ask for deletion after removing the app. */
+    fun contributorId(context: Context): String? = Connected.preferences(context).getString(CONTRIBUTOR, null)
     fun deletionPending(context: Context) = Connected.preferences(context).getString(PENDING_DELETE, null) != null
 
     /** Deletes the examples that wait on the phone, and nothing else. */
@@ -81,8 +83,8 @@ object Contributions {
         queue(context).clear()
         val id = preferences.getString(CONTRIBUTOR, null)
         val edit = preferences.edit().putInt(SENT, 0).putLong(SENT_AT, 0)
-        // Something was sent only if this ID ever sent a batch.
-        if (id != null && preferences.getInt(SENT, 0) > 0) edit.putString(PENDING_DELETE, id)
+        // Asked even if nothing seems sent: a batch may have arrived just before the phone lost its answer.
+        if (id != null && Connected.CONTRIBUTIONS_URL.isNotEmpty()) edit.putString(PENDING_DELETE, id)
         edit.putString(CONTRIBUTOR, if (enabled(context)) UUID.randomUUID().toString() else null).apply()
         Connected.schedule(context)
     }

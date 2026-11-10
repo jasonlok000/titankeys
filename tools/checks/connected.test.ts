@@ -96,6 +96,12 @@ describe("contributions server", () => {
     expect(env.BATCHES.objects.size).toBe(0);
   });
 
+  test("logs nothing and keeps no internet addresses", async () => {
+    const source = await text("server/contributions/src/worker.js");
+    for (const word of ["console.", "CF-Connecting-IP", "X-Forwarded-For", "request.cf"]) expect(source.includes(word)).toBe(false);
+    expect(await text("server/contributions/wrangler.toml")).toMatch(/\[observability\]\s*enabled = false/);
+  });
+
   test("is write-only: nothing can be read or listed", async () => {
     const env = { BATCHES: new Bucket() };
     for (const request of [

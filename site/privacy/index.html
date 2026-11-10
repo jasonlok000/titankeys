@@ -76,7 +76,8 @@
     <li>The TitanKeys version, the version of the swipe models, the phone model (such as "Titan 2 Elite"), and whether the
       app came from GitHub or Google Play.</li>
     <li>A random contributor ID. It is made on your phone when you agree. It is not connected to your name, your
-      account or your phone, and it is only used to delete your examples when you ask.</li>
+      account or your phone, and it is only used to delete your examples when you ask. Settings &gt; Help train swipe
+      typing shows it, with a button to copy it.</li>
   </ul>
 
   <h3>What is never sent</h3>
@@ -100,8 +101,8 @@
     <li>TitanKeys sends them on Wi-Fi only, in batches. Before a batch leaves the phone, it is encrypted with our public
       key (X25519 and AES-256-GCM). Only our private key can open it. That key is kept offline, not on any server.</li>
     <li>Batches go over HTTPS to a small server that we run on Cloudflare. The server can only store batches and delete
-      them. It cannot read them, and it keeps only the encrypted files. It does not keep your internet address.
-      Cloudflare sees the connection, as the <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare privacy
+      them. It cannot read them, and it keeps only the encrypted files. The server never logs or stores internet
+      addresses (IP addresses). Cloudflare carries the connection, as the <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare privacy
       policy</a> says.</li>
     <li>The server files each batch under a hash of your contributor ID, so even the stored files do not show the ID.</li>
   </ul>
@@ -109,8 +110,10 @@
   <h3>How long it is kept</h3>
   <ul>
     <li>On your phone: until it is sent, or until you delete it. When the queue is full, the oldest examples go first.</li>
-    <li>On the server: at most 2 years. Then the files are deleted automatically.</li>
-    <li>Examples that we opened for training are kept only on our own offline computer, also for at most 2 years.</li>
+    <li>On the server and with us: until they are used for training, and at most 2 years after they arrive. Then they
+      are deleted. The server deletes its files after 2 years automatically.</li>
+    <li>Examples that we opened for training are kept only on our own offline computer, within the same 2 years.</li>
+    <li>At any time, on request, we delete all the examples for a contributor ID.</li>
   </ul>
 
   <h3>How to stop and delete</h3>
@@ -121,9 +124,9 @@
     <li><strong>Delete my contributions:</strong> deletes the queue on your phone, and asks the server to delete all the
       batches sent with your contributor ID. If your phone has no connection, it asks again when it has one. After this,
       new examples get a new contributor ID.</li>
-    <li>Removing TitanKeys deletes the queue and the contributor ID from your phone. Then we cannot find your sent
-      examples any more, because we never know who you are. If you want them deleted, use
-      <em>Delete my contributions</em> before you remove the app.</li>
+    <li><strong>After you remove TitanKeys:</strong> removing the app deletes the queue and the contributor ID from your
+      phone, and we never know who you are. So keep a copy of your contributor ID from Settings. To have your examples
+      deleted later, send us the ID as the Contact section says, and we delete everything for it.</li>
   </ul>
 
   <h2>Permissions</h2>
@@ -152,9 +155,12 @@
   <a href="https://github.com/jasonlok000/titankeys/commits/titankeys/site/privacy">history of this page</a>.</p>
 
   <h2>Contact</h2>
-  <p>For a question about privacy, or to ask about your data, open an issue at
-  <a href="https://github.com/jasonlok000/titankeys/issues">github.com/jasonlok000/titankeys/issues</a>.
-  Do not put your contributor ID in a public issue: use <em>Delete my contributions</em> in the app instead.</p>
+  <p>For a question about privacy, or to ask about your data, email
+  <!-- OWNER: put the privacy contact email address here, before the Google Play release. -->
+  <strong>[privacy email address, to be added]</strong>, or open an issue at
+  <a href="https://github.com/jasonlok000/titankeys/issues">github.com/jasonlok000/titankeys/issues</a>.</p>
+  <p>To ask for deletion, send your contributor ID. An issue is public, so send the ID by email if you do not want it
+  to show. While TitanKeys is on your phone, <em>Delete my contributions</em> in the app does the same at once.</p>
 
   <footer>
     <p><a href="../">TitanKeys</a> · <a href="https://github.com/jasonlok000/titankeys">Source code</a></p>

@@ -19,6 +19,8 @@ export type ConnectedState = {
   queuedBytes: number;
   sent: number;
   sentAt: number;
+  /** The random ID of this phone's examples, or "" when there is none. Shown so that deletion can be asked for later. */
+  contributorId: string;
   /** A request to delete sent examples waits for a connection. */
   deletionPending: boolean;
   /** The contributions server is set in this build. Until it is, examples wait on the phone. */
@@ -52,6 +54,7 @@ export const setContribute = (on: boolean) => run("contribute", { on });
 export const declineContributions = () => run("declineContributions");
 export const deleteQueued = () => run("deleteQueued");
 export const deleteContributions = () => run("deleteContributions");
+export const copyContributorId = () => connected("copyContributorId");
 
 export const PRIVACY_URL = "https://jasonlok000.github.io/titankeys/privacy/";
 

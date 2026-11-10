@@ -1,6 +1,8 @@
 package com.vandam.ink
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -47,6 +49,12 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
                     Contributions.deleteAll(activity)
                     "null"
                 }
+                "copyContributorId" -> {
+                    val id = Contributions.contributorId(activity) ?: throw IllegalStateException("No contributor ID")
+                    activity.getSystemService(ClipboardManager::class.java)
+                        .setPrimaryClip(ClipData.newPlainText("TitanKeys contributor ID", id))
+                    "null"
+                }
                 "dismissEntry" -> {
                     Announcements.dismiss(activity, data.getString("id"))
                     "null"
@@ -80,6 +88,7 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
             .put("sent", Contributions.sent(activity))
             .put("sentAt", Contributions.sentAt(activity))
             .put("deletionPending", Contributions.deletionPending(activity))
+            .put("contributorId", Contributions.contributorId(activity) ?: "")
             .put("serverReady", Connected.CONTRIBUTIONS_URL.isNotEmpty())
             .put("privacyUrl", Connected.PRIVACY_URL)
     }

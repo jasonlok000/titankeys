@@ -39,6 +39,16 @@ curl -s -o /dev/null -w "%{http_code}\n" https://titankeys-contributions.<accoun
 
 Keep the bucket private: no public access and no custom domain on it.
 
+## Delete on request (owner)
+
+A user who removed the app can send their contributor ID (shown in the app's Settings). Delete everything for it:
+
+```bash
+curl -s -X POST https://titankeys-contributions.<account>.workers.dev/v1/delete   -H "Content-Type: application/json" -d '{"contributor":"<the ID>"}'
+```
+
+Also delete that contributor's examples from any copy opened for training: the `contributor` field of each batch.
+
 ## Read the contributions (owner only)
 
 On the offline computer that holds `contributions-x25519.pem`:

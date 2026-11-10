@@ -88,6 +88,11 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val altPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = Typeface.create(Typeface.DEFAULT, 600, false) }
+    /** The symbol that Alt types on each letter key, read from the phone's own keyboard, as it is printed on the key. */
+    private val altSymbols = keys.filter { it.letter }.mapNotNull { key ->
+        Keys.letter(key.name, android.view.KeyEvent.META_ALT_ON)?.let { key.name to it }
+    }.toMap()
     private val areaPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val areaPath = Path()
     private val path = Path()
@@ -98,7 +103,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             invalidate()
         }
 
-    private var cue: GuideCue = GuideCue.Free
+    /** The gesture that the ghost finger shows now. */
+    var cue: GuideCue = GuideCue.Free
+        private set
     private var ghost: List<FloatArray> = emptyList()
     private var cueStart = 0L
 
@@ -244,6 +251,12 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         canvas.drawRoundRect(key.box.left + inset, key.box.top + inset, key.box.right - inset, key.box.bottom - inset, radius, radius, boxPaint)
         val labelColour = GuideMotion.blend(idleLabel, litLabel, heat.coerceIn(0f, 1f))
         drawLabel(canvas, key, label, labelColour)
+        // Like the real keys, each letter has its Alt symbol printed small in its top left corner.
+        altSymbols[key.name]?.takeIf { label == key.name }?.let { symbol ->
+            altPaint.color = GuideMotion.faded(labelColour, ALT_ALPHA)
+            altPaint.textSize = min(key.box.width(), key.box.height()) * ALT_SIZE
+            canvas.drawText(symbol, key.box.left + inset + key.box.width() * ALT_INSET, key.box.top + inset - altPaint.ascent() + key.box.height() * ALT_INSET / 2, altPaint)
+        }
         canvas.restore()
         return moving
     }
@@ -323,11 +336,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
                 path.close()
                 canvas.drawPath(path, iconPaint)
             }
-            "▦" -> {
-                val s = r * .34f
-                for (dx in -1..1 step 2) for (dy in -1..1 step 2)
-                    canvas.drawRect(x + dx * r * .5f - s, y + dy * r * .5f - s, x + dx * r * .5f + s, y + dy * r * .5f + s, iconPaint)
-            }
+            // The key next to Space shows one square, the recent apps mark.
+            "▦" -> canvas.drawRoundRect(x - r * .75f, y - r * .75f, x + r * .75f, y + r * .75f, r * .15f, r * .15f, iconPaint)
             else -> canvas.drawText(label, x, y - (labelPaint.ascent() + labelPaint.descent()) / 2, labelPaint)
         }
     }
@@ -469,7 +479,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             val top = height * (ROW_CENTRE - DRAG_UP)
             fingerY = y + (top - y) * up
             fingerX = x + (width * DRAG_REACH) * across
-            ghostPaint.color = GuideMotion.faded(colour, GHOST_LINE)
+            // The drag is the part to copy, so it is as strong as the part of a word that the ghost has done.
+            ghostPaint.color = colour
             ghostPaint.strokeWidth = dp(GHOST_DONE_WIDTH)
             canvas.drawLine(x, y, x, fingerY, ghostPaint)
             if (across > 0f) canvas.drawLine(x, top, fingerX, top, ghostPaint)
@@ -480,7 +491,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private fun cycleMillis() = when (cue) {
         is GuideCue.Word -> 3000L
         is GuideCue.Flick -> if ((cue as GuideCue.Flick).hold) 3400L else 2000L
-        GuideCue.SwipeUp, GuideCue.SlideRow -> 2200L
+        GuideCue.SlideRow -> 2200L
         is GuideCue.Taps -> if ((cue as GuideCue.Taps).drag) 3200L else 1800L
         else -> 2400L
     }
@@ -491,7 +502,6 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             floatArrayOf(x, y)
         }
         is GuideCue.Flick -> listOf(floatArrayOf(.95f, .375f), floatArrayOf(.62f, .375f))
-        GuideCue.SwipeUp -> listOf(floatArrayOf(.5f, .68f), floatArrayOf(.5f, .1f))
         GuideCue.SlideRow -> listOf(floatArrayOf(.08f, .875f), floatArrayOf(.92f, .875f))
         else -> emptyList()
     }
@@ -509,6 +519,10 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val KEY_LABEL_INK = .85f
         const val LABEL_LETTER = .52f
         const val LABEL_SMALL = .36f
+        // The Alt symbol in the corner of a letter key, as parts of the key's size.
+        const val ALT_SIZE = .26f
+        const val ALT_INSET = .1f
+        const val ALT_ALPHA = .6f
         /** How much of a lit key's size goes away, so that it looks pushed in. */
         const val PRESS_DEPTH = .06f
         const val HEAT_FADE_PER_FRAME = .055f

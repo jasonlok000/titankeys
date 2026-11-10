@@ -1,5 +1,5 @@
 import { Canvas, CanvasIcon, CanvasPath, CanvasText, type IconAsset, Rectangle } from "ink";
-import { arrowBack, backspace, circle, gridView, keyboardReturn, shift, spaceBar } from "ink/icons";
+import { arrowBack, backspace, circle, keyboardReturn, shift, spaceBar, square } from "ink/icons";
 import type { Point } from "./atlas";
 import { MUTED, ORANGE } from "./brand";
 
@@ -13,7 +13,7 @@ const rows: Label[][] = [
 ];
 const bottom: [Label, number][] = [
   [{ icon: shift }, 1.2], [{ icon: circle }, 1.2], [{ icon: arrowBack }, 1.2], [{ icon: spaceBar }, 2.8],
-  [{ icon: gridView }, 1.2], [{ text: "fn" }, 1.2], [{ icon: shift }, 1.2],
+  [{ icon: square }, 1.2], [{ text: "fn" }, 1.2], [{ icon: shift }, 1.2],
 ];
 // Fills the screen's content width, with roughly square keys.
 const width = 594;

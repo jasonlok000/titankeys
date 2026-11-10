@@ -18,7 +18,12 @@ import android.os.Looper
 import android.provider.Settings
 import android.text.Editable
 import android.text.InputType
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.TextUtils
 import android.text.TextWatcher
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
@@ -253,6 +258,8 @@ class GuideActivity : Activity() {
     private lateinit var field: GuideField
     private lateinit var keys: GuideKeyboardView
     private lateinit var chapter: TextView
+    /** The line above the field that suggests what to type. */
+    private lateinit var script: TextView
 
     private val keyboardChanges = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) = checkKeyboard()
@@ -287,10 +294,6 @@ class GuideActivity : Activity() {
         flow.step.help?.let(::showHint)
         offerFor(flow.step)
     }
-    private val reseed = Runnable {
-        val seed = flow.step.seed
-        if (!busy && !seed.isNullOrEmpty() && field.text.isEmpty()) putSeed(seed)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -311,7 +314,7 @@ class GuideActivity : Activity() {
         flow.start(preferences.getString(RESUME, null))
         applyTone(GuideTone.Ink)
         backdrop.show(backgroundOf(tone))
-        for (view in listOf(title, body, hint, offer, next, previous, chapter, again, close, segments, field, keys)) view.alpha = 0f
+        for (view in listOf(title, body, hint, offer, next, previous, chapter, again, close, segments, script, field, keys)) view.alpha = 0f
     }
 
     override fun onResume() {
@@ -428,8 +431,17 @@ class GuideActivity : Activity() {
             imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_ENTER_ACTION
             minLines = 1
             maxLines = 2
+            hint = "Your words go here."
             isVerticalScrollBarEnabled = false
             importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
+        }
+        script = TextView(this).apply {
+            typeface = MEDIUM
+            includeFontPadding = false
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(16f), dp(22).toFloat()))
+            contentDescription = "Text to type"
         }
         chapter = TextView(this).apply {
             typeface = HEAVY
@@ -440,8 +452,8 @@ class GuideActivity : Activity() {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(11f), dp(15).toFloat()))
         }
         segments = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-        for (index in 0 until flow.chapterCount) segments.addView(View(this),
-            LinearLayout.LayoutParams(0, dp(SEGMENT_HEIGHT), 1f).apply { marginEnd = dp(4) })
+        for (index in 0 until flow.stepCount) segments.addView(View(this),
+            LinearLayout.LayoutParams(0, dp(SEGMENT_HEIGHT), 1f).apply { marginEnd = dp(3) })
         again = topAction("Start again") { startAgain() }.apply { visibility = View.GONE }
         close = ImageView(this).apply {
             setImageResource(R.drawable.panel_close)
@@ -473,7 +485,8 @@ class GuideActivity : Activity() {
             addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, TITLE_SHARE))
             addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, BODY_SHARE).apply { topMargin = dp(4) })
             addView(hint, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
-            addView(field, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+            addView(script, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+            addView(field, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
             addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(8)
             })
@@ -538,9 +551,10 @@ class GuideActivity : Activity() {
         chapter.setTextColor(GuideMotion.faded(strong, CHAPTER_ALPHA))
         keys.tone = next
         paintNext()
-        paintSegments(flow.chapterIndex)
+        paintSegments(flow.stepIndex)
         val appearance = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
         window.insetsController?.setSystemBarsAppearance(if (onInk) 0 else appearance, appearance)
+        if (::field.isInitialized && ::script.isInitialized) showScript()
     }
 
     /** Next is an outline while the step waits, and filled once the step is done. Back is always a quiet outline. */
@@ -597,7 +611,7 @@ class GuideActivity : Activity() {
 
     private fun reveal(step: GuideStep) {
         keys.appear()
-        for (view in listOf(field, keys, next, previous, chapter, again, close, segments)) view.animate().alpha(1f).setDuration(FADE_MILLIS).start()
+        for (view in listOf(field, keys, next, previous, chapter, again, close, segments, script)) view.animate().alpha(1f).setDuration(FADE_MILLIS).start()
         enter(step)
     }
 
@@ -606,29 +620,70 @@ class GuideActivity : Activity() {
         travel = 0f
         helpShown = false
         passed = false
-        next.visibility = if (step.chapter == GuideChapter.End) View.GONE else View.VISIBLE
+        // At the end Next keeps its room, so that the offer to start typing stays in the middle.
+        next.visibility = if (step.chapter == GuideChapter.End) View.INVISIBLE else View.VISIBLE
         // Back keeps its room on the first step, so that Next does not move.
         previous.visibility = if (flow.canGoBack) View.VISIBLE else View.INVISIBLE
         chapter.text = step.chapter.label
         paintNext()
-        keys.show(step.cue)
         offerFor(step)
         swapIn(title, step.title, 0)
         swapIn(body, step.body, ENTER_STAGGER_MILLIS)
         hideHint()
-        val seed = step.seed
-        if (seed != null) putSeed(seed) else if (panelOpen && step.chapter != GuideChapter.Symbols && step.chapter != GuideChapter.QuickSettings) {
+        // The whole guide is one text. A step that works on text gets the next sentence of the script if the text is too short.
+        val words = field.text.split(' ', '\n').count { it.isNotEmpty() }
+        if (step.needsWords > words) addText(GuideScript.sentenceFrom(GuideScript.progress(field.text.toString())))
+        if (panelOpen && !step.usesPanel) {
             // A skip can leave the panel up where the next step needs the keys.
             input.restartInput(field)
         }
+        showScript()
         step.panelHint?.takeIf { !panelOpen }?.let(::showHint)
-        paintSegments(flow.chapterIndex)
+        paintSegments(flow.stepIndex)
         main.removeCallbacks(showHelp)
         if (step.help != null) main.postDelayed(showHelp, HELP_AFTER_MILLIS)
-        field.hint = step.placeholder.orEmpty()
         if (step.chapter == GuideChapter.End) preferences.edit().remove(RESUME).apply()
         else preferences.edit().putString(RESUME, flow.resumeId).apply()
         busy = false
+        // The stop between the parts is a win already: it shows as done, with the offer to start typing.
+        if (step.pause) {
+            busy = true
+            passed = true
+            backdrop.wipeTo(GuideColours.ORANGE)
+            overlay.sweep()
+            main.postDelayed({ if (passed) applyTone(GuideTone.Orange) }, WIPE_MILLIS)
+        }
+    }
+
+    /**
+     * The line above the field: the script from the next word on, with that word in the accent. The ghost finger on the drawing
+     * of the keys follows the same word on the steps that swipe.
+     */
+    private fun showScript() {
+        val next = GuideScript.progress(field.text.toString())
+        val strong = if (tone == GuideTone.Ink) GuideColours.CREAM else GuideColours.INK
+        val accent = if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK
+        val word = GuideScript.wordAt(next)
+        val rest = (1..SCRIPT_WORDS).joinToString(" ") { GuideScript.wordAt(next + it) }
+        script.text = SpannableStringBuilder().apply {
+            append(word, ForegroundColorSpan(accent), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(StyleSpan(Typeface.BOLD), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            append(" ")
+            append(rest, ForegroundColorSpan(GuideMotion.faded(strong, SCRIPT_REST)), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        val cue = flow.step.cue
+        val shown = if (cue == GuideCue.NextWord) GuideCue.Word(GuideScript.letters(word).ifEmpty { "titan" }) else cue
+        if (shown != keys.cue) keys.show(shown)
+    }
+
+    /** Adds words to the end of the text, as if typed, without a step taking them as done. */
+    private fun addText(words: String) {
+        seeding = true
+        val text = field.text.toString()
+        val joined = if (text.isEmpty() || text.endsWith(' ')) words else " $words"
+        field.text.append(joined)
+        field.setSelection(field.text.length)
+        seeding = false
     }
 
     private fun swapIn(view: TextView, text: String, delay: Long) {
@@ -658,7 +713,7 @@ class GuideActivity : Activity() {
     private fun offerFor(step: GuideStep) {
         val missing = flow.missing
         when {
-            step.chapter == GuideChapter.End -> showOffer("Start typing")
+            step.chapter == GuideChapter.End || step.pause -> showOffer("Start typing")
             !ready -> showOffer("Choose TitanKeys")
             missing != null && (!missing.optional || helpShown) -> showOffer(missing.offer)
             else -> offer.visibility = View.GONE
@@ -674,7 +729,7 @@ class GuideActivity : Activity() {
     private fun offerPressed() {
         val step = flow.step
         when {
-            step.chapter == GuideChapter.End -> leave()
+            step.chapter == GuideChapter.End || step.pause -> leave()
             !ready -> input.showInputMethodPicker()
             else -> flow.missing?.let { need ->
                 writeNeed(need)
@@ -723,22 +778,13 @@ class GuideActivity : Activity() {
         if (!started) begin() else reveal(flow.step)
     }
 
-    private fun putSeed(seed: String) {
-        seeding = true
-        field.setText(seed)
-        field.setSelection(seed.length)
-        seeding = false
-    }
-
     private fun fieldChanged() {
-        if (seeding || !::field.isInitialized) return
+        if (!::field.isInitialized || !::script.isInitialized) return
+        showScript()
+        if (seeding) return
         val start = min(field.selectionStart, field.selectionEnd).coerceAtLeast(0)
         val end = max(field.selectionStart, field.selectionEnd).coerceAtLeast(0)
         handle(KeyboardEvent.FieldChanged(field.text.toString(), start, end))
-        if (field.text.isEmpty() && !flow.step.seed.isNullOrEmpty()) {
-            main.removeCallbacks(reseed)
-            main.postDelayed(reseed, RESEED_MILLIS)
-        }
     }
 
     private fun trace(message: JSONObject) {
@@ -855,7 +901,7 @@ class GuideActivity : Activity() {
 
     /** The high note: lines cross the screen one after the other, the mark lands, and the keys answer. */
     private fun finale(end: GuideStep) {
-        next.visibility = View.GONE
+        next.visibility = View.INVISIBLE
         again.visibility = View.VISIBLE
         again.text = "Again"
         haptics.guideFinale()
@@ -865,9 +911,7 @@ class GuideActivity : Activity() {
         main.postDelayed({
             overlay.hideMark()
             keys.celebrate()
-            seeding = true
-            field.setText("")
-            seeding = false
+            // The text stays: it is what you typed through the whole guide.
             enter(end)
         }, FINALE_MARK_MILLIS)
     }
@@ -971,7 +1015,10 @@ class GuideActivity : Activity() {
         private const val FINALE_STAGGER_MILLIS = 110L
         private const val FINALE_MARK_MILLIS = 1500L
         private const val HELP_AFTER_MILLIS = 9000L
-        private const val RESEED_MILLIS = 700L
+        /** Words of the script that the line above the field shows after the next one. */
+        private const val SCRIPT_WORDS = 24
+        /** How strong the words after the next one are in that line. */
+        private const val SCRIPT_REST = .55f
 
         /** True until the guide has opened once, so it opens by itself after setup. */
         fun due(context: Context) = !context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).getBoolean(SHOWN, false)

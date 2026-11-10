@@ -67,6 +67,13 @@ class SymPanel(
         addView(categories, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         addView(preview, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
     }
+    /** On the clipboard page, the whole clip under a finger, or a message, in the place of the groups. A long clip scrolls. */
+    private val clipLine = TextView(context).apply {
+        typeface = this@SymPanel.typeface
+        includeFontPadding = false
+        visibility = GONE
+    }
+    private val clipMarquee = BandMarquee(clipLine)
     private val grid = LinearLayout(context)
     private val cells = (Layout.letterKeys + Layout.ALT + Layout.SYM + Layout.BACKSPACE + Layout.ENTER).associateWith(::cell)
     private var tabs = emptyList<TextView>()
@@ -187,6 +194,7 @@ class SymPanel(
             }
         }, LayoutParams(LayoutParams.MATCH_PARENT, dp(ROW_HEIGHT)))
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        band.addView(clipLine, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         addView(band, LayoutParams(LayoutParams.MATCH_PARENT, dp(BAND_HEIGHT)))
         // Keep the keys clear of the gesture handle, which draws over the bottom of the keyboard, and of the rounded corners.
         setOnApplyWindowInsetsListener { _, insets ->
@@ -446,6 +454,7 @@ class SymPanel(
         val bandInset = corners.inset((navigationInset + dp(BAND_CONTENT_ABOVE)).toFloat())
         categories.setPadding(bandInset, 0, bandInset, 0)
         preview.setPadding(bandInset + dp(8), 0, bandInset + dp(8), 0)
+        clipLine.setPadding(bandInset + dp(8), 0, bandInset + dp(8), 0)
         for ((index, row) in Layout.rows.take(3).withIndex()) {
             val rowsBelow = 2 - index
             val above = navigationInset + dp(BAND_HEIGHT + rowsBelow * ROW_HEIGHT + ROW_CONTENT_ABOVE)
@@ -481,10 +490,16 @@ class SymPanel(
         if (clipboard) {
             // The whole clip under a finger, or a message, takes the place of the groups, in the middle as on the quick settings.
             val text = clipBandText()
-            preview.text = text.orEmpty()
-            preview.visibility = if (text != null) VISIBLE else GONE
+            clipLine.visibility = if (text != null) VISIBLE else GONE
             categories.visibility = if (text != null) GONE else VISIBLE
-        } else preview.text = detail(hover) ?: if (quick) QUICK_TITLE else ""
+            clipLine.sized(BAND_TEXT_SIZE, BAND_TEXT_LARGEST)
+            clipLine.setTextColor(look.ink)
+            if (text != null) clipMarquee.show(text) else clipMarquee.stop()
+        } else {
+            preview.text = detail(hover) ?: if (quick) QUICK_TITLE else ""
+            clipLine.visibility = GONE
+            clipMarquee.stop()
+        }
         showClipFields()
         // A finger on a clip marks its whole field, as a finger on a symbol marks its key.
         val mark = clipIndex(hover)?.let { "clip$it" }
@@ -558,6 +573,9 @@ class SymPanel(
         /** Enough of a clip for two lines. The field ends it with "…" where it runs out of room. */
         const val CLIP_PREVIEW = 160
         const val CLIP_PIN = 11
+        /** The clip under a finger in the strip at the bottom. */
+        const val BAND_TEXT_SIZE = 15f
+        const val BAND_TEXT_LARGEST = 16f
         const val QUICK_TITLE = "Quick settings"
         const val SLIDE_DISTANCE = 12
         const val SLIDE_ALPHA = .5f

@@ -153,10 +153,8 @@ object Announcements {
 
     /** Opens a page of the app, through Ink's own way to open a page from a notification. */
     fun openPage(context: Context, page: String, request: Int): PendingIntent {
-        val intent = (context.packageManager.getLaunchIntentForPackage(context.packageName) ?: Intent())
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            .putExtra("com.vandam.ink.notification.HREF", page)
-        return PendingIntent.getActivity(context, request, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        return PendingIntent.getActivity(context, request, Connected.pageIntent(context, page),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
     fun openLink(context: Context, url: String) {

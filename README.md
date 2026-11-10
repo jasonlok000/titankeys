@@ -242,7 +242,7 @@ This installs **TitanKeys Debug**, a separate test build.
 
 Bugs and ideas are welcome in [issues](https://github.com/jasonlok000/titankeys/issues). If something also happens in Atlas, please report it [there](https://github.com/juleshall4/atlas/issues) too.
 
-You can also help swipe typing get better for every Titan 2 Elite: **Settings > Help train swipe typing** sends examples of your swipes, only if you agree. The guide offers it once, at its end. See [Privacy](#privacy) for what is sent.
+You can also help swipe typing get better for every Titan 2 Elite: **Settings > Share swipes** sends examples of your swipes, only if you agree. The guide offers it at its end until you answer. See [Privacy](#privacy) for what is sent.
 
 Work is shared in both directions. Anything here is free to use in Atlas, and improvements from Atlas are welcome here.
 

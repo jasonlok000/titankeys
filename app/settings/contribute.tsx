@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Field, Row, Screen, Section, Text, Toggle, back, openURL, useAction, useSnapshot } from "ink";
-import { arrowOutward } from "ink/icons";
+import { arrowOutward, chevronRight } from "ink/icons";
+import { MUTED, ORANGE } from "../../lib/brand";
 import { connectedState, copyContributorId, declineContributions, deleteQueued, kilobytes, PRIVACY_URL, setContribute } from "../../lib/connected";
 import { contributeText as text, swipes } from "../../lib/connected-text";
-import { Disclosure } from "../../lib/contribute";
+import { Disclosure, SMALL, StatusLine } from "../../lib/contribute";
 
 export const contributeLabel = (on: boolean) => on ? "On" : "Off";
 
@@ -15,31 +16,28 @@ export default function Contribute() {
   const state = result.data;
   // The contributor ID and deletion stay here after the user stops, so that what was sent can still be deleted.
   const idSection = state.contributorId !== "" && <Section title={text.idTitle}>
-    <Text>{state.contributorId}</Text>
+    <Text size={SMALL}>{state.contributorId}</Text>
     <Field label={text.copy} onPress={() => void copyContributorId().then(() => setCopied(true))}>{copied ? text.copied : ""}</Field>
-    <Text>{text.idNote}</Text>
+    <Text size={SMALL}>{text.idNote}</Text>
   </Section>;
   if (!state.contribute) return <Disclosure onAgree={() => save.run(true)} onDecline={() => void declineContributions().then(back)}>
-    {idSection}
     {state.contributorId !== "" && <Field label={text.deleteAll} href="/settings/contribute-delete" />}
+    {idSection}
   </Disclosure>;
   const notes = [!state.serverReady && text.notReady, state.deletionPending && text.deletionWaiting].filter(Boolean).join(" ");
-  return <Screen title={text.title} note={notes || undefined}>
-    <Section title={text.title}>
+  return <Screen title={text.title} subtitle={text.onSubtitle} note={notes || undefined}>
+    <Section title={text.statusTitle}>
+      {/* One accent for what was sent, muted for what still waits. */}
+      <StatusLine label={text.sentLine} value={swipes(state.sent)} colour={ORANGE} />
+      <StatusLine label={text.waitingLine} value={`${swipes(state.queued)} · ${kilobytes(state.queuedBytes)}`} colour={MUTED} />
       <Toggle label={text.toggle} value={state.contribute} onChange={on => save.run(on)} />
     </Section>
-    <Section title={text.waitingTitle}>
-      <Field label={text.waiting}>{`${swipes(state.queued)}, ${kilobytes(state.queuedBytes)}`}</Field>
+    <Section title={text.deleteTitle}>
       <Field label={text.deleteWaiting} disabled={state.queued === 0} onPress={() => void deleteQueued()}>{""}</Field>
-    </Section>
-    <Section title={text.sentTitleOn}>
-      <Field label={text.sentCount}>{swipes(state.sent)}</Field>
       <Field label={text.deleteAll} href="/settings/contribute-delete" />
     </Section>
     {idSection}
-    <Section title={text.sentTitle}>
-      {text.sent.map(point => <Text key={point}>{`• ${point}`}</Text>)}
-    </Section>
+    <Row title={text.about} endIcon={chevronRight} href="/settings/contribute-about" />
     <Row title={text.policy} endIcon={arrowOutward} onPress={() => void openURL(PRIVACY_URL)} />
   </Screen>;
 }

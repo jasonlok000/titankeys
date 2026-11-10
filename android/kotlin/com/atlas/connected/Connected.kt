@@ -134,6 +134,15 @@ object Connected {
 
     private val FIELD_TOKEN = Any()
 
+    /**
+     * An intent that opens a page of the app through Ink's own way to open a page from a notification. The app's activity
+     * is singleTask, so this brings it to the front, closes anything above it, such as the guide, and opens the page.
+     */
+    fun pageIntent(context: Context, page: String): android.content.Intent =
+        (context.packageManager.getLaunchIntentForPackage(context.packageName) ?: android.content.Intent())
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra("com.vandam.ink.notification.HREF", page)
+
     /** Opens an HTTPS connection with nothing that identifies the phone: no cookies, no cache, a plain user agent. */
     internal fun open(url: String, method: String): HttpsURLConnection {
         val connection = URL(url).openConnection() as? HttpsURLConnection ?: throw IOException("Only HTTPS is allowed")

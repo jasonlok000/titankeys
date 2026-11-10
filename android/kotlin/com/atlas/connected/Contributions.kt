@@ -53,13 +53,19 @@ object Contributions {
         Connected.schedule(context)
     }
 
-    /** The guide offers contributions once, at its end. This marks the offer as due, unless the user already answered. */
+    /** The guide offers contributions at its end until the user answers. This marks the offer as due for the app too. */
     fun guideEnded(context: Context) {
         val preferences = Connected.preferences(context)
         if (preferences.getString(OFFER, null) == null) preferences.edit().putString(OFFER, DUE).apply()
     }
 
     fun offerDue(context: Context) = Connected.preferences(context).getString(OFFER, null) == DUE
+
+    /** The user has neither agreed nor said no yet, so the guide's last slide offers it. */
+    fun unanswered(context: Context) = !enabled(context) && Connected.preferences(context).getString(OFFER, null) != ANSWERED
+
+    /** The disclosure page, with "I agree" and "No thanks". */
+    const val PAGE = "/settings/contribute"
 
     /** "No thanks": the offer does not come back. Settings still has the switch. */
     fun declined(context: Context) {

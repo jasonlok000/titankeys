@@ -43,6 +43,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.atlas.connected.Connected
 import com.atlas.connected.Contributions
 import com.atlas.engine.TypingSettings
 import org.json.JSONObject
@@ -805,6 +806,8 @@ class GuideActivity : Activity() {
         swapIn(title, step.title, 0)
         swapIn(body, step.body, ENTER_STAGGER_MILLIS)
         hideHint()
+        // While the user has not answered the offer to share swipes, the last slide makes it, under the title.
+        if (step.chapter == GuideChapter.End && Contributions.unanswered(this)) showHint(SHARE_HINT)
         // The whole guide is one text. A step that works on text gets more of the script if the text is too short.
         val words = field.text.split(' ', '\n').count { it.isNotEmpty() }
         if (step.needsWords > words) addText(GuideScript.continueFrom(GuideScript.progress(field.text.toString()), step.needsWords - words))
@@ -1030,6 +1033,7 @@ class GuideActivity : Activity() {
     private fun offerFor(step: GuideStep) {
         val missing = flow.missing
         when {
+            step.chapter == GuideChapter.End && Contributions.unanswered(this) -> showOffer(SHARE_OFFER)
             step.chapter == GuideChapter.End || step.pause -> showOffer("Start typing")
             !ready -> showOffer("Choose TitanKeys")
             missing != null && (!missing.optional || helpShown) -> showOffer(missing.offer)
@@ -1050,6 +1054,11 @@ class GuideActivity : Activity() {
         }
         val step = flow.step
         when {
+            step.chapter == GuideChapter.End && Contributions.unanswered(this) -> {
+                // The app shows the full disclosure, with "I agree" and "No thanks". Nothing is shared before that.
+                startActivity(Connected.pageIntent(this, Contributions.PAGE))
+                finish()
+            }
             step.chapter == GuideChapter.End || step.pause -> leave()
             !ready -> input.showInputMethodPicker()
             else -> flow.missing?.let { need ->
@@ -1483,6 +1492,9 @@ class GuideActivity : Activity() {
         private const val TAG = "TitanKeysGuide"
         private const val PLAYGROUND = "playground"
         private const val PLAYGROUND_LABEL = "Playground"
+        /** The last slide's offer to share swipes (#34), while it is unanswered. The close button still just leaves. */
+        private const val SHARE_HINT = "Help make swiping better on every Titan: share your swipes, if you agree."
+        private const val SHARE_OFFER = "Share your swipes"
         private const val PLAYGROUND_TITLE = "TitanKeys"
         private const val PLAYGROUND_BODY = "Type or swipe anything. Follow the line above, or write your own."
 

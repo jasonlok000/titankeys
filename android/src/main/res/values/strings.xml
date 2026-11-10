@@ -27,4 +27,6 @@
     <!-- Shows once, under the first clip that the strip offers. -->
     <string name="strip_clip_hint">Older clips: push Sym, then A</string>
     <string name="contacts_permission_in_settings">To use names from your contacts, allow Contacts for TitanKeys on this page.</string>
+    <!-- The playground's live speed, after the number, in place of the name while you type. -->
+    <string name="playground_wpm">" wpm"</string>
 </resources>

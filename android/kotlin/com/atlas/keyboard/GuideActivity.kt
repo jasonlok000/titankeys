@@ -25,6 +25,7 @@ import android.text.TextUtils
 import android.text.TextWatcher
 import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.util.Log
 import android.util.TypedValue
@@ -447,6 +448,8 @@ class GuideActivity : Activity() {
         stopTrace = null
         GuideHooks.script = null
         contentResolver.unregisterContentObserver(keyboardChanges)
+        // A hidden playground keeps no clock going; its speed starts over when you type again.
+        main.removeCallbacks(wpmTick)
     }
 
     override fun onDestroy() {
@@ -1291,7 +1294,55 @@ class GuideActivity : Activity() {
         if (!busy && ready) judge(KeyboardEvent.Moved(travel, lifted))
     }
 
+    // The playground's speed: while you type, the name turns into words a minute, and the screen warms towards orange.
+
+    private val wpm = WpmMeter()
+    /** How orange the playground is now, from 0 to 1. It eases towards the speed, or jumps there with animations off. */
+    private var heat = 0f
+    private var showingWpm = false
+    private val wpmTick = object : Runnable {
+        override fun run() = showWpm()
+    }
+
+    private fun countWpm(event: KeyboardEvent) {
+        val now = SystemClock.uptimeMillis()
+        when (event) {
+            is KeyboardEvent.Pushed, is KeyboardEvent.Tapped, is KeyboardEvent.Recognised, is KeyboardEvent.DeletedWord,
+            is KeyboardEvent.Chosen -> wpm.input(now, field.length())
+            is KeyboardEvent.FieldChanged -> wpm.text(event.text.length)
+            else -> return
+        }
+        if (wpm.active(now) && !showingWpm) showWpm()
+    }
+
+    private fun showWpm() {
+        main.removeCallbacks(wpmTick)
+        val now = SystemClock.uptimeMillis()
+        val speed = wpm.wpm(now)
+        val target = WpmMeter.heat(speed)
+        heat = if (GuideMotion.enabled) heat + (target - heat) * WPM_EASE else target
+        if (speed != null) {
+            showingWpm = true
+            title.text = SpannableStringBuilder("$speed").apply {
+                val start = length
+                append(getString(R.string.playground_wpm))
+                setSpan(RelativeSizeSpan(WPM_LABEL_SIZE), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        } else if (showingWpm) {
+            showingWpm = false
+            title.text = PLAYGROUND_TITLE
+        }
+        backdrop.show(GuideMotion.blend(backgroundOf(tone), GuideColours.ORANGE, heat * WPM_MOST_ORANGE))
+        // It stops ticking once the burst is over and the colour is back.
+        if (speed != null || heat > .005f) main.postDelayed(wpmTick, WPM_TICK_MILLIS)
+        else {
+            heat = 0f
+            backdrop.show(backgroundOf(tone))
+        }
+    }
+
     private fun handle(event: KeyboardEvent) {
+        if (playground) countWpm(event)
         // The keyboard reports its modifiers whenever it redraws them, as when a slide opens a panel. That is not you acting.
         if (::phantom.isInitialized && event !is KeyboardEvent.ModifierState) acted()
         when (event) {
@@ -1518,6 +1569,12 @@ class GuideActivity : Activity() {
         private const val PLAYGROUND = "playground"
         private const val PLAYGROUND_LABEL = "Playground"
         private const val PLAYGROUND_TITLE = "TitanKeys"
+        /** The playground's speed updates this often while you type, and its colour eases this much of the way each time. */
+        private const val WPM_TICK_MILLIS = 120L
+        private const val WPM_EASE = .25f
+        private const val WPM_LABEL_SIZE = .35f
+        /** At full speed the screen is this much of the way to orange, so that the words stay easy to read. */
+        private const val WPM_MOST_ORANGE = .85f
         private const val PLAYGROUND_BODY = "Type or swipe anything. Follow the line above, or write your own."
 
         // The look, in dp. These are safe to change. Words fit their box at any system font size, because the boxes set their size.

@@ -28,6 +28,7 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
 )
 
 fun main() {
+    playgroundSpeed()
     everyStepIsReachable()
     theStepsHaveOkayWords()
     oneStepForEachIdea()
@@ -281,6 +282,28 @@ private fun theTrailFollowsTouchSize() {
     check(wobble.zipWithNext().all { (a, b) -> kotlin.math.abs(a - b) < .06f }) { "A touch wavering by a step should not flicker: $wobble" }
     check(trail.next(.45f, .4f, 4) < 1.1f) { "One larger point should only start to thicken the trail" }
     same(trail.next(.45f, .4f, 0), trail.next(.45f, .4f, 0), "A point of unknown size should keep the thickness")
+}
+
+/** The playground's speed: one burst from the first input, five characters a word, and gone after a quiet while. */
+private fun playgroundSpeed() {
+    val meter = WpmMeter()
+    same(meter.wpm(0), null, "Before any typing there is no speed")
+    meter.input(1000, 0)
+    meter.text(5)
+    same(meter.wpm(2000), 15, "One word in the first seconds counts over the shortest span, so it is not a wild number")
+    for (i in 1..60) meter.input(1000L + i * 1000, 5 + i * 5)
+    same(meter.wpm(61_000), 61, "Sixty more words in a minute is about sixty words a minute")
+    same(meter.active(61_000 + WpmMeter.IDLE_MILLIS), true, "The burst lasts through a short pause")
+    same(meter.wpm(61_001 + WpmMeter.IDLE_MILLIS), null, "After the quiet while the speed goes, and the name comes back")
+    meter.input(100_000, 400)
+    meter.text(410)
+    same(meter.wpm(105_000), 24, "A new burst counts from its own start, not from the text before it")
+    meter.input(105_500, 300)
+    same(meter.wpm(106_000), 0, "Deleting gives no negative speed")
+    same(WpmMeter.heat(null), 0f, "No speed, no orange")
+    same(WpmMeter.heat(90), 1f, "Full orange near ninety words a minute")
+    same(WpmMeter.heat(200), 1f, "It saturates there")
+    check(WpmMeter.heat(30) < WpmMeter.heat(60) && WpmMeter.heat(30) < .3f) { "Slow typing barely warms the screen" }
 }
 
 /** #59: a demonstration types a word's marks as the keyboard really does, and counting still ignores them. */

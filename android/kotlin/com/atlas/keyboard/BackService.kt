@@ -8,7 +8,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.ApplicationInfo
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
@@ -51,9 +50,11 @@ class BackService : AccessibilityService() {
 
     override fun onServiceConnected() {
         current = this
-        debuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        // The Debug build is the same app under its own package name, and Android does not mark it debuggable.
+        debuggable = packageName.endsWith(".debug")
         locked = getSystemService(KeyguardManager::class.java).isKeyguardLocked
         window = TouchpadOverlay(this, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, HIGH_TITLE, ::screenTouched) { event ->
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) note("touchpad down at the window above the shade")
             touchpad?.invoke(event) == true
         }
         val filter = IntentFilter().apply {
@@ -91,14 +92,20 @@ class BackService : AccessibilityService() {
 
     /** Only window changes from the shade arrive here, and only while the keyboard wants the touchpad. See [applyInfo]. */
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || event.packageName?.toString() != SYSTEM_UI) return
+        if (event == null) return
+        val shade = event.packageName?.toString() == SYSTEM_UI
+        // DIAGNOSTIC for #28, Debug build only: what this firmware sends. Other apps' events show no text.
+        note("event ${AccessibilityEvent.eventTypeToString(event.eventType)} package=${event.packageName} class=${event.className}" +
+            " changes=0x${Integer.toHexString(event.contentChangeTypes)} windowChanges=0x${Integer.toHexString(event.windowChanges)}" +
+            " window=${event.windowId}" + if (shade) " text=${event.text}" else "")
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || !shade) return
         high.panelChanged(event.contentChangeTypes, SystemClock.uptimeMillis())
-        note("shade changes=0x${Integer.toHexString(event.contentChangeTypes)} class=${event.className} text=${event.text}")
         updateTouchpad()
     }
 
     /** Every screen touch outside the window reaches it, without its place. The touchpad's own gestures do not count. */
     private fun screenTouched(event: MotionEvent) {
+        note("outside source=0x${Integer.toHexString(event.source)} device=${event.device?.name} x=${event.x} y=${event.y}")
         if (Touchpad.fromTouchpad(event)) return
         high.touched(SystemClock.uptimeMillis())
         note("screen touched")
@@ -141,8 +148,11 @@ class BackService : AccessibilityService() {
         val info = serviceInfo ?: return
         info.flags = if (keys) info.flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
             else info.flags and AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS.inv()
-        info.eventTypes = if (shade) AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED else 0
-        info.packageNames = if (shade) arrayOf(SYSTEM_UI) else null
+        info.eventTypes = if (!shade) 0 else if (debuggable) DIAGNOSTIC_EVENTS else AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        info.packageNames = if (shade && !debuggable) arrayOf(SYSTEM_UI) else null
+        // DIAGNOSTIC for #28, Debug build only: whether window focus changes arrive without access to the screen's content.
+        info.flags = if (shade && debuggable) info.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            else info.flags and AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS.inv()
         serviceInfo = info
         filtering = keys
         watchingShade = shade
@@ -153,6 +163,7 @@ class BackService : AccessibilityService() {
         private const val HIGH_TITLE = "AtlasInputMethodTouchpadHigh"
         private const val SYSTEM_UI = "com.android.systemui"
         private const val SHADE_TAG = "AtlasShade"
+        private const val DIAGNOSTIC_EVENTS = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or AccessibilityEvent.TYPE_WINDOWS_CHANGED
 
         @Volatile private var current: BackService? = null
         @Volatile private var watcher: ((KeyEvent) -> Boolean)? = null

@@ -39,6 +39,10 @@ class Strip(
         data class Menu(override val word: String, val forget: Boolean) : Notice
         data class Forgot(override val word: String) : Notice
         data class Saved(override val word: String) : Notice
+        /** A second of fun when the keyboard has had to hide and show itself for Microsoft Teams. It has no buttons. */
+        object TeamsEgg : Notice {
+            override val word = ""
+        }
     }
 
     private val typeface = resources.getFont(R.font.inter_regular)
@@ -307,6 +311,7 @@ class Strip(
             is Notice.Menu -> context.getString(R.string.strip_menu_word, shown.word)
             is Notice.Forgot -> context.getString(R.string.strip_forgot, shown.word)
             is Notice.Saved -> context.getString(R.string.strip_saved, shown.word)
+            Notice.TeamsEgg -> context.getString(R.string.strip_teams_egg)
             null -> ""
         }
         noticeLabel.setTextColor(look.ink)
@@ -314,7 +319,7 @@ class Strip(
             is Notice.Menu -> listOfNotNull(Action.Save to R.string.strip_save, (Action.Forget to R.string.strip_forget).takeIf { shown.forget },
                 Action.Close to R.string.strip_back)
             is Notice.Forgot -> listOf(Action.Undo to R.string.strip_undo)
-            is Notice.Saved, null -> emptyList()
+            is Notice.Saved, Notice.TeamsEgg, null -> emptyList()
         }
         for ((index, button) in noticeButtons.withIndex()) {
             val action = buttons.getOrNull(index)

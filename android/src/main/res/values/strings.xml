@@ -8,6 +8,8 @@
     <string name="strip_save">Save</string>
     <string name="strip_forget">Forget</string>
     <string name="strip_back">Back</string>
+    <!-- Shows on the strip for a second after TitanKeys has hidden and shown itself to work around Microsoft Teams. The owner's wish. -->
+    <string name="strip_teams_egg">FUCK MICROSOFT!!</string>
     <string name="strip_saved">Saved “%1$s”</string>
 
     <!-- The clipboard page of the Sym panel, and the newest clip on the strip. -->

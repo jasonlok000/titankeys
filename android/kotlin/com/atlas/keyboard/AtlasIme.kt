@@ -175,6 +175,23 @@ class AtlasIme : InputMethodService() {
         showStrip.run()
     }
 
+    /** The owner's word on Teams, for about a second after the strip comes back from [recycle]. Never over a word's menu. */
+    private fun showTeamsEgg() {
+        val strip = strip ?: return
+        if (strip.notice != null) return
+        strip.notice = Strip.Notice.TeamsEgg
+        main.removeCallbacks(endTeamsEgg)
+        main.postDelayed(endTeamsEgg, TEAMS_EGG_MILLIS)
+    }
+
+    private val endTeamsEgg = Runnable { clearTeamsEgg() }
+
+    /** Any key or touch clears it at once, so it never stands in the way of typing. */
+    private fun clearTeamsEgg() {
+        main.removeCallbacks(endTeamsEgg)
+        if (strip?.notice == Strip.Notice.TeamsEgg) strip?.notice = null
+    }
+
     private fun cancelRecycle() {
         main.removeCallbacks(recycle)
         main.removeCallbacks(recycleShow)
@@ -753,6 +770,7 @@ class AtlasIme : InputMethodService() {
         super.onWindowShown()
         if (recycling) {
             recycling = false
+            showTeamsEgg()
         } else if (editing && !tallTest() && SystemClock.uptimeMillis() - windowHiddenAt < BOUNCE_MILLIS) {
             val recycles = currentInputEditorInfo?.packageName in BOUNCE_APPS
             main.removeCallbacks(recycle)
@@ -1224,6 +1242,7 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun motion(event: MotionEvent) {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) clearTeamsEgg()
         // The panel works in every field, also where the touchpad types no words.
         if (!field.words && !panelOpen) return
         typedInField = true
@@ -1818,6 +1837,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        clearTeamsEgg()
         if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
@@ -2144,6 +2164,8 @@ class AtlasIme : InputMethodService() {
         private const val RECYCLE_DELAY_MILLIS = 500L
         /** How long the strip stays hidden, from the moment its window has gone. */
         private const val RECYCLE_GAP_MILLIS = 150L
+        /** How long the strip shows its word on Teams. */
+        private const val TEAMS_EGG_MILLIS = 1000L
         /** If the window has not gone by then, the strip comes back anyway. */
         private const val RECYCLE_HIDE_TIMEOUT_MILLIS = 1000L
         /** The height test adds this above the 88 px strip, for a 200 px window. */

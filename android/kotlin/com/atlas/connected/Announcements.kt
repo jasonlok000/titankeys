@@ -86,7 +86,7 @@ object Announcements {
     }
 
     /** The entries for this app and build now, newest first, as the News page shows them. */
-    fun entries(context: Context): List<Feed.Entry> {
+    internal fun entries(context: Context): List<Feed.Entry> {
         val text = Connected.preferences(context).getString(FEED, null) ?: return emptyList()
         val feed = try { Feed.read(text) } catch (error: Feed.Invalid) { return emptyList() }
         val now = System.currentTimeMillis()

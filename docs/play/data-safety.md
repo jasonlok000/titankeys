@@ -33,7 +33,7 @@ The form describes **the Play build only**, and every version of it on Play. If 
 | Does your app collect or share any of the required user data types? | **Yes** (contributions only) |
 | Is all of the user data collected by your app encrypted in transit? | **Yes.** HTTPS, and each batch is also sealed on the phone with the project's public key (X25519 and AES-GCM). |
 | Account creation | **My app doesn't allow users to create an account.** **Not verified:** the exact wording of this question in the 2026 form. |
-| Do you provide a way for users to request that their data is deleted? | **Yes.** "Delete my contributions" in the app removes everything stored for that contributor ID. Also offer a way by email (see the open questions). |
+| Do you provide a way for users to request that their data is deleted? | **Yes.** "Delete my contributions" in the app removes everything stored for that contributor ID. Also by email to vignette@everyones-niche.com with the contributor ID, as the privacy policy says. |
 | Independent security review | No (optional badge) |
 
 ### Data types

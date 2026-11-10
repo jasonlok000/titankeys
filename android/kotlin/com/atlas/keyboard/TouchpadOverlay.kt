@@ -18,14 +18,13 @@ import android.view.WindowManager
  * sends touchpad events here only because [TouchpadHold] keeps the keyboard's reported status on, and they stop here.
  *
  * The firmware also gives a gesture to any window above this one that a screen touch at the same place would hit. A pop-up
- * notification is such a window, so the Back service puts a second overlay above it. See [HighTouchpad]. That one is made
- * with [type] for accessibility overlays, and it also hears [outside] whenever the screen is touched.
+ * notification is such a window, so the Back service puts a second overlay above it, made with [type] for accessibility
+ * overlays. See [BackService.touchpad].
  */
 class TouchpadOverlay(
     private val context: Context,
     private val type: Int = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
     private val title: String = TITLE,
-    private val outside: ((MotionEvent) -> Unit)? = null,
     private val touchpad: (MotionEvent) -> Boolean,
 ) {
     private val windows = context.getSystemService(WindowManager::class.java)
@@ -37,18 +36,12 @@ class TouchpadOverlay(
         if (view != null) return
         if (type == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY && !Settings.canDrawOverlays(context)) return
         val catcher = object : View(context) {
-            override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-                if (event.actionMasked == MotionEvent.ACTION_OUTSIDE) {
-                    outside?.invoke(event)
-                    return false
-                }
-                return touchpad(event)
-            }
+            override fun dispatchTouchEvent(event: MotionEvent) = touchpad(event)
             override fun dispatchGenericMotionEvent(event: MotionEvent) = touchpad(event)
         }
-        var flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-        if (outside != null) flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-        val params = WindowManager.LayoutParams(1, 1, type, flags, PixelFormat.TRANSLUCENT).apply {
+        val params = WindowManager.LayoutParams(1, 1, type,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            PixelFormat.TRANSLUCENT).apply {
             gravity = Gravity.TOP or Gravity.START
             // Below the obscuring limit, so touches on apps under this pixel are never blocked.
             alpha = .5f

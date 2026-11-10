@@ -51,6 +51,7 @@ class AtlasIme : InputMethodService() {
     private lateinit var haptics: Haptics
     private lateinit var composer: Composer
     private lateinit var autocorrect: AutocorrectLoader
+    private lateinit var phoneNames: PhoneNameSource
     private lateinit var editor: ConnectionEditor
     private lateinit var overlay: TouchpadOverlay
     private val contact = Contact()
@@ -171,6 +172,7 @@ class AtlasIme : InputMethodService() {
 
     private val confirmDoubleTap = Runnable {
         if (!cursorGesture.confirm()) return@Runnable
+        Recording.sink?.gesture("double", SystemClock.uptimeMillis(), "")
         finishHeldTaps(type = false)
         haptics.click()
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
@@ -230,6 +232,7 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun startCursor(drag: CursorGesture.Drag, samples: List<Sample>) {
+        Recording.sink?.gesture("drag", samples.lastOrNull()?.time ?: SystemClock.uptimeMillis(), "words=${drag.words}")
         KeyboardEvents.publish { KeyboardEvent.CursorStarted(drag.words) }
         cursor.start(drag.landed, drag.words)
         cursor.move(samples)
@@ -327,6 +330,7 @@ class AtlasIme : InputMethodService() {
             }
         }
         autocorrect = AutocorrectLoader(this, SwipeTyping.get(this))
+        phoneNames = PhoneNameSource(this, SwipeTyping.get(this)).also { it.start() }
         // The firmware hands touchpad events to the topmost window titled "InputMethod", which is this
         // keyboard's window. They arrive at the window, not at any view, so catch them there.
         val window = window.window!!
@@ -1103,7 +1107,10 @@ class AtlasIme : InputMethodService() {
                 cursorPath = ArrayList(samples.filter { it.valid })
                 // With Alt on or the panel open the touchpad does not type, so the cursor waits until they are off.
                 // A finger the contact ignored landed while typing, so it must not start the cursor.
-                cursorGesture.down(first, cursorControl && !altOrPanel && contact.travel != null)
+                val gestureCounts = cursorControl && !altOrPanel && contact.travel != null
+                Recording.sink?.gesture("down", first.time, "counts=$gestureCounts cursorControl=$cursorControl " +
+                    "altOrPanel=$altOrPanel contact=${contact.travel != null}")
+                cursorGesture.down(first, gestureCounts)
                 cursorGesture.move(samples.drop(1))?.let {
                     startCursor(it, samples.drop(1))
                     return
@@ -1142,6 +1149,7 @@ class AtlasIme : InputMethodService() {
             MotionEvent.ACTION_UP -> {
                 endDeleteHold()
                 val doubleTapped = cursorGesture.up(samples, event.eventTime)
+                Recording.sink?.gesture("up", event.eventTime, "doubleTapped=$doubleTapped")
                 if (cursor.active) {
                     main.removeCallbacks(stepCursor)
                     cursor.move(samples)
@@ -1267,6 +1275,7 @@ class AtlasIme : InputMethodService() {
 
     /** A key press or something else interrupted the touchpad, so this ends cursor mode and calls off a double tap. */
     private fun endCursor() {
+        Recording.sink?.gesture("cancel", SystemClock.uptimeMillis(), "")
         stopCursor()
         main.removeCallbacks(confirmDoubleTap)
         cursorGesture.cancel(SystemClock.uptimeMillis())
@@ -2012,6 +2021,7 @@ class AtlasIme : InputMethodService() {
         if (hold.held) hideHeldWindow()
         unregisterReceiver(screenOn)
         clipboard?.removePrimaryClipChangedListener(clipChanged)
+        phoneNames.stop()
         modifiers.closePanel()
         panelKeys.clear()
         updateKeyWatch()

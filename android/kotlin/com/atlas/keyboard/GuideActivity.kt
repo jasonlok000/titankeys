@@ -855,8 +855,8 @@ class GuideActivity : Activity() {
         return GuideCue.Word(GuideScript.letters(word).ifEmpty { "titan" })
     }
 
-    // Demonstrations. When nobody acts for a while, the slide shows its gesture by itself, slowly and now and then, in grey over
-    // the field. It types nothing, and anything that you do stops it.
+    // Demonstrations. A slide shows its gesture by itself, in grey over the field, again and again until you take over. It types
+    // nothing. Anything that you do stops it at once, and it starts again after a quiet while.
 
     private var demoStart = -1L
     private var demoLength = 0L
@@ -865,6 +865,14 @@ class GuideActivity : Activity() {
     /** How many demonstrations this slide has shown, so that a slide with two gestures takes turns between them. */
     private var demoRound = 0
     private var demo: GuideDemo? = null
+    /** The pushes of the word that this demonstration types or swipes, worked out on its first frame. */
+    private var demoPushes: List<DemoPush>? = null
+    /** Which letter key types each mark with Alt, read from the phone's own keyboard. */
+    private val altKeys by lazy {
+        val found = HashMap<Char, String>()
+        for (key in Layout.letterKeys) Keys.letter(key, KeyEvent.META_ALT_ON)?.singleOrNull()?.let { found.putIfAbsent(it, key) }
+        found
+    }
     private val startDemo = Runnable { beginDemo() }
     private val demoTick = Runnable { stepDemo() }
 
@@ -889,6 +897,7 @@ class GuideActivity : Activity() {
         demoLength = if (hasGhost) maxOf(keys.ghostMillis(), DEMO_MILLIS) else DEMO_MILLIS
         demoKeys = 0
         demoTurned = false
+        demoPushes = null
         keys.demo(true)
         // The grey words would sit on top of the empty field's hint.
         field.hint = null
@@ -938,14 +947,19 @@ class GuideActivity : Activity() {
         val lastEnd = text.trimEnd().length
         when (demo) {
             GuideDemo.TypeNext -> {
-                val shown = ((t / TYPE_SHARE) * next.length).toInt().coerceIn(0, next.length)
-                if (shown > demoKeys) {
-                    next.getOrNull(shown - 1)?.takeIf { it.isLetter() }?.let { keys.light(it.uppercaseChar().toString()) }
-                    demoKeys = shown
-                }
-                if (shown > 0) add(gap + next.take(shown))
+                val pushes = pushesFor(next, swiped = false)
+                val shown = ((t / TYPE_SHARE) * pushes.size).toInt().coerceIn(0, pushes.size)
+                lightPushes(pushes, shown)
+                if (shown > 0) add(gap + pushes[shown - 1].text)
             }
-            GuideDemo.SwipeNext -> if (t > SWIPE_LANDS) add(gap + next)
+            // The word lands at the end of the ghost's path, and its marks follow one push at a time.
+            GuideDemo.SwipeNext -> if (t > SWIPE_LANDS) {
+                val pushes = pushesFor(next, swiped = true)
+                val marks = ((t - SWIPE_LANDS) / (MARKS_DONE - SWIPE_LANDS) * pushes.size).toInt()
+                val shown = (1 + marks).coerceIn(1, pushes.size)
+                lightPushes(pushes, shown)
+                add(gap + pushes[shown - 1].text)
+            }
             GuideDemo.FixNext -> when {
                 t > FIX_LANDS -> add(gap + next)
                 t > SWIPE_LANDS / 2 -> add(gap + GuideScript.slip(next))
@@ -987,6 +1001,14 @@ class GuideActivity : Activity() {
         }
         phantom.text = built
         phantom.scrollTo(0, field.scrollY)
+    }
+
+    private fun pushesFor(word: String, swiped: Boolean) = demoPushes
+        ?: GuideScript.pushes(word, swiped, TypingSettings.autoPunctuation(this)) { altKeys[it] }.also { demoPushes = it }
+
+    /** Lights the keys of every push up to [shown] that has not lit yet. */
+    private fun lightPushes(pushes: List<DemoPush>, shown: Int) {
+        while (demoKeys < shown) pushes[demoKeys++].keys.forEach(keys::light)
     }
 
     /** Adds words to the end of the text, as if typed, without a step taking them as done. */
@@ -1237,7 +1259,7 @@ class GuideActivity : Activity() {
         val path = message.getJSONArray("points")
         val points = (0 until path.length()).map { index ->
             val point = path.getJSONArray(index)
-            floatArrayOf(point.getDouble(0).toFloat(), point.getDouble(1).toFloat())
+            floatArrayOf(point.getDouble(0).toFloat(), point.getDouble(1).toFloat(), point.optDouble(2, 1.0).toFloat())
         }
         val reset = message.getBoolean("reset")
         val lifted = message.getString("event") == "lift"
@@ -1255,7 +1277,8 @@ class GuideActivity : Activity() {
     }
 
     private fun handle(event: KeyboardEvent) {
-        if (::phantom.isInitialized) acted()
+        // The keyboard reports its modifiers whenever it redraws them, as when a slide opens a panel. That is not you acting.
+        if (::phantom.isInitialized && event !is KeyboardEvent.ModifierState) acted()
         when (event) {
             is KeyboardEvent.Pushed -> keyName(event.code)?.let {
                 lastKey = it
@@ -1543,12 +1566,13 @@ class GuideActivity : Activity() {
         /** How strong the words after the next one are in that line. */
         private const val SCRIPT_REST = .55f
 
-        // Demonstrations: slow, and now and then. These are safe to change.
-        /** How long nobody acts before a slide shows its gesture again after you act, and the wait before it repeats it. */
-        private const val DEMO_IDLE_MILLIS = 5000L
+        // Demonstrations: back to back until you act. These are safe to change.
+        /** How long nobody acts before a slide shows its gesture again after you act. */
+        private const val DEMO_IDLE_MILLIS = 8000L
         /** When a new slide shows its gesture: as soon as the slide's words have slid in. */
         private const val DEMO_ENTER_MILLIS = ENTER_STAGGER_MILLIS + ENTER_MILLIS
-        private const val DEMO_GAP_MILLIS = 9000L
+        /** The pause between one showing and the next. */
+        private const val DEMO_GAP_MILLIS = 1000L
         /** How long a demonstration with no ghost finger takes. One with a ghost takes as long as the ghost. */
         private const val DEMO_MILLIS = 4200L
         private const val DEMO_FRAME_MILLIS = 33L
@@ -1557,6 +1581,8 @@ class GuideActivity : Activity() {
         /** The part of the demonstration that typing a word takes, and when a swiped word lands, at the end of the ghost's path. */
         private const val TYPE_SHARE = .8f
         private const val SWIPE_LANDS = .72f
+        /** When the last mark after a swiped word is in. */
+        private const val MARKS_DONE = .94f
         /** When the strip puts the right word in place of the slip. */
         private const val FIX_LANDS = .62f
         /** The part that the ghost's taps take, before the cursor moves or the selection shows. */

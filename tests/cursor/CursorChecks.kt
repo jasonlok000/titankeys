@@ -90,6 +90,12 @@ fun main() {
     restingFingerSeriesNeverDrags()
     typingNeverStartsAWordDrag()
     tapKeyWaitsForTheThirdTouch()
+    tapsJustAboveSpaceSteerWithASidewaysDrag()
+    aboveSpaceADragUpIsAWord()
+    aboveSpaceTwoTapsNeverSelectAWord()
+    aboveSpaceOnlyAsWideAsSpace()
+    aboveSpaceOnlyTheLowerHalfOfTheRow()
+    aWordFromVWithoutTapsStaysAWord()
     println("Cursor checks passed")
 }
 
@@ -846,9 +852,14 @@ private fun thirdTouchThatIsHeldDoesNothing() {
 
 private fun thirdTouchTimingMustMatch() {
     val late = Pad()
-    val lateLanded = late.twoTapsThenLand(gap = 151)
+    val lateLanded = late.twoTapsThenLand(gap = 201)
     late.move(at(COLUMN + 1f, lateLanded + 200))
     same(late.started, null, "A third touch after the longest gap must not start a word drag")
+    // The owner's recording had real drags 153 and 173 ms after their taps, so a touch that drags may come later.
+    val slower = Pad()
+    val slowerLanded = slower.twoTapsThenLand(gap = 180)
+    slower.move(at(COLUMN + 1f, slowerLanded + 200))
+    same(slower.words, true, "A third touch that drags may come up to 200 ms after the taps")
     val soon = Pad()
     val soonLanded = soon.twoTapsThenLand(gap = 20)
     soon.move(at(COLUMN + 1f, soonLanded + 200))
@@ -954,4 +965,74 @@ private fun tapKeyWaitsForTheThirdTouch() {
     same(pad.gesture.deciding(landed + 5_000), true, "A tap must wait while the third touch is undecided")
     pad.up(landed + 5_000)
     same(pad.gesture.deciding(landed + 5_001), false, "A held third touch that did nothing must free the tap")
+}
+
+/** The touchpad stops halfway down Space, so the taps may land just above it, over V and B. */
+private const val ABOVE_ROW = 2.8f
+
+private fun tapsJustAboveSpaceSteerWithASidewaysDrag() {
+    val pad = Pad()
+    pad.tap(COLUMN - .3f, 1_000, FIRST_MILLIS, row = ABOVE_ROW)
+    val landed = 1_000 + FIRST_MILLIS + GAP_MILLIS
+    pad.down(at(COLUMN - .3f, landed, ABOVE_ROW))
+    pad.move(*path(COLUMN - .3f, ABOVE_ROW, COLUMN - 1.5f, ABOVE_ROW - .3f, landed))
+    same(pad.words, false, "A tap just above Space, then a sideways drag, steers")
+    same(pad.started != null, true, "The drag above Space should start the cursor")
+}
+
+private fun aboveSpaceADragUpIsAWord() {
+    val pad = Pad()
+    pad.tap(COLUMN - .3f, 1_000, FIRST_MILLIS, row = ABOVE_ROW)
+    val landed = 1_000 + FIRST_MILLIS + GAP_MILLIS
+    pad.down(at(COLUMN - .3f, landed, ABOVE_ROW))
+    pad.move(*path(COLUMN - .3f, ABOVE_ROW, COLUMN, ABOVE_ROW - 1.6f, landed))
+    same(pad.started, null, "Above Space a drag up starts a word, not the cursor")
+}
+
+private fun aboveSpaceTwoTapsNeverSelectAWord() {
+    val pad = Pad()
+    pad.tap(COLUMN - .3f, 1_000, FIRST_MILLIS, row = ABOVE_ROW)
+    pad.tap(COLUMN - .3f, 1_000 + FIRST_MILLIS + GAP_MILLIS, 90, row = ABOVE_ROW)
+    same(pad.selects(), false, "Two quick taps on V or B must never select a word")
+}
+
+/** A tap at [column] and [row], then a touch there that slides a key and a bit sideways. */
+private fun steersFrom(column: Float, row: Float): Boolean {
+    val pad = Pad()
+    pad.tap(column, 1_000, FIRST_MILLIS, row = row)
+    val landed = 1_000 + FIRST_MILLIS + GAP_MILLIS
+    pad.down(at(column, landed, row))
+    val to = if (column > 5f) column - 1.2f else column + 1.2f
+    pad.move(*path(column, row, to, row, landed))
+    return pad.started != null
+}
+
+private fun aboveSpaceOnlyAsWideAsSpace() {
+    same(steersFrom(3.7f, ABOVE_ROW), true, "The zone is as wide as Space, so it takes the edge of C next to V")
+    same(steersFrom(6.3f, ABOVE_ROW), true, "The zone is as wide as Space, so it takes the edge of N next to B")
+    same(steersFrom(3.2f, ABOVE_ROW), false, "Most of C is outside the zone and keeps typing")
+    same(steersFrom(2.5f, ABOVE_ROW), false, "X keeps typing")
+    same(steersFrom(7.5f, ABOVE_ROW), false, "M keeps typing")
+}
+
+private fun aboveSpaceOnlyTheLowerHalfOfTheRow() {
+    same(steersFrom(5f, ABOVE_ROW), true, "The lower half of B takes a tap")
+    same(steersFrom(5f, 2.4f), false, "The upper half of V and B is left to typing")
+    same(steersFrom(5f, 1.5f), false, "The row above never takes the taps")
+}
+
+private fun aWordFromVWithoutTapsStaysAWord() {
+    val pad = Pad()
+    pad.down(at(COLUMN - .3f, 1_000, ABOVE_ROW))
+    pad.move(*path(COLUMN - .3f, ABOVE_ROW, COLUMN - 1.5f, ABOVE_ROW, 1_000), *path(COLUMN - 1.5f, ABOVE_ROW, COLUMN - 2f, 1.5f, 1_100))
+    same(pad.started, null, "A swipe from V or B with no taps before it types a word")
+}
+
+/** A finger's path from one place to another in steps of a fifth of a key, 10 ms apart, after [from] ms. */
+private fun path(column: Float, row: Float, toColumn: Float, toRow: Float, from: Long): Array<Sample> {
+    val steps = 8
+    return Array(steps) { i ->
+        val t = (i + 1f) / steps
+        at(column + (toColumn - column) * t, from + 10L * (i + 1), row + (toRow - row) * t)
+    }
 }

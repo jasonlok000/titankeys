@@ -26,7 +26,7 @@ Every app needs a rating from the International Age Rating Coalition. Apps witho
 
 **Expected result:** the lowest rating everywhere (for example, ESRB Everyone, PEGI 3). **Not verified** until the questionnaire is submitted.
 
-**Note on bad language:** the dictionary and the next-word model could suggest a rude word that the user didn't type. Most keyboards answer "No" here, because the app shows the user's own words back. **Check:** whether TitanKeys filters offensive words from suggestions it makes on its own (next-word suggestions before any letter is typed). If it doesn't, either add a filter or ask the orchestrator whether "Bad language" needs a "Yes".
+**Note on bad language:** the dictionary and the next-word model could suggest a rude word that the user didn't type. Most keyboards answer "No" here, because the app shows the user's own words back. **Decided (owner, 2026-11-10):** TitanKeys does not filter offensive words (#61 dropped). Answer "No", as most keyboards do, since the words come from the user's own typing and a general dictionary, not from content the app presents. If a reviewer questions it, the careful fallback is "Yes", mild, with this explanation.
 
 ## Target audience and content
 

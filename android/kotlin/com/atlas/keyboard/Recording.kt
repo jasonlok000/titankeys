@@ -13,6 +13,12 @@ object Recording {
         fun key(event: KeyEvent, gesture: Boolean)
         fun outcome(outcome: Contact.Outcome)
         fun recognised(words: List<String>, resumed: Boolean)
+        /**
+         * What the Space row's cursor gestures decided at [time] ([CursorGesture]): "down" with whether the touch could
+         * count, "up" with whether it finished two quick taps, "drag" when steering or selecting starts, "double" when a
+         * double tap selects a word, and "cancel" when a key press or another finger calls them off.
+         */
+        fun gesture(event: String, time: Long, detail: String) {}
     }
 
     @Volatile

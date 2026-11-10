@@ -46,7 +46,22 @@ export function KeyboardDiagram({ trail }: { trail: Point[] }) {
       </CanvasText>
       : <CanvasIcon key={`label-${index}`} x={x + 1 + (span - icon) / 2} y={y + 1 + (row - icon) / 2} size={icon} name={name.icon} colour={label} />)}
     <Rectangle x={1 + width * .05} y={1 + height * .5 / 4} width={width * .9} height={height * (3.54 - .5) / 4} stroke={MUTED} strokeWidth={1} />
-    {trail.length > 0 && <CanvasPath points={trail.map(([x, y]) => [1 + x * width, 1 + y * height] as const)}
-      stroke={ink} strokeWidth={4} />}
+    {pieces(trail).map((piece, index) => <CanvasPath key={`trail-${index}`}
+      points={piece.points.map(([x, y]) => [1 + x * width, 1 + y * height] as const)} stroke={ink} strokeWidth={4 * piece.thickness} />)}
   </Canvas>;
+}
+
+/**
+ * Splits the trail where its thickness changes, so it is thicker where the touch is larger than usual. Thickness is
+ * rounded to eighths, which keeps the pieces few. Each piece starts at the point where the one before it ends.
+ */
+function pieces(trail: Point[]) {
+  const result: { thickness: number; points: Point[] }[] = [];
+  for (const point of trail) {
+    const thickness = Math.round((point[2] ?? 1) * 8) / 8;
+    const last = result.at(-1);
+    if (last?.thickness === thickness) last.points.push(point);
+    else result.push({ thickness, points: last ? [last.points.at(-1)!, point] : [point] });
+  }
+  return result;
 }

@@ -16,6 +16,11 @@ import kotlin.math.max
  * have passed with no third touch, and a third touch that lifts without a drag does nothing. A wrong selection is
  * worse than a missed one, so anything in doubt does nothing. Distances are in key widths and rows, as in [Contact].
  * The numbers come from recordings of these gestures on a Titan 2 Elite.
+ *
+ * The touchpad stops at the middle of the Space row, so a tap low on Space is often not felt at all. The taps may also
+ * land just above Space: on the lower half of the bottom letter row, as wide as the Space bar (V, B and the inner edges
+ * of C and N). A touch that lands there is the start of a word as often as not, so there only a sideways drag counts,
+ * never one up.
  */
 class CursorGesture {
     /** A touch that began to drag sideways, from where it [landed]. After three touches it selects [words]. */
@@ -29,7 +34,7 @@ class CursorGesture {
         /** [taps] quick taps are over, and another touch can still land. A third touch or a key press calls off two. */
         class Tapped(val taps: Int, val landed: Sample, val lifted: Long) : State
         /** The touch that came after [taps] quick taps. */
-        class NextTouch(val taps: Int, val landed: Sample) : State {
+        class NextTouch(val taps: Int, val landed: Sample, val gap: Long, val tapLanded: Sample) : State {
             var last = landed
             var across = 0f
             var up = 0f
@@ -45,8 +50,8 @@ class CursorGesture {
     fun down(sample: Sample, counts: Boolean) {
         val previous = state
         state = when {
-            !counts || !sample.valid || sample.y < BOTTOM_ROW_TOP -> State.Idle
-            previous is State.Tapped && follows(previous, sample) -> State.NextTouch(previous.taps, sample)
+            !counts || !sample.valid || !inZone(sample.x, sample.y) -> State.Idle
+            previous is State.Tapped && follows(previous, sample) -> State.NextTouch(previous.taps, sample, sample.time - previous.lifted, previous.landed)
             sample.time >= firstTapFrom -> State.FirstTouch(sample)
             else -> State.Idle
         }
@@ -72,7 +77,10 @@ class CursorGesture {
             current.up = max(current.up, (current.landed.y - sample.y) * 4)
             current.travel = max(current.travel, distance(current.landed, sample))
             // This looks at how far the path has gone, because a drag can go left and right and end near its start.
-            if (current.up >= UP_ROWS || current.across >= DRAG_KEYS && current.across >= SIDEWAYS * current.up) {
+            // Above Space a drag up is a word, so there only a sideways one counts.
+            val onSpace = current.landed.y >= BOTTOM_ROW_TOP
+            val sideways = current.across >= DRAG_KEYS && current.across >= (if (onSpace) SIDEWAYS else ABOVE_SIDEWAYS) * current.up
+            if (onSpace && current.up >= UP_ROWS || sideways) {
                 state = State.Idle
                 return Drag(current.landed, words = current.taps == 2)
             }
@@ -92,7 +100,9 @@ class CursorGesture {
         // A third touch that lifts here ends with nothing, as it would in a resting finger's series.
         if (current is State.NextTouch && current.taps == 1 && time - current.landed.time <= SECOND_TAP_MILLIS && current.travel < TAP_KEYS) {
             state = State.Tapped(2, current.landed, time)
-            return true
+            // A double tap by itself selects a word only on Space, after today's gap. Above Space, or after a longer gap,
+            // two taps can only lead on to a drag that selects: two quick taps on V or B must never select a word.
+            return current.gap <= MAX_GAP_MILLIS && current.landed.y >= BOTTOM_ROW_TOP && current.tapLanded.y >= BOTTOM_ROW_TOP
         }
         return false
     }
@@ -118,12 +128,12 @@ class CursorGesture {
     }
 
     private fun follows(tap: State.Tapped, next: Sample) =
-        next.time - tap.lifted in MIN_GAP_MILLIS..MAX_GAP_MILLIS && abs(next.x - tap.landed.x) * 10 <= MAX_APART_KEYS
+        next.time - tap.lifted in MIN_GAP_MILLIS..MAX_DRAG_GAP_MILLIS && abs(next.x - tap.landed.x) * 10 <= MAX_APART_KEYS
 
     private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
 
     companion object {
-        private const val BOTTOM_ROW_TOP = .75f
+        const val BOTTOM_ROW_TOP = .75f
         /** How long each tap may last. Real first taps took up to 105 ms and real second taps up to 191 ms. */
         private const val FIRST_TAP_MILLIS = 130L
         private const val SECOND_TAP_MILLIS = 200L
@@ -132,6 +142,11 @@ class CursorGesture {
         /** Real gaps between the taps took 37 to 124 ms. Shorter than the settle time, a key press can still cancel the first. */
         private const val MIN_GAP_MILLIS = Contact.SETTLE_MILLIS
         private const val MAX_GAP_MILLIS = 150L
+        /**
+         * A touch that goes on to drag may come this long after the tap before it. In the owner's recording two real
+         * gestures came 153 and 173 ms after their taps; in the raw logs the longer gap took no typed words.
+         */
+        private const val MAX_DRAG_GAP_MILLIS = 200L
         /** Real taps of a pair landed up to 0.61 keys apart. */
         private const val MAX_APART_KEYS = 1f
         /** The first tap must come this long after the touch before it, which also leaves out a resting finger's series. */
@@ -144,6 +159,21 @@ class CursorGesture {
         private const val DRAG_KEYS = .5f
         /** A sideways drag has to be at least this many times wider than it is tall. */
         private const val SIDEWAYS = 2f
+        /**
+         * Above Space, how many times wider than tall a drag must be. The owner's drags go about twice as far across as up,
+         * and lean up most at their start, so 2 missed some. 1.5 caught 35 of 41 recorded gestures against 33.
+         */
+        private const val ABOVE_SIDEWAYS = 1.5f
+        /**
+         * Above Space, taps count from halfway down the bottom letter row, as wide as the Space bar. The owner chose this
+         * from a recording: it caught 35 of 41 gestures against 29, and the full height of the row caught no more.
+         */
+        const val ZONE_TOP = .625f
+        const val ZONE_LEFT = .36f
+        const val ZONE_RIGHT = .64f
+
+        /** Whether a touch that lands at [x], [y] may be part of a gesture: anywhere on Space, or in the zone above it. */
+        fun inZone(x: Float, y: Float) = y >= BOTTOM_ROW_TOP || y >= ZONE_TOP && x >= ZONE_LEFT && x < ZONE_RIGHT
         /** How far up the second or third touch must go to start a drag. Real sideways drags went at most 0.2 rows up before they started. */
         private const val UP_ROWS = .6f
         /** Real drags moved at most 0.43 keys between two points. One finger can't go this far so fast. */
@@ -155,6 +185,7 @@ class CursorGesture {
             "minGapMillis" to MIN_GAP_MILLIS, "maxGapMillis" to MAX_GAP_MILLIS, "maxApartKeys" to MAX_APART_KEYS,
             "aloneMillis" to ALONE_MILLIS, "afterKeyMillis" to AFTER_KEY_MILLIS, "confirmMillis" to CONFIRM_MILLIS,
             "dragKeys" to DRAG_KEYS, "sideways" to SIDEWAYS, "upRows" to UP_ROWS, "jumpKeys" to JUMP_KEYS,
+            "maxDragGapMillis" to MAX_DRAG_GAP_MILLIS, "aboveSideways" to ABOVE_SIDEWAYS,
         )
     }
 }

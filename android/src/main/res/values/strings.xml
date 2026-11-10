@@ -26,4 +26,5 @@
     <string name="clipboard_description">Clipboard. The texts that you copied in the last hour, and the ones you pinned. Push a key under a clip to paste it. Swipe up or down to see more, and left or right for Pinned. Enter pins, Backspace clears, and Alt goes back.</string>
     <!-- Shows once, under the first clip that the strip offers. -->
     <string name="strip_clip_hint">Older clips: push Sym, then A</string>
+    <string name="contacts_permission_in_settings">To use names from your contacts, allow Contacts for TitanKeys on this page.</string>
 </resources>

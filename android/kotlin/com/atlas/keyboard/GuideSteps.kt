@@ -75,9 +75,9 @@ internal sealed interface GuideCue {
  * The drawing of the keys acts it out at the same time.
  */
 internal sealed interface GuideDemo {
-    /** The letters of the next word appear one by one, as if pushed. */
+    /** The letters of the next word appear one by one, as if pushed, then its punctuation as the keyboard types it. */
     data object TypeNext : GuideDemo
-    /** The next word appears whole, at the end of the ghost swipe. */
+    /** The next word appears whole, at the end of the ghost swipe, then its punctuation as the keyboard types it. */
     data object SwipeNext : GuideDemo
     /** The next word appears with a slip in it, then the right word takes its place, as a touch on the strip does. */
     data object FixNext : GuideDemo
@@ -124,6 +124,36 @@ internal object GuideScript {
         return done
     }
 
+    /**
+     * The pushes that put [word] in the field as the keyboard really does (#59). Typed, each letter is a push; swiped, the
+     * word lands at once with the space that a swipe adds. The marks after it come next: with [autoPunctuation] on, a full
+     * stop is two pushes of Space, and any other mark is Alt and the key that [keyFor] says has that mark, or nothing lit if
+     * no key has it. A mark after a swiped word takes the place of its space, as on the keyboard.
+     */
+    fun pushes(word: String, swiped: Boolean, autoPunctuation: Boolean, keyFor: (Char) -> String?): List<DemoPush> {
+        val marks = word.takeLastWhile { !it.isLetterOrDigit() }
+        val base = word.dropLast(marks.length)
+        val pushes = ArrayList<DemoPush>()
+        if (swiped) pushes += DemoPush(emptyList(), "$base ")
+        else for (i in 1..base.length) pushes += DemoPush(listOfNotNull(base[i - 1].takeIf { it.isLetter() }?.uppercase()), base.take(i))
+        var text = pushes.lastOrNull()?.text ?: ""
+        for (mark in marks) {
+            if (mark == '.' && autoPunctuation) {
+                // The first Space after a swipe only arms the full stop: the swipe's space is already there.
+                text = if (text.endsWith(' ')) text else "$text "
+                pushes += DemoPush(listOf(Layout.SPACE), text)
+                text = text.trimEnd() + ". "
+                pushes += DemoPush(listOf(Layout.SPACE), text)
+                continue
+            }
+            val key = keyFor(mark)
+            if (key != null) pushes += DemoPush(listOf(Layout.ALT), text)
+            text = text.trimEnd(' ') + mark
+            pushes += DemoPush(listOfNotNull(key), text)
+        }
+        return pushes
+    }
+
     /** The word at [index], starting again after the end. */
     fun wordAt(index: Int) = words[index.mod(words.size)]
 
@@ -146,6 +176,9 @@ internal object GuideScript {
         return added.joinToString(" ")
     }
 }
+
+/** One push in a demonstration: the keys that light, and the text that the word has become after it. */
+internal data class DemoPush(val keys: List<String>, val text: String)
 
 /** A setting that a step needs. If it is off, the step offers to turn it on. */
 internal enum class GuideNeed(val offer: String, val optional: Boolean = false) {
@@ -305,9 +338,9 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "steer", chapter = GuideChapter.Story,
         title = "Steer and select from Space.",
-        body = "Two touches on Space, then swipe up, to steer. Three touches to select.",
+        body = "Tap just above the middle of Space, then touch and slide to steer.",
         done = "No screen needed.",
-        help = "Touch lightly. Lift after each touch but the last, and keep the last one down.",
+        help = "Tap twice first to select. Tap lightly in the shaded patch, and keep the last touch down as you slide.",
         cue = GuideCue.Taps(2, drag = true),
         needs = GuideNeed.CursorControl,
         needsWords = 6,
@@ -324,7 +357,7 @@ internal val GUIDE_STEPS = listOf(
                     if (mark < 0) mark = event.start
                     if (abs(event.start - mark) >= CURSOR_TRAVEL_CHARACTERS) GuideVerdict.Done else GuideVerdict.Wait
                 }
-                event is Recognised -> GuideVerdict.Hint("That typed a word. Start with quick touches on Space.")
+                event is Recognised -> GuideVerdict.Hint("That typed a word. Start with quick taps just above the middle of Space.")
                 else -> GuideVerdict.Wait
             }
         },
@@ -384,7 +417,7 @@ internal fun commonMistake(step: GuideStep, event: KeyboardEvent): String? = whe
     event is ModifierState && event.alt != Modifiers.Level.Off && !step.usesPanel ->
         "Alt is on, so the touchpad does not type. Push Alt to turn it off."
     event is CursorStarted && step.cue !is GuideCue.Taps ->
-        "That moves the cursor. Quick touches on Space start it. Lift your finger to stop."
+        "That moves the cursor. Quick taps just above the middle of Space start it. Lift your finger to stop."
     event is HeldSymbol && step.id != "symbols" ->
         "A held key types its symbol. Push the keys quickly for letters."
     else -> null

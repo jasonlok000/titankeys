@@ -15,6 +15,7 @@ import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** The guide's brand colours. They are the values in lib/brand.ts and the app icon. */
@@ -94,6 +95,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         Keys.letter(key.name, android.view.KeyEvent.META_ALT_ON)?.let { key.name to it }
     }.toMap()
     private val areaPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val zonePaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val areaPath = Path()
     private val path = Path()
 
@@ -109,7 +111,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private var ghost: List<FloatArray> = emptyList()
     private var cueStart = 0L
 
-    /** The finger's path in touchpad space, from 0 to 1 each way, as pairs of x and y. */
+    /** The finger's path in touchpad space, from 0 to 1 each way: each point's x, y and thickness, 1 for a usual touch. */
     private val trail = ArrayList<FloatArray>()
     private var liftedAt = -1L
     /** When a real finger was last on the keys. The ghost waits while one is there, so it never gets in its way. */
@@ -209,6 +211,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         var moving = cue != GuideCue.Free && GuideMotion.enabled && isShown
         for (key in keys) moving = drawKey(canvas, key, now, frameCount) || moving
         drawTouchArea(canvas)
+        drawTapZone(canvas)
         drawGhost(canvas, now)
         moving = drawTrail(canvas, now) || moving
         if (moving) postInvalidateOnAnimation() else lastFrame = 0
@@ -391,29 +394,45 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             }
             moving = true
         }
-        path.rewind()
-        var px = trail[0][0] * width
-        var py = trail[0][1] * height
-        path.moveTo(px, py)
-        for (i in 1 until trail.size) {
-            val x = trail[i][0] * width
-            val y = trail[i][1] * height
-            path.quadTo(px, py, (px + x) / 2, (py + y) / 2)
-            px = x
-            py = y
-        }
-        path.lineTo(px, py)
-        val under = if (tone == GuideTone.Orange) GuideMotion.faded(GuideColours.INK, TRAIL_SHADE * alpha) else GuideMotion.faded(GuideColours.ORANGE, TRAIL_SHADE * alpha)
-        trailPaint.color = under
-        trailPaint.strokeWidth = dp(TRAIL_WIDTH) * TRAIL_UNDER
-        canvas.drawPath(path, trailPaint)
-        trailPaint.color = GuideMotion.faded(GuideColours.CREAM, alpha)
-        trailPaint.strokeWidth = dp(TRAIL_WIDTH)
-        canvas.drawPath(path, trailPaint)
-        dotPaint.color = trailPaint.color
-        canvas.drawCircle(px, py, dp(TRAIL_WIDTH) * .9f, dotPaint)
+        // Each pass is drawn whole and then faded, so where its pieces overlap it does not darken.
+        trailPaint.color = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE
+        var layer = canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), (TRAIL_SHADE * alpha * 255).roundToInt())
+        drawTrailPieces(canvas, dp(TRAIL_WIDTH) * TRAIL_UNDER)
+        canvas.restoreToCount(layer)
+        trailPaint.color = GuideColours.CREAM
+        dotPaint.color = GuideColours.CREAM
+        layer = canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), (alpha * 255).roundToInt())
+        drawTrailPieces(canvas, dp(TRAIL_WIDTH))
+        val last = trail[trail.size - 1]
+        canvas.drawCircle(last[0] * width, last[1] * height, dp(TRAIL_WIDTH) * .9f * thickness(last), dotPaint)
+        canvas.restoreToCount(layer)
         return moving
     }
+
+    /**
+     * The trail as one smooth curve, drawn a piece at a time so each piece takes its own thickness: thicker where the
+     * touch was larger than usual for that spot, thinner where it was lighter. Round ends join the pieces seamlessly.
+     */
+    private fun drawTrailPieces(canvas: Canvas, width: Float) {
+        var startX = trail[0][0] * this.width
+        var startY = trail[0][1] * height
+        for (i in 1..trail.size) {
+            val corner = trail[i - 1]
+            val cx = corner[0] * this.width
+            val cy = corner[1] * height
+            // Each piece runs from the middle before a point to the middle after it, curving through the point.
+            val (endX, endY) = if (i < trail.size) (cx + trail[i][0] * this.width) / 2 to (cy + trail[i][1] * height) / 2 else cx to cy
+            path.rewind()
+            path.moveTo(startX, startY)
+            path.quadTo(cx, cy, endX, endY)
+            trailPaint.strokeWidth = width * thickness(corner)
+            canvas.drawPath(path, trailPaint)
+            startX = endX
+            startY = endY
+        }
+    }
+
+    private fun thickness(point: FloatArray) = if (point.size > 2) point[2] else 1f
 
     /** The ghost finger: thin, dashed by the time it lasts, then a pause, then again. */
     private fun drawGhost(canvas: Canvas, now: Long) {
@@ -485,11 +504,23 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     private fun distance(a: FloatArray, b: FloatArray) = hypot((b[0] - a[0]) * width, (b[1] - a[1]) * height)
 
+    /**
+     * A soft patch over the part of the keys where the steer and select taps are easiest to land: from halfway down the
+     * bottom letter row to as far down Space as the touchpad feels, as wide as the Space bar ([CursorGesture.inZone]).
+     */
+    private fun drawTapZone(canvas: Canvas) {
+        if (cue !is GuideCue.Taps) return
+        val corner = dp(ZONE_CORNER)
+        zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE, ZONE_ALPHA)
+        canvas.drawRoundRect(width * CursorGesture.ZONE_LEFT, height * CursorGesture.ZONE_TOP, width * CursorGesture.ZONE_RIGHT,
+            height * ZONE_BOTTOM, corner, corner, zonePaint)
+    }
+
     private fun drawTaps(canvas: Canvas, cue: GuideCue.Taps, t: Float, colour: Int) {
-        // Rings for each tap, one after the other, then a drag if there is one.
+        // Rings for each tap, one after the other, inside the zone where the taps count, then a sideways drag if there is one.
         val tapsEnd = if (cue.drag) .45f else .8f
         val x = width * SPACE_CENTRE
-        val y = height * ROW_CENTRE
+        val y = height * ZONE_TAP_ROW
         ringPaint.strokeWidth = dp(2.5f)
         for (tap in 0 until cue.count) {
             val start = tap * tapsEnd / cue.count
@@ -502,19 +533,14 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         var fingerX = x
         var fingerY = y
         if (cue.drag && t > tapsEnd) {
-            // The finger stays down, swipes up onto the letters, then leans left: back over the words that the cursor moves
-            // through or that the selection takes, as the field shows.
+            // The finger stays down and slides sideways to the left: back over the words that the cursor moves through or
+            // that the selection takes, as the field shows. Above Space only a sideways slide counts, so the ghost shows that.
             val travel = ((t - tapsEnd) / (1f - tapsEnd - .08f)).coerceIn(0f, 1f)
-            val up = (travel / UP_SHARE).coerceAtMost(1f)
-            val across = ((travel - UP_SHARE) / (1f - UP_SHARE)).coerceIn(0f, 1f)
-            val top = height * (ROW_CENTRE - DRAG_UP)
-            fingerY = y + (top - y) * up
-            fingerX = x - (width * DRAG_REACH) * across
+            fingerX = x - (width * DRAG_REACH) * travel
             // The drag is the part to copy, so it is as strong as the part of a word that the ghost has done.
             ghostPaint.color = colour
             ghostPaint.strokeWidth = dp(GHOST_DONE_WIDTH)
-            canvas.drawLine(x, y, x, fingerY, ghostPaint)
-            if (across > 0f) canvas.drawLine(x, top, fingerX, top, ghostPaint)
+            canvas.drawLine(x, y, fingerX, fingerY, ghostPaint)
         }
         canvas.drawCircle(fingerX, fingerY, dp(GHOST_FINGER), dotPaint)
     }
@@ -585,11 +611,13 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         /** The ghost goes this many times slower than a real gesture, so that it is easy to follow. */
         const val GHOST_SLOW = 1.5f
         const val SPACE_CENTRE = .5f
-        const val ROW_CENTRE = .875f
         const val DRAG_REACH = .32f
-        /** How far up the drag goes, as a part of the drawing's height, and the part of the drag that going up takes. */
-        const val DRAG_UP = .4f
-        const val UP_SHARE = .35f
+        /** Where the touchpad stops feeling, halfway down Space: the shaded zone ends there. */
+        const val ZONE_BOTTOM = .885f
+        /** Where the ghost taps: just above the line between V and B and Space. */
+        const val ZONE_TAP_ROW = .72f
+        const val ZONE_ALPHA = .2f
+        const val ZONE_CORNER = 6f
 
         // The box round the part of the keys that the touchpad feels, as parts of the drawing's width and height.
         const val AREA_LEFT = .05f

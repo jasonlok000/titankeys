@@ -73,8 +73,11 @@ export type State = {
 
 export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
 
-/** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
-export type Point = [x: number, y: number];
+/**
+ * Touchpad points from 0 to 1 across the keyboard and down its four rows, with how thick to draw the trail there: 1 for a
+ * touch of the usual size.
+ */
+export type Point = [x: number, y: number, thickness?: number];
 
 export type TraceEvent = { event: "touch" | "lift"; points: Point[] };
 

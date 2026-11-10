@@ -792,8 +792,11 @@ private fun restingOnP() {
 /** The symbol and emoji pages read the place under a finger as it is, and hold nothing in the last column. */
 private fun symbolAndEmojiPages() {
     same(Layout.panelLetters.size, EmojiPages.PER_PAGE, "A page must hold one item for each letter key that shows one")
-    same("P" in Layout.panelLetters, false, "P must hold no symbol or emoji")
-    same(Layout.panelLetters.take(10), listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "A"), "The items must go on from O to A")
+    for (key in listOf("Q", "A", "P")) same(key in Layout.panelLetters, false, "$key must hold no symbol or emoji")
+    same(Layout.letterKeys.size, 26, "Every letter key must still have a place in the panel")
+    same(Layout.panelLetters.take(9), listOf("W", "E", "R", "T", "Y", "U", "I", "O", "S"), "The items must go on from O to S")
+    same(QuickSetting.on("A"), QuickSetting.Autocorrect, "The quick settings page must keep A for Autocorrect")
+    same(QuickSetting.on("P"), QuickSetting.AutoPunctuation, "The quick settings page must keep P for Auto-punctuation")
     same(Layout.PAGE_POSITION, "P", "P must show the page position")
     same(Layout.lastColumn, listOf("P", Layout.BACKSPACE, Layout.ENTER), "The last column must be P, Backspace and Enter")
     same(Layout.keyAt(.88f, .15f), "O", "The right of O must be O")

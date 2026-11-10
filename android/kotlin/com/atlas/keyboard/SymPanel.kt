@@ -17,9 +17,9 @@ import kotlin.math.min
 import kotlin.math.sign
 
 /**
- * The panel that Sym opens: a symbol or an emoji on each letter key of the top three rows but P, in line with the physical letter
- * keys. P shows the position of the open page and only that, and the other keys are left empty. A finger that rests on a key marks
- * that key, except in the last column, which the touchpad cannot read well. The groups of emoji are in a strip along the bottom,
+ * The panel that Sym opens: a symbol or an emoji on each letter key of the top three rows but Q, A and P, in line with the physical
+ * letter keys. P shows the position of the open page and only that, and the other keys are left empty. A finger that rests on a key
+ * marks that key, except in the last column, which the touchpad cannot read well. The groups of emoji are in a strip along the bottom,
  * above the bottom row of physical keys, and a finger on that row opens the group at its place.
  *
  * Alt's place shows the quick settings key and Sym's place shows what Sym does next, each as an icon. When a group of emoji has
@@ -58,7 +58,7 @@ class SymPanel(
     }
     private val header = LinearLayout(context)
     private val grid = LinearLayout(context)
-    private val cells = (Layout.panelLetters + Layout.PAGE_POSITION + Layout.ALT + Layout.SYM + Layout.BACKSPACE + Layout.ENTER).associateWith(::cell)
+    private val cells = (Layout.letterKeys + Layout.ALT + Layout.SYM + Layout.BACKSPACE + Layout.ENTER).associateWith(::cell)
     private var tabs = emptyList<TextView>()
     private var shownSamples = emptyList<String>()
     private var navigationInset = 0

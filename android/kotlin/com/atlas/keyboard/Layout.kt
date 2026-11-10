@@ -25,8 +25,13 @@ object Layout {
         listOf("⇧", "○", "◁", SPACE, "▦", FN, "⇧"),
     )
     val bottomWidths = floatArrayOf(1.2f, 1.2f, 1.2f, 2.8f, 1.2f, 1.2f, 1.2f)
-    /** The letter keys that hold a symbol or an emoji, from the top row down: the order in which the Sym panel fills them. */
-    val panelLetters = rows.take(3).flatten().filter { isLetter(it) && it != PAGE_POSITION }
+    /** Every letter key, from the top row down. */
+    val letterKeys = rows.take(3).flatten().filter { isLetter(it) }
+    /**
+     * The letter keys that hold a symbol or an emoji: the order in which the Sym panel fills them. The touchpad cannot read the
+     * first and last columns well, so Q, A and P hold none.
+     */
+    val panelLetters = letterKeys - setOf("Q", "A", PAGE_POSITION)
     /** The touchpad's sensor ends in this column, so a finger on these keys marks nothing on a page of symbols or emoji. */
     val lastColumn = rows.take(3).map { it.last() }
 

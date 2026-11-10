@@ -16,7 +16,7 @@ public final class EmojiPagesChecks {
         check(groups.get(1).emoji().equals(List.of("🍏", "🍎")), "Emoji the phone cannot show must be left out");
         check(groups.get(2).emoji().equals(List.of("🇬🇧", "🏴‍☠️")), "Multi-part emoji must stay whole");
 
-        check(EmojiPages.PER_PAGE == 25, "A page must hold one item for each letter key but P");
+        check(EmojiPages.PER_PAGE == 23, "A page must hold one item for each letter key but Q, A and P");
         List<String> firstFaces = faces.subList(0, EmojiPages.PER_PAGE);
         List<String> lastFaces = faces.subList(EmojiPages.PER_PAGE, faces.size());
 
@@ -139,8 +139,9 @@ public final class EmojiPagesChecks {
 
         List<String> spare = new ArrayList<>();
         for (int i = 0; i < EmojiPages.PER_PAGE; i++) spare.add("s" + i);
-        check(EmojiPages.fillLastPage(symbols.subList(0, 24), spare).size() == EmojiPages.PER_PAGE, "A short page of symbols must fill to a full page");
-        check(EmojiPages.fillLastPage(symbols.subList(0, 24), spare).subList(0, 24).equals(symbols.subList(0, 24)), "Filling must keep the first items in order");
+        int shortPage = EmojiPages.PER_PAGE - 2;
+        check(EmojiPages.fillLastPage(symbols.subList(0, shortPage), spare).size() == EmojiPages.PER_PAGE, "A short page of symbols must fill to a full page");
+        check(EmojiPages.fillLastPage(symbols.subList(0, shortPage), spare).subList(0, shortPage).equals(symbols.subList(0, shortPage)), "Filling must keep the first items in order");
         check(EmojiPages.fillLastPage(symbols.subList(0, EmojiPages.PER_PAGE), spare).size() == EmojiPages.PER_PAGE, "A full page must stay as it is");
         check(EmojiPages.fillLastPage(symbols, spare).size() == EmojiPages.PER_PAGE * 2, "A second page must also fill");
         check(EmojiPages.fillLastPage(List.of("&"), List.of("&", "%")).equals(List.of("&", "%")), "Filling must not repeat an item");

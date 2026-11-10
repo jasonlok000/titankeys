@@ -27,7 +27,7 @@ The size is the sensor's touch major, from 0 to 255. The screen reads Android's 
 1. Make TitanKeys Debug the active keyboard, and leave "Space taps move the cursor" on. Then open **TitanKeys Space gestures**.
 2. Pick what you mean to do: **Steer** (Space twice, then swipe), **Select** (Space three times, then swipe), or **Other / not meant**. Put the cursor in the text and try it once. A try ends after 1.5 seconds with no touch or key.
 3. After each try the screen says what TitanKeys did (steer, select, a double-tap word selection, what was typed, or nothing) and keeps a count per kind of what worked and what failed.
-4. Use **Export** to save the tries as JSON lines. The first line holds the gesture's numbers (`tuning`). Each try has its kind, what happened, and its `events`, in order:
+4. Each try is saved the moment it ends, in `Android/data/com.titankeys.debug/files/space-gestures/` on the phone, so leaving the screen loses nothing. **Export** saves a copy anywhere. The file holds JSON lines. The first line holds the gesture's numbers (`tuning`). Each try has its kind, what happened, and its `events`, in order:
    - `m`: touchpad points as x, y, sensor size step and time
    - `key`: key presses and releases
    - `gesture`: the gesture code's own decisions, from `Recording.Sink.gesture`

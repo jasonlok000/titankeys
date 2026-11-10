@@ -81,7 +81,8 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
     private var current: Try? = null
     private var kind = Kind.Steer
     private var fingerDown = false
-    private var saved: File? = null
+    /** This session's file. Each try is added the moment it ends, so leaving the screen loses nothing. */
+    private var session: File? = null
     private var settingText = false
 
     private lateinit var input: EditText
@@ -250,6 +251,7 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
         current = null
         done.textAfter = input.text.toString()
         tries += done
+        save(done)
         live.text = "Read as: ${done.result()}" + if (done.worked()) "  ✓" else "  ✗"
         show()
     }
@@ -277,35 +279,46 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
     private fun clear() {
         tries.clear()
         current = null
-        saved = null
+        session = null
         resetText()
         show()
     }
 
-    /** Writes a header with the gesture's numbers, then one line for each try, and asks where to save a copy. */
+    /**
+     * Adds a finished try to this session's file, which starts with a header holding the gesture's numbers. The file is
+     * in the app's files on the phone (Android/data/<package>/files/space-gestures), so a closed screen loses nothing.
+     */
+    private fun save(done: Try) {
+        val file = session ?: File(directory, "space-gestures-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.jsonl").also {
+            val tuning = JSONObject()
+            for ((key, value) in CursorGesture.tuning) tuning.put(key, value)
+            it.writeText(JSONObject().put("format", 1).put("model", Build.MODEL).put("android", Build.VERSION.RELEASE)
+                .put("app", packageManager.getPackageInfo(packageName, 0).versionName)
+                .put("cursorControl", TypingSettings.cursorControl(this)).put("tuning", tuning)
+                .put("settleMillis", Contact.SETTLE_MILLIS).put("swipeKeys", Contact.SWIPE_KEYS)
+                .put("points", "x, y (0 to 1 across the keys and down the four rows), sensor size step, time").toString() + "\n")
+            session = it
+        }
+        try {
+            file.appendText(JSONObject().put("kind", done.kind.id).put("start", done.start).put("end", done.end)
+                .put("result", done.result()).put("worked", done.worked()).put("touches", done.touches).put("keys", done.keys)
+                .put("events", done.events).toString() + "\n")
+            status.text = "Saved ${tries.size} tries in ${file.name}."
+        } catch (error: Exception) {
+            status.text = "Could not save the try: ${error.message}"
+        }
+    }
+
+    /** Asks where to save a copy of this session's file, which already holds every try. */
     @Suppress("DEPRECATION")
     private fun export() {
-        if (tries.isEmpty()) {
+        val file = session
+        if (file == null) {
             status.text = "Nothing to export yet."
             return
         }
-        val name = "space-gestures-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.jsonl"
-        val file = File(directory, name)
-        val tuning = JSONObject()
-        for ((key, value) in CursorGesture.tuning) tuning.put(key, value)
-        file.writeText(JSONObject().put("format", 1).put("model", Build.MODEL).put("android", Build.VERSION.RELEASE)
-            .put("app", packageManager.getPackageInfo(packageName, 0).versionName)
-            .put("cursorControl", TypingSettings.cursorControl(this)).put("tuning", tuning)
-            .put("settleMillis", Contact.SETTLE_MILLIS).put("swipeKeys", Contact.SWIPE_KEYS)
-            .put("points", "x, y (0 to 1 across the keys and down the four rows), sensor size step, time").toString() + "\n")
-        for (each in tries) {
-            file.appendText(JSONObject().put("kind", each.kind.id).put("start", each.start).put("end", each.end)
-                .put("result", each.result()).put("worked", each.worked()).put("touches", each.touches).put("keys", each.keys)
-                .put("events", each.events).toString() + "\n")
-        }
-        saved = file
         startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-            .setType("application/octet-stream").putExtra(Intent.EXTRA_TITLE, name), EXPORT)
+            .setType("application/octet-stream").putExtra(Intent.EXTRA_TITLE, file.name), EXPORT)
     }
 
     @Deprecated("Android activity result callback")
@@ -313,7 +326,7 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         val uri = data?.data
-        val file = saved
+        val file = session
         if (requestCode != EXPORT || file == null) return
         status.text = if (resultCode != RESULT_OK || uri == null) "Kept ${file.name} in the app's files only." else try {
             contentResolver.openOutputStream(uri)!!.use { out -> file.inputStream().use { it.copyTo(out) } }

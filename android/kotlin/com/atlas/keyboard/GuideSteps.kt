@@ -110,19 +110,62 @@ internal object GuideScript {
     fun letters(word: String) = word.filter { it.isLetter() }.lowercase()
 
     /**
-     * How many words of the script [text] has. Each word counts, so that a word that came out different still moves the line on.
+     * The script in steps: each word, and after a word that ends in marks, such as "unlearn:" or "go.", those marks as a step of
+     * their own, so that the line above waits for them and you get to type them.
+     */
+    val steps = words.flatMap { word ->
+        val marks = word.takeLastWhile { !it.isLetterOrDigit() }
+        listOfNotNull(word.dropLast(marks.length).takeIf { it.isNotEmpty() }, marks.takeIf { it.isNotEmpty() })
+    }
+
+    /** The step at [index], starting again after the end. */
+    fun stepAt(index: Int) = steps[index.mod(steps.size)]
+
+    /** Whether a step is marks to type, and not a word. */
+    fun isMarks(step: String) = step.isNotEmpty() && !step[0].isLetterOrDigit()
+
+    /** The word that comes next from step [index] on: the step itself, or the word after the marks. */
+    fun wordFrom(index: Int) = stepAt(index).takeUnless(::isMarks) ?: stepAt(index + 1)
+
+    /**
+     * How many steps of the script [text] has. It is lenient, so that nothing waits on you: each word counts, also one that came
+     * out different, and a word typed where marks are next counts for the marks too. A mark where a word is next is passed over.
      * A last word that is still being typed, the start of the word that is next, does not count until it is whole.
      */
     fun progress(text: String): Int {
-        val typed = text.split(' ', '\n').filter { it.isNotEmpty() }
-        var done = typed.size
-        if (done > 0 && !text.endsWith(' ') && !text.endsWith('\n')) {
-            val last = letters(typed.last())
-            val expected = letters(wordAt(done - 1))
-            if (last != expected && expected.startsWith(last)) done--
+        val pieces = PIECE.findAll(text).map { it.value }.toList()
+        var done = 0
+        for (piece in pieces) {
+            if (isMarks(piece)) {
+                if (isMarks(stepAt(done))) done++
+                continue
+            }
+            if (isMarks(stepAt(done))) done++
+            done++
+        }
+        val last = pieces.lastOrNull()
+        if (last != null && !isMarks(last) && !text.endsWith(' ') && !text.endsWith('\n')) {
+            val typed = letters(last)
+            val expected = letters(stepAt(done - 1))
+            if (typed != expected && expected.startsWith(typed)) done--
         }
         return done
     }
+
+    /** The steps from [index] on for the line above: words with a space between them, and marks right after their word. */
+    fun lineFrom(index: Int, count: Int) = buildString {
+        for (at in index until index + count) {
+            val step = stepAt(at)
+            if (isNotEmpty() && !isMarks(step)) append(' ')
+            append(step)
+        }
+    }
+
+    /** The keys that type marks, in order: two pushes of Space for a full stop when that is on, and Alt and its key for others. */
+    fun markKeys(marks: String, autoPunctuation: Boolean, keyFor: (Char) -> String?): List<List<String>> = marks.map { mark ->
+        if (mark == '.' && autoPunctuation) listOf(Layout.SPACE, Layout.SPACE)
+        else listOfNotNull(keyFor(mark)?.let { Layout.ALT }, keyFor(mark))
+    }.flatMap { keys -> keys.map { listOf(it) } }
 
     /**
      * The pushes that put [word] in the field as the keyboard really does (#59). Typed, each letter is a push; swiped, the
@@ -166,15 +209,21 @@ internal object GuideScript {
     }
 
     /**
-     * The script from word [index] on, at least [count] words and to the end of a sentence, to put in the field for a step that
-     * needs text to work on. It goes on from where the text is, so that the line above stays in step with the field.
+     * The script from step [index] on, at least [count] words and to the end of a sentence, to put in the field for a step that
+     * needs text to work on. It goes on from where the text is, so that the line above stays in step with the field. Marks that
+     * are next are passed over, as the text has a space after the word by then.
      */
     fun continueFrom(index: Int, count: Int): String {
-        val added = ArrayList<String>()
         var at = index
-        while (added.size < count || !wordAt(at - 1).endsWith('.')) added += wordAt(at++)
-        return added.joinToString(" ")
+        while (isMarks(stepAt(at))) at++
+        val start = at
+        var added = 0
+        while (added < count || stepAt(at - 1) != ".") if (!isMarks(stepAt(at++))) added++
+        return lineFrom(start, at - start)
     }
+
+    /** A word, or a run of marks, in typed text. */
+    private val PIECE = Regex("[\\p{L}\\p{N}'’]+|[^\\s\\p{L}\\p{N}'’]+")
 }
 
 /** One push in a demonstration: the keys that light, and the text that the word has become after it. */

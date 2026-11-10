@@ -300,9 +300,21 @@ private fun demonstrationsTypePunctuation() {
         val text = GuideScript.pushes(word, false, true) { alt[it] }.last().text
         same(text.trimEnd(), word, "Typing $word ends in the script's own word")
     }
-    // Counting stays lenient: a word counts with or without its marks.
-    same(GuideScript.progress("Nothing to unlearn "), GuideScript.progress("Nothing to unlearn: "), "Marks do not change the count")
-    same(GuideScript.progress("Nothing to unlearn"), 3, "A word without its colon still counts")
+    // The marks after a word are a step of their own, so that you get to type them, and counting stays lenient.
+    same(GuideScript.steps.take(5), listOf("Nothing", "to", "unlearn", ":", "type"), "A word's marks are a step after it")
+    same(GuideScript.steps.count(GuideScript::isMarks), GuideScript.words.count { !it.last().isLetterOrDigit() }, "Each word with marks gives one step of marks")
+    same(GuideScript.progress("Nothing to unlearn"), 3, "A word without its colon counts")
+    same(GuideScript.stepAt(GuideScript.progress("Nothing to unlearn ")), ":", "After the word, the colon is next")
+    same(GuideScript.progress("Nothing to unlearn: "), 4, "Typing the colon moves on")
+    same(GuideScript.progress("Nothing to unlearn:"), 4, "The colon counts at once")
+    same(GuideScript.progress("Nothing to unlearn type "), 5, "Typing the next word instead counts for the colon too, so nobody is stuck")
+    same(GuideScript.progress("Nothing to unlearn ty"), 4, "The start of the next word still waits, past the colon")
+    same(GuideScript.progress("Nothing, to "), 2, "A mark where a word is next is passed over")
+    same(GuideScript.wordFrom(3), "type", "The word to expect after the colon is the next word")
+    same(GuideScript.lineFrom(2, 4), "unlearn: type with", "The line puts marks right after their word")
+    same(GuideScript.markKeys(".", true) { "N" }, listOf(listOf(Layout.SPACE), listOf(Layout.SPACE)), "A full stop is Space twice")
+    same(GuideScript.markKeys(":", true) { "Z" }, listOf(listOf(Layout.ALT), listOf("Z")), "A colon is Alt and its key")
+    same(GuideScript.markKeys("?", true) { null }, emptyList<List<String>>(), "A mark that no key has lights nothing")
     val flow = GuideFlow({ GuideSettings() })
     flow.start("swipe")
     same(flow.step.id, "swipe", "The swipe slide should open")

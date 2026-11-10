@@ -434,7 +434,7 @@ class GuideActivity : Activity() {
         if (stopTrace == null) stopTrace = Trace.listen { message -> trace(message) }
         // A word that comes out different gets the script's word on the strip, so the line above is always one touch away.
         // The playground is free typing, so there the strip keeps to your own words.
-        if (!playground) GuideHooks.script = { before -> GuideScript.wordAt(GuideScript.progress(before)).trim { !it.isLetter() } }
+        if (!playground) GuideHooks.script = { before -> GuideScript.wordFrom(GuideScript.progress(before)).trim { !it.isLetter() } }
         contentResolver.registerContentObserver(Settings.Secure.getUriFor(Settings.Secure.DEFAULT_INPUT_METHOD), false, keyboardChanges)
     }
 
@@ -836,12 +836,13 @@ class GuideActivity : Activity() {
         val next = GuideScript.progress(field.text.toString())
         val strong = if (tone == GuideTone.Ink) GuideColours.CREAM else GuideColours.INK
         val accent = if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK
-        val word = GuideScript.wordAt(next)
-        val rest = (1..SCRIPT_WORDS).joinToString(" ") { GuideScript.wordAt(next + it) }
+        // The next step is a word, or the marks after one, which wait their turn to be typed.
+        val word = GuideScript.stepAt(next)
+        val rest = GuideScript.lineFrom(next + 1, SCRIPT_WORDS)
         script.text = SpannableStringBuilder().apply {
             append(word, ForegroundColorSpan(accent), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             setSpan(StyleSpan(Typeface.BOLD), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            append(" ")
+            if (!GuideScript.isMarks(GuideScript.stepAt(next + 1))) append(" ")
             append(rest, ForegroundColorSpan(GuideMotion.faded(strong, SCRIPT_REST)), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         val shown = ghostCue(if (playground) GuideCue.Free else flow.step.cue)
@@ -851,8 +852,10 @@ class GuideActivity : Activity() {
     /** What the drawing of the keys can draw for [cue]: the next word of the script is turned into that word's letters. */
     private fun ghostCue(cue: GuideCue): GuideCue {
         if (cue != GuideCue.NextWord) return cue
-        val word = GuideScript.wordAt(GuideScript.progress(field.text.toString()))
-        return GuideCue.Word(GuideScript.letters(word).ifEmpty { "titan" })
+        val step = GuideScript.stepAt(GuideScript.progress(field.text.toString()))
+        // Marks that are next glow on their keys: Alt and the key, or Space for a full stop.
+        if (GuideScript.isMarks(step)) return GuideCue.Spot(markPushes(step).flatten().distinct())
+        return GuideCue.Word(GuideScript.letters(step).ifEmpty { "titan" })
     }
 
     // Demonstrations. A slide shows its gesture by itself, in grey over the field, again and again until you take over. It types
@@ -936,7 +939,7 @@ class GuideActivity : Activity() {
         // Android logs an error for a span with no length, and this runs for every frame.
         if (text.isNotEmpty()) built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         val gap = if (text.isEmpty() || text.endsWith(' ')) "" else " "
-        val next = GuideScript.wordAt(GuideScript.progress(text))
+        val next = GuideScript.stepAt(GuideScript.progress(text))
         fun add(added: String) {
             if (added.isEmpty()) return
             val start = built.length
@@ -945,7 +948,17 @@ class GuideActivity : Activity() {
         }
         val lastStart = text.trimEnd().lastIndexOf(' ') + 1
         val lastEnd = text.trimEnd().length
-        when (demo) {
+        val typing = demo == GuideDemo.TypeNext || demo == GuideDemo.SwipeNext || demo == GuideDemo.FixNext
+        if (typing && GuideScript.isMarks(next)) {
+            // Marks go right after their word: the keys light one push at a time, and then the marks show in place.
+            val pushes = markPushes(next)
+            val shown = ((t / TYPE_SHARE) * pushes.size).toInt().coerceIn(0, pushes.size)
+            while (demoKeys < shown) pushes[demoKeys++].forEach(keys::light)
+            if (t > TYPE_SHARE) {
+                built.delete(text.trimEnd().length, built.length)
+                add(next + " ")
+            }
+        } else when (demo) {
             GuideDemo.TypeNext -> {
                 val pushes = pushesFor(next, swiped = false)
                 val shown = ((t / TYPE_SHARE) * pushes.size).toInt().coerceIn(0, pushes.size)
@@ -1002,6 +1015,8 @@ class GuideActivity : Activity() {
         phantom.text = built
         phantom.scrollTo(0, field.scrollY)
     }
+
+    private fun markPushes(marks: String) = GuideScript.markKeys(marks, TypingSettings.autoPunctuation(this)) { altKeys[it] }
 
     private fun pushesFor(word: String, swiped: Boolean) = demoPushes
         ?: GuideScript.pushes(word, swiped, TypingSettings.autoPunctuation(this)) { altKeys[it] }.also { demoPushes = it }

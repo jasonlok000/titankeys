@@ -369,7 +369,8 @@ class TouchSizeActivity : Activity(), Recording.Sink {
 
         private fun key(canvas: Canvas, x: Float, y: Float, width: Float, height: Float, name: String) {
             box.set(x + 3, y + 3, x + width - 3, y + height - 3)
-            canvas.drawRoundRect(box, 10f, 10f, outline)
+            val radius = com.atlas.keyboard.Radii.px(resources, com.atlas.keyboard.Radii.SMALL)
+            canvas.drawRoundRect(box, radius, radius, outline)
             canvas.drawText(name, box.centerX(), box.centerY() + label.textSize / 3, label)
         }
     }

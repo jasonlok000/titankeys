@@ -299,7 +299,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
                 key.symbol = null
             } else moving = true
         }
-        val radius = min(key.box.width(), key.box.height()) * KEY_ROUNDNESS
+        val radius = min(Radii.px(resources, Radii.SMALL), min(key.box.width(), key.box.height()) / 2)
         boxPaint.color = GuideMotion.blend(idleFill, litFill, heat.coerceIn(0f, 1f))
         canvas.drawRoundRect(key.box.left + inset, key.box.top + inset, key.box.right - inset, key.box.bottom - inset, radius, radius, boxPaint)
         val labelColour = GuideMotion.blend(idleLabel, litLabel, heat.coerceIn(0f, 1f))
@@ -325,7 +325,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         areaPath.fillType = Path.FillType.EVEN_ODD
         areaPath.addRect(0f, 0f, width.toFloat(), height.toFloat(), Path.Direction.CW)
         areaPath.addRoundRect(width * AREA_LEFT, height * AREA_TOP, width * AREA_RIGHT, height * AREA_BOTTOM,
-            dp(AREA_RADIUS), dp(AREA_RADIUS), Path.Direction.CW)
+            Radii.px(resources, Radii.MEDIUM), Radii.px(resources, Radii.MEDIUM), Path.Direction.CW)
         canvas.drawPath(areaPath, areaPaint)
     }
 
@@ -531,7 +531,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      */
     private fun drawTapZone(canvas: Canvas) {
         if (cue !is GuideCue.Taps) return
-        val corner = dp(ZONE_CORNER)
+        val corner = Radii.px(resources, Radii.SMALL)
         zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE, ZONE_ALPHA)
         canvas.drawRoundRect(width * CursorGesture.ZONE_LEFT, height * CursorGesture.ZONE_TOP, width * CursorGesture.ZONE_RIGHT,
             height * ZONE_BOTTOM, corner, corner, zonePaint)
@@ -543,7 +543,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      */
     private fun drawDeleteZone(canvas: Canvas) {
         if (cue !is GuideCue.Flick) return
-        val corner = dp(ZONE_CORNER)
+        val corner = Radii.px(resources, Radii.SMALL)
         zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE, ZONE_ALPHA)
         deletePath.rewind()
         for ((left, top, right, bottom) in deleteStartBoxes) {
@@ -610,8 +610,6 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         // Keys. Sizes are in dp unless they say otherwise. Change these to adjust the look.
         const val FRAME_MILLIS = 16f
         const val KEY_GAP = 2f
-        /** How round a key is, as a part of its shorter side. */
-        const val KEY_ROUNDNESS = .22f
         const val KEY_FILL_ORANGE = .13f
         const val KEY_FILL_INK = .1f
         const val KEY_LABEL_INK = .85f
@@ -660,7 +658,6 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         /** Where the ghost taps: just above the line between V and B and Space. */
         const val ZONE_TAP_ROW = .72f
         const val ZONE_ALPHA = .2f
-        const val ZONE_CORNER = 6f
 
         // The box round the part of the keys that the touchpad feels, as parts of the drawing's width and height.
         const val AREA_LEFT = .05f
@@ -671,6 +668,5 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val AREA_BOTTOM = 3.54f / 4
         /** How strongly the part that the touchpad does not read is dimmed. */
         const val AREA_SHADE = .5f
-        const val AREA_RADIUS = 10f
     }
 }

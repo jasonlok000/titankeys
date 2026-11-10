@@ -1,9 +1,11 @@
 import { useEffect } from "react";
-import { Canvas, CanvasIcon, CanvasText, Rectangle, Screen, Stack, Text, replace, useSnapshot } from "ink";
+import { Canvas, CanvasIcon, CanvasText, Screen, Stack, Text, replace, useSnapshot } from "ink";
 import { arrowOutward } from "ink/icons";
 import { cancelPlayground, markNotesSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
 import { INK, ORANGE } from "../lib/brand";
+import { RADIUS } from "../lib/radii";
 import { hasReleaseNotes } from "../lib/release-notes";
+import { RoundedFill } from "../lib/rounded";
 import { WhatsNew } from "../lib/whats-new";
 
 const WIDTH = 596;
@@ -13,7 +15,7 @@ function Action({ label, onPress }: { label: string; onPress: () => void }) {
   const height = 108;
   const icon = 30;
   return <Canvas width={WIDTH} height={height}>
-    <Rectangle x={0} y={0} width={WIDTH} height={height} fill={ORANGE} onPress={onPress} />
+    <RoundedFill x={0} y={0} width={WIDTH} height={height} radius={RADIUS.large} fill={ORANGE} onPress={onPress} />
     <CanvasText x={0} y={0} width={WIDTH} height={height} size={32} colour={INK} align="center">{label}</CanvasText>
     <CanvasIcon x={WIDTH - icon - 32} y={(height - icon) / 2} size={icon} name={arrowOutward} colour={INK} />
   </Canvas>;

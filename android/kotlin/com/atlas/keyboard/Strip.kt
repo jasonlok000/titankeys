@@ -133,7 +133,7 @@ class Strip(
     private var corners = Corners.None
     /** How far the content keeps from each side, so that the screen's rounded corners do not cut it. */
     private var side = 0
-    private val drawing = GestureDrawing(resources.displayMetrics.density)
+    private val drawing = GestureDrawing(resources.displayMetrics.density, Radii.px(resources, Radii.SMALL))
     private var look = Look.of(context)
 
     /** Shows what a special gesture is doing, in the place of the words. It shows only where the strip shows. */
@@ -272,7 +272,7 @@ class Strip(
             val held = bar != null && name in bar.held
             chip.setTextColor(if (held) look.onAccent else look.accent)
             chip.background = GradientDrawable().apply {
-                cornerRadius = dp(6).toFloat()
+                cornerRadius = Radii.px(resources, Radii.SMALL)
                 if (held) setColor(look.accent) else {
                     setColor(Color.TRANSPARENT)
                     setStroke(dp(1).coerceAtLeast(2), look.accent)

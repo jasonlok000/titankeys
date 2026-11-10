@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.Outline
 import android.graphics.Paint
 import android.hardware.display.DisplayManager
 import android.inputmethodservice.InputMethodService
@@ -25,6 +26,7 @@ import android.view.KeyEvent
 import android.view.KeyCharacterMap
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.CursorAnchorInfo
@@ -674,7 +676,21 @@ class AtlasIme : InputMethodService() {
             addView(keys)
             addView(words)
             inputRoot = this
+            roundTopCorners(this)
         }
+    }
+
+    /**
+     * The keyboard's top corners take the medium radius, the same as everything else in TitanKeys. The outline only clips what is
+     * drawn, so nothing moves. It reaches past the bottom, where the screen's own corners do the rounding.
+     */
+    private fun roundTopCorners(view: View) {
+        val radius = Radii.px(resources, Radii.MEDIUM)
+        view.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) =
+                outline.setRoundRect(0, 0, view.width, view.height + radius.toInt(), radius)
+        }
+        view.clipToOutline = true
     }
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {

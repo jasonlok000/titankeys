@@ -47,9 +47,11 @@ Answer **"not collected"** for everything except the rows marked **Collected**.
 | Financial info | All | Not collected | |
 | Health and fitness | All | Not collected | |
 | Messages | Emails, SMS or MMS, Other in-app messages | Not collected | No text around the word, and no typed text, is ever sent. |
-| Photos and videos, Audio, Files and docs, Calendar, Contacts | All | Not collected | |
+| Photos and videos, Audio, Files and docs, Calendar | All | Not collected | |
+| Contacts | Contacts | Not collected | Read on the phone only, with the user's opt-in and Android's Contacts permission, to recognise first and last names as words. Never sent or shared. |
 | **App activity** | **App interactions** | **Collected** | The swipe path, with times from the start of the swipe, the touch sizes, the ranker's 18 numbers, and how the word was settled (kept, picked from the strip, or corrected). |
-| App activity | In-app search history, Installed apps, Other actions | Not collected | |
+| App activity | In-app search history, Other actions | Not collected | |
+| App activity | Installed apps | Not collected | Home-screen app names are read on the phone to recognise them as words. Never sent or shared. |
 | **App activity** | **Other user-generated content** | **Collected** | The kept word, only when it is a dictionary word. **Uncertain:** a single dictionary word could also be seen as part of "App interactions". Declaring it here is the cautious choice. |
 | Web browsing | Web browsing history | Not collected | |
 | App info and performance | Crash logs | Not collected | |

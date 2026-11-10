@@ -28,6 +28,14 @@ For #36. One short reason each, for the store listing, the app's own permission 
 
 **Play:** normal permissions. No declaration. The Data safety form covers what is sent (`data-safety.md`).
 
+## Contacts (`READ_CONTACTS`)
+
+**Short reason:** "Optional. If you turn on Names from my contacts, TitanKeys reads your contacts' first and last names so you can swipe and type them. They stay on your phone and are never sent."
+
+**Where it shows:** Settings > Your words > Names from my contacts. Android's prompt comes only when the user turns the switch on, from the app screen, never at first launch.
+
+**Play:** a dangerous permission, but not a restricted one, so no declaration form. The Data safety form stays "Not collected" for Contacts, because nothing leaves the phone (`data-safety.md`).
+
 ## Accessibility service (`BIND_ACCESSIBILITY_SERVICE`, `BackService`)
 
 **Short reason:** "Optional. It lets one push of Back close the keyboard and go back. At a few set times, such as while the Sym panel is open or in the Smart Launcher search field, it also sees which keys you push, so the keyboard's own keys work there. It can't read your screen, and it doesn't keep or send anything."
@@ -40,6 +48,6 @@ For #36. One short reason each, for the store listing, the app's own permission 
 
 - `VIBRATE`: the ticks you feel while steering and typing. A normal permission.
 - `BIND_INPUT_METHOD`: not asked of the user. It protects the keyboard service so only Android can use it.
-- The `<queries>` entry for the home screen app: lets TitanKeys see which launcher is the home screen. It is not `QUERY_ALL_PACKAGES`, so no declaration.
+- The `<queries>` entries for launcher apps: let TitanKeys see which launcher is the home screen, and read the names of home-screen apps so they can be swiped and typed with their capitals. They are not `QUERY_ALL_PACKAGES`, so no declaration.
 
 **Check on the final App Bundle** that these are all the permissions it asks for. Ink and libraries can add more (`build-tasks.md`, task C4).

@@ -1,10 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Only with "Names from my contacts" on: given and family names, kept in memory on the phone, never sent. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
+        </intent>
+        <!-- The apps on the home screen, whose names the keyboard knows as words. Not every installed package. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
         </intent>
     </queries>
     <!-- Opted in, apps play their own keyboard-dismiss animation on back and never pass back on. -->
@@ -13,6 +20,11 @@
             android:name="com.vandam.ink.LearningTransferActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
+        <activity
+            android:name="com.vandam.ink.ContactsPermissionActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <activity
             android:name="com.vandam.ink.RawLogExportActivity"

@@ -25,6 +25,25 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("auto_capitalise", enabled).apply();
     }
 
+    public static final String CONTACT_NAMES = "contact_names";
+
+    /**
+     * Swipes and typing know the given and family names of the user's contacts. Off until the user turns it on, and it
+     * also needs Android's Contacts permission. The names stay in memory on the phone.
+     */
+    public static boolean contactNames(Context context) {
+        return preferences(context).getBoolean(CONTACT_NAMES, false);
+    }
+
+    public static void contactNames(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean(CONTACT_NAMES, enabled).apply();
+    }
+
+    /** Where the typing settings are kept, for a part that follows one of them as it changes. */
+    public static SharedPreferences settings(Context context) {
+        return preferences(context);
+    }
+
     /** Two quick spaces type a full stop, and typed punctuation moves in front of a space. */
     public static boolean autoPunctuation(Context context) {
         return preferences(context).getBoolean("auto_punctuation", true);

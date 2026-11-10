@@ -37,11 +37,14 @@ private val near: (Char, Char) -> Boolean = { a, b -> KeyNeighbours.near(a, b) }
 
 /** The word list and the user's own words, as AutocorrectLoader gives them. British spelling is the setting's default. */
 private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = PhoneWords.Habits(),
-                    val spelling: (String) -> String = { PhoneWords.spelled(it, false) }) : Lexicon {
-    override fun known(word: String) = words.contains(word) || habits.active(word)
+                    val spelling: (String) -> String = { PhoneWords.spelled(it, false) },
+                    /** Names on this phone, by their lowercase form, as SwipeTyping holds them. */
+                    val phoneNames: Map<String, String> = emptyMap()) : Lexicon {
+    override fun known(word: String) = words.contains(word) || habits.active(word) || word.lowercase() in phoneNames
     override fun frequency(word: String) = words.frequency(word)
-    override fun personal(word: String) = habits.active(word)
+    override fun personal(word: String) = habits.active(word) || word.lowercase() in phoneNames
     override fun name(word: String): String? = words.name(word) ?: habits.capitals(word)
+        ?: phoneNames[word.lowercase()]?.takeIf { it != word.lowercase() }
     override fun preferredSpelling(word: String) = spelling(word)
     override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
 }
@@ -860,6 +863,9 @@ private fun composerFlow(world: Realistic) {
         saved.habits.add("Lok")
         same(typed("jason lok is here", saved), "Jason Lok is here", "A saved word with capitals gets them when typed")
         same(typed("jason lok is here"), "Jason lok is here", "An unsaved word keeps its case")
+        val apps = Lists(world.words, phoneNames = mapOf("whatsapp" to "WhatsApp", "spotify" to "Spotify"))
+        same(typed("open whatsapp now", apps), "open WhatsApp now", "An app's name on this phone gets its capitals when typed")
+        same(typed("play spotify", apps), "play Spotify", "A rare brand from an app's name gets its capitals")
         val undone = Typist(world, world.autocorrect(saved), lists = saved).type("titankeys ").backspace().type(" ")
         same(undone.text, "titankeys ", "An undone capital fix stays undone")
     }

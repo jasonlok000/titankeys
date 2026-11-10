@@ -25,6 +25,7 @@ import com.atlas.keyboard.GuideActivity
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.KeyCapture
+import com.atlas.keyboard.PhoneNameSource
 import com.atlas.keyboard.PhoneSetup
 import com.atlas.keyboard.RawLog
 import com.atlas.keyboard.SetupPart
@@ -311,6 +312,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("scrollAssistant", PhoneSetup.scrollAssistant())
             .put("backService", BackService.enabled(activity))
             .put("learning", typing.learningEnabled())
+            .put("contactNames", PhoneNameSource.contactsAllowed(activity))
             .put("tapKeys", TypingSettings.tapKeys(activity))
             .put("holdSymbols", TypingSettings.holdSymbols(activity))
             .put("holdSymbolMillis", TypingSettings.holdSymbolMillis(activity))
@@ -384,6 +386,9 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private fun set(key: String, value: Any) {
         when (key) {
             "learning" -> typing.learningEnabled(value as Boolean)
+            // Turning it on asks Android first, from a screen of its own. It is on only once Android allows it.
+            "contactNames" -> if (value as Boolean && !PhoneNameSource.contactsAllowed(activity)) ContactsPermissionActivity.start(activity)
+                else TypingSettings.contactNames(activity, value)
             "tapKeys" -> TypingSettings.tapKeys(activity, value as String)
             "holdSymbols" -> TypingSettings.holdSymbols(activity, value as Boolean)
             "holdSymbolMillis" -> TypingSettings.holdSymbolMillis(activity, (value as Number).toInt())

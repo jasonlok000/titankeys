@@ -9,6 +9,17 @@ Tools for measuring swipe accuracy on a real Titan 2 Elite. They build only into
 3. Swipe each word as it is shown. Use **Next**, **Skip** or **Redo** to move on. The session has 200 normal words, 100 rushed words and 25 typed sentences.
 4. Use **Export** to save the session as a JSONL file.
 
+## See touch size
+
+**TitanKeys Touch size** shows the size that the touchpad reports for each point of a touch, to learn what it means (issue #30).
+
+1. Make TitanKeys Debug the active keyboard, then open **TitanKeys Touch size**.
+2. Pick a kind of touch: fingertip swipe, flat thumb swipe, thumb rest or fingertip rest. Do it about 10 times on the keys.
+3. The map draws each point as a circle as large as its size. Below, each kind shows its average size, how often each size came up, and how long and how far its touches went.
+4. Use **Export** to save the touches as JSON lines: one line for each touch, with its kind and each point's position, size, Android's touch major and time. It keeps no text.
+
+The size is the sensor's touch major, from 0 to 255. The screen reads Android's size axis, which is that value divided by 255, and multiplies it back. Android's touch major axis is scaled to the screen, and its range is the screen's diagonal, so it does not give the sensor's steps. The raw log's `sz` is that scaled touch major.
+
 ## Replay a session
 
 Replay runs a recording through the real touch handling, text logic and swipe engine, with no keyboard window.

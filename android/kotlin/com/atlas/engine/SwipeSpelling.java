@@ -56,13 +56,6 @@ final class SwipeSpelling {
         return spellings;
     }
 
-    /** Swipes cannot show a doubled letter, so these words share the shape of "of" and "to" and context chooses. */
-    static Map<String, Float> sameShape(ToDoubleFunction<String> frequency) {
-        Map<String, Float> words = new HashMap<>();
-        for (String word : new String[] { "off", "too" }) words.put(word, (float) frequency.applyAsDouble(word));
-        return words;
-    }
-
     /** Whether these letters or this spelling can only be a contraction, as "dont" and "don't" can. */
     static boolean onlyContraction(String word) {
         return CONTRACTIONS.containsKey(word.replace("'", ""));

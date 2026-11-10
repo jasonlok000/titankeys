@@ -13,11 +13,13 @@ public final class SavedWordSwipeChecks {
     private static NativeDictionary base;
     private static SwipeDecoder decoder;
     private static NativeDictionary contractions;
+    private static NativeDictionary doubleLetters;
 
     public static void main(String[] args) {
         base = new NativeDictionary(args[0] + "/english.combined");
         decoder = new SwipeDecoder(args[0]);
         contractions = SwipeRecognizer.contractionDictionary(base);
+        doubleLetters = NativeDictionary.doubleLetters(base, SwipeRecognizer.DOUBLE_LETTER_FLOOR);
         Swipe swipe = path("ima");
 
         check(!shown(swipe, List.of(), Set.of()).contains("imma"), "An unsaved word must not appear");
@@ -59,10 +61,10 @@ public final class SavedWordSwipeChecks {
         String[] active = saved.stream().filter(blocks::allowed).toArray(String[]::new);
         float[] activeFrequencies = active.length == saved.size() ? frequencies : new float[0];
         try (NativeDictionary personal = new NativeDictionary(active, activeFrequencies)) {
-            decoder.dictionaries(Layout.LETTERS, Layout.KEY_X, Layout.KEY_Y, new long[] { base.pointer(), personal.pointer(), contractions.pointer() });
+            decoder.dictionaries(Layout.LETTERS, Layout.KEY_X, Layout.KEY_Y, new long[] { base.pointer(), personal.pointer(), contractions.pointer(), doubleLetters.pointer() });
             Set<String> learned = Set.copyOf(Arrays.asList(active));
             SwipeDecoder.Result[] results = decoder.recognise(swipe.x, swipe.y, swipe.time, context,
-                    new float[] { 1, 1, 1 }, 48);
+                    new float[] { 1, 1, 1, 1 }, 48);
             results = Arrays.stream(SwipeRecognizer.savedWords(results, learned, decoder.contextWeight()))
                     .filter(result -> blocks.allowed(result.word)).toArray(SwipeDecoder.Result[]::new);
             results = SwipeRecognizer.rank(swipe, results, decoder.contextWeight(), decoder.shapeNormalizer(), contextWords, learned);

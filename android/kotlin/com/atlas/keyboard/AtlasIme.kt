@@ -37,6 +37,7 @@ import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
 import java.io.IOException
 import kotlin.math.abs
+import kotlin.math.hypot
 
 /**
  * Atlas: swipe typing on the Titan 2 keyboard's touchpad, with a suggestion strip for the physical
@@ -230,6 +231,55 @@ class AtlasIme : InputMethodService() {
     }
 
     /** Space set as a tap key would type the first tap of a double tap, so a tap waits until it can't be one. */
+    /** A flick up that waits to see if the next touch carries it on, which makes it the start of a swipe. */
+    private class WaitingFlick(val end: Sample, val done: (Boolean) -> Unit)
+    private var waitingFlick: WaitingFlick? = null
+    private val flickWaited = Runnable { finishFlick(picked = true) }
+
+    /** The strip word that a flick up picks, 0 to 2 on the bar, or null if this contact is not a flick that can pick one. */
+    private fun flickThird(pending: Contact.Settlement, result: Contact.Outcome?): Int? {
+        // A piece joined to another swipe is part of that swipe.
+        if (result !is Contact.Outcome.Swipe || result.deletesWord || result.points.size != pending.points.size) return null
+        if (altOrPanel || !editing || strip?.wordsShowing != true || !TypingSettings.flickToPick(this)) return null
+        return PickFlick.third(result.points)?.let { Strip.WORD_ORDER[it] }
+    }
+
+    /**
+     * A finger near the top of the touchpad can lose contact for a moment, which splits a swipe in two. So a flick waits for the
+     * time that a short lift may last, and a touch that starts where it ended makes it a swipe after all.
+     */
+    private fun waitForFlick(end: Sample, done: (Boolean) -> Unit) {
+        finishFlick(picked = true)
+        val wait = composer.liftOffMillis.toLong()
+        if (wait <= 0) return done(true)
+        waitingFlick = WaitingFlick(end, done)
+        main.postDelayed(flickWaited, wait)
+    }
+
+    private fun decideFlick(next: Sample) {
+        val flick = waitingFlick ?: return
+        val carriesOn = next.valid && hypot((next.x - flick.end.x) * 10, (next.y - flick.end.y) * 4) <= FLICK_CARRY_KEYS
+        finishFlick(picked = !carriesOn)
+    }
+
+    private fun finishFlick(picked: Boolean) {
+        val flick = waitingFlick ?: return
+        waitingFlick = null
+        main.removeCallbacks(flickWaited)
+        flick.done(picked)
+    }
+
+    /** Puts in the strip word at place [index] on the bar, for a flick up. A place with no word takes nothing. */
+    private fun pickFlick(index: Int) {
+        // The flick was not a swipe, so nothing can carry it on.
+        pieces.clear()
+        if (composer.shownWord(index) == null) return
+        haptics.wordPicked()
+        strip?.flash(index)
+        KeyboardEvents.publish { KeyboardEvent.FlickPicked(index) }
+        composer.choose(index)
+    }
+
     private fun holdTap(finish: (Boolean) -> Unit) {
         heldTaps += finish
         main.removeCallbacks(checkHeldTaps)
@@ -698,6 +748,8 @@ class AtlasIme : InputMethodService() {
     override fun onFinishInput() {
         // A word waiting to be forgotten is forgotten now, before the next field can offer it.
         commitForget()
+        // A flick that still waits is a swipe like any other, so the field's pending input decides what becomes of it.
+        finishFlick(picked = false)
         // The letter is already typed, so a press that is still down can only stay a letter.
         holdEngine.cancel()
         heldLetter = null
@@ -794,6 +846,7 @@ class AtlasIme : InputMethodService() {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
                 haptics.begin(samples.firstOrNull())
                 endDeleteHold()
+                decideFlick(first)
                 contact.down(first)
                 if (cursor.resume(first, composer.liftOffMillis.toLong())) {
                     // Back within the slip recovery period: still steering the cursor, never typing.
@@ -880,7 +933,15 @@ class AtlasIme : InputMethodService() {
                             input.ready = true
                             drainInput()
                         }
-                        if (result is Contact.Outcome.Tap && isTapKey(result.key) && cursorGesture.deciding(SystemClock.uptimeMillis())) holdTap(finish)
+                        val third = flickThird(pending, result)
+                        if (third != null) waitForFlick(pending.points.last(), { picked ->
+                            if (!picked) finish(true) else {
+                                input.action = { pickFlick(third) }
+                                input.ready = true
+                                drainInput()
+                            }
+                        })
+                        else if (result is Contact.Outcome.Tap && isTapKey(result.key) && cursorGesture.deciding(SystemClock.uptimeMillis())) holdTap(finish)
                         else finish(true)
                     }
                     settlements[pending] = settle
@@ -1650,6 +1711,8 @@ class AtlasIme : InputMethodService() {
         private const val RECENT_EMOJI = "recent"
         /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
         private const val STALE_HIDE_MILLIS = 500L
+        /** A touch this close to where a flick ended, in keys, carries the flick on as a swipe. */
+        private const val FLICK_CARRY_KEYS = 1f
         /** How long the strip offers Undo after you hold a word to forget it. */
         private const val FORGET_UNDO_MILLIS = 4000L
         /** The field of a returning window started within 30 ms of its empty start. */

@@ -78,6 +78,21 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("swipe_typing", enabled).apply();
     }
 
+    /**
+     * Off at first: on recorded swipes, one real swipe in about two thousand ("my", started a row too high) read as a flick.
+     * Turn it on only once the replays on the phone lose no swipe.
+     */
+    public static final boolean FLICK_TO_PICK_DEFAULT = false;
+
+    /** A short flick up on the letter keys picks the strip word for that third of the keys: left, middle or right. */
+    public static boolean flickToPick(Context context) {
+        return preferences(context).getBoolean("flick_to_pick", FLICK_TO_PICK_DEFAULT);
+    }
+
+    public static void flickToPick(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("flick_to_pick", enabled).apply();
+    }
+
     /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
     public static boolean cursorControl(Context context) {
         return preferences(context).getBoolean("cursor_control", true);

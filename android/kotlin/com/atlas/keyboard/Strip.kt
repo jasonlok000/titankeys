@@ -207,6 +207,24 @@ class Strip(
         if (more) postInvalidateOnAnimation()
     }
 
+    /** Whether the words are on show, so a flick up can pick one. */
+    val wordsShowing get() = showSuggestions && modifiers == null && forgotten == null && !gesture.showing && isShown
+
+    /** Marks the word at place [index] on the bar for a moment, so that you see which word a flick picked. */
+    fun flash(index: Int) {
+        val view = wordViews.getOrNull(WORD_ORDER.indexOf(index)) ?: return
+        view.background = GradientDrawable().apply {
+            cornerRadius = dp(8).toFloat()
+            setColor(look.accent and 0x00FFFFFF or FLASH_ALPHA)
+        }
+        flashEnd?.let(::removeCallbacks)
+        val clear = Runnable { for (word in wordViews) word.background = null }
+        flashEnd = clear
+        postDelayed(clear, FLASH_MILLIS)
+    }
+
+    private var flashEnd: Runnable? = null
+
     /** The words are covered while a gesture shows, so a touch must not choose one that nobody can see. */
     override fun onInterceptTouchEvent(event: MotionEvent) = gesture.showing || super.onInterceptTouchEvent(event)
 
@@ -218,7 +236,10 @@ class Strip(
     private fun dp(value: Int) = Math.round(value * resources.displayMetrics.density)
 
     companion object {
-        private val WORD_ORDER = listOf(1, 0, 2)
+        /** The place on the bar of the word shown left, in the middle and right. The best word is in the middle. */
+        val WORD_ORDER = listOf(1, 0, 2)
+        private const val FLASH_MILLIS = 300L
+        private const val FLASH_ALPHA = 0x55000000
         private const val CHIP_SIZE = 13f
         private const val CONTENT_ABOVE = 16
         private const val HINT_SMALLEST = 8f

@@ -32,6 +32,9 @@ export default function Settings() {
         onChange={suggestionBar => save.run({ suggestionBar })} />
       <Toggle label="No suggestions on an empty home search" value={settings.launcherHidesBar}
         onChange={launcherHidesBar => save.run({ launcherHidesBar })} />
+      {settings.suggestionBar && settings.swipeTyping
+        && <Toggle label="Flick up on the keys to pick a word" value={settings.flickToPick}
+          onChange={flickToPick => save.run({ flickToPick })} />}
     </Section>
     <Section title="Swiping">
       <Toggle label="Swipe to type words" value={settings.swipeTyping}

@@ -72,6 +72,9 @@ class Haptics(private val context: Context) {
     /** A word held on the strip is forgotten: three ticks that fade, unlike any other confirm. */
     fun wordForgotten() = waveform(longArrayOf(0, 16, 40, 14, 40, 12), intArrayOf(0, 230, 0, 150, 0, 80))
 
+    /** A flick up picked a word from the strip: a light tick, then a strong one, like a word that jumps up. */
+    fun wordPicked() = waveform(longArrayOf(0, 10, 30, 22), intArrayOf(0, 110, 0, 255))
+
     /** Confirms a new page or group in the Sym panel, with the same feel as a changed word. */
     fun pageChanged() = wordChanged()
 

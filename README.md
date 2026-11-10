@@ -48,6 +48,10 @@ The Titan's keys are a touchpad too. Slide across the letters of a word without 
 
 The strip above the keys shows the other words that a swipe could be. Touch one to put it in. Before you type, the strip suggests the next word.
 
+Touch and hold a word on the strip to forget it, so it is not suggested or used as a fix again. Undo shows for a moment, and **Settings > Your words** gives the word back.
+
+To pick without the screen, turn on **Flick up on the keys to pick a word** in Settings. A quick flick up on the left, middle or right third of the letter keys picks the word above it.
+
 ### Delete without reaching up
 
 Flick left from Backspace to delete a word. Keep your finger down to delete more: the longer the flick, the faster it goes.
@@ -172,6 +176,10 @@ Quick swipes tend to come out narrower than the word they mean, so TitanKeys rea
 The flick from Backspace is a quick, straight stroke left from around Backspace, at any length. Fitted to 68 real strokes, it catches 66 of them (97%), and it didn't trigger on any of 875 recorded word touches.
 
 <img src="assets/readme/delete-swipe.gif" width="400" alt="Diagram of a swipe from Backspace left to J deleting the previous word">
+
+### Picking a word with a flick up
+
+The flick up is short, quick and straight: it starts on a letter and goes up about one row. A word's swipe almost never does that, and "by" and "my", which go straight up two rows, stay swipes. It is off at first, because on 2,036 recorded strokes one short "my" read as a flick. A flick waits for the time a short lift may last, so a swipe that the top of the sensor breaks in two still joins up.
 
 <details>
 <summary><strong>Smaller changes for two-handed typing</strong></summary>

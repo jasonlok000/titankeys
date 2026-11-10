@@ -533,6 +533,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             floatArrayOf(x, y)
         }
         is GuideCue.Flick -> listOf(floatArrayOf(.95f, .375f), floatArrayOf(.62f, .375f))
+        GuideCue.FlickUp -> listOf(floatArrayOf(.25f, .62f), floatArrayOf(.25f, .38f))
         GuideCue.SlideRow -> listOf(floatArrayOf(.08f, .875f), floatArrayOf(.92f, .875f))
         else -> emptyList()
     }

@@ -1071,6 +1071,7 @@ class GuideActivity : Activity() {
         cursorControl = TypingSettings.cursorControl(this),
         swipeTyping = TypingSettings.swipeTyping(this),
         fnAsCtrl = TypingSettings.fnAsCtrl(this),
+        flickToPick = TypingSettings.flickToPick(this),
         panelOpen = panelOpen,
     )
 

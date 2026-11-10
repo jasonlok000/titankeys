@@ -264,8 +264,10 @@ public final class SwipeTyping {
                     catch (Exception | LinkageError error) { Log.w("TouchpadSwipe", "Swipe ranker skipped", error); }
                 }
                 String[] words = blockedWords.filter(EnglishSpelling.candidates(Arrays.stream(decoded).map(result -> result.word).toArray(String[]::new), variant));
-                if (personalized) for (int i = 0; i < words.length; i++)
-                    words[i] = nameCase(saved ? dictionary.restoreCase(words[i], configuredDay) : words[i]);
+                // Saved spellings only where the swipe was personalised. A name on this phone gets its capitals in any
+                // field, a search field too, as reading it keeps nothing.
+                for (int i = 0; i < words.length; i++)
+                    words[i] = nameCase(personalized && saved ? dictionary.restoreCase(words[i], configuredDay) : words[i]);
                 // Accuracy stats follow saved words only, as they did before names on this phone.
                 Prediction prediction = new Prediction(words.length == 0 ? "" : words[0], variant,
                         personalise && saved, epoch, generation, decoded, ranked);
@@ -448,10 +450,10 @@ public final class SwipeTyping {
         namesRevision++;
     }
 
-    /** Whether the base list has this word, so that a name on this phone need not add it. False until the lists load. */
-    public boolean inBaseList(String word) {
+    /** How common the base list makes this word, 0 if it lacks it, for names on this phone. 0 until the lists load. */
+    public float baseFrequency(String word) {
         SwipeRecognizer loaded = recogniser;
-        return loaded != null && loaded.frequency(SwipeWords.normalise(word)) > 0;
+        return loaded == null ? 0 : loaded.frequency(SwipeWords.normalise(word));
     }
 
     /** Whether this word is one of the names on this phone, for anything that must leave them out, such as contributions. */

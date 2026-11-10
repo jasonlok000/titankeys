@@ -69,7 +69,7 @@ class PhoneNameSource(private val context: Context, private val typing: SwipeTyp
 
     private fun refreshApps() = worker.execute {
         apps = try {
-            PhoneNames.words(appLabels(), typing::inBaseList)
+            PhoneNames.words(appLabels()) { typing.baseFrequency(it).toDouble() }
         } catch (error: RuntimeException) {
             Log.w(TAG, "Could not read the app names", error)
             emptyMap()
@@ -80,7 +80,7 @@ class PhoneNameSource(private val context: Context, private val typing: SwipeTyp
     private fun refreshContacts() = worker.execute {
         val allowed = contactsAllowed(context)
         contacts = if (allowed) try {
-            PhoneNames.words(contactNames(), typing::inBaseList)
+            PhoneNames.words(contactNames()) { typing.baseFrequency(it).toDouble() }
         } catch (error: RuntimeException) {
             Log.w(TAG, "Could not read the contacts' names", error)
             emptyMap()

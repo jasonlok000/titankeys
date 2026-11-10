@@ -48,6 +48,7 @@ public final class TypedPredictions {
                 if (word != null) add(vocabulary, key(word), frequency);
             }
         }
+        for (String word : BuiltInWords.SPELLINGS.keySet()) vocabulary.putIfAbsent(word, (double) BuiltInWords.FREQUENCY);
         words = vocabulary.keySet().toArray(new String[0]);
         Arrays.sort(words);
         frequencies = new float[words.length];

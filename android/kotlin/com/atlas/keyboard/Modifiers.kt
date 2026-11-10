@@ -135,6 +135,14 @@ class Modifiers {
         panel = Panel.Closed
     }
 
+    /** Puts the panel at [target] at once, for the guide that sets up a step. Shift and Alt go off, as a push of Sym does. */
+    fun openPanel(target: Panel) {
+        shift = Level.Off
+        alt = Level.Off
+        if (target == Panel.Settings) beforeSettings = Panel.Symbols
+        panel = target
+    }
+
     fun isCtrl(code: Int) = code == KeyEvent.KEYCODE_CTRL_LEFT || code == KeyEvent.KEYCODE_CTRL_RIGHT || fnIsCtrl && code == FN
 
     fun key(event: KeyEvent) {

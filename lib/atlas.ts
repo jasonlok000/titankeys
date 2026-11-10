@@ -174,6 +174,8 @@ export async function markNotesSeen() {
 
 /** Opens the interactive guide. It starts where you stopped, or from the beginning if you finished it. */
 export const openGuide = () => atlas("guide");
+/** Opens the playground, and tells where its buttons asked to go, or "closed" when it closed from its setup slide. */
+export const openPlayground = async (): Promise<"guide" | "settings" | "closed"> => JSON.parse(await atlas("playground"));
 export const enableKeyboard = () => atlas("enable");
 export const chooseKeyboard = () => atlas("choose");
 export const allowOverlay = () => atlas("overlay");

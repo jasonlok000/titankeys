@@ -58,6 +58,17 @@ class Haptics(private val context: Context) {
         play(VibrationEffect.createWaveform(longArrayOf(0, 18, 55, 18), intArrayOf(0, strength, 0, strength), -1))
     }
 
+    /**
+     * The cursor went past a space: a heavier, longer bump than the tick for a letter, so that you feel where each word ends.
+     * It stays one pulse, so it fits between the steps of a fast cursor.
+     */
+    fun cursorGap() {
+        if (!enabled(context)) return
+        val preset = preset(context)
+        val strength = if (vibrator.hasAmplitudeControl()) minOf(preset.amplitude * GAP_STRENGTH, 255) else VibrationEffect.DEFAULT_AMPLITUDE
+        play(VibrationEffect.createOneShot(preset.durationMillis * GAP_LENGTH_PERCENT / 100, strength))
+    }
+
     /** Confirms a new page or group in the Sym panel, with the same feel as a changed word. */
     fun pageChanged() = wordChanged()
 
@@ -137,6 +148,9 @@ class Haptics(private val context: Context) {
     companion object {
         /** As short as a swipe tick, so it feels the same, only at full strength. */
         private const val CLICK_MILLIS = 20L
+        /** A space under the cursor: this many times a tick's strength, and this much of its length, in percent. */
+        private const val GAP_STRENGTH = 2
+        private const val GAP_LENGTH_PERCENT = 150L
 
         private fun preferences(context: Context) = context.getSharedPreferences("swipe_haptics", Context.MODE_PRIVATE)
 

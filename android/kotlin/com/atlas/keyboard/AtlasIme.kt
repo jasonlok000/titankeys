@@ -248,22 +248,17 @@ class AtlasIme : InputMethodService() {
 
     /**
      * Checks the lean every frame so speed follows the finger at once. Leaning in moves one letter straight
-     * away, then letters build up at the current speed. A word drag grows from the word that it began with:
-     * back in the dead zone it is only that word again, and the other side grows from that word.
+     * away, then letters build up at the current speed. A word drag moves its end one word at a time: leaning
+     * back the other way gives the words back one by one before it goes past the word that it began with.
      */
     private val stepCursor = object : Runnable {
         private var owed = 1f
         private var last = 0L
-        private var side = 0
 
         override fun run() {
             if (!cursor.active) return
             val now = SystemClock.uptimeMillis()
             val direction = cursor.direction()
-            if (cursor.words && direction != side) {
-                if (side != 0) resetWords()
-                side = direction
-            }
             val speed = if (direction != 0 && last != 0L) cursor.speed(now) else 0f
             if (direction == 0) owed = 1f
             else owed += speed * (now - last) / 1000
@@ -279,7 +274,6 @@ class AtlasIme : InputMethodService() {
         fun reset() {
             owed = 1f
             last = 0L
-            side = 0
         }
 
         /** Carries on after a slip, without the extra first step a fresh lean gets. */
@@ -303,6 +297,18 @@ class AtlasIme : InputMethodService() {
         composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
         composer.onStroke = Trace::stroke
         composer.onAutocorrect = haptics::wordChanged
+        composer.nearMiss = { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) }
+        composer.intended = { before -> GuideHooks.intended(currentInputEditorInfo?.privateImeOptions, before) }
+        // The interactive guide puts the keyboard in the menu that a step needs, only in its own field.
+        GuideHooks.panelRequests = { target ->
+            main.post {
+                if (!editing || currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) != true) return@post
+                if (target == modifiers.panel) return@post
+                modifiers.openPanel(target)
+                showModifiers()
+                if (panelOpen && !isInputViewShown) main.post(showPanel)
+            }
+        }
         autocorrect = AutocorrectLoader(this, SwipeTyping.get(this))
         // The firmware hands touchpad events to the topmost window titled "InputMethod", which is this
         // keyboard's window. They arrive at the window, not at any view, so catch them there.
@@ -959,9 +965,12 @@ class AtlasIme : InputMethodService() {
             KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD)
         enqueue {
             // A cursor at the start or end of the text cannot move, so it stays quiet. An app that does not answer still gets the pulse.
+            // Going past a space feels different from a letter, so that you can count words without looking.
             val connection = currentInputConnection
             val next = if (direction > 0) connection?.getTextAfterCursor(1, 0) else connection?.getTextBeforeCursor(1, 0)
-            if (next?.isEmpty() != true && Haptics.enabled(this)) haptics.pulse()
+            if (next?.isEmpty() != true && Haptics.enabled(this)) {
+                if (next?.firstOrNull()?.isWhitespace() == true) haptics.cursorGap() else haptics.pulse()
+            }
             command(arrow)
         }
     }
@@ -978,18 +987,6 @@ class AtlasIme : InputMethodService() {
             val word = WordSelection.at(text, start, end) ?: (start to end)
             wordAnchor = offset + word.first to offset + word.second
             word
-        }
-    }
-
-    /** Selects only the word that the word drag began with again, in order with the rest of the typing. */
-    private fun resetWords() = enqueue {
-        changeSelection { _, start, end, offset ->
-            val anchor = wordAnchor ?: return@changeSelection null
-            val range = anchor.first - offset to anchor.second - offset
-            if (range == start to end) return@changeSelection null
-            if (Haptics.enabled(this)) haptics.pulse()
-            strip?.gesture?.wordsReset()
-            range
         }
     }
 
@@ -1576,6 +1573,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onDestroy() {
         editing = false
+        GuideHooks.panelRequests = null
         // A held status must not outlive the keyboard.
         if (hold.held) hideHeldWindow()
         unregisterReceiver(screenOn)

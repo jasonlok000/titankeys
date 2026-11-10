@@ -124,14 +124,6 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         if (scene == Scene.Cursor || scene == Scene.WordDrag) leave()
     }
 
-    /** The finger came back to the dead zone, so the selection is the first word of the drag again. */
-    fun wordsReset() {
-        if (scene != Scene.WordDrag || leaving) return
-        wordsLeft = 0
-        wordsRight = 0
-        changed()
-    }
-
     /** One step of a word drag changed the selection. It gives back a word from the far side first, as [WordSelection.extend] does. */
     fun wordStep(direction: Int) {
         if (scene != Scene.WordDrag || leaving) return

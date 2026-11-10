@@ -22,6 +22,7 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextUtils
 import android.text.TextWatcher
+import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.util.TypedValue
@@ -31,6 +32,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.WindowManager
 import android.view.animation.OvershootInterpolator
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -137,12 +139,52 @@ internal class GuideOverlay(context: Context) : View(context) {
         invalidate()
     }
 
+    private var wordmark: Wordmark? = null
+
+    /** The two halves of a name, the [left] one in from the left side and the [right] one in from the right. */
+    private class Wordmark(val left: String, val right: String, val paint: Paint, val x: Float, val baseline: Float,
+                           val start: Long, val locked: () -> Unit)
+
+    /**
+     * [left] flies in from the left side and [right] from the right side, and they lock together at [x] and [baseline], where
+     * the title shows the whole name with this [paint]. Then [locked] runs, and the title takes over from the drawing.
+     */
+    fun flyIn(left: String, right: String, paint: Paint, x: Float, baseline: Float, locked: () -> Unit) {
+        if (!GuideMotion.enabled) {
+            locked()
+            return
+        }
+        wordmark = Wordmark(left, right, Paint(paint), x, baseline, GuideMotion.now(), locked)
+        invalidate()
+    }
+
+    /** True while the halves are still on their way. */
+    private fun drawWordmark(canvas: Canvas, mark: Wordmark): Boolean {
+        val t = GuideMotion.progress(mark.start, WORDMARK_MILLIS)
+        if (t >= 1f) {
+            wordmark = null
+            // Views change when the halves lock, so that waits until this drawing is done.
+            post { mark.locked() }
+            return false
+        }
+        // Fast at first and slow at the end, so that the halves land softly, then click together.
+        val left = 1f - GuideMotion.easeOut(t)
+        val travel = width * WORDMARK_TRAVEL
+        val colour = mark.paint.color
+        mark.paint.color = GuideMotion.faded(colour, min(1f, t * WORDMARK_FADE_IN))
+        canvas.drawText(mark.left, mark.x - travel * left, mark.baseline, mark.paint)
+        canvas.drawText(mark.right, mark.x + mark.paint.measureText(mark.left) + travel * left, mark.baseline, mark.paint)
+        mark.paint.color = colour
+        return true
+    }
+
     override fun onDraw(canvas: Canvas) {
         val reach = hypot(width.toFloat(), height.toFloat())
         val cx = width / 2f
         val cy = height / 2f
         var moving = false
         if (markStart >= 0) moving = drawMark(canvas, reach, cx, cy)
+        wordmark?.let { if (drawWordmark(canvas, it)) moving = true }
         val each = sweeps.iterator()
         while (each.hasNext()) {
             val sweep = each.next()
@@ -196,6 +238,12 @@ internal class GuideOverlay(context: Context) : View(context) {
         const val MARK_SCALE = 1.15f
         const val MARK_OUT_MILLIS = 340L
         const val MARK_OUT_GROWTH = .18f
+        /** How long the two halves of the name take to fly together. */
+        const val WORDMARK_MILLIS = 900L
+        /** How far the halves start out, against the width of the screen. */
+        const val WORDMARK_TRAVEL = .9f
+        /** The halves are fully there after this part of the flight, divided into one. */
+        const val WORDMARK_FADE_IN = 3f
         // From android/src/main/res/drawable/atlas_icon_foreground.xml.
         const val MARK = "M757.7,328.4 L760.8,328.4 L602.1,540 L760.8,751.6 L657.8,751.6 L523.4,572.2 L523.4,751.6 L438.8,751.6 L438.8,600.9 Z " +
             "M382.7,328.4 L632,328.4 L568.5,413 L523.4,413 L523.4,507.8 L657.8,328.4 L760.8,328.4 L607.4,532.9 L538.3,592 L523.4,572.2 L523.4,604.7 L438.8,677 L438.8,413 L319.2,413 Z"
@@ -237,6 +285,11 @@ private class GuideField(context: Context) : EditText(context) {
  */
 class GuideActivity : Activity() {
     private val main = Handler(Looper.getMainLooper())
+    /**
+     * The app's front page: the same screen with no steps, a free place to type and swipe. The line above the field still
+     * suggests words, and the drawing of the keys still follows your finger. See [playground].
+     */
+    private val playground by lazy { intent.getBooleanExtra(PLAYGROUND, false) }
     private val preferences by lazy { getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE) }
     private val flow by lazy { GuideFlow(::readSettings) }
     private val haptics by lazy { Haptics(this) }
@@ -250,6 +303,9 @@ class GuideActivity : Activity() {
     private lateinit var next: TextView
     private lateinit var previous: TextView
     private lateinit var again: TextView
+    /** The playground's ways out, to the written guide and to Settings. */
+    private lateinit var guideAction: TextView
+    private lateinit var settingsAction: TextView
     private lateinit var close: ImageView
     private lateinit var title: TextView
     private lateinit var body: TextView
@@ -260,6 +316,8 @@ class GuideActivity : Activity() {
     private lateinit var chapter: TextView
     /** The line above the field that suggests what to type. */
     private lateinit var script: TextView
+    /** Over the field: what a demonstration would do, in grey, without typing it. */
+    private lateinit var phantom: TextView
 
     private val keyboardChanges = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) = checkKeyboard()
@@ -288,6 +346,41 @@ class GuideActivity : Activity() {
         body.animate().alpha(1f).setDuration(FADE_MILLIS).start()
     }
 
+    // Slide zero: setup. While a part is missing, it comes before the story. The guide opens the page for a part, watches for its
+    // switch, closes the page and comes back by itself, then opens the next part after a short beat. See [SetupPart].
+
+    /** The part of setup on the screen, or null when the guide is not setting up. */
+    private var setupPart: SetupPart? = null
+    /** The part whose Settings page is open now, which the guide watches. */
+    private var openedPart: SetupPart? = null
+    /** A part that opens by itself after a short beat, because the part before it was just done. */
+    private var autoPart: SetupPart? = null
+    /** Between a part that is done and the next one, nothing else moves setup on. */
+    private var setupChanging = false
+    private var visible = false
+    private val settingUp get() = setupPart != null
+
+    private val watchSetup = object : Runnable {
+        override fun run() {
+            val part = openedPart ?: return
+            if (!PhoneSetup.done(this@GuideActivity, part)) {
+                main.postDelayed(this, SETUP_POLL_MILLIS)
+                return
+            }
+            openedPart = null
+            // The page was opened from here, so closing it brings the guide back. A page in a task of its own needs the guide sent for.
+            finishActivity(SETUP_REQUEST)
+            main.postDelayed({ if (!visible) bringBack() }, SETUP_RETURN_MILLIS)
+            checkKeyboard()
+        }
+    }
+
+    private val openAuto = Runnable {
+        val part = autoPart ?: return@Runnable
+        autoPart = null
+        if (visible && setupPart == part && openedPart == null) openPart(part)
+    }
+
     private var helpShown = false
     private val showHelp = Runnable {
         helpShown = true
@@ -304,7 +397,8 @@ class GuideActivity : Activity() {
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
         setContentView(build())
-        field.requestFocus()
+        // During setup another keyboard may still be the phone's keyboard, and it would cover the slide.
+        if (PhoneSetup.missing(this).isEmpty()) field.requestFocus() else keyboardShown(false)
         field.changed = ::fieldChanged
         field.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -319,21 +413,43 @@ class GuideActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        visible = true
+        // Back from a Settings page with its part still not done: say what to do there, and wait for the button.
+        openedPart?.let { part ->
+            openedPart = null
+            main.removeCallbacks(watchSetup)
+            if (!PhoneSetup.done(this, part)) part.help?.let(::showHint)
+        }
+        if (autoPart != null) {
+            main.removeCallbacks(openAuto)
+            main.postDelayed(openAuto, SETUP_AUTO_MILLIS)
+        }
         if (stopEvents == null) stopEvents = KeyboardEvents.listen { event -> runOnUiThread { handle(event) } }
         if (stopTrace == null) stopTrace = Trace.listen { message -> trace(message) }
+        // A word that comes out different gets the script's word on the strip, so the line above is always one touch away.
+        // The playground is free typing, so there the strip keeps to your own words.
+        if (!playground) GuideHooks.script = { before -> GuideScript.wordAt(GuideScript.progress(before)).trim { !it.isLetter() } }
         contentResolver.registerContentObserver(Settings.Secure.getUriFor(Settings.Secure.DEFAULT_INPUT_METHOD), false, keyboardChanges)
     }
 
     override fun onPause() {
         super.onPause()
+        visible = false
         stopEvents?.invoke()
         stopEvents = null
         stopTrace?.invoke()
         stopTrace = null
+        GuideHooks.script = null
         contentResolver.unregisterContentObserver(keyboardChanges)
     }
 
     override fun onDestroy() {
+        // Closed from the setup slide: the app's front page shows setup again.
+        if (playground && isFinishing) {
+            playgroundExit?.invoke(PLAYGROUND_CLOSED)
+            playgroundExit = null
+        }
+        GuideHooks.nearMiss = false
         main.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
@@ -343,6 +459,8 @@ class GuideActivity : Activity() {
         if (!hasFocus) return
         // The keyboard list can close without a change, so this checks each time the guide comes back.
         checkKeyboard()
+        // During setup there is nothing to type yet, and another keyboard would cover the slide.
+        if (settingUp) return
         field.requestFocus()
         input.showSoftInput(field, InputMethodManager.SHOW_IMPLICIT)
     }
@@ -351,7 +469,12 @@ class GuideActivity : Activity() {
     override fun onBackPressed() {
         // Back goes to the step before, like the Back button. From the first step or the ending it leaves the guide.
         if (changing) return
-        if (ready && flow.canGoBack && flow.step.chapter != GuideChapter.End) moveOn(forward = false) else leave()
+        // The playground is the front page, so Back leaves the app, as it does from any app's front page.
+        if (playground && !settingUp) {
+            playgroundExit = null
+            finishAffinity()
+        } else if (settingUp) leave()
+        else if (ready && flow.canGoBack && flow.step.chapter != GuideChapter.End) moveOn(forward = false) else leave()
     }
 
     // The screen.
@@ -432,8 +555,23 @@ class GuideActivity : Activity() {
             minLines = 1
             maxLines = 2
             hint = "Your words go here."
+            // Lets the keyboard know this field, for the one step that asks it for a near miss. See [GuideHooks].
+            privateImeOptions = GuideHooks.FIELD
             isVerticalScrollBarEnabled = false
             importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
+        }
+        // The same text settings as the field, so that the grey words line up with the real ones.
+        phantom = TextView(this).apply {
+            typeface = field.typeface
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, field.textSize)
+            setPadding(field.paddingLeft, field.paddingTop, field.paddingRight, field.paddingBottom)
+            gravity = field.gravity
+            includeFontPadding = field.includeFontPadding
+            setLineSpacing(field.lineSpacingExtra, field.lineSpacingMultiplier)
+            letterSpacing = field.letterSpacing
+            isClickable = false
+            isFocusable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
         script = TextView(this).apply {
             typeface = MEDIUM
@@ -455,6 +593,8 @@ class GuideActivity : Activity() {
         for (index in 0 until flow.stepCount) segments.addView(View(this),
             LinearLayout.LayoutParams(0, dp(SEGMENT_HEIGHT), 1f).apply { marginEnd = dp(3) })
         again = topAction("Start again") { startAgain() }.apply { visibility = View.GONE }
+        guideAction = topAction("Guide") { leavePlayground(PLAYGROUND_GUIDE) }.apply { visibility = View.GONE }
+        settingsAction = topAction("Settings") { leavePlayground(PLAYGROUND_SETTINGS) }.apply { visibility = View.GONE }
         close = ImageView(this).apply {
             setImageResource(R.drawable.panel_close)
             contentDescription = "Close"
@@ -466,6 +606,8 @@ class GuideActivity : Activity() {
             minimumHeight = dp(TOP_ACTION)
             addView(segments, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(again, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(guideAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(settingsAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(close, LinearLayout.LayoutParams(dp(TOP_ACTION), dp(TOP_ACTION)))
         }
         // Back always on the left and Next always on the right, so a thumb finds them in the same place on every step.
@@ -486,7 +628,10 @@ class GuideActivity : Activity() {
             addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, BODY_SHARE).apply { topMargin = dp(4) })
             addView(hint, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
             addView(script, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-            addView(field, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
+            addView(FrameLayout(context).apply {
+                addView(field, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                addView(phantom, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
             addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(8)
             })
@@ -547,6 +692,8 @@ class GuideActivity : Activity() {
         offer.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
         offer.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
         again.setTextColor(strong)
+        guideAction.setTextColor(strong)
+        settingsAction.setTextColor(strong)
         close.imageTintList = ColorStateList.valueOf(strong)
         chapter.setTextColor(GuideMotion.faded(strong, CHAPTER_ALPHA))
         keys.tone = next
@@ -595,6 +742,10 @@ class GuideActivity : Activity() {
     private fun begin() {
         if (started) return
         started = true
+        if (playground) {
+            showPlayground()
+            return
+        }
         val resumed = preferences.getString(RESUME, null) != null && flow.step.id != GUIDE_STEPS.first().id
         again.visibility = if (resumed) View.VISIBLE else View.GONE
         if (resumed || !GuideMotion.enabled) {
@@ -610,6 +761,10 @@ class GuideActivity : Activity() {
     }
 
     private fun reveal(step: GuideStep) {
+        if (playground) {
+            showPlayground()
+            return
+        }
         keys.appear()
         for (view in listOf(field, keys, next, previous, chapter, again, close, segments, script)) view.animate().alpha(1f).setDuration(FADE_MILLIS).start()
         enter(step)
@@ -625,26 +780,25 @@ class GuideActivity : Activity() {
         // Back keeps its room on the first step, so that Next does not move.
         previous.visibility = if (flow.canGoBack) View.VISIBLE else View.INVISIBLE
         chapter.text = step.chapter.label
+        GuideHooks.nearMiss = step.nearMiss
         paintNext()
         offerFor(step)
         swapIn(title, step.title, 0)
         swapIn(body, step.body, ENTER_STAGGER_MILLIS)
         hideHint()
-        // The whole guide is one text. A step that works on text gets the next sentence of the script if the text is too short.
+        // The whole guide is one text. A step that works on text gets more of the script if the text is too short.
         val words = field.text.split(' ', '\n').count { it.isNotEmpty() }
-        if (step.needsWords > words) addText(GuideScript.sentenceFrom(GuideScript.progress(field.text.toString())))
-        if (panelOpen && !step.usesPanel) {
-            // A skip can leave the panel up where the next step needs the keys.
-            input.restartInput(field)
-        }
+        if (step.needsWords > words) addText(GuideScript.continueFrom(GuideScript.progress(field.text.toString()), step.needsWords - words))
+        // The keyboard starts the step in the menu that it needs: the Sym panel for Alt and the emoji, closed for typing.
+        step.setup?.let(GuideHooks::openPanel)
         showScript()
-        step.panelHint?.takeIf { !panelOpen }?.let(::showHint)
         paintSegments(flow.stepIndex)
         main.removeCallbacks(showHelp)
         if (step.help != null) main.postDelayed(showHelp, HELP_AFTER_MILLIS)
         if (step.chapter == GuideChapter.End) preferences.edit().remove(RESUME).apply()
         else preferences.edit().putString(RESUME, flow.resumeId).apply()
         busy = false
+        acted()
         // The stop between the parts is a win already: it shows as done, with the offer to start typing.
         if (step.pause) {
             busy = true
@@ -671,9 +825,130 @@ class GuideActivity : Activity() {
             append(" ")
             append(rest, ForegroundColorSpan(GuideMotion.faded(strong, SCRIPT_REST)), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-        val cue = flow.step.cue
+        val cue = if (playground) GuideCue.Free else flow.step.cue
         val shown = if (cue == GuideCue.NextWord) GuideCue.Word(GuideScript.letters(word).ifEmpty { "titan" }) else cue
         if (shown != keys.cue) keys.show(shown)
+    }
+
+    // Demonstrations. When nobody acts for a while, the slide shows its gesture by itself, slowly and now and then, in grey over
+    // the field. It types nothing, and anything that you do stops it.
+
+    private var demoStart = -1L
+    private var demoLength = 0L
+    private var demoKeys = 0
+    private var demoTurned = false
+    private val startDemo = Runnable { beginDemo() }
+    private val demoTick = Runnable { stepDemo() }
+
+    /** Something the user did: a demonstration stops, and the next one waits for a quiet moment. */
+    private fun acted() {
+        endDemo()
+        main.removeCallbacks(startDemo)
+        if (!passed && ready && !changing) main.postDelayed(startDemo, DEMO_IDLE_MILLIS)
+    }
+
+    private fun beginDemo() {
+        val step = flow.step
+        if (busy || passed || changing || step.pause || step.chapter == GuideChapter.End) return
+        val hasGhost = step.cue != GuideCue.Free && step.cue !is GuideCue.Spot
+        if (step.demo == null && !hasGhost) return
+        demoStart = GuideMotion.now()
+        demoLength = if (hasGhost) maxOf(keys.ghostMillis(), DEMO_MILLIS) else DEMO_MILLIS
+        demoKeys = 0
+        demoTurned = false
+        keys.demo(true)
+        main.post(demoTick)
+    }
+
+    private fun stepDemo() {
+        if (demoStart < 0) return
+        val t = (GuideMotion.now() - demoStart).toFloat() / demoLength
+        if (t >= 1f) {
+            endDemo()
+            main.postDelayed(startDemo, DEMO_GAP_MILLIS)
+            return
+        }
+        flow.step.demo?.let { showPhantom(it, t) }
+        main.postDelayed(demoTick, DEMO_FRAME_MILLIS)
+    }
+
+    private fun endDemo() {
+        main.removeCallbacks(demoTick)
+        if (demoStart < 0 && phantom.text.isEmpty()) return
+        demoStart = -1
+        keys.demo(false)
+        phantom.text = ""
+    }
+
+    /**
+     * Draws [demo] at [t], from 0 to 1, over the field. The field's own text is there too, but clear, so that what is added
+     * lines up with it. Added text is grey; a word that goes is covered in the field's colour; a selection is washed in orange.
+     */
+    private fun showPhantom(demo: GuideDemo, t: Float) {
+        val text = field.text.toString()
+        val grey = GuideMotion.faded(GuideColours.INK, PHANTOM_ALPHA)
+        val built = SpannableStringBuilder(text)
+        built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        val gap = if (text.isEmpty() || text.endsWith(' ')) "" else " "
+        val next = GuideScript.wordAt(GuideScript.progress(text))
+        fun add(added: String) {
+            val start = built.length
+            built.append(added)
+            built.setSpan(ForegroundColorSpan(grey), start, built.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        val lastStart = text.trimEnd().lastIndexOf(' ') + 1
+        val lastEnd = text.trimEnd().length
+        when (demo) {
+            GuideDemo.TypeNext -> {
+                val shown = ((t / TYPE_SHARE) * next.length).toInt().coerceIn(0, next.length)
+                if (shown > demoKeys) {
+                    next.getOrNull(shown - 1)?.takeIf { it.isLetter() }?.let { keys.light(it.uppercaseChar().toString()) }
+                    demoKeys = shown
+                }
+                if (shown > 0) add(gap + next.take(shown))
+            }
+            GuideDemo.SwipeNext -> if (t > SWIPE_LANDS) add(gap + next)
+            GuideDemo.FixNext -> when {
+                t > FIX_LANDS -> add(gap + next)
+                t > SWIPE_LANDS / 2 -> add(gap + GuideScript.slip(next))
+            }
+            GuideDemo.DeleteLast -> if (lastEnd > lastStart) {
+                val cover = ((t - .3f) / .5f).coerceIn(0f, 1f)
+                built.setSpan(BackgroundColorSpan(GuideMotion.faded(GuideColours.CREAM, cover)), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            GuideDemo.MoveCursor -> if (lastEnd > 0) {
+                val back = ((t - TAPS_SHARE).coerceAtLeast(0f) / (1f - TAPS_SHARE) * (lastEnd - lastStart + 1)).toInt()
+                val at = (lastEnd - back).coerceIn(1, lastEnd)
+                built.setSpan(BackgroundColorSpan(GuideMotion.faded(GuideColours.ORANGE, CARET_ALPHA)), at - 1, at, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            GuideDemo.SelectLast -> if (lastEnd > lastStart && t > TAPS_SHARE) {
+                val wash = ((t - TAPS_SHARE) / .2f).coerceIn(0f, 1f) * SELECT_ALPHA
+                built.setSpan(BackgroundColorSpan(GuideMotion.faded(GuideColours.ORANGE, wash)), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            is GuideDemo.HoldLetter -> {
+                val symbol = Keys.letter(demo.key, KeyEvent.META_ALT_ON) ?: demo.key
+                if (t < HOLD_TURNS) {
+                    keys.light(demo.key)
+                    add(gap + demo.key.lowercase())
+                } else {
+                    if (!demoTurned) {
+                        demoTurned = true
+                        keys.flip(demo.key, symbol)
+                    }
+                    add(gap + symbol)
+                }
+            }
+            is GuideDemo.Insert -> {
+                val pushed = (t / INSERT_SHARE * demo.keys.size).toInt().coerceAtMost(demo.keys.size)
+                if (pushed > demoKeys) {
+                    keys.light(demo.keys[pushed - 1])
+                    demoKeys = pushed
+                }
+                if (t > INSERT_SHARE) add(gap + demo.text)
+            }
+        }
+        phantom.text = built
+        phantom.scrollTo(0, field.scrollY)
     }
 
     /** Adds words to the end of the text, as if typed, without a step taking them as done. */
@@ -727,6 +1002,10 @@ class GuideActivity : Activity() {
     }
 
     private fun offerPressed() {
+        setupPart?.let {
+            if (!setupChanging) openPart(it)
+            return
+        }
         val step = flow.step
         when {
             step.chapter == GuideChapter.End || step.pause -> leave()
@@ -757,25 +1036,153 @@ class GuideActivity : Activity() {
         panelOpen = panelOpen,
     )
 
+    /**
+     * Decides between setup and the story. Setup shows before the story while any part is missing, and again during the story if
+     * the keyboard stops being TitanKeys, as the story needs it. A part that is done moves setup on.
+     */
     private fun checkKeyboard() {
-        val selected = Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)?.startsWith("$packageName/") == true
-        if (keyboardChecked && selected == ready) return
-        keyboardChecked = true
-        ready = selected
-        if (!selected) {
-            busy = true
-            title.text = "Choose TitanKeys."
-            body.text = "This guide needs TitanKeys as your keyboard."
-            hideHint()
-            offerFor(flow.step)
-            for (view in listOf(title, body, close)) {
-                view.animate().cancel()
-                view.alpha = 1f
-                view.translationX = 0f
-            }
+        if (setupChanging) return
+        val missing = PhoneSetup.missing(this)
+        val shown = setupPart
+        if (shown != null && shown !in missing) {
+            // The part on the screen is done, by the guide's page or by hand.
+            partDone(missing.firstOrNull())
             return
         }
+        if (missing.isNotEmpty() && (!started || shown != null || SetupPart.Enable in missing || SetupPart.Choose in missing)) {
+            if (missing.first() != shown) setUp(missing.first(), auto = false)
+            return
+        }
+        if (keyboardChecked && ready) return
+        keyboardChecked = true
+        ready = true
         if (!started) begin() else reveal(flow.step)
+    }
+
+    /** Shows a part of setup, with the button that opens its page. [auto] opens the page by itself after a short beat. */
+    private fun setUp(part: SetupPart, auto: Boolean) {
+        if (setupPart == null) {
+            ready = false
+            keyboardChecked = false
+            busy = true
+            main.removeCallbacks(startDemo)
+            endDemo()
+            main.removeCallbacks(showHelp)
+            keyboardShown(false)
+            for (view in listOf(field, keys, script, next, previous, again, segments)) {
+                view.animate().cancel()
+                view.alpha = 0f
+                view.visibility = View.INVISIBLE
+            }
+            for (view in listOf(chapter, close)) view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
+        }
+        setupPart = part
+        chapter.text = SetupPart.LABEL
+        hideHint()
+        swapIn(title, part.title, 0)
+        swapIn(body, part.body, ENTER_STAGGER_MILLIS)
+        showOffer(part.action)
+        main.removeCallbacks(openAuto)
+        autoPart = part.takeIf { auto }
+        if (auto && visible) main.postDelayed(openAuto, SETUP_AUTO_MILLIS)
+    }
+
+    private fun openPart(part: SetupPart) {
+        main.removeCallbacks(openAuto)
+        autoPart = null
+        hideHint()
+        val page = PhoneSetup.page(this, part)
+        if (page == null) {
+            PhoneSetup.chooseKeyboard(this)
+            return
+        }
+        try {
+            startActivityForResult(page, SETUP_REQUEST)
+        } catch (error: RuntimeException) {
+            showHint(SETUP_NO_PAGE)
+            return
+        }
+        openedPart = part
+        main.removeCallbacks(watchSetup)
+        main.postDelayed(watchSetup, SETUP_POLL_MILLIS)
+    }
+
+    /** A part of setup is done: a pulse and a line, then the [next] part, which opens by itself. After the last, the story starts. */
+    private fun partDone(next: SetupPart?) {
+        setupChanging = true
+        main.removeCallbacks(openAuto)
+        autoPart = null
+        hideHint()
+        offer.visibility = View.GONE
+        haptics.guideChapter()
+        overlay.sweep()
+        showReaction(if (next == null) SetupPart.ALL_DONE else SetupPart.DONE)
+        main.postDelayed({
+            setupChanging = false
+            if (next != null) setUp(next, auto = true) else setupFinished()
+        }, if (next == null) SETUP_FINISH_MILLIS else SETUP_BEAT_MILLIS)
+    }
+
+    private fun setupFinished() {
+        setupPart = null
+        title.animate().cancel()
+        title.scaleX = 1f
+        title.scaleY = 1f
+        for (view in listOf(field, keys, script, segments)) view.visibility = View.VISIBLE
+        again.visibility = View.GONE
+        keyboardChecked = true
+        ready = true
+        keyboardShown(true)
+        if (!started) begin() else reveal(flow.step)
+    }
+
+    /** The keyboard stays up for the story and the playground, and stays down during setup. */
+    private fun keyboardShown(shown: Boolean) {
+        val state = if (shown) WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE else WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
+        window.setSoftInputMode(state or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        if (shown) {
+            field.requestFocus()
+            input.showSoftInput(field, InputMethodManager.SHOW_IMPLICIT)
+        } else {
+            field.clearFocus()
+            input.hideSoftInputFromWindow(field.windowToken, 0)
+        }
+    }
+
+    /** The playground: the name, a line to follow if you like, the field and the keys. Nothing is checked, and nothing waits. */
+    private fun showPlayground() {
+        busy = true
+        passed = false
+        keys.appear()
+        // The bar keeps its room, so that Guide and Settings stay at the right.
+        segments.visibility = View.INVISIBLE
+        for (view in listOf(next, previous, again, close, offer)) view.visibility = View.GONE
+        hideHint()
+        guideAction.visibility = View.VISIBLE
+        settingsAction.visibility = View.VISIBLE
+        chapter.text = PLAYGROUND_LABEL
+        swapIn(title, PLAYGROUND_TITLE, 0)
+        swapIn(body, PLAYGROUND_BODY, ENTER_STAGGER_MILLIS)
+        for (view in listOf(field, keys, chapter, script, guideAction, settingsAction))
+            view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
+        showScript()
+        field.requestFocus()
+    }
+
+    /** The playground's Guide and Settings buttons: the app opens that page, and the playground opens again when you come back. */
+    private fun leavePlayground(action: String) {
+        playgroundExit?.invoke(action)
+        playgroundExit = null
+        finish()
+    }
+
+    /** Sends for the guide when a Settings page opened in a task of its own, which closing it from here cannot reach. */
+    private fun bringBack() {
+        try {
+            startActivity(Intent(this, GuideActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+        } catch (error: RuntimeException) {
+            // Android can refuse this from the background. Then the guide waits until you come back to it.
+        }
     }
 
     private fun fieldChanged() {
@@ -804,16 +1211,21 @@ class GuideActivity : Activity() {
             lastPoint = point
         }
         keys.trace(points, reset, lifted)
+        acted()
         if (!busy && ready) judge(KeyboardEvent.Moved(travel, lifted))
     }
 
     private fun handle(event: KeyboardEvent) {
+        if (::phantom.isInitialized) acted()
         when (event) {
             is KeyboardEvent.Pushed -> keyName(event.code)?.let {
                 lastKey = it
                 keys.light(it)
             }
-            is KeyboardEvent.Resting -> if (event.key.isNotEmpty()) keys.light(event.key)
+            is KeyboardEvent.Resting -> if (event.key.isNotEmpty()) {
+                keys.light(event.key)
+                keys.touched()
+            }
             is KeyboardEvent.HeldSymbol -> lastKey?.let { keys.flip(it, event.symbol) }
             is KeyboardEvent.ModifierState -> panelOpen = event.panel != Modifiers.Panel.Closed
             else -> Unit
@@ -836,6 +1248,8 @@ class GuideActivity : Activity() {
     private fun stepDone() {
         busy = true
         passed = true
+        main.removeCallbacks(startDemo)
+        endDemo()
         main.removeCallbacks(showHelp)
         hideHint()
         haptics.guideChapter()
@@ -881,6 +1295,8 @@ class GuideActivity : Activity() {
         changing = true
         busy = true
         passed = false
+        main.removeCallbacks(startDemo)
+        endDemo()
         again.visibility = View.GONE
         main.removeCallbacks(showHelp)
         main.removeCallbacks(settleReaction)
@@ -899,21 +1315,60 @@ class GuideActivity : Activity() {
         }, WIPE_MILLIS)
     }
 
-    /** The high note: lines cross the screen one after the other, the mark lands, and the keys answer. */
+    /**
+     * The high note: lines cross the screen one after the other, then "Titan" flies in from the left and "Keys" from the right.
+     * They lock together into the name with a click, the keys answer, and the slogan follows.
+     */
     private fun finale(end: GuideStep) {
         next.visibility = View.INVISIBLE
         again.visibility = View.VISIBLE
         again.text = "Again"
         haptics.guideFinale()
         for (sweep in 0 until FINALE_SWEEPS) overlay.sweep(delay = sweep * FINALE_STAGGER_MILLIS, thickness = BEAT_LINE + sweep * 2f)
-        overlay.showMark(GuideColours.INK)
         keys.celebrate()
-        main.postDelayed({
-            overlay.hideMark()
-            keys.celebrate()
-            // The text stays: it is what you typed through the whole guide.
-            enter(end)
-        }, FINALE_MARK_MILLIS)
+        // The text stays: it is what you typed through the whole guide.
+        enter(end)
+        // The name and slogan wait for the halves to land.
+        for (view in listOf(title, body, chapter)) {
+            view.animate().cancel()
+            view.alpha = 0f
+            view.translationX = 0f
+        }
+        title.post { landName(end.title) }
+    }
+
+    /** Flies the two halves of the name to where the title shows it, then shows the title in their place. */
+    private fun landName(name: String) {
+        val layout = title.layout
+        val split = name.indexOf(NAME_SECOND_HALF)
+        if (layout == null || split <= 0 || overlay.width == 0) {
+            nameLanded()
+            return
+        }
+        val at = IntArray(2)
+        val origin = IntArray(2)
+        title.getLocationInWindow(at)
+        overlay.getLocationInWindow(origin)
+        val baseline = title.getLineBounds(0, null).toFloat()
+        val x = at[0] - origin[0] + title.compoundPaddingLeft + layout.getLineLeft(0)
+        val paint = Paint(title.paint).apply { color = title.currentTextColor }
+        overlay.flyIn(name.substring(0, split), name.substring(split), paint, x, at[1] - origin[1] + baseline, ::nameLanded)
+    }
+
+    private fun nameLanded() {
+        haptics.guideChapter()
+        overlay.sweep(thickness = LINE)
+        keys.celebrate()
+        title.alpha = 1f
+        // The name clicks into place: a small push out from its corner, then back.
+        title.pivotX = 0f
+        title.pivotY = title.height.toFloat()
+        title.scaleX = NAME_CLICK
+        title.scaleY = NAME_CLICK
+        title.animate().scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(NAME_CLICK_MILLIS)
+            .setInterpolator(OvershootInterpolator(REACTION_OVERSHOOT)).start()
+        body.animate().alpha(1f).setStartDelay(SLOGAN_DELAY_MILLIS).setDuration(ENTER_MILLIS).start()
+        chapter.animate().alpha(1f).setStartDelay(SLOGAN_DELAY_MILLIS * 2).setDuration(ENTER_MILLIS).start()
     }
 
     private fun startAgain() {
@@ -926,6 +1381,8 @@ class GuideActivity : Activity() {
         again.visibility = View.GONE
         again.text = "Start again"
         for (view in listOf(title, body)) view.animate().alpha(0f).setDuration(FADE_MILLIS).start()
+        // The ending hides the line above the title until its name lands, so it comes back here.
+        chapter.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         backdrop.wipeTo(backgroundOf(GuideTone.Ink))
         overlay.sweep()
         main.postDelayed({
@@ -964,6 +1421,24 @@ class GuideActivity : Activity() {
         private const val PREFERENCES = "app"
         private const val SHOWN = "guide_shown"
         private const val RESUME = "guide_resume"
+
+        // Setup, in ms. These are safe to change.
+        private const val SETUP_REQUEST = 7
+        /** How often the guide looks at the part whose page is open. Reading these settings is cheap. */
+        private const val SETUP_POLL_MILLIS = 400L
+        /** How long the guide waits to be in front again after it closes a page, before it sends for itself. */
+        private const val SETUP_RETURN_MILLIS = 350L
+        /** The beat after a part is done, before the next part shows, and the wait before its page opens by itself. */
+        private const val SETUP_BEAT_MILLIS = 900L
+        private const val SETUP_AUTO_MILLIS = 1300L
+        /** How long "All set." stays before the story starts. */
+        private const val SETUP_FINISH_MILLIS = 1400L
+        private const val SETUP_NO_PAGE = "This phone does not have that page. Open it in Settings, then come back."
+
+        private const val PLAYGROUND = "playground"
+        private const val PLAYGROUND_LABEL = "Playground"
+        private const val PLAYGROUND_TITLE = "TitanKeys"
+        private const val PLAYGROUND_BODY = "Type or swipe anything. Follow the line above, or write your own."
 
         // The look, in dp. These are safe to change. Words fit their box at any system font size, because the boxes set their size.
         private val HEAVY: Typeface = Typeface.create(Typeface.DEFAULT, 900, false)
@@ -1013,12 +1488,41 @@ class GuideActivity : Activity() {
         private const val BEAT_LINE = 3f
         private const val FINALE_SWEEPS = 6
         private const val FINALE_STAGGER_MILLIS = 110L
-        private const val FINALE_MARK_MILLIS = 1500L
+        /** The ending's name is "Titan" and "Keys", which fly in from the two sides and lock together. */
+        private const val NAME_SECOND_HALF = "Keys"
+        /** How far the name pushes out when it locks, and how long it takes to settle. */
+        private const val NAME_CLICK = 1.08f
+        private const val NAME_CLICK_MILLIS = 420L
+        /** The slogan comes after the name has clicked into place, and the line above it after that. */
+        private const val SLOGAN_DELAY_MILLIS = 260L
         private const val HELP_AFTER_MILLIS = 9000L
         /** Words of the script that the line above the field shows after the next one. */
         private const val SCRIPT_WORDS = 24
         /** How strong the words after the next one are in that line. */
         private const val SCRIPT_REST = .55f
+
+        // Demonstrations: slow, and now and then. These are safe to change.
+        /** How long nobody acts before a slide shows its gesture by itself, and the wait before it shows it again. */
+        private const val DEMO_IDLE_MILLIS = 5000L
+        private const val DEMO_GAP_MILLIS = 9000L
+        /** How long a demonstration with no ghost finger takes. One with a ghost takes as long as the ghost. */
+        private const val DEMO_MILLIS = 4200L
+        private const val DEMO_FRAME_MILLIS = 33L
+        /** How strong the grey words are. */
+        private const val PHANTOM_ALPHA = .38f
+        /** The part of the demonstration that typing a word takes, and when a swiped word lands, at the end of the ghost's path. */
+        private const val TYPE_SHARE = .8f
+        private const val SWIPE_LANDS = .72f
+        /** When the strip puts the right word in place of the slip. */
+        private const val FIX_LANDS = .62f
+        /** The part that the ghost's taps take, before the cursor moves or the selection shows. */
+        private const val TAPS_SHARE = .45f
+        private const val CARET_ALPHA = .7f
+        private const val SELECT_ALPHA = .4f
+        /** When a held letter turns into its symbol. */
+        private const val HOLD_TURNS = .55f
+        /** The part that pushing the keys takes, before the text from the panel appears. */
+        private const val INSERT_SHARE = .6f
 
         /** True until the guide has opened once, so it opens by itself after setup. */
         fun due(context: Context) = !context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).getBoolean(SHOWN, false)
@@ -1026,6 +1530,18 @@ class GuideActivity : Activity() {
         fun start(activity: Activity) {
             activity.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).edit().putBoolean(SHOWN, true).apply()
             activity.startActivity(Intent(activity, GuideActivity::class.java))
+        }
+
+        const val PLAYGROUND_GUIDE = "guide"
+        const val PLAYGROUND_SETTINGS = "settings"
+        const val PLAYGROUND_CLOSED = "closed"
+        /** Told where to go when the playground closes. Only one playground is open at a time. */
+        private var playgroundExit: ((String) -> Unit)? = null
+
+        /** Opens the playground, the app's front page. [exit] gets [PLAYGROUND_GUIDE], [PLAYGROUND_SETTINGS] or [PLAYGROUND_CLOSED]. */
+        fun playground(activity: Activity, exit: (String) -> Unit) {
+            playgroundExit = exit
+            activity.startActivity(Intent(activity, GuideActivity::class.java).putExtra(PLAYGROUND, true))
         }
     }
 }

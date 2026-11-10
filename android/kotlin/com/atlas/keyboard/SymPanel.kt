@@ -118,7 +118,7 @@ class SymPanel(
         // Keep the keys clear of the gesture handle, which draws over the bottom of the keyboard, and of the rounded corners.
         setOnApplyWindowInsetsListener { _, insets ->
             navigationInset = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
-            corners = Corners.of(insets)
+            corners = Corners.of(insets, display)
             render()
             insets
         }
@@ -262,6 +262,13 @@ class SymPanel(
         val metrics = this@SymPanel.resources.displayMetrics
         setTextSize(TypedValue.COMPLEX_UNIT_PX, min(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, metrics),
             TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, largest, metrics)))
+    }
+
+    /** The insets listener does not always run in the keyboard's window, so the corners are read here as well. */
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        corners = Corners.of(rootWindowInsets, display)
+        render()
     }
 
     /** Shows the panel as it is now, also after a quick setting changes. */

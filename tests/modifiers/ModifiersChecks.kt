@@ -85,7 +85,21 @@ fun main() {
     ctrlActions()
     steadyKeyIgnoresFlicker()
     cornersKeepContentClear()
+    theGuideCanOpenAPanel()
     println("Modifier checks passed")
+}
+
+/** The interactive guide puts the keyboard in the menu that a step needs. */
+private fun theGuideCanOpenAPanel() = Keyboard().run {
+    press(SHIFT)
+    modifiers.openPanel(Panel.Symbols)
+    same(modifiers.panel, Panel.Symbols, "The guide can open the symbols")
+    same(shift, Level.Off, "Opening the panel turns Shift off, as Sym does")
+    modifiers.openPanel(Panel.Settings)
+    modifiers.toggleSettings()
+    same(modifiers.panel, Panel.Symbols, "From quick settings that the guide opened, Alt goes back to the symbols")
+    modifiers.openPanel(Panel.Closed)
+    same(modifiers.panel, Panel.Closed, "The guide can close the panel")
 }
 
 private fun steadyKeyIgnoresFlicker() {

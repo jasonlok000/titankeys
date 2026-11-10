@@ -865,6 +865,23 @@ private fun composerFlow(world: Realistic) {
 }
 
 /** Where suggestions are allowed the bar always has words, and popular sentence starts fill it when nothing else can. */
+/** In the interactive guide, a word that comes out different has the guide's word on the strip, one touch away. */
+private fun theGuideOffersItsWord(world: Realistic) {
+    fun guide(miss: Boolean = false) = Typist(world, null).also {
+        it.composer.intended = { "to" }
+        it.composer.nearMiss = { miss }
+    }
+    val swiped = guide().swipe("tp")
+    same(swiped.bar.take(2), listOf("tp", "to"), "A swipe that came out different has the guide's word second")
+    same(swiped.choose(1).text, "to ", "One touch puts the guide's word in")
+    same(guide().swipe("to").bar, listOf("to"), "A swipe that came out right has nothing added")
+    same(guide(miss = true).swipe("to").bar, listOf("to"), "A near miss needs a second guess to swap with")
+    same(guide().type("tp").bar.firstOrNull(), "to", "Typed letters that are not the guide's word have it on the strip")
+    same(guide().type("tp").choose(0).text, "to ", "One touch puts it in place of the letters")
+    same(guide().type("to").bar.contains("to"), false, "Letters that are the guide's word need nothing more")
+    same(Typist(world, null).swipe("tp").bar, listOf("tp"), "Outside the guide nothing is added")
+}
+
 private fun suggestionBar(world: Realistic) {
     val sentences = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, 0)
     val capital = listOf("I", "The", "Hello", "You")
@@ -1462,6 +1479,7 @@ fun main() {
     smallerChecks()
     composerFlow(world)
     suggestionBar(world)
+    theGuideOffersItsWord(world)
     typoBenchmark(world)
     sentenceAware(world)
     fieldReports(world)

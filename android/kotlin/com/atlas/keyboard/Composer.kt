@@ -185,6 +185,13 @@ class Composer(
     var onStroke: ((Swipe) -> Unit)? = null
     /** Told when a word changes by itself, unless that lands as a swipe ends, where a vibration would run into the swipe's own. */
     var onAutocorrect: (() -> Unit)? = null
+    /** True when the next swipe should come out as its second guess, which only the interactive guide asks for. See [GuideHooks]. */
+    var nearMiss: () -> Boolean = { false }
+    /**
+     * The interactive guide's word for a word that starts after this text, or null outside the guide. A word that comes out
+     * different gets the guide's word on the strip, so that one touch puts it right. See [GuideHooks].
+     */
+    var intended: (String) -> String? = { null }
     /** Only the keyboard sets this, so replaying a recording never adds to the raw input log. */
     var log: EditLog? = null
     /** Only the keyboard sets this, and only while the setting is on, so replaying a recording never changes a word. */
@@ -462,9 +469,12 @@ class Composer(
             onStroke?.invoke(path)
             if (recognition.words.isNotEmpty()) {
                 val sentenceCase = field.sentenceCapitalisation && autoCapitalise()
-                val choices = recognition.words.map {
+                val guessed = recognition.words.map {
                     SwipeTyping.capitalise(it, context + leadingSpace, pending.metaState, false, sentenceCase)
                 }
+                val wanted = intended(context + leadingSpace)
+                    ?.let { SwipeTyping.capitalise(it, context + leadingSpace, pending.metaState, false, sentenceCase) }
+                val choices = guideChoices(guessed, wanted)
                 val word = choices.first()
                 val inserted = leadingSpace + word + if (trailingSpace) " " else ""
                 if (!edit(EditCause.Swipe, replaced, inserted)) return@recognise
@@ -1383,6 +1393,32 @@ class Composer(
         later(PREDICTION_DELAY_MILLIS) { if (current == epoch) predict() }
     }
 
+    /**
+     * A swipe's choices in the interactive guide. When the swipe typed another word than [wanted], the guide's word goes second,
+     * where one touch on the strip puts it in. For a near miss on purpose it goes second even when the swipe read it first.
+     */
+    private fun guideChoices(guessed: List<String>, wanted: String?): List<String> {
+        if (wanted == null) return guessed
+        val at = guessed.indexOfFirst { sameLetters(it, wanted) }
+        val right = guessed.getOrNull(at) ?: wanted
+        val others = guessed.filterIndexed { index, _ -> index != at }
+        if (others.isEmpty()) return guessed
+        val miss = nearMiss()
+        if (at == 0 && !miss) return guessed
+        return listOf(others[0], right) + others.drop(1)
+    }
+
+    /** Typed suggestions in the interactive guide: while a word is not the guide's word yet, the guide's word has a place. */
+    private fun guideSuggestions(found: List<String>, prefix: String, wanted: String?): List<String> {
+        if (wanted == null || prefix.isEmpty() || sameLetters(prefix, wanted)) return found
+        val at = found.indexOfFirst { sameLetters(it, wanted) }
+        if (at in 0..GUIDE_PLACE) return found
+        val others = found.filterIndexed { index, _ -> index != at }
+        return others.take(GUIDE_PLACE) + (found.getOrNull(at) ?: wanted) + others.drop(GUIDE_PLACE)
+    }
+
+    private fun sameLetters(a: String, b: String) = a.filter(Char::isLetter).equals(b.filter(Char::isLetter), ignoreCase = true)
+
     private fun show(suggestions: List<String>) {
         barIdle = suggestions.isEmpty()
         showWords(suggestions)
@@ -1433,13 +1469,15 @@ class Composer(
         val cancelled = AtomicBoolean(false)
         completion = cancelled
         completionSnapshot = anchor
-        words.complete(context, cancelled, field.sentenceCapitalisation) { suggestions ->
+        words.complete(context, cancelled, field.sentenceCapitalisation) { found ->
             if (cancelled.get() || current != epoch || snapshot() != anchor) return@complete
+            val prefix = TypedPredictions.prefix(context)
+            val suggestions = guideSuggestions(found, prefix, intended(context.dropLast(prefix.length)))
             if (suggestions.isEmpty()) {
                 offerStarts(anchor)
                 return@complete
             }
-            composition = Composition.Typed(TypedPredictions.prefix(context), trailingSpace, anchor, suggestions)
+            composition = Composition.Typed(prefix, trailingSpace, anchor, suggestions)
             show(suggestions)
             // The first word is the one most likely to be picked, so have what follows it ready.
             suggestions.firstOrNull()?.let {
@@ -1479,6 +1517,8 @@ class Composer(
         private const val DRAIN_NANOS = 4_000_000L
         private const val DESTINATION_TIMEOUT_MILLIS = 500L
         private const val AFTER_CONTEXT_LENGTH = 32
+        /** Where the interactive guide's word goes among typed suggestions: second, after the best of the rest. */
+        private const val GUIDE_PLACE = 1
         private const val FULL_STOP_MILLIS = 400L
         private const val PREDICTION_DELAY_MILLIS = 60L
         private val STARTERS = listOf("What", "How", "Where")

@@ -85,7 +85,7 @@ class Strip(
         // Keep the words clear of the gesture handle, which draws over the bottom of the keyboard, and of the rounded corners.
         setOnApplyWindowInsetsListener { _, insets ->
             navigationInset = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
-            corners = Corners.of(insets)
+            corners = Corners.of(insets, display)
             render()
             insets
         }
@@ -112,6 +112,13 @@ class Strip(
         isFocusable = false
         setTextSize(TypedValue.COMPLEX_UNIT_DIP, CHIP_SIZE)
         setPadding(dp(8), dp(3), dp(8), dp(3))
+    }
+
+    /** The insets listener does not always run in the keyboard's window, so the corners are read here as well. */
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        corners = Corners.of(rootWindowInsets, display)
+        render()
     }
 
     private fun render() {

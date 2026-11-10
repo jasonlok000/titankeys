@@ -2,12 +2,10 @@ package com.vandam.ink
 
 import android.app.Activity
 import android.app.Application
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.ContentObserver
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -21,14 +19,15 @@ import android.widget.EditText
 import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
-import com.atlas.keyboard.AtlasIme
 import com.atlas.keyboard.BackService
 import com.atlas.keyboard.EnterKey
 import com.atlas.keyboard.GuideActivity
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.KeyCapture
+import com.atlas.keyboard.PhoneSetup
 import com.atlas.keyboard.RawLog
+import com.atlas.keyboard.SetupPart
 import com.atlas.keyboard.Trace
 import com.atlas.keyboard.TouchpadPreview
 import org.json.JSONArray
@@ -213,30 +212,22 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     GuideActivity.start(activity)
                     "null"
                 }
-                "enable" -> {
-                    activity.startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
+                "playground" -> {
+                    GuideActivity.playground(activity) { action -> complete(NativeResult.Success(JSONObject.quote(action))) }
+                    null
+                }
+                "enable", "overlay", "scrollAssistant", "backService" -> {
+                    val part = when (operation) {
+                        "enable" -> SetupPart.Enable
+                        "overlay" -> SetupPart.Overlay
+                        "scrollAssistant" -> SetupPart.ScrollAssistant
+                        else -> SetupPart.Back
+                    }
+                    PhoneSetup.page(activity, part)?.let(activity::startActivity)
                     "null"
                 }
                 "choose" -> {
-                    activity.getSystemService(InputMethodManager::class.java).showInputMethodPicker()
-                    "null"
-                }
-                "overlay" -> {
-                    activity.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:${activity.packageName}")))
-                    "null"
-                }
-                "scrollAssistant" -> {
-                    activity.startActivity(Intent().setClassName("com.agui.settings",
-                        "com.agui.settings.touchpad.ScrollAssistantActivity"))
-                    "null"
-                }
-                "backService" -> {
-                    // The page for a single service is closed to apps, so the list opens with Atlas highlighted.
-                    val service = ComponentName(activity, BackService::class.java).flattenToString()
-                    activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                        .putExtra(":settings:fragment_args_key", service)
-                        .putExtra(":settings:show_fragment_args", Bundle().apply { putString(":settings:fragment_args_key", service) }))
+                    PhoneSetup.chooseKeyboard(activity)
                     "null"
                 }
                 "watch" -> {
@@ -295,10 +286,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     }
 
     private fun state(): JSONObject {
-        val keyboard = ComponentName(activity, AtlasIme::class.java)
-        val enabled = activity.getSystemService(InputMethodManager::class.java).enabledInputMethodList.any { it.component == keyboard }
-        val selected = Settings.Secure.getString(activity.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
-            ?.let(ComponentName::unflattenFromString) == keyboard
         val learned = typing.learnedWords()
         val words = JSONArray()
         for ((index, word) in learned.words.withIndex())
@@ -309,10 +296,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("guideDue", GuideActivity.due(activity))
             .put("phone", "${Build.MANUFACTURER} ${Build.MODEL}")
             .put("android", Build.VERSION.RELEASE)
-            .put("enabled", enabled)
-            .put("selected", selected)
-            .put("overlay", Settings.canDrawOverlays(activity))
-            .put("scrollAssistant", scrollAssistant())
+            .put("enabled", PhoneSetup.enabled(activity))
+            .put("selected", PhoneSetup.selected(activity))
+            .put("overlay", PhoneSetup.overlay(activity))
+            .put("scrollAssistant", PhoneSetup.scrollAssistant())
             .put("backService", BackService.enabled(activity))
             .put("learning", typing.learningEnabled())
             .put("tapKeys", TypingSettings.tapKeys(activity))
@@ -370,12 +357,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     }
 
     /** The Titan's Scroll assistant switch powers the keyboard touchpad, and it ships off. Phones without one pass. */
-    private fun scrollAssistant(): Boolean {
-        val get = Class.forName("android.os.SystemProperties").getMethod("get", String::class.java, String::class.java)
-        if (get.invoke(null, "ro.agui.touchpad_function", "") != "yes") return true
-        return get.invoke(null, "persist.sys.scroll_assistant", "0") == "1"
-    }
-
     private fun installedVersion(): String = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
 
     /** Release notes show once after each update. A fresh install has nothing new, so it starts as seen. */

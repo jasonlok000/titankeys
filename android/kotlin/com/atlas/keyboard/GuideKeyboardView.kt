@@ -112,6 +112,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     /** The finger's path in touchpad space, from 0 to 1 each way, as pairs of x and y. */
     private val trail = ArrayList<FloatArray>()
     private var liftedAt = -1L
+    /** When a real finger was last on the keys. The ghost waits while one is there, so it never gets in its way. */
+    private var touchedAt = -1L
     private var lastFrame = 0L
     private var appearStart = -1L
     private var waveStart = -1L
@@ -156,7 +158,34 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         trail.addAll(points)
         for (point in points) byName[Layout.keyAt(point[0], point[1])]?.heat = 1f
         liftedAt = if (lifted) GuideMotion.now() else -1
+        touched()
+    }
+
+    /** The ghost finger shows its gesture only during a demonstration, from the start of the gesture. */
+    private var demoing = false
+
+    fun demo(on: Boolean) {
+        demoing = on
+        if (on) cueStart = GuideMotion.now()
         invalidate()
+    }
+
+    /** How long one run of the ghost's gesture takes. */
+    fun ghostMillis() = (cycleMillis() * GHOST_SLOW).toLong()
+
+    /** A real finger is on the keys, resting or moving, so the ghost finger stops until it has been away for a moment. */
+    fun touched() {
+        touchedAt = GuideMotion.now()
+        invalidate()
+    }
+
+    /** The ghost shows only while no real finger is on the keys, and comes back from the start of its gesture. */
+    private fun ghostWaits(now: Long): Boolean {
+        if (touchedAt < 0) return false
+        if (liftedAt < 0 && trail.isNotEmpty() || now - touchedAt < GHOST_PAUSE_MILLIS) return true
+        touchedAt = -1
+        cueStart = now
+        return false
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -388,10 +417,11 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     /** The ghost finger: thin, dashed by the time it lasts, then a pause, then again. */
     private fun drawGhost(canvas: Canvas, now: Long) {
-        if (cue == GuideCue.Free || cue is GuideCue.Spot) return
+        if (cue == GuideCue.Free || cue is GuideCue.Spot || !demoing) return
+        if (ghostWaits(now)) return
         val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE
-        val cycle = cycleMillis()
-        val t = if (GuideMotion.enabled) ((now - cueStart) % cycle).toFloat() / cycle else 1f
+        val cycle = ghostMillis()
+        val t = if (GuideMotion.enabled) ((now - cueStart).coerceAtMost(cycle - 1).toFloat() / cycle) else 1f
 
         if (cue is GuideCue.Taps) {
             drawTaps(canvas, cue as GuideCue.Taps, t, colour)
@@ -549,6 +579,10 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val GHOST_DONE_WIDTH = 4f
         const val GHOST_LINE = .34f
         const val GHOST_FINGER = 7f
+        /** How long the ghost waits after a real finger leaves the keys before it shows the gesture again. */
+        const val GHOST_PAUSE_MILLIS = 2000L
+        /** The ghost goes this many times slower than a real gesture, so that it is easy to follow. */
+        const val GHOST_SLOW = 1.5f
         const val SPACE_CENTRE = .5f
         const val ROW_CENTRE = .875f
         const val DRAG_REACH = .32f

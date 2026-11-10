@@ -32,6 +32,8 @@ final class ProperNames {
     static String restore(String word) {
         if (!word.equals(word.toLowerCase(Locale.ROOT))) return word;
         String key = word.replace('\u2019', '\'');
+        String builtIn = BuiltInWords.spelling(key);
+        if (builtIn != null) return builtIn;
         String spelling = spellings.get(key);
         if (spelling == null && key.endsWith("'s")) {
             String name = spellings.get(key.substring(0, key.length() - 2));

@@ -21,6 +21,7 @@ internal enum class GuideTone { Orange, Ink }
  */
 internal enum class GuideChapter(val label: String) {
     Story("Everything from the keys"),
+    Boring("Some boring stuff"),
     End("Built for Titan 2 Elite"),
 }
 
@@ -30,16 +31,16 @@ internal enum class GuideChapter(val label: String) {
  * [title] and [body] follow the same rules as a step's words. [help] shows if you come back with the part still not done.
  */
 internal enum class SetupPart(val title: String, val body: String, val action: String, val help: String? = null) {
-    Enable("Switch on the keyboard.", "Turn on TitanKeys in the list. The guide comes back by itself.", "Open the keyboard list",
-        "TitanKeys can be further down the list. Turn on its switch, then push OK two times."),
-    Choose("Make it your keyboard.", "Select TitanKeys in the list. That is all.", "Select TitanKeys"),
+    Enable("Turn the keyboard on.", "Flip TitanKeys on in the list. You'll land back here by yourself.", "Open the keyboard list",
+        "Can't see it? Scroll down. Flip its switch, then press OK twice."),
+    Choose("Make it your keyboard.", "Pick TitanKeys in the list. That's it.", "Pick TitanKeys"),
     // Android shows a list of all apps here, not the page for TitanKeys alone.
-    Overlay("Allow it over other apps.", "Allow TitanKeys in the list. This keeps the touchpad on the keys.", "Open the list",
-        "Find TitanKeys in the list, open it, and turn on its switch."),
-    ScrollAssistant("Turn on Scroll assistant.", "Swiping needs it to read the touchpad. Turn on its switch.", "Open Scroll assistant",
-        "Turn on the switch at the top of that page."),
-    Back("Let TitanKeys handle Back.", "In Accessibility, turn on TitanKeys. Back then works in one push.", "Open Accessibility",
-        "Is the switch grey? In App info, open the menu and allow restricted settings."),
+    Overlay("Let it sit over other apps.", "Allow TitanKeys in the list. It keeps the touchpad on the keys.", "Open the list",
+        "Find TitanKeys in the list, open it and flip the switch."),
+    ScrollAssistant("Turn on Scroll assistant.", "Swiping reads the touchpad through it. Flip its switch on.", "Open Scroll assistant",
+        "The switch is at the top of that page."),
+    Back("Let TitanKeys handle Back.", "Turn TitanKeys on in Accessibility. Then Back works in one press.", "Open Accessibility",
+        "Switch greyed out? Android is being careful. In App info, open the menu and allow restricted settings."),
     ;
 
     companion object {
@@ -99,9 +100,9 @@ internal sealed interface GuideDemo {
  * so that nothing waits on one word. After the last word it starts again.
  */
 internal object GuideScript {
-    const val TEXT = "Nothing to unlearn: type with two hands or one, and TitanKeys fixes the typos as you go. Then swipe whole " +
-        "words on the same keys. A missed word is one touch from right. Flick to delete, steer and select from Space, and " +
-        "reach every symbol and emoji without the screen. This is the ultimate keyboard, and these are the keys your Titan " +
+    const val TEXT = "Nothing to unlearn: type with two hands or one, and TitanKeys fixes your typos as you go. Then swipe whole " +
+        "words on the same keys. Missed one? The right word is a tap away. Flick to delete, steer and pick from Space, and " +
+        "get every symbol and emoji without the screen. This is the ultimate keyboard, and these are the keys your Titan " +
         "deserves."
 
     val words = TEXT.split(' ')
@@ -110,19 +111,62 @@ internal object GuideScript {
     fun letters(word: String) = word.filter { it.isLetter() }.lowercase()
 
     /**
-     * How many words of the script [text] has. Each word counts, so that a word that came out different still moves the line on.
+     * The script in steps: each word, and after a word that ends in marks, such as "unlearn:" or "go.", those marks as a step of
+     * their own, so that the line above waits for them and you get to type them.
+     */
+    val steps = words.flatMap { word ->
+        val marks = word.takeLastWhile { !it.isLetterOrDigit() }
+        listOfNotNull(word.dropLast(marks.length).takeIf { it.isNotEmpty() }, marks.takeIf { it.isNotEmpty() })
+    }
+
+    /** The step at [index], starting again after the end. */
+    fun stepAt(index: Int) = steps[index.mod(steps.size)]
+
+    /** Whether a step is marks to type, and not a word. */
+    fun isMarks(step: String) = step.isNotEmpty() && !step[0].isLetterOrDigit()
+
+    /** The word that comes next from step [index] on: the step itself, or the word after the marks. */
+    fun wordFrom(index: Int) = stepAt(index).takeUnless(::isMarks) ?: stepAt(index + 1)
+
+    /**
+     * How many steps of the script [text] has. It is lenient, so that nothing waits on you: each word counts, also one that came
+     * out different, and a word typed where marks are next counts for the marks too. A mark where a word is next is passed over.
      * A last word that is still being typed, the start of the word that is next, does not count until it is whole.
      */
     fun progress(text: String): Int {
-        val typed = text.split(' ', '\n').filter { it.isNotEmpty() }
-        var done = typed.size
-        if (done > 0 && !text.endsWith(' ') && !text.endsWith('\n')) {
-            val last = letters(typed.last())
-            val expected = letters(wordAt(done - 1))
-            if (last != expected && expected.startsWith(last)) done--
+        val pieces = PIECE.findAll(text).map { it.value }.toList()
+        var done = 0
+        for (piece in pieces) {
+            if (isMarks(piece)) {
+                if (isMarks(stepAt(done))) done++
+                continue
+            }
+            if (isMarks(stepAt(done))) done++
+            done++
+        }
+        val last = pieces.lastOrNull()
+        if (last != null && !isMarks(last) && !text.endsWith(' ') && !text.endsWith('\n')) {
+            val typed = letters(last)
+            val expected = letters(stepAt(done - 1))
+            if (typed != expected && expected.startsWith(typed)) done--
         }
         return done
     }
+
+    /** The steps from [index] on for the line above: words with a space between them, and marks right after their word. */
+    fun lineFrom(index: Int, count: Int) = buildString {
+        for (at in index until index + count) {
+            val step = stepAt(at)
+            if (isNotEmpty() && !isMarks(step)) append(' ')
+            append(step)
+        }
+    }
+
+    /** The keys that type marks, in order: two pushes of Space for a full stop when that is on, and Alt and its key for others. */
+    fun markKeys(marks: String, autoPunctuation: Boolean, keyFor: (Char) -> String?): List<List<String>> = marks.map { mark ->
+        if (mark == '.' && autoPunctuation) listOf(Layout.SPACE, Layout.SPACE)
+        else listOfNotNull(keyFor(mark)?.let { Layout.ALT }, keyFor(mark))
+    }.flatMap { keys -> keys.map { listOf(it) } }
 
     /**
      * The pushes that put [word] in the field as the keyboard really does (#59). Typed, each letter is a push; swiped, the
@@ -166,15 +210,21 @@ internal object GuideScript {
     }
 
     /**
-     * The script from word [index] on, at least [count] words and to the end of a sentence, to put in the field for a step that
-     * needs text to work on. It goes on from where the text is, so that the line above stays in step with the field.
+     * The script from step [index] on, at least [count] words and to the end of a sentence, to put in the field for a step that
+     * needs text to work on. It goes on from where the text is, so that the line above stays in step with the field. Marks that
+     * are next are passed over, as the text has a space after the word by then.
      */
     fun continueFrom(index: Int, count: Int): String {
-        val added = ArrayList<String>()
         var at = index
-        while (added.size < count || !wordAt(at - 1).endsWith('.')) added += wordAt(at++)
-        return added.joinToString(" ")
+        while (isMarks(stepAt(at))) at++
+        val start = at
+        var added = 0
+        while (added < count || stepAt(at - 1) != ".") if (!isMarks(stepAt(at++))) added++
+        return lineFrom(start, at - start)
     }
+
+    /** A word, or a run of marks, in typed text. */
+    private val PIECE = Regex("[\\p{L}\\p{N}'’]+|[^\\s\\p{L}\\p{N}'’]+")
 }
 
 /** One push in a demonstration: the keys that light, and the text that the word has become after it. */
@@ -249,6 +299,10 @@ internal class GuideStep(
     val needsWords: Int = 0,
     /** A stop between the parts of the guide: it counts as done at once, and offers to start typing. */
     val pause: Boolean = false,
+    /** A slide that only tells you something: it counts as done at once, quietly, with nothing to try. */
+    val info: Boolean = false,
+    /** The first slide of a section that you can skip: Next says Show me, and the offer says Skip, which goes past the section. */
+    val opensSection: Boolean = false,
     /** The keyboard makes the next swipe its second guess, on purpose, so that the step can teach the strip. See [GuideHooks]. */
     val nearMiss: Boolean = false,
     /** What the slide shows by itself when it opens and when nobody acts. */
@@ -257,7 +311,7 @@ internal class GuideStep(
 )
 
 /** A swipe or touch step heard a key go down, which is a push and not a touch. */
-private const val PUSHED = "That pushed a key. Touch lightly and slide across the letters."
+private const val PUSHED = "That pressed a key. Touch lightly and slide across the letters."
 
 /** From android.view.KeyEvent, so that the steps can be tested without Android. */
 private fun isLetter(code: Int) = code in 29..54
@@ -266,7 +320,7 @@ private fun isLetter(code: Int) = code in 29..54
 private fun swipes(words: Int): GuideMemory.(KeyboardEvent) -> GuideVerdict = { event ->
     when (event) {
         is Recognised -> if (event.words.isNotEmpty() && ++count >= words) GuideVerdict.Done else GuideVerdict.Wait
-        is Tapped -> GuideVerdict.Hint("That was a touch. Do not lift between the letters of a word.")
+        is Tapped -> GuideVerdict.Hint("That was a tap. Don't lift between the letters of a word.")
         is Pushed -> if (isLetter(event.code)) GuideVerdict.Hint(PUSHED) else GuideVerdict.Wait
         else -> GuideVerdict.Wait
     }
@@ -276,9 +330,9 @@ private fun swipes(words: Int): GuideMemory.(KeyboardEvent) -> GuideVerdict = { 
 internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "type", chapter = GuideChapter.Story,
-        title = "Nothing to unlearn.",
-        body = "Type as you always have. Typos fix themselves when you push Space.",
-        done = "Typos fixed as you type.",
+        title = "The old keyboard? Kinda shit.",
+        body = "This one isn't. Nothing to unlearn, just type. Space fixes your typos.",
+        done = "Fixed while you typed.",
         demo = GuideDemo.TypeNext,
         check = { event ->
             when {
@@ -294,8 +348,8 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "swipe", chapter = GuideChapter.Story,
         title = "Now swipe on the same keys.",
-        body = "Slide across the letters of the next word above. Do not push. Then lift.",
-        done = "One swipe. One word.",
+        body = "Slide across the letters of the next word above. Don't press. Lift.",
+        done = "One swipe, one word.",
         cue = GuideCue.NextWord,
         needs = GuideNeed.SwipeTyping,
         demo = GuideDemo.SwipeNext,
@@ -303,9 +357,9 @@ internal val GUIDE_STEPS = listOf(
     ),
     GuideStep(
         id = "strip", chapter = GuideChapter.Story,
-        title = "Missed? One touch fixes it.",
-        body = "Swipe the next word. It comes out wrong on purpose. Touch the right one.",
-        done = "The right word, one touch away.",
+        title = "Missed? One tap fixes it.",
+        body = "Swipe the next word. It comes out wrong on purpose. Tap the right one.",
+        done = "The right word was a tap away.",
         cue = GuideCue.NextWord,
         needs = GuideNeed.SwipeTyping,
         nearMiss = true,
@@ -313,34 +367,17 @@ internal val GUIDE_STEPS = listOf(
         check = { event ->
             when (event) {
                 is Chosen -> GuideVerdict.Done
-                is Recognised -> if (event.words.size < 2) GuideVerdict.Hint("That word had nothing else to offer. Swipe the next one.") else GuideVerdict.Wait
-                else -> GuideVerdict.Wait
-            }
-        },
-    ),
-    GuideStep(
-        id = "flick", chapter = GuideChapter.Story,
-        title = "Delete without reaching up.",
-        body = "Flick left from Backspace. Keep your finger down to delete more.",
-        done = "Gone.",
-        cue = GuideCue.Flick(hold = true),
-        needs = GuideNeed.SwipeTyping,
-        needsWords = 4,
-        demo = GuideDemo.DeleteLast,
-        check = { event ->
-            when (event) {
-                is DeletedWord -> GuideVerdict.Done
-                is Recognised -> GuideVerdict.Hint("That typed a word. Start on Backspace and move left quickly.")
+                is Recognised -> if (event.words.size < 2) GuideVerdict.Hint("That word had nothing else to offer. Try the next one.") else GuideVerdict.Wait
                 else -> GuideVerdict.Wait
             }
         },
     ),
     GuideStep(
         id = "steer", chapter = GuideChapter.Story,
-        title = "Steer and select from Space.",
+        title = "Steer and pick from Space.",
         body = "Tap just above the middle of Space, then touch and slide to steer.",
-        done = "No screen needed.",
-        help = "Tap twice first to select. Tap lightly in the shaded patch, and keep the last touch down as you slide.",
+        done = "Didn't need the screen for that.",
+        help = "Tap twice first to pick words. Tap lightly in the shaded patch, and keep your last touch down while you slide.",
         cue = GuideCue.Taps(2, drag = true),
         needs = GuideNeed.CursorControl,
         needsWords = 6,
@@ -365,8 +402,8 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "symbols", chapter = GuideChapter.Story,
         title = "Every symbol within reach.",
-        body = "Hold J for the symbol in its corner, or push Sym for all the rest.",
-        done = "No menus to dig through.",
+        body = "Hold J for the symbol in its corner, or press Sym for the rest.",
+        done = "Way quicker than digging through menus.",
         // Holding a letter can be off, so then the slide offers it at once. Sym works either way.
         cue = GuideCue.Spot(listOf("J", Layout.SYM)),
         needs = GuideNeed.HoldSymbols,
@@ -387,9 +424,9 @@ internal val GUIDE_STEPS = listOf(
     ),
     GuideStep(
         id = "panel", chapter = GuideChapter.Story,
-        title = "Emoji and settings, no screen.",
-        body = "Push Sym two times for emoji. In the panel, Alt opens quick settings.",
-        done = "All from the keys. In the panel, A opens the clipboard.",
+        title = "Emoji and settings, keys only.",
+        body = "Press Sym twice for emoji. In the panel, Alt opens quick settings.",
+        done = "And in the panel, A opens your clipboard.",
         cue = GuideCue.Spot(listOf(Layout.SYM, Layout.ALT)),
         usesPanel = true,
         setup = Panel.Closed,
@@ -397,6 +434,73 @@ internal val GUIDE_STEPS = listOf(
         check = { event ->
             if (event is ModifierState && (event.panel == Panel.Emoji || event.panel == Panel.Settings)) GuideVerdict.Done else GuideVerdict.Wait
         },
+    ),
+    // Some boring stuff: useful things that are less fun, after the story. The first slide offers to skip them all.
+    GuideStep(
+        id = "boring", chapter = GuideChapter.Boring,
+        title = "Some boring stuff.",
+        body = "Useful, not thrilling. Have a look, or skip straight to the end.",
+        done = "Fair enough.",
+        opensSection = true,
+        check = { GuideVerdict.Wait },
+    ),
+    GuideStep(
+        id = "flick", chapter = GuideChapter.Boring,
+        title = "Delete without reaching up.",
+        body = "Flick left from Backspace. Keep your finger there to keep deleting.",
+        done = "Gone.",
+        cue = GuideCue.Flick(hold = true),
+        needs = GuideNeed.SwipeTyping,
+        needsWords = 4,
+        demo = GuideDemo.DeleteLast,
+        check = { event ->
+            when (event) {
+                is DeletedWord -> GuideVerdict.Done
+                is Recognised -> GuideVerdict.Hint("That typed a word. Start on Backspace and flick left, fast.")
+                else -> GuideVerdict.Wait
+            }
+        },
+    ),
+    GuideStep(
+        id = "menu", chapter = GuideChapter.Boring,
+        title = "Hold a word for its menu.",
+        body = "Hold a word on the strip. Save keeps it, Forget makes it go away.",
+        done = "Your words, your call.",
+        info = true,
+        check = { GuideVerdict.Wait },
+    ),
+    GuideStep(
+        id = "clipboard", chapter = GuideChapter.Boring,
+        title = "Copied something? It's here.",
+        body = "The bar offers it right after. Older clips: press Sym, then A.",
+        done = "Paste away.",
+        info = true,
+        demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""),
+        check = { GuideVerdict.Wait },
+    ),
+    GuideStep(
+        id = "snippets", chapter = GuideChapter.Boring,
+        title = "Snippets and emoji by name.",
+        body = "Make snippets in Settings, then type ;name and Space. :smile: gives 😄.",
+        done = "Saves you some typing.",
+        info = true,
+        check = { GuideVerdict.Wait },
+    ),
+    GuideStep(
+        id = "exact", chapter = GuideChapter.Boring,
+        title = "Terminals get exact keys.",
+        body = "In terminals and remote desktops, every key goes straight through.",
+        done = "Settings has that list, and one for apps where the bar hides.",
+        info = true,
+        check = { GuideVerdict.Wait },
+    ),
+    GuideStep(
+        id = "names", chapter = GuideChapter.Boring,
+        title = "Names from your contacts.",
+        body = "Turn it on in Settings, under Your words, and names swipe right.",
+        done = "Names, sorted.",
+        info = true,
+        check = { GuideVerdict.Wait },
     ),
     GuideStep(
         id = "end", chapter = GuideChapter.End,
@@ -413,13 +517,13 @@ internal val GUIDE_STEPS = listOf(
  */
 internal fun commonMistake(step: GuideStep, event: KeyboardEvent): String? = when {
     event is ModifierState && event.panel != Panel.Closed && !step.usesPanel ->
-        "That opened the Sym panel. Push Sym until it closes, then try again."
+        "That opened the Sym panel. Press Sym until it closes, then try again."
     event is ModifierState && event.alt != Modifiers.Level.Off && !step.usesPanel ->
-        "Alt is on, so the touchpad does not type. Push Alt to turn it off."
+        "Alt is on, so the touchpad won't type. Press Alt to turn it off."
     event is CursorStarted && step.cue !is GuideCue.Taps ->
-        "That moves the cursor. Quick taps just above the middle of Space start it. Lift your finger to stop."
+        "That's the cursor. Quick taps just above the middle of Space start it. Lift your finger to stop."
     event is HeldSymbol && step.id != "symbols" ->
-        "A held key types its symbol. Push the keys quickly for letters."
+        "Holding a key types its symbol. Press quickly for letters."
     else -> null
 }
 
@@ -478,6 +582,15 @@ internal class GuideFlow(
     fun advance(): GuideStep {
         val left = step
         if (!finished) moveTo(firstFrom(position + 1))
+        return left
+    }
+
+    /** Moves past the rest of this section, to the first step of the next part that shows. Returns the step that was left. */
+    fun skipSection(): GuideStep {
+        val left = step
+        var at = position
+        while (at < steps.lastIndex && steps[at].chapter == left.chapter) at++
+        moveTo(firstFrom(at))
         return left
     }
 

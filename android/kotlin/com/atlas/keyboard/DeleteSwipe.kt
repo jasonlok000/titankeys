@@ -22,6 +22,24 @@ private const val INNER_WANDER = 1.1f
 private const val MIN_TRAVEL = .1f
 private const val TURN_BACK = .05f
 
+/**
+ * Where a level delete flick can start, as boxes of left, top, right and bottom in touchpad space, read from the numbers above so
+ * that the guide's shaded zone cannot drift from the gesture: the right edge with Backspace, and further in on the middle row from
+ * K. A level flick ends at the height it starts, so the limits for its end apply too.
+ */
+internal val deleteStartBoxes: List<FloatArray> get() = listOf(
+    floatArrayOf(RIGHT_EDGE, max(EDGE_START_TOP, EDGE_END_TOP), 1f, minOf(EDGE_START_BOTTOM, EDGE_END_BOTTOM)),
+    floatArrayOf(INNER_EDGE, MIDDLE_ROW_TOP, RIGHT_EDGE, minOf(INNER_START_BOTTOM, INNER_END_BOTTOM)),
+)
+
+/** Whether a level delete flick can start at this point, as [isDeleteWordSwipe] decides. */
+internal fun startsDeleteFlick(x: Float, y: Float) = deleteStartBoxes.any { (left, top, right, bottom) -> x >= left && x < right && y >= top && y < bottom }
+
+/** Where the guide's ghost starts its delete flick: on Backspace, in the middle of the zone, on the middle row. */
+internal val GUIDE_FLICK_START = floatArrayOf((RIGHT_EDGE + .95f) / 2, (MIDDLE_ROW_TOP + INNER_START_BOTTOM) / 2)
+/** Where it ends: about four keys to the left, like a real flick. */
+internal const val GUIDE_FLICK_END_X = .62f
+
 /** A finger that stays this long after a delete flick starts deleting more words. Real flicks lift long before this. */
 private const val HOLD_MILLIS = 400L
 /** The finger counts as staying while it is this close to where it stopped, in key widths. */

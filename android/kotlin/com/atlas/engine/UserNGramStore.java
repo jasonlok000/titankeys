@@ -74,6 +74,18 @@ final class UserNGramStore extends SQLiteOpenHelper implements UserNGramReposito
         return results;
     }
 
+    @Override public java.util.Map<String, Integer> keptStarting(String letters, int limit) {
+        java.util.Map<String, Integer> results = new java.util.LinkedHashMap<>();
+        if (limit <= 0 || letters.isEmpty()) return results;
+        String like = letters.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+        try (Cursor cursor = getReadableDatabase().rawQuery("SELECT LOWER(" + COL_NEXT_WORD + ") AS word, SUM(" + COL_COUNT + ") AS kept FROM "
+                + TABLE_BIGRAMS + " WHERE " + COL_NEXT_WORD + " LIKE ? ESCAPE '\\' GROUP BY word ORDER BY kept DESC LIMIT ?",
+                new String[] { like, Integer.toString(limit) })) {
+            while (cursor.moveToNext()) results.put(cursor.getString(0), cursor.getInt(1));
+        }
+        return results;
+    }
+
     @Override public int deleteWord(String prefix, String nextWord) {
         return getWritableDatabase().delete(TABLE_BIGRAMS, COL_NEXT_WORD + " = ? COLLATE NOCASE OR " + COL_PREFIX + " = ?",
                 new String[] { nextWord, prefix });

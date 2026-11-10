@@ -322,8 +322,14 @@ public final class SwipeTyping {
                 SwipeModels loaded = models;
                 if (loaded != null) {
                     try {
+                        // After letters, the user's own words count too: how often they kept each one (#38, #39).
+                        Map<String, Integer> kept = Map.of();
+                        if (!prefix.isEmpty() && learningEnabled) {
+                            try { kept = nextWords.keptStarting(TypedPredictions.key(prefix)); }
+                            catch (RuntimeException error) { Log.w("TouchpadSwipe", "Could not read the kept words", error); }
+                        }
                         Map<String, Double> predicted = prefix.isEmpty() ? loaded.nextWords(contextText, typedPredictions::contains)
-                                : loaded.completions(contextText, prefix, typedPredictions::contains);
+                                : loaded.completions(contextText, prefix, typedPredictions::contains, kept);
                         if (!predicted.isEmpty()) likely = predicted;
                     } catch (Exception | LinkageError error) { Log.w("TouchpadSwipe", "Next-word model skipped", error); }
                 }

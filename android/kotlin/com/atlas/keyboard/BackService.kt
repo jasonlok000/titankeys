@@ -14,7 +14,7 @@ import android.view.accessibility.AccessibilityEvent
  * the app's, so a back swipe reaches Atlas instead of the app. A back key from a keyboard skips the
  * stage where apps on Android's newer back handling listen for it, so only a system back reaches them.
  * The service cannot read the screen. It receives no events, except the key events that [watchKeys] asks for in the
- * one app that needs them.
+ * one app that needs them and while the Sym panel is open.
  */
 class BackService : AccessibilityService() {
     private var filtering = false
@@ -38,7 +38,7 @@ class BackService : AccessibilityService() {
 
     override fun onInterrupt() = Unit
 
-    /** The keyboard asks for this only while the app that needs it is typed in. True keeps the key from the app. */
+    /** The keyboard asks for this only while it needs it. True keeps the key from the app. */
     override fun onKeyEvent(event: KeyEvent?) = event != null && watcher?.invoke(event) == true
 
     /** Android sends every key on the phone through a service that asks for them, so this is on only while it is needed. */

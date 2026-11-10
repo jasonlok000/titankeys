@@ -98,6 +98,7 @@ class AtlasIme : InputMethodService() {
     private var heldLetter: KeyEvent? = null
     /** In this app the Back service hears the keys first, because the app takes key presses before the keyboard. */
     private var watchingKeys = false
+    private val panelKeys = PanelKeyFilter()
     /** The key under a finger on the touchpad, for the modifier bar, or an empty string. */
     private var restingKey = ""
     private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
@@ -467,18 +468,32 @@ class AtlasIme : InputMethodService() {
     /**
      * Smart Launcher takes every key press in its search field before the keyboard hears it, so a press there cannot start a
      * hold or count towards Shift and Alt. The Back service hears them first, only in this one app and only when a setting needs them.
+     * It also hears them while the Sym panel is open, and until the release of a key that the panel took. See [PanelKeyFilter].
      */
     private fun updateKeyWatch() {
-        val wanted = editing && currentInputEditorInfo?.packageName == SMART_LAUNCHER && (holdSymbols || !modifiers.doublePressLocks)
-        watchingKeys = BackService.watchKeys(if (wanted) ::watchedKey else null) && wanted
+        val launcher = editing && currentInputEditorInfo?.packageName == SMART_LAUNCHER && (holdSymbols || !modifiers.doublePressLocks)
+        val forPanel = panelOpen || panelKeys.holding
+        val running = BackService.watchKeys(if (launcher || forPanel) ::watchedKey else null)
+        watchingKeys = running && launcher
+        if (!running) panelKeys.clear()
     }
 
     /**
      * Hears a key before Smart Launcher does. The launcher still types its own letters, so this only times holds and
      * follows Shift and Alt. True takes the key from the app, which is only ever a repeat of a letter that can become a symbol,
      * or a second push of Shift or Alt. Every key waits for this answer, so slow work goes to the main looper.
+     *
+     * While the Sym panel is open, Enter and Backspace are kept from every app and go to the panel, the same as a key that the app
+     * passed on to the keyboard.
      */
     private fun watchedKey(event: KeyEvent): Boolean {
+        val down = event.action == KeyEvent.ACTION_DOWN
+        if (panelKeys.takes(event.keyCode, down, event.repeatCount, modifiers.panel)) {
+            // Once the panel has closed, a key that it took only waits for its release.
+            if (!down) onKeyUp(event.keyCode, event) else if (panelOpen) onKeyDown(event.keyCode, event)
+            updateKeyWatch()
+            return true
+        }
         if (!watchingKeys) return false
         main.post(refreshModifiers)
         val code = event.keyCode
@@ -1431,6 +1446,7 @@ class AtlasIme : InputMethodService() {
         showModifierBar()
         panel?.mode = modifiers.panel
         contact.paging = panelOpen
+        updateKeyWatch()
     }
 
     private fun showModifierBar() {
@@ -1442,6 +1458,8 @@ class AtlasIme : InputMethodService() {
         // A held status must not outlive the keyboard.
         if (hold.held) hideHeldWindow()
         unregisterReceiver(screenOn)
+        modifiers.closePanel()
+        panelKeys.clear()
         updateKeyWatch()
         main.removeCallbacksAndMessages(null)
         settlements.clear()

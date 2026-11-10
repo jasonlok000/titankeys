@@ -521,7 +521,8 @@ class AtlasIme : InputMethodService() {
                     if (Modifiers.isModifier(event.keyCode)) modifiers.key(event)
                 }
                 Modifiers.isModifier(event.keyCode) -> modifiers.key(event)
-                event.isCtrlPressed || event.isMetaPressed || KeyEvent.isModifierKey(event.keyCode) -> return
+                event.isCtrlPressed || event.isMetaPressed || KeyEvent.isModifierKey(event.keyCode)
+                    || altShortcut(event) != null -> return
                 event.keyCode == KeyEvent.KEYCODE_SPACE -> {
                     composer.space(event.repeatCount > 0, event.eventTime)
                     modifiers.useHeld()
@@ -705,6 +706,11 @@ class AtlasIme : InputMethodService() {
             modifiers.useHeld()
             return true
         }
+        altShortcut(event)?.let {
+            modifiers.useHeld()
+            command(it, meta = it.metaState)
+            return true
+        }
         if (event.isCtrlPressed && event.keyCode != KeyEvent.KEYCODE_DEL || event.isMetaPressed) {
             modifiers.useHeld()
             command(event)
@@ -746,8 +752,22 @@ class AtlasIme : InputMethodService() {
         return true
     }
 
-    private fun command(event: KeyEvent, textKey: Boolean = false) {
-        val meta = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState)
+    /** The keyboard has no Ctrl key, so holding Alt with a shortcut letter sends Ctrl with it. */
+    private fun altShortcut(event: KeyEvent): KeyEvent? {
+        if (!modifiers.altHeld || event.isCtrlPressed || event.isMetaPressed) return null
+        val (code, meta) = when (event.keyCode) {
+            // Ctrl+Shift+Z is the redo that Android, Compose and web text fields all accept.
+            KeyEvent.KEYCODE_Y -> KeyEvent.KEYCODE_Z to (KeyEvent.META_CTRL_ON or KeyEvent.META_SHIFT_ON)
+            in FIELD_SHORTCUTS -> event.keyCode to KeyEvent.META_CTRL_ON
+            else -> return null
+        }
+        return KeyEvent(event.downTime, event.eventTime, event.action, code, event.repeatCount,
+            KeyEvent.normalizeMetaState(meta), event.deviceId, if (code == event.keyCode) event.scanCode else 0,
+            event.flags, event.source)
+    }
+
+    private fun command(event: KeyEvent, textKey: Boolean = false,
+        meta: Int = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState)) {
         val down = KeyEvent(event.downTime, event.eventTime, KeyEvent.ACTION_DOWN, event.keyCode,
             event.repeatCount, meta, event.deviceId, event.scanCode, event.flags, event.source)
         val up = KeyEvent(event.downTime, event.eventTime, KeyEvent.ACTION_UP, event.keyCode,

@@ -77,12 +77,17 @@ The same answers for all four (App interactions, Other user-generated content, D
 
 ## IP addresses
 
-Every download and upload shows the phone's IP address to the server. Google says to disclose IP addresses "based on how you use them", and to declare location if you use an IP address to find where someone is. TitanKeys doesn't use IP addresses at all, so nothing is declared, **as long as**:
+Every download and upload shows the phone's IP address to the server. Google says to disclose IP addresses "based on how you use them", and to declare location if you use an IP address to find where someone is.
 
-- the contributions Worker never reads, stores or logs the IP address (`CF-Connecting-IP`), and Worker logging is off or strips it;
+TitanKeys never uses an IP address to find where someone is, and never keeps one. The one use is the contributions Worker's limit against abuse:
+
+- The Worker hashes the address with a secret salt (`RATE_SALT`), and Cloudflare's rate limiter counts that hash in memory for one minute.
+- The address and the hash are never stored or logged. Worker logging is off.
 - GitHub Pages' own server logs are GitHub's, which the owner can't see or use.
 
-**Uncertain:** Google has no explicit rule for an IP address that reaches a host as part of the connection and is never used. The answer above follows Google's "based on how you use them" wording.
+**Answer:** nothing is declared for IP addresses. Google's form has no IP address type, and this use finds no location and ties nothing to a person.
+
+**Uncertain:** Google has no explicit rule for an address used only for a moment against abuse. If a reviewer asks, the careful answer is: "Device or other IDs", collected, processed ephemerally, not shared, purpose "Fraud prevention, security, and compliance". The privacy policy already says the address is counted for one minute and never kept.
 
 ## Things the 2.1 code must keep true for these answers
 
@@ -93,10 +98,10 @@ Every download and upload shows the phone's IP address to the server. Google say
 - Any feed entry for the Play build never links to an APK download. Google Play doesn't allow an app to update itself by any other route ([Device and Network Abuse policy](https://support.google.com/googleplay/android-developer/answer/9888379)).
 - The privacy policy (#53) says the same things: what is sent, why, how it is protected, how long it is kept, and how to delete it. Google also wants a privacy contact, and the developer name or app name in the policy.
 
-## Open questions
+## Decided
 
-1. **Retention.** How long are contributions kept? The privacy policy must say. "Until you delete them, or until [N] years after the last upload" is one option.
-2. **Deletion after uninstalling.** The 2.1 code in progress files each batch under a hash of the contributor ID (the `X-Contributor` header), and "Delete my contributions" sends the ID so the server can find them. Only the phone knows the ID, so it is lost on uninstall. Options: show the ID in Settings so the user can copy it and email a deletion request, or say in the policy that data from an uninstalled app can't be found. Note that the hashed ID is also an identifier, which is covered by "Device or other IDs".
-3. **Contributions in the Play build at all?** If the first Play release ships without contributions, the whole form becomes "No data collected", which is simpler for the first review. Contributions could follow in an update, with the form updated before that update.
-4. **Typing log (#16) in the Play build.** It stays on the phone, so it isn't "collected". But a keyboard that records all typed text may draw review questions. The earlier plan on #34 was to leave it out of the Play build. Decide before the first upload.
-5. **Purpose:** Analytics only, or Analytics and App functionality.
+1. **Retention:** until it is used for training, and at most 2 years after it arrives. R2 deletes older files by itself, and the privacy policy says so.
+2. **Deletion after uninstalling:** Settings shows the contributor ID with a Copy button, and the user can still delete after stopping. The policy says how to ask for deletion with the ID by email. The hashed ID is covered by "Device or other IDs".
+3. **Contributions in the Play build:** yes, off by default, as in the GitHub build. Everything in 2.1 ships in both builds. The form is filled in as above before the first upload.
+4. **Typing log (#16) in the Play build:** left out. It stays in the GitHub build.
+5. **Purpose:** Analytics only. Google's Analytics covers "future performance improvements", which is what training the swipe models is.

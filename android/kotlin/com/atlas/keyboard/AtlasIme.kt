@@ -87,6 +87,10 @@ class AtlasIme : InputMethodService() {
     }
     private val barHover = SteadyKey(Layout::keyAt)
     private var field = Field.None
+    /** The user chose to hide the bar in this app. The window stays, one pixel high. See [showSuggestions]. */
+    private var barHidden = false
+    /** Each emoji by its shortcode name, once the list has loaded. */
+    private var shortcodes: Map<String, String> = emptyMap()
     /** The apps that the user added to the Enter key setting, read when a field starts. */
     private var enterApps = emptyMap<String, EnterKey.SendMethod>()
     /** The raw input log for this field. It is null when the setting is off or the field must not be recorded. */
@@ -205,7 +209,11 @@ class AtlasIme : InputMethodService() {
      * already handled a hide, such as Microsoft Teams, otherwise leaves its message box under the strip.
      */
     private val showStrip = Runnable {
-        if (!canShowStrip()) return@Runnable
+        if (!canShowStrip()) {
+            if (field.exact) logExact("bar not shown: back $hiddenByBack editing $editing bound ${currentInputBinding != null}")
+            return@Runnable
+        }
+        if (field.exact) logExact("bar shown")
         try {
             requestShowSelf(0)
         } catch (error: RuntimeException) {
@@ -231,8 +239,10 @@ class AtlasIme : InputMethodService() {
     }
 
     // Apps can drop a field yet still start input on it, so only a field that answers gets the strip.
+    // A view with exact typing, such as a remote desktop's, holds no text to answer with, and its busy main thread can let the
+    // question time out, which used to leave its bar hidden. Its app chose it by being on the list, so it gets the bar without asking.
     private fun canShowStrip() = !hiddenByBack && editing && currentInputBinding != null
-        && currentInputConnection?.getTextBeforeCursor(1, 0) != null
+        && (field.exact || currentInputConnection?.getTextBeforeCursor(1, 0) != null)
 
     private fun cancelShowStrip() {
         main.removeCallbacks(showStrip)
@@ -270,7 +280,8 @@ class AtlasIme : InputMethodService() {
         finishHeldTaps(type = false)
         haptics.click()
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
-        enqueue { selectWord() }
+        // A terminal or a remote view has no text to select here.
+        if (!field.exact) enqueue { selectWord() }
     }
 
     private val checkHeldTaps = Runnable { settleHeldTaps() }
@@ -334,7 +345,7 @@ class AtlasIme : InputMethodService() {
         finishHeldTaps(type = false)
         Trace.touch(cursorPath, false)
         haptics.click()
-        if (drag.words) enqueue { startWordDrag() }
+        if (drag.words && !field.exact) enqueue { startWordDrag() }
         stepCursor.reset()
         stepCursor.run()
     }
@@ -375,7 +386,7 @@ class AtlasIme : InputMethodService() {
             else owed += speed * (now - last) / 1000
             if (direction != 0 && owed >= 1f) {
                 owed = (owed - 1f).coerceAtMost(1f)
-                if (cursor.words) extendWords(direction) else moveCursor(direction)
+                if (cursor.words && !field.exact) extendWords(direction) else moveCursor(direction)
             }
             last = now
             strip?.gesture?.cursorFrame(cursor.column, direction, speed, cursor.words, now)
@@ -435,6 +446,31 @@ class AtlasIme : InputMethodService() {
         registerReceiver(screenOn, IntentFilter(Intent.ACTION_SCREEN_ON), RECEIVER_NOT_EXPORTED)
         updateOverlay()
         loadEmoji()
+        loadShortcodes()
+    }
+
+    /** Reads the emoji shortcode list away from the main thread. See [Expansions]. */
+    private fun loadShortcodes() {
+        Thread {
+            val names = try {
+                assets.open("shortcodes.txt").bufferedReader().useLines { Expansions.readShortcodes(it) }
+            } catch (error: IOException) {
+                Log.w("Atlas", "Could not read the emoji shortcodes", error)
+                return@Thread
+            }
+            main.post {
+                shortcodes = names
+                readExpansions()
+            }
+        }.start()
+    }
+
+    /** Snippets and shortcodes for the composer, from the saved settings. Null when there is nothing to expand. */
+    private fun readExpansions() {
+        val snippets = Snippets.load(this)
+        val emoji = if (TypingSettings.shortcodes(this)) shortcodes else emptyMap()
+        composer.expansions = if (snippets.isEmpty() && emoji.isEmpty()) null
+            else Expansions(snippets, TypingSettings.snippetStart(this), emoji)
     }
 
     /** The settings screen is open when this changes, so the keyboard is idle and no field start would apply it. */
@@ -603,19 +639,27 @@ class AtlasIme : InputMethodService() {
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
-        editing = info.inputType != EditorInfo.TYPE_NULL
+        val exact = ExactTyping.applies(info.packageName, ExactTyping.apps(this))
+        if (exact || info.inputType == EditorInfo.TYPE_NULL) logExact("start ${info.packageName} type 0x${Integer.toHexString(info.inputType)}" +
+            " options 0x${Integer.toHexString(info.imeOptions)} restarting $restarting exact $exact")
+        editing = info.inputType != EditorInfo.TYPE_NULL || exact
         if (!restarting) {
             typedInField = false
             fieldStartedAt = SystemClock.uptimeMillis()
             // Apps also restart input on the field that stays, so only a new start ends what Back did.
             hiddenByBack = false
         }
-        field = if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
+        // TitanKeys's own Settings fields hold snippets and words to add, which must not be learned. The guide's field is for practice.
+        val ownSettings = info.packageName == packageName && info.privateImeOptions?.contains(GuideHooks.FIELD) != true
+        field = if (exact) Field.Exact else if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
+        if (ownSettings) field = field.copy(learning = false)
         // Android only calls onFinishInput first when the input is not restarting.
         rawLog?.finish()
-        rawLog = if (editing) RawLog.start(this, info, restarting) else null
+        // Exact typing is for commands and remote computers, which are no typing to learn from.
+        rawLog = if (editing && !exact && !ownSettings) RawLog.start(this, info, restarting) else null
         composer.log = rawLog
         inLauncher = editing && TypingSettings.launcherHidesBar(this) && info.packageName == launcherPackage()
+        barHidden = info.packageName in TypingSettings.hiddenBarApps(this)
         launcherFieldHasText = inLauncher && info.initialSelStart > 0
         contact.releaseKeys()
         clearSettlements()
@@ -624,6 +668,7 @@ class AtlasIme : InputMethodService() {
         showModifiers()
         readSettings()
         if (editing && !restarting) rememberEnterApp(info)
+        if (!restarting) rememberApp(info)
         cancelShowStrip()
         cancelRecycle()
         main.removeCallbacks(hideStrip)
@@ -655,13 +700,15 @@ class AtlasIme : InputMethodService() {
         modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
         cursorControl = TypingSettings.cursorControl(this)
-        contact.swipes = TypingSettings.swipeTyping(this)
+        // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
+        contact.swipes = TypingSettings.swipeTyping(this) && field.words
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
         val corrects = TypingSettings.autocorrect(this)
         composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
         // The word data takes a moment to load, so it starts as a field opens: the first word typed is fixed too.
         if (!corrects) autocorrect.release() else if (editing) autocorrect.prepare()
         strip?.showSuggestions = showSuggestions()
+        readExpansions()
         updateKeyWatch()
     }
 
@@ -733,9 +780,21 @@ class AtlasIme : InputMethodService() {
         if (updated != recent) TypingSettings.recentEnterApps(this, updated)
     }
 
+    /** Only the package is kept, so the exact typing setting can offer apps without asking to see every installed app. */
+    private fun rememberApp(info: EditorInfo) {
+        val app = info.packageName ?: return
+        if (app == packageName) return
+        val recent = TypingSettings.recentApps(this)
+        val updated = ExactTyping.recentApps(recent, app)
+        if (updated != recent) TypingSettings.recentApps(this, updated)
+    }
+
     // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way until you type.
-    // Password, email and number fields get no suggestions, so the bar would only be an empty strip.
-    private fun showSuggestions() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText) && field.suggestions
+    // Password, email and number fields and exact typing get no suggestions, but the bar still shows, with its word places empty,
+    // so that Shift, Alt and Ctrl show on it and the gestures draw there (issue 45).
+    // In an app where the user hid the bar, the strip draws nothing and keeps one pixel, so the keyboard's window stays up: keys,
+    // holds, Alt and the panel work as before, and the app never sees the keyboard go away. The panel opens over it as usual.
+    private fun showSuggestions() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText) && !barHidden
 
     private fun launcherPackage(): String? {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
@@ -751,6 +810,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onWindowShown() {
         super.onWindowShown()
+        if (field.exact) logExact("window shown")
         if (recycling) {
             recycling = false
             showTeamsEgg()
@@ -766,6 +826,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onWindowHidden() {
         super.onWindowHidden()
+        if (field.exact) logExact("window hidden: back $passingBack typed $typedInField")
         windowHiddenAt = SystemClock.uptimeMillis()
         main.removeCallbacks(recycle)
         if (recycleAwaitsHide) {
@@ -1098,6 +1159,8 @@ class AtlasIme : InputMethodService() {
 
     /** Android calls this when you tap the field, so the tap also brings the strip back after Back. */
     override fun onShowInputRequested(flags: Int, configChange: Boolean): Boolean {
+        if (field.exact || currentInputEditorInfo?.inputType == EditorInfo.TYPE_NULL)
+            logExact("show asked by ${currentInputEditorInfo?.packageName} editing $editing")
         hiddenByBack = false
         return editing
     }
@@ -1170,8 +1233,9 @@ class AtlasIme : InputMethodService() {
 
     private fun motion(event: MotionEvent) {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) clearTeamsEgg()
-        // The panel works in every field, also where the touchpad types no words.
-        if (!field.words && !panelOpen) return
+        // The panel and the cursor work in every field. Where the touchpad types no words, swipes and taps type nothing: see [outcome].
+        // With exact typing the touchpad sends nothing, so a resting finger never reaches a terminal or a remote computer.
+        if (field.exact && !panelOpen) return
         typedInField = true
         val samples = touchpad.samples(event)
         Recording.sink?.motion(event, samples)
@@ -1477,7 +1541,7 @@ class AtlasIme : InputMethodService() {
 
     /** Types a symbol or emoji from the panel, then goes back to normal typing. */
     private fun typePanelItem(item: String) {
-        composer.symbol(item)
+        if (field.exact) commitExact(item) else composer.symbol(item)
         if (modifiers.panel == Modifiers.Panel.Emoji) emoji?.use(item)?.let { recents ->
             getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
         }
@@ -1665,6 +1729,7 @@ class AtlasIme : InputMethodService() {
                     if (panelOpen) swipePanel(outcome.points)
                     return
                 }
+                if (!field.words) return
                 if (outcome.deletesWord) {
                     haptics.tap()
                     val nothingLeft = currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true
@@ -1678,7 +1743,7 @@ class AtlasIme : InputMethodService() {
             }
             is Contact.Outcome.Tap -> {
                 KeyboardEvents.publish { KeyboardEvent.Tapped(outcome.key) }
-                if (!isTapKey(outcome.key)) return
+                if (!isTapKey(outcome.key) || !field.words) return
                 showStripAfterBack()
                 val key = if (outcome.key == Layout.SPACE) " " else outcome.key
                 haptics.tap()
@@ -1708,7 +1773,8 @@ class AtlasIme : InputMethodService() {
 
     /** Only a plain letter from the phone's own keyboard can become its symbol. With Shift, Alt, Sym or a shortcut key it stays a letter. */
     private fun canHold(event: KeyEvent): Boolean {
-        if (!holdSymbols || !field.words || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
+        // Every field that the keyboard types in has this, also password, number and exact typing fields.
+        if (!holdSymbols || !editing || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
         if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
         if (modifiers.shift != Modifiers.Level.Off || altOrPanel || !event.hasNoModifiers() || event.isCapsLockOn) return false
         // A modifier still in the queue has not changed the levels above yet.
@@ -1753,7 +1819,12 @@ class AtlasIme : InputMethodService() {
         val text = String(Character.toChars(symbol))
         haptics.holdSymbol()
         KeyboardEvents.publish { KeyboardEvent.HeldSymbol(text) }
-        if (watchingKeys) {
+        if (field.exact) {
+            // The letter went to the app as a key, so a Backspace key takes it back.
+            logExact("hold ${letter.keyCode} gives its symbol")
+            sendExact(letter, ExactTyping.takeBack)
+            commitExact(text)
+        } else if (watchingKeys) {
             val typed = letter.getUnicodeChar(letter.metaState)
             main.post { replaceAppLetter(typed, text) }
         } else if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(text) } else composer.replaceLetter(text)
@@ -1785,6 +1856,11 @@ class AtlasIme : InputMethodService() {
         if (touchpad.isGestureKey(event)) return true
         // Keys like volume reach the keyboard too, but they are not typing.
         if (!event.isSystem) showStripAfterBack()
+        // An exact typing app can hide the keyboard by itself, as AnyDesk's own keyboard button does. A key brings the bar back.
+        if (field.exact && !event.isSystem && !isInputViewShown && !hiddenByBack) {
+            logExact("bar back for a key")
+            main.post(showStrip)
+        }
         // Typing on means the forgotten word can go, and the strip shows words again. The newest clip goes from the strip too.
         if (!event.isSystem && !Modifiers.isModifier(keyCode)) {
             closeMenu()
@@ -1798,7 +1874,10 @@ class AtlasIme : InputMethodService() {
         val repeatOfHold = !watchingKeys && trackHold(carried)
         // A key press means the finger was pressing, not resting on the touchpad.
         endCursor()
-        if (repeatOfHold) return true
+        if (repeatOfHold) {
+            if (field.exact) logExact("key $keyCode repeat ${event.repeatCount} kept by hold")
+            return true
+        }
         if (ctrlKey(event)) {
             consumedKeys += keyCode
             return true
@@ -1853,6 +1932,7 @@ class AtlasIme : InputMethodService() {
         }
         if (Modifiers.isModifier(keyCode)) {
             modifiers.key(event)
+            if (field.exact) logModifiers(event)
             showModifiers()
         }
         return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
@@ -1880,10 +1960,12 @@ class AtlasIme : InputMethodService() {
     private fun key(event: KeyEvent): Boolean {
         if (Modifiers.isModifier(event.keyCode)) {
             modifiers.key(event)
+            if (field.exact) logModifiers(event)
             if (panelOpen && !isInputViewShown) main.post(showPanel)
             return true
         }
         if (panelKey(event)) return true
+        if (field.exact) return exactKey(event)
         // Enter comes before the Ctrl shortcuts, because the Enter key setting can use Ctrl + Enter.
         if (!event.isMetaPressed && enter(event)) return true
         // A lone Ctrl or Meta press is not a shortcut. Each shortcut key carries its own meta state.
@@ -2005,6 +2087,56 @@ class AtlasIme : InputMethodService() {
         if (press == EnterKey.Press.ShiftNewLine || press == EnterKey.Press.ShiftSend) modifiers.consume() else modifiers.useHeld()
         return true
     }
+
+    /**
+     * Exact typing: the key goes to the app as a key event, with the Shift and Alt pushed before it and Ctrl from fn.
+     * A symbol that Alt types goes as text. Keys of the phone itself, such as volume, stay with Android. See [ExactTyping].
+     */
+    private fun exactKey(event: KeyEvent): Boolean {
+        if (event.isSystem) return false
+        val meta = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState)
+        val plan = ExactTyping.plan(event.keyCode, event.repeatCount, meta, event::getUnicodeChar)
+        logExact("key ${event.keyCode} repeat ${event.repeatCount} meta 0x${Integer.toHexString(meta)}" +
+            if (plan.text != null) " as text from Alt" else "")
+        plan.text?.let(::commitExact)
+        sendExact(event, plan.events)
+        modifiers.consume()
+        return true
+    }
+
+    /** Sends [events] to the app, with the device, flags and source of the key [like]. */
+    private fun sendExact(like: KeyEvent, events: List<ExactTyping.Event>) {
+        val connection = currentInputConnection ?: return
+        try {
+            for (sent in events) {
+                logExact("sent ${sent.code} ${if (sent.down) "down" else "up"} repeat ${sent.repeat} meta 0x${Integer.toHexString(sent.meta)}")
+                connection.sendKeyEvent(KeyEvent(like.downTime, like.eventTime,
+                    if (sent.down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, sent.code, sent.repeat, sent.meta, like.deviceId,
+                    if (sent.code == like.keyCode) like.scanCode else 0, like.flags, like.source))
+            }
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not send an exact key", error)
+        }
+    }
+
+    private fun commitExact(text: String) {
+        try {
+            currentInputConnection?.commitText(text, 1)
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not send exact text", error)
+        }
+    }
+
+    /** Only TitanKeys Debug writes these lines, to find faults in exact typing. They hold key codes and states, never text. */
+    private val exactLogging by lazy { packageName.endsWith(".debug") }
+
+    private fun logExact(line: String) {
+        if (exactLogging) Log.i("AtlasExact", line)
+    }
+
+    /** Shift, Alt and Sym stay with the keyboard in exact typing. This says what they left on. */
+    private fun logModifiers(event: KeyEvent) = logExact("modifier ${event.keyCode} ${if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"}" +
+        " kept: shift ${modifiers.shift} alt ${modifiers.alt} panel ${modifiers.panel}")
 
     private fun command(event: KeyEvent, textKey: Boolean = false) {
         val meta = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState)

@@ -101,8 +101,9 @@
     <li>TitanKeys sends them on Wi-Fi only, in batches. Before a batch leaves the phone, it is encrypted with our public
       key (X25519 and AES-256-GCM). Only our private key can open it. That key is kept offline, not on any server.</li>
     <li>Batches go over HTTPS to a small server that we run on Cloudflare. The server can only store batches and delete
-      them. It cannot read them, and it keeps only the encrypted files. The server never logs or stores internet
-      addresses (IP addresses). Cloudflare carries the connection, as the <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare privacy
+      them. It cannot read them, and it keeps only the encrypted files. To stop abuse, it counts the requests from each
+      internet address (IP address) for one minute at most. It uses the address only for that moment, in a hashed form,
+      and never logs or stores it. Cloudflare carries the connection, as the <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare privacy
       policy</a> says.</li>
     <li>The server files each batch under a hash of your contributor ID, so even the stored files do not show the ID.</li>
   </ul>

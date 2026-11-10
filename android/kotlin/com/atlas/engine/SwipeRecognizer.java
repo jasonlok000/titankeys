@@ -275,7 +275,7 @@ public final class SwipeRecognizer implements AutoCloseable {
 
     private static float endpointPenalty(Swipe gesture, String word, boolean end) {
         float distance = endpointDistance(gesture, word, end);
-        return Float.isFinite(distance) ? 2f * Math.min(4, distance) : 0;
+        return Float.isFinite(distance) ? 3f * Math.min(4, distance) : 0;
     }
 
     private static float endpointDistance(Swipe gesture, String word, boolean end) {

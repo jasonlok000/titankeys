@@ -64,6 +64,14 @@ Hold a letter for the symbol printed in its corner. Push Sym for every other sym
 
 Push Sym two times for emoji. In the panel, Alt opens quick settings, with a letter for each setting, such as S for swiping and V for vibration, without leaving the app you are in.
 
+### Snippets and emoji by name
+
+Type a shortcut such as `;addr` and push Space to put in your address, or type `:smile:` for 😄. Backspace straight after puts the shortcut back. The strip shows matching snippets and emoji while you type. Add, import and export snippets in Settings. They stay on the phone and never work in password fields.
+
+### Exact typing for terminals and remote computers
+
+In terminals, remote desktops and game streaming, every key goes to the app as you push it, with Shift, Alt and Ctrl (fn too): no fixes, no capitals, no suggestions. Termux, ConnectBot, Termius, AnyDesk, TeamViewer, Windows App, Chrome Remote Desktop, RustDesk, RealVNC Viewer, bVNC, aRDP, Moonlight and Parsec are on the list from the start. Add or remove any app in Settings. Password, email and number fields keep the bar for Shift, Alt and Ctrl, but show no words and take no swipes.
+
 ## TitanKeys and Atlas
 
 Atlas is a great keyboard, and TitanKeys only exists because Julian built it and shared it. The two projects just aim for slightly different things. Atlas stays simple and keeps swiping for typing only. TitanKeys takes on more complexity to get the most out of the Titan 2 Elite, one-handed swipes included. If you'd rather have something simpler, Atlas is an excellent choice.

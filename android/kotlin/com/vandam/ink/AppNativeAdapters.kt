@@ -21,6 +21,7 @@ import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
 import com.atlas.keyboard.BackService
 import com.atlas.keyboard.EnterKey
+import com.atlas.keyboard.ExactTyping
 import com.atlas.keyboard.GuideActivity
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
@@ -154,10 +155,18 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 }
                 "setExactApp" -> {
                     val app = data.getString("app")
-                    val apps = TypingSettings.exactApps(activity).toMutableSet()
+                    val apps = ExactTyping.apps(activity).toMutableSet()
                     if (data.getBoolean("on")) apps += app else apps -= app
-                    TypingSettings.exactApps(activity, apps)
+                    ExactTyping.apps(activity, apps)
                     "null"
+                }
+                "installedApps" -> {
+                    // Reading every app's name can take a moment, so it happens away from the main thread.
+                    Thread {
+                        val apps = installedApps()
+                        activity.runOnUiThread { complete(NativeResult.Success(apps.toString())) }
+                    }.start()
+                    null
                 }
                 "putSnippet" -> {
                     Snippets.put(activity, data.getString("shortcut").trim(), data.getString("text"),
@@ -393,15 +402,39 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     }
 
     private fun putExactApps(state: JSONObject) {
-        val apps = TypingSettings.exactApps(activity)
-        state.put("exactApps", JSONArray(apps.map { JSONObject().put("app", it).put("name", appName(it)) }
-            .sortedBy { it.getString("name").lowercase() }))
+        val apps = ExactTyping.apps(activity)
+        // Apps on the phone first, by name. A default app that is not on the phone still shows, so that it can be removed.
+        state.put("exactApps", JSONArray(apps.map { JSONObject().put("app", it).put("name", appName(it)).put("installed", installed(it)) }
+            .sortedWith(compareBy({ !it.getBoolean("installed") }, { it.getString("name").lowercase() }))))
+        state.put("exactTouchpad", ExactTyping.touchpadCursor(activity))
         state.put("recentApps", JSONArray(TypingSettings.recentApps(activity).filter { it !in apps }
             .map { JSONObject().put("app", it).put("name", appName(it)) }))
     }
 
     private fun enterApp(app: String, name: String, method: EnterKey.SendMethod) =
         JSONObject().put("app", app).put("name", name).put("method", method.id)
+
+    private fun installed(app: String) = try {
+        activity.packageManager.getApplicationInfo(app, 0)
+        true
+    } catch (error: PackageManager.NameNotFoundException) {
+        false
+    }
+
+    /**
+     * The apps with a screen in the launcher, for the exact typing list. The manifest asks to see only these, which Google Play
+     * allows without the permission to see every app.
+     */
+    private fun installedApps(): JSONArray {
+        val packages = activity.packageManager
+        val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        return JSONArray(packages.queryIntentActivities(launcher, 0)
+            .map { it.activityInfo.packageName to it.loadLabel(packages).toString() }
+            .filter { (app, _) -> app != activity.packageName }
+            .distinctBy { it.first }
+            .sortedBy { it.second.lowercase() }
+            .map { (app, name) -> JSONObject().put("app", app).put("name", name) })
+    }
 
     /** Android lets a keyboard see the apps that it has typed in. If it cannot see one now, the package name is shown. */
     private fun appName(app: String) = appNames.getOrPut(app) {
@@ -449,6 +482,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "enterKey" -> TypingSettings.enterKey(activity, value as String)
             "snippetStart" -> TypingSettings.snippetStart(activity, value as String)
             "shortcodes" -> TypingSettings.shortcodes(activity, value as Boolean)
+            "exactTouchpad" -> ExactTyping.touchpadCursor(activity, value as Boolean)
             "liftOff" -> TypingSettings.liftOffGrace(activity, value as Boolean)
             "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())
             "haptics" -> Haptics.select(activity, Haptics.preset(activity), value as Boolean)

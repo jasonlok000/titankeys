@@ -227,19 +227,6 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("shortcodes", enabled).apply();
     }
 
-    /** Termux and AnyDesk, the apps on the exact typing list until the user changes it. */
-    public static final Set<String> DEFAULT_EXACT_APPS =
-            Collections.unmodifiableSet(new HashSet<>(Arrays.asList("com.termux", "com.anydesk.anydeskandroid")));
-
-    /** Apps where each key goes to the app as it is, with no fixes, capitals, full stops or suggestions. See ExactTyping. */
-    public static Set<String> exactApps(Context context) {
-        return preferences(context).getStringSet("exact_apps", DEFAULT_EXACT_APPS);
-    }
-
-    public static void exactApps(Context context, Set<String> apps) {
-        preferences(context).edit().putStringSet("exact_apps", new HashSet<>(apps)).apply();
-    }
-
     /** Packages of the apps where a field started recently, newest first. Only the keyboard writes this, and only on this phone. */
     public static List<String> recentApps(Context context) {
         String apps = preferences(context).getString("recent_apps", "");

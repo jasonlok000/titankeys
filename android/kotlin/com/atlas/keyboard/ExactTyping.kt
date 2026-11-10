@@ -1,5 +1,6 @@
 package com.atlas.keyboard
 
+import android.content.Context
 import android.view.KeyEvent
 
 /**
@@ -18,6 +19,45 @@ import android.view.KeyEvent
  * The decisions are here, apart from Android, so tests can reach them. The keyboard sends the keys.
  */
 object ExactTyping {
+    /**
+     * The apps on the list until the user changes it: terminals, remote desktops and game streaming, where every key must reach
+     * the app or the computer behind it as it is. Each package name was checked on its Google Play listing, and RustDesk's,
+     * which has none, in the project's own code and on F-Droid (2026-11-10). The user can remove any of them.
+     */
+    val DEFAULT_APPS: Set<String> = linkedSetOf(
+        // Terminals and SSH: Termux, ConnectBot, Termius.
+        "com.termux", "org.connectbot", "com.server.auditor.ssh.client",
+        // Remote desktops: AnyDesk, TeamViewer, Windows App (Microsoft's Remote Desktop), Chrome Remote Desktop, RustDesk,
+        // RealVNC Viewer, bVNC and aRDP in their free and Pro versions.
+        "com.anydesk.anydeskandroid", "com.teamviewer.teamviewer.market.mobile", "com.microsoft.rdc.androidx",
+        "com.google.chromeremotedesktop", "com.carriez.flutter_hbb", "com.realvnc.viewer.android",
+        "com.iiordanov.freebVNC", "com.iiordanov.bVNC", "com.iiordanov.freeaRDP", "com.iiordanov.aRDP",
+        // Game streaming: Moonlight, Parsec.
+        "com.limelight", "tv.parsec.client",
+    )
+
+    private const val APPS = "exact_apps"
+    private const val CURSOR = "exact_touchpad_cursor"
+
+    private fun preferences(context: Context) = context.getSharedPreferences("typing_settings", Context.MODE_PRIVATE)
+
+    /** The apps with exact typing. */
+    fun apps(context: Context): Set<String> = preferences(context).getStringSet(APPS, null)?.toSet() ?: DEFAULT_APPS
+
+    fun apps(context: Context, apps: Set<String>) {
+        preferences(context).edit().putStringSet(APPS, HashSet(apps)).apply()
+    }
+
+    /**
+     * The touchpad moves the cursor with the arrow keys in exact typing. It is off until the user turns it on, so that a finger
+     * on the keys sends nothing to a terminal or a remote computer.
+     */
+    fun touchpadCursor(context: Context): Boolean = preferences(context).getBoolean(CURSOR, false)
+
+    fun touchpadCursor(context: Context, on: Boolean) {
+        preferences(context).edit().putBoolean(CURSOR, on).apply()
+    }
+
     /** Whether a field start gets exact typing: any start in an app on the list. */
     fun applies(packageName: String?, apps: Set<String>): Boolean = packageName != null && packageName in apps
 

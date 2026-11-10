@@ -56,6 +56,8 @@ class AtlasIme : InputMethodService() {
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
     private var cursorPath = ArrayList<Sample>()
     private var cursorControl = true
+    /** The touchpad moves the cursor in exact typing apps too. Off, it does nothing there but work the panel. */
+    private var exactCursor = false
     /** Taps on a tap key that may be part of a double tap. Each call gives its input, typed if the argument is true. */
     private val heldTaps = ArrayList<(Boolean) -> Unit>()
     /** The word that the word drag started from, as its start and end in the field. */
@@ -120,9 +122,15 @@ class AtlasIme : InputMethodService() {
     private val pieces = SwipePieces({ composer.liftOffMillis.toLong() }, { composer.canContinueSwipe }, ::isTapKey)
     private var lastTouch: List<Sample>? = null
     private val showStrip = Runnable {
-        if (hiddenByBack || !editing || currentInputBinding == null) return@Runnable
-        // Apps can drop a field yet still start input on it, so only a field that answers gets the strip.
-        if (currentInputConnection?.getTextBeforeCursor(1, 0) == null) return@Runnable
+        if (hiddenByBack || !editing || currentInputBinding == null) {
+            if (field.exact) logExact("bar not shown: back $hiddenByBack editing $editing bound ${currentInputBinding != null}")
+            return@Runnable
+        }
+        // Apps can drop a field yet still start input on it, so only a field that answers gets the strip. A view with exact
+        // typing, such as a remote desktop's, holds no text to answer with, and its busy main thread can let the question time
+        // out, which used to leave its bar hidden. Its app chose it by being on the list, so it gets the bar without asking.
+        if (!field.exact && currentInputConnection?.getTextBeforeCursor(1, 0) == null) return@Runnable
+        if (field.exact) logExact("bar shown")
         try {
             // A cancelled show request can leave the client waiting for a window surface.
             showWindow(true)
@@ -162,7 +170,8 @@ class AtlasIme : InputMethodService() {
         finishHeldTaps(type = false)
         haptics.click()
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
-        enqueue { selectWord() }
+        // A terminal or a remote view has no text to select here.
+        if (!field.exact) enqueue { selectWord() }
     }
 
     private val checkHeldTaps = Runnable { settleHeldTaps() }
@@ -225,7 +234,7 @@ class AtlasIme : InputMethodService() {
         finishHeldTaps(type = false)
         Trace.touch(cursorPath, false)
         haptics.click()
-        if (drag.words) enqueue { startWordDrag() }
+        if (drag.words && !field.exact) enqueue { startWordDrag() }
         stepCursor.reset()
         stepCursor.run()
     }
@@ -266,7 +275,7 @@ class AtlasIme : InputMethodService() {
             else owed += speed * (now - last) / 1000
             if (direction != 0 && owed >= 1f) {
                 owed = (owed - 1f).coerceAtMost(1f)
-                if (cursor.words) extendWords(direction) else moveCursor(direction)
+                if (cursor.words && !field.exact) extendWords(direction) else moveCursor(direction)
             }
             last = now
             strip?.gesture?.cursorFrame(cursor.column, direction, speed, cursor.words, now)
@@ -498,7 +507,9 @@ class AtlasIme : InputMethodService() {
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
-        val exact = ExactTyping.applies(info.packageName, TypingSettings.exactApps(this))
+        val exact = ExactTyping.applies(info.packageName, ExactTyping.apps(this))
+        if (exact || info.inputType == EditorInfo.TYPE_NULL) logExact("start ${info.packageName} type 0x${Integer.toHexString(info.inputType)}" +
+            " options 0x${Integer.toHexString(info.imeOptions)} restarting $restarting exact $exact")
         editing = info.inputType != EditorInfo.TYPE_NULL || exact
         if (!restarting) {
             typedInField = false
@@ -555,6 +566,7 @@ class AtlasIme : InputMethodService() {
         modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
         cursorControl = TypingSettings.cursorControl(this)
+        exactCursor = ExactTyping.touchpadCursor(this)
         // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
         contact.swipes = TypingSettings.swipeTyping(this) && field.words
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
@@ -662,12 +674,14 @@ class AtlasIme : InputMethodService() {
 
     override fun onWindowShown() {
         super.onWindowShown()
+        if (field.exact) logExact("window shown")
         // Android draws its hide and switch-keyboard buttons in this bar; the strip has no room for them.
         window.window?.insetsController?.hide(WindowInsets.Type.captionBar())
     }
 
     override fun onWindowHidden() {
         super.onWindowHidden()
+        if (field.exact) logExact("window hidden: back $passingBack typed $typedInField")
         // Android's hide also turned the status off.
         hold.hidden()
         // A panel that nobody can see must not take the next key.
@@ -730,6 +744,8 @@ class AtlasIme : InputMethodService() {
 
     /** Android calls this when you tap the field, so the tap also brings the strip back after Back. */
     override fun onShowInputRequested(flags: Int, configChange: Boolean): Boolean {
+        if (field.exact || currentInputEditorInfo?.inputType == EditorInfo.TYPE_NULL)
+            logExact("show asked by ${currentInputEditorInfo?.packageName} editing $editing")
         hiddenByBack = false
         return editing
     }
@@ -786,6 +802,8 @@ class AtlasIme : InputMethodService() {
 
     private fun motion(event: MotionEvent) {
         // The panel and the cursor work in every field. Where the touchpad types no words, swipes and taps type nothing: see [outcome].
+        // With exact typing the touchpad sends nothing unless its setting is on, so a resting finger never reaches the app.
+        if (field.exact && !exactCursor && !panelOpen) return
         typedInField = true
         val samples = touchpad.samples(event)
         Recording.sink?.motion(event, samples)
@@ -1008,6 +1026,14 @@ class AtlasIme : InputMethodService() {
         val code = if (direction > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
         val arrow = KeyEvent(time, time, KeyEvent.ACTION_DOWN, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
             KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD)
+        if (field.exact) {
+            // A terminal or a remote view holds no text to read, and each question to a busy app can wait until it times out,
+            // which stalled the cursor. So the arrow goes straight out, with a plain pulse for each step.
+            if (Haptics.enabled(this)) haptics.pulse()
+            logExact("touchpad arrow $code")
+            sendExact(arrow, ExactTyping.plan(code, 0, 0) { 0 }.events)
+            return
+        }
         enqueue {
             // A cursor at the start or end of the text cannot move, so it stays quiet. An app that does not answer still gets the pulse.
             // Going past a space feels different from a letter, so that you can count words without looking.
@@ -1386,6 +1412,11 @@ class AtlasIme : InputMethodService() {
         if (touchpad.isGestureKey(event)) return true
         // Keys like volume reach the keyboard too, but they are not typing.
         if (!event.isSystem) showStripAfterBack()
+        // An exact typing app can hide the keyboard by itself, as AnyDesk's own keyboard button does. A key brings the bar back.
+        if (field.exact && !event.isSystem && !isInputViewShown && !hiddenByBack) {
+            logExact("bar back for a key")
+            main.post(showStrip)
+        }
         // The touchpad hears the physical press now, before the key is typed.
         contact.key(keyCode, true, event.eventTime)
         val carried = carryCtrl(event)

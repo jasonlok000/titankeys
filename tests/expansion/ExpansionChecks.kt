@@ -155,6 +155,17 @@ private fun exactApps() {
     // AnyDesk's session view reports no type and no options, the same as a window with no field (phone read, issue 45).
     check(ExactTyping.applies("com.anydesk.anydeskandroid", apps), "every start in a listed app, also AnyDesk's session view")
     check(!ExactTyping.applies("com.android.chrome", apps), "an app that is not listed")
+    val defaults = ExactTyping.DEFAULT_APPS
+    for (app in listOf("com.termux", "org.connectbot", "com.server.auditor.ssh.client", "com.anydesk.anydeskandroid",
+            "com.teamviewer.teamviewer.market.mobile", "com.microsoft.rdc.androidx", "com.google.chromeremotedesktop",
+            "com.carriez.flutter_hbb", "com.realvnc.viewer.android", "com.iiordanov.freebVNC", "com.iiordanov.freeaRDP",
+            "com.limelight", "tv.parsec.client"))
+        check(app in defaults, "$app is on the list at first")
+    check(defaults.all { Regex("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+").matches(it) }, "every default is a package name")
+    check("com.sonelli.juicessh" !in defaults, "JuiceSSH has no Play listing to check its name, so it is left out")
+    same(ExactTyping.plan(android.view.KeyEvent.KEYCODE_DPAD_RIGHT, 0, 0) { 0 }.events.map { it.down to it.code },
+        listOf(true to android.view.KeyEvent.KEYCODE_DPAD_RIGHT, false to android.view.KeyEvent.KEYCODE_DPAD_RIGHT),
+        "the touchpad's arrow goes out as one press and release")
     check(!ExactTyping.applies(null, apps), "no app")
 }
 

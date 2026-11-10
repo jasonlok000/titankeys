@@ -52,6 +52,14 @@ private fun json() {
         fails("Bad JSON must fail: $bad") { Json.parse(bad) }
 }
 
+/** Both verifiers must agree: the platform's (the JDK here, Conscrypt on the phone) and the app's own fallback. */
+private fun bothVerify(key: ByteArray, message: ByteArray, signature: ByteArray, expected: Boolean, what: String) {
+    same(Ed25519.verifyPlatform(key, message, signature), expected, "Platform verifier: $what")
+    same(Ed25519.verifyOwn(key, message, signature), expected, "Own verifier: $what")
+    same(Ed25519.verify(key, message, signature), expected, "Verifier in use: $what")
+    same(Ed25519.lastVerifier, Ed25519.Verifier.PLATFORM, "The platform verifier comes first where it exists")
+}
+
 private fun ed25519() {
     // RFC 8032, section 7.1, tests 1 and 2.
     val vectors = listOf(
@@ -61,10 +69,14 @@ private fun ed25519() {
             "92a009a9f0d4cab8720e820b5f642540a2b27b5416503f8fb3762223ebdb69da085ac1e43e15996e458f3613d0f11d8c387b2eaeb4302aeeb00d291612bb0c00"),
     )
     for ((key, message, signature) in vectors) {
-        must(Ed25519.verify(hex(key), hex(message), hex(signature)), "RFC 8032 vector must verify")
-        val changed = hex(signature).also { it[10] = (it[10].toInt() xor 1).toByte() }
-        must(!Ed25519.verify(hex(key), hex(message), changed), "A changed signature must fail")
-        must(!Ed25519.verify(hex(key), hex(message) + byteArrayOf(1), hex(signature)), "A changed message must fail")
+        bothVerify(hex(key), hex(message), hex(signature), true, "RFC 8032 vector")
+        for (at in listOf(0, 10, 31, 32, 50, 63)) {
+            val changed = hex(signature).also { it[at] = (it[at].toInt() xor 1).toByte() }
+            bothVerify(hex(key), hex(message), changed, false, "signature byte $at changed")
+        }
+        bothVerify(hex(key), hex(message) + byteArrayOf(1), hex(signature), false, "a byte added to the message")
+        val otherKey = hex(key).also { it[5] = (it[5].toInt() xor 1).toByte() }
+        bothVerify(otherKey, hex(message), hex(signature), false, "a changed key")
     }
     // Signatures from Java's own Ed25519, for many keys and messages.
     val random = Random(7)
@@ -76,14 +88,19 @@ private fun ed25519() {
         signer.initSign(pair.private)
         signer.update(message)
         val signature = signer.sign()
-        must(Ed25519.verify(public, message, signature), "A Java signature must verify, round $round")
+        bothVerify(public, message, signature, true, "a Java signature, round $round")
         val other = Ed25519.publicKeyFromSpki(KeyPairGenerator.getInstance("Ed25519").generateKeyPair().public.encoded)
-        must(!Ed25519.verify(other, message, signature), "Another key must fail, round $round")
+        bothVerify(other, message, signature, false, "another key, round $round")
+        if (message.isNotEmpty()) {
+            val at = random.nextInt(message.size)
+            val changed = message.copyOf().also { it[at] = (it[at].toInt() xor 0x40).toByte() }
+            bothVerify(public, changed, signature, false, "a changed message, round $round")
+        }
     }
     // S must be below the group order, or a signature could be changed and still pass.
     val (key, message, signature) = vectors[0]
     val high = hex(signature).also { it[63] = (it[63].toInt() or 0xF0).toByte() }
-    must(!Ed25519.verify(hex(key), hex(message), high), "A signature with S too large must fail")
+    bothVerify(hex(key), hex(message), high, false, "S too large")
     must(!Ed25519.verify(ByteArray(31), ByteArray(0), hex(signature)), "A short key must fail")
 }
 
@@ -142,8 +159,20 @@ private fun feedRules() {
 
 /** The feed on the website was signed by the tools with the real key, so the app's code must open it. */
 private fun publishedFeed() {
-    val contents = Feed.open(File("site/feed.json").readText(), FEED_KEY)
+    val envelope = File("site/feed.json").readText()
+    val contents = Feed.open(envelope, FEED_KEY)
     must(contents.entries.isNotEmpty(), "The published feed has entries")
+    // Its exact signed text, checked by both verifiers, and refused by both with any one byte changed.
+    @Suppress("UNCHECKED_CAST")
+    val outer = Json.parse(envelope) as Map<String, Any?>
+    val text = (outer["feed"] as String).toByteArray()
+    val signature = Base64.getDecoder().decode(outer["signature"] as String)
+    bothVerify(FEED_KEY, text, signature, true, "the published feed")
+    for (at in listOf(0, text.size / 2, text.size - 1)) {
+        val changed = text.copyOf().also { it[at] = (it[at].toInt() xor 1).toByte() }
+        bothVerify(FEED_KEY, changed, signature, false, "the published feed with byte $at changed")
+    }
+    fails("A changed published feed must fail whole") { Feed.open(envelope.replace("Test news", "Fake news"), FEED_KEY) }
 }
 
 private fun seal(openTool: String?) {

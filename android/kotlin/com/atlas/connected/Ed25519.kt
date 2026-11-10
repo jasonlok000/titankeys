@@ -1,14 +1,28 @@
 package com.atlas.connected
 
 import java.math.BigInteger
+import java.security.GeneralSecurityException
+import java.security.KeyFactory
 import java.security.MessageDigest
+import java.security.NoSuchAlgorithmException
+import java.security.Signature
+import java.security.spec.X509EncodedKeySpec
 
 /**
- * Checks Ed25519 signatures (RFC 8032, section 5.1.7), the way the announcement feed is signed. Android's own support for
- * Ed25519 differs between versions, so this plain version runs the same on every phone and in the JVM tests. It only
- * verifies: it never holds a private key. It runs once a day at most, so speed does not matter.
+ * Checks Ed25519 signatures, the way the announcement feed is signed. The platform's own verifier (Conscrypt on Android,
+ * the JDK in tests) comes first. This file's own plain version of RFC 8032, section 5.1.7, runs only where the platform
+ * has no Ed25519 at all, never as a second opinion: a signature that the platform refuses is refused. It only verifies,
+ * and never holds a private key.
  */
 internal object Ed25519 {
+    enum class Verifier { PLATFORM, OWN }
+
+    /** Which verifier checked the last signature, for the debug log. */
+    @Volatile
+    var lastVerifier: Verifier? = null
+        private set
+
+    private val SPKI_PREFIX = byteArrayOf(0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00)
     private val P = BigInteger.ONE.shiftLeft(255).subtract(BigInteger.valueOf(19))
     private val L = BigInteger.ONE.shiftLeft(252).add(BigInteger("27742317777372353535851937790883648493"))
     private val D = BigInteger.valueOf(-121665).multiply(BigInteger.valueOf(121666).modInverse(P)).mod(P)
@@ -27,12 +41,40 @@ internal object Ed25519 {
 
     /** The 32-byte key inside an X.509 SubjectPublicKeyInfo for Ed25519, as openssl writes it. */
     fun publicKeyFromSpki(spki: ByteArray): ByteArray {
-        val prefix = byteArrayOf(0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00)
-        require(spki.size == prefix.size + 32 && spki.copyOfRange(0, prefix.size).contentEquals(prefix)) { "Not an Ed25519 public key" }
-        return spki.copyOfRange(prefix.size, spki.size)
+        require(spki.size == SPKI_PREFIX.size + 32 && spki.copyOfRange(0, SPKI_PREFIX.size).contentEquals(SPKI_PREFIX)) { "Not an Ed25519 public key" }
+        return spki.copyOfRange(SPKI_PREFIX.size, spki.size)
     }
 
+    /** Checks with the platform's verifier, or with this file's own one if the platform has no Ed25519. */
     fun verify(publicKey: ByteArray, message: ByteArray, signature: ByteArray): Boolean {
+        if (publicKey.size != 32 || signature.size != 64) return false
+        val platform = try {
+            verifyPlatform(publicKey, message, signature)
+        } catch (error: NoSuchAlgorithmException) {
+            null
+        }
+        lastVerifier = if (platform == null) Verifier.OWN else Verifier.PLATFORM
+        return platform ?: verifyOwn(publicKey, message, signature)
+    }
+
+    /** The platform's verifier. Throws [NoSuchAlgorithmException] if it has no Ed25519; any other problem is a refusal. */
+    fun verifyPlatform(publicKey: ByteArray, message: ByteArray, signature: ByteArray): Boolean {
+        if (publicKey.size != 32 || signature.size != 64) return false
+        val factory = KeyFactory.getInstance("Ed25519")
+        val verifier = Signature.getInstance("Ed25519")
+        return try {
+            verifier.initVerify(factory.generatePublic(X509EncodedKeySpec(SPKI_PREFIX + publicKey)))
+            verifier.update(message)
+            verifier.verify(signature)
+        } catch (error: GeneralSecurityException) {
+            false
+        } catch (error: RuntimeException) {
+            false
+        }
+    }
+
+    /** This file's own verifier, for a platform without Ed25519. */
+    fun verifyOwn(publicKey: ByteArray, message: ByteArray, signature: ByteArray): Boolean {
         if (publicKey.size != 32 || signature.size != 64) return false
         val a = decompress(publicKey) ?: return false
         val rBytes = signature.copyOfRange(0, 32)

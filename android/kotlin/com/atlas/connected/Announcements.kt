@@ -69,7 +69,11 @@ object Announcements {
         }
         preferences.edit().putLong(CHECKED, now).apply()
         try {
-            val feed = Feed.open(envelope, Ed25519.publicKeyFromSpki(Connected.key(Connected.FEED_KEY)))
+            val feed = try {
+                Feed.open(envelope, Ed25519.publicKeyFromSpki(Connected.key(Connected.FEED_KEY)))
+            } finally {
+                if (Connected.build(context) == "debug") Log.d(TAG, "verifier=${Ed25519.lastVerifier?.name?.lowercase() ?: "none"}")
+            }
             if (feed.issued < preferences.getLong(ISSUED, 0)) {
                 Log.w(TAG, "Ignored a feed older than the one already seen")
             } else {

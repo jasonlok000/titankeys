@@ -69,6 +69,9 @@ class Haptics(private val context: Context) {
         play(VibrationEffect.createOneShot(preset.durationMillis * GAP_LENGTH_PERCENT / 100, strength))
     }
 
+    /** A word held on the strip is forgotten: three ticks that fade, unlike any other confirm. */
+    fun wordForgotten() = waveform(longArrayOf(0, 16, 40, 14, 40, 12), intArrayOf(0, 230, 0, 150, 0, 80))
+
     /** Confirms a new page or group in the Sym panel, with the same feel as a changed word. */
     fun pageChanged() = wordChanged()
 

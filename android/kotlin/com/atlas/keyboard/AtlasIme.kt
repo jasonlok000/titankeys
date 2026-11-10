@@ -30,6 +30,7 @@ import android.view.inputmethod.SurroundingText
 import android.widget.LinearLayout
 import com.atlas.engine.Calibration
 import com.atlas.engine.EmojiPages
+import com.atlas.engine.ForgetWords
 import com.atlas.engine.HoldEngine
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
@@ -440,7 +441,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
-        val words = Strip(this) { index -> haptics.wordChanged(); enqueue { composer.choose(index) } }
+        val words = Strip(this, { index -> haptics.wordChanged(); enqueue { composer.choose(index) } }, ::holdWord, ::undoForget)
         val keys = SymPanel(this,
             pick = { item -> enqueue { typePanelItem(item) } },
             useQuickSetting = { item -> enqueue { useQuickSetting(item) } },
@@ -656,7 +657,47 @@ class AtlasIme : InputMethodService() {
         super.onUnbindInput()
     }
 
+    /** A word held on the strip, which waits out its Undo before it is forgotten. */
+    private class PendingForget(val word: String, val typed: String)
+    private var pendingForget: PendingForget? = null
+    private val forgetNow = Runnable { commitForget() }
+
+    /** Holding a word on the strip forgets it, once the Undo has had its time. */
+    private fun holdWord(index: Int): Boolean {
+        val (word, typed) = composer.shownWord(index) ?: return false
+        if (SwipeTyping.get(this).forgetKind(word) == ForgetWords.Kind.NONE && !ForgetWords.fix(typed, word)) return false
+        commitForget()
+        haptics.wordForgotten()
+        pendingForget = PendingForget(word, typed)
+        composer.hide(word)
+        strip?.forgotten = word
+        main.postDelayed(forgetNow, FORGET_UNDO_MILLIS)
+        return true
+    }
+
+    private fun undoForget() {
+        val pending = pendingForget ?: return
+        pendingForget = null
+        main.removeCallbacks(forgetNow)
+        strip?.forgotten = null
+        haptics.wordChanged()
+        composer.unhide(pending.word)
+    }
+
+    /** The word stays off the bar in this field, since the bar can still hold words from before. */
+    private fun commitForget() {
+        val pending = pendingForget ?: return
+        pendingForget = null
+        main.removeCallbacks(forgetNow)
+        strip?.forgotten = null
+        SwipeTyping.get(this).forgetWord(pending.word, pending.typed) { error ->
+            if (error != null) Log.w("Atlas", "Could not forget a word: $error")
+        }
+    }
+
     override fun onFinishInput() {
+        // A word waiting to be forgotten is forgotten now, before the next field can offer it.
+        commitForget()
         // The letter is already typed, so a press that is still down can only stay a letter.
         holdEngine.cancel()
         heldLetter = null
@@ -1335,6 +1376,8 @@ class AtlasIme : InputMethodService() {
         if (touchpad.isGestureKey(event)) return true
         // Keys like volume reach the keyboard too, but they are not typing.
         if (!event.isSystem) showStripAfterBack()
+        // Typing on means the forgotten word can go, and the strip shows words again.
+        if (!event.isSystem && !Modifiers.isModifier(keyCode)) commitForget()
         // The touchpad hears the physical press now, before the key is typed.
         contact.key(keyCode, true, event.eventTime)
         val carried = carryCtrl(event)
@@ -1573,6 +1616,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onDestroy() {
+        commitForget()
         editing = false
         GuideHooks.panelRequests = null
         // A held status must not outlive the keyboard.
@@ -1606,6 +1650,8 @@ class AtlasIme : InputMethodService() {
         private const val RECENT_EMOJI = "recent"
         /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
         private const val STALE_HIDE_MILLIS = 500L
+        /** How long the strip offers Undo after you hold a word to forget it. */
+        private const val FORGET_UNDO_MILLIS = 4000L
         /** The field of a returning window started within 30 ms of its empty start. */
         private const val NO_FIELD_HIDE_MILLIS = 200L
         private const val FRAME_MILLIS = 16L

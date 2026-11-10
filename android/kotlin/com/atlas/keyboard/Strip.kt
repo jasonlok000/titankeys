@@ -22,9 +22,35 @@ import android.widget.TextView
 class Strip(
     context: Context,
     private val choose: (Int) -> Unit,
+    /** A word was held to forget it. Returns false if it can't be forgotten. */
+    private val hold: (Int) -> Boolean = { false },
+    private val undo: () -> Unit = {},
 ) : LinearLayout(context) {
     private val typeface = resources.getFont(R.font.inter_regular)
-    private val wordViews = WORD_ORDER.map { index -> item { choose(index) } }
+    private val wordViews = WORD_ORDER.map { index -> item({ choose(index) }, { hold(index) }) }
+    /** The confirm after a word is held: what was forgotten, and Undo. */
+    private val forgotLabel = TextView(context).apply {
+        typeface = this@Strip.typeface
+        textSize = 15f
+        gravity = Gravity.CENTER_VERTICAL or Gravity.START
+        isSingleLine = true
+        ellipsize = TextUtils.TruncateAt.END
+        isFocusable = false
+    }
+    private val undoButton = TextView(context).apply {
+        typeface = this@Strip.typeface
+        textSize = 17f
+        gravity = Gravity.CENTER
+        isFocusable = false
+        text = context.getString(R.string.strip_undo)
+        setPadding(dp(16), 0, dp(16), 0)
+        setOnClickListener { undo() }
+    }
+    private val forgetRow = LinearLayout(context).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        addView(forgotLabel, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        addView(undoButton, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+    }
     private val chips = ModifierBar.ALL.associateWith(::chip)
     private val hint = TextView(context).apply {
         typeface = this@Strip.typeface
@@ -67,6 +93,14 @@ class Strip(
             render()
         }
 
+    /** A word that was just held to forget it. While it is set, the strip shows it with Undo in the place of the words. */
+    var forgotten: String? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            render()
+        }
+
     /** Which modifiers are on, in the place of the words. Null shows the words. */
     var modifiers: ModifierBar? = null
         set(value) {
@@ -78,6 +112,7 @@ class Strip(
     init {
         for (view in wordViews) addView(view, LayoutParams(0, dp(56), 1f))
         addView(modifierRow, LayoutParams(0, dp(56), 1f))
+        addView(forgetRow, LayoutParams(0, dp(56), 1f))
         // Screen readers go left to right, so point them at the best word first.
         val ranked = wordViews.withIndex().sortedBy { WORD_ORDER[it.index] }.map { it.value }
         for (view in ranked) view.id = generateViewId()
@@ -92,7 +127,7 @@ class Strip(
         render()
     }
 
-    private fun item(press: (TextView) -> Unit) = TextView(context).apply {
+    private fun item(press: (TextView) -> Unit, hold: () -> Boolean) = TextView(context).apply {
         typeface = this@Strip.typeface
         textSize = 17f
         gravity = Gravity.CENTER
@@ -101,6 +136,7 @@ class Strip(
         isFocusable = false
         setPadding(dp(6), 0, dp(6), 0)
         setOnClickListener { press(this) }
+        setOnLongClickListener { hold() }
     }
 
     /** A small label for one modifier. It is the same size at any system font size. */
@@ -125,7 +161,8 @@ class Strip(
         look = Look.of(context)
         gesture.allowed = showSuggestions
         // A strip that shows nothing has no height, and a bar there would move the app each time a modifier changes.
-        val bar = modifiers.takeIf { showSuggestions }
+        val confirm = forgotten.takeIf { showSuggestions }
+        val bar = modifiers.takeIf { showSuggestions && confirm == null }
         setBackgroundColor(if (!showSuggestions) Color.TRANSPARENT else look.paper)
         // The lowest text sits about 16 dp over the bottom of the strip, where the corners curve in.
         side = maxOf(dp(8), corners.inset((navigationInset + dp(CONTENT_ABOVE)).toFloat()) + dp(4))
@@ -134,7 +171,7 @@ class Strip(
         minimumHeight = if (showSuggestions) 0 else 1
         for ((slot, view) in wordViews.withIndex()) {
             val index = WORD_ORDER[slot]
-            view.visibility = if (showSuggestions && bar == null) VISIBLE else GONE
+            view.visibility = if (showSuggestions && bar == null && confirm == null) VISIBLE else GONE
             view.text = words.getOrElse(index) { "" }
             view.isEnabled = index < words.size
             view.setTextColor(look.ink)
@@ -155,6 +192,10 @@ class Strip(
         }
         hint.text = bar?.hint.orEmpty()
         hint.setTextColor(look.ink)
+        forgetRow.visibility = if (confirm != null) VISIBLE else GONE
+        forgotLabel.text = confirm?.let { context.getString(R.string.strip_forgot, it) }.orEmpty()
+        forgotLabel.setTextColor(look.ink)
+        undoButton.setTextColor(look.accent)
     }
 
     override fun dispatchDraw(canvas: Canvas) {

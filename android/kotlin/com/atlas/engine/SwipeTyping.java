@@ -22,6 +22,8 @@ public final class SwipeTyping {
     private static volatile SwipeTyping instance;
     private final Context context;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    /** The fixes that you refused by holding them on the strip. Never part of a data contribution. */
+    private static final String REFUSED_FIXES = "refused_fixes";
     private final Handler main = new Handler(Looper.getMainLooper());
     private final AtomicInteger pendingExamples = new AtomicInteger();
     private SwipeRecognizer recogniser;
@@ -49,6 +51,7 @@ public final class SwipeTyping {
     private volatile Words wordView = new Words(new String[0], new String[0], new String[0]);
     private volatile java.util.Set<String> activeWords = java.util.Set.of();
     private volatile BlockedWords blockedWords;
+    private volatile ForgetWords.RefusedFixes refusedFixes;
     private final NextWordPredictor nextWords;
     /** Swipe engine 2.0's models, once loaded. Until then, or if they fail, the FUTO engine works alone. */
     private volatile SwipeModels models;
@@ -99,6 +102,7 @@ public final class SwipeTyping {
         nextWords = new NextWordPredictor(new UserNGramStore(context), System::currentTimeMillis,
                 word -> wordAllowed(rendered(word, TypingSettings.spelling(context))));
         blockedWords = new BlockedWords(context.getSharedPreferences("blocked_words", 0).getStringSet("words", java.util.Set.of()));
+        refusedFixes = new ForgetWords.RefusedFixes(context.getSharedPreferences(REFUSED_FIXES, 0).getStringSet("fixes", java.util.Set.of()));
         Calibration.init(context);
         learningEnabled = context.getSharedPreferences("word_learning", 0).getBoolean("enabled",
                 context.getSharedPreferences("swipe_calibration", 0).getBoolean("enabled", true));
@@ -415,28 +419,75 @@ public final class SwipeTyping {
     }
 
     public void setWordBlocked(String word, boolean blocked, OperationCallback callback) {
+        worker.execute(() -> operationResult(callback, block(word, blocked)));
+    }
+
+    /** Runs on the worker. Returns why it failed, or null. A word that comes back can be a fix again. */
+    private String block(String word, boolean blocked) {
+        boolean persisted = false;
+        try {
+            BlockedWords replacement = blocked ? blockedWords.add(word) : blockedWords.remove(word);
+            if (!context.getSharedPreferences("blocked_words", 0).edit().putStringSet("words", replacement.entries()).commit())
+                throw new IOException("Could not save blocked words");
+            blockedWords = replacement;
+            learningGeneration++;
+            configuredRevision = -1;
+            persisted = true;
+            if (blocked) nextWords.forget(word);
+            else allowFixesTo(word);
+            syncDictionary();
+            return null;
+        } catch (IllegalArgumentException error) {
+            return error.getMessage();
+        } catch (IOException | RuntimeException | LinkageError error) {
+            return persisted ? "Blocked words were saved, but the swipe dictionary could not be refreshed."
+                    : "Could not save blocked words. Try again.";
+        }
+    }
+
+    /** Whether autocorrect may change the letters [typed] to [fix]. Holding a fix on the strip refuses it. */
+    public boolean fixAllowed(String typed, String fix) { return refusedFixes.allowed(typed, fix); }
+
+    /** What holding [word] on the strip would do to it. */
+    public ForgetWords.Kind forgetKind(String word) {
+        TypedPredictions predictions = typedPredictions;
+        boolean builtIn = predictions != null && predictions.contains(word);
+        boolean saved = Arrays.stream(wordView.words).anyMatch(word::equalsIgnoreCase);
+        return ForgetWords.kind(word, builtIn, saved);
+    }
+
+    /**
+     * Forgets a word that you held on the strip: it leaves Saved words with its learned pairs, or it is blocked. If it was a
+     * fix for the letters [typed], autocorrect also stops making that fix. [typed] is empty when no letters were typed.
+     */
+    public void forgetWord(String word, String typed, OperationCallback callback) {
         worker.execute(() -> {
             String failure = null;
-            boolean persisted = false;
-            try {
-                BlockedWords replacement = blocked ? blockedWords.add(word) : blockedWords.remove(word);
-                if (!context.getSharedPreferences("blocked_words", 0).edit().putStringSet("words", replacement.entries()).commit())
-                    throw new IOException("Could not save blocked words");
-                blockedWords = replacement;
-                learningGeneration++;
-                configuredRevision = -1;
-                persisted = true;
-                if (blocked) nextWords.forget(word);
-                syncDictionary();
-            } catch (IllegalArgumentException error) {
-                failure = error.getMessage();
-            } catch (IOException | RuntimeException | LinkageError error) {
-                failure = persisted ? "Blocked words were saved, but the swipe dictionary could not be refreshed."
-                        : "Could not save blocked words. Try again.";
+            if (ForgetWords.fix(typed, word)) {
+                ForgetWords.RefusedFixes replacement = refusedFixes.add(typed, word);
+                if (saveRefusedFixes(replacement)) refusedFixes = replacement;
+                else failure = "Could not save the change to autocorrect.";
             }
-            operationResult(callback, failure);
+            ForgetWords.Kind kind = forgetKind(word);
+            String result = null;
+            if (kind == ForgetWords.Kind.BLOCK) result = block(word, true);
+            else if (kind == ForgetWords.Kind.REMOVE) {
+                result = remove(word);
+                publish();
+            }
+            operationResult(callback, result != null ? result : failure);
         });
     }
+
+    private void allowFixesTo(String word) {
+        ForgetWords.RefusedFixes replacement = refusedFixes.withoutFix(word);
+        if (replacement != refusedFixes && saveRefusedFixes(replacement)) refusedFixes = replacement;
+    }
+
+    private boolean saveRefusedFixes(ForgetWords.RefusedFixes fixes) {
+        return context.getSharedPreferences(REFUSED_FIXES, 0).edit().putStringSet("fixes", fixes.entries()).commit();
+    }
+
     public void learningEnabled(boolean enabled) {
         learningEnabled = enabled; learningGeneration++;
         context.getSharedPreferences("word_learning", 0).edit().putBoolean("enabled", enabled).apply();
@@ -478,6 +529,7 @@ public final class SwipeTyping {
                 if (blockedWords.contains(word)) throw new IllegalArgumentException("This word is blocked. Remove it from Blocked words first.");
                 replacement.add(word.trim(), today());
                 configs.saveWords(replacement);
+                allowFixesTo(word);
                 dictionary = replacement; configuredRevision = -1; wordsSaveError = "";
                 persisted = true;
                 refreshDictionary();
@@ -495,27 +547,34 @@ public final class SwipeTyping {
     public void removeWord(String word, OperationCallback callback) {
         learningGeneration++;
         worker.execute(() -> {
-            boolean persisted = false;
-            String failure = null;
-            try {
-                configs();
-                if (!wordsAvailable) throw new IOException("Saved words unavailable");
-                String normalised = SwipeWords.normalise(word);
-                if (normalised.isEmpty()) throw new IllegalArgumentException("Invalid saved word");
-                LanguageHabits replacement = dictionary.copy();
-                replacement.remove(normalised);
-                configs.saveWords(replacement);
-                dictionary = replacement; configuredRevision = -1; wordsSaveError = "";
-                persisted = true;
-                refreshDictionary();
-            } catch (IOException | RuntimeException | LinkageError error) {
-                failure = persisted ? "The word was removed, but the swipe dictionary could not be refreshed."
-                        : "Could not remove the word. Existing words were kept.";
-                wordsSaveError = persisted ? " · Swipe dictionary refresh failed" : " · Could not remove saved word";
-                if (recogniser != null && !recogniser.isOpen()) unavailable(error);
-            }
+            String failure = remove(word);
             try { publish(); } finally { operationResult(callback, failure); }
         });
+    }
+
+    /** Runs on the worker: takes [word] out of Saved words, with the pairs learned with it. Returns why it failed, or null. */
+    private String remove(String word) {
+        learningGeneration++;
+        boolean persisted = false;
+        try {
+            configs();
+            if (!wordsAvailable) throw new IOException("Saved words unavailable");
+            String normalised = SwipeWords.normalise(word);
+            if (normalised.isEmpty()) throw new IllegalArgumentException("Invalid saved word");
+            LanguageHabits replacement = dictionary.copy();
+            replacement.remove(normalised);
+            configs.saveWords(replacement);
+            dictionary = replacement; configuredRevision = -1; wordsSaveError = "";
+            persisted = true;
+            nextWords.forget(word);
+            refreshDictionary();
+            return null;
+        } catch (IOException | RuntimeException | LinkageError error) {
+            wordsSaveError = persisted ? " · Swipe dictionary refresh failed" : " · Could not remove saved word";
+            if (recogniser != null && !recogniser.isOpen()) unavailable(error);
+            return persisted ? "The word was removed, but the swipe dictionary could not be refreshed."
+                    : "Could not remove the word. Existing words were kept.";
+        }
     }
 
     public void exportConfig(Uri destination, OperationCallback callback) {

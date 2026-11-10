@@ -11,9 +11,9 @@ import kotlin.math.sqrt
  * past the end for placing the cursor exactly, and quickly towards the edge of the keyboard to race across long
  * text. A word drag uses the same zones, and each step extends the selection by a word. Like a swipe, a brief slip
  * off the touchpad doesn't end it: the keyboard holds it through the slip recovery period, and the finger carries
- * on where it lands. A finger that leans to the end of the touchpad can run off it and come back near the same
- * place, much later than a slip, so that also carries on, like a swipe that runs off the top of the touchpad.
- * Distances are in key widths, as in [Contact].
+ * on where it lands. A finger that leans to the end of the touchpad, or off its bottom edge past Space, can run off
+ * it and come back near the same place, much later than a slip, so that also carries on, like a swipe that runs off
+ * the top of the touchpad. Distances are in key widths, as in [Contact].
  */
 class CursorMode {
     private enum class State { Idle, Active, Lifted }
@@ -49,7 +49,7 @@ class CursorMode {
         position = null
     }
 
-    /** How long to wait for the finger after a lift, given the slip recovery period [slipMillis]: longer at the ends of the touchpad. */
+    /** How long to wait for the finger after a lift, given the slip recovery period [slipMillis]: longer at the edges of the touchpad. */
     fun holdMillis(slipMillis: Long): Long {
         val from = liftedFrom ?: return slipMillis
         return if (atEdge(from)) max(slipMillis, EDGE_RETURN_MILLIS) else slipMillis
@@ -57,7 +57,7 @@ class CursorMode {
 
     /**
      * The finger came back after a slip, carrying on cursor mode from where it lands. Within the slip recovery period
-     * [slipMillis] it counts anywhere. After that it counts only if it comes back near the place at the end of the
+     * [slipMillis] it counts anywhere. After that it counts only if it comes back near the place at the edge of the
      * touchpad where it left, and a touch anywhere else is a new touch, such as another finger or the next gesture.
      */
     fun resume(sample: Sample, slipMillis: Long = Long.MAX_VALUE): Boolean {
@@ -70,7 +70,12 @@ class CursorMode {
         return true
     }
 
-    private fun atEdge(sample: Sample) = sample.x * 10 <= EDGE_ZONE_KEYS || sample.x * 10 >= 10 - EDGE_ZONE_KEYS
+    private fun atEdge(sample: Sample) = sample.x * 10 <= EDGE_ZONE_KEYS || sample.x * 10 >= 10 - EDGE_ZONE_KEYS || atBottomPastSpace(sample)
+
+    private fun atBottomPastSpace(sample: Sample): Boolean {
+        val column = sample.x * 10
+        return sample.y * 4 >= EDGE_BOTTOM_ROW && (column < SPACE_LEFT || column > SPACE_RIGHT)
+    }
 
     private fun returnsToEdge(from: Sample, to: Sample) = atEdge(from) && to.time - from.time <= EDGE_RETURN_MILLIS
         && hypot((to.x - from.x) * 10, (to.y - from.y) * 4) <= EDGE_RETURN_KEYS
@@ -143,6 +148,11 @@ class CursorMode {
         private const val BOTTOM_ROW_TOP = .7f
         /** How near the end of the touchpad a lift must be to count as running off it. Real ones left at column 0.65 and column 9.4. */
         private const val EDGE_ZONE_KEYS = .8f
+        /**
+         * A lift this low on the bottom row is at the bottom edge of the touchpad, which reports its last position at row 3.54. Only past
+         * the ends of Space does it count: a finger on Space moves nothing, and the next gesture lands there, within a key of such a lift.
+         */
+        private const val EDGE_BOTTOM_ROW = 3.45f
         /** Fingers that ran off an end of the touchpad came back 314 to 390 ms later and carried on for several keys. */
         private const val EDGE_RETURN_MILLIS = 450L
         /** They came back 0.15 to 0.48 keys from where they left. A new gesture right after a lift at an end landed over 3.5 keys away. */
@@ -167,7 +177,7 @@ class CursorMode {
             "spaceLeftKeys" to SPACE_LEFT, "spaceRightKeys" to SPACE_RIGHT, "maxLeanKeys" to MAX_LEAN,
             "speedPoints" to SPEEDS.joinToString(" ") { (lean, speed) -> "$lean:$speed" },
             "fastestPerSecond" to FASTEST_PER_SECOND, "wordSpeed" to "sqrt",
-            "edgeZoneKeys" to EDGE_ZONE_KEYS, "edgeReturnMillis" to EDGE_RETURN_MILLIS, "edgeReturnKeys" to EDGE_RETURN_KEYS,
+            "edgeZoneKeys" to EDGE_ZONE_KEYS, "edgeBottomRow" to EDGE_BOTTOM_ROW, "edgeReturnMillis" to EDGE_RETURN_MILLIS, "edgeReturnKeys" to EDGE_RETURN_KEYS,
         )
     }
 }

@@ -63,6 +63,12 @@ public final class PhoneWords {
 
         public void add(String word) { habits.add(word, DAY); }
 
+        /** The saved spelling with capitals, as SwipeTyping.savedSpelling gives it, or null. */
+        public String capitals(String word) {
+            String spelling = habits.restoreCase(word, DAY);
+            return spelling.equals(spelling.toLowerCase(Locale.ROOT)) || !active(word) ? null : spelling;
+        }
+
         /** What the keyboard counts as learned. */
         public boolean active(String word) { return habits.activeWords(DAY).contains(SwipeWords.normalise(word)); }
 

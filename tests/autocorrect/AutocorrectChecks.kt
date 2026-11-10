@@ -41,7 +41,7 @@ private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = Phone
     override fun known(word: String) = words.contains(word) || habits.active(word)
     override fun frequency(word: String) = words.frequency(word)
     override fun personal(word: String) = habits.active(word)
-    override fun name(word: String): String? = words.name(word)
+    override fun name(word: String): String? = words.name(word) ?: habits.capitals(word)
     override fun preferredSpelling(word: String) = spelling(word)
     override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
 }
@@ -820,6 +820,39 @@ private fun composerFlow(world: Realistic) {
         same(corrected("get dome food "), "get some food ", "Only a learned word is protected from the second check")
         lists.habits.add("dome")
         same(corrected("get dome food "), "get dome food ", "A word that the user added stays in the second check")
+    }
+
+    // A word whose spelling has fixed capitals gets them, however it was typed.
+    run {
+        fun typed(text: String, lists: Lists = Lists(world.words)) =
+            Typist(world, world.autocorrect(lists), lists = lists).type("$text ").text.trimEnd()
+        val capitals = listOf(
+            "titankeys is great" to "TitanKeys is great",
+            "Titankeys is great" to "TitanKeys is great",
+            "we love titankeys" to "we love TitanKeys",
+            "be curt with them" to "be curt with them",
+            "my iphone works" to "my iPhone works",
+            "Iphone works" to "iPhone works",
+            "see you on friday" to "see you on Friday",
+            "jason is here" to "Jason is here",
+            "watch it on youtube" to "watch it on YouTube",
+            // A rare name may be a slip for another word.
+            "a quick cali" to "a quick cali",
+            // Typed on purpose: all capitals, or capitals of its own.
+            "TITANKEYS is great" to "TITANKEYS is great",
+            "the TitanKEYS app" to "the TitanKEYS app",
+            // Ordinary words that are also names keep their case.
+            "bill me later" to "bill me later",
+            "mark my words" to "mark my words",
+            "will you come" to "will you come",
+        )
+        for ((text, expected) in capitals) same(typed(text), expected, "Fixed capitals for \"$text\"")
+        val saved = Lists(world.words)
+        saved.habits.add("Lok")
+        same(typed("jason lok is here", saved), "Jason Lok is here", "A saved word with capitals gets them when typed")
+        same(typed("jason lok is here"), "Jason lok is here", "An unsaved word keeps its case")
+        val undone = Typist(world, world.autocorrect(saved), lists = saved).type("titankeys ").backspace().type(" ")
+        same(undone.text, "titankeys ", "An undone capital fix stays undone")
     }
 
     // The Learn my words setting.

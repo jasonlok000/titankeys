@@ -10,6 +10,7 @@ import android.util.Log;
 import org.futo.ml.inference.SwipeDecoder;
 import java.io.*;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -48,6 +49,8 @@ public final class SwipeTyping {
     private int configuredDay = -1, activeCount;
     private volatile Words wordView = new Words(new String[0], new String[0], new String[0]);
     private volatile java.util.Set<String> activeWords = java.util.Set.of();
+    /** Saved words whose spelling has capitals, such as "Lok", by their lowercase form. Read while typing. */
+    private volatile Map<String, String> savedCapitals = Map.of();
     private volatile BlockedWords blockedWords;
     private final NextWordPredictor nextWords;
     /** Swipe engine 2.0's models, once loaded. Until then, or if they fail, the FUTO engine works alone. */
@@ -402,6 +405,14 @@ public final class SwipeTyping {
         return activeWords.contains(SwipeWords.normalise(word));
     }
 
+    /**
+     * The spelling that the user gave a saved word when it has capitals, such as "Lok" for "lok", or null. Only while
+     * learning is on, as the saved words only count then.
+     */
+    public String savedSpelling(String word) {
+        return learningEnabled ? savedCapitals.get(SwipeWords.normalise(word)) : null;
+    }
+
     /** The spelling of a name, such as "Monday" for "monday", or null for any other word. */
     public String properName(String word) {
         String spelling = ProperNames.restore(word);
@@ -615,6 +626,11 @@ public final class SwipeTyping {
         int day = today();
         wordView = new Words(dictionary.spellings(day), dictionary.descriptions(day), dictionary.swipeStatuses(day));
         activeWords = dictionary.activeWords(day);
+        Map<String, String> capitals = new HashMap<>();
+        if (wordsAvailable) for (LanguageHabits.Entry entry : dictionary.active(day))
+            if (!entry.spelling.equals(entry.spelling.toLowerCase(Locale.ROOT)) && entry.spelling.equalsIgnoreCase(entry.word))
+                capitals.put(entry.word, entry.spelling);
+        savedCapitals = capitals;
         accuracyStatus = accuracy.summary();
     }
 

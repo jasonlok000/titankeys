@@ -106,6 +106,14 @@ final class SwipeModels implements AutoCloseable {
         return out;
     }
 
+    /**
+     * Completions of the letters typed so far after this text, lower case, as log chances: only the words the next-word
+     * model holds whole, which are most of the common ones.
+     */
+    Map<String, Double> completions(String text, String letters, Predicate<String> known) throws Exception {
+        return predictor.wordsStarting(predictor.after(text), letters.toLowerCase(java.util.Locale.ROOT).replace('’', '\''), known);
+    }
+
     /** The next-word model's log chance of this word after this text, or NaN when the chances are not ready yet. */
     double ifReady(String text, String word) {
         float[] chances = predictor.ifReady(text);

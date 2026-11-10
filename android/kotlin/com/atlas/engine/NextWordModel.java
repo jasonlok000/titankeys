@@ -155,8 +155,27 @@ public final class NextWordModel implements AutoCloseable {
         return out;
     }
 
+    /**
+     * The whole-word tokens that start with {@code letters} (lower case) and pass {@code known}, lower case, each with the
+     * better log chance of its forms, as "the" and "The". A word the model splits into pieces is left out, because its first
+     * piece's chance is shared with every other word that starts the same way.
+     */
+    public Map<String, Double> wordsStarting(float[] chances, String letters, java.util.function.Predicate<String> known) {
+        int[] ids = wordTokens();
+        String[] lower = wordTokenText;
+        Map<String, Double> out = new HashMap<>();
+        for (int i = 0; i < ids.length; i++) {
+            if (ids[i] >= chances.length || !lower[i].startsWith(letters)) continue;
+            Double seen = out.get(lower[i]);
+            if (seen == null ? known.test(lower[i]) : chances[ids[i]] > seen) out.put(lower[i], (double) chances[ids[i]]);
+        }
+        return out;
+    }
+
     private static final Pattern WORD = Pattern.compile("[A-Za-z]+('[a-z]+)?");
     private int[] wordTokens;
+    /** Each word token's text in lower case, without its space, in the same order as {@code wordTokens}. */
+    private String[] wordTokenText;
 
     /** Tokens that are a space and then a whole word, found once. */
     private synchronized int[] wordTokens() {
@@ -164,6 +183,9 @@ public final class NextWordModel implements AutoCloseable {
             List<Integer> ids = new ArrayList<>();
             for (int i = 0; i < tokens.length; i++)
                 if (tokens[i].length() > 1 && tokens[i].charAt(0) == 'Ġ' && WORD.matcher(tokens[i].substring(1)).matches()) ids.add(i);
+            String[] text = new String[ids.size()];
+            for (int i = 0; i < text.length; i++) text[i] = tokens[ids.get(i)].substring(1).toLowerCase(java.util.Locale.ROOT);
+            wordTokenText = text;
             wordTokens = ids.stream().mapToInt(Integer::intValue).toArray();
         }
         return wordTokens;

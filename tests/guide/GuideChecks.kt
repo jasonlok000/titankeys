@@ -10,6 +10,7 @@ import com.atlas.keyboard.KeyboardEvent.HeldSymbol
 import com.atlas.keyboard.KeyboardEvent.ModifierState
 import com.atlas.keyboard.KeyboardEvent.Moved
 import com.atlas.keyboard.KeyboardEvent.PanelSwiped
+import com.atlas.keyboard.KeyboardEvent.Pushed
 import com.atlas.keyboard.KeyboardEvent.QuickSettingUsed
 import com.atlas.keyboard.KeyboardEvent.Recognised
 import com.atlas.keyboard.KeyboardEvent.Resting
@@ -100,6 +101,8 @@ private fun theStepsHaveOkayWords() {
 private fun wrongEventsDoNotFinish() {
     val flow = GuideFlow({ GuideSettings() })
     same(flow.event(Moved(1f, lifted = true)), GuideVerdict.Wait, "A small touch must not finish the first step")
+    same(flow.event(Pushed(29)) is GuideVerdict.Hint, true, "Pushing a letter on the touch step says to touch lightly")
+    same(flow.event(Pushed(62)), GuideVerdict.Wait, "Space is not a letter, so it says nothing")
     flow.advance()
     same(flow.step.id, "type", "Next is typing")
     same(flow.event(FieldChanged("Real keys, smart fixes: teh", 27, 27)), GuideVerdict.Wait, "A typo before its space is not done")

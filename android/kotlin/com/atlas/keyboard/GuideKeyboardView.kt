@@ -4,7 +4,6 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
@@ -89,10 +88,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val areaPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        pathEffect = DashPathEffect(floatArrayOf(dp(AREA_DASH), dp(AREA_GAP)), 0f)
-    }
+    private val areaPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val areaPath = Path()
     private val path = Path()
 
     var tone = GuideTone.Ink
@@ -252,14 +249,18 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }
 
     /**
-     * A faint dashed box round the part of the keys that the touchpad feels. Its sensor stops at the middle of the outer columns,
-     * of the top row and of the bottom row, so a finger outside the box is not read well.
+     * The part of the keys that the touchpad feels stays bright, and the rest is dimmed: its sensor stops at the middle of the outer
+     * columns, of the top row and of the bottom row, so a finger there is not read well. A line would cross the letters, so the
+     * edge of the dimmed part is the box.
      */
     private fun drawTouchArea(canvas: Canvas) {
-        val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.CREAM
-        areaPaint.color = GuideMotion.faded(colour, AREA_ALPHA)
-        areaPaint.strokeWidth = dp(AREA_WIDTH)
-        canvas.drawRoundRect(width * AREA_LEFT, height * AREA_TOP, width * AREA_RIGHT, height * AREA_BOTTOM, dp(AREA_RADIUS), dp(AREA_RADIUS), areaPaint)
+        areaPaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.ORANGE else GuideColours.INK, AREA_SHADE)
+        areaPath.rewind()
+        areaPath.fillType = Path.FillType.EVEN_ODD
+        areaPath.addRect(0f, 0f, width.toFloat(), height.toFloat(), Path.Direction.CW)
+        areaPath.addRoundRect(width * AREA_LEFT, height * AREA_TOP, width * AREA_RIGHT, height * AREA_BOTTOM,
+            dp(AREA_RADIUS), dp(AREA_RADIUS), Path.Direction.CW)
+        canvas.drawPath(areaPath, areaPaint)
     }
 
     private fun drawLabel(canvas: Canvas, key: Key, label: String, colour: Int) {
@@ -548,10 +549,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val AREA_TOP = .5f / 4
         /** The touchpad reports its last point at row 3.54 of the 4 rows. */
         const val AREA_BOTTOM = 3.54f / 4
-        const val AREA_ALPHA = .22f
-        const val AREA_WIDTH = 1f
+        /** How strongly the part that the touchpad does not read is dimmed. */
+        const val AREA_SHADE = .5f
         const val AREA_RADIUS = 10f
-        const val AREA_DASH = 6f
-        const val AREA_GAP = 5f
     }
 }

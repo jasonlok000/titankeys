@@ -9,6 +9,7 @@ import com.atlas.keyboard.KeyboardEvent.HeldSymbol
 import com.atlas.keyboard.KeyboardEvent.ModifierState
 import com.atlas.keyboard.KeyboardEvent.Moved
 import com.atlas.keyboard.KeyboardEvent.PanelSwiped
+import com.atlas.keyboard.KeyboardEvent.Pushed
 import com.atlas.keyboard.KeyboardEvent.QuickSettingUsed
 import com.atlas.keyboard.KeyboardEvent.Recognised
 import com.atlas.keyboard.KeyboardEvent.Resting
@@ -19,16 +20,16 @@ import kotlin.math.abs
 /** The background of the guide: ink while you try a step, and orange once you have done it. */
 internal enum class GuideTone { Orange, Ink }
 
-/** One part of the story. The bar at the top shows how far through the chapters you are. */
-internal enum class GuideChapter {
-    Hello,
-    Swipe,
-    Flick,
-    Symbols,
-    QuickSettings,
-    Hold,
-    Cursor,
-    End,
+/** One part of the story, with the [label] that shows above its steps. The bar at the top shows how far through the chapters you are. */
+internal enum class GuideChapter(val label: String) {
+    Hello("Real keys"),
+    Swipe("Swipe typing"),
+    Flick("Deleting"),
+    Symbols("Symbols and emoji"),
+    QuickSettings("Quick settings"),
+    Hold("Holding keys"),
+    Cursor("Cursor and selection"),
+    End(""),
 }
 
 /** What the drawing of the keys shows as a ghost finger, so that the screen says what to do without words. */
@@ -123,11 +124,17 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "touch", chapter = GuideChapter.Hello,
         title = "Touch the keys.",
-        body = "Do not push them. Move one finger across, inside the box.",
+        body = "Do not push them. Slide one finger across the bright area.",
         done = "Every key is a touchpad.",
         placeholder = "Your words go here.",
         cue = GuideCue.Word("thumb"),
-        check = { event -> if (event is Moved && event.keys >= TOUCH_TRAVEL_KEYS) GuideVerdict.Done else GuideVerdict.Wait },
+        check = { event ->
+            when {
+                event is Moved && event.keys >= TOUCH_TRAVEL_KEYS -> GuideVerdict.Done
+                event is Pushed && isLetter(event.code) -> GuideVerdict.Hint(PUSHED)
+                else -> GuideVerdict.Wait
+            }
+        },
     ),
     GuideStep(
         id = "type", chapter = GuideChapter.Hello,
@@ -156,6 +163,7 @@ internal val GUIDE_STEPS = listOf(
                 is Recognised -> if (event.words.any { it.equals("faster", ignoreCase = true) }) GuideVerdict.Done
                     else GuideVerdict.Hint(if (event.words.isEmpty()) "Move across more letters." else "That was “${event.words.first()}”. Try again.")
                 is Tapped -> GuideVerdict.Hint("Do not lift between the letters.")
+                is Pushed -> if (isLetter(event.code)) GuideVerdict.Hint(PUSHED) else GuideVerdict.Wait
                 else -> GuideVerdict.Wait
             }
         },
@@ -410,6 +418,12 @@ internal val GUIDE_STEPS = listOf(
         check = { GuideVerdict.Wait },
     ),
 )
+
+/** A swipe or touch step heard a key go down, which is a push and not a touch. */
+private const val PUSHED = "That pushed a key. Touch lightly and slide across the letters."
+
+/** From android.view.KeyEvent, so that the steps can be tested without Android. */
+private fun isLetter(code: Int) = code in 29..54
 
 /** The typed word that the typing step asks for, after autocorrect has fixed it, and before. */
 private val FIXED = Regex("\\bthe\\s", RegexOption.IGNORE_CASE)

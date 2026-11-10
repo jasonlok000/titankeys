@@ -252,7 +252,7 @@ class GuideActivity : Activity() {
     private lateinit var offer: TextView
     private lateinit var field: GuideField
     private lateinit var keys: GuideKeyboardView
-    private lateinit var reaction: TextView
+    private lateinit var chapter: TextView
 
     private val keyboardChanges = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) = checkKeyboard()
@@ -270,15 +270,15 @@ class GuideActivity : Activity() {
     private var travel = 0f
     private var lastPoint: FloatArray? = null
     private var tone = GuideTone.Ink
-    private var bottomInset = 0
     /** The step is done, so the screen is orange and Next is filled. */
     private var passed = false
     /** Between two steps, Next does nothing. */
     private var changing = false
     /** After the line that lands, the step's words come back, so you can read them while you try more. */
     private val settleReaction = Runnable {
-        hideReaction()
-        for (view in listOf(title, body)) view.animate().alpha(1f).setDuration(FADE_MILLIS).start()
+        if (!passed) return@Runnable
+        swapIn(title, flow.step.title, 0)
+        body.animate().alpha(1f).setDuration(FADE_MILLIS).start()
     }
 
     private var helpShown = false
@@ -311,7 +311,7 @@ class GuideActivity : Activity() {
         flow.start(preferences.getString(RESUME, null))
         applyTone(GuideTone.Ink)
         backdrop.show(backgroundOf(tone))
-        for (view in listOf(title, body, hint, offer, next, again, close, segments, field, keys)) view.alpha = 0f
+        for (view in listOf(title, body, hint, offer, next, previous, chapter, again, close, segments, field, keys)) view.alpha = 0f
     }
 
     override fun onResume() {
@@ -431,14 +431,13 @@ class GuideActivity : Activity() {
             isVerticalScrollBarEnabled = false
             importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
         }
-        reaction = TextView(this).apply {
+        chapter = TextView(this).apply {
             typeface = HEAVY
-            gravity = Gravity.CENTER
-            alpha = 0f
-            isClickable = false
-            maxLines = 3
-            setPadding(dp(GUTTER), 0, dp(GUTTER), 0)
-            setAutoSizeTextTypeUniformWithConfiguration(REACTION_SMALLEST, REACTION_LARGEST, 2, TypedValue.COMPLEX_UNIT_DIP)
+            includeFontPadding = false
+            isAllCaps = true
+            letterSpacing = .12f
+            maxLines = 1
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(11f), dp(15).toFloat()))
         }
         segments = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         for (index in 0 until flow.chapterCount) segments.addView(View(this),
@@ -452,20 +451,25 @@ class GuideActivity : Activity() {
         }
         val topBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(TOP_ACTION)
             addView(segments, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(again, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(close, LinearLayout.LayoutParams(dp(TOP_ACTION), dp(TOP_ACTION)))
         }
-        // Back to the step before, the offer to turn on a setting if a step needs one, and Next.
+        // Back always on the left and Next always on the right, so a thumb finds them in the same place on every step.
+        // The offer to turn on a setting, if a step needs one, goes between them.
         val actions = LinearLayout(this).apply {
-            gravity = Gravity.CENTER
-            addView(previous, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(10) })
-            addView(offer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(10) })
+            gravity = Gravity.CENTER_VERTICAL
+            addView(previous, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
+            addView(offer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
             addView(next, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(TOP_ACTION)))
+            addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(chapter, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
             addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, TITLE_SHARE))
             addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, BODY_SHARE).apply { topMargin = dp(4) })
             addView(hint, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
@@ -477,11 +481,9 @@ class GuideActivity : Activity() {
         }
         root.addView(backdrop, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(column, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        root.addView(reaction, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(REACTION_HEIGHT), Gravity.CENTER))
         root.addView(overlay, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.setOnApplyWindowInsetsListener { _, insets ->
             val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout() or WindowInsets.Type.ime())
-            bottomInset = bars.bottom
             column.setPadding(dp(GUTTER) + bars.left, bars.top + dp(4), dp(GUTTER) + bars.right, bars.bottom + dp(8))
             fitKeys()
             insets
@@ -496,7 +498,7 @@ class GuideActivity : Activity() {
         gravity = Gravity.CENTER
         includeFontPadding = false
         maxLines = 1
-        setPadding(dp(10), dp(8), dp(10), dp(8))
+        setPadding(dp(10), dp(6), dp(10), dp(6))
         setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(13f), dp(17).toFloat()))
         setOnClickListener { press() }
     }
@@ -509,14 +511,6 @@ class GuideActivity : Activity() {
         val free = root.height - column.paddingTop - column.paddingBottom
         if (root.width == 0 || free <= 0) return
         val compact = free < dp(COMPACT_HEIGHT)
-        // The line that lands stays in the room above the keyboard, also with the Sym panel open.
-        reaction.translationY = -bottomInset / 2f
-        val reactionSpace = reaction.layoutParams
-        val reactionHeight = min(dp(REACTION_HEIGHT), free)
-        if (reactionSpace.height != reactionHeight) {
-            reactionSpace.height = reactionHeight
-            root.post { reaction.requestLayout() }
-        }
         val target = if (compact) 0 else min((root.width - column.paddingLeft - column.paddingRight) * KEYS_ASPECT, free * KEYS_SHARE).toInt()
         val params = keys.layoutParams
         if (params.height == target) return
@@ -541,7 +535,7 @@ class GuideActivity : Activity() {
         offer.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
         again.setTextColor(strong)
         close.imageTintList = ColorStateList.valueOf(strong)
-        reaction.setTextColor(strong)
+        chapter.setTextColor(GuideMotion.faded(strong, CHAPTER_ALPHA))
         keys.tone = next
         paintNext()
         paintSegments(flow.chapterIndex)
@@ -603,7 +597,7 @@ class GuideActivity : Activity() {
 
     private fun reveal(step: GuideStep) {
         keys.appear()
-        for (view in listOf(field, keys, next, again, close, segments)) view.animate().alpha(1f).setDuration(FADE_MILLIS).start()
+        for (view in listOf(field, keys, next, previous, chapter, again, close, segments)) view.animate().alpha(1f).setDuration(FADE_MILLIS).start()
         enter(step)
     }
 
@@ -613,7 +607,9 @@ class GuideActivity : Activity() {
         helpShown = false
         passed = false
         next.visibility = if (step.chapter == GuideChapter.End) View.GONE else View.VISIBLE
-        previous.visibility = if (flow.canGoBack) View.VISIBLE else View.GONE
+        // Back keeps its room on the first step, so that Next does not move.
+        previous.visibility = if (flow.canGoBack) View.VISIBLE else View.INVISIBLE
+        chapter.text = step.chapter.label
         paintNext()
         keys.show(step.cue)
         offerFor(step)
@@ -816,15 +812,22 @@ class GuideActivity : Activity() {
         moveOn(forward = false)
     }
 
+    /**
+     * The line that lands takes the title's place for a moment, with a small pop from its bottom left corner. It is in the title's
+     * own box, so it fits there at any font size and covers nothing.
+     */
     private fun showReaction(text: String) {
-        reaction.text = text
-        reaction.animate().cancel()
-        reaction.alpha = 0f
-        reaction.scaleX = .78f
-        reaction.scaleY = .78f
-        reaction.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(REACTION_IN_MILLIS)
+        title.animate().cancel()
+        title.text = text
+        title.translationX = 0f
+        title.pivotX = 0f
+        title.pivotY = title.height.toFloat()
+        title.alpha = 0f
+        title.scaleX = REACTION_FROM
+        title.scaleY = REACTION_FROM
+        title.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(REACTION_IN_MILLIS)
             .setInterpolator(OvershootInterpolator(REACTION_OVERSHOOT)).start()
-        for (view in listOf(title, body)) view.animate().alpha(REACTION_DIM).setDuration(FADE_MILLIS).start()
+        body.animate().alpha(REACTION_DIM).setDuration(FADE_MILLIS).start()
     }
 
     /** The story goes on, or back a step: to ink for a step behind the cream line, or orange for the ending. */
@@ -836,7 +839,6 @@ class GuideActivity : Activity() {
         main.removeCallbacks(showHelp)
         main.removeCallbacks(settleReaction)
         hideHint()
-        hideReaction()
         if (forward) flow.advance() else flow.back()
         val coming = flow.step
         val target = if (coming.chapter == GuideChapter.End) GuideTone.Orange else GuideTone.Ink
@@ -849,10 +851,6 @@ class GuideActivity : Activity() {
             applyTone(target)
             if (coming.chapter == GuideChapter.End) finale(coming) else enter(coming)
         }, WIPE_MILLIS)
-    }
-
-    private fun hideReaction() {
-        reaction.animate().alpha(0f).scaleX(1.06f).scaleY(1.06f).setDuration(FADE_MILLIS).start()
     }
 
     /** The high note: lines cross the screen one after the other, the mark lands, and the keys answer. */
@@ -883,7 +881,6 @@ class GuideActivity : Activity() {
         preferences.edit().remove(RESUME).apply()
         again.visibility = View.GONE
         again.text = "Start again"
-        hideReaction()
         for (view in listOf(title, body)) view.animate().alpha(0f).setDuration(FADE_MILLIS).start()
         backdrop.wipeTo(backgroundOf(GuideTone.Ink))
         overlay.sweep()
@@ -933,9 +930,7 @@ class GuideActivity : Activity() {
         private const val TITLE_LARGEST = 76
         private const val BODY_SMALLEST = 11
         private const val BODY_LARGEST = 20
-        private const val REACTION_SMALLEST = 24
-        private const val REACTION_LARGEST = 88
-        private const val REACTION_HEIGHT = 190
+        private const val CHAPTER_ALPHA = .55f
         private const val TITLE_SHARE = 2.6f
         private const val BODY_SHARE = 1f
         private const val FIELD_RADIUS = 14
@@ -964,7 +959,9 @@ class GuideActivity : Activity() {
         private const val ENTER_OVERSHOOT = 1.4f
         private const val REACTION_IN_MILLIS = 300L
         private const val REACTION_OVERSHOOT = 2.2f
-        private const val REACTION_DIM = .08f
+        private const val REACTION_DIM = .3f
+        /** The size that the line that lands grows from. */
+        private const val REACTION_FROM = .86f
         /** How long a finished step's line stays before the step's words come back. */
         private const val REACTION_MILLIS = 1400L
         /** When the new background has reached the middle of the screen. */

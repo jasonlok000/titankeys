@@ -29,5 +29,8 @@ public final class TypedWords {
         return null;
     }
 
+    /** The token so far, or nothing if it grew too long to keep. */
+    public String current() { return overflow ? "" : token.toString(); }
+
     public void clear() { token.setLength(0); overflow = false; }
 }

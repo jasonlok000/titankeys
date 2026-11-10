@@ -11,20 +11,28 @@ import java.util.Map;
 
 /** Bounded evidence for FUTO word frequencies. It never stores gesture coordinates. */
 final class LanguageHabits {
-    static final int LIMIT = 256;
-    private static final int USES_TO_ACTIVATE = 3;
+    // Only words missing from the dictionary are learned. In the raw logs few such words came up more than twice, so
+    // with three uses needed almost nothing was learned. Two uses, and room for more words, let the list grow.
+    static final int LIMIT = 1000;
+    private static final int USES_TO_ACTIVATE = 2;
+    private static final int DAYS_PER_FADE = 30;
     static final class Entry {
         final String word;
         String spelling;
         int confirmations, typedUses, regrets, day, recoveryConfirmations, recoveryTypedUses;
         boolean held;
         boolean typed;
+        /** Added in Settings, so it never fades. */
+        boolean added;
         Entry(String word, int day) { this.word = word; this.spelling = word; this.day = day; }
-        int decay(int today) { return Math.max(0, today - day) / 14; }
+        int decay(int today) { return added ? 0 : Math.max(0, today - day) / DAYS_PER_FADE; }
         int support(int today) { return Math.max(0, Math.max(confirmations, typedUses) - decay(today)); }
         boolean active(int today) { return !held && support(today) >= USES_TO_ACTIVATE; }
+        /** Words that are still gathering evidence stay out of the list, so a one-off typo never shows. */
+        boolean shown(int today) { return added || held || active(today); }
+        boolean faded(int today) { return !added && !held && support(today) == 0; }
         float frequency(float base, int today) {
-            return active(today) ? Math.min(255, (base > 0 ? base : 96) + Math.min(96, 8 + Math.max(0, support(today) - 3) * 8)) : 0;
+            return active(today) ? Math.min(255, (base > 0 ? base : 96) + Math.min(96, 8 + Math.max(0, support(today) - USES_TO_ACTIVATE) * 8)) : 0;
         }
     }
     private final LinkedHashMap<String, Entry> words = new LinkedHashMap<>();
@@ -41,6 +49,7 @@ final class LanguageHabits {
         entry.typedUses = Math.max(USES_TO_ACTIVATE, entry.support(today));
         entry.confirmations = Math.max(0, entry.confirmations - entry.decay(today));
         entry.typed = true;
+        entry.added = true;
         entry.held = false;
         entry.regrets = entry.recoveryConfirmations = entry.recoveryTypedUses = 0;
         entry.day = today;
@@ -79,6 +88,19 @@ final class LanguageHabits {
         entry.typed = true; entry.day = today; revision++;
     }
 
+    /** Takes back the last {@link #typed} use when the user deletes the word straight away. */
+    void untyped(String intended, int today) {
+        Entry entry = words.get(SwipeWords.normalise(intended));
+        if (entry == null || entry.added) return;
+        if (entry.held) entry.recoveryTypedUses = Math.max(0, entry.recoveryTypedUses - 1);
+        else {
+            entry.typedUses = Math.max(0, entry.typedUses - 1);
+            if (entry.typedUses == 0) entry.typed = false;
+            if (entry.faded(today) || entry.confirmations == 0 && !entry.typed) words.remove(entry.word);
+        }
+        revision++;
+    }
+
     private void recover(Entry entry, boolean manual, int today) {
         int decay = entry.decay(today);
         entry.recoveryConfirmations = Math.max(0, entry.recoveryConfirmations - decay);
@@ -94,6 +116,7 @@ final class LanguageHabits {
     }
 
     private Entry create(String word, int today) {
+        words.values().removeIf(entry -> entry.faded(today));
         if (words.size() == LIMIT) {
             Entry oldest = words.values().stream().filter(value -> !value.held)
                     .min(Comparator.comparingInt((Entry value) -> value.active(today) ? 1 : 0)
@@ -140,6 +163,7 @@ final class LanguageHabits {
     }
     List<Entry> entries() { return new ArrayList<>(words.values()); }
     List<Entry> active(int day) { ArrayList<Entry> result = new ArrayList<>(); for (Entry entry : words.values()) if (entry.active(day) && SuggestionPolicy.allowed(entry.word)) result.add(entry); return result; }
+    java.util.Set<String> activeWords(int day) { java.util.Set<String> result = new java.util.HashSet<>(); for (Entry entry : active(day)) result.add(entry.word); return result; }
     String restoreCase(String word, int day) {
         Entry entry = words.get(SwipeWords.normalise(word));
         return entry != null && entry.active(day) && !entry.spelling.equals(entry.word) ? entry.spelling : word;
@@ -149,21 +173,20 @@ final class LanguageHabits {
         for (Entry entry : words.values()) { if (entry.active(day)) active++; if (entry.held) held++; }
         return words.size() + " saved words · " + active + " active · " + (words.size() - active - held) + " gathering evidence · " + held + " held back";
     }
+    private java.util.stream.Stream<Entry> shown(int day) {
+        return words.values().stream().filter(entry -> entry.shown(day)).sorted(Comparator.comparing(entry -> entry.word));
+    }
     String[] descriptions(int day) {
-        return words.values().stream().sorted(Comparator.comparing(entry -> entry.word)).map(entry ->
+        return shown(day).map(entry ->
                 entry.spelling + " · " + (entry.typed ? "manually typed · " : "")
                         + (entry.support(day) > 0 || !entry.typed ? entry.support(day) + " confirmations · " : "")
                         + (entry.held ? "held back" : entry.active(day) ? "active" : "needs 3 confirmations")).toArray(String[]::new);
     }
     String[] swipeStatuses(int day) {
-        return words.values().stream().sorted(Comparator.comparing(entry -> entry.word)).map(entry ->
-                entry.held ? "Held back" : entry.active(day) ? ""
-                        : "Still learning · " + entry.support(day) + " of " + USES_TO_ACTIVATE + " uses")
-                .toArray(String[]::new);
+        return shown(day).map(entry -> entry.held ? "Held back" : "").toArray(String[]::new);
     }
-    String[] spellings() {
-        return words.values().stream().sorted(Comparator.comparing(entry -> entry.word))
-                .map(entry -> entry.spelling).toArray(String[]::new);
+    String[] spellings(int day) {
+        return shown(day).map(entry -> entry.spelling).toArray(String[]::new);
     }
 
     org.json.JSONObject config() throws org.json.JSONException {
@@ -172,6 +195,7 @@ final class LanguageHabits {
                 .put("word", entry.word).put("spelling", entry.spelling)
                 .put("confirmations", entry.confirmations).put("typedUses", entry.typedUses)
                 .put("regrets", entry.regrets).put("day", entry.day).put("held", entry.held).put("typed", entry.typed)
+                .put("added", entry.added)
                 .put("recoveryConfirmations", entry.recoveryConfirmations).put("recoveryTypedUses", entry.recoveryTypedUses));
         return new org.json.JSONObject().put("version", 1).put("words", entries);
     }
@@ -182,7 +206,7 @@ final class LanguageHabits {
         if (entries.length() > LIMIT) throw new IOException("Too many saved words");
         java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
         DataOutput output = new java.io.DataOutputStream(bytes);
-        output.writeInt(5); output.writeInt(entries.length());
+        output.writeInt(6); output.writeInt(entries.length());
         for (int i = 0; i < entries.length(); i++) {
             org.json.JSONObject entry = entries.getJSONObject(i);
             output.writeUTF(entry.getString("word")); output.writeInt(entry.getInt("confirmations"));
@@ -191,6 +215,7 @@ final class LanguageHabits {
             output.writeInt(entry.getInt("typedUses")); output.writeInt(entry.getInt("recoveryConfirmations"));
             output.writeInt(entry.getInt("recoveryTypedUses"));
             output.writeUTF(entry.getString(entry.has("spelling") ? "spelling" : "word"));
+            output.writeBoolean(entry.optBoolean("added", false));
         }
         LanguageHabits result = new LanguageHabits();
         result.read(new java.io.DataInputStream(new java.io.ByteArrayInputStream(bytes.toByteArray())));
@@ -198,7 +223,7 @@ final class LanguageHabits {
     }
 
     void write(DataOutput output) throws IOException {
-        output.writeInt(5); output.writeInt(words.size());
+        output.writeInt(6); output.writeInt(words.size());
         for (Entry entry : words.values()) {
             output.writeUTF(entry.word); output.writeInt(entry.confirmations); output.writeInt(entry.regrets);
             output.writeInt(entry.day); output.writeBoolean(entry.held);
@@ -206,11 +231,12 @@ final class LanguageHabits {
             output.writeInt(entry.typedUses);
             output.writeInt(entry.recoveryConfirmations); output.writeInt(entry.recoveryTypedUses);
             output.writeUTF(entry.spelling);
+            output.writeBoolean(entry.added);
         }
     }
     void read(DataInput input) throws IOException {
         int version = input.readInt();
-        if (version < 1 || version > 5) throw new IOException("Personal dictionary version");
+        if (version < 1 || version > 6) throw new IOException("Personal dictionary version");
         int size = input.readInt(); if (size < 0 || size > LIMIT) throw new IOException("Personal dictionary size");
         LinkedHashMap<String, Entry> loaded = new LinkedHashMap<>();
         for (int i = 0; i < size; i++) {
@@ -220,13 +246,14 @@ final class LanguageHabits {
             int typedUses = version >= 3 ? input.readInt() : typed ? 1 : 0;
             int recovery = version >= 4 ? input.readInt() : 0, recoveryTyped = version >= 4 ? input.readInt() : 0;
             String spelling = version >= 5 ? input.readUTF() : word;
+            boolean added = version >= 6 && input.readBoolean();
             if (word.isEmpty() || !word.equals(SwipeWords.normalise(word)) || !word.equals(SwipeWords.normalise(spelling))
-                    || count < 0 || count == 0 && !typed || count > 16
+                    || count < 0 || count == 0 && !typed || added && !typed || count > 16
                     || typedUses < 0 || typedUses > 16 || !typed && typedUses != 0
                     || recovery < 0 || recovery > 2 || recoveryTyped < 0 || recoveryTyped > 2 || !held && (recovery != 0 || recoveryTyped != 0)
                     || regrets < 0 || regrets > 2 || day < 0 || day > 1000000 || held != (regrets == 2) || loaded.containsKey(word)) throw new IOException("Personal dictionary entry");
             Entry entry = new Entry(word, day); entry.confirmations = count; entry.regrets = regrets; entry.held = held;
-            entry.typed = typed;
+            entry.typed = typed; entry.added = added;
             entry.spelling = spelling;
             entry.typedUses = typedUses; entry.recoveryConfirmations = recovery; entry.recoveryTypedUses = recoveryTyped;
             loaded.put(word, entry);

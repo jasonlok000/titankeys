@@ -1,6 +1,7 @@
-import { Canvas, CanvasIcon, CanvasPath, CanvasText, type IconAsset, Rectangle, useColourScheme } from "ink";
-import { arrowBack, backspace, circle, gridView, keyboardReturn, shift, spaceBar } from "ink/icons";
+import { Canvas, CanvasIcon, CanvasPath, CanvasText, type IconAsset, Rectangle } from "ink";
+import { arrowBack, backspace, circle, keyboardReturn, shift, spaceBar, square } from "ink/icons";
 import type { Point } from "./atlas";
+import { MUTED, ORANGE } from "./brand";
 
 type Label = { text: string } | { icon: IconAsset };
 
@@ -12,7 +13,7 @@ const rows: Label[][] = [
 ];
 const bottom: [Label, number][] = [
   [{ icon: shift }, 1.2], [{ icon: circle }, 1.2], [{ icon: arrowBack }, 1.2], [{ icon: spaceBar }, 2.8],
-  [{ icon: gridView }, 1.2], [{ text: "fn" }, 1.2], [{ icon: shift }, 1.2],
+  [{ icon: square }, 1.2], [{ text: "fn" }, 1.2], [{ icon: shift }, 1.2],
 ];
 // Fills the screen's content width, with roughly square keys.
 const width = 594;
@@ -21,12 +22,14 @@ const key = width / 10;
 const row = height / 4;
 const icon = 22;
 
-/** The Titan 2 keyboard face, with the latest touchpad trail drawn over it. */
+/**
+ * The Titan 2 keyboard face, with the latest touchpad trail drawn over it. A faint box shows the part that the touchpad
+ * feels: its sensor stops at the middle of the outer columns, of the top row and of the bottom row.
+ */
 export function KeyboardDiagram({ trail }: { trail: Point[] }) {
-  const dark = useColourScheme() === "dark";
-  const line = dark ? "#444444" : "#BBBBBB";
-  const label = dark ? "#AAAAAA" : "#555555";
-  const ink = dark ? "#FFFFFF" : "#000000";
+  const line = MUTED;
+  const label = MUTED;
+  const ink = ORANGE;
   const keys: { label: Label; x: number; y: number; width: number }[] = rows.flatMap((labels, r) =>
     labels.map((label, c) => ({ label, x: c * key, y: r * row, width: key })));
   let left = 0;
@@ -42,6 +45,7 @@ export function KeyboardDiagram({ trail }: { trail: Point[] }) {
         {name.text}
       </CanvasText>
       : <CanvasIcon key={`label-${index}`} x={x + 1 + (span - icon) / 2} y={y + 1 + (row - icon) / 2} size={icon} name={name.icon} colour={label} />)}
+    <Rectangle x={1 + width * .05} y={1 + height * .5 / 4} width={width * .9} height={height * (3.54 - .5) / 4} stroke={MUTED} strokeWidth={1} />
     {trail.length > 0 && <CanvasPath points={trail.map(([x, y]) => [1 + x * width, 1 + y * height] as const)}
       stroke={ink} strokeWidth={4} />}
   </Canvas>;

@@ -2,11 +2,10 @@ package com.vandam.ink
 
 import android.app.Activity
 import android.app.Application
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.database.ContentObserver
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -20,11 +19,15 @@ import android.widget.EditText
 import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
-import com.atlas.keyboard.AtlasIme
 import com.atlas.keyboard.BackService
+import com.atlas.keyboard.EnterKey
+import com.atlas.keyboard.GuideActivity
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.KeyCapture
+import com.atlas.keyboard.PhoneSetup
+import com.atlas.keyboard.RawLog
+import com.atlas.keyboard.SetupPart
 import com.atlas.keyboard.Trace
 import com.atlas.keyboard.TouchpadPreview
 import org.json.JSONArray
@@ -44,8 +47,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private var transferring = false
     private val keyCapture = lazy { KeyCapture(activity) { key -> activity.emit(JSONObject().put("type", "atlas-key").put("key", key).toString()) } }
     private var keyCaptureRequested = false
+    private val appNames = HashMap<String, String>()
     private val windowFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
         if (hasFocus) activity.window.decorView.post {
+            // The front page opens the playground whenever the app's own window is in front, as when the playground was closed.
+            if (visible && activity.hasWindowFocus()) activity.emit(JSONObject().put("type", "atlas-window").toString())
             if (visible && watchingRequested && activity.hasWindowFocus()) {
                 // Ink may have blurred the field while the window was away; ask the page to autofocus again.
                 activity.emit(JSONObject().put("type", "atlas-focus").toString())
@@ -136,6 +142,15 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     set(data.getString("key"), data.get("value"))
                     "null"
                 }
+                "setEnterApp" -> {
+                    val method = requireNotNull(EnterKey.SendMethod.of(data.getString("method"))) { "Unknown send method" }
+                    TypingSettings.enterApps(activity, EnterKey.savedApps(TypingSettings.enterApps(activity), data.getString("app"), method))
+                    "null"
+                }
+                "removeEnterApp" -> {
+                    TypingSettings.enterApps(activity, EnterKey.savedApps(TypingSettings.enterApps(activity), data.getString("app"), null))
+                    "null"
+                }
                 "addWord" -> {
                     typing.addWord(data.getString("word")) { error -> operationResult(error, complete) }
                     null
@@ -169,34 +184,59 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     }
                     null
                 }
+                "exportRawLog" -> {
+                    check(!transferring) { "A transfer is already open." }
+                    transferring = true
+                    try {
+                        RawLogExportActivity.start(activity) { exported, error ->
+                            transferring = false
+                            if (error == null) complete(NativeResult.Success(exported.toString()))
+                            else operationResult(error, complete)
+                        }
+                    } catch (error: Exception) {
+                        transferring = false
+                        throw error
+                    }
+                    null
+                }
+                "deleteRawLog" -> {
+                    Thread {
+                        RawLog.deleteAll(activity)
+                        activity.runOnUiThread { complete(NativeResult.Success("null")) }
+                    }.start()
+                    null
+                }
                 "notesSeen" -> {
                     appPreferences().edit().putString(SEEN_NOTES, installedVersion()).apply()
                     "null"
                 }
-                "enable" -> {
-                    activity.startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
+                "guide" -> {
+                    GuideActivity.start(activity)
+                    "null"
+                }
+                "playground" -> {
+                    // The answer comes as a message when the playground closes. A request held open that long would time out.
+                    GuideActivity.playground(activity) { action ->
+                        activity.emit(JSONObject().put("type", "atlas-playground").put("action", action).toString())
+                    }
+                    "null"
+                }
+                "playgroundCancel" -> {
+                    GuideActivity.cancelPlayground()
+                    "null"
+                }
+                "enable", "overlay", "scrollAssistant", "backService" -> {
+                    val part = when (operation) {
+                        "enable" -> SetupPart.Enable
+                        "overlay" -> SetupPart.Overlay
+                        "scrollAssistant" -> SetupPart.ScrollAssistant
+                        else -> SetupPart.Back
+                    }
+                    PhoneSetup.page(activity, part)?.let(activity::startActivity)
                     "null"
                 }
                 "choose" -> {
-                    activity.getSystemService(InputMethodManager::class.java).showInputMethodPicker()
-                    "null"
-                }
-                "overlay" -> {
-                    activity.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:${activity.packageName}")))
-                    "null"
-                }
-                "scrollAssistant" -> {
-                    activity.startActivity(Intent().setClassName("com.agui.settings",
-                        "com.agui.settings.touchpad.ScrollAssistantActivity"))
-                    "null"
-                }
-                "backService" -> {
-                    // The page for a single service is closed to apps, so the list opens with Atlas highlighted.
-                    val service = ComponentName(activity, BackService::class.java).flattenToString()
-                    activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                        .putExtra(":settings:fragment_args_key", service)
-                        .putExtra(":settings:show_fragment_args", Bundle().apply { putString(":settings:fragment_args_key", service) }))
+                    PhoneSetup.chooseKeyboard(activity)
                     "null"
                 }
                 "watch" -> {
@@ -243,7 +283,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             }
             if (result != null) complete(NativeResult.Success(result))
         } catch (error: Exception) {
-            complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "Atlas request failed", false))
+            complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "TitanKeys request failed", false))
         }
     }
 
@@ -255,10 +295,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     }
 
     private fun state(): JSONObject {
-        val keyboard = ComponentName(activity, AtlasIme::class.java)
-        val enabled = activity.getSystemService(InputMethodManager::class.java).enabledInputMethodList.any { it.component == keyboard }
-        val selected = Settings.Secure.getString(activity.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
-            ?.let(ComponentName::unflattenFromString) == keyboard
         val learned = typing.learnedWords()
         val words = JSONArray()
         for ((index, word) in learned.words.withIndex())
@@ -266,34 +302,70 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         return JSONObject()
             .put("version", installedVersion())
             .put("whatsNew", whatsNew())
+            .put("guideDue", GuideActivity.due(activity))
             .put("phone", "${Build.MANUFACTURER} ${Build.MODEL}")
             .put("android", Build.VERSION.RELEASE)
-            .put("enabled", enabled)
-            .put("selected", selected)
-            .put("overlay", Settings.canDrawOverlays(activity))
-            .put("scrollAssistant", scrollAssistant())
+            .put("enabled", PhoneSetup.enabled(activity))
+            .put("selected", PhoneSetup.selected(activity))
+            .put("overlay", PhoneSetup.overlay(activity))
+            .put("scrollAssistant", PhoneSetup.scrollAssistant())
             .put("backService", BackService.enabled(activity))
             .put("learning", typing.learningEnabled())
             .put("tapKeys", TypingSettings.tapKeys(activity))
+            .put("holdSymbols", TypingSettings.holdSymbols(activity))
+            .put("holdSymbolMillis", TypingSettings.holdSymbolMillis(activity))
+            .put("fnAsCtrl", TypingSettings.fnAsCtrl(activity))
+            .put("doublePressLocks", TypingSettings.doublePressLocks(activity))
             .put("autoCapitalise", TypingSettings.autoCapitalise(activity))
+            .put("autoPunctuation", TypingSettings.autoPunctuation(activity))
+            .put("autocorrect", TypingSettings.autocorrect(activity))
             .put("suggestionBar", TypingSettings.suggestionBar(activity))
+            .put("launcherHidesBar", TypingSettings.launcherHidesBar(activity))
             .put("cursorControl", TypingSettings.cursorControl(activity))
+            .put("swipeTyping", TypingSettings.swipeTyping(activity))
+            .put("touchpadOnlyInFields", TypingSettings.touchpadOnlyInFields(activity))
+            .put("orangeAccents", TypingSettings.orangeAccents(activity))
+            .put("enterKey", TypingSettings.enterKey(activity))
+            .also(::putEnterApps)
             .put("liftOff", TypingSettings.liftOffGrace(activity))
             .put("liftOffMillis", TypingSettings.liftOffDurationMillis(activity))
             .put("haptics", Haptics.enabled(activity))
             .put("hapticPreset", Haptics.preset(activity).id)
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
+            .put("rawLog", TypingSettings.rawLog(activity))
+            .put("rawLogBytes", RawLog.size(activity))
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
     }
 
-    /** The Titan's Scroll assistant switch powers the keyboard touchpad, and it ships off. Phones without one pass. */
-    private fun scrollAssistant(): Boolean {
-        val get = Class.forName("android.os.SystemProperties").getMethod("get", String::class.java, String::class.java)
-        if (get.invoke(null, "ro.agui.touchpad_function", "") != "yes") return true
-        return get.invoke(null, "persist.sys.scroll_assistant", "0") == "1"
+    private fun putEnterApps(state: JSONObject) {
+        val added = EnterKey.apps(TypingSettings.enterApps(activity))
+        val builtInNames = EnterKey.BUILT_IN.associate { it.packageName to it.name }
+        state.put("enterApps", JSONArray(added.entries.sortedBy { it.key }.map { (app, method) ->
+            enterApp(app, builtInNames[app] ?: appName(app), method)
+        }))
+        state.put("enterAppsBuiltIn", JSONArray(EnterKey.BUILT_IN.filter { it.packageName !in added }.map {
+            enterApp(it.packageName, it.name, it.method)
+        }))
+        state.put("recentEnterApps", JSONArray(TypingSettings.recentEnterApps(activity)
+            .filter { it !in added && it !in builtInNames }
+            .map { JSONObject().put("app", it).put("name", appName(it)) }))
     }
 
+    private fun enterApp(app: String, name: String, method: EnterKey.SendMethod) =
+        JSONObject().put("app", app).put("name", name).put("method", method.id)
+
+    /** Android lets a keyboard see the apps that it has typed in. If it cannot see one now, the package name is shown. */
+    private fun appName(app: String) = appNames.getOrPut(app) {
+        try {
+            val packages = activity.packageManager
+            packages.getApplicationLabel(packages.getApplicationInfo(app, 0)).toString()
+        } catch (error: PackageManager.NameNotFoundException) {
+            app
+        }
+    }
+
+    /** The Titan's Scroll assistant switch powers the keyboard touchpad, and it ships off. Phones without one pass. */
     private fun installedVersion(): String = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
 
     /** Release notes show once after each update. A fresh install has nothing new, so it starts as seen. */
@@ -313,15 +385,27 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         when (key) {
             "learning" -> typing.learningEnabled(value as Boolean)
             "tapKeys" -> TypingSettings.tapKeys(activity, value as String)
+            "holdSymbols" -> TypingSettings.holdSymbols(activity, value as Boolean)
+            "holdSymbolMillis" -> TypingSettings.holdSymbolMillis(activity, (value as Number).toInt())
+            "fnAsCtrl" -> TypingSettings.fnAsCtrl(activity, value as Boolean)
+            "doublePressLocks" -> TypingSettings.doublePressLocks(activity, value as Boolean)
             "autoCapitalise" -> TypingSettings.autoCapitalise(activity, value as Boolean)
+            "autoPunctuation" -> TypingSettings.autoPunctuation(activity, value as Boolean)
+            "autocorrect" -> TypingSettings.autocorrect(activity, value as Boolean)
             "suggestionBar" -> TypingSettings.suggestionBar(activity, value as Boolean)
+            "launcherHidesBar" -> TypingSettings.launcherHidesBar(activity, value as Boolean)
             "cursorControl" -> TypingSettings.cursorControl(activity, value as Boolean)
+            "swipeTyping" -> TypingSettings.swipeTyping(activity, value as Boolean)
+            "touchpadOnlyInFields" -> TypingSettings.touchpadOnlyInFields(activity, value as Boolean)
+            "orangeAccents" -> TypingSettings.orangeAccents(activity, value as Boolean)
+            "enterKey" -> TypingSettings.enterKey(activity, value as String)
             "liftOff" -> TypingSettings.liftOffGrace(activity, value as Boolean)
             "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())
             "haptics" -> Haptics.select(activity, Haptics.preset(activity), value as Boolean)
             "hapticPreset" -> Haptics.select(activity, HapticPreset.of(value as String), Haptics.enabled(activity))
             "spelling" -> TypingSettings.spelling(activity,
                 if (value == "american") EnglishSpelling.Variant.AMERICAN else EnglishSpelling.Variant.BRITISH)
+            "rawLog" -> RawLog.enabled(activity, value as Boolean)
             else -> throw IllegalArgumentException("Unknown setting: $key")
         }
     }

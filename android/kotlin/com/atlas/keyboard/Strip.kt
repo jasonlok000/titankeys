@@ -1,30 +1,58 @@
 package com.atlas.keyboard
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.os.SystemClock
 import android.text.TextUtils
+import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.WindowInsets
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.atlas.engine.EmojiPages
 
-/** The bar above the keyboard: word suggestions, or pages of extra symbols while Alt is on, or emoji while Sym is on. */
+/**
+ * The bar above the keyboard: word suggestions, or which modifiers are on. The modifiers take the place of the words, at the same
+ * height. While a special gesture runs, [gesture] draws over them at that height too, and the words wait underneath.
+ */
 class Strip(
     context: Context,
     private val choose: (Int) -> Unit,
-    private val symbol: (String) -> Unit,
-    private val pickEmoji: (String) -> Unit,
 ) : LinearLayout(context) {
     private val typeface = resources.getFont(R.font.inter_regular)
-    private val symbols = Keys.extraSymbols()
-    private val wordViews = WORD_ORDER.map { index -> item(17f) { choose(index) } }
-    private val symbolViews = List(SYMBOLS_PER_PAGE) { item(20f) { view ->
-        if (showEmoji) pickEmoji(view.text.toString()) else symbol(view.text.toString())
-    } }
-    private var page = 0
+    private val wordViews = WORD_ORDER.map { index -> item { choose(index) } }
+    private val chips = ModifierBar.ALL.associateWith(::chip)
+    private val hint = TextView(context).apply {
+        typeface = this@Strip.typeface
+        gravity = Gravity.CENTER
+        // A single-line view scrolls where this one must shrink, so it only has a limit of one line.
+        maxLines = 1
+        includeFontPadding = false
+        isFocusable = false
+        val metrics = resources.displayMetrics
+        setAutoSizeTextTypeUniformWithConfiguration(
+            Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, HINT_SMALLEST, metrics)),
+            Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, HINT_LARGEST, metrics)),
+            1, TypedValue.COMPLEX_UNIT_PX)
+    }
+    private val modifierRow = LinearLayout(context).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        for (chip in chips.values) addView(chip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(6) })
+        addView(hint, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+    }
     private var navigationInset = 0
+    private var corners = Corners.None
+    /** How far the content keeps from each side, so that the screen's rounded corners do not cut it. */
+    private var side = 0
+    private val drawing = GestureDrawing(resources.displayMetrics.density)
+    private var look = Look.of(context)
+
+    /** Shows what a special gesture is doing, in the place of the words. It shows only where the strip shows. */
+    val gesture = GestureDisplay { postInvalidateOnAnimation() }
 
     var showSuggestions = true
         set(value) {
@@ -39,65 +67,34 @@ class Strip(
             render()
         }
 
-    var showSymbols = false
-        set(value) {
-            if (field != value) page = 0
-            field = value
-            render()
-        }
-
-    /** Null until the emoji list has loaded. */
-    var emoji: EmojiPages? = null
-        set(value) {
-            field = value
-            render()
-        }
-
-    var showEmoji = false
+    /** Which modifiers are on, in the place of the words. Null shows the words. */
+    var modifiers: ModifierBar? = null
         set(value) {
             if (field == value) return
-            if (value) emoji?.reset()
             field = value
             render()
         }
 
-    private val showPages get() = showSymbols || showEmoji
-
     init {
-        for (view in wordViews + symbolViews) addView(view, LayoutParams(0, dp(56), 1f))
+        for (view in wordViews) addView(view, LayoutParams(0, dp(56), 1f))
+        addView(modifierRow, LayoutParams(0, dp(56), 1f))
         // Screen readers go left to right, so point them at the best word first.
         val ranked = wordViews.withIndex().sortedBy { WORD_ORDER[it.index] }.map { it.value }
         for (view in ranked) view.id = generateViewId()
         ranked.zipWithNext { view, next -> view.accessibilityTraversalBefore = next.id }
-        // Keep the words clear of the gesture handle, which draws over the bottom of the keyboard.
+        // Keep the words clear of the gesture handle, which draws over the bottom of the keyboard, and of the rounded corners.
         setOnApplyWindowInsetsListener { _, insets ->
             navigationInset = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
+            corners = Corners.of(insets, display)
             render()
             insets
         }
         render()
     }
 
-    /** Moves through the symbol or emoji pages, wrapping at either end. */
-    fun turn(direction: Int) {
-        if (showEmoji) {
-            emoji?.turn(direction)
-        } else {
-            val pages = (symbols.size + SYMBOLS_PER_PAGE - 1) / SYMBOLS_PER_PAGE
-            page = Math.floorMod(page + direction, pages)
-        }
-        render()
-    }
-
-    /** Moves to the next or previous emoji group. */
-    fun jump(direction: Int) {
-        emoji?.jump(direction)
-        render()
-    }
-
-    private fun item(size: Float, press: (TextView) -> Unit) = TextView(context).apply {
+    private fun item(press: (TextView) -> Unit) = TextView(context).apply {
         typeface = this@Strip.typeface
-        textSize = size
+        textSize = 17f
         gravity = Gravity.CENTER
         isSingleLine = true
         ellipsize = TextUtils.TruncateAt.END
@@ -106,35 +103,71 @@ class Strip(
         setOnClickListener { press(this) }
     }
 
+    /** A small label for one modifier. It is the same size at any system font size. */
+    private fun chip(name: String) = TextView(context).apply {
+        typeface = this@Strip.typeface
+        text = name
+        isSingleLine = true
+        includeFontPadding = false
+        isFocusable = false
+        setTextSize(TypedValue.COMPLEX_UNIT_DIP, CHIP_SIZE)
+        setPadding(dp(8), dp(3), dp(8), dp(3))
+    }
+
+    /** The insets listener does not always run in the keyboard's window, so the corners are read here as well. */
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        corners = Corners.of(rootWindowInsets, display)
+        render()
+    }
+
     private fun render() {
-        val dark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
-        val ink = if (dark) Color.WHITE else Color.BLACK
-        val visible = showSuggestions || showPages
-        setBackgroundColor(if (!visible) Color.TRANSPARENT else if (dark) Color.BLACK else Color.WHITE)
-        setPadding(dp(8), 0, dp(8), if (visible) navigationInset else 0)
+        look = Look.of(context)
+        gesture.allowed = showSuggestions
+        // A strip that shows nothing has no height, and a bar there would move the app each time a modifier changes.
+        val bar = modifiers.takeIf { showSuggestions }
+        setBackgroundColor(if (!showSuggestions) Color.TRANSPARENT else look.paper)
+        // The lowest text sits about 16 dp over the bottom of the strip, where the corners curve in.
+        side = maxOf(dp(8), corners.inset((navigationInset + dp(CONTENT_ABOVE)).toFloat()) + dp(4))
+        setPadding(side, 0, side, if (showSuggestions) navigationInset else 0)
         // Keep a window for firmware touchpad routing when there is nothing to display.
-        minimumHeight = if (visible) 0 else 1
+        minimumHeight = if (showSuggestions) 0 else 1
         for ((slot, view) in wordViews.withIndex()) {
             val index = WORD_ORDER[slot]
-            view.visibility = if (showSuggestions && !showPages) VISIBLE else GONE
+            view.visibility = if (showSuggestions && bar == null) VISIBLE else GONE
             view.text = words.getOrElse(index) { "" }
             view.isEnabled = index < words.size
-            view.setTextColor(ink)
+            view.setTextColor(look.ink)
         }
-        val emojiPage = if (showEmoji) emoji?.page().orEmpty() else emptyList()
-        for ((slot, view) in symbolViews.withIndex()) {
-            val value = if (showEmoji) emojiPage.getOrNull(slot) else symbols.getOrNull(page * SYMBOLS_PER_PAGE + slot)
-            view.visibility = if (!showPages) GONE else if (value == null) INVISIBLE else VISIBLE
-            view.text = value ?: ""
-            view.contentDescription = value?.let { "Insert $it" }
-            view.setTextColor(ink)
+        modifierRow.visibility = if (bar != null) VISIBLE else GONE
+        for ((name, chip) in chips) {
+            chip.visibility = if (bar != null && name in bar.chips) VISIBLE else GONE
+            // A key that a finger holds down is filled. One that was pushed and let go is an outline.
+            val held = bar != null && name in bar.held
+            chip.setTextColor(if (held) look.onAccent else look.accent)
+            chip.background = GradientDrawable().apply {
+                cornerRadius = dp(6).toFloat()
+                if (held) setColor(look.accent) else {
+                    setColor(Color.TRANSPARENT)
+                    setStroke(dp(1).coerceAtLeast(2), look.accent)
+                }
+            }
         }
-        contentDescription = when {
-            showEmoji -> "Emoji, ${emoji?.group().orEmpty()}. Swipe the keyboard sideways for more, or up or down for the next group."
-            showSymbols -> "Symbols. Swipe the keyboard sideways for more."
-            else -> null
-        }
+        hint.text = bar?.hint.orEmpty()
+        hint.setTextColor(look.ink)
     }
+
+    override fun dispatchDraw(canvas: Canvas) {
+        super.dispatchDraw(canvas)
+        if (!gesture.showing) return
+        val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
+        val more = gesture.advance(SystemClock.uptimeMillis(), scale)
+        if (gesture.showing) drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), dp(56), look)
+        if (more) postInvalidateOnAnimation()
+    }
+
+    /** The words are covered while a gesture shows, so a touch must not choose one that nobody can see. */
+    override fun onInterceptTouchEvent(event: MotionEvent) = gesture.showing || super.onInterceptTouchEvent(event)
 
     override fun onConfigurationChanged(configuration: Configuration) {
         super.onConfigurationChanged(configuration)
@@ -145,6 +178,9 @@ class Strip(
 
     companion object {
         private val WORD_ORDER = listOf(1, 0, 2)
-        private const val SYMBOLS_PER_PAGE = EmojiPages.PER_PAGE
+        private const val CHIP_SIZE = 13f
+        private const val CONTENT_ABOVE = 16
+        private const val HINT_SMALLEST = 8f
+        private const val HINT_LARGEST = 17f
     }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check Atlas visibility when returning to an app with a focused text field.
+"""Check TitanKeys visibility when returning to an app with a focused text field, and after Back.
 
 Focus the affected field on a connected Android device, then run:
     python3 tests/ime-window/run.py org.mozilla.firefox
@@ -26,7 +26,7 @@ def state():
     return (
         package.group(1) if package else None,
         int(input_type.group(1), 16) if input_type else 0,
-        "package=com.atlas " in window and "isVisible=true" in window,
+        "package=com.titankeys" in window and "isVisible=true" in window,
     )
 
 
@@ -37,14 +37,16 @@ def main():
     args = parser.parse_args()
     assert args.cycles > 0, "cycles must be positive"
     selected = shell("settings", "get", "secure", "default_input_method").strip()
-    assert selected == "com.atlas/.keyboard.AtlasIme", "Select Atlas before running"
+    assert selected.startswith("com.titankeys") and selected.endswith("AtlasIme"), "Select TitanKeys before running"
     package, input_type, _ = state()
     assert package == args.package and input_type & 0xF == 1, "Focus a text field in the specified app first"
-    component = shell(
-        "cmd", "package", "resolve-activity", "--brief",
+    # A Debug build also has an icon for the recorder, so one match can't be asked for. The app's main screen is first.
+    components = [line.strip() for line in shell(
+        "cmd", "package", "query-activities", "--brief",
         "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER", args.package,
-    ).strip().splitlines()[-1]
-    assert component.startswith(args.package + "/"), "App has no launcher activity"
+    ).splitlines() if line.strip().startswith(args.package + "/")]
+    assert components, "App has no launcher activity"
+    component = components[0]
 
     for cycle in range(args.cycles):
         delay = (0, .1, .8)[cycle % 3]
@@ -55,7 +57,12 @@ def main():
         shell("am", "start", "-a", "android.intent.action.MAIN",
               "-c", "android.intent.category.LAUNCHER", "-n", component)
         time.sleep(1)
-        package, actual_type, visible = state()
+        # An app can bring its field back a moment later, as TitanKeys does when it opens its playground again.
+        for _ in range(6):
+            package, actual_type, visible = state()
+            if (package, actual_type) == (args.package, input_type):
+                break
+            time.sleep(.5)
         assert (package, actual_type) == (args.package, input_type), "The focused field changed during the check"
         if not visible:
             time.sleep(2)
@@ -63,6 +70,16 @@ def main():
             assert (package, actual_type) == (args.package, input_type), "The focused field changed during the check"
         assert visible, f"Atlas window stayed hidden after return {cycle + 1} (home delay {delay}s)"
         print(f"PASS return {cycle + 1}: Atlas visible after {delay}s home delay", flush=True)
+
+    # Back also reaches the app, which can close the screen. Only a field that stays can show the result.
+    shell("input", "keyevent", "BACK")
+    time.sleep(2)
+    package, actual_type, visible = state()
+    if (package, actual_type) != (args.package, input_type):
+        print("SKIP back: the app left the field", flush=True)
+        return
+    assert not visible, "Atlas window came back after Back hid it"
+    print("PASS back: Atlas stayed hidden in the same field", flush=True)
 
 
 if __name__ == "__main__":

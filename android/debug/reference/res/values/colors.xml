@@ -1,0 +1,4 @@
+<resources>
+    <!-- The icon background, so this app stands apart from TitanKeys and TitanKeys Debug. -->
+    <color name="reference_background">#D1E6FF</color>
+</resources>

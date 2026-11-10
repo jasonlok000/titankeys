@@ -26,7 +26,7 @@ class LearningTransferActivity : Activity() {
         val picker = Intent(if (exporting) Intent.ACTION_CREATE_DOCUMENT else Intent.ACTION_OPEN_DOCUMENT)
             .addCategory(Intent.CATEGORY_OPENABLE)
             .setType(if (exporting) "application/json" else "*/*")
-        if (exporting) picker.putExtra(Intent.EXTRA_TITLE, "atlas-words.json")
+        if (exporting) picker.putExtra(Intent.EXTRA_TITLE, "titankeys-words.json")
         try {
             startActivityForResult(picker, PICK_DOCUMENT)
         } catch (_: ActivityNotFoundException) {

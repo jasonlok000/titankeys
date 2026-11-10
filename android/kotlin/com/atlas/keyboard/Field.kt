@@ -7,19 +7,21 @@ import android.view.inputmethod.EditorInfo
 data class Field(
     /** Swipes and touchpad taps type words. */
     val words: Boolean,
-    /** Typed words get suggestions. Nothing is learned unless [learning] is also true. */
-    val suggestions: Boolean,
     /** Typing here may teach the keyboard new words. */
     val learning: Boolean,
     /** Two quick spaces after a word become a full stop. */
     val fullStops: Boolean,
-    /** An empty search bar shows starter words. */
+    /** A search bar that is empty or fully selected shows starter words. */
     val starters: Boolean,
     /** Sentences may start with a capital letter. */
     val sentenceCapitalisation: Boolean,
+    /** Typed words may be fixed when they end. A private field allows this, but nothing is learned from it. */
+    val autocorrect: Boolean = false,
+    /** Typed words get suggestions. Nothing is learned unless [learning] is also true. */
+    val suggestions: Boolean = learning,
 ) {
     companion object {
-        val None = Field(words = false, suggestions = false, learning = false, fullStops = false, starters = false,
+        val None = Field(words = false, learning = false, fullStops = false, starters = false,
             sentenceCapitalisation = false)
 
         fun of(inputType: Int, imeOptions: Int): Field {
@@ -35,11 +37,26 @@ data class Field(
             val private = imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
             // Browsers often give search bars the URL type.
             val search = url && inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS == 0
-            val starters = search && !private
-            return Field(words = !password, suggestions = !password && !email && (!url || search),
-                learning = !password && !address && !private,
-                fullStops = !password && !address, starters = starters,
-                sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0)
+            val exact = variation == InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS
+                || variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
+                || variation == InputType.TYPE_TEXT_VARIATION_FILTER
+            return Field(words = !password, learning = !password && !address && !private,
+                fullStops = !password && !address, starters = search,
+                sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
+                autocorrect = !password && !address && !exact,
+                // An address bar that asks for no suggestions still gets the bar: browsers search from it too.
+                suggestions = !password && !email)
         }
+
+        /**
+         * Whether the raw input log may record a field. Only fields that allow learning do, which leaves out passwords,
+         * addresses and private fields. A field marked as a reference is recorded even though it asks for no
+         * personalised learning. The mark overrides nothing else, so a marked password is still never recorded.
+         */
+        fun logged(inputType: Int, imeOptions: Int, privateImeOptions: String?): Boolean =
+            of(inputType, imeOptions).learning || privateImeOptions?.contains(RAW_LOG_REFERENCE) == true
+                && of(inputType, imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING.inv()).learning
+
+        private const val RAW_LOG_REFERENCE = "com.titankeys.rawlog.reference"
     }
 }

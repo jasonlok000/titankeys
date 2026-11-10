@@ -1,150 +1,189 @@
 package com.atlas.keyboard
 
 import kotlin.math.hypot
+import kotlin.math.max
 import kotlin.math.pow
+import kotlin.math.sqrt
 
 /**
- * Rest a finger on Space to start cursor mode, then lean it towards either end of Space to move the
- * cursor that way, like a joystick. The whole bottom row sets the speed: just inside the end of Space
- * creeps for placing the cursor exactly, and the far edges of the keyboard race across long text. The rest keeps
- * swipes and grazes that cross Space out of cursor mode: the finger must stay within [REST_KEYS] of
- * where it landed for [REST_MILLIS]. Like a swipe, a brief slip off the touchpad doesn't end it: the
- * keyboard holds it through the slip recovery period, and the finger carries on where it lands.
- * Distances are in key widths, as in [Contact].
+ * A finger that [CursorGesture] started moves the cursor like a joystick. The middle of Space is a dead zone, a fifth
+ * narrower than Space: on it the cursor stays still, wherever the finger landed. Past either end of the dead zone the
+ * cursor goes that way: slowly near Space for placing the cursor exactly, and quickly towards the edge of the keyboard
+ * to race across long text. Only the place across counts, so the finger can also move up onto the letter rows, where
+ * the touchpad reads it better. A word drag uses the same zones, and each step extends the selection by a word. Like a swipe, a brief slip
+ * off the touchpad doesn't end it: the keyboard holds it through the slip recovery period, and the finger carries
+ * on where it lands. A finger that leans to the end of the touchpad, or off its bottom edge past Space, can run off
+ * it and come back near the same place, much later than a slip, so that also carries on, like a swipe that runs off
+ * the top of the touchpad. Distances are in key widths, as in [Contact].
  */
 class CursorMode {
-    private enum class State { Idle, Resting, Active, Lifted }
+    private enum class State { Idle, Active, Lifted }
 
     private var state = State.Idle
-    private var landed: Sample? = null
     private var position: Sample? = null
+    /** Where and when the finger left the touchpad, while it may still come back. */
+    private var liftedFrom: Sample? = null
     /** When the finger reached the edge of the keyboard, for the build-up to full speed. */
     private var edgeSince: Long? = null
 
     val active: Boolean get() = state == State.Active
 
+    /** Where the finger is across the keyboard, in key widths, for the display on the strip. */
+    val column: Float get() = (position?.x ?: .5f) * 10
+
     /** The finger slipped off during cursor mode and may still come back. */
     val lifted: Boolean get() = state == State.Lifted
 
-    /** Whether this contact landed on Space and may start cursor mode once it has rested. */
-    fun down(sample: Sample): Boolean {
-        val onSpace = sample.valid && Layout.keyAt(sample.x, sample.y) == Layout.SPACE
-        state = if (onSpace) State.Resting else State.Idle
-        landed = sample.takeIf { onSpace }
-        position = landed
-        return onSpace
-    }
+    /** Each step extends a selection by a word and doesn't move the cursor by a letter. */
+    var words = false
+        private set
 
-    /** Starts cursor mode if the finger is still resting at [now]. */
-    fun rest(now: Long): Boolean {
-        val first = landed ?: return false
-        if (state != State.Resting || now - first.time < REST_MILLIS) return false
+    /** Starts cursor mode for a finger that landed at [from], or a word drag if [words] is true. */
+    fun start(from: Sample, words: Boolean = false) {
         state = State.Active
-        return true
+        this.words = words
+        position = from
     }
 
     /** The finger left the touchpad; cursor mode waits for it to come back. */
     fun lift() {
         if (state != State.Active) return
         state = State.Lifted
+        liftedFrom = position
         position = null
     }
 
-    /** The finger came back after a slip, carrying on cursor mode from where it lands. */
-    fun resume(sample: Sample): Boolean {
+    /** How long to wait for the finger after a lift, given the slip recovery period [slipMillis]: longer at the edges of the touchpad. */
+    fun holdMillis(slipMillis: Long): Long {
+        val from = liftedFrom ?: return slipMillis
+        return if (atEdge(from)) max(slipMillis, EDGE_RETURN_MILLIS) else slipMillis
+    }
+
+    /**
+     * The finger came back after a slip, carrying on cursor mode from where it lands. Within the slip recovery period
+     * [slipMillis] it counts anywhere. After that it counts only if it comes back near the place at the edge of the
+     * touchpad where it left, and a touch anywhere else is a new touch, such as another finger or the next gesture.
+     */
+    fun resume(sample: Sample, slipMillis: Long = Long.MAX_VALUE): Boolean {
         if (state != State.Lifted || !sample.valid) return false
+        val from = liftedFrom
+        if (from != null && sample.time - from.time > slipMillis && !returnsToEdge(from, sample)) return false
         state = State.Active
+        liftedFrom = null
         position = sample
         return true
     }
 
+    private fun atEdge(sample: Sample) = sample.x * 10 <= EDGE_ZONE_KEYS || sample.x * 10 >= 10 - EDGE_ZONE_KEYS || atBottomPastSpace(sample)
+
+    private fun atBottomPastSpace(sample: Sample): Boolean {
+        val column = sample.x * 10
+        return sample.y * 4 >= EDGE_BOTTOM_ROW && (column < SPACE_LEFT || column > SPACE_RIGHT)
+    }
+
+    private fun returnsToEdge(from: Sample, to: Sample) = atEdge(from) && to.time - from.time <= EDGE_RETURN_MILLIS
+        && hypot((to.x - from.x) * 10, (to.y - from.y) * 4) <= EDGE_RETURN_KEYS
+
     fun move(samples: List<Sample>) {
         for (sample in samples) {
             if (!sample.valid) continue
-            if (state == State.Resting && distance(landed!!, sample) > REST_KEYS) state = State.Idle
             position = sample
         }
     }
 
-    /** Which way the finger is leaning: -1 left, 1 right, 0 resting in the middle of Space. */
+    /** Which way the finger is leaning: -1 left of the dead zone, 1 right of it, 0 in it. */
     fun direction(): Int {
         val depth = depth() ?: return 0
         return if (depth.first) -1 else 1
     }
 
     /**
-     * Letters a second for the current lean at [now], or 0 in the middle. The speed follows [SPEEDS],
-     * growing by an even factor between each pair of points, so every bit further feels like a step up:
-     * slow and precise just off the middle, and quick by the key beside Space. The range ends at ○ and fn;
-     * holding there or further out builds up to [FASTEST_PER_SECOND] over [RAMP_MILLIS].
+     * Steps a second for the current lean at [now], or 0 on Space. The speed follows [SPEEDS], growing by an even
+     * factor between each pair of points, so every bit further feels like a step up: slow and precise just past
+     * Space, and quick near the edge of the keyboard. The range ends at [MAX_LEAN]; holding there or further out
+     * builds up to [FASTEST_PER_SECOND] over [RAMP_MILLIS]. Words are long, so a word drag takes the square root:
+     * about one word a second next to Space and seven at full speed.
      */
     fun speed(now: Long): Float {
         val depth = depth()?.second ?: run { edgeSince = null; return 0f }
-        val lean = depth.coerceAtMost(MAX_DEPTH)
+        val lean = depth.coerceAtMost(MAX_LEAN)
         var upper = 1
         while (upper < SPEEDS.size - 1 && lean > SPEEDS[upper].first) upper++
         val (fromLean, fromSpeed) = SPEEDS[upper - 1]
         val (toLean, toSpeed) = SPEEDS[upper]
         val reached = fromSpeed * (toSpeed / fromSpeed).pow((lean - fromLean) / (toLean - fromLean))
-        if (lean < MAX_DEPTH * AT_EDGE) {
+        val letters = if (lean < MAX_LEAN * AT_EDGE) {
             edgeSince = null
-            return reached
+            reached
+        } else {
+            val since = edgeSince ?: now.also { edgeSince = it }
+            val ramp = ((now - since).toFloat() / RAMP_MILLIS).coerceIn(0f, 1f)
+            // Eased so the build-up starts gently and settles into full speed.
+            reached + (FASTEST_PER_SECOND - reached) * ramp * ramp * (3 - 2 * ramp)
         }
-        val since = edgeSince ?: now.also { edgeSince = it }
-        val ramp = ((now - since).toFloat() / RAMP_MILLIS).coerceIn(0f, 1f)
-        // Eased so the build-up starts gently and settles into full speed.
-        return reached + (FASTEST_PER_SECOND - reached) * ramp * ramp * (3 - 2 * ramp)
+        return if (words) sqrt(letters) else letters
     }
 
     fun end() {
         edgeSince = null
         state = State.Idle
-        landed = null
+        words = false
         position = null
+        liftedFrom = null
     }
 
-    /** Whether the finger leans left, and how far into the edge zone it is, or null in the middle. */
+    /** Whether the finger leans left, and how far past the end of the dead zone it is, or null while it is in the dead zone. */
     private fun depth(): Pair<Boolean, Float>? {
         val sample = position ?: return null
-        if (!active || sample.y < BOTTOM_ROW_TOP) return null
+        if (!active) return null
         val column = sample.x * 10
-        val left = SPACE_LEFT + EDGE_KEYS - column
-        val right = column - (SPACE_RIGHT - EDGE_KEYS)
         return when {
-            left > 0 -> true to left
-            right > 0 -> false to right
+            column < DEAD_LEFT -> true to DEAD_LEFT - column
+            column > DEAD_RIGHT -> false to column - DEAD_RIGHT
             else -> null
         }
     }
 
-    private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
-
     companion object {
-        const val REST_MILLIS = 140L
-        private const val REST_KEYS = .3f
         /** The ends of Space, in key widths from the left edge of the keyboard. */
         private val SPACE_LEFT = Layout.bottomWidths.take(3).sum()
         private val SPACE_RIGHT = SPACE_LEFT + Layout.bottomWidths[3]
-        /** How far in from each end of Space the cursor starts moving. */
-        private const val EDGE_KEYS = 1.35f
-        /** A little above the bottom row still counts, so a finger drifting up keeps control. */
-        private const val BOTTOM_ROW_TOP = .7f
+        /** The ends of the dead zone, a tenth of Space inside each end of Space, so that a lean starts near the ends. */
+        val DEAD_LEFT = SPACE_LEFT + (SPACE_RIGHT - SPACE_LEFT) * .1f
+        val DEAD_RIGHT = SPACE_RIGHT - (SPACE_RIGHT - SPACE_LEFT) * .1f
+        /** How near the end of the touchpad a lift must be to count as running off it. Real ones left at column 0.65 and column 9.4. */
+        private const val EDGE_ZONE_KEYS = .8f
         /**
-         * From where moving starts to the middle of ○ or fn, the second key from each end. Leaning further
-         * counts the same. Space sits in the middle of the row, so both sides match.
+         * A lift this low on the bottom row is at the bottom edge of the touchpad, which reports its last position at row 3.54. Only past
+         * the ends of Space does it count: a finger on Space moves nothing, and the next gesture lands there, within a key of such a lift.
          */
-        private val MAX_DEPTH = SPACE_LEFT + EDGE_KEYS - Layout.bottomWidths[0] - Layout.bottomWidths[1] / 2
-        /** How far out counts as reaching the edge. */
+        private const val EDGE_BOTTOM_ROW = 3.45f
+        /** Fingers that ran off an end of the touchpad came back 314 to 390 ms later and carried on for several keys. */
+        private const val EDGE_RETURN_MILLIS = 450L
+        /** They came back 0.15 to 0.48 keys from where they left. A new gesture right after a lift at an end landed over 3.5 keys away. */
+        private const val EDGE_RETURN_KEYS = 1f
+        /** The lean past the dead zone that gets the top speed. Real drags reached column 0.65 and column 9.4, where the touchpad ends. */
+        private const val MAX_LEAN = 2.9f
+        /** How far out counts as reaching the top speed. */
         private const val AT_EDGE = .97f
         private const val RAMP_MILLIS = 1000f
-        /** Letters a second at each lean, in key widths past the still spot. */
+        /** Letters a second at each lean, in key widths past the end of the dead zone. The keys beside Space are 1.2 wide. */
         private val SPEEDS = listOf(
-            0f to 1.5f, // just off the middle
-            .5f to 3f, // the precise stretch ends
-            EDGE_KEYS to 14f, // the end of Space
-            EDGE_KEYS + .65f to 22f, // the key beside Space
-            MAX_DEPTH to 28f, // ○ or fn, where holding builds up to full speed
+            0f to SLOWEST_PER_SECOND, // just past the end of the dead zone
+            .8f to 3f, // the precise stretch ends
+            1.6f to 8f,
+            2.3f to 16f,
+            MAX_LEAN to 28f, // where holding builds up to full speed
         )
-        private const val FASTEST_PER_SECOND = 52f
+        const val SLOWEST_PER_SECOND = 1.5f
+        const val FASTEST_PER_SECOND = 52f
+
+        /** How a finger becomes the cursor and how fast it moves, for the raw input log. */
+        val tuning: Map<String, Any> get() = CursorGesture.tuning + mapOf(
+            "deadLeftKeys" to DEAD_LEFT, "deadRightKeys" to DEAD_RIGHT, "maxLeanKeys" to MAX_LEAN,
+            "speedPoints" to SPEEDS.joinToString(" ") { (lean, speed) -> "$lean:$speed" },
+            "fastestPerSecond" to FASTEST_PER_SECOND, "wordSpeed" to "sqrt",
+            "edgeZoneKeys" to EDGE_ZONE_KEYS, "edgeBottomRow" to EDGE_BOTTOM_ROW, "edgeReturnMillis" to EDGE_RETURN_MILLIS, "edgeReturnKeys" to EDGE_RETURN_KEYS,
+        )
     }
 }

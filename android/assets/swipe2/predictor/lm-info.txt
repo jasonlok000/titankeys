@@ -1,0 +1,3 @@
+name=distilgpt2
+split_digits=false
+start_token=50256

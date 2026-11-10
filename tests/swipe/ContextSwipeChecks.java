@@ -75,7 +75,12 @@ public final class ContextSwipeChecks {
         check(top(predictions, "", nextWords("")).contains("i"), "A sentence start must suggest likely first words: " + top(predictions, "", nextWords("")));
         check(swipe("im", "but").get(0).equals("i'm"), "I'm must not lose to the model's low rating: " + swipe("im", "but"));
         check(swipe("in", "but").get(0).equals("in"), "A clean swipe of in must stay in: " + swipe("in", "but"));
-        check(swipe("were", "").get(0).equals("we're"), "A sentence start must prefer we're: " + swipe("were", ""));
+        SwipeShapes shapes = new SwipeShapes(new java.io.File(args[0], "english.combined"));
+        Map<String, Double> firstWords;
+        try (java.io.BufferedReader triples = new java.io.BufferedReader(new FileReader(args[0] + "/en_triples.txt"))) {
+            firstWords = FirstWords.read(triples);
+        }
+        check(firstWord("were", shapes, firstWords).get(0).equals("we're"), "A sentence start must prefer we're: " + firstWord("were", shapes, firstWords));
         check(swipe("were", "they").get(0).equals("were"), "Real context must still choose were: " + swipe("were", "they"));
         check(swipe("oclock", "at nine").get(0).equals("o'clock"), "O'clock must keep its apostrophe: " + swipe("oclock", "at nine"));
         System.out.println("Context swipe checks passed");
@@ -99,6 +104,16 @@ public final class ContextSwipeChecks {
         SwipeDecoder.Result[] results = SwipeRecognizer.contractionSpellings(
                 decoder.recognise(gesture.x, gesture.y, gesture.time, SwipeRecognizer.scoringContext(context), new float[] { 1, 0, 1 }), decoder.contextWeight());
         results = SwipeRecognizer.rank(gesture, results, decoder.contextWeight(), decoder.shapeNormalizer(), context.length, Set.of());
+        return Arrays.stream(results).map(result -> result.word).toList();
+    }
+
+    /** The words a swipe gives at the start of a sentence, where the first word counts choose between close words. */
+    private static List<String> firstWord(String letters, SwipeShapes shapes, Map<String, Double> firstWords) {
+        Swipe gesture = path(letters);
+        SwipeDecoder.Result[] results = SwipeRecognizer.contractionSpellings(
+                decoder.recognise(gesture.x, gesture.y, gesture.time, SwipeRecognizer.scoringContext(new String[0]), new float[] { 1, 0, 1 }), decoder.contextWeight());
+        results = SwipeRecognizer.ranked(gesture, results, decoder.contextWeight(), decoder.shapeNormalizer(), 0, Set.of());
+        results = SwipeRecognizer.blended(shapes, gesture, results, firstWords, SwipeRecognizer.contextStrength(0), false, word -> true);
         return Arrays.stream(results).map(result -> result.word).toList();
     }
 

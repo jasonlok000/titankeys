@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}
 adb="$sdk/platform-tools/adb"
-app=com.atlas.debug
+app=com.titankeys.debug
 manifest=android/src/main/AndroidManifest.xml
 check=android/kotlin/com/atlas/keyboard/PreviewChecks.kt
 work=$(mktemp -d)
@@ -33,7 +33,7 @@ passed=true
 for attempt in 1 2 3; do
   output=$("$adb" shell am instrument -w "$app/com.atlas.keyboard.PreviewChecks")
   printf '%s\n' "$output"
-  [[ "$output" == *"PASS preview shows a new swipe after returning from Settings"* ]] || passed=false
+  [[ "$output" == *"PASS the playground shows a new swipe after returning from Settings"* ]] || passed=false
 done
 restore
 bash tools/debug.sh --install

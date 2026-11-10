@@ -1,0 +1,1139 @@
+package com.atlas.keyboard
+
+import android.view.KeyEvent
+import com.atlas.engine.EmojiPages
+import com.atlas.keyboard.Modifiers.Level
+import com.atlas.keyboard.Modifiers.Panel
+
+private const val SHIFT = KeyEvent.KEYCODE_SHIFT_LEFT
+private const val OTHER_SHIFT = KeyEvent.KEYCODE_SHIFT_RIGHT
+private const val ALT = KeyEvent.KEYCODE_ALT_LEFT
+private const val SYM = KeyEvent.KEYCODE_SYM
+private const val LETTER = KeyEvent.KEYCODE_A
+private const val CTRL = KeyEvent.KEYCODE_CTRL_LEFT
+private const val OTHER_CTRL = KeyEvent.KEYCODE_CTRL_RIGHT
+private const val FN = KeyEvent.KEYCODE_FUNCTION
+
+/** How long an ordinary press stays down. */
+private const val PRESS = 80L
+/** The time between the two presses of a double press. */
+private const val GAP = 100L
+/** Long enough to type a word or draw a swipe. */
+private const val WORD = 900L
+
+fun main() {
+    onePress()
+    aLongPushStaysOn()
+    holdAndType()
+    quickHoldAndType()
+    pressThenHoldAndType()
+    doublePress()
+    doublePressAndTypeQuickly()
+    doublePressDoesNotLockWhenOff()
+    quickSecondPressIsTheSameForShiftAndAlt()
+    slowSecondPressTurnsOffWhenLocksIsOff()
+    lateSecondPress()
+    realHoldThenType()
+    realRolledRelease()
+    realSinglePress()
+    realDoublePress()
+    realLongHoldWithRepeats()
+    lostRelease()
+    discardedKeys()
+    appPushes()
+    lockedThenHold()
+    bothShiftKeys()
+    shortcutWhileHeld()
+    alt()
+    symCycle()
+    symHasNoLock()
+    panelIsAToggle()
+    panelStaysWhileTyping()
+    closingThePanel()
+    panelAndOtherModifiers()
+    altOpensQuickSettings()
+    altGoesBackFromQuickSettings()
+    otherKeysLeaveQuickSettings()
+    quickSettingsHoldNoStickyAlt()
+    quickSettingsTable()
+    panelScrollKeys()
+    restingOnP()
+    symbolAndEmojiPages()
+    aFingerOnBackOpensNoGroup()
+    bottomRow()
+    onlyOneModifier()
+    repeatsAndStrayEvents()
+    ctrlShowsInTheBarAtOnce()
+    theShortcutsFitOneLine()
+    stickyShiftAndCapsShowInTheBar()
+    stickyShiftLeavesTheBarWhenItIsUsed()
+    aHeldShiftShowsInTheBar()
+    altShowsTheSymbolOfAKey()
+    aHeldAltShowsInTheBar()
+    theBarShowsEveryModifierThatIsOn()
+    ctrlIsNotAToggle()
+    ctrlLeavesTheSymPanelAlone()
+    ctrlLeavesStickyKeysAlone()
+    bothCtrlKeys()
+    fnIsNotCtrlByDefault()
+    fnAsCtrl()
+    fnAndKeyMapperAreOneCtrl()
+    closingThePanelLeavesCtrlHeld()
+    clearingCtrl()
+    ctrlThroughAFieldStart()
+    ctrlMetaState()
+    ctrlActions()
+    steadyKeyIgnoresFlicker()
+    cornersKeepContentClear()
+    theGuideCanOpenAPanel()
+    println("Modifier checks passed")
+}
+
+/** The interactive guide puts the keyboard in the menu that a step needs. */
+private fun theGuideCanOpenAPanel() = Keyboard().run {
+    press(SHIFT)
+    modifiers.openPanel(Panel.Symbols)
+    same(modifiers.panel, Panel.Symbols, "The guide can open the symbols")
+    same(shift, Level.Off, "Opening the panel turns Shift off, as Sym does")
+    modifiers.openPanel(Panel.Settings)
+    modifiers.toggleSettings()
+    same(modifiers.panel, Panel.Symbols, "From quick settings that the guide opened, Alt goes back to the symbols")
+    modifiers.openPanel(Panel.Closed)
+    same(modifiers.panel, Panel.Closed, "The guide can close the panel")
+}
+
+private fun steadyKeyIgnoresFlicker() {
+    val steady = SteadyKey(Layout::keyAt)
+    same(steady.touch(.15f, .15f), true, "A first touch must mark its key")
+    same(steady.key, "W", "The first touch is on W")
+    same(steady.touch(.201f, .15f), false, "A finger on the line between two keys must keep the key it had")
+    same(steady.key, "W", "The mark must stay on W at the line")
+    same(steady.touch(.25f, .15f), true, "A finger well inside the next key must move the mark")
+    same(steady.key, "E", "The mark must move to E")
+    steady.lift(1_000)
+    same(steady.expire(1_100), false, "A short lift must keep the key, as a resting finger lifts often")
+    same(steady.key, "E", "The key must stay through a short lift")
+    same(steady.touch(.25f, .15f), false, "The finger coming back to the same key changes nothing")
+    steady.lift(2_000)
+    same(steady.expire(2_000 + SteadyKey.LIFT_MILLIS), true, "A finger that stays off must clear the key")
+    same(steady.key, "", "No key must show after the finger has gone")
+}
+
+private fun cornersKeepContentClear() {
+    val corners = Corners(100f)
+    same(corners.inset(0f), 100, "At the bottom edge content must keep the whole radius from the side")
+    same(corners.inset(50f), 14, "Halfway up the corner content must keep the width of the curve there")
+    same(corners.inset(100f), 0, "Above the corner nothing must move")
+    same(Corners.None.inset(0f), 0, "With square corners nothing must move")
+}
+
+private fun same(actual: Any?, expected: Any?, message: String) {
+    if (actual != expected) throw AssertionError("$message\n  expected: $expected\n  actual:   $actual")
+}
+
+/** Plays key events into one [Modifiers], with a clock that moves forward between them. */
+private class Keyboard {
+    val modifiers = Modifiers().apply { doublePressLocks = true }
+    private var now = 1_000L
+
+    val shift get() = modifiers.shift
+
+    fun down(code: Int = SHIFT) = modifiers.down(code, now)
+
+    fun up(code: Int = SHIFT, after: Long = PRESS) {
+        idle(after)
+        modifiers.up(code, now)
+    }
+
+    fun idle(millis: Long) {
+        now += millis
+    }
+
+    /** The modifier bar, with a finger on [hover]. Here Alt types % on Q and nothing on the other keys. */
+    fun bar(hover: String = "") = ModifierBar.of(modifiers, hover) { key -> "%".takeIf { key == "Q" } }
+
+    fun press(code: Int = SHIFT) {
+        down(code)
+        up(code)
+    }
+
+    /** Characters or a finished swipe, which all use the modifiers in the same way. */
+    fun type(count: Int = 1) = repeat(count) { modifiers.consume() }
+
+    /** A push in an app that takes key presses before the keyboard. */
+    fun appPush(code: Int = SHIFT, repeat: Int = 0) = modifiers.appPush(code, now, repeat)
+
+    fun appRelease(code: Int = SHIFT, after: Long = PRESS): Boolean {
+        idle(after)
+        return modifiers.appRelease(code, now)
+    }
+
+    fun appPressed(code: Int = SHIFT) = appPush(code).also { appRelease(code) }
+}
+
+private fun onePress() = Keyboard().run {
+    press()
+    same(shift, Level.Once, "One press must stay on after the key is let go")
+    type()
+    same(shift, Level.Off, "One press must capitalise only the next character")
+    type()
+    same(shift, Level.Off, "One press must not come back")
+}
+
+private fun aLongPushStaysOn() {
+    for (code in listOf(SHIFT, ALT)) Keyboard().run {
+        fun level() = if (code == SHIFT) shift else modifiers.alt
+        down(code)
+        up(code, after = WORD)
+        same(level(), Level.Once, "A long push that typed nothing must stay on for the next key")
+        idle(WORD)
+        press(code)
+        same(level(), Level.Off, "The next push must turn the key off")
+    }
+}
+
+private fun holdAndType() = Keyboard().run {
+    down()
+    repeat(5) {
+        type()
+        same(shift, Level.Once, "Shift must stay on for each character while it is held")
+        idle(120)
+    }
+    up()
+    same(shift, Level.Off, "Holding Shift for a word must leave the next word normal")
+}
+
+private fun quickHoldAndType() = Keyboard().run {
+    down()
+    type()
+    up(after = 60)
+    same(shift, Level.Off, "A short hold for one character must also end with the key")
+}
+
+private fun pressThenHoldAndType() = Keyboard().run {
+    press()
+    idle(GAP)
+    down()
+    same(shift, Level.Locked, "A second press in time locks at first")
+    type(5)
+    same(shift, Level.Locked, "Shift must stay on for the whole word")
+    up(after = WORD)
+    same(shift, Level.Locked, "A lock must stay after the key is let go, as it does for Alt")
+}
+
+private fun doublePress() = Keyboard().run {
+    press()
+    idle(GAP)
+    press()
+    same(shift, Level.Locked, "A double press must lock")
+    type(12)
+    same(shift, Level.Locked, "A lock must stay on while typing")
+    idle(WORD)
+    press()
+    same(shift, Level.Off, "A third press must unlock")
+}
+
+private fun doublePressDoesNotLockWhenOff() = Keyboard().run {
+    same(Modifiers().doublePressLocks, false, "A double press must not lock by default")
+    modifiers.doublePressLocks = false
+    press()
+    same(shift, Level.Once, "One press must still capitalise the next character")
+    idle(GAP)
+    press()
+    same(shift, Level.Once, "A quick second press must leave Shift on for one character")
+    idle(GAP)
+    press()
+    same(shift, Level.Off, "A third press must turn Shift off")
+    idle(GAP)
+    press()
+    same(shift, Level.Once, "The next press must start again")
+    type()
+    same(shift, Level.Off, "That press must capitalise only the next character")
+    idle(WORD)
+    press()
+    idle(GAP)
+    down()
+    type(5)
+    up(after = WORD)
+    same(shift, Level.Off, "A press and then a hold must leave Shift off")
+    idle(WORD)
+    press(ALT)
+    idle(GAP)
+    press(ALT)
+    same(modifiers.alt, Level.Once, "A quick second press must leave Alt on for one character")
+}
+
+private fun quickSecondPressIsTheSameForShiftAndAlt() {
+    for (code in listOf(SHIFT, ALT)) Keyboard().run {
+        modifiers.doublePressLocks = false
+        fun level() = if (code == SHIFT) shift else modifiers.alt
+        press(code)
+        idle(GAP)
+        press(code)
+        same(level(), Level.Once, "Two quick pushes must leave the key on")
+        idle(WORD)
+        same(level(), Level.Once, "The key must stay on until a character is typed, however long it takes")
+        type()
+        same(level(), Level.Off, "Two quick pushes must apply to exactly the next character")
+        type(3)
+        same(level(), Level.Off, "The key must not come back after that character")
+        idle(WORD)
+        press(code)
+        same(level(), Level.Once, "A later press must start a new one")
+    }
+}
+
+private fun slowSecondPressTurnsOffWhenLocksIsOff() {
+    for (code in listOf(SHIFT, ALT)) Keyboard().run {
+        modifiers.doublePressLocks = false
+        fun level() = if (code == SHIFT) shift else modifiers.alt
+        press(code)
+        idle(Modifiers.DOUBLE_PRESS_MILLIS)
+        press(code)
+        same(level(), Level.Off, "A slow second push must turn the key off")
+        type(2)
+        same(level(), Level.Off, "The key must stay off after a slow second push")
+    }
+}
+
+private fun doublePressAndTypeQuickly() = Keyboard().run {
+    // Fast typists press the next letter before the second press is fully let go.
+    press()
+    idle(GAP)
+    down()
+    idle(30)
+    type()
+    up(after = 50)
+    same(shift, Level.Locked, "A letter that overlaps a double press must not undo the lock")
+    type(3)
+    same(shift, Level.Locked, "The lock must stay on after the overlap")
+}
+
+private fun lateSecondPress() = Keyboard().run {
+    press()
+    idle(Modifiers.DOUBLE_PRESS_MILLIS)
+    press()
+    same(shift, Level.Off, "A second press after the double press time must turn Shift off")
+}
+
+// The orders and times below come from real key presses on the phone. A letter is typed when its key goes down, and its
+// release does not reach Modifiers, so only a letter's press appears here.
+
+private fun realHoldThenType() = Keyboard().run {
+    modifiers.doublePressLocks = false
+    down()
+    idle(107)
+    type()
+    same(shift, Level.Once, "Shift must stay on while it is held")
+    idle(128)
+    up(after = 121)
+    same(shift, Level.Off, "After Shift is let go the next character must be normal")
+    idle(240)
+    type()
+    same(shift, Level.Off, "Typing the next character must not turn Shift on again")
+}
+
+private fun realRolledRelease() = Keyboard().run {
+    modifiers.doublePressLocks = false
+    down()
+    idle(56)
+    type()
+    // The letter's own release comes after Shift's, which Modifiers does not see.
+    up(after = 113)
+    same(shift, Level.Off, "Shift let go before the letter must still end with the key")
+    idle(240)
+    type()
+    same(shift, Level.Off, "The next character after a rolled release must be normal")
+}
+
+private fun realSinglePress() = Keyboard().run {
+    modifiers.doublePressLocks = false
+    down()
+    up(after = 76)
+    same(shift, Level.Once, "One real press must stay on for the next character")
+    idle(160)
+    type()
+    same(shift, Level.Off, "One real press must capitalise only the next character")
+    idle(250)
+    type()
+    same(shift, Level.Off, "One real press must not come back")
+}
+
+private fun realDoublePress() = Keyboard().run {
+    same(modifiers.doublePressLocks, true, "This helper starts with the setting on")
+    modifiers.doublePressLocks = false
+    down()
+    up(after = 62)
+    idle(110)
+    down()
+    up(after = 82)
+    same(shift, Level.Once, "With the setting off, two quick real presses must stay on for one character")
+    idle(120)
+    type()
+    same(shift, Level.Off, "Two quick real presses must capitalise only the next character")
+    repeat(4) {
+        idle(120)
+        type()
+        same(shift, Level.Off, "Each letter after that must be lowercase")
+    }
+}
+
+private fun realLongHoldWithRepeats() = Keyboard().run {
+    modifiers.doublePressLocks = false
+    down()
+    // The key's repeats start after 400 ms and do not reach down, because Modifiers.key drops them.
+    idle(1165)
+    type()
+    idle(100)
+    up(after = 200)
+    same(shift, Level.Off, "A long hold with repeats must end with the key")
+}
+
+private fun lostRelease() = Keyboard().run {
+    modifiers.doublePressLocks = false
+    down()
+    type()
+    // The release never reached the keyboard, so this press is the next one.
+    idle(2000)
+    down()
+    same(shift, Level.Once, "A press after a lost release must count as a new press")
+    same(modifiers.isHeld(SHIFT), true, "The new press must still be held")
+    up(after = 60)
+    same(shift, Level.Once, "One press after a lost release must stay on for the next character")
+    type()
+    same(shift, Level.Off, "That press must capitalise only the next character")
+}
+
+private fun discardedKeys() {
+    same(Modifiers.survivesDiscard(SHIFT, down = true), true, "A Shift press must survive when typing is dropped")
+    same(Modifiers.survivesDiscard(ALT, down = true), true, "An Alt press must survive when typing is dropped")
+    same(Modifiers.survivesDiscard(SYM, down = true), true, "A Sym press must survive when typing is dropped")
+    same(Modifiers.survivesDiscard(LETTER, down = true), false, "A letter press must go when typing is dropped")
+    same(Modifiers.survivesDiscard(LETTER, down = false), true, "A release must always survive")
+    same(Modifiers.survivesDiscard(SHIFT, down = false), true, "A Shift release must always survive")
+}
+
+private fun appPushes() {
+    for (code in listOf(SHIFT, ALT)) {
+        Keyboard().run {
+            fun level() = if (code == SHIFT) shift else modifiers.alt
+            modifiers.doublePressLocks = false
+            same(appPush(code), Modifiers.AppPush.Pass, "The app must see the first push")
+            same(appRelease(code), false, "The app must see the release of a push that it saw")
+            same(level(), Level.Once, "The first push must stay on for the next character")
+            idle(GAP)
+            same(appPush(code), Modifiers.AppPush.Hide, "With the setting off, the app must not see a quick second push")
+            same(appPush(code, repeat = 1), Modifiers.AppPush.Hide, "The repeats of a hidden push must stay hidden")
+            same(level(), Level.Once, "A quick second push must leave the key on")
+            same(appRelease(code), true, "The app must not see the release of a hidden push")
+            type()
+            same(level(), Level.Off, "That key must apply to one character only")
+            same(appPressed(code), Modifiers.AppPush.Pass, "After a character, the next push is a first push again")
+        }
+        Keyboard().run {
+            fun level() = if (code == SHIFT) shift else modifiers.alt
+            modifiers.doublePressLocks = false
+            appPressed(code)
+            idle(WORD)
+            same(appPush(code), Modifiers.AppPush.HideAndClear, "A slow second push must not reach the app, and turns the app's key off")
+            same(level(), Level.Off, "A slow second push must turn the key off")
+            same(appRelease(code), true, "A slow second push's release must stay hidden too")
+            same(appPush(code), Modifiers.AppPush.Pass, "The next push is a first push")
+        }
+        Keyboard().run {
+            modifiers.doublePressLocks = false
+            appPressed(code)
+            idle(GAP)
+            same(appPush(code), Modifiers.AppPush.Hide, "A quick second push must be hidden")
+            modifiers.clear()
+            same(appRelease(code), false, "A new field must forget a hidden push")
+        }
+        Keyboard().run {
+            fun level() = if (code == SHIFT) shift else modifiers.alt
+            same(modifiers.doublePressLocks, true, "This helper starts with the setting on")
+            appPressed(code)
+            idle(GAP)
+            same(appPush(code), Modifiers.AppPush.Pass, "With the setting on, a quick second push must pass so that the app locks too")
+            same(level(), Level.Locked, "With the setting on, a quick second push must lock")
+            same(appRelease(code), false, "The app must see the release of the push that locks")
+            idle(WORD)
+            same(appPressed(code), Modifiers.AppPush.Pass, "The app must see the push that unlocks")
+            same(level(), Level.Off, "A third push must unlock")
+            idle(WORD)
+            appPressed(code)
+            idle(WORD)
+            same(appPush(code), Modifiers.AppPush.HideAndClear, "With the setting on, a slow second push must not lock the app")
+        }
+    }
+    Keyboard().run {
+        same(appPush(LETTER), Modifiers.AppPush.Pass, "A letter is not hidden as a push")
+        same(modifiers.isHeld(LETTER), false, "A letter must not count as held")
+        modifiers.doublePressLocks = false
+        appPressed(SHIFT)
+        idle(GAP)
+        type()
+        same(shift, Level.Off, "A letter typed between two pushes uses up the first push")
+        idle(GAP)
+        same(appPush(SHIFT), Modifiers.AppPush.Pass, "After a letter, the next push is a first push again")
+        type()
+        same(appRelease(SHIFT), false, "The app must see the release of that push")
+    }
+}
+
+private fun lockedThenHold() = Keyboard().run {
+    press()
+    idle(GAP)
+    press()
+    idle(WORD)
+    down()
+    same(shift, Level.Off, "Pressing a locked Shift must unlock it at once")
+    type(5)
+    up(after = WORD)
+    same(shift, Level.Off, "A hold that unlocks must not turn Shift back on")
+}
+
+private fun bothShiftKeys() = Keyboard().run {
+    modifiers.doublePressLocks = false
+    down(SHIFT)
+    down(OTHER_SHIFT)
+    type(5)
+    up(OTHER_SHIFT, after = WORD)
+    same(shift, Level.Once, "Shift stays on while the other Shift key is held")
+    up(SHIFT)
+    same(shift, Level.Off, "Shift ends with the last Shift key")
+}
+
+private fun shortcutWhileHeld() = Keyboard().run {
+    down()
+    modifiers.useHeld()
+    same(shift, Level.Once, "A shortcut leaves Shift on while it is held")
+    up(after = 60)
+    same(shift, Level.Off, "A shortcut uses the held Shift")
+}
+
+private fun alt() {
+    Keyboard().run {
+        down(ALT)
+        up(ALT, after = WORD)
+        same(modifiers.alt, Level.Once, "A long press of Alt must stay on for the next key")
+        type()
+        same(modifiers.alt, Level.Off, "One press of Alt must end after one character")
+    }
+    Keyboard().run {
+        down(ALT)
+        type()
+        up(ALT)
+        same(modifiers.alt, Level.Off, "Alt held for a character must end with the key")
+    }
+    Keyboard().run {
+        press(ALT)
+        idle(GAP)
+        down(ALT)
+        type()
+        up(ALT, after = WORD)
+        same(modifiers.alt, Level.Locked, "A double press of Alt must lock even when held")
+    }
+}
+
+private fun symCycle() = Keyboard().run {
+    same(modifiers.panel, Panel.Closed, "The panel must start closed")
+    press(SYM)
+    same(modifiers.panel, Panel.Symbols, "The first press of Sym must show symbols")
+    idle(WORD)
+    press(SYM)
+    same(modifiers.panel, Panel.Emoji, "The second press of Sym must show emoji")
+    idle(WORD)
+    press(SYM)
+    same(modifiers.panel, Panel.Closed, "The third press of Sym must go back to normal typing")
+    idle(WORD)
+    press(SYM)
+    same(modifiers.panel, Panel.Symbols, "The cycle must start again")
+}
+
+private fun symHasNoLock() = Keyboard().run {
+    press(SYM)
+    idle(GAP)
+    press(SYM)
+    same(modifiers.panel, Panel.Emoji, "A quick second press of Sym must move on, not lock")
+    idle(GAP)
+    press(SYM)
+    same(modifiers.panel, Panel.Closed, "A quick third press of Sym must close the panel")
+}
+
+private fun panelIsAToggle() {
+    Keyboard().run {
+        down(SYM)
+        same(modifiers.panel, Panel.Symbols, "The panel must open when Sym goes down")
+        same(modifiers.isHeld(SYM), true, "Sym must count as held while it is down")
+        up(SYM, after = WORD)
+        same(modifiers.panel, Panel.Symbols, "The panel must stay open after Sym is let go")
+        same(modifiers.isHeld(SYM), false, "Sym must not count as held after it is let go")
+    }
+    Keyboard().run {
+        down(SYM)
+        down(SYM)
+        same(modifiers.panel, Panel.Symbols, "A second down without an up must not move the panel on")
+    }
+    Keyboard().run {
+        press(SYM)
+        up(SYM, after = WORD)
+        same(modifiers.panel, Panel.Symbols, "An up without a down must change nothing")
+    }
+}
+
+private fun panelStaysWhileTyping() = Keyboard().run {
+    press(SYM)
+    type(3)
+    same(modifiers.panel, Panel.Symbols, "Only a pick closes the panel, not other typing")
+    down(SYM)
+    type()
+    up(SYM)
+    same(modifiers.panel, Panel.Emoji, "Holding Sym while typing must not close the panel")
+}
+
+private fun closingThePanel() {
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(SYM)
+        modifiers.closePanel()
+        same(modifiers.panel, Panel.Closed, "A pick must go back to normal typing")
+        idle(WORD)
+        press(SYM)
+        same(modifiers.panel, Panel.Symbols, "After a pick the cycle must start at symbols")
+    }
+    Keyboard().run {
+        press(SYM)
+        modifiers.clear()
+        same(modifiers.panel, Panel.Closed, "Clear must close the panel")
+        down(SYM)
+        same(modifiers.panel, Panel.Symbols, "Clear must forget that Sym was down")
+    }
+}
+
+private fun panelAndOtherModifiers() {
+    Keyboard().run {
+        press(SHIFT)
+        idle(WORD)
+        press(SYM)
+        same(shift, Level.Off, "Sym must turn Shift off")
+        same(modifiers.panel, Panel.Symbols, "Sym must open the panel with Shift on")
+    }
+    Keyboard().run {
+        press(ALT)
+        idle(WORD)
+        press(SYM)
+        same(modifiers.alt, Level.Off, "Sym must turn Alt off")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(SHIFT)
+        same(modifiers.panel, Panel.Closed, "Shift must close the panel")
+        same(shift, Level.Once, "Shift must be on after it closes the panel")
+    }
+    Keyboard().run {
+        down(SYM)
+        press(SHIFT)
+        type()
+        same(shift, Level.Off, "A held Sym must not keep one press of Shift on")
+    }
+}
+
+private fun altOpensQuickSettings() {
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        same(modifiers.panel, Panel.Settings, "Alt must open the quick settings from the symbols")
+        same(modifiers.alt, Level.Off, "Alt must not turn on when it opens the quick settings")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        same(modifiers.panel, Panel.Settings, "Alt must open the quick settings from the emoji")
+    }
+    Keyboard().run {
+        press(ALT)
+        same(modifiers.panel, Panel.Closed, "Alt must not open the panel when the panel is closed")
+        same(modifiers.alt, Level.Once, "Alt must still turn on when the panel is closed")
+    }
+    Keyboard().run {
+        press(SYM)
+        modifiers.toggleSettings()
+        same(modifiers.panel, Panel.Settings, "The Settings key on the screen must do what Alt does")
+        modifiers.closePanel()
+        modifiers.toggleSettings()
+        same(modifiers.panel, Panel.Closed, "The Settings key must do nothing when the panel is closed")
+    }
+}
+
+private fun altGoesBackFromQuickSettings() {
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        idle(WORD)
+        press(ALT)
+        same(modifiers.panel, Panel.Symbols, "A second Alt must go back to the symbols")
+        same(modifiers.alt, Level.Off, "A second Alt must not turn Alt on")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        idle(WORD)
+        press(ALT)
+        same(modifiers.panel, Panel.Emoji, "A second Alt must go back to the emoji")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        idle(GAP)
+        press(ALT)
+        idle(GAP)
+        press(ALT)
+        same(modifiers.panel, Panel.Settings, "A quick third Alt must open the quick settings again, and must not lock Alt")
+        same(modifiers.alt, Level.Off, "Quick Alt pushes must not turn Alt on while the panel is open")
+    }
+}
+
+private fun otherKeysLeaveQuickSettings() {
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        idle(WORD)
+        press(SYM)
+        same(modifiers.panel, Panel.Closed, "Sym must close the panel from the quick settings")
+        idle(WORD)
+        press(SYM)
+        same(modifiers.panel, Panel.Symbols, "After that the cycle must start at the symbols")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        idle(WORD)
+        press(SHIFT)
+        same(modifiers.panel, Panel.Closed, "Shift must close the panel from the quick settings")
+        same(shift, Level.Once, "Shift must be on after it closes the quick settings")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        modifiers.closePanel()
+        same(modifiers.panel, Panel.Closed, "A push on the quick settings page must go back to normal typing")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        modifiers.clear()
+        same(modifiers.panel, Panel.Closed, "A new field must close the quick settings")
+    }
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        press(ALT)
+        down(CTRL)
+        same(modifiers.panel, Panel.Settings, "Ctrl must leave the quick settings open")
+        up(CTRL)
+        same(modifiers.panel, Panel.Settings, "The quick settings must stay when Ctrl is let go")
+    }
+}
+
+private fun quickSettingsHoldNoStickyAlt() = Keyboard().run {
+    press(SYM)
+    idle(WORD)
+    down(ALT)
+    same(modifiers.panel, Panel.Settings, "The page must open when Alt goes down")
+    modifiers.closePanel()
+    up(ALT)
+    same(modifiers.alt, Level.Off, "Alt let go after a push on the page must leave Alt off")
+    idle(WORD)
+    press(ALT)
+    same(modifiers.alt, Level.Once, "The next Alt must be a normal Alt")
+    same(modifiers.panel, Panel.Closed, "The next Alt must not open the panel")
+}
+
+private fun quickSettingsTable() {
+    val expected = mapOf(
+        "F" to QuickSetting.Autocorrect, "S" to QuickSetting.SwipeTyping, "W" to QuickSetting.SuggestionBar,
+        "C" to QuickSetting.AutoCapitalise, "D" to QuickSetting.AutoPunctuation, "V" to QuickSetting.Vibration,
+        "H" to QuickSetting.HoldSymbols, "M" to QuickSetting.CursorControl, "L" to QuickSetting.DoublePressLocks,
+        "R" to QuickSetting.ScrollAssistant, "O" to QuickSetting.OpenSettings, "K" to QuickSetting.ChangeKeyboard,
+    )
+    same(QuickSetting.entries.associateBy { it.key }, expected, "Each item must be on the letter it is named after, and on one key only")
+    same(QuickSetting.on("F"), QuickSetting.Autocorrect, "A letter must find its item")
+    same(QuickSetting.on("Q"), null, "A key with no item must find nothing")
+    same(QuickSetting.on(Layout.ALT), null, "The Alt place has no setting")
+    for (item in QuickSetting.entries) {
+        same(Layout.isLetter(item.key), true, "${item.title} must be on a letter key of the panel")
+        same(item.label.length <= 5 && '\n' !in item.label, true, "${item.title} must have a short label on one line")
+        same(item.title.isNotBlank() && item.title.length >= item.label.length, true, "${item.title} must have its full name")
+    }
+}
+
+private fun panelScrollKeys() {
+    for (panel in listOf(Panel.Emoji, Panel.Symbols)) {
+        same(Modifiers.panelScroll(KeyEvent.KEYCODE_DEL, panel), 1f, "On $panel Backspace must do what a swipe down does")
+        same(Modifiers.panelScroll(KeyEvent.KEYCODE_ENTER, panel), -1f, "On $panel Enter must do what a swipe up does")
+        same(Modifiers.panelScroll(KeyEvent.KEYCODE_NUMPAD_ENTER, panel), -1f, "On $panel the other Enter key must do the same")
+    }
+    val keys = listOf(KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER)
+    for (code in keys) {
+        same(Modifiers.panelScroll(code, Panel.Settings), 0f, "On the quick settings page key $code must do nothing and not reach the text")
+        same(Modifiers.panelScroll(code, Panel.Closed), null, "With the panel closed key $code must reach the text")
+    }
+    for (panel in Panel.entries) {
+        same(Modifiers.panelScroll(LETTER, panel), null, "A letter must not turn the page")
+        same(Modifiers.panelScroll(KeyEvent.KEYCODE_SPACE, panel), null, "Space must not turn the page")
+    }
+    same(Layout.rows[1].last(), Layout.BACKSPACE, "Backspace must be at the end of the second row")
+    same(Layout.rows[2].last(), Layout.ENTER, "Enter must be at the end of the third row")
+}
+
+private fun restingOnP() {
+    same(Layout.restingKeyAt(.95f, .15f), "P", "The middle of P must be P")
+    same(Layout.restingKeyAt(.88f, .15f), "P", "A finger at the left of P, read at the right of O, must be P")
+    same(Layout.restingKeyAt(.86f, .15f), "O", "A finger on O must still be O")
+    same(Layout.restingKeyAt(.95f, .28f), "P", "A finger low on P, read at the top of Backspace, must be P")
+    same(Layout.restingKeyAt(.95f, .4f), "⌫", "A finger in the middle of Backspace must stay Backspace")
+    same(Layout.restingKeyAt(.05f, .15f), "Q", "Other keys must not change")
+    same(Layout.restingKeyAt(.88f, .4f), "L", "The key under O must not change")
+    same(Layout.restingKeyAt(.88f, .65f), Layout.SYM, "The right of Sym must stay Sym")
+    same(Layout.restingKeyAt(.95f, .65f), Layout.ENTER, "Enter must stay Enter")
+    same(Layout.restingKeyAt(.45f, .85f), Layout.SPACE, "The bottom row must not change")
+    same(Layout.restingKeyAt(Float.NaN, .15f), "", "A place off the keyboard must be no key")
+}
+
+/** The symbol and emoji pages read the place under a finger as it is, and hold nothing in the last column. */
+private fun symbolAndEmojiPages() {
+    same(Layout.panelLetters.size, EmojiPages.PER_PAGE, "A page must hold one item for each letter key that shows one")
+    for (key in listOf("Q", "A", "P")) same(key in Layout.panelLetters, false, "$key must hold no symbol or emoji")
+    same(Layout.letterKeys.size, 26, "Every letter key must still have a place in the panel")
+    same(Layout.panelLetters.take(9), listOf("W", "E", "R", "T", "Y", "U", "I", "O", "S"), "The items must go on from O to S")
+    for (key in listOf("Q", "A", "P")) same(QuickSetting.on(key), null, "The quick settings page must leave $key empty, where the touchpad reads badly")
+    same(Layout.PAGE_POSITION, "P", "P must show the page position")
+    for (key in listOf(Layout.ALT, Layout.SYM, Layout.BACKSPACE, Layout.ENTER)) for (itemPage in listOf(true, false))
+        same(Layout.restMarks(key, itemPage), false, "A finger on the icon at $key must mark nothing")
+    same(Layout.restMarks("P", itemPage = true), false, "P must show no mark on a page of symbols or emoji")
+    same(Layout.restMarks("P", itemPage = false), true, "P must show a mark on the quick settings page")
+    same(Layout.restMarks("W", itemPage = true), true, "A letter key must show a mark")
+    same(Layout.keyAt(.88f, .15f), "O", "The right of O must be O")
+    same(Layout.keyAt(.88f, .4f), "L", "The right of L must be L")
+    same(Layout.keyAt(.88f, .65f), Layout.SYM, "The right of Sym must be Sym")
+    same(Layout.keyAt(.95f, .15f), "P", "The middle of P must be P")
+    same(Layout.keyAt(.95f, .28f), Layout.BACKSPACE, "The top of Backspace must be Backspace")
+}
+
+/** Real pushes of Back land on the bottom row first, between .12 and .34 across, and moved at most .055 before the key went down. */
+private fun aFingerOnBackOpensNoGroup() {
+    for (landed in listOf(.119f, .222f, .264f, .336f)) {
+        same(Layout.isBottomRow(.87f), true, "A finger on its way to Back is on the bottom row")
+        same(Layout.movedAlongBottomRow(landed, landed), false, "A finger that only lands must open no group")
+        same(Layout.movedAlongBottomRow(landed, landed + .055f), false, "The most that a real push of Back moved must open no group")
+        same(Layout.movedAlongBottomRow(landed, landed - .055f), false, "The same to the left must open no group")
+        same(Layout.movedAlongBottomRow(landed, landed + .1f), true, "A finger that moves one key along the row must choose a group")
+        same(Layout.movedAlongBottomRow(landed, landed - .1f), true, "The same to the left must choose a group")
+    }
+}
+
+private fun bottomRow() {
+    same(Layout.isBottomRow(.74f), false, "The last letter row must not be the bottom row")
+    same(Layout.isBottomRow(.75f), true, "The bottom row must start at three quarters of the height")
+    same(Layout.isBottomRow(1f), true, "The bottom edge is on the bottom row")
+    same(Layout.keyAt(.5f, .8f), Layout.SPACE, "Space must be on the bottom row")
+    val space = Layout.bottomSpan(Layout.SPACE)
+    same(kotlin.math.abs(space.first - .36f) < 1e-5f, true, "Space must start at its place on the row")
+    same(kotlin.math.abs(space.second - .64f) < 1e-5f, true, "Space must end at its place on the row")
+    val fn = Layout.bottomSpan(Layout.FN)
+    same(kotlin.math.abs(fn.first - .76f) < 1e-5f && kotlin.math.abs(fn.second - .88f) < 1e-5f, true, "fn must cover its place on the row")
+}
+
+private fun onlyOneModifier() = Keyboard().run {
+    press(SHIFT)
+    idle(WORD)
+    press(ALT)
+    same(shift, Level.Off, "Alt must turn Shift off")
+    same(modifiers.alt, Level.Once, "Alt must be on")
+}
+
+private fun repeatsAndStrayEvents() {
+    Keyboard().run {
+        down()
+        down()
+        same(shift, Level.Once, "A second down without an up must not count as a double press")
+    }
+    Keyboard().run {
+        press()
+        up(after = WORD)
+        same(shift, Level.Once, "An up without a down must change nothing")
+    }
+    Keyboard().run {
+        down()
+        same(modifiers.isHeld(SHIFT), true, "Shift must count as held while it is down")
+        modifiers.clear()
+        same(modifiers.isHeld(SHIFT), false, "Clear must forget held keys")
+        up(after = WORD)
+        same(shift, Level.Off, "An up after clear must change nothing")
+    }
+    Keyboard().run {
+        down(LETTER)
+        same(modifiers.isHeld(LETTER), false, "A letter is not a modifier")
+        same(shift, Level.Off, "A letter must not turn Shift on")
+        same(Modifiers.isModifier(SHIFT) && Modifiers.isModifier(ALT) && Modifiers.isModifier(SYM), true, "Shift, Alt and Sym are modifiers")
+        same(Modifiers.isModifier(LETTER), false, "A letter is not a modifier")
+    }
+}
+
+private fun ctrlShowsInTheBarAtOnce() = Keyboard().run {
+    same(bar(), null, "With no modifier on there must be no bar, so the words show")
+    down(CTRL)
+    same(modifiers.ctrlHeld, true, "Ctrl must count as held while it is down")
+    same(bar()?.chips, listOf(ModifierBar.CTRL), "Ctrl must show as soon as it goes down")
+    same(bar()?.hint, ModifierBar.SHORTCUTS, "With no finger on a key, the bar must list the shortcuts")
+    same(bar("C")?.hint, "C Copy", "A finger on a key with a shortcut must show that shortcut")
+    same(bar("Q")?.hint, ModifierBar.SHORTCUTS, "A finger on a key with no shortcut must leave the list")
+    idle(WORD)
+    same(bar()?.chips, listOf(ModifierBar.CTRL), "Ctrl must stay in the bar for as long as it is down")
+    up(CTRL)
+    same(bar(), null, "The words must come back when Ctrl is let go")
+    same(modifiers.ctrlHeld, false, "Ctrl must not stay on after it is let go")
+}
+
+private fun theShortcutsFitOneLine() {
+    same(ModifierBar.SHORTCUTS, "A all  C copy  X cut  V paste  Z undo  Y redo", "The six shortcuts must be short")
+}
+
+private fun stickyShiftAndCapsShowInTheBar() = Keyboard().run {
+    press(SHIFT)
+    same(bar()?.chips, listOf(ModifierBar.SHIFT), "A press of Shift must show Shift")
+    same(bar()?.hint, "", "With no finger on a key there is nothing more to show")
+    same(bar("Q")?.hint, "Q", "A finger on a letter must show its capital")
+    same(bar(Layout.SPACE)?.hint, "", "A finger on a key that is not a letter must show nothing")
+    idle(GAP)
+    press(SHIFT)
+    same(shift, Level.Locked, "A quick second press must lock Shift")
+    same(bar()?.chips, listOf(ModifierBar.CAPS), "A locked Shift must show as Caps and not as Shift")
+    same(bar("Q")?.hint, "Q", "A finger on a letter must show its capital with Caps")
+    idle(WORD)
+    press(SHIFT)
+    same(bar(), null, "The words must come back when Shift goes off")
+}
+
+private fun stickyShiftLeavesTheBarWhenItIsUsed() = Keyboard().run {
+    press(SHIFT)
+    same(bar()?.chips, listOf(ModifierBar.SHIFT), "A press of Shift must show Shift")
+    same(bar()?.held, emptySet<String>(), "A Shift that was pushed and let go must not show as held")
+    type()
+    same(bar(), null, "The words must come back after the next letter")
+}
+
+private fun aHeldShiftShowsInTheBar() = Keyboard().run {
+    down(SHIFT)
+    same(bar()?.chips, listOf(ModifierBar.SHIFT), "A Shift that is held must show at once")
+    same(bar()?.held, setOf(ModifierBar.SHIFT), "A Shift that a finger holds must show as held")
+    same(bar("Q")?.hint, "Q", "A finger on a letter must show that letter while Shift is held")
+    type()
+    same(bar()?.chips, listOf(ModifierBar.SHIFT), "Shift must still show while it is held")
+    up(SHIFT)
+    same(bar(), null, "The words must come back when Shift is let go after a letter")
+}
+
+private fun altShowsTheSymbolOfAKey() = Keyboard().run {
+    press(ALT)
+    same(bar()?.chips, listOf(ModifierBar.ALT), "A press of Alt must show Alt")
+    same(bar("Q")?.hint, "%", "A finger on a letter must show the symbol that Alt types")
+    same(bar("W")?.hint, "", "A letter with no symbol must show nothing")
+    type()
+    same(bar(), null, "The words must come back after the next letter")
+}
+
+private fun aHeldAltShowsInTheBar() = Keyboard().run {
+    down(ALT)
+    same(bar()?.chips, listOf(ModifierBar.ALT), "An Alt that is held must show at once")
+    same(bar()?.held, setOf(ModifierBar.ALT), "An Alt that a finger holds must show as held")
+    type()
+    up(ALT)
+    same(bar(), null, "The words must come back when Alt is let go after a character")
+}
+
+private fun theBarShowsEveryModifierThatIsOn() = Keyboard().run {
+    press(SHIFT)
+    down(CTRL)
+    same(bar()?.chips, listOf(ModifierBar.CTRL, ModifierBar.SHIFT), "Ctrl and Shift must both show, Ctrl first")
+    same(bar()?.hint, ModifierBar.SHORTCUTS, "With Ctrl held the bar must list the shortcuts")
+}
+
+private fun ctrlIsNotAToggle() = Keyboard().run {
+    press(CTRL)
+    idle(WORD)
+    same(bar(), null, "A press of Ctrl must not leave the bar on")
+    same(modifiers.ctrlHeld, false, "A press of Ctrl must not stay on")
+    down(CTRL)
+    same(modifiers.ctrlHeld, true, "A second hold must count as held")
+    up(CTRL)
+    same(modifiers.ctrlHeld, false, "A second hold must end when Ctrl is let go")
+}
+
+private fun ctrlLeavesTheSymPanelAlone() {
+    Keyboard().run {
+        press(SYM)
+        idle(WORD)
+        down(CTRL)
+        same(modifiers.panel, Panel.Symbols, "Ctrl must leave the Sym panel open")
+        up(CTRL)
+        same(modifiers.panel, Panel.Symbols, "The Sym panel must stay when Ctrl is let go")
+    }
+    Keyboard().run {
+        down(CTRL)
+        press(SYM)
+        same(modifiers.ctrlHeld, true, "Sym must not end a held Ctrl")
+    }
+}
+
+private fun ctrlLeavesStickyKeysAlone() {
+    Keyboard().run {
+        press(SHIFT)
+        idle(WORD)
+        press(CTRL)
+        same(shift, Level.Once, "Ctrl must leave Shift on")
+    }
+    Keyboard().run {
+        press(ALT)
+        idle(WORD)
+        press(CTRL)
+        same(modifiers.alt, Level.Once, "Ctrl must leave Alt on")
+    }
+}
+
+private fun bothCtrlKeys() = Keyboard().run {
+    down(OTHER_CTRL)
+    same(modifiers.ctrlHeld, true, "Right Ctrl must also count as held")
+    down(CTRL)
+    up(OTHER_CTRL)
+    same(modifiers.ctrlHeld, true, "Ctrl must stay held while the other Ctrl key is down")
+    up(CTRL)
+    same(modifiers.ctrlHeld, false, "Ctrl must end with the last Ctrl key")
+}
+
+private fun fnIsNotCtrlByDefault() = Keyboard().run {
+    same(modifiers.fnIsCtrl, false, "fn must not be Ctrl until the user turns the setting on")
+    same(modifiers.isCtrl(FN), false, "With the setting off, fn must not count as Ctrl")
+    down(FN)
+    idle(WORD)
+    same(modifiers.ctrlHeld, false, "With the setting off, fn must not hold Ctrl")
+    same(bar(), null, "With the setting off, fn must not show in the bar")
+    down(CTRL)
+    same(modifiers.ctrlHeld, true, "With the setting off, Key Mapper's Ctrl must still count")
+}
+
+private fun fnAsCtrl() = Keyboard().run {
+    modifiers.fnIsCtrl = true
+    same(modifiers.isCtrl(FN), true, "With the setting on, fn must count as Ctrl")
+    same(Modifiers.isModifier(FN), false, "fn must not join the sticky modifiers")
+    down(FN)
+    same(bar()?.chips, listOf(ModifierBar.CTRL), "With the setting on, holding fn must show Ctrl")
+    same(shift, Level.Off, "fn as Ctrl must not turn Shift on")
+    up(FN)
+    same(bar(), null, "With the setting on, letting go of fn must bring the words back")
+    same(modifiers.ctrlHeld, false, "With the setting on, fn must not stay on")
+}
+
+private fun fnAndKeyMapperAreOneCtrl() {
+    Keyboard().run {
+        // If Key Mapper leaves fn in place, the keyboard hears both fn and Key Mapper's Ctrl.
+        modifiers.fnIsCtrl = true
+        down(FN)
+        idle(150)
+        down(CTRL)
+        idle(50)
+        up(FN)
+        same(modifiers.ctrlHeld, true, "Ctrl must stay held while Key Mapper's Ctrl is down")
+        up(CTRL)
+        same(modifiers.ctrlHeld, false, "Ctrl must end when both are let go")
+    }
+    Keyboard().run {
+        modifiers.fnIsCtrl = true
+        down(CTRL)
+        down(FN)
+        up(CTRL)
+        up(FN)
+        same(modifiers.ctrlHeld, false, "The order of release must not leave Ctrl on")
+    }
+}
+
+private fun closingThePanelLeavesCtrlHeld() = Keyboard().run {
+    down(CTRL)
+    modifiers.closePanel()
+    same(modifiers.ctrlHeld, true, "Hiding the keyboard must not change what is physically held")
+    up(CTRL)
+    same(modifiers.ctrlHeld, false, "Letting go of Ctrl must still end it")
+}
+
+private fun clearingCtrl() {
+    Keyboard().run {
+        down(CTRL)
+        modifiers.clear()
+        same(modifiers.ctrlHeld, false, "Clear must forget Ctrl")
+        up(CTRL, after = WORD)
+        same(modifiers.ctrlHeld, false, "An up after clear must change nothing")
+    }
+    Keyboard().run {
+        down(CTRL)
+        modifiers.clear(keepCtrl = true)
+        same(modifiers.ctrlHeld, true, "A field that restarts must leave Ctrl held")
+        up(CTRL)
+        same(modifiers.ctrlHeld, false, "Letting go of Ctrl must still end it after a restart")
+    }
+}
+
+private fun ctrlThroughAFieldStart() {
+    Keyboard().run {
+        down(CTRL)
+        modifiers.fieldStarted(restarting = true, editing = true)
+        same(modifiers.ctrlHeld, true, "A restart of a field that takes text must leave Ctrl held")
+    }
+    Keyboard().run {
+        down(CTRL)
+        modifiers.fieldStarted(restarting = false, editing = true)
+        same(modifiers.ctrlHeld, false, "A new field must forget Ctrl")
+    }
+    Keyboard().run {
+        down(CTRL)
+        modifiers.fieldStarted(restarting = true, editing = false)
+        same(modifiers.ctrlHeld, false, "A restart as a field that takes no text must forget Ctrl")
+        // The keyboard does not hear Ctrl let go here. The field then comes back.
+        modifiers.fieldStarted(restarting = true, editing = true)
+        same(modifiers.ctrlHeld, false, "Ctrl must not stay on when the field takes text again")
+    }
+    Keyboard().run {
+        modifiers.fnIsCtrl = true
+        down(FN)
+        modifiers.fieldStarted(restarting = true, editing = false)
+        same(modifiers.ctrlHeld, false, "A restart as a field that takes no text must also forget fn as Ctrl")
+    }
+}
+
+private fun ctrlMetaState() {
+    val fromFn = Modifiers.withCtrl(KeyEvent.META_FUNCTION_ON or KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON)
+    same(fromFn and KeyEvent.META_CTRL_ON != 0, true, "A key pushed with fn as Ctrl must carry Ctrl")
+    same(fromFn and KeyEvent.META_FUNCTION_ON != 0, false, "A key pushed with fn as Ctrl must not also carry fn")
+    same(fromFn and KeyEvent.META_SHIFT_ON != 0, true, "Other modifiers must stay on the key")
+    same(Modifiers.withCtrl(Modifiers.withCtrl(0)), Modifiers.withCtrl(0), "Ctrl from fn and Ctrl from Key Mapper must not add up")
+}
+
+private fun ctrlActions() {
+    same(Modifiers.CTRL_ACTIONS["C"], "Copy", "C must copy")
+    same(Modifiers.CTRL_ACTIONS.keys, setOf("A", "C", "X", "V", "Z", "Y"), "The overlay must show the field shortcuts and no other keys")
+    same(Modifiers.CTRL_ACTIONS.keys.all { it.length == 1 && it[0] in 'A'..'Z' }, true, "Each shortcut must be on a letter key")
+}

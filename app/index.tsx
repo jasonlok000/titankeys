@@ -1,59 +1,93 @@
-import { useEffect, useState } from "react";
-import { Canvas, CanvasText, Icon, Screen, Stack, Text, replace, useSnapshot } from "ink";
+import { useEffect } from "react";
+import { Canvas, CanvasIcon, CanvasText, Rectangle, Screen, Stack, Text, replace, useSnapshot } from "ink";
 import { arrowOutward } from "ink/icons";
-import guideIcon from "../assets/icons/guide.svg";
-import settingsIcon from "../assets/icons/settings.svg";
-import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, markNotesSeen, onHomeFocus, openScrollAssistant, state } from "../lib/atlas";
+import { cancelPlayground, markNotesSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
+import { INK, ORANGE } from "../lib/brand";
 import { hasReleaseNotes } from "../lib/release-notes";
 import { WhatsNew } from "../lib/whats-new";
-import { TryArea } from "../lib/try";
 
-function Step({ step, title, action, onPress }: {
-  step: number;
-  title: string;
-  action: string;
-  onPress: () => void;
-}) {
+const WIDTH = 596;
+const REOPEN_DELAY_MILLIS = 600;
+
+function Action({ label, onPress }: { label: string; onPress: () => void }) {
+  const height = 108;
+  const icon = 30;
+  return <Canvas width={WIDTH} height={height}>
+    <Rectangle x={0} y={0} width={WIDTH} height={height} fill={ORANGE} onPress={onPress} />
+    <CanvasText x={0} y={0} width={WIDTH} height={height} size={32} colour={INK} align="center">{label}</CanvasText>
+    <CanvasIcon x={WIDTH - icon - 32} y={(height - icon) / 2} size={icon} name={arrowOutward} colour={INK} />
+  </Canvas>;
+}
+
+/**
+ * Setup is the first slide of the interactive guide: it opens each Settings page and comes back by itself when the switch is on.
+ * The first time, the guide opens by itself. After that, this page waits for a touch, so that closing the guide is a way out.
+ */
+function SetupStart({ first }: { first: boolean }) {
+  useEffect(() => {
+    if (first) void openGuide();
+  }, []);
   return <Screen centered theme="onboarding">
-    <Stack align="center" gap={14}>
-      <Stack align="center" gap={8}>
-        <Canvas width={596} height={28}>
-          <CanvasText x={0} y={0} width={596} height={28} size={20.67} colour="#7f7f84">{`STEP ${step} OF 5`}</CanvasText>
-        </Canvas>
-        <Text size={49.33} align="center">{title}</Text>
+    <Stack align="center" gap={44}>
+      <Stack align="center" gap={14}>
+        <Text size={60} align="center">Set up TitanKeys</Text>
+        <Text size={30} align="center">A few switches in Settings. The guide opens each one and comes back by itself.</Text>
       </Stack>
-      <Stack axis="horizontal" align="center" gap={12} onPress={onPress}>
-        <Text>{action}</Text>
-        <Icon name={arrowOutward} size={26} tone="muted" />
-      </Stack>
+      <Action label="Start" onPress={() => void openGuide()} />
     </Stack>
   </Screen>;
 }
 
+/** With setup done, the interactive guide opens once, by itself, over this ink screen. */
+function GuideStart() {
+  useEffect(() => void openGuide(), []);
+  return <Screen />;
+}
+
+/**
+ * The front page is the playground, a native screen over this one: the guide's look with no steps, to type and swipe freely.
+ * Its Guide and Settings buttons come back here to open those pages.
+ */
 function FrontPage() {
-  const [focus, setFocus] = useState(0);
-  const refocus = () => setFocus(value => value + 1);
-  useEffect(() => onHomeFocus(refocus), []);
-  return <Screen title="Atlas" rightActions={[
-    { icon: guideIcon, onPress: () => replace({ path: "/settings/guide", params: { from: "home" } }) },
-    { icon: settingsIcon, onPress: () => replace("/settings") },
-  ]}>
-    <Stack align="stretch" onPress={refocus}>
-      <Canvas width={1} height={12} />
-      <TryArea placeholder="Swipe a word on the keyboard" focus={focus} />
-    </Stack>
-  </Screen>;
+  useEffect(() => {
+    let here = true;
+    // Set as a playground button moves to its page, so that the app's window coming to the front then opens nothing.
+    let leaving = false;
+    let stop = () => {};
+    // The app opens a playground only when none is open, so this can ask each time its own window is in front again,
+    // as after something closed the playground, such as a link that opened this screen over it.
+    const open = () => {
+      stop();
+      stop = openPlayground(action => {
+        if (!here) return;
+        if (action === "settings" || action === "guide") leaving = true;
+        if (action === "settings") replace("/settings");
+        else if (action === "guide") replace({ path: "/settings/guide", params: { from: "home" } });
+        // The playground closed from its setup slide, so this page shows setup again.
+        else if (action === "setup") void state.refresh();
+        // Something else closed it, perhaps while this window was already in front. A link into the app closes it too, so
+        // this waits a moment for such a link to move to its own page first.
+        else setTimeout(() => { if (here && !leaving) open(); }, REOPEN_DELAY_MILLIS);
+      });
+    };
+    open();
+    const stopWindow = onAppWindow(() => { if (here && !leaving) open(); });
+    return () => {
+      here = false;
+      stop();
+      stopWindow();
+      cancelPlayground();
+    };
+  }, []);
+  return <Screen />;
 }
 
 export default function Home() {
   const result = useSnapshot(state);
   if (result.status !== "ready") return <Screen />;
-  const { enabled, selected, overlay, scrollAssistant, backService, version, whatsNew } = result.data;
-  if (!enabled) return <Step step={1} title="Enable Atlas" action="Open keyboard settings" onPress={enableKeyboard} />;
-  if (!selected) return <Step step={2} title="Choose Atlas" action="Open keyboard list" onPress={chooseKeyboard} />;
-  if (!overlay) return <Step step={3} title="Allow overlay" action="Open overlay settings" onPress={allowOverlay} />;
-  if (!scrollAssistant) return <Step step={4} title="Turn on Scroll assistant" action="Open Scroll assistant" onPress={openScrollAssistant} />;
-  if (!backService) return <Step step={5} title="Turn on Atlas in Accessibility" action="Open accessibility settings" onPress={allowBack} />;
+  const { enabled, selected, overlay, scrollAssistant, backService, version, whatsNew, guideDue } = result.data;
+  if (!enabled || !selected || !overlay || !scrollAssistant || !backService) return <SetupStart first={guideDue} />;
+  if (guideDue) return <GuideStart />;
   if (whatsNew && hasReleaseNotes(version)) return <WhatsNew version={version} onClose={() => void markNotesSeen()} />;
   return <FrontPage />;
 }

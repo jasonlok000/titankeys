@@ -2,7 +2,13 @@
 
 Thank you for your help with Atlas. This guide tells you how to report a problem, suggest an idea, and send a change.
 
-You do not need a GitHub account to send a bug report or an idea. In Atlas, go to **Settings > Send feedback**.
+## Rules
+
+- Open an issue for all bugs, ideas, and questions.
+- Add a label to each issue.
+- Do not open a pull request before I give the work to you.
+- Test each change on a real Unihertz Titan 2 Elite.
+- Use issues for all contributions. To send feedback without a GitHub account, use **Settings > Send feedback** in Atlas.
 
 ## Philosophy
 
@@ -14,13 +20,28 @@ Atlas has these goals:
 
 ## Open an issue
 
-1. Search the [issues](https://github.com/juleshall4/atlas/issues) first. Make sure that your issue is not a duplicate.
-2. Open a new issue, and select a template:
-   - **Bug:** Something does not operate correctly.
-   - **Feature:** A new feature or a change to a feature.
-3. Fill in the template. The template adds the label.
+1. Search the [issues](https://github.com/jasonlok000/titankeys/issues) first. Make sure that your issue is not a duplicate.
+2. Open a new issue.
+3. Add one of these labels:
 
-For a different issue, such as a question, open a blank issue. I add the label.
+   | Label | Use it for |
+   | --- | --- |
+   | `bug` | Something does not operate correctly. |
+   | `enhancement` | A new feature or a change to a feature. |
+   | `accessibility` | A problem for people with disabilities. |
+   | `documentation` | A problem in the README or the guide. |
+   | `question` | A question about Atlas. |
+
+4. For a bug, write these items:
+   - The Atlas version. Find it in **Settings > About**.
+   - The steps that cause the bug.
+   - The result that you expect, and the result that you see.
+   - A screen recording, if possible.
+
+5. For a feature, write these items:
+   - The problem that you have now.
+   - The change that you want.
+   - Other ways to solve the problem, if you know of them.
 
 ## Get approval
 
@@ -35,13 +56,9 @@ If you want to do the work, write this in the issue. Wait until I give the issue
 
 ### Prerequisites
 
-You must use macOS. The setup script downloads the macOS version of the Android NDK.
-
 - [Bun](https://bun.sh/)
-- [Rust](https://rustup.rs/), to run Ink
 - Java 21 (OpenJDK)
 - The Android SDK
-- The Kotlin compiler and Python 3, for the tests
 - `adb`, to install Atlas on your device
 - A Unihertz Titan 2 Elite with USB debugging on
 
@@ -68,13 +85,12 @@ You must use macOS. The setup script downloads the macOS version of the Android 
    bash tools/setup-native.sh
    ```
 
-5. Set `JAVA_HOME`, `ANDROID_HOME`, and `KOTLIN_HOME`. For example, with Homebrew:
+5. Set `JAVA_HOME` and `ANDROID_HOME`. For example, on macOS with Homebrew:
 
    ```bash
    export JAVA_HOME=/opt/homebrew/opt/openjdk@21
    export PATH="$JAVA_HOME/bin:$PATH"
    export ANDROID_HOME="$HOME/Library/Android/sdk"
-   export KOTLIN_HOME=/opt/homebrew/opt/kotlin/libexec
    ```
 
 ## Make your change
@@ -88,19 +104,6 @@ You must use macOS. The setup script downloads the macOS version of the Android 
    ```bash
    bun run check
    ```
-
-6. Run the tests for the parts that you changed:
-
-   | Part | Test |
-   | --- | --- |
-   | Words and suggestions | `bash tests/words/run.sh` |
-   | Emoji | `bash tests/emoji/run.sh` |
-   | Swipe recognition | `bash tests/swipe/run.sh` |
-   | Swipe preview | `bash tests/preview/run.sh` |
-   | Keyboard show and hide | `python3 tests/ime-window/run.py <app package>` |
-   | App screens | `APP=com.atlas.debug bun run check:phone` |
-
-   The last four tests need your Titan 2 Elite connected over USB.
 
 ## Test on your device
 

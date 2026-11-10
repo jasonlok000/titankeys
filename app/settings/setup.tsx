@@ -14,11 +14,11 @@ export default function Setup() {
   const settings = result.data;
   return <Screen title="Setup">
     <Section title="Steps">
-      <Field label="Enable Atlas" onPress={enableKeyboard}>{status(settings.enabled)}</Field>
-      <Field label="Choose Atlas" onPress={chooseKeyboard}>{status(settings.selected)}</Field>
-      <Field label="Allow overlay" onPress={allowOverlay}>{status(settings.overlay)}</Field>
+      <Field label="Turn on TitanKeys" onPress={enableKeyboard}>{status(settings.enabled)}</Field>
+      <Field label="Make TitanKeys your keyboard" onPress={chooseKeyboard}>{status(settings.selected)}</Field>
+      <Field label="Allow display over other apps" onPress={allowOverlay}>{status(settings.overlay)}</Field>
       <Field label="Turn on Scroll assistant" onPress={openScrollAssistant}>{status(settings.scrollAssistant)}</Field>
-      <Field label="Turn on Atlas in Accessibility" onPress={allowBack}>{status(settings.backService)}</Field>
+      <Field label="Turn on TitanKeys in Accessibility" onPress={allowBack}>{status(settings.backService)}</Field>
     </Section>
   </Screen>;
 }

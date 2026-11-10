@@ -1,10 +1,15 @@
 package com.atlas.keyboard
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Paint
 import android.hardware.display.DisplayManager
 import android.inputmethodservice.InputMethodService
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -20,9 +25,12 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.SurroundingText
+import android.widget.LinearLayout
 import com.atlas.engine.Calibration
 import com.atlas.engine.EmojiPages
+import com.atlas.engine.HoldEngine
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
@@ -38,38 +46,79 @@ class AtlasIme : InputMethodService() {
     private lateinit var touchpad: Touchpad
     private lateinit var haptics: Haptics
     private lateinit var composer: Composer
+    private lateinit var autocorrect: AutocorrectLoader
     private lateinit var editor: ConnectionEditor
     private lateinit var overlay: TouchpadOverlay
     private val contact = Contact()
+    private val deleteHold = DeleteHold(contact)
     private val cursor = CursorMode()
+    private val cursorGesture = CursorGesture()
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
     private var cursorPath = ArrayList<Sample>()
     private var cursorControl = true
-    /** When cursor mode last ended; a press on Space just after selects the word at the cursor. */
-    private var cursorEndedAt = Long.MIN_VALUE
-    /** Space was pressed to select a word, so its repeats and release type nothing. */
-    private var selectingWithSpace = false
+    /** Taps on a tap key that may be part of a double tap. Each call gives its input, typed if the argument is true. */
+    private val heldTaps = ArrayList<(Boolean) -> Unit>()
+    /** The word that the word drag started from, as its start and end in the field. */
+    private var wordAnchor: Pair<Int, Int>? = null
     /** The selection start the app last reported, for apps that don't say where their text sits. */
     private var lastSelectionStart = -1
     private val modifiers = Modifiers()
     private var strip: Strip? = null
+    /** The words the composer last put on the bar, for a strip that is made after that. */
+    private var barWords = emptyList<String>()
+    private var panel: SymPanel? = null
     private var emoji: EmojiPages? = null
+    /** The key that last picked from the panel or turned its page, so its repeats type nothing once the panel has closed. */
+    private var pickedKey = 0
+    /** The current touch landed on the bottom row with categories on the screen, so it picks a category and is nothing else. */
+    private var pickingCategory = false
+    private var categoryLandedAt = 0f
+    /** Where the finger on the bottom row is now, from 0 to 1 across. */
+    private var categoryAt = 0f
+    private var categoryMoved = false
+    private val panelHover = SteadyKey { x, y ->
+        if (modifiers.panel == Modifiers.Panel.Settings) Layout.restingKeyAt(x, y) else Layout.keyAt(x, y)
+    }
+    private val barHover = SteadyKey(Layout::keyAt)
     private var field = Field.None
+    /** The apps that the user added to the Enter key setting, read when a field starts. */
+    private var enterApps = emptyMap<String, EnterKey.SendMethod>()
+    /** The raw input log for this field. It is null when the setting is off or the field must not be recorded. */
+    private var rawLog: RawLog.Session? = null
     private var editing = false
     private var typedInField = false
+    private var fieldStartedAt = 0L
     private var passingBack = false
+    private val backPush = BackPush()
+    /** Back hid the strip, so it stays hidden in this field until you tap the field or type. */
+    private var hiddenByBack = false
     private var inLauncher = false
+    private var launcherFieldHasText = false
     private val consumedKeys = HashSet<Int>()
     private var deadKeyPending = false
+    private val hold = TouchpadHold()
+    /** A process that died with the status on left the firmware's status as it was, so the first field start clears it. */
+    private var statusReported = false
     private var tapKeys = ""
+    private var holdSymbols = false
+    private val holdEngine = HoldEngine(HoldEngine.Output { replaceHeldLetter() })
+    /** The press that can still become its symbol. Its letter is already typed. */
+    private var heldLetter: KeyEvent? = null
+    /** In this app the Back service hears the keys first, because the app takes key presses before the keyboard. */
+    private var watchingKeys = false
+    private val panelKeys = PanelKeyFilter()
+    /** The key under a finger on the touchpad, for the modifier bar, or an empty string. */
+    private var restingKey = ""
     private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
                                val settlement: Contact.Settlement? = null)
     private val pendingInput = ArrayDeque<PendingInput>()
     private var inputGeneration = 0
     private var drainScheduled = false
     private val settlements = LinkedHashMap<Contact.Settlement, Runnable>()
+    private val pieces = SwipePieces({ composer.liftOffMillis.toLong() }, { composer.canContinueSwipe }, ::isTapKey)
+    private var lastTouch: List<Sample>? = null
     private val showStrip = Runnable {
-        if (!editing || currentInputBinding == null) return@Runnable
+        if (hiddenByBack || !editing || currentInputBinding == null) return@Runnable
         // Apps can drop a field yet still start input on it, so only a field that answers gets the strip.
         if (currentInputConnection?.getTextBeforeCursor(1, 0) == null) return@Runnable
         try {
@@ -82,22 +131,125 @@ class AtlasIme : InputMethodService() {
         }
     }
 
+    private val hideStrip = Runnable {
+        // A held status has no strip to hide, and hiding the window would give the touchpad back to the app.
+        if (editing || hold.held) return@Runnable
+        try {
+            hideWindow()
+            requestHideSelf(0)
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not hide the suggestion strip", error)
+        }
+    }
+
+    /** An app's own hide, such as from a Done key, leaves the window closed, so a panel that opens then must show it. */
+    private val showPanel = Runnable {
+        if (!panelOpen || isInputViewShown) return@Runnable
+        showStrip.run()
+        // It could not show, so it must not take the next key.
+        if (!isInputViewShown) closePanel()
+    }
+
+    private val refreshModifiers = Runnable { showModifiers() }
+
     // Apps on Android's newer back handling ignore a back key from a keyboard, so a system back goes first.
     private val sendBack = Runnable { if (!BackService.back() && editing) sendDownUpKeyEvents(KeyEvent.KEYCODE_BACK) }
 
-    private val startCursor = Runnable {
-        if (!cursor.rest(SystemClock.uptimeMillis())) return@Runnable
+    private val confirmDoubleTap = Runnable {
+        if (!cursorGesture.confirm()) return@Runnable
+        finishHeldTaps(type = false)
+        haptics.click()
+        KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
+        enqueue { selectWord() }
+    }
+
+    private val checkHeldTaps = Runnable { settleHeldTaps() }
+
+    /** Deletes the next word of a held delete flick. Only one edit is on its way at a time, so a lift leaves no words waiting. */
+    private val stepDeleteHold = Runnable {
+        val free = pendingInput.isEmpty() && !composer.hasPendingInput
+        val next = deleteHold.step(SystemClock.uptimeMillis(), free, ::deleteHeldWord)
+        if (next != null) nextDeleteHoldStep(next) else strip?.gesture?.deleteEnded()
+    }
+
+    private fun nextDeleteHoldStep(at: Long) {
+        main.removeCallbacks(stepDeleteHold)
+        main.postAtTime(stepDeleteHold, at)
+    }
+
+    /** The finger moved, so the wait for a hold starts again, or ends if the finger is no longer on a delete flick. */
+    private fun followDeleteHold() {
+        val start = contact.points.firstOrNull()
+        val at = deleteHold.moved(!altOrPanel && start != null && pieces.canDelete(start.time))
+        if (at != null) nextDeleteHoldStep(at) else main.removeCallbacks(stepDeleteHold)
+    }
+
+    private fun endDeleteHold() {
+        main.removeCallbacks(stepDeleteHold)
+        deleteHold.reset()
+        strip?.gesture?.deleteEnded()
+    }
+
+    /** Each word goes the way of a normal delete flick. [flick] is the first word's flick, and is null for the words after it. */
+    private fun deleteHeldWord(flick: Contact.Outcome.Swipe?) {
+        if (flick != null) {
+            strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis())
+            // The contact was a delete and not part of a word, as it would be at a lift.
+            pieces.clear()
+            lastTouch = null
+            Trace.touch(emptyList(), true)
+            enqueue { outcome(flick) }
+            return
+        }
+        enqueue {
+            // At the start of the text nothing is left to delete, so the hold ends quietly.
+            if (currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true) {
+                contact.cancelActive()
+                return@enqueue
+            }
+            if (Haptics.enabled(this)) haptics.pulse()
+            composer.backspace(true)
+            strip?.gesture?.wordDeleted(SystemClock.uptimeMillis())
+            KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
+        }
+    }
+
+    private fun startCursor(drag: CursorGesture.Drag, samples: List<Sample>) {
+        KeyboardEvents.publish { KeyboardEvent.CursorStarted(drag.words) }
+        cursor.start(drag.landed, drag.words)
+        cursor.move(samples)
         // The contact now steers the cursor, so it must not also type when it lifts.
         contact.cancelActive()
+        finishHeldTaps(type = false)
         Trace.touch(cursorPath, false)
         haptics.click()
+        if (drag.words) enqueue { startWordDrag() }
         stepCursor.reset()
         stepCursor.run()
     }
 
+    /** Space set as a tap key would type the first tap of a double tap, so a tap waits until it can't be one. */
+    private fun holdTap(finish: (Boolean) -> Unit) {
+        heldTaps += finish
+        main.removeCallbacks(checkHeldTaps)
+        main.postDelayed(checkHeldTaps, CursorGesture.CONFIRM_MILLIS)
+    }
+
+    private fun settleHeldTaps() {
+        if (heldTaps.isNotEmpty() && !cursorGesture.deciding(SystemClock.uptimeMillis())) finishHeldTaps(type = true)
+    }
+
+    private fun finishHeldTaps(type: Boolean) {
+        main.removeCallbacks(checkHeldTaps)
+        val taps = heldTaps.toList()
+        heldTaps.clear()
+        taps.forEach { it(type) }
+    }
+
     /**
      * Checks the lean every frame so speed follows the finger at once. Leaning in moves one letter straight
-     * away, then letters build up at the current speed.
+     * away, then letters build up at the current speed. A word drag moves its end one word at a time: leaning
+     * back the other way gives the words back one by one before it goes past the word that it began with.
      */
     private val stepCursor = object : Runnable {
         private var owed = 1f
@@ -107,13 +259,15 @@ class AtlasIme : InputMethodService() {
             if (!cursor.active) return
             val now = SystemClock.uptimeMillis()
             val direction = cursor.direction()
+            val speed = if (direction != 0 && last != 0L) cursor.speed(now) else 0f
             if (direction == 0) owed = 1f
-            else if (last != 0L) owed += cursor.speed(now) * (now - last) / 1000
+            else owed += speed * (now - last) / 1000
             if (direction != 0 && owed >= 1f) {
                 owed = (owed - 1f).coerceAtMost(1f)
-                moveCursor(direction)
+                if (cursor.words) extendWords(direction) else moveCursor(direction)
             }
             last = now
+            strip?.gesture?.cursorFrame(cursor.column, direction, speed, cursor.words, now)
             main.postDelayed(this, FRAME_MILLIS)
         }
 
@@ -136,20 +290,138 @@ class AtlasIme : InputMethodService() {
         haptics = Haptics(this)
         touchpad = Touchpad(getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY))
         editor = ConnectionEditor(::getCurrentInputConnection, ::getCurrentInputEditorInfo,
-            { delay, action -> main.postDelayed(action, delay) })
+            { delay, action -> main.postDelayed(action, delay) }, { enterApps })
         composer = Composer(editor, EngineWords(SwipeTyping.get(this)),
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
-            { TypingSettings.autoCapitalise(this) }) { strip?.words = it }
+            { TypingSettings.autoCapitalise(this) }) { barWords = it; strip?.words = it }
+        composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
+        composer.onStroke = Trace::stroke
+        composer.onAutocorrect = haptics::wordChanged
+        composer.nearMiss = { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) }
+        composer.intended = { before -> GuideHooks.intended(currentInputEditorInfo?.privateImeOptions, before) }
+        // The interactive guide puts the keyboard in the menu that a step needs, only in its own field.
+        GuideHooks.panelRequests = { target ->
+            main.post {
+                if (!editing || currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) != true) return@post
+                if (target == modifiers.panel) return@post
+                modifiers.openPanel(target)
+                showModifiers()
+                if (panelOpen && !isInputViewShown) main.post(showPanel)
+            }
+        }
+        autocorrect = AutocorrectLoader(this, SwipeTyping.get(this))
         // The firmware hands touchpad events to the topmost window titled "InputMethod", which is this
         // keyboard's window. They arrive at the window, not at any view, so catch them there.
         val window = window.window!!
         window.callback = TouchpadWindowCallback(window.callback) { event ->
             (editing && touchpad.accepts(event)).also { if (it) motion(event) }
         }
+        // With no field active, a touchpad event only stops here, so that the app under the overlay does not scroll.
         overlay = TouchpadOverlay(this) { event ->
-            (editing && touchpad.accepts(event)).also { if (it) motion(event) }
+            touchpad.accepts(event).also { if (it && editing) motion(event) }
         }
+        TypingSettings.listen(this, overlaySetting)
+        registerReceiver(screenOn, IntentFilter(Intent.ACTION_SCREEN_ON), RECEIVER_NOT_EXPORTED)
+        updateOverlay()
         loadEmoji()
+    }
+
+    /** The settings screen is open when this changes, so the keyboard is idle and no field start would apply it. */
+    private val overlaySetting = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key != TypingSettings.TOUCHPAD_ONLY_IN_FIELDS) return@OnSharedPreferenceChangeListener
+        updateOverlay()
+        updateHold()
+    }
+
+    private val screenOn = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            hold.screenOn()
+            updateKeyWatch()
+            updateHold()
+        }
+    }
+
+    private fun updateOverlay() {
+        if (editing || TypingSettings.touchpadOnlyInFields(this)) overlay.show() else overlay.hide()
+    }
+
+    private fun holdWanted() =
+        TouchpadHold.wanted(TypingSettings.touchpadOnlyInFields(this), editing, overlay.up, BackService.enabled(this), hold.lettingGo)
+
+    /** Puts the status that the firmware reads where the setting and the field need it. See [TouchpadHold]. */
+    private fun updateHold() {
+        if (holdWanted()) {
+            // A strip that is still up keeps the status on until it hides, and its hide leaves the status on.
+            if (hold.held || isInputViewShown || main.hasCallbacks(showHold)) return
+            main.postDelayed(showHold, hold.delay(SystemClock.uptimeMillis()))
+            return
+        }
+        main.removeCallbacks(showHold)
+        val wasHeld = hold.held
+        hold.hidden()
+        // With a field, the strip takes over the window that is already up.
+        if (wasHeld && !editing) hideHeldWindow()
+    }
+
+    private val showHold = Runnable {
+        if (!holdWanted() || hold.held || isInputViewShown || currentInputBinding == null) return@Runnable
+        try {
+            backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
+            showWindow(false)
+            // Only the status is wanted. Before the first frame, this takes the window back off the screen.
+            holdWindow()
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not report the keyboard status", error)
+        }
+    }
+
+    private fun holdWindow() {
+        window.hide()
+        hold.shown()
+    }
+
+    /** With no field, a hide takes only the window away. Android's own would also turn the status off. See [TouchpadHold]. */
+    override fun hideWindow() {
+        if (!TouchpadHold.keepsStatus(holdWanted(), isInputViewShown)) {
+            super.hideWindow()
+            return
+        }
+        // A panel that nobody can see must not take the next key.
+        closePanel()
+        holdWindow()
+    }
+
+    /** Ends the held status and Android's back handler with it. A hide from Android keeps them, so this does not go through [hideWindow]. */
+    private fun hideHeldWindow() {
+        try {
+            super.hideWindow()
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not clear the keyboard status", error)
+        }
+    }
+
+    /**
+     * What Back does while the status is held. The first push lets go of the touchpad and stays on the screen. The Back service
+     * then hears the next push go through to the app, and the hold comes back after it. See [TouchpadHold].
+     */
+    private fun heldBack(event: KeyEvent, down: Boolean): Boolean = when (TouchpadHold.backStep(TouchpadHold.fromHandler(event.deviceId, event.flags), down)) {
+        TouchpadHold.Back.ToApp -> false
+        TouchpadHold.Back.Keep -> true
+        TouchpadHold.Back.KeepAndLetGo -> {
+            hold.letGo(currentInputEditorInfo?.packageName)
+            main.removeCallbacks(showHold)
+            hideHeldWindow()
+            hold.hidden()
+            updateKeyWatch()
+            true
+        }
+    }
+
+    /** The second push of Back has gone on to the app, so the hold comes back once the app has had it. */
+    private val backWentThrough = Runnable {
+        hold.backWentThrough(SystemClock.uptimeMillis())
+        updateKeyWatch()
+        updateHold()
     }
 
     /** Reads the emoji list away from the main thread, which also loads the emoji font before Sym is first pressed. */
@@ -163,55 +435,174 @@ class AtlasIme : InputMethodService() {
                 Log.w("Atlas", "Could not read the emoji list", error)
                 return@Thread
             }
-            main.post { emoji = EmojiPages(groups, recents).also { strip?.emoji = it } }
+            main.post { emoji = EmojiPages(groups, recents).also { panel?.emoji = it } }
         }.start()
     }
 
-    override fun onCreateInputView(): View = Strip(this, { index -> haptics.tap(); enqueue { composer.choose(index) } },
-        ::symbol, ::pickEmoji).also {
-        strip = it
-        it.emoji = emoji
-        it.showSuggestions = showSuggestions()
+    override fun onCreateInputView(): View {
+        val words = Strip(this) { index -> haptics.wordChanged(); enqueue { composer.choose(index) } }
+        val keys = SymPanel(this,
+            pick = { item -> enqueue { typePanelItem(item) } },
+            useQuickSetting = { item -> enqueue { useQuickSetting(item) } },
+            quickSettingOn = ::quickSettingOn,
+            pressAlt = { enqueue { modifiers.toggleSettings(); showModifiers() } },
+            pressSym = { enqueue { modifiers.pressSym(); showModifiers() } },
+            pageChanged = haptics::pageChanged,
+            marked = { if (Haptics.enabled(this)) haptics.pulse() },
+        )
+        strip = words
+        panel = keys
+        keys.emoji = emoji
+        // Android can make this view after the field has started, and again when the screen settings change.
+        words.words = barWords
+        words.showSuggestions = showSuggestions()
         showModifiers()
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(keys)
+            addView(words)
+        }
     }
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
+        // A press from the field before must not change a letter here.
+        holdEngine.cancel()
+        heldLetter = null
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
         editing = info.inputType != EditorInfo.TYPE_NULL
-        if (!restarting) typedInField = false
+        if (!restarting) {
+            typedInField = false
+            fieldStartedAt = SystemClock.uptimeMillis()
+            // Apps also restart input on the field that stays, so only a new start ends what Back did.
+            hiddenByBack = false
+        }
         field = if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
-        inLauncher = editing && info.packageName == launcherPackage()
+        // Android only calls onFinishInput first when the input is not restarting.
+        rawLog?.finish()
+        rawLog = if (editing) RawLog.start(this, info, restarting) else null
+        composer.log = rawLog
+        inLauncher = editing && TypingSettings.launcherHidesBar(this) && info.packageName == launcherPackage()
+        launcherFieldHasText = inLauncher && info.initialSelStart > 0
         contact.releaseKeys()
         clearSettlements()
-        modifiers.clear()
+        modifiers.fieldStarted(restarting, editing)
         deadKeyPending = false
         showModifiers()
-        composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
-        tapKeys = TypingSettings.tapKeys(this)
-        cursorControl = TypingSettings.cursorControl(this)
-        strip?.showSuggestions = showSuggestions()
+        readSettings()
+        if (editing && !restarting) rememberEnterApp(info)
         main.removeCallbacks(showStrip)
+        main.removeCallbacks(hideStrip)
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
             main.post(showStrip)
-            overlay.show()
         } else {
             composer.stop()
-            overlay.hide()
-            try {
-                hideWindow()
-                requestHideSelf(0)
-            } catch (error: RuntimeException) {
-                Log.w("Atlas", "Could not hide the suggestion strip", error)
-            }
+            // A returning window starts with no field just before its own field takes focus. A strip that
+            // hides for that moment tells the app the keyboard was closed, and the app then drops its field.
+            main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
         }
+        updateOverlay()
+        hold.started(info.packageName, editing)
+        if (!statusReported) {
+            statusReported = true
+            // A new back disposition sends the current status, which clears a status that a dead process left on.
+            backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
+        }
+        updateHold()
     }
 
-    // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way.
+    /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
+    private fun readSettings() {
+        composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
+        tapKeys = TypingSettings.tapKeys(this)
+        holdSymbols = TypingSettings.holdSymbols(this)
+        holdEngine.threshold(TypingSettings.holdSymbolMillis(this))
+        modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
+        modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
+        cursorControl = TypingSettings.cursorControl(this)
+        contact.swipes = TypingSettings.swipeTyping(this)
+        enterApps = EnterKey.apps(TypingSettings.enterApps(this))
+        val corrects = TypingSettings.autocorrect(this)
+        composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
+        // The word data takes a moment to load, so it starts as a field opens: the first word typed is fixed too.
+        if (!corrects) autocorrect.release() else if (editing) autocorrect.prepare()
+        strip?.showSuggestions = showSuggestions()
+        updateKeyWatch()
+    }
+
+    /**
+     * Smart Launcher takes every key press in its search field before the keyboard hears it, so a press there cannot start a
+     * hold or count towards Shift and Alt. The Back service hears them first, only in this one app and only when a setting needs them.
+     * It also hears them while the Sym panel is open, and until the release of a key that the panel took. See [PanelKeyFilter].
+     * After a first push of Back let go of the touchpad, it hears the second push go through. See [TouchpadHold].
+     */
+    private fun updateKeyWatch() {
+        val launcher = editing && currentInputEditorInfo?.packageName == SMART_LAUNCHER && (holdSymbols || !modifiers.doublePressLocks)
+        val forPanel = panelOpen || panelKeys.holding
+        val running = BackService.watchKeys(if (launcher || forPanel || hold.lettingGo) ::watchedKey else null)
+        watchingKeys = running && launcher
+        if (!running) panelKeys.clear()
+    }
+
+    /**
+     * Hears a key before Smart Launcher does. The launcher still types its own letters, so this only times holds and
+     * follows Shift and Alt. True takes the key from the app, which is only ever a repeat of a letter that can become a symbol,
+     * or a second push of Shift or Alt. Every key waits for this answer, so slow work goes to the main looper.
+     *
+     * While the Sym panel is open, Enter and Backspace are kept from every app and go to the panel, the same as a key that the app
+     * passed on to the keyboard.
+     */
+    private fun watchedKey(event: KeyEvent): Boolean {
+        val down = event.action == KeyEvent.ACTION_DOWN
+        // The second push of Back goes on to the app. Its release says that the app has it.
+        if (event.keyCode == KeyEvent.KEYCODE_BACK && hold.lettingGo && !editing) {
+            if (!down) main.post(backWentThrough)
+            return false
+        }
+        if (panelKeys.takes(event.keyCode, down, event.repeatCount, modifiers.panel)) {
+            // Once the panel has closed, a key that it took only waits for its release.
+            if (!down) onKeyUp(event.keyCode, event) else if (panelOpen) onKeyDown(event.keyCode, event)
+            updateKeyWatch()
+            return true
+        }
+        if (!watchingKeys) return false
+        main.post(refreshModifiers)
+        val code = event.keyCode
+        // The app takes Back before the keyboard, so an open panel must close here.
+        if (code == KeyEvent.KEYCODE_BACK && isInputViewShown && backKey(event, event.action == KeyEvent.ACTION_DOWN)) return true
+        if (event.action != KeyEvent.ACTION_DOWN) {
+            holdEngine.up(code, event.deviceId, event.eventTime)
+            return Modifiers.isShiftOrAlt(code) && modifiers.appRelease(code, event.eventTime)
+        }
+        if (Modifiers.isShiftOrAlt(code)) {
+            val push = modifiers.appPush(code, event.eventTime, event.repeatCount)
+            if (push == Modifiers.AppPush.HideAndClear) {
+                val meta = if (code == KeyEvent.KEYCODE_SHIFT_LEFT || code == KeyEvent.KEYCODE_SHIFT_RIGHT) KeyEvent.META_SHIFT_ON else KeyEvent.META_ALT_ON
+                main.post { currentInputConnection?.clearMetaKeyStates(meta) }
+            }
+            return push != Modifiers.AppPush.Pass
+        }
+        val repeatOfHold = trackHold(event)
+        // A shortcut types nothing, so like the keyboard's own typing, only a character uses up a press of Shift or Alt.
+        if (event.repeatCount == 0 && !event.isSystem && !KeyEvent.isModifierKey(code)
+            && !event.isCtrlPressed && !event.isMetaPressed) modifiers.consume()
+        return repeatOfHold
+    }
+
+    /** Only the package is kept, so the Enter key setting can offer apps without asking to see every installed app. */
+    private fun rememberEnterApp(info: EditorInfo) {
+        val app = info.packageName ?: return
+        if (app == packageName || !EnterKey.recordsApp(info.inputType, info.imeOptions)) return
+        val recent = TypingSettings.recentEnterApps(this)
+        val updated = EnterKey.recentApps(recent, app)
+        if (updated != recent) TypingSettings.recentEnterApps(this, updated)
+    }
+
+    // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way until you type.
     // Password, email and number fields get no suggestions, so the bar would only be an empty strip.
-    private fun showSuggestions() = TypingSettings.suggestionBar(this) && !inLauncher && field.suggestions
+    private fun showSuggestions() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText) && field.suggestions
 
     private fun launcherPackage(): String? {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
@@ -220,7 +611,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        // Back belongs to the app; the strip comes and goes with the text field instead.
+        // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
     }
 
@@ -232,52 +623,108 @@ class AtlasIme : InputMethodService() {
 
     override fun onWindowHidden() {
         super.onWindowHidden()
-        // A delayed hide from the previous app can arrive after this field has started. Once you have
-        // typed, a hide is the app's own, such as a Done key closing a field it then removes.
+        // Android's hide also turned the status off.
+        hold.hidden()
+        // A panel that nobody can see must not take the next key.
+        closePanel()
+        // A delayed hide from the previous app arrives just after this field starts. A later hide, or one
+        // after you have typed, is the app's own, such as a tap outside the field or a Done key.
         main.removeCallbacks(showStrip)
         if (passingBack) {
-            // Now that the strip is gone, the app's own back can run. If its field stays, so does the strip.
+            // Now that the strip is gone, the app's own back can run. If its field stays, the strip stays hidden.
             passingBack = false
+            hiddenByBack = editing
             main.post(sendBack)
-            if (editing) main.postDelayed(showStrip, BACK_SETTLE_MILLIS)
-        } else if (editing && !typedInField) {
+        } else if (editing && !typedInField && SystemClock.uptimeMillis() - fieldStartedAt < STALE_HIDE_MILLIS) {
             main.post(showStrip)
         }
+        updateHold()
+    }
+
+    /** A key or swipe in a field that Back left hidden brings the strip back. */
+    private fun showStripAfterBack() {
+        if (!hiddenByBack) return
+        hiddenByBack = false
+        main.post(showStrip)
     }
 
     override fun onUnbindInput() {
         main.removeCallbacks(showStrip)
         main.removeCallbacks(sendBack)
+        // The app has lost the keyboard, so coming back to it counts as a new start.
+        hiddenByBack = false
         super.onUnbindInput()
     }
 
     override fun onFinishInput() {
+        // The letter is already typed, so a press that is still down can only stay a letter.
+        holdEngine.cancel()
+        heldLetter = null
         preserveDestinationInput()
         // The old connection is still owned here; only a verified final explicit choice is learned.
         composer.stop(terminal = true)
         editor.cancelState()
         editing = false
         field = Field.None
+        updateKeyWatch()
+        rawLog?.finish()
+        rawLog = null
+        composer.log = null
         main.removeCallbacks(showStrip)
         clearSettlements()
         contact.cancel()
         endCursor()
-        selectingWithSpace = false
         deadKeyPending = false
-        overlay.hide()
+        closePanel()
+        updateOverlay()
+        updateHold()
         super.onFinishInput()
     }
 
     override fun onEvaluateInputViewShown() = editing
 
-    override fun onShowInputRequested(flags: Int, configChange: Boolean) = editing
+    /** Android calls this when you tap the field, so the tap also brings the strip back after Back. */
+    override fun onShowInputRequested(flags: Int, configChange: Boolean): Boolean {
+        hiddenByBack = false
+        return editing
+    }
 
     override fun onEvaluateFullscreenMode() = false
 
     override fun onUpdateSelection(oldStart: Int, oldEnd: Int, newStart: Int, newEnd: Int, composingStart: Int, composingEnd: Int) {
         super.onUpdateSelection(oldStart, oldEnd, newStart, newEnd, composingStart, composingEnd)
+        inputLog()?.selection(newStart, newEnd, composingStart, composingEnd,
+            currentInputConnection?.getTextBeforeCursor(RawLog.BEFORE_LENGTH, 0))
         lastSelectionStart = newStart
+        if (inLauncher && (newStart > 0) != launcherFieldHasText) {
+            launcherFieldHasText = newStart > 0
+            strip?.showSuggestions = showSuggestions()
+        }
         if (editing && composer.selectionChanged(newStart, newEnd)) clearSettlements()
+    }
+
+    /**
+     * The raw log for input that arrives now. The keyboard hears that the field changed only after the app has moved,
+     * so input after a key that can move to another field may belong to a password. A gap marker takes its place.
+     */
+    private fun inputLog(): RawLog.Session? {
+        val log = rawLog ?: return null
+        val leavingKey = pendingInput.any { it.event?.action == KeyEvent.ACTION_DOWN && it.event.keyCode in FIELD_LEAVING_KEYS }
+        if (!leavingKey && !composer.mayLeaveField) return log
+        log.skip()
+        return null
+    }
+
+    /** Any app with a focused field can send a command, so a bad one must not stop the keyboard. */
+    override fun onAppPrivateCommand(action: String?, data: Bundle?) {
+        super.onAppPrivateCommand(action, data)
+        if (action != RawLog.MARK_ACTION) return
+        val log = rawLog ?: return
+        try {
+            log.mark(data?.getString("kind"), data?.getString("label"))
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not read a raw log mark", error)
+        }
     }
 
     override fun onUpdateCursorAnchorInfo(info: CursorAnchorInfo) {
@@ -293,15 +740,21 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun motion(event: MotionEvent) {
-        if (!field.words) return
+        // The panel works in every field, also where the touchpad types no words.
+        if (!field.words && !panelOpen) return
         typedInField = true
         val samples = touchpad.samples(event)
+        Recording.sink?.motion(event, samples)
+        inputLog()?.motion(event, samples)
+        if (panelOpen && hover(event, samples)) return
+        if (!panelOpen) followRestingKey(event, samples)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
                 haptics.begin(samples.firstOrNull())
+                endDeleteHold()
                 contact.down(first)
-                if (cursor.resume(first)) {
+                if (cursor.resume(first, composer.liftOffMillis.toLong())) {
                     // Back within the slip recovery period: still steering the cursor, never typing.
                     main.removeCallbacks(endSlippedCursor)
                     contact.cancelActive()
@@ -311,15 +764,23 @@ class AtlasIme : InputMethodService() {
                     return
                 }
                 contact.move(samples.drop(1))
-                endCursor()
-                // Alt and Sym turn swipes into strip pages, so the cursor waits until they are off.
-                // A finger that lands during the pause after a key press cannot start cursor mode, as it cannot swipe.
-                if (cursorControl && !stripPaging && contact.canType && cursor.down(first)) {
-                    cursor.move(samples.drop(1))
-                    cursorPath = ArrayList(samples.filter { it.valid })
-                    main.postAtTime(startCursor, first.time + CursorMode.REST_MILLIS)
+                stopCursor()
+                main.removeCallbacks(confirmDoubleTap)
+                cursorPath = ArrayList(samples.filter { it.valid })
+                // With Alt on or the panel open the touchpad does not type, so the cursor waits until they are off.
+                // A finger the contact ignored landed while typing, so it must not start the cursor.
+                cursorGesture.down(first, cursorControl && !altOrPanel && contact.travel != null)
+                cursorGesture.move(samples.drop(1))?.let {
+                    startCursor(it, samples.drop(1))
+                    return
                 }
-                Trace.touch(contact.points, false)
+                settleHeldTaps()
+                // A touch that may be the last swipe carrying on keeps that swipe on the trail until it is settled.
+                val carried = lastTouch?.takeIf {
+                    Trace.listening && contact.points.isNotEmpty()
+                        && letterSpace(it).couldContinue(first.x, first.y * 4 / 3, first.time - it.last().time, composer.liftOffMillis.toLong())
+                }.orEmpty()
+                Trace.touch(contact.points, false, carried)
             }
             MotionEvent.ACTION_MOVE -> {
                 cursor.move(samples)
@@ -329,27 +790,40 @@ class AtlasIme : InputMethodService() {
                 }
                 cursorPath.addAll(samples.filter { it.valid })
                 contact.move(samples)
+                // A held delete flick only waits for the finger to lift.
+                if (contact.deleting) return
+                cursorGesture.move(samples)?.let {
+                    startCursor(it, samples)
+                    return
+                }
+                settleHeldTaps()
+                followDeleteHold()
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
-                if (!stripPaging && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
+                if (contact.swipes && !altOrPanel && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
                 Trace.touch(contact.points, false)
             }
             MotionEvent.ACTION_UP -> {
+                endDeleteHold()
+                val doubleTapped = cursorGesture.up(samples, event.eventTime)
                 if (cursor.active) {
-                    cursorEndedAt = SystemClock.uptimeMillis()
                     main.removeCallbacks(stepCursor)
+                    cursor.move(samples)
                     cursor.lift()
+                    strip?.gesture?.cursorPaused()
                     val slips = composer.liftOffMillis > 0
                     // Through a slip the path stays open, so a finger that comes back carries on drawing it.
                     traceCursor(samples, ended = !slips)
-                    if (slips) main.postDelayed(endSlippedCursor, composer.liftOffMillis.toLong()) else endCursor()
+                    if (slips) main.postDelayed(endSlippedCursor, cursor.holdMillis(composer.liftOffMillis.toLong())) else stopCursor()
                     return
                 }
-                endCursor()
+                stopCursor()
                 val points = contact.points
+                if (doubleTapped) main.postAtTime(confirmDoubleTap, event.eventTime + CursorGesture.CONFIRM_MILLIS)
                 contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
+                    lastTouch = pending.points
                     if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
                         contact.settle(pending, pending.deadline)
                         return@let
@@ -358,25 +832,96 @@ class AtlasIme : InputMethodService() {
                     pendingInput.addLast(input)
                     val settle = Runnable {
                         settlements.remove(pending)
-                        val result = contact.settle(pending, SystemClock.uptimeMillis())
-                        input.action = { result?.let(::outcome) }
-                        input.ready = true
-                        drainInput()
+                        val settled = contact.settle(pending, SystemClock.uptimeMillis())
+                        val result = if (pending.cancelled || altOrPanel) settled else pieces.settle(pending, settled)
+                        val finish = { type: Boolean ->
+                            input.action = { if (type) result?.let(::outcome) }
+                            input.ready = true
+                            drainInput()
+                        }
+                        if (result is Contact.Outcome.Tap && isTapKey(result.key) && cursorGesture.deciding(SystemClock.uptimeMillis())) holdTap(finish)
+                        else finish(true)
                     }
                     settlements[pending] = settle
                     main.postAtTime(settle, pending.deadline)
                 }
+                settleHeldTaps()
                 Trace.touch(if (points.size <= Swipe.MAX_POINTS && samples.all { it.valid }) points else emptyList(), true)
             }
             MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
                 contact.cancelActive()
+                endDeleteHold()
                 endCursor()
                 Trace.touch(emptyList(), true)
             }
         }
     }
 
-    private val endSlippedCursor = Runnable { endCursor() }
+    /**
+     * A finger that rests on a key shows that key in the panel, held steady as [SteadyKey] says. A finger that lands on the bottom
+     * row while the groups show opens the group at its place when it moves along the row, and that follows the finger. A finger
+     * that stays there for [GROUP_REST_MILLIS] opens it too, so a brief touch does not. Returns true for such a touch, which is then
+     * not also a swipe.
+     */
+    private fun hover(event: MotionEvent, samples: List<Sample>): Boolean {
+        val last = samples.lastOrNull { it.valid }
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            pickingCategory = last != null && Layout.isBottomRow(last.y) && panel?.hasCategories == true
+            categoryLandedAt = last?.x ?: 0f
+            categoryAt = categoryLandedAt
+            categoryMoved = false
+            main.removeCallbacks(restOnCategory)
+            if (pickingCategory) main.postDelayed(restOnCategory, GROUP_REST_MILLIS)
+        }
+        val picking = pickingCategory
+        if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            main.removeCallbacks(restOnCategory)
+            panelHover.lift(event.eventTime)
+            main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
+            pickingCategory = false
+            return picking
+        }
+        if (last == null) return picking
+        if (!picking) {
+            panelHover.touch(last.x, last.y)
+            panel?.hover = panelHover.key
+            return false
+        }
+        categoryAt = last.x
+        categoryMoved = categoryMoved || Layout.movedAlongBottomRow(categoryLandedAt, last.x)
+        if (categoryMoved && panel?.pickCategory(last.x) == true) haptics.pageChanged()
+        return true
+    }
+
+    /** A finger that stayed on the bottom row opens the group under it. A key press lifts the finger first, which calls this off. */
+    private val restOnCategory = Runnable {
+        if (pickingCategory && panelOpen && panel?.pickCategory(categoryAt) == true) haptics.pageChanged()
+    }
+
+    /** A finger that has stayed off the touchpad no longer marks a key. */
+    private val expireHover = Runnable {
+        val now = SystemClock.uptimeMillis()
+        if (panelHover.expire(now)) panel?.hover = ""
+        if (barHover.expire(now)) {
+            restingKey = ""
+            showModifierBar()
+        }
+    }
+
+    /** A finger that rests on a key shows in the modifier bar what that key gives, held steady as [SteadyKey] says. */
+    private fun followRestingKey(event: MotionEvent, samples: List<Sample>) {
+        val last = samples.lastOrNull { it.valid }
+        if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            barHover.lift(event.eventTime)
+            main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
+            return
+        }
+        if (last == null || !barHover.touch(last.x, last.y)) return
+        restingKey = barHover.key
+        showModifierBar()
+    }
+
+    private val endSlippedCursor = Runnable { stopCursor() }
 
     private fun traceCursor(samples: List<Sample>, ended: Boolean) {
         val added = samples.filter { it.valid }
@@ -386,43 +931,89 @@ class AtlasIme : InputMethodService() {
         Trace.touch(cursorPath, ended)
     }
 
+    /** A key press or something else interrupted the touchpad, so this ends cursor mode and calls off a double tap. */
     private fun endCursor() {
+        stopCursor()
+        main.removeCallbacks(confirmDoubleTap)
+        cursorGesture.cancel(SystemClock.uptimeMillis())
+        settleHeldTaps()
+    }
+
+    private fun stopCursor() {
         if (cursor.active || cursor.lifted) Trace.touch(cursorPath, true)
         main.removeCallbacks(endSlippedCursor)
-        main.removeCallbacks(startCursor)
         main.removeCallbacks(stepCursor)
         cursor.end()
+        strip?.gesture?.cursorEnded()
+    }
+
+    /** Closes an open panel, or uses up the rest of the push that closed it. False is an ordinary Back that does not concern a panel. */
+    private fun backKey(event: KeyEvent, down: Boolean): Boolean = when (backPush.event(down, panelOpen, event.eventTime, event.downTime)) {
+        BackPush.Action.ClosePanel -> {
+            closePanel()
+            true
+        }
+        BackPush.Action.UseUp -> true
+        BackPush.Action.Normal -> false
     }
 
     /** Sends one arrow key press, in order with the rest of the typing. */
     private fun moveCursor(direction: Int) {
         if (direction == 0) return
         val time = SystemClock.uptimeMillis()
-        if (Haptics.enabled(this)) haptics.pulse()
         val code = if (direction > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
         val arrow = KeyEvent(time, time, KeyEvent.ACTION_DOWN, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
             KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD)
-        enqueue { command(arrow) }
+        enqueue {
+            // A cursor at the start or end of the text cannot move, so it stays quiet. An app that does not answer still gets the pulse.
+            // Going past a space feels different from a letter, so that you can count words without looking.
+            val connection = currentInputConnection
+            val next = if (direction > 0) connection?.getTextAfterCursor(1, 0) else connection?.getTextBeforeCursor(1, 0)
+            if (next?.isEmpty() != true && Haptics.enabled(this)) {
+                if (next?.firstOrNull()?.isWhitespace() == true) haptics.cursorGap() else haptics.pulse()
+            }
+            command(arrow)
+        }
     }
 
-    /** Pressing Space presses the finger into the touchpad, which lifts it, so either may arrive first. */
-    private fun selectsWord(event: KeyEvent) = event.keyCode == KeyEvent.KEYCODE_SPACE && event.repeatCount == 0
-        && (cursor.active || cursor.lifted || event.eventTime - cursorEndedAt in 0..SELECT_AFTER_CURSOR_MILLIS)
-
     /** Selects the word at the cursor, or does nothing between words. */
-    private fun selectWord() {
+    private fun selectWord() = changeSelection { text, start, end, _ ->
+        WordSelection.at(text, start, end)?.also { strip?.gesture?.wordSelected(SystemClock.uptimeMillis()) }
+    }
+
+    /** Selects the word at the cursor, the part that a word drag keeps selected. Between words the drag starts from the cursor. */
+    private fun startWordDrag() {
+        wordAnchor = null
+        changeSelection { text, start, end, offset ->
+            val word = WordSelection.at(text, start, end) ?: (start to end)
+            wordAnchor = offset + word.first to offset + word.second
+            word
+        }
+    }
+
+    /** Extends the selection by one word, in order with the rest of the typing. */
+    private fun extendWords(direction: Int) = enqueue {
+        changeSelection { text, start, end, offset ->
+            val anchor = wordAnchor ?: return@changeSelection null
+            val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction)
+            if (range == start to end) return@changeSelection null
+            if (Haptics.enabled(this)) haptics.pulse()
+            strip?.gesture?.wordStep(direction)
+            range
+        }
+    }
+
+    /**
+     * Selects the range that [choose] picks from the text around the selection, or leaves it if [choose] returns null.
+     * [choose] gets the text, the selection in that text, and where that text starts in the field.
+     */
+    private fun changeSelection(choose: (CharSequence, Int, Int, Int) -> Pair<Int, Int>?) {
         composer.command(destructive = false, fieldLocal = true) {
             val connection = currentInputConnection ?: return@command false
             connection.finishComposingText()
             val around = connection.getSurroundingText(WORD_REACH, WORD_REACH, 0) ?: return@command false
-            val text = around.text
-            val cursorAt = around.selectionStart
-            var start = cursorAt
-            var end = around.selectionEnd
-            while (start > 0 && isWordCharacter(text[start - 1])) start--
-            while (end < text.length && isWordCharacter(text[end])) end++
-            if (start == end) return@command true
             val offset = fieldOffset(connection, around) ?: return@command false
+            val (start, end) = choose(around.text, around.selectionStart, around.selectionEnd, offset) ?: return@command true
             connection.setSelection(offset + start, offset + end)
         }
     }
@@ -440,39 +1031,107 @@ class AtlasIme : InputMethodService() {
         return if (cursor >= around.selectionStart) cursor - around.selectionStart else null
     }
 
-    private fun isWordCharacter(character: Char) = Character.isLetterOrDigit(character) || character == '\'' || character == '’'
-
-    private fun symbol(symbol: String) {
-        enqueue {
-            composer.symbol(symbol)
-            modifiers.consume()
-            showModifiers()
+    /** Types a symbol or emoji from the panel, then goes back to normal typing. */
+    private fun typePanelItem(item: String) {
+        composer.symbol(item)
+        if (modifiers.panel == Modifiers.Panel.Emoji) emoji?.use(item)?.let { recents ->
+            getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
         }
+        closePanel()
     }
 
-    private fun pickEmoji(picked: String) {
-        enqueue {
-            composer.symbol(picked)
-            emoji?.use(picked)?.let { recents ->
-                getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
+    private fun closePanel() {
+        modifiers.closePanel()
+        showModifiers()
+    }
+
+    private fun quickSettingOn(item: QuickSetting) = when (item) {
+        QuickSetting.Autocorrect -> TypingSettings.autocorrect(this)
+        QuickSetting.SwipeTyping -> TypingSettings.swipeTyping(this)
+        QuickSetting.SuggestionBar -> TypingSettings.suggestionBar(this)
+        QuickSetting.AutoCapitalise -> TypingSettings.autoCapitalise(this)
+        QuickSetting.AutoPunctuation -> TypingSettings.autoPunctuation(this)
+        QuickSetting.Vibration -> Haptics.enabled(this)
+        QuickSetting.HoldSymbols -> TypingSettings.holdSymbols(this)
+        QuickSetting.CursorControl -> TypingSettings.cursorControl(this)
+        QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this)
+        QuickSetting.ScrollAssistant -> !TypingSettings.touchpadOnlyInFields(this)
+        QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard -> true
+    }
+
+    private fun writeQuickSetting(item: QuickSetting, on: Boolean) = when (item) {
+        QuickSetting.Autocorrect -> TypingSettings.autocorrect(this, on)
+        QuickSetting.SwipeTyping -> TypingSettings.swipeTyping(this, on)
+        QuickSetting.SuggestionBar -> TypingSettings.suggestionBar(this, on)
+        QuickSetting.AutoCapitalise -> TypingSettings.autoCapitalise(this, on)
+        QuickSetting.AutoPunctuation -> TypingSettings.autoPunctuation(this, on)
+        // The preset is saved apart from this, so turning vibration on again gives the same strength.
+        QuickSetting.Vibration -> Haptics.select(this, Haptics.preset(this), on)
+        QuickSetting.HoldSymbols -> TypingSettings.holdSymbols(this, on)
+        QuickSetting.CursorControl -> TypingSettings.cursorControl(this, on)
+        QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this, on)
+        QuickSetting.ScrollAssistant -> TypingSettings.touchpadOnlyInFields(this, !on)
+        QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard -> Unit
+    }
+
+    /** Pushing a key on the quick settings page. The change applies at once and the page stays open. Only the key that opens Settings leaves. */
+    private fun useQuickSetting(item: QuickSetting) {
+        when (item) {
+            QuickSetting.OpenSettings -> {
+                openSettings()
+                closePanel()
             }
-            modifiers.consume()
-            showModifiers()
+            QuickSetting.ChangeKeyboard -> {
+                showKeyboardPicker()
+                closePanel()
+            }
+            else -> {
+                writeQuickSetting(item, !quickSettingOn(item))
+                readSettings()
+                panel?.render()
+                KeyboardEvents.publish { KeyboardEvent.QuickSettingUsed(item, quickSettingOn(item)) }
+            }
         }
+        haptics.settingChanged()
     }
 
-    private val stripPaging get() = modifiers.alt != Modifiers.Level.Off || modifiers.sym != Modifiers.Level.Off
+    /**
+     * Shows Android's list of keyboards. The list can take the release of a key that is still down and the field stays
+     * open, so nothing else would end that key. A key that stays down would stop the touchpad from typing.
+     */
+    private fun showKeyboardPicker() {
+        contact.releaseKeys()
+        modifiers.clear()
+        getSystemService(InputMethodManager::class.java).showInputMethodPicker()
+    }
+
+    /** Opens the app at its Settings page, with the same extra that its notifications use to open a page. */
+    private fun openSettings() {
+        val app = packageManager.getLaunchIntentForPackage(packageName) ?: return
+        startActivity(app.putExtra(OPEN_PAGE_EXTRA, "/settings").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    private val panelOpen get() = modifiers.panel != Modifiers.Panel.Closed
+
+    /** The touchpad types nothing while Alt is on or a panel is on screen. */
+    private val altOrPanel get() = modifiers.alt != Modifiers.Level.Off || panelOpen
 
     private fun clearSettlements() {
         inputGeneration++
         drainScheduled = false
         settlements.values.forEach(main::removeCallbacks)
         settlements.clear()
-        val releases = pendingInput.filter { it.event?.action == KeyEvent.ACTION_UP }
+        heldTaps.clear()
+        main.removeCallbacks(checkHeldTaps)
+        pieces.clear()
+        lastTouch = null
+        val kept = pendingInput.filter { pending ->
+            pending.event?.let { Modifiers.survivesDiscard(it.keyCode, it.action == KeyEvent.ACTION_DOWN) } == true
+        }
         pendingInput.clear()
         contact.cancel()
-        // Discarded typing must still release physically held modifiers.
-        releases.forEach { it.action?.invoke() }
+        // Discarded typing must still apply Shift, Alt and Sym presses and all releases, in order.
+        kept.forEach { it.action?.invoke() }
     }
 
     /** Move only an interpretable ready key prefix into the existing navigation barrier. */
@@ -487,7 +1146,7 @@ class AtlasIme : InputMethodService() {
                     if (Modifiers.isModifier(event.keyCode)) modifiers.key(event)
                 }
                 Modifiers.isModifier(event.keyCode) -> modifiers.key(event)
-                event.isCtrlPressed || event.isMetaPressed || KeyEvent.isModifierKey(event.keyCode) -> return
+                panelOpen || event.isCtrlPressed || event.isMetaPressed || KeyEvent.isModifierKey(event.keyCode) -> return
                 event.keyCode == KeyEvent.KEYCODE_SPACE -> {
                     composer.space(event.repeatCount > 0, event.eventTime)
                     modifiers.useHeld()
@@ -548,27 +1207,30 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun outcome(outcome: Contact.Outcome) {
+        Recording.sink?.outcome(outcome)
+        inputLog()?.outcome(outcome)
         when (outcome) {
             is Contact.Outcome.Swipe -> {
-                if (stripPaging) {
-                    // Sideways swipes page through the symbols or emoji on the strip. The pages follow the finger.
-                    val dx = (outcome.points.last().x - outcome.points.first().x) * 10
-                    val dy = (outcome.points.last().y - outcome.points.first().y) * 4
-                    if (modifiers.sym != Modifiers.Level.Off && abs(dy) > abs(dx) && abs(dy) >= Contact.PAGE_KEYS) {
-                        // Up and down swipes, measured in key rows, jump between emoji groups.
-                        strip?.jump(if (dy < 0) 1 else -1)
-                        haptics.pulse(HapticPreset.Strong)
-                    } else if (abs(dx) >= Contact.PAGE_KEYS) {
-                        strip?.turn(if (dx > 0) -1 else 1)
-                        haptics.pulse(HapticPreset.Strong)
-                    }
+                showStripAfterBack()
+                if (altOrPanel) {
+                    if (panelOpen) swipePanel(outcome.points)
+                    return
+                }
+                if (outcome.deletesWord) {
+                    haptics.tap()
+                    val nothingLeft = currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true
+                    composer.backspace(true)
+                    if (!nothingLeft) strip?.gesture?.wordDeleted(SystemClock.uptimeMillis())
+                    KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return
                 }
                 composer.swipe(letterSpace(outcome.points), outcome.startedAt, outcome.endedAt, modifiers.metaState)
                 modifiers.consume()
             }
             is Contact.Outcome.Tap -> {
+                KeyboardEvents.publish { KeyboardEvent.Tapped(outcome.key) }
                 if (!isTapKey(outcome.key)) return
+                showStripAfterBack()
                 val key = if (outcome.key == Layout.SPACE) " " else outcome.key
                 haptics.tap()
                 if (key == " ") {
@@ -583,32 +1245,110 @@ class AtlasIme : InputMethodService() {
         showModifiers()
     }
 
+    /** Measures a swipe in keys across and rows down, and moves the panel if it went far enough. */
+    private fun swipePanel(points: List<Sample>) {
+        val across = (points.last().x - points.first().x) * 10
+        val down = (points.last().y - points.first().y) * 4
+        if (maxOf(abs(across), abs(down)) >= Contact.PAGE_KEYS && panel?.swipe(across, down) == true) haptics.pageChanged()
+    }
+
     private fun isTapKey(key: String): Boolean {
-        if (stripPaging) return false
+        if (altOrPanel) return false
         return if (key == Layout.SPACE) ' ' in tapKeys else Layout.isLetter(key) && key[0] in tapKeys
     }
 
+    /** Only a plain letter from the phone's own keyboard can become its symbol. With Shift, Alt, Sym or a shortcut key it stays a letter. */
+    private fun canHold(event: KeyEvent): Boolean {
+        if (!holdSymbols || !field.words || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
+        if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
+        if (modifiers.shift != Modifiers.Level.Off || altOrPanel || !event.hasNoModifiers() || event.isCapsLockOn) return false
+        // A modifier still in the queue has not changed the levels above yet.
+        if (pendingInput.any { it.event?.keyCode?.let(Modifiers::isModifier) == true }) return false
+        val device = event.device ?: return false
+        if (device.isVirtual || device.isExternal || !event.isFromSource(InputDevice.SOURCE_KEYBOARD)) return false
+        val symbol = event.getUnicodeChar(KeyEvent.META_ALT_ON)
+        return symbol > 0 && !Character.isISOControl(symbol)
+    }
+
+    /** Starts the hold timer for a letter that can become its symbol. True if this is a repeat of such a key, which types nothing. */
+    private fun trackHold(event: KeyEvent): Boolean {
+        val earlier = holdEngine.pending()
+        val consumed = holdEngine.down(event.keyCode, event.deviceId, event.downTime, event.repeatCount > 0, canHold(event))
+        val press = holdEngine.pending()
+        if (press != null && press !== earlier) {
+            heldLetter = KeyEvent(event)
+            // Typing the letter before this one can take a long time, so this reads the clock after that.
+            main.postAtTime({ holdTimer(press) }, holdEngine.timerAt(press, SystemClock.uptimeMillis()))
+        }
+        return consumed
+    }
+
+    /** The app sends each key's release to the keyboard, so the timer first asks if the app is free to do that. */
+    private fun holdTimer(press: HoldEngine.Press) {
+        if (holdEngine.pending() !== press) return
+        val asked = SystemClock.uptimeMillis()
+        currentInputConnection?.getTextBeforeCursor(0, 0)
+        holdEngine.holdDue(press.id, SystemClock.uptimeMillis() - asked)
+    }
+
+    /**
+     * The key stayed down, so its letter becomes what the key types with Alt on: its printed symbol. The press's own flags
+     * decide the symbol, so a modifier pushed since then does not change it. It stays in order with other input.
+     */
+    private fun replaceHeldLetter() {
+        val letter = heldLetter ?: return
+        heldLetter = null
+        if (!editing) return
+        val symbol = letter.getUnicodeChar(letter.metaState or KeyEvent.META_ALT_ON)
+        if (symbol <= 0 || !Character.isValidCodePoint(symbol) || Character.isISOControl(symbol)) return
+        val text = String(Character.toChars(symbol))
+        haptics.holdSymbol()
+        KeyboardEvents.publish { KeyboardEvent.HeldSymbol(text) }
+        if (watchingKeys) {
+            val typed = letter.getUnicodeChar(letter.metaState)
+            main.post { replaceAppLetter(typed, text) }
+        } else if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(text) } else composer.replaceLetter(text)
+    }
+
+    /** The app typed the letter itself, so the composer does not know it. It stays as it is unless it is still the last thing typed. */
+    private fun replaceAppLetter(letter: Int, symbol: String) {
+        if (!editing || !watchingKeys) return
+        composer.command(destructive = true, fieldLocal = true) {
+            val before = currentInputConnection?.getTextBeforeCursor(1, 0) ?: return@command false
+            before.length != 1 || before[0].code != letter || editor.replace(1, symbol, 0)
+        }
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
+        Recording.sink?.key(event, touchpad.isGestureKey(event))
+        inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
+        if (keyCode == KeyEvent.KEYCODE_BACK && hold.held && !editing) return heldBack(event, down = true)
         // Android hands back to a shown keyboard first, which would only close the strip.
-        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) return true
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
+            backKey(event, down = true)
+            return true
+        }
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) return super.onKeyDown(keyCode, event)
         typedInField = true
         if (touchpad.isGestureKey(event)) return true
+        // Keys like volume reach the keyboard too, but they are not typing.
+        if (!event.isSystem) showStripAfterBack()
+        // The touchpad hears the physical press now, before the key is typed.
         contact.key(keyCode, true, event.eventTime)
-        if (keyCode == KeyEvent.KEYCODE_SPACE && selectingWithSpace) return true
-        if (selectsWord(event)) {
-            endCursor()
-            cursorEndedAt = Long.MIN_VALUE
-            selectingWithSpace = true
+        val carried = carryCtrl(event)
+        // A key that gets here while the keys are watched has already told the hold timer about its press.
+        val repeatOfHold = !watchingKeys && trackHold(carried)
+        // A key press means the finger was pressing, not resting on the touchpad.
+        endCursor()
+        if (repeatOfHold) return true
+        if (ctrlKey(event)) {
             consumedKeys += keyCode
-            enqueue { selectWord() }
             return true
         }
-        // Any other key press means the finger was pressing, not resting on the touchpad.
-        endCursor()
         if (pendingInput.isNotEmpty()) {
-            val captured = KeyEvent(event)
+            val captured = KeyEvent(carried)
             consumedKeys += keyCode
             enqueue(captured) {
                 key(captured)
@@ -616,29 +1356,36 @@ class AtlasIme : InputMethodService() {
             }
             return true
         }
-        val handled = key(event)
+        val handled = key(carried)
         if (handled) consumedKeys += keyCode
         showModifiers()
         return handled || super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        Recording.sink?.key(event, touchpad.isGestureKey(event))
+        inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
+        if (keyCode == KeyEvent.KEYCODE_BACK && hold.held && !editing) return heldBack(event, down = false)
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
-            passingBack = true
-            requestHideSelf(0)
+            // Back closes an open panel and stays in the app.
+            if (!backKey(event, down = false)) {
+                passingBack = true
+                requestHideSelf(0)
+            }
             return true
         }
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) {
-            return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
+            val heldRelease = holdEngine.up(keyCode, event.deviceId, event.eventTime)
+            return consumedKeys.remove(keyCode) || heldRelease || super.onKeyUp(keyCode, event)
         }
         if (touchpad.isGestureKey(event)) return true
         contact.key(keyCode, false, event.eventTime)
-        if (keyCode == KeyEvent.KEYCODE_SPACE && selectingWithSpace) {
-            selectingWithSpace = false
+        if (holdEngine.up(keyCode, event.deviceId, event.eventTime)) {
             consumedKeys.remove(keyCode)
             return true
         }
+        if (ctrlKey(event)) return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
         if (pendingInput.isNotEmpty()) {
             val captured = KeyEvent(event)
             consumedKeys.remove(keyCode)
@@ -655,19 +1402,42 @@ class AtlasIme : InputMethodService() {
         return consumedKeys.remove(keyCode) || super.onKeyUp(keyCode, event)
     }
 
+    /**
+     * Follows a key that counts as Ctrl, and returns false for any other key. Keys carry Ctrl from the moment they arrive,
+     * so Ctrl does not wait in the input queue.
+     */
+    private fun ctrlKey(event: KeyEvent): Boolean {
+        if (!modifiers.isCtrl(event.keyCode)) return false
+        modifiers.key(event)
+        showModifiers()
+        return true
+    }
+
+    /** A key pushed while Ctrl is held carries Ctrl, also when that Ctrl is fn, which the phone reports as its own modifier. */
+    private fun carryCtrl(event: KeyEvent): KeyEvent {
+        if (!modifiers.ctrlHeld || event.isCtrlPressed && !event.isFunctionPressed) return event
+        return KeyEvent(event.downTime, event.eventTime, event.action, event.keyCode, event.repeatCount,
+            Modifiers.withCtrl(event.metaState), event.deviceId, event.scanCode, event.flags, event.source)
+    }
+
     /** Captures each app-handled key as a paired command in the composer's ordered input queue. */
     private fun key(event: KeyEvent): Boolean {
         if (Modifiers.isModifier(event.keyCode)) {
             modifiers.key(event)
+            if (panelOpen && !isInputViewShown) main.post(showPanel)
+            return true
+        }
+        if (panelKey(event)) return true
+        // Enter comes before the Ctrl shortcuts, because the Enter key setting can use Ctrl + Enter.
+        if (!event.isMetaPressed && enter(event)) return true
+        // A lone Ctrl or Meta press is not a shortcut. Each shortcut key carries its own meta state.
+        if (KeyEvent.isModifierKey(event.keyCode)) {
+            modifiers.useHeld()
             return true
         }
         if (event.isCtrlPressed && event.keyCode != KeyEvent.KEYCODE_DEL || event.isMetaPressed) {
             modifiers.useHeld()
             command(event)
-            return true
-        }
-        if (KeyEvent.isModifierKey(event.keyCode)) {
-            modifiers.useHeld()
             return true
         }
         if (deadKeyPending && (event.keyCode == KeyEvent.KEYCODE_SPACE || event.keyCode == KeyEvent.KEYCODE_DEL)) {
@@ -683,7 +1453,6 @@ class AtlasIme : InputMethodService() {
                 composer.backspace(event.isCtrlPressed || alt)
                 if (alt) modifiers.consume() else modifiers.useHeld()
             }
-            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { composer.enter(); modifiers.useHeld() }
             KeyEvent.KEYCODE_SPACE -> { composer.space(event.repeatCount > 0, event.eventTime); modifiers.useHeld() }
             KeyEvent.KEYCODE_TAB -> { modifiers.useHeld(); command(event) }
             else -> {
@@ -702,6 +1471,63 @@ class AtlasIme : InputMethodService() {
                 composer.type(text)
             }
         }
+        return true
+    }
+
+    /**
+     * With the panel on screen, a letter key types the item that it shows, and a key with no item, such as P, types nothing. Backspace and Enter
+     * turn the page of symbols or emoji, do nothing on the quick settings page, and never reach the text. Space and fn can pick a category. Other
+     * keys stay as they are.
+     */
+    private fun panelKey(event: KeyEvent): Boolean {
+        if (event.repeatCount > 0 && event.keyCode == pickedKey) return true
+        pickedKey = 0
+        if (!panelOpen) return false
+        Modifiers.panelScroll(event.keyCode, modifiers.panel)?.let { rows ->
+            pickedKey = event.keyCode
+            if (event.repeatCount == 0 && rows != 0f && panel?.swipe(0f, rows) == true) haptics.pageChanged()
+            return true
+        }
+        if (!isInputViewShown || event.isCtrlPressed || event.isMetaPressed) return false
+        if (!HoldEngine.isLetter(event.keyCode)) return categoryKey(event)
+        if (event.repeatCount > 0) return true
+        val letter = ('A' + (event.keyCode - KeyEvent.KEYCODE_A)).toString()
+        if (modifiers.panel == Modifiers.Panel.Settings) QuickSetting.on(letter)?.let { item ->
+            pickedKey = event.keyCode
+            useQuickSetting(item)
+        } else panel?.item(letter)?.let { item ->
+            pickedKey = event.keyCode
+            typePanelItem(item)
+        }
+        return true
+    }
+
+    /** With categories on the screen, Space and fn open the category at their place on the bottom row, and type nothing. */
+    private fun categoryKey(event: KeyEvent): Boolean {
+        val key = when (event.keyCode) {
+            KeyEvent.KEYCODE_SPACE -> Layout.SPACE
+            Modifiers.FN -> Layout.FN
+            else -> return false
+        }
+        if (panel?.hasCategories != true) return false
+        if (event.repeatCount == 0 && panel?.pickCategoryUnder(key) == true) haptics.pageChanged()
+        return true
+    }
+
+    /** False for any other key, and for a Ctrl + Enter that stays a shortcut for the app. */
+    private fun enter(event: KeyEvent): Boolean {
+        if (event.keyCode != KeyEvent.KEYCODE_ENTER && event.keyCode != KeyEvent.KEYCODE_NUMPAD_ENTER) return false
+        val info = currentInputEditorInfo
+        // A locked Shift is Caps Lock, so Enter still sends.
+        val shift = event.isShiftPressed || modifiers.shift == Modifiers.Level.Once
+        // The Enter key setting is postponed (issue 26) and has no row in Settings, so each field decides for now.
+        val press = EnterKey.AppDecides.press(info?.inputType ?: 0, info?.imeOptions ?: 0,
+            info?.actionId ?: 0, info?.packageName, shift, event.isCtrlPressed, enterApps)
+        if (press == EnterKey.Press.FieldDecides && event.isCtrlPressed) return false
+        // A held Enter must not send again before the app has cleared the field.
+        val sends = press == EnterKey.Press.Send || press == EnterKey.Press.ShiftSend
+        if (!sends || event.repeatCount == 0) composer.enter(press)
+        if (press == EnterKey.Press.ShiftNewLine || press == EnterKey.Press.ShiftSend) modifiers.consume() else modifiers.useHeld()
         return true
     }
 
@@ -734,40 +1560,57 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun showModifiers() {
-        strip?.showSymbols = modifiers.alt != Modifiers.Level.Off
-        strip?.showEmoji = modifiers.sym != Modifiers.Level.Off
-        contact.paging = stripPaging
+        strip?.visibility = if (panelOpen) View.GONE else View.VISIBLE
+        showModifierBar()
+        panel?.mode = modifiers.panel
+        contact.paging = panelOpen
+        updateKeyWatch()
+        KeyboardEvents.publish { KeyboardEvent.ModifierState(modifiers.shift, modifiers.alt, modifiers.panel, modifiers.ctrlHeld) }
     }
 
-    /** Converts touchpad points to the recogniser's letter space. */
-    private fun letterSpace(points: List<Sample>): Swipe {
-        val start = points.first().time
-        return Swipe(
-            FloatArray(points.size) { points[it].x },
-            FloatArray(points.size) { points[it].y * 4 / 3 },
-            FloatArray(points.size) { (points[it].time - start).toFloat() },
-        )
+    private fun showModifierBar() {
+        strip?.modifiers = ModifierBar.of(modifiers, restingKey) { Keys.letter(it, KeyEvent.META_ALT_ON) }
     }
 
     override fun onDestroy() {
         editing = false
+        GuideHooks.panelRequests = null
+        // A held status must not outlive the keyboard.
+        if (hold.held) hideHeldWindow()
+        unregisterReceiver(screenOn)
+        modifiers.closePanel()
+        panelKeys.clear()
+        updateKeyWatch()
         main.removeCallbacksAndMessages(null)
         settlements.clear()
         pendingInput.clear()
+        heldLetter = null
         contact.releaseKeys()
         composer.stop()
+        autocorrect.release()
         editor.cancelState()
+        TypingSettings.stopListening(this, overlaySetting)
         overlay.hide()
+        rawLog?.finish()
+        rawLog = null
+        composer.log = null
         super.onDestroy()
     }
 
     companion object {
+        /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
+        private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"
+        private const val SMART_LAUNCHER = "ginlemon.flowerfree"
         private const val MAX_PENDING_INPUT = 128
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"
-        private const val BACK_SETTLE_MILLIS = 300L
-        private const val SELECT_AFTER_CURSOR_MILLIS = 250L
+        /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
+        private const val STALE_HIDE_MILLIS = 500L
+        /** The field of a returning window started within 30 ms of its empty start. */
+        private const val NO_FIELD_HIDE_MILLIS = 200L
         private const val FRAME_MILLIS = 16L
+        /** How long a finger must stay on the bottom row to open the group under it. A resting finger's touches last about 40 ms. */
+        private const val GROUP_REST_MILLIS = 250L
         /** Characters read on each side of the cursor to find the word it is in. */
         private const val WORD_REACH = 64
         /** One for each physical Shift, Alt and Sym key. */
@@ -777,8 +1620,8 @@ class AtlasIme : InputMethodService() {
         private val NAVIGATION_KEYS = setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MOVE_HOME,
             KeyEvent.KEYCODE_MOVE_END, KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_PAGE_DOWN)
-        private val FIELD_SHORTCUTS = setOf(KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_X,
-            KeyEvent.KEYCODE_V, KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Y)
+        private val FIELD_LEAVING_KEYS = setOf(KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_TAB)
+        private val FIELD_SHORTCUTS = Modifiers.CTRL_ACTIONS.keys.map { KeyEvent.KEYCODE_A + (it[0] - 'A') }.toSet()
         private val DESTRUCTIVE_SHORTCUTS = setOf(KeyEvent.KEYCODE_X, KeyEvent.KEYCODE_V,
             KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Y)
     }

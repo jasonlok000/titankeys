@@ -3,8 +3,8 @@ import { add, close } from "ink/icons";
 import { type EnterApp, type SendMethod, removeEnterApp, setEnterApp, state } from "../../lib/atlas";
 
 const title = "Message apps";
-const subtitle = "The Enter key setting applies in these apps and in fields that have a Send action. In other apps, Enter adds a new line. Select an app to change how TitanKeys sends messages in that app.";
-const sendLabels: Record<SendMethod, string> = { action: "Sends with the field action", key: "Sends with the Enter key" };
+const subtitle = "The Enter key setting works in these apps, and in any field that has a Send action. Everywhere else, Enter adds a new line. Pick an app to change how TitanKeys sends in it.";
+const sendLabels: Record<SendMethod, string> = { action: "Sends with the app's Send action", key: "Sends with Enter" };
 const other = (method: SendMethod): SendMethod => method === "action" ? "key" : "action";
 
 export default function EnterApps() {

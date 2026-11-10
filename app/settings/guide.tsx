@@ -7,47 +7,47 @@ export default function Guide() {
   // Opened from the front page, the guide closes back to it, like Settings does.
   const fromHome = useRouteParams().from === "home";
   const closeAction = fromHome ? { icon: close, onPress: () => replace("/") } : undefined;
-  return <Screen title="Guide" subtitle="How to use TitanKeys." rightAction={closeAction}>
+  return <Screen title="Guide" subtitle="How everything works." rightAction={closeAction}>
     <Section title="Try it">
-      <Row title="Interactive guide" subtitle="Try each feature on the keys." endIcon={arrowOutward} onPress={() => void openGuide()} />
+      <Row title="Interactive guide" subtitle="Try every feature on the keys." endIcon={arrowOutward} onPress={() => void openGuide()} />
     </Section>
     <Section title="Swiping">
-      <Topic title="Swipe a word">Move your finger across the letters. Do not push the keys. Lift your finger to type the word.</Topic>
-      <Topic title="Keep swiping after a short lift">If your finger leaves the keys for a short time, the swipe continues. Change this time in Settings.</Topic>
-      <Topic title="Pick another word">Touch a word on the strip above the keyboard.</Topic>
-      <Topic title="Turn off swipe typing">Turn off Swipe to type words in Settings or in the quick settings. The touchpad then types no words. Light-touch keys and the panel continue to operate.</Topic>
-      <Topic title="Scroll assistant outside text fields">This is the phone's Scroll assistant: when no text field is active, the touchpad scrolls the app. Turn it off in Settings or in the quick settings to stop that. The touchpad then works only in text fields, and the touchscreen does not change. When it is off, the shortcuts on the letter keys and the space bar shortcut from the phone Settings do not operate. In some apps, Back then takes two pushes: the first lets go of the touchpad, and the second goes back.</Topic>
-      <Topic title="Move the cursor">Touch the space bar two times quickly. Do not lift your finger after the second touch. Swipe up onto the letters, where the touchpad reads your finger better. Then move your finger to the left or right. The cursor moves slowly near the middle and quickly near the edge of the keyboard. In the middle, the cursor stops. Each time that the cursor goes past a space, you feel a stronger vibration.</Topic>
-      <Topic title="Select words">To select the word at the cursor, touch the space bar two times quickly. Lift your finger after each touch. To select more words, touch the space bar three times quickly. Do not lift your finger after the third touch. Swipe up, then move to the left or right. Lean the other way to give the words back, one at a time.</Topic>
-      <Topic title="Where the touchpad reads">The touchpad stops at the middle of the keys at each side, and at the middle of the top and bottom rows. A finger outside this area is not read well.</Topic>
+      <Topic title="Swipe a word">Slide your finger across the letters without pressing. Lift to type the word.</Topic>
+      <Topic title="Keep swiping after a short lift">If your finger leaves the keys for a moment, the swipe carries on. Set how long in Settings.</Topic>
+      <Topic title="Pick another word">Touch a word on the strip above the keys.</Topic>
+      <Topic title="Turn off swipe typing">Turn off Swipe to type words in Settings or the quick settings. The touchpad stops typing words, but light-touch keys and the panel still work.</Topic>
+      <Topic title="Scroll assistant outside text fields">That's the phone's Scroll assistant: outside text fields, the touchpad scrolls the app. Turn it off in Settings or the quick settings and the touchpad only works in text fields. The touchscreen doesn't change. With it off, the shortcuts on the letter keys and the phone's space bar shortcut stop working, and in some apps Back takes two presses: the first lets go of the touchpad, the second goes back.</Topic>
+      <Topic title="Move the cursor">Touch the space bar twice, quickly, and keep your finger down after the second touch. Slide up onto the letters, where the touchpad reads you better, then move left or right. The cursor goes slowly near the middle and fast near the edges, and stops in the middle. Each time it passes a space, you feel a stronger buzz.</Topic>
+      <Topic title="Select words">To select the word at the cursor, touch the space bar twice, quickly, lifting after each touch. To select more, touch it three times and keep your finger down after the third. Slide up, then move left or right. Lean back the other way to give the words back, one at a time.</Topic>
+      <Topic title="Where the touchpad reads">The touchpad reaches the middle of the outer keys on each side, and the middle of the top and bottom rows. Outside that, it can't read your finger well.</Topic>
     </Section>
     <Section title="Keys">
-      <Topic title="Type as on any keyboard">Push the keys as on any keyboard. When you push the space bar, TitanKeys corrects typos in the word. To stop this, turn off Fix typos as you type in Settings.</Topic>
-      <Topic title="Type with a light touch">Touch these keys lightly to type them. You do not have to push them. Select the keys in Settings.</Topic>
-      <Topic title="Hold a letter for its symbol">Hold a letter to type the symbol printed on its key. Select the time in Settings.</Topic>
-      <Topic title="Full stop">Push the space bar two times.</Topic>
-      <Topic title="Shift and Alt">Push one time for the next letter only. Two quick pushes do the same. To cancel, push again after a longer time. To lock with two quick pushes, open Settings and turn on Double push locks Shift and Alt.</Topic>
-      <Topic title="Word suggestions">The strip shows words and spelling corrections as you type. Touch a word to type it.</Topic>
-      <Topic title="Delete a word">Push Alt, then push Backspace. You can also use Ctrl and Backspace, or flick left from Backspace.</Topic>
-      <Topic title="Delete many words">Flick left from Backspace. Do not lift your finger. TitanKeys deletes more words, one after the other. A longer flick deletes the words faster. To stop, lift your finger or push a key.</Topic>
-      <Topic title="More symbols">Push Sym to open the panel. Each letter key shows a symbol, but Q and A are empty and P shows the page. Rest your finger on a key to mark it. P does not show a mark. Push the key to type the symbol. The panel then closes. To see more, swipe up or down on the keyboard, or push Backspace or Enter. The marks at the bottom of the panel show the groups of symbols. To change the group, swipe left or right, or put your finger on the bottom row of keys.</Topic>
-      <Topic title="Emoji">Push Sym again to show emoji. The first group is Recent, after you use an emoji. Push a key to type its emoji. Q and A are empty. P shows the page and does not type an emoji. To see more, swipe up or down on the keyboard, or push Backspace or Enter. To change the group, swipe left or right. The marks at the bottom of the panel show each group. Touch a mark to open its group, or put your finger on the bottom row of keys. Hold it there, or move it to the group. You can also push Space. Push Sym again to close the panel.</Topic>
-      <Topic title="Quick settings">When the panel is open, push Alt to see the quick settings. Rest your finger on a key to see its setting at the bottom of the panel, and if the setting is on or off. Push the key to change the setting. The page stays open. A dim key shows a setting that is off. Push O to open all settings. Push K to show a list of your keyboards. Then select a keyboard. Push Alt again to go back, or push Sym to close the panel.</Topic>
-      <Topic title="Modifier bar">When Shift, Caps, Alt, or Ctrl is on, the bar above the keyboard shows this in place of the words. A filled label shows a key that you hold. An outline shows a key that you pushed one time. Caps shows that Shift is locked. Rest your finger on a key to see what the key types.</Topic>
-      <Topic title="Orange accents">Some small marks on the keyboard are orange, such as the key under your finger. To make them white, turn off Orange accents in Settings.</Topic>
-      <Topic title="Ctrl shortcuts">Hold Ctrl. The bar above the keyboard shows what each shortcut does.</Topic>
-      <Topic title="Use a shortcut">Hold Ctrl and push the key.</Topic>
-      <Topic title="Use fn as Ctrl">fn works as Ctrl. To use fn for the phone's own shortcuts, turn off Use fn as Ctrl in Settings.</Topic>
+      <Topic title="Type as on any keyboard">Press the keys like on any keyboard. When you press the space bar, TitanKeys fixes typos in the word. Don't want that? Turn off Fix typos as you type in Settings.</Topic>
+      <Topic title="Type with a light touch">Touch these keys lightly to type them. You don't have to press them. Pick the keys in Settings.</Topic>
+      <Topic title="Hold a letter for its symbol">Hold a letter to type the symbol printed on its key. Set how long in Settings.</Topic>
+      <Topic title="Full stop">Press the space bar twice.</Topic>
+      <Topic title="Shift and Alt">Press once for the next letter only. Two quick presses do the same. To cancel, press again after a pause. To lock them with two quick presses, turn on Press twice to lock Shift and Alt in Settings.</Topic>
+      <Topic title="Word suggestions">The strip shows words and spelling fixes as you type. Touch one to type it.</Topic>
+      <Topic title="Delete a word">Press Alt, then Backspace. Ctrl and Backspace works too, or flick left from Backspace.</Topic>
+      <Topic title="Delete many words">Flick left from Backspace and keep your finger down. TitanKeys keeps deleting, word after word, and a longer flick goes faster. Lift your finger or press a key to stop.</Topic>
+      <Topic title="More symbols">Press Sym to open the panel. Each letter key shows a symbol, except Q and A, which are empty, and P, which shows the page. Rest your finger on a key to mark it (P doesn't get a mark), then press it to type the symbol and close the panel. For more, swipe up or down on the keys, or press Backspace or Enter. The marks along the bottom show the groups of symbols. To change group, swipe left or right, or put your finger on the bottom row of keys.</Topic>
+      <Topic title="Emoji">Press Sym again for emoji. Once you've used some, Recent comes first. Press a key to type its emoji. Q and A are empty, and P shows the page. For more, swipe up or down on the keys, or press Backspace or Enter. Swipe left or right to change group. The marks along the bottom show each group: touch one to open it, or put your finger on the bottom row of keys and hold it there or slide to the group. Space works too. Press Sym again to close the panel.</Topic>
+      <Topic title="Quick settings">With the panel open, press Alt for the quick settings. Rest your finger on a key to see its setting at the bottom of the panel, and whether it's on. Press the key to switch it. The page stays open, and a dim key means the setting is off. O opens all settings, and K lists your keyboards so you can pick one. Press Alt to go back, or Sym to close the panel.</Topic>
+      <Topic title="Modifier bar">When Shift, Caps, Alt or Ctrl is on, the bar above the keys shows it instead of words. Filled means you're holding the key, an outline means you pressed it once, and Caps means Shift is locked. Rest your finger on a key to see what it types.</Topic>
+      <Topic title="Orange accents">A few small marks on the keyboard are orange, like the key under your finger. Prefer white? Turn off Orange accents in Settings.</Topic>
+      <Topic title="Ctrl shortcuts">Hold Ctrl and the bar above the keys shows what each shortcut does.</Topic>
+      <Topic title="Use a shortcut">Hold Ctrl and press the key.</Topic>
+      <Topic title="Use fn as Ctrl">fn works as Ctrl. Want fn for the phone's own shortcuts? Turn off Use fn as Ctrl in Settings.</Topic>
     </Section>
     <Section title="Your words">
-      <Topic title="New words">TitanKeys learns the new words that you use. To see, add or block words, open Settings and select Your words.</Topic>
-      <Topic title="Backup">To keep a copy of your words, open Your words and select Export words. To add the words again, select Import words.</Topic>
+      <Topic title="New words">TitanKeys learns the new words you use. To see, add or block words, go to Settings &gt; Your words.</Topic>
+      <Topic title="Backup">To keep a copy of your words, go to Your words &gt; Export words. Import words brings them back.</Topic>
     </Section>
     <Section title="Problems">
-      <Topic title="Check the setup">If a part of TitanKeys does not operate correctly, open Settings and select Setup. Make sure that all steps show Done.</Topic>
-      <Topic title="Sym does not open the panel">In the phone Settings, open Shortcut keys. Set Sym key to Programmable key.</Topic>
-      <Topic title="fn does not operate as Ctrl">In the phone Settings, open Shortcut keys. Set fn key to Programmable key.</Topic>
-      <Topic title="Swiping does not operate in an app">Open Scroll assistant and find the app. Make sure that it shows Sliding Mode 1.</Topic>
+      <Topic title="Check the setup">Something fucked up? Nine times out of ten it's Setup. Settings &gt; Setup, make every step say Done.</Topic>
+      <Topic title="Sym doesn't open the panel">In the phone's Settings, open Shortcut keys and set Sym key to Programmable key.</Topic>
+      <Topic title="fn doesn't work as Ctrl">In the phone's Settings, open Shortcut keys and set fn key to Programmable key.</Topic>
+      <Topic title="Swiping doesn't work in an app">Open Scroll assistant and find the app. It should say Sliding Mode 1.</Topic>
     </Section>
   </Screen>;
 }

@@ -169,7 +169,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     null
                 }
                 "transferLearning" -> {
-                    check(!transferring) { "A learning transfer is already open." }
+                    check(!transferring) { "An export or import is already open." }
                     val mode = data.getString("mode")
                     require(mode == "import" || mode == "export")
                     transferring = true
@@ -186,7 +186,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     null
                 }
                 "exportRawLog" -> {
-                    check(!transferring) { "A transfer is already open." }
+                    check(!transferring) { "An export or import is already open." }
                     transferring = true
                     try {
                         RawLogExportActivity.start(activity) { exported, error ->
@@ -284,7 +284,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             }
             if (result != null) complete(NativeResult.Success(result))
         } catch (error: Exception) {
-            complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "TitanKeys request failed", false))
+            complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "Something went wrong. Try again.", false))
         }
     }
 

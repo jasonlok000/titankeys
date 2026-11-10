@@ -33,8 +33,9 @@ public final class ContextSwipeChecks {
         NativeDictionary base = new NativeDictionary(args[0] + "/english.combined");
         NativeDictionary personal = new NativeDictionary(new String[0], new float[0]);
         NativeDictionary contractions = SwipeRecognizer.contractionDictionary(base);
+        NativeDictionary doubleLetters = NativeDictionary.doubleLetters(base, SwipeRecognizer.DOUBLE_LETTER_FLOOR);
         decoder = new SwipeDecoder(args[0]);
-        decoder.dictionaries(Layout.LETTERS, Layout.KEY_X, Layout.KEY_Y, new long[] { base.pointer(), personal.pointer(), contractions.pointer() });
+        decoder.dictionaries(Layout.LETTERS, Layout.KEY_X, Layout.KEY_Y, new long[] { base.pointer(), personal.pointer(), contractions.pointer(), doubleLetters.pointer() });
 
         List<String> dont = swipe("dont", "i");
         check(dont.get(0).equals("don't"), "A contraction must be scored by its real spelling: " + dont);
@@ -113,7 +114,7 @@ public final class ContextSwipeChecks {
         Swipe gesture = path(letters);
         String[] context = SentenceContext.words(text);
         SwipeDecoder.Result[] results = SwipeRecognizer.contractionSpellings(
-                decoder.recognise(gesture.x, gesture.y, gesture.time, SwipeRecognizer.scoringContext(context), new float[] { 1, 0, 1 }), decoder.contextWeight());
+                decoder.recognise(gesture.x, gesture.y, gesture.time, SwipeRecognizer.scoringContext(context), new float[] { 1, 0, 1, 1 }), decoder.contextWeight());
         results = SwipeRecognizer.rank(gesture, results, decoder.contextWeight(), decoder.shapeNormalizer(), context.length, Set.of());
         return Arrays.stream(results).map(result -> result.word).toList();
     }

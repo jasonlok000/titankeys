@@ -84,6 +84,44 @@ static void add_surface(Dictionary& value, const std::string& path, const std::s
     if (found == forms.end()) forms.push_back({spelling, freq});
     else found->frequency = std::max(found->frequency, freq);
 }
+// A swipe rarely shows a repeated letter, so "imma" must also match the path i-m-a.
+static void add_single_letter_path(Dictionary& value, const std::string& alpha, const std::string& spelling, float freq) {
+    std::string path = alpha;
+    path.erase(std::unique(path.begin(), path.end()), path.end());
+    if (path != alpha && path.size() >= 2) add_surface(value, path, spelling, freq);
+}
+static jlong build(std::unique_ptr<Dictionary> value) {
+    for (auto& group : value->surfaces) {
+        auto& forms = group.second;
+        std::sort(forms.begin(), forms.end(), [](const Surface& a, const Surface& b) {
+            return a.frequency != b.frequency ? a.frequency > b.frequency : a.spelling < b.spelling;
+        });
+        value->trie->insert(group.first, forms.front().frequency, true);
+    }
+    ITrie* trie = value->trie->itrie();
+    std::vector<TrieId> pending{trie->root()};
+    while (!pending.empty()) {
+        TrieId parent = pending.back(); pending.pop_back();
+        std::vector<TrieId> children;
+        bool expanded = false;
+        for (uint32_t i = 0; i < trie->get_child_count(parent); i++) {
+            TrieId id = trie->get_child(parent, i);
+            pending.push_back(id);
+            children.push_back(id);
+            if (!trie->is_word(id)) continue;
+            const auto& forms = value->surfaces.at(trie->get_word(id));
+            value->terminals.emplace(id, forms.front());
+            // Surface variants share the same letter path but remain distinct decoder leaves.
+            for (size_t n = 1; n < forms.size(); n++) {
+                children.push_back(EXTRA_WORD | static_cast<TrieId>(value->extra.size()));
+                value->extra.push_back({id, forms[n]});
+                expanded = true;
+            }
+        }
+        if (expanded) value->branches.emplace(parent, std::move(children));
+    }
+    return finish(std::move(value));
+}
 extern "C" JNIEXPORT jlong JNICALL
 Java_org_futo_ml_inference_NativeDictionary_nativeLoad(JNIEnv* env, jclass, jstring path) {
     try {
@@ -111,42 +149,28 @@ Java_org_futo_ml_inference_NativeDictionary_nativeCreate(JNIEnv* env, jclass, jo
                 error(env, "Invalid personal dictionary entry"); return 0;
             }
             add_surface(*value, alpha, spelling, freq);
-            // A swipe rarely shows a repeated letter, so "imma" must also match the path i-m-a.
-            std::string path = alpha;
-            path.erase(std::unique(path.begin(), path.end()), path.end());
-            if (path != alpha && path.size() >= 2) add_surface(*value, path, spelling, freq);
+            add_single_letter_path(*value, alpha, spelling, freq);
         }
-        for (auto& group : value->surfaces) {
-            auto& forms = group.second;
-            std::sort(forms.begin(), forms.end(), [](const Surface& a, const Surface& b) {
-                return a.frequency != b.frequency ? a.frequency > b.frequency : a.spelling < b.spelling;
-            });
-            value->trie->insert(group.first, forms.front().frequency, true);
-        }
-        ITrie* trie = value->trie->itrie();
-        std::vector<TrieId> pending{trie->root()};
-        while (!pending.empty()) {
-            TrieId parent = pending.back(); pending.pop_back();
-            std::vector<TrieId> children;
-            bool expanded = false;
-            for (uint32_t i = 0; i < trie->get_child_count(parent); i++) {
-                TrieId id = trie->get_child(parent, i);
-                pending.push_back(id);
-                children.push_back(id);
-                if (!trie->is_word(id)) continue;
-                const auto& forms = value->surfaces.at(trie->get_word(id));
-                value->terminals.emplace(id, forms.front());
-                // Surface variants share the same letter path but remain distinct decoder leaves.
-                for (size_t n = 1; n < forms.size(); n++) {
-                    children.push_back(EXTRA_WORD | static_cast<TrieId>(value->extra.size()));
-                    value->extra.push_back({id, forms[n]});
-                    expanded = true;
-                }
-            }
-            if (expanded) value->branches.emplace(parent, std::move(children));
-        }
-        return finish(std::move(value));
+        return build(std::move(value));
     } catch (...) { error(env, "Could not create the personal dictionary"); return 0; }
+}
+extern "C" JNIEXPORT jlong JNICALL
+Java_org_futo_ml_inference_NativeDictionary_nativeDoubleLetters(JNIEnv* env, jclass, jlong handle, jfloat floor) {
+    try {
+        ITrie* source = &reinterpret_cast<Dictionary*>(handle)->view;
+        auto value = std::make_unique<Dictionary>(std::make_unique<swipe_decoder::Trie>());
+        std::vector<TrieId> pending{source->root()};
+        while (!pending.empty()) {
+            TrieId id = pending.back(); pending.pop_back();
+            for (uint32_t i = 0; i < source->get_child_count(id); i++) pending.push_back(source->get_child(id, i));
+            if (id == source->root() || !source->is_word(id) || source->get_log_frequency(id) < floor) continue;
+            std::string spelling = source->get_word(id);
+            if (!std::all_of(spelling.begin(), spelling.end(), [](char ch) { return ch >= 'a' && ch <= 'z'; })) continue;
+            add_single_letter_path(*value, spelling, spelling, source->get_log_frequency(id));
+        }
+        source->end_search();
+        return build(std::move(value));
+    } catch (...) { error(env, "Could not create the double-letter dictionary"); return 0; }
 }
 extern "C" JNIEXPORT jlong JNICALL
 Java_org_futo_ml_inference_NativeDictionary_nativePointer(JNIEnv*, jclass, jlong handle) {

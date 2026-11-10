@@ -317,11 +317,13 @@ public final class SwipeTyping {
                     timing.finish(); completionTiming.record(timing, false, true, false); return;
                 }
                 Map<String, Double> likely = recogniser == null ? Map.of() : recogniser.nextWords(SentenceContext.words(contextText));
-                // Before any letter, the next-word model puts the right word in the top three far more often.
+                // The next-word model puts the right word in the top three more often, before any letter and after the
+                // first few. After letters it ranks only the words it holds whole; the rest follow by frequency.
                 SwipeModels loaded = models;
-                if (prefix.isEmpty() && loaded != null) {
+                if (loaded != null) {
                     try {
-                        Map<String, Double> predicted = loaded.nextWords(contextText, typedPredictions::contains);
+                        Map<String, Double> predicted = prefix.isEmpty() ? loaded.nextWords(contextText, typedPredictions::contains)
+                                : loaded.completions(contextText, prefix, typedPredictions::contains);
                         if (!predicted.isEmpty()) likely = predicted;
                     } catch (Exception | LinkageError error) { Log.w("TouchpadSwipe", "Next-word model skipped", error); }
                 }

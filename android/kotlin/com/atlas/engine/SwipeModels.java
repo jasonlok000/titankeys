@@ -82,6 +82,9 @@ final class SwipeModels implements AutoCloseable {
                 text, spellings);
         for (Map.Entry<String, double[]> e : cand.entrySet())
             if (e.getValue()[12] < 0 && saved.containsKey(e.getKey())) e.getValue()[12] = saved.get(e.getKey());
+        // A built-in word such as "TitanKeys" is missing from the dictionary, but is no rarer than a saved word.
+        for (Map.Entry<String, double[]> e : cand.entrySet())
+            if (e.getValue()[12] < 0 && BuiltInWords.spelling(e.getKey()) != null) e.getValue()[12] = BuiltInWords.FREQUENCY;
         SwipeRanker.Choice[] best = ranker.rank(cand, spellings, allowed, SwipeRanker.shown());
         Map<String, SwipeDecoder.Result> futo = new LinkedHashMap<>();
         for (SwipeDecoder.Result[] list : new SwipeDecoder.Result[][]{shown, readings[0], readings[1]})

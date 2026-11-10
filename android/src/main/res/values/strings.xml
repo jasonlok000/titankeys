@@ -1,3 +1,4 @@
 <resources>
     <string name="back_service_description">Lets one back swipe close the suggestion bar and go back in the app. While the Sym panel is open, TitanKeys also reads the keys that you push, so that Enter and Backspace turn the pages and do not go to the app. In the Smart Launcher search field, TitanKeys also reads the keys that you push, so that Hold for symbols and two pushes of Shift or Alt operate correctly. TitanKeys does not read your screen.</string>
+    <string name="contacts_permission_in_settings">To use names from your contacts, allow Contacts for TitanKeys on this page.</string>
 </resources>

@@ -1,10 +1,13 @@
 import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from "ink";
 import { close } from "ink/icons";
 import { state, update } from "../../lib/atlas";
+import { exactAppsLabel } from "./exact-apps";
+import { hiddenBarLabel } from "./hidden-bar";
 import { holdLabel } from "./hold";
 import { liftLabel } from "./lift";
 import { rawLogLabel } from "./rawlog";
 import { setupLabel } from "./setup";
+import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
 import { tapKeysLabel } from "./tap-keys";
 import { vibrationLabel } from "./vibration";
@@ -26,12 +29,17 @@ export default function Settings() {
       <Field label="English spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
       <Field label="Hold a letter for its symbol" href="/settings/hold">{holdLabel(settings)}</Field>
       <Field label="Type with a light touch" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
+      <Field label="Snippets" href="/settings/snippets">{snippetsLabel(settings)}</Field>
+      <Toggle label="Type :name: for an emoji" value={settings.shortcodes}
+        onChange={shortcodes => save.run({ shortcodes })} />
+      <Field label="Exact typing" href="/settings/exact-apps">{exactAppsLabel(settings)}</Field>
     </Section>
     <Section title="Suggestions">
       <Toggle label="Show word suggestions" value={settings.suggestionBar}
         onChange={suggestionBar => save.run({ suggestionBar })} />
       <Toggle label="No suggestions on an empty home search" value={settings.launcherHidesBar}
         onChange={launcherHidesBar => save.run({ launcherHidesBar })} />
+      <Field label="Hide the bar in these apps" href="/settings/hidden-bar">{hiddenBarLabel(settings)}</Field>
     </Section>
     <Section title="Swiping">
       <Toggle label="Swipe to type words" value={settings.swipeTyping}

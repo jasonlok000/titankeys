@@ -8,7 +8,8 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
         </intent>
-        <!-- The apps on the home screen, whose names the keyboard knows as words. Not every installed package. -->
+        <!-- The apps on the home screen: the keyboard knows their names as words, and Settings offers them for exact typing.
+             Not every installed package. -->
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />

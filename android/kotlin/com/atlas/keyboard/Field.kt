@@ -44,7 +44,8 @@ data class Field(
                 fullStops = !password && !address, starters = search,
                 sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
                 autocorrect = !password && !address && !exact,
-                suggestions = !password && !email && (!url || search))
+                // An address bar that asks for no suggestions still gets the bar: browsers search from it too.
+                suggestions = !password && !email)
         }
 
         /**

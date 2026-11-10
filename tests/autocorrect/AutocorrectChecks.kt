@@ -1014,7 +1014,7 @@ private fun suggestionBar(world: Realistic) {
     // Fields where suggestions are off.
     val noBar = listOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
         InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD, InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
-        InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_URI or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)
+        InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
     for (variation in noBar) {
         val field = Field.of(InputType.TYPE_CLASS_TEXT or variation, 0)
         val words = fakeWords().also { it.completions = null }
@@ -1025,6 +1025,9 @@ private fun suggestionBar(world: Realistic) {
         same(typist.select(1).bar, emptyList<String>(), "Variation $variation shows nothing inside a word")
         same(typist.choose(0).text, "abc", "Variation $variation has no words to touch")
     }
+    val addressBar = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0)
+    same(addressBar.suggestions, true, "An address bar that asks for no suggestions must still get the bar")
+    same(typist(field = addressBar).bar, inside, "An empty address bar shows words")
     same(typist(field = Field.None).bar, emptyList<String>(), "A field with no text words shows nothing")
     same(typist(field = Field.of(InputType.TYPE_CLASS_NUMBER, 0)).bar, emptyList<String>(), "A number field shows nothing")
 

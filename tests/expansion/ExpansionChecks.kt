@@ -151,13 +151,11 @@ private fun labels() {
 
 private fun exactApps() {
     val apps = setOf("com.termux", "com.anydesk.anydeskandroid")
-    check(ExactTyping.applies(InputType.TYPE_NULL, EditorInfo.IME_FLAG_NO_FULLSCREEN, "com.termux", apps), "Termux's terminal")
-    check(ExactTyping.applies(InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS,
-        EditorInfo.IME_FLAG_NO_FULLSCREEN, "com.termux", apps), "Termux with its typing setting")
-    check(ExactTyping.applies(InputType.TYPE_CLASS_TEXT, 0, "com.anydesk.anydeskandroid", apps), "a text field in a listed app")
-    check(!ExactTyping.applies(InputType.TYPE_NULL, 0, "com.termux", apps), "a window of a listed app with no field")
-    check(!ExactTyping.applies(InputType.TYPE_NULL, EditorInfo.IME_FLAG_NO_FULLSCREEN, "com.android.chrome", apps), "an app that is not listed")
-    check(!ExactTyping.applies(InputType.TYPE_CLASS_TEXT, 0, null, apps), "no app")
+    check(ExactTyping.applies("com.termux", apps), "Termux")
+    // AnyDesk's session view reports no type and no options, the same as a window with no field (phone read, issue 45).
+    check(ExactTyping.applies("com.anydesk.anydeskandroid", apps), "every start in a listed app, also AnyDesk's session view")
+    check(!ExactTyping.applies("com.android.chrome", apps), "an app that is not listed")
+    check(!ExactTyping.applies(null, apps), "no app")
 }
 
 private fun exactSymbols() {
@@ -174,10 +172,11 @@ private fun exactSymbols() {
 
 private fun exactWrappers() {
     same(ExactTyping.wrappers(0), emptyList<Int>(), "a plain key")
-    same(ExactTyping.wrappers(KeyEvent.META_SHIFT_ON), emptyList<Int>(), "Shift needs no key of its own")
+    same(ExactTyping.wrappers(KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON), listOf(KeyEvent.KEYCODE_SHIFT_LEFT),
+        "Shift goes as its own key too, for a remote desktop")
     same(ExactTyping.wrappers(KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON), listOf(KeyEvent.KEYCODE_CTRL_LEFT), "Ctrl")
-    same(ExactTyping.wrappers(KeyEvent.META_CTRL_ON or KeyEvent.META_ALT_ON),
-        listOf(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_ALT_LEFT), "Ctrl and Alt")
+    same(ExactTyping.wrappers(KeyEvent.META_SHIFT_ON or KeyEvent.META_CTRL_ON or KeyEvent.META_ALT_ON),
+        listOf(KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_ALT_LEFT), "Shift, Ctrl and Alt, in that order")
 }
 
 private fun recentApps() {

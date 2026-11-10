@@ -1,6 +1,5 @@
 package com.atlas.keyboard
 
-import android.text.InputType
 import android.view.KeyEvent
 
 /**
@@ -12,18 +11,15 @@ import android.view.KeyEvent
  * Alt with a letter as a shortcut, so the symbol would not arrive any other way. Alt with a key that has no symbol, such as Tab,
  * stays a shortcut.
  *
- * Views that are no text field, such as Termux's terminal, report no class of text. Outside the list they keep what they had
- * before: the keys go to the app untouched, with no words. A window with no field at all reports neither a type nor options.
+ * Views that are no text field, such as Termux's terminal, report no class of text. AnyDesk's session view reports no type and
+ * no options at all, the same as a window with no field, so in a listed app every start counts. Outside the list such views
+ * keep what they had before: the keys go to the app untouched, with no words.
  *
  * The decisions are here, apart from Android, so tests can reach them. The keyboard sends the keys.
  */
 object ExactTyping {
-    /**
-     * Whether a field start gets exact typing. It needs an app on the list, and a field: a window with no field sends a start
-     * with no type and no options, and that stays as it is.
-     */
-    fun applies(inputType: Int, imeOptions: Int, packageName: String?, apps: Set<String>): Boolean =
-        packageName != null && packageName in apps && (inputType != InputType.TYPE_NULL || imeOptions != 0)
+    /** Whether a field start gets exact typing: any start in an app on the list. */
+    fun applies(packageName: String?, apps: Set<String>): Boolean = packageName != null && packageName in apps
 
     /**
      * The text that a key sends in place of itself: the symbol that Alt types, or null to send the key. [typed] is the key's
@@ -37,11 +33,12 @@ object ExactTyping {
 
     /**
      * The modifier keys that go down before a key and up after it, so that an app that follows the modifier keys themselves,
-     * as a remote desktop does, sees the shortcut too. Shift is left out: its meta state is enough for a capital letter, and a
-     * text field would latch a Shift that it sees on its own.
+     * as a remote desktop does, sees the capital or the shortcut too. A text field lets go of a Shift that a key used, so it
+     * latches nothing. The phone's own Shift and Alt keys never reach the app: the keyboard keeps them for one key or a lock.
      */
     fun wrappers(meta: Int): List<Int> {
-        val keys = ArrayList<Int>(2)
+        val keys = ArrayList<Int>(3)
+        if (meta and KeyEvent.META_SHIFT_MASK != 0) keys += KeyEvent.KEYCODE_SHIFT_LEFT
         if (meta and KeyEvent.META_CTRL_MASK != 0) keys += KeyEvent.KEYCODE_CTRL_LEFT
         if (meta and KeyEvent.META_ALT_MASK != 0) keys += KeyEvent.KEYCODE_ALT_LEFT
         return keys

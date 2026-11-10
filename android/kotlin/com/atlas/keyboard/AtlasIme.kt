@@ -498,7 +498,7 @@ class AtlasIme : InputMethodService() {
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
-        val exact = ExactTyping.applies(info.inputType, info.imeOptions, info.packageName, TypingSettings.exactApps(this))
+        val exact = ExactTyping.applies(info.packageName, TypingSettings.exactApps(this))
         editing = info.inputType != EditorInfo.TYPE_NULL || exact
         if (!restarting) {
             typedInField = false
@@ -638,7 +638,7 @@ class AtlasIme : InputMethodService() {
     /** Only the package is kept, so the exact typing setting can offer apps without asking to see every installed app. */
     private fun rememberApp(info: EditorInfo) {
         val app = info.packageName ?: return
-        if (app == packageName || info.inputType == EditorInfo.TYPE_NULL && info.imeOptions == 0) return
+        if (app == packageName) return
         val recent = TypingSettings.recentApps(this)
         val updated = ExactTyping.recentApps(recent, app)
         if (updated != recent) TypingSettings.recentApps(this, updated)

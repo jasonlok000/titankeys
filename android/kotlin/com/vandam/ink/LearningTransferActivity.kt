@@ -38,7 +38,7 @@ class LearningTransferActivity : Activity() {
         try {
             startActivityForResult(picker, PICK_DOCUMENT)
         } catch (_: ActivityNotFoundException) {
-            complete(false, "Could not open the Android file picker.")
+            complete(false, "Couldn't open the file picker.")
         }
     }
 
@@ -52,7 +52,7 @@ class LearningTransferActivity : Activity() {
         }
         val uri = data?.data
         if (uri == null) {
-            complete(false, "Could not open the selected file.")
+            complete(false, "Couldn't open that file.")
             return
         }
         if (snippets) {

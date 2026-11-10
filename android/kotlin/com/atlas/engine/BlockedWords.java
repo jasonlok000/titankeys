@@ -27,7 +27,7 @@ final class BlockedWords {
     BlockedWords add(String word) {
         String normalized = key(word);
         if (!valid(word))
-            throw new IllegalArgumentException("Enter one word with 1–24 letters. Apostrophes are allowed.");
+            throw new IllegalArgumentException("Type one word of 1 to 24 letters. Apostrophes are fine.");
         Set<String> replacement = new HashSet<>(words);
         replacement.add(normalized);
         return new BlockedWords(replacement);

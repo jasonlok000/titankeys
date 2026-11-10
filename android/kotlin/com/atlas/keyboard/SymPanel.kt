@@ -436,10 +436,10 @@ class SymPanel(
             }
         }
         contentDescription = when {
-            quick -> "$QUICK_TITLE. Rest a finger on a key to see its setting. Push the key to change the setting."
+            quick -> "$QUICK_TITLE. Rest a finger on a key to see its setting. Press the key to switch it."
             clipboard -> context.getString(R.string.clipboard_description)
             current != null -> "${if (mode == Modifiers.Panel.Symbols) "Symbols" else "Emoji"}, ${current.group()}. " +
-                "Push a key to type it. Swipe up or down on the keyboard to see more, or push Backspace or Enter. " +
+                "Press a key to type it. Swipe up or down on the keyboard for more, or press Backspace or Enter. " +
                 "Swipe left or right to change the group, or put a finger on the bottom row of keys."
             else -> null
         }

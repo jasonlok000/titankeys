@@ -512,8 +512,8 @@ public final class SwipeTyping {
         } catch (IllegalArgumentException error) {
             return error.getMessage();
         } catch (IOException | RuntimeException | LinkageError error) {
-            return persisted ? "Blocked words were saved, but the swipe dictionary could not be refreshed."
-                    : "Could not save blocked words. Try again.";
+            return persisted ? "Blocked words are saved, but the swipe dictionary didn't update."
+                    : "Couldn't save blocked words. Try again.";
         }
     }
 
@@ -581,8 +581,8 @@ public final class SwipeTyping {
                 persisted = true;
                 refreshDictionary();
             } catch (IOException | RuntimeException | LinkageError error) {
-                failure = persisted ? "Saved words were cleared, but the swipe dictionary could not be refreshed."
-                        : "Could not reset saved words. Existing words were kept.";
+                failure = persisted ? "Saved words are cleared, but the swipe dictionary didn't update."
+                        : "Couldn't reset saved words. Your words are still there.";
                 wordsSaveError = persisted ? " · Swipe dictionary refresh failed" : " · Could not reset saved words";
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
             }
@@ -598,7 +598,7 @@ public final class SwipeTyping {
                 configs();
                 if (!wordsAvailable) throw new IOException("Saved words unavailable");
                 LanguageHabits replacement = dictionary.copy();
-                if (blockedWords.contains(word)) throw new IllegalArgumentException("This word is blocked. Remove it from Blocked words first.");
+                if (blockedWords.contains(word)) throw new IllegalArgumentException("That word is blocked. Take it off Blocked words first.");
                 replacement.add(word.trim(), today());
                 configs.saveWords(replacement);
                 allowFixesTo(word);
@@ -608,8 +608,8 @@ public final class SwipeTyping {
             } catch (IllegalArgumentException error) {
                 failure = error.getMessage();
             } catch (IOException | RuntimeException | LinkageError error) {
-                failure = persisted ? "The word was saved, but the swipe dictionary could not be refreshed."
-                        : "Could not save the word. Try again.";
+                failure = persisted ? "The word is saved, but the swipe dictionary didn't update."
+                        : "Couldn't save the word. Try again.";
                 wordsSaveError = persisted ? " · Swipe dictionary refresh failed" : " · Could not save word";
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
             }
@@ -644,8 +644,8 @@ public final class SwipeTyping {
         } catch (IOException | RuntimeException | LinkageError error) {
             wordsSaveError = persisted ? " · Swipe dictionary refresh failed" : " · Could not remove saved word";
             if (recogniser != null && !recogniser.isOpen()) unavailable(error);
-            return persisted ? "The word was removed, but the swipe dictionary could not be refreshed."
-                    : "Could not remove the word. Existing words were kept.";
+            return persisted ? "The word is gone, but the swipe dictionary didn't update."
+                    : "Couldn't remove the word. Nothing else changed.";
         }
     }
 
@@ -677,7 +677,7 @@ public final class SwipeTyping {
                 imported.merge(LearningConfigs.readExport(input));
             } catch (IOException | RuntimeException error) {
                 Log.w("TouchpadSwipe", "Could not read learning backup", error);
-                operationResult(callback, "Could not read the backup. Choose a valid TitanKeys backup file.");
+                operationResult(callback, "Yeah, that's not a TitanKeys backup. Pick the right file.");
                 return;
             }
             try {

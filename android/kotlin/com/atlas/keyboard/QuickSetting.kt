@@ -14,7 +14,7 @@ enum class QuickSetting(val key: String, val label: String, val title: String) {
     Vibration("V", "Vib", "Vibrate while swiping"),
     HoldSymbols("H", "Hold", "Hold a letter for its symbol"),
     CursorControl("M", "Move", "Move the cursor from Space"),
-    DoublePressLocks("L", "Lock", "Double push locks Shift and Alt"),
+    DoublePressLocks("L", "Lock", "Press twice to lock Shift and Alt"),
     /** On is the phone's own Scroll assistant outside text fields, the other way round from the setting that it changes. */
     ScrollAssistant("R", "Scrl", "Scroll assistant outside text fields"),
     OpenSettings("O", "Open", "Open TitanKeys settings"),

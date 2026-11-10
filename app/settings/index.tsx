@@ -37,7 +37,7 @@ export default function Settings() {
     <Section title="Suggestions">
       <Toggle label="Show word suggestions" value={settings.suggestionBar}
         onChange={suggestionBar => save.run({ suggestionBar })} />
-      <Toggle label="No suggestions on an empty home search" value={settings.launcherHidesBar}
+      <Toggle label="Hide suggestions on an empty home search" value={settings.launcherHidesBar}
         onChange={launcherHidesBar => save.run({ launcherHidesBar })} />
       <Field label="Hide the bar in these apps" href="/settings/hidden-bar">{hiddenBarLabel(settings)}</Field>
     </Section>
@@ -53,7 +53,7 @@ export default function Settings() {
         onChange={scroll => save.run({ touchpadOnlyInFields: !scroll })} />
     </Section>
     <Section title="Keys">
-      <Toggle label="Double push locks Shift and Alt" value={settings.doublePressLocks}
+      <Toggle label="Press twice to lock Shift and Alt" value={settings.doublePressLocks}
         onChange={doublePressLocks => save.run({ doublePressLocks })} />
       <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}
         onChange={fnAsCtrl => save.run({ fnAsCtrl })} />

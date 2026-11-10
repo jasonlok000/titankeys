@@ -3,7 +3,7 @@ import { add } from "ink/icons";
 import { setEnterApp, state } from "../../lib/atlas";
 
 const title = "Add app";
-const subtitle = "These are apps where you recently typed a message. TitanKeys keeps this list on this phone.";
+const subtitle = "Apps where you've typed a message lately. This list stays on your phone.";
 
 export default function AddEnterApp() {
   const result = useSnapshot(state);
@@ -17,6 +17,6 @@ export default function AddEnterApp() {
   return <Screen title={title} subtitle={subtitle}>
     {apps.length
       ? apps.map(({ app, name }) => <Row key={app} title={name} titleMaxLines={2} endIcon={add} onPress={() => insert.run(app)} />)
-      : <Row title="No apps to add" subtitle="Type in a message field in the app. Then come back to this page." wrapSubtitle />}
+      : <Row title="No apps to add" subtitle="Type a message in the app, then come back here." wrapSubtitle />}
   </Screen>;
 }

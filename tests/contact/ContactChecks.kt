@@ -38,6 +38,8 @@ fun main() {
     panelHoverKeepsARestingFinger()
     swipesOffTypeNothing()
     swipesOffKeepTapsAndThePanel()
+    aBrushUnderASwipeNeverTicks()
+    aSwipeStillTicks()
     println("Contact checks passed")
 }
 
@@ -340,4 +342,24 @@ private fun swipesOffKeepTapsAndThePanel() {
     same(page is Contact.Outcome.Swipe, true, "A swipe must still turn the panel's page while swipe typing is off")
     contact.down(at(.25f, .4f, 4_000))
     same(contact.travel, 0f, "A finger must still rest on the panel while swipe typing is off")
+}
+
+/** #30: a finger that brushes the keys, short of a swipe, never makes the touchpad tick. */
+private fun aBrushUnderASwipeNeverTicks() {
+    val ticks = SwipeTicks()
+    ticks.begin(at(.45f, .4f, 0))
+    // Up to just short of a swipe, step by step, and back.
+    val brush = (1..12).map { at(.45f + it * .0049f, .4f, it * 8L) } + (1..12).map { at(.5f - it * .004f, .4f, 100 + it * 8L) }
+    for (point in brush) check(!ticks.move(listOf(point), HapticPreset.Normal)) { "A brush of under ${Contact.SWIPE_KEYS} keys ticked at $point" }
+}
+
+/** A real swipe still ticks, once it has gone as far as a swipe, and again as it goes on. */
+private fun aSwipeStillTicks() {
+    val ticks = SwipeTicks()
+    ticks.begin(at(.15f, .4f, 0))
+    val swipe = (1..60).map { at(.15f + it * .01f, .4f, it * 8L) }
+    val ticked = swipe.filter { ticks.move(listOf(it), HapticPreset.Normal) }
+    check(ticked.isNotEmpty()) { "A swipe should tick" }
+    check((ticked.first().x - .15f) * 10 >= Contact.SWIPE_KEYS - 1e-4f) { "The first tick should wait for a swipe's distance, came at ${ticked.first()}" }
+    check(ticked.size >= 3) { "A long swipe should tick as it goes, ticked ${ticked.size} times" }
 }

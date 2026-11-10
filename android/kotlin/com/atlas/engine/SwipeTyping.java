@@ -372,6 +372,10 @@ public final class SwipeTyping {
     }
 
     public boolean learningEnabled() { return learningEnabled; }
+    /** Engine 2.0's models are loaded, so swipes are ranked by them. Replays wait for this to score engine 2.0. */
+    public boolean modelsReady() { return models != null; }
+    /** Engine 2.0's models are still loading. */
+    public boolean modelsLoading() { return modelsLoading.get(); }
     boolean feedbackEnabled() { return learningEnabled && wordsAvailable; }
     public long learningGeneration() { return learningGeneration; }
     public String learningStatus() { return (learningEnabled ? "Learning on · " : "Language habits paused · ") + learningStatus + wordsSaveError; }

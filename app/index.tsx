@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { Canvas, CanvasIcon, CanvasText, Rectangle, Screen, Stack, Text, replace, useSnapshot } from "ink";
 import { arrowOutward } from "ink/icons";
-import { markNotesSeen, openGuide, openPlayground, state } from "../lib/atlas";
+import { markNotesSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
 import { INK, ORANGE } from "../lib/brand";
 import { hasReleaseNotes } from "../lib/release-notes";
 import { WhatsNew } from "../lib/whats-new";
 
 const WIDTH = 596;
+const REOPEN_DELAY_MILLIS = 600;
 
 function Action({ label, onPress }: { label: string; onPress: () => void }) {
   const height = 108;
@@ -50,14 +51,29 @@ function GuideStart() {
 function FrontPage() {
   useEffect(() => {
     let here = true;
-    void openPlayground().then(action => {
-      if (!here) return;
-      if (action === "settings") replace("/settings");
-      else if (action === "guide") replace({ path: "/settings/guide", params: { from: "home" } });
-      // The playground closed from its setup slide, so this page shows setup again.
-      else void state.refresh();
-    });
-    return () => { here = false; };
+    let stop = () => {};
+    // The app opens a playground only when none is open, so this can ask each time its own window is in front again,
+    // as after something closed the playground, such as a link that opened this screen over it.
+    const open = () => {
+      stop();
+      stop = openPlayground(action => {
+        if (!here) return;
+        if (action === "settings") replace("/settings");
+        else if (action === "guide") replace({ path: "/settings/guide", params: { from: "home" } });
+        // The playground closed from its setup slide, so this page shows setup again.
+        else if (action === "setup") void state.refresh();
+        // Something else closed it, perhaps while this window was already in front. A link into the app closes it too, so
+        // this waits a moment for such a link to move to its own page first.
+        else setTimeout(() => { if (here) open(); }, REOPEN_DELAY_MILLIS);
+      });
+    };
+    open();
+    const stopWindow = onAppWindow(() => { if (here) open(); });
+    return () => {
+      here = false;
+      stop();
+      stopWindow();
+    };
   }, []);
   return <Screen />;
 }

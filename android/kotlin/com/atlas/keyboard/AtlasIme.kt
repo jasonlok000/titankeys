@@ -526,7 +526,8 @@ class AtlasIme : InputMethodService() {
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
         val corrects = TypingSettings.autocorrect(this)
         composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
-        if (!corrects) autocorrect.release()
+        // The word data takes a moment to load, so it starts as a field opens: the first word typed is fixed too.
+        if (!corrects) autocorrect.release() else if (editing) autocorrect.prepare()
         strip?.showSuggestions = showSuggestions()
         updateKeyWatch()
     }

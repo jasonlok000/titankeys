@@ -35,6 +35,7 @@ Options, each passed as `-e name value`:
 | `late`, `latespeed`, `latefrom` | Extends the start of swipes that register late |
 | `keys` | A file of `letter x y` lines that replaces the key positions |
 | `timing` | `1` times word suggestions instead of replaying |
+| `engine2` | `1` waits for swipe engine 2.0's models before replaying, so the replay scores engine 2.0 |
 
 To compare two builds, replay the same session on each and compare how often `prompt` is the first word in `top`, and how often it appears at all.
 

@@ -15,6 +15,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import android.text.Editable
 import android.text.InputType
@@ -25,6 +26,7 @@ import android.text.TextWatcher
 import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
@@ -397,6 +399,10 @@ class GuideActivity : Activity() {
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
         setContentView(build())
+        if (playground) {
+            playgrounds += this
+            playgroundStarting = -PLAYGROUND_QUIET_MILLIS
+        } else guidesOpen++
         // During setup another keyboard may still be the phone's keyboard, and it would cover the slide.
         if (PhoneSetup.missing(this).isEmpty()) field.requestFocus() else keyboardShown(false)
         field.changed = ::fieldChanged
@@ -444,10 +450,21 @@ class GuideActivity : Activity() {
     }
 
     override fun onDestroy() {
-        // Closed from the setup slide: the app's front page shows setup again.
+        if (playground) playgrounds -= this
+        if (playground) Log.d(TAG, "playground closed: finishing $isFinishing, told ${playgroundExit != null}")
+        // Closed by something else, such as a link that opens the app's own screen over it: the front page opens it again.
         if (playground && isFinishing) {
             playgroundExit?.invoke(PLAYGROUND_CLOSED)
             playgroundExit = null
+        }
+        // The front page asked for the playground while this guide was open, so it opens now that the guide has closed.
+        if (!playground) {
+            guidesOpen--
+            if (guidesOpen == 0 && isFinishing) waitingPlayground?.let { open ->
+                waitingPlayground = null
+                // Not [main], whose messages this guide drops as it closes.
+                Handler(Looper.getMainLooper()).post { runCatching(open) }
+            }
         }
         GuideHooks.nearMiss = false
         main.removeCallbacksAndMessages(null)
@@ -554,7 +571,7 @@ class GuideActivity : Activity() {
             imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_ENTER_ACTION
             minLines = 1
             maxLines = 2
-            hint = "Your words go here."
+            hint = FIELD_HINT
             // Lets the keyboard know this field, for the one step that asks it for a near miss. See [GuideHooks].
             privateImeOptions = GuideHooks.FIELD
             isVerticalScrollBarEnabled = false
@@ -771,6 +788,7 @@ class GuideActivity : Activity() {
     }
 
     private fun enter(step: GuideStep) {
+        demoRound = 0
         lastPoint = null
         travel = 0f
         helpShown = false
@@ -825,9 +843,15 @@ class GuideActivity : Activity() {
             append(" ")
             append(rest, ForegroundColorSpan(GuideMotion.faded(strong, SCRIPT_REST)), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-        val cue = if (playground) GuideCue.Free else flow.step.cue
-        val shown = if (cue == GuideCue.NextWord) GuideCue.Word(GuideScript.letters(word).ifEmpty { "titan" }) else cue
+        val shown = ghostCue(if (playground) GuideCue.Free else flow.step.cue)
         if (shown != keys.cue) keys.show(shown)
+    }
+
+    /** What the drawing of the keys can draw for [cue]: the next word of the script is turned into that word's letters. */
+    private fun ghostCue(cue: GuideCue): GuideCue {
+        if (cue != GuideCue.NextWord) return cue
+        val word = GuideScript.wordAt(GuideScript.progress(field.text.toString()))
+        return GuideCue.Word(GuideScript.letters(word).ifEmpty { "titan" })
     }
 
     // Demonstrations. When nobody acts for a while, the slide shows its gesture by itself, slowly and now and then, in grey over
@@ -837,6 +861,9 @@ class GuideActivity : Activity() {
     private var demoLength = 0L
     private var demoKeys = 0
     private var demoTurned = false
+    /** How many demonstrations this slide has shown, so that a slide with two gestures takes turns between them. */
+    private var demoRound = 0
+    private var demo: GuideDemo? = null
     private val startDemo = Runnable { beginDemo() }
     private val demoTick = Runnable { stepDemo() }
 
@@ -852,11 +879,18 @@ class GuideActivity : Activity() {
         if (busy || passed || changing || step.pause || step.chapter == GuideChapter.End) return
         val hasGhost = step.cue != GuideCue.Free && step.cue !is GuideCue.Spot
         if (step.demo == null && !hasGhost) return
+        // The steer slide also teaches three touches to select, so every second time it shows that.
+        val selects = step.demo == GuideDemo.MoveCursor && demoRound++ % 2 == 1
+        demo = if (selects) GuideDemo.SelectLast else step.demo
+        val cue = ghostCue(if (selects) GuideCue.Taps(3, drag = true) else step.cue)
+        if (cue != keys.cue) keys.show(cue)
         demoStart = GuideMotion.now()
         demoLength = if (hasGhost) maxOf(keys.ghostMillis(), DEMO_MILLIS) else DEMO_MILLIS
         demoKeys = 0
         demoTurned = false
         keys.demo(true)
+        // The grey words would sit on top of the empty field's hint.
+        field.hint = null
         main.post(demoTick)
     }
 
@@ -868,7 +902,7 @@ class GuideActivity : Activity() {
             main.postDelayed(startDemo, DEMO_GAP_MILLIS)
             return
         }
-        flow.step.demo?.let { showPhantom(it, t) }
+        demo?.let { showPhantom(it, t) }
         main.postDelayed(demoTick, DEMO_FRAME_MILLIS)
     }
 
@@ -878,6 +912,7 @@ class GuideActivity : Activity() {
         demoStart = -1
         keys.demo(false)
         phantom.text = ""
+        field.hint = FIELD_HINT
     }
 
     /**
@@ -888,10 +923,12 @@ class GuideActivity : Activity() {
         val text = field.text.toString()
         val grey = GuideMotion.faded(GuideColours.INK, PHANTOM_ALPHA)
         val built = SpannableStringBuilder(text)
-        built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        // Android logs an error for a span with no length, and this runs for every frame.
+        if (text.isNotEmpty()) built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         val gap = if (text.isEmpty() || text.endsWith(' ')) "" else " "
         val next = GuideScript.wordAt(GuideScript.progress(text))
         fun add(added: String) {
+            if (added.isEmpty()) return
             val start = built.length
             built.append(added)
             built.setSpan(ForegroundColorSpan(grey), start, built.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -1103,6 +1140,7 @@ class GuideActivity : Activity() {
             return
         }
         openedPart = part
+        awaitingAccessibility = part == SetupPart.Back
         main.removeCallbacks(watchSetup)
         main.postDelayed(watchSetup, SETUP_POLL_MILLIS)
     }
@@ -1171,6 +1209,7 @@ class GuideActivity : Activity() {
 
     /** The playground's Guide and Settings buttons: the app opens that page, and the playground opens again when you come back. */
     private fun leavePlayground(action: String) {
+        playgroundLeft = SystemClock.uptimeMillis()  // the button's page, not a new playground, comes next
         playgroundExit?.invoke(action)
         playgroundExit = null
         finish()
@@ -1397,7 +1436,8 @@ class GuideActivity : Activity() {
 
     /** Leaves at any time. The guide remembers where you stopped, and opens there from the guide page. */
     private fun leave() {
-        finish()
+        // The playground's setup slide closes to the app's setup page, which waits for a touch to start again.
+        if (playground && settingUp) leavePlayground(PLAYGROUND_SETUP) else finish()
     }
 
     private fun keyName(code: Int): String? = when (code) {
@@ -1435,6 +1475,8 @@ class GuideActivity : Activity() {
         private const val SETUP_FINISH_MILLIS = 1400L
         private const val SETUP_NO_PAGE = "This phone does not have that page. Open it in Settings, then come back."
 
+        private const val FIELD_HINT = "Your words go here."
+        private const val TAG = "TitanKeysGuide"
         private const val PLAYGROUND = "playground"
         private const val PLAYGROUND_LABEL = "Playground"
         private const val PLAYGROUND_TITLE = "TitanKeys"
@@ -1532,16 +1574,68 @@ class GuideActivity : Activity() {
             activity.startActivity(Intent(activity, GuideActivity::class.java))
         }
 
+        /** The guide opened Accessibility for setup and waits for TitanKeys to be turned on there. */
+        @Volatile private var awaitingAccessibility = false
+
+        /**
+         * TitanKeys was turned on in Accessibility. If the guide asked for it, the guide comes to the front again: Accessibility
+         * opens its page for TitanKeys over its list, which the guide cannot close, and Android lets the service bring it back.
+         */
+        fun accessibilityOn(context: Context) {
+            if (!awaitingAccessibility) return
+            awaitingAccessibility = false
+            try {
+                context.startActivity(Intent(context, GuideActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+            } catch (error: RuntimeException) {
+                // Then the guide waits until you come back to it.
+            }
+        }
+
         const val PLAYGROUND_GUIDE = "guide"
         const val PLAYGROUND_SETTINGS = "settings"
         const val PLAYGROUND_CLOSED = "closed"
+        const val PLAYGROUND_SETUP = "setup"
         /** Told where to go when the playground closes. Only one playground is open at a time. */
         private var playgroundExit: ((String) -> Unit)? = null
 
-        /** Opens the playground, the app's front page. [exit] gets [PLAYGROUND_GUIDE], [PLAYGROUND_SETTINGS] or [PLAYGROUND_CLOSED]. */
+        /** Interactive guides that are open now. Only the main thread changes this. */
+        private var guidesOpen = 0
+        /** The playground asked for while a guide was open, which opens once the guide closes. */
+        private var waitingPlayground: (() -> Unit)? = null
+
+        /**
+         * Opens the playground, the app's front page. [exit] gets [PLAYGROUND_GUIDE] or [PLAYGROUND_SETTINGS] from its buttons,
+         * [PLAYGROUND_SETUP] when it closes from its setup slide, or [PLAYGROUND_CLOSED] when something else closed it.
+         * The front page can ask for it while the guide is open, as when setup ends in the guide, so then it waits for the guide.
+         */
         fun playground(activity: Activity, exit: (String) -> Unit) {
             playgroundExit = exit
-            activity.startActivity(Intent(activity, GuideActivity::class.java).putExtra(PLAYGROUND, true))
+            // The front page asks each time its window is in front, so one that is open, or that a button just closed, is enough.
+            // A playground that Android is closing counts as closed: it can close after the app's window is in front. And with
+            // the app's window in front, no playground is: the app's window is at the bottom of the app's screens.
+            val showing = playgrounds.any { !it.isFinishing } && !activity.hasWindowFocus()
+            val now = SystemClock.uptimeMillis()
+            val quiet = now - playgroundLeft < PLAYGROUND_QUIET_MILLIS || now - playgroundStarting < PLAYGROUND_QUIET_MILLIS
+            Log.d(TAG, "playground asked: open ${playgrounds.size}, showing $showing, quiet $quiet, guides $guidesOpen")
+            if (showing || quiet) return
+            val open = {
+                // One that is starting does not count as open yet, so a second ask in the meantime is left out.
+                playgroundStarting = SystemClock.uptimeMillis()
+                activity.startActivity(Intent(activity, GuideActivity::class.java).putExtra(PLAYGROUND, true))
+            }
+            if (guidesOpen > 0) waitingPlayground = open else open()
         }
+
+        /** Playgrounds that are open now, and when one last started or closed by its own button. Main thread only. */
+        private val playgrounds = ArrayList<GuideActivity>()
+        private var playgroundLeft = -PLAYGROUND_QUIET_MILLIS
+        /** When a playground was asked to start, until it has started. */
+        private var playgroundStarting = -PLAYGROUND_QUIET_MILLIS
+        /**
+         * The app's own window comes to the front as a button closes the playground, before it has moved to the button's page,
+         * and a playground takes a moment to start. Asks in this time are left out.
+         */
+        private const val PLAYGROUND_QUIET_MILLIS = 1500L
     }
 }

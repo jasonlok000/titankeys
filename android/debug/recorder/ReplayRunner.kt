@@ -38,6 +38,8 @@ class ReplayRunner : Instrumentation() {
         val pieces = arguments.getString("pieces") != "0"
         /** "1" times word suggestions instead of replaying a session. */
         val timing = arguments.getString("timing") == "1"
+        /** "1" waits for engine 2.0's models before replaying, so that the replay scores engine 2.0 and not the FUTO order. */
+        val engine2 = arguments.getString("engine2") == "1"
         val lateMillis = arguments.getString("late")?.toLong() ?: 0L
         val lateSpeed = arguments.getString("latespeed")?.toFloat() ?: 4f
         val lateFrom = arguments.getString("latefrom")?.toFloat() ?: .5f
@@ -93,6 +95,12 @@ class ReplayRunner : Instrumentation() {
         }
         check(ready.await(60, TimeUnit.SECONDS)) { "The engine did not load" }
         failure?.let { throw IllegalStateException(it) }
+        // Engine 2.0's models load after the engine, on their own thread. Without them a replay scores the FUTO order alone.
+        if (options.engine2) {
+            val until = System.currentTimeMillis() + ENGINE2_WAIT_MILLIS
+            while (!typing.modelsReady() && System.currentTimeMillis() < until) Thread.sleep(200)
+            check(typing.modelsReady()) { "Engine 2.0's models did not load" }
+        }
         if (options.timing) {
             timeSuggestions(typing, File(directory, options.output))
             result.putString(REPORT_KEY_STREAMRESULT, "Timed suggestions\n")
@@ -450,6 +458,8 @@ class ReplayRunner : Instrumentation() {
     }
 
     private companion object {
+        /** The models are copied out of the app on first start, which takes a few seconds, then loaded. */
+        const val ENGINE2_WAIT_MILLIS = 120_000L
         val TIMED_PHRASES = listOf("what do you ", "thank you so ", "see you at the ", "let me know when ", "do you want to ",
             "we should talk about ", "can you send me ", "that sounds like ", "have a great ", "are you free ", "my phone is ",
             "please call me ", "it was really ", "sorry for the ", "what time does ", "do you have any ", "we are going ",

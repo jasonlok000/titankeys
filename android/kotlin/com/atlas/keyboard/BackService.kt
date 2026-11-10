@@ -22,6 +22,8 @@ class BackService : AccessibilityService() {
     override fun onServiceConnected() {
         current = this
         filterKeys(watcher != null)
+        // Turned on from the guide's setup: Accessibility opens one page over another, so the guide comes back from here.
+        GuideActivity.accessibilityOn(this)
     }
 
     override fun onUnbind(intent: Intent?): Boolean {

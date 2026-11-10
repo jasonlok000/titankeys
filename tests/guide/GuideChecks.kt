@@ -225,7 +225,9 @@ private fun settingsThatStepsNeed() {
     settings = GuideSettings(cursorControl = true)
     same(flow.missing, null, "Nothing is missing when the setting is on")
     flow.start("symbols")
-    same(flow.missing, null, "Sym always works, so the symbol step needs no setting")
+    same(flow.missing, GuideNeed.HoldSymbols, "Holding a letter is off at first, so the symbol step offers it")
+    settings = GuideSettings(cursorControl = true, holdSymbols = true)
+    same(flow.missing, null, "With holding on, the symbol step needs nothing more")
     same(GuideSettings().has(GuideNeed.FnAsCtrl), false, "fn is not Ctrl by default")
 }
 

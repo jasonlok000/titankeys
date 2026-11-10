@@ -13,6 +13,9 @@ public final class TypingSettings {
     public static final int MIN_LIFT_OFF_MILLIS = 50, MAX_LIFT_OFF_MILLIS = 200, DEFAULT_LIFT_OFF_MILLIS = 90;
     public static final String TOUCHPAD_ONLY_IN_FIELDS = "touchpad_only_in_fields";
     private static final String DEFAULT_TAP_KEYS = "";
+    // The defaults follow how the Titan 2 Elite is set up by the person who made TitanKeys: holding a letter for its symbol,
+    // fn as Ctrl, suggestions in an empty home search, and American spelling. Scroll assistant and the typing log stay off.
+    private static final int DEFAULT_HOLD_SYMBOL_MILLIS = 250;
 
     public static boolean autoCapitalise(Context context) {
         return preferences(context).getBoolean("auto_capitalise", true);
@@ -50,7 +53,7 @@ public final class TypingSettings {
 
     /** A home screen's search field has no suggestion bar until you type in it. When this is off, it is like any other field. */
     public static boolean launcherHidesBar(Context context) {
-        return preferences(context).getBoolean("launcher_hides_bar", true);
+        return preferences(context).getBoolean("launcher_hides_bar", false);
     }
 
     public static void launcherHidesBar(Context context, boolean enabled) {
@@ -116,9 +119,9 @@ public final class TypingSettings {
         preferences(context).edit().putString("tap_keys", unique.toString()).apply();
     }
 
-    /** Holding a letter types the symbol printed on its key. It is off until the user turns it on. */
+    /** Holding a letter types the symbol printed on its key. */
     public static boolean holdSymbols(Context context) {
-        return preferences(context).getBoolean("hold_symbols", false);
+        return preferences(context).getBoolean("hold_symbols", true);
     }
 
     public static void holdSymbols(Context context, boolean enabled) {
@@ -126,16 +129,16 @@ public final class TypingSettings {
     }
 
     public static int holdSymbolMillis(Context context) {
-        return HoldEngine.clamp(preferences(context).getInt("hold_symbol_ms", HoldEngine.DEFAULT_MILLIS));
+        return HoldEngine.clamp(preferences(context).getInt("hold_symbol_ms", DEFAULT_HOLD_SYMBOL_MILLIS));
     }
 
     public static void holdSymbolMillis(Context context, int millis) {
         preferences(context).edit().putInt("hold_symbol_ms", HoldEngine.clamp(millis)).apply();
     }
 
-    /** The keyboard treats fn as Ctrl, so Key Mapper is not needed for this. It is off until the user turns it on. */
+    /** The keyboard treats fn as Ctrl, so Key Mapper is not needed for this. */
     public static boolean fnAsCtrl(Context context) {
-        return preferences(context).getBoolean("fn_as_ctrl", false);
+        return preferences(context).getBoolean("fn_as_ctrl", true);
     }
 
     public static void fnAsCtrl(Context context, boolean enabled) {
@@ -215,7 +218,7 @@ public final class TypingSettings {
     }
 
     public static EnglishSpelling.Variant spelling(Context context) {
-        return "american".equals(preferences(context).getString("spelling", "british"))
+        return "american".equals(preferences(context).getString("spelling", "american"))
                 ? EnglishSpelling.Variant.AMERICAN : EnglishSpelling.Variant.BRITISH;
     }
 

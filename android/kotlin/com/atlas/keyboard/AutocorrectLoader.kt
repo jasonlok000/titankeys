@@ -35,6 +35,15 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
         ::using,
     )
 
+    /**
+     * Starts loading before the first key, as a text field opens. The words come from the swipe engine, which can still be
+     * loading when the app has just started, so then this waits for it.
+     */
+    fun prepare() {
+        if (loading || failed || autocorrect.corrector != null) return
+        if (typing.typedPredictions() != null) using() else typing.whenReady { _, _, _ -> main.post(::using) }
+    }
+
     private fun using() {
         main.removeCallbacks(forget)
         main.postDelayed(forget, IDLE_MILLIS)

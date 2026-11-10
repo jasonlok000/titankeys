@@ -174,13 +174,27 @@ export async function markNotesSeen() {
 
 /** Opens the interactive guide. It starts where you stopped, or from the beginning if you finished it. */
 export const openGuide = () => atlas("guide");
-/** Opens the playground, and tells where its buttons asked to go, or "closed" when it closed from its setup slide. */
-export const openPlayground = async (): Promise<"guide" | "settings" | "closed"> => JSON.parse(await atlas("playground"));
+/**
+ * Opens the playground, and tells where its buttons asked to go: "setup" when it closed from its setup slide, and "closed"
+ * when something else closed it, such as a link that opened the app's own screen over it.
+ */
+export function openPlayground(closed: (action: "guide" | "settings" | "setup" | "closed") => void) {
+  // The answer comes as a message, because a native request held open while you play would time out.
+  const stop = onNativeMessage("atlas-playground", message => {
+    stop();
+    closed((message as { action: "guide" | "settings" | "setup" | "closed" }).action);
+  });
+  void atlas("playground");
+  return stop;
+}
 export const enableKeyboard = () => atlas("enable");
 export const chooseKeyboard = () => atlas("choose");
 export const allowOverlay = () => atlas("overlay");
 export const openScrollAssistant = () => atlas("scrollAssistant");
 export const allowBack = () => atlas("backService");
+
+/** Calls `front` whenever the app's own window is in front, as when the playground over it has closed. */
+export const onAppWindow = (front: () => void) => onNativeMessage("atlas-window", front);
 
 /** Calls `focus` whenever the home window regains focus, so its field can take autofocus again. */
 export const onHomeFocus = (focus: () => void) => onNativeMessage("atlas-focus", focus);

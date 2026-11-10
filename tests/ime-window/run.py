@@ -57,7 +57,12 @@ def main():
         shell("am", "start", "-a", "android.intent.action.MAIN",
               "-c", "android.intent.category.LAUNCHER", "-n", component)
         time.sleep(1)
-        package, actual_type, visible = state()
+        # An app can bring its field back a moment later, as TitanKeys does when it opens its playground again.
+        for _ in range(6):
+            package, actual_type, visible = state()
+            if (package, actual_type) == (args.package, input_type):
+                break
+            time.sleep(.5)
         assert (package, actual_type) == (args.package, input_type), "The focused field changed during the check"
         if not visible:
             time.sleep(2)

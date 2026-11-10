@@ -332,8 +332,9 @@ internal val GUIDE_STEPS = listOf(
         title = "Every symbol within reach.",
         body = "Hold J for the symbol in its corner, or push Sym for all the rest.",
         done = "No menus to dig through.",
-        help = "Holding does nothing? Turn on Hold a letter for its symbol in Settings.",
+        // Holding a letter can be off, so then the slide offers it at once. Sym works either way.
         cue = GuideCue.Spot(listOf("J", Layout.SYM)),
+        needs = GuideNeed.HoldSymbols,
         usesPanel = true,
         setup = Panel.Closed,
         demo = GuideDemo.HoldLetter("J"),

@@ -37,7 +37,7 @@ export default function Guide() {
       <Topic title="Orange accents">Some small marks on the keyboard are orange, such as the key under your finger. To make them white, turn off Orange accents in Settings.</Topic>
       <Topic title="Ctrl shortcuts">Hold Ctrl. The bar above the keyboard shows what each shortcut does.</Topic>
       <Topic title="Use a shortcut">Hold Ctrl and push the key.</Topic>
-      <Topic title="Use fn as Ctrl">Turn this on in Settings to use fn in place of Ctrl.</Topic>
+      <Topic title="Use fn as Ctrl">fn works as Ctrl. To use fn for the phone's own shortcuts, turn off Use fn as Ctrl in Settings.</Topic>
     </Section>
     <Section title="Your words">
       <Topic title="New words">TitanKeys learns the new words that you use. To see, add or block words, open Settings and select Your words.</Topic>

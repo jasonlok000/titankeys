@@ -50,6 +50,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private val appNames = HashMap<String, String>()
     private val windowFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
         if (hasFocus) activity.window.decorView.post {
+            // The front page opens the playground whenever the app's own window is in front, as when the playground was closed.
+            if (visible && activity.hasWindowFocus()) activity.emit(JSONObject().put("type", "atlas-window").toString())
             if (visible && watchingRequested && activity.hasWindowFocus()) {
                 // Ink may have blurred the field while the window was away; ask the page to autofocus again.
                 activity.emit(JSONObject().put("type", "atlas-focus").toString())
@@ -213,8 +215,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     "null"
                 }
                 "playground" -> {
-                    GuideActivity.playground(activity) { action -> complete(NativeResult.Success(JSONObject.quote(action))) }
-                    null
+                    // The answer comes as a message when the playground closes. A request held open that long would time out.
+                    GuideActivity.playground(activity) { action ->
+                        activity.emit(JSONObject().put("type", "atlas-playground").put("action", action).toString())
+                    }
+                    "null"
                 }
                 "enable", "overlay", "scrollAssistant", "backService" -> {
                     val part = when (operation) {

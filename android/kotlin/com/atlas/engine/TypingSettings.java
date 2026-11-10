@@ -79,8 +79,8 @@ public final class TypingSettings {
     }
 
     /**
-     * Off at first: on recorded swipes, one real swipe in about two thousand ("my", started a row too high) read as a flick.
-     * Turn it on only once the replays on the phone lose no swipe.
+     * Off at first: of 6,238 recorded swipes, 29 read as a flick (1 of 2,036 in the swipe baseline, 28 of 4,229 in the owner's
+     * raw log of 2026-11-10). Those short strokes have the shape of a flick, so it stays off until real flicks can be told apart.
      */
     public static final boolean FLICK_TO_PICK_DEFAULT = false;
 

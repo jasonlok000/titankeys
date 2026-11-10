@@ -816,7 +816,8 @@ class GuideActivity : Activity() {
         if (step.chapter == GuideChapter.End) preferences.edit().remove(RESUME).apply()
         else preferences.edit().putString(RESUME, flow.resumeId).apply()
         busy = false
-        acted()
+        // A new slide shows its gesture at once, as soon as its words are in.
+        acted(DEMO_ENTER_MILLIS)
         // The stop between the parts is a win already: it shows as done, with the offer to start typing.
         if (step.pause) {
             busy = true
@@ -867,11 +868,11 @@ class GuideActivity : Activity() {
     private val startDemo = Runnable { beginDemo() }
     private val demoTick = Runnable { stepDemo() }
 
-    /** Something the user did: a demonstration stops, and the next one waits for a quiet moment. */
-    private fun acted() {
+    /** Something the user did: a demonstration stops, and the next one waits for a quiet moment, or [wait] on a new slide. */
+    private fun acted(wait: Long = DEMO_IDLE_MILLIS) {
         endDemo()
         main.removeCallbacks(startDemo)
-        if (!passed && ready && !changing) main.postDelayed(startDemo, DEMO_IDLE_MILLIS)
+        if (!passed && ready && !changing) main.postDelayed(startDemo, wait)
     }
 
     private fun beginDemo() {
@@ -1543,8 +1544,10 @@ class GuideActivity : Activity() {
         private const val SCRIPT_REST = .55f
 
         // Demonstrations: slow, and now and then. These are safe to change.
-        /** How long nobody acts before a slide shows its gesture by itself, and the wait before it shows it again. */
+        /** How long nobody acts before a slide shows its gesture again after you act, and the wait before it repeats it. */
         private const val DEMO_IDLE_MILLIS = 5000L
+        /** When a new slide shows its gesture: as soon as the slide's words have slid in. */
+        private const val DEMO_ENTER_MILLIS = ENTER_STAGGER_MILLIS + ENTER_MILLIS
         private const val DEMO_GAP_MILLIS = 9000L
         /** How long a demonstration with no ghost finger takes. One with a ghost takes as long as the ghost. */
         private const val DEMO_MILLIS = 4200L

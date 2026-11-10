@@ -7,7 +7,7 @@
 - On your phone: All models run on the phone, and the keyboard has no network access. They load a few seconds after the keyboard starts, and swiping works in the meantime. If a model cannot load, the old engine works as before.
 
 ## Learn the keys
-- Interactive guide: Seven chapters teach each feature on the real keys. Each one shows its gesture by itself if you wait.
+- Interactive guide: Seven chapters teach each feature on the real keys. Each one shows its gesture as soon as it opens.
 - Quick setup: The guide opens each Settings page for you. When the switch is on, the guide comes back by itself.
 - Playground: The app opens on a place to type and swipe freely, with a line of text to follow.
 - Readable help: The guide page and these notes open one entry at a time.

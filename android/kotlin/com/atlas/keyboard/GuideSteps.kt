@@ -70,7 +70,8 @@ internal sealed interface GuideCue {
 }
 
 /**
- * What a slide shows by itself when nobody acts for a while: slowly, now and then, in grey over the field, without typing anything.
+ * What a slide shows by itself as soon as it opens, and again when nobody acts for a while: slowly, in grey over the field, without
+ * typing anything.
  * The drawing of the keys acts it out at the same time.
  */
 internal sealed interface GuideDemo {
@@ -217,7 +218,7 @@ internal class GuideStep(
     val pause: Boolean = false,
     /** The keyboard makes the next swipe its second guess, on purpose, so that the step can teach the strip. See [GuideHooks]. */
     val nearMiss: Boolean = false,
-    /** What the slide shows by itself when nobody acts. */
+    /** What the slide shows by itself when it opens and when nobody acts. */
     val demo: GuideDemo? = null,
     val check: GuideMemory.(KeyboardEvent) -> GuideVerdict,
 )

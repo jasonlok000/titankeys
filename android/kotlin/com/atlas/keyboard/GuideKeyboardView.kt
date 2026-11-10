@@ -502,13 +502,14 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         var fingerX = x
         var fingerY = y
         if (cue.drag && t > tapsEnd) {
-            // The finger stays down, swipes up onto the letters, then leans to one side.
+            // The finger stays down, swipes up onto the letters, then leans left: back over the words that the cursor moves
+            // through or that the selection takes, as the field shows.
             val travel = ((t - tapsEnd) / (1f - tapsEnd - .08f)).coerceIn(0f, 1f)
             val up = (travel / UP_SHARE).coerceAtMost(1f)
             val across = ((travel - UP_SHARE) / (1f - UP_SHARE)).coerceIn(0f, 1f)
             val top = height * (ROW_CENTRE - DRAG_UP)
             fingerY = y + (top - y) * up
-            fingerX = x + (width * DRAG_REACH) * across
+            fingerX = x - (width * DRAG_REACH) * across
             // The drag is the part to copy, so it is as strong as the part of a word that the ghost has done.
             ghostPaint.color = colour
             ghostPaint.strokeWidth = dp(GHOST_DONE_WIDTH)

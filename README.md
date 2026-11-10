@@ -32,7 +32,7 @@ The first slide of the guide is setup. It opens each Settings page for you, sees
 4. **Turn on Scroll assistant,** the phone's own switch that the touchpad needs.
 5. **Let TitanKeys handle Back** in Accessibility, so one push of Back closes the keyboard and goes back. TitanKeys never reads your screen.
 
-Then the guide teaches everything below, one slide each, on the real keys. Each slide waits for the real gesture, and shows it by itself, in grey, if you wait. After the guide, the app opens on a playground with the same look, to try anything.
+Then the guide teaches everything below, one slide each, on the real keys. Each slide shows its gesture in grey as soon as it opens, then waits for you to do it on the keys. After the guide, the app opens on a playground with the same look, to try anything.
 
 ## Everything from the keys
 

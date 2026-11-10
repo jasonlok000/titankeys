@@ -802,6 +802,9 @@ class GuideActivity : Activity() {
         previous.visibility = if (flow.canGoBack) View.VISIBLE else View.INVISIBLE
         chapter.text = step.chapter.label
         GuideHooks.nearMiss = step.nearMiss
+        // A slide with nothing to try is done as it opens, and the one that opens a section asks first.
+        passed = step.info || step.opensSection
+        next.text = if (step.opensSection) "Show me" else "Next"
         paintNext()
         offerFor(step)
         swapIn(title, step.title, 0)
@@ -1067,6 +1070,7 @@ class GuideActivity : Activity() {
         val missing = flow.missing
         when {
             step.chapter == GuideChapter.End || step.pause -> showOffer("Go type something")
+            step.opensSection -> showOffer("Skip")
             !ready -> showOffer("Pick TitanKeys")
             missing != null && (!missing.optional || helpShown) -> showOffer(missing.offer)
             else -> offer.visibility = View.GONE
@@ -1087,6 +1091,7 @@ class GuideActivity : Activity() {
         val step = flow.step
         when {
             step.chapter == GuideChapter.End || step.pause -> leave()
+            step.opensSection -> if (!changing && ready) moveOn(skip = true)
             !ready -> input.showInputMethodPicker()
             else -> flow.missing?.let { need ->
                 writeNeed(need)
@@ -1419,7 +1424,7 @@ class GuideActivity : Activity() {
     }
 
     /** The story goes on, or back a step: to ink for a step behind the cream line, or orange for the ending. */
-    private fun moveOn(forward: Boolean = true) {
+    private fun moveOn(forward: Boolean = true, skip: Boolean = false) {
         changing = true
         busy = true
         passed = false
@@ -1429,7 +1434,11 @@ class GuideActivity : Activity() {
         main.removeCallbacks(showHelp)
         main.removeCallbacks(settleReaction)
         hideHint()
-        if (forward) flow.advance() else flow.back()
+        when {
+            skip -> flow.skipSection()
+            forward -> flow.advance()
+            else -> flow.back()
+        }
         val coming = flow.step
         val target = if (coming.chapter == GuideChapter.End) GuideTone.Orange else GuideTone.Ink
         val away = (if (forward) -dp(ENTER_OFFSET) else dp(ENTER_OFFSET)).toFloat()

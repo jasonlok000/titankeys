@@ -21,6 +21,7 @@ internal enum class GuideTone { Orange, Ink }
  */
 internal enum class GuideChapter(val label: String) {
     Story("Everything from the keys"),
+    Boring("Some boring stuff"),
     End("Built for Titan 2 Elite"),
 }
 
@@ -298,6 +299,10 @@ internal class GuideStep(
     val needsWords: Int = 0,
     /** A stop between the parts of the guide: it counts as done at once, and offers to start typing. */
     val pause: Boolean = false,
+    /** A slide that only tells you something: it counts as done at once, quietly, with nothing to try. */
+    val info: Boolean = false,
+    /** The first slide of a section that you can skip: Next says Show me, and the offer says Skip, which goes past the section. */
+    val opensSection: Boolean = false,
     /** The keyboard makes the next swipe its second guess, on purpose, so that the step can teach the strip. See [GuideHooks]. */
     val nearMiss: Boolean = false,
     /** What the slide shows by itself when it opens and when nobody acts. */
@@ -368,23 +373,6 @@ internal val GUIDE_STEPS = listOf(
         },
     ),
     GuideStep(
-        id = "flick", chapter = GuideChapter.Story,
-        title = "Delete without reaching up.",
-        body = "Flick left from Backspace. Keep your finger there to keep deleting.",
-        done = "Gone.",
-        cue = GuideCue.Flick(hold = true),
-        needs = GuideNeed.SwipeTyping,
-        needsWords = 4,
-        demo = GuideDemo.DeleteLast,
-        check = { event ->
-            when (event) {
-                is DeletedWord -> GuideVerdict.Done
-                is Recognised -> GuideVerdict.Hint("That typed a word. Start on Backspace and flick left, fast.")
-                else -> GuideVerdict.Wait
-            }
-        },
-    ),
-    GuideStep(
         id = "steer", chapter = GuideChapter.Story,
         title = "Steer and pick from Space.",
         body = "Tap just above the middle of Space, then touch and slide to steer.",
@@ -446,6 +434,73 @@ internal val GUIDE_STEPS = listOf(
         check = { event ->
             if (event is ModifierState && (event.panel == Panel.Emoji || event.panel == Panel.Settings)) GuideVerdict.Done else GuideVerdict.Wait
         },
+    ),
+    // Some boring stuff: useful things that are less fun, after the story. The first slide offers to skip them all.
+    GuideStep(
+        id = "boring", chapter = GuideChapter.Boring,
+        title = "Some boring stuff.",
+        body = "Useful, not thrilling. Have a look, or skip straight to the end.",
+        done = "Fair enough.",
+        opensSection = true,
+        check = { GuideVerdict.Wait },
+    ),
+    GuideStep(
+        id = "flick", chapter = GuideChapter.Boring,
+        title = "Delete without reaching up.",
+        body = "Flick left from Backspace. Keep your finger there to keep deleting.",
+        done = "Gone.",
+        cue = GuideCue.Flick(hold = true),
+        needs = GuideNeed.SwipeTyping,
+        needsWords = 4,
+        demo = GuideDemo.DeleteLast,
+        check = { event ->
+            when (event) {
+                is DeletedWord -> GuideVerdict.Done
+                is Recognised -> GuideVerdict.Hint("That typed a word. Start on Backspace and flick left, fast.")
+                else -> GuideVerdict.Wait
+            }
+        },
+    ),
+    GuideStep(
+        id = "menu", chapter = GuideChapter.Boring,
+        title = "Hold a word for its menu.",
+        body = "Hold a word on the strip. Save keeps it, Forget makes it go away.",
+        done = "Your words, your call.",
+        info = true,
+        check = { GuideVerdict.Wait },
+    ),
+    GuideStep(
+        id = "clipboard", chapter = GuideChapter.Boring,
+        title = "Copied something? It's here.",
+        body = "The bar offers it right after. Older clips: press Sym, then A.",
+        done = "Paste away.",
+        info = true,
+        demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""),
+        check = { GuideVerdict.Wait },
+    ),
+    GuideStep(
+        id = "snippets", chapter = GuideChapter.Boring,
+        title = "Snippets and emoji by name.",
+        body = "Make snippets in Settings, then type ;name and Space. :smile: gives 😄.",
+        done = "Saves you some typing.",
+        info = true,
+        check = { GuideVerdict.Wait },
+    ),
+    GuideStep(
+        id = "exact", chapter = GuideChapter.Boring,
+        title = "Terminals get exact keys.",
+        body = "In terminals and remote desktops, every key goes straight through.",
+        done = "Settings has that list, and one for apps where the bar hides.",
+        info = true,
+        check = { GuideVerdict.Wait },
+    ),
+    GuideStep(
+        id = "names", chapter = GuideChapter.Boring,
+        title = "Names from your contacts.",
+        body = "Turn it on in Settings, under Your words, and names swipe right.",
+        done = "Names, sorted.",
+        info = true,
+        check = { GuideVerdict.Wait },
     ),
     GuideStep(
         id = "end", chapter = GuideChapter.End,
@@ -527,6 +582,15 @@ internal class GuideFlow(
     fun advance(): GuideStep {
         val left = step
         if (!finished) moveTo(firstFrom(position + 1))
+        return left
+    }
+
+    /** Moves past the rest of this section, to the first step of the next part that shows. Returns the step that was left. */
+    fun skipSection(): GuideStep {
+        val left = step
+        var at = position
+        while (at < steps.lastIndex && steps[at].chapter == left.chapter) at++
+        moveTo(firstFrom(at))
         return left
     }
 

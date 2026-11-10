@@ -20,11 +20,18 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "type" to listOf(Pushed(29), FieldChanged("Nothing", 7, 7), FieldChanged("Nothing ", 8, 8)),
     "swipe" to swiped(1),
     "strip" to listOf(Chosen("to")),
-    "flick" to listOf(DeletedWord(held = false)),
     "steer" to listOf(CursorStarted(false), FieldChanged("Nothing to unlearn", 18, 18),
         FieldChanged("Nothing to unlearn", 14, 14)),
     "symbols" to listOf(keys(Panel.Symbols), keys(Panel.Closed)),
     "panel" to listOf(keys(Panel.Emoji)),
+    // Some boring stuff. Its slides only tell you something, and Next moves on, but deleting is still a gesture to try.
+    "boring" to emptyList(),
+    "flick" to listOf(DeletedWord(held = false)),
+    "menu" to emptyList(),
+    "clipboard" to emptyList(),
+    "snippets" to emptyList(),
+    "exact" to emptyList(),
+    "names" to emptyList(),
 )
 
 fun main() {
@@ -90,6 +97,20 @@ private fun theStepsHaveOkayWords() {
         "The slides do not say how to hold the phone, as some type with other fingers")
     same(GUIDE_STEPS.map { it.chapter }.distinct(), GuideChapter.entries, "The story comes first, then the end")
     same(GUIDE_STEPS.count { it.pause }, 0, "The story has no stops")
+    same(GUIDE_STEPS.filter { it.opensSection }.map { it.id }, listOf("boring"), "One slide opens the boring stuff, and offers to skip it")
+    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Boring }.all { it.info || it.opensSection || it.id == "flick" }, true,
+        "The boring stuff only tells you things, but for the delete flick, which you try")
+    same(GUIDE_STEPS.filter { it.info }.all { it.chapter == GuideChapter.Boring }, true, "The story has no slides without something to try")
+    run {
+        val flow = GuideFlow({ GuideSettings() })
+        flow.start("boring")
+        same(flow.skipSection().id, "boring", "Skip leaves the opening slide")
+        same(flow.step.id, "end", "Skip goes past the boring stuff, to the end")
+        same(flow.stepIndex, flow.stepCount, "After Skip the bar at the top is full")
+        flow.start("names")
+        same(flow.skipSection().id, "names", "Skip from the last slide of the section also goes to the end")
+        same(flow.step.id, "end", "And it lands on the end")
+    }
     same(GuideScript.TEXT.any { it.isDigit() }, false, "The script must be easy to swipe, with no numbers")
     for (word in GuideScript.words) same(GuideScript.letters(word).isNotEmpty(), true, "Each word of the script has letters to swipe: $word")
     same(GuideScript.TEXT.contains("two hands or one") && GuideScript.TEXT.contains("ultimate"), true,
@@ -157,8 +178,10 @@ private fun stepsStartInTheRightMenu() {
     same(byId.getValue("symbols").setup, Panel.Closed, "The symbol step starts closed, so that Sym opens the panel")
     same(byId.getValue("panel").setup, Panel.Closed, "The emoji step starts closed, so that Sym two times shows the emoji")
     for (step in GUIDE_STEPS.filter { !it.usesPanel }) same(step.setup, Panel.Closed, "${step.id} types, so the panel is closed for it")
-    for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.End })
+    // A slide that only tells you something has no gesture to show, unless its keys can light up.
+    for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.End && !it.info && !it.opensSection })
         same(step.demo != null, true, "${step.id} must show its gesture by itself when nobody acts")
+    same(byId.getValue("clipboard").demo, GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""), "The clipboard slide lights Sym, then A")
     same(byId.getValue("symbols").demo, GuideDemo.HoldLetter("J"), "The symbol slide shows J held down, the key that it names")
 }
 

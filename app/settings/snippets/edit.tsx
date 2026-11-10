@@ -28,11 +28,11 @@ function SnippetForm({ title, start, previous, ...initial }: {
     back();
   });
   const ready = shortcut.trim().length > 0 && text.length > 0;
-  return <Screen title={title} subtitle="Use letters, numbers, _ - and + in the shortcut. Type the shortcut, then push the space bar to get the text.">
+  return <Screen title={title} subtitle="Shortcuts can use letters, numbers, _ - and +. Type one and press Space to get its text.">
     <Stack gap={24}>
       <TextInput label="Shortcut" prefix={start} value={shortcut} onChange={setShortcut} placeholder="addr"
         autoFocus={!previous} autoCapitalise={false} action="done" />
-      <TextInput label="Text" value={text} onChange={setText} placeholder="The text that the shortcut types"
+      <TextInput label="Text" value={text} onChange={setText} placeholder="What the shortcut turns into"
         minLines={3} maxLines={10} action="return" />
       {save.status === "error" && <Text size={18}>{save.error.message}</Text>}
       <Button disabled={!ready || save.status === "pending"} onPress={() => save.run()}>Save</Button>

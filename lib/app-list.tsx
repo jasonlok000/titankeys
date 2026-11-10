@@ -50,7 +50,7 @@ export function AddAppPage({ list, apps }: { list: AppList; apps: (state: State)
     <Section title="All apps">
       {installed.status === "ready"
         ? installed.data.filter(({ app }) => !listed.has(app)).map(row)
-        : <Row title={installed.status === "error" ? "Could not read the apps" : "Reading the apps…"} />}
+        : <Row title={installed.status === "error" ? "Couldn't find your apps" : "Finding your apps…"} />}
     </Section>
   </Screen>;
 }

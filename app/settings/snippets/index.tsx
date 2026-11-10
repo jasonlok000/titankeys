@@ -3,7 +3,7 @@ import { add, close } from "ink/icons";
 import { type State, removeSnippet, state, transferSnippets } from "../../../lib/atlas";
 
 const title = "Snippets";
-const subtitle = "Type a shortcut and push the space bar. The shortcut changes to its text. To get the shortcut back, push Backspace. Snippets stay on this phone. They do not operate in password fields.";
+const subtitle = "Type a shortcut and press Space, and it turns into its text. Changed your mind? Press Backspace right after. Snippets stay on your phone and never work in password fields.";
 
 export const snippetsLabel = ({ snippets }: State) => snippets.length === 1 ? "1 snippet" : `${snippets.length} snippets`;
 
@@ -26,7 +26,7 @@ export default function Snippets() {
     <Section title="Backup">
       <Field label="Export snippets" onPress={() => void transfer.run("export")} />
       <Field label="Import snippets" onPress={() => void transfer.run("import")} />
-      {transfer.status === "error" && <Row title="Could not do this" subtitle={transfer.error.message} wrapSubtitle />}
+      {transfer.status === "error" && <Row title="That didn't work" subtitle={transfer.error.message} wrapSubtitle />}
     </Section>
   </Screen>;
 }

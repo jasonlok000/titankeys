@@ -23,8 +23,8 @@ object Snippets {
 
     /** Adds or changes a snippet. [previous] is its old shortcut when the shortcut changed. */
     fun put(context: Context, shortcut: String, text: String, previous: String? = null) {
-        require(Expansions.validName(shortcut)) { "Use only letters, numbers, _ - and +, up to ${Expansions.MAX_NAME}." }
-        require(text.isNotEmpty() && text.length <= MAX_TEXT) { "Type the text of the snippet." }
+        require(Expansions.validName(shortcut)) { "Shortcuts can only use letters, numbers, _ - and +, up to ${Expansions.MAX_NAME} of them." }
+        require(text.isNotEmpty() && text.length <= MAX_TEXT) { "Type what the shortcut should turn into." }
         val snippets = LinkedHashMap(load(context))
         if (previous != null) snippets.remove(previous.lowercase())
         snippets[shortcut.lowercase()] = text
@@ -38,18 +38,18 @@ object Snippets {
 
     /** Writes every snippet to [uri]. */
     fun export(context: Context, uri: Uri) {
-        val stream = context.contentResolver.openOutputStream(uri, "wt") ?: error("Could not open the file.")
+        val stream = context.contentResolver.openOutputStream(uri, "wt") ?: error("Couldn't open that file.")
         stream.bufferedWriter().use { it.write(write(load(context))) }
     }
 
     /** Adds the snippets in [uri]. A shortcut that is already here takes the file's text. Returns how many it read. */
     fun import(context: Context, uri: Uri): Int {
-        val stream = context.contentResolver.openInputStream(uri) ?: error("Could not open the file.")
+        val stream = context.contentResolver.openInputStream(uri) ?: error("Couldn't open that file.")
         val text = stream.bufferedReader().use { it.readText() }
         val found = try {
             read(text)
         } catch (error: org.json.JSONException) {
-            throw IllegalArgumentException("This file has no snippets.", error)
+            throw IllegalArgumentException("That file has no snippets in it. Pick the right one.", error)
         }
         val snippets = LinkedHashMap(load(context))
         snippets.putAll(found)

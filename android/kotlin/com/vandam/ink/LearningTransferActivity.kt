@@ -71,7 +71,7 @@ class LearningTransferActivity : Activity() {
                 if (exporting) Snippets.export(this, uri) else Snippets.import(this, uri)
                 null
             } catch (error: Exception) {
-                error.message ?: "Could not read the file."
+                error.message ?: "Couldn't read that file."
             }
             runOnUiThread { complete(error == null, error) }
         }.start()

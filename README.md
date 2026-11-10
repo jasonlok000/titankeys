@@ -72,11 +72,11 @@ Right after you copy text, the strip shows it: touch it to paste. For older clip
 
 ### Snippets and emoji by name
 
-Type a shortcut such as `;addr` and push Space to put in your address, or type `:smile:` for 😄. Backspace straight after puts the shortcut back. The strip shows matching snippets and emoji while you type. Add, import and export snippets in Settings. They stay on the phone and never work in password fields.
+Type `;addr` and press Space, and your address shows up. Type `:smile:` and you get 😄. Changed your mind? Backspace right after puts the shortcut back. The strip shows matching snippets and emoji as you type. Snippets live on your phone, you can import and export them, and they never fire in password fields.
 
 ### Exact typing for terminals and remote computers
 
-In terminals, remote desktops and game streaming, every key goes to the app as you push it, with Shift, Alt and Ctrl (fn too): no fixes, no capitals, no suggestions. Termux, ConnectBot, Termius, AnyDesk, TeamViewer, Windows App, Chrome Remote Desktop, RustDesk, RealVNC Viewer, bVNC, aRDP, Moonlight and Parsec are on the list from the start. Add or remove any app in Settings. Password, email and number fields keep the bar for Shift, Alt and Ctrl, but show no words and take no swipes.
+In terminals, remote desktops and game streaming, every key goes straight to the app, exactly as you press it, with Shift, Alt and Ctrl (fn too). TitanKeys doesn't fix or suggest a thing there. Termux, ConnectBot, Termius, AnyDesk, TeamViewer, Windows App, Chrome Remote Desktop, RustDesk, RealVNC Viewer, bVNC, aRDP, Moonlight and Parsec are on the list out of the box, and you can add or remove any app in Settings. Password, email and number fields keep the bar for Shift, Alt and Ctrl, but they get no words and swipes do nothing there.
 
 ## TitanKeys and Atlas
 

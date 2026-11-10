@@ -1,0 +1,15 @@
+# The TitanKeys contributions Worker. Deploy steps are in README.md next to this file.
+name = "titankeys-contributions"
+main = "src/worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+preview_urls = false
+
+# Write-only storage for sealed batches. Keep it private: no public bucket URL and no custom domain on it.
+[[r2_buckets]]
+binding = "BATCHES"
+bucket_name = "titankeys-contributions"
+
+# No request logs, so no internet addresses are kept, as the privacy policy says.
+[observability]
+enabled = false

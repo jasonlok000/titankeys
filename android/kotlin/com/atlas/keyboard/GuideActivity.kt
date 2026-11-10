@@ -43,6 +43,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.atlas.connected.Contributions
 import com.atlas.engine.TypingSettings
 import org.json.JSONObject
 import kotlin.math.hypot
@@ -813,8 +814,11 @@ class GuideActivity : Activity() {
         paintSegments(flow.stepIndex)
         main.removeCallbacks(showHelp)
         if (step.help != null) main.postDelayed(showHelp, HELP_AFTER_MILLIS)
-        if (step.chapter == GuideChapter.End) preferences.edit().remove(RESUME).apply()
-        else preferences.edit().putString(RESUME, flow.resumeId).apply()
+        if (step.chapter == GuideChapter.End) {
+            preferences.edit().remove(RESUME).apply()
+            // The end of the guide is where TitanKeys offers data contributions, once. The app asks when you leave.
+            Contributions.guideEnded(this)
+        } else preferences.edit().putString(RESUME, flow.resumeId).apply()
         busy = false
         // A new slide shows its gesture at once, as soon as its words are in.
         acted(DEMO_ENTER_MILLIS)

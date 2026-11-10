@@ -28,6 +28,8 @@ import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.SurroundingText
 import android.widget.LinearLayout
+import com.atlas.connected.Connected
+import com.atlas.connected.TouchSizes
 import com.atlas.engine.Calibration
 import com.atlas.engine.EmojiPages
 import com.atlas.engine.HoldEngine
@@ -287,6 +289,7 @@ class AtlasIme : InputMethodService() {
     override fun onCreate() {
         super.onCreate()
         Calibration.init(this)
+        Connected.start(this)
         haptics = Haptics(this)
         touchpad = Touchpad(getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY))
         editor = ConnectionEditor(::getCurrentInputConnection, ::getCurrentInputEditorInfo,
@@ -472,6 +475,7 @@ class AtlasIme : InputMethodService() {
         editor.cancelState()
         super.onStartInput(info, restarting)
         editing = info.inputType != EditorInfo.TYPE_NULL
+        Connected.field(this, editing)
         if (!restarting) {
             typedInField = false
             fieldStartedAt = SystemClock.uptimeMillis()
@@ -665,6 +669,7 @@ class AtlasIme : InputMethodService() {
         composer.stop(terminal = true)
         editor.cancelState()
         editing = false
+        Connected.field(this, false)
         field = Field.None
         updateKeyWatch()
         rawLog?.finish()
@@ -744,6 +749,7 @@ class AtlasIme : InputMethodService() {
         if (!field.words && !panelOpen) return
         typedInField = true
         val samples = touchpad.samples(event)
+        TouchSizes.record(event)
         Recording.sink?.motion(event, samples)
         inputLog()?.motion(event, samples)
         if (panelOpen && hover(event, samples)) return
@@ -1224,7 +1230,8 @@ class AtlasIme : InputMethodService() {
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return
                 }
-                composer.swipe(letterSpace(outcome.points), outcome.startedAt, outcome.endedAt, modifiers.metaState)
+                composer.swipe(letterSpace(outcome.points).also { TouchSizes.attach(it, outcome.points) }, outcome.startedAt,
+                    outcome.endedAt, modifiers.metaState)
                 modifiers.consume()
             }
             is Contact.Outcome.Tap -> {

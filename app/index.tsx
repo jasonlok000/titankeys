@@ -3,6 +3,8 @@ import { Canvas, CanvasIcon, CanvasText, Rectangle, Screen, Stack, Text, replace
 import { arrowOutward } from "ink/icons";
 import { cancelPlayground, markNotesSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
 import { INK, ORANGE } from "../lib/brand";
+import { connectedState, declineContributions, setContribute } from "../lib/connected";
+import { Disclosure } from "../lib/contribute";
 import { hasReleaseNotes } from "../lib/release-notes";
 import { WhatsNew } from "../lib/whats-new";
 
@@ -84,10 +86,16 @@ function FrontPage() {
 
 export default function Home() {
   const result = useSnapshot(state);
+  const connected = useSnapshot(connectedState);
   if (result.status !== "ready") return <Screen />;
   const { enabled, selected, overlay, scrollAssistant, backService, version, whatsNew, guideDue } = result.data;
   if (!enabled || !selected || !overlay || !scrollAssistant || !backService) return <SetupStart first={guideDue} />;
   if (guideDue) return <GuideStart />;
   if (whatsNew && hasReleaseNotes(version)) return <WhatsNew version={version} onClose={() => void markNotesSeen()} />;
+  // The guide offers data contributions once, at its end. The answer can change any time in Settings. The playground
+  // waits for this answer, so that it does not open only to close again.
+  if (connected.status === "loading") return <Screen />;
+  if (connected.status === "ready" && connected.data.offerDue)
+    return <Disclosure onAgree={() => void setContribute(true)} onDecline={() => void declineContributions()} />;
   return <FrontPage />;
 }

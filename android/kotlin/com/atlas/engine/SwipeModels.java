@@ -25,6 +25,8 @@ final class SwipeModels implements AutoCloseable {
     final NextWordModel predictor;
     final SwipeRanker ranker;
     private volatile Map<String, Integer> personal = Map.of();
+    /** The ranker's numbers for each candidate of the last swipe ranked, for data contributions. Only the worker thread ranks. */
+    volatile Map<String, double[]> lastFeatures;
 
     private SwipeModels(CtcReader reader, NextWordModel predictor, SwipeRanker ranker) {
         this.reader = reader; this.predictor = predictor; this.ranker = ranker;
@@ -85,6 +87,7 @@ final class SwipeModels implements AutoCloseable {
         // A built-in word such as "TitanKeys" is missing from the dictionary, but is no rarer than a saved word.
         for (Map.Entry<String, double[]> e : cand.entrySet())
             if (e.getValue()[12] < 0 && BuiltInWords.spelling(e.getKey()) != null) e.getValue()[12] = BuiltInWords.FREQUENCY;
+        lastFeatures = cand;
         SwipeRanker.Choice[] best = ranker.rank(cand, spellings, allowed, SwipeRanker.shown());
         Map<String, SwipeDecoder.Result> futo = new LinkedHashMap<>();
         for (SwipeDecoder.Result[] list : new SwipeDecoder.Result[][]{shown, readings[0], readings[1]})

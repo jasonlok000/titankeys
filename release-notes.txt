@@ -4,7 +4,7 @@
 - Trained for the Titan touchpad: Engine 2.0 adds three trained parts to the FUTO engine. A swipe reader, fine-tuned on real swipes from the Titan touchpad, finds more words. A small language model reads your sentence. A ranker, trained on Titan swipes, puts the best three words on the strip.
 - More right words: On recorded sentences, the right word comes first 91% of the time, against 84% in 1.2. It is in the top 3 96% of the time, against 88%.
 - Next words: Before you type, the strip shows the words that your sentence most likely needs next. After you type a letter or two, it shows the words that start with them and fit the sentence.
-- On your phone: All models run on the phone, and the keyboard has no network access. They load a few seconds after the keyboard starts, and swiping works in the meantime. If a model cannot load, the old engine works as before.
+- On your phone: All models run on the phone. They load a few seconds after the keyboard starts, and swiping works in the meantime. If a model cannot load, the old engine works as before.
 
 ## Learn the keys
 - Interactive guide: Seven chapters teach each feature on the real keys. Each one shows its gesture as soon as it opens.

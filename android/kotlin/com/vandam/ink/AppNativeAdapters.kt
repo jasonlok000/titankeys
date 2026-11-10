@@ -34,7 +34,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> =
-    mapOf("atlas" to AtlasAdapter(activity))
+    mapOf("atlas" to AtlasAdapter(activity), "connected" to ConnectedAdapter(activity))
 
 private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, Application.ActivityLifecycleCallbacks {
     private val typing by lazy { SwipeTyping.get(activity) }

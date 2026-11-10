@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "test-2026-11-10",
+      "title": "Test news from TitanKeys",
+      "text": "This is a test of the news feed. It shows only in TitanKeys Debug. Snooze and Don't show again work as in real news.",
+      "action": { "label": "Privacy policy", "url": "https://jasonlok000.github.io/titankeys/privacy/" },
+      "from": "2026-11-10T00:00:00Z",
+      "until": "2027-01-31T00:00:00Z",
+      "builds": ["debug"],
+      "notify": true
+    }
+  ]
+}

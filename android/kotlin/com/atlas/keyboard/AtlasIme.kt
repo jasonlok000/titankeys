@@ -117,18 +117,43 @@ class AtlasIme : InputMethodService() {
     private val settlements = LinkedHashMap<Contact.Settlement, Runnable>()
     private val pieces = SwipePieces({ composer.liftOffMillis.toLong() }, { composer.canContinueSwipe }, ::isTapKey)
     private var lastTouch: List<Sample>? = null
+    /**
+     * Asks Android to show the strip, so that the app hears that the keyboard is back and makes room for it. An app that has
+     * already handled a hide, such as Microsoft Teams, otherwise leaves its message box under the strip.
+     */
     private val showStrip = Runnable {
-        if (hiddenByBack || !editing || currentInputBinding == null) return@Runnable
-        // Apps can drop a field yet still start input on it, so only a field that answers gets the strip.
-        if (currentInputConnection?.getTextBeforeCursor(1, 0) == null) return@Runnable
+        if (!canShowStrip()) return@Runnable
         try {
-            // A cancelled show request can leave the client waiting for a window surface.
-            showWindow(true)
             requestShowSelf(0)
         } catch (error: RuntimeException) {
             // Titan firmware can drop its current client before Android reports the editor gone.
             Log.w("Atlas", "Could not show the suggestion strip", error)
         }
+        main.removeCallbacks(forceStrip)
+        main.postDelayed(forceStrip, SHOW_FALLBACK_MILLIS)
+    }
+
+    /** A cancelled show request can leave the client waiting for a window surface, so the window shows itself if Android's did not. */
+    private val forceStrip = Runnable {
+        if (!isInputViewShown && canShowStrip()) {
+            try {
+                showWindow(true)
+                requestShowSelf(0)
+            } catch (error: RuntimeException) {
+                Log.w("Atlas", "Could not show the suggestion strip", error)
+            }
+        }
+        // A panel that could not show must not take the next key.
+        if (panelOpen && !isInputViewShown) closePanel()
+    }
+
+    // Apps can drop a field yet still start input on it, so only a field that answers gets the strip.
+    private fun canShowStrip() = !hiddenByBack && editing && currentInputBinding != null
+        && currentInputConnection?.getTextBeforeCursor(1, 0) != null
+
+    private fun cancelShowStrip() {
+        main.removeCallbacks(showStrip)
+        main.removeCallbacks(forceStrip)
     }
 
     private val hideStrip = Runnable {
@@ -142,12 +167,13 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    /** An app's own hide, such as from a Done key, leaves the window closed, so a panel that opens then must show it. */
+    /**
+     * An app's own hide, such as from a Done key, leaves the window closed, so a panel that opens then must show it. If the
+     * window has not shown by the time of the fallback in [forceStrip], the panel closes there.
+     */
     private val showPanel = Runnable {
         if (!panelOpen || isInputViewShown) return@Runnable
-        showStrip.run()
-        // It could not show, so it must not take the next key.
-        if (!isInputViewShown) closePanel()
+        if (canShowStrip()) showStrip.run() else closePanel()
     }
 
     private val refreshModifiers = Runnable { showModifiers() }
@@ -497,7 +523,7 @@ class AtlasIme : InputMethodService() {
         showModifiers()
         readSettings()
         if (editing && !restarting) rememberEnterApp(info)
-        main.removeCallbacks(showStrip)
+        cancelShowStrip()
         main.removeCallbacks(hideStrip)
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
@@ -634,7 +660,7 @@ class AtlasIme : InputMethodService() {
         closePanel()
         // A delayed hide from the previous app arrives just after this field starts. A later hide, or one
         // after you have typed, is the app's own, such as a tap outside the field or a Done key.
-        main.removeCallbacks(showStrip)
+        cancelShowStrip()
         if (passingBack) {
             // Now that the strip is gone, the app's own back can run. If its field stays, the strip stays hidden.
             passingBack = false
@@ -654,7 +680,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onUnbindInput() {
-        main.removeCallbacks(showStrip)
+        cancelShowStrip()
         main.removeCallbacks(sendBack)
         // The app has lost the keyboard, so coming back to it counts as a new start.
         hiddenByBack = false
@@ -675,7 +701,7 @@ class AtlasIme : InputMethodService() {
         rawLog?.finish()
         rawLog = null
         composer.log = null
-        main.removeCallbacks(showStrip)
+        cancelShowStrip()
         clearSettlements()
         contact.cancel()
         endCursor()
@@ -1621,6 +1647,8 @@ class AtlasIme : InputMethodService() {
         private const val RECENT_EMOJI = "recent"
         /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
         private const val STALE_HIDE_MILLIS = 500L
+        /** How long Android has to show the strip before the keyboard shows its window itself. */
+        private const val SHOW_FALLBACK_MILLIS = 300L
         /** The field of a returning window started within 30 ms of its empty start. */
         private const val NO_FIELD_HIDE_MILLIS = 200L
         private const val FRAME_MILLIS = 16L

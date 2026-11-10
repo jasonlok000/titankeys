@@ -7,12 +7,13 @@ trap 'rm -rf "$work"' EXIT
 engine=android/kotlin/com/atlas/engine
 javac --release 17 -cp "$sdk/platforms/android-36/android.jar" -d "$work" \
   "$engine/LanguageHabits.java" "$engine/SwipeWords.java" "$engine/SuggestionPolicy.java" \
-  "$engine/BlockedWords.java" "$engine/TypedPredictions.java" "$engine/BuiltInWords.java" "$engine/SentenceContext.java" \
+  "$engine/BlockedWords.java" "$engine/ForgetWords.java" "$engine/TypedPredictions.java" "$engine/BuiltInWords.java" "$engine/SentenceContext.java" \
   "$engine/NextWordPredictor.java" "$engine/UserNGramRepository.java" "$engine/KeptWords.java" "$engine/SentenceCase.java" \
   tests/words/SavedWordsChecks.java tests/words/BlockedWordsChecks.java tests/words/ContextSuggestionChecks.java \
-  tests/words/NextWordChecks.java tests/words/SentenceCaseChecks.java
+  tests/words/NextWordChecks.java tests/words/SentenceCaseChecks.java tests/words/ForgetWordsChecks.java
 java -cp "$work:$sdk/platforms/android-36/android.jar" com.atlas.engine.SavedWordsChecks
 java -cp "$work:$sdk/platforms/android-36/android.jar" com.atlas.engine.BlockedWordsChecks
 java -cp "$work:$sdk/platforms/android-36/android.jar" com.atlas.engine.ContextSuggestionChecks
 java -cp "$work:$sdk/platforms/android-36/android.jar" com.atlas.engine.NextWordChecks
 java -cp "$work:$sdk/platforms/android-36/android.jar" com.atlas.engine.SentenceCaseChecks
+java -cp "$work:$sdk/platforms/android-36/android.jar" com.atlas.engine.ForgetWordsChecks

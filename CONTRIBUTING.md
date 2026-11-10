@@ -18,6 +18,28 @@ Atlas has these goals:
 - **Simple:** Write clear code. Clear code is better than clever code.
 - **Made for the Titan 2 Elite:** Each feature must operate well with the physical keyboard.
 
+## Bring TitanKeys to another device
+
+TitanKeys is made for the Unihertz Titan 2 Elite. If you own another phone with a physical keyboard, such as the Titan 2 or a future Communicator, you are welcome to make TitanKeys work on it.
+
+**Do it inside TitanKeys, not in a fork.** A port inside this app gets every new feature and fix, and it stays maintained in one place. Open an issue first to describe the device, and wait for approval, as for any other work.
+
+**Fork if your direction is different.** If you want TitanKeys to go in a direction that I do not agree with, for example a different philosophy, then a fork is the right choice. The GPL-3.0 licence allows it. Give the fork its own name, and keep the credits.
+
+**What is specific to the Titan 2 Elite today:**
+
+- The touchpad: its input device name and ranges (`Touchpad.kt`), and how the firmware sends it to the keyboard's window (`TouchpadOverlay.kt`).
+- The keys: the layout (`Layout.kt`), the phone's key map (`Keys.kt`), and the drawing of the keys in the guide.
+- The calibration of touch positions (`android/assets/calibration`).
+- The vendor settings that setup reads and opens (`PhoneSetup.kt`).
+- Swipe engine 2.0: its models were trained on swipes from the Titan 2 Elite's touchpad. Another touchpad needs its own recordings, made with the tools in `android/debug/recorder`.
+
+**Rules for a port:**
+
+- Nothing gets worse on the Titan 2 Elite. A device profile chooses what is different, and the Titan 2 Elite keeps its current behaviour.
+- Test on the real device, and on a Titan 2 Elite if you change shared code.
+- Share recordings from the new device, so that the engine can learn its touchpad.
+
 ## Open an issue
 
 1. Search the [issues](https://github.com/jasonlok000/titankeys/issues) first. Make sure that your issue is not a duplicate.

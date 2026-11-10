@@ -17,7 +17,32 @@ public final class NextWordChecks {
         ranking();
         queue();
         reading();
+        keptCounts();
         System.out.println("Next word checks passed");
+    }
+
+    /** #38: how often each word was kept, from the pairs, for completions after letters. */
+    private static void keptCounts() {
+        FakeStore store = new FakeStore();
+        // The writer waits at this gate, so every pair below is certainly still pending when it is counted.
+        store.gate = new CountDownLatch(1);
+        NextWordPredictor predictor = new NextWordPredictor(store, () -> 1_000 * DAY, word -> !word.equalsIgnoreCase("blocked"));
+        predictor.learn("see", "Tomorrow");
+        predictor.learn("until", "tomorrow");
+        predictor.learnSentenceStart("Tomorrow");
+        predictor.learn("the", "tower");
+        predictor.learn("so", "blocked");
+        java.util.Map<String, Integer> waiting = predictor.keptStarting("to");
+        check(waiting.getOrDefault("tomorrow", 0) == 3 && waiting.getOrDefault("tower", 0) == 1,
+                "A pending word kept after any word, or to start a sentence, counts each time, in any case: " + waiting);
+        store.gate.countDown();
+        predictor.flush();
+        java.util.Map<String, Integer> kept = predictor.keptStarting("to");
+        check(kept.get("tomorrow") == 3 && kept.get("tower") == 1 && kept.size() == 2, "Stored counts add up the same: " + kept);
+        check(predictor.keptStarting("b").isEmpty(), "A blocked word is never counted");
+        check(predictor.keptStarting("").isEmpty(), "Nothing is counted before a letter");
+        predictor.clearAll();
+        check(predictor.keptStarting("to").isEmpty(), "Clearing the learned pairs clears the counts");
     }
 
     private static void combining() {
@@ -295,6 +320,16 @@ public final class NextWordChecks {
                         .sorted(Comparator.<Row>comparingInt(row -> -row.count).thenComparingLong(row -> -row.lastUsed))
                         .limit(limit).map(row -> new Prediction(row.word, row.count, row.lastUsed)).toList();
             }
+        }
+
+        @Override public java.util.Map<String, Integer> keptStarting(String letters, int limit) {
+            java.util.Map<String, Integer> kept = new java.util.HashMap<>();
+            synchronized (rows) {
+                for (Row row : rows)
+                    if (row.word.toLowerCase(java.util.Locale.ROOT).startsWith(letters))
+                        kept.merge(row.word.toLowerCase(java.util.Locale.ROOT), row.count, Integer::sum);
+            }
+            return kept;
         }
 
         @Override public int deleteWord(String prefix, String nextWord) {

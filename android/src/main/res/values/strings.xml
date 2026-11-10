@@ -1,3 +1,29 @@
 <resources>
     <string name="back_service_description">Lets one back swipe close the suggestion bar and go back in the app. While the Sym panel is open, TitanKeys also reads the keys that you push, so that Enter and Backspace turn the pages and do not go to the app. In the Smart Launcher search field, TitanKeys also reads the keys that you push, so that Hold for symbols and two pushes of Shift or Alt operate correctly. While you type, TitanKeys also keeps the touchpad on the keys when a notification shows at the top of the screen. TitanKeys does not read your screen.</string>
+    <!-- The confirm on the suggestion strip after you hold a word to forget it. -->
+    <string name="strip_forgot">Forgot “%1$s”</string>
+    <string name="strip_undo">Undo</string>
+    <!-- The menu of a word held on the strip, or of the word selected in the field. -->
+    <string name="strip_menu_word">“%1$s”</string>
+    <string name="strip_save">Save</string>
+    <string name="strip_forget">Forget</string>
+    <string name="strip_back">Back</string>
+    <string name="strip_saved">Saved “%1$s”</string>
+
+    <!-- The clipboard page of the Sym panel, and the newest clip on the strip. -->
+    <string name="clipboard_open">Open the clipboard</string>
+    <string name="clipboard_empty">Copy text, and it shows here for an hour.</string>
+    <string name="clipboard_group_recent">Clipboard</string>
+    <string name="clipboard_group_pinned">Pinned</string>
+    <string name="clipboard_pinned_empty">To pin a clip, push Enter, then a key under the clip.</string>
+    <string name="clipboard_pinning">Push a key under a clip to pin or unpin it</string>
+    <string name="clipboard_clear_again">Push Backspace or Clear again to clear all but pinned</string>
+    <string name="clipboard_clear">Clear</string>
+    <string name="clipboard_pin">Pin</string>
+    <string name="clipboard_pin_done">Done</string>
+    <string name="clipboard_pinned">%1$s · Pinned</string>
+    <string name="clipboard_paste">Paste %1$s</string>
+    <string name="clipboard_description">Clipboard. The texts that you copied in the last hour, and the ones you pinned. Push a key under a clip to paste it. Swipe up or down to see more, and left or right for Pinned. Enter pins, Backspace clears, and Alt goes back.</string>
+    <!-- Shows once, under the first clip that the strip offers. -->
+    <string name="strip_clip_hint">Older clips: push Sym, then A</string>
 </resources>

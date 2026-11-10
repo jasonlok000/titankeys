@@ -1,7 +1,10 @@
 package com.atlas.engine;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -43,6 +46,17 @@ public final class PhoneNames {
         Map<String, String> all = new HashMap<>(apps);
         all.putAll(contacts);
         return all;
+    }
+
+    /**
+     * The order in which names go to the swipe engines while their personal list has room: contacts' names first, as a
+     * person's name is the likelier to be typed, then apps'. Each part is alphabetical, so the order never depends on how
+     * Android listed them.
+     */
+    public static List<String> order(Map<String, String> contacts, Map<String, String> apps) {
+        List<String> order = new ArrayList<>(new TreeSet<>(contacts.keySet()));
+        for (String word : new TreeSet<>(apps.keySet())) if (!contacts.containsKey(word)) order.add(word);
+        return List.copyOf(order);
     }
 
     private PhoneNames() {}

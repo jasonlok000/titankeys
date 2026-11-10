@@ -30,6 +30,8 @@ public final class PhoneNamesChecks {
         same(both.get("go"), "Go", "A contact's spelling wins over an app's");
         same(both.get("signal"), "Signal", "Both sources are kept");
         same(PhoneNames.merged(Map.of("signal", "Signal"), Map.of()).size(), 1, "With contacts off, only the apps are left");
+        same(PhoneNames.order(Map.of("lok", "Lok", "go", "Go"), Map.of("signal", "Signal", "go", "GO", "arc", "Arc")),
+                List.of("go", "lok", "arc", "signal"), "Contacts' names go to the engines first, then apps', each alphabetical");
         System.out.println("Phone name checks passed");
     }
 

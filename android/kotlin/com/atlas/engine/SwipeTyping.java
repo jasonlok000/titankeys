@@ -57,6 +57,13 @@ public final class SwipeTyping {
     private volatile Map<String, String> savedCapitals = Map.of();
     /** Names on this phone (see {@link PhoneNames}), by their lowercase form. Never learned, saved or logged. */
     private volatile Map<String, String> phoneNames = Map.of();
+    /** The same names in the order they go to the swipe engines while there is room: contacts' names first, then apps'. */
+    private volatile List<String> phoneNameOrder = List.of();
+    /**
+     * How many words the FUTO engine's personal list holds: its native library refuses more (personal_dictionary.cpp),
+     * and the refusal would stop every swipe. Saved words come first, then names on this phone while there is room.
+     */
+    static final int PERSONAL_LIMIT = 256;
     private volatile long namesRevision;
     private volatile BlockedWords blockedWords;
     private final NextWordPredictor nextWords;
@@ -435,8 +442,9 @@ public final class SwipeTyping {
      * Takes the names on this phone: the words of app names and, if the user turned it on, of contacts' names. Replaces
      * the earlier ones, so turning contacts off clears theirs at once. The engines take them before the next swipe.
      */
-    public void phoneNames(Map<String, String> names) {
-        phoneNames = Map.copyOf(names);
+    public void phoneNames(Map<String, String> contacts, Map<String, String> apps) {
+        phoneNames = Map.copyOf(PhoneNames.merged(apps, contacts));
+        phoneNameOrder = PhoneNames.order(contacts, apps);
         namesRevision++;
     }
 
@@ -652,14 +660,19 @@ public final class SwipeTyping {
         if (recogniser == null || (configuredRevision == dictionary.revision && configuredDay == today()
                 && configuredNames == names && configuredLearning == learning)) return;
         // Saved words only count while learning is on. Names on this phone count either way, as they are never learned.
-        List<LanguageHabits.Entry> active = wordsAvailable && learning ? dictionary.active(today()).stream()
-                .filter(entry -> wordAllowed(entry.word)).toList() : java.util.Collections.emptyList();
+        int day = today();
+        // Over the limit, the most used saved words stay.
+        List<LanguageHabits.Entry> active = wordsAvailable && learning ? dictionary.active(day).stream()
+                .filter(entry -> wordAllowed(entry.word))
+                .sorted(java.util.Comparator.comparingDouble((LanguageHabits.Entry entry) -> -entry.frequency(0, day)))
+                .limit(PERSONAL_LIMIT).toList() : java.util.Collections.emptyList();
         java.util.Set<String> savedKeys = new java.util.HashSet<>();
         for (LanguageHabits.Entry entry : active) savedKeys.add(entry.word);
         Map<String, String> phone = phoneNames;
-        List<String> nameWords = phone.keySet().stream()
-                .filter(word -> !savedKeys.contains(word) && recogniser.frequency(word) <= 0 && wordAllowed(phone.get(word)))
-                .sorted().toList();
+        List<String> nameWords = phoneNameOrder.stream()
+                .filter(word -> phone.containsKey(word) && !savedKeys.contains(word) && recogniser.frequency(word) <= 0
+                        && wordAllowed(phone.get(word)))
+                .limit(PERSONAL_LIMIT - active.size()).toList();
         String[] words = new String[active.size() + nameWords.size()];
         float[] frequencies = new float[words.length];
         for (int i = 0; i < active.size(); i++) {

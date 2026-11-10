@@ -89,7 +89,7 @@ class PhoneNameSource(private val context: Context, private val typing: SwipeTyp
         publish()
     }
 
-    private fun publish() = typing.phoneNames(PhoneNames.merged(apps, contacts))
+    private fun publish() = typing.phoneNames(contacts, apps)
 
     /** The labels of the apps that the home screen shows, which the manifest's launcher query lets the keyboard see. */
     private fun appLabels(): List<String> {

@@ -17,3 +17,7 @@ java -cp "$work:$sdk/platforms/android-36/android.jar" com.atlas.engine.ContextS
 java -cp "$work:$sdk/platforms/android-36/android.jar" com.atlas.engine.NextWordChecks
 java -cp "$work:$sdk/platforms/android-36/android.jar" com.atlas.engine.SentenceCaseChecks
 java -cp "$work:$sdk/platforms/android-36/android.jar" com.atlas.engine.PhoneNamesChecks
+# The FUTO engine's native personal list refuses more words than SwipeTyping sends it, which would stop every swipe.
+grep -q 'count > 256' native/personal_dictionary.cpp && grep -q 'PERSONAL_LIMIT = 256;' "$engine/SwipeTyping.java" \
+  || { echo "SwipeTyping.PERSONAL_LIMIT must match the native personal list's limit"; exit 1; }
+echo "Personal list limit matches the native library"

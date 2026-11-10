@@ -1,0 +1,5 @@
+{
+ "format": "titankeys-feed-1",
+ "feed": "{\n \"version\": 1,\n \"issued\": \"2026-11-10T16:10:59Z\",\n \"entries\": [\n  {\n   \"id\": \"test-2026-11-10\",\n   \"title\": \"Test news from TitanKeys\",\n   \"text\": \"This is a test of the news feed. It shows only in TitanKeys Debug. Snooze and Don't show again work as in real news.\",\n   \"action\": {\n    \"label\": \"Privacy policy\",\n    \"url\": \"https://jasonlok000.github.io/titankeys/privacy/\"\n   },\n   \"from\": \"2026-11-10T00:00:00Z\",\n   \"until\": \"2027-01-31T00:00:00Z\",\n   \"builds\": [\n    \"debug\"\n   ],\n   \"notify\": true\n  }\n ]\n}",
+ "signature": "S4r2mR3NpQzYm91HE69j/0Zrhoyk6RexR6e19IQY6UhQL0pAWMJASHgJye5ppzRsnS8vsTCWcEJ9cIoDlN1JDg=="
+}

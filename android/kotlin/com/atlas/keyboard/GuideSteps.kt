@@ -168,8 +168,8 @@ internal data class GuideSettings(
     val cursorControl: Boolean = true,
     val swipeTyping: Boolean = true,
     val fnAsCtrl: Boolean = false,
-    /** Flick up on the keys to pick a word. It is off at first, and its slide shows only when it is on. */
-    val flickToPick: Boolean = false,
+    /** Flick up on the keys to pick a word. It is on at first, and its slide shows only when it is on. */
+    val flickToPick: Boolean = true,
     /** The Sym panel is on the screen now. */
     val panelOpen: Boolean = false,
 ) {

@@ -66,8 +66,11 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
             return if (line.length <= length) line else line.take(length - 1).trimEnd() + "…"
         }
 
-        /** The whole clip on one line, for the strip and the band under the keys. */
-        fun preview(text: String) = text.trim().replace(Regex("\\s+"), " ")
+        /** The clip on one line, for the strip and the band under the keys, cut at [length] characters. */
+        fun preview(text: String, length: Int = Int.MAX_VALUE): String {
+            val line = text.trim().replace(Regex("\\s+"), " ")
+            return if (line.length <= length) line else line.take(length - 1).trimEnd() + "…"
+        }
 
         private const val LABEL_LENGTH = 6
 

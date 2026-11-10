@@ -66,7 +66,7 @@ private fun everyStepIsReachable() {
     same(flow.finished, true, "The ending is the end")
     same(walk.map { it.first }, GUIDE_STEPS.dropLast(1).map { it.id }, "The walk covers each step, in order")
     // Flick up to pick is off at first, and then its slide does not show.
-    val off = GuideFlow({ GuideSettings(panelOpen = true) })
+    val off = GuideFlow({ GuideSettings(panelOpen = true, flickToPick = false) })
     for ((step, events) in walk.filter { it.first != "pick" }) run(off, events, step)
     same(off.step.id, "end", "With flick up to pick off, the walk skips its slide")
 }

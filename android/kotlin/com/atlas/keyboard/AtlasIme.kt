@@ -794,6 +794,12 @@ class AtlasIme : InputMethodService() {
             return
         }
         strip?.clip = newest.text
+        // The first offer ever also says where the older clips are, once.
+        val preferences = getSharedPreferences(CLIP_PREFERENCES, MODE_PRIVATE)
+        if (!preferences.getBoolean(CLIP_HINT_SHOWN, false)) {
+            strip?.clipHint = true
+            preferences.edit().putBoolean(CLIP_HINT_SHOWN, true).apply()
+        }
         main.removeCallbacks(endClipOffer)
         main.postDelayed(endClipOffer, CLIP_OFFER_MILLIS - age)
     }
@@ -803,6 +809,7 @@ class AtlasIme : InputMethodService() {
         if (strip?.clip == null) return
         clipOfferDone = clipHistory.clips.firstOrNull()?.time ?: -1L
         strip?.clip = null
+        strip?.clipHint = false
     }
 
     private fun pasteOfferedClip() {
@@ -1889,6 +1896,8 @@ class AtlasIme : InputMethodService() {
         /** A touch this close to where a flick ended, in keys, carries the flick on as a swipe. */
         private const val FLICK_CARRY_KEYS = 1f
         private const val CLIP_FILE = "clipboard-history"
+        private const val CLIP_PREFERENCES = "clipboard"
+        private const val CLIP_HINT_SHOWN = "hint_shown"
         /** How long after a copy the strip offers the newest clip. */
         private const val CLIP_OFFER_MILLIS = 60_000L
         /** How long the strip offers Undo after you hold a word to forget it. */

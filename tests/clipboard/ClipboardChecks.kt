@@ -57,6 +57,7 @@ fun main() {
     same(ClipboardHistory.label("  \n  Hello world"), "Hello…", "A key shows the start of the first line with text")
     same(ClipboardHistory.label("Hi"), "Hi", "A short clip shows whole")
     same(ClipboardHistory.preview(" one\n two\tthree "), "one two three", "The preview is one line")
+    same(ClipboardHistory.preview("abcdefghij", 5), "abcd…", "The strip cuts a long clip to fit one line")
 
     // The page in the Sym panel.
     same(QuickSetting.on("X"), QuickSetting.Clipboard, "X opens the clipboard from the quick settings page")

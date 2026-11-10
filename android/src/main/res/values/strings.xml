@@ -16,4 +16,6 @@
     <string name="clipboard_paste">Paste %1$s</string>
     <string name="clipboard_description">Clipboard. The texts that you copied in the last hour, and the ones you pinned. Push a key to paste its text. Enter pins, and Backspace clears.</string>
     <string name="strip_clip">Paste “%1$s”</string>
+    <!-- Shows once, under the first clip that the strip offers. -->
+    <string name="strip_clip_hint">Older clips: push Sym, then Alt, then X</string>
 </resources>

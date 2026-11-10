@@ -7,7 +7,11 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.SystemClock
+import android.text.SpannableStringBuilder
+import android.text.Spanned
 import android.text.TextUtils
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -53,7 +57,9 @@ class Strip(
         typeface = this@Strip.typeface
         textSize = 17f
         gravity = Gravity.CENTER
-        isSingleLine = true
+        // One line for the clip, and a second line only for the one-time hint.
+        maxLines = 2
+        includeFontPadding = false
         ellipsize = TextUtils.TruncateAt.END
         isFocusable = false
         setPadding(dp(12), 0, dp(12), 0)
@@ -116,6 +122,14 @@ class Strip(
 
     /** The newest clip, shown in the place of the words right after a copy, until it is pasted or you type on. */
     var clip: String? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            render()
+        }
+
+    /** The first clip that the strip ever offers also says where the older clips are. */
+    var clipHint = false
         set(value) {
             if (field == value) return
             field = value
@@ -220,7 +234,7 @@ class Strip(
         forgotLabel.setTextColor(look.ink)
         undoButton.setTextColor(look.accent)
         clipView.visibility = if (offer != null) VISIBLE else GONE
-        clipView.text = offer?.let { context.getString(R.string.strip_clip, ClipboardHistory.preview(it)) }.orEmpty()
+        clipView.text = offer?.let { clipText(it) }.orEmpty()
         clipView.setTextColor(look.accent)
     }
 
@@ -231,6 +245,17 @@ class Strip(
         val more = gesture.advance(SystemClock.uptimeMillis(), scale)
         if (gesture.showing) drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), dp(56), look)
         if (more) postInvalidateOnAnimation()
+    }
+
+    private fun clipText(clip: String): CharSequence {
+        val line = context.getString(R.string.strip_clip, ClipboardHistory.preview(clip, CLIP_PREVIEW_LENGTH))
+        if (!clipHint) return line
+        val text = SpannableStringBuilder(line).append('\n')
+        val start = text.length
+        text.append(context.getString(R.string.strip_clip_hint))
+        text.setSpan(RelativeSizeSpan(HINT_SIZE), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        text.setSpan(ForegroundColorSpan(look.ink), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        return text
     }
 
     /** Whether the words are on show, so a flick up can pick one. */
@@ -265,6 +290,9 @@ class Strip(
         /** The place on the bar of the word shown left, in the middle and right. The best word is in the middle. */
         val WORD_ORDER = listOf(1, 0, 2)
         private const val FLASH_MILLIS = 300L
+        /** The clip on the strip stops after this many characters, so that it fits one line. */
+        private const val CLIP_PREVIEW_LENGTH = 40
+        private const val HINT_SIZE = .7f
         private const val FLASH_ALPHA = 0x55000000
         private const val CHIP_SIZE = 13f
         private const val CONTENT_ABOVE = 16

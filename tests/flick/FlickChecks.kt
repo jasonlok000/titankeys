@@ -9,8 +9,10 @@ fun main() {
 
     same(PickFlick.third(stroke(.17f to .62f, .17f to .38f)), 0, "A flick on the left third picks the left word")
     same(PickFlick.third(stroke(.5f to .62f, .5f to .38f)), 1, "A flick on the middle third picks the middle word")
-    same(PickFlick.third(stroke(.82f to .38f, .84f to .13f)), 2, "A flick from the middle row on the right third picks the right word")
-    same(PickFlick.third(stroke(.45f to .62f, .47f to .4f, .49f to .36f)), 1, "A flick that leans a little still counts")
+    same(PickFlick.third(stroke(.82f to .38f, .83f to .13f)), 2, "A flick from the middle row on the right third picks the right word")
+    same(PickFlick.third(stroke(.45f to .62f, .46f to .4f, .465f to .36f)), 1, "A flick that leans a little still counts")
+    same(PickFlick.third(stroke(.6364f to .4345f, .5989f to .2449f)), null, "The short \"my\" that leaned 26 degrees stays a swipe")
+    same(PickFlick.third(stroke(.45f to .62f, .52f to .38f)), null, "A stroke that leans 16 degrees is a swipe")
 
     same(PickFlick.third(stroke(.55f to .625f, .55f to .375f, .55f to .125f)), null, "\"by\" goes up two rows, so it stays a swipe")
     same(PickFlick.third(stroke(.65f to .625f, .6f to .375f, .55f to .125f)), null, "\"my\" stays a swipe")

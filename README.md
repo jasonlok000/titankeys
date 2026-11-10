@@ -50,7 +50,7 @@ The strip above the keys shows the other words that a swipe could be. Touch one 
 
 Touch and hold a word on the strip to forget it, so it is not suggested or used as a fix again. Undo shows for a moment, and **Settings > Your words** gives the word back.
 
-To pick without the screen, turn on **Flick up on the keys to pick a word** in Settings. A quick flick up on the left, middle or right third of the letter keys picks the word above it.
+To pick without the screen, flick up quickly on the letter keys: on the left, middle or right third, it picks the word above it. Turn it off in Settings with **Flick up on the keys to pick a word**.
 
 ### Delete without reaching up
 
@@ -183,7 +183,7 @@ The flick from Backspace is a quick, straight stroke left from around Backspace,
 
 ### Picking a word with a flick up
 
-The flick up is short, quick and straight: it starts on a letter and goes up about one row. A word's swipe almost never does that, and "by" and "my", which go straight up two rows, stay swipes. It is off at first, because some short swipes look just like it: of 6,238 recorded swipes, 29 (about 1 in 200) read as a flick. A flick waits for the time a short lift may last, so a swipe that the top of the sensor breaks in two still joins up.
+The flick up is short, quick and straight: it starts on a letter and goes up about one row, within 10 degrees of straight up. A word's swipe almost never does that. "by" and "my" go up two rows, and a short "my" leans too far, so they stay swipes. Of 6,259 recorded swipes, 8 read as a flick. A flick waits for the time a short lift may last, so a swipe that the top of the sensor breaks in two still joins up.
 
 <details>
 <summary><strong>Smaller changes for two-handed typing</strong></summary>

@@ -79,10 +79,10 @@ public final class TypingSettings {
     }
 
     /**
-     * Off at first: of 6,238 recorded swipes, 29 read as a flick (1 of 2,036 in the swipe baseline, 28 of 4,229 in the owner's
-     * raw log of 2026-11-10). Those short strokes have the shape of a flick, so it stays off until real flicks can be told apart.
+     * On at first, the owner's choice of 2026-11-10. A flick must be within 10 degrees of straight up, and then 8 of 6,259 recorded
+     * swipes read as one. See PickFlick.MAX_ANGLE_DEGREES.
      */
-    public static final boolean FLICK_TO_PICK_DEFAULT = false;
+    public static final boolean FLICK_TO_PICK_DEFAULT = true;
 
     /** A short flick up on the letter keys picks the strip word for that third of the keys: left, middle or right. */
     public static boolean flickToPick(Context context) {

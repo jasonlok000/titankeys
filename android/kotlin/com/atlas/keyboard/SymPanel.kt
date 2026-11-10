@@ -76,19 +76,23 @@ class SymPanel(
     private var look = Look.of(context)
     private var shownMark = ""
 
-    /** The clipboard page's clips, newest first, one in each wide field. */
+    /** The clipboard page's clips, newest first, six to a page, in a wide field each. */
     var clips: List<ClipboardHistory.Clip> = emptyList()
         set(value) {
             field = value
+            clipPages.fit(value)
             if (clipboard) render()
         }
+    /** The open group of the clipboard, Clipboard or Pinned, and its page. */
+    private val clipPages = ClipboardHistory.Pages()
+
+    /** The clipboard opens at the first page of Clipboard, as the symbols open at their first page. */
+    fun resetClipPages() = clipPages.reset()
 
     /** On the clipboard page, a push of a letter pins or unpins its clip, and does not paste it. */
     var clipPinning = false
     /** On the clipboard page, Backspace was pushed once, so a second push clears all. */
     var clipClearing = false
-    /** On the clipboard page, a sixth pin was tried, so the strip at the bottom says that five is the most. */
-    var clipPinsFull = false
 
     /** Null until the emoji list has loaded. */
     var emoji: EmojiPages? = null
@@ -127,7 +131,7 @@ class SymPanel(
     private val clipboard get() = mode == Modifiers.Panel.Clipboard
 
     /** The place in [clips] of the clip over a key, or null if the key has none. The outer columns never have one. */
-    fun clipIndex(key: String) = ClipboardHistory.slot(key)?.takeIf { clipboard && it < clips.size }
+    fun clipIndex(key: String) = if (!clipboard) null else ClipboardHistory.slot(key)?.let { clipPages.index(clips, it) }
 
     /** The clip over a key of the clipboard page, or null if the key has none. */
     private fun clipAt(key: String) = clipIndex(key)?.let(clips::get)
@@ -199,7 +203,7 @@ class SymPanel(
 
     /** Follows a swipe, in keys across and rows down. Returns true if a different page now shows. */
     fun swipe(across: Float, down: Float): Boolean {
-        val moved = pages?.swipe(across, down) == true
+        val moved = if (clipboard) clipPages.swipe(clips, across, down) else pages?.swipe(across, down) == true
         if (moved) {
             render()
             slideIn(across, down)
@@ -209,19 +213,28 @@ class SymPanel(
     }
 
     /** The strip of groups shows, so the bottom row of the touchpad chooses a group. */
-    val hasCategories get() = categories.visibility == VISIBLE
+    val hasCategories get() = !quick && (pages != null || clipboard)
 
     /** Opens the group at a place along the strip, from 0 at its left end to 1 at its right end. Returns true if the group changes. */
-    fun pickCategory(across: Float) = pages?.let { open(it.groupAt(across)) } == true
+    fun pickCategory(across: Float) = if (clipboard) open(clipPages.groupAt(across)) else pages?.let { open(it.groupAt(across)) } == true
 
     /** Opens the group under a bottom-row key, unless the open group is already under that key. Returns true if the group changes. */
     fun pickCategoryUnder(key: String): Boolean {
-        val current = pages ?: return false
         val (left, right) = Layout.bottomSpan(key)
+        if (clipboard) return open(clipPages.groupUnder(left, right))
+        val current = pages ?: return false
         return open(current.groupUnder(left, right))
     }
 
     private fun open(group: Int): Boolean {
+        if (clipboard) {
+            val before = clipPages.group
+            if (!clipPages.open(group)) return false
+            render()
+            slideIn(if (group > before) -1f else 1f, 0f)
+            KeyboardEvents.publish { KeyboardEvent.GroupPicked(group) }
+            return true
+        }
         val current = pages ?: return false
         val before = current.groupIndex()
         if (!current.open(group)) return false
@@ -238,7 +251,8 @@ class SymPanel(
     private fun slideIn(across: Float, down: Float) {
         val distance = dp(SLIDE_DISTANCE).toFloat()
         val upOrDown = EmojiPages.turnsPage(across, down)
-        for (key in Layout.panelLetters) cells.getValue(key).apply {
+        val moving = if (clipboard) clipFields.map { it.frame } else Layout.panelLetters.map(cells::getValue)
+        for (view in moving) view.apply {
             animate().cancel()
             translationX = if (upOrDown) 0f else -across.sign * distance
             translationY = if (upOrDown) -down.sign * distance else 0f
@@ -306,10 +320,13 @@ class SymPanel(
     }
 
     /** This key shows where the open page is, and does nothing else. */
-    private fun showsPosition(key: String) = pages != null && key == Layout.PAGE_POSITION
+    private fun showsPosition(key: String) = (pages != null || clipboard) && key == Layout.PAGE_POSITION
+
+    private fun pageNumber() = if (clipboard) clipPages.page + 1 else pages?.pageNumber() ?: 0
+    private fun pageCount() = if (clipboard) clipPages.pageCount(clips) else pages?.pageCount() ?: 0
 
     /** Where the open page is in its group, such as 2/9, or null if the group has only one page. */
-    private fun position() = pages?.takeIf { it.pageCount() > 1 }?.let { "${it.pageNumber()}/${it.pageCount()}" }
+    private fun position() = pageCount().takeIf { it > 1 }?.let { "${pageNumber()}/$it" }
 
     /** What a key shows as text, or null if it shows none. */
     private fun label(key: String) = when {
@@ -317,7 +334,7 @@ class SymPanel(
         clipboard -> when (key) {
             Layout.BACKSPACE -> context.getString(R.string.clipboard_clear).takeIf { clips.any { !it.pinned } }
             Layout.ENTER -> context.getString(if (clipPinning) R.string.clipboard_pin_done else R.string.clipboard_pin).takeIf { clips.isNotEmpty() }
-            else -> null
+            else -> if (showsPosition(key)) position() else null
         }
         showsPosition(key) -> position()
         else -> item(key)
@@ -332,14 +349,21 @@ class SymPanel(
             ClipboardHistory.preview(clip.text).let { if (clip.pinned) context.getString(R.string.clipboard_pinned, it) else it }
         }
 
-    /** What the strip at the bottom of the clipboard page says when no finger rests on a clip. */
-    private fun clipboardTitle() = context.getString(when {
-        clipPinsFull -> R.string.clipboard_pins_full
-        clipClearing -> R.string.clipboard_clear_again
-        clipPinning -> R.string.clipboard_pinning
-        clips.isEmpty() -> R.string.clipboard_empty
-        else -> R.string.clipboard_title
-    })
+    /**
+     * What the strip at the bottom of the clipboard page says in the place of the groups: the whole clip under a resting finger,
+     * what a push does next, or why a group is empty. Null shows the groups.
+     */
+    private fun clipBandText(): String? {
+        detail(hover)?.let { return it }
+        val message = when {
+            clipClearing -> R.string.clipboard_clear_again
+            clipPinning -> R.string.clipboard_pinning
+            clipPages.items(clips).isEmpty() -> if (clipPages.group == ClipboardHistory.PINNED) R.string.clipboard_pinned_empty
+                else R.string.clipboard_empty
+            else -> return null
+        }
+        return context.getString(message)
+    }
 
     private fun dim(key: String) = quick && QuickSetting.on(key)?.let(quickSettingOn) == false
 
@@ -374,8 +398,8 @@ class SymPanel(
         setBackgroundColor(look.paper)
         setPadding(dp(4), 0, dp(4), navigationInset)
         val current = pages
-        categories.visibility = if (quick || clipboard) GONE else VISIBLE
-        preview.visibility = if (quick || clipboard) VISIBLE else GONE
+        categories.visibility = if (quick) GONE else VISIBLE
+        preview.visibility = if (quick) VISIBLE else GONE
         preview.setTextColor(look.ink)
         showCategories(current)
         keepClearOfCorners()
@@ -399,7 +423,7 @@ class SymPanel(
                 icon != null -> icon.description
                 quick -> detail(key)
                 clipboard -> detail(key)?.let { context.getString(R.string.clipboard_paste, it) } ?: value
-                isPosition -> value?.let { "Page ${current?.pageNumber()} of ${current?.pageCount()}" }
+                isPosition -> value?.let { "Page ${pageNumber()} of ${pageCount()}" }
                 else -> value?.let { "Insert $it" }
             }
         }
@@ -433,16 +457,18 @@ class SymPanel(
 
     /** Shows a mark for each group, and washes the open one, so that you can see the other groups as you swipe. */
     private fun showCategories(current: EmojiPages?) {
-        val samples = current?.samples().orEmpty()
+        // The clipboard has two groups, named in words, where the symbols and emoji show one of their own.
+        val groups = listOf(R.string.clipboard_group_recent, R.string.clipboard_group_pinned).map(context::getString)
+        val samples = if (clipboard) groups else current?.samples().orEmpty()
         if (samples != shownSamples) {
             shownSamples = samples
             categories.removeAllViews()
-            val names = current?.groupNames().orEmpty()
+            val names = if (clipboard) groups else current?.groupNames().orEmpty()
             tabs = samples.mapIndexed { index, sample ->
                 categoryTab(sample, names[index], index).also { categories.addView(it, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f)) }
             }
         }
-        val open = current?.groupIndex() ?: -1
+        val open = if (clipboard) clipPages.group else current?.groupIndex() ?: -1
         tabs.forEachIndexed { index, tab ->
             tab.sized(CATEGORY_SIZE, CATEGORY_LARGEST)
             tab.setTextColor(look.ink)
@@ -452,7 +478,13 @@ class SymPanel(
 
     /** A letter key under a resting finger takes the accent, as [Layout.restMarks] says. A setting's name shows in the strip at the bottom. */
     private fun showHover() {
-        preview.text = detail(hover) ?: if (quick) QUICK_TITLE else if (clipboard) clipboardTitle() else ""
+        if (clipboard) {
+            // The whole clip under a finger, or a message, takes the place of the groups, in the middle as on the quick settings.
+            val text = clipBandText()
+            preview.text = text.orEmpty()
+            preview.visibility = if (text != null) VISIBLE else GONE
+            categories.visibility = if (text != null) GONE else VISIBLE
+        } else preview.text = detail(hover) ?: if (quick) QUICK_TITLE else ""
         showClipFields()
         // A finger on a clip marks its whole field, as a finger on a symbol marks its key.
         val mark = clipIndex(hover)?.let { "clip$it" }
@@ -480,10 +512,11 @@ class SymPanel(
     private fun showClipFields() {
         val under = clipIndex(hover)
         for (field in clipFields) {
-            val clip = clips.getOrNull(field.slot)
+            val index = clipPages.index(clips, field.slot)
+            val clip = index?.let(clips::getOrNull)
             field.frame.visibility = if (!clipboard) GONE else if (clip == null) INVISIBLE else VISIBLE
             if (!clipboard || clip == null) continue
-            val lit = under == field.slot
+            val lit = under == index
             field.text.text = ClipboardHistory.preview(clip.text, CLIP_PREVIEW)
             field.text.sized(CLIP_TEXT_SIZE, CLIP_TEXT_LARGEST)
             field.text.setTextColor(if (lit) look.onAccent else look.ink)

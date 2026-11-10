@@ -8,39 +8,32 @@ package com.atlas.keyboard
 class ClipboardHistory(clips: List<Clip> = emptyList()) {
     data class Clip(val text: String, val time: Long, val pinned: Boolean = false)
 
-    private val items = ArrayList(clips.take(LIMIT))
+    private val items = ArrayList(clips).also { trim(it) }
 
     val clips: List<Clip> get() = items
 
     /**
      * Keeps a copied text as the newest clip. A text that is already here moves to the front and keeps its pin. Returns false if
-     * the text is not kept: blank or too long. At most [MAX_PINNED] clips are pinned, so there is always a place for a new one.
+     * the text is not kept: blank or too long. Past [LIMIT] clips that are not pinned, the oldest of them goes. Pins have no limit.
      */
     fun add(text: String, now: Long): Boolean {
         if (text.isBlank() || text.length > MAX_CHARS) return false
         val earlier = items.indexOfFirst { it.text == text }
         val pinned = earlier >= 0 && items[earlier].pinned
         if (earlier >= 0) items.removeAt(earlier)
-        else if (items.size >= LIMIT) {
-            val oldest = items.indexOfLast { !it.pinned }
-            if (oldest < 0) return false
-            items.removeAt(oldest)
-        }
         items.add(0, Clip(text, now, pinned))
+        trim(items)
         return true
     }
 
     /** Takes out the clips that are older than [KEEP_MILLIS] and not pinned. Returns true if any went. */
     fun expire(now: Long) = items.removeAll { !it.pinned && now - it.time !in 0..KEEP_MILLIS }
 
-    enum class Pin { PINNED, UNPINNED, FULL, NONE }
-
-    /** Pins or unpins the clip at [index]. A sixth pin is refused with [Pin.FULL]. */
-    fun togglePin(index: Int): Pin {
-        val clip = items.getOrNull(index) ?: return Pin.NONE
-        if (!clip.pinned && items.count { it.pinned } >= MAX_PINNED) return Pin.FULL
+    /** Pins or unpins the clip at [index]. Returns false if there is no clip there. */
+    fun togglePin(index: Int): Boolean {
+        val clip = items.getOrNull(index) ?: return false
         items[index] = clip.copy(pinned = !clip.pinned)
-        return if (clip.pinned) Pin.UNPINNED else Pin.PINNED
+        return true
     }
 
     /** Clear all: every clip goes but the pinned ones, which you unpin to remove. */
@@ -49,14 +42,73 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
     /** One line for each clip: its time, whether it is pinned, and its text with backslash, tab and line breaks escaped. */
     fun encode() = items.joinToString("\n") { "${it.time}\t${if (it.pinned) 1 else 0}\t${escape(it.text)}" }
 
+    /**
+     * Which clips the clipboard page shows, as the symbols and emoji show theirs: two groups, Clipboard (every clip, newest first)
+     * and Pinned, each in pages of [PER_PAGE]. A swipe up or down turns the page, and a swipe sideways changes the group.
+     */
+    class Pages {
+        var group = RECENT
+            private set
+        var page = 0
+            private set
+
+        /** The places in [clips] of the open group's clips, in order. */
+        fun items(clips: List<Clip>) = if (group == PINNED) clips.indices.filter { clips[it].pinned } else clips.indices.toList()
+
+        fun pageCount(clips: List<Clip>) = maxOf(1, (items(clips).size + PER_PAGE - 1) / PER_PAGE)
+
+        /** The place in [clips] of the clip in field [slot] of the open page, or null if that field is empty. */
+        fun index(clips: List<Clip>, slot: Int) = items(clips).getOrNull(page * PER_PAGE + slot)
+
+        fun reset() {
+            group = RECENT
+            page = 0
+        }
+
+        /** Keeps the page inside the group after clips come or go. */
+        fun fit(clips: List<Clip>) {
+            page = page.coerceIn(0, pageCount(clips) - 1)
+        }
+
+        /** Opens the first page of a group. Returns true if a different group now shows. */
+        fun open(group: Int): Boolean {
+            if (group !in 0 until GROUPS || group == this.group) return false
+            this.group = group
+            page = 0
+            return true
+        }
+
+        /** The group at a place along the category strip, from 0 at its left end to 1 at its right end. */
+        fun groupAt(across: Float) = (across * GROUPS).toInt().coerceIn(0, GROUPS - 1)
+
+        /** The group under a key that covers this part of the category strip. The open group stays if it is under the key. */
+        fun groupUnder(left: Float, right: Float) =
+            if ((group + 1f) / GROUPS > left && group.toFloat() / GROUPS < right) group else groupAt((left + right) / 2)
+
+        /** A swipe, in keys across and rows down, as on the symbols. Returns true if a different page now shows. */
+        fun swipe(clips: List<Clip>, across: Float, down: Float): Boolean {
+            val before = group to page
+            if (kotlin.math.abs(down) > kotlin.math.abs(across)) page = Math.floorMod(page + if (down < 0) 1 else -1, pageCount(clips))
+            else {
+                group = Math.floorMod(group + if (across > 0) -1 else 1, GROUPS)
+                page = 0
+            }
+            return (group to page) != before
+        }
+    }
+
     companion object {
-        /**
-         * The clipboard page shows this many clips, one page only: two to a row, each in a wide field over the letter keys of half a
-         * row, inside the inner columns.
-         */
-        const val LIMIT = 6
-        /** One place is always left for the newest clip. */
-        const val MAX_PINNED = LIMIT - 1
+        /** The newest clips that are not pinned. Pins have no limit. */
+        const val LIMIT = 20
+        /** The clipboard page shows this many clips at a time: two to a row, each in a wide field over half a row of keys. */
+        const val PER_PAGE = 6
+        const val RECENT = 0
+        const val PINNED = 1
+        const val GROUPS = 2
+
+        private fun trim(items: MutableList<Clip>) {
+            while (items.count { !it.pinned } > LIMIT) items.removeAt(items.indexOfLast { !it.pinned })
+        }
 
         /** Which half of a row of the panel a column is in, 0 or 1, or null for an outer column. */
         fun halfAt(row: Int, column: Int): Int? {
@@ -67,7 +119,7 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
 
         /** The field over a key: row times two, plus one for the right half. Null for a key that is no letter of the inner columns. */
         fun slot(key: String): Int? {
-            for ((row, keys) in Layout.rows.take(LIMIT / 2).withIndex()) {
+            for ((row, keys) in Layout.rows.take(PER_PAGE / 2).withIndex()) {
                 val column = keys.indexOf(key)
                 if (column >= 0) return halfAt(row, column)?.let { row * 2 + it }
             }

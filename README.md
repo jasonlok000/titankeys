@@ -68,7 +68,7 @@ Push Sym two times for emoji. In the panel, Alt opens quick settings, with a let
 
 ### Paste what you copied
 
-Right after you copy text, the strip shows it: touch it to paste. For older clips, push Sym, then A for the clipboard. It holds your last six clips, two to a row, each in a wide field over half a row of keys: push any key under a clip to paste it. Clips go after an hour, unless you pin them: push Enter, then a key under the clip. Up to five can be pinned, so the newest clip always has a place. Push Backspace two times to clear all but the pinned clips. TitanKeys keeps no text that an app marks as sensitive, nothing copied from a password field, and nothing leaves the phone.
+Right after you copy text, the strip shows it: touch it to paste. For older clips, push Sym, then A for the clipboard. It works like the symbols: six clips to a page, two to a row, each in a wide field over half a row of keys. Push any key under a clip to paste it, swipe up or down for more, and swipe sideways or rest a finger on the bottom row for **Pinned**. Clips go after an hour, unless you pin them: push Enter, then a key under the clip. Push Backspace two times to clear all but the pinned clips. TitanKeys keeps no text that an app marks as sensitive, nothing copied from a password field, and nothing leaves the phone.
 
 ## TitanKeys and Atlas
 

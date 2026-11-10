@@ -30,27 +30,28 @@ fun main() {
 
     val full = ClipboardHistory()
     for (i in 1..ClipboardHistory.LIMIT + 5) full.add("clip $i", i.toLong())
-    same(full.clips.size, ClipboardHistory.LIMIT, "The history holds at most six clips")
+    same(full.clips.size, ClipboardHistory.LIMIT, "The history holds at most twenty clips that are not pinned")
     same(full.clips.first().text, "clip ${ClipboardHistory.LIMIT + 5}", "The newest of many stays")
     same(full.clips.last().text, "clip 6", "The oldest of many go first")
-    same(full.togglePin(full.clips.lastIndex), ClipboardHistory.Pin.PINNED, "A clip can be pinned")
+    same(full.togglePin(full.clips.lastIndex), true, "A clip can be pinned")
     full.add("one more", 100)
+    same(full.clips.any { it.text == "clip 7" }, true, "A pin frees a place, so one more clip fits")
+    full.add("two more", 101)
     same(full.clips.last().text, "clip 6", "A pinned clip is not pushed out by new ones")
     same(full.clips.any { it.text == "clip 7" }, false, "The oldest clip that is not pinned makes room")
+    same(full.togglePin(99), false, "A place with no clip pins nothing")
 
     same(full.clear(), true, "Clear all removes clips")
     same(full.clips.map { it.text }, listOf("clip 6"), "Clear all keeps the pinned clips")
 
     val pins = ClipboardHistory()
-    for (i in 1..ClipboardHistory.LIMIT) pins.add("clip $i", i.toLong())
-    for (i in 0 until ClipboardHistory.MAX_PINNED) same(pins.togglePin(i), ClipboardHistory.Pin.PINNED, "Pin ${i + 1} of five is taken")
-    same(pins.togglePin(ClipboardHistory.MAX_PINNED), ClipboardHistory.Pin.FULL, "A sixth pin is refused")
-    same(pins.clips.count { it.pinned }, ClipboardHistory.MAX_PINNED, "A refused pin changes nothing")
-    same(pins.add("newest", 99), true, "With five pins there is still room for the newest clip")
-    same(pins.clips.first().text, "newest", "The newest clip is on the page")
-    same(pins.togglePin(1), ClipboardHistory.Pin.UNPINNED, "A pinned clip can be unpinned")
-    same(pins.togglePin(0), ClipboardHistory.Pin.PINNED, "After an unpin, a pin is free again")
-    same(pins.togglePin(9), ClipboardHistory.Pin.NONE, "A place with no clip pins nothing")
+    for (i in 1..30) {
+        pins.add("pin $i", i.toLong())
+        pins.togglePin(0)
+    }
+    for (i in 1..ClipboardHistory.LIMIT + 3) pins.add("clip $i", 100L + i)
+    same(pins.clips.count { it.pinned }, 30, "Pins have no limit")
+    same(pins.clips.count { !it.pinned }, ClipboardHistory.LIMIT, "Pins do not take the places of new clips")
     same(ClipboardHistory().clear(), false, "Clear all on nothing changes nothing")
 
     val odd = ClipboardHistory()
@@ -70,12 +71,41 @@ fun main() {
         listOf(0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5), "Each half row of inner letters is under one clip")
     same(listOf("Q", "A", "P", Layout.ALT, Layout.SYM, Layout.BACKSPACE, Layout.ENTER, Layout.SPACE).map(ClipboardHistory::slot),
         List(8) { null }, "The outer columns, Sym and Space are no clip, as the touchpad reads the edges poorly")
-    for (slot in 0 until ClipboardHistory.LIMIT)
+    for (slot in 0 until ClipboardHistory.PER_PAGE)
         same(ClipboardHistory.slot(ClipboardHistory.keyFor(slot)), slot, "A touch on clip $slot pastes what its keys paste")
     same((0..2).map { row -> (0..1).map { ClipboardHistory.width(row, it) } }, listOf(listOf(4, 4), listOf(4, 4), listOf(4, 3)),
         "Each field is four keys wide, but the last stops at Sym")
     same((0..2).map { row -> (0..1).map { ClipboardHistory.firstColumn(row, it) } }, listOf(listOf(1, 5), listOf(1, 5), listOf(1, 5)),
         "No field starts in the outer column")
+
+    // Clipboard and Pinned, in pages of six, as the symbols and emoji have groups and pages.
+    run {
+        val clips = (1..14).map { ClipboardHistory.Clip("clip $it", it.toLong(), pinned = it % 5 == 0) }
+        val pages = ClipboardHistory.Pages()
+        same(pages.pageCount(clips), 3, "Fourteen clips take three pages of six")
+        same(pages.index(clips, 0), 0, "The first field holds the newest clip")
+        same(pages.swipe(clips, 0f, -1f), true, "A swipe up turns to the next page")
+        same(pages.index(clips, 0), 6, "The second page starts at the seventh clip")
+        pages.swipe(clips, 0f, -1f)
+        same(pages.index(clips, 2), null, "The last page has empty fields")
+        same(pages.swipe(clips, 0f, -1f), true, "The pages wrap round, as on the symbols")
+        same(pages.page, 0, "After the last page comes the first")
+        same(pages.swipe(clips, -1f, 0f), true, "A swipe sideways changes the group")
+        same(pages.group, ClipboardHistory.PINNED, "Pinned is the second group")
+        same((0 until 3).map { pages.index(clips, it) }, listOf(4, 9, null), "Pinned holds only the pinned clips")
+        same(pages.pageCount(clips), 1, "Two pins take one page")
+        same(pages.swipe(clips, 0f, -1f), false, "With one page a swipe up changes nothing")
+        same(pages.open(ClipboardHistory.RECENT), true, "A group can be opened by its place on the strip")
+        same(pages.open(ClipboardHistory.RECENT), false, "Opening the open group changes nothing")
+        same(pages.groupAt(.2f) to pages.groupAt(.8f), ClipboardHistory.RECENT to ClipboardHistory.PINNED, "The strip is half Clipboard, half Pinned")
+        same(pages.groupUnder(.3f, .6f), ClipboardHistory.RECENT, "A key over the open group keeps it")
+        pages.swipe(clips, 0f, -1f)
+        pages.swipe(clips, 0f, -1f)
+        pages.fit(clips.take(3))
+        same(pages.page, 0, "When clips go, the page stays inside the group")
+        pages.reset()
+        same(pages.group to pages.page, ClipboardHistory.RECENT to 0, "The clipboard opens at the first page of Clipboard")
+    }
 
     // The page in the Sym panel.
     same(QuickSetting.on("X"), QuickSetting.Clipboard, "X opens the clipboard from the quick settings page")

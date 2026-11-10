@@ -676,8 +676,6 @@ class AtlasIme : InputMethodService() {
     private val clipFile by lazy { AtomicFile(java.io.File(noBackupFilesDir, CLIP_FILE)) }
     private var clipPinning = false
     private var clipClearing = false
-    /** A sixth pin was just tried, so the clipboard page says that five is the most. */
-    private var clipPinsFull = false
     /** The time of the clip that the strip last offered and that was then pasted or passed over, so it is not offered again. */
     private var clipOfferDone = -1L
     private val endClipOffer = Runnable { dismissClipOffer() }
@@ -734,7 +732,6 @@ class AtlasIme : InputMethodService() {
     private fun showClips() {
         panel?.clipPinning = clipPinning
         panel?.clipClearing = clipClearing
-        panel?.clipPinsFull = clipPinsFull
         panel?.clips = clipHistory.clips.toList()
         panel?.render()
     }
@@ -775,7 +772,6 @@ class AtlasIme : InputMethodService() {
 
     /** A push or touch of a key on the clipboard page: a letter pastes its clip or, while pinning, pins it. */
     private fun clipKey(key: String) {
-        clipPinsFull = false
         when (key) {
             Layout.BACKSPACE -> {
                 if (clipHistory.clips.none { !it.pinned }) return
@@ -811,7 +807,7 @@ class AtlasIme : InputMethodService() {
         expireClips()
         clipPinning = false
         clipClearing = false
-        clipPinsFull = false
+        panel?.resetClipPages()
         showClips()
         modifiers.openClipboard()
         showModifiers()
@@ -824,13 +820,8 @@ class AtlasIme : InputMethodService() {
         showClips()
     }
 
-    /** Pins or unpins a clip. A sixth pin is refused, and the page says why. */
     private fun pin(index: Int) {
-        when (clipHistory.togglePin(index)) {
-            ClipboardHistory.Pin.PINNED, ClipboardHistory.Pin.UNPINNED -> saveClips()
-            ClipboardHistory.Pin.FULL -> clipPinsFull = true
-            ClipboardHistory.Pin.NONE -> Unit
-        }
+        if (clipHistory.togglePin(index)) saveClips()
     }
 
     // The word menu (#43): hold a word on the strip, or select one word in the field, to save or forget it.

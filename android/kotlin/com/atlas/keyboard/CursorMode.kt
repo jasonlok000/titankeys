@@ -27,6 +27,9 @@ class CursorMode {
 
     val active: Boolean get() = state == State.Active
 
+    /** Where the finger is across the keyboard, in key widths, for the display on the strip. */
+    val column: Float get() = (position?.x ?: .5f) * 10
+
     /** The finger slipped off during cursor mode and may still come back. */
     val lifted: Boolean get() = state == State.Lifted
 
@@ -164,13 +167,14 @@ class CursorMode {
         private const val RAMP_MILLIS = 1000f
         /** Letters a second at each lean, in key widths past the end of Space. The keys beside Space are 1.2 wide. */
         private val SPEEDS = listOf(
-            0f to 1.5f, // just past the end of Space
+            0f to SLOWEST_PER_SECOND, // just past the end of Space
             .8f to 3f, // the precise stretch ends
             1.6f to 8f,
             2.3f to 16f,
             MAX_LEAN to 28f, // where holding builds up to full speed
         )
-        private const val FASTEST_PER_SECOND = 52f
+        const val SLOWEST_PER_SECOND = 1.5f
+        const val FASTEST_PER_SECOND = 52f
 
         /** How a finger becomes the cursor and how fast it moves, for the raw input log. */
         val tuning: Map<String, Any> get() = CursorGesture.tuning + mapOf(

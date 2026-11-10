@@ -28,6 +28,8 @@ final class NextWordPredictor {
     private static final int SUGGESTIONS = 8;
     /** Enough of the words after a word to find the ones that the context model offers too. */
     private static final int STORED_WORDS = 64;
+    /** Enough kept words that start with some letters to cover every completion the strip can show. */
+    private static final int KEPT_WORDS = 200;
     /** A use counts half as much after this long, so a word used lately can pass one used more often long ago. */
     private static final double HALF_LIFE_MILLIS = 30 * 86_400_000d;
 
@@ -74,6 +76,21 @@ final class NextWordPredictor {
 
     List<String> predictSentenceStart() {
         return predictFor(SENTENCE_START);
+    }
+
+    /** How often the user kept each word that starts with these letters (lower case, as a key), pending ones included. */
+    Map<String, Integer> keptStarting(String letters) {
+        Map<String, Integer> kept = new HashMap<>();
+        if (letters.isEmpty()) return kept;
+        for (Map.Entry<String, Integer> row : store.keptStarting(letters, KEPT_WORDS).entrySet())
+            if (allowed.test(row.getKey())) kept.merge(TypedPredictions.key(row.getKey()), row.getValue(), Integer::sum);
+        synchronized (pending) {
+            for (Pending entry : pending.values()) {
+                String word = TypedPredictions.key(entry.word);
+                if (word.startsWith(letters) && allowed.test(entry.word)) kept.merge(word, entry.count, Integer::sum);
+            }
+        }
+        return kept;
     }
 
     /**

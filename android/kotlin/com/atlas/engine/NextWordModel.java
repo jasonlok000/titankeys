@@ -160,6 +160,11 @@ public final class NextWordModel implements AutoCloseable {
      * better log chance of its forms, as "the" and "The". A word the model splits into pieces is left out, because its first
      * piece's chance is shared with every other word that starts the same way.
      */
+    /** How many tokens the word takes after a space. */
+    public int tokens(String word) {
+        return bpe.encode(" " + word).length;
+    }
+
     public Map<String, Double> wordsStarting(float[] chances, String letters, java.util.function.Predicate<String> known) {
         int[] ids = wordTokens();
         String[] lower = wordTokenText;

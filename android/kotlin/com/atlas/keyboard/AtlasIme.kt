@@ -81,6 +81,8 @@ class AtlasIme : InputMethodService() {
     }
     private val barHover = SteadyKey(Layout::keyAt)
     private var field = Field.None
+    /** Each emoji by its shortcode name, once the list has loaded. */
+    private var shortcodes: Map<String, String> = emptyMap()
     /** The apps that the user added to the Enter key setting, read when a field starts. */
     private var enterApps = emptyMap<String, EnterKey.SendMethod>()
     /** The raw input log for this field. It is null when the setting is off or the field must not be recorded. */
@@ -324,6 +326,31 @@ class AtlasIme : InputMethodService() {
         registerReceiver(screenOn, IntentFilter(Intent.ACTION_SCREEN_ON), RECEIVER_NOT_EXPORTED)
         updateOverlay()
         loadEmoji()
+        loadShortcodes()
+    }
+
+    /** Reads the emoji shortcode list away from the main thread. See [Expansions]. */
+    private fun loadShortcodes() {
+        Thread {
+            val names = try {
+                assets.open("shortcodes.txt").bufferedReader().useLines { Expansions.readShortcodes(it) }
+            } catch (error: IOException) {
+                Log.w("Atlas", "Could not read the emoji shortcodes", error)
+                return@Thread
+            }
+            main.post {
+                shortcodes = names
+                readExpansions()
+            }
+        }.start()
+    }
+
+    /** Snippets and shortcodes for the composer, from the saved settings. Null when there is nothing to expand. */
+    private fun readExpansions() {
+        val snippets = Snippets.load(this)
+        val emoji = if (TypingSettings.shortcodes(this)) shortcodes else emptyMap()
+        composer.expansions = if (snippets.isEmpty() && emoji.isEmpty()) null
+            else Expansions(snippets, TypingSettings.snippetStart(this), emoji)
     }
 
     /** The settings screen is open when this changes, so the keyboard is idle and no field start would apply it. */
@@ -471,17 +498,22 @@ class AtlasIme : InputMethodService() {
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
-        editing = info.inputType != EditorInfo.TYPE_NULL
+        val exact = ExactTyping.applies(info.inputType, info.imeOptions, info.packageName, TypingSettings.exactApps(this))
+        editing = info.inputType != EditorInfo.TYPE_NULL || exact
         if (!restarting) {
             typedInField = false
             fieldStartedAt = SystemClock.uptimeMillis()
             // Apps also restart input on the field that stays, so only a new start ends what Back did.
             hiddenByBack = false
         }
-        field = if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
+        // TitanKeys's own Settings fields hold snippets and words to add, which must not be learned. The guide's field is for practice.
+        val ownSettings = info.packageName == packageName && info.privateImeOptions?.contains(GuideHooks.FIELD) != true
+        field = if (exact) Field.Exact else if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
+        if (ownSettings) field = field.copy(learning = false)
         // Android only calls onFinishInput first when the input is not restarting.
         rawLog?.finish()
-        rawLog = if (editing) RawLog.start(this, info, restarting) else null
+        // Exact typing is for commands and remote computers, which are no typing to learn from.
+        rawLog = if (editing && !exact && !ownSettings) RawLog.start(this, info, restarting) else null
         composer.log = rawLog
         inLauncher = editing && TypingSettings.launcherHidesBar(this) && info.packageName == launcherPackage()
         launcherFieldHasText = inLauncher && info.initialSelStart > 0
@@ -492,6 +524,7 @@ class AtlasIme : InputMethodService() {
         showModifiers()
         readSettings()
         if (editing && !restarting) rememberEnterApp(info)
+        if (!restarting) rememberApp(info)
         main.removeCallbacks(showStrip)
         main.removeCallbacks(hideStrip)
         if (editing) {
@@ -529,6 +562,7 @@ class AtlasIme : InputMethodService() {
         // The word data takes a moment to load, so it starts as a field opens: the first word typed is fixed too.
         if (!corrects) autocorrect.release() else if (editing) autocorrect.prepare()
         strip?.showSuggestions = showSuggestions()
+        readExpansions()
         updateKeyWatch()
     }
 
@@ -598,6 +632,15 @@ class AtlasIme : InputMethodService() {
         val recent = TypingSettings.recentEnterApps(this)
         val updated = EnterKey.recentApps(recent, app)
         if (updated != recent) TypingSettings.recentEnterApps(this, updated)
+    }
+
+    /** Only the package is kept, so the exact typing setting can offer apps without asking to see every installed app. */
+    private fun rememberApp(info: EditorInfo) {
+        val app = info.packageName ?: return
+        if (app == packageName || info.inputType == EditorInfo.TYPE_NULL && info.imeOptions == 0) return
+        val recent = TypingSettings.recentApps(this)
+        val updated = ExactTyping.recentApps(recent, app)
+        if (updated != recent) TypingSettings.recentApps(this, updated)
     }
 
     // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way until you type.
@@ -1033,7 +1076,7 @@ class AtlasIme : InputMethodService() {
 
     /** Types a symbol or emoji from the panel, then goes back to normal typing. */
     private fun typePanelItem(item: String) {
-        composer.symbol(item)
+        if (field.exact) commitExact(item) else composer.symbol(item)
         if (modifiers.panel == Modifiers.Panel.Emoji) emoji?.use(item)?.let { recents ->
             getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
         }
@@ -1259,7 +1302,7 @@ class AtlasIme : InputMethodService() {
 
     /** Only a plain letter from the phone's own keyboard can become its symbol. With Shift, Alt, Sym or a shortcut key it stays a letter. */
     private fun canHold(event: KeyEvent): Boolean {
-        if (!holdSymbols || !field.words || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
+        if (!holdSymbols || !field.words && !field.exact || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
         if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
         if (modifiers.shift != Modifiers.Level.Off || altOrPanel || !event.hasNoModifiers() || event.isCapsLockOn) return false
         // A modifier still in the queue has not changed the levels above yet.
@@ -1304,7 +1347,12 @@ class AtlasIme : InputMethodService() {
         val text = String(Character.toChars(symbol))
         haptics.holdSymbol()
         KeyboardEvents.publish { KeyboardEvent.HeldSymbol(text) }
-        if (watchingKeys) {
+        if (field.exact) {
+            // The letter went to the app as a key, so a Backspace key takes it back.
+            sendExact(KeyEvent(letter.downTime, letter.eventTime, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL, 0, 0,
+                letter.deviceId, 0, letter.flags, letter.source), 0)
+            commitExact(text)
+        } else if (watchingKeys) {
             val typed = letter.getUnicodeChar(letter.metaState)
             main.post { replaceAppLetter(typed, text) }
         } else if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(text) } else composer.replaceLetter(text)
@@ -1428,6 +1476,7 @@ class AtlasIme : InputMethodService() {
             return true
         }
         if (panelKey(event)) return true
+        if (field.exact) return exactKey(event)
         // Enter comes before the Ctrl shortcuts, because the Enter key setting can use Ctrl + Enter.
         if (!event.isMetaPressed && enter(event)) return true
         // A lone Ctrl or Meta press is not a shortcut. Each shortcut key carries its own meta state.
@@ -1529,6 +1578,46 @@ class AtlasIme : InputMethodService() {
         if (!sends || event.repeatCount == 0) composer.enter(press)
         if (press == EnterKey.Press.ShiftNewLine || press == EnterKey.Press.ShiftSend) modifiers.consume() else modifiers.useHeld()
         return true
+    }
+
+    /**
+     * Exact typing: the key goes to the app as a key event, with the Shift and Alt pushed before it and Ctrl from fn.
+     * A symbol that Alt types goes as text. Keys of the phone itself, such as volume, stay with Android. See [ExactTyping].
+     */
+    private fun exactKey(event: KeyEvent): Boolean {
+        if (event.isSystem) return false
+        val meta = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState)
+        val typed = event.getUnicodeChar(meta)
+        val symbol = ExactTyping.symbol(meta, typed, event.getUnicodeChar(meta and KeyEvent.META_ALT_MASK.inv()))
+        if (symbol != null) commitExact(symbol) else sendExact(event, meta)
+        val character = typed > 0 && typed and KeyCharacterMap.COMBINING_ACCENT == 0 && !Character.isISOControl(typed)
+        if (character && meta and (KeyEvent.META_CTRL_MASK or KeyEvent.META_META_MASK) == 0) modifiers.consume() else modifiers.useHeld()
+        return true
+    }
+
+    /** Sends a press and release of [event]'s key with [meta], inside presses of the Ctrl and Alt keys that [meta] holds. */
+    private fun sendExact(event: KeyEvent, meta: Int) {
+        val connection = currentInputConnection ?: return
+        fun send(action: Int, code: Int, state: Int, repeat: Int = 0) = connection.sendKeyEvent(KeyEvent(event.downTime,
+            event.eventTime, action, code, repeat, state, event.deviceId, if (code == event.keyCode) event.scanCode else 0,
+            event.flags, event.source))
+        val wrappers = ExactTyping.wrappers(meta)
+        try {
+            for (key in wrappers) send(KeyEvent.ACTION_DOWN, key, meta)
+            send(KeyEvent.ACTION_DOWN, event.keyCode, meta, event.repeatCount)
+            send(KeyEvent.ACTION_UP, event.keyCode, meta)
+            for (key in wrappers.asReversed()) send(KeyEvent.ACTION_UP, key, meta)
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not send an exact key", error)
+        }
+    }
+
+    private fun commitExact(text: String) {
+        try {
+            currentInputConnection?.commitText(text, 1)
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not send exact text", error)
+        }
     }
 
     private fun command(event: KeyEvent, textKey: Boolean = false) {

@@ -8,6 +8,7 @@ import com.atlas.engine.SwipeTyping
 import com.atlas.keyboard.Composer
 import com.atlas.keyboard.Editor
 import com.atlas.keyboard.EnterKey
+import com.atlas.keyboard.Expansions
 import com.atlas.keyboard.Field
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Words
@@ -930,6 +931,47 @@ private fun composerFlow(world: Realistic) {
 
 /** Where suggestions are allowed the bar always has words, and popular sentence starts fill it when nothing else can. */
 /** In the interactive guide, a word that comes out different has the guide's word on the strip, one touch away. */
+/** Snippets and emoji shortcodes (issues 47 and 50) go through the composer like an autocorrect, with the same Backspace undo. */
+private fun expansions(world: Realistic) {
+    val snippets = mapOf("addr" to "1 Main Street", "hi" to "Hello there")
+    val emoji = mapOf("smile" to "😄", "smiley" to "😃", "+1" to "👍")
+    fun typist(field: Field = Typist.FIELD) =
+        Typist(world, field = field).also { it.composer.expansions = Expansions(snippets, ';', emoji) }
+
+    same(typist().type("at ;addr ").text, "at 1 Main Street ", "Space after a shortcut puts in the snippet")
+    same(typist().type("at ;addr ").backspace().text, "at ;addr ", "Backspace straight after puts the shortcut back")
+    same(typist().type("at ;addr ").backspace().type("x").text, "at ;addr x", "Typing goes on after the shortcut")
+    same(typist().type("at ;addr ").type("now").backspace().text, "at 1 Main Street no", "A later Backspace is a normal one")
+    same(typist().type(";hi ").text, "Hello there ", "At the start of the text")
+    same(typist().type("a;addr ").text, "a;addr ", "Not inside a word")
+    same(typist().type("at ;adr ").text, "at;adr ", "Not for a shortcut that is not saved: the space moves behind the mark as before")
+    typist().type("at ;addr and more ").also {
+        must(it.words.typed.none { word -> word in setOf("Main", "Street", "1") }, "No word of a snippet is learned")
+        must(it.words.pairs.none { pair -> "Main" in pair || "Street" in pair }, "No pair of a snippet is learned")
+    }
+    val password = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD, 0)
+    same(typist(field = password).type(";addr ").text, ";addr ", "Never in a password field")
+    same(typist(field = Field.Exact).type(";addr ").text, ";addr ", "Never with exact typing")
+
+    same(typist().type("ok :smile:").text, "ok 😄", "A closing colon puts in the emoji")
+    same(typist().type("ok :smile:").backspace().text, "ok :smile:", "Backspace puts the shortcode back")
+    same(typist().type("ok :+1: ").text, "ok 👍 ", "A name with a plus")
+    same(typist().type("at 12:30:").text, "at 12:30:", "A time is not a shortcode")
+    same(typist().type("ok :nothing:").text, "ok:nothing:", "An unknown name stays")
+    same(typist(field = password).type(":smile:").text, ":smile:", "No shortcode in a password field")
+
+    typist().type("ok :smi").also {
+        same(it.bar, listOf("😄", "😃"), "The strip offers emoji for a part of a name")
+        same(it.choose(1).text, "ok 😃", "A touch puts in that emoji")
+        same(it.backspace().text, "ok :smi", "Backspace puts back what was typed")
+    }
+    typist().type("at ;a").also {
+        same(it.bar, listOf("1 Main Street"), "The strip offers a snippet for a part of its shortcut")
+        same(it.choose(0).text, "at 1 Main Street ", "A touch puts in the snippet with a space")
+    }
+    same(Typist(world).type("at ;addr ").text, "at;addr ", "Nothing expands when there are no snippets")
+}
+
 private fun theGuideOffersItsWord(world: Realistic) {
     fun guide(miss: Boolean = false) = Typist(world, null).also {
         it.composer.intended = { "to" }
@@ -1557,6 +1599,7 @@ fun main() {
     composerFlow(world)
     suggestionBar(world)
     theGuideOffersItsWord(world)
+    expansions(world)
     typoBenchmark(world)
     sentenceAware(world)
     fieldReports(world)

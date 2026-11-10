@@ -7,6 +7,12 @@ export type EnterKey = "send" | "newline" | "app";
 /** How a message goes out in an app: the field's action, or a plain Enter key. */
 export type SendMethod = "action" | "key";
 export type EnterApp = { app: string; name: string; method: SendMethod };
+export type App = { app: string; name: string };
+/** A snippet's shortcut is written without its start character. */
+export type Snippet = { shortcut: string; text: string };
+/** The characters that a snippet's shortcut can start with. Words do not use them. */
+export const snippetStarts = [";", "/", "\\", ","] as const;
+export type SnippetStart = typeof snippetStarts[number];
 
 export type State = {
   version: string;
@@ -57,6 +63,15 @@ export type State = {
   enterAppsBuiltIn: EnterApp[];
   /** Apps with a recent multi-line field, which the user can add. */
   recentEnterApps: { app: string; name: string }[];
+  /** Apps with exact typing: each key goes to the app as it is, with no fixes or suggestions. */
+  exactApps: App[];
+  /** Apps where a field started recently and that do not have exact typing, which the user can add. */
+  recentApps: App[];
+  /** The character that starts a snippet's shortcut. */
+  snippetStart: SnippetStart;
+  /** A name between two colons, such as :smile:, types its emoji. */
+  shortcodes: boolean;
+  snippets: Snippet[];
   liftOff: boolean;
   liftOffMillis: number;
   haptics: boolean;
@@ -69,7 +84,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];
@@ -99,6 +114,34 @@ export async function setEnterApp(app: string, method: SendMethod) {
 export async function removeEnterApp(app: string) {
   await atlas("removeEnterApp", { app });
   await state.refresh();
+}
+
+export async function setExactApp(app: string, on: boolean) {
+  await atlas("setExactApp", { app, on });
+  await state.refresh();
+}
+
+/** Adds a snippet, or changes the one that had the shortcut [previous]. Fails with a message if the shortcut or text is not valid. */
+export async function putSnippet(shortcut: string, text: string, previous?: string) {
+  try {
+    await atlas("putSnippet", { shortcut, text, previous: previous ?? "" });
+  } finally {
+    await state.refresh();
+  }
+}
+
+export async function removeSnippet(shortcut: string) {
+  await atlas("removeSnippet", { shortcut });
+  await state.refresh();
+}
+
+/** Opens the file picker. Returns false if the picker was cancelled. */
+export async function transferSnippets(mode: "import" | "export") {
+  try {
+    return await callNative("atlas", "transferSnippets", { mode }, { timeoutMs: 600_000 }) === "true";
+  } finally {
+    if (mode === "import") await state.refresh();
+  }
 }
 
 export async function addWord(word: string) {

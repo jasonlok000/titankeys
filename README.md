@@ -251,6 +251,7 @@ TitanKeys is built on the work of these projects:
 - [CleverKeys](https://github.com/tribixbite/CleverKeys): the swipe encoder that swipe engine 2.0 fine-tunes for the Titan touchpad (GPL-3.0)
 - [DistilGPT-2](https://huggingface.co/distilbert/distilgpt2): the next-word model (Apache 2.0)
 - [ONNX Runtime](https://github.com/microsoft/onnxruntime): runs these two models on the phone (MIT). See [`licences/Swipe-engine-2-models.md`](licences/Swipe-engine-2-models.md)
+- [gemoji](https://github.com/github/gemoji): the emoji names for shortcodes such as `:smile:` (MIT). See [`licences/gemoji-MIT.txt`](licences/gemoji-MIT.txt)
 
 TitanKeys is powered by FUTO Swipe. "Titan 2 Elite" is a product of Unihertz.
 

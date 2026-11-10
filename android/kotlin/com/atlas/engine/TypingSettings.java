@@ -204,6 +204,52 @@ public final class TypingSettings {
         preferences(context).edit().putString("recent_enter_apps", String.join(",", apps)).apply();
     }
 
+    /** The characters that a snippet's shortcut can start with. Words do not use them, so a shortcut never clashes with one. */
+    public static final String SNIPPET_STARTS = ";/\\,";
+
+    /** The character that starts a snippet's shortcut, such as ; in ;addr. */
+    public static char snippetStart(Context context) {
+        String start = preferences(context).getString("snippet_start", ";");
+        return start.length() == 1 && SNIPPET_STARTS.contains(start) ? start.charAt(0) : ';';
+    }
+
+    public static void snippetStart(Context context, String start) {
+        if (start.length() != 1 || !SNIPPET_STARTS.contains(start)) throw new IllegalArgumentException("Not a snippet start");
+        preferences(context).edit().putString("snippet_start", start).apply();
+    }
+
+    /** A name between two colons, such as :smile:, types its emoji. */
+    public static boolean shortcodes(Context context) {
+        return preferences(context).getBoolean("shortcodes", true);
+    }
+
+    public static void shortcodes(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("shortcodes", enabled).apply();
+    }
+
+    /** Termux and AnyDesk, the apps on the exact typing list until the user changes it. */
+    public static final Set<String> DEFAULT_EXACT_APPS =
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList("com.termux", "com.anydesk.anydeskandroid")));
+
+    /** Apps where each key goes to the app as it is, with no fixes, capitals, full stops or suggestions. See ExactTyping. */
+    public static Set<String> exactApps(Context context) {
+        return preferences(context).getStringSet("exact_apps", DEFAULT_EXACT_APPS);
+    }
+
+    public static void exactApps(Context context, Set<String> apps) {
+        preferences(context).edit().putStringSet("exact_apps", new HashSet<>(apps)).apply();
+    }
+
+    /** Packages of the apps where a field started recently, newest first. Only the keyboard writes this, and only on this phone. */
+    public static List<String> recentApps(Context context) {
+        String apps = preferences(context).getString("recent_apps", "");
+        return apps.isEmpty() ? Collections.emptyList() : Arrays.asList(apps.split(","));
+    }
+
+    public static void recentApps(Context context, List<String> apps) {
+        preferences(context).edit().putString("recent_apps", String.join(",", apps)).apply();
+    }
+
     /** Records touches, keys and typed text in a log on this phone. It is off until the user turns it on. */
     public static boolean rawLog(Context context) {
         return preferences(context).getBoolean("raw_log", false);

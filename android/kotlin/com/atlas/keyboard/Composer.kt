@@ -111,6 +111,11 @@ class Composer(
         /** Popular sentence starts, which stand in when there is nothing better to show. */
         class Starts(val snapshot: Snapshot, override val alternatives: List<String>) : Composition
 
+        /** Snippets or emoji for the code that ends the text in [snapshot]. See [Expansions]. */
+        class Expanding(val snapshot: Snapshot, val choices: List<Expansions.Choice>) : Composition {
+            override val alternatives = choices.map { it.label }
+        }
+
         /** The cursor is in an earlier swiped word, [before] and [after] letters from its ends. */
         data class Recalled(val word: Remembered, val before: Int, val after: Int, val snapshot: Snapshot) : Composition {
             override val alternatives get() = word.alternatives
@@ -129,7 +134,8 @@ class Composer(
     private class PendingEdit(val action: () -> Unit, val transferable: Boolean = false, val leaves: Boolean = false) : PendingInput
     private class FullStop(val time: Long, val snapshot: Snapshot)
     /** One Backspace puts [restored] back in place of [replaced], which ends the text in [snapshot]. */
-    private class Undo(val replaced: String, val restored: String, val word: String, val keptAsTyped: Boolean, val snapshot: Snapshot)
+    private class Undo(val replaced: String, val restored: String, val word: String, val keptAsTyped: Boolean, val snapshot: Snapshot,
+                       val expansion: Boolean = false)
     /** The last letter a key typed, in [text], and what typing it changed. Holding the key can still replace it. */
     private class TypedKey(val text: String, val after: Snapshot, val automaticSpace: Snapshot?, val fullStop: FullStop?, val undo: Undo?)
     /** Whether autocorrect changed the text when a typed word ended, and which word to learn now. */
@@ -165,6 +171,8 @@ class Composer(
     private val remembered = ArrayList<Remembered>()
     private var rememberedField: Pair<String?, Int>? = null
     private var undo: Undo? = null
+    /** The text up to a mark that took the place of the space before it, so that a snippet or a shortcode can still start there. */
+    private var markAfterSpace: String? = null
     private var typedKey: TypedKey? = null
     /** The last typed word to end, until the word after it has ended too. */
     private var endedWord: EndedWord? = null
@@ -198,6 +206,8 @@ class Composer(
     var log: EditLog? = null
     /** Only the keyboard sets this, and only while the setting is on, so replaying a recording never changes a word. */
     var autocorrect: Autocorrect? = null
+    /** Snippets and emoji shortcodes, or null when there are none. */
+    var expansions: Expansions? = null
 
     val hasPendingInput get() = recognising || barrier != null || drainScheduled || pendingInput.isNotEmpty()
     /** Whether a touch arriving now could still join the last swipe. A recognition in progress may yet allow it. */
@@ -314,6 +324,7 @@ class Composer(
             is Composition.Typed -> current.snapshot
             is Composition.Recalled -> current.snapshot
             is Composition.Starts -> current.snapshot
+            is Composition.Expanding -> current.snapshot
             Composition.None -> completionSnapshot ?: automaticSpace ?: fullStop?.snapshot ?: editSnapshot
         }
         if (updated != selection && anchor != null && snapshot() == anchor) {
@@ -550,6 +561,7 @@ class Composer(
         val typedSpace = fullStop?.snapshot
         fullStop = null
         var anchor = snapshot()
+        if (!letterTap && text == ":" && expandShortcode(anchor)) return
         holdForNextWord(composition as? Composition.Swiped, anchor)
         val correction = correcting
         if (correction != null && anchor != editSnapshot) {
@@ -586,6 +598,7 @@ class Composer(
         val typed = if (letterTap) "$prefix$cased " else cased
         val cause = if (dropsSpace) EditCause.DropSpace else if (letterTap) EditCause.Tap else EditCause.Key
         if (!edit(cause, if (dropsSpace) 1 else 0, typed)) return
+        if (dropsSpace) markAfterSpace = editor.before()
         automaticSpace = if (letterTap) snapshot() else null
         typedKey = if (letterTap) null else TypedKey(typed.substring(typed.offsetByCodePoints(typed.length, -1)), snapshot(),
             spaceBefore, fullStopBefore, corrected)
@@ -625,6 +638,7 @@ class Composer(
         invalidate(false)
         fullStop = null
         val anchor = snapshot()
+        if (symbol == ":" && expandShortcode(anchor)) return
         val ending = if (symbol.firstOrNull()?.let { it in TYPED_WORD_ENDS } == true) endingWord(anchor, correcting) else null
         val fix = ending?.let { findFix(it, anchor) }
         composition = Composition.None
@@ -655,6 +669,7 @@ class Composer(
         leave()
         invalidate(false)
         val anchor = snapshot()
+        if (!repeated && expandSnippet(anchor)) return
         holdForNextWord(composition as? Composition.Swiped, anchor)
         composition = Composition.None
         val before = anchor.before.orEmpty()
@@ -889,6 +904,16 @@ class Composer(
 
     fun choose(index: Int) {
         val chosen = composition.alternatives.getOrNull(index) ?: return
+        (composition as? Composition.Expanding)?.let { offered ->
+            if (defer { if (composition === offered) choose(index) }) return
+            val anchor = snapshot()
+            val expansion = offered.choices[index].expansion
+            if (anchor != offered.snapshot || anchor.selected || anchor.before?.endsWith(expansion.code) != true) return
+            log?.picked(index, chosen, offered.alternatives)
+            invalidate(false)
+            expand(expansion, predictNow = true)
+            return
+        }
         if (!words.allowed(chosen)) return
         val offered = composition
         if (defer {
@@ -957,7 +982,7 @@ class Composer(
                         words.chosen(word.swipe, word.context, word.recognition, chosen)
                 }
             }
-            is Composition.Starts, Composition.None -> Unit
+            is Composition.Starts, is Composition.Expanding, Composition.None -> Unit
         }
     }
 
@@ -1361,7 +1386,12 @@ class Composer(
         heldWord = null
         endedWord = null
         endedBeforeSwipe = null
-        if (!replaceBehind(showing, anchor, EditCause.AutocorrectUndo, pending.replaced.length, pending.restored)) return true
+        val cause = if (pending.expansion) EditCause.ExpandUndo else EditCause.AutocorrectUndo
+        if (!replaceBehind(showing, anchor, cause, pending.replaced.length, pending.restored)) return true
+        if (pending.expansion) {
+            confirmState(snapshot())
+            return true
+        }
         autocorrect?.undone(pending.word)
         val accepted = snapshot()
         if (pending.keptAsTyped) {
@@ -1488,6 +1518,7 @@ class Composer(
             offerStarts(anchor)
             return
         }
+        if (offerExpansions(anchor, before)) return
         val lastWord = TypedPredictions.prefix(before.dropLast(1))
         val trailingSpace = before.endsWith(" ") && lastWord.isNotEmpty() && !words.known(lastWord)
         val context = if (trailingSpace) before.dropLast(1) else before
@@ -1513,6 +1544,61 @@ class Composer(
                 words.prepare(context.dropLast(TypedPredictions.prefix(context).length) + " " + it + " ", cancelled)
             }
         }
+    }
+
+    /** Space after a snippet's shortcut puts in its text. Not in a password or a field with no words, nor over a selection. */
+    private fun expandSnippet(anchor: Snapshot): Boolean {
+        val before = anchor.before
+        if (!field.words || before == null || anchor.selected) return false
+        val expansion = expansions?.snippet(before, freeMark(before)) ?: return false
+        expand(expansion)
+        return true
+    }
+
+    /** A colon that closes a shortcode such as :smile: puts in its emoji in place of the code, with no colon. */
+    private fun expandShortcode(anchor: Snapshot): Boolean {
+        val before = anchor.before
+        if (!field.words || before == null || anchor.selected) return false
+        val expansion = expansions?.shortcode(before, freeMark(before)) ?: return false
+        expand(expansion)
+        return true
+    }
+
+    /**
+     * Puts [expansion] in place of its code, and lets Backspace put the code back. What it puts in is the user's own text, not
+     * typing, so none of it is learned: the word being typed, the words kept so far and a word on hold all end here.
+     */
+    private fun expand(expansion: Expansions.Expansion, predictNow: Boolean = false) {
+        composition = Composition.None
+        manualWord.clear()
+        keptWords.clear()
+        correcting = null
+        awaitingNextWord = null
+        automaticSpace = null
+        fullStop = null
+        typedKey = null
+        settleTypedWords()
+        if (!edit(EditCause.Expand, expansion.code.length, expansion.text)) return
+        val accepted = snapshot()
+        undo = Undo(expansion.text, expansion.restored, "", false, accepted, expansion = true)
+        confirmState(accepted, predictNow = predictNow)
+    }
+
+    /** Where in [before] the last mark that took the place of a space is, or -1. See [Expansions]. */
+    private fun freeMark(before: String): Int {
+        val mark = markAfterSpace ?: return -1
+        return if (before.length > mark.length && before.startsWith(mark)) mark.length - 1 else -1
+    }
+
+    /** While a snippet's shortcut or a shortcode is typed, the strip offers what it can become. */
+    private fun offerExpansions(anchor: Snapshot, before: String): Boolean {
+        if (!field.words) return false
+        val choices = expansions?.choices(before, EXPANSION_CHOICES, freeMark(before)).orEmpty()
+        if (choices.isEmpty()) return false
+        val offered = Composition.Expanding(anchor, choices)
+        composition = offered
+        show(offered.alternatives)
+        return true
     }
 
     /** Puts popular sentence starts on the bar, so that it is not blank. Where suggestions are off, the bar stays empty and hidden. */
@@ -1556,6 +1642,8 @@ class Composer(
         /** For the time before the word lists load, and if they can't. Written as inside a sentence. */
         private val FEW_STARTS = listOf("I", "the", "hello")
         private const val MAX_REMEMBERED = 1000
+        /** As many as the strip shows. */
+        private const val EXPANSION_CHOICES = 3
         /** Characters that end a word, so a swiped word right before one needs no space after it. */
         private const val WORD_CLOSERS = ".,!?;:)]}…"
         /** Marks that end a typed word, which autocorrect then checks. */

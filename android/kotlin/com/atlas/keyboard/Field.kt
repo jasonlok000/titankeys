@@ -19,10 +19,15 @@ data class Field(
     val autocorrect: Boolean = false,
     /** Typed words get suggestions. Nothing is learned unless [learning] is also true. */
     val suggestions: Boolean = learning,
+    /** Each key goes to the app as a key event, as in a terminal. See [ExactTyping]. */
+    val exact: Boolean = false,
 ) {
     companion object {
         val None = Field(words = false, learning = false, fullStops = false, starters = false,
             sentenceCapitalisation = false)
+
+        /** Exact typing: nothing is fixed, added, suggested or learned. */
+        val Exact = None.copy(exact = true)
 
         fun of(inputType: Int, imeOptions: Int): Field {
             if (inputType and InputType.TYPE_MASK_CLASS != InputType.TYPE_CLASS_TEXT) return None

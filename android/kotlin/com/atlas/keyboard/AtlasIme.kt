@@ -555,7 +555,8 @@ class AtlasIme : InputMethodService() {
         modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
         cursorControl = TypingSettings.cursorControl(this)
-        contact.swipes = TypingSettings.swipeTyping(this)
+        // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
+        contact.swipes = TypingSettings.swipeTyping(this) && field.words
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
         val corrects = TypingSettings.autocorrect(this)
         composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
@@ -644,8 +645,9 @@ class AtlasIme : InputMethodService() {
     }
 
     // Launchers like Niagara keep a search field focused on the home screen, where the bar only gets in the way until you type.
-    // Password, email and number fields get no suggestions, so the bar would only be an empty strip.
-    private fun showSuggestions() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText) && field.suggestions
+    // Password, email and number fields and exact typing get no suggestions, but the bar still shows, with its word places empty,
+    // so that Shift, Alt and Ctrl show on it and the gestures draw there (issue 45).
+    private fun showSuggestions() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText)
 
     private fun launcherPackage(): String? {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
@@ -783,8 +785,7 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun motion(event: MotionEvent) {
-        // The panel works in every field, also where the touchpad types no words.
-        if (!field.words && !panelOpen) return
+        // The panel and the cursor work in every field. Where the touchpad types no words, swipes and taps type nothing: see [outcome].
         typedInField = true
         val samples = touchpad.samples(event)
         Recording.sink?.motion(event, samples)
@@ -1259,6 +1260,7 @@ class AtlasIme : InputMethodService() {
                     if (panelOpen) swipePanel(outcome.points)
                     return
                 }
+                if (!field.words) return
                 if (outcome.deletesWord) {
                     haptics.tap()
                     val nothingLeft = currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true
@@ -1272,7 +1274,7 @@ class AtlasIme : InputMethodService() {
             }
             is Contact.Outcome.Tap -> {
                 KeyboardEvents.publish { KeyboardEvent.Tapped(outcome.key) }
-                if (!isTapKey(outcome.key)) return
+                if (!isTapKey(outcome.key) || !field.words) return
                 showStripAfterBack()
                 val key = if (outcome.key == Layout.SPACE) " " else outcome.key
                 haptics.tap()
@@ -1302,7 +1304,8 @@ class AtlasIme : InputMethodService() {
 
     /** Only a plain letter from the phone's own keyboard can become its symbol. With Shift, Alt, Sym or a shortcut key it stays a letter. */
     private fun canHold(event: KeyEvent): Boolean {
-        if (!holdSymbols || !field.words && !field.exact || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
+        // Every field that the keyboard types in has this, also password, number and exact typing fields.
+        if (!holdSymbols || !editing || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
         if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
         if (modifiers.shift != Modifiers.Level.Off || altOrPanel || !event.hasNoModifiers() || event.isCapsLockOn) return false
         // A modifier still in the queue has not changed the levels above yet.

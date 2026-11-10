@@ -26,7 +26,42 @@ fun main() {
     exactSymbols()
     exactWrappers()
     recentApps()
+    fieldKinds()
     println("Expansion checks passed")
+}
+
+/**
+ * Fields with no suggestions (issue 45): the bar, the panel, the keys and the cursor stay, but nothing types words, fixes,
+ * adds, expands or learns. Only these kinds change, so a normal text field keeps everything.
+ */
+private fun fieldKinds() {
+    val text = InputType.TYPE_CLASS_TEXT
+    val quiet = listOf(
+        "password" to Field.of(text or InputType.TYPE_TEXT_VARIATION_PASSWORD, 0),
+        "visible password" to Field.of(text or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, 0),
+        "web password" to Field.of(text or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD, 0),
+        "email" to Field.of(text or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, 0),
+        "web email" to Field.of(text or InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, 0),
+        "number" to Field.of(InputType.TYPE_CLASS_NUMBER, 0),
+        "phone" to Field.of(InputType.TYPE_CLASS_PHONE, 0),
+        "date" to Field.of(InputType.TYPE_CLASS_DATETIME, 0),
+        "exact typing" to Field.Exact,
+    )
+    for ((name, field) in quiet) {
+        check(!field.suggestions, "$name: no suggestions")
+        check(!field.words, "$name: no swipes, taps, delete flick, snippets or shortcodes")
+        check(!field.autocorrect && !field.sentenceCapitalisation && !field.fullStops && !field.starters,
+            "$name: no fixes, capitals or full stops")
+        check(!field.learning, "$name: nothing learned")
+    }
+    check(Field.Exact.exact && quiet.dropLast(1).none { it.second.exact }, "only exact typing sends every key as a key event")
+    val normal = Field.of(text or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, 0)
+    check(normal.words && normal.suggestions && normal.autocorrect && normal.learning && normal.fullStops && normal.sentenceCapitalisation,
+        "a normal text field keeps everything")
+    val address = Field.of(text or InputType.TYPE_TEXT_VARIATION_URI, 0)
+    check(address.words && address.suggestions && !address.autocorrect, "an address bar keeps its suggestions")
+    val private = Field.of(text, EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING)
+    check(private.words && private.suggestions && !private.learning, "a private field keeps its words but learns nothing")
 }
 
 private fun shortcodeList() {

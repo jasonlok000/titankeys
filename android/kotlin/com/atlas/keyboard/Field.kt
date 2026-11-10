@@ -5,7 +5,10 @@ import android.view.inputmethod.EditorInfo
 
 /** What the focused text field allows. */
 data class Field(
-    /** Swipes and touchpad taps type words. */
+    /**
+     * Swipes, touchpad taps, the delete flick, snippets and shortcodes type here. Where this is false, as in password, email and
+     * number fields and with exact typing, the touchpad only steers the cursor and works the panel, and keys type as they are.
+     */
     val words: Boolean,
     /** Typing here may teach the keyboard new words. */
     val learning: Boolean,
@@ -45,7 +48,8 @@ data class Field(
             val exact = variation == InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS
                 || variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
                 || variation == InputType.TYPE_TEXT_VARIATION_FILTER
-            return Field(words = !password, learning = !password && !address && !private,
+            // A field with no suggestions types no words either: an address or a password is typed key by key.
+            return Field(words = !password && !email, learning = !password && !address && !private,
                 fullStops = !password && !address, starters = search,
                 sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
                 autocorrect = !password && !address && !exact,

@@ -548,7 +548,8 @@ class Composer(
 
     /** Keys wait for pending swipes, retaining the order in which the user entered them. */
     fun type(text: String, letterTap: Boolean = false) {
-        if (text.isEmpty()) return
+        // A light touch types a word, as a swipe does, so it types nothing where words are off.
+        if (text.isEmpty() || letterTap && !field.words) return
         if (!executingQueued && hasPendingInput) {
             enqueueText(text, letterTap)
             return
@@ -648,8 +649,9 @@ class Composer(
         if (fix != null && !edit(EditCause.Autocorrect, fix.typed.length, fix.word)) return
         val before = editor.before().orEmpty()
         val after = editor.after().orEmpty()
-        val around = symbol == "&" || symbol == "="
-        val trailing = around || symbol == ";" || symbol == "…" || symbol == "•" && (before.isEmpty() || before.endsWith("\n"))
+        // Spaces around a symbol are for prose. A password or an address gets the symbol alone.
+        val around = field.words && (symbol == "&" || symbol == "=")
+        val trailing = field.words && (around || symbol == ";" || symbol == "…" || symbol == "•" && (before.isEmpty() || before.endsWith("\n")))
         val leading = around && before.isNotEmpty() && !Character.isWhitespace(before.codePointBefore(before.length))
         val reuseSpace = trailing && after.startsWith(" ")
         val space = reuseSpace || trailing && (after.isEmpty() || !after[0].isWhitespace())

@@ -970,6 +970,20 @@ private fun expansions(world: Realistic) {
         same(it.choose(0).text, "at 1 Main Street ", "A touch puts in the snippet with a space")
     }
     same(Typist(world).type("at ;addr ").text, "at;addr ", "Nothing expands when there are no snippets")
+
+    // Fields with no suggestions (issue 45): keys type as they are, and the touchpad types no words.
+    val email = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, 0)
+    same(Typist(world, field = email).swipe("hello").text, "", "A swipe types no word in an email field")
+    same(Typist(world, field = password).swipe("hello").text, "", "A swipe types no word in a password field")
+    same(Typist(world, field = password).tap("a").text, "", "A light touch types nothing in a password field")
+    fun panelSymbol(field: Field, symbol: String) = Typist(world, field = field).type("a").also {
+        it.composer.symbol(symbol)
+        it.settle()
+    }.text
+    same(panelSymbol(password, "&"), "a&", "A symbol from the panel goes in alone in a password")
+    same(panelSymbol(email, ";"), "a;", "A symbol from the panel goes in alone in an email field")
+    same(panelSymbol(Typist.FIELD, "&"), "a & ", "Prose still gets spaces around the symbol")
+    same(Typist(world, field = password).type("Ab1 x").text, "Ab1 x", "A password is typed as it is")
 }
 
 private fun theGuideOffersItsWord(world: Realistic) {

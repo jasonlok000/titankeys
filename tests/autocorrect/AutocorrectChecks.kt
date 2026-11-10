@@ -47,6 +47,7 @@ private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = Phone
     override fun name(word: String): String? = words.name(word) ?: habits.capitals(word)
         ?: phoneNames[word.lowercase()]?.takeIf { it != word.lowercase() }
     override fun preferredSpelling(word: String) = spelling(word)
+    override fun acronym(word: String) = words.acronym(word)
     override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
 }
 
@@ -858,6 +859,12 @@ private fun composerFlow(world: Realistic) {
             "the jr team won" to "the Jr team won",
             "she has a phd now" to "she has a PhD now",
             "that is ok with me" to "that is ok with me",
+            // A word that the list writes only in capitals, typed in lowercase, is meant: never another word, case kept.
+            "my pc is slow" to "my pc is slow",
+            "burn a cd for me" to "burn a cd for me",
+            "back in the uk now" to "back in the uk now",
+            "watch the bbc news" to "watch the bbc news",
+            "My PC is slow" to "My PC is slow",
             "be curt with them" to "be curt with them",
             "my iphone works" to "my iPhone works",
             "Iphone works" to "iPhone works",

@@ -21,6 +21,8 @@ interface Lexicon {
     fun name(word: String): String?
     /** [word] in the English spelling that the user chose, such as "colour" or "color". */
     fun preferredSpelling(word: String): String
+    /** Whether the word list writes [word] only in capitals, as "PC": then a lowercase "pc" is typed on purpose. */
+    fun acronym(word: String): Boolean = false
     /** Calls [action] with each word in lowercase and its frequency. */
     fun forEachWord(action: (String, Int) -> Unit)
 }
@@ -180,7 +182,8 @@ class TypedCorrector(
         frequencyOf = lexicon::frequency,
         isNeighborKey = KeyNeighbours::near,
         pairCount = data.pairs::count,
-        isProtected = { word -> word in data.slang || lexicon.personal(word) || word.first().isUpperCase() && word in data.names },
+        isProtected = { word -> word in data.slang || lexicon.personal(word) || word.first().isUpperCase() && word in data.names ||
+            lexicon.acronym(word) },
         isRecognized = { word -> word in data.known },
         rejected = rejected,
         noisyChannel = channel,
@@ -196,7 +199,7 @@ class TypedCorrector(
             data.contractions[item.term] ?: item.term.takeIf { lexicon.name(it) == null }
         }
 
-    private fun isKnown(word: String) = lexicon.known(word) || word in data.known || word in data.slang
+    private fun isKnown(word: String) = lexicon.known(word) || word in data.known || word in data.slang || lexicon.acronym(word)
 
     private fun spelled(word: String) = lexicon.name(word) ?: word
 

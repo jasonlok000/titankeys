@@ -70,6 +70,14 @@ Push Sym two times for emoji. In the panel, Alt opens quick settings, with a let
 
 Right after you copy text, the strip shows it: touch it to paste. For older clips, push Sym, then A for the clipboard. It works like the symbols: six clips to a page, two to a row, each in a wide field over half a row of keys. Push any key under a clip to paste it, swipe up or down for more, and swipe sideways or rest a finger on the bottom row for **Pinned**. Clips go after an hour, unless you pin them: push Enter, then a key under the clip. Push Backspace two times to clear all but the pinned clips. TitanKeys keeps no text that an app marks as sensitive, nothing copied from a password field, and nothing leaves the phone.
 
+### Snippets and emoji by name
+
+Type `;addr` and press Space, and your address shows up. Type `:smile:` and you get 😄. Changed your mind? Backspace right after puts the shortcut back. The strip shows matching snippets and emoji as you type. Snippets live on your phone, you can import and export them, and they never fire in password fields.
+
+### Exact typing for terminals and remote computers
+
+In terminals, remote desktops and game streaming, every key goes straight to the app, exactly as you press it, with Shift, Alt and Ctrl (fn too). TitanKeys doesn't fix or suggest a thing there. Termux, ConnectBot, Termius, AnyDesk, TeamViewer, Windows App, Chrome Remote Desktop, RustDesk, RealVNC Viewer, bVNC, aRDP, Moonlight and Parsec are on the list out of the box, and you can add or remove any app in Settings. Password, email and number fields keep the bar for Shift, Alt and Ctrl, but they get no words and swipes do nothing there.
+
 ## TitanKeys and Atlas
 
 Atlas is a great keyboard, and TitanKeys only exists because Julian built it and shared it. The two projects just aim for slightly different things. Atlas stays simple and keeps swiping for typing only. TitanKeys takes on more complexity to get the most out of the Titan 2 Elite, one-handed swipes included. If you'd rather have something simpler, Atlas is an excellent choice.
@@ -257,6 +265,7 @@ TitanKeys is built on the work of these projects:
 - [CleverKeys](https://github.com/tribixbite/CleverKeys): the swipe encoder that swipe engine 2.0 fine-tunes for the Titan touchpad (GPL-3.0)
 - [DistilGPT-2](https://huggingface.co/distilbert/distilgpt2): the next-word model (Apache 2.0)
 - [ONNX Runtime](https://github.com/microsoft/onnxruntime): runs these two models on the phone (MIT). See [`licences/Swipe-engine-2-models.md`](licences/Swipe-engine-2-models.md)
+- [gemoji](https://github.com/github/gemoji): the emoji names for shortcodes such as `:smile:` (MIT). See [`licences/gemoji-MIT.txt`](licences/gemoji-MIT.txt)
 
 TitanKeys is powered by FUTO Swipe. "Titan 2 Elite" is a product of Unihertz.
 

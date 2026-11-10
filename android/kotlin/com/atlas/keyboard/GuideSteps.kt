@@ -356,7 +356,7 @@ internal val GUIDE_STEPS = listOf(
         id = "panel", chapter = GuideChapter.Story,
         title = "Emoji and settings, no screen.",
         body = "Push Sym two times for emoji. In the panel, Alt opens quick settings.",
-        done = "All from the keys.",
+        done = "All from the keys. In the panel, A opens the clipboard.",
         cue = GuideCue.Spot(listOf(Layout.SYM, Layout.ALT)),
         usesPanel = true,
         setup = Panel.Closed,

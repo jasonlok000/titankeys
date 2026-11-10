@@ -16,6 +16,8 @@ object Layout {
     const val ENTER = "↵"
     /** The Sym panel shows the page position on this key, and no symbol or emoji. The touchpad cannot read it well. */
     const val PAGE_POSITION = "P"
+    /** On the symbols and emoji, A holds no item and opens the clipboard. The touchpad cannot read it well, but the key can. */
+    const val CLIPBOARD_KEY = "A"
     /** Where a finger counts as resting on P and not on the key beside it. See [restingKeyAt]. */
     private const val LAST_COLUMN_FROM_LEFT = .875f
     private const val P_TO_BOTTOM = .3f

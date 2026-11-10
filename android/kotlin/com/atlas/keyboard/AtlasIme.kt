@@ -524,6 +524,7 @@ class AtlasIme : InputMethodService() {
         modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
         cursorControl = TypingSettings.cursorControl(this)
+        cursorGesture.area = CursorGesture.Area.of(TypingSettings.spaceTapArea(this))
         contact.swipes = TypingSettings.swipeTyping(this)
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
         val corrects = TypingSettings.autocorrect(this)

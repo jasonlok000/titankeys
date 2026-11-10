@@ -11,6 +11,7 @@ import android.graphics.Typeface
 import android.os.SystemClock
 import android.util.TypedValue
 import android.view.View
+import com.atlas.engine.TypingSettings
 import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.max
@@ -95,6 +96,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         Keys.letter(key.name, android.view.KeyEvent.META_ALT_ON)?.let { key.name to it }
     }.toMap()
     private val areaPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val zonePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val zonePath = Path()
+    private val zonePart = Path()
     private val areaPath = Path()
     private val path = Path()
 
@@ -210,6 +214,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         var moving = cue != GuideCue.Free && GuideMotion.enabled && isShown
         for (key in keys) moving = drawKey(canvas, key, now, frameCount) || moving
         drawTouchArea(canvas)
+        drawTapZone(canvas)
         drawGhost(canvas, now)
         moving = drawTrail(canvas, now) || moving
         if (moving) postInvalidateOnAnimation() else lastFrame = 0
@@ -502,11 +507,35 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     private fun distance(a: FloatArray, b: FloatArray) = hypot((b[0] - a[0]) * width, (b[1] - a[1]) * height)
 
+    /** Where the keyboard takes the Space gestures' taps: the Space row's middle, and V and B above it if that is on. */
+    private fun tapArea() = CursorGesture.Area.of(TypingSettings.spaceTapArea(context))
+
+    /**
+     * A soft patch over the part of the keys where the steer and select taps count: the middle of Space as far down as the
+     * touchpad feels, and the part of V and B above it that the keyboard takes too. The taps are easiest to land there.
+     */
+    private fun drawTapZone(canvas: Canvas) {
+        if (cue !is GuideCue.Taps) return
+        val area = tapArea()
+        val corner = dp(ZONE_CORNER)
+        zonePath.rewind()
+        zonePath.addRoundRect(width * ZONE_SPACE_LEFT, height * .75f, width * ZONE_SPACE_RIGHT, height * ZONE_BOTTOM,
+            corner, corner, Path.Direction.CW)
+        if (area != CursorGesture.Area.SpaceRow) {
+            zonePart.rewind()
+            zonePart.addRoundRect(width * ZONE_VB_LEFT, height * area.top, width * ZONE_VB_RIGHT, height * .75f + corner,
+                corner, corner, Path.Direction.CW)
+            zonePath.op(zonePart, Path.Op.UNION)
+        }
+        zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE, ZONE_ALPHA)
+        canvas.drawPath(zonePath, zonePaint)
+    }
+
     private fun drawTaps(canvas: Canvas, cue: GuideCue.Taps, t: Float, colour: Int) {
-        // Rings for each tap, one after the other, then a drag if there is one.
+        // Rings for each tap, one after the other, inside the zone where the taps count, then a sideways drag if there is one.
         val tapsEnd = if (cue.drag) .45f else .8f
         val x = width * SPACE_CENTRE
-        val y = height * ROW_CENTRE
+        val y = height * if (tapArea() == CursorGesture.Area.SpaceRow) ROW_CENTRE else ZONE_TAP_ROW
         ringPaint.strokeWidth = dp(2.5f)
         for (tap in 0 until cue.count) {
             val start = tap * tapsEnd / cue.count
@@ -519,19 +548,14 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         var fingerX = x
         var fingerY = y
         if (cue.drag && t > tapsEnd) {
-            // The finger stays down, swipes up onto the letters, then leans left: back over the words that the cursor moves
-            // through or that the selection takes, as the field shows.
+            // The finger stays down and slides sideways to the left: back over the words that the cursor moves through or
+            // that the selection takes, as the field shows. Above Space only a sideways slide counts, so the ghost shows that.
             val travel = ((t - tapsEnd) / (1f - tapsEnd - .08f)).coerceIn(0f, 1f)
-            val up = (travel / UP_SHARE).coerceAtMost(1f)
-            val across = ((travel - UP_SHARE) / (1f - UP_SHARE)).coerceIn(0f, 1f)
-            val top = height * (ROW_CENTRE - DRAG_UP)
-            fingerY = y + (top - y) * up
-            fingerX = x - (width * DRAG_REACH) * across
+            fingerX = x - (width * DRAG_REACH) * travel
             // The drag is the part to copy, so it is as strong as the part of a word that the ghost has done.
             ghostPaint.color = colour
             ghostPaint.strokeWidth = dp(GHOST_DONE_WIDTH)
-            canvas.drawLine(x, y, x, fingerY, ghostPaint)
-            if (across > 0f) canvas.drawLine(x, top, fingerX, top, ghostPaint)
+            canvas.drawLine(x, y, fingerX, fingerY, ghostPaint)
         }
         canvas.drawCircle(fingerX, fingerY, dp(GHOST_FINGER), dotPaint)
     }
@@ -604,9 +628,17 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val SPACE_CENTRE = .5f
         const val ROW_CENTRE = .875f
         const val DRAG_REACH = .32f
-        /** How far up the drag goes, as a part of the drawing's height, and the part of the drag that going up takes. */
-        const val DRAG_UP = .4f
-        const val UP_SHARE = .35f
+        /** The zone where the steer and select taps count: the middle of Space down to where the touchpad stops feeling. */
+        const val ZONE_SPACE_LEFT = .36f
+        const val ZONE_SPACE_RIGHT = .64f
+        const val ZONE_BOTTOM = .885f
+        /** The V and B keys, which the zone reaches up over when the keyboard takes taps there. */
+        const val ZONE_VB_LEFT = .4f
+        const val ZONE_VB_RIGHT = .6f
+        /** Where the ghost taps: just above the line between V and B and Space. */
+        const val ZONE_TAP_ROW = .72f
+        const val ZONE_ALPHA = .2f
+        const val ZONE_CORNER = 6f
 
         // The box round the part of the keys that the touchpad feels, as parts of the drawing's width and height.
         const val AREA_LEFT = .05f

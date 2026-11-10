@@ -44,7 +44,7 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
     }
 
     /** One try: everything from its first touch or key until a quiet moment, in event order. */
-    private class Try(val kind: Kind, val start: Long, val textBefore: String) {
+    private class Try(val kind: Kind, val start: Long, val textBefore: String, val area: String) {
         val events = JSONArray()
         var end = start
         var drag: Boolean? = null
@@ -90,6 +90,7 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
     private lateinit var counts: TextView
     private lateinit var status: TextView
     private val kindButtons = HashMap<Kind, Button>()
+    private val areaButtons = HashMap<CursorGesture.Area, Button>()
     private val finish = Runnable { finishTry() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -133,6 +134,8 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
                     "Wait a moment between tries: each try ends after 1.5 seconds without a touch or a key."
             })
             for (each in Kind.values()) addView(kindButton(each))
+            addView(text(13f, MUTED).apply { text = "Where the taps may land, besides Space (debug only):" })
+            addView(row(CursorGesture.Area.entries.map { areaButton(it) }))
             addView(input)
             addView(live)
             addView(counts)
@@ -150,6 +153,7 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
             addView(content)
         })
         choose(Kind.Steer)
+        showArea()
         show()
     }
 
@@ -228,7 +232,7 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
         }
     }
 
-    private fun begin(time: Long): Try = current ?: Try(kind, time, input.text.toString()).also {
+    private fun begin(time: Long): Try = current ?: Try(kind, time, input.text.toString(), TypingSettings.spaceTapArea(this)).also {
         current = it
         live.text = "Trying: ${kind.label}…"
     }
@@ -300,7 +304,7 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
             session = it
         }
         try {
-            file.appendText(JSONObject().put("kind", done.kind.id).put("start", done.start).put("end", done.end)
+            file.appendText(JSONObject().put("kind", done.kind.id).put("area", done.area).put("start", done.start).put("end", done.end)
                 .put("result", done.result()).put("worked", done.worked()).put("touches", done.touches).put("keys", done.keys)
                 .put("events", done.events).toString() + "\n")
             status.text = "Saved ${tries.size} tries in ${file.name}."
@@ -358,6 +362,22 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
     private fun row(buttons: List<Button>) = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         for (button in buttons) addView(button)
+    }
+
+    /** Saves where the taps may land. The keyboard reads it when typing starts, so this starts the field's input again. */
+    private fun areaButton(each: CursorGesture.Area) = button(when (each) {
+        CursorGesture.Area.SpaceRow -> "Space row only"
+        CursorGesture.Area.LowerVb -> "Lower half of V, B"
+        CursorGesture.Area.FullVb -> "All of V, B"
+    }) {
+        TypingSettings.spaceTapArea(this, each.id)
+        getSystemService(InputMethodManager::class.java).restartInput(input)
+        showArea()
+    }.also { areaButtons[each] = it }
+
+    private fun showArea() {
+        val chosen = CursorGesture.Area.of(TypingSettings.spaceTapArea(this))
+        for ((each, button) in areaButtons) button.alpha = if (each == chosen) 1f else .45f
     }
 
     private fun kindButton(each: Kind) = Button(this).apply {

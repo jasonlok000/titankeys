@@ -338,9 +338,9 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "steer", chapter = GuideChapter.Story,
         title = "Steer and select from Space.",
-        body = "Two touches on Space, then swipe up, to steer. Three touches to select.",
+        body = "Tap just above the middle of Space, then touch and slide to steer.",
         done = "No screen needed.",
-        help = "Touch lightly. Lift after each touch but the last, and keep the last one down.",
+        help = "Tap twice first to select. Tap lightly in the shaded patch, and keep the last touch down as you slide.",
         cue = GuideCue.Taps(2, drag = true),
         needs = GuideNeed.CursorControl,
         needsWords = 6,
@@ -357,7 +357,7 @@ internal val GUIDE_STEPS = listOf(
                     if (mark < 0) mark = event.start
                     if (abs(event.start - mark) >= CURSOR_TRAVEL_CHARACTERS) GuideVerdict.Done else GuideVerdict.Wait
                 }
-                event is Recognised -> GuideVerdict.Hint("That typed a word. Start with quick touches on Space.")
+                event is Recognised -> GuideVerdict.Hint("That typed a word. Start with quick taps just above the middle of Space.")
                 else -> GuideVerdict.Wait
             }
         },
@@ -417,7 +417,7 @@ internal fun commonMistake(step: GuideStep, event: KeyboardEvent): String? = whe
     event is ModifierState && event.alt != Modifiers.Level.Off && !step.usesPanel ->
         "Alt is on, so the touchpad does not type. Push Alt to turn it off."
     event is CursorStarted && step.cue !is GuideCue.Taps ->
-        "That moves the cursor. Quick touches on Space start it. Lift your finger to stop."
+        "That moves the cursor. Quick taps just above the middle of Space start it. Lift your finger to stop."
     event is HeldSymbol && step.id != "symbols" ->
         "A held key types its symbol. Push the keys quickly for letters."
     else -> null

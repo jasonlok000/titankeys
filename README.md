@@ -68,6 +68,10 @@ Hold a letter for the symbol printed in its corner. Push Sym for every other sym
 
 Push Sym two times for emoji. In the panel, Alt opens quick settings, with a letter for each setting, such as S for swiping and V for vibration, without leaving the app you are in.
 
+### Paste what you copied
+
+Right after you copy text, the strip shows it: touch it to paste. For older clips, push Sym, then Alt, then X for the clipboard, and push the key of the clip to paste it. Clips go after an hour, unless you pin them: push Enter, then the clip's key. Push Backspace two times to clear all but the pinned clips. TitanKeys keeps no text that an app marks as sensitive, nothing copied from a password field, and nothing leaves the phone.
+
 ## TitanKeys and Atlas
 
 Atlas is a great keyboard, and TitanKeys only exists because Julian built it and shared it. The two projects just aim for slightly different things. Atlas stays simple and keeps swiping for typing only. TitanKeys takes on more complexity to get the most out of the Titan 2 Elite, one-handed swipes included. If you'd rather have something simpler, Atlas is an excellent choice.

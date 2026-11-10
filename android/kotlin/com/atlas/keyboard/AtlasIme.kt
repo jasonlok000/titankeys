@@ -1,6 +1,8 @@
 package com.atlas.keyboard
 
 import android.content.BroadcastReceiver
+import android.content.ClipDescription
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -13,6 +15,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.AtomicFile
 import android.util.Log
 import android.view.Display
 import android.view.InputDevice
@@ -339,6 +342,8 @@ class AtlasIme : InputMethodService() {
         super.onCreate()
         Calibration.init(this)
         haptics = Haptics(this)
+        loadClips()
+        clipboard?.addPrimaryClipChangedListener(clipChanged)
         touchpad = Touchpad(getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY))
         editor = ConnectionEditor(::getCurrentInputConnection, ::getCurrentInputEditorInfo,
             { delay, action -> main.postDelayed(action, delay) }, { enterApps })
@@ -491,7 +496,8 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
-        val words = Strip(this, { index -> haptics.wordChanged(); enqueue { composer.choose(index) } }, ::holdWord, ::undoForget)
+        val words = Strip(this, { index -> haptics.wordChanged(); enqueue { composer.choose(index) } }, ::holdWord, ::undoForget,
+            { enqueue { pasteOfferedClip() } })
         val keys = SymPanel(this,
             pick = { item -> enqueue { typePanelItem(item) } },
             useQuickSetting = { item -> enqueue { useQuickSetting(item) } },
@@ -500,6 +506,8 @@ class AtlasIme : InputMethodService() {
             pressSym = { enqueue { modifiers.pressSym(); showModifiers() } },
             pageChanged = haptics::pageChanged,
             marked = { if (Haptics.enabled(this)) haptics.pulse() },
+            clipKey = { key -> enqueue { clipKey(key) } },
+            holdClip = { key -> enqueue { holdClip(key) } },
         )
         strip = words
         panel = keys
@@ -662,6 +670,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        offerClip()
         // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
     }
@@ -705,6 +714,144 @@ class AtlasIme : InputMethodService() {
         // The app has lost the keyboard, so coming back to it counts as a new start.
         hiddenByBack = false
         super.onUnbindInput()
+    }
+
+    // Clipboard history (#46). Since Android 10 only the keyboard in use, or the app in front, can read the clipboard. TitanKeys
+    // is the keyboard in use, so it hears each copy, also while it is hidden. It keeps no clip that the app marks as sensitive,
+    // and none copied while a password field has the keyboard.
+
+    private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
+    private var clipHistory = ClipboardHistory()
+    private val clipFile by lazy { AtomicFile(java.io.File(noBackupFilesDir, CLIP_FILE)) }
+    private var clipPinning = false
+    private var clipClearing = false
+    /** The time of the clip that the strip last offered and that was then pasted or passed over, so it is not offered again. */
+    private var clipOfferDone = -1L
+    private val endClipOffer = Runnable { dismissClipOffer() }
+    private val clipChanged = ClipboardManager.OnPrimaryClipChangedListener { readClip() }
+
+    private fun readClip() {
+        val clip = try {
+            clipboard?.primaryClip
+        } catch (error: RuntimeException) {
+            Log.w("Atlas", "Could not read the clipboard", error)
+            null
+        } ?: return
+        if (clip.description?.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true) return
+        if (editing && field.secret) return
+        if (clip.itemCount == 0) return
+        val text = clip.getItemAt(0).text?.toString() ?: return
+        expireClips()
+        if (!clipHistory.add(text, System.currentTimeMillis())) return
+        saveClips()
+        showClips()
+        offerClip()
+    }
+
+    private fun loadClips() {
+        clipHistory = try {
+            ClipboardHistory.decode(String(clipFile.readFully(), Charsets.UTF_8))
+        } catch (error: java.io.IOException) {
+            ClipboardHistory()
+        }
+        expireClips()
+    }
+
+    private fun saveClips() {
+        val stream = try {
+            clipFile.startWrite()
+        } catch (error: java.io.IOException) {
+            Log.w("Atlas", "Could not save the clipboard history", error)
+            return
+        }
+        try {
+            stream.write(clipHistory.encode().toByteArray(Charsets.UTF_8))
+            clipFile.finishWrite(stream)
+        } catch (error: java.io.IOException) {
+            clipFile.failWrite(stream)
+            Log.w("Atlas", "Could not save the clipboard history", error)
+        }
+    }
+
+    private fun expireClips() {
+        if (clipHistory.expire(System.currentTimeMillis())) saveClips()
+    }
+
+    /** Gives the clipboard page the clips as they are now. */
+    private fun showClips() {
+        panel?.clipPinning = clipPinning
+        panel?.clipClearing = clipClearing
+        panel?.clips = clipHistory.clips.toList()
+        panel?.render()
+    }
+
+    /** Right after a copy, the strip shows the newest clip until you paste it or type on. */
+    private fun offerClip() {
+        val newest = clipHistory.clips.firstOrNull()
+        val age = newest?.let { System.currentTimeMillis() - it.time }
+        if (newest == null || age == null || newest.time == clipOfferDone || age !in 0 until CLIP_OFFER_MILLIS || field.secret) {
+            strip?.clip = null
+            return
+        }
+        strip?.clip = newest.text
+        main.removeCallbacks(endClipOffer)
+        main.postDelayed(endClipOffer, CLIP_OFFER_MILLIS - age)
+    }
+
+    private fun dismissClipOffer() {
+        main.removeCallbacks(endClipOffer)
+        if (strip?.clip == null) return
+        clipOfferDone = clipHistory.clips.firstOrNull()?.time ?: -1L
+        strip?.clip = null
+    }
+
+    private fun pasteOfferedClip() {
+        val text = strip?.clip ?: return
+        dismissClipOffer()
+        haptics.wordChanged()
+        composer.paste(text)
+    }
+
+    /** A push or touch of a key on the clipboard page: a letter pastes its clip or, while pinning, pins it. */
+    private fun clipKey(key: String) {
+        when (key) {
+            Layout.BACKSPACE -> {
+                if (clipHistory.clips.none { !it.pinned }) return
+                clipPinning = false
+                if (clipClearing) {
+                    clipClearing = false
+                    if (clipHistory.clear()) saveClips()
+                } else clipClearing = true
+            }
+            Layout.ENTER -> {
+                if (clipHistory.clips.isEmpty()) return
+                clipClearing = false
+                clipPinning = !clipPinning
+            }
+            else -> {
+                val index = Layout.panelLetters.indexOf(key)
+                val clip = clipHistory.clips.getOrNull(index) ?: return
+                clipClearing = false
+                if (clipPinning) {
+                    if (clipHistory.togglePin(index)) saveClips()
+                } else {
+                    haptics.wordChanged()
+                    composer.paste(clip.text)
+                    closePanel()
+                    return
+                }
+            }
+        }
+        haptics.settingChanged()
+        showClips()
+    }
+
+    /** A touch held on a clip pins or unpins it, without the Pin key. */
+    private fun holdClip(key: String) {
+        if (!clipHistory.togglePin(Layout.panelLetters.indexOf(key))) return
+        saveClips()
+        haptics.settingChanged()
+        showClips()
     }
 
     /** A word held on the strip, which waits out its Undo before it is forgotten. */
@@ -1158,7 +1305,7 @@ class AtlasIme : InputMethodService() {
         QuickSetting.CursorControl -> TypingSettings.cursorControl(this)
         QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this)
         QuickSetting.ScrollAssistant -> !TypingSettings.touchpadOnlyInFields(this)
-        QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard -> true
+        QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard, QuickSetting.Clipboard -> true
     }
 
     private fun writeQuickSetting(item: QuickSetting, on: Boolean) = when (item) {
@@ -1173,7 +1320,7 @@ class AtlasIme : InputMethodService() {
         QuickSetting.CursorControl -> TypingSettings.cursorControl(this, on)
         QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this, on)
         QuickSetting.ScrollAssistant -> TypingSettings.touchpadOnlyInFields(this, !on)
-        QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard -> Unit
+        QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard, QuickSetting.Clipboard -> Unit
     }
 
     /** Pushing a key on the quick settings page. The change applies at once and the page stays open. Only the key that opens Settings leaves. */
@@ -1186,6 +1333,14 @@ class AtlasIme : InputMethodService() {
             QuickSetting.ChangeKeyboard -> {
                 showKeyboardPicker()
                 closePanel()
+            }
+            QuickSetting.Clipboard -> {
+                expireClips()
+                clipPinning = false
+                clipClearing = false
+                showClips()
+                modifiers.openClipboard()
+                showModifiers()
             }
             else -> {
                 writeQuickSetting(item, !quickSettingOn(item))
@@ -1311,6 +1466,7 @@ class AtlasIme : InputMethodService() {
     private fun outcome(outcome: Contact.Outcome) {
         Recording.sink?.outcome(outcome)
         inputLog()?.outcome(outcome)
+        if (!altOrPanel) dismissClipOffer()
         when (outcome) {
             is Contact.Outcome.Swipe -> {
                 showStripAfterBack()
@@ -1437,8 +1593,11 @@ class AtlasIme : InputMethodService() {
         if (touchpad.isGestureKey(event)) return true
         // Keys like volume reach the keyboard too, but they are not typing.
         if (!event.isSystem) showStripAfterBack()
-        // Typing on means the forgotten word can go, and the strip shows words again.
-        if (!event.isSystem && !Modifiers.isModifier(keyCode)) commitForget()
+        // Typing on means the forgotten word can go, and the strip shows words again. The newest clip goes from the strip too.
+        if (!event.isSystem && !Modifiers.isModifier(keyCode)) {
+            commitForget()
+            dismissClipOffer()
+        }
         // The touchpad hears the physical press now, before the key is typed.
         contact.key(keyCode, true, event.eventTime)
         val carried = carryCtrl(event)
@@ -1587,6 +1746,18 @@ class AtlasIme : InputMethodService() {
         if (event.repeatCount > 0 && event.keyCode == pickedKey) return true
         pickedKey = 0
         if (!panelOpen) return false
+        if (modifiers.panel == Modifiers.Panel.Clipboard && isInputViewShown) {
+            val key = when (event.keyCode) {
+                KeyEvent.KEYCODE_DEL -> Layout.BACKSPACE
+                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> Layout.ENTER
+                else -> null
+            }
+            if (key != null) {
+                pickedKey = event.keyCode
+                if (event.repeatCount == 0) clipKey(key)
+                return true
+            }
+        }
         Modifiers.panelScroll(event.keyCode, modifiers.panel)?.let { rows ->
             pickedKey = event.keyCode
             if (event.repeatCount == 0 && rows != 0f && panel?.swipe(0f, rows) == true) haptics.pageChanged()
@@ -1599,6 +1770,9 @@ class AtlasIme : InputMethodService() {
         if (modifiers.panel == Modifiers.Panel.Settings) QuickSetting.on(letter)?.let { item ->
             pickedKey = event.keyCode
             useQuickSetting(item)
+        } else if (modifiers.panel == Modifiers.Panel.Clipboard) {
+            pickedKey = event.keyCode
+            clipKey(letter)
         } else panel?.item(letter)?.let { item ->
             pickedKey = event.keyCode
             typePanelItem(item)
@@ -1683,6 +1857,7 @@ class AtlasIme : InputMethodService() {
         // A held status must not outlive the keyboard.
         if (hold.held) hideHeldWindow()
         unregisterReceiver(screenOn)
+        clipboard?.removePrimaryClipChangedListener(clipChanged)
         modifiers.closePanel()
         panelKeys.clear()
         updateKeyWatch()
@@ -1713,6 +1888,9 @@ class AtlasIme : InputMethodService() {
         private const val STALE_HIDE_MILLIS = 500L
         /** A touch this close to where a flick ended, in keys, carries the flick on as a swipe. */
         private const val FLICK_CARRY_KEYS = 1f
+        private const val CLIP_FILE = "clipboard-history"
+        /** How long after a copy the strip offers the newest clip. */
+        private const val CLIP_OFFER_MILLIS = 60_000L
         /** How long the strip offers Undo after you hold a word to forget it. */
         private const val FORGET_UNDO_MILLIS = 4000L
         /** The field of a returning window started within 30 ms of its empty start. */

@@ -658,6 +658,21 @@ class Composer(
         predictLater()
     }
 
+    /** Puts in [text] just as it is, as a paste does: no fix of the word before, and no space added. */
+    fun paste(text: String) {
+        if (defer { paste(text) }) return
+        leave()
+        invalidate(false)
+        fullStop = null
+        composition = Composition.None
+        manualWord.clear()
+        correcting = null
+        awaitingNextWord = null
+        if (!edit(EditCause.Paste, 0, text)) return
+        automaticSpace = null
+        predictLater()
+    }
+
     fun space(repeated: Boolean, time: Long) {
         if (defer(transferable = true) { space(repeated, time) }) return
         leave()

@@ -15,7 +15,7 @@ import android.view.KeyEvent
 class Modifiers {
     enum class Level { Off, Once, Locked }
     enum class Key { Shift, Alt }
-    enum class Panel { Closed, Symbols, Emoji, Settings }
+    enum class Panel { Closed, Symbols, Emoji, Settings, Clipboard }
     /** What happens to a push of Shift or Alt in an app that latches them by itself. */
     enum class AppPush { Pass, Hide, HideAndClear }
 
@@ -109,10 +109,10 @@ class Modifiers {
         return hiddenFromApp.remove(code)
     }
 
-    /** From the symbols or emoji to the quick settings page, or back to the page that it came from. */
+    /** From the symbols or emoji to the quick settings page, or back to the page that it came from. The clipboard goes back too. */
     fun toggleSettings() {
         if (panel == Panel.Closed) return
-        if (panel == Panel.Settings) panel = beforeSettings
+        if (panel == Panel.Settings || panel == Panel.Clipboard) panel = beforeSettings
         else {
             beforeSettings = panel
             panel = Panel.Settings
@@ -126,8 +126,13 @@ class Modifiers {
         panel = when (panel) {
             Panel.Closed -> Panel.Symbols
             Panel.Symbols -> Panel.Emoji
-            Panel.Emoji, Panel.Settings -> Panel.Closed
+            Panel.Emoji, Panel.Settings, Panel.Clipboard -> Panel.Closed
         }
+    }
+
+    /** From the quick settings page to the clipboard. Alt then goes back to the symbols or emoji, as from the quick settings. */
+    fun openClipboard() {
+        if (panel == Panel.Settings) panel = Panel.Clipboard
     }
 
     /** Back to normal typing, after an item is picked or the keyboard is hidden. */
@@ -246,7 +251,7 @@ class Modifiers {
             return when (panel) {
                 Panel.Closed -> null
                 Panel.Symbols, Panel.Emoji -> rows
-                Panel.Settings -> 0f
+                Panel.Settings, Panel.Clipboard -> 0f
             }
         }
 

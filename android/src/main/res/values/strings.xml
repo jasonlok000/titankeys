@@ -3,4 +3,17 @@
     <!-- The confirm on the suggestion strip after you hold a word to forget it. -->
     <string name="strip_forgot">Forgot “%1$s”</string>
     <string name="strip_undo">Undo</string>
+
+    <!-- The clipboard page of the Sym panel, and the newest clip on the strip. -->
+    <string name="clipboard_title">Clipboard. Push a key to paste.</string>
+    <string name="clipboard_empty">Copy text, and it shows here for an hour.</string>
+    <string name="clipboard_pinning">Push a key to pin or unpin it.</string>
+    <string name="clipboard_clear_again">Push Backspace again to clear all but pinned.</string>
+    <string name="clipboard_clear">Clear</string>
+    <string name="clipboard_pin">Pin</string>
+    <string name="clipboard_pin_done">Done</string>
+    <string name="clipboard_pinned">%1$s · Pinned</string>
+    <string name="clipboard_paste">Paste %1$s</string>
+    <string name="clipboard_description">Clipboard. The texts that you copied in the last hour, and the ones you pinned. Push a key to paste its text. Enter pins, and Backspace clears.</string>
+    <string name="strip_clip">Paste “%1$s”</string>
 </resources>

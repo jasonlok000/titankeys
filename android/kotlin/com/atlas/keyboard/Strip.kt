@@ -25,6 +25,8 @@ class Strip(
     /** A word was held to forget it. Returns false if it can't be forgotten. */
     private val hold: (Int) -> Boolean = { false },
     private val undo: () -> Unit = {},
+    /** The newest clip was touched, to paste it. */
+    private val paste: () -> Unit = {},
 ) : LinearLayout(context) {
     private val typeface = resources.getFont(R.font.inter_regular)
     private val wordViews = WORD_ORDER.map { index -> item({ choose(index) }, { hold(index) }) }
@@ -45,6 +47,17 @@ class Strip(
         text = context.getString(R.string.strip_undo)
         setPadding(dp(16), 0, dp(16), 0)
         setOnClickListener { undo() }
+    }
+    /** The newest clip, right after a copy. A touch pastes it. */
+    private val clipView = TextView(context).apply {
+        typeface = this@Strip.typeface
+        textSize = 17f
+        gravity = Gravity.CENTER
+        isSingleLine = true
+        ellipsize = TextUtils.TruncateAt.END
+        isFocusable = false
+        setPadding(dp(12), 0, dp(12), 0)
+        setOnClickListener { paste() }
     }
     private val forgetRow = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
@@ -101,6 +114,14 @@ class Strip(
             render()
         }
 
+    /** The newest clip, shown in the place of the words right after a copy, until it is pasted or you type on. */
+    var clip: String? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            render()
+        }
+
     /** Which modifiers are on, in the place of the words. Null shows the words. */
     var modifiers: ModifierBar? = null
         set(value) {
@@ -113,6 +134,7 @@ class Strip(
         for (view in wordViews) addView(view, LayoutParams(0, dp(56), 1f))
         addView(modifierRow, LayoutParams(0, dp(56), 1f))
         addView(forgetRow, LayoutParams(0, dp(56), 1f))
+        addView(clipView, LayoutParams(0, dp(56), 1f))
         // Screen readers go left to right, so point them at the best word first.
         val ranked = wordViews.withIndex().sortedBy { WORD_ORDER[it.index] }.map { it.value }
         for (view in ranked) view.id = generateViewId()
@@ -163,6 +185,7 @@ class Strip(
         // A strip that shows nothing has no height, and a bar there would move the app each time a modifier changes.
         val confirm = forgotten.takeIf { showSuggestions }
         val bar = modifiers.takeIf { showSuggestions && confirm == null }
+        val offer = clip.takeIf { showSuggestions && confirm == null && bar == null }
         setBackgroundColor(if (!showSuggestions) Color.TRANSPARENT else look.paper)
         // The lowest text sits about 16 dp over the bottom of the strip, where the corners curve in.
         side = maxOf(dp(8), corners.inset((navigationInset + dp(CONTENT_ABOVE)).toFloat()) + dp(4))
@@ -171,7 +194,7 @@ class Strip(
         minimumHeight = if (showSuggestions) 0 else 1
         for ((slot, view) in wordViews.withIndex()) {
             val index = WORD_ORDER[slot]
-            view.visibility = if (showSuggestions && bar == null && confirm == null) VISIBLE else GONE
+            view.visibility = if (showSuggestions && bar == null && confirm == null && offer == null) VISIBLE else GONE
             view.text = words.getOrElse(index) { "" }
             view.isEnabled = index < words.size
             view.setTextColor(look.ink)
@@ -196,6 +219,9 @@ class Strip(
         forgotLabel.text = confirm?.let { context.getString(R.string.strip_forgot, it) }.orEmpty()
         forgotLabel.setTextColor(look.ink)
         undoButton.setTextColor(look.accent)
+        clipView.visibility = if (offer != null) VISIBLE else GONE
+        clipView.text = offer?.let { context.getString(R.string.strip_clip, ClipboardHistory.preview(it)) }.orEmpty()
+        clipView.setTextColor(look.accent)
     }
 
     override fun dispatchDraw(canvas: Canvas) {
@@ -208,7 +234,7 @@ class Strip(
     }
 
     /** Whether the words are on show, so a flick up can pick one. */
-    val wordsShowing get() = showSuggestions && modifiers == null && forgotten == null && !gesture.showing && isShown
+    val wordsShowing get() = showSuggestions && modifiers == null && forgotten == null && clip == null && !gesture.showing && isShown
 
     /** Marks the word at place [index] on the bar for a moment, so that you see which word a flick picked. */
     fun flash(index: Int) {

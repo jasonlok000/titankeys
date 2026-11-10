@@ -39,6 +39,10 @@ class SymPanel(
     private val pageChanged: () -> Unit,
     /** A finger moved onto a key that shows a mark, like the tick of a swipe that crosses a key. */
     private val marked: () -> Unit = {},
+    /** A touch on a key of the clipboard page, which does what a push of that key does. */
+    private val clipKey: (String) -> Unit = {},
+    /** A touch held on a clip, which pins or unpins it. */
+    private val holdClip: (String) -> Unit = {},
 ) : LinearLayout(context) {
     private val typeface = resources.getFont(R.font.inter_regular)
     private val symbols = EmojiPages(Keys.symbolGroups(), emptyList())
@@ -68,6 +72,18 @@ class SymPanel(
     private var look = Look.of(context)
     private var shownMark = ""
 
+    /** The clipboard page's clips, newest first, one on each letter key in the order of [Layout.panelLetters]. */
+    var clips: List<ClipboardHistory.Clip> = emptyList()
+        set(value) {
+            field = value
+            if (clipboard) render()
+        }
+
+    /** On the clipboard page, a push of a letter pins or unpins its clip, and does not paste it. */
+    var clipPinning = false
+    /** On the clipboard page, Backspace was pushed once, so a second push clears all. */
+    var clipClearing = false
+
     /** Null until the emoji list has loaded. */
     var emoji: EmojiPages? = null
         set(value) {
@@ -79,7 +95,7 @@ class SymPanel(
         set(value) {
             if (field == value) return
             // The quick settings page goes in front of the symbols or emoji, so they are still at the same page after it.
-            val fromSettings = field == Modifiers.Panel.Settings
+            val fromSettings = field == Modifiers.Panel.Settings || field == Modifiers.Panel.Clipboard
             field = value
             if (!fromSettings) pages?.reset()
             hover = ""
@@ -98,10 +114,14 @@ class SymPanel(
     private val pages get() = when (mode) {
         Modifiers.Panel.Symbols -> symbols
         Modifiers.Panel.Emoji -> emoji
-        Modifiers.Panel.Closed, Modifiers.Panel.Settings -> null
+        Modifiers.Panel.Closed, Modifiers.Panel.Settings, Modifiers.Panel.Clipboard -> null
     }
 
     private val quick get() = mode == Modifiers.Panel.Settings
+    private val clipboard get() = mode == Modifiers.Panel.Clipboard
+
+    /** The clip on a letter key of the clipboard page, or null if the key has none. */
+    private fun clipAt(key: String) = if (clipboard) clips.getOrNull(Layout.panelLetters.indexOf(key)) else null
 
     init {
         orientation = VERTICAL
@@ -186,6 +206,11 @@ class SymPanel(
         includeFontPadding = false
         isFocusable = false
         setOnClickListener { touched(key) }
+        setOnLongClickListener {
+            if (clipAt(key) == null) return@setOnLongClickListener false
+            holdClip(key)
+            true
+        }
     }
 
     /** A touch on the screen does what a push of the key does. Android's click comes when the finger lifts, and not if it slid off the key. */
@@ -195,6 +220,7 @@ class SymPanel(
             key == Layout.ALT -> pressAlt()
             key == Layout.SYM -> pressSym()
             quick -> QuickSetting.on(key)?.let(useQuickSetting)
+            clipboard -> clipKey(key)
             rows != null -> if (swipe(0f, rows)) pageChanged()
             else -> item(key)?.let(pick)
         }
@@ -214,7 +240,7 @@ class SymPanel(
     private class Icon(val drawable: Int, val description: String)
 
     private fun icon(key: String) = when {
-        key == Layout.ALT -> if (mode == Modifiers.Panel.Settings) Icon(R.drawable.panel_back, "Go back")
+        key == Layout.ALT -> if (quick || clipboard) Icon(R.drawable.panel_back, "Go back")
             else Icon(R.drawable.panel_settings, "Open quick settings")
         // What Sym does next: from the symbols it opens the emoji, and from the other pages it closes the panel.
         key == Layout.SYM -> if (mode == Modifiers.Panel.Symbols) Icon(R.drawable.panel_emoji, "Show emoji")
@@ -235,15 +261,31 @@ class SymPanel(
     /** What a key shows as text, or null if it shows none. */
     private fun label(key: String) = when {
         quick -> QuickSetting.on(key)?.label
+        clipboard -> when (key) {
+            Layout.BACKSPACE -> context.getString(R.string.clipboard_clear).takeIf { clips.any { !it.pinned } }
+            Layout.ENTER -> context.getString(if (clipPinning) R.string.clipboard_pin_done else R.string.clipboard_pin).takeIf { clips.isNotEmpty() }
+            else -> clipAt(key)?.let { ClipboardHistory.label(it.text) }
+        }
         showsPosition(key) -> position()
         else -> item(key)
     }
 
     private fun describe(item: QuickSetting) =
-        if (item == QuickSetting.OpenSettings || item == QuickSetting.ChangeKeyboard) item.title else "${item.title}: ${if (quickSettingOn(item)) "On" else "Off"}"
+        if (item == QuickSetting.OpenSettings || item == QuickSetting.ChangeKeyboard || item == QuickSetting.Clipboard) item.title else "${item.title}: ${if (quickSettingOn(item)) "On" else "Off"}"
 
     /** What the strip at the bottom says for a key under a finger on the quick settings page, or null if it says nothing. */
-    private fun detail(key: String) = if (quick) QuickSetting.on(key)?.let(::describe) else null
+    private fun detail(key: String) = if (quick) QuickSetting.on(key)?.let(::describe)
+        else clipAt(key)?.let { clip ->
+            ClipboardHistory.preview(clip.text).let { if (clip.pinned) context.getString(R.string.clipboard_pinned, it) else it }
+        }
+
+    /** What the strip at the bottom of the clipboard page says when no finger rests on a clip. */
+    private fun clipboardTitle() = context.getString(when {
+        clipClearing -> R.string.clipboard_clear_again
+        clipPinning -> R.string.clipboard_pinning
+        clips.isEmpty() -> R.string.clipboard_empty
+        else -> R.string.clipboard_title
+    })
 
     private fun dim(key: String) = quick && QuickSetting.on(key)?.let(quickSettingOn) == false
 
@@ -278,8 +320,8 @@ class SymPanel(
         setBackgroundColor(look.paper)
         setPadding(dp(4), 0, dp(4), navigationInset)
         val current = pages
-        categories.visibility = if (quick) GONE else VISIBLE
-        preview.visibility = if (quick) VISIBLE else GONE
+        categories.visibility = if (quick || clipboard) GONE else VISIBLE
+        preview.visibility = if (quick || clipboard) VISIBLE else GONE
         preview.setTextColor(look.ink)
         showCategories(current)
         keepClearOfCorners()
@@ -290,7 +332,7 @@ class SymPanel(
             view.text = value.orEmpty()
             view.foreground = icon?.let { context.getDrawable(it.drawable) }
             // A label must fit its key, so it shrinks where a symbol keeps its size.
-            if (quick || isPosition) view.setAutoSizeTextTypeUniformWithConfiguration(LABEL_SMALLEST, LABEL_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
+            if (quick || clipboard || isPosition) view.setAutoSizeTextTypeUniformWithConfiguration(LABEL_SMALLEST, LABEL_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
             else {
                 view.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
                 view.sized(ITEM_SIZE, ITEM_LARGEST)
@@ -300,12 +342,14 @@ class SymPanel(
             view.contentDescription = when {
                 icon != null -> icon.description
                 quick -> detail(key)
+                clipboard -> detail(key)?.let { context.getString(R.string.clipboard_paste, it) } ?: value
                 isPosition -> value?.let { "Page ${current?.pageNumber()} of ${current?.pageCount()}" }
                 else -> value?.let { "Insert $it" }
             }
         }
         contentDescription = when {
             quick -> "$QUICK_TITLE. Rest a finger on a key to see its setting. Push the key to change the setting."
+            clipboard -> context.getString(R.string.clipboard_description)
             current != null -> "${if (mode == Modifiers.Panel.Symbols) "Symbols" else "Emoji"}, ${current.group()}. " +
                 "Push a key to type it. Swipe up or down on the keyboard to see more, or push Backspace or Enter. " +
                 "Swipe left or right to change the group, or put a finger on the bottom row of keys."
@@ -352,12 +396,18 @@ class SymPanel(
 
     /** A letter key under a resting finger takes the accent, as [Layout.restMarks] says. A setting's name shows in the strip at the bottom. */
     private fun showHover() {
-        preview.text = detail(hover) ?: if (quick) QUICK_TITLE else ""
+        preview.text = detail(hover) ?: if (quick) QUICK_TITLE else if (clipboard) clipboardTitle() else ""
         val mark = hover.takeIf { Layout.restMarks(it, pages != null) && label(it) != null }.orEmpty()
         for ((key, view) in cells) {
             val hovered = key == mark
             view.setBackgroundColor(if (hovered) look.accent else Color.TRANSPARENT)
-            view.setTextColor(if (hovered) look.onAccent else if (dim(key)) Color.GRAY else if (showsPosition(key)) look.muted else look.ink)
+            view.setTextColor(when {
+                hovered -> look.onAccent
+                dim(key) -> Color.GRAY
+                showsPosition(key) -> look.muted
+                clipAt(key)?.pinned == true -> look.accent
+                else -> look.ink
+            })
             view.foregroundTintList = ColorStateList.valueOf(look.ink)
         }
         if (mark != shownMark) {

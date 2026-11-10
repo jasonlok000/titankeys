@@ -75,9 +75,9 @@ internal sealed interface GuideCue {
  * The drawing of the keys acts it out at the same time.
  */
 internal sealed interface GuideDemo {
-    /** The letters of the next word appear one by one, as if pushed. */
+    /** The letters of the next word appear one by one, as if pushed, then its punctuation as the keyboard types it. */
     data object TypeNext : GuideDemo
-    /** The next word appears whole, at the end of the ghost swipe. */
+    /** The next word appears whole, at the end of the ghost swipe, then its punctuation as the keyboard types it. */
     data object SwipeNext : GuideDemo
     /** The next word appears with a slip in it, then the right word takes its place, as a touch on the strip does. */
     data object FixNext : GuideDemo
@@ -124,6 +124,36 @@ internal object GuideScript {
         return done
     }
 
+    /**
+     * The pushes that put [word] in the field as the keyboard really does (#59). Typed, each letter is a push; swiped, the
+     * word lands at once with the space that a swipe adds. The marks after it come next: with [autoPunctuation] on, a full
+     * stop is two pushes of Space, and any other mark is Alt and the key that [keyFor] says has that mark, or nothing lit if
+     * no key has it. A mark after a swiped word takes the place of its space, as on the keyboard.
+     */
+    fun pushes(word: String, swiped: Boolean, autoPunctuation: Boolean, keyFor: (Char) -> String?): List<DemoPush> {
+        val marks = word.takeLastWhile { !it.isLetterOrDigit() }
+        val base = word.dropLast(marks.length)
+        val pushes = ArrayList<DemoPush>()
+        if (swiped) pushes += DemoPush(emptyList(), "$base ")
+        else for (i in 1..base.length) pushes += DemoPush(listOfNotNull(base[i - 1].takeIf { it.isLetter() }?.uppercase()), base.take(i))
+        var text = pushes.lastOrNull()?.text ?: ""
+        for (mark in marks) {
+            if (mark == '.' && autoPunctuation) {
+                // The first Space after a swipe only arms the full stop: the swipe's space is already there.
+                text = if (text.endsWith(' ')) text else "$text "
+                pushes += DemoPush(listOf(Layout.SPACE), text)
+                text = text.trimEnd() + ". "
+                pushes += DemoPush(listOf(Layout.SPACE), text)
+                continue
+            }
+            val key = keyFor(mark)
+            if (key != null) pushes += DemoPush(listOf(Layout.ALT), text)
+            text = text.trimEnd(' ') + mark
+            pushes += DemoPush(listOfNotNull(key), text)
+        }
+        return pushes
+    }
+
     /** The word at [index], starting again after the end. */
     fun wordAt(index: Int) = words[index.mod(words.size)]
 
@@ -146,6 +176,9 @@ internal object GuideScript {
         return added.joinToString(" ")
     }
 }
+
+/** One push in a demonstration: the keys that light, and the text that the word has become after it. */
+internal data class DemoPush(val keys: List<String>, val text: String)
 
 /** A setting that a step needs. If it is off, the step offers to turn it on. */
 internal enum class GuideNeed(val offer: String, val optional: Boolean = false) {

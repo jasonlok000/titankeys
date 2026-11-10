@@ -15,6 +15,7 @@ import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** The guide's brand colours. They are the values in lib/brand.ts and the app icon. */
@@ -109,7 +110,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private var ghost: List<FloatArray> = emptyList()
     private var cueStart = 0L
 
-    /** The finger's path in touchpad space, from 0 to 1 each way, as pairs of x and y. */
+    /** The finger's path in touchpad space, from 0 to 1 each way: each point's x, y and thickness, 1 for a usual touch. */
     private val trail = ArrayList<FloatArray>()
     private var liftedAt = -1L
     /** When a real finger was last on the keys. The ghost waits while one is there, so it never gets in its way. */
@@ -391,29 +392,45 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             }
             moving = true
         }
-        path.rewind()
-        var px = trail[0][0] * width
-        var py = trail[0][1] * height
-        path.moveTo(px, py)
-        for (i in 1 until trail.size) {
-            val x = trail[i][0] * width
-            val y = trail[i][1] * height
-            path.quadTo(px, py, (px + x) / 2, (py + y) / 2)
-            px = x
-            py = y
-        }
-        path.lineTo(px, py)
-        val under = if (tone == GuideTone.Orange) GuideMotion.faded(GuideColours.INK, TRAIL_SHADE * alpha) else GuideMotion.faded(GuideColours.ORANGE, TRAIL_SHADE * alpha)
-        trailPaint.color = under
-        trailPaint.strokeWidth = dp(TRAIL_WIDTH) * TRAIL_UNDER
-        canvas.drawPath(path, trailPaint)
-        trailPaint.color = GuideMotion.faded(GuideColours.CREAM, alpha)
-        trailPaint.strokeWidth = dp(TRAIL_WIDTH)
-        canvas.drawPath(path, trailPaint)
-        dotPaint.color = trailPaint.color
-        canvas.drawCircle(px, py, dp(TRAIL_WIDTH) * .9f, dotPaint)
+        // Each pass is drawn whole and then faded, so where its pieces overlap it does not darken.
+        trailPaint.color = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE
+        var layer = canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), (TRAIL_SHADE * alpha * 255).roundToInt())
+        drawTrailPieces(canvas, dp(TRAIL_WIDTH) * TRAIL_UNDER)
+        canvas.restoreToCount(layer)
+        trailPaint.color = GuideColours.CREAM
+        dotPaint.color = GuideColours.CREAM
+        layer = canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), (alpha * 255).roundToInt())
+        drawTrailPieces(canvas, dp(TRAIL_WIDTH))
+        val last = trail[trail.size - 1]
+        canvas.drawCircle(last[0] * width, last[1] * height, dp(TRAIL_WIDTH) * .9f * thickness(last), dotPaint)
+        canvas.restoreToCount(layer)
         return moving
     }
+
+    /**
+     * The trail as one smooth curve, drawn a piece at a time so each piece takes its own thickness: thicker where the
+     * touch was larger than usual for that spot, thinner where it was lighter. Round ends join the pieces seamlessly.
+     */
+    private fun drawTrailPieces(canvas: Canvas, width: Float) {
+        var startX = trail[0][0] * this.width
+        var startY = trail[0][1] * height
+        for (i in 1..trail.size) {
+            val corner = trail[i - 1]
+            val cx = corner[0] * this.width
+            val cy = corner[1] * height
+            // Each piece runs from the middle before a point to the middle after it, curving through the point.
+            val (endX, endY) = if (i < trail.size) (cx + trail[i][0] * this.width) / 2 to (cy + trail[i][1] * height) / 2 else cx to cy
+            path.rewind()
+            path.moveTo(startX, startY)
+            path.quadTo(cx, cy, endX, endY)
+            trailPaint.strokeWidth = width * thickness(corner)
+            canvas.drawPath(path, trailPaint)
+            startX = endX
+            startY = endY
+        }
+    }
+
+    private fun thickness(point: FloatArray) = if (point.size > 2) point[2] else 1f
 
     /** The ghost finger: thin, dashed by the time it lasts, then a pause, then again. */
     private fun drawGhost(canvas: Canvas, now: Long) {

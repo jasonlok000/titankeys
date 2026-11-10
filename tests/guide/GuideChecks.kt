@@ -40,6 +40,8 @@ fun main() {
     settingsThatStepsNeed()
     goingBack()
     resuming()
+    theTrailFollowsTouchSize()
+    demonstrationsTypePunctuation()
     println("Guide checks passed")
 }
 
@@ -252,4 +254,57 @@ private fun resuming() {
     same(flow.chapterCount, GuideChapter.entries.size, "Each part counts")
     same(flow.stepCount, GUIDE_STEPS.size - 1, "The bar counts every step but the ending")
     same(flow.finished, false, "The start is not the end")
+}
+
+/** #52: a light fingertip draws a thin trail, a flat thumb a thick one, and a touch that wavers by a step stays calm. */
+private fun theTrailFollowsTouchSize() {
+    fun steady(step: Int, x: Float = .45f, y: Float = .4f): Float {
+        val trail = TrailThickness()
+        var thickness = 0f
+        repeat(40) { thickness = trail.next(x, y, step) }
+        return thickness
+    }
+    same(TrailThickness().next(.5f, .5f, 0), 1f, "A touch of unknown size should draw the usual trail")
+    check(steady(1) < .7f) { "A light fingertip should draw a thin trail, got ${steady(1)}" }
+    same(steady(3), 1f, "A usual touch should draw the usual trail")
+    check(steady(2) in .9f..1.1f) { "A touch a step lighter than usual should still look usual, got ${steady(2)}" }
+    check(steady(6) > 1.5f) { "A flat thumb should draw a thick trail, got ${steady(6)}" }
+    same(steady(40), TrailThickness.THICKEST, "The thickest trail should be capped")
+    // Step 3 is usual in the middle of the pad and large on the top row.
+    check(steady(3, y = .1f) > steady(3, y = .4f) + .2f) { "The same step should count as larger where touches are usually smaller" }
+    val trail = TrailThickness()
+    repeat(40) { trail.next(.45f, .4f, 3) }
+    val wobble = (0 until 40).map { trail.next(.45f, .4f, if (it % 2 == 0) 2 else 3) }
+    check(wobble.zipWithNext().all { (a, b) -> kotlin.math.abs(a - b) < .06f }) { "A touch wavering by a step should not flicker: $wobble" }
+    val jump = TrailThickness()
+    repeat(40) { jump.next(.45f, .4f, 3) }
+    check(jump.next(.45f, .4f, 4) < 1.05f) { "One larger point should only start to thicken the trail" }
+    same(jump.next(.45f, .4f, 0), jump.next(.45f, .4f, 0), "A point of unknown size should keep the thickness")
+}
+
+/** #59: a demonstration types a word's marks as the keyboard really does, and counting still ignores them. */
+private fun demonstrationsTypePunctuation() {
+    val alt = mapOf(',' to "M", ':' to "Z", '.' to "N")
+    fun shown(word: String, swiped: Boolean, auto: Boolean = true, keyFor: (Char) -> String? = { alt[it] }) =
+        GuideScript.pushes(word, swiped, auto, keyFor).map { it.keys.joinToString("+") + "=" + it.text }
+    same(shown("Then", false), listOf("T=T", "H=Th", "E=The", "N=Then"), "A typed word is a push for each letter")
+    same(shown("go.", false), listOf("G=g", "O=go", "space=go ", "space=go. "), "A full stop is Space twice")
+    same(shown("go.", true), listOf("=go ", "space=go ", "space=go. "), "After a swipe, the first Space only arms the full stop")
+    same(shown("one,", false), listOf("O=o", "N=on", "E=one", "alt=one", "M=one,"), "A comma is Alt and its key")
+    same(shown("one,", true), listOf("=one ", "alt=one ", "M=one,"), "A mark after a swipe takes the place of its space")
+    same(shown("unlearn:", true).last(), "Z=unlearn:", "A colon is Alt and its key")
+    same(shown("go.", false, auto = false).takeLast(2), listOf("alt=go", "N=go."), "With auto punctuation off, a full stop is Alt and its key")
+    same(shown("hi?", true, keyFor = { null }).last(), "=hi?", "A mark that no key has still shows, with nothing lit")
+    for (word in GuideScript.words) {
+        val text = GuideScript.pushes(word, false, true) { alt[it] }.last().text
+        same(text.trimEnd(), word, "Typing $word ends in the script's own word")
+    }
+    // Counting stays lenient: a word counts with or without its marks.
+    same(GuideScript.progress("Nothing to unlearn "), GuideScript.progress("Nothing to unlearn: "), "Marks do not change the count")
+    same(GuideScript.progress("Nothing to unlearn"), 3, "A word without its colon still counts")
+    val flow = GuideFlow({ GuideSettings() })
+    flow.start("swipe")
+    same(flow.step.id, "swipe", "The swipe slide should open")
+    val done = (0 until 10).firstOrNull { flow.event(Recognised(listOf(GuideScript.letters(GuideScript.wordAt(it))))) == GuideVerdict.Done }
+    same(done != null, true, "Swiped words without their marks should finish the swipe slide")
 }

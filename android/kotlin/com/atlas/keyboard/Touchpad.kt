@@ -13,8 +13,11 @@ import com.atlas.engine.TouchAlignment
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** A touchpad position from 0 to 1 on each axis, with its event time in milliseconds. */
-data class Sample(val x: Float, val y: Float, val time: Long) {
+/**
+ * A touchpad position from 0 to 1 on each axis, with its event time in milliseconds. [step] is the sensor's contact size
+ * as a whole step, round(size × 255), or 0 when it is not known.
+ */
+data class Sample(val x: Float, val y: Float, val time: Long, val step: Int = 0) {
     val valid: Boolean get() = x.isFinite() && y.isFinite() && time >= 0
         && x in -Swipe.MAX_ABS_COORDINATE..Swipe.MAX_ABS_COORDINATE
         && y in -Swipe.MAX_ABS_COORDINATE..Swipe.MAX_ABS_COORDINATE
@@ -50,16 +53,17 @@ class Touchpad(private val display: Display) {
             // Moves can carry a resampled position, which is not a whole raw step.
             if (event.actionMasked != MotionEvent.ACTION_MOVE) checkScale(event.rawY - offset, scales.first)
         }
-        fun sample(rawX: Float, rawY: Float, time: Long): Sample {
+        fun sample(rawX: Float, rawY: Float, time: Long, size: Float): Sample {
             val padX = (rawX - x.first) / x.second
             val padY = if (scales == null) (rawY - y.first) / y.second
                 else rawY / (if (landscapeScale) scales.second else scales.first) / RAW_MAX_Y
-            return Sample(alignment.x(padX, padY), alignment.y(padY), time)
+            val step = if (size.isFinite() && size > 0) (size * 255).roundToInt() else 0
+            return Sample(alignment.x(padX, padY), alignment.y(padY), time, step)
         }
         val samples = ArrayList<Sample>(event.historySize + 1)
         for (i in 0 until event.historySize)
-            samples += sample(event.getHistoricalX(i) + shiftX, event.getHistoricalY(i) + shiftY, event.getHistoricalEventTime(i))
-        if (event.actionMasked != MotionEvent.ACTION_CANCEL) samples += sample(event.rawX, event.rawY - offset, event.eventTime)
+            samples += sample(event.getHistoricalX(i) + shiftX, event.getHistoricalY(i) + shiftY, event.getHistoricalEventTime(i), event.getHistoricalSize(i))
+        if (event.actionMasked != MotionEvent.ACTION_CANCEL) samples += sample(event.rawX, event.rawY - offset, event.eventTime, event.size)
         return samples
     }
 

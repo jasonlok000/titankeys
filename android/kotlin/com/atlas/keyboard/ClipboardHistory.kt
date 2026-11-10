@@ -46,8 +46,32 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
     fun encode() = items.joinToString("\n") { "${it.time}\t${if (it.pinned) 1 else 0}\t${escape(it.text)}" }
 
     companion object {
-        /** The letter keys of the panel hold this many, with room to spare. */
         const val LIMIT = 20
+        /**
+         * The clipboard page shows this many clips at a time: two to a row, each over half a row of keys, so that a clip is large
+         * enough to read. A swipe up or down shows the next or previous six.
+         */
+        const val PER_PAGE = 6
+
+        /** Where a key is on the clipboard page: row times two, plus one for the right half. Null for a key that is not a letter. */
+        fun slot(key: String): Int? {
+            if (!Layout.isLetter(key)) return null
+            for ((row, keys) in Layout.rows.take(PER_PAGE / 2).withIndex()) {
+                val column = keys.indexOf(key)
+                if (column >= 0) return row * 2 + if (column < HALF_ROW) 0 else 1
+            }
+            return null
+        }
+
+        /** A letter key under a box of the clipboard page, which pastes what a touch on the box pastes. */
+        fun keyFor(slot: Int): String {
+            val row = Layout.rows[slot / 2]
+            return row.drop(slot % 2 * HALF_ROW).take(HALF_ROW).first(Layout::isLetter)
+        }
+
+        fun pageCount(clips: Int) = maxOf(1, (clips + PER_PAGE - 1) / PER_PAGE)
+
+        private const val HALF_ROW = 5
         const val KEEP_MILLIS = 60 * 60 * 1000L
         /** A longer text stays in Android's own clipboard only. */
         const val MAX_CHARS = 10_000
@@ -60,20 +84,11 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
             Clip(unescape(parts[2]), time, parts[1] == "1").takeIf { it.text.isNotBlank() }
         })
 
-        /** A short label for a key: the start of the clip's first line that has text. */
-        fun label(text: String, length: Int = LABEL_LENGTH): String {
-            val line = text.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }.orEmpty()
-            return if (line.length <= length) line else line.take(length - 1).trimEnd() + "…"
-        }
-
         /** The clip on one line, for the strip and the band under the keys, cut at [length] characters. */
         fun preview(text: String, length: Int = Int.MAX_VALUE): String {
             val line = text.trim().replace(Regex("\\s+"), " ")
             return if (line.length <= length) line else line.take(length - 1).trimEnd() + "…"
         }
-
-        /** Two short lines on a key. */
-        private const val LABEL_LENGTH = 12
 
         private fun escape(text: String) = buildString {
             for (character in text) when (character) {

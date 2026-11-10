@@ -54,10 +54,17 @@ fun main() {
     same(ClipboardHistory.decode("broken\n12\t2\tbad\n\n7\t0\tgood").clips, listOf(ClipboardHistory.Clip("good", 7)),
         "Damaged lines are left out")
 
-    same(ClipboardHistory.label("  \n  Hello world, again"), "Hello world…", "A key shows the start of the first line with text")
-    same(ClipboardHistory.label("Hi"), "Hi", "A short clip shows whole")
     same(ClipboardHistory.preview(" one\n two\tthree "), "one two three", "The preview is one line")
     same(ClipboardHistory.preview("abcdefghij", 5), "abcd…", "The strip cuts a long clip to fit one line")
+
+    // The clipboard page: six clips at a time, two to a row, each over half a row of keys.
+    same(listOf("Q", "T", "Y", "P", "A", "G", "H", "L", "Z", "V", "B", "M").map(ClipboardHistory::slot),
+        listOf(0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5), "Each half row of letters is under one clip")
+    same(listOf(Layout.ALT, Layout.SYM, Layout.BACKSPACE, Layout.ENTER, Layout.SPACE).map(ClipboardHistory::slot),
+        listOf(null, null, null, null, null), "Alt, Sym, Backspace, Enter and Space are no clip")
+    for (slot in 0 until ClipboardHistory.PER_PAGE)
+        same(ClipboardHistory.slot(ClipboardHistory.keyFor(slot)), slot, "A touch on clip $slot pastes what its keys paste")
+    same(listOf(0, 1, 6, 7, 20).map(ClipboardHistory::pageCount), listOf(1, 1, 1, 2, 4), "Six clips to a page, and one page when empty")
 
     // The page in the Sym panel.
     same(QuickSetting.on("X"), QuickSetting.Clipboard, "X opens the clipboard from the quick settings page")

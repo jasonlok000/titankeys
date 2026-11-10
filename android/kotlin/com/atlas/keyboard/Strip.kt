@@ -7,13 +7,11 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.SystemClock
-import android.content.res.ColorStateList
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.WindowInsets
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -73,23 +71,24 @@ class Strip(
         addView(noticeLabel, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         for (button in noticeButtons) addView(button, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
     }
-    /** The newest clip, right after a copy: a clipboard icon and the start of the clip. A touch pastes it. */
-    private val clipIcon = ImageView(context).apply {
-        setImageResource(R.drawable.clipboard)
-        isFocusable = false
-    }
+    /**
+     * The newest clip, right after a copy: a clipboard icon and the start of the clip, at the size and on the line of the words, so
+     * that it reads as one of them. A touch pastes it.
+     */
     private val clipText = TextView(context).apply {
         typeface = this@Strip.typeface
         textSize = 17f
+        gravity = Gravity.CENTER
         isSingleLine = true
         ellipsize = TextUtils.TruncateAt.END
-        includeFontPadding = false
         isFocusable = false
+        compoundDrawablePadding = dp(8)
     }
     /** Said once, under the first clip that the strip offers: where the older clips are. */
     private val clipHintText = TextView(context).apply {
         typeface = this@Strip.typeface
         textSize = 12f
+        gravity = Gravity.CENTER
         isSingleLine = true
         ellipsize = TextUtils.TruncateAt.END
         includeFontPadding = false
@@ -97,16 +96,12 @@ class Strip(
         text = context.getString(R.string.strip_clip_hint)
     }
     private val clipView = LinearLayout(context).apply {
+        orientation = VERTICAL
         gravity = Gravity.CENTER
         isFocusable = false
-        setPadding(dp(12), 0, dp(12), 0)
-        addView(clipIcon, LayoutParams(dp(CLIP_ICON), dp(CLIP_ICON)).apply { marginEnd = dp(10) })
-        addView(LinearLayout(context).apply {
-            orientation = VERTICAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(clipText, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
-            addView(clipHintText, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) })
-        }, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+        setPadding(dp(6), 0, dp(6), 0)
+        addView(clipText, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        addView(clipHintText, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
         setOnClickListener { paste() }
     }
     private val chips = ModifierBar.ALL.associateWith(::chip)
@@ -283,7 +278,12 @@ class Strip(
         // The start of the clip, cut cleanly at the end of the line.
         clipText.text = offer?.let { ClipboardHistory.preview(it, CLIP_PREVIEW_LENGTH) }.orEmpty()
         clipText.setTextColor(look.ink)
-        clipIcon.imageTintList = ColorStateList.valueOf(look.accent)
+        // The icon is as tall as the letters, so it sits on their line.
+        val icon = Math.round(clipText.textSize * CLIP_ICON_SCALE)
+        clipText.setCompoundDrawablesRelative(context.getDrawable(R.drawable.clipboard)?.mutate()?.apply {
+            setBounds(0, 0, icon, icon)
+            setTint(look.accent)
+        }, null, null, null)
         clipHintText.visibility = if (offer != null && clipHint) VISIBLE else GONE
         clipHintText.setTextColor(look.muted)
         selectedView.visibility = if (chosen != null) VISIBLE else GONE
@@ -341,7 +341,8 @@ class Strip(
         private val WORD_ORDER = listOf(1, 0, 2)
         /** Enough of the clip for one line. The line itself cuts it cleanly where it ends. */
         private const val CLIP_PREVIEW_LENGTH = 200
-        private const val CLIP_ICON = 22
+        /** The clipboard icon beside a clip, as a part of the text size. */
+        private const val CLIP_ICON_SCALE = 1.1f
         /** Save, Forget and Back. */
         private const val MAX_BUTTONS = 3
         private const val CHIP_SIZE = 13f

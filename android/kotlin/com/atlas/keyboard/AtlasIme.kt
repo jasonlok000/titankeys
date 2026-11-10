@@ -787,7 +787,7 @@ class AtlasIme : InputMethodService() {
                 clipPinning = !clipPinning
             }
             else -> {
-                val index = Layout.panelLetters.indexOf(key)
+                val index = panel?.clipIndex(key) ?: return
                 val clip = clipHistory.clips.getOrNull(index) ?: return
                 clipClearing = false
                 if (clipPinning) {
@@ -809,6 +809,7 @@ class AtlasIme : InputMethodService() {
         expireClips()
         clipPinning = false
         clipClearing = false
+        panel?.clipPage = 0
         showClips()
         modifiers.openClipboard()
         showModifiers()
@@ -816,7 +817,7 @@ class AtlasIme : InputMethodService() {
 
     /** A touch held on a clip pins or unpins it, without the Pin key. */
     private fun holdClip(key: String) {
-        if (!clipHistory.togglePin(Layout.panelLetters.indexOf(key))) return
+        if (!clipHistory.togglePin(panel?.clipIndex(key) ?: return)) return
         saveClips()
         haptics.settingChanged()
         showClips()

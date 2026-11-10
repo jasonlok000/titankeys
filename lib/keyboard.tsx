@@ -23,8 +23,8 @@ const row = height / 4;
 const icon = 22;
 
 /**
- * The Titan 2 keyboard face, with the latest touchpad trail drawn over it. A thin orange box shows the part that the touchpad
- * feels: its sensor stops at the middle of the outer columns and of the bottom row.
+ * The Titan 2 keyboard face, with the latest touchpad trail drawn over it. A faint box shows the part that the touchpad
+ * feels: its sensor stops at the middle of the outer columns, of the top row and of the bottom row.
  */
 export function KeyboardDiagram({ trail }: { trail: Point[] }) {
   const line = MUTED;
@@ -45,7 +45,7 @@ export function KeyboardDiagram({ trail }: { trail: Point[] }) {
         {name.text}
       </CanvasText>
       : <CanvasIcon key={`label-${index}`} x={x + 1 + (span - icon) / 2} y={y + 1 + (row - icon) / 2} size={icon} name={name.icon} colour={label} />)}
-    <Rectangle x={1 + width * .05} y={1} width={width * .9} height={height * 3.54 / 4} stroke={ORANGE} strokeWidth={1.5} />
+    <Rectangle x={1 + width * .05} y={1 + height * .5 / 4} width={width * .9} height={height * (3.54 - .5) / 4} stroke={MUTED} strokeWidth={1} />
     {trail.length > 0 && <CanvasPath points={trail.map(([x, y]) => [1 + x * width, 1 + y * height] as const)}
       stroke={ink} strokeWidth={4} />}
   </Canvas>;

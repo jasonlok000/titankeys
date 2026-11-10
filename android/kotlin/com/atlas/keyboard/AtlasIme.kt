@@ -328,14 +328,19 @@ class AtlasIme : InputMethodService() {
     }
 
     private val screenOn = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) = updateHold()
+        override fun onReceive(context: Context, intent: Intent) {
+            hold.screenOn()
+            updateKeyWatch()
+            updateHold()
+        }
     }
 
     private fun updateOverlay() {
         if (editing || TypingSettings.touchpadOnlyInFields(this)) overlay.show() else overlay.hide()
     }
 
-    private fun holdWanted() = TouchpadHold.wanted(TypingSettings.touchpadOnlyInFields(this), editing, overlay.up, BackService.enabled(this))
+    private fun holdWanted() =
+        TouchpadHold.wanted(TypingSettings.touchpadOnlyInFields(this), editing, overlay.up, BackService.enabled(this), hold.lettingGo)
 
     /** Puts the status that the firmware reads where the setting and the field need it. See [TouchpadHold]. */
     private fun updateHold() {
@@ -389,16 +394,28 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    /** What Back does while the status is held. Nothing shows, so it must not stop at the keyboard. */
+    /**
+     * What Back does while the status is held. The first push lets go of the touchpad and stays on the screen. The Back service
+     * then hears the next push go through to the app, and the hold comes back after it. See [TouchpadHold].
+     */
     private fun heldBack(event: KeyEvent, down: Boolean): Boolean = when (TouchpadHold.backStep(TouchpadHold.fromHandler(event.deviceId, event.flags), down)) {
         TouchpadHold.Back.ToApp -> false
         TouchpadHold.Back.Keep -> true
-        TouchpadHold.Back.KeepAndHide -> {
-            hold.backPassed(SystemClock.uptimeMillis())
+        TouchpadHold.Back.KeepAndLetGo -> {
+            hold.letGo(currentInputEditorInfo?.packageName)
+            main.removeCallbacks(showHold)
             hideHeldWindow()
-            main.post(sendBack)
+            hold.hidden()
+            updateKeyWatch()
             true
         }
+    }
+
+    /** The second push of Back has gone on to the app, so the hold comes back once the app has had it. */
+    private val backWentThrough = Runnable {
+        hold.backWentThrough(SystemClock.uptimeMillis())
+        updateKeyWatch()
+        updateHold()
     }
 
     /** Reads the emoji list away from the main thread, which also loads the emoji font before Sym is first pressed. */
@@ -481,6 +498,7 @@ class AtlasIme : InputMethodService() {
             main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
         }
         updateOverlay()
+        hold.started(info.packageName, editing)
         if (!statusReported) {
             statusReported = true
             // A new back disposition sends the current status, which clears a status that a dead process left on.
@@ -511,11 +529,12 @@ class AtlasIme : InputMethodService() {
      * Smart Launcher takes every key press in its search field before the keyboard hears it, so a press there cannot start a
      * hold or count towards Shift and Alt. The Back service hears them first, only in this one app and only when a setting needs them.
      * It also hears them while the Sym panel is open, and until the release of a key that the panel took. See [PanelKeyFilter].
+     * After a first push of Back let go of the touchpad, it hears the second push go through. See [TouchpadHold].
      */
     private fun updateKeyWatch() {
         val launcher = editing && currentInputEditorInfo?.packageName == SMART_LAUNCHER && (holdSymbols || !modifiers.doublePressLocks)
         val forPanel = panelOpen || panelKeys.holding
-        val running = BackService.watchKeys(if (launcher || forPanel) ::watchedKey else null)
+        val running = BackService.watchKeys(if (launcher || forPanel || hold.lettingGo) ::watchedKey else null)
         watchingKeys = running && launcher
         if (!running) panelKeys.clear()
     }
@@ -530,6 +549,11 @@ class AtlasIme : InputMethodService() {
      */
     private fun watchedKey(event: KeyEvent): Boolean {
         val down = event.action == KeyEvent.ACTION_DOWN
+        // The second push of Back goes on to the app. Its release says that the app has it.
+        if (event.keyCode == KeyEvent.KEYCODE_BACK && hold.lettingGo && !editing) {
+            if (!down) main.post(backWentThrough)
+            return false
+        }
         if (panelKeys.takes(event.keyCode, down, event.repeatCount, modifiers.panel)) {
             // Once the panel has closed, a key that it took only waits for its release.
             if (!down) onKeyUp(event.keyCode, event) else if (panelOpen) onKeyDown(event.keyCode, event)

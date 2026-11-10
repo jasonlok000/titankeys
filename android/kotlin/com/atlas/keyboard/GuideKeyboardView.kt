@@ -252,15 +252,14 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }
 
     /**
-     * A faint dashed box round the part of the keys that the touchpad feels. Its sensor stops at the middle of the outer columns
-     * and of the bottom row, so a finger outside the box is not read well.
+     * A faint dashed box round the part of the keys that the touchpad feels. Its sensor stops at the middle of the outer columns,
+     * of the top row and of the bottom row, so a finger outside the box is not read well.
      */
     private fun drawTouchArea(canvas: Canvas) {
         val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.CREAM
         areaPaint.color = GuideMotion.faded(colour, AREA_ALPHA)
         areaPaint.strokeWidth = dp(AREA_WIDTH)
-        val edge = areaPaint.strokeWidth / 2
-        canvas.drawRoundRect(width * AREA_LEFT, edge, width * AREA_RIGHT, height * AREA_BOTTOM, dp(AREA_RADIUS), dp(AREA_RADIUS), areaPaint)
+        canvas.drawRoundRect(width * AREA_LEFT, height * AREA_TOP, width * AREA_RIGHT, height * AREA_BOTTOM, dp(AREA_RADIUS), dp(AREA_RADIUS), areaPaint)
     }
 
     private fun drawLabel(canvas: Canvas, key: Key, label: String, colour: Int) {
@@ -545,10 +544,12 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         // The box round the part of the keys that the touchpad feels, as parts of the drawing's width and height.
         const val AREA_LEFT = .05f
         const val AREA_RIGHT = .95f
+        /** The middle of the top row. */
+        const val AREA_TOP = .5f / 4
         /** The touchpad reports its last point at row 3.54 of the 4 rows. */
         const val AREA_BOTTOM = 3.54f / 4
-        const val AREA_ALPHA = .42f
-        const val AREA_WIDTH = 1.5f
+        const val AREA_ALPHA = .22f
+        const val AREA_WIDTH = 1f
         const val AREA_RADIUS = 10f
         const val AREA_DASH = 6f
         const val AREA_GAP = 5f

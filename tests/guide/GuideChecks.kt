@@ -51,6 +51,7 @@ fun main() {
     aHeldFlickNeedsMoreWords()
     theCursorHasToMove()
     settingsAndSkipping()
+    goingBack()
     resuming()
     println("Guide checks passed")
 }
@@ -178,6 +179,19 @@ private fun settingsAndSkipping() {
     settings = GuideSettings(cursorControl = true)
     same(flow.missing, null, "Nothing is missing when the setting is on")
     same(GuideSettings().has(GuideNeed.FnAsCtrl), false, "fn is not Ctrl by default")
+}
+
+private fun goingBack() {
+    val flow = GuideFlow({ GuideSettings() })
+    same(flow.canGoBack, false, "The first step has nothing before it")
+    same(flow.back(), false, "Back from the first step does nothing")
+    flow.start("swipe")
+    same(flow.back(), true, "Back goes to the step before")
+    same(flow.step.id, "type", "The step before the swipe is typing")
+    val skipping = GuideFlow({ GuideSettings(holdSymbols = true, panelOpen = false) })
+    skipping.start("hold-letter")
+    skipping.back()
+    same(skipping.step.id, "quick-open", "Back passes over the steps that do not show")
 }
 
 private fun resuming() {

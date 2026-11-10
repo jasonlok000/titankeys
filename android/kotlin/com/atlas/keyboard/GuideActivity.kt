@@ -243,6 +243,7 @@ class GuideActivity : Activity() {
     private lateinit var column: LinearLayout
     private lateinit var segments: LinearLayout
     private lateinit var next: TextView
+    private lateinit var previous: TextView
     private lateinit var again: TextView
     private lateinit var close: ImageView
     private lateinit var title: TextView
@@ -345,7 +346,9 @@ class GuideActivity : Activity() {
 
     @Deprecated("Back reaches an activity here, because the app does not opt in to predictive back")
     override fun onBackPressed() {
-        leave()
+        // Back goes to the step before, like the Back button. From the first step or the ending it leaves the guide.
+        if (changing) return
+        if (ready && flow.canGoBack && flow.step.chapter != GuideChapter.End) moveOn(forward = false) else leave()
     }
 
     // The screen.
@@ -397,6 +400,15 @@ class GuideActivity : Activity() {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(20).toFloat()))
             setOnClickListener { nextPressed() }
         }
+        previous = TextView(this).apply {
+            text = "Back"
+            typeface = HEAVY
+            gravity = Gravity.CENTER
+            maxLines = 1
+            setPadding(dp(18), dp(10), dp(18), dp(10))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(20).toFloat()))
+            setOnClickListener { backPressed() }
+        }
         field = GuideField(this).apply {
             typeface = MEDIUM
             setTextColor(GuideColours.INK)
@@ -444,9 +456,10 @@ class GuideActivity : Activity() {
             addView(again, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(close, LinearLayout.LayoutParams(dp(TOP_ACTION), dp(TOP_ACTION)))
         }
-        // The offer to turn on a setting, if a step needs one, and Next.
+        // Back to the step before, the offer to turn on a setting if a step needs one, and Next.
         val actions = LinearLayout(this).apply {
             gravity = Gravity.CENTER
+            addView(previous, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(10) })
             addView(offer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(10) })
             addView(next, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
@@ -536,9 +549,15 @@ class GuideActivity : Activity() {
         window.insetsController?.setSystemBarsAppearance(if (onInk) 0 else appearance, appearance)
     }
 
-    /** Next is an outline while the step waits, and filled once the step is done. */
+    /** Next is an outline while the step waits, and filled once the step is done. Back is always a quiet outline. */
     private fun paintNext() {
         val strong = if (tone == GuideTone.Ink) GuideColours.CREAM else GuideColours.INK
+        previous.setTextColor(GuideMotion.faded(strong, NEXT_WAITING))
+        previous.background = GradientDrawable().apply {
+            setColor(Color.TRANSPARENT)
+            setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(strong, BACK_OUTLINE))
+            cornerRadius = dp(OFFER_RADIUS).toFloat()
+        }
         if (passed) {
             next.setTextColor(if (tone == GuideTone.Ink) GuideColours.INK else GuideColours.CREAM)
             next.background = rounded(strong, OFFER_RADIUS)
@@ -594,6 +613,7 @@ class GuideActivity : Activity() {
         helpShown = false
         passed = false
         next.visibility = if (step.chapter == GuideChapter.End) View.GONE else View.VISIBLE
+        previous.visibility = if (flow.canGoBack) View.VISIBLE else View.GONE
         paintNext()
         keys.show(step.cue)
         offerFor(step)
@@ -791,6 +811,11 @@ class GuideActivity : Activity() {
         moveOn()
     }
 
+    private fun backPressed() {
+        if (changing || !ready || !flow.canGoBack) return
+        moveOn(forward = false)
+    }
+
     private fun showReaction(text: String) {
         reaction.text = text
         reaction.animate().cancel()
@@ -802,8 +827,8 @@ class GuideActivity : Activity() {
         for (view in listOf(title, body)) view.animate().alpha(REACTION_DIM).setDuration(FADE_MILLIS).start()
     }
 
-    /** The story goes on: back to ink for the next step behind the cream line, or orange for the ending. */
-    private fun moveOn() {
+    /** The story goes on, or back a step: to ink for a step behind the cream line, or orange for the ending. */
+    private fun moveOn(forward: Boolean = true) {
         changing = true
         busy = true
         passed = false
@@ -812,10 +837,11 @@ class GuideActivity : Activity() {
         main.removeCallbacks(settleReaction)
         hideHint()
         hideReaction()
-        flow.advance()
+        if (forward) flow.advance() else flow.back()
         val coming = flow.step
         val target = if (coming.chapter == GuideChapter.End) GuideTone.Orange else GuideTone.Ink
-        for (view in listOf(title, body)) view.animate().alpha(0f).translationX(-dp(ENTER_OFFSET).toFloat()).setDuration(FADE_MILLIS).start()
+        val away = (if (forward) -dp(ENTER_OFFSET) else dp(ENTER_OFFSET)).toFloat()
+        for (view in listOf(title, body)) view.animate().alpha(0f).translationX(away).setDuration(FADE_MILLIS).start()
         if (target != tone) backdrop.wipeTo(backgroundOf(target))
         overlay.sweep(thickness = if (target != tone) LINE else BEAT_LINE)
         main.postDelayed({
@@ -917,8 +943,9 @@ class GuideActivity : Activity() {
         private const val OFFER_RADIUS = 22
         private const val BODY_ALPHA = .86f
         private const val HINT_FILL = .14f
-        /** How strong Next is while the step waits. */
+        /** How strong Next is while the step waits, and how strong Back's outline is. */
         private const val NEXT_WAITING = .6f
+        private const val BACK_OUTLINE = .35f
         private const val LINE = 5f
         private const val SEGMENT_HEIGHT = 4
         private const val SEGMENT_OFF = .25f

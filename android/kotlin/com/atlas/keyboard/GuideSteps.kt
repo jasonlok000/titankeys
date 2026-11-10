@@ -483,6 +483,21 @@ internal class GuideFlow(
         return left
     }
 
+    /** There is a step before this one that shows. */
+    val canGoBack get() = previous() != null
+
+    /** Moves back to the step before that shows. Returns false at the first step. */
+    fun back(): Boolean {
+        moveTo(previous() ?: return false)
+        return true
+    }
+
+    private fun previous(): Int? {
+        var at = position - 1
+        while (at >= 0 && steps[at].skipWhen(settings())) at--
+        return at.takeIf { it >= 0 }
+    }
+
     /** Starts from the first step, or from the step with this id. */
     fun start(id: String? = null) {
         moveTo(firstFrom(steps.indexOfFirst { it.id == id }.coerceAtLeast(0)))

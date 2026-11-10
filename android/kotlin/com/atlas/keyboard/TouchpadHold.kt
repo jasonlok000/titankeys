@@ -16,6 +16,10 @@ import kotlin.math.max
  * So while the status is wanted, the keyboard only takes the window off the screen when Android asks for a hide, and the status
  * stays on. It stops only for Back, as [backStep] says, or when it is no longer wanted.
  *
+ * While the status is on, Android gives Back to the keyboard first, and a Back sent on to the app after that came too late for
+ * some apps. So Back takes two pushes: the first lets go of the touchpad and stays on the screen, and the second goes to the app
+ * the usual way. The hold comes back once that Back has gone through, or when another app or a text field starts.
+ *
  * While the status is on, the firmware's letter shortcuts and its space bar to home stop, because they need the status off.
  *
  * This class holds the decisions, so tests can reach them. The keyboard makes the Android calls.
@@ -25,6 +29,11 @@ class TouchpadHold {
     var held = false
         private set
 
+    /** The first push of Back let go of the touchpad, and the hold waits for the second push to go through. */
+    var lettingGo = false
+        private set
+    /** The package of the app that Back let go in. */
+    private var letGoIn: String? = null
     private var backPassed = NEVER
 
     /** How long to wait before the next report: not at all, unless a Back has only just gone on to the app. */
@@ -38,9 +47,27 @@ class TouchpadHold {
         held = false
     }
 
-    /** The keyboard ended the status at [now] to let a Back go on to the app. */
-    fun backPassed(now: Long) {
+    /** The first push of Back in [app] let go of the touchpad. */
+    fun letGo(app: String?) {
+        lettingGo = true
+        letGoIn = app
+    }
+
+    /** The second push of Back went on to the app at [now]. The hold comes back once the app has had it. */
+    fun backWentThrough(now: Long) {
+        if (!lettingGo) return
+        lettingGo = false
         backPassed = now
+    }
+
+    /** Input started in [app], with a text field if [editing]. A field or another app ends the wait for the second push. */
+    fun started(app: String?, editing: Boolean) {
+        if (editing || app != letGoIn) lettingGo = false
+    }
+
+    /** The screen came on, which is a fresh start. */
+    fun screenOn() {
+        lettingGo = false
     }
 
     /** What to do with one Back event while the status is held. */
@@ -49,30 +76,29 @@ class TouchpadHold {
         ToApp,
         /** Keep the event. Nothing else happens yet. */
         Keep,
-        /** Keep the event, end the status and send a system back. */
-        KeepAndHide,
+        /** Keep the event and let go of the touchpad. The next push of Back goes to the app. */
+        KeepAndLetGo,
     }
 
     companion object {
         private const val NEVER = Long.MIN_VALUE / 2
 
         /**
-         * How long the status waits after it ended for Back. The next report puts Android's Back handler in front of the app's
-         * again, so the system back should reach the app first. On the phone it left about 10 ms after the hide. If an app is
-         * slower, that Back reaches the handler and comes back here as one more [Back.KeepAndHide], so one Back is still one.
+         * How long the status waits after the second push of Back went through. The next report puts Android's Back handler in
+         * front of the app's again, so the app must have had its Back first.
          */
-        const val BACK_MILLIS = 100L
+        const val BACK_MILLIS = 300L
 
         /** From android.view.KeyCharacterMap and android.view.KeyEvent, so that this class can be tested without Android. */
         private const val NO_DEVICE = -1
         private const val FLAG_VIRTUAL_HARD_KEY = 0x40
 
         /**
-         * True if the status should stay on now. It needs no field and the overlay that catches the events. The Back service must be
-         * on too, because without it a Back press in an app on Android's newer back handling would be lost.
+         * True if the status should stay on now. It needs no field and the overlay that catches the events, and not a first push
+         * of Back that let go. The Back service must be on too, because it hears the second push of Back go through.
          */
-        fun wanted(settingOn: Boolean, editing: Boolean, overlayUp: Boolean, backServiceOn: Boolean) =
-            settingOn && !editing && overlayUp && backServiceOn
+        fun wanted(settingOn: Boolean, editing: Boolean, overlayUp: Boolean, backServiceOn: Boolean, lettingGo: Boolean = false) =
+            settingOn && !editing && overlayUp && backServiceOn && !lettingGo
 
         /** True if a hide from Android must leave the status on. With no window up there is no status to keep. */
         fun keepsStatus(wanted: Boolean, windowUp: Boolean) = wanted && windowUp
@@ -86,12 +112,12 @@ class TouchpadHold {
         /**
          * Android keeps a back handler for a shown keyboard in front of the app's. Every other Back event, such as a push of a real
          * key or a system back, goes on to the app the usual way. A push reaches the handler only in an app on the newer back
-         * handling. There the push would end, so the status ends too, which removes the handler, and a system back goes on to the app.
+         * handling. There the push would end, so the status ends, which removes the handler, and the next push goes to the app.
          */
         fun backStep(fromHandler: Boolean, down: Boolean): Back = when {
             !fromHandler -> Back.ToApp
             down -> Back.Keep
-            else -> Back.KeepAndHide
+            else -> Back.KeepAndLetGo
         }
     }
 }

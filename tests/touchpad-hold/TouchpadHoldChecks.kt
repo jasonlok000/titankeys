@@ -9,6 +9,7 @@ fun main() {
     aHideEndsTheStatusWhenItIsNotWanted()
     reportsAtOnce()
     waitsOnlyForABackOnItsWay()
+    backTakesTwoPushes()
     heldFollowsShownAndHidden()
     aRealBackKeyGoesToTheApp()
     aSystemBackGoesToTheApp()
@@ -59,11 +60,37 @@ private fun reportsAtOnce() {
 
 private fun waitsOnlyForABackOnItsWay() {
     val hold = TouchpadHold()
-    hold.backPassed(1_000)
-    same(hold.delay(1_000), TouchpadHold.BACK_MILLIS, "The status must wait for the system back to reach the app")
+    hold.letGo("app")
+    hold.backWentThrough(1_000)
+    same(hold.delay(1_000), TouchpadHold.BACK_MILLIS, "The status must wait for the second Back to reach the app")
     same(hold.delay(1_060), TouchpadHold.BACK_MILLIS - 60, "Only the rest of the wait stays")
     same(hold.delay(1_000 + TouchpadHold.BACK_MILLIS), 0L, "After the wait the status comes back at once")
     same(hold.delay(9_999), 0L, "A long time later nothing waits")
+    val idle = TouchpadHold()
+    idle.backWentThrough(1_000)
+    same(idle.delay(1_000), 0L, "A Back with nothing let go must not hold the status back")
+}
+
+/** Back takes two pushes while the status is held: the first lets go of the touchpad, and the second goes to the app. */
+private fun backTakesTwoPushes() {
+    val hold = TouchpadHold()
+    hold.letGo("app")
+    same(hold.lettingGo, true, "The first push must let go")
+    same(TouchpadHold.wanted(settingOn = true, editing = false, overlayUp = true, backServiceOn = true, lettingGo = true), false,
+        "While it waits for the second push, the status must stay off, so that the push reaches the app")
+    hold.started("app", editing = false)
+    same(hold.lettingGo, true, "A restart in the same app with no field must still wait for the second push")
+    hold.backWentThrough(1_000)
+    same(hold.lettingGo, false, "The second push going through must bring the hold back")
+    hold.letGo("app")
+    hold.started("other", editing = false)
+    same(hold.lettingGo, false, "Another app must bring the hold back")
+    hold.letGo("app")
+    hold.started("app", editing = true)
+    same(hold.lettingGo, false, "A text field must end the wait")
+    hold.letGo("app")
+    hold.screenOn()
+    same(hold.lettingGo, false, "The screen coming on must start afresh")
 }
 
 private fun heldFollowsShownAndHidden() {
@@ -105,8 +132,8 @@ private fun theHandlerMarkItsOwnEvents() {
 
 private fun aBackFromTheHandlerHidesAndPasses() {
     same(TouchpadHold.backStep(fromHandler = true, down = true), Back.Keep, "The handler's first event waits for the release")
-    same(TouchpadHold.backStep(fromHandler = true, down = false), Back.KeepAndHide,
-        "The handler's release must end the status and pass Back to the app")
+    same(TouchpadHold.backStep(fromHandler = true, down = false), Back.KeepAndLetGo,
+        "The handler's release must end the status, so that the next push reaches the app")
 }
 
 /**
@@ -123,6 +150,6 @@ private fun oneRealPushIsOneSystemBack() {
         Event(NO_DEVICE, SYSTEM_BACK_FLAGS, down = true),
         Event(NO_DEVICE, CANCELED_SYSTEM_BACK_FLAGS, down = false),
     )
-    val backs = push.count { TouchpadHold.backStep(TouchpadHold.fromHandler(it.deviceId, it.flags), it.down) == Back.KeepAndHide }
-    same(backs, 1, "One push of Back must send exactly one system back")
+    val backs = push.count { TouchpadHold.backStep(TouchpadHold.fromHandler(it.deviceId, it.flags), it.down) == Back.KeepAndLetGo }
+    same(backs, 1, "One push of Back must let go exactly once")
 }

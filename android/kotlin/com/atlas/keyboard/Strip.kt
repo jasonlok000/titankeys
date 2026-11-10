@@ -234,7 +234,7 @@ class Strip(
         forgotLabel.setTextColor(look.ink)
         undoButton.setTextColor(look.accent)
         clipView.visibility = if (offer != null) VISIBLE else GONE
-        clipView.text = offer?.let { clipText(it) }.orEmpty()
+        clipView.text = offer?.let { clipText(it) } ?: ""
         clipView.setTextColor(look.accent)
     }
 

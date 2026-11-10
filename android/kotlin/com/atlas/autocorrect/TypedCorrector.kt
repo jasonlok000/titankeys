@@ -216,6 +216,8 @@ class TypedCorrector(
      * all in capitals, is meant as typed.
      */
     private fun fixedCapitals(word: String): String? {
+        // "I" and its contractions are always capitalised, though the word list also has a lowercase "i" and it is one letter.
+        ALWAYS_CAPITAL[word.replace('’', '\'')]?.let { fixed -> return if ('’' in word) fixed.replace('\'', '’') else fixed }
         if (word.length < 2 || !word.all { it.isLetter() || it == '\'' || it == '’' }) return null
         if (word.drop(1).any { it.isUpperCase() }) return null
         val lower = word.lowercase()
@@ -440,6 +442,8 @@ class TypedCorrector(
 
     companion object {
         private const val MAX_CANDIDATES = 64
+        /** Words that are always written with a capital, however they are typed. */
+        private val ALWAYS_CAPITAL = mapOf("i" to "I", "i'm" to "I'm", "i've" to "I've", "i'll" to "I'll", "i'd" to "I'd")
         /** How common a name must be to take its capitals by itself: "England" (141) and "iPhone" (100) are, "Cali" (78) is not. */
         private const val COMMON_NAME_FREQUENCY = 95
         private val SENTENCE_END_MARKS = setOf('.', '!', '?')

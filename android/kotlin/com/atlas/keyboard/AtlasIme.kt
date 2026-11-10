@@ -125,6 +125,8 @@ class AtlasIme : InputMethodService() {
     private var windowHiddenAt = Long.MIN_VALUE / 2
     /** The keyboard hid itself for [recycle], so the show that follows is its own. */
     private var recycling = false
+    /** [recycle] asked for its hide, and the show waits until the window has gone. */
+    private var recycleAwaitsHide = false
     /** The strip and the Sym panel, which a [nudge] makes one pixel taller for a moment. */
     private var inputRoot: View? = null
 
@@ -155,14 +157,17 @@ class AtlasIme : InputMethodService() {
         if (!isInputViewShown || !canShowStrip()) return@Runnable
         stripLog("recycle: hide")
         recycling = true
+        recycleAwaitsHide = true
         try {
             requestHideSelf(0)
         } catch (error: RuntimeException) {
             recycling = false
+            recycleAwaitsHide = false
             Log.w("Atlas", "Could not hide the suggestion strip", error)
             return@Runnable
         }
-        main.postDelayed(recycleShow, RECYCLE_GAP_MILLIS)
+        // The app animates the hide first, about 350 ms in Teams. If the window does not go, the strip comes back anyway.
+        main.postDelayed(recycleShow, RECYCLE_HIDE_TIMEOUT_MILLIS)
     }
 
     private val recycleShow = Runnable {
@@ -174,7 +179,17 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(recycle)
         main.removeCallbacks(recycleShow)
         recycling = false
+        recycleAwaitsHide = false
     }
+
+    /** How long [recycle] waits after a tap, or after the app's own quick hide and show. */
+    private fun recycleDelay() = tuning("debug.titankeys.bounce_delay") ?: RECYCLE_DELAY_MILLIS
+
+    /** How long the strip stays hidden in [recycle], from the moment the window has gone. */
+    private fun recycleGap() = tuning("debug.titankeys.bounce_gap") ?: RECYCLE_GAP_MILLIS
+
+    /** DIAGNOSTIC for #40, Debug build only: adb shell setprop <name> <ms> sets a wait, read at each use, for one tuning round. */
+    private fun tuning(name: String): Long? = if (!debugBuild) null else systemProperty(name)?.toLongOrNull()?.coerceIn(0L, 5000L)
 
     /**
      * Asks Android to show the strip, so that the app hears that the keyboard is back and makes room for it. An app that has
@@ -742,7 +757,7 @@ class AtlasIme : InputMethodService() {
             val recycles = currentInputEditorInfo?.packageName in BOUNCE_APPS
             main.removeCallbacks(recycle)
             main.removeCallbacks(nudge)
-            if (recycles) main.postDelayed(recycle, RECYCLE_DELAY_MILLIS) else main.postDelayed(nudge, NUDGE_DELAY_MILLIS)
+            if (recycles) main.postDelayed(recycle, recycleDelay()) else main.postDelayed(nudge, NUDGE_DELAY_MILLIS)
         }
         // Android draws its hide and switch-keyboard buttons in this bar; the strip has no room for them.
         window.window?.insetsController?.hide(WindowInsets.Type.captionBar())
@@ -753,6 +768,13 @@ class AtlasIme : InputMethodService() {
         super.onWindowHidden()
         windowHiddenAt = SystemClock.uptimeMillis()
         main.removeCallbacks(recycle)
+        if (recycleAwaitsHide) {
+            recycleAwaitsHide = false
+            main.removeCallbacks(recycleShow)
+            val gap = recycleGap()
+            stripLog("recycle: hidden, show in $gap ms")
+            main.postDelayed(recycleShow, gap)
+        }
         main.removeCallbacks(nudge)
         main.removeCallbacks(unNudge)
         inputRoot?.let { it.setPadding(0, it.paddingTop, 0, 0) }
@@ -1117,7 +1139,9 @@ class AtlasIme : InputMethodService() {
         if (!editing || !isInputViewShown || recycling || tallTest()) return
         if (currentInputEditorInfo?.packageName !in BOUNCE_APPS) return
         main.removeCallbacks(recycle)
-        main.postDelayed(recycle, CLICK_RECYCLE_MILLIS)
+        val delay = recycleDelay()
+        stripLog("recycle in $delay ms")
+        main.postDelayed(recycle, delay)
     }
 
     /**
@@ -2112,15 +2136,16 @@ class AtlasIme : InputMethodService() {
         private const val SHOW_FALLBACK_MILLIS = 300L
         /** A show this soon after a hide is the app's quick hide and show. Teams took 160 to 530 ms. */
         private const val BOUNCE_MILLIS = 1000L
-        /** Teams said the keyboard was shown 330 ms after its show, and asked again after 900 ms, so the hide waits for both. */
-        private const val RECYCLE_DELAY_MILLIS = 1200L
-        /** How long the strip stays hidden, so that the hide finishes before the show. */
-        private const val RECYCLE_GAP_MILLIS = 400L
         /**
-         * How long after a tap the hide and show waits. Teams cancels its own show at once, and a tap that hides and shows the
-         * keyboard hides it within 330 ms, which waits for that show instead.
+         * How long the hide and show waits after a tap, or after the app's own quick hide and show. Teams cancels its own show at
+         * once. A tap that makes Teams hide and show the keyboard hides it within 350 ms, which calls this wait off, and Teams says
+         * the keyboard is shown 330 ms after its show, when this wait starts again.
          */
-        private const val CLICK_RECYCLE_MILLIS = 1000L
+        private const val RECYCLE_DELAY_MILLIS = 500L
+        /** How long the strip stays hidden, from the moment its window has gone. */
+        private const val RECYCLE_GAP_MILLIS = 150L
+        /** If the window has not gone by then, the strip comes back anyway. */
+        private const val RECYCLE_HIDE_TIMEOUT_MILLIS = 1000L
         /** The height test adds this above the 88 px strip, for a 200 px window. */
         private const val TALL_TEST_PADDING = 112
         /**

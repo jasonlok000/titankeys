@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Paint
 import android.hardware.display.DisplayManager
@@ -437,8 +436,9 @@ class AtlasIme : InputMethodService() {
         TypingSettings.listen(this, overlaySetting)
         registerReceiver(screenOn, IntentFilter(Intent.ACTION_SCREEN_ON), RECEIVER_NOT_EXPORTED)
         registerReceiver(screenOff, IntentFilter(Intent.ACTION_SCREEN_OFF), RECEIVER_NOT_EXPORTED)
-        // The debug build can start the idle scene at once, so that a phone check need not wait three minutes.
-        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+        // The debug build can start the idle scene at once, so that a phone check need not wait three minutes. That build is not
+        // marked debuggable, so its own package name tells it apart.
+        if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) {
             registerReceiver(idleBarTrigger, IntentFilter(IDLE_BAR_ACTION), RECEIVER_EXPORTED)
             idleBarTriggerRegistered = true
         }
@@ -461,7 +461,10 @@ class AtlasIme : InputMethodService() {
     private var idleBarTriggerRegistered = false
     private val idleBarTrigger = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            main.post { if (!startIdleBar()) Log.d("Atlas", "Idle bar: no plain words on show, or it is off here") }
+            main.post {
+                val started = startIdleBar()
+                Log.i("Atlas", if (started) "Idle bar: started" else "Idle bar: not started, as no plain words show or it is off here")
+            }
         }
     }
     private val screenOff = object : BroadcastReceiver() {
@@ -2132,6 +2135,7 @@ class AtlasIme : InputMethodService() {
         private const val IDLE_BAR_MILLIS = 3 * 60 * 1000L
         /** The debug build starts the idle scene at once on this broadcast, from adb. */
         private const val IDLE_BAR_ACTION = "com.titankeys.debug.IDLE_BAR"
+        private const val DEBUG_PACKAGE_SUFFIX = ".debug"
         /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"
         private const val SMART_LAUNCHER = "ginlemon.flowerfree"

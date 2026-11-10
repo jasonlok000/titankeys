@@ -247,8 +247,8 @@ class Modifiers {
             }
             return when (panel) {
                 Panel.Closed -> null
-                Panel.Emoji -> rows
-                Panel.Symbols, Panel.Settings -> 0f
+                Panel.Symbols, Panel.Emoji -> rows
+                Panel.Settings -> 0f
             }
         }
 

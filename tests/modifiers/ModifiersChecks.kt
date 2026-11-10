@@ -759,12 +759,13 @@ private fun quickSettingsTable() {
 }
 
 private fun panelScrollKeys() {
-    same(Modifiers.panelScroll(KeyEvent.KEYCODE_DEL, Panel.Emoji), 1f, "On the emoji page Backspace must do what a swipe down does")
-    same(Modifiers.panelScroll(KeyEvent.KEYCODE_ENTER, Panel.Emoji), -1f, "On the emoji page Enter must do what a swipe up does")
-    same(Modifiers.panelScroll(KeyEvent.KEYCODE_NUMPAD_ENTER, Panel.Emoji), -1f, "The other Enter key must do the same")
+    for (panel in listOf(Panel.Emoji, Panel.Symbols)) {
+        same(Modifiers.panelScroll(KeyEvent.KEYCODE_DEL, panel), 1f, "On $panel Backspace must do what a swipe down does")
+        same(Modifiers.panelScroll(KeyEvent.KEYCODE_ENTER, panel), -1f, "On $panel Enter must do what a swipe up does")
+        same(Modifiers.panelScroll(KeyEvent.KEYCODE_NUMPAD_ENTER, panel), -1f, "On $panel the other Enter key must do the same")
+    }
     val keys = listOf(KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER)
     for (code in keys) {
-        same(Modifiers.panelScroll(code, Panel.Symbols), 0f, "On the symbol page key $code must do nothing and not reach the text")
         same(Modifiers.panelScroll(code, Panel.Settings), 0f, "On the quick settings page key $code must do nothing and not reach the text")
         same(Modifiers.panelScroll(code, Panel.Closed), null, "With the panel closed key $code must reach the text")
     }
@@ -799,7 +800,11 @@ private fun symbolAndEmojiPages() {
     same(QuickSetting.on("A"), QuickSetting.Autocorrect, "The quick settings page must keep A for Autocorrect")
     same(QuickSetting.on("P"), QuickSetting.AutoPunctuation, "The quick settings page must keep P for Auto-punctuation")
     same(Layout.PAGE_POSITION, "P", "P must show the page position")
-    same(Layout.lastColumn, listOf("P", Layout.BACKSPACE, Layout.ENTER), "The last column must be P, Backspace and Enter")
+    for (key in listOf(Layout.ALT, Layout.SYM, Layout.BACKSPACE, Layout.ENTER)) for (itemPage in listOf(true, false))
+        same(Layout.restMarks(key, itemPage), false, "A finger on the icon at $key must mark nothing")
+    same(Layout.restMarks("P", itemPage = true), false, "P must show no mark on a page of symbols or emoji")
+    same(Layout.restMarks("P", itemPage = false), true, "P must show a mark on the quick settings page")
+    same(Layout.restMarks("W", itemPage = true), true, "A letter key must show a mark")
     same(Layout.keyAt(.88f, .15f), "O", "The right of O must be O")
     same(Layout.keyAt(.88f, .4f), "L", "The right of L must be L")
     same(Layout.keyAt(.88f, .65f), Layout.SYM, "The right of Sym must be Sym")

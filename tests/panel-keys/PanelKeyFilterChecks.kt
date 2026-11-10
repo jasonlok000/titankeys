@@ -17,7 +17,7 @@ fun main() {
     aLostReleaseDoesNotTakeTheNextPush()
     twoKeysAtOnce()
     clearForgetsThePushes()
-    onlyTheEmojiPageTurns()
+    symbolAndEmojiPagesTurn()
     println("Panel key filter checks passed")
 }
 
@@ -102,9 +102,10 @@ private fun clearForgetsThePushes() {
     same(filter.takes(ENTER, down = false, repeat = 0, Panel.Closed), false, "A release after clear must reach the app")
 }
 
-private fun onlyTheEmojiPageTurns() {
-    same(Modifiers.panelScroll(BACKSPACE, Panel.Emoji), 1f, "Backspace must turn back on the emoji page")
-    same(Modifiers.panelScroll(ENTER, Panel.Emoji), -1f, "Enter must turn on on the emoji page")
-    for (code in PANEL_KEYS) for (panel in listOf(Panel.Symbols, Panel.Settings))
-        same(Modifiers.panelScroll(code, panel), 0f, "On $panel key $code must do nothing")
+private fun symbolAndEmojiPagesTurn() {
+    for (panel in listOf(Panel.Emoji, Panel.Symbols)) {
+        same(Modifiers.panelScroll(BACKSPACE, panel), 1f, "Backspace must turn back on $panel")
+        same(Modifiers.panelScroll(ENTER, panel), -1f, "Enter must turn on on $panel")
+    }
+    for (code in PANEL_KEYS) same(Modifiers.panelScroll(code, Panel.Settings), 0f, "On Settings key $code must do nothing")
 }

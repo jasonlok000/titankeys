@@ -18,12 +18,12 @@ import kotlin.math.sign
 
 /**
  * The panel that Sym opens: a symbol or an emoji on each letter key of the top three rows but Q, A and P, in line with the physical
- * letter keys. P shows the position of the open page and only that, and the other keys are left empty. A finger that rests on a key
- * marks that key, except in the last column, which the touchpad cannot read well. The groups of emoji are in a strip along the bottom,
- * above the bottom row of physical keys, and a finger that moves along that row opens the group at its place.
+ * letter keys. P shows the position of the open page and only that, and the other keys are left empty. A finger that rests on a
+ * letter key marks that key, as [Layout.restMarks] says, and the keys with an icon show no mark. The groups of emoji are in a strip
+ * along the bottom, above the bottom row of physical keys, and a finger that moves along that row opens the group at its place.
  *
- * Alt's place shows the quick settings key and Sym's place shows what Sym does next, each as an icon. When a group of emoji has
- * more than one page, the places of Backspace and Enter show an icon for the page that each key opens. On the quick settings page
+ * Alt's place shows the quick settings key and Sym's place shows what Sym does next, each as an icon. When the symbols or a group of
+ * emoji have more than one page, the places of Backspace and Enter show an icon for the page that each key opens. On the quick settings page
  * each letter key that has an item shows its short label, dim when the setting is off, and a finger that rests on the key shows
  * the setting's name and state at the top.
  */
@@ -249,7 +249,7 @@ class SymPanel(
         if (item == QuickSetting.OpenSettings || item == QuickSetting.ChangeKeyboard) item.title else "${item.title}: ${if (quickSettingOn(item)) "On" else "Off"}"
 
     /** What the top of the panel says for a key under a finger, or null if it says nothing. */
-    private fun detail(key: String) = if (quick) icon(key)?.description ?: QuickSetting.on(key)?.let(::describe) else null
+    private fun detail(key: String) = if (quick) QuickSetting.on(key)?.let(::describe) else null
 
     private fun dim(key: String) = quick && QuickSetting.on(key)?.let(quickSettingOn) == false
 
@@ -318,7 +318,7 @@ class SymPanel(
         contentDescription = when {
             quick -> "$QUICK_TITLE. Rest a finger on a key to see its setting. Push the key to change the setting."
             mode == Modifiers.Panel.Symbols -> "Symbols. Push a key to type its symbol. " +
-                "Swipe up or down on the keyboard to see more."
+                "Swipe up or down on the keyboard to see more, or push Backspace or Enter."
             mode == Modifiers.Panel.Emoji -> "Emoji, ${current?.group().orEmpty()}. Push a key to type its emoji. " +
                 "Swipe left or right on the keyboard to change the group, or move a finger along the bottom row. " +
                 "Swipe up or down to see more, or push Backspace or Enter."
@@ -351,13 +351,10 @@ class SymPanel(
         }
     }
 
-    /**
-     * A cell under a resting finger changes colour, except in the last column on a page of symbols or emoji.
-     * A setting's name also shows at the top of the panel.
-     */
+    /** A letter key under a resting finger changes colour, as [Layout.restMarks] says. A setting's name also shows at the top of the panel. */
     private fun showHover() {
         preview.text = detail(hover) ?: if (quick) QUICK_TITLE else ""
-        val marked = hover.takeIf { (label(it) != null || icon(it) != null) && (pages == null || it !in Layout.lastColumn) }
+        val marked = hover.takeIf { Layout.restMarks(it, pages != null) && label(it) != null }
         for ((key, view) in cells) {
             val hovered = key == marked
             view.setBackgroundColor(if (hovered) ink else Color.TRANSPARENT)

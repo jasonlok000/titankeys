@@ -36,8 +36,6 @@ object Layout {
      * first and last columns well, so Q, A and P hold none.
      */
     val panelLetters = letterKeys - setOf("Q", "A", PAGE_POSITION)
-    /** The touchpad's sensor ends in this column, so a finger on these keys marks nothing on a page of symbols or emoji. */
-    val lastColumn = rows.take(3).map { it.last() }
 
     /** Letter centres in letter space, indexed by [LETTERS]. */
     @JvmField val KEY_X = FloatArray(26)
@@ -52,6 +50,12 @@ object Layout {
     }
 
     fun isLetter(key: String) = key.length == 1 && key[0] in 'A'..'Z'
+
+    /**
+     * Whether a finger that rests on this key marks it in the Sym panel. The keys with an icon never do. On a page of symbols or emoji,
+     * P does not either, because the touchpad's sensor ends there.
+     */
+    fun restMarks(key: String, itemPage: Boolean) = isLetter(key) && !(itemPage && key == PAGE_POSITION)
 
     /** The key under a touchpad position, or an empty string outside the keyboard. */
     fun keyAt(x: Float, y: Float): String {

@@ -1405,7 +1405,7 @@ class AtlasIme : InputMethodService() {
 
     /**
      * With the panel on screen, a letter key types the item that it shows, and a key with no item, such as P, types nothing. Backspace and Enter
-     * turn the page of emoji, do nothing on the other pages, and never reach the text. Space and fn can pick a category. Other
+     * turn the page of symbols or emoji, do nothing on the quick settings page, and never reach the text. Space and fn can pick a category. Other
      * keys stay as they are.
      */
     private fun panelKey(event: KeyEvent): Boolean {

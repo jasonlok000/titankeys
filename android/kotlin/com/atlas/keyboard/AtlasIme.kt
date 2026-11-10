@@ -40,6 +40,7 @@ import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
 import java.io.IOException
 import kotlin.math.abs
+import kotlin.random.Random
 
 /**
  * Atlas: swipe typing on the Titan 2 keyboard's touchpad, with a suggestion strip for the physical
@@ -126,24 +127,126 @@ class AtlasIme : InputMethodService() {
     private val settlements = LinkedHashMap<Contact.Settlement, Runnable>()
     private val pieces = SwipePieces({ composer.liftOffMillis.toLong() }, { composer.canContinueSwipe }, ::isTapKey)
     private var lastTouch: List<Sample>? = null
+    /** When the window last hid, to tell a hide that a show follows at once. */
+    private var windowHiddenAt = Long.MIN_VALUE / 2
+    /** The keyboard hid itself for [recycle], so the show that follows is its own. */
+    private var recycling = false
+    /** [recycle] asked for its hide, and the show waits until the window has gone. */
+    private var recycleAwaitsHide = false
+    /** The strip and the Sym panel, which a [nudge] makes one pixel taller for a moment. */
+    private var inputRoot: View? = null
+
+    /**
+     * A tap on the message box in Microsoft Teams, while the strip shows, makes Teams hide the keyboard and show it again within a
+     * second. Android then has the strip up, but Teams leaves its box under the strip and keeps asking for a show that does
+     * nothing. Other apps may do the same, so after such a quick hide and show in any app, the strip grows one pixel and goes back
+     * once things settle. The change of height plays a new animation in the app, which no one can see.
+     */
+    private val nudge = Runnable {
+        val root = inputRoot ?: return@Runnable
+        if (!isInputViewShown) return@Runnable
+        root.setPadding(0, 0, 0, 1)
+        main.postDelayed(unNudge, NUDGE_MILLIS)
+    }
+
+    private val unNudge = Runnable {
+        inputRoot?.setPadding(0, 0, 0, 0)
+    }
+
+    /**
+     * In Teams the nudge is not enough. A real hide with a gap and then a show puts the box back above the strip, as Back and a tap
+     * on the box do, so in the apps in [BOUNCE_APPS] the keyboard does that by itself, once. The strip flickers once.
+     */
+    private val recycle = Runnable {
+        if (!isInputViewShown || !canShowStrip()) return@Runnable
+        recycling = true
+        recycleAwaitsHide = true
+        try {
+            requestHideSelf(0)
+        } catch (error: RuntimeException) {
+            recycling = false
+            recycleAwaitsHide = false
+            Log.w("Atlas", "Could not hide the suggestion strip", error)
+            return@Runnable
+        }
+        // The app animates the hide first, about 350 ms in Teams. If the window does not go, the strip comes back anyway.
+        main.postDelayed(recycleShow, RECYCLE_HIDE_TIMEOUT_MILLIS)
+    }
+
+    private val recycleShow = Runnable {
+        showStrip.run()
+    }
+
+    /**
+     * The owner's word on Teams, for a moment after the strip comes back from [recycle], once in [TEAMS_EGG_CHANCE] times at
+     * random. Never over a word's menu.
+     */
+    private fun showTeamsEgg() {
+        val strip = strip ?: return
+        if (strip.notice != null || Random.nextInt(TEAMS_EGG_CHANCE) != 0) return
+        strip.notice = Strip.Notice.TeamsEgg
+        main.removeCallbacks(endTeamsEgg)
+        main.postDelayed(endTeamsEgg, TEAMS_EGG_MILLIS)
+    }
+
+    private val endTeamsEgg = Runnable { clearTeamsEgg() }
+
+    /** Any key or touch clears it at once, so it never stands in the way of typing. */
+    private fun clearTeamsEgg() {
+        main.removeCallbacks(endTeamsEgg)
+        if (strip?.notice == Strip.Notice.TeamsEgg) strip?.notice = null
+    }
+
+    private fun cancelRecycle() {
+        main.removeCallbacks(recycle)
+        main.removeCallbacks(recycleShow)
+        recycling = false
+        recycleAwaitsHide = false
+    }
+
+    /**
+     * Asks Android to show the strip, so that the app hears that the keyboard is back and makes room for it. An app that has
+     * already handled a hide, such as Microsoft Teams, otherwise leaves its message box under the strip.
+     */
     private val showStrip = Runnable {
-        if (hiddenByBack || !editing || currentInputBinding == null) {
+        if (!canShowStrip()) {
             if (field.exact) logExact("bar not shown: back $hiddenByBack editing $editing bound ${currentInputBinding != null}")
             return@Runnable
         }
-        // Apps can drop a field yet still start input on it, so only a field that answers gets the strip. A view with exact
-        // typing, such as a remote desktop's, holds no text to answer with, and its busy main thread can let the question time
-        // out, which used to leave its bar hidden. Its app chose it by being on the list, so it gets the bar without asking.
-        if (!field.exact && currentInputConnection?.getTextBeforeCursor(1, 0) == null) return@Runnable
         if (field.exact) logExact("bar shown")
         try {
-            // A cancelled show request can leave the client waiting for a window surface.
-            showWindow(true)
             requestShowSelf(0)
         } catch (error: RuntimeException) {
             // Titan firmware can drop its current client before Android reports the editor gone.
             Log.w("Atlas", "Could not show the suggestion strip", error)
         }
+        main.removeCallbacks(forceStrip)
+        main.postDelayed(forceStrip, SHOW_FALLBACK_MILLIS)
+    }
+
+    /** A cancelled show request can leave the client waiting for a window surface, so the window shows itself if Android's did not. */
+    private val forceStrip = Runnable {
+        if (!isInputViewShown && canShowStrip()) {
+            try {
+                showWindow(true)
+                requestShowSelf(0)
+            } catch (error: RuntimeException) {
+                Log.w("Atlas", "Could not show the suggestion strip", error)
+            }
+        }
+        // A panel that could not show must not take the next key.
+        if (panelOpen && !isInputViewShown) closePanel()
+    }
+
+    // Apps can drop a field yet still start input on it, so only a field that answers gets the strip.
+    // A view with exact typing, such as a remote desktop's, holds no text to answer with, and its busy main thread can let the
+    // question time out, which used to leave its bar hidden. Its app chose it by being on the list, so it gets the bar without asking.
+    private fun canShowStrip() = !hiddenByBack && editing && currentInputBinding != null
+        && (field.exact || currentInputConnection?.getTextBeforeCursor(1, 0) != null)
+
+    private fun cancelShowStrip() {
+        main.removeCallbacks(showStrip)
+        main.removeCallbacks(forceStrip)
     }
 
     private val hideStrip = Runnable {
@@ -157,12 +260,13 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    /** An app's own hide, such as from a Done key, leaves the window closed, so a panel that opens then must show it. */
+    /**
+     * An app's own hide, such as from a Done key, leaves the window closed, so a panel that opens then must show it. If the
+     * window has not shown by the time of the fallback in [forceStrip], the panel closes there.
+     */
     private val showPanel = Runnable {
         if (!panelOpen || isInputViewShown) return@Runnable
-        showStrip.run()
-        // It could not show, so it must not take the next key.
-        if (!isInputViewShown) closePanel()
+        if (canShowStrip()) showStrip.run() else closePanel()
     }
 
     private val refreshModifiers = Runnable { showModifiers() }
@@ -337,10 +441,7 @@ class AtlasIme : InputMethodService() {
         window.callback = TouchpadWindowCallback(window.callback) { event ->
             (editing && touchpad.accepts(event)).also { if (it) motion(event) }
         }
-        // With no field active, a touchpad event only stops here, so that the app under the overlay does not scroll.
-        overlay = TouchpadOverlay(this) { event ->
-            touchpad.accepts(event).also { if (it && editing) motion(event) }
-        }
+        overlay = TouchpadOverlay(this, touchpad = overlayEvent)
         TypingSettings.listen(this, overlaySetting)
         registerReceiver(screenOn, IntentFilter(Intent.ACTION_SCREEN_ON), RECEIVER_NOT_EXPORTED)
         updateOverlay()
@@ -387,9 +488,25 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    private fun updateOverlay() {
-        if (editing || TypingSettings.touchpadOnlyInFields(this)) overlay.show() else overlay.hide()
+    /** With no field active, a touchpad event only stops here, so that the app under the overlay does not scroll. */
+    private val overlayEvent: (MotionEvent) -> Boolean = { event ->
+        touchpad.accepts(event).also { if (it && editing) motion(event) }
     }
+
+    /**
+     * The Back service also puts a window above the notification shade, so that a pop-up notification cannot take the touchpad.
+     * It stays for [HIGH_GRACE_MILLIS] after the field ends: until Android hears that the keyboard has gone, the firmware still
+     * sends the touchpad to the windows, and a swipe that ends as the keyboard goes, or the gap as one field hands over to
+     * the next, would reach the pop-up. With no field it only drops the touchpad events, as the keyboard's own overlay does.
+     */
+    private fun updateOverlay() {
+        val wanted = editing || TypingSettings.touchpadOnlyInFields(this)
+        if (wanted) overlay.show() else overlay.hide()
+        main.removeCallbacks(releaseHighTouchpad)
+        if (wanted) BackService.touchpad(overlayEvent) else main.postDelayed(releaseHighTouchpad, HIGH_GRACE_MILLIS)
+    }
+
+    private val releaseHighTouchpad = Runnable { BackService.touchpad(null) }
 
     private fun holdWanted() =
         TouchpadHold.wanted(TypingSettings.touchpadOnlyInFields(this), editing, overlay.up, BackService.enabled(this), hold.lettingGo)
@@ -511,6 +628,7 @@ class AtlasIme : InputMethodService() {
             orientation = LinearLayout.VERTICAL
             addView(keys)
             addView(words)
+            inputRoot = this
         }
     }
 
@@ -551,7 +669,8 @@ class AtlasIme : InputMethodService() {
         readSettings()
         if (editing && !restarting) rememberEnterApp(info)
         if (!restarting) rememberApp(info)
-        main.removeCallbacks(showStrip)
+        cancelShowStrip()
+        cancelRecycle()
         main.removeCallbacks(hideStrip)
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
@@ -692,6 +811,15 @@ class AtlasIme : InputMethodService() {
     override fun onWindowShown() {
         super.onWindowShown()
         if (field.exact) logExact("window shown")
+        if (recycling) {
+            recycling = false
+            showTeamsEgg()
+        } else if (editing && SystemClock.uptimeMillis() - windowHiddenAt < BOUNCE_MILLIS) {
+            val recycles = currentInputEditorInfo?.packageName in BOUNCE_APPS
+            main.removeCallbacks(recycle)
+            main.removeCallbacks(nudge)
+            if (recycles) main.postDelayed(recycle, RECYCLE_DELAY_MILLIS) else main.postDelayed(nudge, NUDGE_DELAY_MILLIS)
+        }
         // Android draws its hide and switch-keyboard buttons in this bar; the strip has no room for them.
         window.window?.insetsController?.hide(WindowInsets.Type.captionBar())
     }
@@ -699,13 +827,23 @@ class AtlasIme : InputMethodService() {
     override fun onWindowHidden() {
         super.onWindowHidden()
         if (field.exact) logExact("window hidden: back $passingBack typed $typedInField")
+        windowHiddenAt = SystemClock.uptimeMillis()
+        main.removeCallbacks(recycle)
+        if (recycleAwaitsHide) {
+            recycleAwaitsHide = false
+            main.removeCallbacks(recycleShow)
+            main.postDelayed(recycleShow, RECYCLE_GAP_MILLIS)
+        }
+        main.removeCallbacks(nudge)
+        main.removeCallbacks(unNudge)
+        inputRoot?.setPadding(0, 0, 0, 0)
         // Android's hide also turned the status off.
         hold.hidden()
         // A panel that nobody can see must not take the next key.
         closePanel()
         // A delayed hide from the previous app arrives just after this field starts. A later hide, or one
         // after you have typed, is the app's own, such as a tap outside the field or a Done key.
-        main.removeCallbacks(showStrip)
+        cancelShowStrip()
         if (passingBack) {
             // Now that the strip is gone, the app's own back can run. If its field stays, the strip stays hidden.
             passingBack = false
@@ -725,7 +863,8 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onUnbindInput() {
-        main.removeCallbacks(showStrip)
+        cancelShowStrip()
+        cancelRecycle()
         main.removeCallbacks(sendBack)
         // The app has lost the keyboard, so coming back to it counts as a new start.
         hiddenByBack = false
@@ -1004,7 +1143,8 @@ class AtlasIme : InputMethodService() {
         rawLog?.finish()
         rawLog = null
         composer.log = null
-        main.removeCallbacks(showStrip)
+        cancelShowStrip()
+        cancelRecycle()
         clearSettlements()
         contact.cancel()
         endCursor()
@@ -1026,6 +1166,21 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onEvaluateFullscreenMode() = false
+
+    /**
+     * Teams sometimes takes a tap on its message box while the strip shows as if the keyboard were hidden: it asks for a show,
+     * which does nothing, and moves its box down. The keyboard hears nothing else of that tap, but a text field tells the
+     * keyboard about each tap on it, so in the apps in [BOUNCE_APPS] a tap starts the hide and show of [recycle] too.
+     */
+    @Deprecated("Android still calls it for a tap on a text field")
+    override fun onViewClicked(focusChanged: Boolean) {
+        @Suppress("DEPRECATION")
+        super.onViewClicked(focusChanged)
+        if (!editing || !isInputViewShown || recycling) return
+        if (currentInputEditorInfo?.packageName !in BOUNCE_APPS) return
+        main.removeCallbacks(recycle)
+        main.postDelayed(recycle, RECYCLE_DELAY_MILLIS)
+    }
 
     override fun onUpdateSelection(oldStart: Int, oldEnd: Int, newStart: Int, newEnd: Int, composingStart: Int, composingEnd: Int) {
         super.onUpdateSelection(oldStart, oldEnd, newStart, newEnd, composingStart, composingEnd)
@@ -1077,6 +1232,7 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun motion(event: MotionEvent) {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) clearTeamsEgg()
         // The panel and the cursor work in every field. Where the touchpad types no words, swipes and taps type nothing: see [outcome].
         // With exact typing the touchpad sends nothing, so a resting finger never reaches a terminal or a remote computer.
         if (field.exact && !panelOpen) return
@@ -1146,57 +1302,66 @@ class AtlasIme : InputMethodService() {
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
                 Trace.touch(contact.points, false)
             }
-            MotionEvent.ACTION_UP -> {
-                endDeleteHold()
-                val doubleTapped = cursorGesture.up(samples, event.eventTime)
-                Recording.sink?.gesture("up", event.eventTime, "doubleTapped=$doubleTapped")
-                if (cursor.active) {
-                    main.removeCallbacks(stepCursor)
-                    cursor.move(samples)
-                    cursor.lift()
-                    strip?.gesture?.cursorPaused()
-                    val slips = composer.liftOffMillis > 0
-                    // Through a slip the path stays open, so a finger that comes back carries on drawing it.
-                    traceCursor(samples, ended = !slips)
-                    if (slips) main.postDelayed(endSlippedCursor, cursor.holdMillis(composer.liftOffMillis.toLong())) else stopCursor()
-                    return
-                }
-                stopCursor()
-                val points = contact.points
-                if (doubleTapped) main.postAtTime(confirmDoubleTap, event.eventTime + CursorGesture.CONFIRM_MILLIS)
-                contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
-                    lastTouch = pending.points
-                    if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
-                        contact.settle(pending, pending.deadline)
-                        return@let
-                    }
-                    val input = PendingInput(false, null, settlement = pending)
-                    pendingInput.addLast(input)
-                    val settle = Runnable {
-                        settlements.remove(pending)
-                        val settled = contact.settle(pending, SystemClock.uptimeMillis())
-                        val result = if (pending.cancelled || altOrPanel) settled else pieces.settle(pending, settled)
-                        val finish = { type: Boolean ->
-                            input.action = { if (type) result?.let(::outcome) }
-                            input.ready = true
-                            drainInput()
-                        }
-                        if (result is Contact.Outcome.Tap && isTapKey(result.key) && cursorGesture.deciding(SystemClock.uptimeMillis())) holdTap(finish)
-                        else finish(true)
-                    }
-                    settlements[pending] = settle
-                    main.postAtTime(settle, pending.deadline)
-                }
-                settleHeldTaps()
-                Trace.touch(if (points.size <= Swipe.MAX_POINTS && samples.all { it.valid }) points else emptyList(), true)
-            }
-            MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
+            MotionEvent.ACTION_UP -> lift(event, samples, cancelled = false)
+            // The system cancels a gesture when its window goes, such as the window above the shade. Like a short lift, the
+            // swipe so far still counts, and the next touch can carry it on. See [SwipePieces].
+            MotionEvent.ACTION_CANCEL -> lift(event, samples, cancelled = true)
+            MotionEvent.ACTION_POINTER_DOWN -> {
                 contact.cancelActive()
                 endDeleteHold()
                 endCursor()
                 Trace.touch(emptyList(), true)
             }
         }
+    }
+
+    /** A finger lifted, or the system cancelled the gesture, which counts as a lift but never as a tap of a double tap. */
+    private fun lift(event: MotionEvent, samples: List<Sample>, cancelled: Boolean) {
+        endDeleteHold()
+        val doubleTapped = if (cancelled) {
+            cursorGesture.cancel(event.eventTime)
+            false
+        } else cursorGesture.up(samples, event.eventTime)
+        Recording.sink?.gesture("up", event.eventTime, "doubleTapped=$doubleTapped" + if (cancelled) " cancelled=true" else "")
+        if (cursor.active) {
+            main.removeCallbacks(stepCursor)
+            cursor.move(samples)
+            cursor.lift()
+            strip?.gesture?.cursorPaused()
+            val slips = composer.liftOffMillis > 0
+            // Through a slip the path stays open, so a finger that comes back carries on drawing it.
+            traceCursor(samples, ended = !slips)
+            if (slips) main.postDelayed(endSlippedCursor, cursor.holdMillis(composer.liftOffMillis.toLong())) else stopCursor()
+            return
+        }
+        stopCursor()
+        val points = contact.points
+        if (doubleTapped) main.postAtTime(confirmDoubleTap, event.eventTime + CursorGesture.CONFIRM_MILLIS)
+        contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
+            lastTouch = pending.points
+            if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
+                contact.settle(pending, pending.deadline)
+                return@let
+            }
+            val input = PendingInput(false, null, settlement = pending)
+            pendingInput.addLast(input)
+            val settle = Runnable {
+                settlements.remove(pending)
+                val settled = contact.settle(pending, SystemClock.uptimeMillis())
+                val result = if (pending.cancelled || altOrPanel) settled else pieces.settle(pending, settled)
+                val finish = { type: Boolean ->
+                    input.action = { if (type) result?.let(::outcome) }
+                    input.ready = true
+                    drainInput()
+                }
+                if (result is Contact.Outcome.Tap && isTapKey(result.key) && cursorGesture.deciding(SystemClock.uptimeMillis())) holdTap(finish)
+                else finish(true)
+            }
+            settlements[pending] = settle
+            main.postAtTime(settle, pending.deadline)
+        }
+        settleHeldTaps()
+        Trace.touch(if (points.size <= Swipe.MAX_POINTS && samples.all { it.valid }) points else emptyList(), true)
     }
 
     /**
@@ -1675,6 +1840,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        clearTeamsEgg()
         if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
@@ -2035,6 +2201,7 @@ class AtlasIme : InputMethodService() {
         editor.cancelState()
         TypingSettings.stopListening(this, overlaySetting)
         overlay.hide()
+        BackService.touchpad(null)
         rawLog?.finish()
         rawLog = null
         composer.log = null
@@ -2050,6 +2217,35 @@ class AtlasIme : InputMethodService() {
         private const val RECENT_EMOJI = "recent"
         /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
         private const val STALE_HIDE_MILLIS = 500L
+        /** How long Android has to show the strip before the keyboard shows its window itself. */
+        private const val SHOW_FALLBACK_MILLIS = 300L
+        /** A show this soon after a hide is the app's quick hide and show. Teams took 160 to 530 ms. */
+        private const val BOUNCE_MILLIS = 1000L
+        /**
+         * How long the hide and show waits after a tap, or after the app's own quick hide and show. Teams cancels its own show at
+         * once. When Teams hides and shows the keyboard by itself, its hide calls this wait off and its show starts it again.
+         * Tuned on the phone: 300 ms worked every time, as did everything up to 500 ms.
+         */
+        private const val RECYCLE_DELAY_MILLIS = 300L
+        /** How long the strip stays hidden, from the moment its window has gone. Tuned on the phone: none is needed. */
+        private const val RECYCLE_GAP_MILLIS = 0L
+        /** How long the strip shows its word on Teams. */
+        private const val TEAMS_EGG_MILLIS = 200L
+        /** The word shows after one in this many hides and shows for Teams. */
+        private const val TEAMS_EGG_CHANCE = 10
+        /** If the window has not gone by then, the strip comes back anyway. */
+        private const val RECYCLE_HIDE_TIMEOUT_MILLIS = 1000L
+        /**
+         * Apps where a quick hide and show leaves the message box under the strip even after the nudge, so the strip hides and shows
+         * again once. Add an app here when the nudge alone is seen not to help in it.
+         */
+        private val BOUNCE_APPS = setOf("com.microsoft.teams")
+        /** The nudge waits until the app's own requests after its show are done. Teams asked again after 900 ms to 1.4 s. */
+        private const val NUDGE_DELAY_MILLIS = 1600L
+        /** How long the strip stays one pixel taller. */
+        private const val NUDGE_MILLIS = 300L
+        /** How long the window above the notification shade stays after a field ends. */
+        private const val HIGH_GRACE_MILLIS = 2000L
         private const val CLIP_FILE = "clipboard-history"
         private const val CLIP_PREFERENCES = "clipboard"
         private const val CLIP_HINT_SHOWN = "hint_shown"

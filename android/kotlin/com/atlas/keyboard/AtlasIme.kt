@@ -419,7 +419,9 @@ class AtlasIme : InputMethodService() {
             { delay, action -> main.postDelayed(action, delay) }, { enterApps })
         composer = Composer(editor, EngineWords(SwipeTyping.get(this)),
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
-            { TypingSettings.autoCapitalise(this) }) { barWords = it; strip?.words = it }
+            { TypingSettings.autoCapitalise(this) }) { barWords = it; strip?.words = ScriptedInput.director?.words ?: it }
+        // A debug demo screen can show its own words on the strip. See ScriptedInput.
+        ScriptedInput.refresh = { strip?.words = ScriptedInput.director?.words ?: barWords }
         composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
         composer.onStroke = Trace::stroke
         composer.onAutocorrect = haptics::wordChanged
@@ -648,7 +650,10 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
-        val words = Strip(this, { index -> haptics.wordChanged(); enqueue { composer.choose(index) } }, ::holdWord,
+        val words = Strip(this, { index ->
+            haptics.wordChanged()
+            if (ScriptedInput.director?.strip(index) != true) enqueue { composer.choose(index) }
+        }, ::holdWord,
             { action -> enqueue { stripAction(action) } }, { enqueue { pasteOfferedClip() } }, ::wakeIdleBar)
         val keys = SymPanel(this,
             pick = { item -> enqueue { typePanelItem(item) } },
@@ -1891,6 +1896,8 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        // A debug demo screen in front decides what keys do. See ScriptedInput.
+        if (!event.isSystem && ScriptedInput.director?.key(keyCode, event) == true) return true
         clearTeamsEgg()
         wakeIdleBar()
         if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
@@ -1950,6 +1957,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (!event.isSystem && ScriptedInput.director?.key(keyCode, event) == true) return true
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true

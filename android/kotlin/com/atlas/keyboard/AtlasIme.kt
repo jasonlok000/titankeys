@@ -676,6 +676,8 @@ class AtlasIme : InputMethodService() {
     private val clipFile by lazy { AtomicFile(java.io.File(noBackupFilesDir, CLIP_FILE)) }
     private var clipPinning = false
     private var clipClearing = false
+    /** A sixth pin was just tried, so the clipboard page says that five is the most. */
+    private var clipPinsFull = false
     /** The time of the clip that the strip last offered and that was then pasted or passed over, so it is not offered again. */
     private var clipOfferDone = -1L
     private val endClipOffer = Runnable { dismissClipOffer() }
@@ -732,6 +734,7 @@ class AtlasIme : InputMethodService() {
     private fun showClips() {
         panel?.clipPinning = clipPinning
         panel?.clipClearing = clipClearing
+        panel?.clipPinsFull = clipPinsFull
         panel?.clips = clipHistory.clips.toList()
         panel?.render()
     }
@@ -772,6 +775,7 @@ class AtlasIme : InputMethodService() {
 
     /** A push or touch of a key on the clipboard page: a letter pastes its clip or, while pinning, pins it. */
     private fun clipKey(key: String) {
+        clipPinsFull = false
         when (key) {
             Layout.BACKSPACE -> {
                 if (clipHistory.clips.none { !it.pinned }) return
@@ -790,9 +794,7 @@ class AtlasIme : InputMethodService() {
                 val index = panel?.clipIndex(key) ?: return
                 val clip = clipHistory.clips.getOrNull(index) ?: return
                 clipClearing = false
-                if (clipPinning) {
-                    if (clipHistory.togglePin(index)) saveClips()
-                } else {
+                if (clipPinning) pin(index) else {
                     haptics.wordChanged()
                     composer.paste(clip.text)
                     closePanel()
@@ -809,7 +811,7 @@ class AtlasIme : InputMethodService() {
         expireClips()
         clipPinning = false
         clipClearing = false
-        panel?.clipPage = 0
+        clipPinsFull = false
         showClips()
         modifiers.openClipboard()
         showModifiers()
@@ -817,10 +819,18 @@ class AtlasIme : InputMethodService() {
 
     /** A touch held on a clip pins or unpins it, without the Pin key. */
     private fun holdClip(key: String) {
-        if (!clipHistory.togglePin(panel?.clipIndex(key) ?: return)) return
-        saveClips()
+        pin(panel?.clipIndex(key) ?: return)
         haptics.settingChanged()
         showClips()
+    }
+
+    /** Pins or unpins a clip. A sixth pin is refused, and the page says why. */
+    private fun pin(index: Int) {
+        when (clipHistory.togglePin(index)) {
+            ClipboardHistory.Pin.PINNED, ClipboardHistory.Pin.UNPINNED -> saveClips()
+            ClipboardHistory.Pin.FULL -> clipPinsFull = true
+            ClipboardHistory.Pin.NONE -> Unit
+        }
     }
 
     // The word menu (#43): hold a word on the strip, or select one word in the field, to save or forget it.

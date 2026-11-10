@@ -14,7 +14,7 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
 
     /**
      * Keeps a copied text as the newest clip. A text that is already here moves to the front and keeps its pin. Returns false if
-     * the text is not kept: blank, too long, or every place is pinned.
+     * the text is not kept: blank or too long. At most [MAX_PINNED] clips are pinned, so there is always a place for a new one.
      */
     fun add(text: String, now: Long): Boolean {
         if (text.isBlank() || text.length > MAX_CHARS) return false
@@ -33,10 +33,14 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
     /** Takes out the clips that are older than [KEEP_MILLIS] and not pinned. Returns true if any went. */
     fun expire(now: Long) = items.removeAll { !it.pinned && now - it.time !in 0..KEEP_MILLIS }
 
-    fun togglePin(index: Int): Boolean {
-        val clip = items.getOrNull(index) ?: return false
+    enum class Pin { PINNED, UNPINNED, FULL, NONE }
+
+    /** Pins or unpins the clip at [index]. A sixth pin is refused with [Pin.FULL]. */
+    fun togglePin(index: Int): Pin {
+        val clip = items.getOrNull(index) ?: return Pin.NONE
+        if (!clip.pinned && items.count { it.pinned } >= MAX_PINNED) return Pin.FULL
         items[index] = clip.copy(pinned = !clip.pinned)
-        return true
+        return if (clip.pinned) Pin.UNPINNED else Pin.PINNED
     }
 
     /** Clear all: every clip goes but the pinned ones, which you unpin to remove. */
@@ -46,32 +50,40 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
     fun encode() = items.joinToString("\n") { "${it.time}\t${if (it.pinned) 1 else 0}\t${escape(it.text)}" }
 
     companion object {
-        const val LIMIT = 20
         /**
-         * The clipboard page shows this many clips at a time: two to a row, each over half a row of keys, so that a clip is large
-         * enough to read. A swipe up or down shows the next or previous six.
+         * The clipboard page shows this many clips, one page only: two to a row, each in a wide field over the letter keys of half a
+         * row, inside the inner columns.
          */
-        const val PER_PAGE = 6
+        const val LIMIT = 6
+        /** One place is always left for the newest clip. */
+        const val MAX_PINNED = LIMIT - 1
 
-        /** Where a key is on the clipboard page: row times two, plus one for the right half. Null for a key that is not a letter. */
+        /** Which half of a row of the panel a column is in, 0 or 1, or null for an outer column. */
+        fun halfAt(row: Int, column: Int): Int? {
+            val key = Layout.rows.getOrNull(row)?.getOrNull(column) ?: return null
+            if (!Layout.isLetter(key) || column == 0 || column == Layout.rows[row].lastIndex) return null
+            return if (column < HALF_SPLIT) 0 else 1
+        }
+
+        /** The field over a key: row times two, plus one for the right half. Null for a key that is no letter of the inner columns. */
         fun slot(key: String): Int? {
-            if (!Layout.isLetter(key)) return null
-            for ((row, keys) in Layout.rows.take(PER_PAGE / 2).withIndex()) {
+            for ((row, keys) in Layout.rows.take(LIMIT / 2).withIndex()) {
                 val column = keys.indexOf(key)
-                if (column >= 0) return row * 2 + if (column < HALF_ROW) 0 else 1
+                if (column >= 0) return halfAt(row, column)?.let { row * 2 + it }
             }
             return null
         }
 
-        /** A letter key under a box of the clipboard page, which pastes what a touch on the box pastes. */
-        fun keyFor(slot: Int): String {
-            val row = Layout.rows[slot / 2]
-            return row.drop(slot % 2 * HALF_ROW).take(HALF_ROW).first(Layout::isLetter)
-        }
+        /** The first column of a field, where it starts. */
+        fun firstColumn(row: Int, half: Int) = Layout.rows[row].indices.first { halfAt(row, it) == half }
 
-        fun pageCount(clips: Int) = maxOf(1, (clips + PER_PAGE - 1) / PER_PAGE)
+        /** How many keys wide a field is. */
+        fun width(row: Int, half: Int) = Layout.rows[row].indices.count { halfAt(row, it) == half }
 
-        private const val HALF_ROW = 5
+        /** A letter key under a field, which pastes what a touch on the field pastes. */
+        fun keyFor(slot: Int) = Layout.rows[slot / 2][firstColumn(slot / 2, slot % 2)]
+
+        private const val HALF_SPLIT = 5
         const val KEEP_MILLIS = 60 * 60 * 1000L
         /** A longer text stays in Android's own clipboard only. */
         const val MAX_CHARS = 10_000

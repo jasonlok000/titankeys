@@ -30,19 +30,27 @@ fun main() {
 
     val full = ClipboardHistory()
     for (i in 1..ClipboardHistory.LIMIT + 5) full.add("clip $i", i.toLong())
-    same(full.clips.size, ClipboardHistory.LIMIT, "The history holds at most twenty clips")
+    same(full.clips.size, ClipboardHistory.LIMIT, "The history holds at most six clips")
     same(full.clips.first().text, "clip ${ClipboardHistory.LIMIT + 5}", "The newest of many stays")
     same(full.clips.last().text, "clip 6", "The oldest of many go first")
-    same(ClipboardHistory.LIMIT <= Layout.panelLetters.size, true, "Every clip has a letter key in the panel")
-    full.togglePin(full.clips.lastIndex)
+    same(full.togglePin(full.clips.lastIndex), ClipboardHistory.Pin.PINNED, "A clip can be pinned")
     full.add("one more", 100)
     same(full.clips.last().text, "clip 6", "A pinned clip is not pushed out by new ones")
     same(full.clips.any { it.text == "clip 7" }, false, "The oldest clip that is not pinned makes room")
-    val pinnedOnly = ClipboardHistory((1..ClipboardHistory.LIMIT).map { ClipboardHistory.Clip("pin $it", it.toLong(), pinned = true) })
-    same(pinnedOnly.add("new", 200), false, "When every place is pinned, a new clip is not kept")
 
     same(full.clear(), true, "Clear all removes clips")
     same(full.clips.map { it.text }, listOf("clip 6"), "Clear all keeps the pinned clips")
+
+    val pins = ClipboardHistory()
+    for (i in 1..ClipboardHistory.LIMIT) pins.add("clip $i", i.toLong())
+    for (i in 0 until ClipboardHistory.MAX_PINNED) same(pins.togglePin(i), ClipboardHistory.Pin.PINNED, "Pin ${i + 1} of five is taken")
+    same(pins.togglePin(ClipboardHistory.MAX_PINNED), ClipboardHistory.Pin.FULL, "A sixth pin is refused")
+    same(pins.clips.count { it.pinned }, ClipboardHistory.MAX_PINNED, "A refused pin changes nothing")
+    same(pins.add("newest", 99), true, "With five pins there is still room for the newest clip")
+    same(pins.clips.first().text, "newest", "The newest clip is on the page")
+    same(pins.togglePin(1), ClipboardHistory.Pin.UNPINNED, "A pinned clip can be unpinned")
+    same(pins.togglePin(0), ClipboardHistory.Pin.PINNED, "After an unpin, a pin is free again")
+    same(pins.togglePin(9), ClipboardHistory.Pin.NONE, "A place with no clip pins nothing")
     same(ClipboardHistory().clear(), false, "Clear all on nothing changes nothing")
 
     val odd = ClipboardHistory()
@@ -57,14 +65,17 @@ fun main() {
     same(ClipboardHistory.preview(" one\n two\tthree "), "one two three", "The preview is one line")
     same(ClipboardHistory.preview("abcdefghij", 5), "abcd…", "The strip cuts a long clip to fit one line")
 
-    // The clipboard page: six clips at a time, two to a row, each over half a row of keys.
-    same(listOf("Q", "T", "Y", "P", "A", "G", "H", "L", "Z", "V", "B", "M").map(ClipboardHistory::slot),
-        listOf(0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5), "Each half row of letters is under one clip")
-    same(listOf(Layout.ALT, Layout.SYM, Layout.BACKSPACE, Layout.ENTER, Layout.SPACE).map(ClipboardHistory::slot),
-        listOf(null, null, null, null, null), "Alt, Sym, Backspace, Enter and Space are no clip")
-    for (slot in 0 until ClipboardHistory.PER_PAGE)
+    // The clipboard page: six wide fields, two to a row, inside the inner columns.
+    same(listOf("W", "T", "Y", "O", "S", "G", "H", "L", "Z", "V", "B", "M").map(ClipboardHistory::slot),
+        listOf(0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5), "Each half row of inner letters is under one clip")
+    same(listOf("Q", "A", "P", Layout.ALT, Layout.SYM, Layout.BACKSPACE, Layout.ENTER, Layout.SPACE).map(ClipboardHistory::slot),
+        List(8) { null }, "The outer columns, Sym and Space are no clip, as the touchpad reads the edges poorly")
+    for (slot in 0 until ClipboardHistory.LIMIT)
         same(ClipboardHistory.slot(ClipboardHistory.keyFor(slot)), slot, "A touch on clip $slot pastes what its keys paste")
-    same(listOf(0, 1, 6, 7, 20).map(ClipboardHistory::pageCount), listOf(1, 1, 1, 2, 4), "Six clips to a page, and one page when empty")
+    same((0..2).map { row -> (0..1).map { ClipboardHistory.width(row, it) } }, listOf(listOf(4, 4), listOf(4, 4), listOf(4, 3)),
+        "Each field is four keys wide, but the last stops at Sym")
+    same((0..2).map { row -> (0..1).map { ClipboardHistory.firstColumn(row, it) } }, listOf(listOf(1, 5), listOf(1, 5), listOf(1, 5)),
+        "No field starts in the outer column")
 
     // The page in the Sym panel.
     same(QuickSetting.on("X"), QuickSetting.Clipboard, "X opens the clipboard from the quick settings page")

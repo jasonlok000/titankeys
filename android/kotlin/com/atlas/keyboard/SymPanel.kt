@@ -41,9 +41,9 @@ class SymPanel(
     private val pageChanged: () -> Unit,
     /** A finger moved onto a key that shows a mark, like the tick of a swipe that crosses a key. */
     private val marked: () -> Unit = {},
-    /** A touch on the clipboard page, which does what a push of [String] does: a letter under a clip, Backspace or Enter. */
+    /** A touch on a key of the clipboard page, which does what a push of that key does. */
     private val clipKey: (String) -> Unit = {},
-    /** A touch held on a clip, which pins or unpins it. The key is a letter under the clip. */
+    /** A touch held on a clip, which pins or unpins it. The key is one under the clip. */
     private val holdClip: (String) -> Unit = {},
     /** A touch on A, which opens the clipboard from the symbols or emoji. */
     private val openClipboard: () -> Unit = {},
@@ -68,64 +68,6 @@ class SymPanel(
         addView(preview, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
     }
     private val grid = LinearLayout(context)
-    /** One box on the clipboard page: a clip in two lines, with a small pin in its corner when it is pinned. */
-    private inner class ClipBox(slot: Int) {
-        val text = TextView(context).apply {
-            typeface = this@SymPanel.typeface
-            maxLines = 2
-            ellipsize = TextUtils.TruncateAt.END
-            includeFontPadding = false
-            gravity = Gravity.CENTER_VERTICAL or Gravity.START
-            setLineSpacing(0f, CLIP_LINE_SPACING)
-            setPadding(dp(10), 0, dp(CLIP_PIN + 8), 0)
-        }
-        val pinMark = ImageView(context).apply { setImageResource(R.drawable.pin) }
-        val frame = FrameLayout(context).apply {
-            addView(text, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-            addView(pinMark, FrameLayout.LayoutParams(dp(CLIP_PIN), dp(CLIP_PIN), Gravity.TOP or Gravity.END).apply {
-                topMargin = dp(5)
-                marginEnd = dp(5)
-            })
-            setOnClickListener { clipKey(ClipboardHistory.keyFor(slot)) }
-            setOnLongClickListener {
-                holdClip(ClipboardHistory.keyFor(slot))
-                true
-            }
-        }
-    }
-    private val clipBoxes = List(ClipboardHistory.PER_PAGE) { ClipBox(it) }
-    private val clipGrid = LinearLayout(context).apply {
-        orientation = VERTICAL
-        for (row in 0 until ClipboardHistory.PER_PAGE / 2) addView(LinearLayout(context).apply {
-            for (half in 0..1) addView(clipBoxes[row * 2 + half].frame, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply {
-                setMargins(dp(3), dp(3), dp(3), dp(3))
-            })
-        }, LayoutParams(LayoutParams.MATCH_PARENT, dp(ROW_HEIGHT)))
-    }
-    /** The strip at the bottom of the clipboard page: the clip under a finger or what to do, the page, and Pin and Clear. */
-    private val clipStatus = TextView(context).apply {
-        typeface = this@SymPanel.typeface
-        gravity = Gravity.CENTER_VERTICAL or Gravity.START
-        maxLines = 1
-        ellipsize = TextUtils.TruncateAt.END
-        includeFontPadding = false
-    }
-    private fun bandButton(key: String) = TextView(context).apply {
-        typeface = this@SymPanel.typeface
-        gravity = Gravity.CENTER
-        maxLines = 1
-        includeFontPadding = false
-        setPadding(dp(12), 0, dp(12), 0)
-        setOnClickListener { clipKey(key) }
-    }
-    private val pinButton = bandButton(Layout.ENTER)
-    private val clearButton = bandButton(Layout.BACKSPACE)
-    private val clipBand = LinearLayout(context).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        addView(clipStatus, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
-        addView(pinButton, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
-        addView(clearButton, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
-    }
     private val cells = (Layout.letterKeys + Layout.ALT + Layout.SYM + Layout.BACKSPACE + Layout.ENTER).associateWith(::cell)
     private var tabs = emptyList<TextView>()
     private var shownSamples = emptyList<String>()
@@ -134,21 +76,19 @@ class SymPanel(
     private var look = Look.of(context)
     private var shownMark = ""
 
-    /** The clipboard page's clips, newest first, six to a page. */
+    /** The clipboard page's clips, newest first, one in each wide field. */
     var clips: List<ClipboardHistory.Clip> = emptyList()
         set(value) {
             field = value
-            clipPage = clipPage.coerceAtMost(ClipboardHistory.pageCount(value.size) - 1)
             if (clipboard) render()
         }
-
-    /** Which six clips the clipboard page shows, from 0. */
-    var clipPage = 0
 
     /** On the clipboard page, a push of a letter pins or unpins its clip, and does not paste it. */
     var clipPinning = false
     /** On the clipboard page, Backspace was pushed once, so a second push clears all. */
     var clipClearing = false
+    /** On the clipboard page, a sixth pin was tried, so the strip at the bottom says that five is the most. */
+    var clipPinsFull = false
 
     /** Null until the emoji list has loaded. */
     var emoji: EmojiPages? = null
@@ -186,14 +126,41 @@ class SymPanel(
     private val quick get() = mode == Modifiers.Panel.Settings
     private val clipboard get() = mode == Modifiers.Panel.Clipboard
 
-    /** The place in [clips] of the clip over a key, or null if the key has none. */
-    fun clipIndex(key: String): Int? {
-        val slot = ClipboardHistory.slot(key) ?: return null
-        return (clipPage * ClipboardHistory.PER_PAGE + slot).takeIf { clipboard && it < clips.size }
-    }
+    /** The place in [clips] of the clip over a key, or null if the key has none. The outer columns never have one. */
+    fun clipIndex(key: String) = ClipboardHistory.slot(key)?.takeIf { clipboard && it < clips.size }
 
     /** The clip over a key of the clipboard page, or null if the key has none. */
     private fun clipAt(key: String) = clipIndex(key)?.let(clips::get)
+
+    /**
+     * One wide field of the clipboard page, in the place of the letter keys of half a row: the clip in up to two lines that end
+     * in "…", with a small pin in its top corner when it is pinned. It sits inside the inner columns, as the symbols do.
+     */
+    private inner class ClipField(val slot: Int) {
+        val text = TextView(context).apply {
+            typeface = this@SymPanel.typeface
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+            includeFontPadding = false
+            gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            setPadding(dp(8), 0, dp(CLIP_PIN + 6), 0)
+        }
+        val pinMark = ImageView(context).apply { setImageResource(R.drawable.pin) }
+        val frame = FrameLayout(context).apply {
+            addView(text, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+            addView(pinMark, FrameLayout.LayoutParams(dp(CLIP_PIN), dp(CLIP_PIN), Gravity.TOP or Gravity.END).apply {
+                topMargin = dp(4)
+                marginEnd = dp(4)
+            })
+            visibility = GONE
+            setOnClickListener { clipKey(ClipboardHistory.keyFor(slot)) }
+            setOnLongClickListener {
+                holdClip(ClipboardHistory.keyFor(slot))
+                true
+            }
+        }
+    }
+    private val clipFields = List(ClipboardHistory.LIMIT) { ClipField(it) }
 
     init {
         orientation = VERTICAL
@@ -202,12 +169,20 @@ class SymPanel(
         grid.clipChildren = false
         grid.orientation = VERTICAL
         // Each row keeps all ten columns, so that the letter keys stay above the physical letter keys.
-        for (row in Layout.rows.take(3)) grid.addView(LinearLayout(context).apply {
-            for (key in row) addView(cells[key] ?: Space(context), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        // On the clipboard page, two wide fields take the place of the letter keys of each row, one over each half.
+        for ((index, row) in Layout.rows.take(3).withIndex()) grid.addView(LinearLayout(context).apply {
+            for ((column, key) in row.withIndex()) {
+                val half = ClipboardHistory.halfAt(index, column)
+                if (half != null && ClipboardHistory.firstColumn(index, half) == column) {
+                    val field = clipFields[index * 2 + half]
+                    addView(field.frame, LayoutParams(0, LayoutParams.MATCH_PARENT, ClipboardHistory.width(index, half).toFloat()).apply {
+                        setMargins(dp(2), dp(3), dp(2), dp(3))
+                    })
+                }
+                addView(cells[key] ?: Space(context), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+            }
         }, LayoutParams(LayoutParams.MATCH_PARENT, dp(ROW_HEIGHT)))
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        addView(clipGrid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        band.addView(clipBand, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         addView(band, LayoutParams(LayoutParams.MATCH_PARENT, dp(BAND_HEIGHT)))
         // Keep the keys clear of the gesture handle, which draws over the bottom of the keyboard, and of the rounded corners.
         setOnApplyWindowInsetsListener { _, insets ->
@@ -224,21 +199,13 @@ class SymPanel(
 
     /** Follows a swipe, in keys across and rows down. Returns true if a different page now shows. */
     fun swipe(across: Float, down: Float): Boolean {
-        val moved = if (clipboard) turnClipPage(down) else pages?.swipe(across, down) == true
+        val moved = pages?.swipe(across, down) == true
         if (moved) {
             render()
             slideIn(across, down)
         }
         KeyboardEvents.publish { KeyboardEvent.PanelSwiped(across, down, moved) }
         return moved
-    }
-
-    /** A swipe up shows the next six clips, as it shows the next page of symbols, and a swipe down the six before. */
-    private fun turnClipPage(down: Float): Boolean {
-        val next = (clipPage + if (down < 0) 1 else -1).coerceIn(0, ClipboardHistory.pageCount(clips.size) - 1)
-        if (down == 0f || next == clipPage) return false
-        clipPage = next
-        return true
     }
 
     /** The strip of groups shows, so the bottom row of the touchpad chooses a group. */
@@ -303,6 +270,7 @@ class SymPanel(
             key == Layout.SYM -> pressSym()
             opensClipboard(key) -> openClipboard()
             quick -> QuickSetting.on(key)?.let(useQuickSetting)
+            clipboard -> clipKey(key)
             rows != null -> if (swipe(0f, rows)) pageChanged()
             else -> item(key)?.let(pick)
         }
@@ -346,6 +314,11 @@ class SymPanel(
     /** What a key shows as text, or null if it shows none. */
     private fun label(key: String) = when {
         quick -> QuickSetting.on(key)?.label
+        clipboard -> when (key) {
+            Layout.BACKSPACE -> context.getString(R.string.clipboard_clear).takeIf { clips.any { !it.pinned } }
+            Layout.ENTER -> context.getString(if (clipPinning) R.string.clipboard_pin_done else R.string.clipboard_pin).takeIf { clips.isNotEmpty() }
+            else -> null
+        }
         showsPosition(key) -> position()
         else -> item(key)
     }
@@ -361,6 +334,7 @@ class SymPanel(
 
     /** What the strip at the bottom of the clipboard page says when no finger rests on a clip. */
     private fun clipboardTitle() = context.getString(when {
+        clipPinsFull -> R.string.clipboard_pins_full
         clipClearing -> R.string.clipboard_clear_again
         clipPinning -> R.string.clipboard_pinning
         clips.isEmpty() -> R.string.clipboard_empty
@@ -400,11 +374,8 @@ class SymPanel(
         setBackgroundColor(look.paper)
         setPadding(dp(4), 0, dp(4), navigationInset)
         val current = pages
-        grid.visibility = if (clipboard) GONE else VISIBLE
-        clipGrid.visibility = if (clipboard) VISIBLE else GONE
         categories.visibility = if (quick || clipboard) GONE else VISIBLE
-        preview.visibility = if (quick) VISIBLE else GONE
-        clipBand.visibility = if (clipboard) VISIBLE else GONE
+        preview.visibility = if (quick || clipboard) VISIBLE else GONE
         preview.setTextColor(look.ink)
         showCategories(current)
         keepClearOfCorners()
@@ -412,10 +383,12 @@ class SymPanel(
             val value = label(key)
             val icon = icon(key)
             val isPosition = showsPosition(key)
+            // On the clipboard page the wide fields take the place of the inner letter keys.
+            view.visibility = if (clipboard && ClipboardHistory.slot(key) != null) GONE else VISIBLE
             view.text = value.orEmpty()
             view.foreground = icon?.let { context.getDrawable(it.drawable) }
             // A label must fit its key, so it shrinks where a symbol keeps its size.
-            if (quick || isPosition) view.setAutoSizeTextTypeUniformWithConfiguration(LABEL_SMALLEST, LABEL_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
+            if (quick || clipboard || isPosition) view.setAutoSizeTextTypeUniformWithConfiguration(LABEL_SMALLEST, LABEL_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
             else {
                 view.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
                 view.sized(ITEM_SIZE, ITEM_LARGEST)
@@ -425,6 +398,7 @@ class SymPanel(
             view.contentDescription = when {
                 icon != null -> icon.description
                 quick -> detail(key)
+                clipboard -> detail(key)?.let { context.getString(R.string.clipboard_paste, it) } ?: value
                 isPosition -> value?.let { "Page ${current?.pageNumber()} of ${current?.pageCount()}" }
                 else -> value?.let { "Insert $it" }
             }
@@ -478,9 +452,11 @@ class SymPanel(
 
     /** A letter key under a resting finger takes the accent, as [Layout.restMarks] says. A setting's name shows in the strip at the bottom. */
     private fun showHover() {
-        if (clipboard) return showClipboard()
-        preview.text = detail(hover) ?: if (quick) QUICK_TITLE else ""
-        val mark = hover.takeIf { Layout.restMarks(it, pages != null) && label(it) != null }.orEmpty()
+        preview.text = detail(hover) ?: if (quick) QUICK_TITLE else if (clipboard) clipboardTitle() else ""
+        showClipFields()
+        // A finger on a clip marks its whole field, as a finger on a symbol marks its key.
+        val mark = clipIndex(hover)?.let { "clip$it" }
+            ?: hover.takeIf { Layout.restMarks(it, pages != null) && label(it) != null }.orEmpty()
         for ((key, view) in cells) {
             val hovered = key == mark
             view.setBackgroundColor(if (hovered) look.accent else Color.TRANSPARENT)
@@ -488,6 +464,8 @@ class SymPanel(
                 hovered -> look.onAccent
                 dim(key) -> Color.GRAY
                 showsPosition(key) -> look.muted
+                // Clear and Pin are actions, so they take the accent like the buttons on the strip.
+                clipboard && (key == Layout.BACKSPACE || key == Layout.ENTER) -> look.accent
                 else -> look.ink
             })
             view.foregroundTintList = ColorStateList.valueOf(look.ink)
@@ -498,48 +476,25 @@ class SymPanel(
         }
     }
 
-    /**
-     * The clipboard page: each clip in its box, the box under a resting finger in the accent colour with the whole clip in the strip
-     * at the bottom, and Pin and Clear beside it.
-     */
-    private fun showClipboard() {
+    /** The clipboard page's fields: each clip, the one under a resting finger in the accent colour, and an outline while pinning. */
+    private fun showClipFields() {
         val under = clipIndex(hover)
-        for ((slot, box) in clipBoxes.withIndex()) {
-            val clip = clips.getOrNull(clipPage * ClipboardHistory.PER_PAGE + slot)
-            box.frame.visibility = if (clip != null) VISIBLE else INVISIBLE
-            if (clip == null) continue
-            val lit = under == clipPage * ClipboardHistory.PER_PAGE + slot
-            box.text.text = ClipboardHistory.preview(clip.text, CLIP_PREVIEW)
-            box.text.sized(CLIP_TEXT_SIZE, CLIP_TEXT_LARGEST)
-            box.text.setTextColor(if (lit) look.onAccent else look.ink)
-            box.frame.background = GradientDrawable().apply {
-                cornerRadius = dp(8).toFloat()
+        for (field in clipFields) {
+            val clip = clips.getOrNull(field.slot)
+            field.frame.visibility = if (!clipboard) GONE else if (clip == null) INVISIBLE else VISIBLE
+            if (!clipboard || clip == null) continue
+            val lit = under == field.slot
+            field.text.text = ClipboardHistory.preview(clip.text, CLIP_PREVIEW)
+            field.text.sized(CLIP_TEXT_SIZE, CLIP_TEXT_LARGEST)
+            field.text.setTextColor(if (lit) look.onAccent else look.ink)
+            field.frame.background = GradientDrawable().apply {
+                cornerRadius = dp(6).toFloat()
                 setColor(if (lit) look.accent else look.wash)
-                // While pinning, every clip has an outline, to show that a push pins it.
                 if (clipPinning && !lit) setStroke(dp(1).coerceAtLeast(2), look.accent)
             }
-            box.pinMark.visibility = if (clip.pinned) VISIBLE else GONE
-            box.pinMark.imageTintList = ColorStateList.valueOf(if (lit) look.onAccent else look.accent)
-            box.frame.contentDescription = context.getString(R.string.clipboard_paste, ClipboardHistory.preview(clip.text))
-        }
-        val pages = ClipboardHistory.pageCount(clips.size)
-        val status = detail(hover) ?: clipboardTitle()
-        clipStatus.text = if (pages > 1 && detail(hover) == null)
-            context.getString(R.string.clipboard_page, status, clipPage + 1, pages) else status
-        clipStatus.sized(BAND_TEXT_SIZE, BAND_TEXT_LARGEST)
-        clipStatus.setTextColor(look.ink)
-        pinButton.text = context.getString(if (clipPinning) R.string.clipboard_pin_done else R.string.clipboard_pin)
-        pinButton.visibility = if (clips.isNotEmpty()) VISIBLE else GONE
-        clearButton.text = context.getString(R.string.clipboard_clear)
-        clearButton.visibility = if (clips.any { !it.pinned }) VISIBLE else GONE
-        for (button in listOf(pinButton, clearButton)) {
-            button.sized(BAND_TEXT_SIZE, BAND_TEXT_LARGEST)
-            button.setTextColor(look.accent)
-        }
-        val mark = under?.toString().orEmpty()
-        if (mark != shownMark) {
-            shownMark = mark
-            if (mark.isNotEmpty()) marked()
+            field.pinMark.visibility = if (clip.pinned) VISIBLE else GONE
+            field.pinMark.imageTintList = ColorStateList.valueOf(if (lit) look.onAccent else look.accent)
+            field.frame.contentDescription = context.getString(R.string.clipboard_paste, ClipboardHistory.preview(clip.text))
         }
     }
 
@@ -564,15 +519,12 @@ class SymPanel(
         const val ITEM_LARGEST = 30f
         const val LABEL_SMALLEST = 8
         const val LABEL_LARGEST = 14
-        /** A clip in its box: the size of the words on the strip, in two lines. */
-        const val CLIP_TEXT_SIZE = 16f
-        const val CLIP_TEXT_LARGEST = 19f
-        const val CLIP_LINE_SPACING = .95f
-        /** Enough of a clip for two lines. The box cuts it cleanly where it ends. */
+        /** A clip in its field: two lines that fit the row at any system font size. */
+        const val CLIP_TEXT_SIZE = 15f
+        const val CLIP_TEXT_LARGEST = 16f
+        /** Enough of a clip for two lines. The field ends it with "…" where it runs out of room. */
         const val CLIP_PREVIEW = 160
-        const val CLIP_PIN = 12
-        const val BAND_TEXT_SIZE = 14f
-        const val BAND_TEXT_LARGEST = 16f
+        const val CLIP_PIN = 11
         const val QUICK_TITLE = "Quick settings"
         const val SLIDE_DISTANCE = 12
         const val SLIDE_ALPHA = .5f

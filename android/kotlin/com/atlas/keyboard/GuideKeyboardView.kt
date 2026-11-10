@@ -212,6 +212,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         for (key in keys) moving = drawKey(canvas, key, now, frameCount) || moving
         drawTouchArea(canvas)
         drawTapZone(canvas)
+        drawDeleteZone(canvas)
         drawGhost(canvas, now)
         moving = drawTrail(canvas, now) || moving
         if (moving) postInvalidateOnAnimation() else lastFrame = 0
@@ -516,6 +517,26 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             height * ZONE_BOTTOM, corner, corner, zonePaint)
     }
 
+    /**
+     * A soft patch, like the steer zone, over where a delete flick can start ([deleteStartBoxes]): Backspace and the right edge, and
+     * the middle row from K. It stops where the touchpad stops feeling. The ghost's flick starts inside it.
+     */
+    private fun drawDeleteZone(canvas: Canvas) {
+        if (cue !is GuideCue.Flick) return
+        val corner = dp(ZONE_CORNER)
+        zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE, ZONE_ALPHA)
+        deletePath.rewind()
+        for ((left, top, right, bottom) in deleteStartBoxes) {
+            val box = Path()
+            box.addRoundRect(width * left, height * maxOf(top, AREA_TOP), width * minOf(right, AREA_RIGHT), height * minOf(bottom, AREA_BOTTOM),
+                corner, corner, Path.Direction.CW)
+            deletePath.op(box, Path.Op.UNION)
+        }
+        canvas.drawPath(deletePath, zonePaint)
+    }
+
+    private val deletePath = Path()
+
     private fun drawTaps(canvas: Canvas, cue: GuideCue.Taps, t: Float, colour: Int) {
         // Rings for each tap, one after the other, inside the zone where the taps count, then a sideways drag if there is one.
         val tapsEnd = if (cue.drag) .45f else .8f
@@ -558,7 +579,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             val (x, y) = Layout.centre(letter)
             floatArrayOf(x, y)
         }
-        is GuideCue.Flick -> listOf(floatArrayOf(.95f, .375f), floatArrayOf(.62f, .375f))
+        is GuideCue.Flick -> listOf(GUIDE_FLICK_START, floatArrayOf(GUIDE_FLICK_END_X, GUIDE_FLICK_START[1]))
         GuideCue.SlideRow -> listOf(floatArrayOf(.08f, .875f), floatArrayOf(.92f, .875f))
         else -> emptyList()
     }

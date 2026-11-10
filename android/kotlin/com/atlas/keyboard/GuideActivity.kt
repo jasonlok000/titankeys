@@ -1568,7 +1568,7 @@ class GuideActivity : Activity() {
 
         // Demonstrations: back to back until you act. These are safe to change.
         /** How long nobody acts before a slide shows its gesture again after you act. */
-        private const val DEMO_IDLE_MILLIS = 8000L
+        private const val DEMO_IDLE_MILLIS = 3000L
         /** When a new slide shows its gesture: as soon as the slide's words have slid in. */
         private const val DEMO_ENTER_MILLIS = ENTER_STAGGER_MILLIS + ENTER_MILLIS
         /** The pause between one showing and the next. */

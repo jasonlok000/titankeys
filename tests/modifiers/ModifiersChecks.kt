@@ -23,13 +23,10 @@ private const val WORD = 900L
 
 fun main() {
     onePress()
-    slowOnePress()
+    aLongPushStaysOn()
     holdAndType()
     quickHoldAndType()
-    holdAndSwipe()
-    holdLimit()
     pressThenHoldAndType()
-    pressThenHoldAndSwipe()
     doublePress()
     doublePressAndTypeQuickly()
     doublePressDoesNotLockWhenOff()
@@ -70,9 +67,9 @@ fun main() {
     theShortcutsFitOneLine()
     stickyShiftAndCapsShowInTheBar()
     stickyShiftLeavesTheBarWhenItIsUsed()
-    aCapitalWithShiftHeldLeavesTheWords()
+    aHeldShiftShowsInTheBar()
     altShowsTheSymbolOfAKey()
-    aHeldAltStaysOutOfTheBar()
+    aHeldAltShowsInTheBar()
     theBarShowsEveryModifierThatIsOn()
     ctrlIsNotAToggle()
     ctrlLeavesTheSymPanelAlone()
@@ -142,10 +139,16 @@ private fun onePress() = Keyboard().run {
     same(shift, Level.Off, "One press must not come back")
 }
 
-private fun slowOnePress() = Keyboard().run {
-    down()
-    up(after = Modifiers.HOLD_MILLIS - 1)
-    same(shift, Level.Once, "A press just short of a hold is still one press")
+private fun aLongPushStaysOn() {
+    for (code in listOf(SHIFT, ALT)) Keyboard().run {
+        fun level() = if (code == SHIFT) shift else modifiers.alt
+        down(code)
+        up(code, after = WORD)
+        same(level(), Level.Once, "A long push that typed nothing must stay on for the next key")
+        idle(WORD)
+        press(code)
+        same(level(), Level.Off, "The next push must turn the key off")
+    }
 }
 
 private fun holdAndType() = Keyboard().run {
@@ -166,19 +169,6 @@ private fun quickHoldAndType() = Keyboard().run {
     same(shift, Level.Off, "A short hold for one character must also end with the key")
 }
 
-private fun holdAndSwipe() = Keyboard().run {
-    // Contact drops a swipe made while a key is held, so nothing uses the Shift.
-    down()
-    up(after = WORD)
-    same(shift, Level.Off, "A swipe dropped during a hold must not leave Shift on")
-}
-
-private fun holdLimit() = Keyboard().run {
-    down()
-    up(after = Modifiers.HOLD_MILLIS)
-    same(shift, Level.Off, "Shift down for the full hold time counts as held")
-}
-
 private fun pressThenHoldAndType() = Keyboard().run {
     press()
     idle(GAP)
@@ -187,15 +177,7 @@ private fun pressThenHoldAndType() = Keyboard().run {
     type(5)
     same(shift, Level.Locked, "Shift must stay on for the whole word")
     up(after = WORD)
-    same(shift, Level.Off, "A press and then a hold must not stay locked after a word")
-}
-
-private fun pressThenHoldAndSwipe() = Keyboard().run {
-    press()
-    idle(GAP)
-    down()
-    up(after = WORD)
-    same(shift, Level.Off, "A press and then a hold must not stay locked after a dropped swipe")
+    same(shift, Level.Locked, "A lock must stay after the key is let go, as it does for Alt")
 }
 
 private fun doublePress() = Keyboard().run {
@@ -470,11 +452,12 @@ private fun lockedThenHold() = Keyboard().run {
 }
 
 private fun bothShiftKeys() = Keyboard().run {
+    modifiers.doublePressLocks = false
     down(SHIFT)
     down(OTHER_SHIFT)
     type(5)
     up(OTHER_SHIFT, after = WORD)
-    same(shift, Level.Locked, "Shift stays on while the other Shift key is held")
+    same(shift, Level.Once, "Shift stays on while the other Shift key is held")
     up(SHIFT)
     same(shift, Level.Off, "Shift ends with the last Shift key")
 }
@@ -914,13 +897,14 @@ private fun stickyShiftLeavesTheBarWhenItIsUsed() = Keyboard().run {
     same(bar(), null, "The words must come back after the next letter")
 }
 
-private fun aCapitalWithShiftHeldLeavesTheWords() = Keyboard().run {
+private fun aHeldShiftShowsInTheBar() = Keyboard().run {
     down(SHIFT)
-    same(bar(), null, "A Shift that is held must not replace the words")
+    same(bar()?.chips, listOf(ModifierBar.SHIFT), "A Shift that is held must show at once")
+    same(bar("Q")?.hint, "Q", "A finger on a letter must show that letter while Shift is held")
     type()
-    same(bar(), null, "A capital typed with Shift held must not replace the words")
+    same(bar()?.chips, listOf(ModifierBar.SHIFT), "Shift must still show while it is held")
     up(SHIFT)
-    same(bar(), null, "The words must stay after Shift is let go")
+    same(bar(), null, "The words must come back when Shift is let go after a letter")
 }
 
 private fun altShowsTheSymbolOfAKey() = Keyboard().run {
@@ -932,9 +916,12 @@ private fun altShowsTheSymbolOfAKey() = Keyboard().run {
     same(bar(), null, "The words must come back after the next letter")
 }
 
-private fun aHeldAltStaysOutOfTheBar() = Keyboard().run {
+private fun aHeldAltShowsInTheBar() = Keyboard().run {
     down(ALT)
-    same(bar(), null, "An Alt that is held must not replace the words")
+    same(bar()?.chips, listOf(ModifierBar.ALT), "An Alt that is held must show at once")
+    type()
+    up(ALT)
+    same(bar(), null, "The words must come back when Alt is let go after a character")
 }
 
 private fun theBarShowsEveryModifierThatIsOn() = Keyboard().run {

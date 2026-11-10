@@ -5,7 +5,8 @@ import android.view.KeyEvent
 /**
  * Sticky Shift and Alt, and the Sym panel. One press of Shift or Alt applies to the next character. A second press within
  * [DOUBLE_PRESS_MILLIS] leaves the key on for exactly that next character, or with [doublePressLocks] locks it until a
- * third press. A slower second press turns the key off. Holding the key works as usual.
+ * third press. A slower second press turns the key off. A key held for a character ends with the release, and a push that typed
+ * nothing stays on for the next key, however long it lasted. Shift and Alt follow the same rules.
  * Each press of Sym moves the panel to its next step, and the panel stays open after Sym is let go.
  * Only one of them is on at a time. While the panel is open, Alt opens the quick settings page and goes back from it.
  *
@@ -58,9 +59,6 @@ class Modifiers {
         Key.Shift -> shift
         Key.Alt -> alt
     }
-
-    /** The key is on and no finger holds it down, so it still applies to what comes next. */
-    fun sticky(key: Key) = level(key) != Level.Off && held.keys.none { keyOf(it) == key }
 
     /** Pressing Shift or Alt on the touchpad or the keyboard. With the panel open, Alt is the quick settings key. */
     fun press(key: Key, time: Long) {
@@ -168,21 +166,12 @@ class Modifiers {
         }
         if (code == KeyEvent.KEYCODE_SYM) symHeld = false
         val key = keyOf(code) ?: return
-        val pressedAt = held.remove(code) ?: return
+        held.remove(code) ?: return
         val used = usedWhileHeld.remove(code)
         if (held.keys.any { keyOf(it) == key }) return
-        // Shift only applies while it is held, even when nothing used it: a swipe during the hold is
-        // dropped, and a hold that starts as a double press must not stay locked. The time, not the use,
-        // decides a lock, so a letter that overlaps a quick double press does not undo it. Alt stays on
-        // after a long press, so the next key still types the symbol printed on it.
-        val heldDown = key == Key.Shift && time - pressedAt >= HOLD_MILLIS
-        // Holding the modifier for a character releases it with the key, like a regular keyboard.
-        val releases = when (level(key)) {
-            Level.Once -> used || heldDown
-            Level.Locked -> heldDown
-            Level.Off -> false
-        }
-        if (releases) when (key) {
+        // Holding the modifier for a character releases it with the key, like a regular keyboard. A push that typed
+        // nothing stays on, so a slow push of the key is still one push, and a lock stays locked.
+        if (used && level(key) == Level.Once) when (key) {
             Key.Shift -> shift = Level.Off
             Key.Alt -> alt = Level.Off
         }
@@ -226,8 +215,6 @@ class Modifiers {
 
     companion object {
         const val DOUBLE_PRESS_MILLIS = 300L
-        /** Shift down for at least this long was held, not pressed. It matches an Android long press. */
-        const val HOLD_MILLIS = 400L
         /** The key code that the Use fn as Ctrl setting listens for. */
         const val FN = KeyEvent.KEYCODE_FUNCTION
 
@@ -235,9 +222,9 @@ class Modifiers {
         val CTRL_ACTIONS = mapOf("A" to "Select all", "C" to "Copy", "X" to "Cut", "V" to "Paste", "Z" to "Undo", "Y" to "Redo")
 
         /**
-         * What a key does to the pages of the open [panel], in rows down. On the emoji page Backspace does what a swipe down does,
-         * and Enter what a swipe up does. On the other pages they return 0, which changes nothing. Returns null for other keys and
-         * for a closed panel. These two keys never reach the text while the panel is open.
+         * What a key does to the pages of the open [panel], in rows down. On the symbol and emoji pages Backspace does what a swipe
+         * down does, and Enter what a swipe up does. On the quick settings page they return 0, which changes nothing. Returns null
+         * for other keys and for a closed panel. These two keys never reach the text while the panel is open.
          */
         fun panelScroll(code: Int, panel: Panel): Float? {
             val rows = when (code) {

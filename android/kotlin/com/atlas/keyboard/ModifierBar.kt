@@ -13,19 +13,22 @@ data class ModifierBar(val chips: List<String>, val hint: String) {
         val SHORTCUTS = Modifiers.CTRL_ACTIONS.entries.joinToString("  ") { (key, action) -> "$key ${action.removePrefix("Select ").lowercase()}" }
 
         /**
-         * The bar for the modifiers as they are now, or null if none is on. A Shift or Alt that a finger holds down is left out,
-         * so typing a capital with Shift held does not replace the words for a moment.
+         * The bar for the modifiers as they are now, or null if none is on. A modifier shows from the moment that it goes down,
+         * and it stays while a finger holds it.
          *
          * [hover] is the key under a resting finger, or an empty string. The touchpad reports nothing while a physical key other
          * than Shift is held, so with Ctrl there is normally no such key, and the bar lists the shortcuts.
          * [symbol] gives what Alt types on a letter key.
          */
         fun of(modifiers: Modifiers, hover: String, symbol: (String) -> String?): ModifierBar? {
-            val shift = modifiers.sticky(Modifiers.Key.Shift)
-            val alt = modifiers.sticky(Modifiers.Key.Alt)
+            val alt = modifiers.alt != Modifiers.Level.Off
             val chips = listOfNotNull(
                 CTRL.takeIf { modifiers.ctrlHeld },
-                if (!shift) null else if (modifiers.shift == Modifiers.Level.Locked) CAPS else SHIFT,
+                when (modifiers.shift) {
+                    Modifiers.Level.Off -> null
+                    Modifiers.Level.Once -> SHIFT
+                    Modifiers.Level.Locked -> CAPS
+                },
                 ALT.takeIf { alt },
             )
             if (chips.isEmpty()) return null

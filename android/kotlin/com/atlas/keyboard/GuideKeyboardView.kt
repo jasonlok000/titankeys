@@ -60,6 +60,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val box = RectF()
         /** How lit the key is, from 0 to 1. It fades by itself. */
         var heat = 0f
+        /** How lit the key is because a finger is over it, from 0 to 1. It eases in and out, so the light never flickers. */
+        var glow = 0f
         /** What the key shows for a moment after its letter became a symbol. */
         var symbol: String? = null
         var flipStart = -1L
@@ -113,6 +115,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     /** The finger's path in touchpad space, from 0 to 1 each way: each point's x, y and thickness, 1 for a usual touch. */
     private val trail = ArrayList<FloatArray>()
+    /** The key under a real finger, held steady at key edges and through short dropouts of contact. */
+    private val hover = KeyHover()
+    private var hovered: String? = null
     private var liftedAt = -1L
     /** When a real finger was last on the keys. The ghost waits while one is there, so it never gets in its way. */
     private var touchedAt = -1L
@@ -158,8 +163,13 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     fun trace(points: List<FloatArray>, reset: Boolean, lifted: Boolean) {
         if (reset) trail.clear()
         trail.addAll(points)
-        for (point in points) byName[Layout.keyAt(point[0], point[1])]?.heat = 1f
+        for (point in points) hover.point(point[0], point[1])
         liftedAt = if (lifted) GuideMotion.now() else -1
+        if (lifted) {
+            hover.lift(GuideMotion.now())
+            // Once the dropout's grace is over, the light fades out.
+            postInvalidateDelayed(KeyHover.DROPOUT_MILLIS + FRAME_MILLIS.toLong())
+        }
         touched()
     }
 
@@ -209,6 +219,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         lastFrame = now
         val frameCount = if (GuideMotion.enabled) elapsed / FRAME_MILLIS else 99f
         var moving = cue != GuideCue.Free && GuideMotion.enabled && isShown
+        hovered = hover.current(now)
         for (key in keys) moving = drawKey(canvas, key, now, frameCount) || moving
         drawTouchArea(canvas)
         drawTapZone(canvas)
@@ -231,6 +242,15 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             key.heat = if (GuideMotion.enabled) max(0f, key.heat - HEAT_FADE_PER_FRAME * frames) else 0f
             moving = true
         }
+        // The key under the finger eases in, and out once the finger has left it.
+        val target = if (key.name == hovered) 1f else 0f
+        if (key.glow != target) {
+            val step = frames * FRAME_MILLIS / HOVER_FADE_MILLIS
+            key.glow = if (!GuideMotion.enabled) target
+                else if (target > key.glow) min(target, key.glow + step) else max(target, key.glow - step)
+            moving = true
+        }
+        heat = max(heat, key.glow)
         val spot = cue as? GuideCue.Spot
         if (spot != null && key.name in spot.keys && GuideMotion.enabled) {
             val at = spot.keys.indexOf(key.name)
@@ -604,6 +624,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         /** How much of a lit key's size goes away, so that it looks pushed in. */
         const val PRESS_DEPTH = .06f
         const val HEAT_FADE_PER_FRAME = .055f
+        /** How long the light under a finger takes to come on, and to go once the finger has left. */
+        const val HOVER_FADE_MILLIS = 100f
         const val SPOT_PULSE_MILLIS = 900f
 
         // The wave that runs over the keys when something works.

@@ -28,6 +28,7 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
 )
 
 fun main() {
+    steadyKeyLight()
     playgroundSpeed()
     everyStepIsReachable()
     theStepsHaveOkayWords()
@@ -282,6 +283,37 @@ private fun theTrailFollowsTouchSize() {
     check(wobble.zipWithNext().all { (a, b) -> kotlin.math.abs(a - b) < .06f }) { "A touch wavering by a step should not flicker: $wobble" }
     check(trail.next(.45f, .4f, 4) < 1.1f) { "One larger point should only start to thicken the trail" }
     same(trail.next(.45f, .4f, 0), trail.next(.45f, .4f, 0), "A point of unknown size should keep the thickness")
+}
+
+/** The guide's key light under a finger: steady at key edges, and through the touchpad's short dropouts of contact. */
+private fun steadyKeyLight() {
+    val hover = KeyHover()
+    same(hover.current(0), null, "No finger, no key")
+    hover.point(.15f, .125f)
+    same(hover.current(0), "W", "A finger lights the key under it at once")
+    // W is from .1 to .2 across. Just over the border into E stays on W.
+    hover.point(.205f, .125f)
+    same(hover.current(10), "W", "Just over a border, the light stays where it was")
+    hover.point(.195f, .125f)
+    hover.point(.21f, .125f)
+    same(hover.current(20), "W", "Wobbling on a border does not flip the light")
+    hover.point(.225f, .125f)
+    same(hover.current(30), "E", "Clearly inside the next key, the light moves")
+    hover.point(.25f, .27f)
+    same(hover.current(40), "E", "Just below a row's border, it stays in the row it was in")
+    hover.point(.25f, .36f)
+    same(hover.current(50), "D", "Well inside the next row, it moves")
+    hover.lift(100)
+    same(hover.current(150), "D", "A short dropout keeps the light")
+    hover.point(.25f, .37f)
+    same(hover.current(200), "D", "The finger back after a dropout carries on")
+    hover.lift(300)
+    same(hover.current(300 + KeyHover.DROPOUT_MILLIS), "D", "Up to the end of the grace the light stays")
+    same(hover.current(301 + KeyHover.DROPOUT_MILLIS), null, "After a real lift the light goes")
+    hover.point(.55f, .62f)
+    same(hover.current(500), "B", "A new touch after a lift lights its key at once")
+    hover.point(.05f, .375f)
+    same(hover.current(510), "A", "An edge key can be reached, as far as the touchpad goes")
 }
 
 /** The playground's speed: one burst from the first input, five characters a word, and gone after a quiet while. */

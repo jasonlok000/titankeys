@@ -9,6 +9,6 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 keyboard=android/kotlin/com/atlas/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
-  "$keyboard/KeyboardEvents.kt" "$keyboard/GuideSteps.kt" "$keyboard/GuideHooks.kt" "$keyboard/Modifiers.kt" "$keyboard/QuickSetting.kt" "$keyboard/Layout.kt" "$keyboard/TrailThickness.kt" "$keyboard/WpmMeter.kt" \
+  "$keyboard/KeyboardEvents.kt" "$keyboard/GuideSteps.kt" "$keyboard/GuideHooks.kt" "$keyboard/Modifiers.kt" "$keyboard/QuickSetting.kt" "$keyboard/Layout.kt" "$keyboard/TrailThickness.kt" "$keyboard/WpmMeter.kt" "$keyboard/KeyHover.kt" \
   tests/guide/GuideChecks.kt
 java -cp "$work:$stdlib" com.atlas.keyboard.GuideChecksKt

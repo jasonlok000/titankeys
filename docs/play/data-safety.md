@@ -48,12 +48,12 @@ Answer **"not collected"** for everything except the rows marked **Collected**.
 | Health and fitness | All | Not collected | |
 | Messages | Emails, SMS or MMS, Other in-app messages | Not collected | No text around the word, and no typed text, is ever sent. |
 | Photos and videos, Audio, Files and docs, Calendar, Contacts | All | Not collected | |
-| **App activity** | **App interactions** | **Collected** | The swipe path, with times from the start of the swipe, the touch sizes, and the ranker's 18 numbers. |
+| **App activity** | **App interactions** | **Collected** | The swipe path, with times from the start of the swipe, the touch sizes, the ranker's 18 numbers, and how the word was settled (kept, picked from the strip, or corrected). |
 | App activity | In-app search history, Installed apps, Other actions | Not collected | |
 | **App activity** | **Other user-generated content** | **Collected** | The kept word, only when it is a dictionary word. **Uncertain:** a single dictionary word could also be seen as part of "App interactions". Declaring it here is the cautious choice. |
 | Web browsing | Web browsing history | Not collected | |
 | App info and performance | Crash logs | Not collected | |
-| **App info and performance** | **Diagnostics** | **Collected** | The app version, the model versions and the phone model. **Uncertain:** Google has no data type for a phone model. Diagnostics is the closest, and declaring it is the cautious choice. |
+| **App info and performance** | **Diagnostics** | **Collected** | The app version, the build (GitHub, Play or debug), the model versions and the phone model. **Uncertain:** Google has no data type for a phone model. Diagnostics is the closest, and declaring it is the cautious choice. |
 | App info and performance | Other app performance data | Not collected | |
 | **Device or other IDs** | **Device or other IDs** | **Collected** | The random contributor ID. Google: "identifiers that relate to an individual device, browser or app", with an app instance ID among its examples. |
 

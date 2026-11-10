@@ -371,7 +371,7 @@ class AtlasIme : InputMethodService() {
     }
 
     /** What Back does while the status is held. Nothing shows, so it must not stop at the keyboard. */
-    private fun heldBack(event: KeyEvent, down: Boolean): Boolean = when (TouchpadHold.backStep(event.deviceId != KeyCharacterMap.VIRTUAL_KEYBOARD, down)) {
+    private fun heldBack(event: KeyEvent, down: Boolean): Boolean = when (TouchpadHold.backStep(TouchpadHold.fromHandler(event.deviceId, event.flags), down)) {
         TouchpadHold.Back.ToApp -> false
         TouchpadHold.Back.Keep -> true
         TouchpadHold.Back.KeepAndHide -> {

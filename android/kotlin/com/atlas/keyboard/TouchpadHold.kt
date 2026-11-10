@@ -63,6 +63,10 @@ class TouchpadHold {
          */
         const val BACK_MILLIS = 100L
 
+        /** From android.view.KeyCharacterMap and android.view.KeyEvent, so that this class can be tested without Android. */
+        private const val NO_DEVICE = -1
+        private const val FLAG_VIRTUAL_HARD_KEY = 0x40
+
         /**
          * True if the status should stay on now. It needs no field and the overlay that catches the events. The Back service must be
          * on too, because without it a Back press in an app on Android's newer back handling would be lost.
@@ -74,12 +78,18 @@ class TouchpadHold {
         fun keepsStatus(wanted: Boolean, windowUp: Boolean) = wanted && windowUp
 
         /**
-         * Android keeps a back handler for a shown keyboard in front of the app's. A push of a real key still reaches the app the
-         * usual way, so the keyboard stays out of it. The handler reaches the keyboard as a Back event from no device, and there
-         * the push would end, so the status ends too, which removes the handler, and a system back goes on to the app.
+         * True for the Back events that Android's handler for a shown keyboard makes. A system back also has no device, and it comes
+         * past the keyboard on its way to the app, so only the flag that the handler alone sets tells them apart.
          */
-        fun backStep(fromKey: Boolean, down: Boolean): Back = when {
-            fromKey -> Back.ToApp
+        fun fromHandler(deviceId: Int, flags: Int) = deviceId == NO_DEVICE && flags and FLAG_VIRTUAL_HARD_KEY != 0
+
+        /**
+         * Android keeps a back handler for a shown keyboard in front of the app's. Every other Back event, such as a push of a real
+         * key or a system back, goes on to the app the usual way. A push reaches the handler only in an app on the newer back
+         * handling. There the push would end, so the status ends too, which removes the handler, and a system back goes on to the app.
+         */
+        fun backStep(fromHandler: Boolean, down: Boolean): Back = when {
+            !fromHandler -> Back.ToApp
             down -> Back.Keep
             else -> Back.KeepAndHide
         }

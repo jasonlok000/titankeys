@@ -221,6 +221,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     }
                     "null"
                 }
+                "playgroundCancel" -> {
+                    GuideActivity.cancelPlayground()
+                    "null"
+                }
                 "enable", "overlay", "scrollAssistant", "backService" -> {
                     val part = when (operation) {
                         "enable" -> SetupPart.Enable

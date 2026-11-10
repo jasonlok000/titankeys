@@ -31,10 +31,11 @@ internal enum class GuideChapter(val label: String) {
  */
 internal enum class SetupPart(val title: String, val body: String, val action: String, val help: String? = null) {
     Enable("Switch on the keyboard.", "Turn on TitanKeys in the list. The guide comes back by itself.", "Open the keyboard list",
-        "Turn on the switch for TitanKeys, then push OK."),
+        "TitanKeys can be further down the list. Turn on its switch, then push OK two times."),
     Choose("Make it your keyboard.", "Select TitanKeys in the list. That is all.", "Select TitanKeys"),
-    Overlay("Allow it over other apps.", "This keeps the touchpad on the keys when an app shows its own buttons.", "Allow",
-        "Turn on the switch on that page."),
+    // Android shows a list of all apps here, not the page for TitanKeys alone.
+    Overlay("Allow it over other apps.", "Allow TitanKeys in the list. This keeps the touchpad on the keys.", "Open the list",
+        "Find TitanKeys in the list, open it, and turn on its switch."),
     ScrollAssistant("Turn on Scroll assistant.", "Swiping needs it to read the touchpad. Turn on its switch.", "Open Scroll assistant",
         "Turn on the switch at the top of that page."),
     Back("Let TitanKeys handle Back.", "In Accessibility, turn on TitanKeys. Back then works in one push.", "Open Accessibility",

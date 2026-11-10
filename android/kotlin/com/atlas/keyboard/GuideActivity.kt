@@ -1209,7 +1209,6 @@ class GuideActivity : Activity() {
 
     /** The playground's Guide and Settings buttons: the app opens that page, and the playground opens again when you come back. */
     private fun leavePlayground(action: String) {
-        playgroundLeft = SystemClock.uptimeMillis()  // the button's page, not a new playground, comes next
         playgroundExit?.invoke(action)
         playgroundExit = null
         finish()
@@ -1616,7 +1615,7 @@ class GuideActivity : Activity() {
             // the app's window in front, no playground is: the app's window is at the bottom of the app's screens.
             val showing = playgrounds.any { !it.isFinishing } && !activity.hasWindowFocus()
             val now = SystemClock.uptimeMillis()
-            val quiet = now - playgroundLeft < PLAYGROUND_QUIET_MILLIS || now - playgroundStarting < PLAYGROUND_QUIET_MILLIS
+            val quiet = now - playgroundStarting < PLAYGROUND_QUIET_MILLIS
             Log.d(TAG, "playground asked: open ${playgrounds.size}, showing $showing, quiet $quiet, guides $guidesOpen")
             if (showing || quiet) return
             val open = {
@@ -1627,15 +1626,16 @@ class GuideActivity : Activity() {
             if (guidesOpen > 0) waitingPlayground = open else open()
         }
 
-        /** Playgrounds that are open now, and when one last started or closed by its own button. Main thread only. */
+        /** The front page went away, so a playground that waits for a guide to close is no longer wanted. */
+        fun cancelPlayground() {
+            waitingPlayground = null
+        }
+
+        /** Playgrounds that are open now. Main thread only. */
         private val playgrounds = ArrayList<GuideActivity>()
-        private var playgroundLeft = -PLAYGROUND_QUIET_MILLIS
         /** When a playground was asked to start, until it has started. */
         private var playgroundStarting = -PLAYGROUND_QUIET_MILLIS
-        /**
-         * The app's own window comes to the front as a button closes the playground, before it has moved to the button's page,
-         * and a playground takes a moment to start. Asks in this time are left out.
-         */
+        /** A playground takes a moment to start. A second ask in this time is left out. */
         private const val PLAYGROUND_QUIET_MILLIS = 1500L
     }
 }

@@ -187,6 +187,9 @@ export function openPlayground(closed: (action: "guide" | "settings" | "setup" |
   void atlas("playground");
   return stop;
 }
+
+/** The front page went away: a playground that waits for the guide to close is not wanted any more. */
+export const cancelPlayground = () => void atlas("playgroundCancel");
 export const enableKeyboard = () => atlas("enable");
 export const chooseKeyboard = () => atlas("choose");
 export const allowOverlay = () => atlas("overlay");

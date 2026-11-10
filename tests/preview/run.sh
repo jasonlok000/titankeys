@@ -33,7 +33,7 @@ passed=true
 for attempt in 1 2 3; do
   output=$("$adb" shell am instrument -w "$app/com.atlas.keyboard.PreviewChecks")
   printf '%s\n' "$output"
-  [[ "$output" == *"PASS preview shows a new swipe after returning from Settings"* ]] || passed=false
+  [[ "$output" == *"PASS the playground shows a new swipe after returning from Settings"* ]] || passed=false
 done
 restore
 bash tools/debug.sh --install

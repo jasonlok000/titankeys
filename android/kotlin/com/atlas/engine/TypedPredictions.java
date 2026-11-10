@@ -30,6 +30,13 @@ public final class TypedPredictions {
     /** The most frequent words, which are all the next word can be when the model has no opinion. */
     private final int[] common;
     private static final int COMMON_WORDS = 64;
+    /**
+     * Common words that the full word list writes only in capitals, such as "PC", "OK" or "CD", in lowercase and sorted. They are
+     * not offered as words, but a lowercase "pc" is one of them typed on purpose, not a slip for another word.
+     */
+    private final String[] acronyms;
+    /** How common an acronym must be to count. At 80, rarer ones such as "DL" hid real slips ("dl" for "do"). */
+    static final int ACRONYM_FREQUENCY = 100;
 
     TypedPredictions(Reader source, ToDoubleFunction<String> frequency) throws IOException {
         this(source, null, frequency);
@@ -41,13 +48,19 @@ public final class TypedPredictions {
         BufferedReader reader = new BufferedReader(source);
         String line;
         while ((line = reader.readLine()) != null) add(vocabulary, key(line), frequency);
+        java.util.Set<String> capitals = new java.util.HashSet<>();
         if (dictionary != null) {
             reader = new BufferedReader(dictionary);
             while ((line = reader.readLine()) != null) {
                 String word = dictionaryWord(line);
                 if (word != null) add(vocabulary, key(word), frequency);
+                String acronym = acronymOn(line);
+                if (acronym != null) capitals.add(acronym);
             }
         }
+        capitals.removeAll(vocabulary.keySet());
+        acronyms = capitals.toArray(new String[0]);
+        Arrays.sort(acronyms);
         for (String word : BuiltInWords.SPELLINGS.keySet()) vocabulary.putIfAbsent(word, (double) BuiltInWords.FREQUENCY);
         words = vocabulary.keySet().toArray(new String[0]);
         Arrays.sort(words);
@@ -61,6 +74,23 @@ public final class TypedPredictions {
     private static void add(Map<String, Double> vocabulary, String word, ToDoubleFunction<String> frequency) {
         if (!word.isEmpty() && SuggestionPolicy.allowed(word) && !vocabulary.containsKey(word))
             vocabulary.put(word, frequency.applyAsDouble(word));
+    }
+
+    /** The lowercase form of a common word written only in capitals on this line, as "pc" for "PC", or null. */
+    static String acronymOn(String line) {
+        if (!line.startsWith(" word=")) return null;
+        String[] fields = line.trim().split(",");
+        if (fields.length < 3 || !fields[1].startsWith("f=") || !fields[2].startsWith("flags=")) return null;
+        String word = fields[0].substring(5), flags = fields[2].substring(6);
+        int frequency;
+        try { frequency = Integer.parseInt(fields[1].substring(2)); } catch (NumberFormatException error) { return null; }
+        if (frequency < ACRONYM_FREQUENCY || flags.contains("offensive") || flags.contains("nonword")) return null;
+        return word.matches("[A-Z]{2,8}") ? word.toLowerCase(Locale.ROOT) : null;
+    }
+
+    /** Whether the full word list writes this word only in capitals, as "PC" for "pc". */
+    public boolean acronym(String word) {
+        return Arrays.binarySearch(acronyms, word.toLowerCase(Locale.ROOT)) >= 0;
     }
 
     /** The word on a " word=nuggets,f=72,flags=,…" line, or null for names, unused words, and words marked offensive or not a word. */

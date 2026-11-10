@@ -22,3 +22,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Resets the connected features for phone tests. Only adb, which holds DUMP, can send to it. -->
+        <receiver
+            android:name="com.atlas.keyboard.ConnectedReset"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />

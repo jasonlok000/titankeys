@@ -117,17 +117,18 @@ class AtlasIme : InputMethodService() {
     private val settlements = LinkedHashMap<Contact.Settlement, Runnable>()
     private val pieces = SwipePieces({ composer.liftOffMillis.toLong() }, { composer.canContinueSwipe }, ::isTapKey)
     private var lastTouch: List<Sample>? = null
-    /** The strip and the Sym panel, which a [nudge] makes one pixel taller for a moment. */
-    private var inputRoot: View? = null
     /** When the window last hid, to tell a hide that a show follows at once. */
     private var windowHiddenAt = Long.MIN_VALUE / 2
+    /** The keyboard hid itself for [recycle], so the show that follows is its own. */
+    private var recycling = false
+    /** The strip and the Sym panel, which a [nudge] makes one pixel taller for a moment. */
+    private var inputRoot: View? = null
 
     /**
-     * A tap on the field of some apps, such as the message box in Microsoft Teams, asks Android to hide the keyboard and show it
-     * again half a second later. The app's own animation for that show is cancelled, so the app leaves its box where the keyboard
-     * was hidden, under the strip, while Android knows the strip is up. Another show does nothing, because the keyboard is already
-     * shown. A change of the keyboard's height plays a new animation, so once things settle, the strip grows one pixel and goes
-     * back, and the app moves its box above the strip.
+     * A tap on the message box in Microsoft Teams, while the strip shows, makes Teams hide the keyboard and show it again within a
+     * second. Android then has the strip up, but Teams leaves its box under the strip and keeps asking for a show that does
+     * nothing. Other apps may do the same, so after such a quick hide and show in any app, the strip grows one pixel and goes back
+     * once things settle. The change of height plays a new animation in the app, which no one can see.
      */
     private val nudge = Runnable {
         val root = inputRoot ?: return@Runnable
@@ -141,6 +142,36 @@ class AtlasIme : InputMethodService() {
         stripLog("nudge: back")
         inputRoot?.setPadding(0, 0, 0, 0)
     }
+
+    /**
+     * In Teams the nudge is not enough. A real hide with a gap and then a show puts the box back above the strip, as Back and a tap
+     * on the box do, so in the apps in [BOUNCE_APPS] the keyboard does that by itself, once. The strip flickers once.
+     */
+    private val recycle = Runnable {
+        if (!isInputViewShown || !canShowStrip()) return@Runnable
+        stripLog("recycle: hide")
+        recycling = true
+        try {
+            requestHideSelf(0)
+        } catch (error: RuntimeException) {
+            recycling = false
+            Log.w("Atlas", "Could not hide the suggestion strip", error)
+            return@Runnable
+        }
+        main.postDelayed(recycleShow, RECYCLE_GAP_MILLIS)
+    }
+
+    private val recycleShow = Runnable {
+        stripLog("recycle: show")
+        showStrip.run()
+    }
+
+    private fun cancelRecycle() {
+        main.removeCallbacks(recycle)
+        main.removeCallbacks(recycleShow)
+        recycling = false
+    }
+
     /**
      * Asks Android to show the strip, so that the app hears that the keyboard is back and makes room for it. An app that has
      * already handled a hide, such as Microsoft Teams, otherwise leaves its message box under the strip.
@@ -566,6 +597,7 @@ class AtlasIme : InputMethodService() {
         readSettings()
         if (editing && !restarting) rememberEnterApp(info)
         cancelShowStrip()
+        cancelRecycle()
         main.removeCallbacks(hideStrip)
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
@@ -692,9 +724,13 @@ class AtlasIme : InputMethodService() {
     override fun onWindowShown() {
         stripLog("windowShown")
         super.onWindowShown()
-        if (editing && SystemClock.uptimeMillis() - windowHiddenAt < BOUNCE_MILLIS) {
+        if (recycling) {
+            recycling = false
+        } else if (editing && SystemClock.uptimeMillis() - windowHiddenAt < BOUNCE_MILLIS) {
+            val recycles = currentInputEditorInfo?.packageName in BOUNCE_APPS
+            main.removeCallbacks(recycle)
             main.removeCallbacks(nudge)
-            main.postDelayed(nudge, NUDGE_DELAY_MILLIS)
+            if (recycles) main.postDelayed(recycle, RECYCLE_DELAY_MILLIS) else main.postDelayed(nudge, NUDGE_DELAY_MILLIS)
         }
         // Android draws its hide and switch-keyboard buttons in this bar; the strip has no room for them.
         window.window?.insetsController?.hide(WindowInsets.Type.captionBar())
@@ -704,6 +740,7 @@ class AtlasIme : InputMethodService() {
         stripLog("windowHidden passingBack=$passingBack typed=$typedInField sinceStart=${SystemClock.uptimeMillis() - fieldStartedAt}")
         super.onWindowHidden()
         windowHiddenAt = SystemClock.uptimeMillis()
+        main.removeCallbacks(recycle)
         main.removeCallbacks(nudge)
         main.removeCallbacks(unNudge)
         inputRoot?.setPadding(0, 0, 0, 0)
@@ -735,6 +772,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onUnbindInput() {
         cancelShowStrip()
+        cancelRecycle()
         main.removeCallbacks(sendBack)
         // The app has lost the keyboard, so coming back to it counts as a new start.
         hiddenByBack = false
@@ -756,6 +794,7 @@ class AtlasIme : InputMethodService() {
         rawLog = null
         composer.log = null
         cancelShowStrip()
+        cancelRecycle()
         clearSettlements()
         contact.cancel()
         endCursor()
@@ -1730,9 +1769,18 @@ class AtlasIme : InputMethodService() {
         private const val STALE_HIDE_MILLIS = 500L
         /** How long Android has to show the strip before the keyboard shows its window itself. */
         private const val SHOW_FALLBACK_MILLIS = 300L
-        /** A show this soon after a hide is the app's quick hide and show. Teams took 520 ms. */
+        /** A show this soon after a hide is the app's quick hide and show. Teams took 160 to 530 ms. */
         private const val BOUNCE_MILLIS = 1000L
-        /** Teams said the keyboard was shown 360 ms after its request, and asked again after 1.4 s, so the nudge waits for both. */
+        /** Teams said the keyboard was shown 330 ms after its show, and asked again after 900 ms, so the hide waits for both. */
+        private const val RECYCLE_DELAY_MILLIS = 1200L
+        /** How long the strip stays hidden, so that the hide finishes before the show. */
+        private const val RECYCLE_GAP_MILLIS = 400L
+        /**
+         * Apps where a quick hide and show leaves the message box under the strip even after the nudge, so the strip hides and shows
+         * again once. Add an app here when the nudge alone is seen not to help in it.
+         */
+        private val BOUNCE_APPS = setOf("com.microsoft.teams")
+        /** The nudge waits until the app's own requests after its show are done. Teams asked again after 900 ms to 1.4 s. */
         private const val NUDGE_DELAY_MILLIS = 1600L
         /** How long the strip stays one pixel taller. */
         private const val NUDGE_MILLIS = 300L

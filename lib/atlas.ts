@@ -50,6 +50,8 @@ export type State = {
   touchpadOnlyInFields: boolean;
   /** A few small marks on the keyboard are orange, such as the key under a finger. Off, they are white or black. */
   orangeAccents: boolean;
+  /** Swipes and typing know contacts' given and family names. True only while the setting is on and Android allows it. */
+  contactNames: boolean;
   /** What Enter does in fields with more than one line. */
   enterKey: EnterKey;
   /** Apps that the user added to the Enter key setting, and built-in apps that the user changed. */
@@ -69,7 +71,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];

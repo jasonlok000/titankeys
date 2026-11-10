@@ -20,6 +20,22 @@ Tools for measuring swipe accuracy on a real Titan 2 Elite. They build only into
 
 The size is the sensor's touch major, from 0 to 255. The screen reads Android's size axis, which is that value divided by 255, and multiplies it back. Android's touch major axis is scaled to the screen, and its range is the screen's diagonal, so it does not give the sensor's steps. The raw log's `sz` is that scaled touch major.
 
+## Space gestures
+
+**TitanKeys Space gestures** records tries at the Space row's cursor gestures, to find why some trigger and some don't.
+
+1. Make TitanKeys Debug the active keyboard, and leave "Space taps move the cursor" on. Then open **TitanKeys Space gestures**.
+2. Pick what you mean to do: **Steer** (Space twice, then swipe), **Select** (Space three times, then swipe), or **Other / not meant**. Put the cursor in the text and try it once. A try ends after 1.5 seconds with no touch or key.
+3. After each try the screen says what TitanKeys did (steer, select, a double-tap word selection, what was typed, or nothing) and keeps a count per kind of what worked and what failed.
+4. Use **Export** to save the tries as JSON lines. The first line holds the gesture's numbers (`tuning`). Each try has its kind, what happened, and its `events`, in order:
+   - `m`: touchpad points as x, y, sensor size step and time
+   - `key`: key presses and releases
+   - `gesture`: the gesture code's own decisions, from `Recording.Sink.gesture`
+   - `out` and `rec`: what a contact counted as, and the words offered
+   - `sel` and `text`: the field's selection and its length
+
+The field holds only the sample text and what you type over it, so the export keeps no personal text. A tool on a computer can then check each failed try against the rules of `CursorGesture`, whose numbers the header holds.
+
 ## Replay a session
 
 Replay runs a recording through the real touch handling, text logic and swipe engine, with no keyboard window.

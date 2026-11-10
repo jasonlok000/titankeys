@@ -117,6 +117,30 @@ class AtlasIme : InputMethodService() {
     private val settlements = LinkedHashMap<Contact.Settlement, Runnable>()
     private val pieces = SwipePieces({ composer.liftOffMillis.toLong() }, { composer.canContinueSwipe }, ::isTapKey)
     private var lastTouch: List<Sample>? = null
+    /** The strip and the Sym panel, which a [nudge] makes one pixel taller for a moment. */
+    private var inputRoot: View? = null
+    /** When the window last hid, to tell a hide that a show follows at once. */
+    private var windowHiddenAt = Long.MIN_VALUE / 2
+
+    /**
+     * A tap on the field of some apps, such as the message box in Microsoft Teams, asks Android to hide the keyboard and show it
+     * again half a second later. The app's own animation for that show is cancelled, so the app leaves its box where the keyboard
+     * was hidden, under the strip, while Android knows the strip is up. Another show does nothing, because the keyboard is already
+     * shown. A change of the keyboard's height plays a new animation, so once things settle, the strip grows one pixel and goes
+     * back, and the app moves its box above the strip.
+     */
+    private val nudge = Runnable {
+        val root = inputRoot ?: return@Runnable
+        if (!isInputViewShown) return@Runnable
+        stripLog("nudge: one pixel taller")
+        root.setPadding(0, 0, 0, 1)
+        main.postDelayed(unNudge, NUDGE_MILLIS)
+    }
+
+    private val unNudge = Runnable {
+        stripLog("nudge: back")
+        inputRoot?.setPadding(0, 0, 0, 0)
+    }
     /**
      * Asks Android to show the strip, so that the app hears that the keyboard is back and makes room for it. An app that has
      * already handled a hide, such as Microsoft Teams, otherwise leaves its message box under the strip.
@@ -508,6 +532,7 @@ class AtlasIme : InputMethodService() {
             orientation = LinearLayout.VERTICAL
             addView(keys)
             addView(words)
+            inputRoot = this
         }
     }
 
@@ -667,6 +692,10 @@ class AtlasIme : InputMethodService() {
     override fun onWindowShown() {
         stripLog("windowShown")
         super.onWindowShown()
+        if (editing && SystemClock.uptimeMillis() - windowHiddenAt < BOUNCE_MILLIS) {
+            main.removeCallbacks(nudge)
+            main.postDelayed(nudge, NUDGE_DELAY_MILLIS)
+        }
         // Android draws its hide and switch-keyboard buttons in this bar; the strip has no room for them.
         window.window?.insetsController?.hide(WindowInsets.Type.captionBar())
     }
@@ -674,6 +703,10 @@ class AtlasIme : InputMethodService() {
     override fun onWindowHidden() {
         stripLog("windowHidden passingBack=$passingBack typed=$typedInField sinceStart=${SystemClock.uptimeMillis() - fieldStartedAt}")
         super.onWindowHidden()
+        windowHiddenAt = SystemClock.uptimeMillis()
+        main.removeCallbacks(nudge)
+        main.removeCallbacks(unNudge)
+        inputRoot?.setPadding(0, 0, 0, 0)
         // Android's hide also turned the status off.
         hold.hidden()
         // A panel that nobody can see must not take the next key.
@@ -1697,6 +1730,12 @@ class AtlasIme : InputMethodService() {
         private const val STALE_HIDE_MILLIS = 500L
         /** How long Android has to show the strip before the keyboard shows its window itself. */
         private const val SHOW_FALLBACK_MILLIS = 300L
+        /** A show this soon after a hide is the app's quick hide and show. Teams took 520 ms. */
+        private const val BOUNCE_MILLIS = 1000L
+        /** Teams said the keyboard was shown 360 ms after its request, and asked again after 1.4 s, so the nudge waits for both. */
+        private const val NUDGE_DELAY_MILLIS = 1600L
+        /** How long the strip stays one pixel taller. */
+        private const val NUDGE_MILLIS = 300L
         /** How long the window above the notification shade stays after a field ends. */
         private const val HIGH_GRACE_MILLIS = 2000L
         /** The field of a returning window started within 30 ms of its empty start. */

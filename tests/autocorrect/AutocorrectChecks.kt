@@ -42,7 +42,7 @@ private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = Phone
     override fun known(word: String) = words.contains(word) || habits.active(word)
     override fun frequency(word: String) = words.frequency(word)
     override fun personal(word: String) = habits.active(word)
-    override fun name(word: String): String? = words.name(word)
+    override fun name(word: String): String? = words.name(word) ?: habits.capitals(word)
     override fun preferredSpelling(word: String) = spelling(word)
     override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
 }
@@ -140,6 +140,8 @@ private class FakeWords(private val lists: Lists) : Words {
     var holdSwipes = false
     val unrecognised = ArrayDeque<() -> Unit>()
     val blocked = HashSet<String>()
+    /** Fixes refused by holding them on the strip, as "typed>fix" in lower case. */
+    val refusedFixes = HashSet<String>()
 
     /** The next swipe readings, each a word and how clearly it was read. When this is empty, a swipe reads as [swiped]. */
     val readings = ArrayDeque<Pair<String, Float?>>()
@@ -158,6 +160,7 @@ private class FakeWords(private val lists: Lists) : Words {
     override fun prepare(text: String, cancelled: AtomicBoolean) = Unit
     override fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit) = result(lookAlike)
     override fun allowed(word: String) = word.lowercase() !in blocked
+    override fun fixAllowed(typed: String, fix: String) = "${typed.lowercase()}>${fix.lowercase()}" !in refusedFixes
     override fun known(word: String) = lists.known(word) || lists.habits.seen(word)
     override fun typed(word: String, rememberCase: Boolean) {
         typed += word
@@ -549,6 +552,12 @@ private fun composerFlow(world: Realistic) {
     same(typed("teh\n").text, "the\n", "A slip is fixed before a new line")
     same(typed("Teh ").text, "The ", "The fix keeps the capital")
     same(typed("THe ").text, "The ", "Shift held too long is fixed")
+    run {
+        val refusing = FakeWords(Lists(world.words)).also { it.refusedFixes += "teh>the" }
+        same(Typist(world, words = refusing).type("teh ").text, "teh ", "A fix held on the strip to forget it is not made again")
+        same(Typist(world, words = refusing).type("adn ").text, "and ", "Refusing one fix leaves the other fixes")
+        same(Typist(world, words = refusing).type("Teh ").text, "Teh ", "A refused fix stays refused in capitals")
+    }
     same(typed("doesnt ").text, "doesn't ", "A missing apostrophe is fixed")
 
     // Auto-punctuation.
@@ -821,6 +830,39 @@ private fun composerFlow(world: Realistic) {
         same(corrected("get dome food "), "get some food ", "Only a learned word is protected from the second check")
         lists.habits.add("dome")
         same(corrected("get dome food "), "get dome food ", "A word that the user added stays in the second check")
+    }
+
+    // A word whose spelling has fixed capitals gets them, however it was typed.
+    run {
+        fun typed(text: String, lists: Lists = Lists(world.words)) =
+            Typist(world, world.autocorrect(lists), lists = lists).type("$text ").text.trimEnd()
+        val capitals = listOf(
+            "titankeys is great" to "TitanKeys is great",
+            "Titankeys is great" to "TitanKeys is great",
+            "we love titankeys" to "we love TitanKeys",
+            "be curt with them" to "be curt with them",
+            "my iphone works" to "my iPhone works",
+            "Iphone works" to "iPhone works",
+            "see you on friday" to "see you on Friday",
+            "jason is here" to "Jason is here",
+            "watch it on youtube" to "watch it on YouTube",
+            // A rare name may be a slip for another word.
+            "a quick cali" to "a quick cali",
+            // Typed on purpose: all capitals, or capitals of its own.
+            "TITANKEYS is great" to "TITANKEYS is great",
+            "the TitanKEYS app" to "the TitanKEYS app",
+            // Ordinary words that are also names keep their case.
+            "bill me later" to "bill me later",
+            "mark my words" to "mark my words",
+            "will you come" to "will you come",
+        )
+        for ((text, expected) in capitals) same(typed(text), expected, "Fixed capitals for \"$text\"")
+        val saved = Lists(world.words)
+        saved.habits.add("Lok")
+        same(typed("jason lok is here", saved), "Jason Lok is here", "A saved word with capitals gets them when typed")
+        same(typed("jason lok is here"), "Jason lok is here", "An unsaved word keeps its case")
+        val undone = Typist(world, world.autocorrect(saved), lists = saved).type("titankeys ").backspace().type(" ")
+        same(undone.text, "titankeys ", "An undone capital fix stays undone")
     }
 
     // The Learn my words setting.
@@ -1115,6 +1157,24 @@ private fun suggestionBar(world: Realistic) {
         refused.composer.type("a")
         refused.settle()
         same(refused.bar, inside, "An edit that the app refused leaves words on the bar")
+    }
+
+    // A word held on the strip to forget it.
+    run {
+        val typist = typist(fakeWords())
+        val shown = typist.bar
+        same(typist.composer.shownWord(1), shown[1] to "", "The held place names the word under the finger")
+        typist.composer.hide(shown[0])
+        same(typist.bar, shown.drop(1), "A held word leaves the bar while its Undo shows")
+        typist.composer.unhide(shown[0])
+        same(typist.bar, shown, "Undo puts the word back in its place")
+        typist.composer.hide(shown[0])
+        same(typist.choose(0).text, shown[1] + " ", "A touch after a held word picks the word now in that place")
+    }
+    run {
+        val words = fakeWords().also { it.completions = listOf("the", "then") }
+        val typist = typist(words).type("teh")
+        same(typist.composer.shownWord(0), "the" to "Teh", "A held fix names the letters it would replace")
     }
 
     // Every start was blocked, or the search words were.

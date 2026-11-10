@@ -44,6 +44,8 @@ interface Words {
     fun prepare(text: String, cancelled: AtomicBoolean)
     fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit)
     fun allowed(word: String): Boolean
+    /** Whether autocorrect may change the letters [typed] to [fix]. Holding a fix on the strip refuses it. */
+    fun fixAllowed(typed: String, fix: String): Boolean = true
     fun known(word: String): Boolean
     /** The commonest ways to start a sentence, best first. It answers at once, and is empty until the word lists have loaded. */
     fun sentenceStarts(): List<String> = emptyList()
@@ -187,6 +189,10 @@ class Composer(
     private var lastLearned: Learned? = null
     /** The bar holds nothing, or words that came from no text, so new starts can go up without waiting for the models. */
     private var barIdle = true
+    /** Words held on the strip to forget, in lower case. The bar leaves them out while their Undo shows. */
+    private val hidden = mutableSetOf<String>()
+    /** Which of the composition's alternatives each place on the bar shows, since hidden and blocked words leave gaps. */
+    private var shownAlternatives = emptyList<Int>()
 
     var liftOffMillis = 0
     /** Two quick spaces type a full stop, and punctuation typed after a space moves in front of that space. */
@@ -227,6 +233,8 @@ class Composer(
             it is PendingText || it is PendingEdit && it.transferable
         } else emptyList()
         this.field = field
+        // A word forgotten in the field before is gone from the engine by now, or Settings has given it back.
+        hidden.clear()
         selection = Selection(selectionStart, selectionEnd)
         selectionConfirmed = selectionStart >= 0 && selectionEnd >= 0
         reset(predicts = false)
@@ -666,6 +674,21 @@ class Composer(
         predictLater()
     }
 
+    /** Puts in [text] just as it is, as a paste does: no fix of the word before, and no space added. */
+    fun paste(text: String) {
+        if (defer { paste(text) }) return
+        leave()
+        invalidate(false)
+        fullStop = null
+        composition = Composition.None
+        manualWord.clear()
+        correcting = null
+        awaitingNextWord = null
+        if (!edit(EditCause.Paste, 0, text)) return
+        automaticSpace = null
+        predictLater()
+    }
+
     fun space(repeated: Boolean, time: Long) {
         if (defer(transferable = true) { space(repeated, time) }) return
         leave()
@@ -904,7 +927,28 @@ class Composer(
         }
     }
 
-    fun choose(index: Int) {
+    /** Puts in the word at place [shown] on the bar. */
+    fun choose(shown: Int) {
+        chooseAlternative(shownAlternatives.getOrNull(shown) ?: return)
+    }
+
+    /** The word at place [shown] on the bar, and the typed letters it would replace, which are empty when there are none. */
+    fun shownWord(shown: Int): Pair<String, String>? {
+        val word = composition.alternatives.getOrNull(shownAlternatives.getOrNull(shown) ?: return null) ?: return null
+        val typed = (composition as? Composition.Typed)?.prefix.orEmpty()
+        return word to typed
+    }
+
+    /** Leaves [word] off the bar until [unhide], while it waits to be forgotten. */
+    fun hide(word: String) {
+        if (hidden.add(word.lowercase())) show(composition.alternatives)
+    }
+
+    fun unhide(word: String) {
+        if (hidden.remove(word.lowercase())) show(composition.alternatives)
+    }
+
+    private fun chooseAlternative(index: Int) {
         val chosen = composition.alternatives.getOrNull(index) ?: return
         (composition as? Composition.Expanding)?.let { offered ->
             if (defer { if (composition === offered) choose(index) }) return
@@ -916,12 +960,12 @@ class Composer(
             expand(expansion, predictNow = true)
             return
         }
-        if (!words.allowed(chosen)) return
+        if (!words.allowed(chosen) || chosen.lowercase() in hidden) return
         val offered = composition
         if (defer {
             val current = composition
             if (current === offered || current is Composition.Swiped && offered is Composition.Swiped
-                && current.recognition === offered.recognition) choose(index)
+                && current.recognition === offered.recognition) chooseAlternative(index)
         }) return
         log?.picked(index, chosen, offered.alternatives)
         KeyboardEvents.publish { KeyboardEvent.Chosen(chosen) }
@@ -1296,7 +1340,7 @@ class Composer(
     private fun findFix(word: String, anchor: Snapshot): TypedCorrector.Fix? {
         val before = anchor.before ?: return null
         val fix = corrector()?.check(word, before.dropLast(word.length), endedWord?.word) ?: return null
-        return fix.takeIf { before.endsWith(it.typed) && it.word.split(' ').all(words::allowed) }
+        return fix.takeIf { before.endsWith(it.typed) && it.word.split(' ').all(words::allowed) && words.fixAllowed(it.typed, it.word) }
     }
 
     /**
@@ -1327,7 +1371,8 @@ class Composer(
         val anchor = snapshot()
         val text = anchor.before.orEmpty()
         val review = corrector.review(text.takeLast(REVIEW_LENGTH), text.length >= REVIEW_LENGTH, endedWord, word, true)
-            ?.takeIf { anchor.available && !anchor.selected && text.endsWith(it.original) && words.allowed(it.fix) }
+            ?.takeIf { anchor.available && !anchor.selected && text.endsWith(it.original) && words.allowed(it.fix)
+                && words.fixAllowed(it.word, it.fix) }
         if (review != null) {
             if (!replaceBehind(Composition.None, anchor, EditCause.Autocorrect, review.original.length, review.replaced)) return null
             onAutocorrect?.invoke()
@@ -1436,7 +1481,7 @@ class Composer(
             val before = anchor.before ?: return@later
             if (anchor != swiped.snapshot || anchor.selected) return@later
             val review = corrector()?.review(before.takeLast(REVIEW_LENGTH), before.length >= REVIEW_LENGTH, earlier, swiped.word, false)
-                ?.takeIf { before.endsWith(it.original) && words.allowed(it.fix) } ?: return@later
+                ?.takeIf { before.endsWith(it.original) && words.allowed(it.fix) && words.fixAllowed(it.word, it.fix) } ?: return@later
             invalidate(false)
             if (!replaceBehind(swiped, anchor, EditCause.Autocorrect, review.original.length, review.replaced)) return@later
             offerUndo(review.replaced, review.original, review.word, true)
@@ -1482,7 +1527,8 @@ class Composer(
 
     private fun show(suggestions: List<String>) {
         barIdle = suggestions.isEmpty()
-        showWords(suggestions)
+        shownAlternatives = suggestions.indices.filter { suggestions[it].lowercase() !in hidden && words.allowed(suggestions[it]) }
+        showWords(shownAlternatives.map(suggestions::get))
     }
 
     private fun predict() {

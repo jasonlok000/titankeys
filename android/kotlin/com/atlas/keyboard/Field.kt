@@ -24,6 +24,8 @@ data class Field(
     val suggestions: Boolean = learning,
     /** Each key goes to the app as a key event, as in a terminal. See [ExactTyping]. */
     val exact: Boolean = false,
+    /** A password field. Text copied from it never goes into the clipboard history. */
+    val secret: Boolean = false,
 ) {
     companion object {
         val None = Field(words = false, learning = false, fullStops = false, starters = false,
@@ -54,7 +56,7 @@ data class Field(
                 sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
                 autocorrect = !password && !address && !exact,
                 // An address bar that asks for no suggestions still gets the bar: browsers search from it too.
-                suggestions = !password && !email)
+                suggestions = !password && !email, secret = password)
         }
 
         /**

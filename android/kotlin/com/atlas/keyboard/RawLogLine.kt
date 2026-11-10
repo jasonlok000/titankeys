@@ -6,6 +6,7 @@ enum class EditCause(val cause: String, val via: String? = null, val automatic: 
     Tap("commit", "tap"),
     Key("commit", "key"),
     Symbol("commit", "symbol"),
+    Paste("commit", "paste"),
     Space("commit", "space"),
     Newline("commit", "enter"),
     Backspace("backspace", "letter"),

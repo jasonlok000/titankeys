@@ -7,7 +7,7 @@ kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 android=$sdk/platforms/android-36/android.jar
 # ONNX Runtime classes, which the engine needs to compile.
-ort=android/libs/onnxruntime-android-1.20.0.jar
+ort=android/libs/onnxruntime-android-1.23.2.jar
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 javac --release 17 -d "$work" android/kotlin/com/atlas/engine/HoldEngine.java tests/hold/HoldEngineChecks.java

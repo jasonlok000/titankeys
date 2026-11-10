@@ -6,7 +6,7 @@ import com.atlas.keyboard.Modifiers.Panel
 private const val ENTER = KeyEvent.KEYCODE_ENTER
 private const val BACKSPACE = KeyEvent.KEYCODE_DEL
 private val PANEL_KEYS = listOf(ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, BACKSPACE)
-private val OPEN_PANELS = listOf(Panel.Symbols, Panel.Emoji, Panel.Settings)
+private val OPEN_PANELS = listOf(Panel.Symbols, Panel.Emoji, Panel.Settings, Panel.Clipboard)
 
 fun main() {
     nothingIsTakenWithThePanelClosed()

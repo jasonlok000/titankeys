@@ -48,6 +48,8 @@ The Titan's keys are a touchpad too. Slide across the letters of a word without 
 
 The strip above the keys shows the other words that a swipe could be. Touch one to put it in. Before you type, the strip suggests the next word.
 
+Touch and hold a word on the strip for its menu. **Save** keeps it in your words. **Forget** stops it as a suggestion and as a fix, with Undo for a moment, and **Settings > Your words** gives it back. Select one word in the text, such as a name that never swipes right, and the strip shows it with the same menu.
+
 ### Delete without reaching up
 
 Flick left from Backspace to delete a word. Keep your finger down to delete more: the longer the flick, the faster it goes.
@@ -63,6 +65,10 @@ Hold a letter for the symbol printed in its corner. Push Sym for every other sym
 ### Emoji and settings, no screen
 
 Push Sym two times for emoji. In the panel, Alt opens quick settings, with a letter for each setting, such as S for swiping and V for vibration, without leaving the app you are in.
+
+### Paste what you copied
+
+Right after you copy text, the strip shows it: touch it to paste. For older clips, push Sym, then A for the clipboard. It works like the symbols: six clips to a page, two to a row, each in a wide field over half a row of keys. Push any key under a clip to paste it, swipe up or down for more, and swipe sideways or rest a finger on the bottom row for **Pinned**. Clips go after an hour, unless you pin them: push Enter, then a key under the clip. Push Backspace two times to clear all but the pinned clips. TitanKeys keeps no text that an app marks as sensitive, nothing copied from a password field, and nothing leaves the phone.
 
 ### Snippets and emoji by name
 

@@ -208,6 +208,27 @@ class TypedCorrector(
     /** The second check's [fixed] for [word], in the user's English spelling. Null if that is what [word] already is. */
     private fun respelled(fixed: String?, word: String) = fixed?.let(lexicon::preferredSpelling)?.takeUnless { it == word }
 
+    /**
+     * A word whose only spelling has fixed capitals, typed without them: "titankeys" or "Titankeys" is "TitanKeys", and
+     * "iphone" is "iPhone". That covers TitanKeys' own words, names that the word list only ever writes with a capital, and
+     * saved words that have capitals, but never a word that is also an ordinary word ("curt"). Only a plain word is a
+     * slip: all lowercase, or a first capital alone, as at the start of a sentence. A word typed with other capitals, or
+     * all in capitals, is meant as typed.
+     */
+    private fun fixedCapitals(word: String): String? {
+        if (word.length < 2 || !word.all { it.isLetter() || it == '\'' || it == '’' }) return null
+        if (word.drop(1).any { it.isUpperCase() }) return null
+        val lower = word.lowercase()
+        // An ordinary word that is also a name ("curt", "Curt") is meant as typed.
+        if (lower in data.known) return null
+        // A rare name may be another word's slip ("cali" for "call"), so only a common one counts, or TitanKeys' own words
+        // and the user's saved ones, which the word lists do not rate.
+        val frequency = lexicon.frequency(lower)
+        if (!lexicon.personal(lower) && frequency in 1 until COMMON_NAME_FREQUENCY) return null
+        val spelling = lexicon.name(lower) ?: return null
+        return spelling.takeIf { it != word && it.equals(word, ignoreCase = true) }
+    }
+
     /** Whether the word list or the user's learned words hold [word]. The next word can still change any other word. */
     fun listed(word: String) = lexicon.known(word)
 
@@ -227,6 +248,7 @@ class TypedCorrector(
             if (isRejected || isKnown(word)) return null
             return nameSplit(word)?.let { Fix(word, it) }
         }
+        if (!isRejected) fixedCapitals(word)?.let { return Fix(word, it) }
         if (!isRejected && !hasExactCase(word)) shiftHeldTooLongFix(word, lexicon::frequency)?.let { return Fix(word, it) }
         if (!isRejected) spacedContraction(word, before, typedPrevious)?.let { return it }
         val letters = word.all { it.isLetter() }
@@ -418,6 +440,8 @@ class TypedCorrector(
 
     companion object {
         private const val MAX_CANDIDATES = 64
+        /** How common a name must be to take its capitals by itself: "England" (141) and "iPhone" (100) are, "Cali" (78) is not. */
+        private const val COMMON_NAME_FREQUENCY = 95
         private val SENTENCE_END_MARKS = setOf('.', '!', '?')
         private const val PLURAL_MIN_LENGTH = 5
         private const val COMPOUND_MIN_HALF = 3

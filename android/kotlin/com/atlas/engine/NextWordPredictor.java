@@ -28,6 +28,8 @@ final class NextWordPredictor {
     private static final int SUGGESTIONS = 8;
     /** Enough of the words after a word to find the ones that the context model offers too. */
     private static final int STORED_WORDS = 64;
+    /** Enough kept words that start with some letters to cover every completion the strip can show. */
+    private static final int KEPT_WORDS = 200;
     /** A use counts half as much after this long, so a word used lately can pass one used more often long ago. */
     private static final double HALF_LIFE_MILLIS = 30 * 86_400_000d;
 
@@ -74,6 +76,23 @@ final class NextWordPredictor {
 
     List<String> predictSentenceStart() {
         return predictFor(SENTENCE_START);
+    }
+
+    /** How often the user kept each word that starts with these letters (lower case, as a key), pending ones included. */
+    Map<String, Integer> keptStarting(String letters) {
+        Map<String, Integer> kept = new HashMap<>();
+        if (letters.isEmpty()) return kept;
+        // Pending pairs first, then the store. A pair leaves the pending list only after the store has it, so one that moves
+        // in between is counted twice for a moment and never missed.
+        synchronized (pending) {
+            for (Pending entry : pending.values()) {
+                String word = TypedPredictions.key(entry.word);
+                if (word.startsWith(letters) && allowed.test(entry.word)) kept.merge(word, entry.count, Integer::sum);
+            }
+        }
+        for (Map.Entry<String, Integer> row : store.keptStarting(letters, KEPT_WORDS).entrySet())
+            if (allowed.test(row.getKey())) kept.merge(TypedPredictions.key(row.getKey()), row.getValue(), Integer::sum);
+        return kept;
     }
 
     /**
@@ -161,15 +180,16 @@ final class NextWordPredictor {
     }
 
     private List<String> predictFor(String prefix) {
-        // Pending pairs first. One stored in between then counts twice for a moment, which is better than not at all.
+        // Pending pairs first, then the store: one stored in between then counts twice for a moment, never not at all.
         List<UserNGramRepository.Prediction> waiting = new ArrayList<>();
         synchronized (pending) {
             for (Pending entry : pending.values())
                 if (entry.prefix.equals(prefix)) waiting.add(new UserNGramRepository.Prediction(entry.word, entry.count, entry.lastUsed));
         }
+        List<UserNGramRepository.Prediction> stored = store.predict(prefix, STORED_WORDS);
         // One word can have rows in more than one case, as "Good" and "good" do. The latest case is the one to show.
         Map<String, UserNGramRepository.Prediction> merged = new LinkedHashMap<>();
-        for (UserNGramRepository.Prediction row : store.predict(prefix, STORED_WORDS)) add(merged, row);
+        for (UserNGramRepository.Prediction row : stored) add(merged, row);
         for (UserNGramRepository.Prediction row : waiting) add(merged, row);
         long now = clock.getAsLong();
         return merged.values().stream()

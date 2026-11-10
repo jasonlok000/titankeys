@@ -316,10 +316,7 @@ class AtlasIme : InputMethodService() {
         window.callback = TouchpadWindowCallback(window.callback) { event ->
             (editing && touchpad.accepts(event)).also { if (it) motion(event) }
         }
-        // With no field active, a touchpad event only stops here, so that the app under the overlay does not scroll.
-        overlay = TouchpadOverlay(this) { event ->
-            touchpad.accepts(event).also { if (it && editing) motion(event) }
-        }
+        overlay = TouchpadOverlay(this, touchpad = overlayEvent)
         TypingSettings.listen(this, overlaySetting)
         registerReceiver(screenOn, IntentFilter(Intent.ACTION_SCREEN_ON), RECEIVER_NOT_EXPORTED)
         updateOverlay()
@@ -341,8 +338,16 @@ class AtlasIme : InputMethodService() {
         }
     }
 
+    /** With no field active, a touchpad event only stops here, so that the app under the overlay does not scroll. */
+    private val overlayEvent: (MotionEvent) -> Boolean = { event ->
+        touchpad.accepts(event).also { if (it && editing) motion(event) }
+    }
+
+    /** The Back service also puts a window above the notification shade, so that a pop-up notification cannot take the touchpad. */
     private fun updateOverlay() {
-        if (editing || TypingSettings.touchpadOnlyInFields(this)) overlay.show() else overlay.hide()
+        val wanted = editing || TypingSettings.touchpadOnlyInFields(this)
+        if (wanted) overlay.show() else overlay.hide()
+        BackService.touchpad(if (wanted) overlayEvent else null)
     }
 
     private fun holdWanted() =
@@ -805,56 +810,65 @@ class AtlasIme : InputMethodService() {
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
                 Trace.touch(contact.points, false)
             }
-            MotionEvent.ACTION_UP -> {
-                endDeleteHold()
-                val doubleTapped = cursorGesture.up(samples, event.eventTime)
-                if (cursor.active) {
-                    main.removeCallbacks(stepCursor)
-                    cursor.move(samples)
-                    cursor.lift()
-                    strip?.gesture?.cursorPaused()
-                    val slips = composer.liftOffMillis > 0
-                    // Through a slip the path stays open, so a finger that comes back carries on drawing it.
-                    traceCursor(samples, ended = !slips)
-                    if (slips) main.postDelayed(endSlippedCursor, cursor.holdMillis(composer.liftOffMillis.toLong())) else stopCursor()
-                    return
-                }
-                stopCursor()
-                val points = contact.points
-                if (doubleTapped) main.postAtTime(confirmDoubleTap, event.eventTime + CursorGesture.CONFIRM_MILLIS)
-                contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
-                    lastTouch = pending.points
-                    if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
-                        contact.settle(pending, pending.deadline)
-                        return@let
-                    }
-                    val input = PendingInput(false, null, settlement = pending)
-                    pendingInput.addLast(input)
-                    val settle = Runnable {
-                        settlements.remove(pending)
-                        val settled = contact.settle(pending, SystemClock.uptimeMillis())
-                        val result = if (pending.cancelled || altOrPanel) settled else pieces.settle(pending, settled)
-                        val finish = { type: Boolean ->
-                            input.action = { if (type) result?.let(::outcome) }
-                            input.ready = true
-                            drainInput()
-                        }
-                        if (result is Contact.Outcome.Tap && isTapKey(result.key) && cursorGesture.deciding(SystemClock.uptimeMillis())) holdTap(finish)
-                        else finish(true)
-                    }
-                    settlements[pending] = settle
-                    main.postAtTime(settle, pending.deadline)
-                }
-                settleHeldTaps()
-                Trace.touch(if (points.size <= Swipe.MAX_POINTS && samples.all { it.valid }) points else emptyList(), true)
-            }
-            MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
+            MotionEvent.ACTION_UP -> lift(event, samples, cancelled = false)
+            // The system cancels a gesture when its window goes, such as the window above the shade. Like a short lift, the
+            // swipe so far still counts, and the next touch can carry it on. See [SwipePieces].
+            MotionEvent.ACTION_CANCEL -> lift(event, samples, cancelled = true)
+            MotionEvent.ACTION_POINTER_DOWN -> {
                 contact.cancelActive()
                 endDeleteHold()
                 endCursor()
                 Trace.touch(emptyList(), true)
             }
         }
+    }
+
+    /** A finger lifted, or the system cancelled the gesture, which counts as a lift but never as a tap of a double tap. */
+    private fun lift(event: MotionEvent, samples: List<Sample>, cancelled: Boolean) {
+        endDeleteHold()
+        val doubleTapped = if (cancelled) {
+            cursorGesture.cancel(event.eventTime)
+            false
+        } else cursorGesture.up(samples, event.eventTime)
+        if (cursor.active) {
+            main.removeCallbacks(stepCursor)
+            cursor.move(samples)
+            cursor.lift()
+            strip?.gesture?.cursorPaused()
+            val slips = composer.liftOffMillis > 0
+            // Through a slip the path stays open, so a finger that comes back carries on drawing it.
+            traceCursor(samples, ended = !slips)
+            if (slips) main.postDelayed(endSlippedCursor, cursor.holdMillis(composer.liftOffMillis.toLong())) else stopCursor()
+            return
+        }
+        stopCursor()
+        val points = contact.points
+        if (doubleTapped) main.postAtTime(confirmDoubleTap, event.eventTime + CursorGesture.CONFIRM_MILLIS)
+        contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
+            lastTouch = pending.points
+            if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
+                contact.settle(pending, pending.deadline)
+                return@let
+            }
+            val input = PendingInput(false, null, settlement = pending)
+            pendingInput.addLast(input)
+            val settle = Runnable {
+                settlements.remove(pending)
+                val settled = contact.settle(pending, SystemClock.uptimeMillis())
+                val result = if (pending.cancelled || altOrPanel) settled else pieces.settle(pending, settled)
+                val finish = { type: Boolean ->
+                    input.action = { if (type) result?.let(::outcome) }
+                    input.ready = true
+                    drainInput()
+                }
+                if (result is Contact.Outcome.Tap && isTapKey(result.key) && cursorGesture.deciding(SystemClock.uptimeMillis())) holdTap(finish)
+                else finish(true)
+            }
+            settlements[pending] = settle
+            main.postAtTime(settle, pending.deadline)
+        }
+        settleHeldTaps()
+        Trace.touch(if (points.size <= Swipe.MAX_POINTS && samples.all { it.valid }) points else emptyList(), true)
     }
 
     /**
@@ -1591,6 +1605,7 @@ class AtlasIme : InputMethodService() {
         editor.cancelState()
         TypingSettings.stopListening(this, overlaySetting)
         overlay.hide()
+        BackService.touchpad(null)
         rawLog?.finish()
         rawLog = null
         composer.log = null

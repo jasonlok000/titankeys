@@ -213,7 +213,7 @@ Everything runs and is stored on your phone, including both language models. Not
 
 TitanKeys doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
 
-TitanKeys asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "TitanKeys is displaying over other apps" notification while it's there, which you can turn off. Its Accessibility service only sends Back and, while the Sym panel is open or in a launcher search, reads the keys you push.
+TitanKeys asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "TitanKeys is displaying over other apps" notification while it's there, which you can turn off. Its Accessibility service only sends Back and, while the Sym panel is open or in a launcher search, reads the keys you push. While you type, it also notices when the notification shade opens and closes, and keeps a 1-pixel window above it so that a notification can't take the touchpad.
 
 The typing log in Settings, which records touches and typed text to tune the keyboard, is off until you turn it on, and it stays on your phone.
 

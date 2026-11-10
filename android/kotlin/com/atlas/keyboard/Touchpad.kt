@@ -31,7 +31,7 @@ class Touchpad(private val display: Display) {
     private var lastChecked = Float.NaN
 
     /** In Sliding Mode 1 the firmware delivers the touchpad to apps as screen touches, still from its own device. */
-    fun accepts(event: MotionEvent) = event.isFromSource(InputDevice.SOURCE_TOUCHPAD) || event.device?.name == DEVICE
+    fun accepts(event: MotionEvent) = fromTouchpad(event)
 
     /** Firmware gesture keys accompany swipes; they are not physical key presses. */
     fun isGestureKey(event: KeyEvent) = event.device?.name == DEVICE
@@ -117,10 +117,13 @@ class Touchpad(private val display: Display) {
         null
     }
 
-    private companion object {
-        const val DEVICE = "touchPad"
-        const val RAW_HEIGHT = 600f
-        const val RAW_MAX_Y = RAW_HEIGHT - 1
-        const val ON_STEP_TO_CLEAR = 2
+    companion object {
+        /** True for an event from the keyboard's touchpad, and false for a touch on the screen. */
+        fun fromTouchpad(event: MotionEvent) = event.isFromSource(InputDevice.SOURCE_TOUCHPAD) || event.device?.name == DEVICE
+
+        private const val DEVICE = "touchPad"
+        private const val RAW_HEIGHT = 600f
+        private const val RAW_MAX_Y = RAW_HEIGHT - 1
+        private const val ON_STEP_TO_CLEAR = 2
     }
 }

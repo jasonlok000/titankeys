@@ -1,17 +1,20 @@
 package com.atlas.keyboard
 
 import android.content.BroadcastReceiver
+import android.animation.ValueAnimator
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Paint
 import android.hardware.display.DisplayManager
 import android.inputmethodservice.InputMethodService
 import android.os.Bundle
+import android.os.PowerManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -433,6 +436,12 @@ class AtlasIme : InputMethodService() {
         overlay = TouchpadOverlay(this, touchpad = overlayEvent)
         TypingSettings.listen(this, overlaySetting)
         registerReceiver(screenOn, IntentFilter(Intent.ACTION_SCREEN_ON), RECEIVER_NOT_EXPORTED)
+        registerReceiver(screenOff, IntentFilter(Intent.ACTION_SCREEN_OFF), RECEIVER_NOT_EXPORTED)
+        // The debug build can start the idle scene at once, so that a phone check need not wait three minutes.
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            registerReceiver(idleBarTrigger, IntentFilter(IDLE_BAR_ACTION), RECEIVER_EXPORTED)
+            idleBarTriggerRegistered = true
+        }
         updateOverlay()
         loadEmoji()
     }
@@ -442,6 +451,38 @@ class AtlasIme : InputMethodService() {
         if (key != TypingSettings.TOUCHPAD_ONLY_IN_FIELDS) return@OnSharedPreferenceChangeListener
         updateOverlay()
         updateHold()
+    }
+
+    // The idle scene on the bar (an Easter egg, see IdleScene): after three minutes with no key, touch or swipe, while plain words
+    // show. Any input ends it at once. It stays off in fields that need exact typing, with the bar or the screen off, with the Sym
+    // panel open, and with Android's animations off.
+
+    private val idleBar = Runnable { startIdleBar() }
+    private var idleBarTriggerRegistered = false
+    private val idleBarTrigger = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            main.post { if (!startIdleBar()) Log.d("Atlas", "Idle bar: no plain words on show, or it is off here") }
+        }
+    }
+    private val screenOff = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) = sleepIdleBar()
+    }
+
+    private fun idleBarAllowed() = editing && isInputViewShown && !panelOpen && field.suggestions && field.autocorrect &&
+        showSuggestions() && ValueAnimator.areAnimatorsEnabled() && getSystemService(PowerManager::class.java).isInteractive
+
+    private fun startIdleBar() = idleBarAllowed() && strip?.startIdle(Random(System.nanoTime())) == true
+
+    /** Input ends the scene and starts the wait again. */
+    private fun wakeIdleBar() {
+        main.removeCallbacks(idleBar)
+        strip?.stopIdle()
+        if (idleBarAllowed()) main.postDelayed(idleBar, IDLE_BAR_MILLIS)
+    }
+
+    private fun sleepIdleBar() {
+        main.removeCallbacks(idleBar)
+        strip?.stopIdle()
     }
 
     private val screenOn = object : BroadcastReceiver() {
@@ -568,7 +609,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onCreateInputView(): View {
         val words = Strip(this, { index -> haptics.wordChanged(); enqueue { composer.choose(index) } }, ::holdWord,
-            { action -> enqueue { stripAction(action) } }, { enqueue { pasteOfferedClip() } })
+            { action -> enqueue { stripAction(action) } }, { enqueue { pasteOfferedClip() } }, ::wakeIdleBar)
         val keys = SymPanel(this,
             pick = { item -> enqueue { typePanelItem(item) } },
             useQuickSetting = { item -> enqueue { useQuickSetting(item) } },
@@ -744,6 +785,8 @@ class AtlasIme : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        // The bar may only now be set up for this field, so the wait starts once it is.
+        main.post(::wakeIdleBar)
         offerClip()
         // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
@@ -766,6 +809,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onWindowHidden() {
         super.onWindowHidden()
+        sleepIdleBar()
         windowHiddenAt = SystemClock.uptimeMillis()
         main.removeCallbacks(recycle)
         if (recycleAwaitsHide) {
@@ -1169,7 +1213,10 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun motion(event: MotionEvent) {
-        if (event.actionMasked == MotionEvent.ACTION_DOWN) clearTeamsEgg()
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            clearTeamsEgg()
+            wakeIdleBar()
+        }
         // The panel works in every field, also where the touchpad types no words.
         if (!field.words && !panelOpen) return
         typedInField = true
@@ -1770,6 +1817,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         clearTeamsEgg()
+        wakeIdleBar()
         if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
@@ -2054,6 +2102,9 @@ class AtlasIme : InputMethodService() {
         // A held status must not outlive the keyboard.
         if (hold.held) hideHeldWindow()
         unregisterReceiver(screenOn)
+        unregisterReceiver(screenOff)
+        if (idleBarTriggerRegistered) unregisterReceiver(idleBarTrigger)
+        sleepIdleBar()
         clipboard?.removePrimaryClipChangedListener(clipChanged)
         phoneNames.stop()
         modifiers.closePanel()
@@ -2077,6 +2128,10 @@ class AtlasIme : InputMethodService() {
     }
 
     companion object {
+        /** How long with no input before the idle scene starts on the bar. */
+        private const val IDLE_BAR_MILLIS = 3 * 60 * 1000L
+        /** The debug build starts the idle scene at once on this broadcast, from adb. */
+        private const val IDLE_BAR_ACTION = "com.titankeys.debug.IDLE_BAR"
         /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"
         private const val SMART_LAUNCHER = "ginlemon.flowerfree"

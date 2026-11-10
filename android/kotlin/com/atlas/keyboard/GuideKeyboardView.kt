@@ -11,7 +11,6 @@ import android.graphics.Typeface
 import android.os.SystemClock
 import android.util.TypedValue
 import android.view.View
-import com.atlas.engine.TypingSettings
 import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.max
@@ -97,8 +96,6 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }.toMap()
     private val areaPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val zonePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val zonePath = Path()
-    private val zonePart = Path()
     private val areaPath = Path()
     private val path = Path()
 
@@ -507,35 +504,23 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     private fun distance(a: FloatArray, b: FloatArray) = hypot((b[0] - a[0]) * width, (b[1] - a[1]) * height)
 
-    /** Where the keyboard takes the Space gestures' taps: the Space row's middle, and V and B above it if that is on. */
-    private fun tapArea() = CursorGesture.Area.of(TypingSettings.spaceTapArea(context))
-
     /**
-     * A soft patch over the part of the keys where the steer and select taps count: the middle of Space as far down as the
-     * touchpad feels, and the part of V and B above it that the keyboard takes too. The taps are easiest to land there.
+     * A soft patch over the part of the keys where the steer and select taps are easiest to land: from halfway down the
+     * bottom letter row to as far down Space as the touchpad feels, as wide as the Space bar ([CursorGesture.inZone]).
      */
     private fun drawTapZone(canvas: Canvas) {
         if (cue !is GuideCue.Taps) return
-        val area = tapArea()
         val corner = dp(ZONE_CORNER)
-        zonePath.rewind()
-        zonePath.addRoundRect(width * ZONE_SPACE_LEFT, height * .75f, width * ZONE_SPACE_RIGHT, height * ZONE_BOTTOM,
-            corner, corner, Path.Direction.CW)
-        if (area != CursorGesture.Area.SpaceRow) {
-            zonePart.rewind()
-            zonePart.addRoundRect(width * ZONE_VB_LEFT, height * area.top, width * ZONE_VB_RIGHT, height * .75f + corner,
-                corner, corner, Path.Direction.CW)
-            zonePath.op(zonePart, Path.Op.UNION)
-        }
         zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE, ZONE_ALPHA)
-        canvas.drawPath(zonePath, zonePaint)
+        canvas.drawRoundRect(width * CursorGesture.ZONE_LEFT, height * CursorGesture.ZONE_TOP, width * CursorGesture.ZONE_RIGHT,
+            height * ZONE_BOTTOM, corner, corner, zonePaint)
     }
 
     private fun drawTaps(canvas: Canvas, cue: GuideCue.Taps, t: Float, colour: Int) {
         // Rings for each tap, one after the other, inside the zone where the taps count, then a sideways drag if there is one.
         val tapsEnd = if (cue.drag) .45f else .8f
         val x = width * SPACE_CENTRE
-        val y = height * if (tapArea() == CursorGesture.Area.SpaceRow) ROW_CENTRE else ZONE_TAP_ROW
+        val y = height * ZONE_TAP_ROW
         ringPaint.strokeWidth = dp(2.5f)
         for (tap in 0 until cue.count) {
             val start = tap * tapsEnd / cue.count
@@ -626,15 +611,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         /** The ghost goes this many times slower than a real gesture, so that it is easy to follow. */
         const val GHOST_SLOW = 1.5f
         const val SPACE_CENTRE = .5f
-        const val ROW_CENTRE = .875f
         const val DRAG_REACH = .32f
-        /** The zone where the steer and select taps count: the middle of Space down to where the touchpad stops feeling. */
-        const val ZONE_SPACE_LEFT = .36f
-        const val ZONE_SPACE_RIGHT = .64f
+        /** Where the touchpad stops feeling, halfway down Space: the shaded zone ends there. */
         const val ZONE_BOTTOM = .885f
-        /** The V and B keys, which the zone reaches up over when the keyboard takes taps there. */
-        const val ZONE_VB_LEFT = .4f
-        const val ZONE_VB_RIGHT = .6f
         /** Where the ghost taps: just above the line between V and B and Space. */
         const val ZONE_TAP_ROW = .72f
         const val ZONE_ALPHA = .2f

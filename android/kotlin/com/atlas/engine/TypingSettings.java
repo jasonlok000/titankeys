@@ -25,18 +25,6 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("auto_capitalise", enabled).apply();
     }
 
-    /**
-     * Where the Space gestures' taps may land besides the Space row: "lower_vb" (the lower half of V and B, the default),
-     * "full_vb" or "space_row". Only TitanKeys Debug's Space gestures screen changes it, to compare the heights.
-     */
-    public static String spaceTapArea(Context context) {
-        return preferences(context).getString("space_tap_area", "lower_vb");
-    }
-
-    public static void spaceTapArea(Context context, String area) {
-        preferences(context).edit().putString("space_tap_area", area).apply();
-    }
-
     /** Two quick spaces type a full stop, and typed punctuation moves in front of a space. */
     public static boolean autoPunctuation(Context context) {
         return preferences(context).getBoolean("auto_punctuation", true);

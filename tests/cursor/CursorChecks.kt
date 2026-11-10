@@ -93,8 +93,8 @@ fun main() {
     tapsJustAboveSpaceSteerWithASidewaysDrag()
     aboveSpaceADragUpIsAWord()
     aboveSpaceTwoTapsNeverSelectAWord()
-    aboveSpaceOnlyOverVAndB()
-    eachAreaHasItsHeight()
+    aboveSpaceOnlyAsWideAsSpace()
+    aboveSpaceOnlyTheLowerHalfOfTheRow()
     aWordFromVWithoutTapsStaysAWord()
     println("Cursor checks passed")
 }
@@ -996,30 +996,29 @@ private fun aboveSpaceTwoTapsNeverSelectAWord() {
     same(pad.selects(), false, "Two quick taps on V or B must never select a word")
 }
 
-private fun aboveSpaceOnlyOverVAndB() {
+/** A tap at [column] and [row], then a touch there that slides a key and a bit sideways. */
+private fun steersFrom(column: Float, row: Float): Boolean {
     val pad = Pad()
-    pad.tap(2f, 1_000, FIRST_MILLIS, row = ABOVE_ROW)
+    pad.tap(column, 1_000, FIRST_MILLIS, row = row)
     val landed = 1_000 + FIRST_MILLIS + GAP_MILLIS
-    pad.down(at(2f, landed, ABOVE_ROW))
-    pad.move(*path(2f, ABOVE_ROW, 3.5f, ABOVE_ROW, landed))
-    same(pad.started, null, "Above Space only V and B take the taps, so X and C keep typing")
+    pad.down(at(column, landed, row))
+    val to = if (column > 5f) column - 1.2f else column + 1.2f
+    pad.move(*path(column, row, to, row, landed))
+    return pad.started != null
 }
 
-private fun eachAreaHasItsHeight() {
-    fun steers(area: CursorGesture.Area, row: Float): Boolean {
-        val pad = Pad()
-        pad.gesture.area = area
-        pad.tap(COLUMN - .3f, 1_000, FIRST_MILLIS, row = row)
-        val landed = 1_000 + FIRST_MILLIS + GAP_MILLIS
-        pad.down(at(COLUMN - .3f, landed, row))
-        pad.move(*path(COLUMN - .3f, row, COLUMN - 1.5f, row, landed))
-        return pad.started != null
-    }
-    same(steers(CursorGesture.Area.SpaceRow, ABOVE_ROW), false, "With Space row only, a tap above Space does nothing, as before")
-    same(steers(CursorGesture.Area.LowerVb, ABOVE_ROW), true, "The lower half of V and B takes a tap low on the keys")
-    same(steers(CursorGesture.Area.LowerVb, 2.2f), false, "The lower half of V and B leaves their upper half to typing")
-    same(steers(CursorGesture.Area.FullVb, 2.2f), true, "All of V and B takes a tap high on the keys")
-    same(steers(CursorGesture.Area.FullVb, 1.8f), false, "No area reaches the row above V and B")
+private fun aboveSpaceOnlyAsWideAsSpace() {
+    same(steersFrom(3.7f, ABOVE_ROW), true, "The zone is as wide as Space, so it takes the edge of C next to V")
+    same(steersFrom(6.3f, ABOVE_ROW), true, "The zone is as wide as Space, so it takes the edge of N next to B")
+    same(steersFrom(3.2f, ABOVE_ROW), false, "Most of C is outside the zone and keeps typing")
+    same(steersFrom(2.5f, ABOVE_ROW), false, "X keeps typing")
+    same(steersFrom(7.5f, ABOVE_ROW), false, "M keeps typing")
+}
+
+private fun aboveSpaceOnlyTheLowerHalfOfTheRow() {
+    same(steersFrom(5f, ABOVE_ROW), true, "The lower half of B takes a tap")
+    same(steersFrom(5f, 2.4f), false, "The upper half of V and B is left to typing")
+    same(steersFrom(5f, 1.5f), false, "The row above never takes the taps")
 }
 
 private fun aWordFromVWithoutTapsStaysAWord() {

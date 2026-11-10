@@ -13,6 +13,7 @@ fun main() {
     same(PickFlick.third(stroke(.45f to .62f, .46f to .4f, .465f to .36f)), 1, "A flick that leans a little still counts")
     same(PickFlick.third(stroke(.45f to .62f, .48f to .38f)), 1, "A flick that leans 17 degrees, as the owner's did, still counts")
     same(PickFlick.third(stroke(.5f to .7f, .52f to .3f)), 1, "A long flick from the bottom of the row to the top of the next still counts")
+    same(PickFlick.third(stroke(.45f to .62f, .49f to .38f)), 1, "A flick that leans 23 degrees, as the owner's widest did, still counts")
     same(PickFlick.third(stroke(.45f to .62f, .5f to .38f)), null, "A stroke that leans 27 degrees is a swipe")
     same(PickFlick.third(stroke(.82f to .38f, .83f to .13f)), null, "A stroke up from the middle row is a swipe")
     same(PickFlick.third(stroke(.6364f to .4345f, .5989f to .2449f)), null, "The short \"my\" from the middle row stays a swipe")

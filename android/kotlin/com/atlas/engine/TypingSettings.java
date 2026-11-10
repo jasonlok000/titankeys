@@ -79,7 +79,7 @@ public final class TypingSettings {
     }
 
     /**
-     * On at first, the owner's choice of 2026-11-10. A flick goes from the bottom row of letters to the row above, within 20
+     * On at first, the owner's choice of 2026-11-10. A flick goes from the bottom row of letters to the row above, within 25
      * degrees of straight up. See PickFlick.
      */
     public static final boolean FLICK_TO_PICK_DEFAULT = true;

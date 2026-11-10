@@ -183,7 +183,7 @@ The flick from Backspace is a quick, straight stroke left from around Backspace,
 
 ### Picking a word with a flick up
 
-The flick up is short, quick and straight: it starts on the bottom row of letters and lifts on the row above, within 20 degrees of straight up and in under 0.3 seconds. "by" and "my" go on to the top row, so they stay swipes. The owner's own flicks set these numbers. Of 5,572 recorded swipes that typed a word, 6 read as a flick, about 1 in 930. Other upward strokes that match are page turns in the Sym panel, where flicks are off. A flick waits for the time a short lift may last, so a swipe that the top of the sensor breaks in two still joins up.
+The flick up is short, quick and straight: it starts on the bottom row of letters and lifts on the row above, within 25 degrees of straight up and in under 0.3 seconds. "by" and "my" go on to the top row, so they stay swipes. The owner's own flicks set these numbers. Of 5,572 recorded swipes that typed a word, 6 read as a flick, about 1 in 930. Other upward strokes that match are page turns in the Sym panel, where flicks are off. A flick waits for the time a short lift may last, so a swipe that the top of the sensor breaks in two still joins up.
 
 <details>
 <summary><strong>Smaller changes for two-handed typing</strong></summary>

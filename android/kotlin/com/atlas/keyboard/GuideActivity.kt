@@ -1066,8 +1066,8 @@ class GuideActivity : Activity() {
     private fun offerFor(step: GuideStep) {
         val missing = flow.missing
         when {
-            step.chapter == GuideChapter.End || step.pause -> showOffer("Start typing")
-            !ready -> showOffer("Choose TitanKeys")
+            step.chapter == GuideChapter.End || step.pause -> showOffer("Go type something")
+            !ready -> showOffer("Pick TitanKeys")
             missing != null && (!missing.optional || helpShown) -> showOffer(missing.offer)
             else -> offer.visibility = View.GONE
         }
@@ -1562,9 +1562,9 @@ class GuideActivity : Activity() {
         private const val SETUP_AUTO_MILLIS = 1300L
         /** How long "All set." stays before the story starts. */
         private const val SETUP_FINISH_MILLIS = 1400L
-        private const val SETUP_NO_PAGE = "This phone does not have that page. Open it in Settings, then come back."
+        private const val SETUP_NO_PAGE = "This phone doesn't have that page. Find it in Settings, then come back."
 
-        private const val FIELD_HINT = "Your words go here."
+        private const val FIELD_HINT = "Type here. Or swipe."
         private const val TAG = "TitanKeysGuide"
         private const val PLAYGROUND = "playground"
         private const val PLAYGROUND_LABEL = "Playground"
@@ -1575,7 +1575,7 @@ class GuideActivity : Activity() {
         private const val WPM_LABEL_SIZE = .35f
         /** At full speed the screen is this much of the way to orange, so that the words stay easy to read. */
         private const val WPM_MOST_ORANGE = .85f
-        private const val PLAYGROUND_BODY = "Type or swipe anything. Follow the line above, or write your own."
+        private const val PLAYGROUND_BODY = "Type or swipe whatever you like. Follow the line above, or ignore it."
 
         // The look, in dp. These are safe to change. Words fit their box at any system font size, because the boxes set their size.
         private val HEAVY: Typeface = Typeface.create(Typeface.DEFAULT, 900, false)

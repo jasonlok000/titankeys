@@ -265,21 +265,22 @@ private fun theTrailFollowsTouchSize() {
         return thickness
     }
     same(TrailThickness().next(.5f, .5f, 0), 1f, "A touch of unknown size should draw the usual trail")
-    check(steady(1) < .7f) { "A light fingertip should draw a thin trail, got ${steady(1)}" }
-    same(steady(3), 1f, "A usual touch should draw the usual trail")
-    check(steady(2) in .9f..1.1f) { "A touch a step lighter than usual should still look usual, got ${steady(2)}" }
-    check(steady(6) > 1.5f) { "A flat thumb should draw a thick trail, got ${steady(6)}" }
+    // In the middle of the pad the usual size is 2.53, so step 3 is half a step firmer and step 2 half a step lighter.
+    same(steady(1), TrailThickness.THINNEST, "A light fingertip should draw the thinnest trail")
+    check(steady(2) < .8f) { "A touch half a step lighter than usual should look clearly thinner, got ${steady(2)}" }
+    check(steady(3) > 1.25f) { "A touch half a step firmer than usual should look clearly thicker, got ${steady(3)}" }
+    same(steady(4), TrailThickness.THICKEST, "A firm press should reach the thickest trail, not only a resting thumb")
     same(steady(40), TrailThickness.THICKEST, "The thickest trail should be capped")
-    // Step 3 is usual in the middle of the pad and large on the top row.
+    // Step 3 is a little firmer than usual in the middle of the pad and much firmer on the top row.
     check(steady(3, y = .1f) > steady(3, y = .4f) + .2f) { "The same step should count as larger where touches are usually smaller" }
+    // A usual touch wavers between the steps either side of the usual size. It must look usual, and calm.
     val trail = TrailThickness()
-    repeat(40) { trail.next(.45f, .4f, 3) }
+    repeat(60) { trail.next(.45f, .4f, if (it % 2 == 0) 2 else 3) }
     val wobble = (0 until 40).map { trail.next(.45f, .4f, if (it % 2 == 0) 2 else 3) }
+    check(wobble.all { it in .95f..1.05f }) { "A touch wavering between the steps around usual should look usual: $wobble" }
     check(wobble.zipWithNext().all { (a, b) -> kotlin.math.abs(a - b) < .06f }) { "A touch wavering by a step should not flicker: $wobble" }
-    val jump = TrailThickness()
-    repeat(40) { jump.next(.45f, .4f, 3) }
-    check(jump.next(.45f, .4f, 4) < 1.05f) { "One larger point should only start to thicken the trail" }
-    same(jump.next(.45f, .4f, 0), jump.next(.45f, .4f, 0), "A point of unknown size should keep the thickness")
+    check(trail.next(.45f, .4f, 4) < 1.1f) { "One larger point should only start to thicken the trail" }
+    same(trail.next(.45f, .4f, 0), trail.next(.45f, .4f, 0), "A point of unknown size should keep the thickness")
 }
 
 /** #59: a demonstration types a word's marks as the keyboard really does, and counting still ignores them. */

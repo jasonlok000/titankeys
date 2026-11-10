@@ -1,15 +1,13 @@
 package com.atlas.keyboard
 
 import kotlin.math.abs
-import kotlin.math.exp
-import kotlin.math.ln
-import kotlin.math.max
-import kotlin.math.sign
 
 /**
  * How thick the live trail is drawn at each point, from the touch's size against the size usual at that spot (#52).
- * 1 is a usual touch, less is a light fingertip and more is a flat finger. One step of the sensor is a large change, so
- * the thickness follows it slowly and a touch that wavers between two steps stays calm.
+ * 1 is a usual touch, less is a light fingertip and more is a firm or flat finger. The scale follows the owner's own
+ * touches, so their everyday range fills most of it: from [THIN_AT] steps under the usual size, the lightest twentieth of
+ * points, to [THICK_AT] over it, as firm as nine swipes in ten get at some point. The thickness follows the size slowly,
+ * so a touch that wavers between two steps stays calm.
  */
 class TrailThickness {
     private var level = Float.NaN
@@ -21,22 +19,26 @@ class TrailThickness {
     /** The thickness at this touchpad point, from its sensor [step]. A step of 0, not known, keeps the thickness as it was. */
     fun next(x: Float, y: Float, step: Int): Float {
         if (step > 0) {
-            val relative = ln(step / usual(x, y))
-            level = if (level.isNaN()) relative else level + (relative - level) * FOLLOW
+            val over = step - usual(x, y)
+            level = if (level.isNaN()) over else level + (over - level) * FOLLOW
         }
-        if (level.isNaN()) return 1f
-        // A touch near the usual size is the usual thickness: the sensor's whole steps are never exactly the usual.
-        val beyond = sign(level) * max(0f, abs(level) - USUAL_BAND)
-        return exp(beyond * STRENGTH).coerceIn(THINNEST, THICKEST)
+        if (level.isNaN() || abs(level) <= USUAL_BAND) return 1f
+        return if (level > 0) 1f + (THICKEST - 1f) * ((level - USUAL_BAND) / (THICK_AT - USUAL_BAND)).coerceAtMost(1f)
+        else 1f - (1f - THINNEST) * ((-level - USUAL_BAND) / (-THIN_AT - USUAL_BAND)).coerceAtMost(1f)
     }
 
     companion object {
         /** How far the thickness moves toward each new point's size. */
         const val FOLLOW = .12f
-        /** How far from the usual size, as a log of the ratio, still counts as usual: about a fifth either way. */
-        const val USUAL_BAND = .2f
-        /** Below 1, a touch twice the usual size draws less than twice as thick. */
-        const val STRENGTH = .8f
+        /** Steps from the usual size that still draw the usual thickness, so a touch between two steps stays calm. */
+        const val USUAL_BAND = .15f
+        /**
+         * Steps over the usual size that draw the thickest trail: the 90th percentile of each swipe's firmest smoothed
+         * point in the owner's raw-log-14 (0.82), so a firmer press reaches it and a resting thumb is well past it.
+         */
+        const val THICK_AT = .85f
+        /** Steps under the usual size that draw the thinnest trail: the lightest 5% of smoothed points in raw-log-14. */
+        const val THIN_AT = -.8f
         const val THINNEST = .5f
         const val THICKEST = 1.8f
 

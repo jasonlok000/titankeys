@@ -481,7 +481,7 @@ class SymPanel(
         tabs.forEachIndexed { index, tab ->
             tab.sized(CATEGORY_SIZE, CATEGORY_LARGEST)
             tab.setTextColor(look.ink)
-            tab.setBackgroundColor(if (index == open) look.wash else Color.TRANSPARENT)
+            tab.background = if (index == open) rounded(look.wash) else null
         }
     }
 
@@ -506,7 +506,7 @@ class SymPanel(
             ?: hover.takeIf { Layout.restMarks(it, pages != null) && label(it) != null }.orEmpty()
         for ((key, view) in cells) {
             val hovered = key == mark
-            view.setBackgroundColor(if (hovered) look.accent else Color.TRANSPARENT)
+            view.background = if (hovered) rounded(look.accent) else null
             view.setTextColor(when {
                 hovered -> look.onAccent
                 dim(key) -> Color.GRAY
@@ -536,7 +536,7 @@ class SymPanel(
             field.text.sized(CLIP_TEXT_SIZE, CLIP_TEXT_LARGEST)
             field.text.setTextColor(if (lit) look.onAccent else look.ink)
             field.frame.background = GradientDrawable().apply {
-                cornerRadius = dp(6).toFloat()
+                cornerRadius = Radii.px(resources, Radii.SMALL)
                 setColor(if (lit) look.accent else look.wash)
                 if (clipPinning && !lit) setStroke(dp(1).coerceAtLeast(2), look.accent)
             }
@@ -544,6 +544,12 @@ class SymPanel(
             field.pinMark.imageTintList = ColorStateList.valueOf(if (lit) look.onAccent else look.accent)
             field.frame.contentDescription = context.getString(R.string.clipboard_paste, ClipboardHistory.preview(clip.text))
         }
+    }
+
+    /** A fill with the small corners that every highlight in TitanKeys has. */
+    private fun rounded(colour: Int) = GradientDrawable().apply {
+        cornerRadius = Radii.px(resources, Radii.SMALL)
+        setColor(colour)
     }
 
     override fun onConfigurationChanged(configuration: Configuration) {

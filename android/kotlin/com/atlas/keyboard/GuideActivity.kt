@@ -568,7 +568,7 @@ class GuideActivity : Activity() {
             })
             background = GradientDrawable().apply {
                 setColor(GuideColours.CREAM)
-                cornerRadius = dp(FIELD_RADIUS).toFloat()
+                cornerRadius = Radii.px(resources, FIELD_RADIUS)
             }
             setPadding(dp(14), dp(10), dp(14), dp(10))
             setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(18f), dp(24).toFloat()))
@@ -664,7 +664,13 @@ class GuideActivity : Activity() {
         root.addView(overlay, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.setOnApplyWindowInsetsListener { _, insets ->
             val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout() or WindowInsets.Type.ime())
-            column.setPadding(dp(GUTTER) + bars.left, bars.top + dp(4), dp(GUTTER) + bars.right, bars.bottom + dp(8))
+            // The content nearest the screen's rounded corners, such as Back and Next at the bottom and the chapter at the top,
+            // keeps clear of them. The camera hole is in the status bar, which bars.top already leaves out.
+            val top = bars.top + dp(4)
+            val bottom = bars.bottom + dp(8)
+            val corners = Corners.of(insets, display)
+            val corner = maxOf(corners.inset(bottom.toFloat()), corners.topInset(top.toFloat()))
+            column.setPadding(maxOf(dp(GUTTER) + bars.left, corner), top, maxOf(dp(GUTTER) + bars.right, corner), bottom)
             fitKeys()
             insets
         }
@@ -733,7 +739,7 @@ class GuideActivity : Activity() {
         previous.background = GradientDrawable().apply {
             setColor(Color.TRANSPARENT)
             setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(strong, BACK_OUTLINE))
-            cornerRadius = dp(OFFER_RADIUS).toFloat()
+            cornerRadius = Radii.px(resources, OFFER_RADIUS)
         }
         if (passed) {
             next.setTextColor(if (tone == GuideTone.Ink) GuideColours.INK else GuideColours.CREAM)
@@ -743,20 +749,24 @@ class GuideActivity : Activity() {
             next.background = GradientDrawable().apply {
                 setColor(Color.TRANSPARENT)
                 setStroke(dp(2), GuideMotion.faded(strong, NEXT_WAITING))
-                cornerRadius = dp(OFFER_RADIUS).toFloat()
+                cornerRadius = Radii.px(resources, OFFER_RADIUS)
             }
         }
     }
 
+    /** A fill with one of the shared [Radii]. */
     private fun rounded(colour: Int, radius: Int) = GradientDrawable().apply {
         setColor(colour)
-        cornerRadius = dp(radius).toFloat()
+        cornerRadius = Radii.px(resources, radius)
     }
 
     private fun paintSegments(done: Int) {
         val strong = if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK
         for (index in 0 until segments.childCount) segments.getChildAt(index).background =
-            rounded(if (index <= done) strong else GuideMotion.faded(strong, SEGMENT_OFF), SEGMENT_HEIGHT)
+            GradientDrawable().apply {
+                setColor(if (index <= done) strong else GuideMotion.faded(strong, SEGMENT_OFF))
+                cornerRadius = dp(SEGMENT_HEIGHT).toFloat()
+            }
     }
 
     // The story.
@@ -1614,9 +1624,9 @@ class GuideActivity : Activity() {
         private const val CHAPTER_ALPHA = .55f
         private const val TITLE_SHARE = 2.6f
         private const val BODY_SHARE = 1f
-        private const val FIELD_RADIUS = 14
-        private const val HINT_RADIUS = 10
-        private const val OFFER_RADIUS = 22
+        private const val FIELD_RADIUS = Radii.MEDIUM
+        private const val HINT_RADIUS = Radii.MEDIUM
+        private const val OFFER_RADIUS = Radii.LARGE
         private const val BODY_ALPHA = .86f
         private const val HINT_FILL = .14f
         /** How strong Next is while the step waits, and how strong Back's outline is. */

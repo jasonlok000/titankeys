@@ -17,7 +17,8 @@ import kotlin.math.min
  * For the cursor the line of letters moves past the caret at the cursor's speed, over a track of the keyboard that shows the dead
  * zone and the finger. For a word drag the selection grows over the words. For a delete the words run into the caret and go.
  */
-internal class GestureDrawing(private val density: Float) {
+/** [radius] rounds the selection's corners, from [Radii]. */
+internal class GestureDrawing(private val density: Float, private val radius: Float) {
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val box = RectF()
 
@@ -87,7 +88,7 @@ internal class GestureDrawing(private val density: Float) {
         if (end <= start) return
         start -= dp(SELECTION_PAD)
         end += dp(SELECTION_PAD)
-        rounded(canvas, start, mid - dp(SELECTION_HEIGHT / 2), end, mid + dp(SELECTION_HEIGHT / 2), dp(SELECTION_RADIUS),
+        rounded(canvas, start, mid - dp(SELECTION_HEIGHT / 2), end, mid + dp(SELECTION_HEIGHT / 2), radius,
             GuideMotion.faded(look.accent, alpha))
         wordRow(canvas, display, slot, centre, mid, selected = true, GuideMotion.faded(look.onAccent, SELECTED * alpha))
         // The end that moves has the caret on it.
@@ -185,7 +186,6 @@ internal class GestureDrawing(private val density: Float) {
         const val WORD_HEIGHT = 11f
         const val WORD_GAP = 8f
         const val SELECTION_HEIGHT = 26f
-        const val SELECTION_RADIUS = 8f
         const val SELECTION_PAD = 5f
         const val BEAT = .5f
     }

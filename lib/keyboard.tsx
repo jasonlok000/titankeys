@@ -1,7 +1,9 @@
-import { Canvas, CanvasIcon, CanvasPath, CanvasText, type IconAsset, Rectangle } from "ink";
+import { Canvas, CanvasIcon, CanvasPath, CanvasText, type IconAsset } from "ink";
 import { arrowBack, backspace, circle, keyboardReturn, shift, spaceBar, square } from "ink/icons";
 import type { Point } from "./atlas";
 import { MUTED, ORANGE } from "./brand";
+import { RADIUS } from "./radii";
+import { RoundedOutline } from "./rounded";
 
 type Label = { text: string } | { icon: IconAsset };
 
@@ -39,13 +41,14 @@ export function KeyboardDiagram({ trail }: { trail: Point[] }) {
   }
   return <Canvas width={width + 2} height={height + 2}>
     {keys.map(({ x, y, width: span }, index) =>
-      <Rectangle key={`key-${index}`} x={x + 1} y={y + 1} width={span} height={row} stroke={line} strokeWidth={1} />)}
+      <RoundedOutline key={`key-${index}`} x={x + 1} y={y + 1} width={span} height={row} radius={RADIUS.small} stroke={line} strokeWidth={1} />)}
     {keys.map(({ label: name, x, y, width: span }, index) => "text" in name
       ? <CanvasText key={`label-${index}`} x={x + 1} y={y + 1} width={span} height={row} size={18} colour={label} align="center">
         {name.text}
       </CanvasText>
       : <CanvasIcon key={`label-${index}`} x={x + 1 + (span - icon) / 2} y={y + 1 + (row - icon) / 2} size={icon} name={name.icon} colour={label} />)}
-    <Rectangle x={1 + width * .05} y={1 + height * .5 / 4} width={width * .9} height={height * (3.54 - .5) / 4} stroke={MUTED} strokeWidth={1} />
+    <RoundedOutline x={1 + width * .05} y={1 + height * .5 / 4} width={width * .9} height={height * (3.54 - .5) / 4} radius={RADIUS.medium}
+      stroke={MUTED} strokeWidth={1} />
     {pieces(trail).map((piece, index) => <CanvasPath key={`trail-${index}`}
       points={piece.points.map(([x, y]) => [1 + x * width, 1 + y * height] as const)} stroke={ink} strokeWidth={4 * piece.thickness} />)}
   </Canvas>;

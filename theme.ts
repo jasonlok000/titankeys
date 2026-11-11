@@ -21,6 +21,8 @@ export default defineTheme({
   scrollBar: { colour: muted, visibility: "scrolling", track: false, width: 8, inset: 30 },
   field: "inline",
   selection: "check",
+  // The medium radius from lib/radii.ts, which tools/checks/radii.test.ts checks. A theme cannot import it.
+  textInput: { radius: 32 },
   toggle: defineToggle({
     // Ink's toggle row is 69 tall, and a taller switch is cut off at the top of a screen.
     width: 118,

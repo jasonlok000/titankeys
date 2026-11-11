@@ -649,27 +649,6 @@ private fun realWordsForAWordDrag() {
     if (GestureDisplay().wordWidth(5) <= 0f) throw AssertionError("With no text known, a made-up row shows")
 }
 
-<<<<<<< ours
-/** A word picked with no slide shows its mark, holds it about 400 ms, then goes over about 300 ms. A key or touch ends it at once. */
-private fun aPickedWordHoldsABeat() {
-    val display = GestureDisplay()
-    display.wordSelected(0L)
-    display.advance(GestureDisplay.PICK_IN.toLong() + 200, 1f)
-    if (display.scene != GestureDisplay.Scene.WordSelected) throw AssertionError("The pick still shows in its hold")
-    if (display.reveal != 1f) throw AssertionError("The cover is full during the hold, so no suggestion shows through: ${display.reveal}")
-    if (display.spanStart != -.5f || display.spanEnd != .5f) throw AssertionError("The mark covers the whole word during the hold")
-    display.advance((GestureDisplay.PICK_IN + GestureDisplay.PICK_HOLD + GestureDisplay.PICK_OUT / 2).toLong(), 1f)
-    if (display.reveal <= 0f || display.reveal >= 1f) throw AssertionError("Halfway out, it is going: ${display.reveal}")
-    display.advance(GestureDisplay.PICK_MILLIS.toLong() + 1, 1f)
-    if (display.scene != GestureDisplay.Scene.None) throw AssertionError("After about 790 ms the suggestions are back")
-    if (GestureDisplay.PICK_HOLD != 400f || GestureDisplay.PICK_OUT != 300f) throw AssertionError("The owner's timings: hold 400 ms, exit 300 ms")
-
-    val cut = GestureDisplay()
-    cut.wordSelected(0L)
-    cut.advance(150L, 1f)
-    cut.interrupt()
-    if (cut.scene != GestureDisplay.Scene.None) throw AssertionError("A key or touch ends the pick at once")
-=======
 private fun near(actual: Float, expected: Float, message: String) {
     if (kotlin.math.abs(actual - expected) > .001f) throw AssertionError("$message: expected $expected, got $actual")
 }
@@ -859,5 +838,25 @@ private fun onlyCountedTapsGlow() {
     key.down(Sample(.5f, .9f, start), false)
     key.up(listOf(Sample(.5f, .9f, start + 60)), start + 60)
     same(key.tapped, 0, "A touch that can't type, such as just after a key press, is no tap")
->>>>>>> theirs
+}
+
+/** A word picked with no slide shows its mark, holds it about 400 ms, then goes over about 300 ms. A key or touch ends it at once. */
+private fun aPickedWordHoldsABeat() {
+    val display = GestureDisplay()
+    display.wordSelected(0L)
+    display.advance(GestureDisplay.PICK_IN.toLong() + 200, 1f)
+    if (display.scene != GestureDisplay.Scene.WordSelected) throw AssertionError("The pick still shows in its hold")
+    if (display.reveal != 1f) throw AssertionError("The cover is full during the hold, so no suggestion shows through: ${display.reveal}")
+    if (display.spanStart != -.5f || display.spanEnd != .5f) throw AssertionError("The mark covers the whole word during the hold")
+    display.advance((GestureDisplay.PICK_IN + GestureDisplay.PICK_HOLD + GestureDisplay.PICK_OUT / 2).toLong(), 1f)
+    if (display.reveal <= 0f || display.reveal >= 1f) throw AssertionError("Halfway out, it is going: ${display.reveal}")
+    display.advance(GestureDisplay.PICK_MILLIS.toLong() + 1, 1f)
+    if (display.scene != GestureDisplay.Scene.None) throw AssertionError("After about 790 ms the suggestions are back")
+    if (GestureDisplay.PICK_HOLD != 400f || GestureDisplay.PICK_OUT != 300f) throw AssertionError("The owner's timings: hold 400 ms, exit 300 ms")
+
+    val cut = GestureDisplay()
+    cut.wordSelected(0L)
+    cut.advance(150L, 1f)
+    cut.interrupt()
+    if (cut.scene != GestureDisplay.Scene.None) throw AssertionError("A key or touch ends the pick at once")
 }

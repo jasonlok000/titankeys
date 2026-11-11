@@ -1,9 +1,6 @@
 import { resource } from "ink";
 import { callNative, onNativeMessage } from "ink/native";
 
-export type HapticPreset = "normal" | "strong";
-/** How a picked word feels, to try in the debug build only. */
-export type PickFeel = "off" | "length" | "syllables" | "weight";
 export type Spelling = "british" | "american";
 export type EnterKey = "send" | "newline" | "app";
 /** How a message goes out in an app: the field's action, or a plain Enter key. */
@@ -83,11 +80,10 @@ export type State = {
   snippets: Snippet[];
   liftOff: boolean;
   liftOffMillis: number;
+  /** All haptics: off, nothing vibrates. */
   haptics: boolean;
-  hapticPreset: HapticPreset;
-  /** TitanKeys Debug, where the pick feel can be tried. */
-  debugBuild: boolean;
-  pickFeel: PickFeel;
+  /** Each haptic's own switch, by its id in Haptics.kt. A write may send only the ones that changed. */
+  hapticToggles: Record<string, boolean>;
   spelling: Spelling;
   /** Records touches, keys and typed text in a log on this phone. */
   /** This build has the full typing log: only TitanKeys Debug does. */
@@ -98,7 +94,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "pickFeel" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
 
 /**
  * Touchpad points from 0 to 1 across the keyboard and down its four rows, with how thick to draw the trail there: 1 for a

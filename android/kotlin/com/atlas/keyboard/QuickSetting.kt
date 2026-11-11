@@ -11,7 +11,7 @@ enum class QuickSetting(val key: String, val label: String, val title: String) {
     SuggestionBar("W", "Words", "Show word suggestions"),
     AutoCapitalise("C", "Caps", "Capital letter to start a sentence"),
     AutoPunctuation("D", "Dot", "Full stop on double space"),
-    Vibration("V", "Vib", "Vibrate while swiping"),
+    Vibration("V", "Vib", "Haptics"),
     HoldSymbols("H", "Hold", "Hold a letter for its symbol"),
     CursorControl("M", "Move", "Move the cursor from Space"),
     DoublePressLocks("L", "Lock", "Press twice to lock Shift and Alt"),

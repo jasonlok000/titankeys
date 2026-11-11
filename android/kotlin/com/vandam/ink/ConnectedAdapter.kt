@@ -11,11 +11,15 @@ import com.atlas.connected.Announcements
 import com.atlas.connected.Connected
 import com.atlas.connected.Contributions
 import com.atlas.keyboard.BugRecording
+import com.atlas.keyboard.Haptic
+import com.atlas.keyboard.Haptics
 import org.json.JSONArray
 import org.json.JSONObject
 
 /** The Settings pages for News and for data contributions. */
 internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdapter {
+    private val haptics by lazy { Haptics(activity) }
+
     init {
         // The app may open before the keyboard has ever started, so it sets the jobs too.
         Thread { runCatching { Connected.schedule(activity.applicationContext) } }.start()
@@ -59,10 +63,13 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
                 "bugState" -> bugState().toString()
                 "bugStart" -> {
                     BugRecording.start(activity)
+                    // A click as it starts or stops, since a button on the screen has no click of its own.
+                    haptics.play(Haptic.BugRecording)
                     "null"
                 }
                 "bugStop" -> {
                     BugRecording.stop(activity)
+                    haptics.play(Haptic.BugRecording)
                     "null"
                 }
                 "bugDelete" -> {

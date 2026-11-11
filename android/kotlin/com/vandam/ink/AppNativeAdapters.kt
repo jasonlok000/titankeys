@@ -23,7 +23,6 @@ import com.atlas.keyboard.BackService
 import com.atlas.keyboard.EnterKey
 import com.atlas.keyboard.ExactTyping
 import com.atlas.keyboard.GuideActivity
-import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.KeyCapture
 import com.atlas.keyboard.PhoneNameSource
@@ -387,9 +386,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("liftOff", TypingSettings.liftOffGrace(activity))
             .put("liftOffMillis", TypingSettings.liftOffDurationMillis(activity))
             .put("haptics", Haptics.enabled(activity))
-            .put("hapticPreset", Haptics.preset(activity).id)
-            .put("debugBuild", activity.packageName.endsWith(".debug"))
-            .put("pickFeel", Haptics.pickFeel(activity).id)
+            .put("hapticToggles", JSONObject(Haptics.toggles(activity)))
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
             .put("rawLogAvailable", RawLog.available(activity))
             .put("rawLog", RawLog.on(activity))
@@ -501,9 +498,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "expandShorthand" -> TypingSettings.expandShorthand(activity, value as Boolean)
             "liftOff" -> TypingSettings.liftOffGrace(activity, value as Boolean)
             "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())
-            "haptics" -> Haptics.select(activity, Haptics.preset(activity), value as Boolean)
-            "hapticPreset" -> Haptics.select(activity, HapticPreset.of(value as String), Haptics.enabled(activity))
-            "pickFeel" -> Haptics.pickFeel(activity, com.atlas.keyboard.HapticPalette.PickFeel.of(value as String))
+            "haptics" -> Haptics.enabled(activity, value as Boolean)
+            // Only the switches that came: one toggle on the page sends just its own.
+            "hapticToggles" -> (value as JSONObject).let { toggles ->
+                for (id in toggles.keys()) Haptics.toggle(activity, id, toggles.getBoolean(id))
+            }
             "spelling" -> TypingSettings.spelling(activity,
                 if (value == "american") EnglishSpelling.Variant.AMERICAN else EnglishSpelling.Variant.BRITISH)
             "rawLog" -> RawLog.enabled(activity, value as Boolean)

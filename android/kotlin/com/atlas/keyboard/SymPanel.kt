@@ -41,6 +41,8 @@ class SymPanel(
     private val pressAlt: () -> Unit,
     private val pressSym: () -> Unit,
     private val pageChanged: () -> Unit,
+    /** A touch on a group's tab opened that group. */
+    private val groupChanged: () -> Unit = {},
     /** A finger moved onto a key that shows a mark, like the tick of a swipe that crosses a key. */
     private val marked: () -> Unit = {},
     /** A touch on a key of the clipboard page, which does what a push of that key does. */
@@ -386,7 +388,7 @@ class SymPanel(
         includeFontPadding = false
         isFocusable = false
         contentDescription = "Show $name"
-        setOnClickListener { if (open(index)) pageChanged() }
+        setOnClickListener { if (open(index)) groupChanged() }
     }
 
     /** Text that follows the system font size up to [largest] dp, so that it stays inside a row of fixed height. */

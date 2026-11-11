@@ -115,6 +115,8 @@ export type State = {
 export type HapticsLab = {
   families: Record<string, { name: string; pattern: number[]; plays: string; tried: boolean }>;
   haptics: Record<string, { family: string; pattern: number[]; plays: string }>;
+  /** The lab's experiments, on or off, by id: dotsSpeedUp, "Dots speed up when long". */
+  experiments: Record<string, boolean>;
 };
 
 export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
@@ -243,6 +245,12 @@ export async function transferLearning(mode: "import" | "export") {
  * family. It shows the haptics with these names, groups and words on where each plays. TitanKeys Debug only.
  */
 export const showHapticsGraph = (haptics: { id: string; label: string; group: string; about: string }[]) => atlas("labGraph", { haptics });
+
+/** Turns one of the Haptics lab's experiments on or off, by its id. TitanKeys Debug only. */
+export async function setLabExperiment(id: string, on: boolean) {
+  await atlas("labExperiment", { id, on });
+  await state.refresh();
+}
 
 /** Opens the file picker. Returns false if the picker was cancelled. */
 export async function exportRawLog() {

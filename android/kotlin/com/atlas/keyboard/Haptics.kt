@@ -243,6 +243,11 @@ class PendingTicks(private val post: (Runnable, Long) -> Unit, private val remov
     /** Drops any ticks still waiting, then [play]s once at each of [times], in ms from now. */
     fun schedule(times: List<Long>, play: () -> Unit) {
         cut()
+        add(times, play)
+    }
+
+    /** [play]s once at each of [times], in ms from now, as well as the ticks still waiting: more dots joined the stream. */
+    fun add(times: List<Long>, play: () -> Unit) {
         for (at in times) {
             lateinit var tick: Runnable
             tick = Runnable {
@@ -418,17 +423,21 @@ class Haptics(private val context: Context) {
      * as one message, busy until the tail ends. Then a light tick as each dot lands in the caret, at [landings] (see [DotTicks]),
      * each only while [showing] says the same flick's dots are still on the bar. [cutDots] drops the ticks still to come.
      */
-    fun flick(poppedMillis: Long?, landings: List<Long> = emptyList(), showing: () -> Boolean = { false }): Boolean {
+    fun flick(poppedMillis: Long?, landings: List<Long> = emptyList(), showing: () -> Boolean = { false }, chained: Boolean = false): Boolean {
         val pattern = pattern(context, Family.GoneFlick)
         val head = pattern[0]
         val tailAt = poppedMillis?.coerceIn(head + pattern[1], head + HapticPalette.GAP_MILLIS.last)
         val played = flickNow(pattern, tailAt)
-        landTicks(landings, if (played) tailAt ?: (head + pattern[1]) else null, showing)
+        landTicks(landings, if (played) tailAt ?: (head + pattern[1]) else null, showing, chained)
         return played
     }
 
-    private fun landTicks(landings: List<Long>, tailAt: Long?, showing: () -> Boolean) =
-        dotTicks.schedule(DotTicks.times(landings, tailAt)) { if (showing()) play(Haptic.DeleteDotsLand) }
+    /** The ticks for dots that land at [landings]. Dots [chained] onto a stream that still plays keep its ticks still to come. */
+    private fun landTicks(landings: List<Long>, tailAt: Long?, showing: () -> Boolean, chained: Boolean = false) {
+        val times = DotTicks.times(landings, tailAt)
+        val tick = { if (showing()) play(Haptic.DeleteDotsLand) }
+        if (chained) dotTicks.add(times, tick) else dotTicks.schedule(times, tick)
+    }
 
     /**
      * A hold's dots at its lift: a light tick as each lands in the caret, at [landings], each only while [showing] says those
@@ -507,6 +516,19 @@ class Haptics(private val context: Context) {
         }
 
         private fun patternKey(family: Family) = "debug_pattern_${family.id}"
+
+        /**
+         * The Haptics lab's experiment "Dots speed up when long": after the first few, each of a delete's dots lands a little
+         * sooner, and ticks keep 30 ms apart. Off unless tried in the lab, and only TitanKeys Debug reads it.
+         */
+        fun dotsSpeedUp(context: Context) = debug(context) && preferences(context).getBoolean(DOTS_SPEED_UP, false)
+
+        fun tryDotsSpeedUp(context: Context, on: Boolean) {
+            check(debug(context)) { "Only TitanKeys Debug has the lab's experiments" }
+            preferences(context).edit().putBoolean(DOTS_SPEED_UP, on).apply()
+        }
+
+        private const val DOTS_SPEED_UP = "debug_dots_speed_up"
 
         /** The master switch: All haptics in Settings, and Vibration on the quick settings page. */
         fun enabled(context: Context) = switches(context).master

@@ -43,8 +43,8 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
 
     private fun scene(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
         // The words stay where they are, under a cover in the strip's own colour, so nothing moves when this comes and goes. A swipe
-        // only dims them.
-        val cover = if (display.scene == GestureDisplay.Scene.Swipe) SWIPE_DIM else 1f
+        // and a delete's dots only dim them, so the suggestions still show, faded, behind.
+        val cover = if (display.scene == GestureDisplay.Scene.Swipe || display.softDelete) SWIPE_DIM else 1f
         fill.color = GuideMotion.faded(look.paper, display.reveal * cover)
         canvas.drawRect(0f, 0f, right + left, h, fill)
         if (display.scene == GestureDisplay.Scene.Swipe) {
@@ -239,9 +239,12 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         }
     }
 
-    /** How far apart the dots are: [DOT_STEP], or closer so that all of them and their word gaps fit between [left] and [stop]. */
+    /**
+     * How far apart the dots are: [DOT_STEP], or closer so that the dots still to land and their word gaps fit between [left] and
+     * [stop]. The row follows the queue smoothly as deletes join it.
+     */
     private fun dotStep(display: GestureDisplay, left: Float, stop: Float) =
-        min(dp(DOT_STEP), (stop - left) / (display.dots + maxOf(0, display.groups.size - 1)).coerceAtLeast(1))
+        min(dp(DOT_STEP), (stop - left) / display.shownUnits.coerceAtLeast(1f))
 
     /**
      * A lifted hold: each of its lines, nearest the caret first, shrinks to the run of dots of one deleted word, in place, while the
@@ -316,15 +319,10 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val count = display.dots
         val step = dotStep(display, left, stop)
         var pulse = 0f
-        var group = 0
-        var inGroup = 0
         for (i in 0 until count) {
-            // Each word before this dot's word leaves one gap.
-            while (group < display.groups.size - 1 && inGroup >= display.groups[group]) { group++; inGroup = 0 }
-            inGroup++
-            val place = i + group
-            val order = i.toFloat() / count
-            val popped = ((display.dotsIn - order * GestureDisplay.POP_SPREAD) / GestureDisplay.POP_LENGTH).coerceIn(0f, 1f)
+            // Each word before this dot's word leaves one gap; the row's place next to the caret moves on as the queue does.
+            val place = display.dotPlace(i) - display.shownBase
+            val popped = display.dotPopped(i)
             // Each dot has its own part of the way out; it lands in the caret at 1.
             val travel = display.dotTravel(i)
             if (travel >= 1f) {

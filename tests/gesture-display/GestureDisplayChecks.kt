@@ -13,6 +13,8 @@ private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
     aFlicksWayInStretchesToFitItsDots()
+    quickFlicksMakeOneStream()
+    longDotsSpeedUpWhenTried()
     aPickedWordHoldsABeat()
     realTextFollowsTheCursor()
     realWordsForAWordDrag()
@@ -990,6 +992,89 @@ private fun theHeldGlowGoesWithTheDisplay() {
     off.cursorFrame(5f, 0, 0f, false, 100L)
     off.allowed = false
     same(off.glowing, false, "Where the strip does not show, the held glow goes too")
+}
+
+/**
+ * Deletes that come while the dots still play don't start them over or cut them: their dots join the end of the queue, and the
+ * stream goes on, every dot landing and ticking 30 ms or more after the one before.
+ */
+private fun quickFlicksMakeOneStream() {
+    val display = GestureDisplay()
+    display.wordDeleted(1_000, 5)
+    val first = display.dotLandings(1f).map { 1_000 + it }
+    display.run(1_000, 1_240)
+    val started = display.dotsAt
+    display.wordDeleted(1_256, 4)
+    same(display.scene, Scene.DeleteFlick, "A second flick keeps the dots going")
+    same(display.chained, true, "It joins the stream")
+    same(display.dotsAt, started, "The stream does not start over")
+    same(display.dots, 9, "Its four dots join the five")
+    same(display.groups.toList(), listOf(5, 4), "Each word keeps its own group, with a gap between")
+    val second = display.dotLandings(1f).map { 1_256 + it }
+    same(second.size, 4, "A tick for each new dot")
+    display.run(1_256, 1_500)
+    display.wordDeleted(1_512, 7)
+    same(display.dots, 16, "A third flick grows the queue again")
+    val third = display.dotLandings(1f).map { 1_512 + it }
+    val all = first + second + third
+    isTrue(all.zipWithNext().all { (a, b) -> b - a >= 30 }, "Every dot lands 30 ms or more after the one before: $all")
+    isTrue(second.first() > first.last() && third.first() > second.last(), "The new dots land after the ones already queued")
+    // Every dot lands, in order, before the words come back.
+    val landed = BooleanArray(16)
+    var now = 1_512L
+    while (display.scene != Scene.None && now < 6_000) {
+        display.advance(now, 1f)
+        if (display.scene == Scene.DeleteFlick) for (index in 0 until 16) if (display.dotTravel(index) >= 1f) landed[index] = true
+        now += 16
+    }
+    isTrue(landed.all { it }, "Every one of the sixteen dots lands: ${landed.toList()}")
+    isTrue(now > all.last(), "The words come back only after the last dot")
+    // After the stream is over, the next flick starts a new one.
+    display.wordDeleted(now + 100, 3)
+    same(display.chained, false, "A flick after the dots are over starts fresh")
+    // Anything but a delete still cuts the stream at once.
+    display.run(now + 100, now + 300)
+    display.wordDeleted(now + 316, 2)
+    display.interrupt()
+    same(display.scene, Scene.None, "A key or a touch that is no delete cuts the whole stream")
+    // With motion off there is no stream to join: each flick shows its own still picture.
+    val still = GestureDisplay()
+    still.wordDeleted(1_000, 3)
+    still.advance(1_000, 0f)
+    still.wordDeleted(1_100, 2)
+    same(still.chained, false, "With motion off a flick starts its own dots")
+}
+
+/**
+ * The experiment "Dots speed up when long": the first few dots keep their spacing, then each lands about 8% sooner than the one
+ * before, down to 10 ms, so a long delete whooshes in. Ticks keep 30 ms apart by leaving some dots without one.
+ */
+private fun longDotsSpeedUpWhenTried() {
+    val plain = GestureDisplay()
+    plain.wordDeleted(1_000, 30)
+    val plainSpan = plain.dotLandsAt(29) - plain.dotLandsAt(0)
+    val fast = GestureDisplay()
+    fast.speedUp = true
+    fast.wordDeleted(1_000, 30)
+    val gaps = (1 until 30).map { fast.dotLandsAt(it) - fast.dotLandsAt(it - 1) }
+    isTrue(gaps.take(3).all { kotlin.math.abs(it - 30f) < .01f }, "The first few keep 30 ms: $gaps")
+    isTrue(gaps.drop(2).zipWithNext().all { (a, b) -> b <= a + .01f }, "Then each is no longer than the one before: $gaps")
+    isTrue(kotlin.math.abs(gaps[3] - 30f * GestureDisplay.DOT_SPEED_UP) < .01f, "about 8% sooner each: ${gaps[3]}")
+    isTrue(gaps.all { it >= GestureDisplay.DOT_FASTEST_GAP - .01f } && kotlin.math.abs(gaps.last() - 10f) < .01f, "down to 10 ms: $gaps")
+    val span = fast.dotLandsAt(29) - fast.dotLandsAt(0)
+    isTrue(span < plainSpan * .6f, "A long delete is over much sooner: $span ms against $plainSpan")
+    val ticks = fast.dotLandings(1f)
+    isTrue(ticks.zipWithNext().all { (a, b) -> b - a >= 30 }, "Ticks stay 30 ms apart or more: $ticks")
+    isTrue(ticks.size in 10 until 30, "so some dots land without one: ${ticks.size} ticks for 30 dots")
+    isTrue(kotlin.math.abs(ticks.first() - fast.dotLandsAt(0)) <= .5f, "The first dot ticks as it lands: ${ticks.first()}")
+    // A few dots with it on keep a tick each, as their spacing stays over 30 ms.
+    val few = GestureDisplay()
+    few.speedUp = true
+    few.wordDeleted(1_000, 4)
+    same(few.dotLandings(1f).size, 4, "Four dots, four ticks")
+    // Off, as by default, nothing changes.
+    same(GestureDisplay().speedUp, false, "The experiment is off by default")
+    isTrue((1 until 30).all { kotlin.math.abs(plain.dotLandsAt(it) - plain.dotLandsAt(it - 1) - 30f) < .01f }, "Off, thirty dots land 30 ms apart")
 }
 
 /**

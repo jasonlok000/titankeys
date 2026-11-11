@@ -1,5 +1,5 @@
-import { Field, Screen, Section, useSnapshot } from "ink";
-import { type HapticsLab, showHapticsGraph, state } from "../../lib/atlas";
+import { Field, Screen, Section, Toggle, useSnapshot } from "ink";
+import { type HapticsLab, setLabExperiment, showHapticsGraph, state } from "../../lib/atlas";
 import { hapticGroups } from "../../lib/haptics";
 
 const title = "Haptics lab";
@@ -20,6 +20,10 @@ function Lab({ lab }: { lab: HapticsLab }) {
   return <Screen title={title} subtitle={subtitle}>
     <Section title="Lab">
       <Field label="Open the lab" onPress={open}>Practice, live haptics, patterns and notes</Field>
+    </Section>
+    <Section title="Experiments">
+      <Toggle label="Dots speed up when long" value={lab.experiments.dotsSpeedUp ?? false}
+        onChange={on => void setLabExperiment("dotsSpeedUp", on)} />
     </Section>
     <Section title="Patterns">
       {Object.entries(lab.families).map(([id, family]) =>

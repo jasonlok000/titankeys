@@ -3,9 +3,11 @@ package com.atlas.keyboard
 import android.app.Activity
 import android.graphics.Color
 import android.os.Bundle
+import android.os.SystemClock
 import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
@@ -14,14 +16,22 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.TextView
+import org.json.JSONArray
 import org.json.JSONObject
+import java.io.BufferedWriter
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * TitanKeys Debug's demo screen, for filming in one take: full screen, in the phone's own shape, with the typed text as kinetic
  * type. While it is in front it directs the keyboard through [ScriptedInput], so every swipe, key and touch on the strip types
  * what the script says next, whatever was really swiped. The script is not in the app: it is read from
  * getExternalFilesDir("trailer")/script.json each time the screen starts. Volume Down starts the take again.
+ *
+ * Each take writes a log next to the script, take-<time>.jsonl, so that the edit can draw a bar in step with the video: a line for
+ * each step and each modifier key, with the uptime, and a sync line for one orange frame at the first input of the take.
  */
 class TrailerActivity : Activity(), ScriptedInput.Director {
     private lateinit var view: TrailerView
@@ -29,6 +39,11 @@ class TrailerActivity : Activity(), ScriptedInput.Director {
     private lateinit var note: TextView
     private var script: TrailerScript? = null
     private var stopEvents: (() -> Unit)? = null
+    private lateinit var flash: View
+    /** This take's log. It opens at the first input after a reset, so the newest file is the newest take. */
+    private var log: BufferedWriter? = null
+    /** The modifier keys that are down now, by name, for the bar's chips in the edit. */
+    private val held = LinkedHashSet<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +69,12 @@ class TrailerActivity : Activity(), ScriptedInput.Director {
             addView(view, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(field, FrameLayout.LayoutParams(2, 2))
             addView(note, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+            // The sync mark: one orange frame over everything at the start of a take.
+            flash = View(this@TrailerActivity).apply {
+                setBackgroundColor(Color.rgb(239, 128, 78))
+                visibility = View.GONE
+            }
+            addView(flash, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         })
     }
 
@@ -79,6 +100,7 @@ class TrailerActivity : Activity(), ScriptedInput.Director {
     }
 
     override fun onPause() {
+        closeLog()
         if (ScriptedInput.director === this) ScriptedInput.director = null
         stopEvents?.invoke()
         stopEvents = null
@@ -114,17 +136,62 @@ class TrailerActivity : Activity(), ScriptedInput.Director {
 
     /** Back to the start of the take, at once. */
     private fun restart() {
+        closeLog()
+        held.clear()
         script?.reset()
         view.reset()
         field.text.clear()
         ScriptedInput.refresh()
     }
 
-    private fun play(input: TrailerScript.Input) {
+    private fun play(input: TrailerScript.Input, picked: Int? = null) {
         val script = script ?: return
+        val bar = script.bar
         val change = script.input(input) ?: return
+        if (log == null) startTake()
         view.apply(change, script.cursorAt)
         ScriptedInput.refresh()
+        write(JSONObject()
+            .put("t", SystemClock.uptimeMillis())
+            .put("input", input.name.lowercase())
+            .put("text", script.shown)
+            .put("bar", JSONArray(bar))
+            .put("picked", picked?.let { PLACES[it] } ?: JSONObject.NULL)
+            .put("next", JSONArray(script.bar))
+            .put("chips", JSONArray(held.toList()))
+            .put("selection", change.selection?.let { JSONArray().put(it.first).put(it.last + 1) } ?: JSONObject.NULL))
+    }
+
+    /** A take starts: its log opens, and one orange frame marks the moment on the video. */
+    private fun startTake() {
+        val name = "take-" + SimpleDateFormat("yyyyMMdd-HHmmss-SSS", Locale.ROOT).format(Date()) + ".jsonl"
+        log = File(getExternalFilesDir("trailer"), name).bufferedWriter()
+        flash.visibility = View.VISIBLE
+        flash.postOnAnimation {
+            write(JSONObject().put("t", SystemClock.uptimeMillis()).put("sync", "orange frame"))
+            flash.postDelayed({ flash.visibility = View.GONE }, FLASH_MILLIS)
+        }
+    }
+
+    private fun write(line: JSONObject) {
+        val out = log ?: return
+        out.write(line.toString())
+        out.newLine()
+        out.flush()
+    }
+
+    private fun closeLog() {
+        log?.close()
+        log = null
+        flash.visibility = View.GONE
+    }
+
+    /** A modifier key went down or up: its chip on the bar comes and goes in the edit. */
+    private fun modifier(code: Int, down: Boolean) {
+        val name = KeyEvent.keyCodeToString(code).removePrefix("KEYCODE_")
+        if (down) held += name else held -= name
+        write(JSONObject().put("t", SystemClock.uptimeMillis()).put("input", "modifier").put("key", name).put("down", down)
+            .put("chips", JSONArray(held.toList())))
     }
 
     // The director. Every key that is not a system key is the script's: letters and marks type its next letter, Space its next
@@ -132,7 +199,9 @@ class TrailerActivity : Activity(), ScriptedInput.Director {
     // with them for the camera. Backspace does nothing either: the delete flick is the script's way to delete.
 
     override fun key(code: Int, event: KeyEvent): Boolean {
-        if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount > 0) return true
+        if (event.repeatCount > 0) return true
+        if (Modifiers.isModifier(code)) modifier(code, event.action == KeyEvent.ACTION_DOWN)
+        if (event.action != KeyEvent.ACTION_DOWN) return true
         when {
             code == KeyEvent.KEYCODE_SYM -> play(TrailerScript.Input.Sym)
             code == KeyEvent.KEYCODE_SPACE -> play(TrailerScript.Input.Space)
@@ -143,13 +212,19 @@ class TrailerActivity : Activity(), ScriptedInput.Director {
     }
 
     override fun strip(index: Int): Boolean {
-        play(TrailerScript.Input.Tap)
+        play(TrailerScript.Input.Tap, picked = index)
         return true
     }
 
     /** The next pick's words, from left, middle and right to the composer's order: middle, left, right. */
     override val words: List<String>
         get() = script?.bar?.takeIf { it.size == 3 }?.let { listOf(it[1], it[0], it[2]) } ?: emptyList()
+
+    private companion object {
+        /** The strip's places in the composer's order: middle, left, right. */
+        val PLACES = listOf("middle", "left", "right")
+        const val FLASH_MILLIS = 40L
+    }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {

@@ -42,6 +42,7 @@ class AtlasIme : InputMethodService() {
     private lateinit var composer: Composer
     private lateinit var editor: ConnectionEditor
     private lateinit var overlay: TouchpadOverlay
+    private lateinit var watch: TouchWatch
     private val contact = Contact()
     private val cursor = CursorMode()
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
@@ -150,6 +151,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onCreate() {
         super.onCreate()
+        running = this
         Calibration.init(this)
         haptics = Haptics(this)
         touchpad = Touchpad(getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY))
@@ -167,6 +169,8 @@ class AtlasIme : InputMethodService() {
         overlay = TouchpadOverlay(this) { event ->
             (editing && touchpad.accepts(event)).also { if (it) motion(event) }
         }
+        watch = TouchWatch(this) { if (touchpad.accepts(it)) light() }
+        watch.show()
         loadEmoji()
     }
 
@@ -291,7 +295,11 @@ class AtlasIme : InputMethodService() {
 
     override fun onEvaluateInputViewShown() = editing
 
-    override fun onShowInputRequested(flags: Int, configChange: Boolean) = editing
+    override fun onShowInputRequested(flags: Int, configChange: Boolean): Boolean {
+        // A refused show still reports an active window. Hide it again, or the next touch reports no change.
+        if (!editing) main.post { if (!editing) requestHideSelf(0) }
+        return editing
+    }
 
     override fun onEvaluateFullscreenMode() = false
 
@@ -401,6 +409,15 @@ class AtlasIme : InputMethodService() {
     }
 
     private val endSlippedCursor = Runnable { endCursor() }
+
+    /**
+     * Turns on the keyboard light for a touch outside a text field. The Titan lights the keys for a key press, or
+     * when the keyboard reports an active window, so ask to show the keyboard: Atlas refuses, but the request still
+     * reports an active window. In a text field, the Titan keeps the light on by itself.
+     */
+    private fun light() {
+        if (!editing) requestShowSelf(0)
+    }
 
     private fun traceCursor(samples: List<Sample>, ended: Boolean) {
         val added = samples.filter { it.valid }
@@ -819,6 +836,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onDestroy() {
+        if (running === this) running = null
         editing = false
         main.removeCallbacksAndMessages(null)
         settlements.clear()
@@ -827,10 +845,20 @@ class AtlasIme : InputMethodService() {
         composer.stop()
         editor.cancelState()
         overlay.hide()
+        watch.hide()
         super.onDestroy()
     }
 
     companion object {
+        /** The running keyboard, for keys that Atlas's accessibility service takes before they reach it. */
+        @Volatile private var running: AtlasIme? = null
+
+        /** A key taken for an app shortcut still ends the touch it overlaps, so the touch does not type. */
+        fun keyTaken(event: KeyEvent) {
+            val keyboard = running ?: return
+            if (keyboard.editing) keyboard.contact.key(event.keyCode, event.action == KeyEvent.ACTION_DOWN, event.eventTime)
+        }
+
         private const val MAX_PENDING_INPUT = 128
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"

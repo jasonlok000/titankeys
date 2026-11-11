@@ -73,10 +73,13 @@ class Strip(
             setPadding(dp(14), 0, dp(14), 0)
         }
     }
+    private val menuSpace = android.view.View(context)
     private val noticeRow = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
         addView(noticeLabel, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         for (button in noticeButtons) addView(button, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+        // In a word's menu, the room over P's column, which picks nothing.
+        addView(menuSpace, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
     }
     /**
      * The newest clip, right after a copy: a clipboard icon and the start of the clip, at the size and on the line of the words, so
@@ -436,8 +439,30 @@ class Strip(
         canvas.drawPath(capitalArrow, capitalPaint)
     }
 
+    /** The word of the open menu, drawn small above its buttons. */
+    private var menuWord: String? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+    private val menuWordPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+
+    private fun drawMenuWord(canvas: Canvas) {
+        val word = menuWord ?: return
+        if (noticeRow.visibility != VISIBLE) return
+        menuWordPaint.typeface = typeface
+        menuWordPaint.color = look.muted
+        menuWordPaint.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, MENU_WORD_SIZE, resources.displayMetrics)
+        val text = context.getString(R.string.strip_menu_word, word)
+        canvas.drawText(text, width / 2f, dp(MENU_WORD_TOP) - menuWordPaint.ascent(), menuWordPaint)
+    }
+
     override fun dispatchDraw(canvas: Canvas) {
         super.dispatchDraw(canvas)
+        drawMenuWord(canvas)
         drawAutoCapital(canvas)
         idle?.let { drawIdle(canvas, it) }
         drawDemoFinger(canvas)
@@ -477,6 +502,25 @@ class Strip(
     /** The label and buttons of a word's menu, or of what just happened to a word. */
     private fun showNotice(shown: Notice?) {
         noticeRow.visibility = if (shown != null) VISIBLE else GONE
+        // A word's menu lays its buttons over the key columns that pick them, so a marked key sits right under its button. The word
+        // shows small above them, as the label would push them out of line.
+        val menu = shown is Notice.Menu
+        val count = noticeActions(shown).size
+        noticeLabel.visibility = if (menu) GONE else VISIBLE
+        menuSpace.visibility = if (menu) VISIBLE else GONE
+        val keysIn = if (menu) maxOf(0, dp(Layout.KEY_SIDE_DP) - paddingLeft) else 0
+        noticeRow.setPadding(keysIn, 0, keysIn, 0)
+        for ((index, button) in noticeButtons.withIndex()) {
+            val params = button.layoutParams as LayoutParams
+            val width = if (menu) 0 else LayoutParams.WRAP_CONTENT
+            val weight = if (menu) MenuKeys.columns(index, count).toFloat() else 0f
+            if (params.width != width || params.weight != weight) {
+                params.width = width
+                params.weight = weight
+                button.layoutParams = params
+            }
+        }
+        menuWord = (shown as? Notice.Menu)?.word
         // A word's menu starts at the side, by its buttons. The word on Teams has no buttons, so it sits in the middle.
         noticeLabel.gravity = Gravity.CENTER_VERTICAL or if (shown == Notice.TeamsEgg) Gravity.CENTER_HORIZONTAL else Gravity.START
         noticeLabel.text = when (shown) {
@@ -738,6 +782,9 @@ class Strip(
         private const val FINGER_FADE_MILLIS = 150L
         private const val MENU_END_MILLIS = 3600L
         private const val MENU_WORDS = 3
+        /** The menu's word, small above its buttons: its size in sp and its top in dp. */
+        private const val MENU_WORD_SIZE = 11f
+        private const val MENU_WORD_TOP = 2
         /** Enough of the clip for one line. The line itself cuts it cleanly where it ends. */
         private const val CLIP_PREVIEW_LENGTH = 200
         /** The clipboard icon beside a clip, as a part of the text size. */

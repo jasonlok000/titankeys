@@ -550,6 +550,7 @@ class AtlasIme : InputMethodService() {
                 showClips()
             }
         }
+        GuideHooks.clipDismissals = { main.post { if (inGuide) dismissClipOffer() } }
         GuideHooks.stripPoints = { index ->
             main.post {
                 if (index == null) strip?.point(null)
@@ -2569,6 +2570,7 @@ class AtlasIme : InputMethodService() {
         GuideHooks.stripDemos = null
         GuideHooks.stripPoints = null
         GuideHooks.clipSeeds = null
+        GuideHooks.clipDismissals = null
         // A held status must not outlive the keyboard.
         if (hold.held) hideHeldWindow()
         unregisterReceiver(screenOn)

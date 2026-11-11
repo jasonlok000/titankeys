@@ -407,6 +407,8 @@ class GuideActivity : Activity() {
     private val settleReaction = Runnable {
         if (!passed) return@Runnable
         swapIn(title, flow.step.title, 0)
+        // The line under the title reacts to what you just did, and never gives the next instruction.
+        if (flow.step.praise.isNotEmpty()) body.text = flow.step.praise
         body.animate().alpha(1f).setDuration(FADE_MILLIS).start()
     }
 
@@ -496,7 +498,10 @@ class GuideActivity : Activity() {
         if (stopTrace == null) stopTrace = Trace.listen { message -> trace(message) }
         // A word that comes out different gets the script's word on the strip, so the line above is always one touch away.
         // The playground is free typing, so there the strip keeps to your own words.
-        if (!playground) GuideHooks.script = { before -> GuideScript.letters(passage.wordAt(passage.track(typedSince(before)).next)) }
+        // Only where there's text to type along to: elsewhere the bar keeps to your own words.
+        if (!playground) GuideHooks.script = { before ->
+            if (script.visibility != View.VISIBLE) "" else GuideScript.letters(passage.wordAt(passage.track(typedSince(before)).next))
+        }
         contentResolver.registerContentObserver(Settings.Secure.getUriFor(Settings.Secure.DEFAULT_INPUT_METHOD), false, keyboardChanges)
         clipboard.addPrimaryClipChangedListener(clipChanged)
         // Back from the disclosure: the end screen shows the answer, or keeps asking.
@@ -919,12 +924,17 @@ class GuideActivity : Activity() {
         offerFor(step)
         // The whole guide is one text. A step that works on text gets more of the script if the text is too short, and a step
         // with words to practise on gets them, once.
-        val words = field.text.split(' ', '\n').count { it.isNotEmpty() }
-        if (step.needsWords > words) addText(Passage(step.text).words.take(step.needsWords - words).joinToString(" ") + ".")
-        step.passage?.let { if (!field.text.contains(it)) addText(it) }
+        // Each slide starts with a clean field: its own text to work on, or nothing. Within the slide, what you type stays.
+        seeding = true
+        field.setText(step.seed)
+        field.setSelection(field.length())
+        seeding = false
         setUpLesson(step)
         flow.seed(field.text.toString())
-        startPassage(step.text)
+        // The box with text to type along to shows only where typing or swiping text is the task.
+        val typing = step.text.isNotEmpty()
+        script.visibility = if (typing) View.VISIBLE else View.GONE
+        if (typing) startPassage(step.text)
         swapIn(title, step.title, 0)
         // Only the instruction that is needed now. The slide moves on, or back, as the keyboard changes. See [showStage].
         swapIn(body, flow.instruction, ENTER_STAGGER_MILLIS)
@@ -989,6 +999,25 @@ class GuideActivity : Activity() {
         passageFrom = field.length()
         passageLayout = null
         passageLine = -1
+        passageText = text
+    }
+
+    /**
+     * The slide is done: [text] follows on from the end of the line you're on, and then again and again. What's typed and the lines
+     * on show stay as they are, so the box never jumps and nothing you typed counts for less.
+     */
+    private fun continuePassage(text: String) {
+        if (text.isEmpty()) return
+        val next = passage.track(typedSince(field.text.toString())).next
+        // The last word of the line with the word you're on: the new text starts on the line after it.
+        val layout = passageLayout
+        val lastOnLine = if (layout == null) next else {
+            val end = layout.getLineEnd(layout.getLineForOffset(passage.ranges[next.mod(passage.words.size)].first))
+            (passage.ranges.indexOfLast { it.first < end }).coerceAtLeast(next)
+        }
+        val lead = (0..lastOnLine).joinToString(" ") { passage.wordAt(it) }
+        passage = Passage(lead, text)
+        passageLayout = null
         passageText = text
     }
 
@@ -1840,7 +1869,9 @@ class GuideActivity : Activity() {
         main.postDelayed({ if (passed) applyTone(GuideTone.Orange) }, WIPE_MILLIS)
         showReaction(flow.step.done)
         flow.step.rain?.let { effects.burst(it, RAIN_PIECES) }
-        startPassage(flow.step.after)
+        if (flow.step.text.isNotEmpty()) continuePassage(flow.step.after)
+        // What the paste lesson put on the clipboard has done its job: the bar stops offering it.
+        if (flow.step.clip != null) GuideHooks.dismissClip()
         showScript()
         if (flow.chapterEnds) effects.confetti()
         main.removeCallbacks(settleReaction)

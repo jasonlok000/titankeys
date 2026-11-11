@@ -310,7 +310,23 @@ internal object GuideScript {
  * instructions perfectly means typing it. It starts again after its end. Words are matched by their letters only, so marks and
  * capitals never hold anyone up, and a wrong word is skipped: see [track].
  */
-internal class Passage(val text: String) {
+internal class Passage(lead: String, loop: String = lead) {
+    /**
+     * The whole run of text: [lead], then [loop] again and again, so that the text never starts over in the box but goes on in
+     * new lines. A slide's text is its own lead and loop; once the slide is done, its after text follows on from the line you're on.
+     */
+    val text: String = buildString {
+        append(lead.trim())
+        val more = loop.trim()
+        var count = lead.split(' ').count { it.isNotEmpty() }
+        val step = more.split(' ').count { it.isNotEmpty() }
+        // Each time round is marked with a dot and flows on in the same lines, so a short text never shows the same line twice.
+        while (step > 0 && count < MIN_WORDS) {
+            if (isNotEmpty()) append(" $LOOP_MARK ")
+            append(more)
+            count += step
+        }
+    }
     val words: List<String> = text.split(' ').filter { it.isNotEmpty() }
 
     /** Where each word is in [text], from its first character to after its last. */
@@ -341,6 +357,11 @@ internal class Passage(val text: String) {
         val open = typed.isNotEmpty() && !typed.last().isWhitespace()
         var next = 0
         val done = HashSet<Int>()
+        // The dot between rounds has nothing to type, so it is passed over by itself.
+        fun pass() {
+            while (GuideScript.letters(wordAt(next)).isEmpty() && next < words.size * 2) done += next++
+        }
+        pass()
         for ((index, piece) in pieces.withIndex()) {
             val letters = GuideScript.letters(piece)
             if (letters.isEmpty()) continue
@@ -348,6 +369,7 @@ internal class Passage(val text: String) {
             val ahead = (0..LOOK_AHEAD).firstOrNull { GuideScript.letters(wordAt(next + it)) == letters } ?: continue
             done += next + ahead
             next += ahead + 1
+            pass()
         }
         return Track(next, done, "")
     }
@@ -355,6 +377,10 @@ internal class Passage(val text: String) {
     private companion object {
         /** How many words past the next one a typed word may match. */
         const val LOOK_AHEAD = 3
+        /** At least this many words in a run, far more than anyone types on one slide. */
+        const val MIN_WORDS = 400
+        /** Between one time round the text and the next. */
+        const val LOOP_MARK = "·"
         val WORD = Regex("[\\p{L}\\p{N}'’]+")
     }
 }
@@ -532,9 +558,16 @@ internal class GuideStep(
     val pinnedClips: List<String> = emptyList(),
     /** What the slide rains down once it is done, if anything. */
     val rain: String? = null,
-    /** The slide's own text to type along to, and the one that takes its place once the slide is done. See [Passage]. */
+    /**
+     * The text to type along to, only on slides where typing or swiping text is the task, and the one that follows on once the
+     * slide is done. See [Passage]. Other slides have no passage box.
+     */
     val text: String = "",
     val after: String = "",
+    /** What the field starts with on this slide: each slide gets a clean field, with this to work on, or nothing. */
+    val seed: String = "",
+    /** What the line under the title says once the slide is done: about what you just did, never the next instruction. */
+    val praise: String = "",
     /** The slide offers to share swipes: its offer opens the disclosure, and an answer finishes it. */
     val offersShare: Boolean = false,
     val check: GuideMemory.(KeyboardEvent) -> GuideVerdict = staged(stages),
@@ -599,6 +632,7 @@ internal val GUIDE_STEPS = listOf(
         done = "Fixed. Nobody saw a thing.",
         text = "this keyboard fixes your typos so you can keep pretending you never make any",
         after = "see nobody noticed a thing and your dignity is still mostly intact",
+        praise = "See? Fixed. You're welcome.",
         demo = GuideDemo.TypeSlip,
         bar = GuideBar.Fix,
     ),
@@ -607,8 +641,9 @@ internal val GUIDE_STEPS = listOf(
         title = "Now swipe on the same keys.",
         stages = listOf(GuideStage("Slide over the letters of the next word in the box. Don't press. Lift.", check = swipes(BASIC_SWIPES))),
         done = "One swipe, one word. Easy.",
-        text = "swipe these words without lifting and pretend you have always done it this way",
+        text = "swipe each word in one go then lift and do the next one like a pro",
         after = "one swipe one word and your thumbs are already less tired",
+        praise = "Look at that. A whole word, no pressing.",
         cue = GuideCue.NextWord,
         needs = GuideNeed.SwipeTyping,
         demo = GuideDemo.SwipeNext,
@@ -632,6 +667,7 @@ internal val GUIDE_STEPS = listOf(
         done = "Fixed with one tap. Keep going, it stays wrong.",
         text = "every word you swipe here comes out wrong because we said so",
         after = "keep swiping if you like it is still going to be wrong",
+        praise = "One tap. That's all a bad swipe costs you.",
         cue = GuideCue.NextWord,
         needs = GuideNeed.SwipeTyping,
         nearMiss = true,
@@ -653,8 +689,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Your words, your call.",
-        text = "hold any word on the bar and judge it like you judge everyone",
-        after = "save the good ones and forget the bad ones just like real life",
+        praise = "Judged and dealt with. Brutal.",
         bar = GuideBar.Menu,
     ),
     // Delete and move: Backspace as you know it, then one flick, then the hold, then steering and selecting from Space.
@@ -692,11 +727,10 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Gone. Like your patience.",
-        text = "delete this sentence one word at a time because you clearly regret all of it",
-        after = "hold the flick and watch your mistakes go faster than your excuses",
+        seed = "Delete these words because you clearly regret every single one of them",
+        praise = "Gone. Your mistakes never stood a chance.",
         cue = GuideCue.Flick(hold = true),
         needs = GuideNeed.SwipeTyping,
-        needsWords = 8,
         demo = GuideDemo.DeleteLast,
     ),
     GuideStep(
@@ -726,11 +760,10 @@ internal val GUIDE_STEPS = listOf(
         ),
         done = "No more poking the glass.",
         help = "Tap lightly in the shaded patch, and keep your last touch down while you slide.",
-        text = "move the cursor around this line without touching the screen like a grownup",
-        after = "the screen is for watching videos not for poking at text",
+        seed = "Move the cursor through this line without touching the screen like an adult",
+        praise = "Look, no fingerprints on the glass.",
         cue = GuideCue.Taps(2, drag = true),
         needs = GuideNeed.CursorControl,
-        needsWords = 6,
         demo = GuideDemo.MoveCursor,
     ),
     GuideStep(
@@ -756,11 +789,10 @@ internal val GUIDE_STEPS = listOf(
         ),
         done = "Selected. Glass untouched.",
         help = "Two taps that lift select the word at the cursor. Three, with the last one down, select more.",
-        text = "select a few of these words and feel powerful for a second",
-        after = "selected and not a single fingerprint on the glass",
+        seed = "Select some of these words and feel powerful for a second or two",
+        praise = "Selected. Not a single smudge.",
         cue = GuideCue.Taps(3, drag = true),
         needs = GuideNeed.CursorControl,
-        needsWords = 6,
         demo = GuideDemo.SelectLast,
     ),
     // Copy and paste: after selecting, so that something is selected. Paste first, then the clipboard.
@@ -772,10 +804,9 @@ internal val GUIDE_STEPS = listOf(
         }),
         done = "Yes, we know.",
         help = "Nothing pasted? Some phones need fn as Ctrl.",
-        text = "go on paste it we promise it is something nice",
-        after = "you pasted it yourself so it must be true",
+        seed = "Replace this word",
+        praise = "Harsh. Accurate, but harsh.",
         needs = GuideNeed.FnAsCtrl,
-        needsWords = 4,
         clip = PASTE_TEXT,
         preselect = true,
         rain = "🙄",
@@ -785,7 +816,7 @@ internal val GUIDE_STEPS = listOf(
         id = "clipboard", chapter = GuideChapter.Clipboard,
         title = "Your clipboard, keys only.",
         stages = listOf(
-            GuideStage("Press Sym.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+            GuideStage("Press Sym. Yes, the one that says sym.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
                 when {
                     panel(event, Panel.Symbols) -> GuideVerdict.Done
                     panel(event, Panel.Clipboard) -> GuideVerdict.Stage(2)
@@ -805,8 +836,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Pinned. They're never leaving.",
-        text = "your clipboard remembers everything you copied even the stuff you regret",
-        after = "everything you copy ends up here so maybe copy nicer things",
+        praise = "Now you know the whole story. You're welcome.",
         usesPanel = true,
         setup = Panel.Closed,
         pinnedClips = GUIDE_CLIPS,
@@ -817,7 +847,7 @@ internal val GUIDE_STEPS = listOf(
         id = "alt", chapter = GuideChapter.Symbols,
         title = "Symbols, the old way.",
         stages = listOf(
-            GuideStage("Press Alt.", GuideCue.Spot(listOf(Layout.ALT))) { event ->
+            GuideStage("Press Alt, the key you've ignored for years.", GuideCue.Spot(listOf(Layout.ALT))) { event ->
                 if (event is ModifierState && event.alt != Level.Off) GuideVerdict.Done else GuideVerdict.Wait
             },
             GuideStage("Now J. You get the tiny symbol in its corner.", GuideCue.Spot(listOf("J"))) { event ->
@@ -825,8 +855,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Old school. Still works.",
-        text = "press alt and then a letter to get its symbol like it is the old days",
-        after = "that symbol was printed on the key the whole time you just never looked",
+        praise = "Printed on the key the whole time. You just never looked.",
         usesPanel = true,
         setup = Panel.Closed,
         demo = GuideDemo.AltLetter("J"),
@@ -838,8 +867,7 @@ internal val GUIDE_STEPS = listOf(
             if (event is HeldSymbol) GuideVerdict.Done else GuideVerdict.Wait
         }),
         done = "Quicker than Alt, right?",
-        text = "hold a letter long enough and it turns into a symbol like magic but slower",
-        after = "holding keys works out better than holding grudges",
+        praise = "Look at you, holding things together.",
         // Holding a letter can be off, so then the slide offers it at once.
         cue = GuideCue.Spot(listOf("J")),
         needs = GuideNeed.HoldSymbols,
@@ -849,7 +877,7 @@ internal val GUIDE_STEPS = listOf(
         id = "sym", chapter = GuideChapter.Symbols,
         title = "Every symbol within reach.",
         stages = listOf(
-            GuideStage("Press Sym.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+            GuideStage("Press Sym. The key you thought was decoration.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
                 when {
                     panel(event, Panel.Symbols) -> GuideVerdict.Done
                     panel(event, Panel.Emoji) -> GuideVerdict.Hint("Too far, that's emoji. Press Sym to close them, then once.")
@@ -862,8 +890,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "All of them, right under your thumbs.",
-        text = "every symbol you never knew you needed lives right behind sym",
-        after = "now you know where the weird stuff lives",
+        praise = "Now you know where the weird stuff lives.",
         usesPanel = true,
         setup = Panel.Closed,
         demo = GuideDemo.Insert(listOf(Layout.SYM, "W"), "&"),
@@ -884,8 +911,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "We saw that. We're not judging. Much.",
-        text = "swipe sideways for more symbols and find the rudest one in there",
-        after = "we saw what you picked and we are only a little bit judging",
+        praise = "We saw what you picked. We're only a little bit judging.",
         usesPanel = true,
         setup = Panel.Symbols,
         demo = GuideDemo.Insert(listOf("A", "S", "D", "F", "G", "H"), ""),
@@ -895,14 +921,14 @@ internal val GUIDE_STEPS = listOf(
         id = "emoji", chapter = GuideChapter.Emoji,
         title = "Emoji, keys only.",
         stages = listOf(
-            GuideStage("Press Sym.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+            GuideStage("Press Sym. The key you thought was decoration.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
                 when {
                     panel(event, Panel.Symbols) -> GuideVerdict.Done
                     panel(event, Panel.Emoji) -> GuideVerdict.Stage(2)
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Press it again for emoji.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+            GuideStage("Again. Twice is the emoji. Revolutionary, we know.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
                 when {
                     panel(event, Panel.Emoji) -> GuideVerdict.Done
                     panel(event, Panel.Settings) -> GuideVerdict.Hint("That's Alt, the quick settings. Sym is the one you want.")
@@ -915,8 +941,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Look at you, with feelings.",
-        text = "press sym twice and pick an emoji that matches your mood",
-        after = "great now your messages have feelings",
+        praise = "Great. Now your messages have feelings.",
         usesPanel = true,
         setup = Panel.Closed,
         demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.SYM, "W"), "😎"),
@@ -937,8 +962,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Plenty more where that came from.",
-        text = "swipe sideways for other groups because one face is never enough",
-        after = "there are more emoji than you will ever need and you will use three",
+        praise = "There are more emoji than you will ever use. You will use three.",
         usesPanel = true,
         setup = Panel.Emoji,
         demo = GuideDemo.Insert(listOf("A", "S", "D", "F", "G", "H"), ""),
@@ -955,8 +979,7 @@ internal val GUIDE_STEPS = listOf(
         }),
         done = "Hey, that's you.",
         help = "Smileys are the first group after Recent. Swipe up or down for more pages.",
-        text = "find the clown in the emoji and type it to move on",
-        after = "hey that is you",
+        praise = "The resemblance is uncanny.",
         usesPanel = true,
         setup = Panel.Emoji,
         rain = CLOWN,
@@ -967,7 +990,7 @@ internal val GUIDE_STEPS = listOf(
         id = "quick", chapter = GuideChapter.Settings,
         title = "Settings, keys only.",
         stages = listOf(
-            GuideStage("Press Sym.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+            GuideStage("Press Sym. The key you thought was decoration.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
                 when {
                     panel(event, Panel.Symbols) -> GuideVerdict.Done
                     panel(event, Panel.Settings) -> GuideVerdict.Stage(2)
@@ -995,8 +1018,7 @@ internal val GUIDE_STEPS = listOf(
         ),
         done = "Look at you, all set up.",
         help = "Outside the guide, O opens all of TitanKeys' settings.",
-        text = "quick settings live behind sym and alt so you never need the settings app",
-        after = "close it with sym and act like you knew that already",
+        praise = "Closed with Sym, like you knew all along.",
         usesPanel = true,
         setup = Panel.Closed,
         demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.ALT, Layout.SYM), ""),

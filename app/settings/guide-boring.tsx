@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Screen, Section, replace, useRouteParams } from "ink";
+import { Screen, Section, Stack, Text, replace, useRouteParams, useSnapshot } from "ink";
+import { markNerdSeen, state } from "../../lib/atlas";
+import { nerdSplash } from "../../lib/nerd";
 import { close } from "ink/icons";
 import { Topic } from "../../lib/topic";
 
@@ -11,13 +13,29 @@ export default function BoringGuide() {
   // Opened from the front page, the guide closes back to it, like Settings does.
   const fromHome = useRouteParams().from === "home";
   const closeAction = fromHome ? { icon: close, onPress: () => replace("/") } : undefined;
-  // First, briefly, like a loading screen: we know who reads the manual.
-  const [splash, setSplash] = useState(true);
+  // The first time only, briefly, like a loading screen: we know who reads the manual. It waits for the app's state, so it knows
+  // whether it has shown before, and its time starts once it's on the screen.
+  const result = useSnapshot(state);
+  const ready = result.status === "ready";
+  const [phase, setPhase] = useState<"waiting" | "splash" | "done">("waiting");
   useEffect(() => {
-    const timer = setTimeout(() => setSplash(false), SPLASH_MILLIS);
+    if (!ready || phase !== "waiting") return;
+    setPhase(nerdSplash(result.data.nerdSeen) ? "splash" : "done");
+  }, [ready]);
+  useEffect(() => {
+    if (phase !== "splash") return;
+    void markNerdSeen();
+    const timer = setTimeout(() => setPhase("done"), SPLASH_MILLIS);
     return () => clearTimeout(timer);
-  }, []);
-  if (splash) return <Screen title="We know you're a nerd." subtitle="It's fine. Loading the boring stuff." rightAction={closeAction} />;
+  }, [phase]);
+  if (phase === "waiting") return <Screen title="The boring guide" rightAction={closeAction} />;
+  // A splash, big and centred, so the whole line fits: no page title to cut it short.
+  if (phase === "splash") return <Screen centered theme="onboarding">
+    <Stack align="center" gap={14}>
+      <Text size={SPLASH_SIZE} align="center">{"We know you're a nerd."}</Text>
+      <Text size={SPLASH_SMALL} align="center">{"It's fine. Somebody has to read the manual."}</Text>
+    </Stack>
+  </Screen>;
   return <Screen title="The boring guide" subtitle="Every feature, every setting, in words. Enjoy, nerd." rightAction={closeAction}>
     <Section title="Start here">
       <Topic title="The fun guide">{"The fun guide teaches the main stuff right on the keys, a chapter at a time. Open it from Settings > Guide. This one is for everything else."}</Topic>
@@ -104,4 +122,7 @@ export default function BoringGuide() {
 }
 
 /** How long the nerd screen shows before the boring guide. */
-const SPLASH_MILLIS = 1400;
+const SPLASH_MILLIS = 1800;
+/** The splash's line and its smaller line, sized like the setup screen's. */
+const SPLASH_SIZE = 56;
+const SPLASH_SMALL = 28;

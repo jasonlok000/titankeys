@@ -64,6 +64,13 @@ internal object GuideHooks {
         stripPoints?.invoke(index)
     }
 
+    /** The keyboard listens here, so that the bar stops offering the newest clip once the guide is done with it. */
+    @Volatile var clipDismissals: (() -> Unit)? = null
+
+    fun dismissClip() {
+        clipDismissals?.invoke()
+    }
+
     /** The keyboard listens here, so that the clipboard lesson has clips to show: it pins these, newest first, once. */
     @Volatile var clipSeeds: ((List<String>) -> Unit)? = null
 

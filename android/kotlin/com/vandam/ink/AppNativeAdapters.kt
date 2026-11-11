@@ -256,6 +256,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     }.start()
                     null
                 }
+                "nerdSeen" -> {
+                    appPreferences().edit().putBoolean(NERD_SEEN, true).apply()
+                    "null"
+                }
                 "notesSeen" -> {
                     appPreferences().edit().putString(SEEN_NOTES, installedVersion()).apply()
                     "null"
@@ -355,6 +359,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("version", installedVersion())
             .put("whatsNew", whatsNew())
             .put("guideDue", GuideActivity.due(activity))
+            .put("nerdSeen", appPreferences().getBoolean(NERD_SEEN, false))
             .put("phone", "${Build.MANUFACTURER} ${Build.MODEL}")
             .put("android", Build.VERSION.RELEASE)
             .put("enabled", PhoneSetup.enabled(activity))
@@ -517,3 +522,5 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
 }
 
 private const val SEEN_NOTES = "seen_release_notes"
+/** The boring guide's nerd screen has shown once. Only clearing the app's data brings it back. */
+private const val NERD_SEEN = "nerd_screen_seen"

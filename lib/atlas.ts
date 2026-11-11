@@ -20,6 +20,8 @@ export type State = {
   whatsNew: boolean;
   /** The interactive guide has not opened yet, so it opens by itself after setup. */
   guideDue: boolean;
+  /** The boring guide's nerd screen has shown once, so it never shows again until the app's data is cleared. */
+  nerdSeen: boolean;
   phone: string;
   android: string;
   enabled: boolean;
@@ -234,6 +236,15 @@ export async function deleteRawLog() {
 export async function markNotesSeen() {
   try {
     await atlas("notesSeen");
+  } finally {
+    await state.refresh();
+  }
+}
+
+/** The boring guide's nerd screen has shown: it won't show again. */
+export async function markNerdSeen() {
+  try {
+    await atlas("nerdSeen");
   } finally {
     await state.refresh();
   }

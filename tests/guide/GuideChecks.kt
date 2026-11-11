@@ -53,9 +53,11 @@ private val gone = listOf("boring", "snippets", "exact", "names", "panel", "symb
 /** The word menu is picked with the keys: the top two rows, split into as many parts as the menu has buttons. */
 private fun theMenuKeys() {
     same(MenuKeys.button("Q", 3), 0, "Q picks the first of three")
-    same(MenuKeys.button("R", 3), 0, "Q to R pick the first")
+    same(MenuKeys.button("E", 3), 0, "Q to E pick the first")
+    same(MenuKeys.button("R", 3), 1, "R starts the second")
     same(MenuKeys.button("T", 3), 1, "T picks the second")
-    same(MenuKeys.button("P", 3), 2, "P picks the last")
+    same(MenuKeys.button("O", 3), 2, "O picks the last")
+    same(MenuKeys.button("P", 3), -1, "P picks nothing, and nothing is drawn over it")
     same(MenuKeys.button("A", 3), 0, "The second row senses it too")
     same(MenuKeys.button("L", 3), 2, "L picks the last")
     same(MenuKeys.button("Z", 3), -1, "The bottom row of letters picks nothing")
@@ -63,7 +65,12 @@ private fun theMenuKeys() {
     same(MenuKeys.button("T", 2), 0, "With two buttons, T is on the left half")
     same(MenuKeys.button("Y", 2), 1, "and Y on the right")
     same(MenuKeys.button("Q", 0), -1, "No menu, no button")
-    for (count in 1..3) same((0 until 10).map { MenuKeys.button(Layout.rows[0][it], count) }.distinct().size, count, "Every one of $count buttons has keys")
+    for (count in 1..3) {
+        same((0 until 9).map { MenuKeys.button(Layout.rows[0][it], count) }.distinct().size, count, "Every one of $count buttons has keys")
+        same((0 until count).sumOf { MenuKeys.columns(it, count) }, MenuKeys.COLUMNS, "The buttons share every column but P's")
+        for (button in 0 until count) same((0 until 9).count { MenuKeys.button(Layout.rows[0][it], count) == button }, MenuKeys.columns(button, count),
+            "Button $button is drawn as wide as the keys that pick it")
+    }
 }
 
 fun main() {
@@ -191,7 +198,7 @@ private fun oneStepForEachIdea() {
 private fun oneInstructionAtATime() {
     val flow = GuideFlow({ GuideSettings() })
     flow.start("emoji")
-    same(flow.instruction, "Press Sym.", "The emoji slide starts with Sym")
+    same(flow.instruction.startsWith("Press Sym."), true, "The emoji slide starts with Sym")
     same(flow.event(keys(Panel.Symbols)), GuideVerdict.Stage(1), "Sym opens the symbols, so the next instruction shows")
     same(flow.event(keys(Panel.Closed)), GuideVerdict.Stage(0), "Closing the panel goes back a step")
     same(flow.event(keys(Panel.Emoji)), GuideVerdict.Stage(2), "Emoji at once skips ahead")
@@ -278,19 +285,35 @@ private fun theScriptedMiss() {
 
 /** Each slide has its own text to type, a new one once it's done, and the playground its own, fast one. */
 private fun slideTexts() {
-    for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.End }) {
-        same(step.text.isNotBlank() && step.after.isNotBlank(), true, "${step.id} has a text to type, before and after")
-        same(step.text != step.after, true, "${step.id}'s text changes once it's done")
+    // The box with text to type along to is only where typing or swiping text is the task.
+    val typing = GUIDE_STEPS.filter { it.text.isNotEmpty() && it.chapter != GuideChapter.End }.map { it.id }
+    same(typing, listOf("type", "swipe", "strip"), "Only typing, swiping and fixing a swipe have text to type along to")
+    for (step in GUIDE_STEPS.filter { it.id in typing }) {
+        same(step.after.isNotBlank() && step.text != step.after, true, "${step.id}'s text goes on with something new once it's done")
         same(step.text.any { it.isDigit() } || step.after.any { it.isDigit() }, false, "${step.id}'s texts are easy to type")
     }
-    same(GUIDE_STEPS.map { it.text }.distinct().size, GUIDE_STEPS.size, "Every slide has a text of its own")
+    for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.End }) {
+        // Once done, the line under the title reacts to what you did. It never gives the next instruction.
+        same(step.praise.isNotBlank(), true, "${step.id} says something about what you just did")
+        same(step.stages.none { it.text == step.praise }, true, "${step.id}'s praise is no instruction")
+    }
+    same(GUIDE_STEPS.first { it.id == "flick" }.seed.split(' ').size >= 8, true, "The delete slide starts with words to delete")
+    same(GUIDE_STEPS.first { it.id == "steer" }.seed.isNotEmpty() && GUIDE_STEPS.first { it.id == "select" }.seed.isNotEmpty(), true,
+        "Steering and selecting start with a line to move through")
+    same(GUIDE_STEPS.first { it.id == "swipe" }.text.contains("lift"), true, "The swipe text agrees with its instruction: lift")
     val race = Passage("Nothing to unlearn: type with two hands or one")
     same(race.wordAt(race.track("Nothing to unlearn type with t two ").next), "hands", "A wrong word is skipped, matching by what's typed")
     same(race.track("Nothing to unlearn type with t two ").done.contains(5), true, "two counts as done")
     same(race.track("nothing TO").typed, "to", "Capitals don't matter, and the word being typed is followed")
     same(race.wordAt(race.track("Nothing type ").next), "with", "A word from a little further on skips ahead to it")
     same(race.track("Nothing zebra ").next, 1, "Any other word is ignored")
-    same(race.wordAt(race.words.size), "Nothing", "The text starts again after its end")
+    same(race.words.size >= 400 && race.words[9] == "·" && race.words[10] == "Nothing", true, "The text goes on after a dot, as more lines, not a reset")
+    same(race.wordAt(race.track("Nothing to unlearn type with two hands or one ").next), "Nothing", "The dot is passed over by itself")
+    // Once a slide is done, its after text follows on from the line you're on, and what's typed still counts.
+    val done = Passage("swipe these words now", "and these follow on")
+    same(done.wordAt(done.track("swipe these words now ").next), "and", "The after text comes next, after the lead")
+    same(done.track("swipe these words now and ").done, setOf(0, 1, 2, 3, 4, 5), "Words typed before and after both count, and the dot passes")
+    same(done.text.startsWith("swipe these words now · and these follow on · and these"), true, "The after text loops on")
     val fast = PlaygroundText.make(kotlin.random.Random(7))
     same(fast.any { it.isUpperCase() || it.isDigit() || it in ".,:;!?" }, false, "The playground's text is all plain, fast words")
     val words = fast.split(' ')

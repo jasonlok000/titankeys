@@ -343,7 +343,16 @@ class AtlasIme : InputMethodService() {
     private val stepDeleteHold = Runnable {
         val free = pendingInput.isEmpty() && !composer.hasPendingInput
         val next = deleteHold.step(SystemClock.uptimeMillis(), free, ::deleteHeldWord)
-        if (next != null) nextDeleteHoldStep(next) else strip?.gesture?.deleteEnded(SystemClock.uptimeMillis())
+        if (next != null) nextDeleteHoldStep(next) else deleteDots()
+    }
+
+    /** The hold ended: its lines turn into dots, which tick as each lands in the caret while those same dots are on the bar. */
+    private fun deleteDots() {
+        val gesture = strip?.gesture ?: return
+        if (!gesture.deleteEnded(SystemClock.uptimeMillis())) return
+        val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
+        val dotsAt = gesture.dotsAt
+        haptics.holdDots(gesture.dotLandings(scale)) { dotsAt != null && strip?.gesture?.dotsAt == dotsAt }
     }
 
     private fun nextDeleteHoldStep(at: Long) {
@@ -361,7 +370,7 @@ class AtlasIme : InputMethodService() {
     private fun endDeleteHold() {
         main.removeCallbacks(stepDeleteHold)
         deleteHold.reset()
-        strip?.gesture?.deleteEnded(SystemClock.uptimeMillis())
+        deleteDots()
     }
 
     /** Each word goes the way of a normal delete flick. [flick] is the first word's flick, and is null for the words after it. */
@@ -2191,9 +2200,9 @@ class AtlasIme : InputMethodService() {
                         gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
-                        val flickAt = gesture?.flickAt
+                        val dotsAt = gesture?.dotsAt
                         haptics.flick(gesture?.dotsPoppedMillis(scale), gesture?.dotLandings(scale).orEmpty()) {
-                            flickAt != null && strip?.gesture?.flickAt == flickAt
+                            dotsAt != null && strip?.gesture?.dotsAt == dotsAt
                         }
                     }
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }

@@ -63,7 +63,7 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     TapKey("tap_key", HapticGroup.Swipe, Family.Texture),
 
     DeleteFlick("delete_flick", HapticGroup.Delete, Family.GoneFlick),
-    /** A flick's dots going into the caret: a light tick as each one lands. */
+    /** A flick's dots, or a hold's at its lift, going into the caret: a light tick as each one lands. */
     DeleteDotsLand("delete_dots_land", HapticGroup.Delete, Family.Texture),
     DeleteWord("delete_word", HapticGroup.Delete, Family.Texture),
     DeleteNothing("delete_nothing", HapticGroup.Delete, Family.No),
@@ -207,14 +207,17 @@ class HapticSwitches(private val read: (String, Boolean) -> Boolean) {
 }
 
 /**
- * When a delete flick's dots tick as they land in the caret: one tick per dot, as each lands. The dots land at least 30 ms apart
+ * When the delete dots tick as they land in the caret, a flick's or a hold's at its lift: one tick per dot, as each lands. The dots land at least 30 ms apart
  * (see GestureDisplay.DOT_LAND_GAP), so every tick stays its own. A tick near the flick's own tail is left out, so the two never
  * land on top of each other. It has no Android parts, so the checks can run it.
  */
 object DotTicks {
-    /** The ticks, in ms after the flick, for dots that land at [landings], with the flick's tail starting at [tailAt]. */
-    fun times(landings: List<Long>, tailAt: Long?) =
-        landings.filter { tailAt == null || kotlin.math.abs(it - tailAt) >= HapticPalette.MIN_GAP_MILLIS }
+    /**
+     * The ticks, in ms after the dots started, for dots that land at [landings], leaving out any within 35 ms of [near]: the
+     * flick's tail, or for a hold the last haptic before its lift, which is at 0 or before.
+     */
+    fun times(landings: List<Long>, near: Long?) =
+        landings.filter { near == null || kotlin.math.abs(it - near) >= HapticPalette.MIN_GAP_MILLIS }
 }
 
 /**
@@ -364,6 +367,8 @@ class Haptics(private val context: Context) {
     private val ticks = SwipeTicks()
     private val main = Handler(Looper.getMainLooper())
     private var tail: Runnable? = null
+    /** When the last haptic played, an uptime. */
+    private var lastPlayedAt = Long.MIN_VALUE / 2
     private val dotTicks = PendingTicks({ tick, at -> main.postDelayed(tick, at) }, main::removeCallbacks)
     private val feeds = debug(context)
 
@@ -379,7 +384,10 @@ class Haptics(private val context: Context) {
     fun attempt(haptic: Haptic): HapticResult {
         val pattern = pattern(context, haptic.family)
         val result = switches.stops(haptic) ?: gate.check(haptic.family, HapticPalette.millis(pattern))
-        if (result.played) vibrate(pattern)
+        if (result.played) {
+            vibrate(pattern)
+            lastPlayedAt = SystemClock.uptimeMillis()
+        }
         report(haptic, pattern, result)
         return result
     }
@@ -409,7 +417,14 @@ class Haptics(private val context: Context) {
     private fun landTicks(landings: List<Long>, tailAt: Long?, showing: () -> Boolean) =
         dotTicks.schedule(DotTicks.times(landings, tailAt)) { if (showing()) play(Haptic.DeleteDotsLand) }
 
-    /** Any key or touch cuts a flick's dots at once, and with them the ticks still to come. */
+    /**
+     * A hold's dots at its lift: a light tick as each lands in the caret, at [landings], each only while [showing] says those
+     * dots are still on the bar. The hold's last word or its no may have just played, so a tick within 35 ms of it is left out.
+     */
+    fun holdDots(landings: List<Long>, showing: () -> Boolean) =
+        landTicks(landings, lastPlayedAt - SystemClock.uptimeMillis(), showing)
+
+    /** Any key or touch cuts the dots at once, and with them the ticks still to come. */
     fun cutDots() = dotTicks.cut()
 
     private fun flickNow(pattern: List<Long>, tailAt: Long?): Boolean {

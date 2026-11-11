@@ -305,11 +305,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     }
 
     /**
-     * When each of a single flick's dots lands in the caret, nearest the caret first, in ms after the flick, at Android's
-     * animator duration [scale]. Empty when no flick's dots show now, or with no motion. The dots land haptic ticks on these.
+     * When each of the dots lands in the caret, nearest the caret first, in ms after they started: a single flick's, or a hold's
+     * at its lift. At Android's animator duration [scale]. Empty when no dots show now, or with no motion. The dots land haptic
+     * ticks on these.
      */
     fun dotLandings(scale: Float): List<Long> {
-        if (scene != Scene.DeleteFlick || fromHold || dots == 0 || scale <= 0f) return emptyList()
+        if (scene != Scene.DeleteFlick || dots == 0 || scale <= 0f) return emptyList()
         // Each dot sets off one step after the one before, and lands as its own way ends.
         val first = ((dotsInMillis + FLICK_HOLD + DOT_TRAVEL) * scale).roundToLong()
         val step = dotStepMillis(dots, scale)
@@ -319,8 +320,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     /** How far dot [index] has gone on its way into the caret: 0 before it sets off, 1 as it lands, and more after. */
     fun dotTravel(index: Int) = (outElapsed - index * dotStep) / DOT_TRAVEL
 
-    /** When the single flick that shows now started, an uptime, or null when none shows. Tells one flick's dots from the next. */
-    val flickAt get() = if (scene == Scene.DeleteFlick && !fromHold) flourishAt else null
+    /** When the dots that show now started, an uptime, or null when none show. Tells one flick's or hold's dots from the next. */
+    val dotsAt get() = if (scene == Scene.DeleteFlick) flourishAt else null
 
     /** The dots for words of [letters], nearest the caret first, cut at [MAX_DOTS] in all. */
     private fun setGroups(letters: List<Int>) {
@@ -345,11 +346,14 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     /**
      * The hold lifted. Its lines shrink and turn into a dot for each character it deleted, grouped by word, which then go into the
-     * caret as a single flick's do. A hold that deleted nothing just goes.
+     * caret as a single flick's do. A hold that deleted nothing just goes. True when the dots start.
      */
-    fun deleteEnded(now: Long = lastFrame) {
-        if (scene != Scene.DeleteHold || leaving) return
-        if (held.isEmpty()) { leave(); return }
+    fun deleteEnded(now: Long = lastFrame): Boolean {
+        if (scene != Scene.DeleteHold || leaving) return false
+        if (held.isEmpty()) {
+            leave()
+            return false
+        }
         setGroups(held)
         val from = shownDeleted
         val beat = flow
@@ -363,6 +367,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         morphFlow = beat
         dotsInMillis = MORPH_IN
         changed()
+        return true
     }
 
     /** A double tap selected the word at the cursor. */

@@ -26,6 +26,7 @@ import android.text.Editable
 import android.text.InputType
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.TextUtils
 import android.text.TextWatcher
 import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
@@ -385,6 +386,10 @@ class GuideActivity : Activity() {
     private lateinit var script: TextView
     /** Over the field: what a demonstration would do, in grey, without typing it. */
     private lateinit var phantom: TextView
+    /** The instruction's line, with the chip that slides over it for a real mistake, and the room that is left above the keys. */
+    private lateinit var instruction: FrameLayout
+    private lateinit var chip: TextView
+    private lateinit var spacer: View
     /** The end's two big buttons, in the middle, each with its line under it. */
     private lateinit var endButtons: LinearLayout
     private lateinit var boringButton: TextView
@@ -443,15 +448,25 @@ class GuideActivity : Activity() {
     private val checkBar = Runnable {
         if (passed || busy || flow.step.bar != GuideBar.Menu || flow.stage != 0) return@Runnable
         val count = GuideHooks.barCount?.invoke() ?: -1
+        // Never a made-up word to hold: with nothing on the bar, the instruction says to fill it, until it has words.
         if (count == 0 && !emptyBarShown) {
-            showScenario(EMPTY_BAR_TITLE, EMPTY_BAR_BODY)
+            body.text = EMPTY_BAR_BODY
             emptyBarShown = true
         } else if (count > 0 && emptyBarShown) {
             emptyBarShown = false
-            backOnTrack()
+            body.text = flow.instruction
         }
     }
-    private val idleOnce = Runnable { idle(IDLE_TITLE, IDLE_AGAIN_MILLIS) }
+    private val idleOnce = Runnable { idle(IDLE_TITLE, -1) }
+    /** The idle chip has shown on this slide, and the lock's chip too: each shows once a slide. */
+    private var idleChipShown = false
+    private var lockChipShown = false
+    /** The chip on the screen, since when, and the one that waits for it to end. */
+    private var chipAt = 0L
+    private var pendingChip: String? = null
+    private val chipOver = Runnable { hideChip() }
+    /** Which look the screen has: the guide's slides, one line each, or the playground's and setup's, which wrap. */
+    private var guideLooks: Boolean? = null
     private val idleTwice = Runnable { idle(IDLE_AGAIN_TITLE, -1) }
     /** The line under the title once the slide is done: its own, or a scenario's that counted. */
     private var settledPraise = ""
@@ -557,17 +572,30 @@ class GuideActivity : Activity() {
         // The playground is free typing, so there the strip keeps to your own words.
         // Only where there's text to type along to: elsewhere the bar keeps to your own words.
         if (!playground) GuideHooks.script = { before ->
-            if (script.visibility != View.VISIBLE) "" else GuideScript.letters(passage.wordAt(passage.track(typedSince(before)).next))
+            if (!hasText()) "" else GuideScript.letters(passage.wordAt(passage.track(typedSince(before)).next))
         }
         contentResolver.registerContentObserver(Settings.Secure.getUriFor(Settings.Secure.DEFAULT_INPUT_METHOD), false, keyboardChanges)
         clipboard.addPrimaryClipChangedListener(clipChanged)
         // Back from the disclosure: the end screen shows the answer, or keeps asking.
         if (ready && flow.finished && !playground) showEndChoices()
+        // Back on a slide: its lock and its bar again.
+        if (ready && started && !playground && !settingUp && !flow.finished && guideLooks == true) {
+            GuideHooks.lessons = flow.step.lessons
+            GuideHooks.barSides(flow.step.sides)
+        }
+    }
+
+    /** The keyboard as it always is: nothing locked, and the bar with all its words. */
+    private fun unlockKeyboard() {
+        GuideHooks.lessons = null
+        GuideHooks.barSides(true)
     }
 
     override fun onPause() {
         super.onPause()
         visible = false
+        // The lock and the bar's look are the guide's own: anywhere else the keyboard is as it always is.
+        unlockKeyboard()
         stopEvents?.invoke()
         stopEvents = null
         stopTrace?.invoke()
@@ -599,6 +627,7 @@ class GuideActivity : Activity() {
             }
         }
         GuideHooks.nearMiss = false
+        unlockKeyboard()
         GuideHooks.stripDemo(null)
         GuideHooks.stripPoint(null)
         main.removeCallbacksAndMessages(null)
@@ -672,14 +701,28 @@ class GuideActivity : Activity() {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(20).toFloat()))
             setOnClickListener { offerPressed() }
         }
+        // A small pill in the top bar: Skip until the slide is passed, then a filled Next.
         next = TextView(this).apply {
-            text = "Next"
+            text = "Skip"
             typeface = HEAVY
             gravity = Gravity.CENTER
             maxLines = 1
-            setPadding(dp(22), dp(10), dp(22), dp(10))
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(20).toFloat()))
+            setPadding(dp(12), dp(3), dp(12), dp(3))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(12f), dp(15).toFloat()))
             setOnClickListener { nextPressed() }
+        }
+        chip = TextView(this).apply {
+            typeface = MEDIUM
+            maxLines = 1
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.END
+            gravity = Gravity.CENTER_VERTICAL
+            includeFontPadding = false
+            visibility = View.GONE
+            setPadding(dp(12), 0, dp(12), 0)
+            setTextColor(GuideColours.INK)
+            background = rounded(GuideColours.CREAM, Radii.LARGE)
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
         previous = TextView(this).apply {
             text = "Back"
@@ -811,31 +854,38 @@ class GuideActivity : Activity() {
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             setOnClickListener { endRoast() }
         }
+        // One line on top: the chapters, the chapter's name, Skip or Next, and ✕. Back is the phone's Back.
         val topBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             minimumHeight = dp(TOP_ACTION)
             addView(segments, LinearLayout.LayoutParams(0, dp(TOP_ACTION), 1f))
+            addView(chapter, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = dp(10)
+            })
             addView(again, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(guideAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(settingsAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(close, LinearLayout.LayoutParams(dp(TOP_ACTION), dp(TOP_ACTION)))
+            addView(next, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = dp(10)
+            })
+            addView(close, LinearLayout.LayoutParams(dp(TOP_ACTION), dp(TOP_ACTION)).apply { marginStart = dp(4) })
         }
-        // Back always on the left and Next always on the right, so a thumb finds them in the same place on every step.
-        // The offer to turn on a setting, if a step needs one, goes between them.
+        // The offer to turn on a setting, if a step needs one, sits above the keys.
         val actions = LinearLayout(this).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            addView(previous, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
+            gravity = Gravity.CENTER
             addView(offer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
-            addView(next, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
+        instruction = FrameLayout(this).apply {
+            addView(body, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            addView(chip, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT,
+                Gravity.START or Gravity.CENTER_VERTICAL))
+        }
+        spacer = View(this)
         column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(chapter, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
             addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, TITLE_SHARE).apply { topMargin = dp(6) })
-            addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, BODY_SHARE).apply { topMargin = dp(4) })
+            addView(instruction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, BODY_SHARE).apply { topMargin = dp(4) })
             addView(hint, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
             addView(endButtons, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
             addView(script, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
@@ -843,6 +893,8 @@ class GuideActivity : Activity() {
                 addView(field, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 addView(phantom, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
+            // The room between the field and the keys stays free, on the slides.
+            addView(spacer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0))
             addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(8)
             })
@@ -872,6 +924,81 @@ class GuideActivity : Activity() {
             column.translationY = dy
         }
         return root
+    }
+
+    /**
+     * The guide's slides have fixed heights and nothing reflows: one line for the title at one size, one line for the instruction,
+     * the field exactly two lines, and the room above the keys left free. Setup, the end and the playground keep their wrapping look.
+     */
+    private fun guideLook(guide: Boolean) {
+        if (guideLooks == guide) return
+        guideLooks = guide
+        if (guide) {
+            val titlePx = min(sp(TITLE_SP), dp(TITLE_DP).toFloat())
+            val bodyPx = min(sp(BODY_SP), dp(BODY_DP).toFloat())
+            title.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
+            title.isSingleLine = true
+            title.maxLines = 1
+            title.ellipsize = TextUtils.TruncateAt.END
+            title.setTextSize(TypedValue.COMPLEX_UNIT_PX, titlePx)
+            title.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, lineHeight(HEAVY, titlePx)).apply {
+                topMargin = dp(GAP)
+            }
+            body.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
+            body.isSingleLine = true
+            body.maxLines = 1
+            body.ellipsize = TextUtils.TruncateAt.END
+            body.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodyPx)
+            body.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodyPx * CHIP_SCALE)
+            instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                lineHeight(MEDIUM, bodyPx) + 2 * dp(CHIP_PAD)).apply { topMargin = dp(GAP) }
+            spacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+            // The field on ink, as the approved frame has it: what's typed in cream, exactly two lines.
+            field.setTextColor(GuideColours.CREAM)
+            field.setHintTextColor(GuideMotion.faded(GuideColours.CREAM, .45f))
+            field.background = rounded(fieldFill(), FIELD_RADIUS)
+            field.hint = null
+            for (view in listOf<TextView>(field, phantom)) {
+                view.minLines = 2
+                view.maxLines = 2
+            }
+        } else {
+            title.isSingleLine = false
+            title.maxLines = 3
+            title.ellipsize = null
+            title.gravity = Gravity.BOTTOM or Gravity.START
+            title.setAutoSizeTextTypeUniformWithConfiguration(TITLE_SMALLEST, TITLE_LARGEST, 2, TypedValue.COMPLEX_UNIT_DIP)
+            title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, TITLE_SHARE).apply { topMargin = dp(6) }
+            body.isSingleLine = false
+            body.maxLines = 5
+            body.ellipsize = null
+            body.gravity = Gravity.TOP or Gravity.START
+            body.setAutoSizeTextTypeUniformWithConfiguration(BODY_SMALLEST, BODY_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
+            instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, BODY_SHARE).apply { topMargin = dp(4) }
+            spacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0)
+            field.setTextColor(GuideColours.INK)
+            field.setHintTextColor(GuideMotion.faded(GuideColours.INK, .45f))
+            field.background = rounded(GuideColours.CREAM, FIELD_RADIUS)
+            field.hint = FIELD_HINT
+            for (view in listOf<TextView>(field, phantom)) {
+                view.minLines = 1
+                view.maxLines = 2
+            }
+        }
+    }
+
+    /** The field's own colour on the slides, for a word in a demo to fade into. */
+    private fun fieldFill() = if (guideLooks == true) GuideMotion.blend(GuideColours.INK, GuideColours.CREAM, FIELD_FILL) else GuideColours.CREAM
+
+    /** The grey of what isn't typed yet: the ghost ahead of the cursor, and a demo's words. */
+    private fun ghostGrey() = if (guideLooks == true) GuideMotion.faded(GuideColours.CREAM, GHOST_ALPHA) else GuideMotion.faded(GuideColours.INK, PHANTOM_ALPHA)
+
+    /** The height of one line of [face] at [px], from its font's top to its bottom, so nothing is cut. */
+    private fun lineHeight(face: Typeface, px: Float): Int {
+        val metrics = Paint().apply { typeface = face; textSize = px }.fontMetrics
+        return kotlin.math.ceil(metrics.bottom - metrics.top).toInt() + dp(2)
     }
 
     /** One of the end's big buttons. */
@@ -916,7 +1043,7 @@ class GuideActivity : Activity() {
         val params = keys.layoutParams
         if (params.height == target) return
         params.height = target
-        keys.visibility = if (target == 0) View.GONE else View.VISIBLE
+        keys.visibility = if (target == 0) View.GONE else if (panelOpen) View.INVISIBLE else View.VISIBLE
         root.post { keys.requestLayout() }
     }
 
@@ -964,14 +1091,16 @@ class GuideActivity : Activity() {
             setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(strong, BACK_OUTLINE))
             cornerRadius = Radii.px(resources, OFFER_RADIUS)
         }
+        // Skip is an outline; once the slide is passed it's a filled orange Next.
         if (passed) {
-            next.setTextColor(if (tone == GuideTone.Ink) GuideColours.INK else GuideColours.CREAM)
-            next.background = rounded(strong, OFFER_RADIUS)
+            next.setTextColor(GuideColours.INK)
+            next.background = rounded(if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
+            if (tone != GuideTone.Ink) next.setTextColor(GuideColours.CREAM)
         } else {
             next.setTextColor(GuideMotion.faded(strong, NEXT_WAITING))
             next.background = GradientDrawable().apply {
                 setColor(Color.TRANSPARENT)
-                setStroke(dp(2), GuideMotion.faded(strong, NEXT_WAITING))
+                setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(strong, NEXT_WAITING))
                 cornerRadius = Radii.px(resources, OFFER_RADIUS)
             }
         }
@@ -991,7 +1120,10 @@ class GuideActivity : Activity() {
     private fun paintSegments(done: Int) {
         val strong = if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK
         val current = flow.barChapters.indexOf(flow.step.chapter).let { if (it < 0) flow.barChapters.size else it }
-        val within = (flow.stepInChapter + 1f) / flow.stepsInChapter.coerceAtLeast(1)
+        // The chapter you're in fills with the slides passed in it: all of them, and it's full.
+        val ids = flow.idsOf(flow.step.chapter)
+        val passedHere = passedIds()
+        val within = ids.count { it in passedHere }.toFloat() / ids.size.coerceAtLeast(1)
         for (index in 0 until segments.childCount) (segments.getChildAt(index) as GuideSegment).paint(
             on = strong,
             off = GuideMotion.faded(strong, SEGMENT_OFF),
@@ -1044,6 +1176,10 @@ class GuideActivity : Activity() {
     }
 
     private fun enter(step: GuideStep) {
+        guideLook(true)
+        hideChip(now = true)
+        idleChipShown = false
+        lockChipShown = false
         lastPoint = null
         travel = 0f
         helpShown = false
@@ -1063,8 +1199,8 @@ class GuideActivity : Activity() {
         enteredChapter = step.chapter
         // At the end Next keeps its room, so that the offer to start typing stays in the middle.
         next.visibility = if (step.chapter == GuideChapter.End) View.INVISIBLE else View.VISIBLE
-        // Back keeps its room on the first step, so that Next does not move.
-        previous.visibility = if (flow.canGoBack) View.VISIBLE else View.INVISIBLE
+        // Back is the phone's Back.
+        previous.visibility = View.GONE
         chapter.text = step.chapter.label
         GuideHooks.nearMiss = step.nearMiss
         // A slide with nothing to try is done as it opens.
@@ -1085,27 +1221,34 @@ class GuideActivity : Activity() {
                 }
             }
             seeding = false
+            // The keyboard reads the new field afresh, so a first word gets its capital.
+            input.restartInput(field)
         }
+        // Each slide unlocks what it teaches, and only in this field; the bar shows its side words or only the middle one.
+        GuideHooks.lessons = step.lessons
+        GuideHooks.barSides(step.sides)
         setUpLesson(step)
         flow.seed(field.text.toString())
         // The chapter's text box shows on the slides that have one, and stays as it is from slide to slide.
         val typing = step.text.isNotEmpty()
-        script.visibility = if (typing) View.VISIBLE else View.GONE
+        // The Typing chapter has no box: its text is the grey ghost in the field. The other chapters keep their box for now.
+        script.visibility = if (typing && step.chapter != GuideChapter.Typing) View.VISIBLE else View.GONE
         if (typing && (!carry || passageSource != step.text)) startPassage(step.text)
         // A setting that the slide needs is off: the slide says so, over its own words.
         val missing = flow.missing
-        val (shownTitle, shownBody) = when {
+        // The title is always the slide's own. A line about arriving, or about a setting that's off, is a chip.
+        val (said, shownBody) = when {
             missing == GuideNeed.FnAsCtrl -> FN_OFF_TITLE to FN_OFF_BODY
             missing == GuideNeed.HoldSymbols -> HOLD_OFF_TITLE to HOLD_OFF_BODY
             missing != null -> FEATURE_OFF_TITLE to FEATURE_OFF_BODY
-            else -> (arrivalTitle ?: step.title) to (arrivalBody ?: flow.instruction)
+            else -> arrivalTitle to flow.instruction
         }
-        scenarioShown = missing != null || arrivalTitle != null
         arrivalTitle = null
         arrivalBody = null
-        swapIn(title, shownTitle, 0)
+        swapIn(title, step.title, 0)
         // Only the instruction that is needed now. The slide moves on, or back, as the keyboard changes. See [showStage].
         swapIn(body, shownBody, ENTER_STAGGER_MILLIS)
+        if (said != null) main.postDelayed({ if (!passed && flow.step === step) showChip(said) }, ENTER_MILLIS)
         hideHint()
         if (missing == GuideNeed.FnAsCtrl) offerDecline()
         else if (refresher) showHint(REFRESHER)
@@ -1160,8 +1303,62 @@ class GuideActivity : Activity() {
      */
     private fun showScript() {
         showPassage()
-        val shown = ghostCue(if (playground) GuideCue.Free else flow.cue)
+        // Once a slide is passed nothing glows any more, as Space did on the first slide.
+        val shown = ghostCue(if (playground || passed) GuideCue.Free else flow.cue)
         if (shown != keys.cue) keys.show(shown)
+        showGhost()
+    }
+
+    /**
+     * The Typing chapter's text, in grey in the field itself, ahead of what's typed: the rest of the word you're on, letter by
+     * letter, then the words after it. A demo draws over it while it plays.
+     */
+    private fun showGhost() {
+        if (!::phantom.isInitialized || demoStart >= 0) return
+        val ghost = if (!playground && ready && !settingUp && guideLooks == true && flow.step.chapter == GuideChapter.Typing) ghostText() else ""
+        if (ghost.isEmpty()) {
+            if (phantom.text.isNotEmpty()) phantom.text = ""
+            return
+        }
+        val text = field.text.toString()
+        val built = SpannableStringBuilder(text)
+        if (text.isNotEmpty()) built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        val start = built.length
+        built.append(ghost)
+        built.setSpan(ForegroundColorSpan(ghostGrey()), start, built.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        phantom.text = built
+        phantom.post { phantom.scrollTo(0, field.scrollY) }
+    }
+
+    /** What the ghost says after the field's text: see [showGhost]. A slide with a [GuideStep.ghost] shows its words instead. */
+    private fun ghostText(): String {
+        val step = flow.step
+        val text = field.text.toString()
+        val track = passage.track(typedSince(text))
+        val own = step.ghost.split(' ').filter { it.isNotEmpty() }
+        fun shown(at: Int) = own.getOrNull(at) ?: passage.wordAt(at)
+        val out = StringBuilder()
+        if (track.typed.isNotEmpty()) ghostRest(shown(track.next), track.typed)?.let(out::append)
+        else {
+            if (text.isNotEmpty() && !text.last().isWhitespace()) out.append(' ')
+            out.append(shown(track.next))
+        }
+        for (more in 1..GHOST_WORDS) out.append(' ').append(shown(track.next + more))
+        return out.toString()
+    }
+
+    /** What's left of [word] after the letters [typed], or null if they aren't its start. */
+    private fun ghostRest(word: String, typed: String): String? {
+        var matched = 0
+        var at = 0
+        while (at < word.length && matched < typed.length) {
+            if (word[at].isLetter()) {
+                if (!word[at].equals(typed[matched], ignoreCase = true)) return null
+                matched++
+            }
+            at++
+        }
+        return if (matched == typed.length) word.substring(at) else null
     }
 
     // The passage above the field, as a typing race shows it: always exactly two lines of the script, cut where its lines end, with
@@ -1350,36 +1547,70 @@ class GuideActivity : Activity() {
         endDemo()
         main.removeCallbacks(startDemo)
         if (!passed && ready && !changing) main.postDelayed(startDemo, wait)
+        // One idle chip, once a slide, after a long while with no touch at all.
         main.removeCallbacks(idleOnce)
-        main.removeCallbacks(idleTwice)
-        if (idleShown) backOnTrack()
-        if (!passed && ready && !changing && !playground && !settingUp && !flow.finished) main.postDelayed(idleOnce, IDLE_MILLIS)
+        if (!idleChipShown && !passed && ready && !changing && !playground && !settingUp && !flow.finished) main.postDelayed(idleOnce, IDLE_MILLIS)
     }
 
     /** Nobody acted for a while: the slide asks, with its own instruction, and asks again after [again] if it's not -1. */
+    @Suppress("UNUSED_PARAMETER")
     private fun idle(title: String, again: Long) {
-        if (passed || busy || changing || playground || settingUp) return
-        showScenario(title, flow.instruction)
-        idleShown = true
-        if (again > 0) main.postDelayed(idleTwice, again)
+        if (passed || busy || changing || playground || settingUp || idleChipShown) return
+        idleChipShown = true
+        showChip(title)
     }
 
-    /** A scenario's words take the place of the slide's title and instruction, until the user is back on track. */
-    private fun showScenario(heading: String, text: String) {
-        idleShown = false
-        hideHint()
-        if (title.text != heading) swapIn(title, heading, 0)
-        if (body.text != text) swapIn(body, text, ENTER_STAGGER_MILLIS)
-        scenarioShown = true
+    /** A scenario: its words show in a chip over the instruction. The title and instruction stay the slide's own. */
+    @Suppress("UNUSED_PARAMETER")
+    private fun showScenario(heading: String, text: String) = showChip(heading)
+
+    /** Back on track: nothing to undo, as a chip goes by itself. */
+    private fun backOnTrack() = Unit
+
+    /**
+     * A chip slides over the instruction for a real mistake, for at most [CHIP_MILLIS], and then the instruction comes back. One at a
+     * time and no flicker: a chip shows for at least [CHIP_MIN_MILLIS], and a new one waits until it ends. A passed slide shows
+     * none, unless [force], for the line that comes with passing.
+     */
+    private fun showChip(text: String, force: Boolean = false) {
+        if (!::chip.isInitialized || guideLooks != true || (passed && !force) || text.isBlank()) return
+        if (chip.visibility == View.VISIBLE) {
+            if (chip.text.toString() == text) return
+            pendingChip = text
+            main.removeCallbacks(chipOver)
+            main.postDelayed(chipOver, max(0L, chipAt + CHIP_MIN_MILLIS - SystemClock.uptimeMillis()))
+            return
+        }
+        chip.animate().cancel()
+        chip.text = text
+        chip.visibility = View.VISIBLE
+        chipAt = SystemClock.uptimeMillis()
+        chip.alpha = 0f
+        chip.translationX = dp(CHIP_SLIDE).toFloat()
+        chip.animate().alpha(1f).translationX(0f).setDuration(CHIP_IN_MILLIS).start()
+        body.animate().alpha(0f).setDuration(CHIP_IN_MILLIS).start()
+        main.removeCallbacks(chipOver)
+        main.postDelayed(chipOver, CHIP_MILLIS)
     }
 
-    /** The user is back on track: the slide's own title and instruction show again. */
-    private fun backOnTrack() {
-        idleShown = false
-        if (!scenarioShown || passed) return
-        scenarioShown = false
-        swapIn(title, flow.step.title, 0)
-        swapIn(body, flow.instruction, ENTER_STAGGER_MILLIS)
+    /** The chip goes, and the one waiting shows, or the instruction comes back. [now] clears it all at once, as a slide changes. */
+    private fun hideChip(now: Boolean = false) {
+        if (!::chip.isInitialized) return
+        main.removeCallbacks(chipOver)
+        val waiting = pendingChip
+        pendingChip = null
+        chip.animate().cancel()
+        if (now || chip.visibility != View.VISIBLE) {
+            chip.visibility = View.GONE
+            body.animate().cancel()
+            body.alpha = 1f
+            return
+        }
+        chip.animate().alpha(0f).translationX(-dp(CHIP_SLIDE / 4).toFloat()).setDuration(CHIP_OUT_MILLIS).withEndAction {
+            chip.visibility = View.GONE
+            if (waiting != null && !passed && !changing) showChip(waiting)
+            else body.animate().alpha(1f).setDuration(CHIP_OUT_MILLIS).start()
+        }.start()
     }
 
     private fun beginDemo() {
@@ -1400,7 +1631,8 @@ class GuideActivity : Activity() {
         // The word menu is a gesture on the bar itself, so the bar acts it out.
         if (step.bar == GuideBar.Menu && flow.stage == 0) {
             demoBarPlayed = true
-            GuideHooks.stripDemo(GuideHooks.StripDemo.Menu(emptyList()))
+            // Only the hold on a real word of the bar: the menu itself opens only for a real hold.
+            GuideHooks.stripDemo(GuideHooks.StripDemo.Menu(emptyList(), opens = false))
         }
         keys.demo(true)
         // The grey words would sit on top of the empty field's hint.
@@ -1417,10 +1649,10 @@ class GuideActivity : Activity() {
             return
         }
         demo?.let { showPhantom(it, t) }
-        // The word menu's demo presses O, which closes it, once the menu is open on the bar.
-        if (flow.step.bar == GuideBar.Menu && demoKeys == 0 && t > (if (flow.stage == 0) MENU_O_AT else MENU_O_OPEN_AT)) {
+        // Once the menu is really open, the demo presses P, which closes it.
+        if (flow.step.bar == GuideBar.Menu && flow.stage == 1 && demoKeys == 0 && t > MENU_O_OPEN_AT) {
             demoKeys = 1
-            keys.light("O")
+            keys.light("P")
         }
         main.postDelayed(demoTick, DEMO_FRAME_MILLIS)
     }
@@ -1435,7 +1667,8 @@ class GuideActivity : Activity() {
         demoStart = -1
         keys.demo(false)
         phantom.text = ""
-        field.hint = FIELD_HINT
+        field.hint = if (guideLooks == true) null else FIELD_HINT
+        showGhost()
     }
 
     /**
@@ -1444,7 +1677,7 @@ class GuideActivity : Activity() {
      */
     private fun showPhantom(demo: GuideDemo, t: Float) {
         val text = field.text.toString()
-        val grey = GuideMotion.faded(GuideColours.INK, PHANTOM_ALPHA)
+        val grey = ghostGrey()
         val built = SpannableStringBuilder(text)
         // Android logs an error for a span with no length, and this runs for every frame.
         if (text.isNotEmpty()) built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -1493,10 +1726,10 @@ class GuideActivity : Activity() {
                     val gone = ((t - .5f) / .4f * HOLD_DEMO_WORDS).toInt().coerceIn(0, HOLD_DEMO_WORDS) + if (t > .5f) 1 else 0
                     var from = lastEnd
                     repeat(gone) { from = text.substring(0, from).trimEnd().lastIndexOf(' ') + 1 }
-                    if (from < lastEnd) built.setSpan(BackgroundColorSpan(GuideColours.CREAM), from, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    if (from < lastEnd) built.setSpan(BackgroundColorSpan(fieldFill()), from, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 } else {
                     // One flick, one word, gone at once.
-                    if (t > FLICK_GONE) built.setSpan(BackgroundColorSpan(GuideColours.CREAM), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    if (t > FLICK_GONE) built.setSpan(BackgroundColorSpan(fieldFill()), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
             GuideDemo.MoveCursor -> if (lastEnd > 0) {
@@ -1748,6 +1981,8 @@ class GuideActivity : Activity() {
             for (view in listOf(chapter, close)) view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         }
         setupPart = part
+        guideLook(false)
+        unlockKeyboard()
         chapter.text = SetupPart.LABEL
         hideHint()
         swapIn(title, part.title, 0)
@@ -1838,6 +2073,8 @@ class GuideActivity : Activity() {
 
     /** The playground: the name, a line to follow if you like, the field and the keys. Nothing is checked, and nothing waits. */
     private fun showPlayground() {
+        guideLook(false)
+        unlockKeyboard()
         busy = true
         passed = false
         keys.appear()
@@ -1960,6 +2197,8 @@ class GuideActivity : Activity() {
     }
 
     private fun trace(message: JSONObject) {
+        // A finger on the touchpad is someone there: no idle chip, and the demo waits.
+        if (!playground && ::phantom.isInitialized) acted()
         val path = message.getJSONArray("points")
         val points = (0 until path.length()).map { index ->
             val point = path.getJSONArray(index)
@@ -2117,17 +2356,19 @@ class GuideActivity : Activity() {
             is KeyboardEvent.HeldSymbol -> lastKey?.let { keys.flip(it, event.symbol) }
             is KeyboardEvent.ModifierState -> {
                 panelOpen = event.panel != Modifiers.Panel.Closed
-                if (!panelOpen) keys.face = null
+                // The real panel shows the keys right above the finger, so the drawing of them steps aside while it's open,
+                // instead of drawing the panel a second time.
+                if (keys.layoutParams.height > 0) keys.visibility = if (panelOpen) View.INVISIBLE else View.VISIBLE
                 altOn = event.alt != Modifiers.Level.Off
                 modifiersOff = !panelOpen && event.alt == Modifiers.Level.Off
                 if (modifiersOff) modifiersWentOff()
             }
-            // The drawing of the keys shows the panel as it is, so the slide mirrors the keyboard.
-            is KeyboardEvent.PanelFace -> keys.face = event.labels.takeIf { event.panel != Modifiers.Panel.Closed }
+            // The drawing of the keys doesn't copy the panel: the real panel is on the screen. See ModifierState above.
+            is KeyboardEvent.PanelFace -> Unit
             // On the slide about the bar, every swipe comes out wrong, so that there is always something to fix with one tap.
             is KeyboardEvent.Recognised -> if (!playground && flow.step.nearMiss) {
                 GuideHooks.nearMiss = true
-                if (passed) main.post { GuideHooks.stripPoint(GuideHooks.rightPlace) }
+                if (passed) pointAtRightWord()
             }
             else -> Unit
         }
@@ -2141,7 +2382,14 @@ class GuideActivity : Activity() {
      */
     private fun watch(event: KeyboardEvent) {
         val step = flow.step
-        if (event is KeyboardEvent.Restored && step.id == "type" && passed) unpass(FIX_UNDONE_TITLE, FIX_UNDONE_BODY)
+        // Something the slide doesn't teach yet did nothing at all: the chip says so once a slide, or for the bar on the first slide.
+        if (event is KeyboardEvent.Blocked && !passed) {
+            if (event.lesson == GuideLesson.BarTap.name && step.id == "type") showChip(PICK_IT_YOURSELF)
+            else if (!lockChipShown) {
+                lockChipShown = true
+                showChip(THATS_LATER)
+            }
+        }
         if (event is KeyboardEvent.Pushed && event.code == KeyEvent.KEYCODE_V && step.id == "paste" && !passed) {
             val before = field.text.toString()
             main.postDelayed({
@@ -2170,8 +2418,11 @@ class GuideActivity : Activity() {
         acted()
     }
 
+    /** The slide has a text to type along to: in its box, or as the ghost in the field. */
+    private fun hasText() = !settingUp && started && (script.visibility == View.VISIBLE || flow.step.chapter == GuideChapter.Typing && guideLooks == true)
+
     /** The letters of the word that the text box has next, or nothing on a slide without one. */
-    private fun expectedWord() = if (script.visibility != View.VISIBLE || playground) ""
+    private fun expectedWord() = if (!hasText() || playground) ""
         else GuideScript.letters(passage.wordAt(passage.track(typedSince(field.text.toString())).next))
 
     private fun judge(event: KeyboardEvent) {
@@ -2184,6 +2435,11 @@ class GuideActivity : Activity() {
             // A scenario about Alt or the panel waits a moment, to be sure that they are really still on: the keyboard reports its
             // modifiers on every redraw, and a passing state must not leave words about something that is no longer true.
             is GuideVerdict.Hint -> when {
+                // A chip that comes with passing: the slide's own success line, and the chip.
+                verdict.passes && verdict.title == null -> {
+                    done()
+                    showChip(verdict.text, force = true)
+                }
                 verdict.passes -> done(verdict.title, verdict.text)
                 event is KeyboardEvent.ModifierState && verdict.stage == null -> {
                     main.removeCallbacks(modifierHint)
@@ -2195,19 +2451,25 @@ class GuideActivity : Activity() {
             GuideVerdict.Wait -> Unit
         }
         // A miss on the swipe slide: the right word, on the bar, wiggles to show where to tap.
-        if (verdict is GuideVerdict.Hint && flow.step.id == "swipe" && event is KeyboardEvent.Recognised) {
-            main.post { GuideHooks.stripPoint(GuideHooks.rightPlace) }
-        }
+        if (verdict is GuideVerdict.Hint && flow.step.id == "swipe" && event is KeyboardEvent.Recognised) pointAtRightWord()
     }
 
     /** Shows what a scenario says: in the slide's place with a title, or as a hint without one. A stage it moves to shows too. */
     private fun scenario(verdict: GuideVerdict.Hint) {
         if (verdict.stage != null) {
+            if (flow.stage == 0) body.text = flow.instruction
             showScript()
-            GuideHooks.stripPoint(if (flow.step.nearMiss && flow.stage > 0) GuideHooks.rightPlace else null)
+            if (flow.step.nearMiss && flow.stage > 0) pointAtRightWord() else GuideHooks.stripPointWord(null)
         }
-        val heading = verdict.title
-        if (heading != null) showScenario(heading, verdict.text) else showHint(verdict.text)
+        showChip(verdict.title ?: verdict.text)
+    }
+
+    /**
+     * The right word dances on the bar, wherever the keyboard put it: by the word itself, once the bar has it. It's the right word
+     * that moves, never a wrong one.
+     */
+    private fun pointAtRightWord() {
+        main.postDelayed({ if (!changing) GuideHooks.stripPointWord(GuideHooks.rightWord) }, POINT_AFTER_MILLIS)
     }
 
     /** A scenario about Alt or the panel, waiting to be sure, and the one that shows, which goes as soon as it is no longer true. */
@@ -2228,7 +2490,7 @@ class GuideActivity : Activity() {
         pendingModifierHint = null
         val shown = shownModifierHint ?: return
         shownModifierHint = null
-        if (shown.title != null) backOnTrack() else if (hint.text == shown.text) hideHint()
+        if (::chip.isInitialized && chip.text.toString() == (shown.title ?: shown.text)) hideChip()
     }
 
     /**
@@ -2286,14 +2548,14 @@ class GuideActivity : Activity() {
     /** The slide moved on, or back, to another instruction: only that one shows, and the ghost follows it. */
     private fun showStage() {
         hideHint()
-        // Back on track: a scenario's title gives way to the slide's own.
-        if (scenarioShown) swapIn(title, flow.step.title, 0)
+        hideChip(now = true)
         scenarioShown = false
         idleShown = false
+        // The instruction changes only here, when the slide moves to its next step.
         swapIn(body, flow.instruction, 0)
         showScript()
-        // The swipe came out wrong on purpose: the right word, wherever it is on the bar, wiggles to show where to tap.
-        GuideHooks.stripPoint(if (flow.step.nearMiss && flow.stage > 0) GuideHooks.rightPlace else null)
+        // The swipe came out wrong on purpose: the right word, wherever it is on the bar, dances to show where to tap.
+        if (flow.step.nearMiss && flow.stage > 0) pointAtRightWord() else GuideHooks.stripPointWord(null)
         main.removeCallbacks(showHelp)
         if (flow.step.help != null) main.postDelayed(showHelp, if (flow.step.helpTitle != null) HELP_TITLE_AFTER_MILLIS else HELP_AFTER_MILLIS)
     }
@@ -2304,6 +2566,8 @@ class GuideActivity : Activity() {
      */
     private fun stepDone(reaction: String? = null, praise: String? = null) {
         GuideHooks.stripPoint(null)
+        GuideHooks.stripPointWord(null)
+        hideChip(now = true)
         busy = true
         passed = true
         scenarioShown = false
@@ -2319,13 +2583,13 @@ class GuideActivity : Activity() {
         paintNext()
         haptics.celebrate()
         keys.celebrate()
-        backdrop.wipeTo(GuideColours.ORANGE)
-        main.postDelayed({ if (passed) applyTone(GuideTone.Orange) }, WIPE_MILLIS)
+        // Frozen until Next: the title is the success line with an orange check, the instruction what was learned.
         val step = flow.step
         markPassed(step)
-        showReaction(reaction ?: step.done)
+        showSuccess(reaction ?: step.done)
         val said = praise ?: if (step.id == "symgroups") groupsPraise(flow.counted) else step.praise
-        if (said.isNotEmpty()) body.text = said
+        if (said.isNotEmpty()) swapIn(body, said, ENTER_STAGGER_MILLIS)
+        paintSegments(flow.stepIndex)
         settledPraise = said
         step.rain?.let { effects.burst(it, RAIN_PIECES) }
         // Done in a way that does the next slide too: it opens, done.
@@ -2339,7 +2603,25 @@ class GuideActivity : Activity() {
         if (flow.step.clip != null) GuideHooks.dismissClip()
         showScript()
         main.removeCallbacks(settleReaction)
-        main.postDelayed(settleReaction, REACTION_MILLIS)
+    }
+
+    /** The success line, in the title's place for good, with a small orange check, and a small pop from its corner. */
+    private fun showSuccess(text: String) {
+        title.animate().cancel()
+        title.text = SpannableStringBuilder(text).apply {
+            val start = length
+            append(" ✓")
+            setSpan(ForegroundColorSpan(GuideColours.ORANGE), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(RelativeSizeSpan(CHECK_SIZE), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        title.translationX = 0f
+        title.pivotX = 0f
+        title.pivotY = title.height.toFloat()
+        title.alpha = 0f
+        title.scaleX = REACTION_FROM
+        title.scaleY = REACTION_FROM
+        title.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(REACTION_IN_MILLIS)
+            .setInterpolator(OvershootInterpolator(REACTION_OVERSHOOT)).start()
     }
 
     private fun nextPressed() {
@@ -2361,7 +2643,8 @@ class GuideActivity : Activity() {
             main.removeCallbacks(idleTwice)
             endDemo()
             hideHint()
-            showReaction(SKIP_ROAST)
+            hideChip(now = true)
+            showChip(SKIP_ROAST, force = true)
             main.postDelayed({
                 changing = false
                 moveOn()
@@ -2412,6 +2695,7 @@ class GuideActivity : Activity() {
         main.removeCallbacks(idleTwice)
         autoTyping = false
         hideHint()
+        hideChip(now = true)
         val leaving = flow.step
         if (forward) flow.advance() else flow.back()
         val coming = flow.step
@@ -2419,7 +2703,6 @@ class GuideActivity : Activity() {
         val away = (if (forward) -dp(ENTER_OFFSET) else dp(ENTER_OFFSET)).toFloat()
         for (view in listOf(title, body)) view.animate().alpha(0f).translationX(away).setDuration(FADE_MILLIS).start()
         val newChapter = coming.chapter != leaving.chapter
-        val roast = leaving.chapter.roast.takeIf { forward && newChapter }
         val arrive: () -> Unit = {
             if (target != tone) backdrop.wipeTo(backgroundOf(target))
             // The stroke crosses the screen only on a change of chapter. Between slides the screen just fades.
@@ -2430,7 +2713,8 @@ class GuideActivity : Activity() {
                 if (coming.chapter == GuideChapter.End) finale(coming) else enter(coming)
             }, WIPE_MILLIS)
         }
-        if (roast != null && GuideMotion.enabled) showRoast(roast, leaving.chapter, arrive) else arrive()
+        // No full-screen roasts: a chapter's last slide says it in its success line.
+        arrive()
     }
 
     /** What happens after a chapter's roast, once it's over or touched away. */
@@ -2547,6 +2831,9 @@ class GuideActivity : Activity() {
         keys.celebrate()
         // The text stays: it is what you typed through the whole guide.
         enter(end)
+        // The end wraps its words, as setup does, and locks nothing.
+        guideLook(false)
+        unlockKeyboard()
         // The name and slogan wait for the halves to land.
         for (view in listOf(title, body, chapter)) {
             view.animate().cancel()
@@ -2674,8 +2961,8 @@ class GuideActivity : Activity() {
         // The owner's words for what happens around the slides (v3.1).
         private const val IDLE_TITLE = "Still there?"
         private const val IDLE_AGAIN_TITLE = "The keys won't press themselves. We checked."
-        private const val SKIP_ROAST = "Skipping? Fine. You'll be back when you can't find the damn thing."
-        private const val GOING_BACK = "Missed something? Happens to the best of us. Mostly to the rest of us."
+        private const val SKIP_ROAST = "Skipping? Fine. You'll be back."
+        private const val GOING_BACK = "Missed something? Happens to the best of us."
         private const val BACK_FROM_END = "Miss us already? That's sweet. Weird, but sweet."
         private const val FEATURE_OFF_TITLE = "You turned this off. Bold."
         private const val FEATURE_OFF_BODY = "Press the button below to turn it back on, then try again."
@@ -2697,7 +2984,7 @@ class GuideActivity : Activity() {
         private const val NOTHING_PASTED_TITLE = "Nothing happened. Shocking."
         private const val NOTHING_PASTED_BODY = "fn isn't Ctrl yet. Press the button below to turn it on."
         private const val EMPTY_BAR_TITLE = "Nothing to judge. Rare for you."
-        private const val EMPTY_BAR_BODY = "Type a letter or two so the bar fills up, then hold a word."
+        private const val EMPTY_BAR_BODY = "Type a letter so the bar fills up."
         private const val TOO_LATE_TITLE = "Still got that open? The last slide's over, let it go."
         private const val TOO_LATE_PANEL = "Press Sym to close it."
         private const val TOO_LATE_ALT = "Press Alt to turn it off."
@@ -2713,9 +3000,33 @@ class GuideActivity : Activity() {
         /** The flick demo's word goes as the flick snaps; the hold demo deletes up to this many more while the finger stays. */
         private const val FLICK_GONE = .25f
         private const val HOLD_DEMO_WORDS = 4
+        /** The chapter one chips that the screen itself shows. */
+        private const val PICK_IT_YOURSELF = "Pick it yourself? No. Type it."
+        private const val THATS_LATER = "That's later."
+        // The slides' look, in the new layout: one size for every title, one for the instruction, and the chip's timing.
+        private const val TITLE_SP = 28f
+        private const val TITLE_DP = 30
+        private const val BODY_SP = 16f
+        private const val BODY_DP = 20
+        private const val GAP = 10
+        private const val CHIP_PAD = 3
+        private const val CHIP_SCALE = .94f
+        private const val CHIP_SLIDE = 40
+        private const val CHIP_MILLIS = 3000L
+        private const val CHIP_MIN_MILLIS = 1200L
+        private const val CHIP_IN_MILLIS = 220L
+        private const val CHIP_OUT_MILLIS = 180L
+        private const val CHECK_SIZE = .7f
+        /** The field's fill on ink, and how grey the ghost is, as in the approved frame. */
+        private const val FIELD_FILL = .08f
+        private const val GHOST_ALPHA = .38f
+        /** How many words the ghost shows after the one you're on: more than two lines hold. */
+        private const val GHOST_WORDS = 24
+        /** The bar has the right word a moment after the swipe that missed. */
+        private const val POINT_AFTER_MILLIS = 160L
         private const val REFRESHER = "Back for a refresher? Pick a chapter. No judgement. Some judgement."
         /** No input this long shows the idle words, and this much more shows them again. */
-        private const val IDLE_MILLIS = 12_000L
+        private const val IDLE_MILLIS = 20_000L
         private const val IDLE_AGAIN_MILLIS = 20_000L
         /** How long the Skip roast shows as the slide changes. */
         private const val SKIP_MILLIS = 1100L

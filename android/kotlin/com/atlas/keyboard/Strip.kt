@@ -220,7 +220,8 @@ class Strip(
         textSize = WORD_SIZE
         gravity = Gravity.CENTER
         isSingleLine = true
-        ellipsize = TextUtils.TruncateAt.END
+        // StripFit shrinks and cuts the words itself, where they differ. Android's own "…" would cut the part that matters.
+        ellipsize = null
         isFocusable = false
         setPadding(dp(WORD_PADDING), 0, dp(WORD_PADDING), 0)
         setOnClickListener { press(this) }
@@ -238,12 +239,6 @@ class Strip(
         setPadding(dp(8), dp(3), dp(8), dp(3))
     }
 
-    /** How wide the chips named [names] are, with their padding and the gap after each, so that the words can fit beside them. */
-    private fun chipRoom(names: List<String>): Int = names.sumOf { name ->
-        val chip = chips[name] ?: return@sumOf 0
-        Math.round(chip.paint.measureText(name)) + chip.paddingLeft + chip.paddingRight + dp(CHIP_GAP)
-    }
-
     /** The insets listener does not always run in the keyboard's window, so the corners are read here as well. */
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
@@ -259,8 +254,9 @@ class Strip(
         val demo = this.demo
         val confirm = (if (demo != null) demoNotice else notice).takeIf { showSuggestions }
         val modifierChips = modifiers.takeIf { showSuggestions && confirm == null }
-        // The whole bar takes the place of everything else. Chips alone stay beside the words, the clip or the selected word.
+        // Shift, Alt and Ctrl take the whole bar. The Shift that a sentence start turned on only gets a small mark: see [drawAutoCapital].
         val bar = modifierChips?.takeIf { it.replacesWords }
+        autoCapital = modifierChips?.autoCapital == true && bar == null
         val offer = clip.takeIf { showSuggestions && confirm == null && bar == null && demo == null }
         val chosen = selected.takeIf { showSuggestions && confirm == null && bar == null && offer == null && demo == null }
         setBackgroundColor(if (!showSuggestions) Color.TRANSPARENT else look.paper)
@@ -269,12 +265,12 @@ class Strip(
         setPadding(side, 0, side, if (showSuggestions) navigationInset else 0)
         // Keep a window for firmware touchpad routing when there is nothing to display.
         minimumHeight = if (showSuggestions) 0 else 1
-        // Long words shrink, borrow room from short ones, and as a last resort lose the part they share with the others.
+        // The three places never move or shrink: the middle one is muscle memory. A long word shrinks in its own place, and as a last
+        // resort loses the part that it shares with the others, so the part where they differ shows. The fit keeps a little slack,
+        // so that the text always fits its view and Android never cuts it with an "…" of its own.
         val shown = WORD_ORDER.map { (demoWords ?: words).getOrElse(it) { "" } }
-        // Chips beside the words take their room first, and the words fit in the rest.
-        val chipsBeside = if (modifierChips != null && bar == null) chipRoom(modifierChips.chips) else 0
-        val room = (width - paddingLeft - paddingRight - chipsBeside).toFloat()
-        val fits = if (room > 0) StripFit.fit(shown, room, dp(WORD_PADDING).toFloat(), ::measureWord) else null
+        val room = (width - paddingLeft - paddingRight).toFloat()
+        val fits = if (room > 0) StripFit.fit(shown, room, wordRoomPadding(), ::measureWord, lend = false) else null
         for ((slot, view) in wordViews.withIndex()) {
             val index = WORD_ORDER[slot]
             // While the idle scene plays, it draws the letters itself, and the words keep their places underneath.
@@ -283,31 +279,14 @@ class Strip(
             val fit = fits?.get(slot)
             view.text = fit?.text ?: shown[slot]
             view.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (fit?.scale ?: 1f))
-            // Each place is as wide as what it shows, so a touch lands on the word that it shows.
-            val params = view.layoutParams as LayoutParams
-            val weight = fit?.width ?: 1f
-            if (params.weight != weight) {
-                params.weight = weight
-                view.layoutParams = params
-            }
             view.isEnabled = index < words.size && demo == null
             view.setTextColor(look.ink)
         }
-        modifierRow.visibility = if (modifierChips != null) VISIBLE else GONE
-        (modifierRow.layoutParams as LayoutParams).let { params ->
-            val width = if (bar != null) 0 else LayoutParams.WRAP_CONTENT
-            val weight = if (bar != null) 1f else 0f
-            if (params.width != width || params.weight != weight) {
-                params.width = width
-                params.weight = weight
-                modifierRow.layoutParams = params
-            }
-        }
-        hint.visibility = if (bar != null) VISIBLE else GONE
+        modifierRow.visibility = if (bar != null) VISIBLE else GONE
         for ((name, chip) in chips) {
-            chip.visibility = if (modifierChips != null && name in modifierChips.chips) VISIBLE else GONE
+            chip.visibility = if (bar != null && name in bar.chips) VISIBLE else GONE
             // A key that a finger holds down is filled. One that was pushed and let go is an outline.
-            val held = modifierChips != null && name in modifierChips.held
+            val held = bar != null && name in bar.held
             chip.setTextColor(if (held) look.onAccent else look.accent)
             chip.background = GradientDrawable().apply {
                 cornerRadius = Radii.px(resources, Radii.SMALL)
@@ -325,7 +304,7 @@ class Strip(
         // The clip follows the words' rules: it shrinks to fit, then loses its end.
         val preview = offer?.let { ClipboardHistory.preview(it, CLIP_PREVIEW_LENGTH) }.orEmpty()
         val icon = Math.round(wordPixels() * CLIP_ICON_SCALE)
-        val clipRoom = (width - paddingLeft - paddingRight - chipsBeside - clipView.paddingLeft - clipView.paddingRight - icon - clipText.compoundDrawablePadding).toFloat()
+        val clipRoom = (width - paddingLeft - paddingRight - clipView.paddingLeft - clipView.paddingRight - icon - clipText.compoundDrawablePadding).toFloat()
         val clipFit = if (clipRoom > 0 && preview.isNotEmpty()) StripFit.fit(listOf(preview), clipRoom, 0f, ::measureWord).single() else null
         clipText.text = clipFit?.text ?: preview
         clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (clipFit?.scale ?: 1f))
@@ -339,7 +318,7 @@ class Strip(
         clipHintText.setTextColor(look.muted)
         selectedView.visibility = if (chosen != null) VISIBLE else GONE
         // The selected word follows the words' rules too: it shrinks to fit, then loses its end.
-        val selectedFit = if (room > 0 && !chosen.isNullOrEmpty()) StripFit.fit(listOf(chosen), room, dp(WORD_PADDING).toFloat(), ::measureWord).single() else null
+        val selectedFit = if (room > 0 && !chosen.isNullOrEmpty()) StripFit.fit(listOf(chosen), room, wordRoomPadding(), ::measureWord).single() else null
         selectedView.text = selectedFit?.text ?: chosen.orEmpty()
         selectedView.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (selectedFit?.scale ?: 1f))
         selectedView.setTextColor(look.ink)
@@ -363,8 +342,37 @@ class Strip(
         if (w != oldw) post { render() }
     }
 
+    /** The room that a word keeps on each side: its padding, and a little slack against rounding. */
+    private fun wordRoomPadding() = (dp(WORD_PADDING) + dp(WORD_SLACK)).toFloat()
+
+    /** Shift came on by itself at a sentence start, and the words show: the strip marks it with a small capital. */
+    private var autoCapital = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+    private val capitalPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+
+    /**
+     * The mark for the automatic capital: a small "A" in the accent, in the top left corner of the bar, out of the way of the words
+     * in their places. It moves nothing.
+     */
+    private fun drawAutoCapital(canvas: Canvas) {
+        if (!autoCapital || !showSuggestions) return
+        capitalPaint.typeface = typeface
+        capitalPaint.isFakeBoldText = true
+        capitalPaint.color = look.accent
+        capitalPaint.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, CAPITAL_SIZE, resources.displayMetrics)
+        val x = side.toFloat() / 2 + dp(CAPITAL_IN)
+        canvas.drawText(CAPITAL_MARK, x, dp(CAPITAL_TOP) - capitalPaint.ascent(), capitalPaint)
+    }
+
     override fun dispatchDraw(canvas: Canvas) {
         super.dispatchDraw(canvas)
+        drawAutoCapital(canvas)
         idle?.let { scene ->
             val time = SystemClock.uptimeMillis() - idleStart
             idleDrawing.draw(canvas, scene.at(time), wordViews.first().paint, dp(56).toFloat(), look)
@@ -434,7 +442,7 @@ class Strip(
 
     /** Starts the idle scene with the words on the bar, if plain words show. Returns false if there is nothing to play with. */
     fun startIdle(random: kotlin.random.Random): Boolean {
-        if (idle != null || !isShown || !showSuggestions || modifiers != null || notice != null || clip != null || selected != null
+        if (idle != null || !isShown || !showSuggestions || modifiers?.replacesWords == true || notice != null || clip != null || selected != null
             || gesture.showing) return false
         val letters = ArrayList<IdleScene.Letter>()
         for ((word, view) in wordViews.withIndex()) {
@@ -583,6 +591,13 @@ class Strip(
         /** The words' size, in sp, and the room on each side of a word. */
         private const val WORD_SIZE = 17f
         private const val WORD_PADDING = 6
+        /** A little room, in dp, that a fitted word keeps on each side, so that Android never has to cut it. */
+        private const val WORD_SLACK = 2
+        /** The mark for the automatic capital: its text, its size in sp, and where it sits, in dp. */
+        private const val CAPITAL_MARK = "A"
+        private const val CAPITAL_SIZE = 10f
+        private const val CAPITAL_IN = 2
+        private const val CAPITAL_TOP = 6
         /** About 30 frames a second while the idle scene moves. */
         private const val IDLE_FRAME_MILLIS = 33L
         // The guide's demonstrations on the bar, in ms from their start. Android's animator duration setting scales them.

@@ -52,6 +52,18 @@ fun main() {
         "When more than the shared start fits, the start tells it apart, so it stays")
     same(StripFit.cut("Recommended", listOf("recommend"), 100f, measure), "…commended", "Shared starts are found in any case")
 
+    // The strip's three words: their places never move or shrink, as the middle one is muscle memory.
+    val fixed = StripFit.fit(listOf("a", "internationalization", "of"), 300f, 5f, measure, lend = false)
+    same(fixed.map { it.width }, List(3) { 100f }, "Without lending, the places stay even, whatever the words")
+    check(fits(fixed), "The long word still fits its own place: $fixed")
+    // The owner's case: typing "recommendatons", the middle word was cut at its end while the sides showed whole.
+    val owner = StripFit.fit(listOf("recommendation's", "recommendations", "recommendation"), 300f, 5f, measure, lend = false)
+    same(owner.map { it.width }, List(3) { 100f }, "The places stay even")
+    check(fits(owner), "All three fit: $owner")
+    check(owner[1].text.startsWith(StripFit.ELLIPSIS) && owner[1].text.endsWith("tions"), "The middle keeps the end where it differs: ${owner[1].text}")
+    check(owner[0].text.endsWith("n's") && owner[2].text.endsWith("tion"), "The sides keep their ends too: ${owner.map { it.text }}")
+    same(owner.map { it.text }.distinct().size, 3, "The three can be told apart")
+
     // The clipboard chip: one place, the same rules.
     val clip = StripFit.fit(listOf("Meet me at the station at noon tomorrow, and bring the tickets"), 300f, 5f, measure)
     check(clip.single().scale == StripFit.MIN_SCALE && clip.single().text.endsWith(StripFit.ELLIPSIS), "A long clip shrinks, then loses its end: $clip")

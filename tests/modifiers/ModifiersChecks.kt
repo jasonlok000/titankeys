@@ -1231,27 +1231,37 @@ private fun autoShift() {
     }
 }
 
-/** Shift and Alt show as chips beside the words. The whole bar takes their place only while a finger rests on a letter, or with Ctrl. */
+/**
+ * Only the Shift that a sentence start turns on keeps the words, with a small capital as its mark. Shift, Alt and Ctrl that you
+ * press or hold take the whole bar, as do a finger resting on a letter.
+ */
 private fun chipsBesideTheWords() {
     Keyboard().run {
         modifiers.autoShift(sentenceStart = true)
-        same(bar()?.replacesWords, false, "At a sentence start the automatic Shift shows beside the suggestions")
+        same(bar()?.replacesWords, false, "At a sentence start the automatic Shift keeps the suggestions")
+        same(bar()?.autoCapital, true, "and the strip marks it with a small capital")
         same(bar("H")?.replacesWords, true, "A finger resting on a letter shows the whole bar")
         same(bar("H")?.hint, "H", "and what the key types")
         same(bar(Layout.SPACE)?.replacesWords, false, "A finger on Space keeps the words")
     }
     Keyboard().run {
         press()
-        same(bar()?.replacesWords, false, "One push of Shift keeps the words, with its chip")
+        same(bar()?.replacesWords, true, "One push of Shift takes the whole bar")
+        same(bar()?.autoCapital, false, "It is no automatic capital")
         press()
         same(bar()?.chips, listOf(ModifierBar.CAPS), "A lock shows Caps")
-        same(bar()?.replacesWords, false, "Caps keeps the words too")
+        same(bar()?.replacesWords, true, "Caps takes the whole bar too")
     }
     Keyboard().run {
         press(ALT)
-        same(bar()?.replacesWords, false, "One push of Alt keeps the words")
-        same(bar("Q")?.replacesWords, true, "A finger on a letter shows what Alt types there")
-        same(bar("Q")?.hint, "%", "the symbol")
+        same(bar()?.replacesWords, true, "One push of Alt takes the whole bar")
+        same(bar("Q")?.hint, "%", "A finger on a letter shows what Alt types there")
+    }
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        press(ALT)
+        same(bar()?.autoCapital, false, "Alt with the automatic Shift is no longer only the capital")
+        same(bar()?.replacesWords, true, "so it takes the whole bar")
     }
     Keyboard().run {
         down(CTRL)

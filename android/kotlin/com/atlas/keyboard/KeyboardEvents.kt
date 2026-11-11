@@ -60,6 +60,13 @@ sealed interface KeyboardEvent {
     /** Something was copied to the clipboard. The screen that owns the field sends this, as only it may read the clipboard. */
     data class Copied(val text: String) : KeyboardEvent
 
+    /**
+     * Autocorrect changed [typed] into [word]. A change of capitals alone is no typo fixed: see [isRealFix].
+     */
+    data class Fixed(val typed: String, val word: String) : KeyboardEvent {
+        val isRealFix get() = !typed.filter(Char::isLetter).equals(word.filter(Char::isLetter), ignoreCase = true)
+    }
+
     /** A word on the strip was held, and its menu opened. */
     data class WordMenu(val word: String) : KeyboardEvent
 

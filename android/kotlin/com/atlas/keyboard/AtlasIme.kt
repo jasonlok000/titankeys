@@ -530,9 +530,11 @@ class AtlasIme : InputMethodService() {
         composer.onStroke = Trace::stroke
         // Backspace putting a word back plays nothing: the key press is felt already.
         composer.onAutocorrect = { haptics.play(Haptic.Autocorrect) }
+        composer.onFixed = { typed, word -> KeyboardEvents.publish { KeyboardEvent.Fixed(typed, word) } }
         composer.onExpanded = { haptics.play(Haptic.Expansion) }
         composer.nearMiss = { right -> GuideScript.slip(right).takeIf { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) } }
         composer.intended = { before -> GuideHooks.intended(currentInputEditorInfo?.privateImeOptions, before) }
+        composer.guidePlaced = { place -> GuideHooks.rightPlace = place }
         // The interactive guide acts out a gesture on this bar, only in its own field. See [Strip.playDemo].
         GuideHooks.stripDemos = { demo ->
             main.post {
@@ -1281,7 +1283,8 @@ class AtlasIme : InputMethodService() {
                 clipClearing = false
                 if (clipPinning) pin(index) else {
                     haptics.play(Haptic.ClipPasted)
-                    composer.paste(clip.text)
+                    // The guide swaps one clip for a prank, and says so; anywhere else a clip pastes as it is.
+                    composer.paste(if (inGuide) GuideHooks.swapClip(clip.text) else clip.text)
                     closePanel()
                     return
                 }

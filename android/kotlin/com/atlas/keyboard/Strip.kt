@@ -352,23 +352,49 @@ class Strip(
             field = value
             invalidate()
         }
-    /** The mark of an automatic capital: a small shift arrow, in thin lines of the accent colour, as the figure on the bar. */
+    /**
+     * The mark of an automatic capital: Shift's chip as it shows for one push, an outline in the accent colour at the left of the
+     * bar, as tall as Shift's chip but narrower, with a shift arrow for its label. It is drawn over the bar, so the words never move
+     * for it. If the left word reaches under it, it goes small into the top left corner for that bar instead.
+     */
     private val capitalPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         style = android.graphics.Paint.Style.STROKE
         strokeJoin = android.graphics.Paint.Join.ROUND
         strokeCap = android.graphics.Paint.Cap.ROUND
     }
+    private val capitalText = android.graphics.Paint()
     private val capitalArrow = android.graphics.Path()
+    private val capitalBox = android.graphics.RectF()
 
-    /** Drawn over the bar's top left corner, so the words never move for it. */
     private fun drawAutoCapital(canvas: Canvas) {
         if (!autoCapital || !showSuggestions) return
+        // Shift's chip: its text size and padding give its height.
+        capitalText.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CHIP_SIZE, resources.displayMetrics)
+        val height = capitalText.descent() - capitalText.ascent() + 2 * dp(3)
+        val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
+        val width = arrow + 2 * dp(CAPITAL_SIDE_IN)
+        val left = side.toFloat()
+        val top = (dp(56) - height) / 2
+        capitalBox.set(left, top, left + width, top + height)
+        // The left word, as drawn: if its text would reach under the chip, the chip goes small into the corner.
+        val word = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.minByOrNull { it.left }
+        val textLeft = word?.let { it.left + it.totalPaddingLeft + it.layout.getLineLeft(0) - it.scrollX }
+        val small = textLeft != null && textLeft < capitalBox.right + dp(CAPITAL_CLEAR)
+        if (small) {
+            val scale = CAPITAL_SMALL
+            val x = side.toFloat() / 2 + dp(2)
+            capitalBox.set(x, dp(4).toFloat(), x + width * scale, dp(4) + height * scale)
+        }
+        val cornerScale = capitalBox.height() / height
         capitalPaint.color = look.accent
-        capitalPaint.strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CAPITAL_LINE, resources.displayMetrics)
-        val size = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, CAPITAL_SIZE, resources.displayMetrics)
-        val x = side.toFloat() / 2 + dp(CAPITAL_IN)
-        val y = dp(CAPITAL_TOP).toFloat()
-        // An arrow head as wide as it is tall at the top, on a stem half as wide: the shift key's mark, outlined.
+        capitalPaint.strokeWidth = dp(1).coerceAtLeast(2) * (if (small) .8f else 1f)
+        val corner = Radii.px(resources, Radii.SMALL) * cornerScale
+        canvas.drawRoundRect(capitalBox, corner, corner, capitalPaint)
+        // The shift arrow inside: a head as wide as it is tall at the top, on a stem half as wide.
+        val size = arrow * cornerScale
+        val x = capitalBox.centerX() - size / 2
+        val y = capitalBox.centerY() - size / 2
+        capitalPaint.strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CAPITAL_LINE, resources.displayMetrics) * cornerScale
         capitalArrow.reset()
         capitalArrow.moveTo(x + size / 2, y)
         capitalArrow.lineTo(x + size, y + size * .52f)
@@ -628,11 +654,13 @@ class Strip(
         /** A little room, in dp, that a fitted word keeps on each side, so that Android never has to cut it. */
         private const val WORD_SLACK = 2
         /** The mark for the automatic capital: its text, its size in sp, and where it sits, in dp. */
-        /** The shift arrow's height, about the height of a capital at the bar's small text size, and its line. */
-        private const val CAPITAL_SIZE = 8f
+        /** How far the arrow keeps from the chip's top and bottom, and from its sides, and its line. */
+        private const val CAPITAL_ARROW_IN = 4
+        private const val CAPITAL_SIDE_IN = 5
         private const val CAPITAL_LINE = 1.3f
-        private const val CAPITAL_IN = 2
-        private const val CAPITAL_TOP = 6
+        /** How far the left word's text must stay from the chip, or the chip goes into the corner, at this size. */
+        private const val CAPITAL_CLEAR = 2
+        private const val CAPITAL_SMALL = .6f
         /** About 30 frames a second while the idle scene moves. */
         private const val IDLE_FRAME_MILLIS = 33L
         /** A frame that comes late, as after the screen was busy, moves the game on by no more than this. */

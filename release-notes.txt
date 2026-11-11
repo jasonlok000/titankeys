@@ -11,6 +11,7 @@
 
 ## Changed
 - Tap keys: When swipe typing is off, tap keys do not type. Settings shows Tap keys in grey.
+- Hold Alt: When you hold Alt, letters do not type symbols. Hold Alt for shortcuts. To type a symbol, push Alt one time, or two times to lock it.
 
 ## Fixed
 - Notifications: When a notification shows at the top of the screen, your swipes go to the keyboard. Before, the notification got swipes that started on the top row of keys. Atlas must be on in Accessibility for this fix.

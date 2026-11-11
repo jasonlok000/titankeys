@@ -547,6 +547,11 @@ class AtlasIme : InputMethodService() {
                 }
                 else -> {
                     val typed = event.getUnicodeChar(event.metaState or modifiers.metaState)
+                    if (modifiers.altHeld && typed != 0) {
+                        modifiers.useHeld()
+                        pendingInput.removeFirst()
+                        return@repeat
+                    }
                     if (typed <= 0 || !Character.isValidCodePoint(typed) || Character.isISOControl(typed)) return
                     composer.type(String(Character.toChars(typed)), shifted = modifiers.shift == Modifiers.Level.Once)
                     modifiers.consume()
@@ -752,6 +757,11 @@ class AtlasIme : InputMethodService() {
             KeyEvent.KEYCODE_TAB -> { modifiers.useHeld(); command(event) }
             else -> {
                 val typed = event.getUnicodeChar(event.metaState or modifiers.metaState)
+                // A held Alt is for shortcuts, so it types no symbols. A tapped or locked Alt types them.
+                if (modifiers.altHeld && typed != 0) {
+                    modifiers.useHeld()
+                    return true
+                }
                 val dead = typed and KeyCharacterMap.COMBINING_ACCENT != 0
                 if (dead || deadKeyPending || typed <= 0 || !Character.isValidCodePoint(typed) || Character.isISOControl(typed)) {
                     val textKey = dead || typed > 0 && Character.isValidCodePoint(typed) && !Character.isISOControl(typed)

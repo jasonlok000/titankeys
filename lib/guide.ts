@@ -28,7 +28,7 @@ export const guide: { title: string; rows: GuideRow[] }[] = [
         terms: ["backlight", "back light", "lights", "lit", "glow", "illuminate", "dark", "night", "see keys", "turn off light", "light comes on", "battery"] },
       { title: "Full stop", text: "Push the space bar two times.",
         terms: ["period", "dot", "point", "punctuation", "double space", "double tap space", "two spaces", "end sentence", "finish sentence", "auto punctuation"] },
-      { title: "Shift and Alt", text: "Push one time for the next letter only. Push two times quickly to lock. Push again to unlock.",
+      { title: "Shift and Alt", text: "Push one time for the next letter only. Push two times quickly to lock. Push again to unlock. When you hold Alt, letters do not type symbols. Use it for shortcuts.",
         terms: ["caps lock", "capital letters", "capitals", "uppercase", "upper case", "big letters", "lowercase", "small letters", "all caps", "shouting", "numbers", "digits", "stuck", "sticky keys", "modifier"] },
       { title: "Word suggestions", text: "The strip shows words and spelling corrections as you type. Touch a word to type it.",
         terms: ["autocorrect", "auto correct", "spell check", "spellcheck", "misspelled", "correction", "predictions", "predictive text", "next word", "autocomplete", "auto complete", "typo", "mistake", "suggestion bar", "top bar"] },

@@ -938,6 +938,9 @@ public final class SwipeTyping {
 
     public static String capitalise(String text, String before) { return SentenceCase.capitalise(text, before); }
 
+    /** Whether the next letter after [before] starts a sentence. */
+    public static boolean startsSentence(CharSequence before) { return SentenceCase.startsSentence(before); }
+
     public static String capitalise(String str, String str2, int i, boolean z, boolean autoCapitalise) {
         if ((1048576 & i) != 0) {
             return str.toUpperCase(Locale.UK);

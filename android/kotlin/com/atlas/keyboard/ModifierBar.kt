@@ -1,10 +1,14 @@
 package com.atlas.keyboard
 
 /**
- * What the bar in the place of the suggestion strip shows: which modifiers are on, and what they do to a key. [held] names the
- * chips whose key a finger holds down now, which show filled. A key that was pushed and let go shows as an outline.
+ * What the strip shows of the modifiers: which are on, and what they do to a key. [held] names the chips whose key a finger holds
+ * down now, which show filled. A key that was pushed and let go shows as an outline.
+ *
+ * Shift and Alt that are on show as small chips beside the words, so the suggestions stay, also at a sentence start where Shift
+ * came on by itself. The whole bar, with what the key under a resting finger types, takes the place of the words only while a finger
+ * rests on a letter, and while Ctrl is held, where it lists the shortcuts. That is [replacesWords].
  */
-data class ModifierBar(val chips: List<String>, val hint: String, val held: Set<String> = emptySet()) {
+data class ModifierBar(val chips: List<String>, val hint: String, val held: Set<String> = emptySet(), val replacesWords: Boolean = true) {
     companion object {
         const val CTRL = "Ctrl"
         const val SHIFT = "Shift"
@@ -43,7 +47,7 @@ data class ModifierBar(val chips: List<String>, val hint: String, val held: Set<
                 alt -> symbol(hover).orEmpty()
                 else -> hover
             }
-            return ModifierBar(chips, hint, held)
+            return ModifierBar(chips, hint, held, replacesWords = modifiers.ctrlHeld || Layout.isLetter(hover))
         }
     }
 }

@@ -16,8 +16,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
- * The bar above the keyboard: word suggestions, or which modifiers are on. The modifiers take the place of the words, at the same
- * height. While a special gesture runs, [gesture] draws over them at that height too, and the words wait underneath.
+ * The bar above the keyboard: word suggestions, with small chips for the modifiers that are on. While a finger rests on a letter
+ * with a modifier on, or Ctrl is held, the modifiers take the place of the words, at the same height: see [ModifierBar]. While a
+ * special gesture runs, [gesture] draws over them at that height too, and the words wait underneath.
  */
 class Strip(
     context: Context,
@@ -127,7 +128,7 @@ class Strip(
     }
     private val modifierRow = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
-        for (chip in chips.values) addView(chip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(6) })
+        for (chip in chips.values) addView(chip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(CHIP_GAP) })
         addView(hint, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
     }
     private var navigationInset = 0
@@ -185,7 +186,7 @@ class Strip(
             render()
         }
 
-    /** Which modifiers are on, in the place of the words. Null shows the words. */
+    /** Which modifiers are on: chips beside the words, or the whole bar in their place. Null shows the words alone. */
     var modifiers: ModifierBar? = null
         set(value) {
             if (field == value) return
@@ -194,8 +195,9 @@ class Strip(
         }
 
     init {
-        for (view in wordViews) addView(view, LayoutParams(0, dp(56), 1f))
+        // The modifiers come first, so that their chips sit at the start of the words.
         addView(modifierRow, LayoutParams(0, dp(56), 1f))
+        for (view in wordViews) addView(view, LayoutParams(0, dp(56), 1f))
         addView(noticeRow, LayoutParams(0, dp(56), 1f))
         addView(clipView, LayoutParams(0, dp(56), 1f))
         addView(selectedView, LayoutParams(0, dp(56), 1f))
@@ -236,6 +238,12 @@ class Strip(
         setPadding(dp(8), dp(3), dp(8), dp(3))
     }
 
+    /** How wide the chips named [names] are, with their padding and the gap after each, so that the words can fit beside them. */
+    private fun chipRoom(names: List<String>): Int = names.sumOf { name ->
+        val chip = chips[name] ?: return@sumOf 0
+        Math.round(chip.paint.measureText(name)) + chip.paddingLeft + chip.paddingRight + dp(CHIP_GAP)
+    }
+
     /** The insets listener does not always run in the keyboard's window, so the corners are read here as well. */
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
@@ -248,7 +256,9 @@ class Strip(
         gesture.allowed = showSuggestions
         // A strip that shows nothing has no height, and a bar there would move the app each time a modifier changes.
         val confirm = notice.takeIf { showSuggestions }
-        val bar = modifiers.takeIf { showSuggestions && confirm == null }
+        val modifierChips = modifiers.takeIf { showSuggestions && confirm == null }
+        // The whole bar takes the place of everything else. Chips alone stay beside the words, the clip or the selected word.
+        val bar = modifierChips?.takeIf { it.replacesWords }
         val offer = clip.takeIf { showSuggestions && confirm == null && bar == null }
         val chosen = selected.takeIf { showSuggestions && confirm == null && bar == null && offer == null }
         setBackgroundColor(if (!showSuggestions) Color.TRANSPARENT else look.paper)
@@ -259,7 +269,9 @@ class Strip(
         minimumHeight = if (showSuggestions) 0 else 1
         // Long words shrink, borrow room from short ones, and as a last resort lose the part they share with the others.
         val shown = WORD_ORDER.map { words.getOrElse(it) { "" } }
-        val room = (width - paddingLeft - paddingRight).toFloat()
+        // Chips beside the words take their room first, and the words fit in the rest.
+        val chipsBeside = if (modifierChips != null && bar == null) chipRoom(modifierChips.chips) else 0
+        val room = (width - paddingLeft - paddingRight - chipsBeside).toFloat()
         val fits = if (room > 0) StripFit.fit(shown, room, dp(WORD_PADDING).toFloat(), ::measureWord) else null
         for ((slot, view) in wordViews.withIndex()) {
             val index = WORD_ORDER[slot]
@@ -279,11 +291,21 @@ class Strip(
             view.isEnabled = index < words.size
             view.setTextColor(look.ink)
         }
-        modifierRow.visibility = if (bar != null) VISIBLE else GONE
+        modifierRow.visibility = if (modifierChips != null) VISIBLE else GONE
+        (modifierRow.layoutParams as LayoutParams).let { params ->
+            val width = if (bar != null) 0 else LayoutParams.WRAP_CONTENT
+            val weight = if (bar != null) 1f else 0f
+            if (params.width != width || params.weight != weight) {
+                params.width = width
+                params.weight = weight
+                modifierRow.layoutParams = params
+            }
+        }
+        hint.visibility = if (bar != null) VISIBLE else GONE
         for ((name, chip) in chips) {
-            chip.visibility = if (bar != null && name in bar.chips) VISIBLE else GONE
+            chip.visibility = if (modifierChips != null && name in modifierChips.chips) VISIBLE else GONE
             // A key that a finger holds down is filled. One that was pushed and let go is an outline.
-            val held = bar != null && name in bar.held
+            val held = modifierChips != null && name in modifierChips.held
             chip.setTextColor(if (held) look.onAccent else look.accent)
             chip.background = GradientDrawable().apply {
                 cornerRadius = Radii.px(resources, Radii.SMALL)
@@ -301,7 +323,7 @@ class Strip(
         // The clip follows the words' rules: it shrinks to fit, then loses its end.
         val preview = offer?.let { ClipboardHistory.preview(it, CLIP_PREVIEW_LENGTH) }.orEmpty()
         val icon = Math.round(wordPixels() * CLIP_ICON_SCALE)
-        val clipRoom = (width - paddingLeft - paddingRight - clipView.paddingLeft - clipView.paddingRight - icon - clipText.compoundDrawablePadding).toFloat()
+        val clipRoom = (width - paddingLeft - paddingRight - chipsBeside - clipView.paddingLeft - clipView.paddingRight - icon - clipText.compoundDrawablePadding).toFloat()
         val clipFit = if (clipRoom > 0 && preview.isNotEmpty()) StripFit.fit(listOf(preview), clipRoom, 0f, ::measureWord).single() else null
         clipText.text = clipFit?.text ?: preview
         clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (clipFit?.scale ?: 1f))
@@ -457,6 +479,8 @@ class Strip(
         /** Save, Forget and Back. */
         private const val MAX_BUTTONS = 3
         private const val CHIP_SIZE = 13f
+        /** The gap after each modifier chip, in dp. */
+        private const val CHIP_GAP = 6
         private const val CONTENT_ABOVE = 16
         private const val HINT_SMALLEST = 8f
         private const val HINT_LARGEST = 17f

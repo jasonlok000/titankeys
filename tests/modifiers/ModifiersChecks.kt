@@ -86,6 +86,8 @@ fun main() {
     steadyKeyIgnoresFlicker()
     cornersKeepContentClear()
     theGuideCanOpenAPanel()
+    autoShift()
+    chipsBesideTheWords()
     println("Modifier checks passed")
 }
 
@@ -1137,4 +1139,124 @@ private fun ctrlActions() {
     same(Modifiers.CTRL_ACTIONS["C"], "Copy", "C must copy")
     same(Modifiers.CTRL_ACTIONS.keys, setOf("A", "C", "X", "V", "Z", "Y"), "The overlay must show the field shortcuts and no other keys")
     same(Modifiers.CTRL_ACTIONS.keys.all { it.length == 1 && it[0] in 'A'..'Z' }, true, "Each shortcut must be on a letter key")
+}
+
+/**
+ * Shift comes on by itself where a sentence starts, as one push would. A push turns it off for that letter, and it comes back at
+ * the next sentence start, also after deleting back to one.
+ */
+private fun autoShift() {
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        same(shift, Level.Once, "At a sentence start Shift comes on by itself")
+        same(modifiers.autoShifted, true, "It says that it came on by itself")
+        same(bar()?.chips, listOf(ModifierBar.SHIFT), "The bar shows it like one push of Shift")
+        type()
+        same(shift, Level.Off, "The first letter uses it up")
+        modifiers.autoShift(sentenceStart = false)
+        same(shift, Level.Off, "Inside the sentence it stays off")
+        modifiers.autoShift(sentenceStart = true)
+        same(shift, Level.Once, "Deleting back to the sentence start turns it on again")
+    }
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        press()
+        same(shift, Level.Off, "A push turns the automatic Shift off, so the letter stays lowercase")
+        same(modifiers.autoShifted, false, "It is no longer on by itself")
+        modifiers.autoShift(sentenceStart = true)
+        same(shift, Level.Off, "It stays off at the same sentence start")
+        idle(GAP)
+        press()
+        same(shift, Level.Once, "A quick second push is a fresh push of Shift, not a lock")
+        same(modifiers.autoShifted, false, "That Shift is the user's own")
+        modifiers.autoShift(sentenceStart = false)
+        same(shift, Level.Once, "The user's own Shift stays when the sentence start is left")
+        type()
+        modifiers.autoShift(sentenceStart = false)
+        modifiers.autoShift(sentenceStart = true)
+        same(shift, Level.Once, "After the letter, the next sentence start turns it on again")
+        same(modifiers.autoShifted, true, "On by itself again")
+    }
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        modifiers.autoShift(sentenceStart = false)
+        same(shift, Level.Off, "Moving the cursor away from a sentence start turns the automatic Shift off")
+    }
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        press(ALT)
+        same(shift, Level.Off, "Alt replaces the automatic Shift")
+        same(modifiers.alt, Level.Once, "and Alt is on")
+        modifiers.autoShift(sentenceStart = true)
+        same(shift, Level.Off, "It does not come back while Alt is on")
+        type()
+        modifiers.autoShift(sentenceStart = true)
+        same(shift, Level.Once, "Once Alt is used up, a sentence start still turns it on")
+    }
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        press(SYM)
+        same(shift, Level.Off, "The panel replaces the automatic Shift")
+        modifiers.autoShift(sentenceStart = true)
+        same(shift, Level.Off, "It stays off while the panel is open")
+        modifiers.closePanel()
+        modifiers.autoShift(sentenceStart = true)
+        same(shift, Level.Once, "Closing the panel at a sentence start turns it on again")
+    }
+    Keyboard().run {
+        down(CTRL)
+        modifiers.autoShift(sentenceStart = true)
+        same(shift, Level.Off, "It does not come on while Ctrl is held")
+        up(CTRL)
+        down()
+        same(shift, Level.Once, "A held Shift is the user's own")
+        modifiers.autoShift(sentenceStart = true)
+        same(modifiers.autoShifted, false, "It does not take over a held Shift")
+        up()
+    }
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        down()
+        same(shift, Level.Off, "Holding Shift on an automatic Shift turns it off; the held key gives the capital itself")
+        type()
+        up()
+        same(shift, Level.Off, "Nothing is left on after the held Shift")
+    }
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        modifiers.fieldStarted(restarting = false, editing = true)
+        same(shift, Level.Off, "A new field starts with nothing on, until it is checked again")
+        modifiers.autoShift(sentenceStart = true)
+        same(shift, Level.Once, "A new field that starts a sentence turns it on")
+    }
+}
+
+/** Shift and Alt show as chips beside the words. The whole bar takes their place only while a finger rests on a letter, or with Ctrl. */
+private fun chipsBesideTheWords() {
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        same(bar()?.replacesWords, false, "At a sentence start the automatic Shift shows beside the suggestions")
+        same(bar("H")?.replacesWords, true, "A finger resting on a letter shows the whole bar")
+        same(bar("H")?.hint, "H", "and what the key types")
+        same(bar(Layout.SPACE)?.replacesWords, false, "A finger on Space keeps the words")
+    }
+    Keyboard().run {
+        press()
+        same(bar()?.replacesWords, false, "One push of Shift keeps the words, with its chip")
+        press()
+        same(bar()?.chips, listOf(ModifierBar.CAPS), "A lock shows Caps")
+        same(bar()?.replacesWords, false, "Caps keeps the words too")
+    }
+    Keyboard().run {
+        press(ALT)
+        same(bar()?.replacesWords, false, "One push of Alt keeps the words")
+        same(bar("Q")?.replacesWords, true, "A finger on a letter shows what Alt types there")
+        same(bar("Q")?.hint, "%", "the symbol")
+    }
+    Keyboard().run {
+        down(CTRL)
+        same(bar()?.replacesWords, true, "Ctrl shows its shortcuts in the place of the words")
+        up(CTRL)
+        same(bar(), null, "Nothing on shows the words alone")
+    }
 }

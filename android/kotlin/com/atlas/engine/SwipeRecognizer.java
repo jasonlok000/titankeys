@@ -248,7 +248,7 @@ public final class SwipeRecognizer implements AutoCloseable {
             double pathScore = result.ctcScore / Math.pow(Math.max(1, result.word.replace("'", "").length()), shapeNormalizer);
             group.pathBest = Math.max(group.pathBest, pathScore);
             if (learnedWords.contains(result.word)) group.learnedPath = Math.max(group.learnedPath, pathScore);
-            if (result.score > group.nativeBest) { group.nativeBest = result.score; group.nativePath = pathScore; }
+            if (!learnedWords.contains(result.word) && result.score > group.nativeBest) { group.nativeBest = result.score; group.nativePath = pathScore; }
             group.adjustedBest = Math.max(group.adjustedBest, adjusted);
         }
         // Keep context bounded when a learned word is the best shape match in its group.

@@ -33,6 +33,14 @@ public final class SavedWordSwipeChecks {
         List<String> hidden = shown(swipe, List.of("heyy"), Set.of("heyy"));
         check(!hidden.contains("heyy"), "A blocked saved word must stay hidden: " + hidden);
         String[][] sentences = { {}, { "hi" }, { "i", "love" }, { "this", "is", "a" }, { "hey", "how", "are", "you" } };
+        // A saved spelling borrows the best context score, which must not push the swipe's own best word out.
+        String[][] doubled = { { "hey", "heyy" }, { "sup", "supp" }, { "nah", "nahh" }, { "ok", "okk" }, { "yes", "yess" }, { "bro", "broo" } };
+        for (String[] pair : doubled) for (int i = 0; i < 3; i++) {
+            String[] sentence = sentences[i];
+            String best = shown(path(pair[0]), sentence, List.of(), Set.of()).get(0);
+            List<String> withSaved = shown(path(pair[0]), sentence, List.of(pair[1]), Set.of());
+            check(withSaved.contains(best), "Saving " + pair[1] + " must keep " + best + " after '" + String.join(" ", sentence) + "': " + withSaved);
+        }
         for (String[] sentence : sentences) {
             String words = String.join(" ", sentence);
             List<String> liv = shown(path("liv"), sentence, List.of("liv"), Set.of());

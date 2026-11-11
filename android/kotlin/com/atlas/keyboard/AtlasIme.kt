@@ -637,8 +637,9 @@ class AtlasIme : InputMethodService() {
         showModifiers()
     }
 
+    /** Tap keys belong to swipe typing, so they stop when it is off. */
     private fun isTapKey(key: String): Boolean {
-        if (stripPaging) return false
+        if (!swipeTyping || stripPaging) return false
         return if (key == Layout.SPACE) ' ' in tapKeys else Layout.isLetter(key) && key[0] in tapKeys
     }
 

@@ -9,10 +9,13 @@
 - Shortcuts: Push and hold Alt, then push a letter. Z is undo. Y is redo. A selects all text. C is copy. X is cut. V is paste.
 - Keyboard light: When you slide your finger on the keys outside a text field, the keyboard light comes on. To stop this, set Light keys on touch to off in Settings.
 
+## Changed
+- Tap keys: When swipe typing is off, tap keys do not type. Settings shows Tap keys in grey.
+
 ## Fixed
 - Notifications: When a notification shows at the top of the screen, your swipes go to the keyboard. Before, the notification got swipes that started on the top row of keys. Atlas must be on in Accessibility for this fix.
 - Saved words: When you save a word with a double letter, such as "supp", the strip continues to show the word that you swiped before.
 - Double letters: When you swipe a common word with a double letter, such as "coffee", Atlas finds the word more often.
 - Swipe end: Atlas gives more importance to the key where your swipe stops.
 - Delete a word: Only a held Alt with Backspace deletes a word. A tapped or locked Alt with Backspace deletes one letter.
-- Settings: When swipe typing is off, Settings shows Swipe vibration and Slip recovery period in grey. When app shortcuts are off, their settings show in grey.
+- Settings: When swipe typing is off, Settings shows Tap keys, Swipe vibration and Slip recovery period in grey. When app shortcuts are off, their settings show in grey.

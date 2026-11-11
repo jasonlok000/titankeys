@@ -18,7 +18,6 @@ export default function Settings() {
   return <Screen title="Settings" rightAction={closeAction}>
     <Section title="Typing">
       <Field label="Spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
-      <Field label="Tap keys" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
       <Toggle label="Auto-capitalisation" value={settings.autoCapitalise}
         onChange={autoCapitalise => save.run({ autoCapitalise })} />
       <Toggle label="Auto-punctuation" value={settings.autoPunctuation}
@@ -33,6 +32,7 @@ export default function Settings() {
     <Section title="Swipe typing">
       <Toggle label="Swipe typing" value={settings.swipeTyping}
         onChange={swipeTyping => save.run({ swipeTyping })} />
+      <Field label="Tap keys" href="/settings/tap-keys" disabled={!settings.swipeTyping}>{tapKeysLabel(settings)}</Field>
       <Field label="Slip recovery period" href="/settings/lift" disabled={!settings.swipeTyping}>{liftLabel(settings)}</Field>
       <Field label="Swipe vibration" href="/settings/vibration" disabled={!settings.swipeTyping}>{vibrationLabel(settings)}</Field>
     </Section>

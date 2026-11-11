@@ -10,7 +10,7 @@ export const guide: { title: string; rows: GuideRow[] }[] = [
     title: "Swiping", rows: [
       { title: "Swipe a word", text: "Move your finger across the letters. Do not push the keys. Lift your finger to type the word.",
         terms: ["swipe typing", "slide typing", "glide typing", "gesture typing", "trace", "drag", "draw", "shape writing", "one finger", "fast typing", "type faster", "without pressing", "write words", "how to type"] },
-      { title: "Turn off swiping", text: "To stop swipes from typing words, set Swipe typing to off in Settings. Tap keys and cursor control continue to operate.",
+      { title: "Turn off swiping", text: "To stop swipes from typing words, set Swipe typing to off in Settings. Tap keys also stop. Cursor control continues to operate.",
         terms: ["turn off swipe", "disable swipe", "switch off swipe", "no swipe", "accidental swipe", "unwanted words", "random words", "typing by itself", "ghost typing", "physical keys only"] },
       { title: "Slip recovery", text: "If your finger leaves the keyboard for a short time, the swipe continues. Change this time in Settings.",
         terms: ["lift", "slip", "slipped", "lost contact", "finger came off", "let go", "cut off", "stops halfway", "half word", "timeout", "delay", "break", "gap", "pause", "sensitivity"] },
@@ -22,7 +22,7 @@ export const guide: { title: string; rows: GuideRow[] }[] = [
   },
   {
     title: "Keys", rows: [
-      { title: "Tap keys", text: "Touch these keys lightly to type them. Select the keys in Settings.",
+      { title: "Tap keys", text: "Touch these keys lightly to type them. Select the keys in Settings. Tap keys operate only when Swipe typing is on.",
         terms: ["light touch", "soft press", "touch to type", "no press", "without clicking", "tap to type", "brush", "sensitive keys", "touch keyboard"] },
       { title: "Keyboard light", text: "Outside a text field, slide your finger on the keys to turn on the keyboard light. To stop this, set Light keys on touch to off in Settings.",
         terms: ["backlight", "back light", "lights", "lit", "glow", "illuminate", "dark", "night", "see keys", "turn off light", "light comes on", "battery"] },

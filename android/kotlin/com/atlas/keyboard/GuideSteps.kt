@@ -322,7 +322,7 @@ internal class Passage(lead: String, loop: String = lead) {
         val step = more.split(' ').count { it.isNotEmpty() }
         // Each time round is marked with a dot and flows on in the same lines, so a short text never shows the same line twice.
         while (step > 0 && count < MIN_WORDS) {
-            if (isNotEmpty()) append(" $LOOP_MARK ")
+            if (isNotEmpty()) append("   $LOOP_MARK   ")
             append(more)
             count += step
         }
@@ -727,7 +727,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Gone. Like your patience.",
-        seed = "Delete these words because you clearly regret every single one of them",
+        seed = "Delete these words because you clearly regret every single one of them.",
         praise = "Gone. Your mistakes never stood a chance.",
         cue = GuideCue.Flick(hold = true),
         needs = GuideNeed.SwipeTyping,
@@ -760,7 +760,7 @@ internal val GUIDE_STEPS = listOf(
         ),
         done = "No more poking the glass.",
         help = "Tap lightly in the shaded patch, and keep your last touch down while you slide.",
-        seed = "Move the cursor through this line without touching the screen like an adult",
+        seed = "Move the cursor through this line without touching the screen like an adult.",
         praise = "Look, no fingerprints on the glass.",
         cue = GuideCue.Taps(2, drag = true),
         needs = GuideNeed.CursorControl,
@@ -789,7 +789,7 @@ internal val GUIDE_STEPS = listOf(
         ),
         done = "Selected. Glass untouched.",
         help = "Two taps that lift select the word at the cursor. Three, with the last one down, select more.",
-        seed = "Select some of these words and feel powerful for a second or two",
+        seed = "Select some of these words and feel powerful for a second or two.",
         praise = "Selected. Not a single smudge.",
         cue = GuideCue.Taps(3, drag = true),
         needs = GuideNeed.CursorControl,
@@ -804,7 +804,7 @@ internal val GUIDE_STEPS = listOf(
         }),
         done = "Yes, we know.",
         help = "Nothing pasted? Some phones need fn as Ctrl.",
-        seed = "Replace this word",
+        seed = "Replace this word.",
         praise = "Harsh. Accurate, but harsh.",
         needs = GuideNeed.FnAsCtrl,
         clip = PASTE_TEXT,

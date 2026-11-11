@@ -19,7 +19,7 @@ class PreviewChecks : Instrumentation() {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
             waitForPreview(activity)
             swipe("first", .2f)
-            tap(860f, 255f)
+            tap(955f, 190f)
             waitFor("Settings did not open") { !homeEditor(activity) }
             closeSettings(activity)
             swipe("returned", .6f)

@@ -279,6 +279,30 @@ private class GuideField(context: Context) : EditText(context) {
         super.onSelectionChanged(selStart, selEnd)
         changed?.invoke()
     }
+
+    /**
+     * Android's text view crashes on a touch while it has no layout for its text, which it can lack for a moment while the guide
+     * changes the text or the screen under the finger: it places the cursor at -1. A touch then does nothing, and the next one works.
+     */
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
+        if (layout == null) return true
+        return try {
+            super.onTouchEvent(event)
+        } catch (error: IndexOutOfBoundsException) {
+            true
+        }
+    }
+
+    /** The same for a long press, which needs a selection handle that a text view without a layout has not made. */
+    override fun performLongClick(): Boolean {
+        if (layout == null) return true
+        return try {
+            super.performLongClick()
+        } catch (error: NullPointerException) {
+            true
+        }
+    }
 }
 
 /**
@@ -489,6 +513,7 @@ class GuideActivity : Activity() {
         }
         GuideHooks.nearMiss = false
         GuideHooks.stripDemo(null)
+        GuideHooks.stripPoint(null)
         main.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
@@ -1531,6 +1556,8 @@ class GuideActivity : Activity() {
             is KeyboardEvent.ModifierState -> {
                 panelOpen = event.panel != Modifiers.Panel.Closed
                 if (!panelOpen) keys.face = null
+                modifiersOff = !panelOpen && event.alt == Modifiers.Level.Off
+                if (modifiersOff) modifiersWentOff()
             }
             // The drawing of the keys shows the panel as it is, so the slide mirrors the keyboard.
             is KeyboardEvent.PanelFace -> keys.face = event.labels.takeIf { event.panel != Modifiers.Panel.Closed }
@@ -1545,9 +1572,35 @@ class GuideActivity : Activity() {
         when (val verdict = flow.event(event)) {
             GuideVerdict.Done, GuideVerdict.Finished -> stepDone()
             is GuideVerdict.Stage -> showStage()
-            is GuideVerdict.Hint -> showHint(verdict.text)
+            // A hint about Alt or the panel waits a moment, to be sure that they are really still on: the keyboard reports its
+            // modifiers on every redraw, and a passing state must not leave a hint about something that is no longer true.
+            is GuideVerdict.Hint -> if (event is KeyboardEvent.ModifierState) {
+                main.removeCallbacks(modifierHint)
+                pendingModifierHint = verdict.text
+                main.postDelayed(modifierHint, MODIFIER_HINT_MILLIS)
+            } else showHint(verdict.text)
             GuideVerdict.Wait -> Unit
         }
+    }
+
+    /** A hint about Alt or the panel, waiting to be sure, and the one that shows, which goes as soon as it is no longer true. */
+    private var pendingModifierHint: String? = null
+    private var shownModifierHint: String? = null
+    private var modifiersOff = true
+    private val modifierHint = Runnable {
+        val text = pendingModifierHint ?: return@Runnable
+        pendingModifierHint = null
+        if (modifiersOff || busy) return@Runnable
+        showHint(text)
+        shownModifierHint = text
+    }
+
+    /** Alt and the panel are off now: a hint about them, waiting or shown, is no longer true. */
+    private fun modifiersWentOff() {
+        main.removeCallbacks(modifierHint)
+        pendingModifierHint = null
+        if (shownModifierHint != null && hint.text == shownModifierHint) hideHint()
+        shownModifierHint = null
     }
 
     /** The slide moved on, or back, to another instruction: only that one shows, with a tick, and the ghost follows it. */
@@ -1556,6 +1609,8 @@ class GuideActivity : Activity() {
         haptics.tick()
         swapIn(body, flow.instruction, 0)
         showScript()
+        // The swipe came out wrong on purpose: the right word, second on the bar, wiggles to show where to tap.
+        GuideHooks.stripPoint(if (flow.step.nearMiss && flow.stage > 0) 1 else null)
         main.removeCallbacks(showHelp)
         if (flow.step.help != null) main.postDelayed(showHelp, HELP_AFTER_MILLIS)
     }
@@ -1565,6 +1620,7 @@ class GuideActivity : Activity() {
      * try it more: the keys still answer, and only the checks stop. Next is filled now.
      */
     private fun stepDone() {
+        GuideHooks.stripPoint(null)
         busy = true
         passed = true
         main.removeCallbacks(startDemo)
@@ -1611,6 +1667,7 @@ class GuideActivity : Activity() {
 
     /** The story goes on, or back a step: to ink for a step behind the cream line, or orange for the ending. */
     private fun moveOn(forward: Boolean = true) {
+        GuideHooks.stripPoint(null)
         changing = true
         busy = true
         passed = false
@@ -1834,6 +1891,8 @@ class GuideActivity : Activity() {
         /** The slogan comes after the name has clicked into place, and the line above it after that. */
         private const val SLOGAN_DELAY_MILLIS = 260L
         private const val HELP_AFTER_MILLIS = 9000L
+        /** How long Alt or the panel must stay on before the guide says so. */
+        private const val MODIFIER_HINT_MILLIS = 350L
         /** Words of the script that the line above the field shows after the next one. */
         private const val SCRIPT_WORDS = 24
         /** How strong the words after the next one are in that line. */

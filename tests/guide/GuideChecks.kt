@@ -41,7 +41,24 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
 /** Slides that the guide no longer has: the written guide explains them. */
 private val gone = listOf("boring", "snippets", "exact", "names", "panel")
 
+/** The word menu is picked with the keys: the top two rows, split into as many parts as the menu has buttons. */
+private fun theMenuKeys() {
+    same(MenuKeys.button("Q", 3), 0, "Q picks the first of three")
+    same(MenuKeys.button("R", 3), 0, "Q to R pick the first")
+    same(MenuKeys.button("T", 3), 1, "T picks the second")
+    same(MenuKeys.button("P", 3), 2, "P picks the last")
+    same(MenuKeys.button("A", 3), 0, "The second row senses it too")
+    same(MenuKeys.button("L", 3), 2, "L picks the last")
+    same(MenuKeys.button("Z", 3), -1, "The bottom row of letters picks nothing")
+    same(MenuKeys.button(Layout.SPACE, 3), -1, "Space picks nothing")
+    same(MenuKeys.button("T", 2), 0, "With two buttons, T is on the left half")
+    same(MenuKeys.button("Y", 2), 1, "and Y on the right")
+    same(MenuKeys.button("Q", 0), -1, "No menu, no button")
+    for (count in 1..3) same((0 until 10).map { MenuKeys.button(Layout.rows[0][it], count) }.distinct().size, count, "Every one of $count buttons has keys")
+}
+
 fun main() {
+    theMenuKeys()
     steadyKeyLight()
     playgroundSpeed()
     everyStepIsReachable()

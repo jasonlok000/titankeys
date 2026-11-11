@@ -54,6 +54,16 @@ internal object GuideHooks {
         stripDemos?.invoke(demo)
     }
 
+    /**
+     * The strip listens here, so that a slide can point at a word on the bar: the word in that place, as the keyboard ranks them,
+     * wiggles up and down until it is picked or changes. Null stops it. Only in the guide's field.
+     */
+    @Volatile var stripPoints: ((Int?) -> Unit)? = null
+
+    fun stripPoint(index: Int?) {
+        stripPoints?.invoke(index)
+    }
+
     /** The guide's word for a word after [before], only in the guide's field. */
     fun intended(privateOptions: String?, before: String): String? =
         if (privateOptions?.contains(FIELD) == true) script?.invoke(before)?.takeIf { it.isNotEmpty() } else null

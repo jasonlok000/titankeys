@@ -32,17 +32,21 @@ export default function Settings() {
     <Section title="Swipe typing">
       <Toggle label="Swipe typing" value={settings.swipeTyping}
         onChange={swipeTyping => save.run({ swipeTyping })} />
-      <Field label="Tap keys" href="/settings/tap-keys" disabled={!settings.swipeTyping}>{tapKeysLabel(settings)}</Field>
-      <Field label="Slip recovery period" href="/settings/lift" disabled={!settings.swipeTyping}>{liftLabel(settings)}</Field>
-      <Field label="Swipe vibration" href="/settings/vibration" disabled={!settings.swipeTyping}>{vibrationLabel(settings)}</Field>
+      {settings.swipeTyping && <>
+        <Field label="Tap keys" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
+        <Field label="Slip recovery period" href="/settings/lift">{liftLabel(settings)}</Field>
+        <Field label="Swipe vibration" href="/settings/vibration">{vibrationLabel(settings)}</Field>
+      </>}
     </Section>
     <Section title="Shortcuts">
       <Toggle label="App shortcuts" value={settings.appShortcuts}
         onChange={appShortcuts => save.run({ appShortcuts })} />
-      <Field label="Hyper key" href="/settings/hyper-key" disabled={!settings.appShortcuts}>{hyperKeyLabel(settings)}</Field>
-      <Field label="Apps" href="/settings/shortcuts" disabled={!settings.appShortcuts}>{shortcutsLabel(settings)}</Field>
-      <Toggle label="Animations" value={settings.shortcutAnimation} disabled={!settings.appShortcuts}
-        onChange={shortcutAnimation => save.run({ shortcutAnimation })} />
+      {settings.appShortcuts && <>
+        <Field label="Hyper key" href="/settings/hyper-key">{hyperKeyLabel(settings)}</Field>
+        <Field label="Apps" href="/settings/shortcuts">{shortcutsLabel(settings)}</Field>
+        <Toggle label="Animations" value={settings.shortcutAnimation}
+          onChange={shortcutAnimation => save.run({ shortcutAnimation })} />
+      </>}
     </Section>
     <Section title="Personal">
       <Field label="Your words" href="/settings/data" />

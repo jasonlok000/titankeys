@@ -165,6 +165,29 @@ class Strip(
     private var pointed: String? = null
     private var pointer: android.animation.ValueAnimator? = null
 
+    /** Points at [word], wherever it sits on the bar, or stops with null. */
+    internal fun pointWord(word: String?) {
+        val index = word?.let { wanted -> words.indexOfFirst { it.equals(wanted, ignoreCase = true) } } ?: -1
+        point(index.takeIf { it >= 0 })
+    }
+
+    /**
+     * The bar shows its side words, or only the middle one, for the guide's first slide. As they come back they slide up into
+     * their places.
+     */
+    var sides = true
+        set(value) {
+            if (field == value) return
+            field = value
+            render()
+            if (value && GuideMotion.enabled) for ((slot, view) in wordViews.withIndex()) {
+                if (WORD_ORDER[slot] == 0) continue
+                view.translationY = dp(56).toFloat()
+                view.alpha = 0f
+                view.animate().translationY(0f).alpha(1f).setDuration(SIDES_MILLIS).start()
+            }
+        }
+
     /** Points at the word at [index], as the keyboard ranks them, or stops with null. */
     internal fun point(index: Int?) {
         pointer?.cancel()
@@ -315,7 +338,7 @@ class Strip(
             val index = WORD_ORDER[slot]
             // While the idle scene plays, it draws the letters itself, and the words keep their places underneath.
             view.visibility = if (showSuggestions && bar == null && confirm == null && offer == null && chosen == null)
-                (if (idle != null) INVISIBLE else VISIBLE) else GONE
+                (if (idle != null || !sides && index != 0) INVISIBLE else VISIBLE) else GONE
             val fit = fits?.get(slot)
             view.text = fit?.text ?: shown[slot]
             view.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (fit?.scale ?: 1f))
@@ -823,7 +846,8 @@ class Strip(
                     else -> 0f
                 }
                 fingerHold = ((time - MENU_PRESS_MILLIS).toFloat() / (MENU_OPEN_MILLIS - MENU_PRESS_MILLIS)).coerceIn(0f, 1f)
-                val menu = if (time >= MENU_OPEN_MILLIS) Notice.Menu(shown.first(), true) else null
+                // The guide's slide about the menu shows only the hold: the menu itself opens only for a real hold.
+                val menu = if (time >= MENU_OPEN_MILLIS && playing.opens) Notice.Menu(shown.first(), true) else null
                 if (menu != demoNotice) {
                     demoNotice = menu
                     render()
@@ -887,6 +911,8 @@ class Strip(
         private const val FINGER_FADE_MILLIS = 150L
         private const val MENU_END_MILLIS = 3600L
         private const val MENU_WORDS = 3
+        /** How long the side words take to slide back up. */
+        private const val SIDES_MILLIS = 260L
         /** The menu's word, small above its buttons: its size in sp and its top in dp. */
         private const val MENU_WORD_SIZE = 11f
         private const val MENU_WORD_ABOVE = false

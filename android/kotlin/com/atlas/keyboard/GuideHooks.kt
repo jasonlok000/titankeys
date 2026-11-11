@@ -4,13 +4,16 @@ package com.atlas.keyboard
  * What the interactive guide asks of the keyboard, only in the guide's own field. The guide runs in the keyboard's process, so this
  * is a plain shared object. No other field is ever touched: the guide's field marks itself with [FIELD] in its private options.
  */
+/** What the guide's slides teach, one by one. A slide that locks the keyboard lets only these through, besides letters. */
+internal enum class GuideLesson { Swipe, BarTap, BarHold, Flick, Cursor, Symbols, Enter, Ctrl }
+
 internal object GuideHooks {
     /** A short scene on the keyboard's own bar, for the guide. It types nothing, and any input on the keyboard ends it. */
     sealed interface StripDemo {
         /** [typo] shows in the middle of the bar, then [fix] swaps in, as Space does when it fixes a word. */
         data class Fix(val typo: String, val fix: String) : StripDemo
         /** [words] show, a ghost finger holds the middle one, and its menu opens. */
-        data class Menu(val words: List<String>) : StripDemo
+        data class Menu(val words: List<String>, val opens: Boolean = true) : StripDemo
     }
 
     const val FIELD = "com.titankeys.guide"
@@ -62,6 +65,31 @@ internal object GuideHooks {
 
     fun stripPoint(index: Int?) {
         stripPoints?.invoke(index)
+    }
+
+    /**
+     * What the slide on the guide's screen unlocks, or null for no lock. In the guide's field only, anything else does nothing at
+     * all: no text and no haptic. Letters, Backspace and Space always work.
+     */
+    @Volatile var lessons: Set<GuideLesson>? = null
+
+    fun allows(lesson: GuideLesson) = lessons?.contains(lesson) ?: true
+
+    /** The right word after a miss, for the guide to point at wherever it is on the bar. The keyboard sets it. */
+    @Volatile var rightWord: String? = null
+
+    /** The keyboard listens here, so the bar shows its side words, or only the middle one. Only in the guide's field. */
+    @Volatile var barSideRequests: ((Boolean) -> Unit)? = null
+
+    fun barSides(show: Boolean) {
+        barSideRequests?.invoke(show)
+    }
+
+    /** The keyboard listens here, so the guide points at a word by itself, wherever it sits on the bar. */
+    @Volatile var stripPointWords: ((String?) -> Unit)? = null
+
+    fun stripPointWord(word: String?) {
+        stripPointWords?.invoke(word)
     }
 
     /** How many words the bar shows now, or -1 outside the guide's field. The keyboard sets it. */

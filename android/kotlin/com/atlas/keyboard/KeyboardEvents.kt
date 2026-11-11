@@ -57,6 +57,9 @@ sealed interface KeyboardEvent {
     /** A key on the Sym panel with nothing on it was pressed. Only in the guide's field. */
     data object EmptyKey : KeyboardEvent
 
+    /** The guide's slide locks [lesson], a [GuideLesson]'s name, so what was tried did nothing. Only in the guide's field. */
+    data class Blocked(val lesson: String) : KeyboardEvent
+
     /** Backspace right after a typo fix put the typed word back. */
     data object Restored : KeyboardEvent
 

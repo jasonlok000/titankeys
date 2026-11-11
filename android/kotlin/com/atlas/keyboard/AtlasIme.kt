@@ -351,7 +351,7 @@ class AtlasIme : InputMethodService() {
     /** The finger moved, so the wait for a hold starts again, or ends if the finger is no longer on a delete flick. */
     private fun followDeleteHold() {
         val start = contact.points.firstOrNull()
-        val at = deleteHold.moved(!altOrPanel && start != null && pieces.canDelete(start.time))
+        val at = deleteHold.moved(!altOrPanel && start != null && pieces.canDelete(start.time) && guideAllows(GuideLesson.Flick))
         if (at != null) nextDeleteHoldStep(at) else main.removeCallbacks(stepDeleteHold)
     }
 
@@ -541,7 +541,13 @@ class AtlasIme : InputMethodService() {
         composer.onExpanded = { haptics.play(Haptic.Expansion) }
         composer.nearMiss = { right -> GuideScript.slip(right).takeIf { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) } }
         composer.intended = { before -> GuideHooks.intended(currentInputEditorInfo?.privateImeOptions, before) }
-        composer.guidePlaced = { place -> GuideHooks.rightPlace = place }
+        composer.guidePlaced = { place, word ->
+            GuideHooks.rightPlace = place
+            GuideHooks.rightWord = word
+        }
+        // The guide's slides show the bar's side words, or only its middle one, and point at a word wherever it sits.
+        GuideHooks.barSideRequests = { show -> main.post { if (!show && !inGuide) return@post else strip?.sides = show } }
+        GuideHooks.stripPointWords = { word -> main.post { if (word == null || inGuide) strip?.pointWord(word) } }
         composer.onRestored = {
             haptics.play(Haptic.AutocorrectUndone)
             KeyboardEvents.publish { KeyboardEvent.Restored }
@@ -862,7 +868,12 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
-        val words = Strip(this, { index -> haptics.play(Haptic.BarWord); enqueue { composer.choose(index) } }, ::holdWord,
+        val words = Strip(this, { index ->
+            if (!guideBlocked(GuideLesson.BarTap)) {
+                haptics.play(Haptic.BarWord)
+                enqueue { composer.choose(index) }
+            }
+        }, ::holdWord,
             { action -> enqueue { stripAction(action) } }, { enqueue { pasteOfferedClip() } }, { wakeIdleBar(cut = false) })
         // A game that ended by itself, or was sent home, gives the bar back: the next wait starts fresh, with the same roll.
         words.idleEnded = ::waitIdleBar
@@ -1346,6 +1357,8 @@ class AtlasIme : InputMethodService() {
 
     /** Holding a word on the strip opens its menu. */
     private fun holdWord(index: Int): Boolean {
+        // A guide slide that doesn't teach the menu yet: the hold does nothing, not even a haptic.
+        if (guideBlocked(GuideLesson.BarHold)) return false
         val (word, typed) = composer.shownWord(index) ?: return false
         openMenu(HeldWord(word, typed))
         return true
@@ -1389,6 +1402,28 @@ class AtlasIme : InputMethodService() {
             MenuKeys.BACK -> Strip.Action.Close
             else -> null
         }
+    }
+
+    // The guide's lesson lock: in its own field, a slide lets through only what it teaches, besides letters, Backspace and Space.
+
+    /** Keys whose press the lock kept, so their release is kept too. */
+    private val lockedKeys = HashSet<Int>()
+
+    private fun guideAllows(lesson: GuideLesson) = !inGuide || GuideHooks.allows(lesson)
+
+    /** True if the guide's slide locks [lesson], and tells the guide, which says so once. */
+    private fun guideBlocked(lesson: GuideLesson): Boolean {
+        if (guideAllows(lesson)) return false
+        KeyboardEvents.publish { KeyboardEvent.Blocked(lesson.name) }
+        return true
+    }
+
+    /** What a key belongs to, for the lock: Alt and Sym are symbols, Enter is its own, fn and Ctrl are shortcuts. Others are typing. */
+    private fun guideLesson(keyCode: Int): GuideLesson? = when (keyCode) {
+        KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT, KeyEvent.KEYCODE_SYM -> GuideLesson.Symbols
+        KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> GuideLesson.Enter
+        Modifiers.FN, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT -> GuideLesson.Ctrl
+        else -> null
     }
 
     /** A resting finger marks the button over its key, as on the Sym panel. */
@@ -1632,7 +1667,7 @@ class AtlasIme : InputMethodService() {
                 cursorPath = ArrayList(samples.filter { it.valid })
                 // With Alt on or the panel open the touchpad does not type, so the cursor waits until they are off.
                 // A finger the contact ignored landed while typing, so it must not start the cursor.
-                val gestureCounts = cursorControl && !altOrPanel && contact.travel != null
+                val gestureCounts = cursorControl && !altOrPanel && contact.travel != null && guideAllows(GuideLesson.Cursor)
                 Recording.sink?.gesture("down", first.time, "counts=$gestureCounts cursorControl=$cursorControl " +
                     "altOrPanel=$altOrPanel contact=${contact.travel != null}")
                 cursorGesture.down(first, gestureCounts)
@@ -1679,10 +1714,11 @@ class AtlasIme : InputMethodService() {
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
-                if (contact.swipes && !altOrPanel && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
+                if (contact.swipes && !altOrPanel && guideAllows(GuideLesson.Swipe) && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
                 Trace.touch(contact.points, false)
-                showSwipe()
+                // A guide slide that doesn't teach swiping shows no word growing on the bar either.
+                if (guideAllows(GuideLesson.Swipe)) showSwipe()
             }
             MotionEvent.ACTION_UP -> lift(event, samples, cancelled = false)
             // The system cancels a gesture when its window goes, such as the window above the shade. Like a short lift, the
@@ -2179,6 +2215,8 @@ class AtlasIme : InputMethodService() {
                     return
                 }
                 if (!field.words) return
+                // A guide slide that doesn't teach this yet: the swipe or the flick does nothing.
+                if (guideBlocked(if (outcome.deletesWord) GuideLesson.Flick else GuideLesson.Swipe)) return
                 if (outcome.deletesWord) {
                     val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
                     val nothingLeft = before?.isEmpty() == true
@@ -2232,7 +2270,7 @@ class AtlasIme : InputMethodService() {
     /** Only a plain letter from the phone's own keyboard can become its symbol. With Shift, Alt, Sym or a shortcut key it stays a letter. */
     private fun canHold(event: KeyEvent): Boolean {
         // Every field that the keyboard types in has this, also password, number and exact typing fields.
-        if (!holdSymbols || !editing || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
+        if (!holdSymbols || !editing || !HoldEngine.isLetter(event.keyCode) || deadKeyPending || !guideAllows(GuideLesson.Symbols)) return false
         if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
         // A Shift that came on by itself still lets the first letter of a sentence become its symbol.
         if (modifiers.shift != Modifiers.Level.Off && !modifiers.autoShifted || altOrPanel || !event.hasNoModifiers() || event.isCapsLockOn) return false
@@ -2303,6 +2341,13 @@ class AtlasIme : InputMethodService() {
         strip?.gesture?.interrupt()
         strip?.gesture?.glowOff()
         wakeIdleBar()
+        // A guide slide that doesn't teach this key yet: it does nothing at all, and its release is kept too.
+        val locked = if (editing && !event.isSystem) guideLesson(keyCode) else null
+        if (locked != null && !guideAllows(locked)) {
+            if (event.repeatCount == 0) guideBlocked(locked)
+            lockedKeys += keyCode
+            return true
+        }
         if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
@@ -2371,6 +2416,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (lockedKeys.remove(keyCode)) return true
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         // The guide tells Alt pressed and let go from Alt held, and a letter let go before its symbol. Only in its own field.
@@ -2746,6 +2792,8 @@ class AtlasIme : InputMethodService() {
         GuideHooks.panelRequests = null
         GuideHooks.stripDemos = null
         GuideHooks.stripPoints = null
+        GuideHooks.barSideRequests = null
+        GuideHooks.stripPointWords = null
         GuideHooks.clipSeeds = null
         GuideHooks.barCount = null
         GuideHooks.clipDismissals = null

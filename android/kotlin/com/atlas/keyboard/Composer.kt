@@ -226,7 +226,7 @@ class Composer(
      */
     var intended: (String) -> String? = { null }
     /** Told where the guide's word went among a swipe's choices, as they rank, so that the guide can point at it. */
-    var guidePlaced: (Int) -> Unit = {}
+    var guidePlaced: (place: Int, word: String) -> Unit = { _, _ -> }
     /** Only the keyboard sets this, so replaying a recording never adds to the raw input log. */
     var log: EditLog? = null
     /** Only the keyboard sets this, and only while the setting is on, so replaying a recording never changes a word. */
@@ -1567,11 +1567,11 @@ class Composer(
             // The right word takes a random place after the wrong one, so it has to be looked for. The guide points at it.
             val rest = others.drop(1)
             val place = 1 + kotlin.random.Random.nextInt(minOf(rest.size, GUIDE_RIGHT_PLACES - 1) + 1)
-            guidePlaced(place)
+            guidePlaced(place, right)
             return (listOf(others.firstOrNull() ?: slip) + rest).toMutableList().apply { add(place, right) }
         }
         if (others.isEmpty() || at == 0) return guessed
-        guidePlaced(1)
+        guidePlaced(1, right)
         return listOf(others[0], right) + others.drop(1)
     }
 

@@ -71,25 +71,5 @@ class HyperKey {
     companion object {
         /** Time from letting go of a tapped Hyper to the letter. Vim and leader keys use the same. */
         const val TAP_MILLIS = 1000L
-        /** The Titan's Sym key when Shortcut keys does not set it to Programmable key. */
-        private const val TITAN_SYM = 342
-
-        /** Why this key cannot be Hyper, or null when it can. */
-        fun problem(code: Int): String? = when (code) {
-            in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z, in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 ->
-                "This key types text. Choose a different key."
-            KeyEvent.KEYCODE_SPACE, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_TAB ->
-                "This key types text. Choose a different key."
-            KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> "Shift types capitals. Choose a different key."
-            KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT -> "Alt types symbols. Choose a different key."
-            KeyEvent.KEYCODE_SYM, TITAN_SYM -> "Sym shows emoji. Choose a different key."
-            KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT, KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_META_RIGHT ->
-                "This key starts shortcuts. Choose a different key."
-            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH ->
-                "This key moves between apps. Choose a different key."
-            KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_MUTE, KeyEvent.KEYCODE_POWER ->
-                "This key controls the phone. Choose a different key."
-            else -> null
-        }
     }
 }

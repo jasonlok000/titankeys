@@ -1,27 +1,23 @@
-import { useEffect, useState } from "react";
-import { Field, Row, Screen, navigate, useSnapshot } from "ink";
-import { add } from "ink/icons";
-import { captureKey, state, type State } from "../../../lib/atlas";
+import { Field, Screen, Section, Toggle, useAction, useSnapshot } from "ink";
+import { state, update } from "../../../lib/atlas";
 
-export const shortcutsLabel = ({ shortcuts }: State) => shortcuts.length === 1 ? "1 app" : `${shortcuts.length} apps`;
-
-const choose = (letter: string) => navigate({ path: "/settings/shortcuts/[letter]", params: { letter } });
-
-export default function Apps() {
+export default function Shortcuts() {
   const result = useSnapshot(state);
-  const [adding, setAdding] = useState(false);
-  useEffect(() => {
-    if (!adding) return;
-    return captureKey(key => {
-      if (key === " ") return;
-      setAdding(false);
-      choose(key);
-    });
-  }, [adding]);
-  const subtitle = "Push the hyper key and a letter to open its app.";
-  if (result.status !== "ready") return <Screen title="Apps" subtitle={subtitle} />;
-  return <Screen title="Apps" subtitle={subtitle}>
-    <Row title={adding ? "Push a letter" : "Add app"} endIcon={adding ? undefined : add} onPress={() => setAdding(!adding)} />
-    {result.data.shortcuts.map(({ letter, name }) => <Field key={letter} label={name} onPress={() => choose(letter)}>{letter}</Field>)}
+  const save = useAction(update);
+  if (result.status !== "ready") return <Screen title="Shortcuts" />;
+  const settings = result.data;
+  return <Screen title="Shortcuts">
+    <Section title="Quick open">
+      <Toggle label="Quick open" value={settings.openApps} onChange={openApps => save.run({ openApps })} />
+      {settings.openApps && <>
+        <Field label="Apps" href="/settings/shortcuts/apps">Fn + letter</Field>
+        <Toggle label="Animation" value={settings.shortcutAnimation}
+          onChange={shortcutAnimation => save.run({ shortcutAnimation })} />
+      </>}
+    </Section>
+    <Section title="Actions">
+      <Toggle label="Actions" value={settings.actions} onChange={actions => save.run({ actions })} />
+      {settings.actions && <Field label="Keys" href="/settings/shortcuts/actions">Alt + key</Field>}
+    </Section>
   </Screen>;
 }

@@ -19,10 +19,12 @@ const cases: [query: string, first: string][] = [
   ["how do i get emojis", "Emoji"],
   ["question mark", "More symbols"],
   ["it keeps suggesting a word", "New words"],
-  ["swipe cuts off", "Slip recovery"],
-  ["undo", "Shortcuts"],
-  ["how do i copy and paste", "Shortcuts"],
-  ["redo", "Shortcuts"],
+  ["swipe cuts off", "Continue after a lift"],
+  ["undo", "Actions"],
+  ["how do i copy and paste", "Actions"],
+  ["redo", "Actions"],
+  ["open an app with fn", "Quick open"],
+  ["hyper key", "Quick open"],
 ];
 
 for (const [query, first] of cases) {

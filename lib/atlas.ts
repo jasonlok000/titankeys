@@ -38,12 +38,10 @@ export type State = {
   spelling: Spelling;
   words: { word: string; description: string }[];
   blockedWords: string[];
-  /** The hyper key and a letter open an app. */
-  appShortcuts: boolean;
+  /** Fn and a letter open that letter's app. */
+  openApps: boolean;
   /** Apps from shortcuts open with Android's animation. Off, they show at once. */
   shortcutAnimation: boolean;
-  /** The name of the key that opens app shortcuts, or null when none is set. */
-  hyperKey: string | null;
   /** A held Alt and a key do an action, such as undo. Off, a held Alt types symbols. */
   actions: boolean;
   /** Each letter with an app, from A to Z. */
@@ -55,10 +53,7 @@ export type Shortcut = { letter: string; app: string; name: string };
 /** An app with a launcher icon. `icon` is a picture of it, or null when it cannot be drawn. */
 export type App = { app: string; name: string; icon: string | null };
 
-/** A key pressed to choose the hyper key, with why it cannot be one. */
-export type HyperKeyPress = { code: number; label: string; problem: string | null };
-
-export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autoPunctuation" | "suggestionBar" | "cursorControl" | "touchLight" | "swipeTyping" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "appShortcuts" | "shortcutAnimation" | "actions">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autoPunctuation" | "suggestionBar" | "cursorControl" | "touchLight" | "swipeTyping" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "openApps" | "shortcutAnimation" | "actions">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];
@@ -144,16 +139,7 @@ export const allowOverlay = () => atlas("overlay");
 export const openScrollAssistant = () => atlas("scrollAssistant");
 export const allowBack = () => atlas("backService");
 
-/** Sets the key that opens app shortcuts. 0 turns shortcuts off. */
-export async function setHyperKey(code: number) {
-  try {
-    await atlas("hyperKey", { code });
-  } finally {
-    await state.refresh();
-  }
-}
-
-/** Sets the app a letter opens, or removes it with null. */
+/** Gives the letter to the app, which loses any letter it had. Null takes the letter's app away. */
 export async function setShortcut(letter: string, app: string | null) {
   try {
     await atlas("shortcut", { letter, app });
@@ -169,20 +155,10 @@ export const apps = resource({
 
 export const tapKeyLabel = (key: string) => key === " " ? "Space" : key;
 
-/** Waits for letter keys or Space until the returned function is called. */
+/** Waits for letter keys, Space or Backspace until the returned function is called. */
 export function captureKey(pressed: (key: string) => void) {
   const stop = onNativeMessage("atlas-key", message => pressed((message as { key: string }).key));
   void atlas("captureKey");
-  return () => {
-    stop();
-    void atlas("releaseKey");
-  };
-}
-
-/** Waits for any key except Back and Home until the returned function is called. */
-export function captureHyperKey(pressed: (key: HyperKeyPress) => void) {
-  const stop = onNativeMessage("atlas-key", message => pressed(message as HyperKeyPress));
-  void atlas("captureKey", { anyKey: true });
   return () => {
     stop();
     void atlas("releaseKey");

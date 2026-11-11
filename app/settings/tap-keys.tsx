@@ -13,6 +13,7 @@ export default function TapKeys() {
   useEffect(() => {
     if (!adding) return;
     return captureKey(key => {
+      if (key === "Backspace") return;
       setAdding(false);
       if (!keys.includes(key)) save.run({ tapKeys: keys + key });
     });

@@ -10,7 +10,7 @@ const options = [
 export const liftLabel = ({ liftOff, liftOffMillis }: State) => liftOff ? `${liftOffMillis} ms` : "Off";
 
 export default function Lift() {
-  return <ChoicePage title="Continue after brief lift"
+  return <ChoicePage title="Continue after a lift"
     subtitle="How long you can lift your finger and still finish the word."
     options={options}
     read={({ liftOff, liftOffMillis }) => liftOff ? String(liftOffMillis) : "off"}

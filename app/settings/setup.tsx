@@ -6,7 +6,10 @@ const steps = ({ enabled, selected, overlay, scrollAssistant, backService }: Sta
 
 const status = (done: boolean) => done ? "Done" : "Not done";
 
-export const setupLabel = (settings: State) => status(steps(settings).every(Boolean));
+export const setupDone = (settings: State) => steps(settings).every(Boolean);
+
+/** How many steps are still to do, such as "2 left". */
+export const setupLeft = (settings: State) => `${steps(settings).filter(done => !done).length} left`;
 
 export default function Setup() {
   const result = useSnapshot(state);

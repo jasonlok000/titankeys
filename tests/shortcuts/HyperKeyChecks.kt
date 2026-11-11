@@ -74,12 +74,5 @@ fun main() {
         check("reset: letter types", down(S, 100), Action.Pass)
     }
 
-    check("FUNC3 can be Hyper", HyperKey.problem(HYPER), null)
-    for (code in listOf(KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_SPACE, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_ENTER,
-            KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT, KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_SYM, 342,
-            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH, KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_POWER))
-        if (HyperKey.problem(code) == null) throw AssertionError("Key $code has a job, so it cannot be Hyper")
-    check("Sym says why", HyperKey.problem(KeyEvent.KEYCODE_SYM), "Sym shows emoji. Choose a different key.")
-    check("Alt says why", HyperKey.problem(KeyEvent.KEYCODE_ALT_LEFT), "Alt types symbols. Choose a different key.")
     println("Hyper key checks passed")
 }

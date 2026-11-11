@@ -13,7 +13,7 @@ export const vibrationLabel = ({ haptics, hapticPreset }: State) =>
 
 export default function Vibration() {
   useEffect(previewTouchpad, []);
-  return <ChoicePage title="Swipe vibration"
+  return <ChoicePage title="Vibration"
     subtitle="Swipe across the letter keys to try the selected vibration."
     options={options}
     read={({ haptics, hapticPreset }) => haptics ? hapticPreset : "off"}

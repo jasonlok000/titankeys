@@ -6,10 +6,12 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.view.KeyEvent
 
-/** Whether app shortcuts are on, the hyper key, and the app each letter opens. */
+/** The app each letter opens with Fn, and how it opens. */
 object AppShortcuts {
-    /** No hyper key, so no key opens a shortcut. */
+    /** No key opens a shortcut. */
     const val NONE = KeyEvent.KEYCODE_UNKNOWN
+    /** The Titan 2 Elite's Fn key. The firmware sends it as 403, a code that Android has no name for. */
+    const val FN = 403
 
     class App(val packageName: String, val name: String, val activity: ActivityInfo)
 
@@ -28,34 +30,17 @@ object AppShortcuts {
         preferences(context).edit().putBoolean("animation", on).apply()
     }
 
-    /** The key that opens shortcuts, or [NONE] when shortcuts are off or have no key. */
-    fun activeKey(context: Context) = if (enabled(context)) hyperKey(context) else NONE
-
-    fun hyperKey(context: Context) = preferences(context).getInt("hyper_key", NONE)
-
-    fun hyperKey(context: Context, code: Int) {
-        require(code == NONE || HyperKey.problem(code) == null)
-        preferences(context).edit().putInt("hyper_key", code).apply()
-    }
-
-    /** The name on the key, such as "Fn", or one from Android, such as "F12", or "Key 403" when it has none. */
-    fun label(code: Int): String {
-        KEY_NAMES[code]?.let { return it }
-        val name = KeyEvent.keyCodeToString(code)
-        if (!name.startsWith("KEYCODE_")) return "Key $code"
-        return name.removePrefix("KEYCODE_").split('_').joinToString(" ") { it.lowercase().replaceFirstChar(Char::uppercase) }
-    }
-
-    /** Titan 2 Elite keys, named as printed. The firmware sends Fn as 403, a code that Android has no name for. */
-    private val KEY_NAMES = mapOf(403 to "Fn", KeyEvent.KEYCODE_SYM to "Sym", 342 to "Sym",
-        KeyEvent.KEYCODE_ALT_LEFT to "Alt", KeyEvent.KEYCODE_SHIFT_LEFT to "Shift", KeyEvent.KEYCODE_SHIFT_RIGHT to "Shift",
-        KeyEvent.KEYCODE_BACK to "Back", KeyEvent.KEYCODE_HOME to "Home", KeyEvent.KEYCODE_APP_SWITCH to "Recent apps")
+    /** Fn while Quick open is on and a letter has an app, so Fn keeps its usual job until then. */
+    fun activeKey(context: Context) = if (!enabled(context) || shortcuts(context).isEmpty()) NONE else FN
 
     fun app(context: Context, letter: Char): String? = preferences(context).getString("letter_$letter", null)
 
+    /** Gives the letter to the app, which loses any letter it had. Null takes the letter's app away. */
     fun app(context: Context, letter: Char, packageName: String?) {
         require(letter in 'A'..'Z')
+        val earlier = shortcuts(context).filter { it.second == packageName }.map { it.first }
         preferences(context).edit().apply {
+            for (old in earlier) remove("letter_$old")
             if (packageName == null) remove("letter_$letter") else putString("letter_$letter", packageName)
         }.apply()
     }

@@ -68,6 +68,7 @@ private val table = mapOf(
     Haptic.BarWord to Family.Confirm,
     Haptic.MenuOpen to Family.Confirm,
     Haptic.MenuMark to Family.Texture,
+    Haptic.MenuClosed to Family.Release,
     Haptic.WordSaved to Family.Confirm,
     Haptic.WordForgotten to Family.Gone,
     Haptic.ForgetUndone to Family.Back,

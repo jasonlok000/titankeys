@@ -34,7 +34,7 @@ Patterns are on and off in ms, starting with on.
 | **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, Save, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
 | **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol |
 | **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar |
-| **Release** | 30 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked |
+| **Release** | 30 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked, Back closing the word menu |
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
 | **Gone** | 60 | Forget, the clipboard cleared |
 | **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
@@ -90,6 +90,7 @@ A tick within 35 ms of the flick's tail is left out. Any key or touch cuts the d
 - Tap a word: confirm.
 - The word menu opens: confirm.
 - The marked menu button changes: texture.
+- Back closes the word menu: release. Typing or leaving the field closes it with nothing.
 - Save: confirm.
 - Forget: gone.
 - Undo after Forget: back.

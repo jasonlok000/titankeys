@@ -35,9 +35,16 @@ public final class SwipeRecognizer implements AutoCloseable {
     public org.futo.ml.inference.SwipeDecoder.Result[] rawResults() { return rawResults; }
     public float contextWeight() { return decoder.contextWeight(); }
 
-    public SwipeRecognizer(Context context) throws IOException {
+    public SwipeRecognizer(Context context) throws IOException { this(installedModels(context)); }
+
+    private static File installedModels(Context context) throws IOException {
         File file = new File(context.getNoBackupFilesDir(), "swipe-models-v1");
         ModelAssets.install(context.getAssets(), file.toPath());
+        return file;
+    }
+
+    /** Loads the models from a folder that already holds them. */
+    SwipeRecognizer(File file) {
         try {
             base = new org.futo.ml.inference.NativeDictionary(new File(file, "english.combined").getPath());
             personal = new org.futo.ml.inference.NativeDictionary(new String[0], new float[0]);
@@ -159,15 +166,11 @@ public final class SwipeRecognizer implements AutoCloseable {
         return lookAlike(decoder, context, word, next, typed);
     }
 
-    static String lookAlike(org.futo.ml.inference.SwipeDecoder decoder, String[] context, String word, String next) {
-        return lookAlike(decoder, context, word, next, false);
-    }
-
     /**
      * The next word must point to the look-alike strongly. A swiped word was already chosen from the earlier words,
      * so they need only not outweigh it. A typed word was not, so the earlier words must also agree.
      */
-    static String lookAlike(org.futo.ml.inference.SwipeDecoder decoder, String[] context, String word, String next, boolean typed) {
+    private static String lookAlike(org.futo.ml.inference.SwipeDecoder decoder, String[] context, String word, String next, boolean typed) {
         String other = SwipeSpelling.lookAlike(word);
         if (other == null) return null;
         String shown = SwipeSpelling.restore(SwipeSpelling.lookAlike(other));

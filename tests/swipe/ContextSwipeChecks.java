@@ -1,6 +1,7 @@
 package com.atlas.engine;
 
 import com.atlas.keyboard.Layout;
+import java.io.File;
 import java.io.FileReader;
 import java.io.Reader;
 import java.util.ArrayList;
@@ -8,12 +9,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.futo.ml.inference.NativeDictionary;
 import org.futo.ml.inference.SwipeDecoder;
 
 /** Runs the real context model on a device: contractions on swipes, and context on typed suggestions. */
 public final class ContextSwipeChecks {
-    private static SwipeDecoder decoder;
+    private static SwipeRecognizer recogniser;
 
     /** A swipe ending between w and s, slightly nearer s: how is likelier, and both are over the limit. */
     private static boolean cleanSwipeFollowsContext() {
@@ -36,12 +36,7 @@ public final class ContextSwipeChecks {
             System.out.flush();
             System.exit(1);
         });
-        NativeDictionary base = new NativeDictionary(args[0] + "/english.combined");
-        NativeDictionary personal = new NativeDictionary(new String[0], new float[0]);
-        NativeDictionary contractions = SwipeRecognizer.contractionDictionary(base);
-        NativeDictionary doubleLetters = NativeDictionary.doubleLetters(base, SwipeRecognizer.DOUBLE_LETTER_FLOOR);
-        decoder = new SwipeDecoder(args[0]);
-        decoder.dictionaries(Layout.LETTERS, Layout.KEY_X, Layout.KEY_Y, new long[] { base.pointer(), personal.pointer(), contractions.pointer(), doubleLetters.pointer() });
+        recogniser = new SwipeRecognizer(new File(args[0]));
 
         List<String> dont = swipe("dont", "i");
         check(dont.get(0).equals("don't"), "A contraction must be scored by its real spelling: " + dont);
@@ -50,12 +45,12 @@ public final class ContextSwipeChecks {
         check(swipe("its", "the dog ate").get(0).equals("its"), "Context must choose its: " + swipe("its", "the dog ate"));
         check(swipe("well", "very").get(0).equals("well"), "A real word must survive its contraction twin: " + swipe("well", "very"));
 
-        check("were".equals(SwipeRecognizer.lookAlike(decoder, new String[0], "we're", "you")), "we're you must become were you");
-        check("we'll".equals(SwipeRecognizer.lookAlike(decoder, new String[0], "well", "be")), "well be must become we'll be");
-        check(SwipeRecognizer.lookAlike(decoder, new String[0], "well", "grab") == null, "well grab is too weak a clue to change");
-        check(SwipeRecognizer.lookAlike(decoder, new String[0], "were", "you") == null, "were you must stay");
-        check(SwipeRecognizer.lookAlike(decoder, new String[0], "we're", "going") == null, "we're going must stay");
-        check(SwipeRecognizer.lookAlike(decoder, new String[0], "house", "you") == null, "A word with no look-alike must stay");
+        check("were".equals(lookAlike(new String[0], "we're", "you")), "we're you must become were you");
+        check("we'll".equals(lookAlike(new String[0], "well", "be")), "well be must become we'll be");
+        check(lookAlike(new String[0], "well", "grab") == null, "well grab is too weak a clue to change");
+        check(lookAlike(new String[0], "were", "you") == null, "were you must stay");
+        check(lookAlike(new String[0], "we're", "going") == null, "we're going must stay");
+        check(lookAlike(new String[0], "house", "you") == null, "A word with no look-alike must stay");
         // Typed words change only on strong evidence. Each real word here must stay, even the close ones.
         String[][] typed = {
             { "", "were", "going", "we're" }, { "", "were", "gonna", "we're" }, { "", "its", "not", "it's" },
@@ -68,7 +63,7 @@ public final class ContextSwipeChecks {
             { "the garden", "shed", "is", null }, { "your", "id", "card", null }, { "get", "well", "soon", null },
         };
         for (String[] example : typed) {
-            String found = SwipeRecognizer.lookAlike(decoder, SentenceContext.words(example[0]), example[1], example[2], true);
+            String found = recogniser.lookAlike(SentenceContext.words(example[0]), example[1], example[2], true);
             check(java.util.Objects.equals(found, example[3]), "Typed " + example[0] + " [" + example[1] + "] " + example[2]
                 + " must give " + example[3] + ", not " + found);
         }
@@ -79,9 +74,9 @@ public final class ContextSwipeChecks {
         check(SwipeSpelling.restore("i'd").equals("I'd"), "I'd must keep its capital: " + SwipeSpelling.restore("i'd"));
 
         for (String next : new String[] { "raining", "snowing", "windy", "rainy", "foggy", "tuesday", "christmas", "midnight" })
-            check(SwipeRecognizer.lookAlike(decoder, new String[0], "it's", next) == null, "it's " + next + " must stay");
-        check("its".equals(SwipeRecognizer.lookAlike(decoder, new String[] { "the", "horse", "hurt" }, "it's", "leg")), "the horse hurt it's leg must become its");
-        check("its".equals(SwipeRecognizer.lookAlike(decoder, new String[] { "the", "watch", "stopped", "because" }, "it's", "battery")), "because it's battery must become its");
+            check(lookAlike(new String[0], "it's", next) == null, "it's " + next + " must stay");
+        check("its".equals(lookAlike(new String[] { "the", "horse", "hurt" }, "it's", "leg")), "the horse hurt it's leg must become its");
+        check("its".equals(lookAlike(new String[] { "the", "watch", "stopped", "because" }, "it's", "battery")), "because it's battery must become its");
         check(swipe("of", "knock it").get(0).equals("off"), "Context must choose off: " + swipe("of", "knock it"));
         check(swipe("of", "a cup").get(0).equals("of"), "Context must keep of: " + swipe("of", "a cup"));
         check(swipe("to", "i want").get(0).equals("to"), "Context must keep to: " + swipe("to", "i want"));
@@ -90,7 +85,7 @@ public final class ContextSwipeChecks {
 
         TypedPredictions predictions;
         try (Reader vocabulary = new FileReader(args[0] + "/vocab.txt")) {
-            predictions = new TypedPredictions(vocabulary, base::frequency);
+            predictions = new TypedPredictions(vocabulary, recogniser::frequency);
         }
         Map<String, Double> likely = nextWords("i don't");
         check(top(predictions, "", likely).contains("know"), "Next words must follow context: " + top(predictions, "", likely));
@@ -105,23 +100,21 @@ public final class ContextSwipeChecks {
     }
 
     private static Map<String, Double> nextWords(String text) {
-        String[] context = SwipeRecognizer.scoringContext(SentenceContext.words(text));
-        Map<String, Double> scores = new java.util.HashMap<>();
-        for (SwipeDecoder.Result result : decoder.predictNext(context, 3000))
-            scores.putIfAbsent(TypedPredictions.key(result.word), (double) result.score);
-        return scores;
+        return recogniser.nextWords(SentenceContext.words(text));
+    }
+
+    /** A swiped word's look-alike that the next word makes clearly more likely, or null. */
+    private static String lookAlike(String[] context, String word, String next) {
+        return recogniser.lookAlike(context, word, next, false);
     }
 
     private static List<String> top(TypedPredictions predictions, String prefix, Map<String, Double> likely) {
         return Arrays.asList(predictions.suggest(prefix, List.of(), 20000, word -> true, likely)).subList(0, 3);
     }
 
+    /** What the keyboard offers for a swipe after {@code text}, with no saved words. */
     private static List<String> swipe(String letters, String text) {
-        Swipe gesture = path(letters);
-        String[] context = SentenceContext.words(text);
-        SwipeDecoder.Result[] results = SwipeRecognizer.contractionSpellings(
-                decoder.recognise(gesture.x, gesture.y, gesture.time, SwipeRecognizer.scoringContext(context), new float[] { 1, 0, 1, 1 }), decoder.contextWeight());
-        results = SwipeRecognizer.rank(gesture, results, decoder.contextWeight(), decoder.shapeNormalizer(), context.length, Set.of());
+        SwipeDecoder.Result[] results = recogniser.recognise(path(letters), SentenceContext.words(text), false);
         return Arrays.stream(results).map(result -> result.word).toList();
     }
 

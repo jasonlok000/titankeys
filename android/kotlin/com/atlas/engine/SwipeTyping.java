@@ -679,9 +679,14 @@ public final class SwipeTyping {
                 if (input == null) throw new IOException("Could not open the import file");
                 imported = dictionary.copy();
                 imported.merge(LearningConfigs.readExport(input));
+            } catch (BackupFormat.NotABackup error) {
+                Log.w("TouchpadSwipe", "Not a learning backup", error);
+                operationResult(callback, BackupFormat.NOT_A_BACKUP);
+                return;
             } catch (IOException | RuntimeException error) {
+                // A backup that is damaged, or a file that could not be opened.
                 Log.w("TouchpadSwipe", "Could not read learning backup", error);
-                operationResult(callback, "Yeah, that's not a TitanKeys backup. Pick the right file.");
+                operationResult(callback, BackupFormat.DAMAGED);
                 return;
             }
             try {

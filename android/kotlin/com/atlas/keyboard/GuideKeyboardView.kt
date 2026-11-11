@@ -561,16 +561,15 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }
 
     /**
-     * A soft patch, like the steer zone, over where a delete flick can start ([deleteStartBoxes]): one rectangle over the right
-     * edge, from I and O down to M and Sym, or with [DELETE_RECTANGLE] off, Backspace and the right edge and the middle row from K.
-     * It stops where the touchpad stops feeling. The ghost's flick starts inside it.
+     * A soft patch, like the steer zone, over where to flick from to delete ([guideDeleteBox]): one rectangle over the right edge,
+     * from I and O down to M and Sym. It stops where the touchpad stops feeling. The ghost's flick starts inside it.
      */
     private fun drawDeleteZone(canvas: Canvas) {
         if (cue !is GuideCue.Flick) return
         val corner = dp(ZONE_CORNER)
         zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE, ZONE_ALPHA)
         deletePath.rewind()
-        for ((left, top, right, bottom) in deleteStartBoxes) {
+        for ((left, top, right, bottom) in listOf(guideDeleteBox)) {
             val box = Path()
             box.addRoundRect(width * left, height * maxOf(top, AREA_TOP), width * minOf(right, AREA_RIGHT), height * minOf(bottom, AREA_BOTTOM),
                 corner, corner, Path.Direction.CW)

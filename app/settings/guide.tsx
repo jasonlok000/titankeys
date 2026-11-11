@@ -45,7 +45,7 @@ export default function Guide() {
       <Topic title="Hide the bar in an app">{"Don't want the bar in some app? Settings > Hide the bar picks the apps, or hides it everywhere. The keys, holds, Alt and the Sym panel still work there."}</Topic>
     </Section>
     <Section title="Deleting">
-      <Topic title="Delete a word">{"Flick left, fast, from Backspace or the keys next to it. The interactive guide shades where a flick can start. Press Alt, then Backspace works too, and so do Ctrl and Backspace."}</Topic>
+      <Topic title="Delete a word">{"Flick left, fast, from Backspace or the keys next to it. The interactive guide shades where to aim. Press Alt, then Backspace works too, and so do Ctrl and Backspace."}</Topic>
       <Topic title="Delete lots of words">{"Flick and keep your finger down. TitanKeys keeps deleting, word after word, and a longer flick goes faster. Lift your finger or press a key to stop."}</Topic>
     </Section>
     <Section title="Cursor and picking text">

@@ -25,22 +25,28 @@ private const val TURN_BACK = .05f
 /**
  * The delete zone as one rectangle, as wide and as tall as the L shape of the right edge and the middle row together, so that it
  * also takes in the edges of I, O, M and Sym. Off, a flick starts only in the L shape. A flick from anywhere in the rectangle is
- * read by the right edge's rules. The guide's drawing and its practice follow this switch.
- * Kept as a switch until a replay of real swipes from I, O, M and Sym says how many of them would become deletes.
+ * read by the right edge's rules.
+ * Off: a replay of the owner's real swipes found that the rectangle deletes about one kept word in sixty that today's zone keeps,
+ * while it finds few flicks that today's zone misses. The guide still draws the rectangle: see [guideDeleteBox].
  */
-internal const val DELETE_RECTANGLE = true
+internal const val DELETE_RECTANGLE = false
 
 /**
  * Where a level delete flick can start, as boxes of left, top, right and bottom in touchpad space, read from the numbers above so
  * that the guide's shaded zone cannot drift from the gesture: the right edge with Backspace, and further in on the middle row from
  * K. A level flick ends at the height it starts, so the limits for its end apply too.
  */
-internal val deleteStartBoxes: List<FloatArray> get() = if (DELETE_RECTANGLE) listOf(
-    floatArrayOf(INNER_EDGE, max(EDGE_START_TOP, EDGE_END_TOP), 1f, minOf(EDGE_START_BOTTOM, EDGE_END_BOTTOM)),
-) else listOf(
+internal val deleteStartBoxes: List<FloatArray> get() = if (DELETE_RECTANGLE) listOf(guideDeleteBox) else listOf(
     floatArrayOf(RIGHT_EDGE, max(EDGE_START_TOP, EDGE_END_TOP), 1f, minOf(EDGE_START_BOTTOM, EDGE_END_BOTTOM)),
     floatArrayOf(INNER_EDGE, MIDDLE_ROW_TOP, RIGHT_EDGE, minOf(INNER_START_BOTTOM, INNER_END_BOTTOM)),
 )
+
+/**
+ * The patch that the guide shades for the delete flick, whatever [DELETE_RECTANGLE] is: one rectangle over the right edge, from
+ * I and O down to M and Sym. It is simple to show and to aim for, and the flicks that it teaches start inside the real zone.
+ */
+internal val guideDeleteBox: FloatArray get() =
+    floatArrayOf(INNER_EDGE, max(EDGE_START_TOP, EDGE_END_TOP), 1f, minOf(EDGE_START_BOTTOM, EDGE_END_BOTTOM))
 
 /** Whether a level delete flick can start at this point, as [isDeleteWordSwipe] decides. */
 internal fun startsDeleteFlick(x: Float, y: Float) = deleteStartBoxes.any { (left, top, right, bottom) -> x >= left && x < right && y >= top && y < bottom }

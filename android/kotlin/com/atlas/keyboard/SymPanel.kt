@@ -4,7 +4,9 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
@@ -77,6 +79,8 @@ class SymPanel(
     private val grid = LinearLayout(context)
     private val cells = (Layout.letterKeys + Layout.ALT + Layout.SYM + Layout.BACKSPACE + Layout.ENTER).associateWith(::cell)
     private var tabs = emptyList<TextView>()
+    /** How far the band's groups keep from each side, for the screen's corners. */
+    private var bandInset = 0
     private var shownSamples = emptyList<String>()
     private var navigationInset = 0
     private var corners = Corners.None
@@ -409,8 +413,9 @@ class SymPanel(
         categories.visibility = if (quick) GONE else VISIBLE
         preview.visibility = if (quick) VISIBLE else GONE
         preview.setTextColor(look.ink)
-        showCategories(current)
+        // The corners first: the washed group's highlight depends on how far the band keeps from them.
         keepClearOfCorners()
+        showCategories(current)
         for ((key, view) in cells) {
             val value = label(key)
             val icon = icon(key)
@@ -467,7 +472,7 @@ class SymPanel(
      * the strip at the bottom keeps clear of them, so that the keys stay in line with the physical keys.
      */
     private fun keepClearOfCorners() {
-        val bandInset = corners.inset((navigationInset + dp(BAND_CONTENT_ABOVE)).toFloat())
+        bandInset = corners.inset((navigationInset + dp(BAND_CONTENT_ABOVE)).toFloat())
         categories.setPadding(bandInset, 0, bandInset, 0)
         preview.setPadding(bandInset + dp(8), 0, bandInset + dp(8), 0)
         clipLine.setPadding(bandInset + dp(8), 0, bandInset + dp(8), 0)
@@ -497,7 +502,8 @@ class SymPanel(
         tabs.forEachIndexed { index, tab ->
             tab.sized(CATEGORY_SIZE, CATEGORY_LARGEST)
             tab.setTextColor(look.ink)
-            tab.background = if (index == open) rounded(look.wash) else null
+            tab.background = if (index != open) null else clearOfCorners(rounded(look.wash), navigationInset, dp(TAB_INSET),
+                first = index == 0, last = index == tabs.lastIndex, sideGap = dp(4) + bandInset)
         }
     }
 
@@ -522,7 +528,7 @@ class SymPanel(
             ?: hover.takeIf { Layout.restMarks(it, pages != null) && label(it) != null }.orEmpty()
         for ((key, view) in cells) {
             val hovered = key == mark
-            view.background = if (hovered) rounded(look.accent) else null
+            view.background = if (hovered) cellHighlight(key) else null
             view.setTextColor(when {
                 hovered -> look.onAccent
                 dim(key) -> Color.GRAY
@@ -562,6 +568,26 @@ class SymPanel(
         }
     }
 
+    /** The key under a finger. A key in an outer column keeps its highlight clear of the screen's corners. */
+    private fun cellHighlight(key: String): Drawable {
+        val row = Layout.rows.take(3).indexOfFirst { key in it }
+        if (row < 0) return rounded(look.accent)
+        val keys = Layout.rows[row]
+        val bottom = navigationInset + dp(BAND_HEIGHT + (2 - row) * ROW_HEIGHT)
+        return clearOfCorners(rounded(look.accent), bottom, 0, first = key == keys.first(), last = key == keys.last(), sideGap = dp(4))
+    }
+
+    /**
+     * A highlight that the screen's rounded corners never cut. [bottom] is how far the highlighted box's bottom is over the
+     * bottom of the screen, and [sideGap] how far a [first] or [last] box is from the screen's side. The highlight keeps [inset]
+     * from the box's top and bottom, and moves in from the side as far as the corner needs at its lowest edge. Only the
+     * highlight changes: the box itself does not move.
+     */
+    private fun clearOfCorners(highlight: Drawable, bottom: Int, inset: Int, first: Boolean, last: Boolean, sideGap: Int): Drawable {
+        val side = (corners.inset((bottom + inset).toFloat()) + dp(CORNER_MARGIN) - sideGap).coerceAtLeast(0)
+        return InsetDrawable(highlight, if (first) side else 0, inset, if (last) side else 0, inset)
+    }
+
     /** A fill with the small corners that every highlight in TitanKeys has. */
     private fun rounded(colour: Int) = GradientDrawable().apply {
         cornerRadius = Radii.px(resources, Radii.SMALL)
@@ -583,6 +609,10 @@ class SymPanel(
         /** How far the lowest content of a row is over the row's bottom: an icon in the middle of the row. */
         const val ROW_CONTENT_ABOVE = 11
         const val BAND_CONTENT_ABOVE = 6
+        /** How far the washed group keeps from the top and bottom of the band, so it is a pill inside the band. */
+        const val TAB_INSET = 3
+        /** How far a highlight keeps from the curve of a screen corner. */
+        const val CORNER_MARGIN = 2
         const val CATEGORY_SIZE = 15f
         const val CATEGORY_LARGEST = 18f
         const val PREVIEW_SMALLEST = 8

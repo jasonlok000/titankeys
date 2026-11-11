@@ -382,6 +382,8 @@ class Strip(
     /** The label and buttons of a word's menu, or of what just happened to a word. */
     private fun showNotice(shown: Notice?) {
         noticeRow.visibility = if (shown != null) VISIBLE else GONE
+        // A word's menu starts at the side, by its buttons. The word on Teams has no buttons, so it sits in the middle.
+        noticeLabel.gravity = Gravity.CENTER_VERTICAL or if (shown == Notice.TeamsEgg) Gravity.CENTER_HORIZONTAL else Gravity.START
         noticeLabel.text = when (shown) {
             is Notice.Menu -> context.getString(R.string.strip_menu_word, shown.word)
             is Notice.Forgot -> context.getString(R.string.strip_forgot, shown.word)

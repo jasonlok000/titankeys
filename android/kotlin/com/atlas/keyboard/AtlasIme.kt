@@ -185,9 +185,8 @@ class AtlasIme : InputMethodService() {
     }
 
     /**
-     * The owner's word on Teams, the first time the strip comes back from [recycle] after the phone starts, and never again
-     * until it starts again. It flickers for about a second, or simply shows for a second with animations off. Never over a
-     * word's menu.
+     * The owner's word on Teams, steady and in the middle of the bar for half a second, the first time the strip comes back from
+     * [recycle] after the phone starts, and never again until it starts again. Never over a word's menu.
      */
     private fun showTeamsEgg() {
         val strip = strip ?: return
@@ -195,34 +194,16 @@ class AtlasIme : InputMethodService() {
         val boot = currentBoot()
         if (!OncePerBoot.due(lastEggBoot(), boot)) return
         rememberEggBoot(boot)
-        teamsEggStep = 0
         strip.notice = Strip.Notice.TeamsEgg
-        main.removeCallbacks(stepTeamsEgg)
-        main.postDelayed(stepTeamsEgg, if (ValueAnimator.areAnimatorsEnabled()) TEAMS_EGG_PULSES[0] else TEAMS_EGG_MILLIS)
+        main.removeCallbacks(endTeamsEgg)
+        main.postDelayed(endTeamsEgg, TEAMS_EGG_MILLIS)
     }
 
-    private var teamsEggStep = 0
-
-    /** Each step turns the word off or on, until the last, which ends it. */
-    private val stepTeamsEgg = object : Runnable {
-        override fun run() {
-            val strip = strip ?: return
-            // A word's menu or an Undo that took the strip's place ends it.
-            if (strip.notice != null && strip.notice != Strip.Notice.TeamsEgg) return
-            teamsEggStep++
-            if (!ValueAnimator.areAnimatorsEnabled() || teamsEggStep >= TEAMS_EGG_PULSES.size) {
-                strip.notice = null
-                return
-            }
-            strip.notice = if (teamsEggStep % 2 == 0) Strip.Notice.TeamsEgg else null
-            main.postDelayed(this, TEAMS_EGG_PULSES[teamsEggStep] - TEAMS_EGG_PULSES[teamsEggStep - 1])
-        }
-    }
+    private val endTeamsEgg = Runnable { clearTeamsEgg() }
 
     /** Any key or touch clears it at once, so it never stands in the way of typing. */
     private fun clearTeamsEgg() {
-        if (!main.hasCallbacks(stepTeamsEgg) && strip?.notice != Strip.Notice.TeamsEgg) return
-        main.removeCallbacks(stepTeamsEgg)
+        main.removeCallbacks(endTeamsEgg)
         if (strip?.notice == Strip.Notice.TeamsEgg) strip?.notice = null
     }
 
@@ -2432,9 +2413,8 @@ class AtlasIme : InputMethodService() {
         /** How long the strip stays hidden, from the moment its window has gone. Tuned on the phone: none is needed. */
         private const val RECYCLE_GAP_MILLIS = 0L
         /** How long the strip shows its word on Teams. */
-        private const val TEAMS_EGG_MILLIS = 1000L
-        /** When the word on Teams turns off, on, off and so on, in milliseconds from when it first shows. The last ends it. */
-        private val TEAMS_EGG_PULSES = longArrayOf(180, 260, 440, 520, 700, 760, TEAMS_EGG_MILLIS)
+        /** How long the word on Teams shows. */
+        private const val TEAMS_EGG_MILLIS = 500L
         private const val EGG_PREFERENCES = "easter_egg"
         private const val EGG_BOOT_COUNT = "teams_boot_count"
         private const val EGG_BOOT_STARTED = "teams_boot_started"

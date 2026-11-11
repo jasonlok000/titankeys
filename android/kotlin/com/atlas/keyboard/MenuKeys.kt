@@ -5,6 +5,9 @@ package com.atlas.keyboard
  * press the key to pick it. Its three buttons sit over the last three key columns, I for Save, O for Forget and P for Back, and the
  * top two rows sense them, so K and L work too. The word itself sits right-aligned over the columns that pick nothing, just left of
  * Save.
+ *
+ * The columns are the Sym panel's: ten of them, [Layout.KEY_SIDE_DP] in from each side of the screen, so that a button sits centred
+ * over its own key. [slot] and [wordRight] work them out in pixels, so they can be checked without a phone.
  */
 internal object MenuKeys {
     /** The rows of letters that pick the menu's buttons: the top two. */
@@ -16,6 +19,8 @@ internal object MenuKeys {
     /** The columns the word takes, left of the buttons, and the ones past them that have nothing over them: none. */
     const val WORD_COLUMNS = SAVE
     const val AFTER_COLUMNS = 0
+    /** The ten key columns. */
+    const val COLUMNS = 10
 
     /** Which button [key] picks: [SAVE], [FORGET] or [BACK], or -1 for a key that picks none. */
     fun button(key: String): Int {
@@ -26,4 +31,13 @@ internal object MenuKeys {
         }
         return -1
     }
+
+    /** The left and right of key [column], from 0, on a bar [width] pixels wide whose columns start [side] pixels in from each edge. */
+    fun slot(width: Float, side: Float, column: Int): Pair<Float, Float> {
+        val each = (width - 2 * side) / COLUMNS
+        return side + column * each to side + (column + 1) * each
+    }
+
+    /** Where the word ends on the right, [gap] pixels left of Save's column. */
+    fun wordRight(width: Float, side: Float, gap: Float) = slot(width, side, SAVE).first - gap
 }

@@ -283,12 +283,20 @@ class Strip(
             point(null)
             press(this)
         }
-        // Only a finger held on the screen opens a word's menu: never a touch that reaches the bar any other way.
+        // Only a finger held on the screen opens a word's menu: never a touch that reaches the bar any other way, and never
+        // a long click without a finger down at all.
         setOnTouchListener { _, event ->
-            if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) heldOnScreen = event.isFromSource(android.view.InputDevice.SOURCE_TOUCHSCREEN)
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> heldOnScreen = event.isFromSource(android.view.InputDevice.SOURCE_TOUCHSCREEN)
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> heldOnScreen = false
+            }
             false
         }
-        setOnLongClickListener { heldOnScreen && isPressed && hold() }
+        setOnLongClickListener {
+            val opened = heldOnScreen && hold()
+            android.util.Log.d(HOLD_TAG, "bar word held: finger on the screen $heldOnScreen, menu opened $opened")
+            opened
+        }
     }
 
     /** A small label for one modifier. It is the same size at any system font size. */
@@ -511,6 +519,7 @@ class Strip(
     override fun dispatchDraw(canvas: Canvas) {
         super.dispatchDraw(canvas)
         drawMenuWord(canvas)
+        drawMenu(canvas)
         drawAutoCapital(canvas)
         idle?.let { drawIdle(canvas, it) }
         drawDemoFinger(canvas)
@@ -551,95 +560,152 @@ class Strip(
     private fun showNotice(shown: Notice?) {
         noticeRow.visibility = if (shown != null) VISIBLE else GONE
         val menu = shown as? Notice.Menu
-        // A word's menu lays its three buttons over I, O and P, the keys that pick them, with the word right-aligned over the columns
-        // that pick nothing, just left of Save. Elsewhere a notice is its line and its buttons, as before.
-        val keysIn = if (menu != null) maxOf(0, dp(Layout.KEY_SIDE_DP) - paddingLeft) else 0
-        noticeRow.setPadding(keysIn, 0, keysIn, 0)
-        menuSpace.visibility = if (menu != null && MenuKeys.AFTER_COLUMNS > 0) VISIBLE else GONE
+        // A word's menu is drawn on the bar itself, over the key columns: see [drawMenu]. The row stays, empty, to keep the bar's
+        // height and to take a touch beside the buttons. Elsewhere a notice is its line and its buttons, as before.
+        noticeRow.setPadding(0, 0, 0, 0)
+        menuSpace.visibility = GONE
         (noticeLabel.layoutParams as LayoutParams).let { params ->
-            val weight = if (menu != null) MenuKeys.WORD_COLUMNS.toFloat() else 1f
-            if (params.weight != weight) {
-                params.weight = weight
+            if (params.weight != 1f) {
+                params.weight = 1f
                 noticeLabel.layoutParams = params
             }
         }
-        (menuSpace.layoutParams as LayoutParams).let { params ->
-            if (params.weight != MenuKeys.AFTER_COLUMNS.toFloat()) {
-                params.weight = MenuKeys.AFTER_COLUMNS.toFloat()
-                menuSpace.layoutParams = params
-            }
-        }
-        noticeLabel.gravity = Gravity.CENTER_VERTICAL or when {
-            shown == Notice.TeamsEgg -> Gravity.CENTER_HORIZONTAL
-            menu != null -> Gravity.END
-            else -> Gravity.START
-        }
+        noticeLabel.gravity = Gravity.CENTER_VERTICAL or if (shown == Notice.TeamsEgg) Gravity.CENTER_HORIZONTAL else Gravity.START
         noticeLabel.text = when (shown) {
-            is Notice.Menu -> context.getString(R.string.strip_menu_word, shown.word)
+            is Notice.Menu -> ""
             is Notice.Forgot -> context.getString(R.string.strip_forgot, shown.word)
             is Notice.Saved -> context.getString(R.string.strip_saved, shown.word)
             Notice.TeamsEgg -> context.getString(R.string.strip_teams_egg)
             null -> ""
         }
+        noticeLabel.contentDescription = if (menu == null) null else
+            context.getString(R.string.strip_menu_word, menu.word) + ": " + menuSlots(menu).filterNotNull().joinToString(", ") { context.getString(label(it)) }
         noticeLabel.setTextColor(look.ink)
-        // In a menu each button has its own place: Save, Forget, Back. A word that no list can drop keeps Forget's place empty.
-        val slots: List<Action?> = if (menu != null) listOf(Action.Save, Action.Forget.takeIf { menu.forget }, Action.Close)
-            else noticeActions(shown)
+        val actions = if (menu != null) emptyList() else noticeActions(shown)
         for ((index, button) in noticeButtons.withIndex()) {
-            val params = button.layoutParams as LayoutParams
-            val width = if (menu != null) 0 else LayoutParams.WRAP_CONTENT
-            val weight = if (menu != null) 1f else 0f
-            if (params.width != width || params.weight != weight) {
-                params.width = width
-                params.weight = weight
-                button.layoutParams = params
-            }
-            val action = slots.getOrNull(index)
-            button.visibility = when {
-                action != null -> VISIBLE
-                menu != null && index < slots.size -> INVISIBLE
-                else -> GONE
-            }
+            val action = actions.getOrNull(index)
+            button.visibility = if (action != null) VISIBLE else GONE
             if (action == null) continue
-            val marked = menu != null && MenuKeys.SAVE + index == menuMark
-            val colour = if (marked) look.onAccent else if (action == Action.Close) look.muted else look.accent
-            button.setTextColor(colour)
-            if (menu != null) {
-                // An icon, as tall as the words' letters, in the middle of its key's column, and its name for screen readers. A
-                // drawable at the start of the text would sit at the column's left edge instead.
-                button.text = ""
-                button.contentDescription = context.getString(label(action))
-                val size = Math.round(wordPixels() * MENU_ICON_SCALE)
-                button.setCompoundDrawablesRelative(null, null, null, null)
-                button.foreground = context.getDrawable(icon(action))?.mutate()?.let { drawable ->
-                    drawable.setTint(colour)
-                    android.graphics.drawable.LayerDrawable(arrayOf(drawable)).apply {
-                        setLayerSize(0, size, size)
-                        setLayerGravity(0, Gravity.CENTER)
-                    }
-                }
-                button.gravity = Gravity.CENTER
-                button.setPadding(0, 0, 0, 0)
-            } else {
-                button.foreground = null
-                button.setCompoundDrawablesRelative(null, null, null, null)
-                button.contentDescription = null
-                button.text = context.getString(label(action))
-                button.setPadding(dp(14), 0, dp(14), 0)
-            }
-            button.background = if (!marked) null else GradientDrawable().apply {
-                cornerRadius = Radii.px(resources, Radii.SMALL)
-                setColor(look.accent)
-            }
+            button.foreground = null
+            button.background = null
+            button.setCompoundDrawablesRelative(null, null, null, null)
+            button.contentDescription = null
+            button.setTextColor(if (action == Action.Close) look.muted else look.accent)
+            button.text = context.getString(label(action))
+            button.setPadding(dp(14), 0, dp(14), 0)
             button.setOnClickListener { act(action) }
         }
         // As the menu opens its buttons move in from the right, to their keys.
-        if (menu != null && shownMenu != menu.word && GuideMotion.enabled) for (button in noticeButtons) {
-            button.translationX = dp(MENU_SLIDE_DP).toFloat()
-            button.alpha = 0f
-            button.animate().translationX(0f).alpha(1f).setDuration(MENU_SLIDE_MILLIS).start()
+        if (menu != null && shownMenu != menu.word) {
+            menuIn?.cancel()
+            menuShown = if (GuideMotion.enabled) 0f else 1f
+            if (GuideMotion.enabled) menuIn = ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = MENU_SLIDE_MILLIS
+                addUpdateListener {
+                    menuShown = it.animatedValue as Float
+                    invalidate()
+                }
+                start()
+            }
         }
         shownMenu = menu?.word
+        invalidate()
+    }
+
+    /** How far in the menu's buttons are, from 0 as it opens to 1. */
+    private var menuShown = 1f
+    private var menuIn: ValueAnimator? = null
+
+    /** The menu's buttons, over Save's, Forget's and Back's columns. A word that no list can drop has no Forget. */
+    private fun menuSlots(menu: Notice.Menu): List<Action?> = listOf(Action.Save, Action.Forget.takeIf { menu.forget }, Action.Close)
+
+    /** The left and right of a key column on this bar, in its own pixels: the Sym panel's columns. See [MenuKeys.slot]. */
+    private fun menuColumn(column: Int) = MenuKeys.slot(width.toFloat(), dp(Layout.KEY_SIDE_DP).toFloat(), column)
+
+    private val menuPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    private val menuWordText = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    private val menuBox = android.graphics.RectF()
+
+    /**
+     * The word's menu, drawn on the bar: the word right-aligned in the bar's own font, ending just left of Save, and each button's
+     * icon with its name under it, centred on its key's column. The button that a resting finger marks is filled, as the Sym
+     * panel's marked key is.
+     */
+    private fun drawMenu(canvas: Canvas) {
+        val menu = notice as? Notice.Menu ?: return
+        if (noticeRow.visibility != VISIBLE || width == 0) return
+        val height = dp(56).toFloat()
+        val word = context.getString(R.string.strip_menu_word, menu.word)
+        menuWordText.typeface = typeface
+        menuWordText.textSize = wordPixels()
+        menuWordText.color = look.ink
+        menuWordText.textAlign = android.graphics.Paint.Align.RIGHT
+        val right = MenuKeys.wordRight(width.toFloat(), dp(Layout.KEY_SIDE_DP).toFloat(), dp(MENU_WORD_GAP).toFloat())
+        val room = right - maxOf(side, dp(Layout.KEY_SIDE_DP)).toFloat()
+        val shown = TextUtils.ellipsize(word, menuWordText, room, TextUtils.TruncateAt.END).toString()
+        canvas.drawText(shown, right, height / 2 - (menuWordText.ascent() + menuWordText.descent()) / 2, menuWordText)
+        val slide = (1f - menuShown) * dp(MENU_SLIDE_DP)
+        val alpha = (menuShown * 255).toInt().coerceIn(0, 255)
+        val icon = Math.round(wordPixels() * MENU_ICON_SCALE)
+        menuPaint.typeface = typeface
+        menuPaint.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, MENU_LABEL_SIZE, resources.displayMetrics)
+        menuPaint.textAlign = android.graphics.Paint.Align.CENTER
+        val label = menuPaint.descent() - menuPaint.ascent()
+        val block = icon + dp(MENU_LABEL_GAP) + label
+        val top = (height - block) / 2
+        for ((index, action) in menuSlots(menu).withIndex()) {
+            if (action == null) continue
+            val column = MenuKeys.SAVE + index
+            val (left, end) = menuColumn(column)
+            val marked = column == menuMark
+            menuBox.set(left + dp(2) + slide, dp(4).toFloat(), end - dp(2) + slide, height - dp(4))
+            if (marked) {
+                menuPaint.color = look.accent
+                menuPaint.alpha = alpha
+                val radius = Radii.px(resources, Radii.SMALL)
+                canvas.drawRoundRect(menuBox, radius, radius, menuPaint)
+            }
+            val colour = if (marked) look.onAccent else if (action == Action.Close) look.muted else look.ink
+            val centre = menuBox.centerX()
+            context.getDrawable(icon(action))?.mutate()?.let { drawable ->
+                drawable.setTint(colour)
+                drawable.alpha = alpha
+                val x = Math.round(centre - icon / 2f)
+                val y = Math.round(top)
+                drawable.setBounds(x, y, x + icon, y + icon)
+                drawable.draw(canvas)
+            }
+            menuPaint.color = colour
+            menuPaint.alpha = alpha
+            canvas.drawText(context.getString(label(action)), centre, top + icon + dp(MENU_LABEL_GAP) - menuPaint.ascent(), menuPaint)
+        }
+    }
+
+    /** The menu's button under a touch at [x], or null. */
+    private fun menuActionAt(x: Float): Action? {
+        val menu = notice as? Notice.Menu ?: return null
+        for ((index, action) in menuSlots(menu).withIndex()) {
+            val (left, right) = menuColumn(MenuKeys.SAVE + index)
+            if (x in left..right) return action
+        }
+        return null
+    }
+
+    /** A touch that went down on one of the menu's buttons, which picks it if it lifts there too. */
+    private var menuTouched: Action? = null
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (notice !is Notice.Menu) return super.onTouchEvent(event)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> menuTouched = menuActionAt(event.x)
+            MotionEvent.ACTION_UP -> {
+                val action = menuTouched
+                menuTouched = null
+                if (action != null && menuActionAt(event.x) == action) act(action)
+            }
+            MotionEvent.ACTION_CANCEL -> menuTouched = null
+        }
+        return true
     }
 
     /** The touch on a bar word came from the screen itself, so holding it may open its menu. */
@@ -666,6 +732,8 @@ class Strip(
             woke()
             return true
         }
+        // A touch on one of the menu's buttons is the bar's, which draws them. Beside them it closes the menu, as before.
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && menuActionAt(event.x) != null) return true
         return gesture.showing || super.onInterceptTouchEvent(event)
     }
 
@@ -911,6 +979,8 @@ class Strip(
         private const val FINGER_FADE_MILLIS = 150L
         private const val MENU_END_MILLIS = 3600L
         private const val MENU_WORDS = 3
+        /** In logcat, a hold on a bar word and whether its menu opened. */
+        private const val HOLD_TAG = "TitanKeysBar"
         /** How long the side words take to slide back up. */
         private const val SIDES_MILLIS = 260L
         /** The menu's word, small above its buttons: its size in sp and its top in dp. */
@@ -918,6 +988,10 @@ class Strip(
         private const val MENU_WORD_ABOVE = false
         /** The menu's icons, as a part of the words' size, and how far and how long its buttons move in. */
         private const val MENU_ICON_SCALE = 1.2f
+        /** The size of a button's name under its icon, in sp, the gap between them, and the room between the word and Save. */
+        private const val MENU_LABEL_SIZE = 10f
+        private const val MENU_LABEL_GAP = 2
+        private const val MENU_WORD_GAP = 8
         private const val MENU_SLIDE_DP = 40
         private const val MENU_SLIDE_MILLIS = 220L
         private const val MENU_WORD_TOP = 2

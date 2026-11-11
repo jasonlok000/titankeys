@@ -19,6 +19,8 @@ import android.widget.EditText
 import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
+import com.atlas.keyboard.AppBuild
+import com.atlas.keyboard.BackDisclosureActivity
 import com.atlas.keyboard.BackService
 import com.atlas.keyboard.EnterKey
 import com.atlas.keyboard.ExactTyping
@@ -280,7 +282,9 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                         "scrollAssistant" -> SetupPart.ScrollAssistant
                         else -> SetupPart.Back
                     }
-                    PhoneSetup.page(activity, part)?.let(activity::startActivity)
+                    // Accessibility opens only after its own disclosure, as Google Play asks.
+                    if (part == SetupPart.Back) activity.startActivity(BackDisclosureActivity.forSettings(activity))
+                    else PhoneSetup.page(activity, part)?.let(activity::startActivity)
                     "null"
                 }
                 "choose" -> {
@@ -390,6 +394,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
             .put("rawLogAvailable", RawLog.available(activity))
             .put("rawLog", RawLog.on(activity))
+            .put("build", AppBuild.kind(activity))
             .put("rawLogBytes", RawLog.size(activity))
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))

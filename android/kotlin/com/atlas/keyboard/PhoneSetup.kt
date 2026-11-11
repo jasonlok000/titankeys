@@ -34,8 +34,13 @@ internal object PhoneSetup {
         SetupPart.Back -> BackService.enabled(context)
     }
 
-    /** The parts that are not done yet, in the order that setup asks for them. */
-    fun missing(context: Context) = SetupPart.entries.filterNot { done(context, it) }
+    /**
+     * The parts that are not done yet, in the order that setup asks for them. Accessibility is optional: after "No thanks" on
+     * its disclosure ([BackDisclosureActivity]), setup goes on without it, and Settings > Setup can still ask again.
+     */
+    fun missing(context: Context) = SetupPart.entries.filterNot {
+        done(context, it) || it == SetupPart.Back && BackDisclosureActivity.declined(context)
+    }
 
     /** The Settings page that changes [part]. Choosing the keyboard is a list over the screen, so it has no page. */
     fun page(context: Context, part: SetupPart): Intent? = when (part) {

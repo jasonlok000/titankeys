@@ -73,11 +73,9 @@ Google signs what users install. You sign what you upload with a separate **uplo
 
 The GitHub 2.0.0 APK is version code **55**. Every Play build must have a version code **higher than any GitHub APK that a tester or user has installed**, or Play won't offer it as an update.
 
-- Suggested scheme: for each release, the GitHub build gets an even code and the Play build the next odd one. For example, 2.1.0 is 56 on GitHub and 57 on Play; 2.1.1 is 58 and 59. Then Play always offers its build to GitHub users of the same version.
-- A simpler alternative: one code for both, with Play's first build above every GitHub build so far. GitHub users of the same version then don't see an update on Play until the next release.
+- **The scheme (decided):** for each release, the GitHub build gets an odd code and the Play build the even one after it. 2.1.0 is 57 on GitHub and 58 on Play; 2.1.1 is 59 and 60. Then Play always offers its build to GitHub users of the same version.
+- `ink.toml` holds the GitHub code. `tools/play.sh` checks that it is odd and builds with the next one, so the Play code is never typed by hand.
 - Never reuse or lower a code on Play. The maximum is 2,100,000,000.
-
-The build agent makes the Play code settable (`build-tasks.md`, task A).
 
 ## Warnings
 

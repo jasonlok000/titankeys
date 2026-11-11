@@ -1475,6 +1475,12 @@ class GuideActivity : Activity() {
         main.removeCallbacks(openAuto)
         autoPart = null
         hideHint()
+        // Google Play asks for its own disclosure before Accessibility opens. "No thanks" lets setup go on without it.
+        if (part == SetupPart.Back && !BackDisclosureActivity.agreed(this)) {
+            @Suppress("DEPRECATION")
+            startActivityForResult(BackDisclosureActivity.forGuide(this), DISCLOSURE_REQUEST)
+            return
+        }
         val page = PhoneSetup.page(this, part)
         if (page == null) {
             PhoneSetup.chooseKeyboard(this)
@@ -1506,6 +1512,15 @@ class GuideActivity : Activity() {
             setupChanging = false
             if (next != null) setUp(next, auto = true) else setupFinished()
         }, if (next == null) SETUP_FINISH_MILLIS else SETUP_BEAT_MILLIS)
+    }
+
+    @Deprecated("Android activity result callback")
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != DISCLOSURE_REQUEST) return
+        // After "Agree" Accessibility opens as before. After "No thanks" the part is no longer missing, and setup moves on.
+        if (resultCode == RESULT_OK && setupPart == SetupPart.Back) openPart(SetupPart.Back) else checkKeyboard()
     }
 
     private fun setupFinished() {
@@ -2027,6 +2042,7 @@ class GuideActivity : Activity() {
 
         // Setup, in ms. These are safe to change.
         private const val SETUP_REQUEST = 7
+        private const val DISCLOSURE_REQUEST = 8
         /** How often the guide looks at the part whose page is open. Reading these settings is cheap. */
         private const val SETUP_POLL_MILLIS = 400L
         /** How long the guide waits to be in front again after it closes a page, before it sends for itself. */

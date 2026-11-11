@@ -6,6 +6,7 @@ import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
 import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
+import { hapticsLabel } from "./haptics";
 import { hiddenBarLabel } from "./hidden-bar";
 import { holdLabel } from "./hold";
 import { liftLabel } from "./lift";
@@ -14,7 +15,6 @@ import { setupLabel } from "./setup";
 import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
 import { tapKeysLabel } from "./tap-keys";
-import { vibrationLabel } from "./vibration";
 
 export default function Settings() {
   const result = useSnapshot(state);
@@ -55,7 +55,7 @@ export default function Settings() {
         onChange={cursorControl => save.run({ cursorControl })} />
       {(settings.swipeTyping || settings.cursorControl)
         && <Field label="Keep swiping after a short lift" href="/settings/lift">{liftLabel(settings)}</Field>}
-      <Field label="Vibrate while swiping" href="/settings/vibration">{vibrationLabel(settings)}</Field>
+      <Field label="Haptics" href="/settings/haptics">{hapticsLabel(settings)}</Field>
       <Toggle label="Scroll assistant outside text fields" value={!settings.touchpadOnlyInFields}
         onChange={scroll => save.run({ touchpadOnlyInFields: !scroll })} />
     </Section>

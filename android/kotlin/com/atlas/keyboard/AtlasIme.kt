@@ -57,6 +57,8 @@ class AtlasIme : InputMethodService() {
     private val main = Handler(Looper.getMainLooper())
     private lateinit var touchpad: Touchpad
     private lateinit var haptics: Haptics
+    /** The cursor plays gone once each time it reaches an end of the text. */
+    private val cursorSteps = CursorSteps()
     private lateinit var composer: Composer
     private lateinit var autocorrect: AutocorrectLoader
     private lateinit var phoneNames: PhoneNameSource
@@ -324,7 +326,7 @@ class AtlasIme : InputMethodService() {
         finishHeldTaps(type = false)
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
         // A terminal or a remote view has no text to select here.
-        if (field.exact) haptics.stays() else enqueue { selectWord() }
+        if (field.exact) haptics.play(Haptic.WordPicked) else enqueue { selectWord() }
     }
 
     private val checkHeldTaps = Runnable { settleHeldTaps() }
@@ -368,13 +370,13 @@ class AtlasIme : InputMethodService() {
             return
         }
         enqueue {
-            // At the start of the text nothing is left to delete, so the hold ends quietly.
+            // At the start of the text nothing is left to delete, so the hold ends with a no.
             if (currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true) {
                 contact.cancelActive()
-                haptics.refused()
+                haptics.play(Haptic.DeleteNothing)
                 return@enqueue
             }
-            haptics.tick()
+            haptics.play(Haptic.DeleteWord)
             composer.backspace(true)
             strip?.gesture?.wordDeleted(SystemClock.uptimeMillis())
             KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
@@ -385,6 +387,7 @@ class AtlasIme : InputMethodService() {
         Recording.sink?.gesture("drag", samples.lastOrNull()?.time ?: SystemClock.uptimeMillis(), "words=${drag.words}")
         KeyboardEvents.publish { KeyboardEvent.CursorStarted(drag.words) }
         cursor.start(drag.landed, drag.words)
+        cursorSteps.reset()
         cursor.move(samples)
         // The contact now steers the cursor, so it must not also type when it lifts.
         contact.cancelActive()
@@ -392,7 +395,7 @@ class AtlasIme : InputMethodService() {
         Trace.touch(cursorPath, false)
         if (!gestureRegistered) {
             gestureRegistered = true
-            if (drag.words) haptics.stays() else haptics.confirm()
+            haptics.play(if (drag.words) Haptic.Select else Haptic.Steer)
         }
         if (!drag.words) readCursorText()
         if (drag.words && !field.exact) enqueue { startWordDrag() }
@@ -413,7 +416,7 @@ class AtlasIme : InputMethodService() {
         gestureRegistered = true
         val words = taps >= 3
         Recording.sink?.gesture("registered", now, "taps=$taps")
-        if (words) haptics.stays() else haptics.confirm()
+        haptics.play(if (words) Haptic.Select else Haptic.Steer)
         if (words) readWordsAroundCursor() else readCursorText()
         strip?.gesture?.cursorFrame((gestureLanded?.x ?: .5f) * 10, 0, 0f, words, now)
     }
@@ -444,7 +447,7 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(confirmDoubleTap)
         finishHeldTaps(type = false)
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
-        if (field.exact) haptics.stays() else enqueue { selectWord(inFront = true) }
+        if (field.exact) haptics.play(Haptic.WordPicked) else enqueue { selectWord(inFront = true) }
     }
 
     /** Space set as a tap key would type the first tap of a double tap, so a tap waits until it can't be one. */
@@ -521,8 +524,9 @@ class AtlasIme : InputMethodService() {
             { modifiers.autoShifted }) { barWords = it; strip?.words = it }
         composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
         composer.onStroke = Trace::stroke
-        composer.onAutocorrect = haptics::changed
-        composer.onRestored = haptics::restored
+        // Backspace putting a word back plays nothing: the key press is felt already.
+        composer.onAutocorrect = { haptics.play(Haptic.Autocorrect) }
+        composer.onExpanded = { haptics.play(Haptic.Expansion) }
         composer.nearMiss = { right -> GuideScript.slip(right).takeIf { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) } }
         composer.intended = { before -> GuideHooks.intended(currentInputEditorInfo?.privateImeOptions, before) }
         // The interactive guide acts out a gesture on this bar, only in its own field. See [Strip.playDemo].
@@ -819,7 +823,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
-        val words = Strip(this, { index -> haptics.confirm(); enqueue { composer.choose(index) } }, ::holdWord,
+        val words = Strip(this, { index -> haptics.play(Haptic.BarWord); enqueue { composer.choose(index) } }, ::holdWord,
             { action -> enqueue { stripAction(action) } }, { enqueue { pasteOfferedClip() } }, { wakeIdleBar(cut = false) })
         val keys = SymPanel(this,
             pick = { item -> enqueue { typePanelItem(item) } },
@@ -827,11 +831,12 @@ class AtlasIme : InputMethodService() {
             quickSettingOn = ::quickSettingOn,
             pressAlt = { enqueue { modifiers.toggleSettings(); showModifiers() } },
             pressSym = { enqueue { modifiers.pressSym(); showModifiers() } },
-            pageChanged = haptics::tick,
-            marked = haptics::texture,
+            pageChanged = { haptics.play(Haptic.PanelPage) },
+            groupChanged = { haptics.play(Haptic.PanelGroup) },
+            marked = { haptics.play(Haptic.PanelMark) },
             clipKey = { key -> enqueue { clipKey(key) } },
             holdClip = { key -> enqueue { holdClip(key) } },
-            openClipboard = { enqueue { openClipboardPage(); haptics.tick() } },
+            openClipboard = { enqueue { openClipboardPage() } },
         )
         strip = words
         panel = keys
@@ -1205,7 +1210,7 @@ class AtlasIme : InputMethodService() {
     private fun pasteOfferedClip() {
         val text = strip?.clip ?: return
         dismissClipOffer()
-        haptics.confirm()
+        haptics.play(Haptic.ClipOffer)
         composer.paste(text)
     }
 
@@ -1218,10 +1223,10 @@ class AtlasIme : InputMethodService() {
                 if (clipClearing) {
                     clipClearing = false
                     if (clipHistory.clear()) saveClips()
-                    haptics.removed()
+                    haptics.play(Haptic.ClipboardCleared)
                 } else {
+                    // The first press only arms the clear, which the page shows. The press is felt already.
                     clipClearing = true
-                    haptics.tick()
                 }
                 showClips()
                 return
@@ -1230,7 +1235,6 @@ class AtlasIme : InputMethodService() {
                 if (clipHistory.clips.isEmpty()) return
                 clipClearing = false
                 clipPinning = !clipPinning
-                haptics.tick()
                 showClips()
                 return
             }
@@ -1239,7 +1243,7 @@ class AtlasIme : InputMethodService() {
                 val clip = clipHistory.clips.getOrNull(index) ?: return
                 clipClearing = false
                 if (clipPinning) pin(index) else {
-                    haptics.confirm()
+                    haptics.play(Haptic.ClipPasted)
                     composer.paste(clip.text)
                     closePanel()
                     return
@@ -1266,10 +1270,10 @@ class AtlasIme : InputMethodService() {
         showClips()
     }
 
-    /** Pinning stays; unpinning is a step. */
+    /** Pinning locks the clip; unpinning is a step, as unlocking Shift is. */
     private fun pin(index: Int) {
         if (clipHistory.togglePin(index)) saveClips()
-        if (clipHistory.clips.getOrNull(index)?.pinned == true) haptics.stays() else haptics.tick()
+        haptics.play(if (clipHistory.clips.getOrNull(index)?.pinned == true) Haptic.ClipPinned else Haptic.ClipUnpinned)
     }
 
     // The word menu (#43): hold a word on the strip, or select one word in the field, to save or forget it.
@@ -1294,8 +1298,7 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(endNotice)
         menuWord = held
         strip?.menuMark = -1
-        // A step: the menu opened.
-        haptics.tick()
+        haptics.play(Haptic.MenuOpen)
         strip?.notice = Strip.Notice.Menu(held.word, canForget(held))
         KeyboardEvents.publish { KeyboardEvent.WordMenu(held.word) }
     }
@@ -1330,7 +1333,9 @@ class AtlasIme : InputMethodService() {
     private fun markMenu(key: String) {
         val strip = strip ?: return
         val actions = strip.noticeActions(strip.notice)
-        strip.menuMark = if (menuOpen) MenuKeys.button(key, actions.size) else -1
+        val mark = if (menuOpen) MenuKeys.button(key, actions.size) else -1
+        if (mark >= 0 && mark != strip.menuMark) haptics.play(Haptic.MenuMark)
+        strip.menuMark = mark
     }
 
     private fun stripAction(action: Strip.Action) {
@@ -1358,11 +1363,11 @@ class AtlasIme : InputMethodService() {
             typing.addWord(held.word) { error ->
                 if (error != null) {
                     Log.w("Atlas", "Could not save a word: $error")
-                    haptics.refused()
+                    main.post { haptics.play(Haptic.WordNotSaved) }
                 }
             }
         }
-        haptics.confirm()
+        haptics.play(Haptic.WordSaved)
         if (!typing.wordAllowed(held.word)) typing.setWordBlocked(held.word, false) { add() } else add()
         composer.unhide(held.word)
         strip?.notice = Strip.Notice.Saved(held.word)
@@ -1376,14 +1381,14 @@ class AtlasIme : InputMethodService() {
         composer.hide(held.word)
         if (strip?.selected.equals(held.word, ignoreCase = true)) strip?.selected = null
         strip?.notice = Strip.Notice.Forgot(held.word)
-        haptics.removed()
+        haptics.play(Haptic.WordForgotten)
         main.postDelayed(forgetNow, FORGET_UNDO_MILLIS)
     }
 
     private fun undoForget() {
         val pending = pendingForget ?: return
         pendingForget = null
-        haptics.restored()
+        haptics.play(Haptic.WordSaved)
         main.removeCallbacks(forgetNow)
         strip?.notice = null
         composer.unhide(pending.word)
@@ -1699,13 +1704,13 @@ class AtlasIme : InputMethodService() {
         }
         categoryAt = last.x
         categoryMoved = categoryMoved || Layout.movedAlongBottomRow(categoryLandedAt, last.x)
-        if (categoryMoved && panel?.pickCategory(last.x) == true) haptics.tick()
+        if (categoryMoved && panel?.pickCategory(last.x) == true) haptics.play(Haptic.PanelGroup)
         return true
     }
 
     /** A finger that stayed on the bottom row opens the group under it. A key press lifts the finger first, which calls this off. */
     private val restOnCategory = Runnable {
-        if (pickingCategory && panelOpen && panel?.pickCategory(categoryAt) == true) haptics.tick()
+        if (pickingCategory && panelOpen && panel?.pickCategory(categoryAt) == true) haptics.play(Haptic.PanelGroup)
     }
 
     /** A finger that has stayed off the touchpad no longer marks a key. */
@@ -1780,12 +1785,12 @@ class AtlasIme : InputMethodService() {
         val arrow = KeyEvent(time, time, KeyEvent.ACTION_DOWN, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
             KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD)
         enqueue {
-            // A cursor at the start or end of the text cannot move, so it stays quiet. An app that does not answer still gets the pulse.
-            // Going past a space feels different from a letter, so that you can count words without looking.
+            // Going past a space feels different from a letter, so that you can count words without looking. A cursor at the
+            // start or end of the text can't move, so it plays gone, once each time it gets there. See [CursorSteps].
             val connection = currentInputConnection
             val next = if (direction > 0) connection?.getTextAfterCursor(1, 0) else connection?.getTextBeforeCursor(1, 0)
             // An app that does not answer still gets the light tick.
-            HapticPalette.cursorStep(if (next == null) 'a' else next.firstOrNull())?.let(haptics::play)
+            cursorSteps.step(if (next == null) 'a' else next.firstOrNull())?.let(haptics::play)
             if (rereadCursorText) readCursorText()
             command(arrow)
             if (next?.isEmpty() != true) rereadCursorText = strip?.gesture?.cursorStepped(direction) == true
@@ -1796,12 +1801,8 @@ class AtlasIme : InputMethodService() {
     /** [inFront] also takes the word before the cursor past marks and spaces, for a triple tap. See [WordSelection.atOrBefore]. */
     private fun selectWord(inFront: Boolean = false) = changeSelection { text, start, end, _ ->
         val word = if (inFront) WordSelection.atOrBefore(text, start, end) else WordSelection.at(text, start, end)
-        if (word == null) {
-            haptics.stays()
-            return@changeSelection null
-        }
-        // The pick plays with the word, so the debug build's pick feel can follow its length.
-        haptics.picked(text.subSequence(word.first, word.second).toString(), Feel.Stays)
+        haptics.play(Haptic.WordPicked)
+        if (word == null) return@changeSelection null
         strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
         strip?.gesture?.wordSelected(SystemClock.uptimeMillis())
         word
@@ -1827,7 +1828,7 @@ class AtlasIme : InputMethodService() {
             // The word that this step took or gave back.
             val moved = if (range.second != end) text.subSequence(minOf(end, range.second), maxOf(end, range.second))
                 else text.subSequence(minOf(start, range.first), maxOf(start, range.first))
-            haptics.picked(moved.toString().trim(), Feel.Tick)
+            haptics.play(Haptic.SelectionWord)
             strip?.gesture?.wordStep(direction)
             range
         }
@@ -1895,8 +1896,8 @@ class AtlasIme : InputMethodService() {
         QuickSetting.SuggestionBar -> TypingSettings.suggestionBar(this, on)
         QuickSetting.AutoCapitalise -> TypingSettings.autoCapitalise(this, on)
         QuickSetting.AutoPunctuation -> TypingSettings.autoPunctuation(this, on)
-        // The preset is saved apart from this, so turning vibration on again gives the same strength.
-        QuickSetting.Vibration -> Haptics.select(this, Haptics.preset(this), on)
+        // Only the master switch: each haptic's own switch stays as it is, for when it is on again.
+        QuickSetting.Vibration -> Haptics.enabled(this, on)
         QuickSetting.HoldSymbols -> TypingSettings.holdSymbols(this, on)
         QuickSetting.CursorControl -> TypingSettings.cursorControl(this, on)
         QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this, on)
@@ -1925,9 +1926,10 @@ class AtlasIme : InputMethodService() {
                 readSettings()
                 panel?.render()
                 KeyboardEvents.publish { KeyboardEvent.QuickSettingUsed(item, quickSettingOn(item)) }
+                // Opening Settings, the keyboard list or the clipboard opens something you see, so only a switch plays.
+                haptics.play(Haptic.QuickSetting)
             }
         }
-        haptics.confirm()
     }
 
     /**
@@ -2062,7 +2064,7 @@ class AtlasIme : InputMethodService() {
                 if (!field.words) return
                 if (outcome.deletesWord) {
                     val nothingLeft = currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true
-                    if (nothingLeft) haptics.refused() else haptics.removed()
+                    haptics.play(if (nothingLeft) Haptic.DeleteNothing else Haptic.DeleteFlick)
                     composer.backspace(true)
                     if (!nothingLeft) strip?.gesture?.wordDeleted(SystemClock.uptimeMillis())
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
@@ -2077,8 +2079,8 @@ class AtlasIme : InputMethodService() {
                 if (!isTapKey(outcome.key) || !field.words) return
                 showStripAfterBack()
                 val key = if (outcome.key == Layout.SPACE) " " else outcome.key
-                // A touch that typed a key: a step, as light as a tap keyboard's.
-                haptics.tick()
+                // A touch that typed a key: a step, as light as a tap keyboard's, since the touchpad has no click of its own.
+                haptics.play(Haptic.TapKey)
                 if (key == " ") {
                     composer.space(repeated = false, time = outcome.endedAt)
                 } else {
@@ -2095,7 +2097,7 @@ class AtlasIme : InputMethodService() {
     private fun swipePanel(points: List<Sample>) {
         val across = (points.last().x - points.first().x) * 10
         val down = (points.last().y - points.first().y) * 4
-        if (maxOf(abs(across), abs(down)) >= Contact.PAGE_KEYS && panel?.swipe(across, down) == true) haptics.tick()
+        if (maxOf(abs(across), abs(down)) >= Contact.PAGE_KEYS && panel?.swipe(across, down) == true) haptics.play(Haptic.PanelPage)
     }
 
     private fun isTapKey(key: String): Boolean {
@@ -2150,7 +2152,7 @@ class AtlasIme : InputMethodService() {
         val symbol = letter.getUnicodeChar(letter.metaState or KeyEvent.META_ALT_ON)
         if (symbol <= 0 || !Character.isValidCodePoint(symbol) || Character.isISOControl(symbol)) return
         val text = String(Character.toChars(symbol))
-        haptics.changed()
+        haptics.play(Haptic.HeldSymbol)
         KeyboardEvents.publish { KeyboardEvent.HeldSymbol(text) }
         if (field.exact) {
             // The letter went to the app as a key, so a Backspace key takes it back.
@@ -2201,7 +2203,6 @@ class AtlasIme : InputMethodService() {
             if (action != null) {
                 if (event.repeatCount == 0) {
                     menuKey = keyCode
-                    haptics.tick()
                     stripAction(action)
                 }
                 return true
@@ -2386,7 +2387,7 @@ class AtlasIme : InputMethodService() {
         }
         Modifiers.panelScroll(event.keyCode, modifiers.panel)?.let { rows ->
             pickedKey = event.keyCode
-            if (event.repeatCount == 0 && rows != 0f && panel?.swipe(0f, rows) == true) haptics.tick()
+            if (event.repeatCount == 0 && rows != 0f && panel?.swipe(0f, rows) == true) haptics.play(Haptic.PanelPage)
             return true
         }
         if (!isInputViewShown || event.isCtrlPressed || event.isMetaPressed) return false
@@ -2402,7 +2403,6 @@ class AtlasIme : InputMethodService() {
         } else if (letter == Layout.CLIPBOARD_KEY) {
             pickedKey = event.keyCode
             openClipboardPage()
-            haptics.tick()
         } else panel?.item(letter)?.let { item ->
             pickedKey = event.keyCode
             typePanelItem(item)
@@ -2418,7 +2418,7 @@ class AtlasIme : InputMethodService() {
             else -> return false
         }
         if (panel?.hasCategories != true) return false
-        if (event.repeatCount == 0 && panel?.pickCategoryUnder(key) == true) haptics.tick()
+        if (event.repeatCount == 0 && panel?.pickCategoryUnder(key) == true) haptics.play(Haptic.PanelGroup)
         return true
     }
 
@@ -2527,9 +2527,12 @@ class AtlasIme : InputMethodService() {
     private fun showModifiers() {
         showGuideExtras()
         updateAutoShift()
-        // Locked now stays, so it plays the feel for that. Once and off are key presses, which the keys already click.
-        if (modifiers.shift == Modifiers.Level.Locked && shownShift != Modifiers.Level.Locked
-            || modifiers.alt == Modifiers.Level.Locked && shownAlt != Modifiers.Level.Locked) haptics.stays()
+        // Locked plays its feel, and so does unlocking, as a press alone doesn't tell you which it did. Once and off are key
+        // presses, which the keys already click.
+        val locked = { now: Modifiers.Level, shown: Modifiers.Level -> now == Modifiers.Level.Locked && shown != Modifiers.Level.Locked }
+        val unlocked = { now: Modifiers.Level, shown: Modifiers.Level -> now != Modifiers.Level.Locked && shown == Modifiers.Level.Locked }
+        if (locked(modifiers.shift, shownShift) || locked(modifiers.alt, shownAlt)) haptics.play(Haptic.ModifierLocked)
+        else if (unlocked(modifiers.shift, shownShift) || unlocked(modifiers.alt, shownAlt)) haptics.play(Haptic.ModifierUnlocked)
         shownShift = modifiers.shift
         shownAlt = modifiers.alt
         strip?.visibility = if (panelOpen) View.GONE else View.VISIBLE

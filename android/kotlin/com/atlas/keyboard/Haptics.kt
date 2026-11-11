@@ -1,6 +1,8 @@
 package com.atlas.keyboard
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.os.VibrationAttributes
 import android.os.VibrationEffect
@@ -8,43 +10,89 @@ import android.os.Vibrator
 import android.provider.Settings
 import kotlin.math.hypot
 
-/** Swipe feels, in the units the original haptics settings used. */
-enum class HapticPreset(val id: String, duration: Int, strength: Int, interval: Int, spacing: Int) {
-    Normal("normal", 8, 3, 4, 7),
-    Strong("strong", 10, 5, 4, 7);
-
-    val durationMillis = duration * 2L
-    val amplitude = strength * 255 / 10
-    val intervalMillis = maxOf(interval * 10L, durationMillis + 5)
-    /** Travel between ticks, in key widths. */
-    val spacing = spacing / 10f
-
-    companion object {
-        fun of(id: String?) = entries.firstOrNull { it.id == id } ?: Normal
-    }
+/**
+ * The six feels, one meaning each, from lightest to heaviest. Haptics are only for what the thumb can't feel or see, so a
+ * physical key press never buzzes. See docs/haptics.md.
+ */
+enum class Feel(val priority: Int) {
+    /** Moving: a swipe crossing keys, the cursor passing a letter, a mark moving to another key. A texture tick. */
+    Moving(0),
+    /** A step: a word, a space, a page, a group. A tick. */
+    Step(1),
+    /** Done: a word saved, a setting switched, steering armed. A click. */
+    Done(2),
+    /** Locked: Shift or Alt locked, selecting armed, a clip pinned. A double click. */
+    Locked(2),
+    /** Gone: a delete flick, a word forgotten, the clipboard cleared, the cursor at an end of the text. A heavy click. */
+    Gone(3),
+    /** No: nothing happened, such as nothing left to delete. Three short pulses, used for nothing else. */
+    No(3),
 }
 
+/** The groups on the Haptics settings page, in its order. */
+enum class HapticGroup { Swipe, Delete, Space, Changes, Bar, Modifiers, Panels, Other }
+
 /**
- * The keyboard's feels, one meaning each, so a gesture can be told by touch alone. See docs/haptics.md for the owner's
- * table of which trigger plays which feel.
+ * Every action that plays a feel, each with its own switch in Settings > Haptics. [id] is stored, so it never changes.
+ * The labels are on the settings page, app/settings/haptics.tsx.
  */
-enum class Feel {
-    /** Movement over keys: swipe ticks, the cursor passing a letter. The lightest. */
-    Texture,
-    /** A step or boundary: the cursor passing a space, a selection growing by a word, a new Sym page. */
-    Tick,
-    /** Done, accepted: a word picked, a clip pasted, a word saved, steering starts. */
-    Confirm,
-    /** Something now stays, selected or locked: selecting starts, Shift or Alt locked, a clip pinned. */
-    Stays,
-    /** Changed into something else: a held letter became its symbol, autocorrect changed a word. Short, then longer. */
-    Changed,
-    /** Put back: autocorrect undone, a forgotten word brought back. Longer, then short. */
-    Restored,
-    /** Something removed: a delete flick, a word forgotten or blocked, the clipboard cleared. */
-    Removed,
-    /** Can't do that: nothing left to delete, a word that can't be saved. A long buzz, used for nothing else. */
-    Refused,
+enum class Haptic(val id: String, val group: HapticGroup, val feel: Feel) {
+    SwipeStart("swipe_start", HapticGroup.Swipe, Feel.Moving),
+    SwipeKey("swipe_key", HapticGroup.Swipe, Feel.Moving),
+    /** A light touch on the touchpad typed a key, which a key press would have clicked. */
+    TapKey("tap_key", HapticGroup.Swipe, Feel.Step),
+
+    DeleteFlick("delete_flick", HapticGroup.Delete, Feel.Gone),
+    DeleteWord("delete_word", HapticGroup.Delete, Feel.Step),
+    DeleteNothing("delete_nothing", HapticGroup.Delete, Feel.No),
+
+    Steer("steer", HapticGroup.Space, Feel.Done),
+    Select("select", HapticGroup.Space, Feel.Locked),
+    /** A double or triple tap on Space picked the word at the cursor. It is selected, so it feels like selecting. */
+    WordPicked("word_picked", HapticGroup.Space, Feel.Locked),
+    CursorLetter("cursor_letter", HapticGroup.Space, Feel.Moving),
+    CursorSpace("cursor_space", HapticGroup.Space, Feel.Step),
+    SelectionWord("selection_word", HapticGroup.Space, Feel.Step),
+    CursorEnd("cursor_end", HapticGroup.Space, Feel.Gone),
+
+    /** Autocorrect changed a word, or shorthand was spelled out, which goes the same way. */
+    Autocorrect("autocorrect", HapticGroup.Changes, Feel.Step),
+    HeldSymbol("held_symbol", HapticGroup.Changes, Feel.Done),
+    /** A :name: became its emoji, or a snippet's shortcut its text. */
+    Expansion("expansion", HapticGroup.Changes, Feel.Step),
+
+    BarWord("bar_word", HapticGroup.Bar, Feel.Step),
+    MenuOpen("menu_open", HapticGroup.Bar, Feel.Done),
+    MenuMark("menu_mark", HapticGroup.Bar, Feel.Moving),
+    /** Save, or Undo after Forget. */
+    WordSaved("word_saved", HapticGroup.Bar, Feel.Done),
+    WordForgotten("word_forgotten", HapticGroup.Bar, Feel.Gone),
+    /** Save went wrong and the word isn't saved. */
+    WordNotSaved("word_not_saved", HapticGroup.Bar, Feel.No),
+    ClipOffer("clip_offer", HapticGroup.Bar, Feel.Done),
+
+    ModifierLocked("modifier_locked", HapticGroup.Modifiers, Feel.Locked),
+    ModifierUnlocked("modifier_unlocked", HapticGroup.Modifiers, Feel.Step),
+
+    PanelMark("panel_mark", HapticGroup.Panels, Feel.Moving),
+    PanelPage("panel_page", HapticGroup.Panels, Feel.Step),
+    PanelGroup("panel_group", HapticGroup.Panels, Feel.Step),
+    QuickSetting("quick_setting", HapticGroup.Panels, Feel.Done),
+    ClipPasted("clip_pasted", HapticGroup.Panels, Feel.Done),
+    ClipPinned("clip_pinned", HapticGroup.Panels, Feel.Locked),
+    ClipUnpinned("clip_unpinned", HapticGroup.Panels, Feel.Step),
+    ClipboardCleared("clipboard_cleared", HapticGroup.Panels, Feel.Gone),
+
+    BugRecording("bug_recording", HapticGroup.Other, Feel.Done),
+    /** Three ticks rising into a click: see [HapticPalette.celebration]. It ends in a click, so it counts as done. */
+    GuideCelebration("guide_celebration", HapticGroup.Other, Feel.Done);
+
+    /** Its switch in the "swipe_haptics" preferences. */
+    val key get() = "haptic_$id"
+
+    companion object {
+        fun of(id: String) = entries.firstOrNull { it.id == id }
+    }
 }
 
 /** How each [Feel] plays. It has no Android parts, so the checks can read it. */
@@ -56,16 +104,12 @@ object HapticPalette {
 
     /**
      * One of the phone's ready-made effects ([effect] is a VibrationEffect.EFFECT_ id), with [fallback] for a phone that
-     * lacks it, and [rise] (or a fall) where a phone can compose a short then a longer tap. The Titan 2 Elite has the five
-     * effects and no strength control, so there the effects and the timing of [fallback] make each feel distinct.
+     * lacks it. The Titan 2 Elite has the five effects and no strength control, so there each feel is its own effect.
      */
-    data class Pattern(val effect: Int?, val fallback: Buzzes, val composed: Composed? = null) {
+    data class Pattern(val effect: Int?, val fallback: Buzzes) {
         /** How long the feel lasts, for the rule that nothing cuts into a playing feel. */
         val millis get() = fallback.millis
     }
-
-    /** Two composition primitives with a gap, for phones that can compose effects. */
-    data class Composed(val first: Int, val second: Int, val gapMillis: Int)
 
     // The VibrationEffect ids, as plain numbers so this needs no Android to run.
     const val EFFECT_CLICK = 0
@@ -73,189 +117,148 @@ object HapticPalette {
     const val EFFECT_TICK = 2
     const val EFFECT_HEAVY_CLICK = 5
     const val EFFECT_TEXTURE_TICK = 21
-    const val PRIMITIVE_CLICK = 1
-    const val PRIMITIVE_TICK = 7
 
-    /** The gap in a pair, and its two buzzes: short then long rises, long then short falls. */
-    private const val PAIR_GAP = 45L
-    private const val PAIR_SHORT = 15L
-    private const val PAIR_LONG = 30L
+    /** "No": three 12 ms pulses, 50 ms apart. Nothing else feels like it. */
+    const val NO_PULSE_MILLIS = 12L
+    const val NO_GAP_MILLIS = 50L
 
     fun of(feel: Feel): Pattern = when (feel) {
-        Feel.Texture -> Pattern(EFFECT_TEXTURE_TICK, Buzzes(listOf(10), listOf(80)))
-        Feel.Tick -> Pattern(EFFECT_TICK, Buzzes(listOf(16), listOf(140)))
-        Feel.Confirm -> Pattern(EFFECT_CLICK, Buzzes(listOf(20), listOf(220)))
-        Feel.Stays -> Pattern(EFFECT_DOUBLE_CLICK, Buzzes(listOf(15, 40, 15), listOf(220, 0, 220)))
-        Feel.Changed -> Pattern(null, Buzzes(listOf(PAIR_SHORT, PAIR_GAP, PAIR_LONG), listOf(110, 0, 255)),
-            Composed(PRIMITIVE_TICK, PRIMITIVE_CLICK, PAIR_GAP.toInt()))
-        Feel.Restored -> Pattern(null, Buzzes(listOf(PAIR_LONG, PAIR_GAP, PAIR_SHORT), listOf(255, 0, 110)),
-            Composed(PRIMITIVE_CLICK, PRIMITIVE_TICK, PAIR_GAP.toInt()))
-        Feel.Removed -> Pattern(EFFECT_HEAVY_CLICK, Buzzes(listOf(45), listOf(255)))
-        Feel.Refused -> Pattern(null, Buzzes(listOf(80), listOf(255)))
+        Feel.Moving -> Pattern(EFFECT_TEXTURE_TICK, Buzzes(listOf(10), listOf(80)))
+        Feel.Step -> Pattern(EFFECT_TICK, Buzzes(listOf(16), listOf(140)))
+        Feel.Done -> Pattern(EFFECT_CLICK, Buzzes(listOf(20), listOf(220)))
+        Feel.Locked -> Pattern(EFFECT_DOUBLE_CLICK, Buzzes(listOf(15, 40, 15), listOf(220, 0, 220)))
+        Feel.Gone -> Pattern(EFFECT_HEAVY_CLICK, Buzzes(listOf(45), listOf(255)))
+        Feel.No -> Pattern(null, Buzzes(listOf(NO_PULSE_MILLIS, NO_GAP_MILLIS, NO_PULSE_MILLIS, NO_GAP_MILLIS, NO_PULSE_MILLIS),
+            listOf(255, 0, 255, 0, 255)))
     }
 
-    /** The swipe tick: the lightest feel for Normal, a tick for Strong, as the Titan can't make a tick stronger. */
-    fun swipeTick(preset: HapticPreset) = if (preset == HapticPreset.Strong) Feel.Tick else Feel.Texture
-
-    /** Feels that steps and movement play, which may come close together. The others are confirmations. */
-    fun isMotion(feel: Feel) = feel == Feel.Texture || feel == Feel.Tick
-
-    /** Two confirmations closer than this play only the first, so a fast run of actions stays calm. */
-    const val CONFIRM_SPACING_MILLIS = 80L
+    /** One beat of the guide's celebration: [feel] plays [atMillis] after the start, at [scale] where a phone can compose. */
+    data class Beat(val atMillis: Long, val feel: Feel, val scale: Float)
 
     /**
-     * What the cursor plays as it steps past [next], the character it crosses, or nothing at either end of the text. A space or a
-     * line end is a step between words, so it is a [Feel.Tick], and every other character is the lightest [Feel.Texture].
-     * Punctuation gets no third feel: the Titan has five ready-made effects, and the three others already mean done, stays and
-     * removed. A full stop or a comma almost always sits next to a space, so the space's tick already marks the end of the word,
-     * and a third feel in a fast run of steps would only make it noisier.
+     * The guide's celebration: three ticks rising into a click. The Titan can't make a tick stronger, so there the rise is only
+     * the click at the end. A phone that can compose effects gets ticks that really grow.
      */
-    fun cursorStep(next: Char?): Feel? = when {
-        next == null -> null
-        next.isWhitespace() -> Feel.Tick
-        else -> Feel.Texture
-    }
+    val celebration = listOf(Beat(0, Feel.Step, .4f), Beat(70, Feel.Step, .6f), Beat(140, Feel.Step, .8f), Beat(210, Feel.Done, 1f))
+    val celebrationMillis get() = celebration.last().let { it.atMillis + of(it.feel).millis }
+}
 
-    /**
-     * Ways to feel how long a picked word is, for the owner to try in the debug build only. [Off] plays the usual feel. Each one
-     * plays on its own when a word is picked: by a double or triple tap, or as a word drag takes one more word.
-     */
-    enum class PickFeel(val id: String) {
-        Off("off"),
-        /** One buzz that lasts longer for a longer word: [PICK_BASE_MILLIS] and [PICK_LETTER_MILLIS] a letter, up to [PICK_MOST_MILLIS]. */
-        Length("length"),
-        /** A short buzz for each syllable, so "cat" is one and "remember" three, up to [MOST_SYLLABLES]. */
-        Syllables("syllables"),
-        /** One of the phone's effects by word size: a tick up to 3 letters, a click up to 7, a heavy click for longer. */
-        Weight("weight");
+/**
+ * Which haptics play: the master switch, then each haptic's own. [read] gives a stored switch, or the default it is given.
+ * Every switch is on until it is turned off. It has no Android parts, so the checks can run it.
+ */
+class HapticSwitches(private val read: (String, Boolean) -> Boolean) {
+    val master get() = read(MASTER, true)
 
-        companion object {
-            fun of(id: String?) = entries.firstOrNull { it.id == id } ?: Off
-        }
-    }
+    fun on(haptic: Haptic) = read(haptic.key, true)
 
-    const val PICK_BASE_MILLIS = 8L
-    const val PICK_LETTER_MILLIS = 4L
-    const val PICK_MOST_MILLIS = 60L
-    const val SYLLABLE_MILLIS = 14L
-    const val SYLLABLE_GAP_MILLIS = 45L
-    const val MOST_SYLLABLES = 6
+    fun allows(haptic: Haptic) = master && on(haptic)
 
-    /** How [option] plays a picked [word], or null for the usual feel. */
-    fun pick(word: String, option: PickFeel): Pattern? {
-        val letters = word.count { it.isLetterOrDigit() }.coerceAtLeast(1)
-        return when (option) {
-            PickFeel.Off -> null
-            PickFeel.Length -> Pattern(null, Buzzes(listOf(minOf(PICK_BASE_MILLIS + PICK_LETTER_MILLIS * letters, PICK_MOST_MILLIS)), listOf(255)))
-            PickFeel.Syllables -> {
-                val count = syllables(word).coerceIn(1, MOST_SYLLABLES)
-                val timings = (0 until count).flatMap { if (it == 0) listOf(SYLLABLE_MILLIS) else listOf(SYLLABLE_GAP_MILLIS, SYLLABLE_MILLIS) }
-                Pattern(null, Buzzes(timings, timings.indices.map { if (it % 2 == 0) 255 else 0 }))
-            }
-            PickFeel.Weight -> when {
-                letters <= 3 -> of(Feel.Tick)
-                letters <= 7 -> of(Feel.Confirm)
-                else -> of(Feel.Removed)
-            }
-        }
-    }
-
-    /** About how many syllables [word] has: groups of vowels, with a final silent e left out. Good enough to feel a word's length. */
-    fun syllables(word: String): Int {
-        val letters = word.lowercase().filter { it.isLetter() }
-        if (letters.isEmpty()) return 1
-        var count = 0
-        var inVowels = false
-        for (letter in letters) {
-            val vowel = letter in "aeiouy"
-            if (vowel && !inVowels) count++
-            inVowels = vowel
-        }
-        if (letters.length > 2 && letters.endsWith("e") && !letters.endsWith("le") && count > 1) count--
-        return count.coerceAtLeast(1)
+    companion object {
+        /** The master switch's key. It is the old Vibration setting's, so turning that off before still counts. */
+        const val MASTER = "enabled"
     }
 }
 
-/** Plays the keyboard's feels ([Feel]), only while the Vibration setting and Android's touch feedback are on. */
+/**
+ * Keeps fast runs of feels calm. It has no Android parts, so the checks can run it with their own [clock].
+ * - Within [WINDOW_MILLIS] of the last feel that played, only the first plays.
+ * - Except that a feel of a higher [Feel.priority] still plays, as gone and no beat a step, which beats moving.
+ * - A feel never cuts one that is still playing, so even that higher feel waits for the first to finish, or doesn't play.
+ */
+class HapticGate(private val clock: () -> Long) {
+    private var lastAt = Long.MIN_VALUE / 2
+    private var lastPriority = -1
+    private var busyUntil = Long.MIN_VALUE / 2
+
+    /** Whether [feel], lasting [millis], plays now. If it does, it is the last feel from now on. */
+    fun admit(feel: Feel, millis: Long = HapticPalette.of(feel).millis): Boolean {
+        val now = clock()
+        if (now < busyUntil) return false
+        // Moving keeps its own pace, a tick per key crossed, as the owner kept it. It never waits for another moving
+        // tick, but it never cuts or blocks a heavier feel either: it plays only outside a heavier feel's window, and
+        // leaves the window as it was, so a heavier feel right after it still plays.
+        if (feel == Feel.Moving) return now - lastAt >= WINDOW_MILLIS || lastPriority <= feel.priority
+        if (now - lastAt < WINDOW_MILLIS && feel.priority <= lastPriority) return false
+        lastAt = now
+        lastPriority = feel.priority
+        busyUntil = now + millis
+        return true
+    }
+
+    companion object {
+        const val WINDOW_MILLIS = 80L
+    }
+}
+
+/**
+ * What the cursor plays as it steps while steering. A space or a line end is a step between words, and every other
+ * character is moving. Punctuation gets no feel of its own: it almost always sits next to a space, whose tick already marks
+ * the end of the word. At the start or end of the text the cursor can't move, so it plays gone, once each time it gets there.
+ */
+class CursorSteps {
+    private var atEnd = false
+
+    /** A new steer: the next end it reaches plays again. */
+    fun reset() {
+        atEnd = false
+    }
+
+    /** The haptic for a step past [next], the character it crosses, or null for an end of the text. */
+    fun step(next: Char?): Haptic? {
+        if (next == null) {
+            if (atEnd) return null
+            atEnd = true
+            return Haptic.CursorEnd
+        }
+        atEnd = false
+        return if (next.isWhitespace()) Haptic.CursorSpace else Haptic.CursorLetter
+    }
+}
+
+/** Plays the keyboard's haptics ([Haptic]), only while its switch, the master switch and Android's touch feedback are on. */
 class Haptics(private val context: Context) {
     private val vibrator = context.getSystemService(Vibrator::class.java)
-    private var preset = HapticPreset.Normal
-    private var enabled = true
-    /** Nothing cuts into a feel that is still playing. */
-    private var busyUntil = 0L
-    private var lastConfirm = Long.MIN_VALUE / 2
+    private val switches = switches(context)
+    private val gate = HapticGate(SystemClock::uptimeMillis)
     private val ticks = SwipeTicks()
+    private val main = Handler(Looper.getMainLooper())
 
-    fun texture() = play(Feel.Texture)
-    fun tick() = play(Feel.Tick)
-    fun confirm() = play(Feel.Confirm)
-    fun stays() = play(Feel.Stays)
-    fun changed() = play(Feel.Changed)
-    fun restored() = play(Feel.Restored)
-    fun removed() = play(Feel.Removed)
-    fun refused() = play(Feel.Refused)
-
-    fun play(feel: Feel) {
-        if (!enabled(context)) return
-        perform(feel)
+    fun play(haptic: Haptic) {
+        if (!switches.allows(haptic) || !gate.admit(haptic.feel)) return
+        vibrate(effect(HapticPalette.of(haptic.feel)))
     }
 
-    /** A word was picked. The debug build's pick feel can play instead of [usual]: see [HapticPalette.PickFeel]. */
-    fun picked(word: String, usual: Feel) {
-        if (!enabled(context)) return
-        val custom = HapticPalette.pick(word, pickFeel(context)) ?: return perform(usual)
-        val now = SystemClock.uptimeMillis()
-        if (now < busyUntil) return
-        if (!vibrate(effect(custom))) return
-        busyUntil = now + custom.millis
+    /** A finished part of the interactive guide: three ticks rising into a click. */
+    fun celebrate() {
+        if (!switches.allows(Haptic.GuideCelebration)) return
+        if (!gate.admit(Haptic.GuideCelebration.feel, HapticPalette.celebrationMillis)) return
+        val beats = HapticPalette.celebration
+        if (vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_TICK, VibrationEffect.Composition.PRIMITIVE_CLICK)) {
+            val composition = VibrationEffect.startComposition()
+            var at = 0L
+            for (beat in beats) {
+                val primitive = if (beat.feel == Feel.Done) VibrationEffect.Composition.PRIMITIVE_CLICK else VibrationEffect.Composition.PRIMITIVE_TICK
+                composition.addPrimitive(primitive, beat.scale, (beat.atMillis - at).toInt())
+                at = beat.atMillis
+            }
+            vibrate(composition.compose())
+            return
+        }
+        for (beat in beats) main.postDelayed({ vibrate(effect(HapticPalette.of(beat.feel))) }, beat.atMillis)
     }
 
-    /** A finished part of the interactive guide: two ticks, the second one stronger. */
-    fun guideChapter() = waveform(longArrayOf(0, 16, 45, 24), intArrayOf(0, 170, 0, 255))
-
-    /** The end of the interactive guide: ticks that get stronger, then one long pulse. */
-    fun guideFinale() = waveform(longArrayOf(0, 12, 60, 14, 60, 18, 60, 60), intArrayOf(0, 90, 0, 140, 0, 200, 0, 255))
-
-    private fun waveform(timings: LongArray, amplitudes: IntArray) {
-        if (!enabled(context)) return
-        val strengths = if (vibrator.hasAmplitudeControl()) amplitudes
-            else IntArray(amplitudes.size) { if (amplitudes[it] == 0) 0 else VibrationEffect.DEFAULT_AMPLITUDE }
-        vibrate(VibrationEffect.createWaveform(timings, strengths, -1))
-    }
-
-    fun begin(sample: Sample?) {
-        preset = preset(context)
-        enabled = enabled(context)
-        ticks.begin(sample)
-    }
+    fun begin(sample: Sample?) = ticks.begin(sample)
 
     fun move(samples: List<Sample>) {
-        if (enabled && ticks.move(samples, preset)) perform(HapticPalette.swipeTick(preset))
+        ticks.move(samples)?.let(::play)
     }
 
-    private fun perform(feel: Feel) {
-        val now = SystemClock.uptimeMillis()
-        if (now < busyUntil) return
-        if (!HapticPalette.isMotion(feel)) {
-            if (now - lastConfirm < HapticPalette.CONFIRM_SPACING_MILLIS) return
-            lastConfirm = now
-        }
-        val pattern = HapticPalette.of(feel)
-        if (!vibrate(effect(pattern))) return
-        busyUntil = now + pattern.millis
-    }
-
-    /** The phone's own effect where it has it, a composed pair where it can, and otherwise the timed buzzes. */
+    /** The phone's own effect where it has it, and otherwise the timed buzzes. */
     private fun effect(pattern: HapticPalette.Pattern): VibrationEffect {
         val id = pattern.effect
         if (id != null && vibrator.areAllEffectsSupported(id) != Vibrator.VIBRATION_EFFECT_SUPPORT_NO)
             return VibrationEffect.createPredefined(id)
-        val composed = pattern.composed
-        if (composed != null && vibrator.areAllPrimitivesSupported(composed.first, composed.second))
-            return VibrationEffect.startComposition()
-                .addPrimitive(composed.first, .6f)
-                .addPrimitive(composed.second, 1f, composed.gapMillis)
-                .compose()
         val buzzes = pattern.fallback
         val timings = LongArray(buzzes.timings.size + 1) { if (it == 0) 0 else buzzes.timings[it - 1] }
         val strengths = IntArray(timings.size) { index ->
@@ -265,31 +268,38 @@ class Haptics(private val context: Context) {
         return VibrationEffect.createWaveform(timings, strengths, -1)
     }
 
-    private fun vibrate(effect: VibrationEffect): Boolean {
-        if (!vibrator.hasVibrator()) return false
-        if (Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return false
+    private fun vibrate(effect: VibrationEffect) {
+        if (!vibrator.hasVibrator()) return
+        if (Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return
         // Hardware feedback keeps ticking while another app is in the foreground.
         vibrator.vibrate(effect, VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_HARDWARE_FEEDBACK).build())
-        return true
     }
 
     companion object {
         private fun preferences(context: Context) = context.getSharedPreferences("swipe_haptics", Context.MODE_PRIVATE)
 
-        fun preset(context: Context) = HapticPreset.of(preferences(context).getString("haptic_preset_v1", null))
-
-        fun enabled(context: Context) = preferences(context).getBoolean("enabled", true)
-
-        /** The pick feel to try. Only TitanKeys Debug reads it, so a normal build always plays the usual feel. */
-        fun pickFeel(context: Context) = if (!context.packageName.endsWith(".debug")) HapticPalette.PickFeel.Off
-            else HapticPalette.PickFeel.of(preferences(context).getString("pick_feel", null))
-
-        fun pickFeel(context: Context, option: HapticPalette.PickFeel) {
-            preferences(context).edit().putString("pick_feel", option.id).apply()
+        /** The switches as they are stored now, read again on each use, so a change in Settings counts at once. */
+        fun switches(context: Context): HapticSwitches {
+            val preferences = preferences(context)
+            return HapticSwitches { key, default -> preferences.getBoolean(key, default) }
         }
 
-        fun select(context: Context, preset: HapticPreset, enabled: Boolean) {
-            preferences(context).edit().putString("haptic_preset_v1", preset.id).putBoolean("enabled", enabled).apply()
+        /** The master switch: All haptics in Settings, and Vibration on the quick settings page. */
+        fun enabled(context: Context) = switches(context).master
+
+        fun enabled(context: Context, on: Boolean) {
+            preferences(context).edit().putBoolean(HapticSwitches.MASTER, on).apply()
+        }
+
+        /** Each haptic's own switch, by its id. */
+        fun toggles(context: Context): Map<String, Boolean> {
+            val switches = switches(context)
+            return Haptic.entries.associate { it.id to switches.on(it) }
+        }
+
+        fun toggle(context: Context, id: String, on: Boolean) {
+            val haptic = Haptic.of(id) ?: return
+            preferences(context).edit().putBoolean(haptic.key, on).apply()
         }
     }
 }
@@ -308,10 +318,13 @@ class SwipeTicks {
         last = sample
     }
 
-    /** Whether these new points of the contact tick, at most once. */
-    fun move(samples: List<Sample>, preset: HapticPreset): Boolean {
-        val start = origin ?: return false
-        var ticked = false
+    /**
+     * What these new points of the contact play, at most once: [Haptic.SwipeStart] when the contact first goes as far as a
+     * swipe, [Haptic.SwipeKey] for each later tick, or null.
+     */
+    fun move(samples: List<Sample>): Haptic? {
+        val start = origin ?: return null
+        var ticked: Haptic? = null
         for (sample in samples) {
             last?.let { travel += distance(it, sample) }
             last = sample
@@ -322,12 +335,13 @@ class SwipeTicks {
             // The first tick waits until the contact has gone far enough to be a swipe, so a finger that only brushes the
             // keys, or slides a little while pushing one, stays quiet (#30). A finger that sets off slowly, as from resting
             // on a key, has to go further: most phantom buzzes in the owner's logs start that way, and real swipes rarely.
-            val ready = if (lastTick < 0) distance(start, sample) >= firstTickKeys(sample.time - start.time)
-                else travel >= preset.spacing && sample.time - lastTick >= preset.intervalMillis
-            if (!ready || ticked) continue
+            val first = lastTick < 0
+            val ready = if (first) distance(start, sample) >= firstTickKeys(sample.time - start.time)
+                else travel >= SPACING_KEYS && sample.time - lastTick >= INTERVAL_MILLIS
+            if (!ready || ticked != null) continue
             lastTick = sample.time
             travel = 0f
-            ticked = true
+            ticked = if (first) Haptic.SwipeStart else Haptic.SwipeKey
         }
         return ticked
     }
@@ -335,6 +349,11 @@ class SwipeTicks {
     private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
 
     companion object {
+        /** Travel between ticks, in key widths. */
+        const val SPACING_KEYS = .7f
+        /** The least time between ticks. */
+        const val INTERVAL_MILLIS = 40L
+
         /**
          * How quickly a real swipe gets to a swipe's distance. In raw-log-17, 90% of swipes and flicks that vibrated were
          * there within 144 ms of landing, and three in four phantom buzzes took longer (median 200 ms).

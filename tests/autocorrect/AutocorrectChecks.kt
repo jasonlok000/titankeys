@@ -10,9 +10,7 @@ import com.atlas.keyboard.Editor
 import com.atlas.keyboard.EnterKey
 import com.atlas.keyboard.Expansions
 import com.atlas.keyboard.Field
-import com.atlas.keyboard.Feel
-import com.atlas.keyboard.HapticPalette
-import com.atlas.keyboard.HapticPreset
+import com.atlas.keyboard.Haptic
 import com.atlas.keyboard.Words
 import java.io.File
 import java.nio.file.Path
@@ -1398,11 +1396,8 @@ private fun suggestionBar(world: Realistic) {
 }
 
 private fun smallerChecks() {
-    // A changed word must feel different from a swipe tick, at each vibration setting (tests/haptics has the rest).
-    for (preset in HapticPreset.entries) {
-        val tick = HapticPalette.of(HapticPalette.swipeTick(preset))
-        must(HapticPalette.of(Feel.Changed) != tick, "A changed word feels different from a swipe tick: $preset")
-    }
+    // A changed word must feel different from a swipe tick (tests/haptics has the rest).
+    must(Haptic.Autocorrect.feel != Haptic.SwipeKey.feel, "A changed word feels different from a swipe tick")
 
     // NoisyChannel.
     must(NoisyChannel.cost("vrown", "brown", near) < NoisyChannel.cost("prown", "brown", near), "A neighbouring key is a cheaper slip")

@@ -1400,7 +1400,6 @@ class GuideActivity : Activity() {
                 input.restartInput(field)
                 offerFor(step)
                 if (need == GuideNeed.FnAsCtrl) showHint("Now hold fn.")
-                haptics.confirm()
             }
         }
     }
@@ -1500,7 +1499,7 @@ class GuideActivity : Activity() {
         autoPart = null
         hideHint()
         offer.visibility = View.GONE
-        haptics.guideChapter()
+        haptics.celebrate()
         overlay.sweep()
         showReaction(if (next == null) SetupPart.ALL_DONE else SetupPart.DONE)
         main.postDelayed({
@@ -1796,10 +1795,9 @@ class GuideActivity : Activity() {
         shownModifierHint = null
     }
 
-    /** The slide moved on, or back, to another instruction: only that one shows, with a tick, and the ghost follows it. */
+    /** The slide moved on, or back, to another instruction: only that one shows, and the ghost follows it. */
     private fun showStage() {
         hideHint()
-        haptics.tick()
         swapIn(body, flow.instruction, 0)
         showScript()
         // The swipe came out wrong on purpose: the right word, second on the bar, wiggles to show where to tap.
@@ -1820,7 +1818,7 @@ class GuideActivity : Activity() {
         endDemo()
         main.removeCallbacks(showHelp)
         hideHint()
-        haptics.guideChapter()
+        haptics.celebrate()
         keys.celebrate()
         backdrop.wipeTo(GuideColours.ORANGE)
         overlay.sweep()
@@ -1902,7 +1900,7 @@ class GuideActivity : Activity() {
     private fun finale(end: GuideStep) {
         again.visibility = View.VISIBLE
         again.text = "Again"
-        haptics.guideFinale()
+        haptics.celebrate()
         for (sweep in 0 until FINALE_SWEEPS) overlay.sweep(delay = sweep * FINALE_STAGGER_MILLIS, thickness = BEAT_LINE + sweep * 2f)
         keys.celebrate()
         // The text stays: it is what you typed through the whole guide.
@@ -1955,7 +1953,7 @@ class GuideActivity : Activity() {
     }
 
     private fun nameLanded() {
-        haptics.guideChapter()
+        haptics.celebrate()
         overlay.sweep(thickness = LINE)
         keys.celebrate()
         title.alpha = 1f

@@ -208,6 +208,8 @@ class Composer(
     var onAutocorrect: (() -> Unit)? = null
     /** Told when an automatic change is undone and the typed word is back. */
     var onRestored: (() -> Unit)? = null
+    /** Told when a :name: becomes its emoji, or a snippet's shortcut its text. */
+    var onExpanded: (() -> Unit)? = null
     /**
      * A wrong word for the right one, when the next swipe should come out wrong on purpose, which only the interactive guide asks
      * for, or null. See [GuideHooks].
@@ -1681,6 +1683,7 @@ class Composer(
         typedKey = null
         settleTypedWords()
         if (!edit(EditCause.Expand, expansion.code.length, expansion.text)) return
+        onExpanded?.invoke()
         val accepted = snapshot()
         undo = Undo(expansion.text, expansion.restored, "", false, accepted, expansion = true)
         confirmState(accepted, predictNow = predictNow)

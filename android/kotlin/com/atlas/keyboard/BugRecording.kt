@@ -196,6 +196,7 @@ class BugStopReceiver : BroadcastReceiver() {
         Thread {
             try {
                 BugRecording.stop(context)
+                Haptics(context).play(Haptic.BugRecording)
             } finally {
                 result.finish()
             }

@@ -26,6 +26,7 @@ import com.atlas.keyboard.EnterKey
 import com.atlas.keyboard.ExactTyping
 import com.atlas.keyboard.GuideActivity
 import com.atlas.keyboard.Haptics
+import com.atlas.keyboard.HapticsLab
 import com.atlas.keyboard.KeyCapture
 import com.atlas.keyboard.PhoneNameSource
 import com.atlas.keyboard.PhoneSetup
@@ -52,6 +53,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private val keyCapture = lazy { KeyCapture(activity) { key -> activity.emit(JSONObject().put("type", "atlas-key").put("key", key).toString()) } }
     private var keyCaptureRequested = false
     private val appNames = HashMap<String, String>()
+    private val hapticsLab = lazy { HapticsLab(activity) }
     private val windowFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
         if (hasFocus) activity.window.decorView.post {
             // The front page opens the playground whenever the app's own window is in front, as when the playground was closed.
@@ -128,6 +130,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         watchingRequested = false
         previewRequested = false
         keyCaptureRequested = false
+        if (hapticsLab.isInitialized()) hapticsLab.value.stop()
         activity.contentResolver.unregisterContentObserver(keyboardSettings)
         activity.application.unregisterActivityLifecycleCallbacks(this)
     }
@@ -335,6 +338,23 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     syncPreview()
                     "null"
                 }
+                "labPlay" -> {
+                    lab().play(data.getString("id"))
+                    "null"
+                }
+                "labPlayRun" -> {
+                    lab().playRun(data.getString("id"))
+                    "null"
+                }
+                "labLength" -> {
+                    lab().length(data.getString("feel"), data.getLong("millis"))
+                    "null"
+                }
+                "labComments" -> lab().comments()
+                "labSaveComments" -> {
+                    lab().saveComments(data.getString("text"))
+                    "null"
+                }
                 else -> throw IllegalArgumentException("Unknown Atlas operation: $operation")
             }
             if (result != null) complete(NativeResult.Success(result))
@@ -344,6 +364,12 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     }
 
     override fun cancel(requestId: Long) = Unit
+
+    /** The Haptics lab, which only TitanKeys Debug has. Every other build refuses each of its operations. */
+    private fun lab(): HapticsLab {
+        check(HapticsLab.available(activity)) { "The Haptics lab is only in TitanKeys Debug" }
+        return hapticsLab.value
+    }
 
     private fun operationResult(error: String?, complete: NativeResultHandler) {
         complete(if (error == null) NativeResult.Success("null")
@@ -396,6 +422,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("liftOffMillis", TypingSettings.liftOffDurationMillis(activity))
             .put("haptics", Haptics.enabled(activity))
             .put("hapticToggles", JSONObject(Haptics.toggles(activity)))
+            .put("hapticsLab", if (HapticsLab.available(activity)) hapticsLab.value.state() else JSONObject.NULL)
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
             .put("rawLogAvailable", RawLog.available(activity))
             .put("rawLog", RawLog.on(activity))

@@ -167,6 +167,25 @@ object HapticPalette {
      */
     val celebration = listOf(Beat(0, Feel.Step, .4f), Beat(70, Feel.Step, .6f), Beat(140, Feel.Step, .8f), Beat(210, Feel.Done, 1f))
     val celebrationMillis get() = celebration.last().let { it.atMillis + of(it.feel).millis }
+
+    /** What [haptic] plays on the Titan, in words, with the swipe tick and a step at these lengths. For the debug Haptics lab. */
+    fun describe(haptic: Haptic, movingMillis: Long, stepMillis: Long): String {
+        // The Titan can't compose, so the guide plays its own steps, at the usual length, then the click.
+        if (haptic == Haptic.GuideCelebration) {
+            val steps = celebration.filter { it.feel == Feel.Step }
+            return "${steps.size} × ${of(Feel.Step).millis} ms, ${steps[1].atMillis - steps[0].atMillis} ms apart, then CLICK"
+        }
+        return when (haptic.feel) {
+            Feel.Moving -> "$movingMillis ms buzz"
+            Feel.Step -> "$stepMillis ms buzz"
+            Feel.No -> "3 × $NO_PULSE_MILLIS ms, $NO_GAP_MILLIS ms apart"
+            else -> when (of(haptic.feel).effect) {
+                EFFECT_CLICK -> "CLICK (prebaked)"
+                EFFECT_DOUBLE_CLICK -> "DOUBLE_CLICK (prebaked)"
+                else -> "HEAVY_CLICK (prebaked)"
+            }
+        }
+    }
 }
 
 /**

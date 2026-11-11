@@ -56,6 +56,8 @@ export default function Settings() {
       {(settings.swipeTyping || settings.cursorControl)
         && <Field label="Keep swiping after a short lift" href="/settings/lift">{liftLabel(settings)}</Field>}
       <Field label="Haptics" href="/settings/haptics">{hapticsLabel(settings)}</Field>
+      {/* The Haptics lab is only in TitanKeys Debug. Other builds get null for it, so the row never shows there. */}
+      {settings.hapticsLab && <Field label="Haptics lab" href="/settings/haptics-lab" />}
       <Toggle label="Scroll assistant outside text fields" value={!settings.touchpadOnlyInFields}
         onChange={scroll => save.run({ touchpadOnlyInFields: !scroll })} />
     </Section>

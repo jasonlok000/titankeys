@@ -88,6 +88,8 @@ export type State = {
   haptics: boolean;
   /** Each haptic's own switch, by its id in Haptics.kt. A write may send only the ones that changed. */
   hapticToggles: Record<string, boolean>;
+  /** TitanKeys Debug's Haptics lab, and null in every other build. */
+  hapticsLab: HapticsLab | null;
   spelling: Spelling;
   /** Records touches, keys and typed text in a log on this phone. */
   /** This build has the full typing log: only TitanKeys Debug does. */
@@ -97,6 +99,9 @@ export type State = {
   words: { word: string; description: string }[];
   blockedWords: string[];
 };
+
+/** The lengths in use for moving and a step, in ms, and each haptic's feel and what it plays, by its id in Haptics.kt. */
+export type HapticsLab = { movingMillis: number; stepMillis: number; haptics: Record<string, { feel: string; plays: string }> };
 
 export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
 
@@ -218,6 +223,24 @@ export async function transferLearning(mode: "import" | "export") {
     if (mode === "import") await state.refresh();
   }
 }
+
+/** Plays a haptic in the Haptics lab, as the keyboard does. TitanKeys Debug only. */
+export const playHaptic = (id: string) => atlas("labPlay", { id });
+/** Plays a haptic 10 times, 40 ms apart. TitanKeys Debug only. */
+export const playHapticRun = (id: string) => atlas("labPlayRun", { id });
+
+/** Tries a length in ms for the swipe tick ("moving") or a step. TitanKeys Debug only. */
+export async function tryHapticLength(feel: "moving" | "step", millis: number) {
+  try {
+    await atlas("labLength", { feel, millis });
+  } finally {
+    await state.refresh();
+  }
+}
+
+/** The Haptics lab's saved comments file, as JSON. TitanKeys Debug only. */
+export const readLabComments = async (): Promise<unknown> => JSON.parse(await atlas("labComments"));
+export const saveLabComments = (text: string) => atlas("labSaveComments", { text });
 
 /** Opens the file picker. Returns false if the picker was cancelled. */
 export async function exportRawLog() {

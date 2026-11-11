@@ -18,6 +18,7 @@ fun main() {
     steeringFeelsSpacesAndLetters()
     theEndsOfTheTextPlayOncePerHit()
     theCelebrationRisesIntoAClick()
+    theLabSaysWhatEachPlays()
     println("Haptic checks passed")
 }
 
@@ -227,4 +228,19 @@ private fun theCelebrationRisesIntoAClick() {
     check(beats.zipWithNext().all { (a, b) -> a.atMillis < b.atMillis && a.scale < b.scale }) { "It rises: $beats" }
     check(beats.first().atMillis == 0L) { "It starts at once" }
     check(HapticPalette.celebrationMillis < 400) { "It stays short: ${HapticPalette.celebrationMillis} ms" }
+}
+
+/** The debug Haptics lab's words for each haptic, with the tried lengths for moving and a step. */
+private fun theLabSaysWhatEachPlays() {
+    fun says(haptic: Haptic, words: String) = HapticPalette.describe(haptic, 12, 24).let {
+        check(it == words) { "$haptic plays \"$it\", not \"$words\"" }
+    }
+    says(Haptic.SwipeKey, "12 ms buzz")
+    says(Haptic.CursorSpace, "24 ms buzz")
+    says(Haptic.Steer, "CLICK (prebaked)")
+    says(Haptic.Select, "DOUBLE_CLICK (prebaked)")
+    says(Haptic.DeleteFlick, "HEAVY_CLICK (prebaked)")
+    says(Haptic.DeleteNothing, "3 × 12 ms, 50 ms apart")
+    says(Haptic.GuideCelebration, "3 × 16 ms, 70 ms apart, then CLICK")
+    check(Haptic.entries.all { HapticPalette.describe(it, 8, 16).isNotEmpty() }) { "Every haptic says what it plays" }
 }

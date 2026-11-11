@@ -10,7 +10,7 @@ private const val EDGE_START_TOP = .1f
 private const val EDGE_START_BOTTOM = .62f
 private const val EDGE_END_TOP = .175f
 private const val EDGE_END_BOTTOM = .625f
-private const val EDGE_WANDER = 1.15f
+private const val EDGE_WANDER = 1.1f
 
 private const val INNER_EDGE = .76f
 private const val MIDDLE_ROW_TOP = .25f
@@ -21,6 +21,16 @@ private const val INNER_WANDER = 1.1f
 
 private const val MIN_TRAVEL = .1f
 private const val TURN_BACK = .05f
+/**
+ * A flick is short and quick. A longer stroke, or a slower one, is a word: a swipe that starts on P or Backspace and runs left
+ * along the keys, such as "press", is straight enough to pass for a flick, but it goes much further and takes longer. In the
+ * owner's logs, half the real flicks are about 2 keys and 80 ms, and nearly all are under 5.5 keys and 600 ms; the test swipes
+ * that deleted by mistake were 6 to 8.5 keys, or took 600 ms to 1.4 s.
+ */
+private const val MAX_PATH_KEYS = 5.5f
+private const val MAX_FLICK_MILLIS = 600L
+/** The flick has arrived once it is this close to where it ends, in key widths; a finger resting there after that is a hold. */
+private const val ARRIVED_KEYS = .25f
 
 /**
  * The delete zone as one rectangle, as wide and as tall as the L shape of the right edge and the middle row together, so that it
@@ -66,8 +76,8 @@ private const val REPEAT_SLOW_MILLIS = 350L
 private const val REPEAT_FAST_MILLIS = 80L
 /** A flick of this many key widths or fewer is short. Between short and long, the wait follows a straight line. */
 private const val REPEAT_SHORT_KEYS = 2f
-/** A flick of this many key widths or more is long. */
-private const val REPEAT_LONG_KEYS = 7f
+/** A flick of this many key widths or more is long: the longest that still counts as a flick, [MAX_PATH_KEYS]. */
+private const val REPEAT_LONG_KEYS = 5.5f
 /** While an earlier edit is still going through, the next word looks again after this time. */
 private const val BUSY_MILLIS = 20L
 
@@ -81,7 +91,9 @@ internal fun isDeleteWordSwipe(points: List<Sample>): Boolean {
     val first = points.firstOrNull() ?: return false
     val last = points.last()
     if (first.x - last.x < MIN_TRAVEL || points.any { it.x < last.x - TURN_BACK }) return false
-    val wander = pathKeys(points) / max(hypot((last.x - first.x) * 10, (last.y - first.y) * 4), 1e-6f)
+    val path = pathKeys(points)
+    if (path > MAX_PATH_KEYS || flickMillis(points) > MAX_FLICK_MILLIS) return false
+    val wander = path / max(hypot((last.x - first.x) * 10, (last.y - first.y) * 4), 1e-6f)
     if (first.x >= RIGHT_EDGE || DELETE_RECTANGLE && first.x >= INNER_EDGE) {
         return first.y >= EDGE_START_TOP && first.y < EDGE_START_BOTTOM &&
             last.y >= EDGE_END_TOP && last.y < EDGE_END_BOTTOM && wander <= EDGE_WANDER
@@ -99,8 +111,16 @@ internal val deleteSwipeTuning: Map<String, Any> get() = mapOf(
     "minTravel" to MIN_TRAVEL, "turnBack" to TURN_BACK, "deleteRectangle" to DELETE_RECTANGLE,
     "deleteHoldMillis" to HOLD_MILLIS, "deleteHoldKeys" to HOLD_KEYS, "deleteRepeatSlowMillis" to REPEAT_SLOW_MILLIS,
     "deleteRepeatFastMillis" to REPEAT_FAST_MILLIS, "deleteRepeatShortKeys" to REPEAT_SHORT_KEYS,
-    "deleteRepeatLongKeys" to REPEAT_LONG_KEYS,
+    "deleteRepeatLongKeys" to REPEAT_LONG_KEYS, "deleteMaxPathKeys" to MAX_PATH_KEYS, "deleteMaxMillis" to MAX_FLICK_MILLIS,
 )
+
+/** How long the stroke took to arrive where it ends: a finger that then rests there, for a hold, does not make it slower. */
+internal fun flickMillis(points: List<Sample>): Long {
+    val first = points.firstOrNull() ?: return 0
+    val last = points.last()
+    val arrived = points.first { hypot((last.x - it.x) * 10, (last.y - it.y) * 4) <= ARRIVED_KEYS }
+    return arrived.time - first.time
+}
 
 private fun pathKeys(points: List<Sample>) = points.zipWithNext { a, b -> hypot((b.x - a.x) * 10, (b.y - a.y) * 4) }.sum()
 

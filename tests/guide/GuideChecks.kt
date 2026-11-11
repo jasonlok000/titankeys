@@ -64,6 +64,53 @@ private fun theMenuKeys() {
     for (key in listOf("Q", "W", "E", "R", "T", "Y", "U", "A", "H", "J", "Z", "M", Layout.SPACE))
         same(MenuKeys.button(key), -1, "$key picks nothing: the word sits over the left")
     same(MenuKeys.WORD_COLUMNS + 3 + MenuKeys.AFTER_COLUMNS, 10, "The word, three buttons and P's column fill the ten columns")
+    // The bar's buttons, in pixels, on the phone's width: each has room, and sits centred over its own key, as the Sym panel's
+    // labels do. The word ends left of Save.
+    val width = 1080f
+    val side = Layout.KEY_SIDE_DP * 2.625f
+    for ((column, key) in listOf(MenuKeys.SAVE to 'I', MenuKeys.FORGET to 'O', MenuKeys.BACK to 'P')) {
+        val (left, right) = MenuKeys.slot(width, side, column)
+        check(right - left > 80f) { "The button over $key has room: ${right - left} px" }
+        val keyCentre = side + (width - 2 * side) * Layout.KEY_X[key - 'A']
+        check(kotlin.math.abs((left + right) / 2 - keyCentre) < .5f) { "The button over $key is centred on its key: ${(left + right) / 2} vs $keyCentre" }
+    }
+    check(MenuKeys.wordRight(width, side, 21f) < MenuKeys.slot(width, side, MenuKeys.SAVE).first) { "The word ends left of Save" }
+    System.getenv("MENU_PNG")?.let { drawMenuBar(it, width, side) }
+}
+
+/** The menu's geometry, drawn to a PNG over the keys' columns, to look at without a phone. Set MENU_PNG to a path to get it. */
+private fun drawMenuBar(path: String, width: Float, side: Float) {
+    val bar = 147
+    val image = java.awt.image.BufferedImage(width.toInt(), bar * 2, java.awt.image.BufferedImage.TYPE_INT_RGB)
+    val g = image.createGraphics()
+    g.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+    g.color = java.awt.Color.BLACK
+    g.fillRect(0, 0, image.width, image.height)
+    g.font = java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.PLAIN, 44)
+    g.color = java.awt.Color.WHITE
+    val word = "“The”"
+    val right = MenuKeys.wordRight(width, side, 21f)
+    g.drawString(word, right - g.fontMetrics.stringWidth(word), bar / 2f + 15)
+    for ((index, name) in listOf("Save", "Forget", "Back").withIndex()) {
+        val (left, end) = MenuKeys.slot(width, side, MenuKeys.SAVE + index)
+        g.color = if (index == 0) java.awt.Color(0xFF, 0x7A, 0x3D) else java.awt.Color.DARK_GRAY
+        g.fillRoundRect(left.toInt() + 5, 10, (end - left).toInt() - 10, bar - 20, 16, 16)
+        g.color = java.awt.Color.WHITE
+        g.font = java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.PLAIN, 26)
+        g.drawString(name, ((left + end) / 2 - g.fontMetrics.stringWidth(name) / 2).toInt(), bar / 2 + 9)
+    }
+    // The keys underneath: the top row, in its ten columns.
+    g.font = java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD, 36)
+    for ((column, key) in Layout.rows[0].withIndex()) {
+        val (left, end) = MenuKeys.slot(width, side, column)
+        g.color = java.awt.Color(0x33, 0x33, 0x33)
+        g.fillRoundRect(left.toInt() + 4, bar + 14, (end - left).toInt() - 8, bar - 28, 14, 14)
+        g.color = java.awt.Color.WHITE
+        g.drawString(key, ((left + end) / 2 - g.fontMetrics.stringWidth(key) / 2).toInt(), bar + bar / 2 + 12)
+    }
+    g.dispose()
+    javax.imageio.ImageIO.write(image, "png", java.io.File(path))
+    println("Menu bar drawn to $path")
 }
 
 fun main() {
@@ -420,6 +467,8 @@ private fun scenarios() {
 
     val swipe = GuideFlow({ GuideSettings() })
     swipe.start("swipe")
+    swipe.event(Pushed(KEY_A))
+    same(title(swipe.event(Pushed(62))), "That's typing. Swipe this one.", "A word typed key by key on the swipe slide")
     same(title(swipe.event(Recognised(listOf("tp")), "to")), "Close. Tap the right one on the bar.", "A missed swipe points at the bar")
     same(swipe.event(Chosen("to"), "to"), GuideVerdict.Done, "The right word on the bar finishes it")
     same(swipe.jumps, true, "and does the next slide too")

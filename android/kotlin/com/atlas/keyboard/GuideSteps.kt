@@ -782,9 +782,19 @@ internal val GUIDE_STEPS = listOf(
                 }
                 event is Recognised && event.words.isNotEmpty() -> {
                     mark = -1
+                    armed = false
                     if (++count >= SWIPES_TO_PASS) GuideVerdict.Done else GuideVerdict.Wait
                 }
                 event is Tapped -> chip("That's a tap. Slide, don't lift.")
+                // Letters work here, but a word typed key by key isn't what this slide is for.
+                event is Pushed && isLetter(event.code) -> {
+                    armed = true
+                    GuideVerdict.Wait
+                }
+                event is Pushed && event.code == KEY_SPACE && armed -> {
+                    armed = false
+                    chip("That's typing. Swipe this one.")
+                }
                 else -> GuideVerdict.Wait
             }
         }),

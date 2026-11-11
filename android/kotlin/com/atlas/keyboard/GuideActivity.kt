@@ -300,6 +300,53 @@ private class GuideSegment(context: Context) : View(context) {
 private class GuideField(context: Context) : EditText(context) {
     /** Android calls [onSelectionChanged] while it builds the view, so this has to work before it is set. */
     var changed: (() -> Unit)? = null
+
+    /**
+     * Grey text that carries on right after what's typed, as one paragraph with it: the same font, size and lines, wrapping where
+     * the typed text would. It isn't in the field's text, so the keyboard never sees it. See [GuideActivity.showGhost].
+     */
+    var ghost = ""
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+    var ghostColour = 0
+    private var ghostLayout: StaticLayout? = null
+    private var ghostKey = ""
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val own = layout ?: return
+        if (ghost.isEmpty()) return
+        val typed = text.toString()
+        val key = "$typed\u0000$ghost\u0000${own.width}\u0000$ghostColour"
+        val ghostly = ghostLayout?.takeIf { ghostKey == key } ?: run {
+            // What's typed, invisible, then the ghost: so the ghost starts exactly where the typed text ends, on its line.
+            val built = SpannableStringBuilder(typed)
+            if (typed.isNotEmpty()) built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, typed.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val start = built.length
+            built.append(ghost)
+            built.setSpan(ForegroundColorSpan(ghostColour), start, built.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            StaticLayout.Builder.obtain(built, 0, built.length, paint, own.width)
+                .setAlignment(own.alignment)
+                .setLineSpacing(lineSpacingExtra, lineSpacingMultiplier)
+                .setIncludePad(includeFontPadding)
+                .setBreakStrategy(breakStrategy)
+                .setHyphenationFrequency(hyphenationFrequency)
+                .build()
+                .also { ghostLayout = it; ghostKey = key }
+        }
+        // The same place the field draws its own text: inside its padding, scrolled with it, and only within its lines.
+        val left = compoundPaddingLeft.toFloat()
+        val top = extendedPaddingTop.toFloat()
+        canvas.save()
+        canvas.clipRect(left + scrollX, top + scrollY, (width - compoundPaddingRight + scrollX).toFloat(),
+            (height - extendedPaddingBottom + scrollY).toFloat())
+        canvas.translate(left, top)
+        ghostly.draw(canvas)
+        canvas.restore()
+    }
     /** A finger lifted from the field: the guide's steering slides have words for that. */
     var touched: (() -> Unit)? = null
 
@@ -436,6 +483,8 @@ class GuideActivity : Activity() {
     private var steerLength = 0
     /** The guide is typing a symbol's sentence, letter by letter. */
     private var autoTyping = false
+    /** The next hint is a line of its own, as the box to tick is, and not a chip. */
+    private var keepHint = false
     /** The user ticked the box to go on without pasting. */
     private var pasteDeclined = false
     /** The guide opens with the line that says chapters can be picked. */
@@ -760,6 +809,8 @@ class GuideActivity : Activity() {
         }
         // The same text settings as the field, so that the grey words line up with the real ones.
         phantom = TextView(this).apply {
+            breakStrategy = field.breakStrategy
+            hyphenationFrequency = field.hyphenationFrequency
             typeface = field.typeface
             setTextSize(TypedValue.COMPLEX_UNIT_PX, field.textSize)
             setPadding(field.paddingLeft, field.paddingTop, field.paddingRight, field.paddingBottom)
@@ -960,9 +1011,11 @@ class GuideActivity : Activity() {
             field.setHintTextColor(GuideMotion.faded(GuideColours.CREAM, .45f))
             field.background = rounded(fieldFill(), FIELD_RADIUS)
             field.hint = null
+            field.ghostColour = ghostGrey()
             for (view in listOf<TextView>(field, phantom)) {
                 view.minLines = 2
                 view.maxLines = 2
+                view.gravity = Gravity.TOP or Gravity.START
             }
         } else {
             title.isSingleLine = false
@@ -982,9 +1035,11 @@ class GuideActivity : Activity() {
             field.setHintTextColor(GuideMotion.faded(GuideColours.INK, .45f))
             field.background = rounded(GuideColours.CREAM, FIELD_RADIUS)
             field.hint = FIELD_HINT
+            field.ghost = ""
             for (view in listOf<TextView>(field, phantom)) {
                 view.minLines = 1
                 view.maxLines = 2
+                view.gravity = Gravity.CENTER_VERTICAL or Gravity.START
             }
         }
     }
@@ -1146,13 +1201,14 @@ class GuideActivity : Activity() {
         }
         val resumed = preferences.getString(RESUME, null) != null && flow.step.id != GUIDE_STEPS.first().id
         again.visibility = if (resumed) View.VISIBLE else View.GONE
-        // Every chapter finished: the bar at the top jumps to any of them, and the guide says so.
-        refresher = canJump
-        if (preferences.getBoolean(LEFT_EARLY, false)) {
-            preferences.edit().remove(LEFT_EARLY).apply()
+        // Coming back says one thing, once: that you're back, or that chapters can be picked. On the very first slide, neither.
+        val leftEarly = preferences.getBoolean(LEFT_EARLY, false)
+        preferences.edit().remove(LEFT_EARLY).apply()
+        val first = flow.step.id == GUIDE_STEPS.first().id
+        if (leftEarly && !first) {
             arrivalTitle = COME_BACK_TITLE
             arrivalBody = COME_BACK_BODY
-        }
+        } else refresher = canJump && !first
         if (resumed || !GuideMotion.enabled) {
             reveal(flow.step)
             return
@@ -1251,7 +1307,7 @@ class GuideActivity : Activity() {
         if (said != null) main.postDelayed({ if (!passed && flow.step === step) showChip(said) }, ENTER_MILLIS)
         hideHint()
         if (missing == GuideNeed.FnAsCtrl) offerDecline()
-        else if (refresher) showHint(REFRESHER)
+        else if (refresher && said == null) main.postDelayed({ if (!passed) showChip(REFRESHER) }, ENTER_MILLIS)
         refresher = false
         if (step.offersShare) Contributions.guideEnded(this)
         // The keyboard starts the step in the menu that it needs: the Sym panel for Alt and the emoji, closed for typing.
@@ -1314,20 +1370,9 @@ class GuideActivity : Activity() {
      * letter, then the words after it. A demo draws over it while it plays.
      */
     private fun showGhost() {
-        if (!::phantom.isInitialized || demoStart >= 0) return
-        val ghost = if (!playground && ready && !settingUp && guideLooks == true && flow.step.chapter == GuideChapter.Typing) ghostText() else ""
-        if (ghost.isEmpty()) {
-            if (phantom.text.isNotEmpty()) phantom.text = ""
-            return
-        }
-        val text = field.text.toString()
-        val built = SpannableStringBuilder(text)
-        if (text.isNotEmpty()) built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        val start = built.length
-        built.append(ghost)
-        built.setSpan(ForegroundColorSpan(ghostGrey()), start, built.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        phantom.text = built
-        phantom.post { phantom.scrollTo(0, field.scrollY) }
+        if (!::field.isInitialized) return
+        // The field draws it itself, from the slide's first frame, demo or not. See [GuideField.ghost].
+        field.ghost = if (!playground && started && !settingUp && guideLooks == true && flow.step.chapter == GuideChapter.Typing) ghostText() else ""
     }
 
     /** What the ghost says after the field's text: see [showGhost]. A slide with a [GuideStep.ghost] shows its words instead. */
@@ -1801,7 +1846,7 @@ class GuideActivity : Activity() {
                 if (t > INSERT_SHARE) add(gap + demo.text)
             }
         }
-        phantom.text = built
+        phantom.text = if (guideLooks == true && flow.step.chapter == GuideChapter.Typing) "" else built
         phantom.scrollTo(0, field.scrollY)
     }
 
@@ -1856,6 +1901,10 @@ class GuideActivity : Activity() {
     }
 
     private fun showHint(text: String) {
+        if (guideLooks == true && !keepHint) {
+            showChip(text)
+            return
+        }
         hint.text = text
         if (hint.visibility != View.VISIBLE) {
             hint.visibility = View.VISIBLE
@@ -1912,7 +1961,9 @@ class GuideActivity : Activity() {
 
     /** The paste slide's box, for going on without fn as Ctrl: ticked, the slide counts as passed. */
     private fun offerDecline() {
+        keepHint = true
         showHint(DECLINE_OFF)
+        keepHint = false
         hint.setOnClickListener {
             pasteDeclined = !pasteDeclined
             hint.text = if (pasteDeclined) DECLINE_ON else DECLINE_OFF

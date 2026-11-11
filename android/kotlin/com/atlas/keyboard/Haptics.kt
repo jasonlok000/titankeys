@@ -76,8 +76,11 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     Select("select", HapticGroup.Space, Family.Lock),
     /** A double or triple tap on Space picked the word at the cursor. It is selected, so it feels like selecting. */
     WordPicked("word_picked", HapticGroup.Space, Family.Lock),
-    /** Two quick taps above Space, which pick nothing there. Only in the guide's practice field, which says so. */
-    TwoTapsAbove("two_taps_above", HapticGroup.Space, Family.No),
+    /**
+     * Taps on or above Space found nothing to work on: a double or triple tap with no word to pick, or steering with no text.
+     * Nothing happens, and a no says why. In the guide's practice field it also plays for two taps above Space, which pick nothing.
+     */
+    NothingToPick("nothing_to_pick", HapticGroup.Space, Family.No),
     CursorLetter("cursor_letter", HapticGroup.Space, Family.Texture),
     CursorSpace("cursor_space", HapticGroup.Space, Family.Boundary),
     SelectionWord("selection_word", HapticGroup.Space, Family.Boundary),
@@ -133,6 +136,16 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
 
         /** What a short tap on an exact typing chip plays: Release when it unlocks a locked chip, and Confirm otherwise. */
         fun chipTapped(wasLocked: Boolean) = if (wasLocked) ExactUnlock else ExactChip
+
+        /** What a double or triple tap plays: Lock when it picked a word, and Nothing to pick when there was none. */
+        fun picked(found: Boolean) = if (found) WordPicked else NothingToPick
+
+        /** What a held Space gesture plays as it registers: steer, select, or Nothing to pick where it has nothing to work on. */
+        fun registered(words: Boolean, nothing: Boolean) = when {
+            nothing -> NothingToPick
+            words -> Select
+            else -> Steer
+        }
     }
 }
 

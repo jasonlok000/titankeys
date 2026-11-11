@@ -20,7 +20,7 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "steer_resumed", label: "Steering picks up after a slip", about: "When your finger slips off and lands again in time, and you're still steering." },
     { id: "select", label: "Selecting starts", about: "When you tap, tap, then hold Space and selecting starts." },
     { id: "word_picked", label: "Double or triple tap picks a word", about: "When a double or triple tap on Space picks the word at the cursor." },
-    { id: "two_taps_above", label: "Two taps above Space in the guide", about: "When you tap twice above Space in the guide's practice field. Two taps there pick nothing." },
+    { id: "nothing_to_pick", label: "Nothing to pick", about: "When a double or triple tap finds no word, or you steer with no text. Nothing happens, and this says why." },
     { id: "cursor_letter", label: "Cursor passes a letter", about: "Each letter the cursor passes while you steer." },
     { id: "cursor_space", label: "Cursor passes a space", about: "Each space or line end the cursor passes while you steer, so you can count words." },
     { id: "selection_word", label: "Selection grows or shrinks a word", about: "When the selection grabs one more word, or lets one go." },

@@ -40,7 +40,7 @@ fun main() {
     swipesOffKeepTapsAndThePanel()
     aBrushUnderASwipeNeverTicks()
     aSwipeStillTicks()
-    aSlowStartTicksLater()
+    aSlowSwipeTicksAtOnce()
     println("Contact checks passed")
 }
 
@@ -354,20 +354,13 @@ private fun aBrushUnderASwipeNeverTicks() {
     for (point in brush) check(ticks.move(listOf(point)) == null) { "A brush of under ${Contact.SWIPE_KEYS} keys ticked at $point" }
 }
 
-/** A finger that sets off slowly, as from resting on a key, ticks only once it has gone two keys. A quick one ticks as before. */
-private fun aSlowStartTicksLater() {
+/** A slow swipe ticks at a swipe's distance too: waiting longer made the first ticks feel missing (Nov 11). */
+private fun aSlowSwipeTicksAtOnce() {
     val ticks = SwipeTicks()
     ticks.begin(at(.15f, .4f, 0))
-    // 0.1 keys every 40 ms: a swipe's distance after 240 ms, which is a slow start.
     val slow = (1..40).map { at(.15f + it * .01f, .4f, it * 40L) }
-    val ticked = slow.filter { ticks.move(listOf(it)) != null }
-    check(ticked.isNotEmpty()) { "A slow swipe that goes on should still tick" }
-    check((ticked.first().x - .15f) * 10 >= SwipeTicks.SLOW_START_KEYS - 1e-4f) { "A slow start ticked too soon, at ${ticked.first()}" }
-    val short = SwipeTicks()
-    short.begin(at(.45f, .4f, 0))
-    // Slowly to 1.5 keys, as a finger sliding while it pushes a key: no tick at all.
-    for (point in (1..15).map { at(.45f + it * .01f, .4f, it * 30L) })
-        check(short.move(listOf(point)) == null) { "A slow slide of under two keys ticked at $point" }
+    val first = slow.first { ticks.move(listOf(it)) != null }
+    check((first.x - .15f) * 10 < Contact.SWIPE_KEYS + .15f) { "A slow swipe's first tick came late, at $first" }
 }
 
 /** A real swipe still ticks, once it has gone as far as a swipe, and again as it goes on. */

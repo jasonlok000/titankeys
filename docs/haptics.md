@@ -20,7 +20,7 @@ A meaning is the same everywhere. "No" is the only timed pattern, so it can't be
 ## What plays what
 
 **Swipe**
-- The swipe is recognised: texture tick. This is the first tick, once the finger has gone as far as a swipe. A finger that sets off slowly, as from resting on a key, has to go two keys first, which stops most phantom buzzes.
+- The swipe is recognised: texture tick. This is the first tick, once the finger has gone as far as a swipe.
 - Each key the swipe crosses: texture tick. The ticks come every 0.7 keys, at most one each 40 ms.
 - A light touch types a key: tick. The touchpad has no click, so this stands in for the key's.
 

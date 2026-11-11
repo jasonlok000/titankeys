@@ -335,14 +335,17 @@ class Strip(
         hint.setTextColor(look.ink)
         showNotice(confirm)
         clipView.visibility = if (offer != null) VISIBLE else GONE
-        // The start of the clip, cut cleanly at the end of the line.
-        // The clip follows the words' rules: it shrinks to fit, then loses its end.
+        // The clip follows the words' rules: it shrinks to fit, and then shows its start and its last word, "word word … word".
+        // While the automatic capital's arrow shows, the clip keeps out of the arrow's place at the left.
+        val reserve = if (autoCapital && showSuggestions) Math.round(capitalWidth()) + dp(CAPITAL_CLEAR) + dp(4) else 0
+        clipView.setPadding(dp(6) + reserve, 0, dp(6), 0)
         val preview = offer?.let { ClipboardHistory.preview(it, CLIP_PREVIEW_LENGTH) }.orEmpty()
         val icon = Math.round(wordPixels() * CLIP_ICON_SCALE)
         val clipRoom = (width - paddingLeft - paddingRight - clipView.paddingLeft - clipView.paddingRight - icon - clipText.compoundDrawablePadding).toFloat()
         val clipFit = if (clipRoom > 0 && preview.isNotEmpty()) StripFit.fit(listOf(preview), clipRoom, 0f, ::measureWord).single() else null
-        clipText.text = clipFit?.text ?: preview
-        clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (clipFit?.scale ?: 1f))
+        val clipScale = clipFit?.scale ?: 1f
+        clipText.text = if (clipFit == null) preview else ClipboardHistory.ends(preview, clipRoom) { measureWord(it) * clipScale }
+        clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * clipScale)
         clipText.setTextColor(look.ink)
         // The icon is as tall as the words' letters, so it sits on their line.
         clipText.setCompoundDrawablesRelative(context.getDrawable(R.drawable.clipboard)?.mutate()?.apply {
@@ -401,13 +404,23 @@ class Strip(
     private val capitalArrow = android.graphics.Path()
     private val capitalBox = android.graphics.RectF()
 
-    private fun drawAutoCapital(canvas: Canvas) {
-        if (!autoCapital || !showSuggestions) return
-        // Shift's chip: its text size and padding give its height.
+    /** The height of Shift's chip: its text size and padding. The arrow's place is that tall. */
+    private fun capitalHeight(): Float {
         capitalText.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CHIP_SIZE, resources.displayMetrics)
-        val height = capitalText.descent() - capitalText.ascent() + 2 * dp(3)
+        return capitalText.descent() - capitalText.ascent() + 2 * dp(3)
+    }
+
+    /** The width of the arrow's place at the left of the bar. */
+    private fun capitalWidth() = capitalHeight() - 2 * dp(CAPITAL_ARROW_IN) + 2 * dp(CAPITAL_SIDE_IN)
+
+    /**
+     * Puts the arrow's place in [capitalBox] and gives the arrow's size and line width in pixels. While an idle game plays with the
+     * arrow, the game draws it.
+     */
+    private fun placeCapital(): Pair<Float, Float> {
+        val height = capitalHeight()
         val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
-        val width = arrow + 2 * dp(CAPITAL_SIDE_IN)
+        val width = capitalWidth()
         val left = side.toFloat()
         val top = (dp(56) - height) / 2
         capitalBox.set(left, top, left + width, top + height)
@@ -421,12 +434,17 @@ class Strip(
             capitalBox.set(x, dp(4).toFloat(), x + width * scale, dp(4) + height * scale)
         }
         val cornerScale = capitalBox.height() / height
+        return arrow * cornerScale to TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CAPITAL_LINE, resources.displayMetrics) * cornerScale
+    }
+
+    private fun drawAutoCapital(canvas: Canvas) {
+        if (!autoCapital || !showSuggestions || idle?.glyphs?.any { it.arrow } == true) return
+        val (size, line) = placeCapital()
         capitalPaint.color = look.accent
         // The shift arrow, where Shift's chip would be, without the chip's outline: a head as wide as it is tall at the top, on a stem half as wide.
-        val size = arrow * cornerScale
         val x = capitalBox.centerX() - size / 2
         val y = capitalBox.centerY() - size / 2
-        capitalPaint.strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CAPITAL_LINE, resources.displayMetrics) * cornerScale
+        capitalPaint.strokeWidth = line
         capitalArrow.reset()
         capitalArrow.moveTo(x + size / 2, y)
         capitalArrow.lineTo(x + size, y + size * .52f)
@@ -572,14 +590,23 @@ class Strip(
     private val idleFrame = Runnable { invalidate() }
     /** How many of the bar's pixels make one of the games' units: they are made for a bar 88 high. */
     private val idleScale get() = dp(56) / Idle.H
+    /** How far the game keeps from each side, in pixels, so that the screen's rounded corners cut nothing, down to its floor. */
+    private var idleEdge = 0
+    /** A game ended by itself, and the bar shows its words again: the next idle wait starts. */
+    var idleEnded: () -> Unit = {}
 
     val idling get() = idle != null
 
-    /** Starts an idle game with the words on the bar, if plain words show. Returns false if there is nothing to play with. */
-    internal fun startIdle(random: kotlin.random.Random, kind: IdlePlayer.Kind? = null): Boolean {
+    /**
+     * Starts an idle game with the words on the bar, if plain words show: [kind], or one picked by rarity among the games the
+     * letters fit and [schedule] allows. Returns false if there is nothing to play with, or the letters do not fit [kind].
+     */
+    internal fun startIdle(random: kotlin.random.Random, kind: IdlePlayer.Kind? = null, schedule: IdleSchedule? = null): Boolean {
         if (idle != null || !isShown || !showSuggestions || modifiers?.replacesWords == true || notice != null || clip != null || selected != null
             || gesture.showing) return false
         val scale = idleScale
+        // The floor of the game, the bottom of its letters, is this far over the bottom of the screen; the corners curve in there.
+        idleEdge = corners.inset((height - Idle.H * scale).coerceAtLeast(0f)) + dp(2)
         val glyphs = ArrayList<Glyph>()
         // The words left to right, in the order of the bar, so that word 0, 1 and 2 are left, middle and right.
         val views = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.sortedBy { it.left }
@@ -594,11 +621,21 @@ class Strip(
                 if (char.isWhitespace()) continue
                 val left = view.left + view.totalPaddingLeft + layout.getPrimaryHorizontal(i) - view.scrollX
                 val advance = paint.measureText(view.text, i, i + 1)
-                glyphs += Glyph(char, word, (left + advance / 2) / scale, middle / scale, advance / scale, paint.textSize / scale)
+                glyphs += Glyph(char, word, (left + advance / 2 - idleEdge) / scale, middle / scale, advance / scale, paint.textSize / scale)
             }
         }
         if (glyphs.isEmpty()) return false
-        idle = IdlePlayer(glyphs, width / scale, random, kind)
+        // The automatic capital's arrow plays too, first in the left word, and comes home to its own place.
+        if (autoCapital) {
+            val (size, line) = placeCapital()
+            idleDrawing.arrowLine = line / scale
+            glyphs.add(0, Glyph(Idle.ARROW, 0, (capitalBox.centerX() - idleEdge) / scale, capitalBox.centerY() / scale, size / scale,
+                wordViews.first().paint.textSize / scale, arrow = true))
+        }
+        val game = kind?.takeIf { IdlePlayer.fits(it, glyphs) }
+            ?: (if (kind == null) IdlePlayer.choose(glyphs, random) { schedule?.allows(it) != false } else null) ?: return false
+        schedule?.played(game)
+        idle = IdlePlayer(glyphs, (width - 2 * idleEdge) / scale, random, game)
         idleFrameAt = SystemClock.uptimeMillis()
         render()
         invalidate()
@@ -628,10 +665,13 @@ class Strip(
         val dt = (now - idleFrameAt).coerceIn(0, IDLE_LONGEST_FRAME).toFloat()
         idleFrameAt = now
         if (speed <= 0f || !player.update(dt / speed)) {
-            post(::stopIdle)
+            post { if (idle === player) { stopIdle(); idleEnded() } }
             return
         }
+        canvas.save()
+        canvas.translate(idleEdge.toFloat(), 0f)
         idleDrawing.draw(canvas, player, idleScale, wordViews.first().paint, look)
+        canvas.restore()
         postDelayed(idleFrame, IDLE_FRAME_MILLIS)
     }
 

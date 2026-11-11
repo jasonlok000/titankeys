@@ -335,7 +335,7 @@ class AtlasIme : InputMethodService() {
     private val stepDeleteHold = Runnable {
         val free = pendingInput.isEmpty() && !composer.hasPendingInput
         val next = deleteHold.step(SystemClock.uptimeMillis(), free, ::deleteHeldWord)
-        if (next != null) nextDeleteHoldStep(next) else strip?.gesture?.deleteEnded()
+        if (next != null) nextDeleteHoldStep(next) else strip?.gesture?.deleteEnded(SystemClock.uptimeMillis())
     }
 
     private fun nextDeleteHoldStep(at: Long) {
@@ -353,7 +353,7 @@ class AtlasIme : InputMethodService() {
     private fun endDeleteHold() {
         main.removeCallbacks(stepDeleteHold)
         deleteHold.reset()
-        strip?.gesture?.deleteEnded()
+        strip?.gesture?.deleteEnded(SystemClock.uptimeMillis())
     }
 
     /** Each word goes the way of a normal delete flick. [flick] is the first word's flick, and is null for the words after it. */
@@ -377,8 +377,10 @@ class AtlasIme : InputMethodService() {
                 return@enqueue
             }
             haptics.play(Haptic.DeleteWord)
+            // A dot for each character of the word, for the dots that play when the hold lifts.
+            val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
             composer.backspace(true)
-            strip?.gesture?.wordDeleted(SystemClock.uptimeMillis())
+            strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
             KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
         }
     }
@@ -631,7 +633,15 @@ class AtlasIme : InputMethodService() {
     // show. Any input ends it at once. It stays off with exact typing, in apps where the bar hides, in fields with no suggestions,
     // with the bar or the screen off, with the Sym panel open, and with Android's animations off.
 
-    private val idleBar = Runnable { startIdleBar() }
+    /**
+     * The idle time is reached: most times nothing plays, and the next wait starts; see [IdlePlayer.PLAY_CHANCE] and [IdleSchedule]
+     * (never two games in a row, and no game again within two idle times).
+     */
+    private val idleBar = Runnable {
+        val random = Random(System.nanoTime())
+        if (!idleSchedule.trigger(random) || !startIdleBar(random = random, schedule = idleSchedule)) waitIdleBar()
+    }
+    private val idleSchedule = IdleSchedule()
     private var idleBarTriggerRegistered = false
     /** The debug build's swipe tick length to try, from adb: the extra "ms", or 0 to go back to the usual length. It plays one. */
     private val movingTry = object : BroadcastReceiver() {
@@ -652,9 +662,10 @@ class AtlasIme : InputMethodService() {
     }
 
     /**
-     * The debug build's trigger, from adb. With no extra it starts a game picked at random. The extra "game" picks one by name or by
-     * the demo's number (1 drift, 2 pong, 3 bowling, 5 rope, 7 race, 8 juggle); the extra "return" sends the running game home by
-     * one way (shell, firework, drop, exit), as coming back would.
+     * The debug build's trigger, from adb. It always starts a game, with no roll of the chance. With no extra the game is picked by
+     * rarity among the ones the letters fit. The extra "game" picks one by name or by the demo's number (1 drift, 2 pong, 3 bowling,
+     * 5 rope, 6 firework, 7 race, 8 juggle), if the letters fit it; the extra "return" sends the running game home by one way (shell,
+     * firework, drop, exit), as coming back would.
      */
     private val idleBarTrigger = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -671,13 +682,14 @@ class AtlasIme : InputMethodService() {
                     IdlePlayer.Kind.entries.firstOrNull { it.name.lowercase() == name || it.number.toString() == name || name == "rope" && it == IdlePlayer.Kind.JumpRope }
                 }
                 if (game != null && kind == null) {
-                    Log.i("Atlas", "Idle bar: no game called $game. Shell (4) and firework (6) are ways home: use the extra return")
+                    Log.i("Atlas", "Idle bar: no game called $game. Shell (4) is a way home: use the extra return")
                     return@post
                 }
                 // A game that plays now starts again as the one asked for.
                 strip?.stopIdle()
                 val started = startIdleBar(kind)
-                Log.i("Atlas", if (started) "Idle bar: started ${kind ?: "a random game"}" else "Idle bar: not started, as no plain words show or it is off here")
+                Log.i("Atlas", if (started) "Idle bar: started ${kind ?: "a game picked by rarity"}"
+                    else "Idle bar: not started, as no plain words show, the letters do not fit ${kind ?: "any game"}, or it is off here")
             }
         }
     }
@@ -689,7 +701,8 @@ class AtlasIme : InputMethodService() {
     private fun idleBarAllowed() = editing && isInputViewShown && !panelOpen && !field.exact && !barHidden && field.suggestions &&
         field.autocorrect && showSuggestions() && ValueAnimator.areAnimatorsEnabled() && getSystemService(PowerManager::class.java).isInteractive
 
-    private fun startIdleBar(kind: IdlePlayer.Kind? = null) = idleBarAllowed() && strip?.startIdle(Random(System.nanoTime()), kind) == true
+    private fun startIdleBar(kind: IdlePlayer.Kind? = null, random: Random = Random(System.nanoTime()), schedule: IdleSchedule? = null) =
+        idleBarAllowed() && strip?.startIdle(random, kind, schedule) == true
 
     /**
      * Input starts the wait again. Coming back, with a finger on the touchpad or a touch on the bar, sends the idle game's letters
@@ -700,6 +713,12 @@ class AtlasIme : InputMethodService() {
         if (cut) strip?.stopIdle() else strip?.comeBackFromIdle()
         // A demonstration from the guide gives the bar back as soon as you act.
         strip?.stopDemo()
+        waitIdleBar()
+    }
+
+    /** The idle wait starts again from now, a random while of at least [IDLE_BAR_MILLIS]. */
+    private fun waitIdleBar() {
+        main.removeCallbacks(idleBar)
         if (idleBarAllowed()) main.postDelayed(idleBar, IDLE_BAR_MILLIS + Random.nextLong(IDLE_BAR_MILLIS / 2))
     }
 
@@ -850,6 +869,8 @@ class AtlasIme : InputMethodService() {
     override fun onCreateInputView(): View {
         val words = Strip(this, { index -> haptics.play(Haptic.BarWord); enqueue { composer.choose(index) } }, ::holdWord,
             { action -> enqueue { stripAction(action) } }, { enqueue { pasteOfferedClip() } }, { wakeIdleBar(cut = false) })
+        // A game that ended by itself, or was sent home, gives the bar back: the next wait starts fresh, with the same roll.
+        words.idleEnded = ::waitIdleBar
         val keys = SymPanel(this,
             pick = { item -> enqueue { typePanelItem(item) } },
             useQuickSetting = { item -> enqueue { useQuickSetting(item) } },

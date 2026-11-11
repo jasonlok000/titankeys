@@ -131,23 +131,90 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val slot = (right - left) / GestureDisplay.VISIBLE_WORDS
         val alpha = display.reveal
         if (display.softDelete) {
-            // A single flick shows only the orange part: a dot for each character that went, and the caret.
-            val pulse = dots(canvas, display, left, stop, caret, mid, alpha, look)
-            bar(canvas, caret, mid, dp(CARET_HEIGHT) * (1f + CARET_PULSE * pulse), GuideMotion.faded(look.accent, alpha))
+            // The dots show only the orange part: a dot for each character that went, and the caret.
+            val morphing = display.fromHold && display.dotsIn < 1f
+            val pulse = if (morphing) { morph(canvas, display, left, stop, slot, mid, alpha, look); 0f }
+                else dots(canvas, display, left, stop, caret, mid, alpha, look)
+            // A lifted hold's caret beat settles while its lines turn into dots.
+            val beat = if (morphing) 1f - BEAT * display.morphFlow * (1f - display.dotsIn) else 1f
+            bar(canvas, caret, mid, dp(CARET_HEIGHT) * (1f + CARET_PULSE * pulse), GuideMotion.faded(look.accent, beat * alpha))
             return
         }
-        val first = floor(display.shownDeleted).toInt()
-        for (index in first..first + GestureDisplay.VISIBLE_WORDS.toInt() + 1) {
-            val x = stop - slot / 2 - (index - display.shownDeleted) * slot
-            val half = slot * widthOf(index) / 2
-            if (x - half >= stop || x + half < left) continue
-            val going = x + half > stop
-            val colour = if (going) GuideMotion.faded(look.accent, alpha) else GuideMotion.faded(look.ink, WORD * alpha)
-            word(canvas, maxOf(x - half, left), min(x + half, stop), mid, colour)
+        lines(display.shownDeleted, left, stop, slot) { start, end, going ->
+            word(canvas, start, end, mid, if (going) GuideMotion.faded(look.accent, alpha) else GuideMotion.faded(look.ink, WORD * alpha))
         }
         // The caret beats once for each word, quicker for a longer flick.
         val beat = 1f - BEAT * display.flow
         bar(canvas, caret, mid, dp(CARET_HEIGHT), GuideMotion.faded(look.accent, beat * alpha))
+    }
+
+    /** A hold's lines with [shown] words gone, nearest the caret first: each line's ends, and whether it is the one going now. */
+    private inline fun lines(shown: Float, left: Float, stop: Float, slot: Float, each: (Float, Float, Boolean) -> Unit) {
+        val first = floor(shown).toInt()
+        for (index in first..first + GestureDisplay.VISIBLE_WORDS.toInt() + 1) {
+            val x = stop - slot / 2 - (index - shown) * slot
+            val half = slot * widthOf(index) / 2
+            if (x - half >= stop || x + half < left) continue
+            each(maxOf(x - half, left), min(x + half, stop), x + half > stop)
+        }
+    }
+
+    /** How far apart the dots are: [DOT_STEP], or closer so that all of them and their word gaps fit between [left] and [stop]. */
+    private fun dotStep(display: GestureDisplay, left: Float, stop: Float) =
+        min(dp(DOT_STEP), (stop - left) / (display.dots + maxOf(0, display.groups.size - 1)).coerceAtLeast(1))
+
+    /**
+     * A lifted hold: each of its lines, nearest the caret first, shrinks to the run of dots of one deleted word, in place, while the
+     * dots come up inside it and the line fades; a word with no line left on the bar has its dots pop in. With no jump at the
+     * start, it is the hold's own picture; at the end, the dots' first frame.
+     */
+    private fun morph(canvas: Canvas, display: GestureDisplay, left: Float, stop: Float, slot: Float, mid: Float, alpha: Float, look: Look) {
+        val m = display.dotsIn.let { it * it * (3 - 2 * it) }
+        val step = dotStep(display, left, stop)
+        val radius = dp(DOT_RADIUS)
+        val groups = display.groups
+        var line = 0
+        var placed = 0
+        lines(display.morphFrom, left, stop, slot) { start, end, going ->
+            if (line >= groups.size) return@lines
+            val firstSlot = placed + line
+            val count = groups[line]
+            // The dots' run for this word: from its farthest dot to its nearest.
+            val near = stop - step / 2 - firstSlot * step
+            val far = stop - step / 2 - (firstSlot + count - 1) * step
+            val from = if (going) look.accent else look.ink
+            val strength = if (going) 1f else WORD + (1f - WORD) * m
+            val fade = 1f - ((m - .45f) / .55f).coerceIn(0f, 1f)
+            val half = dp(WORD_HEIGHT / 2) + (radius - dp(WORD_HEIGHT / 2)) * m
+            val a = start + (far - radius - start) * m
+            val b = end + (near + radius - end) * m
+            if (fade > 0f) rounded(canvas, a, mid - half, maxOf(a, b), mid + half, half,
+                GuideMotion.faded(blend(from, look.accent, m), strength * fade * alpha))
+            val show = ((m - .3f) / .7f).coerceIn(0f, 1f)
+            for (k in 0 until count) {
+                val home = stop - step / 2 - (firstSlot + k) * step
+                // Spread along the line at first, and at their own places at the end.
+                val spread = if (count == 1) (start + end) / 2 else end - (end - start) * k / (count - 1)
+                dot(canvas, spread + (home - spread) * m, mid, radius * show, GuideMotion.faded(look.accent, alpha))
+            }
+            placed += count
+            line++
+        }
+        // The words past the lines on the bar pop in at their places.
+        for (g in line until groups.size) {
+            for (k in 0 until groups[g]) {
+                val home = stop - step / 2 - (placed + g + k) * step
+                if (home < left) continue
+                dot(canvas, home, mid, radius * m, GuideMotion.faded(look.accent, alpha))
+            }
+            placed += groups[g]
+        }
+    }
+
+    /** [from] to [to], a part [t] of the way, channel by channel. */
+    private fun blend(from: Int, to: Int, t: Float): Int {
+        fun mix(shift: Int) = (((from shr shift) and 0xFF) + (((to shr shift) and 0xFF) - ((from shr shift) and 0xFF)) * t).toInt() shl shift
+        return mix(24) or mix(16) or mix(8) or mix(0)
     }
 
     private fun isSpace(index: Int): Boolean {
@@ -161,15 +228,21 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
 
     /**
-     * A single flick's dots, one for each character it deleted, in a row that ends at [stop] beside the caret. They pop in one after
-     * another from the caret outwards and stay. At the end each one, nearest first, winds back a hair, then shoots into the caret
-     * with a small swell and is gone. Returns how hard the caret pulses now, from the dots that just arrived, 0 to 1.
+     * The dots, one for each character deleted, in a row that ends at [stop] beside the caret, with a gap between words. They pop
+     * in one after another from the caret outwards and stay. At the end each one, nearest first, winds back a hair, then shoots
+     * into the caret with a small swell and is gone. Returns how hard the caret pulses now, from the dots that just arrived, 0 to 1.
      */
     private fun dots(canvas: Canvas, display: GestureDisplay, left: Float, stop: Float, caret: Float, mid: Float, alpha: Float, look: Look): Float {
         val count = display.dots
-        val step = min(dp(DOT_STEP), (stop - left) / count)
+        val step = dotStep(display, left, stop)
         var pulse = 0f
+        var group = 0
+        var inGroup = 0
         for (i in 0 until count) {
+            // Each word before this dot's word leaves one gap.
+            while (group < display.groups.size - 1 && inGroup >= display.groups[group]) { group++; inGroup = 0 }
+            inGroup++
+            val place = i + group
             val order = i.toFloat() / count
             val popped = ((display.dotsIn - order * .6f) / .4f).coerceIn(0f, 1f)
             // Each dot has its own part of the way out; it lands in the caret at 1.
@@ -183,7 +256,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             val u = travel.coerceIn(0f, 1f)
             // A back-in ease: a small step back, then quickly into the caret.
             val along = u * u * ((BACK + 1) * u - BACK)
-            val home = stop - step / 2 - i * step
+            val home = stop - step / 2 - place * step
             val x = home + (caret - home) * along
             val swell = 1f + DOT_SWELL * sin(u * PI.toFloat())
             val size = popped * (1f + .25f * (1f - popped)) * swell * (1f - u * u)
@@ -242,9 +315,9 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val WORD = .28f
         const val SELECTED = .85f
         const val WORD_HEIGHT = 11f
-        /** A single flick's dots: their size and how far apart they are. */
-        const val DOT_RADIUS = 2.5f
-        const val DOT_STEP = 8f
+        /** The dots: their size and how far apart they are at most. */
+        const val DOT_RADIUS = 1.7f
+        const val DOT_STEP = 6f
         /** On their way into the caret: how much later the farthest dot leaves, how far each winds back, and how much it swells. */
         const val DOT_STAGGER = .55f
         const val BACK = 1.4f

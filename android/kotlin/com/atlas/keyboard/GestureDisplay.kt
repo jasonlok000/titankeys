@@ -128,9 +128,29 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      */
     val softDelete get() = scene == Scene.DeleteFlick
 
-    /** How many dots a single flick shows: the characters it deleted, not counting spaces. */
+    /** How many dots a single flick shows: the characters it deleted, not counting spaces, at most [MAX_DOTS]. */
     var dots = 0
         private set
+    /**
+     * The dots by word, nearest the caret first: a hold's deleted words, or a flick's one word. A gap shows where each space was,
+     * so the shape mirrors what went. They add up to [dots].
+     */
+    var groups = IntArray(0)
+        private set
+    /**
+     * True when the dots come from a hold that lifted: then they do not pop in, the hold's lines shrink and turn into them in place,
+     * over [dotsIn]. [morphFrom] and [morphFlow] are the hold's [shownDeleted] and [flow] at the lift, where its lines were.
+     */
+    var fromHold = false
+        private set
+    var morphFrom = 0f
+        private set
+    var morphFlow = 0f
+        private set
+    /** The letters of each word a hold deleted, in order. */
+    private val held = ArrayList<Int>()
+    /** How long the dots take to come in: a flick's pop, or a lifted hold's morph. */
+    private var dotsInMillis = FLICK_IN
     /** How far the dots have come in, from 0 to 1, and how far their way into the caret has gone at the end. */
     var dotsIn = 0f
         private set
@@ -222,15 +242,33 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         changed()
     }
 
-    /** One word went. In a hold that is one more word; a flick that lifted gets a brief flourish. */
+    /** One word of [letters] went. In a hold that is one more word; a flick that lifted gets a brief flourish. */
     fun wordDeleted(now: Long, letters: Int = 1) {
         if (scene == Scene.DeleteHold && !leaving) {
             deleted++
+            held += letters.coerceAtLeast(1)
             changed()
         } else {
-            dots = letters.coerceIn(1, MAX_DOTS)
+            if (!allowed || live) return
+            setGroups(listOf(letters))
             startFlourish(Scene.DeleteFlick, now)
+            fromHold = false
+            dotsInMillis = FLICK_IN
         }
+    }
+
+    /** The dots for words of [letters], nearest the caret first, cut at [MAX_DOTS] in all. */
+    private fun setGroups(letters: List<Int>) {
+        val out = ArrayList<Int>()
+        var room = MAX_DOTS
+        for (count in letters) {
+            if (room <= 0) break
+            val take = min(count.coerceAtLeast(1), room)
+            out += take
+            room -= take
+        }
+        groups = out.toIntArray()
+        dots = groups.sum()
     }
 
     /** New input ends a flourish at once: it is only a picture, and nothing waits for it. */
@@ -240,8 +278,26 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         changed()
     }
 
-    fun deleteEnded() {
-        if (scene == Scene.DeleteHold) leave()
+    /**
+     * The hold lifted. Its lines shrink and turn into a dot for each character it deleted, grouped by word, which then go into the
+     * caret as a single flick's do. A hold that deleted nothing just goes.
+     */
+    fun deleteEnded(now: Long = lastFrame) {
+        if (scene != Scene.DeleteHold || leaving) return
+        if (held.isEmpty()) { leave(); return }
+        setGroups(held)
+        val from = shownDeleted
+        val beat = flow
+        resetPieces()
+        scene = Scene.DeleteFlick
+        flourishAt = now
+        lastFrame = now
+        revealedAtStart = reveal
+        fromHold = true
+        morphFrom = from
+        morphFlow = beat
+        dotsInMillis = MORPH_IN
+        changed()
     }
 
     /** A double tap selected the word at the cursor. */
@@ -254,7 +310,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         lastFrame = now
         val motion = scale > 0f
         if (flourishing) {
-            val length = if (motion) (if (scene == Scene.DeleteFlick) FLICK_MILLIS else FLOURISH_MILLIS) * scale else STILL_MILLIS
+            val length = if (motion) (if (scene == Scene.DeleteFlick) flickMillis else FLOURISH_MILLIS) * scale else STILL_MILLIS
             val t = ((now - flourishAt) / length).coerceAtLeast(0f)
             if (t >= 1f) {
                 clear()
@@ -299,9 +355,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             }
             Scene.DeleteFlick -> {
                 // The text is already gone; only the picture moves. The dots come in, stay a while, and go into the caret.
-                val elapsed = if (motion) (now - flourishAt) / scale else FLICK_IN
-                dotsIn = (elapsed / FLICK_IN).coerceIn(0f, 1f)
-                dotsOut = if (motion) ((elapsed - FLICK_IN - FLICK_HOLD) / FLICK_OUT).coerceIn(0f, 1f) else 0f
+                val elapsed = if (motion) (now - flourishAt) / scale else dotsInMillis
+                dotsIn = (elapsed / dotsInMillis).coerceIn(0f, 1f)
+                dotsOut = if (motion) ((elapsed - dotsInMillis - FLICK_HOLD) / FLICK_OUT).coerceIn(0f, 1f) else 0f
                 shownDeleted = 0f
                 flow = 0f
             }
@@ -357,13 +413,17 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * the caret, and then the words fade back in.
      */
     private fun flickReveal(elapsed: Float): Float {
-        val back = ((elapsed - FLICK_IN - FLICK_HOLD - FLICK_OUT) / FLICK_BACK).coerceIn(0f, 1f)
+        val back = ((elapsed - dotsInMillis - FLICK_HOLD - FLICK_OUT) / FLICK_BACK).coerceIn(0f, 1f)
         if (back > 0f) return 1f - back * back * (3 - 2 * back)
         return revealedAtStart + (1f - revealedAtStart) * (elapsed / FLICK_COVER_IN).coerceIn(0f, 1f)
     }
 
+    /** How long the dots play in all: in, a while, into the caret, and the words back. */
+    val flickMillis get() = dotsInMillis + FLICK_HOLD + FLICK_OUT + FLICK_BACK
+
     private fun clear() {
         scene = Scene.None
+        fromHold = false
         reveal = 0f
         leaving = false
         resetPieces()
@@ -392,6 +452,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         camera = 0f
         deleted = 0
         shownDeleted = 0f
+        held.clear()
         flourish = 0f
         bandStart = .5f
         bandEnd = .5f
@@ -434,15 +495,17 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
          * A single flick's dots come in, stay a while so you can see them, go into the caret one by one, and then the words fade back
          * in. It is only a picture, so nothing waits for it, and any new input ends it.
          */
-        const val FLICK_IN = 90f
-        const val FLICK_HOLD = 380f
-        const val FLICK_OUT = 320f
-        const val FLICK_BACK = 120f
+        const val FLICK_IN = 120f
+        const val FLICK_HOLD = 200f
+        const val FLICK_OUT = 450f
+        const val FLICK_BACK = 150f
         const val FLICK_MILLIS = FLICK_IN + FLICK_HOLD + FLICK_OUT + FLICK_BACK
+        /** A lifted hold's lines shrink into the dots over this long, in the place of the dots' pop. */
+        const val MORPH_IN = 240f
         /** The cover comes in this quickly, so the old words never show through it. */
         private const val FLICK_COVER_IN = 60f
-        /** The most dots a flick shows; a longer word still shows this many. */
-        const val MAX_DOTS = 20
+        /** The most dots the bar shows, for a long word or a long hold; the spacing shrinks to fit them. */
+        const val MAX_DOTS = 30
 
         /** The characters of the last word in [before], not counting spaces: what a delete flick takes. "don't" gives 5. */
         fun letters(before: CharSequence?): Int {

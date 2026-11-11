@@ -28,6 +28,8 @@ import kotlin.random.Random
  */
 internal object Idle {
     const val H = 88f
+    /** The [Glyph.char] of the automatic capital's arrow, which is drawn as a shape, not a letter. */
+    const val ARROW = '\u21E7'
     /** The size the demo's numbers were made for: a letter of this size has the demo's radius and speed. */
     const val FONT_SIZE = 40f
     const val EXIT_MILLIS = 300f
@@ -86,8 +88,13 @@ internal object Idle {
 /**
  * One letter of the bar: where it lives in its word ([homeX], [homeY], its middle), how wide it is there ([advance]) and its text
  * size ([size]), all in the bar's units; and where it is now.
+ *
+ * The automatic capital's arrow, while it shows, plays as one more piece: an [arrow], [advance] wide and tall, that goes with the
+ * left word, first in it. The games use it where they can (a pin, Pong's ball when the middle has no letter, a racer, a drifter),
+ * and it always comes home to its own place.
  */
-internal class Glyph(val char: Char, val word: Int, val homeX: Float, val homeY: Float, val advance: Float, val size: Float) {
+internal class Glyph(val char: Char, val word: Int, val homeX: Float, val homeY: Float, val advance: Float, val size: Float,
+    val arrow: Boolean = false) {
     val text = char.toString()
     var x = homeX
     var y = homeY
@@ -227,7 +234,7 @@ internal class Pong(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
     }
 
     private val middle = words(1)
-    private val ball = Idle.roundest(middle.ifEmpty { glyphs })!!
+    private val ball = Idle.roundest(middle.ifEmpty { glyphs.filter { it.arrow } }.ifEmpty { glyphs })!!
     private val wall = middle.filter { it !== ball }
     private val wallXs = HashMap<Glyph, Float>()
     private val wallX0: Float
@@ -251,7 +258,7 @@ internal class Pong(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
         for (g in wall) { val a = g.advance * WALL_SCALE; wallXs[g] = x + a / 2; x += a }
         wallX0 = (wallXs.values.minOrNull() ?: 0f) - 12 * WALL_SCALE
         wallX1 = (wallXs.values.maxOrNull() ?: 0f) + 12 * WALL_SCALE
-        paddles = listOf(paddle(words(0), X_SIDE, -1f), paddle(words(2), width - X_SIDE, 1f))
+        paddles = listOf(paddle(words(0).filter { it !== ball }, X_SIDE, -1f), paddle(words(2), width - X_SIDE, 1f))
     }
 
     private fun paddle(list: List<Glyph>, x: Float, sign: Float): Paddle {
@@ -361,7 +368,7 @@ internal class Pong(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
 internal class Bowling(glyphs: List<Glyph>, width: Float, random: Random) : IdleGame(glyphs, width, random) {
     private enum class Phase { Intro, Windup, Roll, Scatter, Cheer, Home }
 
-    private val ball = Idle.roundest(glyphs)!!
+    private val ball = IdlePlayer.ballOf(glyphs)!!
     private val pins = glyphs.filter { it !== ball }
     private val fromX = FloatArray(glyphs.size) { glyphs[it].x }
     private val fromY = FloatArray(glyphs.size) { glyphs[it].y }
@@ -503,7 +510,7 @@ internal class Bowling(glyphs: List<Glyph>, width: Float, random: Random) : Idle
 
 /** 5. Jump rope: a letter at each side swings a rope, and the middle word jumps it. */
 internal class JumpRope(glyphs: List<Glyph>, width: Float, random: Random) : IdleGame(glyphs, width, random) {
-    private val holderL = words(0).firstOrNull() ?: glyphs.first()
+    private val holderL = words(0).firstOrNull { !it.arrow } ?: glyphs.first()
     private val holderR = words(2).lastOrNull() ?: glyphs.last()
     private val jumper = words(1)
     private val rest = glyphs.filter { it !== holderL && it !== holderR && it.word != 1 }
@@ -527,7 +534,12 @@ internal class JumpRope(glyphs: List<Glyph>, width: Float, random: Random) : Idl
             g.x = Idle.lerp(fromX[k], x, p); g.y = Idle.lerp(fromY[k], Idle.H / 2 - 4, p)
         }
         // The other side letters make room and watch.
-        for (g in rest) { val k = glyphs.indexOf(g); g.x = Idle.lerp(fromX[k], fromX[k] + if (g.word == 0) -50 else 50, p); g.alpha = Idle.lerp(1f, .32f, p) }
+        // The rest step aside, but never past the ends of the bar, where the screen's corners would cut them.
+        for (g in rest) {
+            val k = glyphs.indexOf(g)
+            val aside = Idle.clamp(fromX[k] + if (g.word == 0) -50 else 50, min(fromX[k], g.advance / 2), max(fromX[k], width - g.advance / 2))
+            g.x = Idle.lerp(fromX[k], aside, p); g.alpha = Idle.lerp(1f, .32f, p)
+        }
         val speed = (2 * PI.toFloat() / period) * Idle.smooth((t - 300) / INTRO)
         ropeAngle += speed * dt
         holderL.rot = .35f * sin(ropeAngle) * p; holderR.rot = -.35f * sin(ropeAngle) * p
@@ -657,7 +669,7 @@ internal class Race(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
     }
 }
 
-/** 8. Juggling: the figure walks on and juggles three letters, one of each word, in a three-ball cascade. */
+/** 8. Juggling: the figure walks on and juggles the middle word's three letters in a three-ball cascade; the side words stay put. */
 internal class Juggle(glyphs: List<Glyph>, width: Float, random: Random) : IdleGame(glyphs, width, random) {
     val balls: List<Glyph>
     val others: List<Glyph>
@@ -672,12 +684,9 @@ internal class Juggle(glyphs: List<Glyph>, width: Float, random: Random) : IdleG
     private val handY = feet - Figure.NECK + 6 + 18
 
     init {
-        // One letter from each word, different letters where the words allow, so the eye can follow each one.
-        val picked = ArrayList<Glyph>()
-        for (w in 0..2) { val list = words(w); (list.firstOrNull { g -> picked.none { it.char == g.char } } ?: list.firstOrNull())?.let { picked += it } }
-        while (picked.size < 3 && picked.size < glyphs.size) picked += glyphs.first { it !in picked }
-        balls = picked
-        others = glyphs.filter { it !in picked }
+        // The middle word's three letters; the side words stay where they are.
+        balls = words(1)
+        others = glyphs.filter { it.word != 1 }
     }
 
     private fun handX(side: Float, phase: Float) = centre + side * (HAND_SPREAD + sin(phase * PI.toFloat() * 2) * 4 * side * .5f)
@@ -685,13 +694,6 @@ internal class Juggle(glyphs: List<Glyph>, width: Float, random: Random) : IdleG
 
     override fun update(dt: Float): Boolean {
         t += dt
-        // The letters left behind dim and step aside to make room for the figure.
-        for (g in others) {
-            val k = glyphs.indexOf(g)
-            val p = Idle.smooth(t / WALK)
-            g.alpha = Idle.lerp(1f, .3f, p); g.y = fromY[k] + 6 * p
-            g.x = fromX[k] + if (g.word == 1) (if (g.homeX < centre) -1 else 1) * ASIDE * p else 0f
-        }
         if (t < WALK + 500) {
             val p = Idle.easeInOut(t / WALK)
             figure.x = Idle.lerp(width + 40, centre, p); figure.step = p * 12
@@ -739,7 +741,6 @@ internal class Juggle(glyphs: List<Glyph>, width: Float, random: Random) : IdleG
         const val HEIGHT = 44f
         const val HAND_SPREAD = 38f
         const val DWELL = .45f
-        const val ASIDE = 48f
     }
 }
 
@@ -905,8 +906,9 @@ internal class Shell(glyphs: List<Glyph>, width: Float, random: Random) : IdleGa
 }
 
 /** 6. Firework, a way home: every letter gathers into one round letter, it shoots up, bursts into all the letters, and they float home. */
-internal class Firework(glyphs: List<Glyph>, width: Float, random: Random) : IdleGame(glyphs, width, random) {
-    override val returning get() = true
+internal class Firework(glyphs: List<Glyph>, width: Float, random: Random, private val asReturn: Boolean = true) :
+    IdleGame(glyphs, width, random) {
+    override val returning get() = asReturn
     /** A spark from the rocket, for the drawing. */
     class Spark(var x: Float, var y: Float, val vx: Float, val vy: Float, val max: Float) { var life = 0f }
 
@@ -1000,17 +1002,24 @@ internal class Firework(glyphs: List<Glyph>, width: Float, random: Random) : Idl
  * Runs the idle games on one bar: a game picked at random, round after round, until you come back; then a way home. While it
  * plays, the bar's own words are hidden and these letters stand in for them, so when it ends the bar is exactly as it was.
  */
-internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val random: Random, chosen: Kind? = null) {
-    /** The games, with the numbers of the owner's demo. */
-    enum class Kind(val number: Int) { Drift(1), Pong(2), Bowling(3), JumpRope(5), Race(7), Juggle(8) }
+internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val random: Random, val kind: Kind) {
+    /**
+     * The games, with the numbers of the owner's demo, how often each is picked against the others ([weight]: the games that play
+     * once are common, the loops rare), and whether it loops until you come back, at most [LOOP_MILLIS], or plays once and gives the
+     * bar back by itself.
+     */
+    enum class Kind(val number: Int, val weight: Int, val loops: Boolean) {
+        Bowling(3, COMMON, false), Race(7, COMMON, false), Firework(6, COMMON, false),
+        Drift(1, RARE, true), Pong(2, RARE, true), JumpRope(5, RARE, true), Juggle(8, RARE, true),
+    }
     /** The ways home, for the debug build's trigger; normally [comeBack] picks one. */
     enum class Way(val number: Int) { Shell(4), Firework(6), Drop(0), Exit(0) }
 
-    val kind = chosen ?: Kind.entries[random.nextInt(Kind.entries.size)]
     var game: IdleGame = make(kind)
         private set
     /** True once you came back and the letters are on their way home. */
     val returning get() = game.returning
+    private var played = 0f
 
     private fun make(kind: Kind): IdleGame = when (kind) {
         Kind.Drift -> Drift(glyphs, width, random)
@@ -1019,15 +1028,22 @@ internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val
         Kind.JumpRope -> JumpRope(glyphs, width, random)
         Kind.Race -> Race(glyphs, width, random)
         Kind.Juggle -> Juggle(glyphs, width, random)
+        Kind.Firework -> Firework(glyphs, width, random, asReturn = false)
     }
 
-    /** Moves on by [dt] milliseconds. Returns false once the way home is over and the bar shows its words again. */
+    /**
+     * Moves on by [dt] milliseconds. Returns false once it is over and the bar shows its words again: after the way home, after a
+     * game that plays once, or after a loop's own way home once it has played [LOOP_MILLIS].
+     */
     fun update(dt: Float): Boolean {
-        if (game.update(dt)) return true
-        if (game.returning) return false
-        // A round of Bowling or a Race ended: the letters are home, and the next round begins.
-        game = make(kind)
-        return true
+        if (!game.returning) {
+            played += dt
+            if (kind.loops && played >= LOOP_MILLIS) {
+                comeBack(if (game is Juggle) Way.Drop else Way.Exit)
+                return true
+            }
+        }
+        return game.update(dt)
     }
 
     /**
@@ -1052,10 +1068,80 @@ internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val
             current is Juggle -> Drop(glyphs, width, random, figure, current.balls)
             figure != null -> Exit(glyphs, width, random, figure)
             else -> when (random.nextInt(4)) {
-                0 -> Shell(glyphs, width, random)
+                0 -> if (words(glyphs) == 3) Shell(glyphs, width, random) else Exit(glyphs, width, random, null)
                 1 -> Firework(glyphs, width, random)
                 else -> Exit(glyphs, width, random, null)
             }
         }
+    }
+
+    companion object {
+        /** How often an idle time starts a game at all; the rest of the time nothing plays, and the next wait starts. */
+        const val PLAY_CHANCE = .25f
+        /** The longest a looping game plays before it goes home by itself. */
+        const val LOOP_MILLIS = 30_000f
+        const val COMMON = 30
+        const val RARE = 10
+        /** The letters that roll well enough to be Bowling's ball. */
+        const val ROUND = "oaedgbpq"
+
+        private fun words(glyphs: List<Glyph>) = glyphs.map { it.word }.distinct().size
+        private fun word(glyphs: List<Glyph>, w: Int) = glyphs.filter { it.word == w }
+
+        /** Bowling's ball: a round letter, the roundest first. */
+        fun ballOf(glyphs: List<Glyph>): Glyph? {
+            for (char in ROUND) glyphs.firstOrNull { it.char == char }?.let { return it }
+            return null
+        }
+
+        /** Whether the bar's letters fit [kind]: a game that needs letters the bar does not have is skipped. */
+        fun fits(kind: Kind, glyphs: List<Glyph>): Boolean = glyphs.isNotEmpty() && when (kind) {
+            Kind.Drift, Kind.Firework -> true
+            Kind.Pong -> word(glyphs, 0).any { !it.arrow } && word(glyphs, 2).isNotEmpty() && (word(glyphs, 1).isNotEmpty() || glyphs.any { it.arrow })
+            Kind.Bowling -> ballOf(glyphs) != null && glyphs.size >= 4
+            Kind.JumpRope -> words(glyphs) == 3 && word(glyphs, 0).any { !it.arrow }
+            Kind.Race -> words(glyphs) == 3
+            Kind.Juggle -> word(glyphs, 1).size == 3
+        }
+
+        /** A game for these letters, picked by rarity among the ones they fit, or null if none fits. */
+        fun choose(glyphs: List<Glyph>, random: Random, allowed: (Kind) -> Boolean = { true }): Kind? {
+            val fitting = Kind.entries.filter { allowed(it) && fits(it, glyphs) }
+            val total = fitting.sumOf { it.weight }
+            if (total == 0) return null
+            var pick = random.nextInt(total)
+            for (kind in fitting) { pick -= kind.weight; if (pick < 0) return kind }
+            return fitting.last()
+        }
+
+        /** Whether this idle time starts a game at all. */
+        fun shouldPlay(random: Random) = random.nextFloat() < PLAY_CHANCE
+    }
+}
+
+/**
+ * The idle times so far, so that games stay a surprise: the idle time right after a game never plays one, and a game waits at
+ * least [GAP] more idle times before it plays again. Only the real idle times count, not the debug build's trigger.
+ */
+internal class IdleSchedule {
+    private var count = 0
+    private var lastGame = Int.MIN_VALUE / 2
+    private val last = HashMap<IdlePlayer.Kind, Int>()
+
+    /** An idle time is reached. Returns whether it may play a game: not right after one, and only by [IdlePlayer.PLAY_CHANCE]. */
+    fun trigger(random: Random): Boolean {
+        count++
+        if (count - lastGame <= 1) return false
+        return IdlePlayer.shouldPlay(random)
+    }
+
+    /** Whether [kind] may play at this idle time: at least [GAP] idle times have passed since it last played. */
+    fun allows(kind: IdlePlayer.Kind) = count - (last[kind] ?: (Int.MIN_VALUE / 2)) > GAP
+
+    /** [kind] plays at this idle time. */
+    fun played(kind: IdlePlayer.Kind) { lastGame = count; last[kind] = count }
+
+    companion object {
+        const val GAP = 2
     }
 }

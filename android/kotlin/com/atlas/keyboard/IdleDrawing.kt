@@ -55,8 +55,12 @@ internal class IdleDrawing {
         canvas.restore()
     }
 
+    /** The arrow's line width, in the games' units: [Strip] sets it to match its own arrow. */
+    var arrowLine = 3f
+
     private fun glyph(canvas: Canvas, g: Glyph, look: Look) {
         if (g.alpha <= .01f) return
+        if (g.arrow) { arrow(canvas, g, look); return }
         letter.color = if (g.accent) look.accent else look.ink
         letter.alpha = (g.alpha.coerceIn(0f, 1f) * 255).toInt()
         letter.textSize = g.size * g.scale
@@ -66,6 +70,36 @@ internal class IdleDrawing {
         val metrics = letter.fontMetrics
         canvas.drawText(g.text, 0f, -(metrics.ascent + metrics.descent) / 2, letter)
         canvas.restore()
+    }
+
+    /** The automatic capital's arrow, as the strip draws it: a head as wide as it is tall at the top, on a stem half as wide. */
+    private fun arrow(canvas: Canvas, g: Glyph, look: Look) {
+        stroke.color = look.accent
+        stroke.alpha = (g.alpha.coerceIn(0f, 1f) * 255).toInt()
+        stroke.strokeWidth = arrowLine * g.scale
+        val size = g.advance * g.scale
+        canvas.save()
+        canvas.translate(g.x, g.y)
+        if (g.rot != 0f) canvas.rotate(g.rot * 180 / PI.toFloat())
+        val x = -size / 2
+        val y = -size / 2
+        path.reset()
+        path.moveTo(x + size / 2, y)
+        path.lineTo(x + size, y + size * .52f)
+        path.lineTo(x + size * .73f, y + size * .52f)
+        path.lineTo(x + size * .73f, y + size)
+        path.lineTo(x + size * .27f, y + size)
+        path.lineTo(x + size * .27f, y + size * .52f)
+        path.lineTo(x, y + size * .52f)
+        path.close()
+        canvas.drawPath(path, stroke)
+        canvas.restore()
+    }
+
+    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
     }
 
     private fun figure(canvas: Canvas, f: Figure, look: Look) {

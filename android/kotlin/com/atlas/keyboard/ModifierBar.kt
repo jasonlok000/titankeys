@@ -6,8 +6,9 @@ package com.atlas.keyboard
  *
  * Shift, Alt and Ctrl that you press or hold take the whole bar, in the place of the words, with what the key under a resting
  * finger types, or Ctrl's shortcuts. The one exception is the Shift that comes on by itself at a sentence start: the suggestions
- * stay, in their places, and the strip only marks it with a small capital in its corner. That is [autoCapital], and then
- * [replacesWords] is false, unless a finger rests on a letter, which shows the whole bar as always.
+ * stay, in their places, and the strip only marks it with a small shift arrow. That is [autoCapital], and then [replacesWords] is
+ * false, also with a finger resting on a letter: no preview of the key and no Shift view, as if Shift were off. Only a real push
+ * of Shift shows them.
  */
 data class ModifierBar(
     val chips: List<String>,
@@ -56,7 +57,7 @@ data class ModifierBar(
             }
             // Only Shift is on, and only because a sentence starts here: the words stay, with a small mark.
             val automatic = modifiers.autoShifted && shift == SHIFT && !alt && !modifiers.ctrlHeld && held.isEmpty()
-            return ModifierBar(chips, hint, held, replacesWords = !automatic || Layout.isLetter(hover), autoCapital = automatic)
+            return ModifierBar(chips, hint, held, replacesWords = !automatic, autoCapital = automatic)
         }
     }
 }

@@ -230,7 +230,7 @@ private fun theWaitCountsToWhereTheFingerStopped() {
     moved.move(at(.15f, .35f, started + 3_010))
     val far = moved.words.size
     moved.runTo(started + 4_000)
-    same(moved.words.drop(far - 1).zipWithNext { a, b -> b - a }.toSet(), setOf(fastMillis), "Past seven keys it stays at the fastest, the cap")
+    same(moved.words.drop(far - 1).zipWithNext { a, b -> b - a }.toSet(), setOf(fastMillis), "Past five and a half keys it stays at the fastest, the cap")
     // Speeding up takes effect at once: the next word comes the new wait after the last one, not after the old wait.
     val quick = Rig()
     quick.flick(1_000, SHORT_STOP)
@@ -238,16 +238,17 @@ private fun theWaitCountsToWhereTheFingerStopped() {
     quick.move(at(LONG_STOP, .35f, started + 20))
     quick.runTo(started + fastMillis)
     same(quick.words.size, 2, "The next word comes sooner as soon as the finger slides further")
-    // In between, the speed changes smoothly with the distance.
-    val waits = (0..6).map { k ->
+    // From two keys to five and a half, the speed changes smoothly with the distance: each half key a little faster, all the way.
+    val waits = (0..7).map { k ->
         val rig = Rig()
         rig.flick(1_000, SHORT_STOP)
         rig.runTo(started)
-        rig.move(at(.75f - k * .07f, .35f, started + 10))
+        rig.move(at(.75f - k * .05f, .35f, started + 10))
         rig.runTo(started + 2_000)
         rig.words.zipWithNext { a, b -> b - a }.last()
     }
     same(waits.zipWithNext().all { (a, b) -> b < a && a - b < 60 }, true, "Each step further makes it a little faster: $waits")
+    same(waits.first() to waits.last(), slowMillis to fastMillis, "The whole range: slowest at two keys, fastest at five and a half: $waits")
 }
 
 private fun moreLengthDoesNotPassTheLimits() {

@@ -18,59 +18,115 @@ enum class HapticPreset(val id: String, duration: Int, strength: Int, interval: 
     val intervalMillis = maxOf(interval * 10L, durationMillis + 5)
     /** Travel between ticks, in key widths. */
     val spacing = spacing / 10f
-    /** A changed word: two ticks long at twice the strength, then one tick at tick strength, so it fades where a tick just stops. */
-    val wordTimings = longArrayOf(durationMillis * 2, durationMillis)
-    val wordAmplitudes = intArrayOf(amplitude * 2, amplitude)
 
     companion object {
         fun of(id: String?) = entries.firstOrNull { it.id == id } ?: Normal
     }
 }
 
-/** Ticks during swipes, and confirms accepted tap keys and changed words. */
+/**
+ * The keyboard's feels, one meaning each, so a gesture can be told by touch alone. See docs/haptics.md for the owner's
+ * table of which trigger plays which feel.
+ */
+enum class Feel {
+    /** Movement over keys: swipe ticks, the cursor passing a letter. The lightest. */
+    Texture,
+    /** A step or boundary: the cursor passing a space, a selection growing by a word, a new Sym page. */
+    Tick,
+    /** Done, accepted: a word picked, a clip pasted, a word saved, steering starts. */
+    Confirm,
+    /** Something now stays, selected or locked: selecting starts, Shift or Alt locked, a clip pinned. */
+    Stays,
+    /** Changed into something else: a held letter became its symbol, autocorrect changed a word. Short, then longer. */
+    Changed,
+    /** Put back: autocorrect undone, a forgotten word brought back. Longer, then short. */
+    Restored,
+    /** Something removed: a delete flick, a word forgotten or blocked, the clipboard cleared. */
+    Removed,
+    /** Can't do that: nothing left to delete, a word that can't be saved. A long buzz, used for nothing else. */
+    Refused,
+}
+
+/** How each [Feel] plays. It has no Android parts, so the checks can read it. */
+object HapticPalette {
+    /** Buzzes and gaps, starting with a buzz, in ms, and each buzz's strength from 1 to 255 where a phone can set it. */
+    data class Buzzes(val timings: List<Long>, val strengths: List<Int>) {
+        val millis get() = timings.sum()
+    }
+
+    /**
+     * One of the phone's ready-made effects ([effect] is a VibrationEffect.EFFECT_ id), with [fallback] for a phone that
+     * lacks it, and [rise] (or a fall) where a phone can compose a short then a longer tap. The Titan 2 Elite has the five
+     * effects and no strength control, so there the effects and the timing of [fallback] make each feel distinct.
+     */
+    data class Pattern(val effect: Int?, val fallback: Buzzes, val composed: Composed? = null) {
+        /** How long the feel lasts, for the rule that nothing cuts into a playing feel. */
+        val millis get() = fallback.millis
+    }
+
+    /** Two composition primitives with a gap, for phones that can compose effects. */
+    data class Composed(val first: Int, val second: Int, val gapMillis: Int)
+
+    // The VibrationEffect ids, as plain numbers so this needs no Android to run.
+    const val EFFECT_CLICK = 0
+    const val EFFECT_DOUBLE_CLICK = 1
+    const val EFFECT_TICK = 2
+    const val EFFECT_HEAVY_CLICK = 5
+    const val EFFECT_TEXTURE_TICK = 21
+    const val PRIMITIVE_CLICK = 1
+    const val PRIMITIVE_TICK = 7
+
+    /** The gap in a pair, and its two buzzes: short then long rises, long then short falls. */
+    private const val PAIR_GAP = 45L
+    private const val PAIR_SHORT = 15L
+    private const val PAIR_LONG = 30L
+
+    fun of(feel: Feel): Pattern = when (feel) {
+        Feel.Texture -> Pattern(EFFECT_TEXTURE_TICK, Buzzes(listOf(10), listOf(80)))
+        Feel.Tick -> Pattern(EFFECT_TICK, Buzzes(listOf(16), listOf(140)))
+        Feel.Confirm -> Pattern(EFFECT_CLICK, Buzzes(listOf(20), listOf(220)))
+        Feel.Stays -> Pattern(EFFECT_DOUBLE_CLICK, Buzzes(listOf(15, 40, 15), listOf(220, 0, 220)))
+        Feel.Changed -> Pattern(null, Buzzes(listOf(PAIR_SHORT, PAIR_GAP, PAIR_LONG), listOf(110, 0, 255)),
+            Composed(PRIMITIVE_TICK, PRIMITIVE_CLICK, PAIR_GAP.toInt()))
+        Feel.Restored -> Pattern(null, Buzzes(listOf(PAIR_LONG, PAIR_GAP, PAIR_SHORT), listOf(255, 0, 110)),
+            Composed(PRIMITIVE_CLICK, PRIMITIVE_TICK, PAIR_GAP.toInt()))
+        Feel.Removed -> Pattern(EFFECT_HEAVY_CLICK, Buzzes(listOf(45), listOf(255)))
+        Feel.Refused -> Pattern(null, Buzzes(listOf(80), listOf(255)))
+    }
+
+    /** The swipe tick: the lightest feel for Normal, a tick for Strong, as the Titan can't make a tick stronger. */
+    fun swipeTick(preset: HapticPreset) = if (preset == HapticPreset.Strong) Feel.Tick else Feel.Texture
+
+    /** Feels that steps and movement play, which may come close together. The others are confirmations. */
+    fun isMotion(feel: Feel) = feel == Feel.Texture || feel == Feel.Tick
+
+    /** Two confirmations closer than this play only the first, so a fast run of actions stays calm. */
+    const val CONFIRM_SPACING_MILLIS = 80L
+}
+
+/** Plays the keyboard's feels ([Feel]), only while the Vibration setting and Android's touch feedback are on. */
 class Haptics(private val context: Context) {
     private val vibrator = context.getSystemService(Vibrator::class.java)
     private var preset = HapticPreset.Normal
     private var enabled = true
-    private var clickUntil = 0L
+    /** Nothing cuts into a feel that is still playing. */
+    private var busyUntil = 0L
+    private var lastConfirm = Long.MIN_VALUE / 2
     private val ticks = SwipeTicks()
 
-    fun tap() {
-        if (enabled(context)) pulse(HapticPreset.Strong)
-    }
+    fun texture() = play(Feel.Texture)
+    fun tick() = play(Feel.Tick)
+    fun confirm() = play(Feel.Confirm)
+    fun stays() = play(Feel.Stays)
+    fun changed() = play(Feel.Changed)
+    fun restored() = play(Feel.Restored)
+    fun removed() = play(Feel.Removed)
+    fun refused() = play(Feel.Refused)
 
-    /** Confirms a word picked on the strip or changed by autocorrect. */
-    fun wordChanged() {
+    fun play(feel: Feel) {
         if (!enabled(context)) return
-        val preset = preset(context)
-        val amplitudes = if (vibrator.hasAmplitudeControl()) preset.wordAmplitudes
-            else intArrayOf(VibrationEffect.DEFAULT_AMPLITUDE, VibrationEffect.DEFAULT_AMPLITUDE)
-        play(VibrationEffect.createWaveform(preset.wordTimings, amplitudes, -1))
+        perform(feel)
     }
-
-    /** Confirms that a held letter became its symbol: two quick, equal pulses, unlike the single fading buzz of a changed word. */
-    fun holdSymbol() {
-        if (!enabled(context)) return
-        val strength = if (vibrator.hasAmplitudeControl()) minOf(preset(context).amplitude * 2, 255) else VibrationEffect.DEFAULT_AMPLITUDE
-        play(VibrationEffect.createWaveform(longArrayOf(0, 18, 55, 18), intArrayOf(0, strength, 0, strength), -1))
-    }
-
-    /**
-     * The cursor went past a space: a heavier, longer bump than the tick for a letter, so that you feel where each word ends.
-     * It stays one pulse, so it fits between the steps of a fast cursor.
-     */
-    fun cursorGap() {
-        if (!enabled(context)) return
-        val preset = preset(context)
-        val strength = if (vibrator.hasAmplitudeControl()) minOf(preset.amplitude * GAP_STRENGTH, 255) else VibrationEffect.DEFAULT_AMPLITUDE
-        play(VibrationEffect.createOneShot(preset.durationMillis * GAP_LENGTH_PERCENT / 100, strength))
-    }
-
-    /** Confirms a new page or group in the Sym panel, with the same feel as a changed word. */
-    fun pageChanged() = wordChanged()
-
-    /** Confirms a push on the quick settings page. It comes after the change, so turning vibration off is silent. */
-    fun settingChanged() = wordChanged()
 
     /** A finished part of the interactive guide: two ticks, the second one stronger. */
     fun guideChapter() = waveform(longArrayOf(0, 16, 45, 24), intArrayOf(0, 170, 0, 255))
@@ -82,7 +138,7 @@ class Haptics(private val context: Context) {
         if (!enabled(context)) return
         val strengths = if (vibrator.hasAmplitudeControl()) amplitudes
             else IntArray(amplitudes.size) { if (amplitudes[it] == 0) 0 else VibrationEffect.DEFAULT_AMPLITUDE }
-        play(VibrationEffect.createWaveform(timings, strengths, -1))
+        vibrate(VibrationEffect.createWaveform(timings, strengths, -1))
     }
 
     fun begin(sample: Sample?) {
@@ -92,40 +148,50 @@ class Haptics(private val context: Context) {
     }
 
     fun move(samples: List<Sample>) {
-        if (enabled && ticks.move(samples, preset)) pulse(preset)
+        if (enabled && ticks.move(samples, preset)) perform(HapticPalette.swipeTick(preset))
     }
 
-    /** A swipe tick at full strength when cursor mode starts. */
-    fun click() {
-        if (!enabled(context) || !vibrator.hasVibrator()) return
-        if (Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return
-        val amplitude = if (vibrator.hasAmplitudeControl()) 255 else VibrationEffect.DEFAULT_AMPLITUDE
-        clickUntil = SystemClock.uptimeMillis() + CLICK_MILLIS
-        vibrator.vibrate(VibrationEffect.createOneShot(CLICK_MILLIS, amplitude),
-            VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_HARDWARE_FEEDBACK).build())
+    private fun perform(feel: Feel) {
+        val now = SystemClock.uptimeMillis()
+        if (now < busyUntil) return
+        if (!HapticPalette.isMotion(feel)) {
+            if (now - lastConfirm < HapticPalette.CONFIRM_SPACING_MILLIS) return
+            lastConfirm = now
+        }
+        val pattern = HapticPalette.of(feel)
+        if (!vibrate(effect(pattern))) return
+        busyUntil = now + pattern.millis
     }
 
-    fun pulse(preset: HapticPreset = this.preset) {
-        val amplitude = if (vibrator.hasAmplitudeControl()) preset.amplitude else VibrationEffect.DEFAULT_AMPLITUDE
-        play(VibrationEffect.createOneShot(preset.durationMillis, amplitude))
+    /** The phone's own effect where it has it, a composed pair where it can, and otherwise the timed buzzes. */
+    private fun effect(pattern: HapticPalette.Pattern): VibrationEffect {
+        val id = pattern.effect
+        if (id != null && vibrator.areAllEffectsSupported(id) != Vibrator.VIBRATION_EFFECT_SUPPORT_NO)
+            return VibrationEffect.createPredefined(id)
+        val composed = pattern.composed
+        if (composed != null && vibrator.areAllPrimitivesSupported(composed.first, composed.second))
+            return VibrationEffect.startComposition()
+                .addPrimitive(composed.first, .6f)
+                .addPrimitive(composed.second, 1f, composed.gapMillis)
+                .compose()
+        val buzzes = pattern.fallback
+        val timings = LongArray(buzzes.timings.size + 1) { if (it == 0) 0 else buzzes.timings[it - 1] }
+        val strengths = IntArray(timings.size) { index ->
+            val strength = if (index == 0) 0 else buzzes.strengths[index - 1]
+            if (strength == 0) 0 else if (vibrator.hasAmplitudeControl()) strength else VibrationEffect.DEFAULT_AMPLITUDE
+        }
+        return VibrationEffect.createWaveform(timings, strengths, -1)
     }
 
-    private fun play(effect: VibrationEffect) {
-        if (!vibrator.hasVibrator()) return
-        // A new vibration would cut the click short, so ticks wait until it has played.
-        if (SystemClock.uptimeMillis() < clickUntil) return
-        if (Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return
+    private fun vibrate(effect: VibrationEffect): Boolean {
+        if (!vibrator.hasVibrator()) return false
+        if (Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return false
         // Hardware feedback keeps ticking while another app is in the foreground.
         vibrator.vibrate(effect, VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_HARDWARE_FEEDBACK).build())
+        return true
     }
 
     companion object {
-        /** As short as a swipe tick, so it feels the same, only at full strength. */
-        private const val CLICK_MILLIS = 20L
-        /** A space under the cursor: this many times a tick's strength, and this much of its length, in percent. */
-        private const val GAP_STRENGTH = 2
-        private const val GAP_LENGTH_PERCENT = 150L
-
         private fun preferences(context: Context) = context.getSharedPreferences("swipe_haptics", Context.MODE_PRIVATE)
 
         fun preset(context: Context) = HapticPreset.of(preferences(context).getString("haptic_preset_v1", null))

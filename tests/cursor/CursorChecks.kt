@@ -91,6 +91,7 @@ fun main() {
     typingNeverStartsAWordDrag()
     tapKeyWaitsForTheThirdTouch()
     tapsJustAboveSpaceSteerWithASidewaysDrag()
+    tapsJustAboveSpaceSelectWithASidewaysDrag()
     aboveSpaceADragUpIsAWord()
     aboveSpaceTwoTapsNeverSelectAWord()
     aboveSpaceOnlyAsWideAsSpace()
@@ -1035,4 +1036,20 @@ private fun path(column: Float, row: Float, toColumn: Float, toRow: Float, from:
         val t = (i + 1f) / steps
         at(column + (toColumn - column) * t, from + 10L * (i + 1), row + (toRow - row) * t)
     }
+}
+
+/** Selecting starts from the zone above Space too: two taps there, then a third touch that slides sideways. */
+private fun tapsJustAboveSpaceSelectWithASidewaysDrag() {
+    val pad = Pad()
+    var time = 1_000L
+    pad.tap(COLUMN - .3f, time, FIRST_MILLIS, row = ABOVE_ROW)
+    time += FIRST_MILLIS + GAP_MILLIS
+    pad.tap(COLUMN - .3f, time, SECOND_MILLIS, row = ABOVE_ROW)
+    time += SECOND_MILLIS + GAP_MILLIS
+    pad.down(at(COLUMN - .3f, time, ABOVE_ROW))
+    pad.move(*path(COLUMN - .3f, ABOVE_ROW, COLUMN - 1.5f, ABOVE_ROW - .3f, time))
+    same(pad.started != null, true, "Two taps just above Space, then a sideways slide, should start selecting")
+    same(pad.words, true, "It selects words, which starts with the word before the cursor and its space")
+    // What it selects first is WordSelection.at, as on Space: "text |" takes "text ", inside a word the word, else nothing.
+    same(picked("text ", range("text ", 5)), "text ", "The word before the cursor and its space")
 }

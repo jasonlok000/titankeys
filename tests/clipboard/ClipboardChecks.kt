@@ -65,6 +65,14 @@ fun main() {
 
     same(ClipboardHistory.preview(" one\n two\tthree "), "one two three", "The preview is one line")
     same(ClipboardHistory.preview("abcdefghij", 5), "abcd…", "The strip cuts a long clip to fit one line")
+    // The offer on the bar: the start and the last word of a long clip. Here each character is 1 wide.
+    val width = { text: String -> text.length.toFloat() }
+    same(ClipboardHistory.ends("For the record I will be late tonight", 99f, width), "For the record I will be late tonight", "A clip that fits shows whole")
+    same(ClipboardHistory.ends("For the record I will be late tonight", 24f, width), "For the record … tonight", "A long clip shows its start and its last word")
+    same(ClipboardHistory.ends("For the record I will be late tonight", 13f, width), "For … tonight", "With less room, fewer words at the start")
+    same(ClipboardHistory.ends("Forever and tonight", 11f, width), "Fo… tonight", "A first word too long for the room keeps its start")
+    same(ClipboardHistory.ends("extraordinarily", 8f, width), "extraor…", "One long word keeps its start")
+    same(ClipboardHistory.ends("For the record I will be late tonight", 24f, width).length <= 24, true, "The cut clip fits the room")
 
     // The clipboard page: six wide fields, two to a row, inside the inner columns.
     same(listOf("W", "T", "Y", "O", "S", "G", "H", "L", "Z", "V", "B", "M").map(ClipboardHistory::slot),

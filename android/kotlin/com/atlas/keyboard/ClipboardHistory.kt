@@ -151,6 +151,29 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
         })
 
         /** The clip on one line, for the strip and the band under the keys, cut at [length] characters. */
+        /**
+         * [line] cut to fit [room], as [measure] measures it: as many of its first words as fit, then "…" and its last word, so you
+         * see how the clip starts and how it ends: "word word … word". A single long word keeps its start: "extraordi…".
+         */
+        fun ends(line: String, room: Float, measure: (String) -> Float): String {
+            if (measure(line) <= room) return line
+            val words = line.split(' ').filter { it.isNotEmpty() }
+            val last = words.lastOrNull() ?: return line
+            fun startOf(word: String): String {
+                for (end in word.length - 1 downTo 1) { val cut = word.take(end) + "…"; if (measure(cut) <= room) return cut }
+                return "…"
+            }
+            if (words.size < 2 || measure("… $last") > room) return startOf(words.first())
+            for (count in words.size - 2 downTo 1) {
+                val shown = words.take(count).joinToString(" ") + " … " + last
+                if (measure(shown) <= room) return shown
+            }
+            // Not even the first word fits beside the last: the first word's start, then the last word.
+            val first = words.first()
+            for (end in first.length - 1 downTo 1) { val shown = first.take(end) + "… " + last; if (measure(shown) <= room) return shown }
+            return "… $last"
+        }
+
         fun preview(text: String, length: Int = Int.MAX_VALUE): String {
             val line = text.trim().replace(Regex("\\s+"), " ")
             return if (line.length <= length) line else line.take(length - 1).trimEnd() + "…"

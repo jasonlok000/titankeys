@@ -335,14 +335,17 @@ class Strip(
         hint.setTextColor(look.ink)
         showNotice(confirm)
         clipView.visibility = if (offer != null) VISIBLE else GONE
-        // The start of the clip, cut cleanly at the end of the line.
-        // The clip follows the words' rules: it shrinks to fit, then loses its end.
+        // The clip follows the words' rules: it shrinks to fit, and then shows its start and its last word, "word word … word".
+        // While the automatic capital's arrow shows, the clip keeps out of the arrow's place at the left.
+        val reserve = if (autoCapital && showSuggestions) Math.round(capitalWidth()) + dp(CAPITAL_CLEAR) + dp(4) else 0
+        clipView.setPadding(dp(6) + reserve, 0, dp(6), 0)
         val preview = offer?.let { ClipboardHistory.preview(it, CLIP_PREVIEW_LENGTH) }.orEmpty()
         val icon = Math.round(wordPixels() * CLIP_ICON_SCALE)
         val clipRoom = (width - paddingLeft - paddingRight - clipView.paddingLeft - clipView.paddingRight - icon - clipText.compoundDrawablePadding).toFloat()
         val clipFit = if (clipRoom > 0 && preview.isNotEmpty()) StripFit.fit(listOf(preview), clipRoom, 0f, ::measureWord).single() else null
-        clipText.text = clipFit?.text ?: preview
-        clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (clipFit?.scale ?: 1f))
+        val clipScale = clipFit?.scale ?: 1f
+        clipText.text = if (clipFit == null) preview else ClipboardHistory.ends(preview, clipRoom) { measureWord(it) * clipScale }
+        clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * clipScale)
         clipText.setTextColor(look.ink)
         // The icon is as tall as the words' letters, so it sits on their line.
         clipText.setCompoundDrawablesRelative(context.getDrawable(R.drawable.clipboard)?.mutate()?.apply {
@@ -401,13 +404,20 @@ class Strip(
     private val capitalArrow = android.graphics.Path()
     private val capitalBox = android.graphics.RectF()
 
+    /** The height of Shift's chip: its text size and padding. The arrow's place is that tall. */
+    private fun capitalHeight(): Float {
+        capitalText.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CHIP_SIZE, resources.displayMetrics)
+        return capitalText.descent() - capitalText.ascent() + 2 * dp(3)
+    }
+
+    /** The width of the arrow's place at the left of the bar. */
+    private fun capitalWidth() = capitalHeight() - 2 * dp(CAPITAL_ARROW_IN) + 2 * dp(CAPITAL_SIDE_IN)
+
     private fun drawAutoCapital(canvas: Canvas) {
         if (!autoCapital || !showSuggestions) return
-        // Shift's chip: its text size and padding give its height.
-        capitalText.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CHIP_SIZE, resources.displayMetrics)
-        val height = capitalText.descent() - capitalText.ascent() + 2 * dp(3)
+        val height = capitalHeight()
         val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
-        val width = arrow + 2 * dp(CAPITAL_SIDE_IN)
+        val width = capitalWidth()
         val left = side.toFloat()
         val top = (dp(56) - height) / 2
         capitalBox.set(left, top, left + width, top + height)

@@ -1151,6 +1151,9 @@ private fun autoShift() {
         same(shift, Level.Once, "At a sentence start Shift comes on by itself")
         same(modifiers.autoShifted, true, "It says that it came on by itself")
         same(bar()?.chips, listOf(ModifierBar.SHIFT), "The bar shows it like one push of Shift")
+        same(bar()?.replacesWords, false, "The words stay on the bar, with only the arrow")
+        same(bar("H")?.replacesWords, false, "A finger resting on a letter shows no preview and no Shift view, as with Shift off")
+        same(bar("H")?.autoCapital, true, "The arrow stays while the finger rests")
         type()
         same(shift, Level.Off, "The first letter uses it up")
         modifiers.autoShift(sentenceStart = false)
@@ -1169,6 +1172,7 @@ private fun autoShift() {
         press()
         same(shift, Level.Once, "A quick second push is a fresh push of Shift, not a lock")
         same(modifiers.autoShifted, false, "That Shift is the user's own")
+        same(bar("H")?.replacesWords, true, "A real push of Shift shows the key under a resting finger, as always")
         modifiers.autoShift(sentenceStart = false)
         same(shift, Level.Once, "The user's own Shift stays when the sentence start is left")
         type()
@@ -1240,8 +1244,7 @@ private fun chipsBesideTheWords() {
         modifiers.autoShift(sentenceStart = true)
         same(bar()?.replacesWords, false, "At a sentence start the automatic Shift keeps the suggestions")
         same(bar()?.autoCapital, true, "and the strip marks it with a small capital")
-        same(bar("H")?.replacesWords, true, "A finger resting on a letter shows the whole bar")
-        same(bar("H")?.hint, "H", "and what the key types")
+        same(bar("H")?.replacesWords, false, "A finger resting on a letter keeps the words too: no preview and no Shift view")
         same(bar(Layout.SPACE)?.replacesWords, false, "A finger on Space keeps the words")
     }
     Keyboard().run {

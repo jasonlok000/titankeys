@@ -16,8 +16,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
- * The bar above the keyboard: word suggestions, or which modifiers are on. The modifiers take the place of the words, at the same
- * height. While a special gesture runs, [gesture] draws over them at that height too, and the words wait underneath.
+ * The bar above the keyboard: word suggestions, with small chips for the modifiers that are on. While a finger rests on a letter
+ * with a modifier on, or Ctrl is held, the modifiers take the place of the words, at the same height: see [ModifierBar]. While a
+ * special gesture runs, [gesture] draws over them at that height too, and the words wait underneath.
  */
 class Strip(
     context: Context,
@@ -184,7 +185,7 @@ class Strip(
             render()
         }
 
-    /** Which modifiers are on, in the place of the words. Null shows the words. */
+    /** Which modifiers are on: chips beside the words, or the whole bar in their place. Null shows the words alone. */
     var modifiers: ModifierBar? = null
         set(value) {
             if (field == value) return
@@ -193,8 +194,9 @@ class Strip(
         }
 
     init {
-        for (view in wordViews) addView(view, LayoutParams(0, dp(56), 1f))
+        // The modifiers come first, so that their chips sit at the start of the words.
         addView(modifierRow, LayoutParams(0, dp(56), 1f))
+        for (view in wordViews) addView(view, LayoutParams(0, dp(56), 1f))
         addView(noticeRow, LayoutParams(0, dp(56), 1f))
         addView(clipView, LayoutParams(0, dp(56), 1f))
         addView(selectedView, LayoutParams(0, dp(56), 1f))
@@ -247,7 +249,9 @@ class Strip(
         gesture.allowed = showSuggestions
         // A strip that shows nothing has no height, and a bar there would move the app each time a modifier changes.
         val confirm = notice.takeIf { showSuggestions }
-        val bar = modifiers.takeIf { showSuggestions && confirm == null }
+        val shown = modifiers.takeIf { showSuggestions && confirm == null }
+        // The whole bar takes the place of everything else. Chips alone stay beside the words, the clip or the selected word.
+        val bar = shown?.takeIf { it.replacesWords }
         val offer = clip.takeIf { showSuggestions && confirm == null && bar == null }
         val chosen = selected.takeIf { showSuggestions && confirm == null && bar == null && offer == null }
         setBackgroundColor(if (!showSuggestions) Color.TRANSPARENT else look.paper)
@@ -265,11 +269,21 @@ class Strip(
             view.isEnabled = index < words.size
             view.setTextColor(look.ink)
         }
-        modifierRow.visibility = if (bar != null) VISIBLE else GONE
+        modifierRow.visibility = if (shown != null) VISIBLE else GONE
+        (modifierRow.layoutParams as LayoutParams).let { params ->
+            val width = if (bar != null) 0 else LayoutParams.WRAP_CONTENT
+            val weight = if (bar != null) 1f else 0f
+            if (params.width != width || params.weight != weight) {
+                params.width = width
+                params.weight = weight
+                modifierRow.layoutParams = params
+            }
+        }
+        hint.visibility = if (bar != null) VISIBLE else GONE
         for ((name, chip) in chips) {
-            chip.visibility = if (bar != null && name in bar.chips) VISIBLE else GONE
+            chip.visibility = if (shown != null && name in shown.chips) VISIBLE else GONE
             // A key that a finger holds down is filled. One that was pushed and let go is an outline.
-            val held = bar != null && name in bar.held
+            val held = shown != null && name in shown.held
             chip.setTextColor(if (held) look.onAccent else look.accent)
             chip.background = GradientDrawable().apply {
                 cornerRadius = dp(6).toFloat()

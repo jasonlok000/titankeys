@@ -87,6 +87,7 @@ fun main() {
     cornersKeepContentClear()
     theGuideCanOpenAPanel()
     autoShift()
+    chipsBesideTheWords()
     println("Modifier checks passed")
 }
 
@@ -1227,5 +1228,35 @@ private fun autoShift() {
         same(shift, Level.Off, "A new field starts with nothing on, until it is checked again")
         modifiers.autoShift(sentenceStart = true)
         same(shift, Level.Once, "A new field that starts a sentence turns it on")
+    }
+}
+
+/** Shift and Alt show as chips beside the words. The whole bar takes their place only while a finger rests on a letter, or with Ctrl. */
+private fun chipsBesideTheWords() {
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        same(bar()?.replacesWords, false, "At a sentence start the automatic Shift shows beside the suggestions")
+        same(bar("H")?.replacesWords, true, "A finger resting on a letter shows the whole bar")
+        same(bar("H")?.hint, "H", "and what the key types")
+        same(bar(Layout.SPACE)?.replacesWords, false, "A finger on Space keeps the words")
+    }
+    Keyboard().run {
+        press()
+        same(bar()?.replacesWords, false, "One push of Shift keeps the words, with its chip")
+        press()
+        same(bar()?.chips, listOf(ModifierBar.CAPS), "A lock shows Caps")
+        same(bar()?.replacesWords, false, "Caps keeps the words too")
+    }
+    Keyboard().run {
+        press(ALT)
+        same(bar()?.replacesWords, false, "One push of Alt keeps the words")
+        same(bar("Q")?.replacesWords, true, "A finger on a letter shows what Alt types there")
+        same(bar("Q")?.hint, "%", "the symbol")
+    }
+    Keyboard().run {
+        down(CTRL)
+        same(bar()?.replacesWords, true, "Ctrl shows its shortcuts in the place of the words")
+        up(CTRL)
+        same(bar(), null, "Nothing on shows the words alone")
     }
 }

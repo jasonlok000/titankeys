@@ -1050,12 +1050,13 @@ class Composer(
     }
 
     private fun typeWord(word: String, rememberCase: Boolean) {
-        words.typed(word, rememberCase)
         learned = null
         val anchor = snapshot()
-        val before = anchor.before ?: return
-        if (!anchor.knownSelection || anchor.selected) return
-        val index = before.lastIndexOf(word)
+        val before = anchor.before
+        val index = before?.lastIndexOf(word) ?: -1
+        val sentenceCapital = index >= 0 && SwipeTyping.sentenceCapital(word, before!!.substring(0, index))
+        words.typed(word, rememberCase && !sentenceCapital)
+        if (before == null || !anchor.knownSelection || anchor.selected) return
         if (index < 0) return
         val tail = before.substring(index + word.length)
         if (tail.length > 2 || tail.any { it.isLetterOrDigit() || it == '\'' || it == '’' }) return

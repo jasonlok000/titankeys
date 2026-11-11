@@ -123,6 +123,7 @@ class CursorGesture {
         val current = state
         state = State.Idle
         tripled = false
+        twoAbove = false
         // A third quick tap, after two quick ones, picks the word at the cursor once no fourth touch follows. Unlike two taps, three
         // count anywhere in the zone, also above Space: the touchpad barely feels the lower half of Space, so taps land on the row
         // above, and three quick taps there with no press between them are no typing.
@@ -140,9 +141,22 @@ class CursorGesture {
             state = State.Tapped(2, current.landed, time)
             // A double tap by itself selects a word only on Space, after today's gap. Above Space, or after a longer gap,
             // two taps can only lead on to a drag that selects: two quick taps on V or B must never select a word.
-            return current.gap <= MAX_GAP_MILLIS && current.landed.y >= BOTTOM_ROW_TOP && current.tapLanded.y >= BOTTOM_ROW_TOP
+            val picks = current.gap <= MAX_GAP_MILLIS && current.landed.y >= BOTTOM_ROW_TOP && current.tapLanded.y >= BOTTOM_ROW_TOP
+            twoAbove = !picks
+            return picks
         }
         return false
+    }
+
+    /** The last lift ended two quick taps that pick nothing, as above Space. Only the guide asks, to say so. */
+    var twoAbove = false
+        private set
+
+    /** True if two taps that pick nothing still stand, with no third touch, [CONFIRM_MILLIS] after they lifted. Used once. */
+    fun confirmTwoAbove(): Boolean {
+        if (!twoAbove || (state as? State.Tapped)?.taps != 2) return false
+        twoAbove = false
+        return true
     }
 
     /** True if the double tap still stands [CONFIRM_MILLIS] after it lifted. It can only be used once. */

@@ -64,6 +64,9 @@ internal object GuideHooks {
         stripPoints?.invoke(index)
     }
 
+    /** How many words the bar shows now, or -1 outside the guide's field. The keyboard sets it. */
+    @Volatile var barCount: (() -> Int)? = null
+
     /** Where the right word is on the bar after a miss, as the keyboard ranks the words, for the guide to point at. */
     @Volatile var rightPlace = 1
 

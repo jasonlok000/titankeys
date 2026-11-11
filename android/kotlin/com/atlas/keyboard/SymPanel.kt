@@ -96,6 +96,8 @@ class SymPanel(
             clipPages.fit(value)
             if (clipboard) render()
         }
+    /** A clip that flashes on the clipboard page, to show where to look: the guide's newest. Null for none. */
+    var flashClip: String? = null
     /** The open group of the clipboard, Clipboard or Pinned, and its page. */
     private val clipPages = ClipboardHistory.Pages()
 
@@ -575,8 +577,27 @@ class SymPanel(
                 if (clipPinning && !lit) setStroke(dp(1).coerceAtLeast(2), look.accent)
             }
             field.pinMark.visibility = if (clip.pinned) VISIBLE else GONE
+            flash(field.frame, clip.text == flashClip && !lit)
             field.pinMark.imageTintList = ColorStateList.valueOf(if (lit) look.onAccent else look.accent)
             field.frame.contentDescription = context.getString(R.string.clipboard_paste, ClipboardHistory.preview(clip.text))
+        }
+    }
+
+    /** Makes [view] pulse softly while [on], and stops it otherwise. */
+    private val flashes = HashMap<android.view.View, android.animation.ObjectAnimator>()
+
+    private fun flash(view: android.view.View, on: Boolean) {
+        val running = flashes[view]
+        if (on == (running != null)) return
+        running?.cancel()
+        view.alpha = 1f
+        flashes.remove(view)
+        if (!on || !GuideMotion.enabled) return
+        flashes[view] = android.animation.ObjectAnimator.ofFloat(view, android.view.View.ALPHA, 1f, FLASH_ALPHA).apply {
+            duration = FLASH_MILLIS
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            repeatMode = android.animation.ValueAnimator.REVERSE
+            start()
         }
     }
 
@@ -614,6 +635,9 @@ class SymPanel(
     private fun dp(value: Int) = Math.round(value * resources.displayMetrics.density)
 
     private companion object {
+        /** A flashing clip dims to this and back, once each way in this long. */
+        const val FLASH_ALPHA = .45f
+        const val FLASH_MILLIS = 650L
         /** How much of a clip the guide's drawing shows on its key. */
         const val FACE_CLIP_LENGTH = 4
         const val BAND_HEIGHT = 32

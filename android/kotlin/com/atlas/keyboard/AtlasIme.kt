@@ -482,8 +482,15 @@ class AtlasIme : InputMethodService() {
         composer.onStroke = Trace::stroke
         composer.onAutocorrect = haptics::changed
         composer.onRestored = haptics::restored
-        composer.nearMiss = { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) }
+        composer.nearMiss = { right -> GuideScript.slip(right).takeIf { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) } }
         composer.intended = { before -> GuideHooks.intended(currentInputEditorInfo?.privateImeOptions, before) }
+        // The interactive guide acts out a gesture on this bar, only in its own field. See [Strip.playDemo].
+        GuideHooks.stripDemos = { demo ->
+            main.post {
+                if (demo == null) strip?.stopDemo()
+                else if (editing && currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) == true) strip?.playDemo(demo)
+            }
+        }
         // The interactive guide puts the keyboard in the menu that a step needs, only in its own field.
         GuideHooks.panelRequests = { target ->
             main.post {
@@ -576,6 +583,8 @@ class AtlasIme : InputMethodService() {
     private fun wakeIdleBar() {
         main.removeCallbacks(idleBar)
         strip?.stopIdle()
+        // A demonstration from the guide gives the bar back as soon as you act.
+        strip?.stopDemo()
         if (idleBarAllowed()) main.postDelayed(idleBar, IDLE_BAR_MILLIS)
     }
 
@@ -1183,6 +1192,7 @@ class AtlasIme : InputMethodService() {
         // A step: the menu opened.
         haptics.tick()
         strip?.notice = Strip.Notice.Menu(held.word, canForget(held))
+        KeyboardEvents.publish { KeyboardEvent.WordMenu(held.word) }
     }
 
     private fun canForget(held: HeldWord) =
@@ -2364,6 +2374,7 @@ class AtlasIme : InputMethodService() {
         commitForget()
         editing = false
         GuideHooks.panelRequests = null
+        GuideHooks.stripDemos = null
         // A held status must not outlive the keyboard.
         if (hold.held) hideHeldWindow()
         unregisterReceiver(screenOn)

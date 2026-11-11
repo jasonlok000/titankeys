@@ -255,12 +255,14 @@ class Strip(
         look = Look.of(context)
         gesture.allowed = showSuggestions
         // A strip that shows nothing has no height, and a bar there would move the app each time a modifier changes.
-        val confirm = notice.takeIf { showSuggestions }
+        // A demonstration from the guide shows its own words and menu, in place of the bar's own.
+        val demo = this.demo
+        val confirm = (if (demo != null) demoNotice else notice).takeIf { showSuggestions }
         val modifierChips = modifiers.takeIf { showSuggestions && confirm == null }
         // The whole bar takes the place of everything else. Chips alone stay beside the words, the clip or the selected word.
         val bar = modifierChips?.takeIf { it.replacesWords }
-        val offer = clip.takeIf { showSuggestions && confirm == null && bar == null }
-        val chosen = selected.takeIf { showSuggestions && confirm == null && bar == null && offer == null }
+        val offer = clip.takeIf { showSuggestions && confirm == null && bar == null && demo == null }
+        val chosen = selected.takeIf { showSuggestions && confirm == null && bar == null && offer == null && demo == null }
         setBackgroundColor(if (!showSuggestions) Color.TRANSPARENT else look.paper)
         // The lowest text sits about 16 dp over the bottom of the strip, where the corners curve in.
         side = maxOf(dp(8), corners.inset((navigationInset + dp(CONTENT_ABOVE)).toFloat()) + dp(4))
@@ -268,7 +270,7 @@ class Strip(
         // Keep a window for firmware touchpad routing when there is nothing to display.
         minimumHeight = if (showSuggestions) 0 else 1
         // Long words shrink, borrow room from short ones, and as a last resort lose the part they share with the others.
-        val shown = WORD_ORDER.map { words.getOrElse(it) { "" } }
+        val shown = WORD_ORDER.map { (demoWords ?: words).getOrElse(it) { "" } }
         // Chips beside the words take their room first, and the words fit in the rest.
         val chipsBeside = if (modifierChips != null && bar == null) chipRoom(modifierChips.chips) else 0
         val room = (width - paddingLeft - paddingRight - chipsBeside).toFloat()
@@ -288,7 +290,7 @@ class Strip(
                 params.weight = weight
                 view.layoutParams = params
             }
-            view.isEnabled = index < words.size
+            view.isEnabled = index < words.size && demo == null
             view.setTextColor(look.ink)
         }
         modifierRow.visibility = if (modifierChips != null) VISIBLE else GONE
@@ -369,6 +371,7 @@ class Strip(
             // A modest frame rate, and none at all once the build stands still.
             if (time < scene.millis) postDelayed(idleFrame, IDLE_FRAME_MILLIS)
         }
+        drawDemoFinger(canvas)
         if (!gesture.showing) return
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
         val more = gesture.advance(SystemClock.uptimeMillis(), scale)
@@ -406,6 +409,11 @@ class Strip(
 
     /** The words are covered while a gesture shows, so a touch must not choose one that nobody can see. */
     override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
+        // A touch on a demonstration only ends it, so that it never presses a button that the demonstration drew.
+        if (demo != null) {
+            stopDemo()
+            return true
+        }
         // A touch on the idle scene only ends it: the words come back as they were, and nothing is picked.
         if (idle != null) {
             stopIdle()
@@ -463,6 +471,111 @@ class Strip(
         render()
     }
 
+    // The guide's demonstrations on the bar itself: see [GuideHooks.StripDemo]. They borrow the words' places for a few seconds,
+    // type nothing and take no touch, and the bar is as it was when one ends.
+
+    private var demo: GuideHooks.StripDemo? = null
+    private var demoWords: List<String>? = null
+    private var demoNotice: Notice? = null
+    private var demoStart = 0L
+    /** The ghost finger on the middle word, from 0 (gone) to 1, and how far its hold has run. */
+    private var fingerAlpha = 0f
+    private var fingerHold = 0f
+    private val fingerPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    private val demoFrame = object : Runnable {
+        override fun run() = stepDemo()
+    }
+
+    /** Plays [next] from its start, in place of whatever demonstration was playing. */
+    internal fun playDemo(next: GuideHooks.StripDemo) {
+        if (!isShown || !showSuggestions || modifiers?.replacesWords == true || idle != null) return
+        stopDemo()
+        demo = next
+        demoStart = SystemClock.uptimeMillis()
+        stepDemo()
+    }
+
+    /** Ends the demonstration, if one plays, and the bar shows its own words again. */
+    fun stopDemo() {
+        if (demo == null) return
+        demo = null
+        demoWords = null
+        demoNotice = null
+        fingerAlpha = 0f
+        removeCallbacks(demoFrame)
+        middleWord().animate().cancel()
+        middleWord().alpha = 1f
+        middleWord().translationY = 0f
+        render()
+        invalidate()
+    }
+
+    /** The word in the middle of the bar, the best one, where both demonstrations act. */
+    private fun middleWord() = wordViews[WORD_ORDER.indexOf(0)]
+
+    private fun stepDemo() {
+        val playing = demo ?: return
+        val time = ((SystemClock.uptimeMillis() - demoStart) / demoScale()).toLong()
+        when (playing) {
+            is GuideHooks.StripDemo.Fix -> {
+                // The word with the slip, then Space: the fix rises into its place, as autocorrect does it.
+                val fixed = time >= FIX_SWAP_MILLIS
+                val words = listOf(if (fixed) playing.fix else playing.typo)
+                if (words != demoWords) {
+                    demoWords = words
+                    render()
+                    if (fixed && GuideMotion.enabled) {
+                        middleWord().alpha = 0f
+                        middleWord().translationY = dp(8).toFloat()
+                        middleWord().animate().alpha(1f).translationY(0f).setDuration(FIX_RISE_MILLIS).start()
+                    }
+                }
+                if (time >= FIX_END_MILLIS) return stopDemo()
+            }
+            is GuideHooks.StripDemo.Menu -> {
+                // The words, a finger comes down on the middle one and stays, the menu opens, then the finger lifts.
+                if (demoWords != playing.words) {
+                    demoWords = playing.words
+                    render()
+                }
+                fingerAlpha = when {
+                    time < MENU_PRESS_MILLIS -> 0f
+                    time < MENU_PRESS_MILLIS + FINGER_FADE_MILLIS -> (time - MENU_PRESS_MILLIS).toFloat() / FINGER_FADE_MILLIS
+                    time < MENU_OPEN_MILLIS + FINGER_FADE_MILLIS -> 1f
+                    time < MENU_OPEN_MILLIS + 2 * FINGER_FADE_MILLIS -> 1f - (time - MENU_OPEN_MILLIS - FINGER_FADE_MILLIS).toFloat() / FINGER_FADE_MILLIS
+                    else -> 0f
+                }
+                fingerHold = ((time - MENU_PRESS_MILLIS).toFloat() / (MENU_OPEN_MILLIS - MENU_PRESS_MILLIS)).coerceIn(0f, 1f)
+                val menu = if (time >= MENU_OPEN_MILLIS) Notice.Menu(playing.words.firstOrNull().orEmpty(), true) else null
+                if (menu != demoNotice) {
+                    demoNotice = menu
+                    render()
+                }
+                invalidate()
+                if (time >= MENU_END_MILLIS) return stopDemo()
+            }
+        }
+        postDelayed(demoFrame, DEMO_FRAME_MILLIS)
+    }
+
+    private fun demoScale() = if (GuideMotion.enabled) ValueAnimator.getDurationScale().coerceAtLeast(.01f) else 1f
+
+    /** A soft dot on the middle word with a ring that closes in while it holds, like the guide's ghost finger. */
+    private fun drawDemoFinger(canvas: Canvas) {
+        if (demo !is GuideHooks.StripDemo.Menu || fingerAlpha <= 0f) return
+        val view = middleWord()
+        val x = view.left + view.width / 2f
+        val y = height / 2f - (paddingBottom - paddingTop) / 2f
+        val radius = dp(9).toFloat()
+        fingerPaint.style = android.graphics.Paint.Style.FILL
+        fingerPaint.color = GuideMotion.faded(look.accent, .35f * fingerAlpha)
+        canvas.drawCircle(x, y, radius, fingerPaint)
+        fingerPaint.style = android.graphics.Paint.Style.STROKE
+        fingerPaint.strokeWidth = dp(2).toFloat()
+        fingerPaint.color = GuideMotion.faded(look.accent, fingerAlpha)
+        canvas.drawCircle(x, y, radius * (2.6f - 1.6f * fingerHold), fingerPaint)
+    }
+
     private fun dp(value: Int) = Math.round(value * resources.displayMetrics.density)
 
     companion object {
@@ -472,6 +585,15 @@ class Strip(
         private const val WORD_PADDING = 6
         /** About 30 frames a second while the idle scene moves. */
         private const val IDLE_FRAME_MILLIS = 33L
+        // The guide's demonstrations on the bar, in ms from their start. Android's animator duration setting scales them.
+        private const val DEMO_FRAME_MILLIS = 33L
+        private const val FIX_SWAP_MILLIS = 600L
+        private const val FIX_RISE_MILLIS = 220L
+        private const val FIX_END_MILLIS = 2200L
+        private const val MENU_PRESS_MILLIS = 500L
+        private const val MENU_OPEN_MILLIS = 1300L
+        private const val FINGER_FADE_MILLIS = 150L
+        private const val MENU_END_MILLIS = 3600L
         /** Enough of the clip for one line. The line itself cuts it cleanly where it ends. */
         private const val CLIP_PREVIEW_LENGTH = 200
         /** The clipboard icon beside a clip, as a part of the text size. */

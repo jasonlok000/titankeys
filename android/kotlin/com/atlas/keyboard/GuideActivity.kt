@@ -1,6 +1,7 @@
 package com.atlas.keyboard
 
 import android.app.Activity
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
@@ -299,6 +300,12 @@ class GuideActivity : Activity() {
     private val flow by lazy { GuideFlow(::readSettings) }
     private val haptics by lazy { Haptics(this) }
     private val input by lazy { getSystemService(InputMethodManager::class.java) }
+    private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
+    /** A copy, from the keyboard's fn and C or from anything else, as the copy slides wait for. */
+    private val clipChanged = ClipboardManager.OnPrimaryClipChangedListener {
+        val text = runCatching { clipboard.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString() }.getOrNull().orEmpty()
+        handle(KeyboardEvent.Copied(text))
+    }
 
     private lateinit var root: FrameLayout
     private lateinit var backdrop: GuideBackdrop
@@ -439,6 +446,9 @@ class GuideActivity : Activity() {
         // The playground is free typing, so there the strip keeps to your own words.
         if (!playground) GuideHooks.script = { before -> GuideScript.wordFrom(GuideScript.progress(before)).trim { !it.isLetter() } }
         contentResolver.registerContentObserver(Settings.Secure.getUriFor(Settings.Secure.DEFAULT_INPUT_METHOD), false, keyboardChanges)
+        clipboard.addPrimaryClipChangedListener(clipChanged)
+        // Back from the disclosure with an answer: the slide that offered it is done.
+        if (ready && !busy && !passed && flow.step.offersShare && !Contributions.unanswered(this)) stepDone()
     }
 
     override fun onPause() {
@@ -450,6 +460,8 @@ class GuideActivity : Activity() {
         stopTrace = null
         GuideHooks.script = null
         contentResolver.unregisterContentObserver(keyboardChanges)
+        clipboard.removePrimaryClipChangedListener(clipChanged)
+        endDemo()
         // A hidden playground keeps no clock going; its speed starts over when you type again.
         main.removeCallbacks(wpmTick)
     }
@@ -472,6 +484,7 @@ class GuideActivity : Activity() {
             }
         }
         GuideHooks.nearMiss = false
+        GuideHooks.stripDemo(null)
         main.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
@@ -803,7 +816,6 @@ class GuideActivity : Activity() {
     }
 
     private fun enter(step: GuideStep) {
-        demoRound = 0
         lastPoint = null
         travel = 0f
         helpShown = false
@@ -814,19 +826,24 @@ class GuideActivity : Activity() {
         previous.visibility = if (flow.canGoBack) View.VISIBLE else View.INVISIBLE
         chapter.text = step.chapter.label
         GuideHooks.nearMiss = step.nearMiss
-        // A slide with nothing to try is done as it opens, and the one that opens a section asks first.
-        passed = step.info || step.opensSection
-        next.text = if (step.opensSection) "Show me" else "Next"
+        // A slide with nothing to try is done as it opens.
+        passed = step.info
+        next.text = "Next"
         paintNext()
         offerFor(step)
-        swapIn(title, step.title, 0)
-        swapIn(body, step.body, ENTER_STAGGER_MILLIS)
-        hideHint()
-        // While the user has not answered the offer to share swipes, the last slide makes it, under the title.
-        if (step.chapter == GuideChapter.End && Contributions.unanswered(this)) showHint(SHARE_HINT)
-        // The whole guide is one text. A step that works on text gets more of the script if the text is too short.
+        // The whole guide is one text. A step that works on text gets more of the script if the text is too short, and a step
+        // with words to practise on gets them, once.
         val words = field.text.split(' ', '\n').count { it.isNotEmpty() }
         if (step.needsWords > words) addText(GuideScript.continueFrom(GuideScript.progress(field.text.toString()), step.needsWords - words))
+        step.passage?.let { if (!field.text.contains(it)) addText(it) }
+        flow.seed(field.text.toString())
+        swapIn(title, step.title, 0)
+        // Only the instruction that is needed now. The slide moves on, or back, as the keyboard changes. See [showStage].
+        swapIn(body, flow.instruction, ENTER_STAGGER_MILLIS)
+        hideHint()
+        // Everything that the slides leave out is in the written guide, and the ending says where.
+        if (step.chapter == GuideChapter.End) showHint(END_HINT)
+        if (step.offersShare) Contributions.guideEnded(this)
         // The keyboard starts the step in the menu that it needs: the Sym panel for Alt and the emoji, closed for typing.
         step.setup?.let(GuideHooks::openPanel)
         showScript()
@@ -857,6 +874,7 @@ class GuideActivity : Activity() {
      */
     private fun showScript() {
         val next = GuideScript.progress(field.text.toString())
+        // [cue] is the stage's ghost, which can change as the slide moves on.
         val strong = if (tone == GuideTone.Ink) GuideColours.CREAM else GuideColours.INK
         val accent = if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK
         // The next step is a word, or the marks after one, which wait their turn to be typed.
@@ -868,7 +886,7 @@ class GuideActivity : Activity() {
             if (!GuideScript.isMarks(GuideScript.stepAt(next + 1))) append(" ")
             append(rest, ForegroundColorSpan(GuideMotion.faded(strong, SCRIPT_REST)), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-        val shown = ghostCue(if (playground) GuideCue.Free else flow.step.cue)
+        val shown = ghostCue(if (playground) GuideCue.Free else flow.cue)
         if (shown != keys.cue) keys.show(shown)
     }
 
@@ -888,9 +906,9 @@ class GuideActivity : Activity() {
     private var demoLength = 0L
     private var demoKeys = 0
     private var demoTurned = false
-    /** How many demonstrations this slide has shown, so that a slide with two gestures takes turns between them. */
-    private var demoRound = 0
     private var demo: GuideDemo? = null
+    /** The bar's own demonstration has started in this showing. */
+    private var demoBarPlayed = false
     /** The pushes of the word that this demonstration types or swipes, worked out on its first frame. */
     private var demoPushes: List<DemoPush>? = null
     /** Which letter key types each mark with Alt, read from the phone's own keyboard. */
@@ -912,18 +930,23 @@ class GuideActivity : Activity() {
     private fun beginDemo() {
         val step = flow.step
         if (busy || passed || changing || step.pause || step.chapter == GuideChapter.End) return
-        val hasGhost = step.cue != GuideCue.Free && step.cue !is GuideCue.Spot
-        if (step.demo == null && !hasGhost) return
-        // The steer slide also teaches three touches to select, so every second time it shows that.
-        val selects = step.demo == GuideDemo.MoveCursor && demoRound++ % 2 == 1
-        demo = if (selects) GuideDemo.SelectLast else step.demo
-        val cue = ghostCue(if (selects) GuideCue.Taps(3, drag = true) else step.cue)
+        val stageCue = flow.cue
+        val hasGhost = stageCue != GuideCue.Free && stageCue !is GuideCue.Spot
+        if (step.demo == null && step.bar == null && !hasGhost) return
+        demo = step.demo
+        val cue = ghostCue(stageCue)
         if (cue != keys.cue) keys.show(cue)
         demoStart = GuideMotion.now()
         demoLength = if (hasGhost) maxOf(keys.ghostMillis(), DEMO_MILLIS) else DEMO_MILLIS
         demoKeys = 0
         demoTurned = false
         demoPushes = null
+        demoBarPlayed = false
+        // The word menu is a gesture on the bar itself, so the bar acts it out.
+        if (step.bar == GuideBar.Menu) {
+            demoBarPlayed = true
+            GuideHooks.stripDemo(GuideHooks.StripDemo.Menu(barWords()))
+        }
         keys.demo(true)
         // The grey words would sit on top of the empty field's hint.
         field.hint = null
@@ -944,6 +967,10 @@ class GuideActivity : Activity() {
 
     private fun endDemo() {
         main.removeCallbacks(demoTick)
+        if (demoBarPlayed) {
+            demoBarPlayed = false
+            GuideHooks.stripDemo(null)
+        }
         if (demoStart < 0 && phantom.text.isEmpty()) return
         demoStart = -1
         keys.demo(false)
@@ -971,7 +998,7 @@ class GuideActivity : Activity() {
         }
         val lastStart = text.trimEnd().lastIndexOf(' ') + 1
         val lastEnd = text.trimEnd().length
-        val typing = demo == GuideDemo.TypeNext || demo == GuideDemo.SwipeNext || demo == GuideDemo.FixNext
+        val typing = demo == GuideDemo.TypeNext || demo == GuideDemo.SwipeNext || demo == GuideDemo.FixNext || demo == GuideDemo.TypeSlip
         if (typing && GuideScript.isMarks(next)) {
             // Marks go right after their word: the keys light one push at a time, and then the marks show in place.
             val pushes = markPushes(next)
@@ -1026,6 +1053,42 @@ class GuideActivity : Activity() {
                     add(gap + symbol)
                 }
             }
+            // A slip typed key by key; then Space lights, the bar shows the fix swapping in, and the right word takes its place.
+            GuideDemo.TypeSlip -> {
+                val slip = GuideScript.slip(next)
+                val pushes = pushesFor(slip, swiped = false)
+                val shown = ((t / SLIP_TYPED) * pushes.size).toInt().coerceIn(0, pushes.size)
+                lightPushes(pushes, shown)
+                if (t >= SLIP_TYPED && !demoBarPlayed) {
+                    demoBarPlayed = true
+                    GuideHooks.stripDemo(GuideHooks.StripDemo.Fix(slip, next))
+                }
+                if (t < SLIP_FIXED) {
+                    if (shown > 0) add(gap + pushes[shown - 1].text)
+                } else {
+                    if (!demoTurned) {
+                        demoTurned = true
+                        keys.light(Layout.SPACE)
+                    }
+                    add(gap + next + " ")
+                }
+            }
+            is GuideDemo.AltLetter -> {
+                val symbol = Keys.letter(demo.key, KeyEvent.META_ALT_ON) ?: demo.key
+                val pushed = listOf(Layout.ALT, demo.key)
+                val due = (t / ALT_KEYS_SHARE * pushed.size).toInt().coerceAtMost(pushed.size)
+                while (demoKeys < due) keys.light(pushed[demoKeys++])
+                if (t > ALT_KEYS_SHARE) add(gap + symbol)
+            }
+            GuideDemo.CopyLast -> if (lastEnd > lastStart && t > TAPS_SHARE) {
+                val wash = ((t - TAPS_SHARE) / .2f).coerceIn(0f, 1f) * SELECT_ALPHA
+                built.setSpan(BackgroundColorSpan(GuideMotion.faded(GuideColours.ORANGE, wash)), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                if (t > COPY_KEYS && demoKeys == 0) {
+                    demoKeys = 1
+                    keys.light(Layout.FN)
+                    keys.light("C")
+                }
+            }
             is GuideDemo.Insert -> {
                 val pushed = (t / INSERT_SHARE * demo.keys.size).toInt().coerceAtMost(demo.keys.size)
                 if (pushed > demoKeys) {
@@ -1037,6 +1100,13 @@ class GuideActivity : Activity() {
         }
         phantom.text = built
         phantom.scrollTo(0, field.scrollY)
+    }
+
+    /** Words for the bar's demonstrations: the next words of the script, as the bar might offer them. */
+    private fun barWords(): List<String> {
+        val next = GuideScript.progress(field.text.toString())
+        return GuideScript.lineFrom(next, BAR_WORDS * 2).split(' ').map { word -> word.trim { !it.isLetter() } }
+            .filter { it.isNotEmpty() }.distinct().take(BAR_WORDS).ifEmpty { listOf("Titan") }
     }
 
     private fun markPushes(marks: String) = GuideScript.markKeys(marks, TypingSettings.autoPunctuation(this)) { altKeys[it] }
@@ -1086,9 +1156,8 @@ class GuideActivity : Activity() {
     private fun offerFor(step: GuideStep) {
         val missing = flow.missing
         when {
-            step.chapter == GuideChapter.End && Contributions.unanswered(this) -> showOffer(SHARE_OFFER)
+            step.offersShare -> showOffer(SHARE_OFFER)
             step.chapter == GuideChapter.End || step.pause -> showOffer("Go type something")
-            step.opensSection -> showOffer("Skip")
             !ready -> showOffer("Pick TitanKeys")
             missing != null && (!missing.optional || helpShown) -> showOffer(missing.offer)
             else -> offer.visibility = View.GONE
@@ -1108,13 +1177,10 @@ class GuideActivity : Activity() {
         }
         val step = flow.step
         when {
-            step.chapter == GuideChapter.End && Contributions.unanswered(this) -> {
-                // The app shows the full disclosure, with "I agree" and "No thanks". Nothing is shared before that.
-                startActivity(Connected.pageIntent(this, Contributions.PAGE))
-                finish()
-            }
+            // The app shows the full disclosure, with "I agree" and "No thanks". Nothing is shared before that. The guide waits
+            // here, and an answer finishes the slide when you come back.
+            step.offersShare -> startActivity(Connected.pageIntent(this, Contributions.PAGE))
             step.chapter == GuideChapter.End || step.pause -> leave()
-            step.opensSection -> if (!changing && ready) moveOn(skip = true)
             !ready -> input.showInputMethodPicker()
             else -> flow.missing?.let { need ->
                 writeNeed(need)
@@ -1140,6 +1206,7 @@ class GuideActivity : Activity() {
         swipeTyping = TypingSettings.swipeTyping(this),
         fnAsCtrl = TypingSettings.fnAsCtrl(this),
         panelOpen = panelOpen,
+        shareUnanswered = Contributions.unanswered(this),
     )
 
     /**
@@ -1383,7 +1450,14 @@ class GuideActivity : Activity() {
                 keys.touched()
             }
             is KeyboardEvent.HeldSymbol -> lastKey?.let { keys.flip(it, event.symbol) }
-            is KeyboardEvent.ModifierState -> panelOpen = event.panel != Modifiers.Panel.Closed
+            is KeyboardEvent.ModifierState -> {
+                panelOpen = event.panel != Modifiers.Panel.Closed
+                if (!panelOpen) keys.face = null
+            }
+            // The drawing of the keys shows the panel as it is, so the slide mirrors the keyboard.
+            is KeyboardEvent.PanelFace -> keys.face = event.labels.takeIf { event.panel != Modifiers.Panel.Closed }
+            // On the slide about the bar, every swipe comes out wrong, so that there is always something to fix with one tap.
+            is KeyboardEvent.Recognised -> if (!playground && !passed && flow.step.nearMiss) GuideHooks.nearMiss = true
             else -> Unit
         }
         if (!busy && ready) judge(event)
@@ -1391,10 +1465,21 @@ class GuideActivity : Activity() {
 
     private fun judge(event: KeyboardEvent) {
         when (val verdict = flow.event(event)) {
-            GuideVerdict.Done -> stepDone()
+            GuideVerdict.Done, GuideVerdict.Finished -> stepDone()
+            is GuideVerdict.Stage -> showStage()
             is GuideVerdict.Hint -> showHint(verdict.text)
             GuideVerdict.Wait -> Unit
         }
+    }
+
+    /** The slide moved on, or back, to another instruction: only that one shows, with a tick, and the ghost follows it. */
+    private fun showStage() {
+        hideHint()
+        haptics.tick()
+        swapIn(body, flow.instruction, 0)
+        showScript()
+        main.removeCallbacks(showHelp)
+        if (flow.step.help != null) main.postDelayed(showHelp, HELP_AFTER_MILLIS)
     }
 
     /**
@@ -1447,7 +1532,7 @@ class GuideActivity : Activity() {
     }
 
     /** The story goes on, or back a step: to ink for a step behind the cream line, or orange for the ending. */
-    private fun moveOn(forward: Boolean = true, skip: Boolean = false) {
+    private fun moveOn(forward: Boolean = true) {
         changing = true
         busy = true
         passed = false
@@ -1457,11 +1542,7 @@ class GuideActivity : Activity() {
         main.removeCallbacks(showHelp)
         main.removeCallbacks(settleReaction)
         hideHint()
-        when {
-            skip -> flow.skipSection()
-            forward -> flow.advance()
-            else -> flow.back()
-        }
+        if (forward) flow.advance() else flow.back()
         val coming = flow.step
         val target = if (coming.chapter == GuideChapter.End) GuideTone.Orange else GuideTone.Ink
         val away = (if (forward) -dp(ENTER_OFFSET) else dp(ENTER_OFFSET)).toFloat()
@@ -1600,9 +1681,10 @@ class GuideActivity : Activity() {
         private const val TAG = "TitanKeysGuide"
         private const val PLAYGROUND = "playground"
         private const val PLAYGROUND_LABEL = "Playground"
-        /** The last slide's offer to share swipes (#34), while it is unanswered. The close button still just leaves. */
-        private const val SHARE_HINT = "Want swiping to get even better? Share your swipes with us. You'll see exactly what's sent first."
+        /** The share slide's offer (#34), while it is unanswered. It opens the full disclosure. */
         private const val SHARE_OFFER = "Share my swipes"
+        /** The ending points to the written guide, which explains everything that the slides leave out. */
+        private const val END_HINT = "Everything else, explained: Settings > Guide."
         private const val PLAYGROUND_TITLE = "TitanKeys"
         /** The playground's speed updates this often while you type, and its colour eases this much of the way each time. */
         private const val WPM_TICK_MILLIS = 120L
@@ -1700,6 +1782,15 @@ class GuideActivity : Activity() {
         private const val HOLD_TURNS = .55f
         /** The part that pushing the keys takes, before the text from the panel appears. */
         private const val INSERT_SHARE = .6f
+        /** When a slip is typed and the bar starts to fix it, and when Space puts the right word in, after the bar's swap. */
+        private const val SLIP_TYPED = .5f
+        private const val SLIP_FIXED = .64f
+        /** The part that Alt and the letter take, before the symbol appears. */
+        private const val ALT_KEYS_SHARE = .5f
+        /** When fn and C light, once the word is selected. */
+        private const val COPY_KEYS = .72f
+        /** How many words the bar's demonstrations show. */
+        private const val BAR_WORDS = 3
 
         /** True until the guide has opened once, so it opens by itself after setup. */
         fun due(context: Context) = !context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).getBoolean(SHOWN, false)

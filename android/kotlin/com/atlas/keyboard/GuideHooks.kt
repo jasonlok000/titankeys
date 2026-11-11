@@ -5,6 +5,14 @@ package com.atlas.keyboard
  * is a plain shared object. No other field is ever touched: the guide's field marks itself with [FIELD] in its private options.
  */
 internal object GuideHooks {
+    /** A short scene on the keyboard's own bar, for the guide. It types nothing, and any input on the keyboard ends it. */
+    sealed interface StripDemo {
+        /** [typo] shows in the middle of the bar, then [fix] swaps in, as Space does when it fixes a word. */
+        data class Fix(val typo: String, val fix: String) : StripDemo
+        /** [words] show, a ghost finger holds the middle one, and its menu opens. */
+        data class Menu(val words: List<String>) : StripDemo
+    }
+
     const val FIELD = "com.titankeys.guide"
 
     /**
@@ -34,6 +42,16 @@ internal object GuideHooks {
         if (!nearMiss || privateOptions?.contains(FIELD) != true) return false
         nearMiss = false
         return true
+    }
+
+    /**
+     * The strip listens here, so that a slide can act out a gesture on the keyboard's own bar: see [StripDemo]. Null stops one
+     * that plays. The keyboard acts on it only while it serves the guide's field.
+     */
+    @Volatile var stripDemos: ((StripDemo?) -> Unit)? = null
+
+    fun stripDemo(demo: StripDemo?) {
+        stripDemos?.invoke(demo)
     }
 
     /** The guide's word for a word after [before], only in the guide's field. */

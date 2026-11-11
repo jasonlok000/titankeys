@@ -1094,13 +1094,15 @@ private fun expansions(world: Realistic) {
 private fun theGuideOffersItsWord(world: Realistic) {
     fun guide(miss: Boolean = false) = Typist(world, null).also {
         it.composer.intended = { "to" }
-        it.composer.nearMiss = { miss }
+        it.composer.nearMiss = { right -> if (miss) right.reversed() else null }
     }
     val swiped = guide().swipe("tp")
     same(swiped.bar.take(2), listOf("tp", "to"), "A swipe that came out different has the guide's word second")
     same(swiped.choose(1).text, "to ", "One touch puts the guide's word in")
     same(guide().swipe("to").bar, listOf("to"), "A swipe that came out right has nothing added")
-    same(guide(miss = true).swipe("to").bar, listOf("to"), "A near miss needs a second guess to swap with")
+    same(guide(miss = true).swipe("to").bar, listOf("ot", "to"), "A near miss always puts a wrong word in, with the right one second")
+    same(guide(miss = true).swipe("to").text, "ot ", "The wrong word is what the near miss types")
+    same(guide(miss = true).swipe("tp").bar.take(2), listOf("tp", "to"), "A swipe that read another word puts that in first")
     same(guide().type("tp").bar.firstOrNull(), "to", "Typed letters that are not the guide's word have it on the strip")
     same(guide().type("tp").choose(0).text, "to ", "One touch puts it in place of the letters")
     same(guide().type("to").bar.contains("to"), false, "Letters that are the guide's word need nothing more")

@@ -203,8 +203,11 @@ class Composer(
     var onAutocorrect: (() -> Unit)? = null
     /** Told when an automatic change is undone and the typed word is back. */
     var onRestored: (() -> Unit)? = null
-    /** True when the next swipe should come out as its second guess, which only the interactive guide asks for. See [GuideHooks]. */
-    var nearMiss: () -> Boolean = { false }
+    /**
+     * A wrong word for the right one, when the next swipe should come out wrong on purpose, which only the interactive guide asks
+     * for, or null. See [GuideHooks].
+     */
+    var nearMiss: (String) -> String? = { null }
     /**
      * The interactive guide's word for a word that starts after this text, or null outside the guide. A word that comes out
      * different gets the guide's word on the strip, so that one touch puts it right. See [GuideHooks].
@@ -1506,16 +1509,16 @@ class Composer(
 
     /**
      * A swipe's choices in the interactive guide. When the swipe typed another word than [wanted], the guide's word goes second,
-     * where one touch on the strip puts it in. For a near miss on purpose it goes second even when the swipe read it first.
+     * where one touch on the strip puts it in. For a near miss on purpose a wrong word always goes in first, whatever was swiped:
+     * the swipe's next guess, or the right word with a slip in it when there is no other guess.
      */
     private fun guideChoices(guessed: List<String>, wanted: String?): List<String> {
         if (wanted == null) return guessed
         val at = guessed.indexOfFirst { sameLetters(it, wanted) }
         val right = guessed.getOrNull(at) ?: wanted
         val others = guessed.filterIndexed { index, _ -> index != at }
-        if (others.isEmpty()) return guessed
-        val miss = nearMiss()
-        if (at == 0 && !miss) return guessed
+        nearMiss(right)?.let { slip -> return listOf(others.firstOrNull() ?: slip, right) + others.drop(1) }
+        if (others.isEmpty() || at == 0) return guessed
         return listOf(others[0], right) + others.drop(1)
     }
 

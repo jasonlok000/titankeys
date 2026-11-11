@@ -163,16 +163,14 @@ class AtlasIme : InputMethodService() {
         // The firmware hands touchpad events to the topmost window titled "InputMethod", which is this
         // keyboard's window. They arrive at the window, not at any view, so catch them there.
         val window = window.window!!
-        window.callback = TouchpadWindowCallback(window.callback) { event ->
-            (editing && touchpad.accepts(event)).also { if (it) motion(event) }
-        }
-        overlay = TouchpadOverlay(this) { event ->
-            (editing && touchpad.accepts(event)).also { if (it) motion(event) }
-        }
+        window.callback = TouchpadWindowCallback(window.callback, touchpad = ::catchTouchpad)
+        overlay = TouchpadOverlay(this, touchpad = ::catchTouchpad)
         watch = TouchWatch(this) { if (touchpad.accepts(it)) light() }
         watch.show()
         loadEmoji()
     }
+
+    private fun catchTouchpad(event: MotionEvent) = (editing && touchpad.accepts(event)).also { if (it) motion(event) }
 
     /** Reads the emoji list away from the main thread, which also loads the emoji font before Sym is first pressed. */
     private fun loadEmoji() {
@@ -225,9 +223,11 @@ class AtlasIme : InputMethodService() {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
             main.post(showStrip)
             overlay.show()
+            BackService.catchTouchpad(::catchTouchpad)
         } else {
             composer.stop()
             overlay.hide()
+            BackService.catchTouchpad(null)
             // A returning window starts with no field just before its own field takes focus. A strip that
             // hides for that moment tells the app the keyboard was closed, and the app then drops its field.
             main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
@@ -290,6 +290,7 @@ class AtlasIme : InputMethodService() {
         selectingWithSpace = false
         deadKeyPending = false
         overlay.hide()
+        BackService.catchTouchpad(null)
         super.onFinishInput()
     }
 
@@ -844,6 +845,7 @@ class AtlasIme : InputMethodService() {
         composer.stop()
         editor.cancelState()
         overlay.hide()
+        BackService.catchTouchpad(null)
         watch.hide()
         super.onDestroy()
     }

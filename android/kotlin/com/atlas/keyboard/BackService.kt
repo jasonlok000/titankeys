@@ -8,6 +8,8 @@ import android.content.Intent
 import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 
 /**
@@ -17,23 +19,36 @@ import android.view.accessibility.AccessibilityEvent
  *
  * With app shortcuts on and a hyper key set, it also sees keys before apps do, so Hyper and a letter open an app anywhere.
  * It asks for keys only then, because each key waits for Atlas while it does. It cannot read the screen.
+ *
+ * In a text field it also keeps the touchpad with the keyboard. A notification banner sits above the
+ * keyboard's own overlay and takes swipes that start under it, but not those under this service's overlay.
  */
 class BackService : AccessibilityService() {
     private val hyper = HyperKey()
+    private val overlay by lazy {
+        TouchpadOverlay(this, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) { touchpad?.invoke(it) == true }
+    }
 
     override fun onServiceConnected() {
         current = this
         filterKeys()
+        showTouchpad()
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
         if (current === this) current = null
+        overlay.hide()
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
         if (current === this) current = null
+        overlay.hide()
         super.onDestroy()
+    }
+
+    private fun showTouchpad() {
+        if (touchpad != null) overlay.show() else overlay.hide()
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
@@ -69,9 +84,16 @@ class BackService : AccessibilityService() {
 
     companion object {
         @Volatile private var current: BackService? = null
+        private var touchpad: ((MotionEvent) -> Boolean)? = null
 
         /** Sends a system back, or returns false when the service is off. */
         fun back(): Boolean = current?.performGlobalAction(GLOBAL_ACTION_BACK) == true
+
+        /** Sends touchpad events to [handler] while it is set, or stops when it is null. Call on the main thread. */
+        fun catchTouchpad(handler: ((MotionEvent) -> Boolean)?) {
+            touchpad = handler
+            current?.showTouchpad()
+        }
 
         /** Asks for keys only while shortcuts are on with a hyper key, or a screen waits for a key. */
         fun filterKeys() {

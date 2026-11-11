@@ -908,6 +908,17 @@ private fun composerFlow(world: Realistic) {
         same(typed("send it on whatsapp", phone), "send it on WhatsApp", "\"whatsapp\" gets the capitals inside its name")
         same(typed("watch netflix later", phone), "watch Netflix later", "\"netflix\" gets its capital")
         same(typed("my instagram", phone), "my Instagram", "\"instagram\" gets its capital")
+        // The bar keeps a name's capitals off while the word is in progress, and a tapped word gets them as it goes in.
+        val tapping = Typist(world, world.autocorrect(phone), lists = phone,
+            words = FakeWords(phone).also { it.completions = listOf("whatsapp", "toggle", "spotify") })
+        tapping.type("hi ")
+        tapping.type("w")
+        same(tapping.bar.contains("WhatsApp"), false, "The bar shows no name capitals while the word is in progress: ${tapping.bar}")
+        tapping.choose(tapping.bar.indexOf("whatsapp"))
+        same(tapping.text, "hi WhatsApp ", "A tapped \"whatsapp\" goes in as \"WhatsApp\"")
+        tapping.type("t")
+        tapping.choose(tapping.bar.indexOf("toggle"))
+        same(tapping.text, "hi WhatsApp toggle ", "A tapped \"toggle\" stays lowercase")
         same(typed("rose and bill came", Lists(world.words, phoneNames = com.atlas.engine.PhoneNames.words(listOf("Rose Bill"),
             { world.words.frequency(it).toDouble() }, { it in plain }))), "rose and bill came",
             "A contact's name made of ordinary words gives them no capitals")

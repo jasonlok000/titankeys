@@ -65,7 +65,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             GestureDisplay.Scene.Cursor -> cursor(canvas, display, inside, outside, mid, look)
             GestureDisplay.Scene.WordDrag, GestureDisplay.Scene.WordSelected -> words(canvas, display, inside, outside, mid, look)
             GestureDisplay.Scene.DeleteHold, GestureDisplay.Scene.DeleteFlick -> delete(canvas, display, inside, outside, mid, look)
-            GestureDisplay.Scene.None -> Unit
+            GestureDisplay.Scene.Swipe, GestureDisplay.Scene.None -> Unit
         }
         canvas.restore()
     }

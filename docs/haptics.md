@@ -8,7 +8,7 @@ The Titan 2 Elite has five ready-made effects and no strength control, so each m
 
 | Feel | Effect | Means |
 |---|---|---|
-| **Texture tick** | one 16 ms buzz (the old Normal swipe tick), not `TEXTURE_TICK`, which felt too strong on the Titan | Moving |
+| **Texture tick** | one 8 ms buzz, not `TEXTURE_TICK`: on the Titan every ready-made effect lasts 55 to 105 ms (the texture tick 57 ms), too strong for a tick per key | Moving |
 | **Tick** | `TICK` (2) | A step |
 | **Click** | `CLICK` (0) | Done |
 | **Double click** | `DOUBLE_CLICK` (1) | Locked, or selecting armed |

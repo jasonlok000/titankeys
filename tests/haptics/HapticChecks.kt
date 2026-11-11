@@ -86,8 +86,10 @@ private fun feelsUseTheirEffects() {
     val effectIds = listOf(HapticPalette.EFFECT_CLICK, HapticPalette.EFFECT_DOUBLE_CLICK, HapticPalette.EFFECT_TICK,
         HapticPalette.EFFECT_HEAVY_CLICK, HapticPalette.EFFECT_TEXTURE_TICK)
     check(effectIds == listOf(0, 1, 2, 5, 21)) { "The VibrationEffect ids are Android's: $effectIds" }
-    // Moving is exactly the old Normal swipe tick: one 16 ms buzz at 76 of 255, no ready-made effect.
-    check(HapticPalette.of(Feel.Moving).fallback == HapticPalette.Buzzes(listOf(16L), listOf(76))) { "Moving is the old Normal tick" }
+    // Moving is one short buzz, shorter than the old Normal tick's 16 ms, with no ready-made effect: the Titan's last 55 ms or more.
+    check(HapticPalette.of(Feel.Moving).fallback == HapticPalette.Buzzes(listOf(8L), listOf(76))) { "Moving is one 8 ms buzz" }
+    check(HapticPalette.moving(12).millis == 12L) { "A tried length is one buzz of that length" }
+    check(6L in HapticPalette.MOVING_TRY_MILLIS && 12L in HapticPalette.MOVING_TRY_MILLIS) { "The debug build can try 6 to 12 ms" }
     // Phones without an effect fall back to timed buzzes, which must be distinct too.
     val fallbacks = Feel.entries.map { HapticPalette.of(it).fallback.timings }
     check(fallbacks.toSet().size == Feel.entries.size) { "Each feel's fallback must feel different: $fallbacks" }

@@ -580,6 +580,7 @@ class AtlasIme : InputMethodService() {
         // marked debuggable, so its own package name tells it apart.
         if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) {
             registerReceiver(idleBarTrigger, IntentFilter(IDLE_BAR_ACTION), RECEIVER_EXPORTED)
+            registerReceiver(movingTry, IntentFilter(MOVING_ACTION), RECEIVER_EXPORTED)
             idleBarTriggerRegistered = true
         }
         updateOverlay()
@@ -624,6 +625,15 @@ class AtlasIme : InputMethodService() {
 
     private val idleBar = Runnable { startIdleBar() }
     private var idleBarTriggerRegistered = false
+    /** The debug build's swipe tick length to try, from adb: the extra "ms", or 0 to go back to the usual length. It plays one. */
+    private val movingTry = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            Haptics.tryMovingMillis(context, intent.getIntExtra("ms", 0).toLong())
+            Log.i("Atlas", "Swipe tick: ${Haptics.movingMillis(context)} ms")
+            main.post { haptics.play(Haptic.SwipeKey) }
+        }
+    }
+
     private val idleBarTrigger = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             main.post {
@@ -2523,7 +2533,10 @@ class AtlasIme : InputMethodService() {
         if (hold.held) hideHeldWindow()
         unregisterReceiver(screenOn)
         unregisterReceiver(screenOff)
-        if (idleBarTriggerRegistered) unregisterReceiver(idleBarTrigger)
+        if (idleBarTriggerRegistered) {
+            unregisterReceiver(idleBarTrigger)
+            unregisterReceiver(movingTry)
+        }
         sleepIdleBar()
         clipboard?.removePrimaryClipChangedListener(clipChanged)
         phoneNames.stop()
@@ -2552,6 +2565,7 @@ class AtlasIme : InputMethodService() {
         private const val IDLE_BAR_MILLIS = 3 * 60 * 1000L
         /** The debug build starts the idle scene at once on this broadcast, from adb. */
         private const val IDLE_BAR_ACTION = "com.titankeys.debug.IDLE_BAR"
+        private const val MOVING_ACTION = "com.titankeys.debug.MOVING_MILLIS"
         private const val DEBUG_PACKAGE_SUFFIX = ".debug"
         /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"

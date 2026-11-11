@@ -120,15 +120,23 @@ object HapticPalette {
 
     /** "No": three 12 ms pulses, 50 ms apart. Nothing else feels like it. */
     const val NO_PULSE_MILLIS = 12L
-    /** The old Normal preset's swipe tick: 8 units of 2 ms, at strength 3 of 10. */
-    const val MOVING_MILLIS = 16L
+    /**
+     * The swipe tick: the shortest buzz the Titan's motor still gives every time, half the old Normal tick's 16 ms. The phone's
+     * own effects all last 55 to 105 ms there (its vibrator log), its texture tick 57 ms, so none of them can be light.
+     */
+    const val MOVING_MILLIS = 8L
     const val MOVING_STRENGTH = 76
+    /** The range the debug build lets a phone check try for [MOVING_MILLIS]. */
+    val MOVING_TRY_MILLIS = 4L..40L
     const val NO_GAP_MILLIS = 50L
 
+    /** The swipe tick, one buzz of [millis]. */
+    fun moving(millis: Long) = Pattern(null, Buzzes(listOf(millis), listOf(MOVING_STRENGTH)))
+
     fun of(feel: Feel): Pattern = when (feel) {
-        // Exactly the old Normal swipe tick: one 16 ms buzz, at 76 of 255 where a phone can set it. The owner found the phone's
-        // texture tick too strong on the Titan, which has no strength control (Nov 11).
-        Feel.Moving -> Pattern(null, Buzzes(listOf(MOVING_MILLIS), listOf(MOVING_STRENGTH)))
+        // One short buzz, at 76 of 255 where a phone can set it. The owner found the phone's texture tick too strong on the
+        // Titan, which has no strength control, and wanted the lightest tick it can make (Nov 11).
+        Feel.Moving -> moving(MOVING_MILLIS)
         Feel.Step -> Pattern(EFFECT_TICK, Buzzes(listOf(18), listOf(140)))
         Feel.Done -> Pattern(EFFECT_CLICK, Buzzes(listOf(20), listOf(220)))
         Feel.Locked -> Pattern(EFFECT_DOUBLE_CLICK, Buzzes(listOf(15, 40, 15), listOf(220, 0, 220)))
@@ -230,8 +238,9 @@ class Haptics(private val context: Context) {
     private val main = Handler(Looper.getMainLooper())
 
     fun play(haptic: Haptic) {
-        if (!switches.allows(haptic) || !gate.admit(haptic.feel)) return
-        vibrate(effect(HapticPalette.of(haptic.feel)))
+        val pattern = if (haptic.feel == Feel.Moving) HapticPalette.moving(movingMillis(context)) else HapticPalette.of(haptic.feel)
+        if (!switches.allows(haptic) || !gate.admit(haptic.feel, pattern.millis)) return
+        vibrate(effect(pattern))
     }
 
     /** A finished part of the interactive guide: three ticks rising into a click. */
@@ -291,6 +300,23 @@ class Haptics(private val context: Context) {
             val preferences = preferences(context)
             return HapticSwitches { key, default -> preferences.getBoolean(key, default) }
         }
+
+        /**
+         * How long the swipe tick lasts. Only the debug build reads a value tried on the phone (see AtlasIme's MOVING_ACTION);
+         * every other build plays [HapticPalette.MOVING_MILLIS].
+         */
+        fun movingMillis(context: Context): Long {
+            if (!context.packageName.endsWith(".debug")) return HapticPalette.MOVING_MILLIS
+            val tried = preferences(context).getLong(MOVING_TRY_KEY, 0)
+            return if (tried in HapticPalette.MOVING_TRY_MILLIS) tried else HapticPalette.MOVING_MILLIS
+        }
+
+        /** Sets the swipe tick's length to try, or puts it back with 0. Debug build only. */
+        fun tryMovingMillis(context: Context, millis: Long) {
+            preferences(context).edit().apply { if (millis in HapticPalette.MOVING_TRY_MILLIS) putLong(MOVING_TRY_KEY, millis) else remove(MOVING_TRY_KEY) }.apply()
+        }
+
+        private const val MOVING_TRY_KEY = "debug_moving_millis"
 
         /** The master switch: All haptics in Settings, and Vibration on the quick settings page. */
         fun enabled(context: Context) = switches(context).master

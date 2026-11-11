@@ -255,6 +255,13 @@ class TypedCorrector(
         return fixedCapitals(word)?.let { Fix(word, it) }
     }
 
+    /**
+     * The capitals step alone, for a whole word that the user tapped on the bar ("whatsapp" is "WhatsApp"), or null to
+     * keep it. The bar itself never shows them while a word is in progress. [before] is the text before the word.
+     */
+    fun capitals(word: String, before: String): String? =
+        if (isInsideAddress(before + word) || word.lowercase() in rejected) null else fixedCapitals(word)
+
     private fun typoFix(word: String, before: String, typedPrevious: String?): Fix? {
         if (isInsideAddress(before + word)) return null
         val lower = word.lowercase()

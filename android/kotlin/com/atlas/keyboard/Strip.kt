@@ -29,7 +29,7 @@ class Strip(
     private val act: (Action) -> Unit = {},
     /** The newest clip was touched, to paste it. */
     private val paste: () -> Unit = {},
-    /** A touch ended the idle scene. The touch does nothing else. */
+    /** A touch on the idle game: you came back. The touch does nothing else. */
     private val woke: () -> Unit = {},
 ) : LinearLayout(context) {
     /** What the buttons in the place of the words do. */
@@ -384,33 +384,39 @@ class Strip(
             field = value
             invalidate()
         }
+    /** The mark of an automatic capital: a small shift arrow, in thin lines of the accent colour, as the figure on the bar. */
     private val capitalPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        textAlign = android.graphics.Paint.Align.CENTER
+        style = android.graphics.Paint.Style.STROKE
+        strokeJoin = android.graphics.Paint.Join.ROUND
+        strokeCap = android.graphics.Paint.Cap.ROUND
     }
+    private val capitalArrow = android.graphics.Path()
 
-    /**
-     * The mark for the automatic capital: a small "A" in the accent, in the top left corner of the bar, out of the way of the words
-     * in their places. It moves nothing.
-     */
+    /** Drawn over the bar's top left corner, so the words never move for it. */
     private fun drawAutoCapital(canvas: Canvas) {
         if (!autoCapital || !showSuggestions) return
-        capitalPaint.typeface = typeface
-        capitalPaint.isFakeBoldText = true
         capitalPaint.color = look.accent
-        capitalPaint.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, CAPITAL_SIZE, resources.displayMetrics)
+        capitalPaint.strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CAPITAL_LINE, resources.displayMetrics)
+        val size = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, CAPITAL_SIZE, resources.displayMetrics)
         val x = side.toFloat() / 2 + dp(CAPITAL_IN)
-        canvas.drawText(CAPITAL_MARK, x, dp(CAPITAL_TOP) - capitalPaint.ascent(), capitalPaint)
+        val y = dp(CAPITAL_TOP).toFloat()
+        // An arrow head as wide as it is tall at the top, on a stem half as wide: the shift key's mark, outlined.
+        capitalArrow.reset()
+        capitalArrow.moveTo(x + size / 2, y)
+        capitalArrow.lineTo(x + size, y + size * .52f)
+        capitalArrow.lineTo(x + size * .73f, y + size * .52f)
+        capitalArrow.lineTo(x + size * .73f, y + size)
+        capitalArrow.lineTo(x + size * .27f, y + size)
+        capitalArrow.lineTo(x + size * .27f, y + size * .52f)
+        capitalArrow.lineTo(x, y + size * .52f)
+        capitalArrow.close()
+        canvas.drawPath(capitalArrow, capitalPaint)
     }
 
     override fun dispatchDraw(canvas: Canvas) {
         super.dispatchDraw(canvas)
         drawAutoCapital(canvas)
-        idle?.let { scene ->
-            val time = SystemClock.uptimeMillis() - idleStart
-            idleDrawing.draw(canvas, scene.at(time), wordViews.first().paint, dp(56).toFloat(), look)
-            // A modest frame rate, and none at all once the build stands still.
-            if (time < scene.millis) postDelayed(idleFrame, IDLE_FRAME_MILLIS)
-        }
+        idle?.let { drawIdle(canvas, it) }
         drawDemoFinger(canvas)
         if (!gesture.showing) return
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
@@ -482,56 +488,82 @@ class Strip(
             stopDemo()
             return true
         }
-        // A touch on the idle scene only ends it: the words come back as they were, and nothing is picked.
+        // A touch on the idle game only sends the letters home: nothing is picked.
         if (idle != null) {
-            stopIdle()
             woke()
             return true
         }
         return gesture.showing || super.onInterceptTouchEvent(event)
     }
 
-    // The idle scene, an Easter egg: see [IdleScene]. It has no touch targets, and any input ends it at once.
+    // The idle games, an Easter egg: see [IdlePlayer]. They have no touch targets. Coming back sends the letters home, and typing or
+    // swiping cuts straight back to the words.
 
-    private val idleDrawing = IdleDrawing(resources.displayMetrics.density)
-    private var idle: IdleScene? = null
-    private var idleStart = 0L
+    private val idleDrawing = IdleDrawing()
+    private var idle: IdlePlayer? = null
+    private var idleFrameAt = 0L
     private val idleFrame = Runnable { invalidate() }
+    /** How many of the bar's pixels make one of the games' units: they are made for a bar 88 high. */
+    private val idleScale get() = dp(56) / Idle.H
 
     val idling get() = idle != null
 
-    /** Starts the idle scene with the words on the bar, if plain words show. Returns false if there is nothing to play with. */
+    /** Starts an idle game with the words on the bar, if plain words show. Returns false if there is nothing to play with. */
     fun startIdle(random: kotlin.random.Random): Boolean {
         if (idle != null || !isShown || !showSuggestions || modifiers?.replacesWords == true || notice != null || clip != null || selected != null
             || gesture.showing) return false
-        val letters = ArrayList<IdleScene.Letter>()
-        for ((word, view) in wordViews.withIndex()) {
-            val layout = view.layout ?: continue
-            if (view.visibility != VISIBLE || view.text.isEmpty()) continue
+        val scale = idleScale
+        val glyphs = ArrayList<Glyph>()
+        // The words left to right, in the order of the bar, so that word 0, 1 and 2 are left, middle and right.
+        val views = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.sortedBy { it.left }
+        for ((word, view) in views.withIndex()) {
+            val layout = view.layout
+            val paint = view.paint
             // An ellipsized word gives only the letters that show.
             val shown = if (layout.getEllipsisCount(0) > 0) layout.getEllipsisStart(0) else view.text.length
-            val baseline = view.top + view.totalPaddingTop + layout.getLineBaseline(0).toFloat()
+            val middle = view.top + view.totalPaddingTop + layout.getLineBaseline(0) + (paint.ascent() + paint.descent()) / 2
             for (i in 0 until shown) {
                 val char = view.text[i]
                 if (char.isWhitespace()) continue
-                letters += IdleScene.Letter(char, view.left + view.totalPaddingLeft + layout.getPrimaryHorizontal(i) - view.scrollX, baseline, word)
+                val left = view.left + view.totalPaddingLeft + layout.getPrimaryHorizontal(i) - view.scrollX
+                val advance = paint.measureText(view.text, i, i + 1)
+                glyphs += Glyph(char, word, (left + advance / 2) / scale, middle / scale, advance / scale, paint.textSize / scale)
             }
         }
-        if (letters.isEmpty()) return false
-        idle = IdleScene(letters, width.toFloat(), dp(56).toFloat(), resources.displayMetrics.density, random)
-        idleStart = SystemClock.uptimeMillis()
+        if (glyphs.isEmpty()) return false
+        idle = IdlePlayer(glyphs, width / scale, random)
+        idleFrameAt = SystemClock.uptimeMillis()
         render()
         invalidate()
         return true
     }
 
-    /** Ends the idle scene, and the bar is as it was. */
+    /** You came back: the letters go home, by the game's own way. Typing or swiping still cuts to the words at once with [stopIdle]. */
+    fun comeBackFromIdle() {
+        idle?.comeBack()
+    }
+
+    /** Ends the idle game at once, and the bar is as it was. */
     fun stopIdle() {
         if (idle == null) return
         idle = null
         removeCallbacks(idleFrame)
         render()
         invalidate()
+    }
+
+    /** Moves the idle game on to now and draws it. Android's animation speed sets its pace; with animations off it ends. */
+    private fun drawIdle(canvas: Canvas, player: IdlePlayer) {
+        val now = SystemClock.uptimeMillis()
+        val speed = ValueAnimator.getDurationScale()
+        val dt = (now - idleFrameAt).coerceIn(0, IDLE_LONGEST_FRAME).toFloat()
+        idleFrameAt = now
+        if (speed <= 0f || !player.update(dt / speed)) {
+            post(::stopIdle)
+            return
+        }
+        idleDrawing.draw(canvas, player, idleScale, wordViews.first().paint, look)
+        postDelayed(idleFrame, IDLE_FRAME_MILLIS)
     }
 
     override fun onConfigurationChanged(configuration: Configuration) {
@@ -657,12 +689,15 @@ class Strip(
         /** A little room, in dp, that a fitted word keeps on each side, so that Android never has to cut it. */
         private const val WORD_SLACK = 2
         /** The mark for the automatic capital: its text, its size in sp, and where it sits, in dp. */
-        private const val CAPITAL_MARK = "A"
-        private const val CAPITAL_SIZE = 10f
+        /** The shift arrow's height, about the height of a capital at the bar's small text size, and its line. */
+        private const val CAPITAL_SIZE = 8f
+        private const val CAPITAL_LINE = 1.3f
         private const val CAPITAL_IN = 2
         private const val CAPITAL_TOP = 6
         /** About 30 frames a second while the idle scene moves. */
         private const val IDLE_FRAME_MILLIS = 33L
+        /** A frame that comes late, as after the screen was busy, moves the game on by no more than this. */
+        private const val IDLE_LONGEST_FRAME = 50L
         // The guide's demonstrations on the bar, in ms from their start. Android's animator duration setting scales them.
         private const val DEMO_FRAME_MILLIS = 33L
         private const val FIX_SWAP_MILLIS = 600L

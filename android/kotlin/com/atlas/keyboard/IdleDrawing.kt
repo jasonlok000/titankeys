@@ -1,85 +1,105 @@
 package com.atlas.keyboard
 
 import android.graphics.Canvas
+import android.graphics.DashPathEffect
 import android.graphics.Paint
+import android.graphics.Path
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.sin
 
-/** Draws a frame of [IdleScene] on the bar: thin lines in the accent colour for the figure, and the letters in the words' own look. */
-internal class IdleDrawing(private val density: Float) {
+/**
+ * Draws [IdlePlayer]'s game on the bar: the letters in the words' own look and typeface, the figure, the rope, the sparks and the
+ * finish line in thin lines. The game is in the bar's own units, 88 high, which [scale] turns into the bar's pixels. Nothing here
+ * is made per frame.
+ */
+internal class IdleDrawing {
+    private val letter = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
     }
-    private val words = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val dashes = DashPathEffect(floatArrayOf(6f, 6f), 0f)
+    private val path = Path()
 
-    /**
-     * [letters] is the paint of the bar's words, for their typeface and size. [height] is the height of the row of words, where the
-     * figure stands on the bottom. It draws no text but the letters: the figure never says anything.
-     */
-    fun draw(canvas: Canvas, frame: IdleScene.Frame, letters: Paint, height: Float, look: Look) {
-        val u = density
-        words.set(letters)
-        words.color = look.ink
-        for (placed in frame.letters) {
-            words.textSize = letters.textSize * placed.scale
-            canvas.drawText(placed.char.toString(), placed.x, placed.y, words)
+    /** [words] is the paint of the bar's words, for their typeface. */
+    fun draw(canvas: Canvas, player: IdlePlayer, scale: Float, words: Paint, look: Look) {
+        canvas.save()
+        canvas.scale(scale, scale)
+        letter.typeface = words.typeface
+        val game = player.game
+        if (game is Race && game.line > 0) {
+            line.color = look.muted; line.alpha = (game.line * 255).toInt(); line.strokeWidth = 3f; line.pathEffect = dashes
+            canvas.drawLine(game.lineX, 4f, game.lineX, Idle.H - 4, line)
+            line.pathEffect = null; line.alpha = 255
         }
-        if (!frame.figureShown) return
+        if (game is Firework) {
+            dot.color = look.accent
+            for (s in game.sparks) { dot.alpha = ((1 - s.life / s.max).coerceIn(0f, 1f) * 255).toInt(); canvas.drawCircle(s.x, s.y, 2f, dot) }
+        }
+        val rope = game as? JumpRope
+        // The rope behind the letters while it swings at the back, and in front of them at the front.
+        val behind = rope != null && sin(rope.ropeAngle) < 0
+        if (rope != null && behind) rope(canvas, rope, look, true)
+        if (game is Juggle) {
+            for (g in game.others) glyph(canvas, g, look)
+            game.figure.let { figure(canvas, it, look) }
+            for (g in game.balls) glyph(canvas, g, look)
+        } else {
+            game.figure?.let { figure(canvas, it, look) }
+            for (g in player.glyphs) glyph(canvas, g, look)
+        }
+        if (rope != null && !behind) rope(canvas, rope, look, false)
+        canvas.restore()
+    }
+
+    private fun glyph(canvas: Canvas, g: Glyph, look: Look) {
+        if (g.alpha <= .01f) return
+        letter.color = if (g.accent) look.accent else look.ink
+        letter.alpha = (g.alpha.coerceIn(0f, 1f) * 255).toInt()
+        letter.textSize = g.size * g.scale
+        canvas.save()
+        canvas.translate(g.x, g.y)
+        if (g.rot != 0f) canvas.rotate(g.rot * 180 / PI.toFloat())
+        val metrics = letter.fontMetrics
+        canvas.drawText(g.text, 0f, -(metrics.ascent + metrics.descent) / 2, letter)
+        canvas.restore()
+    }
+
+    private fun figure(canvas: Canvas, f: Figure, look: Look) {
+        if (f.alpha <= .01f) return
         line.color = look.accent
-        line.strokeWidth = LINE_WIDTH * u
-        val feet = height - FEET_ABOVE * u
-        val x = frame.figureX
-        val side = if (frame.facingLeft) -1f else 1f
-        if (frame.pose == IdleScene.Pose.Fall) lying(canvas, x, feet, side, u) else standing(canvas, x, feet, side, u, frame)
-        if (frame.carrying > 0 && frame.pose != IdleScene.Pose.Fall) {
-            // The bundle of letters, held over the head: a little bigger with each letter.
-            val r = (BUNDLE_SMALLEST + minOf(frame.carrying, 12) * BUNDLE_GROWTH) * u
-            canvas.drawCircle(x, feet - (FIGURE_HEIGHT + 2) * u - r, r, line)
-        }
+        line.alpha = (f.alpha.coerceIn(0f, 1f) * 255).toInt()
+        line.strokeWidth = Figure.LINE
+        canvas.save()
+        canvas.translate(f.x, f.feet)
+        if (f.lean != 0f) canvas.rotate(f.lean * 180 / PI.toFloat())
+        val swing = sin(f.step) * 10
+        canvas.drawCircle(0f, -Figure.NECK - Figure.HEAD, Figure.HEAD, line)
+        canvas.drawLine(0f, -Figure.NECK, 0f, -Figure.HIP, line)
+        canvas.drawLine(0f, -Figure.HIP, -swing, 0f, line)
+        canvas.drawLine(0f, -Figure.HIP, swing, 0f, line)
+        val shoulder = -Figure.NECK + 6
+        canvas.drawLine(f.armLX, shoulder + f.armLY, 0f, shoulder, line)
+        canvas.drawLine(0f, shoulder, f.armRX, shoulder + f.armRY, line)
+        canvas.restore()
+        line.alpha = 255
     }
 
-    private fun standing(canvas: Canvas, x: Float, feet: Float, side: Float, u: Float, frame: IdleScene.Frame) {
-        val swing = if (frame.pose == IdleScene.Pose.Walk) sin(frame.step * PI.toFloat()) else 0f
-        val hip = feet - 10 * u
-        val neck = feet - 19 * u
-        canvas.drawCircle(x, feet - 22.5f * u, 3 * u, line)
-        canvas.drawLine(x, neck, x, hip, line)
-        canvas.drawLine(x, hip, x + swing * 3.5f * u, feet, line)
-        canvas.drawLine(x, hip, x - swing * 3.5f * u, feet, line)
-        val arms = neck + 2 * u
-        when {
-            // Arms up to hold the bundle.
-            frame.carrying > 0 -> {
-                canvas.drawLine(x, arms, x - 3 * u, arms - 8 * u, line)
-                canvas.drawLine(x, arms, x + 3 * u, arms - 8 * u, line)
-            }
-            // Reaching down for a letter, or to put one in place.
-            frame.pose == IdleScene.Pose.Pick -> {
-                canvas.drawLine(x, arms, x + side * 6 * u, arms + 6 * u, line)
-                canvas.drawLine(x, arms, x - side * 2 * u, arms + 7 * u, line)
-            }
-            else -> {
-                canvas.drawLine(x, arms, x - swing * 3 * u, arms + 7 * u, line)
-                canvas.drawLine(x, arms, x + swing * 3 * u, arms + 7 * u, line)
-            }
-        }
-    }
-
-    private fun lying(canvas: Canvas, x: Float, feet: Float, side: Float, u: Float) {
-        val y = feet - 1.5f * u
-        canvas.drawCircle(x - side * 9 * u, y - 1.5f * u, 3 * u, line)
-        canvas.drawLine(x - side * 6 * u, y, x + side * 4 * u, y, line)
-        canvas.drawLine(x + side * 4 * u, y, x + side * 10 * u, y - 2 * u, line)
-        canvas.drawLine(x + side * 4 * u, y, x + side * 10 * u, y, line)
-    }
-
-    companion object {
-        const val LINE_WIDTH = 1.5f
-        const val FEET_ABOVE = 3f
-        const val FIGURE_HEIGHT = 26f
-        const val BUNDLE_SMALLEST = 2.5f
-        const val BUNDLE_GROWTH = .35f
+    /** A rope seen from the side: its middle goes from under the feet to over the head and back. */
+    private fun rope(canvas: Canvas, rope: JumpRope, look: Look, behind: Boolean) {
+        if (rope.ropeAmount <= 0f) return
+        val y0 = rope.ropeY
+        val mid = Idle.lerp(y0 + 6, Idle.lerp(y0 - 40, y0 + 36, (1 + cos(rope.ropeAngle)) / 2), rope.ropeAmount)
+        line.color = look.ink
+        line.alpha = ((if (behind) .45f else .9f) * rope.ropeAmount * 255).toInt()
+        line.strokeWidth = 3f
+        path.reset()
+        path.moveTo(rope.ropeX0, y0)
+        path.quadTo((rope.ropeX0 + rope.ropeX1) / 2, 2 * mid - y0, rope.ropeX1, y0)
+        canvas.drawPath(path, line)
+        line.alpha = 255
     }
 }

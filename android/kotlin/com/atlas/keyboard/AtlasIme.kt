@@ -614,7 +614,7 @@ class AtlasIme : InputMethodService() {
         updateHold()
     }
 
-    // The idle scene on the bar (an Easter egg, see IdleScene): after three minutes with no key, touch or swipe, while plain words
+    // The idle games on the bar (an Easter egg, see IdlePlayer): after three minutes or more with no key, touch or swipe, while plain words
     // show. Any input ends it at once. It stays off with exact typing, in apps where the bar hides, in fields with no suggestions,
     // with the bar or the screen off, with the Sym panel open, and with Android's animations off.
 
@@ -638,13 +638,16 @@ class AtlasIme : InputMethodService() {
 
     private fun startIdleBar() = idleBarAllowed() && strip?.startIdle(Random(System.nanoTime())) == true
 
-    /** Input ends the scene and starts the wait again. */
-    private fun wakeIdleBar() {
+    /**
+     * Input starts the wait again. Coming back, with a finger on the touchpad or a touch on the bar, sends the idle game's letters
+     * home; typing or swiping ([cut]) puts the words back at once. The next game waits a random while, at least [IDLE_BAR_MILLIS].
+     */
+    private fun wakeIdleBar(cut: Boolean = true) {
         main.removeCallbacks(idleBar)
-        strip?.stopIdle()
+        if (cut) strip?.stopIdle() else strip?.comeBackFromIdle()
         // A demonstration from the guide gives the bar back as soon as you act.
         strip?.stopDemo()
-        if (idleBarAllowed()) main.postDelayed(idleBar, IDLE_BAR_MILLIS)
+        if (idleBarAllowed()) main.postDelayed(idleBar, IDLE_BAR_MILLIS + Random.nextLong(IDLE_BAR_MILLIS / 2))
     }
 
     private fun sleepIdleBar() {
@@ -776,7 +779,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onCreateInputView(): View {
         val words = Strip(this, { index -> haptics.confirm(); enqueue { composer.choose(index) } }, ::holdWord,
-            { action -> enqueue { stripAction(action) } }, { enqueue { pasteOfferedClip() } }, ::wakeIdleBar)
+            { action -> enqueue { stripAction(action) } }, { enqueue { pasteOfferedClip() } }, { wakeIdleBar(cut = false) })
         val keys = SymPanel(this,
             pick = { item -> enqueue { typePanelItem(item) } },
             useQuickSetting = { item -> enqueue { useQuickSetting(item) } },
@@ -991,7 +994,7 @@ class AtlasIme : InputMethodService() {
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         // The bar may only now be set up for this field, so the wait starts once it is.
-        main.post(::wakeIdleBar)
+        main.post { wakeIdleBar() }
         offerClip()
         // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
@@ -1471,7 +1474,8 @@ class AtlasIme : InputMethodService() {
     private fun motion(event: MotionEvent) {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             clearTeamsEgg()
-            wakeIdleBar()
+            // A finger landing is you coming back; the letters go home. A tap or swipe that types cuts to the words: see [outcome].
+            wakeIdleBar(cut = false)
         }
         // The panel and the cursor work in every field. Where the touchpad types no words, swipes and taps type nothing: see [outcome].
         // With exact typing the touchpad sends nothing, so a resting finger never reaches a terminal or a remote computer.
@@ -1986,6 +1990,8 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun outcome(outcome: Contact.Outcome) {
+        // You typed or swiped: the idle game's way home ends at once, and the words are back.
+        if (strip?.idling == true) wakeIdleBar()
         Recording.sink?.outcome(outcome)
         inputLog()?.outcome(outcome)
         // The word menu keeps the touchpad for itself: a finger there only marks its buttons, and nothing types.

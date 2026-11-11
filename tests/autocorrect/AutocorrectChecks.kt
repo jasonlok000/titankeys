@@ -584,8 +584,8 @@ private fun composerFlow(world: Realistic) {
         val sentences = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, 0)
         fun capitals() = Typist(world, autocorrect = null, field = sentences, autoCapitalise = true)
         same(capitals().type("hi. there").text, "Hi. There", "A letter after a full stop and a space is a capital")
-        same(capitals().type("see atlas.com").text, "See atlas.com", "A letter straight after a full stop stays in lowercase")
-        same(capitals().type("see file.txt").text, "See file.txt", "A file name stays in lowercase")
+        same(capitals().type("see atlas.com ").text, "See atlas.com ", "A letter straight after a full stop stays in lowercase")
+        same(capitals().type("see file.txt ").text, "See file.txt ", "A file name stays in lowercase")
         same(capitals().type("use e.g").text, "Use e.g", "The letter after the first full stop of e.g stays in lowercase")
         same(capitals().type("use e.g. this").text, "Use e.g. this", "A word after e.g. stays in lowercase")
         same(capitals().type("use i.e. this").text, "Use i.e. this", "A word after i.e. stays in lowercase")
@@ -1103,14 +1103,19 @@ private fun expansions(world: Realistic) {
     val emoji = mapOf("smile" to "😄", "smiley" to "😃", "+1" to "👍")
     fun typist(field: Field = Typist.FIELD) =
         Typist(world, field = field).also { it.composer.expansions = Expansions(snippets, ';', emoji) }
+    // Without Space after , ; : a mark straight after a word keeps the next letter against it.
+    fun unspaced() = typist().also { it.composer.commaSpace = { false } }
 
     same(typist().type("at ;addr ").text, "at 1 Main Street ", "Space after a shortcut puts in the snippet")
     same(typist().type("at ;addr ").backspace().text, "at ;addr ", "Backspace straight after puts the shortcut back")
     same(typist().type("at ;addr ").backspace().type("x").text, "at ;addr x", "Typing goes on after the shortcut")
     same(typist().type("at ;addr ").type("now").backspace().text, "at 1 Main Street no", "A later Backspace is a normal one")
     same(typist().type(";hi ").text, "Hello there ", "At the start of the text")
-    same(typist().type("a;addr ").text, "a;addr ", "Not inside a word")
-    same(typist().type("at ;adr ").text, "at;adr ", "Not for a shortcut that is not saved: the space moves behind the mark as before")
+    same(unspaced().type("a;addr ").text, "a;addr ", "Not inside a word")
+    same(typist().type("a;addr ").text, "a; addr ", "Not inside a word, where the mark gets its space")
+    same(unspaced().type("at ;adr ").text, "at;adr ", "Not for a shortcut that is not saved: the space moves behind the mark as before")
+    same(typist().type("at ;adr ").text, "at; adr ", "A shortcut that is not saved gets the space after its mark")
+    same(typist().type("at ;addr ").backspace().text, "at ;addr ", "Backspace puts back the shortcut that went in through a space")
     typist().type("at ;addr and more ").also {
         must(it.words.typed.none { word -> word in setOf("Main", "Street", "1") }, "No word of a snippet is learned")
         must(it.words.pairs.none { pair -> "Main" in pair || "Street" in pair }, "No pair of a snippet is learned")
@@ -1123,7 +1128,13 @@ private fun expansions(world: Realistic) {
     same(typist().type("ok :smile:").backspace().text, "ok :smile:", "Backspace puts the shortcode back")
     same(typist().type("ok :+1: ").text, "ok 👍 ", "A name with a plus")
     same(typist().type("at 12:30:").text, "at 12:30:", "A time is not a shortcode")
-    same(typist().type("ok :nothing:").text, "ok:nothing:", "An unknown name stays")
+    same(unspaced().type("ok :nothing:").text, "ok:nothing:", "An unknown name stays")
+    same(typist().type("ok :nothing:").text, "ok: nothing:", "An unknown name stays, with the space after its colon")
+    same(typist().type("Note :smile:").text, "Note 😄", "A shortcode still works after a colon that got its space")
+    typist().type("at ;a").also {
+        same(it.bar, listOf("1 Main Street"), "The strip offers a snippet after a mark that got its space")
+        same(it.choose(0).text, "at 1 Main Street ", "A touch there puts in the snippet")
+    }
     same(typist(field = password).type(":smile:").text, ":smile:", "No shortcode in a password field")
 
     typist().type("ok :smi").also {
@@ -1135,7 +1146,8 @@ private fun expansions(world: Realistic) {
         same(it.bar, listOf("1 Main Street"), "The strip offers a snippet for a part of its shortcut")
         same(it.choose(0).text, "at 1 Main Street ", "A touch puts in the snippet with a space")
     }
-    same(Typist(world).type("at ;addr ").text, "at;addr ", "Nothing expands when there are no snippets")
+    same(Typist(world).also { it.composer.commaSpace = { false } }.type("at ;addr ").text, "at;addr ",
+        "Nothing expands when there are no snippets")
 
     // Fields with no suggestions (issue 45): keys type as they are, and the touchpad types no words.
     val email = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, 0)
@@ -1150,6 +1162,128 @@ private fun expansions(world: Realistic) {
     same(panelSymbol(email, ";"), "a;", "A symbol from the panel goes in alone in an email field")
     same(panelSymbol(Typist.FIELD, "&"), "a & ", "Prose still gets spaces around the symbol")
     same(Typist(world, field = password).type("Ab1 x").text, "Ab1 x", "A password is typed as it is")
+}
+
+/**
+ * Spaces after typed marks: Space after a sentence (one, two or none), Space after , ; : and Double Space types a full stop.
+ * The spaces go in when the next letter comes, never twice, and never inside numbers, addresses or abbreviations.
+ */
+private fun markSpacing(world: Realistic) {
+    val sentences = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, 0)
+    fun typist(sentence: Int = 1, comma: Boolean = true, fullStop: Boolean = true, field: Field = sentences,
+               capitals: Boolean = true, autocorrect: Boolean = false) =
+        Typist(world, autocorrect = if (autocorrect) world.autocorrect() else null, field = field, autoCapitalise = capitals).also {
+            it.composer.sentenceSpaces = { sentence }
+            it.composer.commaSpace = { comma }
+            it.composer.autoPunctuation = { fullStop }
+        }
+
+    // Space after a sentence, each choice.
+    same(typist().type("hi.there").text, "Hi. There", "One space goes in after a full stop, and the next word gets its capital")
+    same(typist().type("really?yes!great").text, "Really? Yes! Great", "One space after ? and !")
+    same(typist(sentence = 2).type("hi.there").text, "Hi.  There", "Two spaces after a full stop")
+    same(typist(sentence = 2).type("really?yes").text, "Really?  Yes", "Two spaces after ?")
+    same(typist(sentence = 0).type("hi.there").text, "Hi.there", "Don't add spaces leaves the letter against the mark")
+    same(typist().type("hi.").text, "Hi.", "Nothing goes in until a letter comes")
+    same(typist().type("hi. there").text, "Hi. There", "A space typed by hand is the only one")
+    same(typist(sentence = 2).type("hi. there").text, "Hi. There", "A space typed by hand adds no second one")
+    same(typist(capitals = false, field = Typist.FIELD).type("hi.there").text, "hi. there", "Without capitals the space still goes in")
+    // On the phone the automatic Shift is off straight after a mark, so the letter that brings the spaces gets its capital itself.
+    typist(capitals = false).also { it.composer.sentenceCapitals = { true } }.type("hi.there,you").also {
+        same(it.text, "hi. There, you", "A letter after a full stop gets its capital from the setting")
+    }
+    same(typist(capitals = false).type("hi.there").text, "hi. there", "With Capital letter to start a sentence off, it stays small")
+    same(typist().type("hi,there").text, "Hi, there", "A comma brings no capital")
+    same(typist().type("item 3.next").text, "Item 3. Next", "A number before a full stop ends a sentence")
+    same(typist(capitals = false, field = Typist.FIELD).type("hi,com now").text, "hi, com now", "A comma is never part of an address")
+
+    // Space after , ; : on and off.
+    same(typist().type("one,two;three:four").text, "One, two; three: four", "One space after , ; and :")
+    same(typist(sentence = 2).type("one,two").text, "One, two", "Two spaces after a sentence give a comma only one")
+    same(typist(comma = false).type("one,two;three:four").text, "One,two;three:four", "Off, the marks stay against the letter")
+    same(typist(sentence = 0).type("one,two.three").text, "One, two.three", "The comma setting works with Don't add spaces")
+    same(typist(comma = false).type("one,two.three").text, "One,two. Three", "Space after a sentence works with the comma setting off")
+    same(typist().type("hello ,world").text, "Hello, world", "A space typed before a comma moves after it")
+
+    // Double Space types a full stop, on and off.
+    fun quick(typist: Typist) = typist.type("hi ").quickSpace()
+    same(quick(typist()).text, "Hi. ", "Double Space types a full stop")
+    same(quick(typist()).type("there").text, "Hi. There", "The next word after the double Space full stop gets no more spaces")
+    same(quick(typist(sentence = 2)).type("there").text, "Hi.  There", "With two spaces, the double Space full stop gives two")
+    same(quick(typist(sentence = 0)).type("there").text, "Hi. There", "Don't add spaces keeps the full stop's own space")
+    same(quick(typist(fullStop = false)).type("there").text, "Hi  there", "Off, two spaces stay spaces")
+    same(typist().type("hi. ").quickSpace().type("there").text, "Hi.  There", "Two spaces typed by hand after a full stop stay two")
+
+    // Every combination: the same keys never give a double space or a misfire.
+    for (sentence in 0..2) for (comma in listOf(true, false)) for (fullStop in listOf(true, false)) {
+        val name = "sentence $sentence, comma $comma, full stop $fullStop"
+        val after = when (sentence) { 0 -> ""; 1 -> " "; else -> "  " }
+        val commaAfter = if (comma) " " else ""
+        val typed = typist(sentence, comma, fullStop).type("so,yes.ok?no")
+        same(typed.text, "So,${commaAfter}yes.${after}${if (sentence > 0) "Ok" else "ok"}?${after}${if (sentence > 0) "No" else "no"}",
+            "Marks get their spaces ($name)")
+        val shortcut = quick(typist(sentence, comma, fullStop)).type("there")
+        val expected = if (!fullStop) "Hi  there" else if (sentence == 2) "Hi.  There" else "Hi. There"
+        same(shortcut.text, expected, "Space, Space and a word ($name)")
+        val handTyped = typist(sentence, comma, fullStop).type("hi. there, you")
+        same(handTyped.text, "Hi. There, you", "Spaces typed by hand stay as they are ($name)")
+        must("   " !in typist(sentence, comma, fullStop).type("a.b,c").text, "No run of three spaces ($name)")
+    }
+
+    // Never in numbers, addresses, after an ellipsis or a known abbreviation, or before a closing quote or bracket.
+    for (text in listOf("pi is 3.14", "about 1,000 now", "at 12:30 then", "go to www.example.com now", "see http://example.com now",
+        "mail me at name@x.com now", "wait...what", "ask Mr.Smith", "ask Dr.Who", "use e.g.this", "the U.S.A. too")) {
+        same(typist(capitals = false, field = Typist.FIELD).type(text).text, text, "No space in \"$text\"")
+    }
+    same(typist(capitals = false, field = Typist.FIELD).type("see example.com now").text, "see example.com now",
+        "A web address goes back together when its last part ends")
+    same(typist().type("see example.com now").text, "See example.com now", "with its letters as typed")
+    same(typist(capitals = false, field = Typist.FIELD).type("open notes.txt now").text, "open notes.txt now", "A file name too")
+    same(typist(capitals = false, field = Typist.FIELD).type("mail john.smith@x.com now").text, "mail john.smith@x.com now",
+        "A name before @ goes back together")
+    same(typist(capitals = false, field = Typist.FIELD).type("see atlas.co.uk now").text, "see atlas.co.uk now", "An address in parts")
+    same(typist().type("he said \"hi.\"then").text, "He said \"hi.\"then", "Nothing after a closing quote")
+    same(typist().type("(see this.)then").text, "(see this.)then", "Nothing after a closing bracket")
+    same(typist().type("(see this).then").text, "(see this). Then", "A mark after a closing bracket still ends the sentence")
+    same(typist().type("hi.\nthere").text, "Hi.\nThere", "A new line needs no space")
+    same(typist().type("hi.1").text, "Hi.1", "A digit gets no space")
+    same(typist().type("hi.com").text, "Hi. Com", "Until the word ends, the letters may still be a word")
+    same(typist().type("hi.come here").text, "Hi. Come here", "A word that only starts like an address keeps its space")
+
+    // Exact typing, passwords, addresses and email fields stay as they are.
+    val password = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD, 0)
+    val url = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI, 0)
+    val email = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, 0)
+    for ((name, field) in listOf("exact typing" to Field.Exact, "a password" to password, "an address bar" to url, "an email field" to email)) {
+        same(typist(field = field, capitals = false).type("ab.cd,ef").text, "ab.cd,ef", "No spaces with $name")
+        same(typist(field = field, capitals = false, sentence = 2).type("ab ").quickSpace().text, "ab  ", "No full stop with $name")
+    }
+
+    // Backspace straight after takes out the spaces and only those.
+    same(typist().type("hi.t").backspace().text, "Hi.t", "Backspace takes out the space and leaves the mark and the letter")
+    same(typist(sentence = 2).type("hi.t").backspace().text, "Hi.t", "One Backspace takes out both spaces")
+    same(typist().type("one,t").backspace().text, "One,t", "Backspace takes out the space after a comma")
+    same(typist().type("hi.t").backspace().type("xt").text, "Hi.txt", "Typing goes on after it")
+    same(typist().type("hi.th").backspace().text, "Hi. T", "A later Backspace is a normal one")
+    same(typist().type("hi.t").backspace().backspace().text, "Hi.", "A second Backspace deletes the letter")
+
+    // Holding the key for its symbol puts the symbol straight after the mark.
+    typist().type("hi.q").also {
+        it.composer.replaceLetter("?")
+        it.settle()
+        same(it.text, "Hi.?", "A held letter's symbol replaces the letter and its space")
+    }
+
+    // A swipe or a light touch after a sentence follows Two spaces too.
+    same(typist(sentence = 2).type("Hi.").swipe("there").text, "Hi.  There ", "A swiped word after a sentence gets two spaces")
+    same(typist(sentence = 2).type("Hi.").tap("a").text, "Hi.  A ", "A light touch after a sentence gets two spaces")
+    same(typist(sentence = 2).type("Hi,").swipe("there").text, "Hi, there ", "A swiped word after a comma gets one")
+    same(typist(sentence = 0).type("Hi.").swipe("there").text, "Hi. There ", "A swiped word still brings its own space")
+
+    // With autocorrect: a fix before the mark stays when the sentence goes on, and an address takes it back.
+    same(typist(autocorrect = true).type("I went hme.then").text, "I went home. Then", "A fix before a full stop stays")
+    same(typist(autocorrect = true, capitals = false, field = Typist.FIELD).type("open teh.txt now").text, "open teh.txt now",
+        "An address takes back the fix before its full stop")
 }
 
 private fun theGuideOffersItsWord(world: Realistic) {
@@ -1847,6 +1981,7 @@ fun main() {
     smallerChecks()
     nextWordChecks()
     composerFlow(world)
+    markSpacing(world)
     suggestionBar(world)
     theGuideOffersItsWord(world)
     expansions(world)

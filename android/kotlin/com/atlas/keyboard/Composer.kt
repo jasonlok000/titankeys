@@ -140,9 +140,17 @@ class Composer(
     private class PendingText(var text: String, val letterTap: Boolean) : PendingInput
     private class PendingEdit(val action: () -> Unit, val transferable: Boolean = false, val leaves: Boolean = false) : PendingInput
     private class FullStop(val time: Long, val snapshot: Snapshot)
-    /** One Backspace puts [restored] back in place of [replaced], which ends the text in [snapshot]. */
+    /**
+     * One Backspace puts [restored] back in place of [replaced], which ends the text in [snapshot]. [spacing] marks the spaces
+     * that went in after a mark, which Backspace takes out again.
+     */
     private class Undo(val replaced: String, val restored: String, val word: String, val keptAsTyped: Boolean, val snapshot: Snapshot,
-                       val expansion: Boolean = false)
+                       val expansion: Boolean = false, val spacing: Boolean = false)
+    /**
+     * [spaces] went in after [mark] when the letter after it was typed. [at] is where the mark ends. The letter was typed as
+     * [typed] and went in as [put], with any capital. [corrected] is the fix of the word before the mark, if it had one.
+     */
+    private class Spaced(val at: Int, val mark: Char, val spaces: String, val typed: String, val put: String, val corrected: Undo?)
     /** The last letter a key typed, in [text], and what typing it changed. Holding the key can still replace it. */
     private class TypedKey(val text: String, val after: Snapshot, val automaticSpace: Snapshot?, val fullStop: FullStop?, val undo: Undo?)
     /** Whether autocorrect changed the text when a typed word ended, and which word to learn now. */
@@ -170,6 +178,10 @@ class Composer(
     private var editSnapshot: Snapshot? = null
     private var automaticSpace: Snapshot? = null
     private var fullStop: FullStop? = null
+    /** The text just after a typed mark, whose next letter may bring a space. */
+    private var typedMark: Snapshot? = null
+    /** The spaces that went in after the last mark, while the word after them is typed. */
+    private var spaced: Spaced? = null
     private val manualWord = TypedWords()
     private val keptWords = KeptWords { previous, next -> words.keptPair(previous, next) }
     private var correcting: Composition.Swiped? = null
@@ -202,6 +214,15 @@ class Composer(
     var liftOffMillis = 0
     /** Two quick spaces type a full stop, and punctuation typed after a space moves in front of that space. */
     var autoPunctuation: () -> Boolean = { true }
+    /** How many spaces go in after a typed . ? or ! once a letter follows it: 0, 1 or 2. */
+    var sentenceSpaces: () -> Int = { 1 }
+    /** A space goes in after a typed , ; or : once a letter follows it. */
+    var commaSpace: () -> Boolean = { true }
+    /**
+     * Capital letter to start a sentence is on. A letter that brings its spaces after a full stop gets its capital here,
+     * since the automatic Shift can't turn on before those spaces are in.
+     */
+    var sentenceCapitals: () -> Boolean = { false }
     /** Told the whole path behind each recognised word, including any pieces joined to it. */
     var onStroke: ((Swipe) -> Unit)? = null
     /** Told when a word changes by itself, unless that lands as a swipe ends, where a vibration would run into the swipe's own. */
@@ -285,6 +306,8 @@ class Composer(
             composition = Composition.None
             automaticSpace = null
             fullStop = null
+            typedMark = null
+            spaced = null
             editSnapshot = null
             manualWord.clear()
             correcting = null
@@ -321,6 +344,8 @@ class Composer(
         composition = Composition.None
         automaticSpace = null
         fullStop = null
+        typedMark = null
+        spaced = null
         editSnapshot = null
         manualWord.clear()
         keptWords.clear()
@@ -491,7 +516,7 @@ class Composer(
             val resumed = previous.takeIf { resumes }
             val context = resumed?.context ?: before
             val replaced = resumed?.inserted?.length ?: 0
-            val leadingSpace = resumed?.leadingSpace ?: if (anchor.selected) "" else SwipeTyping.prefix(context)
+            val leadingSpace = resumed?.leadingSpace ?: if (anchor.selected) "" else wordSpace(context)
             // Mid-sentence the next character may already be a space or punctuation, so another space would double up.
             val trailingSpace = resumed?.trailingSpace ?: (!anchor.selected && !closesWord(anchor.after?.firstOrNull()))
             val current = epoch
@@ -596,6 +621,12 @@ class Composer(
         fullStop = null
         var anchor = snapshot()
         if (!letterTap && text == ":" && expandShortcode(anchor)) return
+        val letter = !letterTap && text.codePointCount(0, text.length) == 1 && Character.isLetterOrDigit(text.codePointAt(0))
+        if (!letter) {
+            if (!unspaceAddress(text)) return
+            anchor = snapshot()
+        }
+        val spaces = if (letter) spacesAfterMark(text, anchor) else ""
         holdForNextWord(composition as? Composition.Swiped, anchor)
         val correction = correcting
         if (correction != null && anchor != editSnapshot) {
@@ -603,7 +634,8 @@ class Composer(
             manualWord.clear()
         }
         // A full stop inside an address or file name ended no sentence, so the word before it goes back as typed.
-        if (corrected != null && anchor == corrected.snapshot && !letterTap && continuesAddress(corrected.replaced, text)) {
+        if (spaces.isEmpty() && corrected != null && anchor == corrected.snapshot && !letterTap
+            && continuesAddress(corrected.replaced, text)) {
             if (!edit(EditCause.AutocorrectUndo, corrected.replaced.length, corrected.restored)) return
             anchor = snapshot()
             manualWord.clear()
@@ -625,17 +657,27 @@ class Composer(
         val dropsSpace = (automaticSpace == anchor || typedSpace == anchor && autoPunctuation()) && anchor.before?.endsWith(" ") == true
             && text[0] in ".,!?;:)]}…"
         val before = anchor.before
-        val prefix = if (letterTap && !anchor.selected) SwipeTyping.prefix(before.orEmpty()) else ""
-        val cased = if (before != null && field.sentenceCapitalisation && autoCapitalise()) {
+        val prefix = if (letterTap && !anchor.selected) wordSpace(before.orEmpty()) else spaces
+        val capitals = autoCapitalise() || spaces.isNotEmpty() && sentenceCapitals()
+        val cased = if (before != null && field.sentenceCapitalisation && capitals) {
             SwipeTyping.capitalise(text, before + prefix)
         } else text
         val typed = if (letterTap) "$prefix$cased " else cased
         val cause = if (dropsSpace) EditCause.DropSpace else if (letterTap) EditCause.Tap else EditCause.Key
+        if (spaces.isNotEmpty() && !edit(EditCause.MarkSpace, 0, spaces)) return
         if (!edit(cause, if (dropsSpace) 1 else 0, typed)) return
         if (dropsSpace) markAfterSpace = editor.before()
         automaticSpace = if (letterTap) snapshot() else null
-        typedKey = if (letterTap) null else TypedKey(typed.substring(typed.offsetByCodePoints(typed.length, -1)), snapshot(),
+        // Holding the key takes the spaces out with the letter, so its symbol lands straight after the mark.
+        typedKey = if (letterTap) null else TypedKey(spaces + typed.substring(typed.offsetByCodePoints(typed.length, -1)), snapshot(),
             spaceBefore, fullStopBefore, corrected)
+        typedMark = if (!letterTap && text.length == 1 && text[0] in SPACED_MARKS) snapshot() else null
+        if (spaces.isNotEmpty()) {
+            val accepted = snapshot()
+            spaced = Spaced(accepted.selection.end - typed.length - spaces.length, before.orEmpty().last(), spaces, text, typed,
+                corrected)
+            undo = Undo(spaces + typed, text, "", false, accepted, spacing = true)
+        }
         composition = Composition.None
         if (letterTap) manualWord.clear()
         else if (!completesCorrection) observe(text)
@@ -671,8 +713,9 @@ class Composer(
         leave()
         invalidate(false)
         fullStop = null
+        if (symbol == ":" && expandShortcode(snapshot())) return
+        if (!unspaceAddress(symbol)) return
         val anchor = snapshot()
-        if (symbol == ":" && expandShortcode(anchor)) return
         val ending = if (symbol.firstOrNull()?.let { it in TYPED_WORD_ENDS } == true) endingWord(anchor, correcting) else null
         val fix = ending?.let { findFix(it, anchor) }
         composition = Composition.None
@@ -691,6 +734,7 @@ class Composer(
         val text = (if (leading) " " else "") + symbol + if (space) " " else ""
         if (!edit(EditCause.Symbol, 0, text, if (reuseSpace) 1 else 0)) return
         automaticSpace = null
+        typedMark = if (text.length == 1 && text[0] in SPACED_MARKS) snapshot() else null
         val ended = wordEnded(ending, fix, text, null) ?: return
         if (ended.changed) {
             confirmState(snapshot())
@@ -711,6 +755,7 @@ class Composer(
         awaitingNextWord = null
         if (!edit(EditCause.Paste, 0, text)) return
         automaticSpace = null
+        spaced = null
         predictLater()
     }
 
@@ -718,8 +763,9 @@ class Composer(
         if (defer(transferable = true) { space(repeated, time) }) return
         leave()
         invalidate(false)
+        if (!repeated && expandSnippet(snapshot())) return
+        if (!unspaceAddress(" ")) return
         val anchor = snapshot()
-        if (!repeated && expandSnippet(anchor)) return
         holdForNextWord(composition as? Composition.Swiped, anchor)
         composition = Composition.None
         val before = anchor.before.orEmpty()
@@ -737,7 +783,11 @@ class Composer(
                 if (!repeated && endsWord(before.dropLast(1))) fullStop = FullStop(time, anchor)
             }
             !repeated && pending != null && time - pending.time in 0..FULL_STOP_MILLIS && autoPunctuation()
-                && anchor.available && anchor == pending.snapshot -> if (!edit(EditCause.FullStop, 1, ". ")) return
+                && anchor.available && anchor == pending.snapshot -> {
+                // Two spaces after a sentence give this full stop two spaces as well.
+                val spaces = if (field.markSpaces && sentenceSpaces() == 2) "  " else " "
+                if (!edit(EditCause.FullStop, 1, ".$spaces")) return
+            }
             else -> {
                 if (!edit(EditCause.Space, 0, " ")) return
                 // Read the bounded editor window after insertion; appending would exceed its limit.
@@ -819,6 +869,7 @@ class Composer(
         composition = Composition.None
         fullStop = null
         awaitingNextWord = null
+        if (!unspaceAddress("\n")) return
         val anchor = snapshot()
         val correction = correcting
         val ending = endingWord(anchor, correction)
@@ -1024,7 +1075,7 @@ class Composer(
                 // A starter word replaces a selection. Any other word would leave it behind.
                 if (anchor != current.snapshot || !before.endsWith(tail) || anchor.selected && tail.isNotEmpty()) return
                 invalidate(false)
-                val space = if (current.prefix.isEmpty()) SwipeTyping.prefix(before) else ""
+                val space = if (current.prefix.isEmpty()) wordSpace(before) else ""
                 // A tapped word is whole, so it gets the capitals step that a typed word gets at its end ("WhatsApp").
                 val word = corrector()?.capitals(chosen, before.dropLast(tail.length) + space) ?: chosen
                 if (!edit(EditCause.Choose, tail.length, "$space$word ")) return
@@ -1066,7 +1117,7 @@ class Composer(
     private fun chooseStart(offered: Composition.Starts, chosen: String, anchor: Snapshot) {
         if (anchor != offered.snapshot) return
         invalidate(false)
-        val space = if (anchor.selected) "" else SwipeTyping.prefix(anchor.before.orEmpty())
+        val space = if (anchor.selected) "" else wordSpace(anchor.before.orEmpty())
         val trailingSpace = !closesWord(anchor.after?.firstOrNull())
         if (!edit(EditCause.Choose, 0, space + chosen + if (trailingSpace) " " else "")) return
         composition = Composition.None
@@ -1176,6 +1227,7 @@ class Composer(
         val accepted = snapshot()
         readKeptWords(accepted)
         if (automaticSpace == anchor) automaticSpace = accepted
+        if (typedMark == anchor) typedMark = accepted
         fullStop = fullStop?.let { if (it.snapshot == anchor) FullStop(it.time, accepted) else it }
         if (showing is Composition.Swiped) {
             val context = accepted.before?.removeSuffix(showing.inserted) ?: showing.context
@@ -1486,8 +1538,19 @@ class Composer(
         heldWord = null
         endedWord = null
         endedBeforeSwipe = null
-        val cause = if (pending.expansion) EditCause.ExpandUndo else EditCause.AutocorrectUndo
+        val cause = when {
+            pending.spacing -> EditCause.MarkSpaceUndo
+            pending.expansion -> EditCause.ExpandUndo
+            else -> EditCause.AutocorrectUndo
+        }
         if (!replaceBehind(showing, anchor, cause, pending.replaced.length, pending.restored)) return true
+        if (pending.spacing) {
+            // The user wants the letter straight after the mark, so it stays there.
+            typedMark = null
+            spaced = null
+            confirmState(snapshot())
+            return true
+        }
         onRestored?.invoke()
         if (pending.expansion) {
             confirmState(snapshot())
@@ -1509,6 +1572,7 @@ class Composer(
         val accepted = snapshot()
         readKeptWords(accepted)
         if (automaticSpace == anchor) automaticSpace = accepted
+        if (typedMark == anchor) typedMark = accepted
         fullStop = fullStop?.let { if (it.snapshot == anchor) FullStop(it.time, accepted) else it }
         if (showing is Composition.Swiped) {
             val context = accepted.before?.removeSuffix(showing.inserted) ?: showing.context
@@ -1670,8 +1734,9 @@ class Composer(
     private fun expandSnippet(anchor: Snapshot): Boolean {
         val before = anchor.before
         if (!field.words || before == null || anchor.selected) return false
-        val expansion = expansions?.snippet(before, freeMark(before)) ?: return false
-        expand(expansion)
+        val (text, spaces) = codeText(anchor)
+        val expansion = expansions?.snippet(text, freeMark(text)) ?: return false
+        expand(withSpaces(expansion, spaces))
         return true
     }
 
@@ -1679,8 +1744,9 @@ class Composer(
     private fun expandShortcode(anchor: Snapshot): Boolean {
         val before = anchor.before
         if (!field.words || before == null || anchor.selected) return false
-        val expansion = expansions?.shortcode(before, freeMark(before)) ?: return false
-        expand(expansion)
+        val (text, spaces) = codeText(anchor)
+        val expansion = expansions?.shortcode(text, freeMark(text)) ?: return false
+        expand(withSpaces(expansion, spaces))
         return true
     }
 
@@ -1697,6 +1763,7 @@ class Composer(
         automaticSpace = null
         fullStop = null
         typedKey = null
+        spaced = null
         settleTypedWords()
         if (!edit(EditCause.Expand, expansion.code.length, expansion.text)) return
         onExpanded?.invoke()
@@ -1714,7 +1781,9 @@ class Composer(
     /** While a snippet's shortcut or a shortcode is typed, the strip offers what it can become. */
     private fun offerExpansions(anchor: Snapshot, before: String): Boolean {
         if (!field.words) return false
-        val choices = expansions?.choices(before, EXPANSION_CHOICES, freeMark(before)).orEmpty()
+        val (text, spaces) = codeText(anchor)
+        val choices = expansions?.choices(text, EXPANSION_CHOICES, freeMark(text)).orEmpty()
+            .map { it.copy(expansion = withSpaces(it.expansion, spaces)) }
         if (choices.isEmpty()) return false
         val offered = Composition.Expanding(anchor, choices)
         composition = offered
@@ -1737,6 +1806,95 @@ class Composer(
     /** [predict] does not read the text while a swiped word shows, so an edit that can happen then must call this itself. */
     private fun readKeptWords(anchor: Snapshot) {
         if (mayLearnFrom(anchor)) keptWords.saw(anchor.before, anchor.selection.end)
+    }
+
+    /**
+     * The spaces that go in before [letter], typed straight after a mark. None after a mark that is not the last thing typed,
+     * or one inside a number, an address, an ellipsis or an abbreviation such as Mr. or e.g.
+     */
+    private fun spacesAfterMark(letter: String, anchor: Snapshot): String {
+        if (!field.markSpaces || anchor != typedMark || !anchor.available || anchor.selected) return ""
+        if (!Character.isLetter(letter.codePointAt(0))) return ""
+        val before = anchor.before ?: return ""
+        val mark = before.lastOrNull() ?: return ""
+        val count = when (mark) {
+            in SENTENCE_MARKS -> sentenceSpaces()
+            in SPACED_MARKS -> if (commaSpace()) 1 else 0
+            else -> 0
+        }
+        val word = before.dropLast(1)
+        // A mark after a space or another mark, as in "..." or "?!", ends no word.
+        if (count <= 0 || !endsWord(word)) return ""
+        val token = word.takeLastWhile { !it.isWhitespace() }.trimStart(*WORD_OPENERS).lowercase()
+        if (address(token, mark)) return ""
+        if (mark == '.' && (token.length == 1 && token[0].isLetter() || token in NO_SPACE_ABBREVIATIONS)) return ""
+        return " ".repeat(count)
+    }
+
+    /** Whether [token], which [mark] follows, is part of an address, a path or a dotted abbreviation such as e.g. */
+    private fun address(token: String, mark: Char) = token.any { it in "@/\\." } || token.startsWith("www")
+        || mark == ':' && token in URL_SCHEMES
+
+    /**
+     * The word typed so far after [record]'s spaces, as it stands at the end of [anchor]. Null if the text there is
+     * anything else.
+     */
+    private fun spacedWord(record: Spaced, anchor: Snapshot): String? {
+        val before = anchor.before ?: return null
+        if (!anchor.available || !anchor.knownSelection || anchor.selected) return null
+        val word = before.takeLastWhile { it.isLetterOrDigit() }
+        val start = before.length - word.length - record.spaces.length - 1
+        if (start < 0 || !word.startsWith(record.put) || anchor.selection.end - word.length - record.spaces.length != record.at)
+            return null
+        return word.takeIf { before[start] == record.mark && before.regionMatches(start + 1, record.spaces, 0, record.spaces.length) }
+    }
+
+    /**
+     * The word after spaces that went in after a full stop ends with [next]. An address or a file name, such as atlas.com, or a
+     * name before @, gets its mark back with no spaces, and the letters as they were typed. A fix of the word before the
+     * mark is taken back too, as an address ends no sentence. False if an edit failed.
+     */
+    private fun unspaceAddress(next: String): Boolean {
+        val record = spaced?.takeIf { it.mark == '.' }
+        spaced = null
+        if (record == null) return true
+        val anchor = snapshot()
+        val word = spacedWord(record, anchor) ?: return true
+        val ends = next.firstOrNull() ?: return true
+        val address = ends == '@' || (ends.isWhitespace() || ends in ADDRESS_FOLLOWERS) && word.lowercase() in ADDRESS_ENDINGS
+        if (!address) return true
+        val typed = record.typed + word.substring(record.put.length)
+        val spacedText = record.spaces + word
+        val fix = record.corrected?.takeIf { anchor.before?.endsWith(it.replaced + spacedText) == true }
+        val count = (fix?.replaced?.length ?: 1) + spacedText.length
+        if (!edit(EditCause.MarkSpaceUndo, count, (fix?.restored ?: record.mark.toString()) + typed)) return false
+        manualWord.clear()
+        if (fix != null) endedWord = null
+        return true
+    }
+
+    /**
+     * The text that a snippet's shortcut or a shortcode is looked for in. A mark that took the place of a space can start one,
+     * so spaces that went in after it are left out, as in "Note:" then smile: for an emoji. Also says how many it left out.
+     */
+    private fun codeText(anchor: Snapshot): Pair<String, Int> {
+        val before = anchor.before.orEmpty()
+        val record = spaced ?: return before to 0
+        val word = spacedWord(record, anchor) ?: return before to 0
+        val joined = before.dropLast(word.length + record.spaces.length) + word
+        return if (freeMark(joined) == joined.length - word.length - 1) joined to record.spaces.length else before to 0
+    }
+
+    /** [expansion] with its code widened by the [spaces] that [codeText] left out after its mark. */
+    private fun withSpaces(expansion: Expansions.Expansion, spaces: Int) = if (spaces == 0) expansion
+        else expansion.copy(code = expansion.code.take(1) + " ".repeat(spaces) + expansion.code.drop(1))
+
+    /** The space before a word that a swipe, a tap or a pick puts in. After a sentence, Two spaces gives two. */
+    private fun wordSpace(before: String): String {
+        val space = SwipeTyping.prefix(before)
+        val sentence = space.isNotEmpty() && field.markSpaces && sentenceSpaces() == 2 && before.last() in SENTENCE_MARKS
+            && SwipeTyping.startsSentence(before + space)
+        return if (sentence) "  " else space
     }
 
     private fun endsWord(text: String): Boolean {
@@ -1772,6 +1930,26 @@ class Composer(
         /** Marks that end a typed word, which autocorrect then checks. */
         private const val TYPED_WORD_ENDS = "$WORD_CLOSERS\"”"
         private val WORD_OPENERS = charArrayOf('"', '\'', '(', '[', '{', '“', '‘')
+        /** Marks that end a sentence, which Space after a sentence follows. */
+        private const val SENTENCE_MARKS = ".?!"
+        /** Marks whose next letter may bring a space: the sentence marks, and those that Space after , ; : follows. */
+        private const val SPACED_MARKS = "$SENTENCE_MARKS,;:"
+        /** Abbreviations that a full stop doesn't end, such as Mr. Single letters, as in e.g. and J. Smith, count as well. */
+        private val NO_SPACE_ABBREVIATIONS = setOf("mr", "mrs", "ms", "mx", "dr", "prof", "st", "jr", "sr", "vs", "cf", "viz",
+            "eg", "ie", "approx", "fig")
+        /** What comes before a colon in a link, as in http: or mailto: */
+        private val URL_SCHEMES = setOf("http", "https", "ftp", "sftp", "file", "mailto", "tel", "sms", "geo", "ssh")
+        /**
+         * Last parts of web addresses and file names that are no common word. A spaced word that turns out to be one of them
+         * goes back against its full stop, as in atlas.com and notes.txt.
+         */
+        private val ADDRESS_ENDINGS = setOf("com", "org", "net", "edu", "gov", "mil", "io", "co", "eu", "de",
+            "fr", "nl", "ca", "au", "nz", "jp", "cn", "ru", "ch", "se", "dk", "pl", "info", "biz", "xyz",
+            "txt", "pdf", "jpg", "jpeg", "png", "gif", "webp", "heic", "svg", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+            "csv", "zip", "md", "html", "htm", "js", "ts", "kt", "kts", "java", "py", "json", "xml", "yml", "yaml", "apk", "mp3",
+            "mp4", "mov", "wav", "exe")
+        /** What can come right after an address: the end of a sentence, a path, a port or a closing bracket. */
+        private const val ADDRESS_FOLLOWERS = ".,!?;:/)]"
         /** How much text the second check reads. Numen tuned it on this much. */
         private const val REVIEW_LENGTH = 96
     }

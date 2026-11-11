@@ -137,6 +137,8 @@ object RawLog {
         "doublePressLocks" to TypingSettings.doublePressLocks(context),
         "autoCapitalise" to TypingSettings.autoCapitalise(context),
         "autoPunctuation" to TypingSettings.autoPunctuation(context),
+        "sentenceSpaces" to TypingSettings.sentenceSpaces(context),
+        "commaSpace" to TypingSettings.commaSpace(context),
         "autocorrect" to TypingSettings.autocorrect(context),
         "suggestionBar" to TypingSettings.suggestionBar(context),
         "launcherHidesBar" to TypingSettings.launcherHidesBar(context),

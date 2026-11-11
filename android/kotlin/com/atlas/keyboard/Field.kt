@@ -26,6 +26,8 @@ data class Field(
     val exact: Boolean = false,
     /** A password field. Text copied from it never goes into the clipboard history. */
     val secret: Boolean = false,
+    /** A typed mark gets its space when the next letter comes. Like full stops, not in passwords or addresses. */
+    val markSpaces: Boolean = fullStops,
 ) {
     companion object {
         val None = Field(words = false, learning = false, fullStops = false, starters = false,

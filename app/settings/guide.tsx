@@ -18,7 +18,7 @@ export default function Guide() {
     </Section>
     <Section title="Typing">
       <Topic title="Type like on any keyboard">{"Press the keys. Nothing to unlearn. When you press Space, TitanKeys fixes typos in the word you just typed. Don't want that? Turn off Fix typos as you type in Settings."}</Topic>
-      <Topic title="Capital at the start">{"At the start of a sentence, Shift turns on by itself, so the first letter's a capital. Want it lowercase? Press Shift once to turn it off. Rather do it all yourself? Turn off Capital letter to start a sentence in Settings."}</Topic>
+      <Topic title="Capital at the start">{"At the start of a sentence, Shift turns on by itself, so the first letter's a capital. Your words stay on the bar, right where they were, and a small A in its corner shows that Shift is on. Want it lowercase? Press Shift once to turn it off. Rather do it all yourself? Turn off Capital letter to start a sentence in Settings."}</Topic>
       <Topic title="Names keep their capitals">{"Names and words like iPhone keep their own capitals, swiped or typed."}</Topic>
       <Topic title="Full stop">{"Press Space twice for a full stop and a space. Turn it off with Full stop on double space in Settings."}</Topic>
       <Topic title="Shift and Alt">{"Press once for the next letter only. To cancel, press again after a pause. Want two quick presses to lock them? Turn on Press twice to lock Shift and Alt in Settings. When Shift is locked, the bar says Caps."}</Topic>
@@ -37,11 +37,11 @@ export default function Guide() {
       <Topic title="Scroll assistant outside text fields">{"That's the phone's Scroll assistant: outside text fields, the touchpad scrolls the app. Turn it off in Settings or the quick settings and the touchpad only works in text fields. The touchscreen doesn't change. With it off, the shortcuts on the letter keys and the phone's space bar shortcut stop working, and in some apps Back takes two presses: the first lets go of the touchpad, the second goes back."}</Topic>
     </Section>
     <Section title="The bar">
-      <Topic title="Word suggestions">{"The bar above the keys shows words and spelling fixes as you type. Touch one to type it. The best guess is in the middle."}</Topic>
+      <Topic title="Word suggestions">{"The bar above the keys shows words and spelling fixes as you type. Touch one to type it. The best guess is always in the middle, and the three places never move. A long word shrinks to fit its place. If it still doesn't fit, it shows the part where it differs from the others, like …mendations."}</Topic>
       <Topic title="The word menu">{"Hold a word on the bar for its menu. Save keeps the word for good, so it's always suggested. Forget makes it go away: it stops showing up, and a word TitanKeys learned from you is unlearned. Changed your mind? Undo shows right after. Back closes the menu."}</Topic>
       <Topic title="A selected word">{"Pick a word in your text and the bar shows it alone in the middle. Touch it for the same menu: Save or Forget."}</Topic>
       <Topic title="Your newest copy">{"Right after you copy something, the bar offers it. Touch it to paste. It goes away once you type on. Older copies are in the clipboard: press Sym, then A."}</Topic>
-      <Topic title="Shift, Alt and Ctrl">{"When Shift, Caps or Alt is on, a small label shows on the bar, beside your words, so you can still pick one. Filled means you're holding the key, an outline means you pressed it once, and Caps means Shift is locked. The bar only gives up the words when you rest a finger on a key, where it shows what that key types, or while you hold Ctrl."}</Topic>
+      <Topic title="Shift, Alt and Ctrl">{"When you press or hold Shift, Alt or Ctrl, the bar shows it in place of your words. Filled means you're holding the key, an outline means you pressed it once, and Caps means Shift is locked. Rest your finger on a key to see what it types. The only exception is the capital at the start of a sentence: that one keeps your words."}</Topic>
       <Topic title="Ctrl shortcuts">{"Hold Ctrl and the bar shows what each shortcut does. Press a key while you hold Ctrl to use it."}</Topic>
       <Topic title="Hide the bar in an app">{"Don't want the bar in some app? Settings > Hide the bar picks the apps, or hides it everywhere. The keys, holds, Alt and the Sym panel still work there."}</Topic>
     </Section>

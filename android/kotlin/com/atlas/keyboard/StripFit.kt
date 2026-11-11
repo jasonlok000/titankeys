@@ -4,10 +4,11 @@ package com.atlas.keyboard
  * How the strip shows words that are too long for their place, so that words such as "recommendations", "recommend" and
  * "recommended" can still be told apart. In this order:
  * 1. A word shrinks to fit its place, down to [MIN_SCALE] of its size.
- * 2. A word that still does not fit takes room from shorter words beside it, so the places are no longer the same width, and
- *    each place is as wide as what it shows, so a touch goes where the word is.
+ * 2. Only where [fit] may lend room: a word that still does not fit takes room from shorter words beside it, so the places are no
+ *    longer the same width. The strip's three words never do this: their places stay where they are, as the middle one is muscle
+ *    memory.
  * 3. Last, the word is cut with "…" where it is the same as another word on the strip: a word that starts like another keeps
- *    its end ("…mendations"), and any other word keeps its start ("extraordi…").
+ *    its end ("…mendations"), and any other word keeps its start ("extraordi…"), so the part where the words differ shows.
  * It needs no Android: [measure] gives the width of a text at full size, in the same units as the widths.
  */
 internal object StripFit {
@@ -17,8 +18,12 @@ internal object StripFit {
     const val MIN_SCALE = .7f
     const val ELLIPSIS = "…"
 
-    /** Lays out [words], left to right, across [total], with [padding] on each side of each word. An empty word lends its place. */
-    fun fit(words: List<String>, total: Float, padding: Float, measure: (String) -> Float, minScale: Float = MIN_SCALE): List<Slot> {
+    /**
+     * Lays out [words], left to right, across [total], with [padding] on each side of each word. With [lend], a word that does not
+     * fit takes room from the others, and an empty word lends its place. Without, every place is the same width.
+     */
+    fun fit(words: List<String>, total: Float, padding: Float, measure: (String) -> Float, minScale: Float = MIN_SCALE,
+            lend: Boolean = true): List<Slot> {
         if (words.isEmpty()) return emptyList()
         val share = total / words.size
         val natural = words.map { if (it.isEmpty()) 0f else measure(it) }
@@ -30,7 +35,7 @@ internal object StripFit {
         val pool = spare.sum()
         val wanted = wants.sum()
         val widths = FloatArray(words.size) { share }
-        if (wanted > 0 && pool > 0) {
+        if (lend && wanted > 0 && pool > 0) {
             val borrowers = words.indices.filter { wants[it] > 0 }
             // Room left once every word that wants room has enough to fit small grows it back towards full size.
             val leftover = (pool - wanted).coerceAtLeast(0f)

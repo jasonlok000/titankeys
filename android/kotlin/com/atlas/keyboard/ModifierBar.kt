@@ -4,11 +4,18 @@ package com.atlas.keyboard
  * What the strip shows of the modifiers: which are on, and what they do to a key. [held] names the chips whose key a finger holds
  * down now, which show filled. A key that was pushed and let go shows as an outline.
  *
- * Shift and Alt that are on show as small chips beside the words, so the suggestions stay, also at a sentence start where Shift
- * came on by itself. The whole bar, with what the key under a resting finger types, takes the place of the words only while a finger
- * rests on a letter, and while Ctrl is held, where it lists the shortcuts. That is [replacesWords].
+ * Shift, Alt and Ctrl that you press or hold take the whole bar, in the place of the words, with what the key under a resting
+ * finger types, or Ctrl's shortcuts. The one exception is the Shift that comes on by itself at a sentence start: the suggestions
+ * stay, in their places, and the strip only marks it with a small capital in its corner. That is [autoCapital], and then
+ * [replacesWords] is false, unless a finger rests on a letter, which shows the whole bar as always.
  */
-data class ModifierBar(val chips: List<String>, val hint: String, val held: Set<String> = emptySet(), val replacesWords: Boolean = true) {
+data class ModifierBar(
+    val chips: List<String>,
+    val hint: String,
+    val held: Set<String> = emptySet(),
+    val replacesWords: Boolean = true,
+    val autoCapital: Boolean = false,
+) {
     companion object {
         const val CTRL = "Ctrl"
         const val SHIFT = "Shift"
@@ -47,7 +54,9 @@ data class ModifierBar(val chips: List<String>, val hint: String, val held: Set<
                 alt -> symbol(hover).orEmpty()
                 else -> hover
             }
-            return ModifierBar(chips, hint, held, replacesWords = modifiers.ctrlHeld || Layout.isLetter(hover))
+            // Only Shift is on, and only because a sentence starts here: the words stay, with a small mark.
+            val automatic = modifiers.autoShifted && shift == SHIFT && !alt && !modifiers.ctrlHeld && held.isEmpty()
+            return ModifierBar(chips, hint, held, replacesWords = !automatic || Layout.isLetter(hover), autoCapital = automatic)
         }
     }
 }

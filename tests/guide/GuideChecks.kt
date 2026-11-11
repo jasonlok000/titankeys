@@ -298,6 +298,8 @@ private fun slideTexts() {
         same(step.stages.none { it.text == step.praise }, true, "${step.id}'s praise is no instruction")
     }
     same(GUIDE_STEPS.first { it.id == "flick" }.seed.split(' ').size >= 8, true, "The delete slide starts with words to delete")
+    for (step in GUIDE_STEPS.filter { it.seed.isNotEmpty() })
+        same(step.seed.endsWith("."), true, "${step.id}'s text ends with a full stop, so the cursor never sits in a word being typed")
     same(GUIDE_STEPS.first { it.id == "steer" }.seed.isNotEmpty() && GUIDE_STEPS.first { it.id == "select" }.seed.isNotEmpty(), true,
         "Steering and selecting start with a line to move through")
     same(GUIDE_STEPS.first { it.id == "swipe" }.text.contains("lift"), true, "The swipe text agrees with its instruction: lift")
@@ -307,13 +309,13 @@ private fun slideTexts() {
     same(race.track("nothing TO").typed, "to", "Capitals don't matter, and the word being typed is followed")
     same(race.wordAt(race.track("Nothing type ").next), "with", "A word from a little further on skips ahead to it")
     same(race.track("Nothing zebra ").next, 1, "Any other word is ignored")
-    same(race.words.size >= 400 && race.words[9] == "·" && race.words[10] == "Nothing", true, "The text goes on after a dot, as more lines, not a reset")
+    same(race.words.size >= 400 && race.words[9] == "·" && race.words[10] == "Nothing" && race.text.contains("one   ·   Nothing"), true, "The text goes on after a dot, as more lines, not a reset")
     same(race.wordAt(race.track("Nothing to unlearn type with two hands or one ").next), "Nothing", "The dot is passed over by itself")
     // Once a slide is done, its after text follows on from the line you're on, and what's typed still counts.
     val done = Passage("swipe these words now", "and these follow on")
     same(done.wordAt(done.track("swipe these words now ").next), "and", "The after text comes next, after the lead")
     same(done.track("swipe these words now and ").done, setOf(0, 1, 2, 3, 4, 5), "Words typed before and after both count, and the dot passes")
-    same(done.text.startsWith("swipe these words now · and these follow on · and these"), true, "The after text loops on")
+    same(done.text.startsWith("swipe these words now   ·   and these follow on   ·   and these"), true, "The after text loops on, with a wide gap round the dot")
     val fast = PlaygroundText.make(kotlin.random.Random(7))
     same(fast.any { it.isUpperCase() || it.isDigit() || it in ".,:;!?" }, false, "The playground's text is all plain, fast words")
     val words = fast.split(' ')

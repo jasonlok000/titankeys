@@ -926,7 +926,7 @@ class GuideActivity : Activity() {
         // with words to practise on gets them, once.
         // Each slide starts with a clean field: its own text to work on, or nothing. Within the slide, what you type stays.
         seeding = true
-        field.setText(step.seed)
+        field.setText(if (step.seed.isEmpty()) "" else step.seed + " ")
         field.setSelection(field.length())
         seeding = false
         setUpLesson(step)
@@ -1868,6 +1868,7 @@ class GuideActivity : Activity() {
         overlay.sweep()
         main.postDelayed({ if (passed) applyTone(GuideTone.Orange) }, WIPE_MILLIS)
         showReaction(flow.step.done)
+        if (flow.step.praise.isNotEmpty()) body.text = flow.step.praise
         flow.step.rain?.let { effects.burst(it, RAIN_PIECES) }
         if (flow.step.text.isNotEmpty()) continuePassage(flow.step.after)
         // What the paste lesson put on the clipboard has done its job: the bar stops offering it.
@@ -1915,6 +1916,7 @@ class GuideActivity : Activity() {
 
     /** The story goes on, or back a step: to ink for a step behind the cream line, or orange for the ending. */
     private fun moveOn(forward: Boolean = true) {
+        if (flow.step.clip != null) GuideHooks.dismissClip()
         GuideHooks.stripPoint(null)
         changing = true
         busy = true

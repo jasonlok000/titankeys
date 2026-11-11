@@ -10,8 +10,8 @@ private val fastMillis = deleteSwipeTuning["deleteRepeatFastMillis"] as Long
 
 /** Where a flick from .95 stops, for a length of 1.8, 4.5, and 7 key widths. */
 private const val SHORT_STOP = .77f
-private const val MIDDLE_STOP = .5f
-private const val LONG_STOP = .25f
+private const val MIDDLE_STOP = .575f
+private const val LONG_STOP = .4f
 
 fun main() {
     aNormalFlickDeletesOneWordAndDoesNotRepeat()
@@ -38,7 +38,32 @@ fun main() {
     aBusyEditDoesNotChangeTheWait()
     aStrokeJustAfterASwipeCannotDelete()
     theGuideZoneIsWhereFlicksStart()
+    aWordSwipeIsNotAFlick()
     println("Delete hold checks passed")
+}
+
+/**
+ * A delete flick is a short, quick, straight stroke to the left. A word that starts at the right and runs left along the keys,
+ * such as "press" from P, is straight enough, but it goes further, or takes longer: it stays a word.
+ */
+private fun aWordSwipeIsNotAFlick() {
+    // "press": from P along the top row to R and E, then down to S, in about half a second.
+    val press = listOf(at(.95f, .15f, 0), at(.75f, .16f, 90), at(.55f, .17f, 180), at(.35f, .18f, 270), at(.25f, .2f, 330),
+        at(.2f, .3f, 400), at(.15f, .38f, 460))
+    same(isDeleteWordSwipe(press), false, "A swipe of \"press\" from P is a word, not a delete")
+    // The owner's false deletes: straight, but six keys or more.
+    same(isDeleteWordSwipe((0..12).map { at(.95f - .62f * it / 12, .35f, it * 15L) }), false, "A straight stroke of six keys is a word, even a quick one")
+    // A slow drag of three keys.
+    same(isDeleteWordSwipe((0..20).map { at(.95f - .3f * it / 20, .35f, it * 40L) }), false, "A stroke that takes 800 ms to get there is a word")
+    // Real flicks still delete: two keys in 80 ms, and five keys in 200 ms.
+    same(isDeleteWordSwipe((0..8).map { at(.95f - .2f * it / 8, .35f, it * 10L) }), true, "A quick flick of two keys deletes")
+    same(isDeleteWordSwipe((0..10).map { at(.95f - .5f * it / 10, .35f, it * 20L) }), true, "A quick flick of five keys deletes")
+    // A finger that rests after a quick flick, for a hold, is still a flick: only the way there is timed.
+    val rest = (0..8).map { at(.95f - .3f * it / 8, .35f, it * 12L) } + (1..40).map { at(.65f, .35f, 96L + it * 50) }
+    same(isDeleteWordSwipe(rest), true, "A quick flick that then rests two seconds is still a flick")
+    // A stroke that bows away from a straight line more than a flick does is a word.
+    val bowed = (0..10).map { val u = it / 10f; at(.95f - .3f * u, .4f - .2f * kotlin.math.sin(u * Math.PI.toFloat()), it * 15L) }
+    same(isDeleteWordSwipe(bowed), false, "A stroke that curves is a word")
 }
 
 /** The guide shades where a delete flick can start, and its ghost flick starts there and really deletes. */
@@ -164,7 +189,7 @@ private fun aShortFlickWaitsTheLongest() {
 
 private fun aLongFlickWaitsTheShortest() {
     same(fastMillis, 80L, "A long flick must wait 80 ms between words")
-    same(waitsOf(LONG_STOP).first(), fastMillis, "A flick of seven keys must wait the shortest")
+    same(waitsOf(LONG_STOP).first(), fastMillis, "A flick of five and a half keys, the longest flick, must wait the shortest")
 }
 
 private fun aMiddleFlickWaitsBetween() {
@@ -200,7 +225,7 @@ private fun theWaitCountsToWhereTheFingerStopped() {
 }
 
 private fun moreLengthDoesNotPassTheLimits() {
-    same(waitsOf(.15f).first(), fastMillis, "A flick past seven keys must not wait less than the shortest wait")
+    same(waitsOf(.15f).isEmpty(), true, "A stroke past five and a half keys is a word, so it never holds")
     same(waitsOf(.83f).first(), slowMillis, "A flick under two keys must not wait more than the longest wait")
 }
 
@@ -282,9 +307,14 @@ private fun aFieldStartCancelsAWaitingHold() {
 private fun aFingerThatKeepsMovingWaits() {
     val rig = Rig()
     rig.flick(1_000)
-    // Slow travel that is still a clean flick. The finger is not holding, so the wait starts again at each step.
-    var x = SHORT_STOP
-    var time = 1_060L
+    // A little more travel, still quick: the finger is not holding, so the wait starts again from the last move.
+    rig.runTo(1_099)
+    rig.move(at(SHORT_STOP - .05f, .35f, 1_100))
+    same(rig.words.size, 0, "A finger that keeps moving must not repeat")
+    same(rig.next, 1_100 + holdMillis, "The wait must count from the last move")
+    // Slow travel on and on is not a flick any more, but a word: no hold.
+    var x = SHORT_STOP - .05f
+    var time = 1_100L
     repeat(5) {
         x -= .05f
         time += 300
@@ -292,7 +322,7 @@ private fun aFingerThatKeepsMovingWaits() {
         rig.move(at(x, .35f, time))
     }
     same(rig.words.size, 0, "A finger that keeps moving must not repeat")
-    same(rig.next, time + holdMillis, "The wait must count from the last move")
+    same(rig.next, null, "A stroke that took over a second to get there is a word, so it never holds")
 }
 
 private fun aSmallShakeDoesNotRestartTheWait() {

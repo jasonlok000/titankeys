@@ -8,6 +8,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.PowerManager
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -26,23 +27,14 @@ import android.view.accessibility.AccessibilityEvent
 class BackService : AccessibilityService() {
     private var filtering = false
     private var window: TouchpadOverlay? = null
-    /** The screen is off or the lock screen shows, where the touchpad goes where it went before. */
-    private var locked = false
 
+    /** Each of these may change whether the window should be up. The state itself is read from Android. See [HighTouchpad]. */
     private val screen = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                Intent.ACTION_SCREEN_OFF -> locked = true
-                Intent.ACTION_SCREEN_ON -> locked = getSystemService(KeyguardManager::class.java).isKeyguardLocked
-                Intent.ACTION_USER_PRESENT -> locked = false
-            }
-            updateTouchpad()
-        }
+        override fun onReceive(context: Context, intent: Intent) = updateTouchpad()
     }
 
     override fun onServiceConnected() {
         current = this
-        locked = getSystemService(KeyguardManager::class.java).isKeyguardLocked
         window = TouchpadOverlay(this, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, HIGH_TITLE) { event ->
             touchpad?.invoke(event) == true
         }
@@ -51,7 +43,9 @@ class BackService : AccessibilityService() {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_USER_PRESENT)
         }
-        registerReceiver(screen, filter, RECEIVER_NOT_EXPORTED)
+        // The unlock broadcast comes from the lock screen, not from the system itself, so a receiver that is not exported never
+        // hears it. All three are protected broadcasts, which only Android can send, so exporting this receiver is safe.
+        registerReceiver(screen, filter, RECEIVER_EXPORTED)
         filterKeys(watcher != null)
         updateTouchpad()
         // Turned on from the guide's setup: Accessibility opens one page over another, so the guide comes back from here.
@@ -79,9 +73,12 @@ class BackService : AccessibilityService() {
         }
     }
 
+    /** The screen on and the lock screen are read now, so a broadcast that never came can't leave the window down. */
     private fun updateTouchpad() {
         val window = window ?: return
-        if (touchpad != null && !locked) window.show() else window.hide()
+        val screenOn = getSystemService(PowerManager::class.java).isInteractive
+        val lockScreenShows = getSystemService(KeyguardManager::class.java).isKeyguardLocked
+        if (HighTouchpad.up(touchpad != null, screenOn, lockScreenShows)) window.show() else window.hide()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
@@ -135,10 +132,9 @@ class BackService : AccessibilityService() {
          * the keyboard's own overlay still catches the touchpad then, below the shade. The handler runs on the main thread.
          */
         fun touchpad(handler: ((MotionEvent) -> Boolean)?): Boolean {
-            if (handler !== touchpad) {
-                touchpad = handler
-                current?.updateTouchpad()
-            }
+            touchpad = handler
+            // The keyboard calls this at every field start, so the window is checked again there even with the same handler.
+            current?.updateTouchpad()
             return current != null
         }
 

@@ -422,6 +422,8 @@ class GuideActivity : Activity() {
     private var arrivalBody: String? = null
     /** The next slide opens done, as another slide did it already. */
     private var arriveDone = false
+    /** A slide was on the screen before this one, so a panel open now was left from it. */
+    private var enteredBefore = false
     /** The chapter of the slide on the screen, so that a slide in the same chapter carries the field on. */
     private var enteredChapter: GuideChapter? = null
     /** How many times the delete chapter's field was emptied, and the steering line's length as it was put in. */
@@ -433,6 +435,22 @@ class GuideActivity : Activity() {
     private var pasteDeclined = false
     /** The guide opens with the line that says chapters can be picked. */
     private var refresher = false
+    /** Alt is on, as the keyboard last said. */
+    private var altOn = false
+    /** The word menu slide says the bar is empty. */
+    private var emptyBarShown = false
+    /** On the word menu slide, the bar with no words to hold says so, and stops once it has some. See [GuideHooks.barCount]. */
+    private val checkBar = Runnable {
+        if (passed || busy || flow.step.bar != GuideBar.Menu || flow.stage != 0) return@Runnable
+        val count = GuideHooks.barCount?.invoke() ?: -1
+        if (count == 0 && !emptyBarShown) {
+            showScenario(EMPTY_BAR_TITLE, EMPTY_BAR_BODY)
+            emptyBarShown = true
+        } else if (count > 0 && emptyBarShown) {
+            emptyBarShown = false
+            backOnTrack()
+        }
+    }
     private val idleOnce = Runnable { idle(IDLE_TITLE, IDLE_AGAIN_MILLIS) }
     private val idleTwice = Runnable { idle(IDLE_AGAIN_TITLE, -1) }
     /** The line under the title once the slide is done: its own, or a scenario's that counted. */
@@ -1094,6 +1112,18 @@ class GuideActivity : Activity() {
         refresher = false
         if (step.offersShare) Contributions.guideEnded(this)
         // The keyboard starts the step in the menu that it needs: the Sym panel for Alt and the emoji, closed for typing.
+        val panelLeft = panelOpen && step.setup == Modifiers.Panel.Closed && enteredBefore
+        val altLeft = altOn && !panelOpen && !step.usesPanel && enteredBefore
+        enteredBefore = true
+        emptyBarShown = false
+        if (panelLeft) {
+            showScenario(TOO_LATE_TITLE, TOO_LATE_PANEL)
+            main.postDelayed({ if (!passed && !changing && !panelOpen) backOnTrack() }, TOO_LATE_MILLIS)
+        } else if (altLeft) {
+            showScenario(TOO_LATE_TITLE, TOO_LATE_ALT)
+            // It goes once Alt is off. See [modifiersWentOff].
+            shownModifierHint = GuideVerdict.Hint(TOO_LATE_ALT, TOO_LATE_TITLE)
+        }
         step.setup?.let(GuideHooks::openPanel)
         showScript()
         paintSegments(flow.stepIndex)
@@ -1107,6 +1137,8 @@ class GuideActivity : Activity() {
         busy = false
         // A new slide shows its gesture at once, as soon as its words are in.
         acted(DEMO_ENTER_MILLIS)
+        main.removeCallbacks(checkBar)
+        if (step.bar == GuideBar.Menu) main.postDelayed(checkBar, BAR_CHECK_MILLIS)
         // Another slide did this one already: it shows done.
         if (arriveDone) {
             arriveDone = false
@@ -1366,7 +1398,7 @@ class GuideActivity : Activity() {
         demoPushes = null
         demoBarPlayed = false
         // The word menu is a gesture on the bar itself, so the bar acts it out.
-        if (step.bar == GuideBar.Menu) {
+        if (step.bar == GuideBar.Menu && flow.stage == 0) {
             demoBarPlayed = true
             GuideHooks.stripDemo(GuideHooks.StripDemo.Menu(emptyList()))
         }
@@ -1385,6 +1417,11 @@ class GuideActivity : Activity() {
             return
         }
         demo?.let { showPhantom(it, t) }
+        // The word menu's demo presses O, which closes it, once the menu is open on the bar.
+        if (flow.step.bar == GuideBar.Menu && demoKeys == 0 && t > (if (flow.stage == 0) MENU_O_AT else MENU_O_OPEN_AT)) {
+            demoKeys = 1
+            keys.light("O")
+        }
         main.postDelayed(demoTick, DEMO_FRAME_MILLIS)
     }
 
@@ -1451,8 +1488,16 @@ class GuideActivity : Activity() {
                 t > SWIPE_LANDS / 2 -> add(gap + GuideScript.slip(next))
             }
             GuideDemo.DeleteLast -> if (lastEnd > lastStart) {
-                val cover = ((t - .3f) / .5f).coerceIn(0f, 1f)
-                built.setSpan(BackgroundColorSpan(GuideMotion.faded(GuideColours.CREAM, cover)), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                if ((flow.cue as? GuideCue.Flick)?.hold == true) {
+                    // A flick that stays: words keep going, one after another, while the finger is down.
+                    val gone = ((t - .5f) / .4f * HOLD_DEMO_WORDS).toInt().coerceIn(0, HOLD_DEMO_WORDS) + if (t > .5f) 1 else 0
+                    var from = lastEnd
+                    repeat(gone) { from = text.substring(0, from).trimEnd().lastIndexOf(' ') + 1 }
+                    if (from < lastEnd) built.setSpan(BackgroundColorSpan(GuideColours.CREAM), from, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                } else {
+                    // One flick, one word, gone at once.
+                    if (t > FLICK_GONE) built.setSpan(BackgroundColorSpan(GuideColours.CREAM), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
             }
             GuideDemo.MoveCursor -> if (lastEnd > 0) {
                 val back = ((t - TAPS_SHARE).coerceAtLeast(0f) / (1f - TAPS_SHARE) * (lastEnd - lastStart + 1)).toInt()
@@ -2073,6 +2118,7 @@ class GuideActivity : Activity() {
             is KeyboardEvent.ModifierState -> {
                 panelOpen = event.panel != Modifiers.Panel.Closed
                 if (!panelOpen) keys.face = null
+                altOn = event.alt != Modifiers.Level.Off
                 modifiersOff = !panelOpen && event.alt == Modifiers.Level.Off
                 if (modifiersOff) modifiersWentOff()
             }
@@ -2085,7 +2131,43 @@ class GuideActivity : Activity() {
             }
             else -> Unit
         }
+        if (!playground && ready && !changing && !settingUp) watch(event)
         if (!busy && ready) judge(event)
+    }
+
+    /**
+     * What the screen itself watches for, beyond a slide's check: a fix undone after the typing slide passed, fn and V that changed
+     * nothing, and the bar emptying on the word menu slide.
+     */
+    private fun watch(event: KeyboardEvent) {
+        val step = flow.step
+        if (event is KeyboardEvent.Restored && step.id == "type" && passed) unpass(FIX_UNDONE_TITLE, FIX_UNDONE_BODY)
+        if (event is KeyboardEvent.Pushed && event.code == KeyEvent.KEYCODE_V && step.id == "paste" && !passed) {
+            val before = field.text.toString()
+            main.postDelayed({
+                if (!passed && flow.step.id == "paste" && field.text.toString() == before && flow.missing == GuideNeed.FnAsCtrl)
+                    showScenario(NOTHING_PASTED_TITLE, NOTHING_PASTED_BODY)
+            }, NOTHING_PASTED_MILLIS)
+        }
+        if (step.bar == GuideBar.Menu && !passed) {
+            main.removeCallbacks(checkBar)
+            main.postDelayed(checkBar, BAR_CHECK_MILLIS)
+        }
+    }
+
+    /** The slide is not done after all, as the user undid it: it goes back to ink, and says why. */
+    private fun unpass(heading: String, text: String) {
+        passed = false
+        busy = false
+        main.removeCallbacks(settleReaction)
+        next.text = "Skip"
+        backdrop.wipeTo(GuideColours.INK)
+        main.postDelayed({ if (!passed) applyTone(GuideTone.Ink) }, WIPE_MILLIS)
+        title.animate().cancel()
+        title.scaleX = 1f
+        title.scaleY = 1f
+        showScenario(heading, text)
+        acted()
     }
 
     /** The letters of the word that the text box has next, or nothing on a slide without one. */
@@ -2610,6 +2692,27 @@ class GuideActivity : Activity() {
         private const val LEAVE_NO = "Stay"
         private const val COME_BACK_TITLE = "Oh, look who's back. Didn't know everything after all?"
         private const val COME_BACK_BODY = "Pick up where you left off."
+        private const val FIX_UNDONE_TITLE = "You wanted the typo back? Rebel."
+        private const val FIX_UNDONE_BODY = "Let it fix one and leave it. Type a typo, then Space."
+        private const val NOTHING_PASTED_TITLE = "Nothing happened. Shocking."
+        private const val NOTHING_PASTED_BODY = "fn isn't Ctrl yet. Press the button below to turn it on."
+        private const val EMPTY_BAR_TITLE = "Nothing to judge. Rare for you."
+        private const val EMPTY_BAR_BODY = "Type a letter or two so the bar fills up, then hold a word."
+        private const val TOO_LATE_TITLE = "Still got that open? The last slide's over, let it go."
+        private const val TOO_LATE_PANEL = "Press Sym to close it."
+        private const val TOO_LATE_ALT = "Press Alt to turn it off."
+        /** How long the too-late line shows while the panel closes by itself. */
+        private const val TOO_LATE_MILLIS = 1600L
+        /** fn and V that changed nothing in this long says so. */
+        private const val NOTHING_PASTED_MILLIS = 600L
+        /** The word menu slide looks at the bar this long after the last thing that happened. */
+        private const val BAR_CHECK_MILLIS = 700L
+        /** When the word menu's demo presses O: late in the hold demo, early once the menu is really open. */
+        private const val MENU_O_AT = .75f
+        private const val MENU_O_OPEN_AT = .3f
+        /** The flick demo's word goes as the flick snaps; the hold demo deletes up to this many more while the finger stays. */
+        private const val FLICK_GONE = .25f
+        private const val HOLD_DEMO_WORDS = 4
         private const val REFRESHER = "Back for a refresher? Pick a chapter. No judgement. Some judgement."
         /** No input this long shows the idle words, and this much more shows them again. */
         private const val IDLE_MILLIS = 12_000L

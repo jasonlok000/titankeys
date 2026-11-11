@@ -314,7 +314,10 @@ class Strip(
         clipHintText.visibility = if (offer != null && clipHint) VISIBLE else GONE
         clipHintText.setTextColor(look.muted)
         selectedView.visibility = if (chosen != null) VISIBLE else GONE
-        selectedView.text = chosen.orEmpty()
+        // The selected word follows the words' rules too: it shrinks to fit, then loses its end.
+        val selectedFit = if (room > 0 && !chosen.isNullOrEmpty()) StripFit.fit(listOf(chosen), room, dp(WORD_PADDING).toFloat(), ::measureWord).single() else null
+        selectedView.text = selectedFit?.text ?: chosen.orEmpty()
+        selectedView.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (selectedFit?.scale ?: 1f))
         selectedView.setTextColor(look.ink)
     }
 

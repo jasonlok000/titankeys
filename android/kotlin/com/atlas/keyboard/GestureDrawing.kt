@@ -212,6 +212,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val alpha = display.reveal
         if (display.softDelete) {
             // The dots show only the orange part: a dot for each character that went, and the caret.
+            clearBehindDots(canvas, display, left, stop, caret, mid, alpha, look)
             val morphing = display.fromHold && display.dotsIn < 1f
             val pulse = if (morphing) { morph(canvas, display, left, stop, slot, mid, alpha, look); 0f }
                 else dots(canvas, display, left, stop, caret, mid, alpha, look)
@@ -236,6 +237,27 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             val half = slot * widthOf(index) / 2
             if (x - half >= stop || x + half < left) continue
             each(maxOf(x - half, left), min(x + half, stop), x + half > stop)
+        }
+    }
+
+    /**
+     * The words stay faded behind the dots, but right behind the row of dots they fade much further, in a band with soft edges,
+     * so the dots read cleanly over a word while the rest of the bar keeps the faded look. The band covers the row still to land,
+     * from its far end to just past the caret.
+     */
+    private fun clearBehindDots(canvas: Canvas, display: GestureDisplay, left: Float, stop: Float, caret: Float, mid: Float, alpha: Float, look: Look) {
+        if (display.dots == 0 || alpha <= 0f) return
+        val step = dotStep(display, left, stop)
+        val far = max(left, stop - step * display.shownUnits)
+        val pad = dp(BAND_PAD)
+        val half = dp(DOT_RADIUS) * (1f + DOT_SWELL) + pad
+        // Each layer is a little smaller than the one before, so together they make soft edges and reach [BAND_CLEAR] in the middle.
+        val layer = 1f - Math.pow((1f - BAND_CLEAR).toDouble(), 1.0 / BAND_LAYERS).toFloat()
+        for (index in 0 until BAND_LAYERS) {
+            val inset = pad * index / BAND_LAYERS
+            val top = mid - half + inset
+            val bottom = mid + half - inset
+            rounded(canvas, far - pad + inset, top, caret + pad - inset, bottom, (bottom - top) / 2, GuideMotion.faded(look.paper, layer * alpha))
         }
     }
 
@@ -375,6 +397,13 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val REST_SCALE = .86f
         /** A swipe dims the words to about an eighth, as in the owner's mockup; they are the path's backdrop. */
         const val SWIPE_DIM = .88f
+        /**
+         * Behind the dots the faded words fade further, to about 30% of how they show elsewhere: the band clears this much more of
+         * them, over [BAND_LAYERS] soft layers that reach [BAND_PAD] past the dots.
+         */
+        const val BAND_CLEAR = .7f
+        const val BAND_LAYERS = 4
+        const val BAND_PAD = 4f
         /** The path's three rows of letters lie this far apart on the strip, and it keeps this far from the strip's edges. */
         const val PATH_ROW = 14f
         const val PATH_EDGE = 4.5f

@@ -14,6 +14,8 @@ private const val GAP_MILLIS = 80L
 
 fun main() {
     twoQuickTapsSelect()
+    tapsWithNoWordPickNothing()
+    steeringNeedsSomeText()
     worksAnywhereOnTheRow()
     selectingNeedsTheConfirmWait()
     dragStartsFromWhereTheSecondTouchLanded()
@@ -1147,4 +1149,26 @@ private fun theThirdTouchIsKnownAsItLands() {
     val late = Pad()
     late.twoTapsThenLand(gap = 400)
     same(late.gesture.tapsBefore, 0, "A touch long after two taps is no third touch")
+}
+
+/** A double or triple tap with no word to pick does nothing: an empty field, between spaces with nothing to take, only marks. */
+private fun tapsWithNoWordPickNothing() {
+    for (inFront in listOf(false, true)) {
+        same(WordSelection.anyToPick("", 0, 0, inFront), false, "An empty field has no word, inFront=$inFront")
+        same(WordSelection.anyToPick("...", 3, 3, inFront), false, "Only marks have no word, inFront=$inFront")
+        same(WordSelection.anyToPick("?! ,", 2, 2, inFront), false, "Marks and spaces have no word, inFront=$inFront")
+        same(WordSelection.anyToPick("   ", 1, 1, inFront), false, "Between spaces there is nothing to take, inFront=$inFront")
+        same(WordSelection.anyToPick("hello", 2, 2, inFront), true, "Inside a word there is one, inFront=$inFront")
+        same(WordSelection.anyToPick("hello ", 6, 6, inFront), true, "Just after a word and a space there is one, inFront=$inFront")
+    }
+    same(WordSelection.anyToPick("hello.  ", 8, 8, inFront = false), false, "A double tap past a mark and spaces finds none")
+    same(WordSelection.anyToPick("hello.  ", 8, 8, inFront = true), true, "but a triple tap takes the word in front")
+    same(WordSelection.anyToPick("hello\n  ", 8, 8, inFront = true), false, "A triple tap never reaches back to another line")
+}
+
+/** Steering with no text at all does nothing. Any text before or after the cursor is enough. */
+private fun steeringNeedsSomeText() {
+    same(WordSelection.anyToSteer("", ""), false, "An empty field has nothing to steer through")
+    same(WordSelection.anyToSteer(" ", ""), true, "A space is text to steer through")
+    same(WordSelection.anyToSteer("", "."), true, "and so is a mark after the cursor")
 }

@@ -117,11 +117,11 @@ test("the lab has a practice field, a live timeline and an editor with small Pla
 
 test("two taps above Space play no only in the guide's practice field", () => {
   const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
-  expect(ime.match(/Haptic\.TwoTapsAbove/g)?.length).toBe(1);
+  expect(ime).not.toContain("Haptic.TwoTapsAbove");
   // The play sits after the check that returns outside the guide's field.
   const block = ime.slice(ime.indexOf("private val confirmTwoAbove = Runnable {"));
   const body = block.slice(0, block.indexOf("\n    }\n"));
-  expect(body).toMatch(/if \(!inGuide \|\| !cursorGesture\.confirmTwoAbove\(\)\) return@Runnable[\s\S]*haptics\.play\(Haptic\.TwoTapsAbove\)/);
+  expect(body).toMatch(/if \(!inGuide \|\| !cursorGesture\.confirmTwoAbove\(\)\) return@Runnable[\s\S]*haptics\.play\(Haptic\.NothingToPick\)/);
   // And the runnable is only ever posted in the guide's field.
   expect(ime).toContain("else if (inGuide && cursorGesture.twoAbove) main.postAtTime(confirmTwoAbove,");
   expect(ime.match(/confirmTwoAbove,/g)?.length).toBe(1);
@@ -141,4 +141,25 @@ test("any key or touch cuts a flick's dots and the dot ticks still to come, at t
   // Nothing else cuts the dots, so the ticks can't outlive them.
   expect(ime.match(/gesture\?\.interrupt\(\)/g)?.length).toBe(1);
   expect(ime.match(/interruptGesture\(\)/g)?.length).toBe(3);
+});
+
+test("taps that find no word, and steering with no text, do nothing but play Nothing to pick", () => {
+  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  // A pick plays Lock only when it found a word.
+  expect(ime).toContain("haptics.play(Haptic.picked(found = word != null))");
+  expect(ime).not.toContain("haptics.play(Haptic.WordPicked)\n        if (word == null)");
+  // A triple tap with nothing in front picks nothing, and its held touch neither registers nor drags.
+  expect(ime).toMatch(/nothingHere\(words = true\) -> nothingToPick\(\)/);
+  expect(ime).toMatch(/if \(taps == 0 \|\| gestureRegistered \|\| gestureEmpty\) return/);
+  expect(ime).toMatch(/if \(gestureEmpty\) \{\s*contact\.cancelActive\(\)\s*return\s*\}/);
+  // Steering with no text says no once, at the hold or at a slide that comes first.
+  expect(ime).toMatch(/if \(!words && nothingHere\(words = false\)\) \{\s*nothingToPick\(\)/);
+  expect(ime).toContain("if (!gestureEmpty && !gestureRegistered && !drag.words && nothingHere(words = false)) nothingToPick()");
+  // A new touch starts fresh.
+  expect(ime).toMatch(/gestureRegistered = false\s*gestureEmpty = false/);
+  // Its own switch in Space gestures, with the lab's words.
+  const lib = read("lib/haptics.ts");
+  expect(lib).toContain('id: "nothing_to_pick", label: "Nothing to pick"');
+  expect(lib).not.toContain("two_taps_above");
+  expect(read("android/kotlin/com/atlas/keyboard/HapticTimeline.kt")).toContain('Haptic.NothingToPick -> "Taps found no word"');
 });

@@ -41,7 +41,7 @@ object HapticTimeline {
         Haptic.SteerResumed -> "Steering picked up after a slip"
         Haptic.Select -> "Selecting started"
         Haptic.WordPicked -> "Taps picked a word"
-        Haptic.TwoTapsAbove -> "Two taps above Space did nothing"
+        Haptic.NothingToPick -> "Taps found no word"
         Haptic.CursorLetter -> "The cursor passed a letter"
         Haptic.CursorSpace -> "The cursor passed a space"
         Haptic.SelectionWord -> "The selection moved a word"

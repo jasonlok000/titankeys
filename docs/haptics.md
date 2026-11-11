@@ -38,7 +38,7 @@ Patterns are on and off in ms, starting with on.
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
 | **Gone** | 60 | Forget, the clipboard cleared |
 | **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
-| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, nothing left to delete (flick and hold), the cursor hitting the start or end of the text, two taps above Space in the guide's practice field |
+| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, nothing left to delete (flick and hold), the cursor hitting the start or end of the text, taps on Space that find nothing to pick or steer |
 | **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations |
 
 The rising and falling patterns use a short first or last pulse on purpose: the short pulse is what makes the rise or the fall. So Confirm's 15 ms and Change's 20 ms are under rule 1's "about 25". The table wins over that guide.
@@ -74,7 +74,7 @@ A tick within 35 ms of the flick's tail is left out. Any key or touch cuts the d
 - Steering starts: confirm.
 - Selecting starts (tap, tap, then hold): lock.
 - A double or triple tap picks a word: lock, as the word is now selected.
-- Two taps above Space pick nothing: no, but only in the guide's practice field, which teaches it. Everywhere else they stay quiet.
+- Nothing to pick: a double or triple tap with no word to take (an empty field, between spaces, only marks), or a steer with no text at all. Nothing happens, no selection and no lock, only a no, once. Two taps above Space play it too, but only in the guide's practice field, which teaches it. Everywhere else they stay quiet.
 - Your finger slips off while steering and lands again in time: texture, once, so you know you're still steering and not typing.
 - The cursor passes a letter: texture. It passes a space or a line end: boundary. So you can count words without looking. Punctuation has no tick of its own, as it almost always sits next to a space.
 - The selection grows or shrinks by a word: boundary.

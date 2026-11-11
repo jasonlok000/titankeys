@@ -72,6 +72,8 @@ class AtlasIme : InputMethodService() {
     private var cursorPath = ArrayList<Sample>()
     /** The touch of a Space gesture registered before any slide, so the strip shows it and its feel has played. */
     private var gestureRegistered = false
+    /** This touch's Space gesture found nothing to work on, played its no, and does nothing more. See [nothingToPick]. */
+    private var gestureEmpty = false
     /** Where that touch landed, for the strip's track. */
     private var gestureLanded: Sample? = null
     /** The cursor has moved far from where its text was read, so the next step reads it again. */
@@ -335,7 +337,7 @@ class AtlasIme : InputMethodService() {
     private val confirmTwoAbove = Runnable {
         if (!inGuide || !cursorGesture.confirmTwoAbove()) return@Runnable
         // A no, so the taps that did nothing are felt as nothing. Everywhere else they stay quiet.
-        haptics.play(Haptic.TwoTapsAbove)
+        haptics.play(Haptic.NothingToPick)
         KeyboardEvents.publish { KeyboardEvent.TwoTapsAbove }
     }
 
@@ -403,6 +405,12 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun startCursor(drag: CursorGesture.Drag, samples: List<Sample>) {
+        // A slide before the hold registered still steers nothing where there is no text. Selecting was decided on landing.
+        if (!gestureEmpty && !gestureRegistered && !drag.words && nothingHere(words = false)) nothingToPick()
+        if (gestureEmpty) {
+            contact.cancelActive()
+            return
+        }
         Recording.sink?.gesture("drag", samples.lastOrNull()?.time ?: SystemClock.uptimeMillis(), "words=${drag.words}")
         KeyboardEvents.publish { KeyboardEvent.CursorStarted(drag.words) }
         cursor.start(drag.landed, drag.words)
@@ -431,11 +439,16 @@ class AtlasIme : InputMethodService() {
      */
     private fun registerGesture(now: Long) {
         val taps = cursorGesture.held(now)
-        if (taps == 0 || gestureRegistered) return
-        gestureRegistered = true
+        if (taps == 0 || gestureRegistered || gestureEmpty) return
         val words = taps >= 3
+        // Selecting was decided as the touch landed, in [pickOnLand]. Steering with no text at all does nothing but say no.
+        if (!words && nothingHere(words = false)) {
+            nothingToPick()
+            return
+        }
+        gestureRegistered = true
         Recording.sink?.gesture("registered", now, "taps=$taps")
-        haptics.play(if (words) Haptic.Select else Haptic.Steer)
+        haptics.play(Haptic.registered(words, nothing = false))
         if (words) readWordsAroundCursor() else readCursorText()
         strip?.gesture?.cursorFrame((gestureLanded?.x ?: .5f) * 10, 0, 0f, words, now)
     }
@@ -469,7 +482,53 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(confirmDoubleTap)
         finishHeldTaps(type = false)
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped(3) }
-        if (field.exact) haptics.play(Haptic.WordPicked) else enqueue { selectWord(inFront = true) }
+        when {
+            field.exact -> haptics.play(Haptic.WordPicked)
+            // No word in front of the cursor: no selection, no word drag, only a no.
+            nothingHere(words = true) -> nothingToPick()
+            else -> {
+                // Typing still on its way decides it later: with no word then, the rest of this touch does nothing too.
+                val landed = gestureLanded
+                enqueue { selectWord(inFront = true) { if (gestureLanded === landed) nothingLater() } }
+            }
+        }
+    }
+
+    /**
+     * True where a Space gesture has nothing to work on: no word to pick for [words], or no text at all to steer through. It
+     * reads the field now, as the feel plays now. With typing still on its way, or a field that doesn't answer, there is text.
+     */
+    private fun nothingHere(words: Boolean): Boolean {
+        if (field.exact || pendingInput.isNotEmpty() || composer.hasPendingInput) return false
+        val connection = currentInputConnection ?: return false
+        if (!words) {
+            val before = connection.getTextBeforeCursor(1, 0) ?: return false
+            val after = connection.getTextAfterCursor(1, 0) ?: return false
+            return !WordSelection.anyToSteer(before, after)
+        }
+        val around = connection.getSurroundingText(WORD_REACH, WORD_REACH, 0) ?: return false
+        return !WordSelection.anyToPick(around.text, around.selectionStart, around.selectionEnd, inFront = true)
+    }
+
+    /**
+     * Taps on or above Space found nothing to work on. Nothing happens, not even typing, and the glow goes: only the no plays,
+     * once, so you know it didn't fire because there's nothing there (owner, 2026-11-11).
+     */
+    private fun nothingToPick() {
+        haptics.play(Haptic.NothingToPick)
+        nothingLater()
+    }
+
+    /** The rest of a touch that found nothing does nothing. Its no has played. */
+    private fun nothingLater() {
+        Recording.sink?.gesture("nothing", SystemClock.uptimeMillis(), "")
+        gestureEmpty = true
+        gestureRegistered = true
+        main.removeCallbacks(registerGestureLater)
+        contact.cancelActive()
+        finishHeldTaps(type = false)
+        strip?.gesture?.glowOff()
+        if (cursor.active) endCursor()
     }
 
     /** Space set as a tap key would type the first tap of a double tap, so a tap waits until it can't be one. */
@@ -1693,6 +1752,7 @@ class AtlasIme : InputMethodService() {
                 cursorGesture.down(first, gestureCounts)
                 swipeShown = 0
                 gestureRegistered = false
+                gestureEmpty = false
                 main.removeCallbacks(registerGestureLater)
                 if (cursorGesture.touchPending) {
                     gestureLanded = first
@@ -1984,11 +2044,17 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    /** Selects the word at the cursor, or does nothing between words. [inFront] also takes the word before the cursor past marks and spaces, for a triple tap. See [WordSelection.atOrBefore]. */
-    private fun selectWord(inFront: Boolean = false) = changeSelection { text, start, end, _ ->
+    /**
+     * Selects the word at the cursor, or does nothing between words but say no, then calls [nothing]. [inFront] also takes the
+     * word before the cursor past marks and spaces, for a triple tap. See [WordSelection.atOrBefore].
+     */
+    private fun selectWord(inFront: Boolean = false, nothing: () -> Unit = {}) = changeSelection { text, start, end, _ ->
         val word = if (inFront) WordSelection.atOrBefore(text, start, end) else WordSelection.at(text, start, end)
-        haptics.play(Haptic.WordPicked)
-        if (word == null) return@changeSelection null
+        haptics.play(Haptic.picked(found = word != null))
+        if (word == null) {
+            nothing()
+            return@changeSelection null
+        }
         strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
         strip?.gesture?.wordSelected(SystemClock.uptimeMillis())
         word

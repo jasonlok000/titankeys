@@ -29,6 +29,16 @@ object WordSelection {
     }
 
     /**
+     * True where a double or triple tap would find a word to pick: [inFront] for a triple tap, see [atOrBefore]. An empty
+     * field, a cursor between spaces with nothing to take, or only marks have none, and the taps then do nothing.
+     */
+    fun anyToPick(text: CharSequence, selectionStart: Int, selectionEnd: Int, inFront: Boolean) =
+        (if (inFront) atOrBefore(text, selectionStart, selectionEnd) else at(text, selectionStart, selectionEnd)) != null
+
+    /** True where steering has text to move through: anything at all before or after the cursor. */
+    fun anyToSteer(before: CharSequence, after: CharSequence) = before.isNotEmpty() || after.isNotEmpty()
+
+    /**
      * The selection after one word of a word drag towards [direction], -1 or 1. It grows by a word. If it has already
      * grown the other way past the [anchorStart] to [anchorEnd] that the drag began with, it gives back a word instead.
      */

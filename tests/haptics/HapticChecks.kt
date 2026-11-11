@@ -21,6 +21,7 @@ fun main() {
     theGateSaysWhy()
     theFeedOnlyRecordsWhenOn()
     theOwnersFourAdditions()
+    tapsThatFindNothingSayNo()
     theDotsTickAsTheyLand()
     aCutDropsTheTicksToCome()
     aHoldsDotsTickAtTheLift()
@@ -55,7 +56,7 @@ private val table = mapOf(
     Haptic.SteerResumed to Family.Texture,
     Haptic.Select to Family.Lock,
     Haptic.WordPicked to Family.Lock,
-    Haptic.TwoTapsAbove to Family.No,
+    Haptic.NothingToPick to Family.No,
     Haptic.CursorLetter to Family.Texture,
     Haptic.CursorSpace to Family.Boundary,
     Haptic.SelectionWord to Family.Boundary,
@@ -398,7 +399,7 @@ private fun theFeedOnlyRecordsWhenOn() {
 
 /** Four from the audit the owner approved: a steer picked up after a slip, exact typing's chips, and two taps above Space in the guide. */
 private fun theOwnersFourAdditions() {
-    check(Haptic.SteerResumed.group == HapticGroup.Space && Haptic.TwoTapsAbove.group == HapticGroup.Space) { "Space gestures" }
+    check(Haptic.SteerResumed.group == HapticGroup.Space && Haptic.NothingToPick.group == HapticGroup.Space) { "Space gestures" }
     check(Haptic.ExactChip.group == HapticGroup.Bar && Haptic.ExactUnlock.group == HapticGroup.Bar) { "Exact typing's bar" }
     check(Haptic.chipTapped(wasLocked = false) == Haptic.ExactChip) { "A tap on a chip that isn't locked is confirm" }
     check(Haptic.chipTapped(wasLocked = true) == Haptic.ExactUnlock) { "A tap that unlocks a locked chip is release" }
@@ -410,7 +411,7 @@ private fun theOwnersFourAdditions() {
     check(gate.admit(Haptic.CursorLetter.family)) { "The next letter still ticks" }
     check(gate.check(Haptic.CursorEnd.family) == HapticResult.Played) { "And an end still plays its no" }
     // Its plain words for the lab.
-    for (haptic in listOf(Haptic.SteerResumed, Haptic.TwoTapsAbove, Haptic.ExactChip, Haptic.ExactUnlock))
+    for (haptic in listOf(Haptic.SteerResumed, Haptic.NothingToPick, Haptic.ExactChip, Haptic.ExactUnlock))
         check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic has a trigger" }
 }
 
@@ -523,4 +524,25 @@ private fun aHoldsDotsTickAtTheLift() {
     check(DotTicks.times(listOf(30L, 60L, 90L), 0) == listOf(60L, 90L)) { "A tick 30 ms after the last haptic goes, one 60 ms after stays" }
     check(DotTicks.times(listOf(30L, 60L), -10) == listOf(30L, 60L)) { "One 40 ms after stays" }
     check(DotTicks.times(lands, -20) == lands) { "At normal speed the dots land long after it" }
+}
+
+/** Taps that find no word, or steering with no text, play Nothing to pick: the same no as nothing left to delete, never a lock. */
+private fun tapsThatFindNothingSayNo() {
+    check(Haptic.NothingToPick.id == "nothing_to_pick") { "Its own switch" }
+    check(Haptic.NothingToPick.group == HapticGroup.Space) { "in the Space gestures group" }
+    check(Haptic.NothingToPick.family == Haptic.DeleteNothing.family) { "The same no as nothing left to delete" }
+    check(Haptic.NothingToPick.family.pattern == listOf(25L, 40L, 25L, 40L, 25L)) { "25, 40, 25, 40, 25" }
+    check(HapticTimeline.trigger(Haptic.NothingToPick) == "Taps found no word") { "The lab's trigger text" }
+    check(Haptic.of("two_taps_above") == null) { "Two taps above Space is now part of Nothing to pick" }
+    check(Haptic.picked(found = true) == Haptic.WordPicked) { "A tap that picks a word locks" }
+    check(Haptic.picked(found = false) == Haptic.NothingToPick) { "A tap that finds none says no" }
+    check(Haptic.registered(words = false, nothing = false) == Haptic.Steer) { "A steer confirms" }
+    check(Haptic.registered(words = true, nothing = false) == Haptic.Select) { "A select locks" }
+    for (words in listOf(false, true))
+        check(Haptic.registered(words, nothing = true) == Haptic.NothingToPick) { "Nothing to work on says no, never a lock, words=$words" }
+    // Nothing to pick is a message, so it is never cut short or held up by the glow's ticks before it.
+    val clock = Clock()
+    val gate = HapticGate { clock.now }
+    check(gate.admit(Haptic.SpaceTap.family)) { "A counted tap ticks" }
+    check(gate.check(Haptic.NothingToPick.family) == HapticResult.Played) { "and the no after it still plays" }
 }

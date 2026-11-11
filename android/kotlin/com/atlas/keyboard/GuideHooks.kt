@@ -64,6 +64,13 @@ internal object GuideHooks {
         stripPoints?.invoke(index)
     }
 
+    /** The keyboard listens here, so that the clipboard lesson has clips to show: it pins these, newest first, once. */
+    @Volatile var clipSeeds: ((List<String>) -> Unit)? = null
+
+    fun seedClips(clips: List<String>) {
+        clipSeeds?.invoke(clips)
+    }
+
     /** The guide's word for a word after [before], only in the guide's field. */
     fun intended(privateOptions: String?, before: String): String? =
         if (privateOptions?.contains(FIELD) == true) script?.invoke(before)?.takeIf { it.isNotEmpty() } else null

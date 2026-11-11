@@ -60,6 +60,9 @@ sealed interface KeyboardEvent {
     /** A word on the strip was held, and its menu opened. */
     data class WordMenu(val word: String) : KeyboardEvent
 
+    /** A button of the word menu was picked, by a touch or a key: Save, Forget or Back, by its name. */
+    data class MenuPicked(val action: String) : KeyboardEvent
+
     /**
      * What each key of the open Sym panel shows, by the name of the key under it in [Layout]: a symbol, an emoji, a setting's
      * label or a short mark for an icon. Keys that show nothing are left out. Sent each time the panel draws itself.

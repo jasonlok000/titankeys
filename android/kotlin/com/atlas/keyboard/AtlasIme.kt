@@ -530,6 +530,20 @@ class AtlasIme : InputMethodService() {
                 else if (editing && currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) == true) strip?.playDemo(demo)
             }
         }
+        // The guide's clipboard lesson pins a few clips, so that the clipboard has something to show. Only in its own field.
+        GuideHooks.clipSeeds = { clips ->
+            main.post {
+                if (!editing || currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) != true) return@post
+                val now = System.currentTimeMillis()
+                for (text in clips.reversed()) {
+                    if (clipHistory.clips.any { it.text == text }) continue
+                    if (!clipHistory.add(text, now)) continue
+                    clipHistory.togglePin(0)
+                }
+                saveClips()
+                showClips()
+            }
+        }
         GuideHooks.stripPoints = { index ->
             main.post {
                 if (index == null) strip?.point(null)
@@ -1276,6 +1290,7 @@ class AtlasIme : InputMethodService() {
 
     private fun stripAction(action: Strip.Action) {
         val held = menuWord
+        if (held != null && action != Strip.Action.OpenSelected) KeyboardEvents.publish { KeyboardEvent.MenuPicked(action.name) }
         when (action) {
             Strip.Action.OpenSelected -> strip?.selected?.let { openMenu(HeldWord(it, "")) }
             Strip.Action.Close -> closeMenu()
@@ -2494,6 +2509,7 @@ class AtlasIme : InputMethodService() {
         GuideHooks.panelRequests = null
         GuideHooks.stripDemos = null
         GuideHooks.stripPoints = null
+        GuideHooks.clipSeeds = null
         // A held status must not outlive the keyboard.
         if (hold.held) hideHeldWindow()
         unregisterReceiver(screenOn)

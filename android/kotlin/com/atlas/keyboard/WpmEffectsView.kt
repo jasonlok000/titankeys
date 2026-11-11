@@ -92,6 +92,21 @@ internal class WpmEffectsView(context: Context) : View(context) {
         postInvalidateOnAnimation()
     }
 
+    /**
+     * Rains [count] of [emoji] down the screen once, as a reward, whatever the speed: the guide's paste lesson uses it. With
+     * animations off it does nothing.
+     */
+    fun burst(emoji: String, count: Int) {
+        if (!GuideMotion.enabled || width == 0) return
+        repeat(count) {
+            val size = dp(random.nextFloat() * 12f + 20f)
+            add(Bit(Kind.Fall, random.nextFloat() * width, -size - random.nextFloat() * height * BURST_SPREAD, 0f,
+                dp(random.nextFloat() * 160f + 260f), random.nextFloat() * 40f - 20f, (random.nextFloat() - .5f) * 120f, 0f,
+                FALL_SECONDS, Color.WHITE, size, emoji))
+        }
+        postInvalidateOnAnimation()
+    }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         val reach = dp(EDGE_DP)
         val glowColour = GuideMotion.faded(EDGE, .7f)
@@ -399,6 +414,8 @@ internal class WpmEffectsView(context: Context) : View(context) {
         const val SPROUT_SECONDS = 1.4f
         const val CLEAR_SECONDS = .3f
         const val FALL_SECONDS = 6f
+        /** A burst starts this much of the screen's height above it, so that it arrives over a second or two. */
+        const val BURST_SPREAD = .8f
         const val SHOWER_SECONDS = 6f
         const val BROWN_FLICKER = 18f
         /** The last part of a life over which a bit fades. */

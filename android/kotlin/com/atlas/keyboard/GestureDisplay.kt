@@ -52,6 +52,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     /** How fast the gesture goes, from 0 for the slowest to 1 for the fastest. */
     var intensity = 0f
         private set
+    /**
+     * Which way steering leans and how hard, eased so it never jumps: -1 fully left to 1 fully right, 0 on Space. The underglow
+     * brightens on that side.
+     */
+    var steerLean = 0f
+        private set
     /** How far the line of text has gone past the caret, from 0 to 1 of a letter. It wraps round into [letters]. */
     var flow = 0f
         private set
@@ -567,6 +573,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         when (scene) {
             Scene.Cursor -> {
                 intensity = ease(intensity, speedTarget, elapsed, EASE_MILLIS, motion)
+                steerLean = ease(steerLean, leaning * (LEAN_BASE + (1f - LEAN_BASE) * intensity), elapsed, LEAN_MILLIS, motion)
                 shownStep = ease(shownStep, stepped.toFloat(), elapsed, STEP_MILLIS, motion)
                 if (motion) {
                     val next = flow + leaning * flowRate(intensity) * seconds
@@ -693,6 +700,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         leaning = 0
         speedTarget = 0f
         intensity = 0f
+        steerLean = 0f
         flow = 0f
         letters = 0
         wordsLeft = 0
@@ -732,6 +740,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         private const val HIDE_MILLIS = 140f
         /** How quickly a value catches up with a new one. */
         private const val EASE_MILLIS = 70f
+        /** A lean at the slowest speed already brightens its side this much; the fastest brightens it fully. */
+        const val LEAN_BASE = .45f
+        /** The underglow's side follows the lean a little slower than the speed, so a flick across Space doesn't flash. */
+        private const val LEAN_MILLIS = 110f
         private const val STEP_MILLIS = 60f
         /** A frame that comes late must not make the text jump. */
         private const val MAX_FRAME_MILLIS = 48f

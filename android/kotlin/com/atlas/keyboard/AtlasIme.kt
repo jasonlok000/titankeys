@@ -605,6 +605,15 @@ class AtlasIme : InputMethodService() {
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
             { modifiers.autoShifted }) { barWords = it; strip?.words = it }
         composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
+        composer.sentenceSpaces = {
+            when (TypingSettings.sentenceSpaces(this)) {
+                "two" -> 2
+                "none" -> 0
+                else -> 1
+            }
+        }
+        composer.commaSpace = { TypingSettings.commaSpace(this) }
+        composer.sentenceCapitals = { TypingSettings.autoCapitalise(this) }
         composer.onStroke = Trace::stroke
         // Backspace putting a word back plays nothing: the key press is felt already.
         composer.onAutocorrect = { haptics.play(Haptic.Autocorrect) }

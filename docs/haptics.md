@@ -118,7 +118,7 @@ A tick within 35 ms of the flick's tail is left out. Any key or touch cuts the d
 
 - **Physical key presses.** Your thumb feels them.
 - **Shift or Alt once.** A key press, and the bar shows it.
-- **The double-space full stop and the automatic capital.** You see them land as you type.
+- **The double-space full stop, the space after a mark and the automatic capital.** You see them land as you type. Backspace taking that space out again is a key press too.
 - **A swiped word landing.** Its ticks already played.
 - **Slipping and carrying on in a swipe.** The swipe just goes on. Steering is different: it ticks once when your finger lands again, above.
 - **Lifting to end a steer.** You lifted, so you know.

@@ -53,6 +53,30 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("auto_punctuation", enabled).apply();
     }
 
+    /**
+     * How many spaces go in after a typed full stop, question mark or exclamation mark, once the next letter comes: "one",
+     * "two" or "none". One until the user picks another.
+     */
+    public static String sentenceSpaces(Context context) {
+        String spaces = preferences(context).getString("sentence_spaces", "one");
+        return "two".equals(spaces) || "none".equals(spaces) ? spaces : "one";
+    }
+
+    public static void sentenceSpaces(Context context, String spaces) {
+        if (!"one".equals(spaces) && !"two".equals(spaces) && !"none".equals(spaces))
+            throw new IllegalArgumentException("Not a number of spaces");
+        preferences(context).edit().putString("sentence_spaces", spaces).apply();
+    }
+
+    /** A space goes in after a typed comma, semicolon or colon, once the next letter comes. */
+    public static boolean commaSpace(Context context) {
+        return preferences(context).getBoolean("comma_space", true);
+    }
+
+    public static void commaSpace(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("comma_space", enabled).apply();
+    }
+
     /** Two quick pushes lock Shift or Alt. When this is off, they leave it on for the next character only. */
     public static boolean doublePressLocks(Context context) {
         return preferences(context).getBoolean("double_press_locks", false);

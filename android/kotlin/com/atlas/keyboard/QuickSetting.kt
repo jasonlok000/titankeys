@@ -10,7 +10,7 @@ enum class QuickSetting(val key: String, val label: String, val title: String) {
     SwipeTyping("S", "Swipe", "Swipe to type words"),
     SuggestionBar("W", "Words", "Show word suggestions"),
     AutoCapitalise("C", "Caps", "Capital letter to start a sentence"),
-    AutoPunctuation("D", "Dot", "Full stop on double space"),
+    AutoPunctuation("D", "Dot", "Double Space types a full stop"),
     Vibration("V", "Vib", "Haptics"),
     HoldSymbols("H", "Hold", "Hold a letter for its symbol"),
     CursorControl("M", "Move", "Move the cursor from Space"),

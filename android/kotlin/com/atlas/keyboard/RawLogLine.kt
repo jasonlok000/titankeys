@@ -21,6 +21,10 @@ enum class EditCause(val cause: String, val via: String? = null, val automatic: 
     /** A snippet or an emoji shortcode took the place of its code. */
     Expand("expand", automatic = true),
     ExpandUndo("expandundo", automatic = true),
+    /** Spaces after a typed mark, which went in when the next letter came. */
+    MarkSpace("markspace", automatic = true),
+    /** Spaces after a mark taken out again, by Backspace or because the word after them was an address. */
+    MarkSpaceUndo("markspaceundo", automatic = true),
 }
 
 /** One word the swipe engine considered, with the parts of its score. */

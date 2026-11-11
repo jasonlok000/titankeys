@@ -2,6 +2,8 @@ import { resource } from "ink";
 import { callNative, onNativeMessage } from "ink/native";
 
 export type Spelling = "british" | "american";
+/** How many spaces go in after a full stop, a question mark or an exclamation mark. */
+export type SentenceSpaces = "one" | "two" | "none";
 export type EnterKey = "send" | "newline" | "app";
 /** How a message goes out in an app: the field's action, or a plain Enter key. */
 export type SendMethod = "action" | "key";
@@ -45,6 +47,10 @@ export type State = {
   autoCapitalise: boolean;
   /** Two quick spaces type a full stop, and typed punctuation moves in front of a space. */
   autoPunctuation: boolean;
+  /** Spaces that go in after a typed . ? or ! when the next letter comes. */
+  sentenceSpaces: SentenceSpaces;
+  /** A space goes in after a typed comma, semicolon or colon when the next letter comes. */
+  commaSpace: boolean;
   /** Fixes slips in typed words when they end. Swiped words never change. */
   autocorrect: boolean;
   suggestionBar: boolean;
@@ -111,7 +117,7 @@ export type HapticsLab = {
   haptics: Record<string, { family: string; pattern: number[]; plays: string }>;
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
 
 /**
  * Touchpad points from 0 to 1 across the keyboard and down its four rows, with how thick to draw the trail there: 1 for a

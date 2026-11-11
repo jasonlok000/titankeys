@@ -11,6 +11,7 @@ import { hiddenBarLabel } from "./hidden-bar";
 import { holdLabel } from "./hold";
 import { liftLabel } from "./lift";
 import { rawLogLabel } from "./rawlog";
+import { sentenceSpacesLabel } from "./sentence-spaces";
 import { setupLabel } from "./setup";
 import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
@@ -29,7 +30,10 @@ export default function Settings() {
         onChange={autocorrect => save.run({ autocorrect })} />
       <Toggle label="Capital letter to start a sentence" value={settings.autoCapitalise}
         onChange={autoCapitalise => save.run({ autoCapitalise })} />
-      <Toggle label="Full stop on double space" value={settings.autoPunctuation}
+      <Field label="Space after a sentence" href="/settings/sentence-spaces">{sentenceSpacesLabel(settings)}</Field>
+      <Toggle label="Space after , ; :" value={settings.commaSpace}
+        onChange={commaSpace => save.run({ commaSpace })} />
+      <Toggle label="Double Space types a full stop" value={settings.autoPunctuation}
         onChange={autoPunctuation => save.run({ autoPunctuation })} />
       <Field label="English spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
       <Field label="Hold a letter for its symbol" href="/settings/hold">{holdLabel(settings)}</Field>

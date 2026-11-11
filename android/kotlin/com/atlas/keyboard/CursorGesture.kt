@@ -22,8 +22,7 @@ import kotlin.math.max
  * The numbers come from recordings of these gestures on a Titan 2 Elite.
  *
  * The touchpad stops at the middle of the Space row, so a tap low on Space is often not felt at all. The taps may also
- * land just above Space: anywhere on the bottom letter row, as wide as the Space bar (V, B and the inner edges
- * of C and N). A touch that lands there is the start of a word as often as not, so there only a sideways drag counts,
+ * land just above Space: anywhere on C, V, B and N. A touch that lands there is the start of a word as often as not, so there only a sideways drag counts,
  * never one up.
  */
 class CursorGesture {
@@ -219,8 +218,13 @@ class CursorGesture {
          * and fires none within 600 ms before a key press. A key press always calls a gesture off, so no press is lost.
          */
         const val ZONE_TOP = .5f
-        const val ZONE_LEFT = .36f
-        const val ZONE_RIGHT = .64f
+        /**
+         * From C's left edge to N's right edge, the whole of C, V, B and N (owner, 2026-11-11). Over raw log 17 that is one more
+         * gesture and one more swiped word taken as one than the inner edges of C and N, and no press is lost: a press calls a
+         * gesture off.
+         */
+        const val ZONE_LEFT = .3f
+        const val ZONE_RIGHT = .7f
 
         /** Whether a touch that lands at [x], [y] may be part of a gesture: anywhere on Space, or in the zone above it. */
         fun inZone(x: Float, y: Float) = y >= BOTTOM_ROW_TOP || y >= ZONE_TOP && x >= ZONE_LEFT && x < ZONE_RIGHT

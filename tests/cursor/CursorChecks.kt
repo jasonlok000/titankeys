@@ -1016,7 +1016,10 @@ private fun steersFrom(column: Float, row: Float): Boolean {
 private fun aboveSpaceOnlyAsWideAsSpace() {
     same(steersFrom(3.7f, ABOVE_ROW), true, "The zone is as wide as Space, so it takes the edge of C next to V")
     same(steersFrom(6.3f, ABOVE_ROW), true, "The zone is as wide as Space, so it takes the edge of N next to B")
-    same(steersFrom(3.2f, ABOVE_ROW), false, "Most of C is outside the zone and keeps typing")
+    same(steersFrom(3.1f, ABOVE_ROW), true, "All of C is in the zone (owner, 2026-11-11)")
+    same(steersFrom(6.9f, ABOVE_ROW), true, "and all of N")
+    same(steersFrom(2.9f, ABOVE_ROW), false, "X, just left of C, keeps typing")
+    same(steersFrom(7.1f, ABOVE_ROW), false, "M, just right of N, keeps typing")
     same(steersFrom(2.5f, ABOVE_ROW), false, "X keeps typing")
     same(steersFrom(7.5f, ABOVE_ROW), false, "M keeps typing")
 }

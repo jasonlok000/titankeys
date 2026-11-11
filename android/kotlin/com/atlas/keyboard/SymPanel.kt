@@ -400,8 +400,11 @@ class SymPanel(
     /** Text that follows the system font size up to [largest] dp, so that it stays inside a row of fixed height. */
     private fun TextView.sized(sp: Float, largest: Float) {
         val metrics = this@SymPanel.resources.displayMetrics
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, min(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, metrics),
-            TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, largest, metrics)))
+        val size = min(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, metrics),
+            TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, largest, metrics))
+        // Only a real change: setting the size lays the text out again, which would throw a rolling line back to its start mid-roll
+        // each time a finger moves.
+        if (kotlin.math.abs(textSize - size) > .5f) setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
     }
 
     /** The insets listener does not always run in the keyboard's window, so the corners are read here as well. */

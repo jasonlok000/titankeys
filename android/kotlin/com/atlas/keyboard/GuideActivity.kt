@@ -1107,7 +1107,10 @@ class GuideActivity : Activity() {
                     for ((offset, char) in expected.withIndex()) {
                         if (!char.isLetter()) continue
                         if (letter >= track.typed.length) break
-                        if (!track.typed[letter].equals(char, ignoreCase = true)) span(BackgroundColorSpan(wrong), (range.first + offset)..(range.first + offset))
+                        val at = (range.first + offset)..(range.first + offset)
+                        // Each letter typed right turns grey as it's typed, like the words behind you; a wrong one is boxed.
+                        if (!track.typed[letter].equals(char, ignoreCase = true)) span(BackgroundColorSpan(wrong), at)
+                        else span(ForegroundColorSpan(GuideMotion.faded(strong, PASSAGE_DONE)), at)
                         letter++
                     }
                     if (track.typed.length > GuideScript.letters(expected).length) span(BackgroundColorSpan(wrong), range)

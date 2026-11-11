@@ -51,6 +51,18 @@ fun main() {
     whereTheStripDoesNotShowNothingShows()
     turningTheStripOffEndsTheDisplay()
     aRecoveredGestureStartsClean()
+    aSwipeDrawsItsPath()
+    aSwipePathFadesIntoTheResult()
+    aDeleteFlickCancelsThePath()
+    aFlickFlourishReplacesThePath()
+    aLongSwipeKeepsItsShape()
+    aSwipeAsksForFramesOnlyWhileItFades()
+    theGlowGrowsWithEachTap()
+    theGlowFadesWhenNoTapFollows()
+    aKeyPressPutsTheGlowOut()
+    theGlowLeavesTheWordsAlone()
+    withMotionOffTheGlowIsStill()
+    onlyCountedTapsGlow()
     println("Gesture display checks passed")
 }
 
@@ -591,4 +603,195 @@ private fun realWordsForAWordDrag() {
     if (display.wordWidth(1) != GestureDisplay.widthFor(3) || display.wordWidth(2) != 0f) throw AssertionError("After it, fox and then nothing")
     if (GestureDisplay.widthFor(1) >= GestureDisplay.widthFor(9)) throw AssertionError("A longer word is wider")
     if (GestureDisplay().wordWidth(5) <= 0f) throw AssertionError("With no text known, a made-up row shows")
+}
+
+private fun near(actual: Float, expected: Float, message: String) {
+    if (kotlin.math.abs(actual - expected) > .001f) throw AssertionError("$message: expected $expected, got $actual")
+}
+
+/** A word swipe dims the words and draws its path from the first point to the finger. */
+private fun aSwipeDrawsItsPath() {
+    val display = GestureDisplay()
+    display.swipePoint(.1f, .1f, 0L)
+    display.swipePoint(.3f, .2f, 10L)
+    display.swipePoint(.5f, .1f, 20L)
+    same(display.scene, GestureDisplay.Scene.Swipe, "A swipe shows its mini path")
+    same(display.pathSize, 3, "with each point")
+    near(display.pathX[2], .5f, "The last point is the finger")
+    display.advance(200L, 1f)
+    near(display.reveal, 1f, "The words dim fully while it goes")
+    display.swipePoint(.5f, .1f, 210L)
+    same(display.pathSize, 3, "A point where the finger already is adds nothing")
+}
+
+/** On lift the path fades over about 300 ms, while the words come back with what it typed. */
+private fun aSwipePathFadesIntoTheResult() {
+    val display = GestureDisplay()
+    display.swipePoint(.1f, .1f, 0L)
+    display.swipePoint(.4f, .3f, 10L)
+    display.advance(200L, 1f)
+    display.swipeEnded()
+    display.advance(350L, 1f)
+    if (display.reveal <= 0f || display.reveal >= 1f) throw AssertionError("Halfway, the path is fading: ${display.reveal}")
+    display.advance(560L, 1f)
+    same(display.scene, GestureDisplay.Scene.None, "After the fade the words are back")
+    same(display.pathSize, 0, "and the path is gone")
+    display.swipePoint(.2f, .2f, 600L)
+    same(display.pathSize, 1, "The next swipe starts a new path")
+}
+
+/** A touch that turns out to be a delete flick takes the path away at once, but a fading path is left to fade. */
+private fun aDeleteFlickCancelsThePath() {
+    val display = GestureDisplay()
+    display.swipePoint(.9f, .3f, 0L)
+    display.swipePoint(.8f, .3f, 10L)
+    display.swipeCancelled()
+    same(display.scene, GestureDisplay.Scene.None, "A delete flick shows no path")
+    display.swipePoint(.1f, .1f, 20L)
+    display.swipePoint(.3f, .1f, 30L)
+    display.advance(150L, 1f)
+    display.swipeEnded()
+    display.swipeCancelled()
+    same(display.scene, GestureDisplay.Scene.Swipe, "The next touch leaves a fading path to fade")
+}
+
+/** A flick's dots replace the path, and a cursor drag does too. */
+private fun aFlickFlourishReplacesThePath() {
+    val display = GestureDisplay()
+    display.swipePoint(.1f, .1f, 0L)
+    display.swipePoint(.3f, .1f, 10L)
+    display.swipeEnded()
+    display.wordDeleted(20L, 3)
+    same(display.scene, GestureDisplay.Scene.DeleteFlick, "A flick's dots replace the path")
+    same(display.pathSize, 0, "and the path goes")
+    val drag = GestureDisplay()
+    drag.cursorFrame(5f, 0, 0f, false, 0L)
+    drag.swipePoint(.1f, .1f, 10L)
+    same(drag.scene, GestureDisplay.Scene.Cursor, "A swipe point never breaks a cursor drag")
+}
+
+/** A long swipe keeps every other point when it runs out of room, so its start and its finger stay. */
+private fun aLongSwipeKeepsItsShape() {
+    val display = GestureDisplay()
+    for (index in 0..GestureDisplay.MAX_PATH) display.swipePoint((index % 100) / 100f, if (index / 100 % 2 == 0) .1f else .5f, index.toLong())
+    if (display.pathSize > GestureDisplay.MAX_PATH) throw AssertionError("The path never grows past its room")
+    near(display.pathX[0], 0f, "The path still starts where the swipe did")
+    near(display.pathX[display.pathSize - 1], (GestureDisplay.MAX_PATH % 100) / 100f, "and ends at the finger")
+}
+
+/** Light on frames: the path asks for a frame when it moves, and only while it comes in or fades. */
+private fun aSwipeAsksForFramesOnlyWhileItFades() {
+    var asked = 0
+    val display = GestureDisplay { asked++ }
+    display.swipePoint(.1f, .1f, 0L)
+    display.swipePoint(.3f, .1f, 10L)
+    same(asked, 2, "Each new point asks for a frame")
+    display.swipePoint(.3f, .1f, 12L)
+    same(asked, 2, "A point that does not move asks for none")
+    if (!display.advance(40L, 1f)) throw AssertionError("While it comes in, it asks for frames")
+    display.advance(300L, 1f)
+    if (display.advance(320L, 1f)) throw AssertionError("A still finger asks for no more frames")
+    display.swipeEnded()
+    if (!display.advance(330L, 1f)) throw AssertionError("While it fades, it asks for frames")
+}
+
+/** Tap one is small and soft, tap two grows from where the glow is, and tap three is full under the middle word with a pulse. */
+private fun theGlowGrowsWithEachTap() {
+    val display = GestureDisplay()
+    display.spaceTapped(1, 0L)
+    same(display.showing, false, "The glow leaves the words showing")
+    display.advance(GestureDisplay.GLOW_GROW.toLong(), 1f)
+    near(display.glowWidth, GestureDisplay.GLOW_WIDTHS[1], "One tap: a small glow")
+    near(display.glowAlpha, GestureDisplay.GLOW_ALPHAS[1], "and a soft one")
+    display.advance(150L, 1f)
+    val before = display.glowWidth
+    display.spaceTapped(2, 150L)
+    display.advance(150L, 1f)
+    near(display.glowWidth, before, "Tap two grows from where the glow is")
+    display.advance(150L + GestureDisplay.GLOW_GROW.toLong(), 1f)
+    near(display.glowWidth, GestureDisplay.GLOW_WIDTHS[2], "Two taps: wider")
+    near(display.glowAlpha, GestureDisplay.GLOW_ALPHAS[2], "and brighter")
+    display.spaceTapped(3, 300L)
+    display.advance(330L, 1f)
+    if (display.glowPulse <= 0f) throw AssertionError("Three taps pulse")
+    display.advance(300L + GestureDisplay.GLOW_GROW.toLong(), 1f)
+    near(display.glowWidth, GestureDisplay.GLOW_WIDTHS[3], "Three taps: full under the middle word")
+    if (GestureDisplay.GLOW_WIDTHS[1] >= GestureDisplay.GLOW_WIDTHS[2] || GestureDisplay.GLOW_WIDTHS[2] >= GestureDisplay.GLOW_WIDTHS[3]
+        || GestureDisplay.GLOW_ALPHAS[1] >= GestureDisplay.GLOW_ALPHAS[2] || GestureDisplay.GLOW_ALPHAS[2] >= GestureDisplay.GLOW_ALPHAS[3])
+        throw AssertionError("Each tap is wider and brighter than the last")
+}
+
+/** With no tap after it, the glow fades in about 250 ms, and an animation scale slows it. */
+private fun theGlowFadesWhenNoTapFollows() {
+    val display = GestureDisplay()
+    display.spaceTapped(1, 0L)
+    display.advance(GestureDisplay.GLOW_GROW.toLong() + 125, 1f)
+    if (display.glowAlpha <= 0f || display.glowAlpha >= GestureDisplay.GLOW_ALPHAS[1]) throw AssertionError("Halfway, it is fading: ${display.glowAlpha}")
+    if (display.advance((GestureDisplay.GLOW_GROW + GestureDisplay.GLOW_FADE).toLong() + 1, 1f)) throw AssertionError("Then it asks for no frames")
+    same(display.glowTaps, 0, "and it is gone")
+    if (GestureDisplay.GLOW_FADE != 250f) throw AssertionError("The owner asked for about 250 ms")
+    val slow = GestureDisplay()
+    slow.spaceTapped(1, 0L)
+    slow.advance((GestureDisplay.GLOW_GROW + GestureDisplay.GLOW_FADE).toLong() + 1, 2f)
+    same(slow.glowTaps, 1, "With the animation scale at 2 it lasts twice as long")
+}
+
+/** A key press means the taps made nothing, so the glow goes at once. A touch landing does not. */
+private fun aKeyPressPutsTheGlowOut() {
+    val display = GestureDisplay()
+    display.spaceTapped(1, 0L)
+    display.interrupt()
+    same(display.glowTaps, 1, "The next touch landing keeps the glow, so its tap can grow it")
+    display.glowOff()
+    same(display.glowTaps, 0, "A key press puts it out")
+    same(display.busy, false, "and nothing is left to draw")
+}
+
+/** The glow sits under the words and never covers them, also over a swipe's path, and not where the strip does not show. */
+private fun theGlowLeavesTheWordsAlone() {
+    val display = GestureDisplay()
+    display.spaceTapped(2, 0L)
+    same(display.busy, true, "The glow needs drawing")
+    same(display.showing, false, "but a touch on the strip can still pick a word")
+    display.allowed = false
+    same(display.glowTaps, 0, "Where the strip does not show, the glow goes")
+    display.spaceTapped(1, 10L)
+    same(display.glowTaps, 0, "and none starts")
+}
+
+/** With animations off, the glow shows at its size with no motion, then goes. */
+private fun withMotionOffTheGlowIsStill() {
+    val display = GestureDisplay()
+    display.spaceTapped(3, 0L)
+    display.advance(1L, 0f)
+    near(display.glowWidth, GestureDisplay.GLOW_WIDTHS[3], "It shows at its size at once")
+    same(display.glowPulse, 0f, "with no pulse")
+    display.advance((GestureDisplay.GLOW_GROW + GestureDisplay.GLOW_FADE).toLong(), 0f)
+    same(display.glowTaps, 0, "then goes")
+}
+
+/** The gesture code says which taps count: quick taps on Space, one to three. A slow touch or one that slides counts none. */
+private fun onlyCountedTapsGlow() {
+    val gesture = CursorGesture()
+    val start = 10_000L
+    fun tap(at: Long, x: Float = .5f, lift: Long = 60L, slide: Float = 0f): Int {
+        gesture.down(Sample(x, .9f, at), true)
+        gesture.up(listOf(Sample(x + slide, .9f, at + lift)), at + lift)
+        return gesture.tapped
+    }
+    same(tap(start), 1, "A quick tap on Space counts as one")
+    same(tap(start + 160), 2, "a second as two")
+    same(tap(start + 320), 3, "a third as three")
+    val slow = CursorGesture()
+    slow.down(Sample(.5f, .9f, start), true)
+    slow.up(listOf(Sample(.5f, .9f, start + 400)), start + 400)
+    same(slow.tapped, 0, "A held touch is no tap")
+    val swipe = CursorGesture()
+    swipe.down(Sample(.5f, .9f, start), true)
+    swipe.up(listOf(Sample(.2f, .9f, start + 60)), start + 60)
+    same(swipe.tapped, 0, "A touch that slides is no tap")
+    val key = CursorGesture()
+    key.down(Sample(.5f, .9f, start), false)
+    key.up(listOf(Sample(.5f, .9f, start + 60)), start + 60)
+    same(key.tapped, 0, "A touch that can't type, such as just after a key press, is no tap")
 }

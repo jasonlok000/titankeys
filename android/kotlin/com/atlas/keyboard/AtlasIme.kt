@@ -1603,6 +1603,7 @@ class AtlasIme : InputMethodService() {
                 Recording.sink?.gesture("down", first.time, "counts=$gestureCounts cursorControl=$cursorControl " +
                     "altOrPanel=$altOrPanel contact=${contact.travel != null}")
                 cursorGesture.down(first, gestureCounts)
+                swipeShown = 0
                 gestureRegistered = false
                 main.removeCallbacks(registerGestureLater)
                 if (cursorGesture.touchPending) {
@@ -1631,7 +1632,10 @@ class AtlasIme : InputMethodService() {
                 cursorPath.addAll(samples.filter { it.valid })
                 contact.move(samples)
                 // A held delete flick only waits for the finger to lift.
-                if (contact.deleting) return
+                if (contact.deleting) {
+                    strip?.gesture?.swipeCancelled()
+                    return
+                }
                 samples.lastOrNull()?.let { registerGesture(it.time) }
                 cursorGesture.move(samples)?.let {
                     startCursor(it, samples)
@@ -1645,6 +1649,7 @@ class AtlasIme : InputMethodService() {
                 if (contact.swipes && !altOrPanel && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
                 Trace.touch(contact.points, false)
+                showSwipe()
             }
             MotionEvent.ACTION_UP -> lift(event, samples, cancelled = false)
             // The system cancels a gesture when its window goes, such as the window above the shade. Like a short lift, the
@@ -1652,11 +1657,51 @@ class AtlasIme : InputMethodService() {
             MotionEvent.ACTION_CANCEL -> lift(event, samples, cancelled = true)
             MotionEvent.ACTION_POINTER_DOWN -> {
                 contact.cancelActive()
+                strip?.gesture?.swipeCancelled()
                 endDeleteHold()
                 endCursor()
                 Trace.touch(emptyList(), true)
             }
         }
+    }
+
+    /** Points of this touch already on the strip's mini path. */
+    private var swipeShown = 0
+
+    /**
+     * The strip shows a word swipe's path as it goes. A touch that hasn't gone far enough to be a swipe shows nothing, and neither
+     * does a delete flick, nor a touch that can't type, such as with Alt on or the panel open.
+     */
+    private fun showSwipe() {
+        val gesture = strip?.gesture ?: return
+        val points = contact.points
+        val travel = contact.travel
+        val first = points.firstOrNull()
+        if (!contact.swipes || altOrPanel || travel == null || travel < Contact.SWIPE_KEYS || first == null
+            || startsDeleteFlick(first.x, first.y) && isDeleteWordSwipe(points)) {
+            gesture.swipeCancelled()
+            swipeShown = 0
+            return
+        }
+        if (swipeShown > points.size) swipeShown = 0
+        val now = SystemClock.uptimeMillis()
+        for (index in swipeShown until points.size) {
+            val point = points[index]
+            if (point.valid) gesture.swipePoint(point.x, point.y, now)
+        }
+        swipeShown = points.size
+    }
+
+    /**
+     * A Space tap that the gesture code counted grows the glow under the middle word. A first tap on a key that types by tapping
+     * may become that key, so it shows nothing; a key press puts the glow out (see [onKeyDown]).
+     */
+    private fun glowSpaceTap(cancelled: Boolean) {
+        val taps = cursorGesture.tapped
+        if (cancelled || taps == 0) return
+        val landed = cursorGesture.tappedLanded
+        if (taps == 1 && landed != null && isTapKey(Layout.keyAt(landed.x, landed.y))) return
+        strip?.gesture?.spaceTapped(taps, SystemClock.uptimeMillis())
     }
 
     /** A finger lifted, or the system cancelled the gesture, which counts as a lift but never as a tap of a double tap. */
@@ -1668,6 +1713,8 @@ class AtlasIme : InputMethodService() {
         } else cursorGesture.up(samples, event.eventTime)
         Recording.sink?.gesture("up", event.eventTime, "doubleTapped=$doubleTapped" + if (cancelled) " cancelled=true" else "")
         main.removeCallbacks(registerGestureLater)
+        strip?.gesture?.swipeEnded()
+        glowSpaceTap(cancelled)
         // Three quick taps pick the word at the cursor, with no slide, once no fourth touch follows.
         if (cursor.active) {
             main.removeCallbacks(stepCursor)
@@ -2213,6 +2260,7 @@ class AtlasIme : InputMethodService() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         clearTeamsEgg()
         strip?.gesture?.interrupt()
+        strip?.gesture?.glowOff()
         wakeIdleBar()
         if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
         Recording.sink?.key(event, touchpad.isGestureKey(event))

@@ -466,10 +466,10 @@ class Strip(
         drawAutoCapital(canvas)
         idle?.let { drawIdle(canvas, it) }
         drawDemoFinger(canvas)
-        if (!gesture.showing) return
+        if (!gesture.busy) return
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
         val more = gesture.advance(SystemClock.uptimeMillis(), scale)
-        if (gesture.showing) drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), dp(56), look)
+        if (gesture.busy) drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), dp(56), look)
         if (more) postInvalidateOnAnimation()
     }
 

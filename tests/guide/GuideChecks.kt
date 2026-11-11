@@ -66,6 +66,7 @@ private fun theMenuKeys() {
 }
 
 fun main() {
+    modifiersAreNoTyping()
     theMenuKeys()
     steadyKeyLight()
     playgroundSpeed()
@@ -619,4 +620,13 @@ private fun demonstrationsTypePunctuation() {
     same(flow.step.id, "swipe", "The swipe slide should open")
     val done = (0 until 10).firstOrNull { flow.event(Recognised(listOf(GuideScript.letters(GuideScript.wordAt(it))))) == GuideVerdict.Done }
     same(done != null, true, "Swiped words without their marks should finish the swipe slide")
+}
+
+/** Shift, Alt, Sym, fn and Ctrl put in no text, so they neither start nor keep up the playground's speed. */
+private fun modifiersAreNoTyping() {
+    for (code in listOf(android.view.KeyEvent.KEYCODE_SHIFT_LEFT, android.view.KeyEvent.KEYCODE_ALT_LEFT, android.view.KeyEvent.KEYCODE_SYM,
+            android.view.KeyEvent.KEYCODE_FUNCTION, android.view.KeyEvent.KEYCODE_CTRL_LEFT))
+        if (WpmMeter.counts(code)) throw AssertionError("Key $code must not count towards the speed")
+    for (code in listOf(android.view.KeyEvent.KEYCODE_A, android.view.KeyEvent.KEYCODE_SPACE, android.view.KeyEvent.KEYCODE_DEL))
+        if (!WpmMeter.counts(code)) throw AssertionError("Key $code is typing and counts")
 }

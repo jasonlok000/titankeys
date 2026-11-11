@@ -1586,6 +1586,8 @@ class GuideActivity : Activity() {
     private var showingWpm = false
     /** The comment's step that shows, from [WpmComments.STEPS], or -1 for none. */
     private var commentStep = -1
+    /** When that comment came, for [WpmMeter.COMMENT_MIN_MILLIS]. */
+    private var commentAt = 0L
     private val comments by lazy { resources.getStringArray(R.array.playground_comments) }
     private val wpmTick = object : Runnable {
         override fun run() = showWpm()
@@ -1594,7 +1596,9 @@ class GuideActivity : Activity() {
     private fun countWpm(event: KeyboardEvent) {
         val now = SystemClock.uptimeMillis()
         when (event) {
-            is KeyboardEvent.Pushed, is KeyboardEvent.Tapped, is KeyboardEvent.Recognised, is KeyboardEvent.DeletedWord,
+            // Shift, Alt, Sym, fn and Ctrl type nothing, so they don't count.
+            is KeyboardEvent.Pushed -> if (WpmMeter.counts(event.code)) wpm.input(now, field.length()) else return
+            is KeyboardEvent.Tapped, is KeyboardEvent.Recognised, is KeyboardEvent.DeletedWord,
             is KeyboardEvent.Chosen -> wpm.input(now, field.length())
             is KeyboardEvent.FieldChanged -> wpm.text(event.text.length)
             else -> return
@@ -1632,6 +1636,8 @@ class GuideActivity : Activity() {
         // It stops ticking once the burst is over and the number is back to nothing.
         if (speed != null || shown > 0) main.postDelayed(wpmTick, WPM_TICK_MILLIS)
         else {
+            // The number is back to nothing, so the playground's own line returns, however long the last comment has shown.
+            showComment(-1, force = true)
             shownWpm = 0f
             backdrop.show(backgroundOf(tone))
         }
@@ -1641,8 +1647,12 @@ class GuideActivity : Activity() {
      * The comment for [step], in the place of the playground's line, from its step until the next one. Going up, it slides in and
      * the number gives a small pulse; counting down, it steps back quietly, and below the first step the playground's line returns.
      */
-    private fun showComment(step: Int) {
+    private fun showComment(step: Int, force: Boolean = false) {
         if (step == commentStep) return
+        // Each comment stays long enough to read, whichever way the speed goes next.
+        val now = SystemClock.uptimeMillis()
+        if (!force && commentStep >= 0 && now - commentAt < WpmMeter.COMMENT_MIN_MILLIS) return
+        commentAt = now
         val rose = step > commentStep
         commentStep = step
         val line = comments.getOrNull(step) ?: PLAYGROUND_BODY

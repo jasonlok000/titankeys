@@ -1,5 +1,6 @@
 package com.atlas.keyboard
 
+import android.view.KeyEvent
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -39,6 +40,17 @@ internal class WpmMeter {
     }
 
     companion object {
+        /** Shift, Alt, Sym, fn, Ctrl and the like put in no text, so they neither start a burst nor keep it going. */
+        private val MODIFIERS = setOf(KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT, KeyEvent.KEYCODE_ALT_LEFT,
+            KeyEvent.KEYCODE_ALT_RIGHT, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT, KeyEvent.KEYCODE_META_LEFT,
+            KeyEvent.KEYCODE_META_RIGHT, KeyEvent.KEYCODE_SYM, KeyEvent.KEYCODE_FUNCTION, KeyEvent.KEYCODE_CAPS_LOCK)
+
+        /** Whether a push of [code] is typing, which counts towards the speed. */
+        fun counts(code: Int) = code !in MODIFIERS
+
+        /** Each comment stays at least this long, up or down, so that it can be read. */
+        const val COMMENT_MIN_MILLIS = 3000L
+
         /** Five seconds with nothing ends a burst, and the speed counts back down to nothing. */
         const val IDLE_MILLIS = 5000L
         const val MIN_SPAN_MILLIS = 4000L

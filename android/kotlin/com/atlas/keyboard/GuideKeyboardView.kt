@@ -107,6 +107,17 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             invalidate()
         }
 
+    /**
+     * What the keys show while the Sym panel is open, by key name, as the keyboard reports it, or null for the plain keys. With a
+     * face, each letter key shows its symbol, emoji or setting instead of its letter, and an empty key shows nothing.
+     */
+    var face: Map<String, String>? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
     /** The gesture that the ghost finger shows now. */
     var cue: GuideCue = GuideCue.Free
         private set
@@ -281,7 +292,12 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val centreY = key.box.centerY()
         canvas.save()
         canvas.scale(pressed * appear, pressed * appear, centreX, centreY)
-        var label = key.name
+        val faced = face
+        var label = when {
+            faced == null -> key.name
+            key.letter -> faced[key.name].orEmpty()
+            else -> faced[key.name] ?: key.name
+        }
         var flip = 1f
         if (key.flipStart >= 0) {
             val t = GuideMotion.progress(key.flipStart, FLIP_MILLIS)
@@ -305,7 +321,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val labelColour = GuideMotion.blend(idleLabel, litLabel, heat.coerceIn(0f, 1f))
         drawLabel(canvas, key, label, labelColour)
         // Like the real keys, each letter has its Alt symbol printed small in its top left corner.
-        altSymbols[key.name]?.takeIf { label == key.name }?.let { symbol ->
+        altSymbols[key.name]?.takeIf { label == key.name && face == null }?.let { symbol ->
             altPaint.color = GuideMotion.faded(labelColour, ALT_ALPHA)
             altPaint.textSize = min(key.box.width(), key.box.height()) * ALT_SIZE
             canvas.drawText(symbol, key.box.left + inset + key.box.width() * ALT_INSET, key.box.top + inset - altPaint.ascent() + key.box.height() * ALT_INSET / 2, altPaint)
@@ -391,7 +407,14 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             }
             // The key next to Space shows one square, the recent apps mark.
             "▦" -> canvas.drawRoundRect(x - r * .75f, y - r * .75f, x + r * .75f, y + r * .75f, r * .15f, r * .15f, iconPaint)
-            else -> canvas.drawText(label, x, y - (labelPaint.ascent() + labelPaint.descent()) / 2, labelPaint)
+            "" -> Unit
+            else -> {
+                // A setting's name or a clip is longer than a letter, so it shrinks to fit its key.
+                val room = box.width() * LABEL_ROOM
+                val wide = labelPaint.measureText(label)
+                if (wide > room) labelPaint.textSize = size * room / wide
+                canvas.drawText(label, x, y - (labelPaint.ascent() + labelPaint.descent()) / 2, labelPaint)
+            }
         }
     }
 
@@ -538,8 +561,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }
 
     /**
-     * A soft patch, like the steer zone, over where a delete flick can start ([deleteStartBoxes]): Backspace and the right edge, and
-     * the middle row from K. It stops where the touchpad stops feeling. The ghost's flick starts inside it.
+     * A soft patch, like the steer zone, over where a delete flick can start ([deleteStartBoxes]): one rectangle over the right
+     * edge, from I and O down to M and Sym, or with [DELETE_RECTANGLE] off, Backspace and the right edge and the middle row from K.
+     * It stops where the touchpad stops feeling. The ghost's flick starts inside it.
      */
     private fun drawDeleteZone(canvas: Canvas) {
         if (cue !is GuideCue.Flick) return
@@ -617,6 +641,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val KEY_LABEL_INK = .85f
         const val LABEL_LETTER = .52f
         const val LABEL_SMALL = .36f
+        /** The part of a key's width that a label may take. */
+        const val LABEL_ROOM = .86f
         // The Alt symbol in the corner of a letter key, as parts of the key's size.
         const val ALT_SIZE = .26f
         const val ALT_INSET = .1f

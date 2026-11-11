@@ -23,11 +23,21 @@ private const val MIN_TRAVEL = .1f
 private const val TURN_BACK = .05f
 
 /**
+ * The delete zone as one rectangle, as wide and as tall as the L shape of the right edge and the middle row together, so that it
+ * also takes in the edges of I, O, M and Sym. Off, a flick starts only in the L shape. A flick from anywhere in the rectangle is
+ * read by the right edge's rules. The guide's drawing and its practice follow this switch.
+ * Kept as a switch until a replay of real swipes from I, O, M and Sym says how many of them would become deletes.
+ */
+internal const val DELETE_RECTANGLE = true
+
+/**
  * Where a level delete flick can start, as boxes of left, top, right and bottom in touchpad space, read from the numbers above so
  * that the guide's shaded zone cannot drift from the gesture: the right edge with Backspace, and further in on the middle row from
  * K. A level flick ends at the height it starts, so the limits for its end apply too.
  */
-internal val deleteStartBoxes: List<FloatArray> get() = listOf(
+internal val deleteStartBoxes: List<FloatArray> get() = if (DELETE_RECTANGLE) listOf(
+    floatArrayOf(INNER_EDGE, max(EDGE_START_TOP, EDGE_END_TOP), 1f, minOf(EDGE_START_BOTTOM, EDGE_END_BOTTOM)),
+) else listOf(
     floatArrayOf(RIGHT_EDGE, max(EDGE_START_TOP, EDGE_END_TOP), 1f, minOf(EDGE_START_BOTTOM, EDGE_END_BOTTOM)),
     floatArrayOf(INNER_EDGE, MIDDLE_ROW_TOP, RIGHT_EDGE, minOf(INNER_START_BOTTOM, INNER_END_BOTTOM)),
 )
@@ -66,7 +76,7 @@ internal fun isDeleteWordSwipe(points: List<Sample>): Boolean {
     val last = points.last()
     if (first.x - last.x < MIN_TRAVEL || points.any { it.x < last.x - TURN_BACK }) return false
     val wander = pathKeys(points) / max(hypot((last.x - first.x) * 10, (last.y - first.y) * 4), 1e-6f)
-    if (first.x >= RIGHT_EDGE) {
+    if (first.x >= RIGHT_EDGE || DELETE_RECTANGLE && first.x >= INNER_EDGE) {
         return first.y >= EDGE_START_TOP && first.y < EDGE_START_BOTTOM &&
             last.y >= EDGE_END_TOP && last.y < EDGE_END_BOTTOM && wander <= EDGE_WANDER
     }
@@ -80,7 +90,7 @@ internal val deleteSwipeTuning: Map<String, Any> get() = mapOf(
     "edgeEndTop" to EDGE_END_TOP, "edgeEndBottom" to EDGE_END_BOTTOM, "edgeWander" to EDGE_WANDER,
     "innerEdge" to INNER_EDGE, "middleRowTop" to MIDDLE_ROW_TOP, "innerStartBottom" to INNER_START_BOTTOM,
     "innerEndBottom" to INNER_END_BOTTOM, "innerTilt" to INNER_TILT, "innerWander" to INNER_WANDER,
-    "minTravel" to MIN_TRAVEL, "turnBack" to TURN_BACK,
+    "minTravel" to MIN_TRAVEL, "turnBack" to TURN_BACK, "deleteRectangle" to DELETE_RECTANGLE,
     "deleteHoldMillis" to HOLD_MILLIS, "deleteHoldKeys" to HOLD_KEYS, "deleteRepeatSlowMillis" to REPEAT_SLOW_MILLIS,
     "deleteRepeatFastMillis" to REPEAT_FAST_MILLIS, "deleteRepeatShortKeys" to REPEAT_SHORT_KEYS,
     "deleteRepeatLongKeys" to REPEAT_LONG_KEYS,

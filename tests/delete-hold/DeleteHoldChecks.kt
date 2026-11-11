@@ -55,6 +55,14 @@ private fun theGuideZoneIsWhereFlicksStart() {
         same(isDeleteWordSwipe(stroke), true, "A flick from just inside the zone at $cx, $cy deletes")
     }
     same(startsDeleteFlick(.7f, .375f), false, "Left of K is outside the zone")
+    if (DELETE_RECTANGLE) {
+        // One rectangle as wide and as tall as the old L shape: it takes in the edges of I, O, M and Sym too.
+        same(deleteStartBoxes.size, 1, "The zone is one rectangle")
+        for ((cx, cy, key) in listOf(Triple(.78f, .2f, "I"), Triple(.85f, .2f, "O"), Triple(.78f, .58f, "M"), Triple(.85f, .58f, Layout.SYM))) {
+            same(Layout.keyAt(cx, cy), key, "The rectangle reaches $key")
+            same(isDeleteWordSwipe((0..10).map { at(cx - .3f * it / 10, cy, it * 15L) }), true, "A flick from $key deletes")
+        }
+    }
     same(isDeleteWordSwipe((0..10).map { at(.7f - .3f * it / 10, .375f, it * 15L) }), false, "A flick from outside the zone does not delete")
 }
 

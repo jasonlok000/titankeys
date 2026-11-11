@@ -53,6 +53,18 @@ sealed interface KeyboardEvent {
 
     /** The text or selection of the screen's own field changed. The screen that owns the field sends this. */
     data class FieldChanged(val text: String, val start: Int, val end: Int) : KeyboardEvent
+
+    /** Something was copied to the clipboard. The screen that owns the field sends this, as only it may read the clipboard. */
+    data class Copied(val text: String) : KeyboardEvent
+
+    /** A word on the strip was held, and its menu opened. */
+    data class WordMenu(val word: String) : KeyboardEvent
+
+    /**
+     * What each key of the open Sym panel shows, by the name of the key under it in [Layout]: a symbol, an emoji, a setting's
+     * label or a short mark for an icon. Keys that show nothing are left out. Sent each time the panel draws itself.
+     */
+    data class PanelFace(val panel: Modifiers.Panel, val labels: Map<String, String>) : KeyboardEvent
 }
 
 /**

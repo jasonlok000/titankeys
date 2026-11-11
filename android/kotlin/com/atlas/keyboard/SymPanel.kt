@@ -444,7 +444,23 @@ class SymPanel(
             else -> null
         }
         showHover()
+        // The guide draws the keys as the panel shows them, so that the drawing on its slide matches the real panel.
+        KeyboardEvents.publish { KeyboardEvent.PanelFace(mode, if (mode == Modifiers.Panel.Closed) emptyMap() else face()) }
     }
+
+    /** What each key shows now, as text, with a short mark for each icon. */
+    private fun face() = cells.keys.mapNotNull { key ->
+        val rows = pageRows(key)
+        val shown = when {
+            opensClipboard(key) -> "📋"
+            key == Layout.ALT -> if (quick || clipboard) "←" else "⚙"
+            key == Layout.SYM -> if (mode == Modifiers.Panel.Symbols) "☺" else "✕"
+            rows != null -> if (rows < 0) "↓" else "↑"
+            clipboard -> clipAt(key)?.let { ClipboardHistory.preview(it.text, FACE_CLIP_LENGTH) } ?: label(key)
+            else -> label(key)
+        }
+        shown?.takeIf { it.isNotEmpty() }?.let { key to it }
+    }.toMap()
 
     /**
      * The screen's rounded corners cut into the bottom of the panel. The keys in the outer columns move their content in, and
@@ -554,6 +570,8 @@ class SymPanel(
     private fun dp(value: Int) = Math.round(value * resources.displayMetrics.density)
 
     private companion object {
+        /** How much of a clip the guide's drawing shows on its key. */
+        const val FACE_CLIP_LENGTH = 4
         const val BAND_HEIGHT = 32
         const val ROW_HEIGHT = 46
         /** How far the lowest content of a row is over the row's bottom: an icon in the middle of the row. */

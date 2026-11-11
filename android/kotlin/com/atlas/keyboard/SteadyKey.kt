@@ -10,6 +10,29 @@ class SteadyKey(private val keyAt: (Float, Float) -> String) {
     var key = ""
         private set
     private var liftedAt: Long? = null
+    /**
+     * The physical keys down now. The touchpad reports a lift when a key goes down and then nothing until it is let go, so the
+     * key stays while a key is down, as when a key toggles a quick setting under a resting finger.
+     */
+    private val keysDown = HashSet<Int>()
+
+    /** A physical key went down. */
+    fun keyDown(code: Int) {
+        keysDown += code
+    }
+
+    /**
+     * A physical key was let go at [time]. Returns true when it was the last one: then a resting finger is reported again at once,
+     * and if none is, the key clears as after a lift.
+     */
+    fun keyUp(code: Int, time: Long): Boolean {
+        if (!keysDown.remove(code) || keysDown.isNotEmpty()) return false
+        liftedAt = time
+        return true
+    }
+
+    /** No key is down any more, as when the keyboard hides. */
+    fun keysReleased() = keysDown.clear()
 
     /** A finger is at [x], [y]. Returns true if [key] changed. */
     fun touch(x: Float, y: Float): Boolean {
@@ -29,7 +52,7 @@ class SteadyKey(private val keyAt: (Float, Float) -> String) {
     /** Clears the key when the finger has stayed off for [LIFT_MILLIS] at [now]. Returns true if [key] changed. */
     fun expire(now: Long): Boolean {
         val lifted = liftedAt ?: return false
-        if (now - lifted < LIFT_MILLIS) return false
+        if (keysDown.isNotEmpty() || now - lifted < LIFT_MILLIS) return false
         liftedAt = null
         if (key.isEmpty()) return false
         key = ""

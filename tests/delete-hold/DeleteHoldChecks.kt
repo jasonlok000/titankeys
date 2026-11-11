@@ -123,7 +123,7 @@ private class Rig {
 
     fun move(sample: Sample, allowed: Boolean = true) {
         contact.move(listOf(sample))
-        if (!contact.deleting) next = hold.moved(allowed)
+        if (!contact.deleting) next = hold.moved(allowed) else hold.follow(sample)?.let { next = it }
     }
 
     /** A flick left from Backspace that has stopped at [stop], with the finger still down. It stops at [flick] + 60. */
@@ -215,13 +215,39 @@ private fun theWaitCountsToWhereTheFingerStopped() {
     rig.move(at(LONG_STOP, .35f, 1_200))
     rig.runTo(1_200 + holdMillis + 1_000)
     same(rig.words.zipWithNext { a, b -> b - a }.first(), fastMillis, "The length must count to where the finger stopped")
-    // A move after the words have started is ignored, so it must not change the speed.
+    // While the hold deletes, the speed follows how far the finger is now: further left is faster, back is slower.
     val moved = Rig()
+    val started = 1_000L + 60 + holdMillis
     moved.flick(1_000, SHORT_STOP)
-    moved.runTo(1_000 + 60 + holdMillis)
-    moved.move(at(LONG_STOP, .35f, 1_000 + 60 + holdMillis + 10))
-    moved.runTo(1_000 + 60 + holdMillis + 2_000)
-    same(moved.words.zipWithNext { a, b -> b - a }.toSet(), setOf(slowMillis), "A move during the hold must not change the wait")
+    moved.runTo(started)
+    moved.move(at(LONG_STOP, .35f, started + 10))
+    moved.runTo(started + 1_000)
+    same(moved.words.zipWithNext { a, b -> b - a }.toSet(), setOf(fastMillis), "Sliding far left during the hold makes it the fastest")
+    moved.move(at(MIDDLE_STOP, .35f, started + 1_010))
+    val before = moved.words.size
+    moved.runTo(started + 3_000)
+    same(moved.words.drop(before - 1).zipWithNext { a, b -> b - a }.toSet(), setOf(215L), "Back to the middle, it slows to the middle wait")
+    moved.move(at(.15f, .35f, started + 3_010))
+    val far = moved.words.size
+    moved.runTo(started + 4_000)
+    same(moved.words.drop(far - 1).zipWithNext { a, b -> b - a }.toSet(), setOf(fastMillis), "Past seven keys it stays at the fastest, the cap")
+    // Speeding up takes effect at once: the next word comes the new wait after the last one, not after the old wait.
+    val quick = Rig()
+    quick.flick(1_000, SHORT_STOP)
+    quick.runTo(started)
+    quick.move(at(LONG_STOP, .35f, started + 20))
+    quick.runTo(started + fastMillis)
+    same(quick.words.size, 2, "The next word comes sooner as soon as the finger slides further")
+    // In between, the speed changes smoothly with the distance.
+    val waits = (0..6).map { k ->
+        val rig = Rig()
+        rig.flick(1_000, SHORT_STOP)
+        rig.runTo(started)
+        rig.move(at(.75f - k * .07f, .35f, started + 10))
+        rig.runTo(started + 2_000)
+        rig.words.zipWithNext { a, b -> b - a }.last()
+    }
+    same(waits.zipWithNext().all { (a, b) -> b < a && a - b < 60 }, true, "Each step further makes it a little faster: $waits")
 }
 
 private fun moreLengthDoesNotPassTheLimits() {

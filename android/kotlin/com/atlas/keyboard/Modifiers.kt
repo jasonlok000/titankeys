@@ -56,10 +56,13 @@ class Modifiers {
     /** A key that counts as Ctrl is down. The modifier bar shows this at once. */
     val ctrlHeld get() = ctrlKeys.isNotEmpty()
 
+    /** The automatic Shift waits while Ctrl is down: Ctrl's shortcuts take no Shift from it, and it is back when Ctrl lets go. */
+    val autoShiftWaits get() = autoShifted && ctrlHeld
+
     val metaState: Int
         get() {
             var meta = 0
-            if (shift != Level.Off) meta = meta or KeyEvent.META_SHIFT_ON
+            if (shift != Level.Off && !autoShiftWaits) meta = meta or KeyEvent.META_SHIFT_ON
             if (shift == Level.Locked) meta = meta or KeyEvent.META_CAPS_LOCK_ON
             if (alt != Level.Off) meta = meta or KeyEvent.META_ALT_ON
             return KeyEvent.normalizeMetaState(meta)

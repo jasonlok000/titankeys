@@ -125,14 +125,19 @@ internal fun flickMillis(points: List<Sample>): Long {
 private fun pathKeys(points: List<Sample>) = points.zipWithNext { a, b -> hypot((b.x - a.x) * 10, (b.y - a.y) * 4) }.sum()
 
 /**
- * A delete flick whose finger stays on the keys deletes more and more words until the finger lifts, at a steady speed that
- * the length of the flick sets. This class only keeps the times. [contact] knows if the finger is still there, so a lift,
+ * A delete flick whose finger stays on the keys deletes more and more words until the finger lifts. The further the finger is
+ * from where the flick started, the faster: slide further left and it speeds up, back towards Backspace and it slows, smoothly,
+ * between [REPEAT_SLOW_MILLIS] and [REPEAT_FAST_MILLIS] a word. This class only keeps the times. [contact] knows if the finger is still there, so a lift,
  * a key press or a new field ends the hold without a call to this class, and a test can run it with no clock.
  */
 internal class DeleteHold(private val contact: Contact) {
     private var still: Sample? = null
     private var started = false
     private var nextAt = 0L
+    /** Where the flick started, which the finger's distance is measured from while it holds. */
+    private var origin: Sample? = null
+    /** When the last word went. */
+    private var lastAt = 0L
     /** The wait between words. It is set while the flick is read, because a contact that deletes keeps no points. */
     var repeatMillis = REPEAT_SLOW_MILLIS
         private set
@@ -151,9 +156,24 @@ internal class DeleteHold(private val contact: Contact) {
         val last = points.last()
         val held = still?.takeIf { hypot((last.x - it.x) * 10, (last.y - it.y) * 4) <= HOLD_KEYS } ?: last
         still = held
-        repeatMillis = repeatMillis(hypot((held.x - points.first().x) * 10, (held.y - points.first().y) * 4))
+        origin = points.first()
+        repeatMillis = repeatMillis(keysFrom(points.first(), held))
         return held.time + HOLD_MILLIS
     }
+
+    /**
+     * The finger moved while the hold deletes: the wait between words follows how far it now is from where the flick started.
+     * Returns when the next word is due, sooner or later than before, or null if nothing is deleting.
+     */
+    fun follow(finger: Sample): Long? {
+        if (!contact.deleting || !started || !finger.valid) return null
+        val from = origin ?: return null
+        repeatMillis = repeatMillis(keysFrom(from, finger))
+        nextAt = lastAt + repeatMillis
+        return nextAt
+    }
+
+    private fun keysFrom(from: Sample, to: Sample) = hypot((to.x - from.x) * 10, (to.y - from.y) * 4)
 
     /**
      * The timer ran. Deletes a word if one is due, through [delete]: the flick itself for the first word, then null for each
@@ -172,12 +192,13 @@ internal class DeleteHold(private val contact: Contact) {
             if (!free) return now + BUSY_MILLIS
             delete(null)
         }
+        lastAt = now
         nextAt = now + repeatMillis
         started = true
         return nextAt
     }
 
-    /** A longer flick waits less between words. */
+    /** A finger further from the start waits less between words. */
     private fun repeatMillis(flickKeys: Float): Long {
         val longer = ((flickKeys - REPEAT_SHORT_KEYS) / (REPEAT_LONG_KEYS - REPEAT_SHORT_KEYS)).coerceIn(0f, 1f)
         return (REPEAT_SLOW_MILLIS + (REPEAT_FAST_MILLIS - REPEAT_SLOW_MILLIS) * longer).roundToLong()
@@ -187,5 +208,7 @@ internal class DeleteHold(private val contact: Contact) {
         still = null
         started = false
         nextAt = 0
+        lastAt = 0
+        origin = null
     }
 }

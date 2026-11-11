@@ -102,8 +102,11 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
     companion object {
         /** The newest clips that are not pinned. Pins have no limit. */
         const val LIMIT = 20
-        /** The clipboard page shows this many clips at a time: two to a row, each in a wide field over half a row of keys. */
-        const val PER_PAGE = 6
+        /**
+         * The clipboard page shows this many clips at a time, each in a field four keys wide over half a row of keys: two on each
+         * of the top rows, and one over Z to V. The bottom row's right half, B, N and M, is narrower, so it holds no clip.
+         */
+        const val PER_PAGE = 5
         const val RECENT = 0
         const val PINNED = 1
         const val GROUPS = 2
@@ -119,11 +122,11 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
             return if (column < HALF_SPLIT) 0 else 1
         }
 
-        /** The field over a key: row times two, plus one for the right half. Null for a key that is no letter of the inner columns. */
+        /** The field over a key: row times two, plus one for the right half. Null for a key under no field. */
         fun slot(key: String): Int? {
-            for ((row, keys) in Layout.rows.take(PER_PAGE / 2).withIndex()) {
+            for ((row, keys) in Layout.rows.take((PER_PAGE + 1) / 2).withIndex()) {
                 val column = keys.indexOf(key)
-                if (column >= 0) return halfAt(row, column)?.let { row * 2 + it }
+                if (column >= 0) return halfAt(row, column)?.let { row * 2 + it }?.takeIf { it < PER_PAGE }
             }
             return null
         }

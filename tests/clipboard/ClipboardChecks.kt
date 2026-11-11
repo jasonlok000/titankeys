@@ -74,9 +74,12 @@ fun main() {
     same(ClipboardHistory.ends("extraordinarily", 8f, width), "extraor…", "One long word keeps its start")
     same(ClipboardHistory.ends("For the record I will be late tonight", 24f, width).length <= 24, true, "The cut clip fits the room")
 
-    // The clipboard page: six wide fields, two to a row, inside the inner columns.
-    same(listOf("W", "T", "Y", "O", "S", "G", "H", "L", "Z", "V", "B", "M").map(ClipboardHistory::slot),
-        listOf(0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5), "Each half row of inner letters is under one clip")
+    // The clipboard page: five wide fields, all four keys wide, inside the inner columns. B, N and M hold no clip.
+    same(ClipboardHistory.PER_PAGE, 5, "Five clips to a page")
+    same(listOf("W", "T", "Y", "O", "S", "G", "H", "L", "Z", "V").map(ClipboardHistory::slot),
+        listOf(0, 0, 1, 1, 2, 2, 3, 3, 4, 4), "Each half row of inner letters is under one clip, as before")
+    same(listOf("B", "N", "M").map(ClipboardHistory::slot), listOf(null, null, null), "The narrow spot by Sym holds no clip any more")
+    same((0 until ClipboardHistory.PER_PAGE).map { ClipboardHistory.width(it / 2, it % 2) }.toSet(), setOf(4), "Every clip's field is four keys wide")
     same(listOf("Q", "A", "P", Layout.ALT, Layout.SYM, Layout.BACKSPACE, Layout.ENTER, Layout.SPACE).map(ClipboardHistory::slot),
         List(8) { null }, "The outer columns, Sym and Space are no clip, as the touchpad reads the edges poorly")
     for (slot in 0 until ClipboardHistory.PER_PAGE)
@@ -86,18 +89,19 @@ fun main() {
     same((0..2).map { row -> (0..1).map { ClipboardHistory.firstColumn(row, it) } }, listOf(listOf(1, 5), listOf(1, 5), listOf(1, 5)),
         "No field starts in the outer column")
 
-    // Clipboard and Pinned, in pages of six, as the symbols and emoji have groups and pages.
+    // Clipboard and Pinned, in pages of five, as the symbols and emoji have groups and pages.
     run {
         val clips = (1..14).map { ClipboardHistory.Clip("clip $it", it.toLong(), pinned = it % 5 == 0) }
         val pages = ClipboardHistory.Pages()
-        same(pages.pageCount(clips), 3, "Fourteen clips take three pages of six")
+        same(pages.pageCount(clips), 3, "Fourteen clips take three pages of five")
         same(pages.index(clips, 0), 0, "The first field holds the newest clip")
         same(pages.swipe(clips, 0f, -1f), true, "A swipe up turns to the next page")
-        // Clips that aren't pinned come first, and the pins after them: the seventh of those is at index 7, past the pin at 4.
-        same(pages.index(clips, 0), 7, "The second page starts at the seventh clip that isn't pinned")
+        // Clips that aren't pinned come first, and the pins after them: the sixth of those is at index 6, past the pin at 4.
+        same(pages.index(clips, 0), 6, "The second page starts at the sixth clip that isn't pinned")
         same(pages.items(clips).takeLast(2), listOf(4, 9), "The pins come after the rest")
         pages.swipe(clips, 0f, -1f)
-        same(pages.index(clips, 2), null, "The last page has empty fields")
+        same(pages.index(clips, 4), null, "The last page has empty fields")
+        same(pages.index(clips, 5), null, "No sixth field")
         same(pages.swipe(clips, 0f, -1f), true, "The pages wrap round, as on the symbols")
         same(pages.page, 0, "After the last page comes the first")
         same(pages.swipe(clips, -1f, 0f), true, "A swipe sideways changes the group")

@@ -1131,6 +1131,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onWindowHidden() {
+        panelHover.keysReleased()
         super.onWindowHidden()
         sleepIdleBar()
         if (field.exact) logExact("window hidden: back $passingBack typed $typedInField")
@@ -1709,9 +1710,15 @@ class AtlasIme : InputMethodService() {
                 }
                 cursorPath.addAll(samples.filter { it.valid })
                 contact.move(samples)
-                // A held delete flick only waits for the finger to lift.
+                // A held delete flick waits for the finger to lift, and goes faster the further the finger is from where it started.
                 if (contact.deleting) {
                     strip?.gesture?.swipeCancelled()
+                    samples.lastOrNull { it.valid }?.let { finger ->
+                        deleteHold.follow(finger)?.let {
+                            nextDeleteHoldStep(it)
+                            if (strip?.gesture?.scene == GestureDisplay.Scene.DeleteHold) strip?.gesture?.deleteHeld(deleteHold.repeatMillis, finger.time)
+                        }
+                    }
                     return
                 }
                 samples.lastOrNull()?.let { registerGesture(it.time) }
@@ -2351,6 +2358,8 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        // The panel's mark of the key under a resting finger stays while a key is down, as when it toggles a quick setting.
+        if (!touchpad.isGestureKey(event)) panelHover.keyDown(keyCode)
         clearTeamsEgg()
         interruptGesture()
         strip?.gesture?.glowOff()
@@ -2430,6 +2439,11 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        // The last key let go: a resting finger is reported again at once, and if none is, the mark goes as after a lift.
+        if (panelHover.keyUp(keyCode, event.eventTime) && panelOpen) {
+            main.removeCallbacks(expireHover)
+            main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
+        }
         if (lockedKeys.remove(keyCode)) return true
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))

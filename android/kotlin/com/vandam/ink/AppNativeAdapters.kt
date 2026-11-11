@@ -338,17 +338,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     syncPreview()
                     "null"
                 }
-                "labPlay" -> {
-                    lab().play(data.getString("id"))
-                    "null"
-                }
                 "labGraph" -> {
                     lab().showGraph(data.getJSONArray("haptics").toString())
-                    "null"
-                }
-                "labComments" -> lab().comments()
-                "labSaveComments" -> {
-                    lab().saveComments(data.getString("text"))
                     "null"
                 }
                 else -> throw IllegalArgumentException("Unknown Atlas operation: $operation")

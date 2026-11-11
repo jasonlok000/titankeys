@@ -289,6 +289,16 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         }
     }
 
+    /**
+     * When the last of a single flick's dots has popped in, in ms after the flick, at Android's animator duration [scale]. Null
+     * when no flick's dots pop in now, or with no motion. The delete flick's haptic lands its tail then.
+     */
+    fun dotsPoppedMillis(scale: Float): Long? {
+        if (scene != Scene.DeleteFlick || fromHold || dots == 0 || scale <= 0f) return null
+        val last = (dots - 1).toFloat() / dots
+        return ((last * POP_SPREAD + POP_LENGTH) * FLICK_IN * scale).toLong()
+    }
+
     /** The dots for words of [letters], nearest the caret first, cut at [MAX_DOTS] in all. */
     private fun setGroups(letters: List<Int>) {
         val out = ArrayList<Int>()
@@ -639,6 +649,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         const val FLICK_OUT = 450f
         const val FLICK_BACK = 150f
         const val FLICK_MILLIS = FLICK_IN + FLICK_HOLD + FLICK_OUT + FLICK_BACK
+        /**
+         * The dots pop in one after another over [FLICK_IN]: a dot whose place in the row is from 0 to 1 starts at that much of
+         * [POP_SPREAD] and takes [POP_LENGTH] of it.
+         */
+        const val POP_SPREAD = .6f
+        const val POP_LENGTH = .4f
         /** A lifted hold's lines shrink into the dots over this long, in the place of the dots' pop. */
         const val MORPH_IN = 240f
 

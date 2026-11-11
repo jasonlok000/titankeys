@@ -1397,7 +1397,7 @@ private fun suggestionBar(world: Realistic) {
 
 private fun smallerChecks() {
     // A changed word must feel different from a swipe tick (tests/haptics has the rest).
-    must(Haptic.Autocorrect.feel != Haptic.SwipeKey.feel, "A changed word feels different from a swipe tick")
+    must(Haptic.Autocorrect.family != Haptic.SwipeKey.family, "A changed word feels different from a swipe tick")
 
     // NoisyChannel.
     must(NoisyChannel.cost("vrown", "brown", near) < NoisyChannel.cost("prown", "brown", near), "A neighbouring key is a cheaper slip")

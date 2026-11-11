@@ -10,6 +10,8 @@ export default defineTheme({
   header: { layout: "large", size: 74, top: 21, bottom: 51, cutout: "below", back: { position: "end", icon: "arrow" }, iconSize: 60 },
   section: { uppercase: true, size: 31, gap: 48 },
   subtitle: { size: 30, tone: "muted" },
+  // Rows use the body text size, the same as fields and toggles.
+  row: { size: 45 },
   scrollBar: { colour: "#8e8e93", visibility: "scrolling", track: false, width: 8, inset: 30 },
   field: "inline",
   selection: "check",

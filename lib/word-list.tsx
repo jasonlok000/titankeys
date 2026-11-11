@@ -22,7 +22,7 @@ export function WordList({ title, words, empty, placeholder, addWord, removeWord
   const header = adding
     ? <TextInput value={word} onChange={setWord} onSubmit={value => value.trim() ? insert.run(value) : setAdding(false)}
       placeholder={placeholder} action="done" autoFocus autoCapitalise={false}
-      style={{ border: "none", paddingX: 0, paddingY: 0, minHeight: 50, fontSize: 26, placeholderColour: "muted" }}
+      style={{ border: "none", paddingX: 0, paddingY: 0, minHeight: 50, fontSize: 30, placeholderColour: "muted" }}
       error={word && insert.status === "error" ? insert.error.message : undefined} />
     : <Row title="Add word" endIcon={add} onPress={() => setAdding(true)} />;
   return <Screen title={title} header={header}>

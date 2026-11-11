@@ -1797,8 +1797,7 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    /** Selects the word at the cursor, or does nothing between words. */
-    /** [inFront] also takes the word before the cursor past marks and spaces, for a triple tap. See [WordSelection.atOrBefore]. */
+    /** Selects the word at the cursor, or does nothing between words. [inFront] also takes the word before the cursor past marks and spaces, for a triple tap. See [WordSelection.atOrBefore]. */
     private fun selectWord(inFront: Boolean = false) = changeSelection { text, start, end, _ ->
         val word = if (inFront) WordSelection.atOrBefore(text, start, end) else WordSelection.at(text, start, end)
         haptics.play(Haptic.WordPicked)

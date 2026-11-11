@@ -94,10 +94,11 @@ Google's list of what the video must show, in order. Record the screen with `adb
 | 6 | In an app with a text field (for example Messages), type, then press Back once: the keyboard closes and the app goes back. | A core feature that uses the service | "One press of Back closes the keyboard and goes back" |
 | 7 | Open the Sym panel. Press Enter and Backspace to turn its pages. Show that the text field didn't get a new line or lose a letter. | Core feature (keys while the panel is open) | "In the Sym panel, Enter and Backspace turn the pages" |
 | 8 | Open Smart Launcher's search. Hold a letter: its symbol appears. | Core feature (keys in a launcher search) | "In Smart Launcher's search, holding a key types its symbol" |
+| 9 | In a text field, swipe-type a word on the keys. While the finger is still swiping, a heads-up notification arrives at the top of the screen (send the phone a test message from another device). The swipe carries on and the word is typed; the notification doesn't take the swipe. | Core feature (touchpad above the notification shade) | "When a notification pops up, the touchpad stays on the keys" |
 
-Before recording: use a test text with nothing personal in it, turn off notifications that could appear (and keep the phone silent), and record at the phone's normal resolution.
+Before recording: use a test text with nothing personal in it, turn off notifications that could appear except the one test message for shot 9 (and keep the phone silent), and record at the phone's normal resolution.
 
 ## Open points
 
 - The exact questions and wording in the Play Console declaration form were not seen (they show only inside the console). The table follows Google's help page.
-- Smart Launcher must be installed for shot 8. If it isn't, show only shots 6 and 7, and say in the caption that the launcher case works the same way.
+- Smart Launcher must be installed for shot 8. If it isn't, show only shots 6, 7 and 9, and say in the caption that the launcher case works the same way.

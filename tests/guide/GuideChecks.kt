@@ -88,16 +88,41 @@ private fun drawMenuBar(path: String, width: Float, side: Float) {
     g.fillRect(0, 0, image.width, image.height)
     g.font = java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.PLAIN, 44)
     g.color = java.awt.Color.WHITE
+    // The word, centred in the room left of the icons, as the bar draws it.
     val word = "“The”"
     val right = MenuKeys.wordRight(width, side, 21f)
-    g.drawString(word, right - g.fontMetrics.stringWidth(word), bar / 2f + 15)
-    for ((index, name) in listOf("Save", "Forget", "Back").withIndex()) {
+    g.drawString(word, (side + right) / 2 - g.fontMetrics.stringWidth(word) / 2f, bar / 2f + 15)
+    // The icons, 22 dp, centred on their columns, with Save marked softly as a resting finger marks it. Back is never marked.
+    val icon = 58
+    val accent = java.awt.Color(0xFF, 0x7A, 0x3D)
+    for (index in 0..2) {
         val (left, end) = MenuKeys.slot(width, side, MenuKeys.SAVE + index)
-        g.color = if (index == 0) java.awt.Color(0xFF, 0x7A, 0x3D) else java.awt.Color.DARK_GRAY
-        g.fillRoundRect(left.toInt() + 5, 10, (end - left).toInt() - 10, bar - 20, 16, 16)
-        g.color = java.awt.Color.WHITE
-        g.font = java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.PLAIN, 26)
-        g.drawString(name, ((left + end) / 2 - g.fontMetrics.stringWidth(name) / 2).toInt(), bar / 2 + 9)
+        val centre = ((left + end) / 2).toInt()
+        val marked = index == 0
+        if (marked) {
+            val markWidth = minOf((end - left).toInt() - 10, icon + 63)
+            g.color = java.awt.Color(0xFF, 0x7A, 0x3D, 51)
+            g.fillRoundRect(centre - markWidth / 2, (bar - icon - 37) / 2, markWidth, icon + 37, 63, 63)
+        }
+        g.color = if (marked) accent else java.awt.Color.WHITE
+        g.stroke = java.awt.BasicStroke(5f)
+        val x = centre - icon / 2
+        val y = (bar - icon) / 2
+        when (index) {
+            // Save: a bookmark.
+            0 -> g.drawPolygon(intArrayOf(x + 12, x + icon - 12, x + icon - 12, centre, x + 12), intArrayOf(y + 4, y + 4, y + icon - 4, y + icon - 18, y + icon - 4), 5)
+            // Forget: a bin.
+            1 -> {
+                g.drawRect(x + 12, y + 14, icon - 24, icon - 18)
+                g.drawLine(x + 6, y + 10, x + icon - 6, y + 10)
+            }
+            // Back: an arrow.
+            else -> {
+                g.drawLine(x + 6, y + icon / 2, x + icon - 6, y + icon / 2)
+                g.drawLine(x + 6, y + icon / 2, x + 24, y + 12)
+                g.drawLine(x + 6, y + icon / 2, x + 24, y + icon - 12)
+            }
+        }
     }
     // The keys underneath: the top row, in its ten columns.
     g.font = java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD, 36)

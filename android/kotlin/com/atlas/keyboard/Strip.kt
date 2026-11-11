@@ -627,66 +627,59 @@ class Strip(
     private val menuBox = android.graphics.RectF()
 
     /**
-     * The word's menu, drawn on the bar: the word right-aligned in the bar's own font, ending just left of Save, and each button's
-     * icon with its name under it, centred on its key's column. The button that a resting finger marks is filled, as the Sym
-     * panel's marked key is.
+     * The word's menu, drawn on the bar: the word in the bar's own font, centred in the room left of the icons, and an icon over
+     * each button's key, centred on its column. Save and Forget take a soft mark when a finger rests on their key, as the Sym
+     * panel's keys do, only quieter; Back takes none. Nothing comes near the screen's rounded corners.
      */
     private fun drawMenu(canvas: Canvas) {
         val menu = notice as? Notice.Menu ?: return
         if (noticeRow.visibility != VISIBLE || width == 0) return
         val height = dp(56).toFloat()
+        val keySide = dp(Layout.KEY_SIDE_DP).toFloat()
         val word = context.getString(R.string.strip_menu_word, menu.word)
         menuWordText.typeface = typeface
         menuWordText.textSize = wordPixels()
         menuWordText.color = look.ink
-        menuWordText.textAlign = android.graphics.Paint.Align.RIGHT
-        val right = MenuKeys.wordRight(width.toFloat(), dp(Layout.KEY_SIDE_DP).toFloat(), dp(MENU_WORD_GAP).toFloat())
-        val room = right - maxOf(side, dp(Layout.KEY_SIDE_DP)).toFloat()
-        val shown = TextUtils.ellipsize(word, menuWordText, room, TextUtils.TruncateAt.END).toString()
-        canvas.drawText(shown, right, height / 2 - (menuWordText.ascent() + menuWordText.descent()) / 2, menuWordText)
+        menuWordText.textAlign = android.graphics.Paint.Align.CENTER
+        // The room for the word: from the bar's own side, clear of the left corner at the text's foot, to just left of Save.
+        val baseline = height / 2 - (menuWordText.ascent() + menuWordText.descent()) / 2
+        val wordFoot = navigationInset + height - (baseline + menuWordText.descent())
+        val wordLeft = maxOf(side.toFloat(), keySide, corners.inset(wordFoot).toFloat() + dp(MENU_CORNER_GAP))
+        val wordRight = MenuKeys.wordRight(width.toFloat(), keySide, dp(MENU_WORD_GAP).toFloat())
+        val shown = TextUtils.ellipsize(word, menuWordText, (wordRight - wordLeft).coerceAtLeast(0f), TextUtils.TruncateAt.END).toString()
+        canvas.drawText(shown, (wordLeft + wordRight) / 2, baseline, menuWordText)
         val slide = (1f - menuShown) * dp(MENU_SLIDE_DP)
         val alpha = (menuShown * 255).toInt().coerceIn(0, 255)
-        // The icon and its name, together, sit in the middle of the bar with room above and below, at any font size: the name
-        // follows the font setting only as far as there's room, and the icon shrinks if it still doesn't fit.
-        menuPaint.typeface = typeface
-        menuPaint.textAlign = android.graphics.Paint.Align.CENTER
-        menuPaint.textSize = minOf(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, MENU_LABEL_SIZE, resources.displayMetrics),
-            dp(MENU_LABEL_MOST).toFloat())
-        val label = menuPaint.descent() - menuPaint.ascent()
-        val tall = height - 2 * dp(MENU_MARGIN)
-        val icon = minOf(dp(MENU_ICON_DP), Math.round(tall - dp(MENU_LABEL_GAP) - label))
-        val block = icon + dp(MENU_LABEL_GAP) + label
-        val top = (height - block) / 2
+        val icon = dp(MENU_ICON_DP)
+        val top = (height - icon) / 2
         for ((index, action) in menuSlots(menu).withIndex()) {
             if (action == null) continue
             val column = MenuKeys.SAVE + index
             val (left, end) = menuColumn(column)
-            val marked = column == menuMark
-            menuBox.set(left + dp(2) + slide, dp(4).toFloat(), end - dp(2) + slide, height - dp(4))
+            // Back is a way out, not a choice to weigh up: it never takes the mark.
+            val marked = column == menuMark && action != Action.Close
+            // The mark: a soft, rounded patch round the icon, a little wider than tall, never past its column.
+            val markWidth = minOf(end - left - dp(4), icon + 2f * dp(MENU_MARK_SIDE))
+            val markHeight = icon + 2f * dp(MENU_MARK_TOP)
+            var centre = (left + end) / 2 + slide
+            // The screen's rounded corner comes in near the bottom right: the icon, and its mark, keep clear of it.
+            val foot = navigationInset + height - (height + markHeight) / 2
+            val most = width - corners.inset(foot) - dp(MENU_CORNER_GAP) - markWidth / 2
+            if (centre > most) centre = most
             if (marked) {
-                menuPaint.color = look.accent
-                menuPaint.alpha = alpha
-                val radius = Radii.px(resources, Radii.SMALL)
+                menuBox.set(centre - markWidth / 2, (height - markHeight) / 2, centre + markWidth / 2, (height + markHeight) / 2)
+                menuPaint.color = GuideMotion.faded(look.accent, MENU_MARK_ALPHA * menuShown)
+                val radius = dp(MENU_MARK_RADIUS).toFloat()
                 canvas.drawRoundRect(menuBox, radius, radius, menuPaint)
             }
-            // All three alike, unless a resting finger marks one.
-            val colour = if (marked) look.onAccent else look.ink
-            // The name stays clear of the screen's rounded corner, which comes in near the bottom right.
-            val name = context.getString(label(action))
-            val bottom = top + block
-            val cornerIn = corners.inset(navigationInset + height - bottom).toFloat()
-            val centre = minOf(menuBox.centerX(), width - cornerIn - dp(2) - menuPaint.measureText(name) / 2)
             context.getDrawable(icon(action))?.mutate()?.let { drawable ->
-                drawable.setTint(colour)
+                drawable.setTint(if (marked) look.accent else look.ink)
                 drawable.alpha = alpha
                 val x = Math.round(centre - icon / 2f)
                 val y = Math.round(top)
                 drawable.setBounds(x, y, x + icon, y + icon)
                 drawable.draw(canvas)
             }
-            menuPaint.color = colour
-            menuPaint.alpha = alpha
-            canvas.drawText(name, centre, top + icon + dp(MENU_LABEL_GAP) - menuPaint.ascent(), menuPaint)
         }
     }
 
@@ -998,11 +991,14 @@ class Strip(
         /** The menu's icons, as a part of the words' size, and how far and how long its buttons move in. */
         private const val MENU_ICON_SCALE = 1.2f
         /** The size of a button's name under its icon, in sp, the gap between them, and the room between the word and Save. */
-        private const val MENU_LABEL_SIZE = 11f
-        /** The most a button's name may grow with a large font setting, in dp, the icon's size, and the room kept above and below. */
-        private const val MENU_LABEL_MOST = 13
-        private const val MENU_ICON_DP = 20
-        private const val MENU_MARGIN = 6
+        /** The menu's icons, in dp, and the soft mark round a marked one: its room at the sides and top, its corners and strength. */
+        private const val MENU_ICON_DP = 22
+        private const val MENU_MARK_SIDE = 12
+        private const val MENU_MARK_TOP = 7
+        private const val MENU_MARK_RADIUS = 12
+        private const val MENU_MARK_ALPHA = .2f
+        /** How far the menu keeps from a rounded corner, in dp. */
+        private const val MENU_CORNER_GAP = 4
         private const val MENU_LABEL_GAP = 2
         private const val MENU_WORD_GAP = 8
         private const val MENU_SLIDE_DP = 40

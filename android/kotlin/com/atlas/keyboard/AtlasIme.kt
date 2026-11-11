@@ -1574,7 +1574,9 @@ class AtlasIme : InputMethodService() {
     /** A resting finger marks the button over its key, as on the Sym panel. */
     private fun markMenu(key: String) {
         val strip = strip ?: return
-        val mark = if (menuOpen && menuAction(key) != null) MenuKeys.button(key) else -1
+        // Save and Forget take the mark; Back, a way out, never does, though P still picks it.
+        val action = if (menuOpen) menuAction(key) else null
+        val mark = if (action == Strip.Action.Save || action == Strip.Action.Forget) MenuKeys.button(key) else -1
         if (mark >= 0 && mark != strip.menuMark) haptics.play(Haptic.MenuMark)
         strip.menuMark = mark
     }

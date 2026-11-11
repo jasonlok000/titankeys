@@ -11,6 +11,8 @@ fun main() {
         word.mapIndexed { i, c -> Glyph(c, w, start + i * 22f + 11f, Idle.H / 2, 22f, 40f) }
     }
     fun fits(kind: IdlePlayer.Kind, vararg words: String) = IdlePlayer.fits(kind, bar(*words))
+    // The automatic capital's arrow, at the left of the bar, first in the left word.
+    fun withArrow(glyphs: List<Glyph>) = listOf(Glyph(Idle.ARROW, 0, 18f, Idle.H / 2, 20f, 40f, arrow = true)) + glyphs
     val bars = listOf(listOf("going", "the", "and"), listOf("good", "one", "gonna"), listOf("recommendations", "red", "recommended"))
     for (words in bars) for (kind in IdlePlayer.Kind.entries) check(fits(kind, *words.toTypedArray()), "$words fit $kind")
 
@@ -134,6 +136,34 @@ fun main() {
         home(glyphs, what)
     }
     check("Shell" in ways && "Firework" in ways && "Exit" in ways && "Drop" in ways, "Every way home turns up, not only $ways")
+
+    // The arrow plays along while it shows, and always comes home to its own place, never left behind or out of the bar.
+    val arrowBars = bars.map { withArrow(bar(*it.toTypedArray())) } + listOf(withArrow(bar("good", "", "gonna")))
+    val moved = HashSet<IdlePlayer.Kind>()
+    for (seed in 1..20) for (glyphs in arrowBars) for (kind in IdlePlayer.Kind.entries) {
+        if (!IdlePlayer.fits(kind, glyphs)) continue
+        val arrow = glyphs.first()
+        val player = IdlePlayer(glyphs, width, Random(seed), kind)
+        val what = "Seed $seed, $kind with the arrow"
+        var time = 0f
+        var away = 0f
+        var back = false
+        while (player.update(33f)) {
+            time += 33
+            check(time < IdlePlayer.LOOP_MILLIS + 30_000, "$what: ends")
+            check(arrow.x in -10f..width + 10 && arrow.y in -10f..Idle.H + 10, "$what: keeps the arrow inside the bar, not at ${arrow.x}, ${arrow.y}")
+            away = maxOf(away, abs(arrow.x - arrow.homeX) + abs(arrow.y - arrow.homeY))
+            if (kind == IdlePlayer.Kind.Juggle && !player.returning) check(arrow.x == arrow.homeX && arrow.y == arrow.homeY, "$what: the arrow stays put")
+            if (!back && seed % 2 == 1 && time > 4_000) { player.comeBack(); back = true }
+        }
+        check(arrow.x == arrow.homeX && arrow.y == arrow.homeY && arrow.scale == 1f && arrow.alpha == 1f && arrow.rot == 0f && !arrow.accent,
+            "$what: the arrow is back in its place exactly")
+        if (away > 20) moved += kind
+    }
+    for (kind in listOf(IdlePlayer.Kind.Drift, IdlePlayer.Kind.Pong, IdlePlayer.Kind.Bowling, IdlePlayer.Kind.Race, IdlePlayer.Kind.Firework))
+        check(kind in moved, "$kind plays with the arrow, not only $moved")
+    check(fits(IdlePlayer.Kind.Pong, "good", "", "gonna").not() && IdlePlayer.fits(IdlePlayer.Kind.Pong, withArrow(bar("good", "", "gonna"))),
+        "With no middle letter, the arrow is Pong's ball")
 
     // The shell game is a way home only with three words.
     repeat(200) { seed ->

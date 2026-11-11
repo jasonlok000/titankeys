@@ -413,8 +413,11 @@ class Strip(
     /** The width of the arrow's place at the left of the bar. */
     private fun capitalWidth() = capitalHeight() - 2 * dp(CAPITAL_ARROW_IN) + 2 * dp(CAPITAL_SIDE_IN)
 
-    private fun drawAutoCapital(canvas: Canvas) {
-        if (!autoCapital || !showSuggestions) return
+    /**
+     * Puts the arrow's place in [capitalBox] and gives the arrow's size and line width in pixels. While an idle game plays with the
+     * arrow, the game draws it.
+     */
+    private fun placeCapital(): Pair<Float, Float> {
         val height = capitalHeight()
         val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
         val width = capitalWidth()
@@ -431,12 +434,17 @@ class Strip(
             capitalBox.set(x, dp(4).toFloat(), x + width * scale, dp(4) + height * scale)
         }
         val cornerScale = capitalBox.height() / height
+        return arrow * cornerScale to TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CAPITAL_LINE, resources.displayMetrics) * cornerScale
+    }
+
+    private fun drawAutoCapital(canvas: Canvas) {
+        if (!autoCapital || !showSuggestions || idle?.glyphs?.any { it.arrow } == true) return
+        val (size, line) = placeCapital()
         capitalPaint.color = look.accent
         // The shift arrow, where Shift's chip would be, without the chip's outline: a head as wide as it is tall at the top, on a stem half as wide.
-        val size = arrow * cornerScale
         val x = capitalBox.centerX() - size / 2
         val y = capitalBox.centerY() - size / 2
-        capitalPaint.strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CAPITAL_LINE, resources.displayMetrics) * cornerScale
+        capitalPaint.strokeWidth = line
         capitalArrow.reset()
         capitalArrow.moveTo(x + size / 2, y)
         capitalArrow.lineTo(x + size, y + size * .52f)
@@ -617,6 +625,13 @@ class Strip(
             }
         }
         if (glyphs.isEmpty()) return false
+        // The automatic capital's arrow plays too, first in the left word, and comes home to its own place.
+        if (autoCapital) {
+            val (size, line) = placeCapital()
+            idleDrawing.arrowLine = line / scale
+            glyphs.add(0, Glyph(Idle.ARROW, 0, (capitalBox.centerX() - idleEdge) / scale, capitalBox.centerY() / scale, size / scale,
+                wordViews.first().paint.textSize / scale, arrow = true))
+        }
         val game = kind?.takeIf { IdlePlayer.fits(it, glyphs) }
             ?: (if (kind == null) IdlePlayer.choose(glyphs, random) { schedule?.allows(it) != false } else null) ?: return false
         schedule?.played(game)

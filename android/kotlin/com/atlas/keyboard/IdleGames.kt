@@ -28,6 +28,8 @@ import kotlin.random.Random
  */
 internal object Idle {
     const val H = 88f
+    /** The [Glyph.char] of the automatic capital's arrow, which is drawn as a shape, not a letter. */
+    const val ARROW = '\u21E7'
     /** The size the demo's numbers were made for: a letter of this size has the demo's radius and speed. */
     const val FONT_SIZE = 40f
     const val EXIT_MILLIS = 300f
@@ -86,8 +88,13 @@ internal object Idle {
 /**
  * One letter of the bar: where it lives in its word ([homeX], [homeY], its middle), how wide it is there ([advance]) and its text
  * size ([size]), all in the bar's units; and where it is now.
+ *
+ * The automatic capital's arrow, while it shows, plays as one more piece: an [arrow], [advance] wide and tall, that goes with the
+ * left word, first in it. The games use it where they can (a pin, Pong's ball when the middle has no letter, a racer, a drifter),
+ * and it always comes home to its own place.
  */
-internal class Glyph(val char: Char, val word: Int, val homeX: Float, val homeY: Float, val advance: Float, val size: Float) {
+internal class Glyph(val char: Char, val word: Int, val homeX: Float, val homeY: Float, val advance: Float, val size: Float,
+    val arrow: Boolean = false) {
     val text = char.toString()
     var x = homeX
     var y = homeY
@@ -227,7 +234,7 @@ internal class Pong(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
     }
 
     private val middle = words(1)
-    private val ball = Idle.roundest(middle.ifEmpty { glyphs })!!
+    private val ball = Idle.roundest(middle.ifEmpty { glyphs.filter { it.arrow } }.ifEmpty { glyphs })!!
     private val wall = middle.filter { it !== ball }
     private val wallXs = HashMap<Glyph, Float>()
     private val wallX0: Float
@@ -251,7 +258,7 @@ internal class Pong(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
         for (g in wall) { val a = g.advance * WALL_SCALE; wallXs[g] = x + a / 2; x += a }
         wallX0 = (wallXs.values.minOrNull() ?: 0f) - 12 * WALL_SCALE
         wallX1 = (wallXs.values.maxOrNull() ?: 0f) + 12 * WALL_SCALE
-        paddles = listOf(paddle(words(0), X_SIDE, -1f), paddle(words(2), width - X_SIDE, 1f))
+        paddles = listOf(paddle(words(0).filter { it !== ball }, X_SIDE, -1f), paddle(words(2), width - X_SIDE, 1f))
     }
 
     private fun paddle(list: List<Glyph>, x: Float, sign: Float): Paddle {
@@ -503,7 +510,7 @@ internal class Bowling(glyphs: List<Glyph>, width: Float, random: Random) : Idle
 
 /** 5. Jump rope: a letter at each side swings a rope, and the middle word jumps it. */
 internal class JumpRope(glyphs: List<Glyph>, width: Float, random: Random) : IdleGame(glyphs, width, random) {
-    private val holderL = words(0).firstOrNull() ?: glyphs.first()
+    private val holderL = words(0).firstOrNull { !it.arrow } ?: glyphs.first()
     private val holderR = words(2).lastOrNull() ?: glyphs.last()
     private val jumper = words(1)
     private val rest = glyphs.filter { it !== holderL && it !== holderR && it.word != 1 }
@@ -527,7 +534,12 @@ internal class JumpRope(glyphs: List<Glyph>, width: Float, random: Random) : Idl
             g.x = Idle.lerp(fromX[k], x, p); g.y = Idle.lerp(fromY[k], Idle.H / 2 - 4, p)
         }
         // The other side letters make room and watch.
-        for (g in rest) { val k = glyphs.indexOf(g); g.x = Idle.lerp(fromX[k], fromX[k] + if (g.word == 0) -50 else 50, p); g.alpha = Idle.lerp(1f, .32f, p) }
+        // The rest step aside, but never past the ends of the bar, where the screen's corners would cut them.
+        for (g in rest) {
+            val k = glyphs.indexOf(g)
+            val aside = Idle.clamp(fromX[k] + if (g.word == 0) -50 else 50, min(fromX[k], g.advance / 2), max(fromX[k], width - g.advance / 2))
+            g.x = Idle.lerp(fromX[k], aside, p); g.alpha = Idle.lerp(1f, .32f, p)
+        }
         val speed = (2 * PI.toFloat() / period) * Idle.smooth((t - 300) / INTRO)
         ropeAngle += speed * dt
         holderL.rot = .35f * sin(ropeAngle) * p; holderR.rot = -.35f * sin(ropeAngle) * p
@@ -1085,9 +1097,10 @@ internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val
         /** Whether the bar's letters fit [kind]: a game that needs letters the bar does not have is skipped. */
         fun fits(kind: Kind, glyphs: List<Glyph>): Boolean = glyphs.isNotEmpty() && when (kind) {
             Kind.Drift, Kind.Firework -> true
-            Kind.Pong -> word(glyphs, 0).isNotEmpty() && word(glyphs, 2).isNotEmpty() && word(glyphs, 1).isNotEmpty()
+            Kind.Pong -> word(glyphs, 0).any { !it.arrow } && word(glyphs, 2).isNotEmpty() && (word(glyphs, 1).isNotEmpty() || glyphs.any { it.arrow })
             Kind.Bowling -> ballOf(glyphs) != null && glyphs.size >= 4
-            Kind.JumpRope, Kind.Race -> words(glyphs) == 3
+            Kind.JumpRope -> words(glyphs) == 3 && word(glyphs, 0).any { !it.arrow }
+            Kind.Race -> words(glyphs) == 3
             Kind.Juggle -> word(glyphs, 1).size == 3
         }
 

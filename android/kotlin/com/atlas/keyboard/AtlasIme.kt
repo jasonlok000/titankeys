@@ -335,7 +335,7 @@ class AtlasIme : InputMethodService() {
     private val stepDeleteHold = Runnable {
         val free = pendingInput.isEmpty() && !composer.hasPendingInput
         val next = deleteHold.step(SystemClock.uptimeMillis(), free, ::deleteHeldWord)
-        if (next != null) nextDeleteHoldStep(next) else strip?.gesture?.deleteEnded()
+        if (next != null) nextDeleteHoldStep(next) else strip?.gesture?.deleteEnded(SystemClock.uptimeMillis())
     }
 
     private fun nextDeleteHoldStep(at: Long) {
@@ -353,7 +353,7 @@ class AtlasIme : InputMethodService() {
     private fun endDeleteHold() {
         main.removeCallbacks(stepDeleteHold)
         deleteHold.reset()
-        strip?.gesture?.deleteEnded()
+        strip?.gesture?.deleteEnded(SystemClock.uptimeMillis())
     }
 
     /** Each word goes the way of a normal delete flick. [flick] is the first word's flick, and is null for the words after it. */
@@ -377,8 +377,10 @@ class AtlasIme : InputMethodService() {
                 return@enqueue
             }
             haptics.play(Haptic.DeleteWord)
+            // A dot for each character of the word, for the dots that play when the hold lifts.
+            val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
             composer.backspace(true)
-            strip?.gesture?.wordDeleted(SystemClock.uptimeMillis())
+            strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
             KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
         }
     }

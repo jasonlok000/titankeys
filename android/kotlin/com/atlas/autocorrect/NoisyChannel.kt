@@ -141,10 +141,13 @@ class NoisyChannel(
         private const val VOWEL = 0.6
         private const val MISSED = 0.7
         private const val MISSED_DOUBLE = 0.4
+        // A left-out vowel ("defalt") is likelier than a left-out consonant. From the owner's logs and the benchmark.
+        private const val MISSED_VOWEL = 0.55
         // The apostrophe needs Alt on the Titan, so it is often left out.
         private const val MISSED_APOSTROPHE = 0.2
         private const val EXTRA = 0.9
         private const val EXTRA_FAT_FINGER = 0.5
+        private const val EXTRA_ECHO = 0.6
         private const val SWAPPED = 0.5
         private const val VOWELS = "aeiou"
 
@@ -172,7 +175,9 @@ class NoisyChannel(
                 val after = t.getOrNull(i)
                 val fatFinger = (before != null && (before == letter || isNeighborKey(letter, before))) ||
                     (after != null && (after == letter || isNeighborKey(letter, after)))
-                val extra = if (fatFinger) EXTRA_FAT_FINGER else EXTRA
+                // A vowel typed again just after itself in the word ("receieve") is a common slip too.
+                val echo = letter in VOWELS && (t.getOrNull(i - 3) == letter || t.getOrNull(i + 1) == letter)
+                val extra = if (fatFinger) EXTRA_FAT_FINGER else if (echo) EXTRA_ECHO else EXTRA
                 current[0] = previous[0] + EXTRA
                 for (j in 1..w.length) {
                     val target = w[j - 1]
@@ -185,6 +190,7 @@ class NoisyChannel(
                     val missed = when {
                         w[j - 1] == '\'' -> MISSED_APOSTROPHE
                         j > 1 && w[j - 1] == w[j - 2] -> MISSED_DOUBLE
+                        target in VOWELS -> MISSED_VOWEL
                         else -> MISSED
                     }
                     var c = minOf(previous[j] + extra, current[j - 1] + missed, previous[j - 1] + substitution)

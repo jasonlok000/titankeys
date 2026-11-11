@@ -237,6 +237,15 @@ public final class TypingSettings {
         preferences(context).edit().putString("snippet_start", start).apply();
     }
 
+    /** Chat shorthand such as "shd" becomes its full word, "should" (issue 63). Off by default: then it stays as typed. */
+    public static boolean expandShorthand(Context context) {
+        return preferences(context).getBoolean("expand_shorthand", false);
+    }
+
+    public static void expandShorthand(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("expand_shorthand", enabled).apply();
+    }
+
     /** A name between two colons, such as :smile:, types its emoji. */
     public static boolean shortcodes(Context context) {
         return preferences(context).getBoolean("shortcodes", true);

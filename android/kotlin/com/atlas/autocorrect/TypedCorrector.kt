@@ -23,6 +23,8 @@ interface Lexicon {
     fun preferredSpelling(word: String): String
     /** Whether the word list writes [word] only in capitals, as "PC": then a lowercase "pc" is typed on purpose. */
     fun acronym(word: String): Boolean = false
+    /** Whether shorthand such as "shd" becomes its full word ("should"), as the setting asks. Off by default. */
+    fun expandShorthand(): Boolean = false
     /** Calls [action] with each word in lowercase and its frequency. */
     fun forEachWord(action: (String, Int) -> Unit)
 }
@@ -63,6 +65,10 @@ class CorrectionData private constructor(
     val spelling: SymSpell,
     /** "doesnt" to "doesn't", as [spelling] holds contractions without the apostrophe. */
     val contractions: Map<String, String>,
+    /** "todays" to "today's": each "'s" word of the list without its apostrophe. Only used where that is no word. */
+    val possessives: Map<String, String>,
+    /** Chat shorthand ("shd"), never corrected, with its full word ("should") where it has one (en_shorthand.txt). */
+    val shorthand: Map<String, String?>,
     /** Common words by first letter, for the last-resort fix. */
     val longWords: Map<Char, List<DictionaryEntry>>,
 ) {
@@ -71,6 +77,8 @@ class CorrectionData private constructor(
         /** Numen's dictionary stops at about this frequency, so rarer words are not fixes. */
         private const val MIN_FREQUENCY = 60
         private const val LONG_WORD_MIN_FREQUENCY = 100
+        /** TitanKeys' own key names, which its users type about, though the list rates them rarer than [MIN_FREQUENCY]. */
+        private val KEY_NAMES = setOf("backspace", "touchpad")
 
         /** Reads the English data files, which [open] finds by name, and indexes [lexicon]. */
         fun read(lexicon: Lexicon, open: (String) -> Reader): CorrectionData {
@@ -95,9 +103,15 @@ class CorrectionData private constructor(
             }
             val spelling = SymSpell(maxEditDistance = 2, prefixLength = PREFIX_LENGTH)
             val contractions = HashMap<String, String>()
+            val possessives = HashMap<String, String>()
+            val shorthand = open("en_shorthand.txt").useLines { lines ->
+                lines.map { it.trim() }.filterNot { it.isEmpty() || it.startsWith("#") }
+                    .map { line -> line.split('\t').let { it[0].lowercase() to it.getOrNull(1)?.trim()?.takeIf(String::isNotEmpty) } }
+                    .toMap(HashMap())
+            }
             val longWords = HashMap<Char, MutableList<DictionaryEntry>>()
             lexicon.forEachWord { word, frequency ->
-                if (frequency < MIN_FREQUENCY) return@forEachWord
+                if (frequency < MIN_FREQUENCY && word !in KEY_NAMES) return@forEachWord
                 if (word.all { it in 'a'..'z' }) {
                     spelling.addWord(word, frequency)
                     if (frequency >= LONG_WORD_MIN_FREQUENCY)
@@ -106,10 +120,12 @@ class CorrectionData private constructor(
                     val plain = word.replace("'", "")
                     contractions[plain] = word
                     spelling.addWord(plain, frequency)
+                } else if (word.endsWith("'s") && word.length > 3 && word.dropLast(2).all { it in 'a'..'z' }) {
+                    possessives[word.dropLast(2) + "s"] = word
                 }
             }
             return CorrectionData(pairs, triples, confusions, misspellings, known, names, slang, shortWords,
-                spelling, contractions, longWords)
+                spelling, contractions, possessives, shorthand, longWords)
         }
     }
 }
@@ -183,7 +199,7 @@ class TypedCorrector(
         isNeighborKey = KeyNeighbours::near,
         pairCount = data.pairs::count,
         isProtected = { word -> word in data.slang || lexicon.personal(word) || word.first().isUpperCase() && word in data.names ||
-            lexicon.acronym(word) },
+            lexicon.acronym(word) || isShorthand(word) },
         isRecognized = { word -> word in data.known },
         rejected = rejected,
         noisyChannel = channel,
@@ -199,7 +215,11 @@ class TypedCorrector(
             data.contractions[item.term] ?: item.term.takeIf { lexicon.name(it) == null }
         }
 
-    private fun isKnown(word: String) = lexicon.known(word) || word in data.known || word in data.slang || lexicon.acronym(word)
+    private fun isKnown(word: String) = lexicon.known(word) || word in data.known || word in data.slang || lexicon.acronym(word) ||
+        isShorthand(word)
+
+    /** Chat shorthand such as "shd" or "sth", which no correction ever turns into another word. */
+    private fun isShorthand(word: String) = word.lowercase() in data.shorthand
 
     private fun spelled(word: String) = lexicon.name(word) ?: word
 
@@ -249,6 +269,12 @@ class TypedCorrector(
      * where the slip is clear, and "Mr" where it isn't). A word that is not wrong gets its capitals anyway.
      */
     private fun firstFix(word: String, before: String, typedPrevious: String?): Fix? {
+        // Shorthand stays as typed, unless the setting asks for its full word (#63). Backspace undoes it as any fix.
+        if (isShorthand(word)) {
+            if (!lexicon.expandShorthand() || isInsideAddress(before + word) || word.lowercase() in rejected) return null
+            val full = data.shorthand[word.lowercase()] ?: return null
+            return Fix(word, if (word.first().isUpperCase()) full.replaceFirstChar { it.uppercaseChar() } else full)
+        }
         val fix = typoFix(word, before, typedPrevious)
         if (fix != null) return fixedCapitals(fix.word)?.let { Fix(word, it) } ?: fix
         if (isInsideAddress(before + word) || word.lowercase() in rejected) return null
@@ -273,6 +299,11 @@ class TypedCorrector(
         }
         if (!isRejected && !hasExactCase(word)) shiftHeldTooLongFix(word, lexicon::frequency)?.let { return Fix(word, it) }
         if (!isRejected) spacedContraction(word, before, typedPrevious)?.let { return it }
+        // A left-out apostrophe before a final s ("todays", "whats"), where the word without it is no word in the list. It
+        // goes before the other fixes, which would drop the s ("today") or split the word ("to days").
+        if (!isRejected && word.all { it.isLetter() } && word.drop(1).none { it.isUpperCase() } && lexicon.frequency(word) == 0 &&
+            !lexicon.personal(word))
+            (data.possessives[lower] ?: data.contractions[lower]?.takeIf { it.endsWith("'s") })?.let { return Fix(word, recased(it, word)) }
         val letters = word.all { it.isLetter() }
         if (!isKnown(word) && word !in data.names && !isRejected && letters) nameSplit(word)?.let { return Fix(word, it) }
         val isName = isCapitalizedName(word, before)
@@ -292,6 +323,11 @@ class TypedCorrector(
         data.misspellings[lower]?.let { return Fix(word, recased(it, word)) }
         // A missing apostrophe ("doesnt"). Without it these are not words, so there is nothing else it could be.
         data.contractions[lower]?.let { return Fix(word, recased(it, word)) }
+        // The last letter typed twice ("yeahh", "showw"): the word without it, if that is a common word.
+        if (lower.length >= 4 && lower.last() == lower[lower.length - 2] && lower.all { it in 'a'..'z' }) {
+            val single = lower.dropLast(1)
+            if (lexicon.frequency(single) >= DOUBLED_LAST_MIN_FREQUENCY) return Fix(word, recased(single, word))
+        }
         val previous = previousWordFor(before)
         val beforePrevious = wordBeforePrevious(before, previous)
         val casual = word.all { it.isLowerCase() } || isSentenceStartCapital(word, before)
@@ -337,8 +373,8 @@ class TypedCorrector(
                 && trailing.next.all { it.isLetter() } && data.pairs.count("me", trailing.next.lowercase()) == 0)
                 return Review(trailing.word, "Mr", "${trailing.word} ${trailing.next}${trailing.tail}",
                     "Mr ${trailing.next}${trailing.tail}", false)
-            // A fix made at the last space, seen again with the word after it.
-            val fixed = respelled(typo?.let { context.reconsiderFix(trailing.before, it, trailing.word, trailing.next) }, trailing.word)
+            // A fix made at the last space, seen again with the word after it. Shorthand spelled out stays as the setting asks.
+            val fixed = respelled(typo?.takeUnless(::isShorthand)?.let { context.reconsiderFix(trailing.before, it, trailing.word, trailing.next) }, trailing.word)
                 ?: respelled(context.review(trailing.before, trailing.word, trailing.next, trailing.beforePrevious, typedAsIs = typo == null), trailing.word)
             if (fixed != null) return Review(trailing.word, fixed, "${trailing.word} ${trailing.next}${trailing.tail}",
                 "$fixed ${trailing.next}${trailing.tail}", false)
@@ -478,6 +514,8 @@ class TypedCorrector(
         private const val PLURAL_MIN_LENGTH = 5
         private const val COMPOUND_MIN_HALF = 3
         private const val COMPOUND_HALF_MIN_FREQUENCY = 100
+        /** How common the word must be when its last letter was typed twice ("yeahh" for "yeah"). */
+        private const val DOUBLED_LAST_MIN_FREQUENCY = 100
         private const val COMPOUND_FIX_MIN_FREQUENCY = 100
         // Plurals of very common words are in the dictionary already; "agains" is a slip.
         private const val PLURAL_BASE_MAX_FREQUENCY = 140

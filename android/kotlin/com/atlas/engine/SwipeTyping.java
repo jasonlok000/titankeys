@@ -94,6 +94,8 @@ public final class SwipeTyping {
         final long epoch, generation;
         final SwipeDecoder.Result[] results;
         final boolean ranked;
+        /** The ranker's numbers for each candidate, keyed by comparison form, or null when the ranker did not run. */
+        volatile Map<String, double[]> features;
         Prediction(String firstWord, EnglishSpelling.Variant variant, boolean personalized, long epoch,
                    long generation, SwipeDecoder.Result[] results) {
             this(firstWord, variant, personalized, epoch, generation, results, false);
@@ -263,8 +265,9 @@ public final class SwipeTyping {
                 SwipeDecoder.Result[] decoded = recogniser.recognise(gesture, contextWords, personalized, allowed);
                 SwipeModels loaded = models;
                 boolean ranked = false;
+                Map<String, double[]> features = null;
                 if (loaded != null) {
-                    try { decoded = loaded.rank(decoded, recogniser.readings(), gesture, text, allowed); ranked = true; }
+                    try { decoded = loaded.rank(decoded, recogniser.readings(), gesture, text, allowed); ranked = true; features = loaded.lastFeatures; }
                     catch (Exception | LinkageError error) { Log.w("TouchpadSwipe", "Swipe ranker skipped", error); }
                 }
                 String[] words = blockedWords.filter(EnglishSpelling.candidates(Arrays.stream(decoded).map(result -> result.word).toArray(String[]::new), variant));
@@ -275,6 +278,7 @@ public final class SwipeTyping {
                 // Accuracy stats follow saved words only, as they did before names on this phone.
                 Prediction prediction = new Prediction(words.length == 0 ? "" : words[0], variant,
                         personalise && saved, epoch, generation, decoded, ranked);
+                prediction.features = features;
                 long elapsed = SystemClock.uptimeMillis() - began;
                 timing.finish();
                 main.post(() -> {
@@ -809,6 +813,36 @@ public final class SwipeTyping {
             catch (RuntimeException | LinkageError error) {
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
                 Log.w("TouchpadSwipe", "Could not refresh learned words");
+            }
+        });
+    }
+
+    /** What a data contribution may take from a swipe, worked out on the engine's thread. */
+    public interface ContributionRows { void result(double[][] rows, int kept); }
+
+    /**
+     * For data contributions: the ranker's numbers for each candidate of this swipe, without the words, and the row of
+     * {@code word}, or -1 when the ranker did not have it. Nothing comes back when {@code word} is not a dictionary word,
+     * so names and other personal words are never sent.
+     */
+    public void contributionRows(String word, Prediction prediction, ContributionRows result) {
+        String normalised = SwipeWords.normalise(word);
+        if (normalised.isEmpty() || prediction == null) return;
+        worker.execute(() -> {
+            try {
+                // Names on this phone are never sent, even one that is also a dictionary word.
+                if (recogniser == null || !standard(normalised) || phoneName(normalised)) return;
+                Map<String, double[]> features = prediction.features;
+                double[][] rows = features == null ? new double[0][] : features.values().toArray(new double[0][]);
+                int kept = -1, index = 0;
+                String key = CtcWords.key(word);
+                if (features != null) for (String candidate : features.keySet()) {
+                    if (candidate.equals(key)) kept = index;
+                    index++;
+                }
+                result.result(rows, kept);
+            } catch (RuntimeException | LinkageError error) {
+                Log.w("TouchpadSwipe", "Contribution skipped");
             }
         });
     }

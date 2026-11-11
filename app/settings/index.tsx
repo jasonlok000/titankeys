@@ -1,6 +1,9 @@
 import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from "ink";
 import { close } from "ink/icons";
 import { state, update } from "../../lib/atlas";
+import { connectedState } from "../../lib/connected";
+import { contributeText, newsText } from "../../lib/connected-text";
+import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
 import { hiddenBarLabel } from "./hidden-bar";
 import { holdLabel } from "./hold";
@@ -14,6 +17,7 @@ import { vibrationLabel } from "./vibration";
 
 export default function Settings() {
   const result = useSnapshot(state);
+  const connected = useSnapshot(connectedState);
   const save = useAction(update);
   const closeAction = { icon: close, onPress: () => replace("/") };
   if (result.status !== "ready") return <Screen title="Settings" rightAction={closeAction} />;
@@ -65,10 +69,13 @@ export default function Settings() {
     <Section title="Your data">
       <Field label="Your words" href="/settings/data" />
       <Field label="Typing log" href="/settings/rawlog">{rawLogLabel(settings)}</Field>
+      <Field label={contributeText.settingsLabel} href="/settings/contribute">
+        {connected.status === "ready" ? contributeLabel(connected.data.contribute) : ""}</Field>
     </Section>
     <Section title="Help">
       <Field label="Setup" href="/settings/setup">{setupLabel(settings)}</Field>
       <Field label="Guide" href="/settings/guide" />
+      <Field label={newsText.title} href="/settings/news" />
       <Field label="Send feedback" href="/settings/feedback" />
       <Field label="About" href="/settings/about" />
     </Section>

@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Announcements and data contributions only, as the privacy policy says. Nothing that you type is sent. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Announcements show as a notification. The app asks first, with the reason. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Only with "Names from my contacts" on: given and family names, kept in memory on the phone, never sent. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <queries>
@@ -58,5 +63,12 @@
             </intent-filter>
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/back_service" />
         </service>
+        <service
+            android:name="com.atlas.connected.ConnectedJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <receiver
+            android:name="com.atlas.connected.NewsReceiver"
+            android:exported="false" />
     </application>
 </manifest>

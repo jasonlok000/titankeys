@@ -223,7 +223,14 @@ These changes aren't free, and Atlas's simpler approach avoids all of this:
 
 ## Privacy
 
-Everything runs and is stored on your phone, including both language models. Nothing you type is sent anywhere, and no data is stored or monitored by me or any third party.
+What you type stays on your phone. The swipe engine and both language models run on the phone, and nothing you type is ever sent.
+
+TitanKeys uses the internet for two things only, and both are strictly limited:
+
+- **News:** at most once a day, it downloads a short signed list of news from the TitanKeys website, such as a new version. It sends nothing about you or your phone. It shows as a silent notification, never while you type, and you can turn it off in **Settings > News**.
+- **Swipe contributions, only if you agree:** you can send examples of your swipes to help train the swipe models. It's off until you agree on a screen that says exactly what is sent: the swipe path, the kept word if it's a dictionary word, and the engine's numbers, never the text around it. Examples are encrypted on your phone, sent on Wi-Fi, used only for training, and you can stop and delete them at any time.
+
+The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what is sent, why, how it's protected, how long it's kept and how to delete it. There are no ads, analytics or trackers.
 
 TitanKeys doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
 
@@ -234,6 +241,8 @@ The typing log in Settings, which records touches and typed text to tune the key
 ## Install
 
 Download the latest APK from [releases](https://github.com/jasonlok000/titankeys/releases) and install it, then open TitanKeys: the guide takes it from there. TitanKeys installs next to Atlas, so it doesn't replace it or touch Atlas's saved words.
+
+When a new version is out, TitanKeys tells you with a short, silent notification, never while you type. The same news is in **Settings > News**, where you can turn it off.
 
 To build it yourself, follow the setup in the [contributing guide](CONTRIBUTING.md), then run:
 
@@ -246,6 +255,8 @@ This installs **TitanKeys Debug**, a separate test build.
 ## Feedback
 
 Bugs and ideas are welcome in [issues](https://github.com/jasonlok000/titankeys/issues). If something also happens in Atlas, please report it [there](https://github.com/juleshall4/atlas/issues) too.
+
+You can also help swipe typing get better for every Titan 2 Elite: **Settings > Share swipes** sends examples of your swipes, only if you agree. The guide offers it at its end until you answer. See [Privacy](#privacy) for what is sent.
 
 Work is shared in both directions. Anything here is free to use in Atlas, and improvements from Atlas are welcome here.
 

@@ -1,0 +1,6 @@
+<!-- The TitanKeys mark for the status bar: the T and K shape alone, centred and filled white, as Android asks. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="560" android:viewportHeight="560">
+    <group android:translateX="-269" android:translateY="-266">
+        <path android:fillColor="#FFFFFF" android:pathData="M757.7,328.4 L760.8,328.4 L602.1,540 L760.8,751.6 L657.8,751.6 L523.4,572.2 L523.4,751.6 L438.8,751.6 L438.8,600.9 Z M382.7,328.4 L632,328.4 L568.5,413 L523.4,413 L523.4,507.8 L657.8,328.4 L760.8,328.4 L607.4,532.9 L538.3,592 L523.4,572.2 L523.4,604.7 L438.8,677 L438.8,413 L319.2,413 Z"/>
+    </group>
+</vector>

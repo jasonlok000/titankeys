@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check home focus, retained text, and Settings on the Titan 2's 1076 x 1200 display.
 
-Opens Atlas if its home isn't on screen. If the field is empty, the check enters a
+Opens Atlas home if it isn't on screen. If the field is empty, the check enters a
 common word and clears it before navigating to Settings. APP=com.atlas.debug checks
 the debug build instead.
 """
@@ -33,9 +33,10 @@ def editor():
     )
 
 
-def launch():
+def launch(href=None):
+    link = ["--es", "com.vandam.ink.notification.HREF", href] if href else []
     shell("am", "start", "-a", "android.intent.action.MAIN",
-          "-c", "android.intent.category.LAUNCHER", "-n", f"{APP}/com.vandam.ink.MainActivity")
+          "-c", "android.intent.category.LAUNCHER", "-n", f"{APP}/com.vandam.ink.MainActivity", *link)
     time.sleep(1)
 
 
@@ -48,8 +49,8 @@ def main():
     try:
         editor()
     except StopIteration:
-        shell("am", "force-stop", APP)
-        launch()
+        # Never force-stop Atlas: Android then changes the keyboard and turns off Atlas in Accessibility.
+        launch("/")
         for _ in range(10):
             try:
                 editor()

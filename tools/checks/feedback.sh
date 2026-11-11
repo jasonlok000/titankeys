@@ -5,8 +5,8 @@ cd "$(dirname "$0")/../.."
 app="${APP:-com.atlas}"
 
 # Exercise the installed app on the Titan 2's 1076 x 1200 display.
+# Never force-stop Atlas: Android then changes the keyboard and turns off Atlas in Accessibility.
 for row in 375 500; do
-  adb shell am force-stop "$app"
   adb shell am start -W -n "$app"/com.vandam.ink.MainActivity \
     --es com.vandam.ink.notification.HREF /settings/feedback >/dev/null
   sleep 2

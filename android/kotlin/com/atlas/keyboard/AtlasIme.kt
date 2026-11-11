@@ -1658,11 +1658,12 @@ class AtlasIme : InputMethodService() {
                 }
                 settleHeldTaps()
                 // A touch that may be the last swipe carrying on keeps that swipe on the trail until it is settled.
-                val carried = lastTouch?.takeIf {
-                    Trace.listening && contact.points.isNotEmpty()
-                        && letterSpace(it).couldContinue(first.x, first.y * 4 / 3, first.time - it.last().time, composer.liftOffMillis.toLong())
-                }.orEmpty()
-                Trace.touch(contact.points, false, carried)
+                val carries = contact.points.isNotEmpty() && lastTouch?.let {
+                    it.isNotEmpty() && letterSpace(it).couldContinue(first.x, first.y * 4 / 3, first.time - it.last().time, composer.liftOffMillis.toLong())
+                } == true
+                // The bar's mini path joins it too, as one line.
+                swipeCarried = carries && !inGuide && strip?.gesture?.swipeCarriesOn() == true
+                Trace.touch(contact.points, false, if (carries && Trace.listening) lastTouch.orEmpty() else emptyList())
             }
             MotionEvent.ACTION_MOVE -> {
                 cursor.move(samples)
@@ -1708,17 +1709,21 @@ class AtlasIme : InputMethodService() {
 
     /** Points of this touch already on the strip's mini path. */
     private var swipeShown = 0
+    /** This touch carries on the last swipe, so its points add to that swipe's path from the start. */
+    private var swipeCarried = false
 
     /**
      * The strip shows a word swipe's path as it goes. A touch that hasn't gone far enough to be a swipe shows nothing, and neither
-     * does a delete flick, nor a touch that can't type, such as with Alt on or the panel open.
+     * does a delete flick, nor a touch that can't type, such as with Alt on or the panel open. The guide has its own trail, so the
+     * bar shows none there. A touch that carries on the last swipe after a slip adds to its path at once.
      */
     private fun showSwipe() {
         val gesture = strip?.gesture ?: return
         val points = contact.points
         val travel = contact.travel
         val first = points.firstOrNull()
-        if (!contact.swipes || altOrPanel || travel == null || travel < Contact.SWIPE_KEYS || first == null
+        val far = swipeCarried && gesture.swiping || travel != null && travel >= Contact.SWIPE_KEYS
+        if (inGuide || !contact.swipes || altOrPanel || travel == null || !far || first == null
             || startsDeleteFlick(first.x, first.y) && isDeleteWordSwipe(points)) {
             gesture.swipeCancelled()
             swipeShown = 0
@@ -1728,7 +1733,7 @@ class AtlasIme : InputMethodService() {
         val now = SystemClock.uptimeMillis()
         for (index in swipeShown until points.size) {
             val point = points[index]
-            if (point.valid) gesture.swipePoint(point.x, point.y, now)
+            if (point.valid) gesture.swipePoint(point.x, point.y, point.step, now)
         }
         swipeShown = points.size
     }
@@ -1754,7 +1759,7 @@ class AtlasIme : InputMethodService() {
         } else cursorGesture.up(samples, event.eventTime)
         Recording.sink?.gesture("up", event.eventTime, "doubleTapped=$doubleTapped" + if (cancelled) " cancelled=true" else "")
         main.removeCallbacks(registerGestureLater)
-        strip?.gesture?.swipeEnded()
+        strip?.gesture?.swipeEnded(SystemClock.uptimeMillis(), composer.liftOffMillis.toLong())
         glowSpaceTap(cancelled)
         // Three quick taps pick the word at the cursor, with no slide, once no fourth touch follows.
         if (cursor.active) {

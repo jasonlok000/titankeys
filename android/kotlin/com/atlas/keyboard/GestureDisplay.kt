@@ -9,8 +9,9 @@ import kotlin.math.min
 
 /**
  * What the strip shows while a special gesture runs: the cursor drag, the word drag, a held delete flick, and a short flourish
- * for one deleted word or one selected word. A word swipe shows a mini path: the words dim, a faint map of the letter keys shows
- * and the path is drawn over it as it goes. A Space tap that counts gives a glow under the middle word that grows with each tap.
+ * for one deleted word or one selected word. A word swipe shows a mini path: the words dim and the path is drawn over them as it
+ * goes, as thick as the touch is firm. A Space tap that counts gives a glow under the middle word that grows with each tap, and
+ * carries on into the steering or selecting that a held touch after it starts.
  *
  * The gesture code gives this class the numbers it already has, and [GestureDrawing] reads the numbers that come out. They are
  * all plain values kept in this one object, so a frame makes no garbage, and a test can run it with no clock and no phone.
@@ -116,7 +117,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     val showing get() = scene != Scene.None
 
     /** True while anything here needs drawing: a scene, or the Space glow, which leaves the words as they are. */
-    val busy get() = scene != Scene.None || glowTaps > 0
+    val busy get() = scene != Scene.None || glowing
+
+    /** True while the Space glow shows, from taps or as part of a steer or select. */
+    val glowing get() = glowTaps > 0 || glowHeld
 
     /**
      * A word swipe's path so far, in touchpad space: x from 0 to 1 across, y from 0 at the top row to [Layout]'s bottom row. Only the
@@ -124,14 +128,21 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      */
     val pathX = FloatArray(MAX_PATH)
     val pathY = FloatArray(MAX_PATH)
+    /** How thick the path is at each point, 1 for a touch of the usual size: see [TrailThickness]. */
+    val pathWidth = FloatArray(MAX_PATH)
     var pathSize = 0
         private set
+    private val thickness = TrailThickness()
+    /** When a lifted swipe's path starts to fade: it waits through the time a slip may still carry the swipe on. */
+    private var swipeFadeAt = 0L
+    /** True while the glow is part of a steer or select, which it grows into and goes with. */
+    private var glowHeld = false
 
     /** The Space glow under the middle word: its width, from 0 to 1 of the strip, and its strength, from 0 to 1. */
     var glowWidth = 0f
         private set
-    var glowAlpha = 0f
-        private set
+    val glowAlpha get() = if (glowHeld && leaving) glowBase * reveal else glowBase
+    private var glowBase = 0f
     /** The quick line along the bottom on the third tap, from 1 down to 0. */
     var glowPulse = 0f
         private set
@@ -339,29 +350,58 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * The word swipe reached touchpad point [x], [y]. The first point of a swipe starts the mini path, also while the last one
      * still fades. Points close to the last one are skipped, and a long path keeps every other point, so it never runs out of room.
      */
-    fun swipePoint(x: Float, y: Float, now: Long) {
+    fun swipePoint(x: Float, y: Float, step: Int, now: Long) {
         if (scene != Scene.Swipe || leaving) {
             if (live && scene != Scene.Swipe || !begin(Scene.Swipe, now)) return
             pathSize = 0
+            thickness.reset()
         }
-        if (pathSize > 0 && abs(x - pathX[pathSize - 1]) + abs(y - pathY[pathSize - 1]) < PATH_STEP) return
+        // The thickness follows every point's size, also one too close to draw, so it stays live.
+        val width = thickness.next(x, y, step)
+        if (pathSize > 0 && abs(x - pathX[pathSize - 1]) + abs(y - pathY[pathSize - 1]) < PATH_STEP) {
+            if (abs(width - pathWidth[pathSize - 1]) < WIDTH_STEP) return
+            pathWidth[pathSize - 1] = width
+            changed()
+            return
+        }
         if (pathSize == MAX_PATH) {
             for (index in 0 until MAX_PATH / 2) {
                 pathX[index] = pathX[index * 2]
                 pathY[index] = pathY[index * 2]
+                pathWidth[index] = pathWidth[index * 2]
             }
             pathSize = MAX_PATH / 2
         }
         pathX[pathSize] = x
         pathY[pathSize] = y
+        pathWidth[pathSize] = width
         pathSize++
         changed()
     }
 
-    /** The swipe lifted: the path fades and the words come back with what it typed. */
-    fun swipeEnded() {
-        if (scene == Scene.Swipe) leave()
+    /**
+     * The swipe lifted: the path fades and the words come back with what it typed. It waits [carryMillis] first, the time in which a
+     * slip or a short lift may still carry the swipe on: see [swipeCarriesOn].
+     */
+    fun swipeEnded(now: Long = 0L, carryMillis: Long = 0L) {
+        if (scene != Scene.Swipe || leaving) return
+        swipeFadeAt = now + carryMillis
+        leave()
     }
+
+    /**
+     * A new touch carries on the swipe that just lifted, as the trail joins it after a slip: the path stays and goes on as one line.
+     * True if the path was still there to carry on.
+     */
+    fun swipeCarriesOn(): Boolean {
+        if (scene != Scene.Swipe || !leaving) return false
+        leaving = false
+        changed()
+        return true
+    }
+
+    /** True while a swipe's path shows and has not lifted, so the next points add to it. */
+    val swiping get() = scene == Scene.Swipe && !leaving
 
     /** The touch turned out to be no word swipe, such as a delete flick: the path goes at once. A path that already fades stays. */
     fun swipeCancelled() {
@@ -391,14 +431,16 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     }
 
     private fun endGlow() {
+        glowHeld = false
         glowTaps = 0
         glowWidth = 0f
-        glowAlpha = 0f
+        glowBase = 0f
         glowPulse = 0f
     }
 
     /** Moves the glow on to [now]. True while it still shows. */
     private fun advanceGlow(now: Long, scale: Float): Boolean {
+        if (glowHeld) return advanceHeldGlow(now, scale)
         if (glowTaps == 0) return false
         val motion = scale > 0f
         val elapsed = (now - glowAt) / if (motion) scale else 1f
@@ -410,7 +452,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         val alpha = GLOW_ALPHAS[glowTaps]
         if (!motion) {
             glowWidth = width
-            glowAlpha = alpha
+            glowBase = alpha
             glowPulse = 0f
             return true
         }
@@ -418,9 +460,30 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         // It fades slowly at first, so it is still there when the next tap of a series lifts and grows it further.
         val fade = ((elapsed - GLOW_GROW) / GLOW_FADE).coerceIn(0f, 1f)
         glowWidth = glowFromWidth + (width - glowFromWidth) * grow
-        glowAlpha = (glowFromAlpha + (alpha - glowFromAlpha) * grow) * (1f - fade * fade)
+        glowBase = (glowFromAlpha + (alpha - glowFromAlpha) * grow) * (1f - fade * fade)
         glowPulse = if (glowTaps == 3) 1f - (elapsed / GLOW_PULSE).coerceIn(0f, 1f) else 0f
         return true
+    }
+
+    /**
+     * A tap's glow carries on into the steer or select that a held touch after it starts: from where it is, it grows to the full
+     * width and stays as part of that display, and it goes with it. So there is no gap or jump between the taps and the hold.
+     */
+    private fun holdGlow(now: Long) {
+        glowFromWidth = glowWidth
+        glowFromAlpha = glowAlpha
+        glowHeld = true
+        glowTaps = 0
+        glowPulse = 0f
+        glowAt = now
+    }
+
+    private fun advanceHeldGlow(now: Long, scale: Float): Boolean {
+        val motion = scale > 0f
+        val grow = if (motion) easeOut(((now - glowAt) / (GLOW_HOLD_GROW * scale)).coerceIn(0f, 1f)) else 1f
+        glowWidth = glowFromWidth + (GLOW_HELD_WIDTH - glowFromWidth) * grow
+        glowBase = (glowFromAlpha + (GLOW_HELD_ALPHA - glowFromAlpha) * grow)
+        return motion && grow < 1f
     }
 
     /** Moves the picture on to [now]. [scale] is Android's animator duration scale, and 0 means no motion. True asks for another frame. */
@@ -439,7 +502,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             val t = ((now - flourishAt) / length).coerceAtLeast(0f)
             if (t >= 1f) {
                 clear()
-                return false
+                return glowing
             }
             flourish = if (motion) easeOut(t) else 1f
             reveal = if (!motion) 1f
@@ -447,7 +510,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 else if (scene == Scene.WordSelected) pickReveal((now - flourishAt) / scale)
                 else min(revealedAtStart + (1f - revealedAtStart) * t / FLOURISH_IN, (1f - t) / FLOURISH_OUT).coerceIn(0f, 1f)
         } else {
-            val target = if (leaving) 0f else 1f
+            // A lifted swipe's path stays while the swipe may still carry on, then fades.
+            val target = if (leaving && !(scene == Scene.Swipe && now < swipeFadeAt)) 0f else 1f
             val hide = if (scene == Scene.Swipe) SWIPE_FADE else HIDE_MILLIS
             reveal = if (!motion) target else toward(reveal, target, elapsed / ((if (target > reveal) SHOW_MILLIS else hide) * scale))
             if (leaving && reveal == 0f) {
@@ -455,7 +519,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 return glowing
             }
             // A swipe's path moves only when a point comes, so it needs frames only while it comes in or fades.
-            if (scene == Scene.Swipe) return motion && reveal != target || glowing
+            if (scene == Scene.Swipe) return motion && reveal != target || leaving && now < swipeFadeAt || glowing
         }
         val seconds = min(elapsed, MAX_FRAME_MILLIS) / 1000f
         when (scene) {
@@ -518,6 +582,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             resetPieces()
             scene = next
             lastFrame = now
+            if (next == Scene.Cursor || next == Scene.WordDrag) {
+                if (!glowHeld) holdGlow(now)
+            } else if (glowHeld) endGlow()
         }
         leaving = false
         return true
@@ -561,6 +628,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     private fun clear() {
         scene = Scene.None
+        if (glowHeld) endGlow()
         fromHold = false
         reveal = 0f
         leaving = false
@@ -657,6 +725,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         private const val PATH_STEP = .004f
         /** A swipe's mini path fades into what it typed over this long. */
         const val SWIPE_FADE = 300f
+        /** A path's thickness changes by at least this much before a point that has not moved is drawn again. */
+        private const val WIDTH_STEP = .03f
+        /** The glow grows to the full width this quickly when a hold after the taps starts to steer or select. */
+        const val GLOW_HOLD_GROW = 120f
+        const val GLOW_HELD_WIDTH = 1f
+        const val GLOW_HELD_ALPHA = .8f
         /**
          * The Space glow grows to each tap's size quickly, then fades over [GLOW_FADE] unless another tap comes. Its width and
          * strength for one, two and three taps, as in the owner's mockup; the third pulses for [GLOW_PULSE].

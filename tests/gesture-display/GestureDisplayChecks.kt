@@ -64,6 +64,12 @@ fun main() {
     theGlowLeavesTheWordsAlone()
     withMotionOffTheGlowIsStill()
     onlyCountedTapsGlow()
+    thePathFollowsTheTouchSize()
+    aSlipCarriesThePathOn()
+    aLiftedPathWaitsForTheSlipWindow()
+    theGlowCarriesIntoASteer()
+    theGlowCarriesIntoASelect()
+    theHeldGlowGoesWithTheDisplay()
     println("Gesture display checks passed")
 }
 
@@ -656,23 +662,23 @@ private fun near(actual: Float, expected: Float, message: String) {
 /** A word swipe dims the words and draws its path from the first point to the finger. */
 private fun aSwipeDrawsItsPath() {
     val display = GestureDisplay()
-    display.swipePoint(.1f, .1f, 0L)
-    display.swipePoint(.3f, .2f, 10L)
-    display.swipePoint(.5f, .1f, 20L)
+    display.swipePoint(.1f, .1f, 0, 0L)
+    display.swipePoint(.3f, .2f, 0, 10L)
+    display.swipePoint(.5f, .1f, 0, 20L)
     same(display.scene, GestureDisplay.Scene.Swipe, "A swipe shows its mini path")
     same(display.pathSize, 3, "with each point")
     near(display.pathX[2], .5f, "The last point is the finger")
     display.advance(200L, 1f)
     near(display.reveal, 1f, "The words dim fully while it goes")
-    display.swipePoint(.5f, .1f, 210L)
+    display.swipePoint(.5f, .1f, 0, 210L)
     same(display.pathSize, 3, "A point where the finger already is adds nothing")
 }
 
 /** On lift the path fades over about 300 ms, while the words come back with what it typed. */
 private fun aSwipePathFadesIntoTheResult() {
     val display = GestureDisplay()
-    display.swipePoint(.1f, .1f, 0L)
-    display.swipePoint(.4f, .3f, 10L)
+    display.swipePoint(.1f, .1f, 0, 0L)
+    display.swipePoint(.4f, .3f, 0, 10L)
     display.advance(200L, 1f)
     display.swipeEnded()
     display.advance(350L, 1f)
@@ -680,19 +686,19 @@ private fun aSwipePathFadesIntoTheResult() {
     display.advance(560L, 1f)
     same(display.scene, GestureDisplay.Scene.None, "After the fade the words are back")
     same(display.pathSize, 0, "and the path is gone")
-    display.swipePoint(.2f, .2f, 600L)
+    display.swipePoint(.2f, .2f, 0, 600L)
     same(display.pathSize, 1, "The next swipe starts a new path")
 }
 
 /** A touch that turns out to be a delete flick takes the path away at once, but a fading path is left to fade. */
 private fun aDeleteFlickCancelsThePath() {
     val display = GestureDisplay()
-    display.swipePoint(.9f, .3f, 0L)
-    display.swipePoint(.8f, .3f, 10L)
+    display.swipePoint(.9f, .3f, 0, 0L)
+    display.swipePoint(.8f, .3f, 0, 10L)
     display.swipeCancelled()
     same(display.scene, GestureDisplay.Scene.None, "A delete flick shows no path")
-    display.swipePoint(.1f, .1f, 20L)
-    display.swipePoint(.3f, .1f, 30L)
+    display.swipePoint(.1f, .1f, 0, 20L)
+    display.swipePoint(.3f, .1f, 0, 30L)
     display.advance(150L, 1f)
     display.swipeEnded()
     display.swipeCancelled()
@@ -702,22 +708,22 @@ private fun aDeleteFlickCancelsThePath() {
 /** A flick's dots replace the path, and a cursor drag does too. */
 private fun aFlickFlourishReplacesThePath() {
     val display = GestureDisplay()
-    display.swipePoint(.1f, .1f, 0L)
-    display.swipePoint(.3f, .1f, 10L)
+    display.swipePoint(.1f, .1f, 0, 0L)
+    display.swipePoint(.3f, .1f, 0, 10L)
     display.swipeEnded()
     display.wordDeleted(20L, 3)
     same(display.scene, GestureDisplay.Scene.DeleteFlick, "A flick's dots replace the path")
     same(display.pathSize, 0, "and the path goes")
     val drag = GestureDisplay()
     drag.cursorFrame(5f, 0, 0f, false, 0L)
-    drag.swipePoint(.1f, .1f, 10L)
+    drag.swipePoint(.1f, .1f, 0, 10L)
     same(drag.scene, GestureDisplay.Scene.Cursor, "A swipe point never breaks a cursor drag")
 }
 
 /** A long swipe keeps every other point when it runs out of room, so its start and its finger stay. */
 private fun aLongSwipeKeepsItsShape() {
     val display = GestureDisplay()
-    for (index in 0..GestureDisplay.MAX_PATH) display.swipePoint((index % 100) / 100f, if (index / 100 % 2 == 0) .1f else .5f, index.toLong())
+    for (index in 0..GestureDisplay.MAX_PATH) display.swipePoint((index % 100) / 100f, if (index / 100 % 2 == 0) .1f else .5f, 0, index.toLong())
     if (display.pathSize > GestureDisplay.MAX_PATH) throw AssertionError("The path never grows past its room")
     near(display.pathX[0], 0f, "The path still starts where the swipe did")
     near(display.pathX[display.pathSize - 1], (GestureDisplay.MAX_PATH % 100) / 100f, "and ends at the finger")
@@ -727,10 +733,10 @@ private fun aLongSwipeKeepsItsShape() {
 private fun aSwipeAsksForFramesOnlyWhileItFades() {
     var asked = 0
     val display = GestureDisplay { asked++ }
-    display.swipePoint(.1f, .1f, 0L)
-    display.swipePoint(.3f, .1f, 10L)
+    display.swipePoint(.1f, .1f, 0, 0L)
+    display.swipePoint(.3f, .1f, 0, 10L)
     same(asked, 2, "Each new point asks for a frame")
-    display.swipePoint(.3f, .1f, 12L)
+    display.swipePoint(.3f, .1f, 0, 12L)
     same(asked, 2, "A point that does not move asks for none")
     if (!display.advance(40L, 1f)) throw AssertionError("While it comes in, it asks for frames")
     display.advance(300L, 1f)
@@ -859,4 +865,128 @@ private fun aPickedWordHoldsABeat() {
     cut.advance(150L, 1f)
     cut.interrupt()
     if (cut.scene != GestureDisplay.Scene.None) throw AssertionError("A key or touch ends the pick at once")
+}
+
+/** The path is thin where the touch is light and thicker where it is firmer, and it follows the size live. */
+private fun thePathFollowsTheTouchSize() {
+    val display = GestureDisplay()
+    val usual = Math.round(TrailThickness.usual(.2f, .3f))
+    display.swipePoint(.20f, .3f, usual, 0L)
+    display.swipePoint(.22f, .3f, usual, 10L)
+    near(display.pathWidth[1], 1f, "A usual touch draws the usual thickness")
+    var x = .32f
+    repeat(30) {
+        x += .01f
+        display.swipePoint(x, .3f, usual + 3, 20L + it)
+    }
+    if (display.pathWidth[display.pathSize - 1] <= 1.5f) throw AssertionError("A firmer touch draws thicker: ${display.pathWidth[display.pathSize - 1]}")
+    val light = GestureDisplay()
+    light.swipePoint(.3f, .3f, 1, 0L)
+    x = .3f
+    repeat(30) {
+        x += .01f
+        light.swipePoint(x, .3f, 1, 10L + it)
+    }
+    if (light.pathWidth[light.pathSize - 1] >= 1f) throw AssertionError("A light touch draws thinner: ${light.pathWidth[light.pathSize - 1]}")
+    var asked = 0
+    val still = GestureDisplay { asked++ }
+    still.swipePoint(.2f, .3f, usual, 0L)
+    repeat(20) { still.swipePoint(.2f, .3f, usual + 4, 10L + it) }
+    same(still.pathSize, 1, "A finger that only presses harder adds no point")
+    if (still.pathWidth[0] <= 1.2f || asked < 2) throw AssertionError("but its thickness grows live: ${still.pathWidth[0]}")
+}
+
+/** After a slip or a short lift, a touch that carries the swipe on carries its path on too, as one line. */
+private fun aSlipCarriesThePathOn() {
+    val display = GestureDisplay()
+    display.swipePoint(.1f, .1f, 0, 0L)
+    display.swipePoint(.3f, .1f, 0, 10L)
+    display.advance(100L, 1f)
+    display.swipeEnded(100L, 200L)
+    same(display.swiping, false, "A lifted swipe is not swiping")
+    same(display.swipeCarriesOn(), true, "A touch that carries it on keeps the path")
+    display.swipePoint(.32f, .12f, 0, 150L)
+    same(display.pathSize, 3, "and its points add to the same line")
+    near(display.pathX[0], .1f, "which still starts where the swipe began")
+    val gone = GestureDisplay()
+    gone.swipePoint(.1f, .1f, 0, 0L)
+    gone.swipePoint(.3f, .1f, 0, 10L)
+    gone.advance(100L, 1f)
+    gone.swipeEnded(100L, 0L)
+    gone.advance(500L, 1f)
+    same(gone.swipeCarriesOn(), false, "A path that has gone can't be carried on")
+    same(GestureDisplay().swipeCarriesOn(), false, "nor can a swipe that never showed")
+}
+
+/** A lifted path stays through the keep-swiping window, then fades into the result. */
+private fun aLiftedPathWaitsForTheSlipWindow() {
+    val display = GestureDisplay()
+    display.swipePoint(.1f, .1f, 0, 0L)
+    display.swipePoint(.3f, .1f, 0, 10L)
+    display.advance(100L, 1f)
+    display.swipeEnded(100L, 250L)
+    if (!display.advance(300L, 1f)) throw AssertionError("While it waits, it still asks for frames so it can start to fade")
+    near(display.reveal, 1f, "Within the window it stays whole")
+    display.advance(500L, 1f)
+    if (display.reveal >= 1f || display.reveal <= 0f) throw AssertionError("After the window it fades: ${display.reveal}")
+    display.advance(700L, 1f)
+    same(display.scene, GestureDisplay.Scene.None, "and then it is gone")
+}
+
+/** A tap then a held touch steers: the tap's glow grows to the full width and stays as part of the steering, with no gap. */
+private fun theGlowCarriesIntoASteer() {
+    val display = GestureDisplay()
+    display.spaceTapped(1, 0L)
+    display.advance(150L, 1f)
+    val before = display.glowWidth
+    val strength = display.glowAlpha
+    display.cursorFrame(5f, 0, 0f, false, 150L)
+    display.advance(150L, 1f)
+    near(display.glowWidth, before, "It carries on from where the tap left it, with no jump")
+    near(display.glowAlpha, strength, "and no flash")
+    display.advance(150L + GestureDisplay.GLOW_HOLD_GROW.toLong(), 1f)
+    near(display.glowWidth, GestureDisplay.GLOW_HELD_WIDTH, "It grows to the full width")
+    display.advance(2000L, 1f)
+    same(display.glowing, true, "and stays as long as the steering does")
+    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "at full strength")
+}
+
+/** Two taps then a held touch select: the glow carries on the same way into the selecting display. */
+private fun theGlowCarriesIntoASelect() {
+    val display = GestureDisplay()
+    display.spaceTapped(1, 0L)
+    display.spaceTapped(2, 150L)
+    display.advance(250L, 1f)
+    val before = display.glowWidth
+    display.cursorFrame(5f, 0, 0f, true, 250L)
+    same(display.scene, GestureDisplay.Scene.WordDrag, "Two taps and a hold select words")
+    display.advance(250L, 1f)
+    near(display.glowWidth, before, "The glow goes on from where it was")
+    display.advance(250L + GestureDisplay.GLOW_HOLD_GROW.toLong(), 1f)
+    near(display.glowWidth, GestureDisplay.GLOW_HELD_WIDTH, "to the full width")
+    val still = GestureDisplay()
+    still.spaceTapped(1, 0L)
+    still.cursorFrame(5f, 0, 0f, true, 50L)
+    still.advance(51L, 0f)
+    near(still.glowWidth, GestureDisplay.GLOW_HELD_WIDTH, "With animations off it is full at once")
+}
+
+/** The held glow goes as the steering or selecting goes, and a key press or a flourish does not leave it behind. */
+private fun theHeldGlowGoesWithTheDisplay() {
+    val display = GestureDisplay()
+    display.spaceTapped(1, 0L)
+    display.cursorFrame(5f, 0, 0f, false, 100L)
+    display.advance(400L, 1f)
+    display.cursorEnded()
+    display.advance(450L, 1f)
+    if (display.glowAlpha >= GestureDisplay.GLOW_HELD_ALPHA || display.glowAlpha <= 0f) throw AssertionError("It fades with the steering: ${display.glowAlpha}")
+    display.advance(1000L, 1f)
+    same(display.scene, GestureDisplay.Scene.None, "The steering is gone")
+    same(display.glowing, false, "and so is the glow")
+    same(display.busy, false, "with nothing left to draw")
+    val off = GestureDisplay()
+    off.spaceTapped(1, 0L)
+    off.cursorFrame(5f, 0, 0f, false, 100L)
+    off.allowed = false
+    same(off.glowing, false, "Where the strip does not show, the held glow goes too")
 }

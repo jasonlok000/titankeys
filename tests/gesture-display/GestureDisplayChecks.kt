@@ -12,6 +12,7 @@ private const val ON_SPACE = 5.3f
 private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
+    aPickedWordHoldsABeat()
     realTextFollowsTheCursor()
     realWordsForAWordDrag()
     nothingShowsAtFirst()
@@ -405,7 +406,9 @@ private fun aDoubleTapHasABriefConfirmation() {
     display.run(1_000, 1_100)
     isTrue(display.spanEnd > 0f, "The selection must open over the word")
     display.run(1_116, 1_260)
-    same(display.scene, Scene.None, "The confirmation must be over by 260 ms")
+    same(display.scene, Scene.WordSelected, "The pick holds a beat now, past the old 260 ms (owner, 2026-11-11)")
+    display.run(1_276, 1_000 + GestureDisplay.PICK_MILLIS.toLong() + 20)
+    same(display.scene, Scene.None, "and is over by about 790 ms")
 }
 
 private fun aSecondFlickDoesNotFlash() {
@@ -591,4 +594,25 @@ private fun realWordsForAWordDrag() {
     if (display.wordWidth(1) != GestureDisplay.widthFor(3) || display.wordWidth(2) != 0f) throw AssertionError("After it, fox and then nothing")
     if (GestureDisplay.widthFor(1) >= GestureDisplay.widthFor(9)) throw AssertionError("A longer word is wider")
     if (GestureDisplay().wordWidth(5) <= 0f) throw AssertionError("With no text known, a made-up row shows")
+}
+
+/** A word picked with no slide shows its mark, holds it about 400 ms, then goes over about 300 ms. A key or touch ends it at once. */
+private fun aPickedWordHoldsABeat() {
+    val display = GestureDisplay()
+    display.wordSelected(0L)
+    display.advance(GestureDisplay.PICK_IN.toLong() + 200, 1f)
+    if (display.scene != GestureDisplay.Scene.WordSelected) throw AssertionError("The pick still shows in its hold")
+    if (display.reveal != 1f) throw AssertionError("The cover is full during the hold, so no suggestion shows through: ${display.reveal}")
+    if (display.spanStart != -.5f || display.spanEnd != .5f) throw AssertionError("The mark covers the whole word during the hold")
+    display.advance((GestureDisplay.PICK_IN + GestureDisplay.PICK_HOLD + GestureDisplay.PICK_OUT / 2).toLong(), 1f)
+    if (display.reveal <= 0f || display.reveal >= 1f) throw AssertionError("Halfway out, it is going: ${display.reveal}")
+    display.advance(GestureDisplay.PICK_MILLIS.toLong() + 1, 1f)
+    if (display.scene != GestureDisplay.Scene.None) throw AssertionError("After about 790 ms the suggestions are back")
+    if (GestureDisplay.PICK_HOLD != 400f || GestureDisplay.PICK_OUT != 300f) throw AssertionError("The owner's timings: hold 400 ms, exit 300 ms")
+
+    val cut = GestureDisplay()
+    cut.wordSelected(0L)
+    cut.advance(150L, 1f)
+    cut.interrupt()
+    if (cut.scene != GestureDisplay.Scene.None) throw AssertionError("A key or touch ends the pick at once")
 }

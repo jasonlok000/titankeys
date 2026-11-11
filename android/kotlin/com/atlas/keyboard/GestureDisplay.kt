@@ -254,7 +254,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         lastFrame = now
         val motion = scale > 0f
         if (flourishing) {
-            val length = if (motion) (if (scene == Scene.DeleteFlick) FLICK_MILLIS else FLOURISH_MILLIS) * scale else STILL_MILLIS
+            val length = if (!motion) STILL_MILLIS else when (scene) {
+                Scene.DeleteFlick -> FLICK_MILLIS
+                Scene.WordSelected -> PICK_MILLIS
+                else -> FLOURISH_MILLIS
+            } * scale
             val t = ((now - flourishAt) / length).coerceAtLeast(0f)
             if (t >= 1f) {
                 clear()
@@ -263,6 +267,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             flourish = if (motion) easeOut(t) else 1f
             reveal = if (!motion) 1f
                 else if (scene == Scene.DeleteFlick) flickReveal((now - flourishAt) / scale)
+                else if (scene == Scene.WordSelected) pickReveal((now - flourishAt) / scale)
                 else min(revealedAtStart + (1f - revealedAtStart) * t / FLOURISH_IN, (1f - t) / FLOURISH_OUT).coerceIn(0f, 1f)
         } else {
             val target = if (leaving) 0f else 1f
@@ -306,8 +311,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 flow = 0f
             }
             Scene.WordSelected -> {
-                spanStart = -.5f * flourish
-                spanEnd = .5f * flourish
+                // The mark grows over the word, stays a beat so it can be seen, and goes with the cover.
+                val grow = if (motion) easeOut((((now - flourishAt) / scale) / PICK_IN).coerceIn(0f, 1f)) else 1f
+                spanStart = -.5f * grow
+                spanEnd = .5f * grow
                 leadingRight = true
             }
             Scene.None -> Unit
@@ -359,6 +366,13 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private fun flickReveal(elapsed: Float): Float {
         val back = ((elapsed - FLICK_IN - FLICK_HOLD - FLICK_OUT) / FLICK_BACK).coerceIn(0f, 1f)
         if (back > 0f) return 1f - back * back * (3 - 2 * back)
+        return revealedAtStart + (1f - revealedAtStart) * (elapsed / FLICK_COVER_IN).coerceIn(0f, 1f)
+    }
+
+    /** A picked word's cover: in quickly from where it was, so the suggestions never show through, it holds, then it fades out. */
+    private fun pickReveal(elapsed: Float): Float {
+        val out = ((elapsed - PICK_IN - PICK_HOLD) / PICK_OUT).coerceIn(0f, 1f)
+        if (out > 0f) return 1f - out * out * (3 - 2 * out)
         return revealedAtStart + (1f - revealedAtStart) * (elapsed / FLICK_COVER_IN).coerceIn(0f, 1f)
     }
 
@@ -439,6 +453,14 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         const val FLICK_OUT = 320f
         const val FLICK_BACK = 120f
         const val FLICK_MILLIS = FLICK_IN + FLICK_HOLD + FLICK_OUT + FLICK_BACK
+        /**
+         * A word picked with no slide, by a double or triple tap: the mark grows over the word, holds a beat so you can see what was
+         * picked, then goes cleanly before the suggestions return (owner, 2026-11-11). Any key or touch ends it at once.
+         */
+        const val PICK_IN = 90f
+        const val PICK_HOLD = 400f
+        const val PICK_OUT = 300f
+        const val PICK_MILLIS = PICK_IN + PICK_HOLD + PICK_OUT
         /** The cover comes in this quickly, so the old words never show through it. */
         private const val FLICK_COVER_IN = 60f
         /** The most dots a flick shows; a longer word still shows this many. */

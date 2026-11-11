@@ -1906,10 +1906,8 @@ class AtlasIme : InputMethodService() {
 
     /** Pushing a key on the quick settings page. The change applies at once and the page stays open. Only the key that opens Settings leaves. */
     private fun useQuickSetting(item: QuickSetting) {
-        if (inGuide && item == QuickSetting.OpenSettings) {
-            haptics.refused()
-            return
-        }
+        // In the guide, O is off limits. The slide says so, and a key press plays no haptic.
+        if (inGuide && item == QuickSetting.OpenSettings) return
         when (item) {
             QuickSetting.OpenSettings -> {
                 openSettings()

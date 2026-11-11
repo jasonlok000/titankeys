@@ -16,6 +16,12 @@ public final class SavedWordSwipeChecks {
     private static NativeDictionary doubleLetters;
 
     public static void main(String[] args) {
+        // app_process kills the process on an uncaught error and reports only "Killed", so print it here.
+        Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
+            error.printStackTrace(System.out);
+            System.out.flush();
+            System.exit(1);
+        });
         base = new NativeDictionary(args[0] + "/english.combined");
         decoder = new SwipeDecoder(args[0]);
         contractions = SwipeRecognizer.contractionDictionary(base);

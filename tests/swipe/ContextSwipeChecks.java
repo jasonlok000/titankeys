@@ -30,6 +30,12 @@ public final class ContextSwipeChecks {
     }
 
     public static void main(String[] args) throws Exception {
+        // app_process kills the process on an uncaught error and reports only "Killed", so print it here.
+        Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
+            error.printStackTrace(System.out);
+            System.out.flush();
+            System.exit(1);
+        });
         NativeDictionary base = new NativeDictionary(args[0] + "/english.combined");
         NativeDictionary personal = new NativeDictionary(new String[0], new float[0]);
         NativeDictionary contractions = SwipeRecognizer.contractionDictionary(base);

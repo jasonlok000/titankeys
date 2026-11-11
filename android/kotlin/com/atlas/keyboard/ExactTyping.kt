@@ -98,6 +98,54 @@ object ExactTyping {
     /** A held letter went to the app as a key, so a Backspace key takes it back before its symbol goes in. */
     val takeBack = listOf(Event(true, KeyEvent.KEYCODE_DEL, 0), Event(false, KeyEvent.KEYCODE_DEL, 0))
 
+    /** A modifier on the exact typing bar. [meta] is what it adds to a key. */
+    enum class BarKey(val meta: Int) {
+        Shift(KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON),
+        Alt(KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON),
+        Ctrl(KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON),
+        Fn(KeyEvent.META_FUNCTION_ON),
+    }
+
+    enum class Level { Off, Once, Locked }
+
+    /**
+     * The exact typing bar's own Shift, Alt, Ctrl and fn: a tap turns one on for the next key, a long press locks it, and a tap
+     * on one that is on turns it off. A key uses up the ones that are on once.
+     */
+    class Sticky {
+        private val levels = BarKey.entries.associateWith { Level.Off }.toMutableMap()
+
+        fun level(key: BarKey) = levels.getValue(key)
+
+        /** A tap on [key]'s chip. */
+        fun tap(key: BarKey) {
+            levels[key] = if (levels.getValue(key) == Level.Off) Level.Once else Level.Off
+        }
+
+        /** A long press on [key]'s chip. True if that locked it. */
+        fun lock(key: BarKey): Boolean {
+            val was = levels.getValue(key)
+            levels[key] = Level.Locked
+            return was != Level.Locked
+        }
+
+        val meta get() = levels.entries.fold(0) { meta, (key, level) -> if (level != Level.Off) meta or key.meta else meta }
+
+        val any get() = levels.values.any { it != Level.Off }
+
+        /** A key went out with these on: the ones that were on once are off now. */
+        fun used() {
+            for ((key, level) in levels) if (level == Level.Once) levels[key] = Level.Off
+        }
+
+        fun clear() {
+            for (key in levels.keys) levels[key] = Level.Off
+        }
+    }
+
+    /** The most of a clip that "type clipboard" sends as key presses. */
+    const val MAX_TYPED_CLIP = 2000
+
     /** Puts [packageName] first in the apps where a field started recently, newest first and at most [MAX_RECENT_APPS]. */
     fun recentApps(recent: List<String>, packageName: String): List<String> =
         (listOf(packageName) + recent.filter { it != packageName }).take(MAX_RECENT_APPS)

@@ -70,6 +70,10 @@ enum class Haptic(val id: String, val group: HapticGroup, val feel: Feel) {
     /** Save went wrong and the word isn't saved. */
     WordNotSaved("word_not_saved", HapticGroup.Bar, Feel.No),
     ClipOffer("clip_offer", HapticGroup.Bar, Feel.Done),
+    /** A key on exact typing's bar, or Type clip. */
+    ExactKey("exact_key", HapticGroup.Bar, Feel.Done),
+    /** A long press locked a chip on exact typing's bar. */
+    ExactLock("exact_lock", HapticGroup.Bar, Feel.Locked),
 
     ModifierLocked("modifier_locked", HapticGroup.Modifiers, Feel.Locked),
     ModifierUnlocked("modifier_unlocked", HapticGroup.Modifiers, Feel.Step),

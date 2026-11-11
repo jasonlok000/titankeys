@@ -11,6 +11,9 @@
     <!-- Shows on the strip for a second after TitanKeys has hidden and shown itself to work around Microsoft Teams. The owner's wish. -->
     <string name="strip_teams_egg">FUCK MICROSOFT!!</string>
     <string name="strip_saved">Saved “%1$s”</string>
+    <!-- Exact typing's bar, for terminals and remote computers. -->
+    <string name="exact_bar_label">Exact</string>
+    <string name="exact_bar_clip">Type clip</string>
 
     <!-- The clipboard page of the Sym panel, and the newest clip on the strip. -->
     <string name="clipboard_open">Open the clipboard</string>

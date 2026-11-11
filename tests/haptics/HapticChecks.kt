@@ -57,6 +57,8 @@ private val table = mapOf(
     Haptic.PanelGroup to Feel.Step,
     Haptic.QuickSetting to Feel.Done,
     Haptic.ClipPasted to Feel.Done,
+    Haptic.ExactKey to Feel.Done,
+    Haptic.ExactLock to Feel.Locked,
     Haptic.ClipPinned to Feel.Locked,
     Haptic.ClipUnpinned to Feel.Step,
     Haptic.ClipboardCleared to Feel.Gone,

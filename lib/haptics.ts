@@ -35,6 +35,8 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "word_forgotten", label: "Forget" },
     { id: "word_not_saved", label: "A word that can't be saved" },
     { id: "clip_offer", label: "Paste the offered clip" },
+    { id: "exact_key", label: "Exact typing bar: a key" },
+    { id: "exact_lock", label: "Exact typing bar: a lock" },
   ] },
   { title: "Shift and Alt", haptics: [
     { id: "modifier_locked", label: "Locked" },

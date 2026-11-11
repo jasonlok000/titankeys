@@ -342,12 +342,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     lab().play(data.getString("id"))
                     "null"
                 }
-                "labPlayRun" -> {
-                    lab().playRun(data.getString("id"))
-                    "null"
-                }
-                "labLength" -> {
-                    lab().length(data.getString("feel"), data.getLong("millis"))
+                "labGraph" -> {
+                    lab().showGraph(data.getJSONArray("haptics").toString())
                     "null"
                 }
                 "labComments" -> lab().comments()

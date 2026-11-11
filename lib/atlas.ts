@@ -228,17 +228,11 @@ export async function transferLearning(mode: "import" | "export") {
 
 /** Plays a haptic in the Haptics lab, as the keyboard does. TitanKeys Debug only. */
 export const playHaptic = (id: string) => atlas("labPlay", { id });
-/** Plays a haptic 10 times, 40 ms apart. TitanKeys Debug only. */
-export const playHapticRun = (id: string) => atlas("labPlayRun", { id });
-
-/** Tries a length in ms for the swipe tick ("moving") or a step. TitanKeys Debug only. */
-export async function tryHapticLength(feel: "moving" | "step", millis: number) {
-  try {
-    await atlas("labLength", { feel, millis });
-  } finally {
-    await state.refresh();
-  }
-}
+/**
+ * Opens the lab's graph: sliders for the lengths, the timeline of each feel and the fast runs. It shows the haptics with
+ * these names. TitanKeys Debug only.
+ */
+export const showHapticsGraph = (haptics: { id: string; label: string }[]) => atlas("labGraph", { haptics });
 
 /** The Haptics lab's saved comments file, as JSON. TitanKeys Debug only. */
 export const readLabComments = async (): Promise<unknown> => JSON.parse(await atlas("labComments"));

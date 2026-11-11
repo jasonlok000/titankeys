@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Field, Screen, Section, Stack, Text, TextInput, useAction, useSnapshot } from "ink";
-import { type HapticsLab, playHaptic, playHapticRun, readLabComments, saveLabComments, state, tryHapticLength } from "../../lib/atlas";
+import { Button, Field, Screen, Section, Stack, Text, TextInput, useSnapshot } from "ink";
+import { type HapticsLab, playHaptic, readLabComments, saveLabComments, showHapticsGraph, state } from "../../lib/atlas";
 import { hapticGroups } from "../../lib/haptics";
 
 const title = "Haptics lab";
 const subtitle = "Play each haptic and say how it feels. Your notes save as you type.";
-/** The lengths the debug build lets you try, as HapticPalette.MOVING_TRY_MILLIS. */
-const shortest = 4;
-const longest = 40;
 
 type Comments = { general: string; haptics: Record<string, string> };
 
@@ -25,7 +22,6 @@ function Lab({ lab, version }: { lab: HapticsLab; version: string }) {
   const [error, setError] = useState("");
   const [text, setText] = useState("");
   const changed = useRef(false);
-  const length = useAction(tryHapticLength);
 
   useEffect(() => {
     readLabComments().then(saved => setComments(fromFile(saved)), () => setError("Couldn't read your saved notes."));
@@ -41,19 +37,17 @@ function Lab({ lab, version }: { lab: HapticsLab; version: string }) {
     changed.current = true;
     setComments(current => current && change(current));
   };
-  const tryLength = (feel: "moving" | "step", millis: number) => {
+  // The sliders are in the graph. The lengths come back with the state when it closes, and go in the file then.
+  const showGraph = () => {
     changed.current = true;
-    length.run(feel, millis);
+    void showHapticsGraph(hapticGroups.flatMap(group => group.haptics));
   };
 
   return <Screen title={title} subtitle={error || subtitle}>
     <Section title="Lengths">
-      <Length label="Moving" value={lab.movingMillis} disabled={length.status === "pending"}
-        onChange={millis => tryLength("moving", millis)} />
-      <Length label="Step" value={lab.stepMillis} disabled={length.status === "pending"}
-        onChange={millis => tryLength("step", millis)} />
-      <Field label="Swipe, 10 in a row" onPress={() => void playHapticRun("swipe_key")}>40 ms apart</Field>
-      <Field label="Cursor over spaces, 10 in a row" onPress={() => void playHapticRun("cursor_space")}>40 ms apart</Field>
+      <Field label="Moving">{`${lab.movingMillis} ms`}</Field>
+      <Field label="Step">{`${lab.stepMillis} ms`}</Field>
+      <Field label="Show the graph" onPress={showGraph}>Sliders, feels and runs</Field>
     </Section>
     <Section title="Try it">
       <TextInput value={text} onChange={setText} placeholder="Type or swipe here" action="return" minLines={3} maxLines={6} />
@@ -72,22 +66,6 @@ function Lab({ lab, version }: { lab: HapticsLab; version: string }) {
       </Stack>)}
     </Section>)}
   </Screen>;
-}
-
-function Length({ label, value, disabled, onChange }: {
-  label: string;
-  value: number;
-  disabled: boolean;
-  onChange: (millis: number) => void;
-}) {
-  return <Stack axis="horizontal" align="center" justify="space-between">
-    <Text size={20}>{label}</Text>
-    <Stack axis="horizontal" align="center" gap={16}>
-      <Button disabled={disabled || value <= shortest} onPress={() => onChange(value - 1)}>−</Button>
-      <Text size={20} tabularNumbers>{`${value} ms`}</Text>
-      <Button disabled={disabled || value >= longest} onPress={() => onChange(value + 1)}>+</Button>
-    </Stack>
-  </Stack>;
 }
 
 /** Writes one file at a time. A text that comes while one is writing waits, and only the newest one is written next. */

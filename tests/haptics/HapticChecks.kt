@@ -19,6 +19,8 @@ fun main() {
     theEndsOfTheTextPlayOncePerHit()
     theCelebrationRisesIntoAClick()
     theLabSaysWhatEachPlays()
+    theGraphDrawsEachFeelToScale()
+    theRunsShowWhatTheGateDrops()
     println("Haptic checks passed")
 }
 
@@ -243,4 +245,52 @@ private fun theLabSaysWhatEachPlays() {
     says(Haptic.DeleteNothing, "3 × 12 ms, 50 ms apart")
     says(Haptic.GuideCelebration, "3 × 16 ms, 70 ms apart, then CLICK")
     check(Haptic.entries.all { HapticPalette.describe(it, 8, 16).isNotEmpty() }) { "Every haptic says what it plays" }
+}
+
+/** The lab's graph: when the motor is on for each feel, ours at the tried lengths and the phone's at their measured ones. */
+private fun theGraphDrawsEachFeelToScale() {
+    fun draws(feel: Feel, vararg buzzes: Buzz) = HapticTimeline.buzzes(feel, 12, 24).let {
+        check(it == buzzes.toList()) { "$feel draws $it, not ${buzzes.toList()}" }
+    }
+    draws(Feel.Moving, Buzz(0, 12, ours = true))
+    draws(Feel.Step, Buzz(0, 24, ours = true))
+    // No's gaps come after each pulse, so the pulses start 62 ms apart.
+    draws(Feel.No, Buzz(0, 12, ours = true), Buzz(62, 74, ours = true), Buzz(124, 136, ours = true))
+    draws(Feel.Done, Buzz(0, 64, ours = false))
+    draws(Feel.Gone, Buzz(0, 98, ours = false))
+    draws(Feel.Locked, Buzz(0, 105, ours = false))
+    check(HapticTimeline.feels.map { it.first } == listOf(Feel.Moving, Feel.Step, Feel.Done, Feel.Gone, Feel.Locked, Feel.No)) {
+        "The graph has a row for each feel, in its order"
+    }
+    for ((feel) in HapticTimeline.feels) {
+        check(HapticTimeline.sample(feel).feel == feel) { "A tap on $feel's row plays $feel" }
+        val longest = HapticTimeline.buzzes(feel, HapticPalette.MOVING_TRY_MILLIS.last, HapticPalette.MOVING_TRY_MILLIS.last).last()
+        check(longest.toMillis <= HapticTimeline.FEEL_SPAN_MILLIS) { "$feel fits in its row: $longest" }
+    }
+    check(HapticTimeline.buzzes(Feel.Step, 8, 16, atMillis = 40, dropped = true) == listOf(Buzz(40, 56, ours = true, dropped = true))) {
+        "A dropped play is drawn where it would have been"
+    }
+}
+
+/** The lab's two runs, with each tick marked as the gate decides. */
+private fun theRunsShowWhatTheGateDrops() {
+    val swipe = HapticTimeline.ticks(HapticTimeline.swipeRun, 8, 16)
+    check(swipe.map { it.fromMillis } == (0L until 400L step 40L).toList()) { "The swipe ticks every 40 ms: $swipe" }
+    check(swipe.none { it.dropped }) { "Moving keeps its own pace, so no swipe tick drops" }
+    check(swipe.all { it.toMillis - it.fromMillis == 8L }) { "Each swipe tick is the swipe tick's length" }
+
+    val steering = HapticTimeline.steeringRun
+    check(steering.map { it.haptic } == HapticTimeline.STEERING_TEXT.map { if (it == ' ') Haptic.CursorSpace else Haptic.CursorLetter }) {
+        "Steering plays letters as moving and spaces as a step"
+    }
+    val ticks = HapticTimeline.ticks(steering, 8, 16)
+    // A letter 40 ms after a space is inside the step's window, so it drops. One 80 ms after plays again.
+    val dropped = ticks.withIndex().filter { it.value.dropped }.map { it.index }
+    check(dropped == listOf(4, 8)) { "Only the letters right after a space drop, not $dropped" }
+    check(ticks[3] == Buzz(120, 136, ours = true)) { "The first space is a step: ${ticks[3]}" }
+    check(ticks.last().toMillis <= HapticTimeline.RUN_SPAN_MILLIS) { "The run fits in its strip" }
+
+    check(HapticTimeline.tick(Haptic.SwipeKey, 43, 8, 16, admitted = false) == Buzz(43, 51, ours = true, dropped = true)) {
+        "A tick sits where it really played, hollow when the gate dropped it"
+    }
 }

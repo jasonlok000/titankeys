@@ -158,6 +158,13 @@ object HapticPalette {
             listOf(255, 0, 255, 0, 255)))
     }
 
+    /** What [feel] plays with the swipe tick and a step at these lengths. */
+    fun of(feel: Feel, movingMillis: Long, stepMillis: Long): Pattern = when (feel) {
+        Feel.Moving -> moving(movingMillis)
+        Feel.Step -> step(stepMillis)
+        else -> of(feel)
+    }
+
     /** One beat of the guide's celebration: [feel] plays [atMillis] after the start, at [scale] where a phone can compose. */
     data class Beat(val atMillis: Long, val feel: Feel, val scale: Float)
 
@@ -269,14 +276,12 @@ class Haptics(private val context: Context) {
     private val ticks = SwipeTicks()
     private val main = Handler(Looper.getMainLooper())
 
-    fun play(haptic: Haptic) {
-        val pattern = when (haptic.feel) {
-            Feel.Moving -> HapticPalette.moving(movingMillis(context))
-            Feel.Step -> HapticPalette.step(stepMillis(context))
-            else -> HapticPalette.of(haptic.feel)
-        }
-        if (!switches.allows(haptic) || !gate.admit(haptic.feel, pattern.millis)) return
+    /** Plays [haptic], and says whether it played: false when its switch is off or the gate dropped it. */
+    fun play(haptic: Haptic): Boolean {
+        val pattern = HapticPalette.of(haptic.feel, movingMillis(context), stepMillis(context))
+        if (!switches.allows(haptic) || !gate.admit(haptic.feel, pattern.millis)) return false
         vibrate(effect(pattern))
+        return true
     }
 
     /** A finished part of the interactive guide: three ticks rising into a click. */

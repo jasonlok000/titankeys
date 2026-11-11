@@ -42,6 +42,12 @@
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
+        <!-- The Haptics lab's graph. Only TitanKeys Debug opens it, and it closes at once in any other build. -->
+        <activity
+            android:name="com.atlas.keyboard.HapticsLabActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <activity
             android:name="com.atlas.keyboard.GuideActivity"
             android:exported="false"

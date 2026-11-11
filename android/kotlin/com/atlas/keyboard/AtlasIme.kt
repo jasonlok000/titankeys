@@ -333,7 +333,10 @@ class AtlasIme : InputMethodService() {
 
     /** Two taps above Space pick nothing; the guide says so, once no third tap follows. Only in its own field. */
     private val confirmTwoAbove = Runnable {
-        if (inGuide && cursorGesture.confirmTwoAbove()) KeyboardEvents.publish { KeyboardEvent.TwoTapsAbove }
+        if (!inGuide || !cursorGesture.confirmTwoAbove()) return@Runnable
+        // A no, so the taps that did nothing are felt as nothing. Everywhere else they stay quiet.
+        haptics.play(Haptic.TwoTapsAbove)
+        KeyboardEvents.publish { KeyboardEvent.TwoTapsAbove }
     }
 
     /** Deletes the next word of a held delete flick. Only one edit is on its way at a time, so a lift leaves no words waiting. */
@@ -1619,11 +1622,17 @@ class AtlasIme : InputMethodService() {
         return true
     }
 
+    /** New input ends a flourish at once, and a flick's dot ticks still to come with it. */
+    private fun interruptGesture() {
+        strip?.gesture?.interrupt()
+        haptics.cutDots()
+    }
+
     private fun motion(event: MotionEvent) {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             clearTeamsEgg()
             // A delete flick's dots are only a picture, so the next touch ends them.
-            strip?.gesture?.interrupt()
+            interruptGesture()
             // A finger landing is you coming back; the letters go home. A tap or swipe that types cuts to the words: see [outcome].
             wakeIdleBar(cut = false)
         }
@@ -1653,7 +1662,8 @@ class AtlasIme : InputMethodService() {
                 endDeleteHold()
                 contact.down(first)
                 if (cursor.resume(first, composer.liftOffMillis.toLong())) {
-                    // Back within the slip recovery period: still steering the cursor, never typing.
+                    // Back within the slip recovery period: still steering the cursor, never typing. A tick says so.
+                    haptics.play(Haptic.SteerResumed)
                     main.removeCallbacks(endSlippedCursor)
                     contact.cancelActive()
                     cursor.move(samples.drop(1))
@@ -2227,7 +2237,11 @@ class AtlasIme : InputMethodService() {
                         val gesture = strip?.gesture
                         gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
-                        haptics.flick(gesture?.dotsPoppedMillis(scale))
+                        // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
+                        val flickAt = gesture?.flickAt
+                        haptics.flick(gesture?.dotsPoppedMillis(scale), gesture?.dotLandings(scale).orEmpty()) {
+                            flickAt != null && strip?.gesture?.flickAt == flickAt
+                        }
                     }
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return
@@ -2338,7 +2352,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         clearTeamsEgg()
-        strip?.gesture?.interrupt()
+        interruptGesture()
         strip?.gesture?.glowOff()
         wakeIdleBar()
         // A guide slide that doesn't teach this key yet: it does nothing at all, and its release is kept too.
@@ -2727,7 +2741,10 @@ class AtlasIme : InputMethodService() {
 
     /** A tap on a chip turns it on for the next key, or off; a long press locks it. */
     private fun exactChip(key: ExactTyping.BarKey, long: Boolean) {
-        if (long) { if (sticky.lock(key)) haptics.play(Haptic.ExactLock) } else sticky.tap(key)
+        if (long) { if (sticky.lock(key)) haptics.play(Haptic.ExactLock) } else {
+            haptics.play(Haptic.chipTapped(wasLocked = sticky.level(key) == ExactTyping.Level.Locked))
+            sticky.tap(key)
+        }
         updateExactBar()
     }
 

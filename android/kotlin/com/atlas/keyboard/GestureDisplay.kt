@@ -6,6 +6,7 @@ import kotlin.math.floor
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToLong
 
 /**
  * What the strip shows while a special gesture runs: the cursor drag, the word drag, a held delete flick, and a short flourish
@@ -188,6 +189,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         private set
     var dotsOut = 0f
         private set
+    /** The dots' way into the caret, in animation ms: how long it takes, how far it has gone, and how far apart the dots set off. */
+    private var outLength = FLICK_OUT
+    private var outElapsed = 0f
+    private var dotStep = 0f
 
     /** The cursor or word drag at this frame. [column] is in key widths, as [CursorMode] gives it. [speed] is 0 on Space. */
     fun cursorFrame(column: Float, direction: Int, speed: Float, words: Boolean, now: Long) {
@@ -298,6 +303,24 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         val last = (dots - 1).toFloat() / dots
         return ((last * POP_SPREAD + POP_LENGTH) * FLICK_IN * scale).toLong()
     }
+
+    /**
+     * When each of a single flick's dots lands in the caret, nearest the caret first, in ms after the flick, at Android's
+     * animator duration [scale]. Empty when no flick's dots show now, or with no motion. The dots land haptic ticks on these.
+     */
+    fun dotLandings(scale: Float): List<Long> {
+        if (scene != Scene.DeleteFlick || fromHold || dots == 0 || scale <= 0f) return emptyList()
+        // Each dot sets off one step after the one before, and lands as its own way ends.
+        val first = ((dotsInMillis + FLICK_HOLD + DOT_TRAVEL) * scale).roundToLong()
+        val step = dotStepMillis(dots, scale)
+        return (0 until dots).map { index -> first + (index * step).roundToLong() }
+    }
+
+    /** How far dot [index] has gone on its way into the caret: 0 before it sets off, 1 as it lands, and more after. */
+    fun dotTravel(index: Int) = (outElapsed - index * dotStep) / DOT_TRAVEL
+
+    /** When the single flick that shows now started, an uptime, or null when none shows. Tells one flick's dots from the next. */
+    val flickAt get() = if (scene == Scene.DeleteFlick && !fromHold) flourishAt else null
 
     /** The dots for words of [letters], nearest the caret first, cut at [MAX_DOTS] in all. */
     private fun setGroups(letters: List<Int>) {
@@ -441,6 +464,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         lastFrame = now
         val motion = scale > 0f
         if (flourishing) {
+            if (scene == Scene.DeleteFlick && motion && dots > 0) {
+                outLength = outMillis(dots, scale) / scale
+                dotStep = dotStepMillis(dots, scale) / scale
+            }
             val length = if (!motion) STILL_MILLIS else when (scene) {
                 Scene.DeleteFlick -> flickMillis
                 Scene.WordSelected -> PICK_MILLIS
@@ -496,7 +523,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 // The text is already gone; only the picture moves. The dots come in, stay a while, and go into the caret.
                 val elapsed = if (motion) (now - flourishAt) / scale else dotsInMillis
                 dotsIn = (elapsed / dotsInMillis).coerceIn(0f, 1f)
-                dotsOut = if (motion) ((elapsed - dotsInMillis - FLICK_HOLD) / FLICK_OUT).coerceIn(0f, 1f) else 0f
+                outElapsed = if (motion) (elapsed - dotsInMillis - FLICK_HOLD).coerceIn(0f, outLength) else 0f
+                dotsOut = outElapsed / outLength
                 shownDeleted = 0f
                 flow = 0f
             }
@@ -554,13 +582,13 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * the caret, and then the words fade back in.
      */
     private fun flickReveal(elapsed: Float): Float {
-        val back = ((elapsed - dotsInMillis - FLICK_HOLD - FLICK_OUT) / FLICK_BACK).coerceIn(0f, 1f)
+        val back = ((elapsed - dotsInMillis - FLICK_HOLD - outLength) / FLICK_BACK).coerceIn(0f, 1f)
         if (back > 0f) return 1f - back * back * (3 - 2 * back)
         return revealedAtStart + (1f - revealedAtStart) * (elapsed / FLICK_COVER_IN).coerceIn(0f, 1f)
     }
 
-    /** How long the dots play in all: in, a while, into the caret, and the words back. */
-    val flickMillis get() = dotsInMillis + FLICK_HOLD + FLICK_OUT + FLICK_BACK
+    /** How long the dots play in all, in animation ms: in, a while, into the caret, and the words back. */
+    val flickMillis get() = dotsInMillis + FLICK_HOLD + outLength + FLICK_BACK
 
     /** A picked word's cover: in quickly from where it was, so the suggestions never show through, it holds, then it fades out. */
     private fun pickReveal(elapsed: Float): Float {
@@ -572,6 +600,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private fun clear() {
         scene = Scene.None
         fromHold = false
+        outLength = FLICK_OUT
+        outElapsed = 0f
+        dotStep = 0f
         reveal = 0f
         leaving = false
         resetPieces()
@@ -655,6 +686,26 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
          */
         const val POP_SPREAD = .6f
         const val POP_LENGTH = .4f
+        /**
+         * On their way into the caret over [FLICK_OUT], the farthest of a few dots sets off this much of the way later than the
+         * nearest, and each dot's own way takes the rest, [DOT_TRAVEL].
+         */
+        const val DOT_STAGGER = .55f
+        const val DOT_TRAVEL = FLICK_OUT * (1 - DOT_STAGGER)
+        /**
+         * The least time between two dots landing, in real ms, so each one's haptic tick stays its own on the Titan's motor. A few
+         * dots keep the owner's 450 ms way in. More dots stretch it, so 30 of them land over about 900 ms, one after another.
+         */
+        const val DOT_LAND_GAP = 30f
+
+        /** How far apart [dots] land in the caret, in real ms at animator [scale]: their share of the way in, or [DOT_LAND_GAP]. */
+        fun dotStepMillis(dots: Int, scale: Float) = max(FLICK_OUT * DOT_STAGGER * scale / dots, DOT_LAND_GAP)
+
+        /**
+         * How long [dots] take to go into the caret, in real ms at animator [scale]: the last one's step plus its own way. That's
+         * max(450 × scale, 202.5 × scale + 30 × dots), so the owner's 450 ms stays for up to eight dots.
+         */
+        fun outMillis(dots: Int, scale: Float) = DOT_TRAVEL * scale + dots * dotStepMillis(dots, scale)
         /** A lifted hold's lines shrink into the dots over this long, in the place of the dots' pop. */
         const val MORPH_IN = 240f
 

@@ -10,14 +10,17 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
   ] },
   { title: "Delete", haptics: [
     { id: "delete_flick", label: "Delete flick", about: "When you flick left to delete a word. The second pulse lands as the dots pop." },
+    { id: "delete_dots_land", label: "Delete dots land", about: "When a flick's dots go into the cursor. A light tick for every dot as it lands." },
     { id: "delete_word", label: "Each word while you hold", about: "Each word that goes while you keep your finger down after a flick." },
     { id: "delete_nothing", label: "Nothing left to delete", about: "When you flick or hold to delete and there's nothing left." },
   ] },
   { title: "Space gestures", haptics: [
     { id: "space_tap", label: "Each counted Space tap", about: "Each tap on Space that counts toward a double or triple tap, so you feel it land." },
     { id: "steer", label: "Steering starts", about: "When you hold Space and the cursor starts to follow your finger." },
+    { id: "steer_resumed", label: "Steering picks up after a slip", about: "When your finger slips off and lands again in time, and you're still steering." },
     { id: "select", label: "Selecting starts", about: "When you tap, tap, then hold Space and selecting starts." },
     { id: "word_picked", label: "Double or triple tap picks a word", about: "When a double or triple tap on Space picks the word at the cursor." },
+    { id: "two_taps_above", label: "Two taps above Space in the guide", about: "When you tap twice above Space in the guide's practice field. Two taps there pick nothing." },
     { id: "cursor_letter", label: "Cursor passes a letter", about: "Each letter the cursor passes while you steer." },
     { id: "cursor_space", label: "Cursor passes a space", about: "Each space or line end the cursor passes while you steer, so you can count words." },
     { id: "selection_word", label: "Selection grows or shrinks a word", about: "When the selection grabs one more word, or lets one go." },
@@ -40,6 +43,8 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "clip_offer", label: "Paste the offered clip", about: "When you paste the clip the bar offers after you copy something." },
     { id: "exact_key", label: "Exact typing bar: a key", about: "When you press a key on exact typing's bar, or Type clip." },
     { id: "exact_lock", label: "Exact typing bar: a lock", about: "When a long press locks a key on exact typing's bar." },
+    { id: "exact_chip", label: "Exact typing bar: a chip", about: "When you tap Shift, Alt or Ctrl on exact typing's bar to turn it on or off." },
+    { id: "exact_unlock", label: "Exact typing bar: unlock", about: "When you tap a locked Shift, Alt or Ctrl on exact typing's bar and it unlocks." },
   ] },
   { title: "Shift and Alt", haptics: [
     { id: "modifier_locked", label: "Locked", about: "When Shift or Alt locks on." },

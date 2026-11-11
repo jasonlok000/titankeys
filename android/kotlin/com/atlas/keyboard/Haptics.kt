@@ -63,15 +63,21 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     TapKey("tap_key", HapticGroup.Swipe, Family.Texture),
 
     DeleteFlick("delete_flick", HapticGroup.Delete, Family.GoneFlick),
+    /** A flick's dots going into the caret: a light tick as each one lands. */
+    DeleteDotsLand("delete_dots_land", HapticGroup.Delete, Family.Texture),
     DeleteWord("delete_word", HapticGroup.Delete, Family.Texture),
     DeleteNothing("delete_nothing", HapticGroup.Delete, Family.No),
 
     /** A Space tap that the gesture code counted, so each tap of a double or triple tap is felt as it lands. */
     SpaceTap("space_tap", HapticGroup.Space, Family.Texture),
     Steer("steer", HapticGroup.Space, Family.Confirm),
+    /** The finger came back within the slip time, and steering picks up again instead of typing. */
+    SteerResumed("steer_resumed", HapticGroup.Space, Family.Texture),
     Select("select", HapticGroup.Space, Family.Lock),
     /** A double or triple tap on Space picked the word at the cursor. It is selected, so it feels like selecting. */
     WordPicked("word_picked", HapticGroup.Space, Family.Lock),
+    /** Two quick taps above Space, which pick nothing there. Only in the guide's practice field, which says so. */
+    TwoTapsAbove("two_taps_above", HapticGroup.Space, Family.No),
     CursorLetter("cursor_letter", HapticGroup.Space, Family.Texture),
     CursorSpace("cursor_space", HapticGroup.Space, Family.Boundary),
     SelectionWord("selection_word", HapticGroup.Space, Family.Boundary),
@@ -99,6 +105,10 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     ExactKey("exact_key", HapticGroup.Bar, Family.Confirm),
     /** A long press locked a chip on exact typing's bar. */
     ExactLock("exact_lock", HapticGroup.Bar, Family.Lock),
+    /** A tap on a chip of exact typing's bar turned it on for the next key, or off. */
+    ExactChip("exact_chip", HapticGroup.Bar, Family.Confirm),
+    /** A tap on a locked chip of exact typing's bar unlocked it. */
+    ExactUnlock("exact_unlock", HapticGroup.Bar, Family.Release),
 
     ModifierLocked("modifier_locked", HapticGroup.Modifiers, Family.Lock),
     ModifierUnlocked("modifier_unlocked", HapticGroup.Modifiers, Family.Release),
@@ -120,6 +130,9 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
 
     companion object {
         fun of(id: String) = entries.firstOrNull { it.id == id }
+
+        /** What a short tap on an exact typing chip plays: Release when it unlocks a locked chip, and Confirm otherwise. */
+        fun chipTapped(wasLocked: Boolean) = if (wasLocked) ExactUnlock else ExactChip
     }
 }
 
@@ -191,6 +204,47 @@ class HapticSwitches(private val read: (String, Boolean) -> Boolean) {
         /** The master switch's key. It is the old Vibration setting's, so turning that off before still counts. */
         const val MASTER = "enabled"
     }
+}
+
+/**
+ * When a delete flick's dots tick as they land in the caret: one tick per dot, as each lands. The dots land at least 30 ms apart
+ * (see GestureDisplay.DOT_LAND_GAP), so every tick stays its own. A tick near the flick's own tail is left out, so the two never
+ * land on top of each other. It has no Android parts, so the checks can run it.
+ */
+object DotTicks {
+    /** The ticks, in ms after the flick, for dots that land at [landings], with the flick's tail starting at [tailAt]. */
+    fun times(landings: List<Long>, tailAt: Long?) =
+        landings.filter { tailAt == null || kotlin.math.abs(it - tailAt) >= HapticPalette.MIN_GAP_MILLIS }
+}
+
+/**
+ * Ticks waiting to play, which a cut drops all at once. [post] runs a tick after a delay and [remove] takes one back, as a
+ * Handler does. It has no Android parts, so the checks can run it with their own.
+ */
+class PendingTicks(private val post: (Runnable, Long) -> Unit, private val remove: (Runnable) -> Unit) {
+    private val waiting = ArrayList<Runnable>()
+
+    /** Drops any ticks still waiting, then [play]s once at each of [times], in ms from now. */
+    fun schedule(times: List<Long>, play: () -> Unit) {
+        cut()
+        for (at in times) {
+            lateinit var tick: Runnable
+            tick = Runnable {
+                waiting.remove(tick)
+                play()
+            }
+            waiting += tick
+            post(tick, at)
+        }
+    }
+
+    /** Drops every tick still waiting, so none plays after this. */
+    fun cut() {
+        for (tick in waiting) remove(tick)
+        waiting.clear()
+    }
+
+    val pending get() = waiting.size
 }
 
 /** What became of a haptic: it played, or why it didn't. */
@@ -310,6 +364,7 @@ class Haptics(private val context: Context) {
     private val ticks = SwipeTicks()
     private val main = Handler(Looper.getMainLooper())
     private var tail: Runnable? = null
+    private val dotTicks = PendingTicks({ tick, at -> main.postDelayed(tick, at) }, main::removeCallbacks)
     private val feeds = debug(context)
 
     init {
@@ -339,12 +394,26 @@ class Haptics(private val context: Context) {
     /**
      * The delete flick, timed to its dots: the first pulse now, and the tail as the dots pop, [poppedMillis] from now. With no
      * dots to time it to (null), or a pop sooner than the pattern's own gap, it plays as one waveform. The gate takes both parts
-     * as one message, busy until the tail ends.
+     * as one message, busy until the tail ends. Then a light tick as each dot lands in the caret, at [landings] (see [DotTicks]),
+     * each only while [showing] says the same flick's dots are still on the bar. [cutDots] drops the ticks still to come.
      */
-    fun flick(poppedMillis: Long?): Boolean {
+    fun flick(poppedMillis: Long?, landings: List<Long> = emptyList(), showing: () -> Boolean = { false }): Boolean {
         val pattern = pattern(context, Family.GoneFlick)
         val head = pattern[0]
         val tailAt = poppedMillis?.coerceIn(head + pattern[1], head + HapticPalette.GAP_MILLIS.last)
+        val played = flickNow(pattern, tailAt)
+        landTicks(landings, if (played) tailAt ?: (head + pattern[1]) else null, showing)
+        return played
+    }
+
+    private fun landTicks(landings: List<Long>, tailAt: Long?, showing: () -> Boolean) =
+        dotTicks.schedule(DotTicks.times(landings, tailAt)) { if (showing()) play(Haptic.DeleteDotsLand) }
+
+    /** Any key or touch cuts a flick's dots at once, and with them the ticks still to come. */
+    fun cutDots() = dotTicks.cut()
+
+    private fun flickNow(pattern: List<Long>, tailAt: Long?): Boolean {
+        val head = pattern[0]
         if (tailAt == null || tailAt == head + pattern[1]) return play(Haptic.DeleteFlick)
         val tailPulse = pattern.drop(2)
         val played = listOf(head, tailAt - head) + tailPulse

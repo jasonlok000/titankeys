@@ -29,16 +29,16 @@ Patterns are on and off in ms, starting with on.
 
 | Family | Pattern | Plays for |
 |---|---|---|
-| **Texture** | 17 | Swipe start, keys crossed, a light touch typing a key, each counted Space tap, cursor letters, words in a held delete, the marked button in the word menu or a panel |
+| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, words in a held delete, the marked button in the word menu or a panel |
 | **Boundary** | 30 | The cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel |
-| **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, Save, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key on exact typing's bar |
+| **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, Save, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
 | **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol |
 | **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar |
-| **Release** | 30 | Shift or Alt unlocked, a clip unpinned |
+| **Release** | 30 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked |
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
 | **Gone** | 60 | Forget, the clipboard cleared |
 | **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
-| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, nothing left to delete (flick and hold), the cursor hitting the start or end of the text |
+| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, nothing left to delete (flick and hold), the cursor hitting the start or end of the text, two taps above Space in the guide's practice field |
 | **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations |
 
 The rising and falling patterns use a short first or last pulse on purpose: the short pulse is what makes the rise or the fall. So Confirm's 15 ms and Change's 20 ms are under rule 1's "about 25". The table wins over that guide.
@@ -51,6 +51,10 @@ The owner's table had the delete flick at 50, 30, 20. Its gap is 35 instead, so 
 
 A flick shows a dot for each letter that went. The dots pop in one after another over 120 ms, at Android's animation speed. The flick's first pulse plays at the flick, and its 20 ms tail plays as a second vibration once the last dot has popped in: at 85 ms for a word of one or two letters, and up to just under 120 ms for a long one. The gate takes both parts as one message. With animations off, or no dots on the bar, it plays as one waveform, 50, 35, 20.
 
+Then the dots go into the caret one after another, and every dot ticks as it lands, as texture. Deleting should feel satisfying. To keep each tick its own on the Titan's motor, the dots land at least 30 ms apart (`DOT_LAND_GAP`). So the way in takes max(450, 202.5 + 30 × dots) ms, times Android's animation speed, and never less than 30 ms a dot after that. Up to eight dots keep the owner's 450 ms. Thirty land over about 900 ms. Each dot's own trip takes 202.5 ms, and the first lands about 520 ms after the flick. `GestureDisplay.outMillis` and `dotStepMillis` hold this, and the drawing and the ticks both come from them.
+
+A tick within 35 ms of the flick's tail is left out. Any key or touch cuts the dots at once, and the ticks still to come with them. A tick also only plays while that flick's dots are still on the bar. With animations off there are none, and a hold's lift, whose lines turn into dots, doesn't tick.
+
 ## What plays what
 
 **Swipe**
@@ -60,6 +64,7 @@ A flick shows a dot for each letter that went. The dots pop in one after another
 
 **Delete**
 - A delete flick: gone flick.
+- The flick's dots land in the caret: a light texture tick for every dot as it lands.
 - Each further word while you hold: texture.
 - Nothing left to delete: no. This goes for the flick and the hold.
 
@@ -68,6 +73,8 @@ A flick shows a dot for each letter that went. The dots pop in one after another
 - Steering starts: confirm.
 - Selecting starts (tap, tap, then hold): lock.
 - A double or triple tap picks a word: lock, as the word is now selected.
+- Two taps above Space pick nothing: no, but only in the guide's practice field, which teaches it. Everywhere else they stay quiet.
+- Your finger slips off while steering and lands again in time: texture, once, so you know you're still steering and not typing.
 - The cursor passes a letter: texture. It passes a space or a line end: boundary. So you can count words without looking. Punctuation has no tick of its own, as it almost always sits next to a space.
 - The selection grows or shrinks by a word: boundary.
 - The cursor hits the start or end of the text: no, once each time it gets there. It plays again once the cursor has moved away and comes back.
@@ -87,7 +94,7 @@ A flick shows a dot for each letter that went. The dots pop in one after another
 - Undo after Forget: back.
 - Save goes wrong: no.
 - Paste the offered clip: confirm.
-- Exact typing's bar: a key is confirm, and a lock is lock.
+- Exact typing's bar: a key is confirm. A tap on a Shift, Alt or Ctrl chip is confirm, a long press that locks one is lock, and a tap that unlocks a locked one is release.
 
 **Shift and Alt**
 - Locked: lock.
@@ -112,7 +119,7 @@ A flick shows a dot for each letter that went. The dots pop in one after another
 - **Shift or Alt once.** A key press, and the bar shows it.
 - **The double-space full stop and the automatic capital.** You see them land as you type.
 - **A swiped word landing.** Its ticks already played.
-- **Slipping and carrying on.** The swipe or the cursor just goes on.
+- **Slipping and carrying on in a swipe.** The swipe just goes on. Steering is different: it ticks once when your finger lands again, above.
 - **Lifting to end a steer.** You lifted, so you know.
 - **Typing in the Sym panel, and opening any panel.** Key presses, and you see the panel.
 - **The touchpad's scroll, cursor and Back.** The screen moves.

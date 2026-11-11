@@ -260,7 +260,12 @@ class Strip(
             point(null)
             press(this)
         }
-        setOnLongClickListener { hold() }
+        // Only a finger held on the screen opens a word's menu: never a touch that reaches the bar any other way.
+        setOnTouchListener { _, event ->
+            if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) heldOnScreen = event.isFromSource(android.view.InputDevice.SOURCE_TOUCHSCREEN)
+            false
+        }
+        setOnLongClickListener { heldOnScreen && isPressed && hold() }
     }
 
     /** A small label for one modifier. It is the same size at any system font size. */
@@ -523,11 +528,11 @@ class Strip(
     private fun showNotice(shown: Notice?) {
         noticeRow.visibility = if (shown != null) VISIBLE else GONE
         val menu = shown as? Notice.Menu
-        // A word's menu lays its three buttons over U, I and O, the keys that pick them, with the word on the left over the columns
-        // that pick nothing, and nothing over P's column. Elsewhere a notice is its line and its buttons, as before.
+        // A word's menu lays its three buttons over I, O and P, the keys that pick them, with the word right-aligned over the columns
+        // that pick nothing, just left of Save. Elsewhere a notice is its line and its buttons, as before.
         val keysIn = if (menu != null) maxOf(0, dp(Layout.KEY_SIDE_DP) - paddingLeft) else 0
         noticeRow.setPadding(keysIn, 0, keysIn, 0)
-        menuSpace.visibility = if (menu != null) VISIBLE else GONE
+        menuSpace.visibility = if (menu != null && MenuKeys.AFTER_COLUMNS > 0) VISIBLE else GONE
         (noticeLabel.layoutParams as LayoutParams).let { params ->
             val weight = if (menu != null) MenuKeys.WORD_COLUMNS.toFloat() else 1f
             if (params.weight != weight) {
@@ -541,7 +546,11 @@ class Strip(
                 menuSpace.layoutParams = params
             }
         }
-        noticeLabel.gravity = Gravity.CENTER_VERTICAL or if (shown == Notice.TeamsEgg) Gravity.CENTER_HORIZONTAL else Gravity.START
+        noticeLabel.gravity = Gravity.CENTER_VERTICAL or when {
+            shown == Notice.TeamsEgg -> Gravity.CENTER_HORIZONTAL
+            menu != null -> Gravity.END
+            else -> Gravity.START
+        }
         noticeLabel.text = when (shown) {
             is Notice.Menu -> context.getString(R.string.strip_menu_word, shown.word)
             is Notice.Forgot -> context.getString(R.string.strip_forgot, shown.word)
@@ -573,17 +582,23 @@ class Strip(
             val colour = if (marked) look.onAccent else if (action == Action.Close) look.muted else look.accent
             button.setTextColor(colour)
             if (menu != null) {
-                // An icon, as tall as the words' letters, and its name for screen readers.
+                // An icon, as tall as the words' letters, in the middle of its key's column, and its name for screen readers. A
+                // drawable at the start of the text would sit at the column's left edge instead.
                 button.text = ""
                 button.contentDescription = context.getString(label(action))
                 val size = Math.round(wordPixels() * MENU_ICON_SCALE)
-                button.setCompoundDrawablesRelative(context.getDrawable(icon(action))?.mutate()?.apply {
-                    setBounds(0, 0, size, size)
-                    setTint(colour)
-                }, null, null, null)
+                button.setCompoundDrawablesRelative(null, null, null, null)
+                button.foreground = context.getDrawable(icon(action))?.mutate()?.let { drawable ->
+                    drawable.setTint(colour)
+                    android.graphics.drawable.LayerDrawable(arrayOf(drawable)).apply {
+                        setLayerSize(0, size, size)
+                        setLayerGravity(0, Gravity.CENTER)
+                    }
+                }
                 button.gravity = Gravity.CENTER
                 button.setPadding(0, 0, 0, 0)
             } else {
+                button.foreground = null
                 button.setCompoundDrawablesRelative(null, null, null, null)
                 button.contentDescription = null
                 button.text = context.getString(label(action))
@@ -603,6 +618,9 @@ class Strip(
         }
         shownMenu = menu?.word
     }
+
+    /** The touch on a bar word came from the screen itself, so holding it may open its menu. */
+    private var heldOnScreen = false
 
     /** The word whose menu shows now, so the buttons move in only as a menu opens. */
     private var shownMenu: String? = null

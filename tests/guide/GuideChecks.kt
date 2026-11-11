@@ -57,12 +57,12 @@ private val gone = listOf("boring", "snippets", "exact", "names", "panel", "symb
 
 /** The word menu is picked with the keys: the top two rows, split into as many parts as the menu has buttons. */
 private fun theMenuKeys() {
-    same(MenuKeys.button("U"), MenuKeys.SAVE, "U saves")
-    same(MenuKeys.button("I"), MenuKeys.FORGET, "I forgets")
-    same(MenuKeys.button("O"), MenuKeys.BACK, "O goes back")
-    same(listOf("J", "K", "L").map(MenuKeys::button), listOf(MenuKeys.SAVE, MenuKeys.FORGET, MenuKeys.BACK), "The second row senses them too")
-    for (key in listOf("Q", "W", "E", "R", "T", "Y", "P", "A", "H", "Z", "M", Layout.SPACE))
-        same(MenuKeys.button(key), -1, "$key picks nothing: the word sits over the left, and nothing over P")
+    same(MenuKeys.button("I"), MenuKeys.SAVE, "I saves")
+    same(MenuKeys.button("O"), MenuKeys.FORGET, "O forgets")
+    same(MenuKeys.button("P"), MenuKeys.BACK, "P goes back")
+    same(listOf("K", "L").map(MenuKeys::button), listOf(MenuKeys.SAVE, MenuKeys.FORGET), "The second row senses them too")
+    for (key in listOf("Q", "W", "E", "R", "T", "Y", "U", "A", "H", "J", "Z", "M", Layout.SPACE))
+        same(MenuKeys.button(key), -1, "$key picks nothing: the word sits over the left")
     same(MenuKeys.WORD_COLUMNS + 3 + MenuKeys.AFTER_COLUMNS, 10, "The word, three buttons and P's column fill the ten columns")
 }
 

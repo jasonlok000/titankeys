@@ -1397,7 +1397,7 @@ class AtlasIme : InputMethodService() {
     /** The key that picked a menu button, whose release must not reach the app. */
     private var menuKey = -1
 
-    /** The menu's button that [key] picks: U saves, I forgets, O goes back. Null for a key that picks none. */
+    /** The menu's button that [key] picks: I saves, O forgets, P goes back. Null for a key that picks none. */
     private fun menuAction(key: String): Strip.Action? {
         val menu = strip?.notice as? Strip.Notice.Menu ?: return null
         return when (MenuKeys.button(key)) {
@@ -1619,6 +1619,15 @@ class AtlasIme : InputMethodService() {
         inputLog()?.motion(event, samples)
         if (panelOpen && hover(event, samples)) return
         if (!panelOpen) followRestingKey(event, samples)
+        // While the word menu is open the touchpad only marks its buttons: no swipe, trail, flick or cursor starts.
+        if (menuOpen && !panelOpen) {
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                endDeleteHold()
+                stopCursor()
+                contact.cancelActive()
+            }
+            return
+        }
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)

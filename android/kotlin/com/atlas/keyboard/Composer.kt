@@ -198,8 +198,6 @@ class Composer(
     private val hidden = mutableSetOf<String>()
     /** Which of the composition's alternatives each place on the bar shows, since hidden and blocked words leave gaps. */
     private var shownAlternatives = emptyList<Int>()
-    /** The typed letters and the bar's middle word for them, as they were when the key that ends the word came. */
-    private var barBefore: Pair<String, String>? = null
 
     var liftOffMillis = 0
     /** Two quick spaces type a full stop, and punctuation typed after a space moves in front of that space. */
@@ -583,7 +581,6 @@ class Composer(
         val corrected = undo
         val spaceBefore = automaticSpace
         val fullStopBefore = fullStop
-        rememberBar()
         leave()
         invalidate(false)
         val typedSpace = fullStop?.snapshot
@@ -710,7 +707,6 @@ class Composer(
 
     fun space(repeated: Boolean, time: Long) {
         if (defer(transferable = true) { space(repeated, time) }) return
-        rememberBar()
         leave()
         invalidate(false)
         val anchor = snapshot()
@@ -809,7 +805,6 @@ class Composer(
 
     fun enter(press: EnterKey.Press) {
         if (defer(leaves = true) { enter(press) }) return
-        rememberBar()
         leave()
         invalidate(false)
         composition = Composition.None
@@ -1386,31 +1381,8 @@ class Composer(
 
     private fun findFix(word: String, anchor: Snapshot): TypedCorrector.Fix? {
         val before = anchor.before ?: return null
-        val corrector = corrector() ?: return null
-        val checked = corrector.check(word, before.dropLast(word.length), endedWord?.word)
-        // The bar and Space must not disagree on an apostrophe: when the bar's best guess is the typed letters with an
-        // apostrophe ("today's" for "todays"), Space puts that in, where it would change the word or the word is no word.
-        val onBar = apostropheOnBar(word)
-        barBefore = null
-        val fix = onBar?.takeIf { checked != null || !words.known(word) }?.let { TypedCorrector.Fix(word, it) }
-            ?: checked ?: return null
+        val fix = corrector()?.check(word, before.dropLast(word.length), endedWord?.word) ?: return null
         return fix.takeIf { before.endsWith(it.typed) && it.word.split(' ').all(words::allowed) && words.fixAllowed(it.typed, it.word) }
-    }
-
-    /** Notes the bar's middle word for the typed letters, before the key that ends the word clears the bar. */
-    private fun rememberBar() {
-        barBefore = (composition as? Composition.Typed)?.let { typed ->
-            typed.alternatives.getOrNull(shownAlternatives.firstOrNull() ?: -1)?.let { typed.prefix to it }
-        }
-    }
-
-    /** The bar's middle word for the typed [word] if it is [word] with only an apostrophe added, in [word]'s first capital. */
-    private fun apostropheOnBar(word: String): String? {
-        val (prefix, middle) = barBefore ?: return null
-        if (!prefix.equals(word, ignoreCase = true) || word.lowercase() in autocorrect?.rejected.orEmpty()) return null
-        if (middle.none { it == '\'' || it == '’' }) return null
-        if (!middle.filterNot { it == '\'' || it == '’' }.equals(word, ignoreCase = true)) return null
-        return if (word.first().isUpperCase()) middle.replaceFirstChar { it.uppercaseChar() } else middle
     }
 
     /**
@@ -1594,6 +1566,16 @@ class Composer(
         return others.take(GUIDE_PLACE) + (found.getOrNull(at) ?: wanted) + others.drop(GUIDE_PLACE)
     }
 
+    /**
+     * The owner's rule: the bar's middle word is what Space will put in. That is autocorrect's fix for the typed word, or the
+     * typed word itself when there is nothing to fix, so it goes first, and the other words follow without it.
+     */
+    private fun spaceFirst(found: List<String>, anchor: Snapshot): List<String> {
+        val word = typedWordAt(anchor) ?: return found
+        val space = findFix(word, anchor)?.word ?: word
+        return listOf(space) + found.filterNot { it.equals(space, ignoreCase = true) }
+    }
+
     private fun sameLetters(a: String, b: String) = a.filter(Char::isLetter).equals(b.filter(Char::isLetter), ignoreCase = true)
 
     private fun show(suggestions: List<String>) {
@@ -1651,7 +1633,8 @@ class Composer(
         words.complete(context, cancelled, field.sentenceCapitalisation && autoCapitalise()) { found ->
             if (cancelled.get() || current != epoch || snapshot() != anchor) return@complete
             val prefix = TypedPredictions.prefix(context)
-            val suggestions = guideSuggestions(found, prefix, intended(context.dropLast(prefix.length)))
+            val guided = guideSuggestions(found, prefix, intended(context.dropLast(prefix.length)))
+            val suggestions = if (trailingSpace) guided else spaceFirst(guided, anchor)
             if (suggestions.isEmpty()) {
                 offerStarts(anchor)
                 return@complete

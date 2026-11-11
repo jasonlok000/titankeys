@@ -582,14 +582,23 @@ class Strip(
     private val idleFrame = Runnable { invalidate() }
     /** How many of the bar's pixels make one of the games' units: they are made for a bar 88 high. */
     private val idleScale get() = dp(56) / Idle.H
+    /** How far the game keeps from each side, in pixels, so that the screen's rounded corners cut nothing, down to its floor. */
+    private var idleEdge = 0
+    /** A game ended by itself, and the bar shows its words again: the next idle wait starts. */
+    var idleEnded: () -> Unit = {}
 
     val idling get() = idle != null
 
-    /** Starts an idle game with the words on the bar, if plain words show. Returns false if there is nothing to play with. */
-    internal fun startIdle(random: kotlin.random.Random, kind: IdlePlayer.Kind? = null): Boolean {
+    /**
+     * Starts an idle game with the words on the bar, if plain words show: [kind], or one picked by rarity among the games the
+     * letters fit and [schedule] allows. Returns false if there is nothing to play with, or the letters do not fit [kind].
+     */
+    internal fun startIdle(random: kotlin.random.Random, kind: IdlePlayer.Kind? = null, schedule: IdleSchedule? = null): Boolean {
         if (idle != null || !isShown || !showSuggestions || modifiers?.replacesWords == true || notice != null || clip != null || selected != null
             || gesture.showing) return false
         val scale = idleScale
+        // The floor of the game, the bottom of its letters, is this far over the bottom of the screen; the corners curve in there.
+        idleEdge = corners.inset((height - Idle.H * scale).coerceAtLeast(0f)) + dp(2)
         val glyphs = ArrayList<Glyph>()
         // The words left to right, in the order of the bar, so that word 0, 1 and 2 are left, middle and right.
         val views = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.sortedBy { it.left }
@@ -604,11 +613,14 @@ class Strip(
                 if (char.isWhitespace()) continue
                 val left = view.left + view.totalPaddingLeft + layout.getPrimaryHorizontal(i) - view.scrollX
                 val advance = paint.measureText(view.text, i, i + 1)
-                glyphs += Glyph(char, word, (left + advance / 2) / scale, middle / scale, advance / scale, paint.textSize / scale)
+                glyphs += Glyph(char, word, (left + advance / 2 - idleEdge) / scale, middle / scale, advance / scale, paint.textSize / scale)
             }
         }
         if (glyphs.isEmpty()) return false
-        idle = IdlePlayer(glyphs, width / scale, random, kind)
+        val game = kind?.takeIf { IdlePlayer.fits(it, glyphs) }
+            ?: (if (kind == null) IdlePlayer.choose(glyphs, random) { schedule?.allows(it) != false } else null) ?: return false
+        schedule?.played(game)
+        idle = IdlePlayer(glyphs, (width - 2 * idleEdge) / scale, random, game)
         idleFrameAt = SystemClock.uptimeMillis()
         render()
         invalidate()
@@ -638,10 +650,13 @@ class Strip(
         val dt = (now - idleFrameAt).coerceIn(0, IDLE_LONGEST_FRAME).toFloat()
         idleFrameAt = now
         if (speed <= 0f || !player.update(dt / speed)) {
-            post(::stopIdle)
+            post { if (idle === player) { stopIdle(); idleEnded() } }
             return
         }
+        canvas.save()
+        canvas.translate(idleEdge.toFloat(), 0f)
         idleDrawing.draw(canvas, player, idleScale, wordViews.first().paint, look)
+        canvas.restore()
         postDelayed(idleFrame, IDLE_FRAME_MILLIS)
     }
 

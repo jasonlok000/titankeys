@@ -869,7 +869,7 @@ class AtlasIme : InputMethodService() {
         // Android can make this view after the field has started, and again when the screen settings change.
         words.words = barWords
         // Exact typing's bar starts hidden and is made before the first check, so a normal field never shows it.
-        val exact = ExactBar(this, ::exactChip, ::exactBarKey, ::typeClip) {}.apply { visibility = View.GONE }
+        val exact = ExactBar(this, ::exactChip, ::exactBarKey).apply { visibility = View.GONE }
         exactBar = exact
         words.showSuggestions = showSuggestions()
         showModifiers()
@@ -950,7 +950,6 @@ class AtlasIme : InputMethodService() {
         updateOverlay()
         if (!restarting) {
             sticky.clear()
-            clipTyping = null
         }
         updateExactBar()
         hold.started(info.packageName, editing)
@@ -971,6 +970,7 @@ class AtlasIme : InputMethodService() {
         modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
         cursorControl = TypingSettings.cursorControl(this)
+        exactRealAlt = ExactTyping.realAlt(this)
         // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
         contact.swipes = TypingSettings.swipeTyping(this) && field.words
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
@@ -2483,8 +2483,8 @@ class AtlasIme : InputMethodService() {
      */
     private fun exactKey(event: KeyEvent): Boolean {
         if (event.isSystem) return false
-        val meta = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState or sticky.meta)
-        val plan = ExactTyping.plan(event.keyCode, event.repeatCount, meta, event::getUnicodeChar)
+        val meta = KeyEvent.normalizeMetaState(ExactTyping.meta(event.metaState or modifiers.metaState, modifiers.ctrlHeld, sticky.meta))
+        val plan = ExactTyping.plan(event.keyCode, event.repeatCount, meta, altSymbols = !exactRealAlt, charFor = event::getUnicodeChar)
         logExact("key ${event.keyCode} repeat ${event.repeatCount} meta 0x${Integer.toHexString(meta)}" +
             if (plan.text != null) " as text from Alt" else "")
         plan.text?.let(::commitExact)
@@ -2565,7 +2565,8 @@ class AtlasIme : InputMethodService() {
     /** Exact typing's own bar: half the strip, worked by touch, always up. See [ExactBar]. It follows the settings that hide the bar. */
     private var exactBar: ExactBar? = null
     private val sticky = ExactTyping.Sticky()
-    private var clipTyping: Runnable? = null
+    /** The physical Alt sends Alt in exact typing apps, not symbols. See [ExactTyping.realAlt]. */
+    private var exactRealAlt = true
 
     private fun updateExactBar() {
         val bar = exactBar ?: return
@@ -2578,7 +2579,6 @@ class AtlasIme : InputMethodService() {
                 ExactTyping.BarKey.Shift -> modifiers.shift
                 ExactTyping.BarKey.Alt -> modifiers.alt
                 ExactTyping.BarKey.Ctrl -> if (modifiers.ctrlHeld) Modifiers.Level.Locked else Modifiers.Level.Off
-                ExactTyping.BarKey.Fn -> Modifiers.Level.Off
             }
             when {
                 own == ExactTyping.Level.Locked || held == Modifiers.Level.Locked -> ExactTyping.Level.Locked
@@ -2599,42 +2599,12 @@ class AtlasIme : InputMethodService() {
         val time = SystemClock.uptimeMillis()
         val like = KeyEvent(time, time, KeyEvent.ACTION_DOWN, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
             KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD)
-        val meta = KeyEvent.normalizeMetaState(modifiers.metaState or sticky.meta)
+        val meta = KeyEvent.normalizeMetaState(ExactTyping.meta(modifiers.metaState, modifiers.ctrlHeld, sticky.meta))
         haptics.play(Haptic.ExactKey)
         sendExact(like, ExactTyping.plan(code, 0, meta) { 0 }.events)
         sticky.used()
         modifiers.consume()
         showModifiers()
-    }
-
-    /**
-     * Types the clipboard as key presses, for a remote desktop where pasting does nothing. At most [ExactTyping.MAX_TYPED_CLIP]
-     * characters, a few each frame so the keyboard stays responsive, and nothing at all from a clip that an app marked sensitive.
-     */
-    private fun typeClip() {
-        val clip = getSystemService(android.content.ClipboardManager::class.java)?.primaryClip ?: return
-        if (clip.description.extras?.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE) == true) return
-        val text = clip.getItemAt(0)?.coerceToText(this)?.toString()?.take(ExactTyping.MAX_TYPED_CLIP) ?: return
-        if (text.isEmpty()) return
-        haptics.play(Haptic.ExactKey)
-        val keys = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)
-        var at = 0
-        val step = object : Runnable {
-            override fun run() {
-                val connection = currentInputConnection
-                if (clipTyping !== this || !field.exact || connection == null) return
-                val end = minOf(text.length, at + CLIP_CHUNK)
-                for (char in text.substring(at, end)) {
-                    // A character with no key, such as an emoji, goes as text.
-                    val events = keys.getEvents(charArrayOf(char))
-                    if (events == null) connection.commitText(char.toString(), 1) else events.forEach(connection::sendKeyEvent)
-                }
-                at = end
-                if (at < text.length) main.post(this) else clipTyping = null
-            }
-        }
-        clipTyping = step
-        main.post(step)
     }
 
     private fun showModifiers() {

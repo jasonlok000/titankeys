@@ -39,7 +39,7 @@ export default function Settings() {
         onChange={shortcodes => save.run({ shortcodes })} />
       <Toggle label="Spell out shorthand, like shd as should" value={settings.expandShorthand}
         onChange={expandShorthand => save.run({ expandShorthand })} />
-      <Field label="Exact typing" href="/settings/exact-apps">{exactAppsLabel(settings)}</Field>
+      <Field label="Exact typing (experimental)" href="/settings/exact-apps">{exactAppsLabel(settings)}</Field>
     </Section>
     <Section title="Suggestions">
       <Toggle label="Show word suggestions" value={settings.suggestionBar}

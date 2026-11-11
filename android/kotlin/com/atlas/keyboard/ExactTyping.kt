@@ -87,8 +87,8 @@ object ExactTyping {
      * [charFor] gives the key's character with a meta state. Shift, Alt and Sym themselves never come here: the keyboard keeps
      * them, so the app sees none of their own presses.
      */
-    fun plan(code: Int, repeat: Int, meta: Int, charFor: (Int) -> Int): Plan {
-        symbol(meta, charFor(meta), charFor(meta and KeyEvent.META_ALT_MASK.inv()))?.let { return Plan(it, emptyList()) }
+    fun plan(code: Int, repeat: Int, meta: Int, altSymbols: Boolean = true, charFor: (Int) -> Int): Plan {
+        if (altSymbols) symbol(meta, charFor(meta), charFor(meta and KeyEvent.META_ALT_MASK.inv()))?.let { return Plan(it, emptyList()) }
         val wrappers = wrappers(meta)
         val events = wrappers.map { Event(true, it, meta) } + Event(true, code, meta, repeat) + Event(false, code, meta) +
             wrappers.asReversed().map { Event(false, it, meta) }
@@ -98,12 +98,32 @@ object ExactTyping {
     /** A held letter went to the app as a key, so a Backspace key takes it back before its symbol goes in. */
     val takeBack = listOf(Event(true, KeyEvent.KEYCODE_DEL, 0), Event(false, KeyEvent.KEYCODE_DEL, 0))
 
+    /**
+     * The meta state of a key in exact typing: the physical keys' own ([physical]: the key's meta and Shift or Alt kept for one
+     * key), a Ctrl that is held, such as fn as Ctrl, and the bar's chips. So a physical Shift and the bar's Esc send Shift + Esc,
+     * and the bar's Ctrl with a physical C sends Ctrl + C.
+     */
+    fun meta(physical: Int, ctrlHeld: Boolean, sticky: Int): Int =
+        physical or sticky or if (ctrlHeld) BarKey.Ctrl.meta else 0
+
+    private const val PREFERENCES = "typing_settings"
+    private const val REAL_ALT = "exact_real_alt"
+
+    /**
+     * In exact typing apps, the physical Alt sends Alt to the app, not the symbol printed on a key (experimental, on by default).
+     * Symbols then come from Sym or from holding a key.
+     */
+    fun realAlt(context: Context) = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).getBoolean(REAL_ALT, true)
+
+    fun realAlt(context: Context, on: Boolean) {
+        context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).edit().putBoolean(REAL_ALT, on).apply()
+    }
+
     /** A modifier on the exact typing bar. [meta] is what it adds to a key. */
     enum class BarKey(val meta: Int) {
         Shift(KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON),
         Alt(KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON),
         Ctrl(KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON),
-        Fn(KeyEvent.META_FUNCTION_ON),
     }
 
     enum class Level { Off, Once, Locked }
@@ -149,9 +169,6 @@ object ExactTyping {
      */
     fun barShown(editing: Boolean, exact: Boolean, barAllowed: Boolean, panelOpen: Boolean) =
         editing && exact && barAllowed && !panelOpen
-
-    /** The most of a clip that "type clipboard" sends as key presses. */
-    const val MAX_TYPED_CLIP = 2000
 
     /** Puts [packageName] first in the apps where a field started recently, newest first and at most [MAX_RECENT_APPS]. */
     fun recentApps(recent: List<String>, packageName: String): List<String> =

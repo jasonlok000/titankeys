@@ -448,6 +448,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
 
     private fun putExactApps(state: JSONObject) {
         state.put("exactApps", listedApps(ExactTyping.apps(activity)))
+        state.put("exactRealAlt", ExactTyping.realAlt(activity))
         state.put("hiddenBarApps", listedApps(TypingSettings.hiddenBarApps(activity)))
         state.put("recentApps", JSONArray(TypingSettings.recentApps(activity)
             .map { JSONObject().put("app", it).put("name", appName(it)) }))
@@ -532,6 +533,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "enterKey" -> TypingSettings.enterKey(activity, value as String)
             "snippetStart" -> TypingSettings.snippetStart(activity, value as String)
             "shortcodes" -> TypingSettings.shortcodes(activity, value as Boolean)
+            "exactRealAlt" -> ExactTyping.realAlt(activity, value as Boolean)
             "expandShorthand" -> TypingSettings.expandShorthand(activity, value as Boolean)
             "liftOff" -> TypingSettings.liftOffGrace(activity, value as Boolean)
             "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())

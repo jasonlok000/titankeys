@@ -210,11 +210,7 @@ private fun stickyBarKeys() {
     same(sticky.level(ExactTyping.BarKey.Shift), ExactTyping.Level.Off, "while Shift on once is used up")
     sticky.tap(ExactTyping.BarKey.Alt)
     same(sticky.level(ExactTyping.BarKey.Alt), ExactTyping.Level.Off, "A tap lets a lock go")
-    sticky.tap(ExactTyping.BarKey.Fn)
-    check(sticky.meta and KeyEvent.META_FUNCTION_ON != 0, "fn adds the fn meta")
-    sticky.tap(ExactTyping.BarKey.Fn)
-    same(sticky.any, false, "A second tap turns it off")
-    same(ExactTyping.MAX_TYPED_CLIP, 2000, "A typed clip stops at 2,000 characters")
+    exactMetaStates()
     // UAT, 2026-11-11: the bar showed above the strip in the guide's normal field.
     for (allowed in listOf(true, false)) for (panel in listOf(true, false))
         same(ExactTyping.barShown(editing = true, exact = false, barAllowed = allowed, panelOpen = panel), false,
@@ -223,4 +219,26 @@ private fun stickyBarKeys() {
     same(ExactTyping.barShown(editing = true, exact = true, barAllowed = false, panelOpen = false), false, "The hide-bar setting hides it")
     same(ExactTyping.barShown(editing = true, exact = true, barAllowed = true, panelOpen = true), false, "The Sym panel takes its place")
     same(ExactTyping.barShown(editing = false, exact = true, barAllowed = true, panelOpen = false), false, "No field, no bar")
+}
+
+/** Physical modifiers, a held Ctrl and the bar's chips add up, and with Alt sending Alt, a letter with Alt is no symbol. */
+private fun exactMetaStates() {
+    val shift = KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON
+    val alt = KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON
+    val ctrl = KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON
+    same(ExactTyping.meta(shift, false, 0), shift, "A physical Shift alone")
+    same(ExactTyping.meta(shift, false, alt), shift or alt, "A physical Shift and the bar's Alt")
+    same(ExactTyping.meta(0, true, 0), ctrl, "A held Ctrl, such as fn")
+    same(ExactTyping.meta(shift or alt, false, ctrl), shift or alt or ctrl, "Shift and Alt on the keys, Ctrl on the bar")
+    val esc = ExactTyping.plan(KeyEvent.KEYCODE_ESCAPE, 0, shift or alt) { 0 }
+    same(esc.events.map { it.down to it.code }, listOf(true to KeyEvent.KEYCODE_SHIFT_LEFT, true to KeyEvent.KEYCODE_ALT_LEFT,
+        true to KeyEvent.KEYCODE_ESCAPE, false to KeyEvent.KEYCODE_ESCAPE, false to KeyEvent.KEYCODE_ALT_LEFT, false to KeyEvent.KEYCODE_SHIFT_LEFT),
+        "Shift and Alt, then the bar's Esc: Shift + Alt + Esc")
+    check(esc.events.all { it.meta == shift or alt }, "with Shift and Alt in each event's meta state")
+    val symbol = { meta: Int -> if (meta and KeyEvent.META_ALT_MASK != 0) '#'.code else 'q'.code }
+    same(ExactTyping.plan(KeyEvent.KEYCODE_Q, 0, alt, charFor = symbol).text, "#", "With the setting off, Alt and a letter type its symbol")
+    val realAlt = ExactTyping.plan(KeyEvent.KEYCODE_Q, 0, alt, altSymbols = false, charFor = symbol)
+    same(realAlt.text, null, "With Alt sending Alt, Alt and a letter are no symbol")
+    same(realAlt.events.map { it.code }, listOf(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_Q, KeyEvent.KEYCODE_Q, KeyEvent.KEYCODE_ALT_LEFT),
+        "but Alt + Q, with Alt's own key around it")
 }

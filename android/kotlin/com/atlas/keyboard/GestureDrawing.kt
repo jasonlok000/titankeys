@@ -129,15 +129,16 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val alpha = display.reveal
         val first = floor(display.shownDeleted).toInt()
         for (index in first..first + GestureDisplay.VISIBLE_WORDS.toInt() + 1) {
+            // A single flick's word is drawn on its own, as it lifts off; the words before it close the gap.
+            if (display.softDelete && index == 0) continue
             val x = stop - slot / 2 - (index - display.shownDeleted) * slot
             val half = slot * widthOf(index) / 2
             if (x - half >= stop || x + half < left) continue
-            val going = x + half > stop
-            // A single flick's word fades and shrinks as it passes into the caret, so it leaves smoothly.
-            val passed = if (going && display.softDelete) ((x + half - stop) / (2 * half)).coerceIn(0f, 1f) else 0f
-            val colour = if (going) GuideMotion.faded(look.accent, alpha * (1f - passed)) else GuideMotion.faded(look.ink, WORD * alpha)
-            word(canvas, maxOf(x - half, left), min(x + half, stop), mid, colour, 1f - passed * SHRINK)
+            val going = x + half > stop && !display.softDelete
+            val colour = if (going) GuideMotion.faded(look.accent, alpha) else GuideMotion.faded(look.ink, WORD * alpha)
+            word(canvas, maxOf(x - half, left), min(x + half, stop), mid, colour)
         }
+        if (display.softDelete) dissolve(canvas, stop - slot / 2, slot * widthOf(0) / 2, mid, display.lift, alpha, look)
         // The caret beats once for each word, quicker for a longer flick.
         val beat = 1f - BEAT * display.flow
         bar(canvas, caret, mid, dp(CARET_HEIGHT), GuideMotion.faded(look.accent, beat * alpha))
@@ -151,6 +152,25 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             at -= length + 1
         }
         return true
+    }
+
+    /**
+     * A single flick's word, centred on [x] and [half] wide each way: it lifts off the line and breaks into pieces that rise, spread,
+     * shrink and fade as [lift] goes from 0 to 1.
+     */
+    private fun dissolve(canvas: Canvas, x: Float, half: Float, mid: Float, lift: Float, alpha: Float, look: Look) {
+        val up = 1f - (1f - lift) * (1f - lift)
+        val piece = 2 * half / PIECES
+        for (i in 0 until PIECES) {
+            val from = i - (PIECES - 1) / 2f
+            val cx = x + from * piece + from * up * dp(PIECE_SPREAD)
+            val cy = mid - up * dp(LIFT_HEIGHT) - (if (i % 2 == 0) up * dp(PIECE_RISE) else 0f)
+            val size = 1f - lift * SHRINK
+            val gone = (lift * 1.15f - i * .03f).coerceIn(0f, 1f)
+            val shownHalf = piece / 2 * size - dp(1f)
+            if (shownHalf <= 0f) continue
+            word(canvas, cx - shownHalf, cx + shownHalf, cy, GuideMotion.faded(look.accent, alpha * (1f - gone)), size)
+        }
     }
 
     private fun word(canvas: Canvas, start: Float, end: Float, mid: Float, colour: Int, size: Float = 1f) {
@@ -202,8 +222,13 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val WORD = .28f
         const val SELECTED = .85f
         const val WORD_HEIGHT = 11f
-        /** How much of its height a single flick's word loses by the time it has gone into the caret. */
+        /** How much of its height a single flick's word loses by the time it has dissolved. */
         const val SHRINK = .6f
+        /** A single flick's word breaks into this many pieces, which rise this high, spread this far apart, and every other one higher. */
+        const val PIECES = 5
+        const val LIFT_HEIGHT = 12f
+        const val PIECE_SPREAD = 5f
+        const val PIECE_RISE = 4f
         const val WORD_GAP = 8f
         const val SELECTION_HEIGHT = 26f
         const val SELECTION_PAD = 5f

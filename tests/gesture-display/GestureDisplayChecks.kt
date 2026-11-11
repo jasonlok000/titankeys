@@ -362,12 +362,14 @@ private fun aFlickHasABriefFlourish() {
     display.run(1_000, 1_100)
     isTrue(display.flourish > 0f, "The flourish must move")
     isTrue(display.reveal > 0f, "The flourish must show")
-    same(display.softDelete, true, "A single flick's word fades and shrinks as it goes")
-    isTrue(display.shownDeleted > 0f && display.shownDeleted < 1f, "Halfway, the word is still on its way into the caret")
-    display.run(1_116, 1_180)
-    same(display.shownDeleted, 1f, "It has gone by about 170 ms")
-    display.run(1_196, 1_260)
-    same(display.scene, Scene.None, "The flourish must be over by 260 ms, so it cannot delay typing")
+    same(display.softDelete, true, "A single flick's word lifts off and dissolves")
+    isTrue(display.lift > 0f && display.lift < 1f, "At 100 ms the word is still lifting off")
+    display.run(1_116, 1_280)
+    same(display.scene, Scene.DeleteFlick, "At 280 ms it still shows, long enough to see clearly")
+    isTrue(display.lift > .7f, "By then it has nearly dissolved")
+    isTrue(display.shownDeleted > .8f, "The words before it have nearly closed the gap by then")
+    display.run(1_296, 1_376)
+    same(display.scene, Scene.None, "It is over by about 360 ms, and it is only a picture, so typing never waits for it")
 }
 
 private fun aDoubleTapHasABriefConfirmation() {

@@ -385,8 +385,8 @@ class Strip(
             invalidate()
         }
     /**
-     * The mark of an automatic capital: Shift's chip as it shows for one push, an outline in the accent colour at the left of the
-     * bar, as tall as Shift's chip but narrower, with a shift arrow for its label. It is drawn over the bar, so the words never move
+     * The mark of an automatic capital: a shift arrow in the accent colour, where Shift's chip shows for one push, at the left of the
+     * bar and at the size the arrow has in that chip, without the chip's outline. It is drawn over the bar, so the words never move
      * for it. If the left word reaches under it, it goes small into the top left corner for that bar instead.
      */
     private val capitalPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
@@ -419,10 +419,7 @@ class Strip(
         }
         val cornerScale = capitalBox.height() / height
         capitalPaint.color = look.accent
-        capitalPaint.strokeWidth = dp(1).coerceAtLeast(2) * (if (small) .8f else 1f)
-        val corner = Radii.px(resources, Radii.SMALL) * cornerScale
-        canvas.drawRoundRect(capitalBox, corner, corner, capitalPaint)
-        // The shift arrow inside: a head as wide as it is tall at the top, on a stem half as wide.
+        // The shift arrow, where Shift's chip would be, without the chip's outline: a head as wide as it is tall at the top, on a stem half as wide.
         val size = arrow * cornerScale
         val x = capitalBox.centerX() - size / 2
         val y = capitalBox.centerY() - size / 2
@@ -535,7 +532,7 @@ class Strip(
     val idling get() = idle != null
 
     /** Starts an idle game with the words on the bar, if plain words show. Returns false if there is nothing to play with. */
-    fun startIdle(random: kotlin.random.Random): Boolean {
+    internal fun startIdle(random: kotlin.random.Random, kind: IdlePlayer.Kind? = null): Boolean {
         if (idle != null || !isShown || !showSuggestions || modifiers?.replacesWords == true || notice != null || clip != null || selected != null
             || gesture.showing) return false
         val scale = idleScale
@@ -557,7 +554,7 @@ class Strip(
             }
         }
         if (glyphs.isEmpty()) return false
-        idle = IdlePlayer(glyphs, width / scale, random)
+        idle = IdlePlayer(glyphs, width / scale, random, kind)
         idleFrameAt = SystemClock.uptimeMillis()
         render()
         invalidate()
@@ -565,8 +562,10 @@ class Strip(
     }
 
     /** You came back: the letters go home, by the game's own way. Typing or swiping still cuts to the words at once with [stopIdle]. */
-    fun comeBackFromIdle() {
-        idle?.comeBack()
+    internal fun comeBackFromIdle(way: IdlePlayer.Way? = null): Boolean {
+        val player = idle ?: return false
+        player.comeBack(way)
+        return true
     }
 
     /** Ends the idle game at once, and the bar is as it was. */

@@ -122,8 +122,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private val live get() = !leaving && (scene == Scene.Cursor || scene == Scene.WordDrag || scene == Scene.DeleteHold)
     private val flourishing get() = scene == Scene.DeleteFlick || scene == Scene.WordSelected
 
-    /** A single flick's word: it eases into the caret, fading and shrinking as it goes, where a hold's words run straight in. */
+    /** A single flick's word: it lifts off the line and dissolves where it was, where a hold's words run straight into the caret. */
     val softDelete get() = scene == Scene.DeleteFlick
+
+    /** How far a single flick's word has lifted off and dissolved, from 0 to 1. */
+    var lift = 0f
+        private set
 
     /** The cursor or word drag at this frame. [column] is in key widths, as [CursorMode] gives it. [speed] is 0 on Space. */
     fun cursorFrame(column: Float, direction: Int, speed: Float, words: Boolean, now: Long) {
@@ -232,7 +236,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         lastFrame = now
         val motion = scale > 0f
         if (flourishing) {
-            val length = if (motion) FLOURISH_MILLIS * scale else STILL_MILLIS
+            val length = if (motion) (if (scene == Scene.DeleteFlick) FLICK_MILLIS else FLOURISH_MILLIS) * scale else STILL_MILLIS
             val t = ((now - flourishAt) / length).coerceAtLeast(0f)
             if (t >= 1f) {
                 clear()
@@ -274,9 +278,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 if (motion) flow = (flow + min(FLOW_FASTEST, 1000f / deleteMillis) * seconds).mod(1f)
             }
             Scene.DeleteFlick -> {
-                // The text is already gone; only the picture eases, over the first part of the flourish, without a snap.
-                val travel = if (motion) ((now - flourishAt) / (FLICK_TRAVEL_MILLIS * scale)).coerceIn(0f, 1f) else 1f
-                shownDeleted = travel * travel * (3 - 2 * travel)
+                // The text is already gone; only the picture moves. The word lifts off and dissolves, and after a beat the words
+                // before it close the gap.
+                lift = if (motion) ((now - flourishAt) / (FLICK_MILLIS * scale)).coerceIn(0f, 1f) else 1f
+                val close = if (motion) ((now - flourishAt - FLICK_CLOSE_AFTER * scale) / (FLICK_CLOSE_MILLIS * scale)).coerceIn(0f, 1f) else 1f
+                shownDeleted = close * close * (3 - 2 * close)
                 flow = shownDeleted
             }
             Scene.WordSelected -> {
@@ -394,8 +400,13 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         private const val MAX_DELETE_EASE_MILLIS = 90f
         /** A flourish is short enough to end before the next word starts, and it does not wait for anything. */
         private const val FLOURISH_MILLIS = 260f
-        /** How long a single flick's word takes to slide into the caret and go. */
-        private const val FLICK_TRAVEL_MILLIS = 170f
+        /**
+         * How long a single flick's word takes to lift off and dissolve: long enough to read clearly, never slow, and only a picture,
+         * so typing never waits for it. The words before it start to close the gap after a beat, and take the rest of the time.
+         */
+        const val FLICK_MILLIS = 360f
+        private const val FLICK_CLOSE_AFTER = 90f
+        private const val FLICK_CLOSE_MILLIS = 240f
         private const val FLOURISH_IN = .25f
         private const val FLOURISH_OUT = .35f
         /** With motion off, a flourish stays this long as a still picture and then goes. */

@@ -119,6 +119,30 @@ private fun steadyKeyIgnoresFlicker() {
     steady.lift(2_000)
     same(steady.expire(2_000 + SteadyKey.LIFT_MILLIS), true, "A finger that stays off must clear the key")
     same(steady.key, "", "No key must show after the finger has gone")
+
+    // A key pushed under a resting finger, as on the quick settings: the touchpad reports a lift, then nothing until the key is up.
+    steady.touch(.25f, .15f)
+    steady.keyDown(45)
+    steady.lift(3_000)
+    same(steady.expire(3_000 + 5 * SteadyKey.LIFT_MILLIS), false, "While a key is down, the mark stays on the resting finger's key")
+    same(steady.key, "E", "The marked key stays marked across the toggle")
+    same(steady.keyUp(45, 4_000), true, "The last key let go")
+    same(steady.touch(.25f, .15f), false, "The resting finger, reported again, keeps its key with no lift needed")
+    same(steady.expire(4_000 + SteadyKey.LIFT_MILLIS), false, "and it stays")
+    // With no finger left after the key, the mark goes as after any lift.
+    steady.keyDown(45)
+    steady.lift(5_000)
+    steady.keyUp(45, 5_100)
+    same(steady.expire(5_100 + SteadyKey.LIFT_MILLIS - 1), false, "Not before the usual wait")
+    same(steady.expire(5_100 + SteadyKey.LIFT_MILLIS), true, "A finger that is gone after the key clears the mark")
+    // Two keys: only the last one let go starts the wait.
+    steady.touch(.25f, .15f)
+    steady.keyDown(45); steady.keyDown(59)
+    steady.lift(6_000)
+    same(steady.keyUp(45, 6_100), false, "One of two keys let go")
+    same(steady.expire(6_100 + 5 * SteadyKey.LIFT_MILLIS), false, "The mark stays while the other key is down")
+    steady.keysReleased()
+    same(steady.expire(6_100 + 6 * SteadyKey.LIFT_MILLIS), true, "When the keyboard hides, no key counts as down")
 }
 
 private fun cornersKeepContentClear() {
@@ -1146,6 +1170,19 @@ private fun ctrlActions() {
  * the next sentence start, also after deleting back to one.
  */
 private fun autoShift() {
+    // Ctrl over the automatic capital: the bar is Ctrl's, and its shortcuts get no Shift, until Ctrl lets go.
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        down(CTRL)
+        same(bar()?.chips, listOf(ModifierBar.CTRL), "With Ctrl down, the bar shows Ctrl only, not the automatic Shift")
+        same(bar()?.replacesWords, true, "Ctrl's own view, as always")
+        same(bar()?.autoCapital, false, "No arrow while Ctrl is down")
+        same(bar("C")?.hint, "C Copy", "A finger on C shows Ctrl's shortcut")
+        same(modifiers.autoShiftWaits, true, "Ctrl's shortcuts get no Shift from the automatic capital: it waits")
+        up(CTRL)
+        same(modifiers.autoShifted, true, "When Ctrl lets go, the automatic capital is back")
+        same(bar()?.autoCapital, true, "and its arrow shows again")
+    }
     Keyboard().run {
         modifiers.autoShift(sentenceStart = true)
         same(shift, Level.Once, "At a sentence start Shift comes on by itself")

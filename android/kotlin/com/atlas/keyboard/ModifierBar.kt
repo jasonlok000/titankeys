@@ -37,7 +37,8 @@ data class ModifierBar(
          */
         fun of(modifiers: Modifiers, hover: String, symbol: (String) -> String?): ModifierBar? {
             val alt = modifiers.alt != Modifiers.Level.Off
-            val shift = when (modifiers.shift) {
+            // While Ctrl is down, the automatic Shift does nothing and shows nothing: the bar is Ctrl's alone.
+            val shift = if (modifiers.autoShiftWaits) null else when (modifiers.shift) {
                 Modifiers.Level.Off -> null
                 Modifiers.Level.Once -> SHIFT
                 Modifiers.Level.Locked -> CAPS

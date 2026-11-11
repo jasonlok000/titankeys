@@ -1134,6 +1134,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onWindowHidden() {
+        panelHover.keysReleased()
         super.onWindowHidden()
         sleepIdleBar()
         if (field.exact) logExact("window hidden: back $passingBack typed $typedInField")
@@ -2306,6 +2307,8 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        // The panel's mark of the key under a resting finger stays while a key is down, as when it toggles a quick setting.
+        if (!touchpad.isGestureKey(event)) panelHover.keyDown(keyCode)
         clearTeamsEgg()
         strip?.gesture?.interrupt()
         strip?.gesture?.glowOff()
@@ -2378,6 +2381,11 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        // The last key let go: a resting finger is reported again at once, and if none is, the mark goes as after a lift.
+        if (panelHover.keyUp(keyCode, event.eventTime) && panelOpen) {
+            main.removeCallbacks(expireHover)
+            main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
+        }
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         // The guide tells Alt pressed and let go from Alt held, and a letter let go before its symbol. Only in its own field.

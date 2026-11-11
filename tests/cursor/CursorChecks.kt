@@ -1113,5 +1113,18 @@ private fun threeQuickTapsPickAWord() {
     above.tap(COLUMN, 1_000, FIRST_MILLIS, row = 2.7f)
     above.tap(COLUMN, 1_000 + FIRST_MILLIS + GAP_MILLIS, SECOND_MILLIS, row = 2.7f)
     above.tap(COLUMN, 1_000 + FIRST_MILLIS + GAP_MILLIS + SECOND_MILLIS + GAP_MILLIS, SECOND_MILLIS, row = 2.7f)
-    same(above.gesture.tripled, false, "Above Space, three taps never pick a word")
+    same(above.gesture.tripled, true, "Above Space, in the zone, three taps pick a word too (owner, 2026-11-11)")
+
+    val outside = Pad()
+    outside.tap(COLUMN, 1_000, FIRST_MILLIS, row = 1.5f)
+    outside.tap(COLUMN, 1_000 + FIRST_MILLIS + GAP_MILLIS, SECOND_MILLIS, row = 1.5f)
+    outside.tap(COLUMN, 1_000 + FIRST_MILLIS + GAP_MILLIS + SECOND_MILLIS + GAP_MILLIS, SECOND_MILLIS, row = 1.5f)
+    same(outside.gesture.tripled, false, "Outside the zone, three taps never pick a word")
+
+    same(WordSelection.atOrBefore("hello", 5, 5), 0 to 5, "Right after a word, that word")
+    same(WordSelection.atOrBefore("say hello. ", 11, 11), 4 to 9, "Past a full stop and a space, the word in front")
+    same(WordSelection.atOrBefore("say hello,", 10, 10), 4 to 9, "Past a comma, the word in front")
+    same(WordSelection.atOrBefore("say he|llo", 6, 6), 4 to 6, "Inside a word, that word as far as the marks around it")
+    same(WordSelection.atOrBefore("hello\n  ", 8, 8), null, "Not across a line end")
+    same(WordSelection.atOrBefore("  ", 2, 2), null, "No word before the cursor")
 }

@@ -3,10 +3,13 @@ package com.atlas.keyboard
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sin
 
 /**
  * Draws a [GestureDisplay] in the place of the words, at the strip's own height, between [left] and [right] so that the screen's
@@ -127,18 +130,21 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val stop = caret - dp(WORD_GAP)
         val slot = (right - left) / GestureDisplay.VISIBLE_WORDS
         val alpha = display.reveal
+        if (display.softDelete) {
+            // A single flick shows only the orange part: a dot for each character that went, and the caret.
+            val pulse = dots(canvas, display, left, stop, caret, mid, alpha, look)
+            bar(canvas, caret, mid, dp(CARET_HEIGHT) * (1f + CARET_PULSE * pulse), GuideMotion.faded(look.accent, alpha))
+            return
+        }
         val first = floor(display.shownDeleted).toInt()
         for (index in first..first + GestureDisplay.VISIBLE_WORDS.toInt() + 1) {
-            // A single flick's word is drawn on its own, as it lifts off; the words before it close the gap.
-            if (display.softDelete && index == 0) continue
             val x = stop - slot / 2 - (index - display.shownDeleted) * slot
             val half = slot * widthOf(index) / 2
             if (x - half >= stop || x + half < left) continue
-            val going = x + half > stop && !display.softDelete
+            val going = x + half > stop
             val colour = if (going) GuideMotion.faded(look.accent, alpha) else GuideMotion.faded(look.ink, WORD * alpha)
             word(canvas, maxOf(x - half, left), min(x + half, stop), mid, colour)
         }
-        if (display.softDelete) dissolve(canvas, stop - slot / 2, slot * widthOf(0) / 2, mid, display.lift, alpha, look)
         // The caret beats once for each word, quicker for a longer flick.
         val beat = 1f - BEAT * display.flow
         bar(canvas, caret, mid, dp(CARET_HEIGHT), GuideMotion.faded(look.accent, beat * alpha))
@@ -155,22 +161,36 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
 
     /**
-     * A single flick's word, centred on [x] and [half] wide each way: it lifts off the line and breaks into pieces that rise, spread,
-     * shrink and fade as [lift] goes from 0 to 1.
+     * A single flick's dots, one for each character it deleted, in a row that ends at [stop] beside the caret. They pop in one after
+     * another from the caret outwards and stay. At the end each one, nearest first, winds back a hair, then shoots into the caret
+     * with a small swell and is gone. Returns how hard the caret pulses now, from the dots that just arrived, 0 to 1.
      */
-    private fun dissolve(canvas: Canvas, x: Float, half: Float, mid: Float, lift: Float, alpha: Float, look: Look) {
-        val up = 1f - (1f - lift) * (1f - lift)
-        val piece = 2 * half / PIECES
-        for (i in 0 until PIECES) {
-            val from = i - (PIECES - 1) / 2f
-            val cx = x + from * piece + from * up * dp(PIECE_SPREAD)
-            val cy = mid - up * dp(LIFT_HEIGHT) - (if (i % 2 == 0) up * dp(PIECE_RISE) else 0f)
-            val size = 1f - lift * SHRINK
-            val gone = (lift * 1.15f - i * .03f).coerceIn(0f, 1f)
-            val shownHalf = piece / 2 * size - dp(1f)
-            if (shownHalf <= 0f) continue
-            word(canvas, cx - shownHalf, cx + shownHalf, cy, GuideMotion.faded(look.accent, alpha * (1f - gone)), size)
+    private fun dots(canvas: Canvas, display: GestureDisplay, left: Float, stop: Float, caret: Float, mid: Float, alpha: Float, look: Look): Float {
+        val count = display.dots
+        val step = min(dp(DOT_STEP), (stop - left) / count)
+        var pulse = 0f
+        for (i in 0 until count) {
+            val order = i.toFloat() / count
+            val popped = ((display.dotsIn - order * .6f) / .4f).coerceIn(0f, 1f)
+            // Each dot has its own part of the way out; it lands in the caret at 1.
+            val travel = (display.dotsOut - order * DOT_STAGGER) / (1f - DOT_STAGGER)
+            if (travel >= 1f) {
+                // Landed: the caret pulses for a moment.
+                pulse = max(pulse, 1f - ((travel - 1f) / DOT_PULSE).coerceIn(0f, 1f))
+                continue
+            }
+            if (popped <= 0f) continue
+            val u = travel.coerceIn(0f, 1f)
+            // A back-in ease: a small step back, then quickly into the caret.
+            val along = u * u * ((BACK + 1) * u - BACK)
+            val home = stop - step / 2 - i * step
+            val x = home + (caret - home) * along
+            val swell = 1f + DOT_SWELL * sin(u * PI.toFloat())
+            val size = popped * (1f + .25f * (1f - popped)) * swell * (1f - u * u)
+            if (size <= 0f) continue
+            dot(canvas, x, mid, dp(DOT_RADIUS) * size, GuideMotion.faded(look.accent, alpha))
         }
+        return pulse
     }
 
     private fun word(canvas: Canvas, start: Float, end: Float, mid: Float, colour: Int, size: Float = 1f) {
@@ -222,13 +242,16 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val WORD = .28f
         const val SELECTED = .85f
         const val WORD_HEIGHT = 11f
-        /** How much of its height a single flick's word loses by the time it has dissolved. */
-        const val SHRINK = .6f
-        /** A single flick's word breaks into this many pieces, which rise this high, spread this far apart, and every other one higher. */
-        const val PIECES = 5
-        const val LIFT_HEIGHT = 12f
-        const val PIECE_SPREAD = 5f
-        const val PIECE_RISE = 4f
+        /** A single flick's dots: their size and how far apart they are. */
+        const val DOT_RADIUS = 2.5f
+        const val DOT_STEP = 8f
+        /** On their way into the caret: how much later the farthest dot leaves, how far each winds back, and how much it swells. */
+        const val DOT_STAGGER = .55f
+        const val BACK = 1.4f
+        const val DOT_SWELL = .3f
+        /** How long the caret pulses for each dot that lands, as a part of the way out, and how much taller it gets. */
+        const val DOT_PULSE = .15f
+        const val CARET_PULSE = .35f
         const val WORD_GAP = 8f
         const val SELECTION_HEIGHT = 26f
         const val SELECTION_PAD = 5f

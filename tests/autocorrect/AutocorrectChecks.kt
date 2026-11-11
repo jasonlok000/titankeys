@@ -803,6 +803,35 @@ private fun composerFlow(world: Realistic) {
         val hidden = Typist(world, field = privateField).swipe("morning")
         hidden.composer.stop(terminal = true)
         same(hidden.words.keptAtEnd, emptyList<String>(), "Nothing is reported from a private field")
+
+        // An app's own send button empties the field: the last swiped word went with the message.
+        fun sendByApp(typist: Typist): Typist {
+            typist.editor.text = ""
+            typist.editor.cursor = 0 to 0
+            typist.composer.selectionChanged(0, 0)
+            typist.settle()
+            return typist
+        }
+        val sent = sendByApp(Typist(world).swipe("good").swipe("morning"))
+        same(sent.words.keptAtEnd, listOf("morning"), "A message sent by the app reports its last swiped word")
+        same(sent.words.kept, listOf("good"), "The sent last word is still not learned from")
+        sent.composer.stop(terminal = true)
+        same(sent.words.keptAtEnd, listOf("morning"), "A sent last word is reported once, not again when the field closes")
+
+        // The user selects everything, then deletes or cuts it: the selection comes first and ends the swiped word.
+        val cleared = Typist(world).swipe("good").swipe("morning")
+        cleared.select(0, cleared.text.length)
+        sendByApp(cleared)
+        same(cleared.words.keptAtEnd, emptyList<String>(), "A field the user cleared through a selection reports nothing")
+
+        val deletedBefore = sendByApp(Typist(world).swipe("good").swipe("morning").backspace())
+        same(deletedBefore.words.keptAtEnd, emptyList<String>(), "A last word deleted before sending is not reported")
+
+        val sentPrivately = sendByApp(Typist(world, field = privateField).swipe("morning"))
+        same(sentPrivately.words.keptAtEnd, emptyList<String>(), "Nothing sent from a private field is reported")
+
+        val picked = Typist(world).also { it.words.readings += "morning" to 1f }.swipe("morning")
+        same(picked.words.keptAtEnd, emptyList<String>(), "Nothing is reported before the field is sent")
     }
     run {
         val privateField = Field.of(InputType.TYPE_CLASS_TEXT, EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING)

@@ -359,6 +359,9 @@ class Composer(
             return false
         }
         if (updated == selection && expectedSelections.isEmpty() && (anchor == null || snapshot() == anchor)) return false
+        // An app empties its whole field when it sends a message: a last swiped word, still as swiped, went with it. The
+        // cursor must be at the start with nothing selected, as selecting everything also leaves no text around it.
+        if (start == 0 && end == 0 && editor.before()?.isEmpty() == true && editor.after()?.isEmpty() == true) sentWithField()
         selection = updated
         selectionConfirmed = start >= 0 && end >= 0
         // An app empties its field when it sends a message. Any other move may be the user going back to change a word.
@@ -1261,6 +1264,20 @@ class Composer(
         if (swiped.finalised) return
         swiped.finalised = true
         if (stillAsSwiped(swiped)) words.keptAtEnd(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
+    }
+
+    /**
+     * The app emptied the field, as it does when it sends. Every other change from outside, such as the user selecting
+     * text to delete or cut it, has already ended the swiped word, so a swiped word still here was the last thing in the
+     * field, just as it was swiped, when the field was sent. Only data sharing hears of it, as in [leaveKept].
+     */
+    private fun sentWithField() {
+        val swiped = composition as? Composition.Swiped ?: return
+        if (swiped.finalised || swiped.chosen) return
+        swiped.finalised = true
+        val asSwiped = field.learning && selectionConfirmed && selection == swiped.snapshot.selection && swiped.snapshot.available
+            && !swiped.snapshot.selected && swiped.snapshot.before?.endsWith(swiped.inserted) == true
+        if (asSwiped) words.keptAtEnd(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
     }
 
     /** The field allows learning, and the text is just as the swipe left it: the word was kept. */

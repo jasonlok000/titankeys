@@ -333,7 +333,10 @@ class AtlasIme : InputMethodService() {
 
     /** Two taps above Space pick nothing; the guide says so, once no third tap follows. Only in its own field. */
     private val confirmTwoAbove = Runnable {
-        if (inGuide && cursorGesture.confirmTwoAbove()) KeyboardEvents.publish { KeyboardEvent.TwoTapsAbove }
+        if (!inGuide || !cursorGesture.confirmTwoAbove()) return@Runnable
+        // A no, so the taps that did nothing are felt as nothing. Everywhere else they stay quiet.
+        haptics.play(Haptic.TwoTapsAbove)
+        KeyboardEvents.publish { KeyboardEvent.TwoTapsAbove }
     }
 
     /** Deletes the next word of a held delete flick. Only one edit is on its way at a time, so a lift leaves no words waiting. */
@@ -1609,7 +1612,8 @@ class AtlasIme : InputMethodService() {
                 endDeleteHold()
                 contact.down(first)
                 if (cursor.resume(first, composer.liftOffMillis.toLong())) {
-                    // Back within the slip recovery period: still steering the cursor, never typing.
+                    // Back within the slip recovery period: still steering the cursor, never typing. A tick says so.
+                    haptics.play(Haptic.SteerResumed)
                     main.removeCallbacks(endSlippedCursor)
                     contact.cancelActive()
                     cursor.move(samples.drop(1))
@@ -2672,7 +2676,10 @@ class AtlasIme : InputMethodService() {
 
     /** A tap on a chip turns it on for the next key, or off; a long press locks it. */
     private fun exactChip(key: ExactTyping.BarKey, long: Boolean) {
-        if (long) { if (sticky.lock(key)) haptics.play(Haptic.ExactLock) } else sticky.tap(key)
+        if (long) { if (sticky.lock(key)) haptics.play(Haptic.ExactLock) } else {
+            haptics.play(Haptic.chipTapped(wasLocked = sticky.level(key) == ExactTyping.Level.Locked))
+            sticky.tap(key)
+        }
         updateExactBar()
     }
 

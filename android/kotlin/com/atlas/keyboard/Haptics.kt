@@ -69,9 +69,13 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     /** A Space tap that the gesture code counted, so each tap of a double or triple tap is felt as it lands. */
     SpaceTap("space_tap", HapticGroup.Space, Family.Texture),
     Steer("steer", HapticGroup.Space, Family.Confirm),
+    /** The finger came back within the slip time, and steering picks up again instead of typing. */
+    SteerResumed("steer_resumed", HapticGroup.Space, Family.Texture),
     Select("select", HapticGroup.Space, Family.Lock),
     /** A double or triple tap on Space picked the word at the cursor. It is selected, so it feels like selecting. */
     WordPicked("word_picked", HapticGroup.Space, Family.Lock),
+    /** Two quick taps above Space, which pick nothing there. Only in the guide's practice field, which says so. */
+    TwoTapsAbove("two_taps_above", HapticGroup.Space, Family.No),
     CursorLetter("cursor_letter", HapticGroup.Space, Family.Texture),
     CursorSpace("cursor_space", HapticGroup.Space, Family.Boundary),
     SelectionWord("selection_word", HapticGroup.Space, Family.Boundary),
@@ -99,6 +103,10 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     ExactKey("exact_key", HapticGroup.Bar, Family.Confirm),
     /** A long press locked a chip on exact typing's bar. */
     ExactLock("exact_lock", HapticGroup.Bar, Family.Lock),
+    /** A tap on a chip of exact typing's bar turned it on for the next key, or off. */
+    ExactChip("exact_chip", HapticGroup.Bar, Family.Confirm),
+    /** A tap on a locked chip of exact typing's bar unlocked it. */
+    ExactUnlock("exact_unlock", HapticGroup.Bar, Family.Release),
 
     ModifierLocked("modifier_locked", HapticGroup.Modifiers, Family.Lock),
     ModifierUnlocked("modifier_unlocked", HapticGroup.Modifiers, Family.Release),
@@ -120,6 +128,9 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
 
     companion object {
         fun of(id: String) = entries.firstOrNull { it.id == id }
+
+        /** What a short tap on an exact typing chip plays: Release when it unlocks a locked chip, and Confirm otherwise. */
+        fun chipTapped(wasLocked: Boolean) = if (wasLocked) ExactUnlock else ExactChip
     }
 }
 

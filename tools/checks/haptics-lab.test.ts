@@ -114,3 +114,23 @@ test("the lab has a practice field, a live timeline and an editor with small Pla
   // The sliders keep every gap at the rulebook's 35 ms or more.
   expect(read("android/kotlin/com/atlas/keyboard/Haptics.kt")).toContain("val GAP_MILLIS = MIN_GAP_MILLIS..200L");
 });
+
+test("two taps above Space play no only in the guide's practice field", () => {
+  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  expect(ime.match(/Haptic\.TwoTapsAbove/g)?.length).toBe(1);
+  // The play sits after the check that returns outside the guide's field.
+  const block = ime.slice(ime.indexOf("private val confirmTwoAbove = Runnable {"));
+  const body = block.slice(0, block.indexOf("\n    }\n"));
+  expect(body).toMatch(/if \(!inGuide \|\| !cursorGesture\.confirmTwoAbove\(\)\) return@Runnable[\s\S]*haptics\.play\(Haptic\.TwoTapsAbove\)/);
+  // And the runnable is only ever posted in the guide's field.
+  expect(ime).toContain("else if (inGuide && cursorGesture.twoAbove) main.postAtTime(confirmTwoAbove,");
+  expect(ime.match(/confirmTwoAbove,/g)?.length).toBe(1);
+});
+
+test("steering ticks when it picks up after a slip, and exact typing's chips play", () => {
+  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  expect(ime).toMatch(/if \(cursor\.resume\(first, composer\.liftOffMillis\.toLong\(\)\)\) \{[^}]*haptics\.play\(Haptic\.SteerResumed\)/);
+  expect(ime).toContain("haptics.play(Haptic.chipTapped(wasLocked = sticky.level(key) == ExactTyping.Level.Locked))");
+  // The level is read before the tap changes it.
+  expect(ime.indexOf("Haptic.chipTapped(")).toBeLessThan(ime.indexOf("sticky.tap(key)"));
+});

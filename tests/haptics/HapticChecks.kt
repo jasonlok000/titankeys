@@ -20,6 +20,7 @@ fun main() {
     aCountedTapNeverBlocksTheGesture()
     theGateSaysWhy()
     theFeedOnlyRecordsWhenOn()
+    theOwnersFourAdditions()
     nothingCutsAPlayingMessage()
     triedPatternsOnlyInDebug()
     everyHapticIsOnByDefault()
@@ -47,8 +48,10 @@ private val table = mapOf(
     Haptic.DeleteNothing to Family.No,
     Haptic.SpaceTap to Family.Texture,
     Haptic.Steer to Family.Confirm,
+    Haptic.SteerResumed to Family.Texture,
     Haptic.Select to Family.Lock,
     Haptic.WordPicked to Family.Lock,
+    Haptic.TwoTapsAbove to Family.No,
     Haptic.CursorLetter to Family.Texture,
     Haptic.CursorSpace to Family.Boundary,
     Haptic.SelectionWord to Family.Boundary,
@@ -67,6 +70,8 @@ private val table = mapOf(
     Haptic.ClipOffer to Family.Confirm,
     Haptic.ExactKey to Family.Confirm,
     Haptic.ExactLock to Family.Lock,
+    Haptic.ExactChip to Family.Confirm,
+    Haptic.ExactUnlock to Family.Release,
     Haptic.ModifierLocked to Family.Lock,
     Haptic.ModifierUnlocked to Family.Release,
     Haptic.PanelMark to Family.Texture,
@@ -385,4 +390,22 @@ private fun theFeedOnlyRecordsWhenOn() {
     HapticFeed.record(event)
     check(heard == HapticFeed.KEEP + 5) { "Once stopped, the listener hears no more" }
     HapticFeed.enabled = false
+}
+
+/** Four from the audit the owner approved: a steer picked up after a slip, exact typing's chips, and two taps above Space in the guide. */
+private fun theOwnersFourAdditions() {
+    check(Haptic.SteerResumed.group == HapticGroup.Space && Haptic.TwoTapsAbove.group == HapticGroup.Space) { "Space gestures" }
+    check(Haptic.ExactChip.group == HapticGroup.Bar && Haptic.ExactUnlock.group == HapticGroup.Bar) { "Exact typing's bar" }
+    check(Haptic.chipTapped(wasLocked = false) == Haptic.ExactChip) { "A tap on a chip that isn't locked is confirm" }
+    check(Haptic.chipTapped(wasLocked = true) == Haptic.ExactUnlock) { "A tap that unlocks a locked chip is release" }
+    check(Haptic.ExactLock.family == Family.Lock) { "The long press still locks" }
+    // A resumed steer is texture, so it never holds up the steering's own messages, and steering's ticks keep their pace after it.
+    val clock = Clock()
+    val gate = HapticGate { clock.now }
+    check(gate.admit(Haptic.SteerResumed.family)) { "The tick on landing again" }
+    check(gate.admit(Haptic.CursorLetter.family)) { "The next letter still ticks" }
+    check(gate.check(Haptic.CursorEnd.family) == HapticResult.Played) { "And an end still plays its no" }
+    // Its plain words for the lab.
+    for (haptic in listOf(Haptic.SteerResumed, Haptic.TwoTapsAbove, Haptic.ExactChip, Haptic.ExactUnlock))
+        check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic has a trigger" }
 }

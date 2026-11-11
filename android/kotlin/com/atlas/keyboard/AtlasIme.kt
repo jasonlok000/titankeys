@@ -1562,6 +1562,8 @@ class AtlasIme : InputMethodService() {
     private fun motion(event: MotionEvent) {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             clearTeamsEgg()
+            // A delete flick's dots are only a picture, so the next touch ends them.
+            strip?.gesture?.interrupt()
             // A finger landing is you coming back; the letters go home. A tap or swipe that types cuts to the words: see [outcome].
             wakeIdleBar(cut = false)
         }
@@ -2094,10 +2096,12 @@ class AtlasIme : InputMethodService() {
                 }
                 if (!field.words) return
                 if (outcome.deletesWord) {
-                    val nothingLeft = currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true
+                    val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
+                    val nothingLeft = before?.isEmpty() == true
                     haptics.play(if (nothingLeft) Haptic.DeleteNothing else Haptic.DeleteFlick)
                     composer.backspace(true)
-                    if (!nothingLeft) strip?.gesture?.wordDeleted(SystemClock.uptimeMillis())
+                    // A dot for each character of the word that went, not counting spaces.
+                    if (!nothingLeft) strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return
                 }
@@ -2207,6 +2211,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         clearTeamsEgg()
+        strip?.gesture?.interrupt()
         wakeIdleBar()
         if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
         Recording.sink?.key(event, touchpad.isGestureKey(event))
@@ -2748,6 +2753,8 @@ class AtlasIme : InputMethodService() {
         /** How long the strip stays hidden, from the moment its window has gone. Tuned on the phone: none is needed. */
         private const val RECYCLE_GAP_MILLIS = 0L
         /** How long the strip shows its word on Teams. */
+        /** How far back a delete flick looks to count the characters of the word it takes. */
+        private const val FLICK_REACH = 64
         /** How long the word on Teams shows. */
         private const val TEAMS_EGG_MILLIS = 500L
         private const val EGG_PREFERENCES = "easter_egg"

@@ -2,6 +2,7 @@ import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from 
 import { close } from "ink/icons";
 import { state, update } from "../../lib/atlas";
 import { connectedState } from "../../lib/connected";
+import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
 import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
@@ -68,7 +69,8 @@ export default function Settings() {
     </Section>
     <Section title="Your data">
       <Field label="Your words" href="/settings/data" />
-      <Field label="Typing log" href="/settings/rawlog">{rawLogLabel(settings)}</Field>
+      {/* The full typing log is only in TitanKeys Debug; public releases have Record a bug instead. */}
+      {settings.rawLogAvailable && <Field label="Typing log" href="/settings/rawlog">{rawLogLabel(settings)}</Field>}
       <Field label={contributeText.settingsLabel} href="/settings/contribute">
         {connected.status === "ready" ? contributeLabel(connected.data.contribute) : ""}</Field>
     </Section>
@@ -77,6 +79,7 @@ export default function Settings() {
       <Field label="Guide" href="/settings/guide" />
       <Field label={newsText.title} href="/settings/news" />
       <Field label="Send feedback" href="/settings/feedback" />
+      <Field label={bugText.settingsLabel} href="/settings/bug" />
       <Field label="About" href="/settings/about" />
     </Section>
   </Screen>;

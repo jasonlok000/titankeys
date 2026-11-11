@@ -16,6 +16,11 @@ class RawLogExportActivity : Activity() {
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The typing log is only in TitanKeys Debug: a public release has nothing to export.
+        if (!RawLog.available(this)) {
+            complete(false, "The typing log is only in TitanKeys Debug.")
+            return
+        }
         setContentView(TextView(this).apply {
             gravity = Gravity.CENTER
             text = "Exporting log…"

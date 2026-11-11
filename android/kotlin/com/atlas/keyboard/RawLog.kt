@@ -19,6 +19,9 @@ import java.io.OutputStream
  * [Session] as each field starts. With the setting off, or in a field that must not be recorded, there is no session,
  * so each hook is a null check. It is separate from [Recording], so the recorder and replay can run beside it.
  * The format is described in android/debug/recorder/README.md.
+ *
+ * The full log is only in TitanKeys Debug ([RawLogGate]). A [Session] also feeds a [BugRecording] while one runs, in every
+ * build, with the same lines but without the text around the cursor.
  */
 object RawLog {
     const val MARK_ACTION = "com.titankeys.rawlog.MARK"
@@ -33,9 +36,16 @@ object RawLog {
     /** A gap marker already covers the fields skipped since the last recorded one. */
     private var skipping = false
 
-    /** Turning it off stops recording at once. What is already saved stays until Delete all. */
+    /** Whether this build has the full typing log at all: only TitanKeys Debug does. */
+    fun available(context: Context) = RawLogGate.allows(context.packageName)
+
+    /** The full log records now: this build has it, and its switch is on. */
+    fun on(context: Context) = available(context) && TypingSettings.rawLog(context)
+
+    /** Turning it off stops recording at once. What is already saved stays until Delete all. Only debug builds turn it on. */
     @Synchronized
     fun enabled(context: Context, enabled: Boolean) {
+        check(!enabled || available(context)) { "The typing log is only in TitanKeys Debug" }
         TypingSettings.rawLog(context, enabled)
         if (!enabled) {
             writer?.close()
@@ -43,9 +53,23 @@ object RawLog {
         }
     }
 
-    fun size(context: Context) = store(context).size()
+    fun size(context: Context) = if (available(context)) store(context).size() else 0L
 
-    fun export(context: Context, out: OutputStream) = store(context).export(out)
+    fun export(context: Context, out: OutputStream) {
+        check(available(context)) { "The typing log is only in TitanKeys Debug" }
+        store(context).export(out)
+    }
+
+    /**
+     * A public release has no typing log. A phone that had one from TitanKeys 2.0 keeps nothing it can't see or export:
+     * the switch goes off and the old files go.
+     */
+    fun removeLeftovers(context: Context) {
+        if (available(context)) return
+        if (TypingSettings.rawLog(context)) TypingSettings.rawLog(context, false)
+        val directory = File(context.applicationContext.filesDir, DIRECTORY)
+        if (directory.exists()) deleteAll(context)
+    }
 
     fun deleteAll(context: Context) {
         val store = store(context)
@@ -56,10 +80,15 @@ object RawLog {
         }
     }
 
-    /** Starts recording the field that is starting, or returns null if it must not be recorded. */
+    /** Starts recording the field that is starting, or returns null if neither the log nor a bug recording takes it. */
     @Synchronized
     fun start(context: Context, info: EditorInfo, restarting: Boolean): Session? {
-        if (!TypingSettings.rawLog(context)) return null
+        val debug = if (on(context)) debugField(context, info, restarting) else null
+        val bug = BugRecording.fieldStart(context, info, restarting)
+        return if (debug == null && bug == null) null else Session(debug, bug)
+    }
+
+    private fun debugField(context: Context, info: EditorInfo, restarting: Boolean): RawLogWriter? {
         val writer = writer(context)
         if (!Field.logged(info.inputType, info.imeOptions, info.privateImeOptions)) {
             if (!skipping) writer.add(RawLogLines.gap("field", 0, now()))
@@ -75,7 +104,7 @@ object RawLog {
         }
         writer.add(RawLogLines.fieldStart(info.inputType, info.imeOptions, !Field.of(info.inputType, info.imeOptions).learning,
             restarting, info.initialSelStart, info.initialSelEnd, info.getInitialTextBeforeCursor(BEFORE_LENGTH, 0)?.toString(), now()))
-        return Session(writer)
+        return writer
     }
 
     private fun writer(context: Context): RawLogWriter = writer ?: store(context).let { store ->
@@ -93,7 +122,7 @@ object RawLog {
         RawLogStore(File(app.filesDir, DIRECTORY)) { header(app) }.also { store = it }
     }
 
-    private fun header(context: Context) = RawLogLines.header(now(), System.currentTimeMillis(),
+    internal fun header(context: Context) = RawLogLines.header(now(), System.currentTimeMillis(),
         context.packageManager.getPackageInfo(context.packageName, 0).versionName, Build.MODEL, Build.VERSION.RELEASE,
         TypingSettings.liftOffGraceMillis(context), settings(context),
         Contact.tuning + deleteSwipeTuning + swipePiecesTuning + CursorMode.tuning + SwipeRecognizer.tuning())
@@ -123,14 +152,29 @@ object RawLog {
 
     private fun now() = SystemClock.uptimeMillis()
 
-    /** Records one field. Every call comes from the keyboard's main thread, so the lines stay in order. */
-    class Session internal constructor(private val writer: RawLogWriter) : EditLog {
+    /**
+     * Records one field, to the full log ([debug], debug builds only) and to a running bug recording ([bug]), either or
+     * both. Every call comes from the keyboard's main thread, so the lines stay in order.
+     */
+    class Session internal constructor(private val debug: RawLogWriter?, private val bug: RawLogWriter?) : EditLog {
         private inline fun write(line: () -> String) {
-            if (!writer.closed) writer.add(line())
+            val open = listOfNotNull(debug, bug).filter { !it.closed }
+            if (open.isEmpty()) return
+            val text = line()
+            for (writer in open) writer.add(text)
+        }
+
+        /** A line with the text before the cursor: only the full log keeps that text. A bug recording never does. */
+        private inline fun writeWithText(line: (keepText: Boolean) -> String) {
+            if (debug != null && !debug.closed) debug.add(line(true))
+            if (bug != null && !bug.closed) bug.add(line(false))
         }
 
         /** Leaves out one line of input that may not belong to this field. */
-        fun skip() = writer.skip()
+        fun skip() {
+            debug?.skip()
+            bug?.skip()
+        }
 
         fun motion(event: MotionEvent, samples: List<Sample>) = write {
             val history = event.historySize
@@ -166,17 +210,19 @@ object RawLog {
             RawLogLines.picked(index, word, offered, now())
         }
 
-        fun selection(start: Int, end: Int, composingStart: Int, composingEnd: Int, before: CharSequence?) = write {
-            RawLogLines.selection(start, end, composingStart, composingEnd, before?.toString(), now())
+        fun selection(start: Int, end: Int, composingStart: Int, composingEnd: Int, before: CharSequence?) = writeWithText { keepText ->
+            RawLogLines.selection(start, end, composingStart, composingEnd, if (keepText) before?.toString() else null, now())
         }
 
-        fun mark(kind: String?, label: String?) = write {
-            RawLogLines.mark(kind?.take(MAX_MARK_LENGTH), label?.take(MAX_MARK_LENGTH), now())
+        /** Any app can send a mark, so only the debug log takes it, never a user's bug recording. */
+        fun mark(kind: String?, label: String?) {
+            if (debug != null && !debug.closed) debug.add(RawLogLines.mark(kind?.take(MAX_MARK_LENGTH), label?.take(MAX_MARK_LENGTH), now()))
         }
 
         fun finish() {
             write { RawLogLines.fieldEnd(now()) }
-            writer.flush()
+            debug?.flush()
+            bug?.flush()
         }
     }
 }

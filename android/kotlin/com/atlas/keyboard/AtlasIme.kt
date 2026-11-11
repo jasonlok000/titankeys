@@ -505,6 +505,8 @@ class AtlasIme : InputMethodService() {
         super.onCreate()
         Calibration.init(this)
         Connected.start(this)
+        // A public release has no typing log: an old one from 2.0 goes, as nothing can show or export it any more.
+        Thread { runCatching { RawLog.removeLeftovers(this) } }.start()
         haptics = Haptics(this)
         loadClips()
         clipboard?.addPrimaryClipChangedListener(clipChanged)

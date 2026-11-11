@@ -70,5 +70,14 @@
         <receiver
             android:name="com.atlas.connected.NewsReceiver"
             android:exported="false" />
+        <!-- Record a bug (#64): the notification's Stop, and the read-only file lent to the app picked in the share sheet. -->
+        <receiver
+            android:name="com.atlas.keyboard.BugStopReceiver"
+            android:exported="false" />
+        <provider
+            android:name="com.atlas.keyboard.BugRecordingProvider"
+            android:authorities="${applicationId}.bugrecording"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>

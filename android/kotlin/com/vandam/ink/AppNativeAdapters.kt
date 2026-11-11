@@ -233,6 +233,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     null
                 }
                 "exportRawLog" -> {
+                    check(RawLog.available(activity)) { "The typing log is only in TitanKeys Debug" }
                     check(!transferring) { "An export or import is already open." }
                     transferring = true
                     try {
@@ -389,7 +390,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("debugBuild", activity.packageName.endsWith(".debug"))
             .put("pickFeel", Haptics.pickFeel(activity).id)
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
-            .put("rawLog", TypingSettings.rawLog(activity))
+            .put("rawLogAvailable", RawLog.available(activity))
+            .put("rawLog", RawLog.on(activity))
             .put("rawLogBytes", RawLog.size(activity))
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))

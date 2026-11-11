@@ -10,6 +10,7 @@ import android.provider.Settings
 import com.atlas.connected.Announcements
 import com.atlas.connected.Connected
 import com.atlas.connected.Contributions
+import com.atlas.keyboard.BugRecording
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -55,6 +56,23 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
                         .setPrimaryClip(ClipData.newPlainText("TitanKeys contributor ID", id))
                     "null"
                 }
+                "bugState" -> bugState().toString()
+                "bugStart" -> {
+                    BugRecording.start(activity)
+                    "null"
+                }
+                "bugStop" -> {
+                    BugRecording.stop(activity)
+                    "null"
+                }
+                "bugDelete" -> {
+                    BugRecording.delete(activity)
+                    "null"
+                }
+                "bugShare" -> {
+                    BugRecording.share(activity, data.getString("subject"), data.getString("text"))
+                    "null"
+                }
                 "dismissEntry" -> {
                     Announcements.dismiss(activity, data.getString("id"))
                     "null"
@@ -91,6 +109,21 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
             .put("contributorId", Contributions.contributorId(activity) ?: "")
             .put("serverReady", Connected.CONTRIBUTIONS_URL.isNotEmpty())
             .put("privacyUrl", Connected.PRIVACY_URL)
+    }
+
+    /** Record a bug: whether it runs and for how long, or what the finished file holds. */
+    private fun bugState(): JSONObject {
+        val state = JSONObject()
+            .put("recording", BugRecording.recording)
+            .put("elapsed", BugRecording.elapsed())
+            .put("maxMillis", BugRecording.MAX_MILLIS)
+            .put("notificationsAllowed", Announcements.notificationsAllowed(activity))
+        val summary = if (BugRecording.recording) null else BugRecording.summary(activity)
+        if (summary != null) state.put("summary", JSONObject()
+            .put("millis", summary.millis).put("fields", summary.fields).put("touches", summary.touches)
+            .put("swipes", summary.swipes).put("keys", summary.keys).put("words", JSONArray(summary.words))
+            .put("bytes", BugRecording.size(activity)))
+        return state
     }
 
     /**

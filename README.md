@@ -236,7 +236,7 @@ TitanKeys doesn't learn from fields marked as passwords, email addresses, URLs, 
 
 TitanKeys asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "TitanKeys is displaying over other apps" notification while it's there, which you can turn off. Its Accessibility service only sends Back and, while the Sym panel is open or in a launcher search, reads the keys you push. While you type, it also keeps a 1-pixel window above the notification shade, so that a notification can't take the touchpad.
 
-The typing log in Settings, which records touches and typed text to tune the keyboard, is off until you turn it on, and it stays on your phone.
+**Settings > Record a bug** records your touches, keys and what the keyboard did, only while you ask it to and for 3 minutes at most, never in password or private fields. You see what's in the file before you share it, and TitanKeys never uploads it: you send it where you like.
 
 ## Install
 

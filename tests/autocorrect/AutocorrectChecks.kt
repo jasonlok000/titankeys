@@ -176,7 +176,11 @@ private class FakeWords(private val lists: Lists) : Words {
     override fun keptPair(previous: String?, next: String) { pairs += "${previous ?: "^"} $next" }
     override fun chosen(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) = Unit
     override fun corrected(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) { corrected += word }
-    override fun kept(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) = Unit
+    /** Swiped words reported as kept, which the keyboard learns from, and as kept at the end, which only sharing hears. */
+    val kept = ArrayList<String>()
+    val keptAtEnd = ArrayList<String>()
+    override fun kept(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) { kept += word }
+    override fun keptAtEnd(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) { keptAtEnd += word }
 }
 
 /** Types into a real Composer, the way the keyboard does for each key. */
@@ -772,6 +776,62 @@ private fun composerFlow(world: Realistic) {
         same(undone.text, "get dome food ", "Backspace put the typed word back")
         undone.composer.stop()
         same(pairs(undone), listOf("^ get", "get dome", "dome food"), "A word put back behind a swiped word is the word the user kept")
+    }
+    run {
+        // The last swiped word in a field, kept as it was, is reported to sharing when the field closes, and only then.
+        val last = Typist(world).swipe("good").swipe("morning")
+        same(last.words.kept, listOf("good"), "A swiped word is kept when the next one comes")
+        last.composer.stop(terminal = true)
+        same(last.words.keptAtEnd, listOf("morning"), "Leaving the field reports the last swiped word that stayed")
+        same(last.words.kept, listOf("good"), "The last word is still not learned from")
+        last.composer.stop(terminal = true)
+        same(last.words.keptAtEnd, listOf("morning"), "The last word is reported once")
+
+        val deleted = Typist(world).swipe("good").swipe("morning").backspace()
+        deleted.composer.stop(terminal = true)
+        same(deleted.words.keptAtEnd, emptyList<String>(), "A last word that was deleted is not reported")
+
+        val changed = Typist(world).swipe("good").swipe("morning").select(0)
+        changed.composer.stop(terminal = true)
+        same(changed.words.keptAtEnd, emptyList<String>(), "A last word after the cursor moved away is not reported")
+
+        val paused = Typist(world).swipe("morning")
+        paused.composer.stop()
+        same(paused.words.keptAtEnd, emptyList<String>(), "Only the field closing reports the last word")
+
+        val privateField = Field.of(InputType.TYPE_CLASS_TEXT, EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING)
+        val hidden = Typist(world, field = privateField).swipe("morning")
+        hidden.composer.stop(terminal = true)
+        same(hidden.words.keptAtEnd, emptyList<String>(), "Nothing is reported from a private field")
+
+        // An app's own send button empties the field: the last swiped word went with the message.
+        fun sendByApp(typist: Typist): Typist {
+            typist.editor.text = ""
+            typist.editor.cursor = 0 to 0
+            typist.composer.selectionChanged(0, 0)
+            typist.settle()
+            return typist
+        }
+        val sent = sendByApp(Typist(world).swipe("good").swipe("morning"))
+        same(sent.words.keptAtEnd, listOf("morning"), "A message sent by the app reports its last swiped word")
+        same(sent.words.kept, listOf("good"), "The sent last word is still not learned from")
+        sent.composer.stop(terminal = true)
+        same(sent.words.keptAtEnd, listOf("morning"), "A sent last word is reported once, not again when the field closes")
+
+        // The user selects everything, then deletes or cuts it: the selection comes first and ends the swiped word.
+        val cleared = Typist(world).swipe("good").swipe("morning")
+        cleared.select(0, cleared.text.length)
+        sendByApp(cleared)
+        same(cleared.words.keptAtEnd, emptyList<String>(), "A field the user cleared through a selection reports nothing")
+
+        val deletedBefore = sendByApp(Typist(world).swipe("good").swipe("morning").backspace())
+        same(deletedBefore.words.keptAtEnd, emptyList<String>(), "A last word deleted before sending is not reported")
+
+        val sentPrivately = sendByApp(Typist(world, field = privateField).swipe("morning"))
+        same(sentPrivately.words.keptAtEnd, emptyList<String>(), "Nothing sent from a private field is reported")
+
+        val picked = Typist(world).also { it.words.readings += "morning" to 1f }.swipe("morning")
+        same(picked.words.keptAtEnd, emptyList<String>(), "Nothing is reported before the field is sent")
     }
     run {
         val privateField = Field.of(InputType.TYPE_CLASS_TEXT, EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING)

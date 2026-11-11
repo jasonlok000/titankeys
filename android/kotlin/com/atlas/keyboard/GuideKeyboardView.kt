@@ -552,7 +552,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     /**
      * A soft patch over the part of the keys where the steer and select taps are easiest to land: from the top of the
-     * bottom letter row to as far down Space as the touchpad feels, as wide as the Space bar ([CursorGesture.inZone]).
+     * bottom letter row to as far down Space as the touchpad feels, across C, V, B and N ([CursorGesture.inZone]).
      */
     private fun drawTapZone(canvas: Canvas) {
         if (cue !is GuideCue.Taps) return

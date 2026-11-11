@@ -126,6 +126,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         if (steering && lean != 0f) {
             // Layers that each reach a little further in from the side's edge, so it brightens smoothly towards the edge, with no
             // edge of its own that could read as a slider.
+            // At a full lean the side comes to about 2.5 times the other side, see [UNDERGLOW] and [SIDE_LAYER].
             glow.alpha = (display.glowAlpha.coerceIn(0f, 1f) * abs(lean).coerceAtMost(1f) * SIDE_LAYER * 255).toInt()
             val far = centre + if (lean < 0) -half else half
             for (layer in 1..SIDE_LAYERS) {
@@ -141,20 +142,26 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
 
     /**
-     * Steering: the real text as a line of dots through the middle that moves past the caret, and the caret as tall as select's
-     * pill, so steering has the same weight as selecting. Which way it leans shows in the underglow, see [glow].
+     * Steering: the real text as a line of dots through the middle that moves past the caret, and the caret in a filled accent pill
+     * as tall as select's, in the dark colour, the other way round from select's dark word in its pill. The dots part round the
+     * pill with a small gap, so a letter the cursor passes hops to the other side. Which way it leans shows in the underglow, see
+     * [glow].
      */
     private fun cursor(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, mid: Float, look: Look) {
         val alpha = display.reveal
         val line = mid
         val caret = (left + right) / 2
         val pitch = dp(LETTER_PITCH)
+        val pill = dp(STEER_PILL / 2)
+        // How far each side's dots move out, so the nearest letter sits a small gap from the pill.
+        val part = pill + dp(PILL_GAP) + dp(LETTER_DOT) - pitch / 2
         val text = display.line
         if (text != null) {
             // The real text: a dot for each character, a gap for each space, and nothing past either end of the text.
             for (index in text.indices) {
                 if (text[index].isWhitespace()) continue
-                val x = caret + (index - display.caretAt - display.shownStep + .5f) * pitch
+                val d = (index - display.caretAt - display.shownStep + .5f) * pitch
+                val x = caret + d + if (d < 0) -part else part
                 if (x < left || x > right) continue
                 letterDot(canvas, x, caret, left, right, line, look, alpha)
             }
@@ -164,16 +171,15 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             val start = floor(moved).toInt() - reach
             for (index in start..start + 2 * reach + 1) {
                 if (isSpace(index)) continue
-                val x = caret + (index - moved + .5f) * pitch
+                val d = (index - moved + .5f) * pitch
+                val x = caret + d + if (d < 0) -part else part
                 if (x < left || x > right) continue
                 letterDot(canvas, x, caret, left, right, line, look, alpha)
             }
         }
-        // The caret in a soft pill of the accent, as tall and as round as select's, so the eye finds it the same way.
-        val halo = dp(HALO_WIDTH / 2)
-        rounded(canvas, caret - halo, line - dp(SELECTION_HEIGHT / 2), caret + halo, line + dp(SELECTION_HEIGHT / 2), radius,
-            GuideMotion.faded(look.accent, HALO * alpha))
-        bar(canvas, caret, line, dp(SELECTION_HEIGHT), GuideMotion.faded(look.accent, alpha), dp(STEER_CARET))
+        rounded(canvas, caret - pill, line - dp(SELECTION_HEIGHT / 2), caret + pill, line + dp(SELECTION_HEIGHT / 2), radius,
+            GuideMotion.faded(look.accent, alpha))
+        bar(canvas, caret, line, dp(STEER_CARET_HEIGHT), GuideMotion.faded(look.onAccent, SELECTED * alpha), dp(STEER_CARET))
     }
 
     /**
@@ -403,18 +409,19 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         /** A letter next to the caret is this strong; far off it is as strong as select's words, and it fades out only at the ends. */
         const val LETTER_NEAR = .75f
         const val LETTER_ENDS = 4f
-        /** Steering's caret is as tall as select's pill, and a touch wider than its caret. */
-        const val STEER_CARET = 4f
+        /** Steering's pill: as tall and as round as select's, and narrow, with its dark caret inside. */
+        const val STEER_PILL = 38f
+        const val STEER_CARET = 3f
+        const val STEER_CARET_HEIGHT = 14f
+        /** The gap between the pill and the nearest letter on each side. */
+        const val PILL_GAP = 5f
         /** While steering the underglow lies across the strip this strong, and the side it leans to grows from this far out. */
-        const val UNDERGLOW = .55f
+        const val UNDERGLOW = .4f
         /** The side it leans to brightens in this many soft layers, each a little past its edge so none shows. */
         const val SIDE_LAYERS = 6
         const val SIDE_SPILL = .08f
         /** Each layer is this strong at a full lean, so the edge itself comes to nearly full strength. */
-        const val SIDE_LAYER = .3f
-        /** The soft pill round steering's caret: about five letters wide, and faint so the letters under it still show. */
-        const val HALO_WIDTH = 58f
-        const val HALO = .3f
+        const val SIDE_LAYER = .45f
         const val CARET_WIDTH = 2.5f
         const val CARET_HEIGHT = 24f
         const val CARET_GAP = 4f

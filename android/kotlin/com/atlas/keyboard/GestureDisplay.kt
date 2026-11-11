@@ -122,6 +122,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private val live get() = !leaving && (scene == Scene.Cursor || scene == Scene.WordDrag || scene == Scene.DeleteHold)
     private val flourishing get() = scene == Scene.DeleteFlick || scene == Scene.WordSelected
 
+    /** A single flick's word: it eases into the caret, fading and shrinking as it goes, where a hold's words run straight in. */
+    val softDelete get() = scene == Scene.DeleteFlick
+
     /** The cursor or word drag at this frame. [column] is in key widths, as [CursorMode] gives it. [speed] is 0 on Space. */
     fun cursorFrame(column: Float, direction: Int, speed: Float, words: Boolean, now: Long) {
         if (!begin(if (words) Scene.WordDrag else Scene.Cursor, now)) return
@@ -271,8 +274,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 if (motion) flow = (flow + min(FLOW_FASTEST, 1000f / deleteMillis) * seconds).mod(1f)
             }
             Scene.DeleteFlick -> {
-                shownDeleted = flourish
-                flow = flourish
+                // The text is already gone; only the picture eases, over the first part of the flourish, without a snap.
+                val travel = if (motion) ((now - flourishAt) / (FLICK_TRAVEL_MILLIS * scale)).coerceIn(0f, 1f) else 1f
+                shownDeleted = travel * travel * (3 - 2 * travel)
+                flow = shownDeleted
             }
             Scene.WordSelected -> {
                 spanStart = -.5f * flourish
@@ -389,6 +394,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         private const val MAX_DELETE_EASE_MILLIS = 90f
         /** A flourish is short enough to end before the next word starts, and it does not wait for anything. */
         private const val FLOURISH_MILLIS = 260f
+        /** How long a single flick's word takes to slide into the caret and go. */
+        private const val FLICK_TRAVEL_MILLIS = 170f
         private const val FLOURISH_IN = .25f
         private const val FLOURISH_OUT = .35f
         /** With motion off, a flourish stays this long as a still picture and then goes. */

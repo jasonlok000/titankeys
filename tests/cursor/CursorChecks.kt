@@ -98,6 +98,7 @@ fun main() {
     aboveSpaceTheWholeBottomLetterRow()
     aWordFromVWithoutTapsStaysAWord()
     aHeldTouchRegistersBeforeAnySlide()
+    theThirdTouchIsKnownAsItLands()
     threeQuickTapsPickAWord()
     println("Cursor checks passed")
 }
@@ -1127,4 +1128,20 @@ private fun threeQuickTapsPickAWord() {
     same(WordSelection.atOrBefore("say he|llo", 6, 6), 4 to 6, "Inside a word, that word as far as the marks around it")
     same(WordSelection.atOrBefore("hello\n  ", 8, 8), null, "Not across a line end")
     same(WordSelection.atOrBefore("  ", 2, 2), null, "No word before the cursor")
+}
+
+/** The third touch picks the word as it lands (owner, 2026-11-11), so the gesture must know it then, before any lift or slide. */
+private fun theThirdTouchIsKnownAsItLands() {
+    val pad = Pad()
+    pad.twoTapsThenLand()
+    same(pad.gesture.tapsBefore, 2, "The third touch is known as it lands")
+    val second = Pad()
+    second.tapThenLand()
+    same(second.gesture.tapsBefore, 1, "A second touch is not a third")
+    val alone = Pad()
+    alone.down(at(COLUMN, 1_000))
+    same(alone.gesture.tapsBefore, 0, "A first touch has no taps before it")
+    val late = Pad()
+    late.twoTapsThenLand(gap = 400)
+    same(late.gesture.tapsBefore, 0, "A touch long after two taps is no third touch")
 }

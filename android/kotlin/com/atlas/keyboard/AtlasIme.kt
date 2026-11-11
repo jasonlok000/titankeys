@@ -399,7 +399,7 @@ class AtlasIme : InputMethodService() {
         }
         if (!drag.words) readCursorText()
         if (drag.words && !field.exact) enqueue { startWordDrag() }
-        stepCursor.reset()
+        stepCursor.reset(drag.words)
         stepCursor.run()
     }
 
@@ -440,10 +440,13 @@ class AtlasIme : InputMethodService() {
         strip?.gesture?.wordText(before.dropLast(head.length), head.length + tail.length, after.drop(tail.length))
     }
 
-    /** Three quick taps on Space: the word at the cursor, as soon as no fourth touch has followed. */
-    private val confirmTripleTap = Runnable {
-        if (!cursorGesture.confirmTriple()) return@Runnable
+    /**
+     * Two quick taps, then a third touch lands: the word in front of the cursor is selected at once, with no wait for a lift or a
+     * slide (owner, 2026-11-11). A slide from there takes more words, starting from this one.
+     */
+    private fun pickOnLand() {
         Recording.sink?.gesture("triple", SystemClock.uptimeMillis(), "")
+        gestureRegistered = true
         main.removeCallbacks(confirmDoubleTap)
         finishHeldTaps(type = false)
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
@@ -493,8 +496,9 @@ class AtlasIme : InputMethodService() {
             main.postDelayed(this, FRAME_MILLIS)
         }
 
-        fun reset() {
-            owed = 1f
+        /** A fresh lean of the cursor steps at once. A word drag starts from the picked word and waits for its first lean. */
+        fun reset(words: Boolean = false) {
+            owed = if (words) 0f else 1f
             last = 0L
         }
 
@@ -1557,7 +1561,6 @@ class AtlasIme : InputMethodService() {
                 contact.move(samples.drop(1))
                 stopCursor()
                 main.removeCallbacks(confirmDoubleTap)
-                main.removeCallbacks(confirmTripleTap)
                 cursorPath = ArrayList(samples.filter { it.valid })
                 // With Alt on or the panel open the touchpad does not type, so the cursor waits until they are off.
                 // A finger the contact ignored landed while typing, so it must not start the cursor.
@@ -1569,6 +1572,7 @@ class AtlasIme : InputMethodService() {
                 main.removeCallbacks(registerGestureLater)
                 if (cursorGesture.touchPending) {
                     gestureLanded = first
+                    if (cursorGesture.tapsBefore == 2) pickOnLand()
                     main.postDelayed(registerGestureLater, CursorGesture.REGISTER_MILLIS)
                 }
                 cursorGesture.move(samples.drop(1))?.let {
@@ -1630,7 +1634,6 @@ class AtlasIme : InputMethodService() {
         Recording.sink?.gesture("up", event.eventTime, "doubleTapped=$doubleTapped" + if (cancelled) " cancelled=true" else "")
         main.removeCallbacks(registerGestureLater)
         // Three quick taps pick the word at the cursor, with no slide, once no fourth touch follows.
-        if (!cancelled && cursorGesture.tripled) main.postAtTime(confirmTripleTap, event.eventTime + CursorGesture.CONFIRM_MILLIS)
         if (cursor.active) {
             main.removeCallbacks(stepCursor)
             cursor.move(samples)
@@ -1753,7 +1756,6 @@ class AtlasIme : InputMethodService() {
         Recording.sink?.gesture("cancel", SystemClock.uptimeMillis(), "")
         stopCursor()
         main.removeCallbacks(confirmDoubleTap)
-        main.removeCallbacks(confirmTripleTap)
         main.removeCallbacks(registerGestureLater)
         cursorGesture.cancel(SystemClock.uptimeMillis())
         settleHeldTaps()

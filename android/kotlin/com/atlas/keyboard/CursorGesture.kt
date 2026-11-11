@@ -58,6 +58,9 @@ class CursorGesture {
     /** True while a second or third touch is down that may still become a gesture, for the keyboard to check [held] after a while. */
     val touchPending get() = state is State.NextTouch
 
+    /** The quick taps before the touch that is down now: 2 when it is the third touch, which picks the word as it lands. */
+    val tapsBefore get() = (state as? State.NextTouch)?.taps ?: 0
+
     /**
      * Once the second or third touch has stayed down for [REGISTER_MILLIS] by [now], the count of touches so far: 2 for a tap then
      * a held touch (steering), 3 for two taps then a held touch (picking words). It answers once, and 0 otherwise. A resting

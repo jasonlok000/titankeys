@@ -1359,18 +1359,21 @@ class AtlasIme : InputMethodService() {
     /** The key that picked a menu button, whose release must not reach the app. */
     private var menuKey = -1
 
-    /** The menu's button that [key] picks, or null for a key that picks none. */
+    /** The menu's button that [key] picks: U saves, I forgets, O goes back. Null for a key that picks none. */
     private fun menuAction(key: String): Strip.Action? {
-        val strip = strip ?: return null
-        val actions = strip.noticeActions(strip.notice)
-        return actions.getOrNull(MenuKeys.button(key, actions.size))
+        val menu = strip?.notice as? Strip.Notice.Menu ?: return null
+        return when (MenuKeys.button(key)) {
+            MenuKeys.SAVE -> Strip.Action.Save
+            MenuKeys.FORGET -> Strip.Action.Forget.takeIf { menu.forget }
+            MenuKeys.BACK -> Strip.Action.Close
+            else -> null
+        }
     }
 
     /** A resting finger marks the button over its key, as on the Sym panel. */
     private fun markMenu(key: String) {
         val strip = strip ?: return
-        val actions = strip.noticeActions(strip.notice)
-        val mark = if (menuOpen) MenuKeys.button(key, actions.size) else -1
+        val mark = if (menuOpen && menuAction(key) != null) MenuKeys.button(key) else -1
         if (mark >= 0 && mark != strip.menuMark) haptics.play(Haptic.MenuMark)
         strip.menuMark = mark
     }

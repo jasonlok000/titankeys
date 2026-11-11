@@ -52,25 +52,13 @@ private val gone = listOf("boring", "snippets", "exact", "names", "panel", "symb
 
 /** The word menu is picked with the keys: the top two rows, split into as many parts as the menu has buttons. */
 private fun theMenuKeys() {
-    same(MenuKeys.button("Q", 3), 0, "Q picks the first of three")
-    same(MenuKeys.button("E", 3), 0, "Q to E pick the first")
-    same(MenuKeys.button("R", 3), 1, "R starts the second")
-    same(MenuKeys.button("T", 3), 1, "T picks the second")
-    same(MenuKeys.button("O", 3), 2, "O picks the last")
-    same(MenuKeys.button("P", 3), -1, "P picks nothing, and nothing is drawn over it")
-    same(MenuKeys.button("A", 3), 0, "The second row senses it too")
-    same(MenuKeys.button("L", 3), 2, "L picks the last")
-    same(MenuKeys.button("Z", 3), -1, "The bottom row of letters picks nothing")
-    same(MenuKeys.button(Layout.SPACE, 3), -1, "Space picks nothing")
-    same(MenuKeys.button("T", 2), 0, "With two buttons, T is on the left half")
-    same(MenuKeys.button("Y", 2), 1, "and Y on the right")
-    same(MenuKeys.button("Q", 0), -1, "No menu, no button")
-    for (count in 1..3) {
-        same((0 until 9).map { MenuKeys.button(Layout.rows[0][it], count) }.distinct().size, count, "Every one of $count buttons has keys")
-        same((0 until count).sumOf { MenuKeys.columns(it, count) }, MenuKeys.COLUMNS, "The buttons share every column but P's")
-        for (button in 0 until count) same((0 until 9).count { MenuKeys.button(Layout.rows[0][it], count) == button }, MenuKeys.columns(button, count),
-            "Button $button is drawn as wide as the keys that pick it")
-    }
+    same(MenuKeys.button("U"), MenuKeys.SAVE, "U saves")
+    same(MenuKeys.button("I"), MenuKeys.FORGET, "I forgets")
+    same(MenuKeys.button("O"), MenuKeys.BACK, "O goes back")
+    same(listOf("J", "K", "L").map(MenuKeys::button), listOf(MenuKeys.SAVE, MenuKeys.FORGET, MenuKeys.BACK), "The second row senses them too")
+    for (key in listOf("Q", "W", "E", "R", "T", "Y", "P", "A", "H", "Z", "M", Layout.SPACE))
+        same(MenuKeys.button(key), -1, "$key picks nothing: the word sits over the left, and nothing over P")
+    same(MenuKeys.WORD_COLUMNS + 3 + MenuKeys.AFTER_COLUMNS, 10, "The word, three buttons and P's column fill the ten columns")
 }
 
 fun main() {

@@ -895,6 +895,33 @@ private fun composerFlow(world: Realistic) {
         val apps = Lists(world.words, phoneNames = mapOf("whatsapp" to "WhatsApp", "spotify" to "Spotify"))
         same(typed("open whatsapp now", apps), "open WhatsApp now", "An app's name on this phone gets its capitals when typed")
         same(typed("play spotify", apps), "play Spotify", "A rare brand from an app's name gets its capitals")
+        // The owner's rule, with the app labels that this phone has, against the real base list: an ordinary word never takes
+        // a name's capitals ("toggle" became "Toggle" from an app named Toggle), and a brand's capitals wait for the whole word.
+        val plain = File("android/assets/swipe/english.combined").useLines { lines ->
+            lines.mapNotNull { com.atlas.engine.TypedPredictions.lowercaseOn(it) }.toHashSet() }
+        val labels = com.atlas.engine.PhoneNames.words(listOf("Toggle", "Spotify", "WhatsApp", "Netflix", "Instagram", "Chrome", "Clock"),
+            { world.words.frequency(it).toDouble() }, { it in plain })
+        val phone = Lists(world.words, phoneNames = labels)
+        must(listOf("toggle", "chrome", "clock").none { it in labels }, "Ordinary words from app names give no capitals: $labels")
+        same(typed("toggle the light", phone), "toggle the light", "\"toggle\" stays lowercase beside an app named Toggle")
+        same(typed("open spotify", phone), "open Spotify", "\"spotify\" gets the capital the base list gives it")
+        same(typed("send it on whatsapp", phone), "send it on WhatsApp", "\"whatsapp\" gets the capitals inside its name")
+        same(typed("watch netflix later", phone), "watch Netflix later", "\"netflix\" gets its capital")
+        same(typed("my instagram", phone), "my Instagram", "\"instagram\" gets its capital")
+        // The bar keeps a name's capitals off while the word is in progress, and a tapped word gets them as it goes in.
+        val tapping = Typist(world, world.autocorrect(phone), lists = phone,
+            words = FakeWords(phone).also { it.completions = listOf("whatsapp", "toggle", "spotify") })
+        tapping.type("hi ")
+        tapping.type("w")
+        same(tapping.bar.contains("WhatsApp"), false, "The bar shows no name capitals while the word is in progress: ${tapping.bar}")
+        tapping.choose(tapping.bar.indexOf("whatsapp"))
+        same(tapping.text, "hi WhatsApp ", "A tapped \"whatsapp\" goes in as \"WhatsApp\"")
+        tapping.type("t")
+        tapping.choose(tapping.bar.indexOf("toggle"))
+        same(tapping.text, "hi WhatsApp toggle ", "A tapped \"toggle\" stays lowercase")
+        same(typed("rose and bill came", Lists(world.words, phoneNames = com.atlas.engine.PhoneNames.words(listOf("Rose Bill"),
+            { world.words.frequency(it).toDouble() }, { it in plain }))), "rose and bill came",
+            "A contact's name made of ordinary words gives them no capitals")
         val undone = Typist(world, world.autocorrect(saved), lists = saved).type("titankeys ").backspace().type(" ")
         same(undone.text, "titankeys ", "An undone capital fix stays undone")
     }

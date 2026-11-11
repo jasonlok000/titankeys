@@ -371,7 +371,8 @@ public final class SwipeTyping {
                 boolean upper = prefix.length() > 1 && prefix.equals(prefix.toUpperCase(Locale.UK));
                 String casedAfter = beforeSuggestion(contextText, prefix);
                 for (int i = 0; i < result.length; i++) {
-                    String word = nameCase(learningEnabled && wordsAvailable ? dictionary.restoreCase(result[i], today()) : result[i]);
+                    // No name's capitals while a word is in progress: "togg" is never "Toggle". The typed word gets them when it ends.
+                    String word = learningEnabled && wordsAvailable ? dictionary.restoreCase(result[i], today()) : result[i];
                     result[i] = upper ? word.toUpperCase(Locale.UK) : capitalise(word, casedAfter, 0,
                             !prefix.isEmpty() && Character.isUpperCase(prefix.charAt(0)), autoCapitalise);
                 }
@@ -462,6 +463,12 @@ public final class SwipeTyping {
     public float baseFrequency(String word) {
         SwipeRecognizer loaded = recogniser;
         return loaded == null ? 0 : loaded.frequency(SwipeWords.normalise(word));
+    }
+
+    /** Whether the base list has this word in lowercase, an ordinary word ("toggle"), not only a name ("Spotify"). */
+    public boolean baseLowercase(String word) {
+        TypedPredictions loaded = typedPredictions;
+        return loaded == null || loaded.lowercase(word);
     }
 
     /** Whether this word is one of the names on this phone, for anything that must leave them out, such as contributions. */

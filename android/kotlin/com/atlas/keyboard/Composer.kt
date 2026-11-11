@@ -1000,7 +1000,9 @@ class Composer(
                 if (anchor != current.snapshot || !before.endsWith(tail) || anchor.selected && tail.isNotEmpty()) return
                 invalidate(false)
                 val space = if (current.prefix.isEmpty()) SwipeTyping.prefix(before) else ""
-                if (!edit(EditCause.Choose, tail.length, "$space$chosen ")) return
+                // A tapped word is whole, so it gets the capitals step that a typed word gets at its end ("WhatsApp").
+                val word = corrector()?.capitals(chosen, before.dropLast(tail.length) + space) ?: chosen
+                if (!edit(EditCause.Choose, tail.length, "$space$word ")) return
                 composition = Composition.None
                 automaticSpace = snapshot()
                 val correction = correcting?.takeIf { anchor == editSnapshot }

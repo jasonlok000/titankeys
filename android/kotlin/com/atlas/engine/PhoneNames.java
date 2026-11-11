@@ -17,22 +17,20 @@ import java.util.regex.Pattern;
 public final class PhoneNames {
     /** As common as a word that the user has just saved, so a name competes without pushing out usual words. */
     static final float FREQUENCY = 104f;
-    /**
-     * A base-list word rarer than this, written with capitals in a name, is a brand: "WhatsApp" and "Spotify" (25 each)
-     * take their capitals, while "Chrome" (98), "Messages" (121) and "Clock" (123) are ordinary words and stay as typed.
-     */
-    static final float BRAND_FREQUENCY = 80f;
     /** Whole words in any letters, so "Zoë" stays one word and is left out, rather than becoming "Zo". */
     private static final Pattern WORD = Pattern.compile("\\p{L}+(?:['’]\\p{L}+)*");
 
     /**
      * The words of these names, by their lowercase form, each with its spelling: "WhatsApp" for "whatsapp". Words of one
      * letter and words that cannot be swiped are left out. A word that the base list has ({@code baseFrequency} above 0)
-     * is left out too, as "Maps" or "Clock" are, unless it is a brand there: written with capitals here, and either rare
-     * in the base list or with a capital inside, as "WhatsApp". Such a word only gives its capitals, since the engines
-     * already have it. A word written two ways keeps the first one that has capitals.
+     * is left out too, as "Maps", "Clock" or "Toggle" are, unless it is a brand: written with capitals here, and either
+     * with a capital inside, as "WhatsApp", or only ever written with a capital in the base list, as "Spotify" ({@code
+     * lowercase} says whether the base list has the word in lowercase). An ordinary word never takes a name's capitals,
+     * however rare it is. A brand only gives its capitals, since the engines already have it. A word written two ways
+     * keeps the first one that has capitals.
      */
-    public static Map<String, String> words(Iterable<String> names, ToDoubleFunction<String> baseFrequency) {
+    public static Map<String, String> words(Iterable<String> names, ToDoubleFunction<String> baseFrequency,
+            java.util.function.Predicate<String> lowercase) {
         Map<String, String> words = new HashMap<>();
         for (String name : names) {
             if (name == null) continue;
@@ -42,7 +40,7 @@ public final class PhoneNames {
                 String key = SwipeWords.normalise(spelling);
                 if (key.isEmpty()) continue;
                 double frequency = baseFrequency.applyAsDouble(key);
-                if (frequency > 0 && !brand(spelling, frequency)) continue;
+                if (frequency > 0 && !brand(spelling, lowercase.test(key))) continue;
                 String known = words.get(key);
                 if (known == null || known.equals(key) && !spelling.equals(key)) words.put(key, spelling);
             }
@@ -50,12 +48,12 @@ public final class PhoneNames {
         return words;
     }
 
-    /** A name written with capitals that the base list has only as a rare word, or one with a capital inside. */
-    static boolean brand(String spelling, double baseFrequency) {
+    /** A name written with capitals, with one inside it or that the base list never writes in lowercase. */
+    static boolean brand(String spelling, boolean lowercaseInBase) {
         if (spelling.equals(spelling.toLowerCase(java.util.Locale.ROOT))) return false;
         boolean inside = false;
         for (int i = 1; i < spelling.length(); i++) inside |= Character.isUpperCase(spelling.charAt(i));
-        return inside || baseFrequency < BRAND_FREQUENCY;
+        return inside || !lowercaseInBase;
     }
 
     /** One map of both sources. A contact's spelling wins over an app's, as a person's name is the likelier meaning. */

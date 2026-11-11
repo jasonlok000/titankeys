@@ -11,6 +11,11 @@
     <!-- Shows on the strip for a second after TitanKeys has hidden and shown itself to work around Microsoft Teams. The owner's wish. -->
     <string name="strip_teams_egg">FUCK MICROSOFT!!</string>
     <string name="strip_saved">Saved “%1$s”</string>
+    <!-- The edit menu that a triple tap on Space opens on the strip when text is selected. -->
+    <string name="strip_cut">Cut</string>
+    <string name="strip_copy">Copy</string>
+    <string name="strip_paste">Paste</string>
+    <string name="strip_select_all">Select all</string>
 
     <!-- The clipboard page of the Sym panel, and the newest clip on the strip. -->
     <string name="clipboard_open">Open the clipboard</string>

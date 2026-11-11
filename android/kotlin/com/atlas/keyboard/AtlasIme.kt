@@ -442,7 +442,8 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(confirmDoubleTap)
         finishHeldTaps(type = false)
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
-        if (field.exact) haptics.stays() else enqueue { selectWord() }
+        val selected = !field.exact && currentInputConnection?.getSelectedText(0)?.isNotEmpty() == true
+        if (selected) openEditMenu() else if (field.exact) haptics.stays() else enqueue { selectWord() }
     }
 
     /** Space set as a tap key would type the first tap of a double tap, so a tap waits until it can't be one. */
@@ -1245,6 +1246,10 @@ class AtlasIme : InputMethodService() {
         SwipeTyping.get(this).forgetKind(held.word) != ForgetWords.Kind.NONE || ForgetWords.fix(held.typed, held.word)
 
     private fun closeMenu() {
+        if (strip?.notice == Strip.Notice.EditMenu) {
+            strip?.menuMark = -1
+            strip?.notice = null
+        }
         if (menuWord == null) return
         menuWord = null
         strip?.menuMark = -1
@@ -1255,7 +1260,7 @@ class AtlasIme : InputMethodService() {
      * The word menu is open on the strip. It stays until you pick a button or close it: the touchpad only marks its buttons then,
      * and the top two rows of keys pick them. See [MenuKeys].
      */
-    private val menuOpen get() = menuWord != null && strip?.notice is Strip.Notice.Menu
+    private val menuOpen get() = menuWord != null && strip?.notice is Strip.Notice.Menu || strip?.notice == Strip.Notice.EditMenu
 
     /** The key that picked a menu button, whose release must not reach the app. */
     private var menuKey = -1
@@ -1282,7 +1287,32 @@ class AtlasIme : InputMethodService() {
             Strip.Action.Undo -> undoForget()
             Strip.Action.Save -> if (held != null) saveWord(held)
             Strip.Action.Forget -> if (held != null && canForget(held)) forgetWord(held)
+            Strip.Action.Cut -> editAction(android.R.id.cut)
+            Strip.Action.Copy -> editAction(android.R.id.copy)
+            Strip.Action.Paste -> editAction(android.R.id.paste)
+            Strip.Action.SelectAll -> editAction(android.R.id.selectAll)
         }
+    }
+
+    /**
+     * A triple tap on Space over selected text opens the edit menu on the strip, picked like the word menu: rest a finger on the
+     * top two rows to mark a button, and press a key there. The app's own menu needs an accessibility service that can read the
+     * field, which TitanKeys does not have, so the strip offers the same actions through the field's connection.
+     */
+    private fun openEditMenu() {
+        commitForget()
+        main.removeCallbacks(endNotice)
+        menuWord = null
+        strip?.menuMark = -1
+        haptics.stays()
+        strip?.notice = Strip.Notice.EditMenu
+    }
+
+    /** One of the edit menu's actions, done by the app as its own menu would do it. The menu closes. */
+    private fun editAction(id: Int) {
+        closeMenu()
+        haptics.confirm()
+        enqueue { composer.command(destructive = id != android.R.id.copy, fieldLocal = true) { currentInputConnection?.performContextMenuAction(id) == true } }
     }
 
     /** Puts the word in Saved words. A blocked word is let back in first, since Save is a clear wish for it. */

@@ -33,7 +33,7 @@ class Strip(
     private val woke: () -> Unit = {},
 ) : LinearLayout(context) {
     /** What the buttons in the place of the words do. */
-    enum class Action { Save, Forget, Close, Undo, OpenSelected }
+    enum class Action { Save, Forget, Close, Undo, OpenSelected, Cut, Copy, Paste, SelectAll }
 
     /** A short line in the place of the words: a word's menu, or what just happened to a word. */
     sealed interface Notice {
@@ -42,6 +42,10 @@ class Strip(
         data class Menu(override val word: String, val forget: Boolean) : Notice
         data class Forgot(override val word: String) : Notice
         data class Saved(override val word: String) : Notice
+        /** The edit menu that a triple tap on Space opens over selected text: Cut, Copy, Paste and Select all. */
+        object EditMenu : Notice {
+            override val word = ""
+        }
         /** A second of fun when the keyboard has had to hide and show itself for Microsoft Teams. It has no buttons. */
         object TeamsEgg : Notice {
             override val word = ""
@@ -61,7 +65,7 @@ class Strip(
         isFocusable = false
         setPadding(dp(8), 0, dp(8), 0)
         // A touch beside the buttons is a way out of the menu.
-        setOnClickListener { if (notice is Notice.Menu) act(Action.Close) }
+        setOnClickListener { if (notice is Notice.Menu || notice == Notice.EditMenu) act(Action.Close) }
     }
     private val noticeButtons = List(MAX_BUTTONS) {
         TextView(context).apply {
@@ -434,6 +438,7 @@ class Strip(
     fun noticeActions(shown: Notice?): List<Action> = when (shown) {
         is Notice.Menu -> listOfNotNull(Action.Save, Action.Forget.takeIf { shown.forget }, Action.Close)
         is Notice.Forgot -> listOf(Action.Undo)
+        Notice.EditMenu -> listOf(Action.Cut, Action.Copy, Action.Paste, Action.SelectAll)
         is Notice.Saved, Notice.TeamsEgg, null -> emptyList()
     }
 
@@ -443,6 +448,10 @@ class Strip(
         Action.Close -> R.string.strip_back
         Action.Undo -> R.string.strip_undo
         Action.OpenSelected -> R.string.strip_back
+        Action.Cut -> R.string.strip_cut
+        Action.Copy -> R.string.strip_copy
+        Action.Paste -> R.string.strip_paste
+        Action.SelectAll -> R.string.strip_select_all
     }
 
     /** The label and buttons of a word's menu, or of what just happened to a word. */
@@ -455,7 +464,7 @@ class Strip(
             is Notice.Forgot -> context.getString(R.string.strip_forgot, shown.word)
             is Notice.Saved -> context.getString(R.string.strip_saved, shown.word)
             Notice.TeamsEgg -> context.getString(R.string.strip_teams_egg)
-            null -> ""
+            Notice.EditMenu, null -> ""
         }
         noticeLabel.setTextColor(look.ink)
         val buttons = noticeActions(shown).map { it to label(it) }
@@ -465,7 +474,7 @@ class Strip(
             if (action == null) continue
             button.text = context.getString(action.second)
             // Back is the calm way out, so only the actions take the accent. The button that a resting finger marks is filled.
-            val marked = shown is Notice.Menu && index == menuMark
+            val marked = (shown is Notice.Menu || shown == Notice.EditMenu) && index == menuMark
             button.setTextColor(if (marked) look.onAccent else if (action.first == Action.Close) look.muted else look.accent)
             button.background = if (!marked) null else GradientDrawable().apply {
                 cornerRadius = Radii.px(resources, Radii.SMALL)

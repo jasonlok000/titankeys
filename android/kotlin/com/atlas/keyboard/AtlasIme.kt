@@ -581,6 +581,7 @@ class AtlasIme : InputMethodService() {
         if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) {
             registerReceiver(idleBarTrigger, IntentFilter(IDLE_BAR_ACTION), RECEIVER_EXPORTED)
             registerReceiver(movingTry, IntentFilter(MOVING_ACTION), RECEIVER_EXPORTED)
+            registerReceiver(stepTry, IntentFilter(STEP_ACTION), RECEIVER_EXPORTED)
             idleBarTriggerRegistered = true
         }
         updateOverlay()
@@ -631,6 +632,15 @@ class AtlasIme : InputMethodService() {
             Haptics.tryMovingMillis(context, intent.getIntExtra("ms", 0).toLong())
             Log.i("Atlas", "Swipe tick: ${Haptics.movingMillis(context)} ms")
             main.post { haptics.play(Haptic.SwipeKey) }
+        }
+    }
+
+    /** The same for a step (a cursor passing a space, a bar tap): the extra "ms", or 0 for the usual length. It plays one. */
+    private val stepTry = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            Haptics.tryStepMillis(context, intent.getIntExtra("ms", 0).toLong())
+            Log.i("Atlas", "Step: ${Haptics.stepMillis(context)} ms")
+            main.post { haptics.play(Haptic.CursorSpace) }
         }
     }
 
@@ -2536,6 +2546,7 @@ class AtlasIme : InputMethodService() {
         if (idleBarTriggerRegistered) {
             unregisterReceiver(idleBarTrigger)
             unregisterReceiver(movingTry)
+            unregisterReceiver(stepTry)
         }
         sleepIdleBar()
         clipboard?.removePrimaryClipChangedListener(clipChanged)
@@ -2566,6 +2577,7 @@ class AtlasIme : InputMethodService() {
         /** The debug build starts the idle scene at once on this broadcast, from adb. */
         private const val IDLE_BAR_ACTION = "com.titankeys.debug.IDLE_BAR"
         private const val MOVING_ACTION = "com.titankeys.debug.MOVING_MILLIS"
+        private const val STEP_ACTION = "com.titankeys.debug.STEP_MILLIS"
         private const val DEBUG_PACKAGE_SUFFIX = ".debug"
         /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"

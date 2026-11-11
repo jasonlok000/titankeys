@@ -126,18 +126,27 @@ object HapticPalette {
      */
     const val MOVING_MILLIS = 8L
     const val MOVING_STRENGTH = 76
-    /** The range the debug build lets a phone check try for [MOVING_MILLIS]. */
+    /**
+     * A step: one buzz twice the swipe tick's. The phone's own tick lasts 85 ms on the Titan, longer than its click (63 ms),
+     * which broke the order from light to heavy. With these the order there is 8, 16, 63, then 98 and 105 ms.
+     */
+    const val STEP_MILLIS = 16L
+    const val STEP_STRENGTH = 140
+    /** The range the debug build lets a phone check try for [MOVING_MILLIS] and [STEP_MILLIS]. */
     val MOVING_TRY_MILLIS = 4L..40L
     const val NO_GAP_MILLIS = 50L
 
     /** The swipe tick, one buzz of [millis]. */
     fun moving(millis: Long) = Pattern(null, Buzzes(listOf(millis), listOf(MOVING_STRENGTH)))
 
+    /** A step, one buzz of [millis]. */
+    fun step(millis: Long) = Pattern(null, Buzzes(listOf(millis), listOf(STEP_STRENGTH)))
+
     fun of(feel: Feel): Pattern = when (feel) {
         // One short buzz, at 76 of 255 where a phone can set it. The owner found the phone's texture tick too strong on the
         // Titan, which has no strength control, and wanted the lightest tick it can make (Nov 11).
         Feel.Moving -> moving(MOVING_MILLIS)
-        Feel.Step -> Pattern(EFFECT_TICK, Buzzes(listOf(18), listOf(140)))
+        Feel.Step -> step(STEP_MILLIS)
         Feel.Done -> Pattern(EFFECT_CLICK, Buzzes(listOf(20), listOf(220)))
         Feel.Locked -> Pattern(EFFECT_DOUBLE_CLICK, Buzzes(listOf(15, 40, 15), listOf(220, 0, 220)))
         Feel.Gone -> Pattern(EFFECT_HEAVY_CLICK, Buzzes(listOf(45), listOf(255)))
@@ -238,7 +247,11 @@ class Haptics(private val context: Context) {
     private val main = Handler(Looper.getMainLooper())
 
     fun play(haptic: Haptic) {
-        val pattern = if (haptic.feel == Feel.Moving) HapticPalette.moving(movingMillis(context)) else HapticPalette.of(haptic.feel)
+        val pattern = when (haptic.feel) {
+            Feel.Moving -> HapticPalette.moving(movingMillis(context))
+            Feel.Step -> HapticPalette.step(stepMillis(context))
+            else -> HapticPalette.of(haptic.feel)
+        }
         if (!switches.allows(haptic) || !gate.admit(haptic.feel, pattern.millis)) return
         vibrate(effect(pattern))
     }
@@ -305,18 +318,29 @@ class Haptics(private val context: Context) {
          * How long the swipe tick lasts. Only the debug build reads a value tried on the phone (see AtlasIme's MOVING_ACTION);
          * every other build plays [HapticPalette.MOVING_MILLIS].
          */
-        fun movingMillis(context: Context): Long {
-            if (!context.packageName.endsWith(".debug")) return HapticPalette.MOVING_MILLIS
-            val tried = preferences(context).getLong(MOVING_TRY_KEY, 0)
-            return if (tried in HapticPalette.MOVING_TRY_MILLIS) tried else HapticPalette.MOVING_MILLIS
-        }
+        fun movingMillis(context: Context) = tried(context, MOVING_TRY_KEY, HapticPalette.MOVING_MILLIS)
+
+        /** How long a step lasts, with the debug build's tried value as for [movingMillis] (AtlasIme's STEP_ACTION). */
+        fun stepMillis(context: Context) = tried(context, STEP_TRY_KEY, HapticPalette.STEP_MILLIS)
 
         /** Sets the swipe tick's length to try, or puts it back with 0. Debug build only. */
-        fun tryMovingMillis(context: Context, millis: Long) {
-            preferences(context).edit().apply { if (millis in HapticPalette.MOVING_TRY_MILLIS) putLong(MOVING_TRY_KEY, millis) else remove(MOVING_TRY_KEY) }.apply()
+        fun tryMovingMillis(context: Context, millis: Long) = tryMillis(context, MOVING_TRY_KEY, millis)
+
+        /** Sets a step's length to try, or puts it back with 0. Debug build only. */
+        fun tryStepMillis(context: Context, millis: Long) = tryMillis(context, STEP_TRY_KEY, millis)
+
+        private fun tried(context: Context, key: String, usual: Long): Long {
+            if (!context.packageName.endsWith(".debug")) return usual
+            val tried = preferences(context).getLong(key, 0)
+            return if (tried in HapticPalette.MOVING_TRY_MILLIS) tried else usual
+        }
+
+        private fun tryMillis(context: Context, key: String, millis: Long) {
+            preferences(context).edit().apply { if (millis in HapticPalette.MOVING_TRY_MILLIS) putLong(key, millis) else remove(key) }.apply()
         }
 
         private const val MOVING_TRY_KEY = "debug_moving_millis"
+        private const val STEP_TRY_KEY = "debug_step_millis"
 
         /** The master switch: All haptics in Settings, and Vibration on the quick settings page. */
         fun enabled(context: Context) = switches(context).master

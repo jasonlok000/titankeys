@@ -75,7 +75,7 @@ private fun eachHapticPlaysItsFeel() {
 private fun feelsUseTheirEffects() {
     val effects = mapOf(
         Feel.Moving to null,
-        Feel.Step to HapticPalette.EFFECT_TICK,
+        Feel.Step to null,
         Feel.Done to HapticPalette.EFFECT_CLICK,
         Feel.Locked to HapticPalette.EFFECT_DOUBLE_CLICK,
         Feel.Gone to HapticPalette.EFFECT_HEAVY_CLICK,
@@ -89,6 +89,10 @@ private fun feelsUseTheirEffects() {
     // Moving is one short buzz, shorter than the old Normal tick's 16 ms, with no ready-made effect: the Titan's last 55 ms or more.
     check(HapticPalette.of(Feel.Moving).fallback == HapticPalette.Buzzes(listOf(8L), listOf(76))) { "Moving is one 8 ms buzz" }
     check(HapticPalette.moving(12).millis == 12L) { "A tried length is one buzz of that length" }
+    // A step is one buzz twice a tick's: on the Titan the order is 8, 16, then the click's 63 ms and up.
+    check(HapticPalette.of(Feel.Step).fallback == HapticPalette.Buzzes(listOf(16L), listOf(140))) { "A step is one 16 ms buzz" }
+    check(HapticPalette.of(Feel.Moving).millis < HapticPalette.of(Feel.Step).millis) { "A step is longer than a tick" }
+    check(HapticPalette.step(10).millis == 10L) { "A tried step length is one buzz of that length" }
     check(6L in HapticPalette.MOVING_TRY_MILLIS && 12L in HapticPalette.MOVING_TRY_MILLIS) { "The debug build can try 6 to 12 ms" }
     // Phones without an effect fall back to timed buzzes, which must be distinct too.
     val fallbacks = Feel.entries.map { HapticPalette.of(it).fallback.timings }

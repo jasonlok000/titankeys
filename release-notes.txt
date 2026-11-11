@@ -1,51 +1,44 @@
-# 2.0.0
+# 2.1.0
 
-## Swipe engine 2.0
-- Trained for the Titan touchpad: Engine 2.0 adds three trained parts to the FUTO engine. A swipe reader, fine-tuned on real swipes from the Titan touchpad, finds more words. A small language model reads your sentence. A ranker, trained on Titan swipes, puts the best three words on the strip.
-- More right words: On recorded sentences, the right word comes first 91% of the time, against 84% in 1.2. It is in the top 3 96% of the time, against 88%.
-- Next words: Before you type, the strip shows the words that your sentence most likely needs next. After you type a letter or two, it shows the words that start with them and fit the sentence.
-- On your phone: All models run on the phone. They load a few seconds after the keyboard starts, and swiping works in the meantime. If a model cannot load, the old engine works as before.
-
-## Learn the keys
-- Interactive guide: Seven chapters teach each feature on the real keys. Each one shows its gesture as soon as it opens.
-- Quick setup: The guide opens each Settings page for you. When the switch is on, the guide comes back by itself.
-- Playground: The app opens on a place to type and swipe freely, with a line of text to follow.
-- Readable help: The guide page and these notes open one entry at a time.
+## The guide, take two
+- Chapters: The guide's now a few big chapters with small, hands-on steps inside. It notices when you go off track and drags you back.
+- Type along: Each step has its own text to type in a box. Words you get right go grey, and missed ones get skipped, so you never get stuck.
+- Mean on purpose: It's way more sarcastic now. You'll paste something you won't like, and you'll have to find a clown.
+- Two guides: The fun one on the keys, and the boring one with every detail. Pick your poison in Settings > Guide.
+- Playground: Type fast and it comments. Type really fast and it rains shit. Five quiet seconds and it all calms down.
 
 ## Typing
-- Autocorrect for typed words: When you push Space, TitanKeys fixes the typo and also looks at the sentence. Backspace undoes a fix.
-- Learns your next words: Word pairs that you type often come first on the strip. Private fields teach it nothing.
-- Sentence starts: When the strip would be empty, it shows common first words.
-- Hold a letter for its symbol: Hold a letter key to type its symbol. You feel a different vibration when the letter changes. It needs no other app.
-- Modifier bar: When Shift, Alt or Ctrl is on, the bar above the keys shows it. A held key is filled, and a key pushed one time is an outline.
-- Shift follows Alt: One push of Shift or Alt is for the next letter, and a held key stays on while you hold it.
-- Fn as Ctrl: Fn works as Ctrl for shortcuts.
-- Sentence capitals: The first letter of a sentence is a capital.
-- TitanKeys is a word: You can swipe and type TitanKeys.
+- Middle means Space: The middle word on the bar is always exactly what Space will type. Tap it or push Space, same thing.
+- Missing apostrophes: todays becomes today's, whats becomes what's. Plurals stay plurals.
+- Your shorthand stays: shd, sth, idk, cuz and friends never get "fixed". Want them spelled out instead? Turn on Spell out shorthand in Settings.
+- Fewer dumb fixes: Typos like defalt, receieve and bckspace get fixed now.
+- Capital at the start: Shift turns on by itself at the start of a sentence. Push Shift once if you want lowercase.
+- Long words fit: Long suggestions fit in their spot, and the three spots never move.
 
 ## Touchpad
-- Steer and select from Space: Touch Space two times, keep the second touch down, and swipe up to move the cursor. Touch Space three times to select words. You feel a stronger vibration at each space.
-- Delete more: Keep your finger down after a flick from Backspace to delete more words. A longer flick deletes faster.
-- Resting fingers: A finger that rests on the keys does not type.
-- Live gestures: Special gestures show in the strip while you make them.
-- Word vibration: A picked suggestion and an autocorrect have their own, longer vibration.
-- Apps outside text fields: The touchpad does not scroll apps when no text field is active. A setting turns scrolling on again.
-- Back: When the touchpad is held, the first push of Back lets go of the touchpad and the second goes back.
+- Steer and select: Taps for steering and selecting count anywhere on the C V B N row. A triple tap with no slide selects the word.
+- You see it right away: The bar shows the gesture as soon as your tap counts, and the dots follow your real text.
+- Delete: A single flick lifts the word off and dissolves it. Hold to keep deleting, like before.
+- Word menu by keys: Hold a word on the bar for its menu, then pick with a finger on the top rows. It doesn't time out.
 
-## Symbols and quick settings
-- Symbol and emoji pages: Sym shows symbols and emoji on pages that mirror the keys, in groups. Swipe up or down for more, or rest a finger on the bottom row to pick a group.
-- Quick settings: In the Sym panel, push Alt to change settings with the letter keys. One of them changes the keyboard.
+## Haptics
+- One feel, one meaning: Moving, a step, done, locked, gone and "nope" each feel different, so you can tell what happened without looking.
+- Your switches: Settings > Haptics has one switch for all of it and one for every single haptic.
+- Quiet when it should be: Key presses never buzz, and a fast run of buzzes doesn't turn into a rattle.
 
-## Look and settings
-- New look: A new icon, and an app in the orange of the Titan 2 Elite. Turn off orange accents in Settings for a keyboard in one colour.
-- New settings: Swipe typing on or off, suggestions in an empty home search, and a typing log for tuning. The log is off at first and stays on your phone.
-- New defaults: Hold a letter for its symbol, fn as Ctrl, suggestions in an empty home search, and American spelling are on at first.
+## Bar and panels
+- Idle games: Leave the bar alone and it starts playing with your words. Come back and it puts everything where it was.
+- Clipboard: Recent clips, then pinned ones, a page at a time.
+- Rounded corners: Nothing on the Sym panel gets cut off by the screen's corners.
+- Shift chip: An automatic capital shows as a small arrow, and the words stay put.
+
+## Privacy and data
+- Record a bug: Something broke? Settings > Record a bug records up to three minutes, shows you what's in it, and you share it wherever you want. Nothing gets uploaded.
+- No more typing log: The full typing log is gone from public builds. A log left over from 2.0 is deleted.
+- Share swipes: The last word of a message now counts too, if you agreed to share.
 
 ## Fixed
-- Back: The keyboard does not come back by itself after Back.
-- Ctrl shortcuts: Ctrl+A and other shortcuts work on the first push.
-- Shift: After you hold Shift for a word, the next word is not a capital.
-- Address bars: The suggestion bar shows in address bars.
-- Rounded corners: The bar and the Sym panel stay clear of the rounded corners of the screen.
-- Cursor at the edge: The cursor keeps moving when your finger runs off the end of the touchpad.
-- Word drag: When you lean the other way, the selected words go back one at a time.
+- Notifications: A pop-up at the top no longer steals the touchpad while you type, even after you lock and unlock.
+- Teams: Typing in Microsoft Teams works properly now. Fuck Microsoft.
+- Guide crashes: Touching the guide's text box at the wrong moment doesn't crash it anymore.
+- Backups: A file that isn't a TitanKeys backup and a damaged backup now get different messages.

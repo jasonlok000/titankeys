@@ -6,7 +6,9 @@
 
 **The keys your Titan deserves.**
 
-A keyboard built for the Unihertz Titan 2 Elite. Type as you always have, swipe whole words on the same keys, and reach every symbol, emoji and setting without touching the screen.
+The keyboard your Titan shipped with is kinda shit. This one's made only for the Titan 2 Elite. Type like you always have, then swipe whole words on the same keys.
+
+**[Download it free](https://github.com/jasonlok000/titankeys/releases/latest)**
 
 </div>
 
@@ -251,6 +253,18 @@ bash tools/debug.sh --install
 ```
 
 This installs **TitanKeys Debug**, a separate test build.
+
+## Questions
+
+**Does it work on other phones?** Nope. It's made for the Titan 2 Elite's keys and touchpad, and it needs both.
+
+**Is it free?** Yes. It's free and open source, under the GPL-3.0. Some parts use the FUTO Source First License, so it can only be shared for free, for non-commercial use.
+
+**Does it need the internet?** Not to type. It only goes online for news and, if you agree, to share swipes. The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what's sent.
+
+**How is it different from Atlas?** See [TitanKeys and Atlas](#titankeys-and-atlas). Short version: Atlas stays simple, and TitanKeys goes further on this one phone.
+
+**Something broke. Where do I tell you?** Open an [issue](https://github.com/jasonlok000/titankeys/issues), or use Settings > Send feedback in the app.
 
 ## Feedback
 

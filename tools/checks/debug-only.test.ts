@@ -22,3 +22,16 @@ test("only the Debug build adds it, and only adb can send to it", () => {
   // A second gate, in case it ever reaches another build: it does nothing outside a package that ends in ".debug".
   expect(read("android/debug/recorder/RawLogPull.kt")).toContain('packageName.endsWith(".debug")');
 });
+
+test("the panel check for screenshots is only in the Debug build's package", () => {
+  // It opens panel pages, marks keys and holds modifiers from adb, so it must never answer in a release.
+  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  const gate = ime.indexOf("if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) {");
+  const register = ime.indexOf("registerReceiver(panelTrigger, IntentFilter(PANEL_ACTION), RECEIVER_EXPORTED)");
+  expect(gate).toBeGreaterThan(0);
+  expect(register).toBeGreaterThan(gate);
+  expect(ime.slice(gate, register)).not.toContain("\n    }\n");
+  expect(ime.match(/(?<!un)registerReceiver\(panelTrigger/g)?.length).toBe(1);
+  expect(ime).toContain('PANEL_ACTION = "com.titankeys.debug.PANEL"');
+  expect(read("android/src/main/AndroidManifest.xml")).not.toContain("com.titankeys.debug.PANEL");
+});

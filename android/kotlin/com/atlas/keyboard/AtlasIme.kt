@@ -690,6 +690,7 @@ class AtlasIme : InputMethodService() {
         // marked debuggable, so its own package name tells it apart.
         if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) {
             registerReceiver(idleBarTrigger, IntentFilter(IDLE_BAR_ACTION), RECEIVER_EXPORTED)
+            registerReceiver(panelTrigger, IntentFilter(PANEL_ACTION), RECEIVER_EXPORTED)
             idleBarTriggerRegistered = true
         }
         updateOverlay()
@@ -774,6 +775,69 @@ class AtlasIme : InputMethodService() {
             }
         }
     }
+    /** The modifier keys that the debug build's panel check holds down, to let go at the next check. */
+    private val debugHeld = ArrayList<Int>()
+
+    /**
+     * The debug build's panel check, from adb, for screenshots of what adb cannot press: Sym, a resting finger, a held modifier.
+     * While a field has the keyboard up, the extra "page" opens symbols, emoji, clipboard or quick, and "none" closes the panel.
+     * The extra "mark" is a key code (29 for A to 54 for Z, 67 Backspace, 66 Enter, 57 Alt, 63 Sym, 62 Space): the key that a
+     * resting finger marks, drawn as a real one is, on the panel and in the bar. The extra "mod" holds ctrl, shift or alt down
+     * until the next check. Each check first lets go of what the last one held. With the panel open, Shift and Alt stay off, as on
+     * the real keyboard.
+     */
+    private val panelTrigger = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val page = intent.getStringExtra("page")?.lowercase()
+            val mark = if (intent.hasExtra("mark")) intent.getIntExtra("mark", -1) else null
+            val mod = intent.getStringExtra("mod")?.lowercase()
+            main.post {
+                if (!editing || !isInputViewShown) {
+                    Log.i("Atlas", "Panel check: no field has the keyboard up")
+                    return@post
+                }
+                val now = SystemClock.uptimeMillis()
+                for (code in debugHeld) modifiers.up(code, now)
+                debugHeld.clear()
+                when (page) {
+                    null -> Unit
+                    "none", "closed" -> closePanel()
+                    "symbols", "sym" -> { modifiers.openPanel(Modifiers.Panel.Symbols); showModifiers() }
+                    "emoji" -> { modifiers.openPanel(Modifiers.Panel.Emoji); showModifiers() }
+                    "quick", "settings" -> { modifiers.openPanel(Modifiers.Panel.Settings); showModifiers() }
+                    "clipboard", "clip" -> {
+                        if (!panelOpen) modifiers.openPanel(Modifiers.Panel.Symbols)
+                        openClipboardPage()
+                    }
+                    else -> {
+                        Log.i("Atlas", "Panel check: no page called $page. Use symbols, emoji, clipboard, quick or none")
+                        return@post
+                    }
+                }
+                val held = when (mod) {
+                    null, "none" -> null
+                    "ctrl" -> KeyEvent.KEYCODE_CTRL_LEFT
+                    "shift" -> KeyEvent.KEYCODE_SHIFT_LEFT
+                    "alt" -> KeyEvent.KEYCODE_ALT_LEFT
+                    else -> { Log.i("Atlas", "Panel check: no modifier called $mod. Use ctrl, shift or alt"); null }
+                }
+                if (held != null) {
+                    modifiers.down(held, now)
+                    debugHeld += held
+                }
+                val key = mark?.let { Layout.keyForCode(it) }
+                if (mark != null && key == null) Log.i("Atlas", "Panel check: key code $mark is no key of the layout")
+                showModifiers()
+                // A resting finger on [key], as the touchpad would report it: the panel's mark and the bar's. After the page is
+                // open, since a new page starts with no mark.
+                restingKey = key.orEmpty()
+                panel?.hover = if (panelOpen) key.orEmpty() else ""
+                showModifierBar()
+                Log.i("Atlas", "Panel check: page ${modifiers.panel}, mark ${key ?: "none"}, held ${mod ?: "none"}")
+            }
+        }
+    }
+
     private val screenOff = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) = sleepIdleBar()
     }
@@ -2923,6 +2987,7 @@ class AtlasIme : InputMethodService() {
         unregisterReceiver(screenOff)
         if (idleBarTriggerRegistered) {
             unregisterReceiver(idleBarTrigger)
+            unregisterReceiver(panelTrigger)
         }
         sleepIdleBar()
         clipboard?.removePrimaryClipChangedListener(clipChanged)
@@ -2952,6 +3017,7 @@ class AtlasIme : InputMethodService() {
         private const val IDLE_BAR_MILLIS = 3 * 60 * 1000L
         /** The debug build starts the idle scene at once on this broadcast, from adb. */
         private const val IDLE_BAR_ACTION = "com.titankeys.debug.IDLE_BAR"
+        private const val PANEL_ACTION = "com.titankeys.debug.PANEL"
         private const val DEBUG_PACKAGE_SUFFIX = ".debug"
         /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"

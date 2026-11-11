@@ -9,6 +9,21 @@ import kotlin.math.abs
 object Layout {
     const val LETTERS = "abcdefghijklmnopqrstuvwxyz"
     const val SPACE = "space"
+
+    /**
+     * The key of the layout for an Android key code, for the debug build's panel check: a letter, Alt, Sym, Backspace, Enter or
+     * Space. The codes are written out, as this file is also built without Android: A is 29 to Z 54, Alt 57 and 58, Space 62,
+     * Sym 63, Enter 66 and Backspace (DEL) 67.
+     */
+    fun keyForCode(code: Int): String? = when (code) {
+        in 29..54 -> ('A' + (code - 29)).toString()
+        67 -> BACKSPACE
+        66 -> ENTER
+        57, 58 -> ALT
+        63 -> SYM
+        62 -> SPACE
+        else -> null
+    }
     const val ALT = "alt"
     const val SYM = "sym"
     const val FN = "fn"

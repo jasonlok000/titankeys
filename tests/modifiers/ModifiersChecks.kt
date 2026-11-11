@@ -105,6 +105,14 @@ private fun theGuideCanOpenAPanel() = Keyboard().run {
 }
 
 private fun steadyKeyIgnoresFlicker() {
+    // The debug build's panel check names a key by its key code.
+    same(Layout.keyForCode(KeyEvent.KEYCODE_A), "A", "Key code 29 is A")
+    same(Layout.keyForCode(KeyEvent.KEYCODE_Z), "Z", "Key code 54 is Z")
+    same(Layout.keyForCode(KeyEvent.KEYCODE_DEL), Layout.BACKSPACE, "67 is Backspace")
+    same(Layout.keyForCode(KeyEvent.KEYCODE_ENTER), Layout.ENTER, "66 is Enter")
+    same(Layout.keyForCode(KeyEvent.KEYCODE_SYM), Layout.SYM, "63 is Sym")
+    same(Layout.keyForCode(KeyEvent.KEYCODE_VOLUME_UP), null, "A key the layout lacks is none")
+    for (code in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) same(Layout.rows.any { Layout.keyForCode(code) in it }, true, "Every letter is on the layout")
     val steady = SteadyKey(Layout::keyAt)
     same(steady.touch(.15f, .15f), true, "A first touch must mark its key")
     same(steady.key, "W", "The first touch is on W")

@@ -51,7 +51,7 @@ Atlas also improves normal typing on the physical keys, with or without swipe ty
 - **Auto-punctuation:** Fixes "i" to "I", "dont" to "don't" and stray spaces before punctuation.
 - **Emoji:** Press Sym, with your recent emoji first.
 - **Symbols:** Press Alt for symbols that aren't on the keys.
-- **Delete a word:** Alt + Backspace.
+- **Delete a word:** Hold Alt + Backspace.
 - **Cursor control:** Rest on the space bar, then slide left or right.
 - **Full stop:** Press space twice.
 

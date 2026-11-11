@@ -6,56 +6,60 @@ import java.io.File
 import javax.imageio.ImageIO
 
 /**
- * Draws the strip's steering and selecting displays to a PNG with the real [GestureDrawing], over a stand-in Canvas that draws
+ * Draws the strip's steering and selecting displays to PNGs with the real [GestureDrawing], over a stand-in Canvas that draws
  * with Java2D, so they can be looked at without the phone. The density and width match the owner's screenshots of the phone.
- * Each row is one moment: steering on Space, leaning right fast, leaning left slow, and selecting for comparison.
+ * Each moment gets its own PNG in the folder given, dark and light, and all.png and all-light.png put them in one sheet.
  */
 fun main(args: Array<String>) {
-    val path = args.firstOrNull() ?: "gesture-render.png"
-    val density = DENSITY
-    val width = WIDTH
-    val strip = (56 * density).toInt()
-    val gap = (8 * density).toInt()
-    val rows = listOf<Pair<String, (GestureDisplay) -> Unit>>(
-        "Steering, on Space" to { d -> steer(d, direction = 0, speed = 0f) },
-        "Steering right, fast" to { d -> steer(d, direction = 1, speed = CursorMode.FASTEST_PER_SECOND) },
-        "Steering left, slow" to { d -> steer(d, direction = -1, speed = CursorMode.SLOWEST_PER_SECOND * 1.5f) },
-        "Selecting" to ::select,
+    val folder = File(args.firstOrNull() ?: "gesture-render")
+    folder.mkdirs()
+    val strip = (56 * DENSITY).toInt()
+    val gap = (8 * DENSITY).toInt()
+    val text = "The quick brown fox jumps over the lazy dog"
+    val moments = listOf<Pair<String, (GestureDisplay) -> Unit>>(
+        "1-steer-rest" to { d -> steer(d, "The quick", text.drop(9), direction = 0, speed = 0f) },
+        "2-steer-left" to { d -> steer(d, "The quick", text.drop(9), direction = -1, speed = CursorMode.SLOWEST_PER_SECOND * 1.5f) },
+        "3-steer-right" to { d -> steer(d, "The quick", text.drop(9), direction = 1, speed = CursorMode.FASTEST_PER_SECOND) },
+        "4-steer-text-start" to { d -> steer(d, "", text, direction = -1, speed = CursorMode.SLOWEST_PER_SECOND * 4) },
+        "5-steer-text-end" to { d -> steer(d, text, "", direction = 1, speed = CursorMode.SLOWEST_PER_SECOND * 4) },
+        "6-select" to ::select,
     )
     for (dark in listOf(true, false)) {
         val look = Look(dark, orange = true)
-        val image = BufferedImage(width, rows.size * (strip + gap), BufferedImage.TYPE_INT_ARGB)
-        val g = image.createGraphics()
-        g.color = java.awt.Color(look.paper, true)
-        g.fillRect(0, 0, image.width, image.height)
-        g.dispose()
-        val drawing = GestureDrawing(density, 16 * density)
-        for ((index, row) in rows.withIndex()) {
+        val drawing = GestureDrawing(DENSITY, 16 * DENSITY)
+        val suffix = if (dark) "" else "-light"
+        val sheet = BufferedImage(WIDTH, moments.size * (strip + gap), BufferedImage.TYPE_INT_ARGB)
+        for ((index, moment) in moments.withIndex()) {
             val display = GestureDisplay()
-            row.second(display)
-            val top = index * (strip + gap)
-            val layer = BufferedImage(width, strip, BufferedImage.TYPE_INT_ARGB)
-            drawing.draw(Canvas(layer), display, SIDE * density, width - SIDE * density, strip, look)
-            val out = image.createGraphics()
-            out.drawImage(layer, 0, top, null)
-            // A faint line between the rows, so each strip's own edges show.
+            moment.second(display)
+            val image = BufferedImage(WIDTH, strip, BufferedImage.TYPE_INT_ARGB)
+            val g = image.createGraphics()
+            g.color = java.awt.Color(look.paper, true)
+            g.fillRect(0, 0, WIDTH, strip)
+            g.dispose()
+            drawing.draw(Canvas(image), display, SIDE * DENSITY, WIDTH - SIDE * DENSITY, strip, look)
+            ImageIO.write(image, "png", File(folder, "${moment.first}$suffix.png"))
+            val out = sheet.createGraphics()
+            out.color = java.awt.Color(look.paper, true)
+            out.fillRect(0, index * (strip + gap), WIDTH, strip + gap)
+            out.drawImage(image, 0, index * (strip + gap), null)
+            // A faint line between the moments, so each strip's own edges show.
             out.color = java.awt.Color(0x80808080.toInt(), true)
-            out.fillRect(0, top + strip + gap / 2, width, 1)
+            out.fillRect(0, index * (strip + gap) + strip + gap / 2, WIDTH, 1)
             out.dispose()
-            println("${row.first}: intensity ${display.intensity}, lean ${display.steerLean}, glow ${display.glowWidth} at ${display.glowAlpha}")
+            println("${moment.first}$suffix: intensity ${display.intensity}, lean ${display.steerLean}, glow ${display.glowWidth} at ${display.glowAlpha}")
         }
-        val file = File(if (dark) path else path.replace(".png", "-light.png"))
-        ImageIO.write(image, "png", file)
-        println("Drawn to $file")
+        ImageIO.write(sheet, "png", File(folder, "all$suffix.png"))
     }
+    println("Drawn to $folder")
 }
 
-/** A tap, then a held touch that steers through real text, with the caret after "quick". */
-private fun steer(display: GestureDisplay, direction: Int, speed: Float) {
+/** A tap, then a held touch that steers through real text, with the caret between [before] and [after]. */
+private fun steer(display: GestureDisplay, before: String, after: String, direction: Int, speed: Float) {
     display.spaceTapped(1, 0L)
     display.advance(100L, 1f)
     display.cursorFrame(5f, 0, 0f, false, 150L)
-    display.cursorText("The quick", " brown fox jumps over the lazy dog")
+    display.cursorText(before, after)
     var now = 150L
     while (now < 700L) {
         now += 16
@@ -64,7 +68,7 @@ private fun steer(display: GestureDisplay, direction: Int, speed: Float) {
     }
 }
 
-/** Two taps, then a held touch that selects "quick" and leans right. */
+/** Two taps, then a held touch that selects "quick". */
 private fun select(display: GestureDisplay) {
     display.spaceTapped(1, 0L)
     display.spaceTapped(2, 150L)

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Draws the strip's steering and selecting displays to a PNG with the real drawing code, to look at without the phone.
-# Usage: bash tests/gesture-render/run.sh [out.png]. A light version goes next to it as out-light.png.
+# Draws the strip's steering and selecting displays to PNGs with the real drawing code, to look at without the phone.
+# Usage: bash tests/gesture-render/run.sh [folder]. Each moment gets a PNG there, dark and light, and all.png is the sheet.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}
 kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
-out=$(realpath -m "${1:-gesture-render.png}")
+out=$(realpath -m "${1:-gesture-render}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 keyboard=android/kotlin/com/atlas/keyboard

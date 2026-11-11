@@ -646,11 +646,15 @@ class Strip(
         canvas.drawText(shown, right, height / 2 - (menuWordText.ascent() + menuWordText.descent()) / 2, menuWordText)
         val slide = (1f - menuShown) * dp(MENU_SLIDE_DP)
         val alpha = (menuShown * 255).toInt().coerceIn(0, 255)
-        val icon = Math.round(wordPixels() * MENU_ICON_SCALE)
+        // The icon and its name, together, sit in the middle of the bar with room above and below, at any font size: the name
+        // follows the font setting only as far as there's room, and the icon shrinks if it still doesn't fit.
         menuPaint.typeface = typeface
-        menuPaint.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, MENU_LABEL_SIZE, resources.displayMetrics)
         menuPaint.textAlign = android.graphics.Paint.Align.CENTER
+        menuPaint.textSize = minOf(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, MENU_LABEL_SIZE, resources.displayMetrics),
+            dp(MENU_LABEL_MOST).toFloat())
         val label = menuPaint.descent() - menuPaint.ascent()
+        val tall = height - 2 * dp(MENU_MARGIN)
+        val icon = minOf(dp(MENU_ICON_DP), Math.round(tall - dp(MENU_LABEL_GAP) - label))
         val block = icon + dp(MENU_LABEL_GAP) + label
         val top = (height - block) / 2
         for ((index, action) in menuSlots(menu).withIndex()) {
@@ -665,8 +669,13 @@ class Strip(
                 val radius = Radii.px(resources, Radii.SMALL)
                 canvas.drawRoundRect(menuBox, radius, radius, menuPaint)
             }
-            val colour = if (marked) look.onAccent else if (action == Action.Close) look.muted else look.ink
-            val centre = menuBox.centerX()
+            // All three alike, unless a resting finger marks one.
+            val colour = if (marked) look.onAccent else look.ink
+            // The name stays clear of the screen's rounded corner, which comes in near the bottom right.
+            val name = context.getString(label(action))
+            val bottom = top + block
+            val cornerIn = corners.inset(navigationInset + height - bottom).toFloat()
+            val centre = minOf(menuBox.centerX(), width - cornerIn - dp(2) - menuPaint.measureText(name) / 2)
             context.getDrawable(icon(action))?.mutate()?.let { drawable ->
                 drawable.setTint(colour)
                 drawable.alpha = alpha
@@ -677,7 +686,7 @@ class Strip(
             }
             menuPaint.color = colour
             menuPaint.alpha = alpha
-            canvas.drawText(context.getString(label(action)), centre, top + icon + dp(MENU_LABEL_GAP) - menuPaint.ascent(), menuPaint)
+            canvas.drawText(name, centre, top + icon + dp(MENU_LABEL_GAP) - menuPaint.ascent(), menuPaint)
         }
     }
 
@@ -989,7 +998,11 @@ class Strip(
         /** The menu's icons, as a part of the words' size, and how far and how long its buttons move in. */
         private const val MENU_ICON_SCALE = 1.2f
         /** The size of a button's name under its icon, in sp, the gap between them, and the room between the word and Save. */
-        private const val MENU_LABEL_SIZE = 10f
+        private const val MENU_LABEL_SIZE = 11f
+        /** The most a button's name may grow with a large font setting, in dp, the icon's size, and the room kept above and below. */
+        private const val MENU_LABEL_MOST = 13
+        private const val MENU_ICON_DP = 20
+        private const val MENU_MARGIN = 6
         private const val MENU_LABEL_GAP = 2
         private const val MENU_WORD_GAP = 8
         private const val MENU_SLIDE_DP = 40

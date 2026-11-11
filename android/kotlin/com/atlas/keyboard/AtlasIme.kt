@@ -442,7 +442,7 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(confirmDoubleTap)
         finishHeldTaps(type = false)
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
-        if (field.exact) haptics.stays() else enqueue { selectWord() }
+        if (field.exact) haptics.stays() else enqueue { selectWord(inFront = true) }
     }
 
     /** Space set as a tap key would type the first tap of a double tap, so a tap waits until it can't be one. */
@@ -1746,8 +1746,9 @@ class AtlasIme : InputMethodService() {
     }
 
     /** Selects the word at the cursor, or does nothing between words. */
-    private fun selectWord() = changeSelection { text, start, end, _ ->
-        val word = WordSelection.at(text, start, end)
+    /** [inFront] also takes the word before the cursor past marks and spaces, for a triple tap. See [WordSelection.atOrBefore]. */
+    private fun selectWord(inFront: Boolean = false) = changeSelection { text, start, end, _ ->
+        val word = if (inFront) WordSelection.atOrBefore(text, start, end) else WordSelection.at(text, start, end)
         if (word == null) {
             haptics.stays()
             return@changeSelection null

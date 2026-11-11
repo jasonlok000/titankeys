@@ -17,6 +17,18 @@ object WordSelection {
     }
 
     /**
+     * The word at the selection, or else the word in front of the cursor: the last word before it, past any spaces and marks
+     * such as a full stop or a comma, on the same line. Returns null where no word comes before the cursor on its line.
+     */
+    fun atOrBefore(text: CharSequence, selectionStart: Int, selectionEnd: Int): Pair<Int, Int>? {
+        at(text, selectionStart, selectionEnd)?.let { return it }
+        var end = selectionStart
+        while (end > 0 && !isWordCharacter(text[end - 1]) && text[end - 1] != '\n') end--
+        if (end == 0 || !isWordCharacter(text[end - 1])) return null
+        return skip(text, end, -1, word = true) to end
+    }
+
+    /**
      * The selection after one word of a word drag towards [direction], -1 or 1. It grows by a word. If it has already
      * grown the other way past the [anchorStart] to [anchorEnd] that the drag began with, it gives back a word instead.
      */

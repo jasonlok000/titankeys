@@ -121,9 +121,11 @@ class CursorGesture {
         val current = state
         state = State.Idle
         tripled = false
-        // A third quick tap on Space, after two quick ones there, picks the word at the cursor once no fourth touch follows.
+        // A third quick tap, after two quick ones, picks the word at the cursor once no fourth touch follows. Unlike two taps, three
+        // count anywhere in the zone, also above Space: the touchpad barely feels the lower half of Space, so taps land on the row
+        // above, and three quick taps there with no press between them are no typing.
         if (current is State.NextTouch && current.taps == 2 && time - current.landed.time <= SECOND_TAP_MILLIS && current.travel < TAP_KEYS
-            && current.gap <= MAX_GAP_MILLIS && current.landed.y >= BOTTOM_ROW_TOP && current.tapLanded.y >= BOTTOM_ROW_TOP) {
+            && current.gap <= MAX_GAP_MILLIS) {
             state = State.Tapped(3, current.landed, time)
             tripled = true
             return false

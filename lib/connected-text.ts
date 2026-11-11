@@ -1,17 +1,18 @@
 /**
- * The words of the News and contribution pages, in one place, so that the tone (#54) and other languages (#56) can
- * change them without touching the pages. The disclosure must stay true to the privacy policy (site/privacy) and to
- * what android/kotlin/com/atlas/connected does. The guide's own offer is in GuideActivity (SHARE_HINT, SHARE_OFFER).
- * Page titles stay short: the large header cuts long ones.
+ * The words of the News and Share swipes pages, in one place, so that other languages (#56) can change them without
+ * touching the pages. The voice is the owner's (#54, voice.md): casual and direct. The Share swipes disclosure and
+ * everything about deleting data are a clean zone: casual, never swearing. The disclosure must stay true to the privacy
+ * policy (site/privacy) and to what android/kotlin/com/atlas/connected does. The guide's own offer is in GuideActivity
+ * (SHARE_HINT, SHARE_OFFER). Page titles stay short: the large header cuts long ones.
  */
 export const newsText = {
   title: "News",
-  subtitle: "New versions and other news from TitanKeys.",
+  subtitle: "New versions and anything else worth knowing.",
   toggle: "Show news",
-  toggleNote: "TitanKeys checks its website once a day. It sends nothing about you.",
+  toggleNote: "TitanKeys checks for news once a day. It doesn't send anything about you.",
   allow: "Allow notifications",
-  allowReason: "News shows as a silent notification, and never while you type.",
-  empty: "No news now.",
+  allowReason: "News shows up as a silent notification, and never while you're typing.",
+  empty: "Nothing new right now.",
   hide: "Don't show again",
   hidden: "Hidden",
 };
@@ -19,48 +20,48 @@ export const newsText = {
 export const contributeText = {
   title: "Share swipes",
   settingsLabel: "Share swipes",
-  subtitle: "Send examples of your swipes to the TitanKeys project, to make swiping better on every Titan 2 Elite. It stays off until you agree.",
-  onSubtitle: "Your swipes help make swiping better on every Titan 2 Elite. Thank you.",
-  sentTitle: "What is sent",
+  subtitle: "Send us examples of your swipes, and we'll use them to make swiping better on every Titan 2 Elite. It's off until you agree.",
+  onSubtitle: "Your swipes are helping make swiping better on every Titan 2 Elite. Thanks.",
+  sentTitle: "What gets sent",
   sent: [
-    "The path of each swipe, with its times and touch sizes.",
-    "The word that you kept, only if it is in the dictionary.",
-    "The 18 numbers that the swipe engine used to rank the words.",
-    "The TitanKeys and model versions, the phone model, and a random ID for your examples.",
+    "The path of each swipe, with its timing and touch sizes.",
+    "The word you kept, but only if it's in the dictionary.",
+    "The 18 numbers the swipe engine used to rank the words.",
+    "The TitanKeys and model versions, your phone model, and a random ID for your swipes.",
   ],
-  neverTitle: "What is never sent",
+  neverTitle: "What never gets sent",
   never: [
-    "The text around the word, and the text that you type with the keys.",
-    "Names and other words that are not in the dictionary.",
+    "The text around the word, or anything you type on the keys.",
+    "Names, and any other word that isn't in the dictionary.",
     "Anything from password, email, web address or private fields.",
-    "The clipboard, snippets and shortcuts.",
+    "Your clipboard, snippets and shortcuts.",
   ],
-  howTitle: "How it is sent and kept",
+  howTitle: "How it's sent and kept",
   how: [
-    "Examples wait on this phone, up to 4 MB. You can see and delete them.",
-    "They go on Wi-Fi only, encrypted on this phone. Only the project's private key, kept offline, can open them.",
-    "They are used only to train the TitanKeys swipe models. They are kept until they are used, and at most 2 years.",
-    "You can stop at any time, and delete everything that you sent. This page shows your contributor ID, so that you can ask for deletion even after you remove TitanKeys.",
+    "Swipes wait on your phone, up to 4 MB. You can see them and delete them.",
+    "They're only sent on Wi-Fi, and they're encrypted on your phone first. Only our private key can open them, and it's kept offline.",
+    "We only use them to train the TitanKeys swipe models. We keep them until they're used, and 2 years at most.",
+    "You can stop whenever you want and delete everything you've sent. This page shows your contributor ID, so you can still ask us to delete your swipes after you uninstall TitanKeys.",
   ],
   agree: "I agree",
   decline: "No thanks",
   policy: "Privacy policy",
-  about: "What is sent",
+  about: "What gets sent",
   toggle: "Share my swipes",
   statusTitle: "Your swipes",
   sentLine: "Sent",
   waitingLine: "Waiting to send",
   deleteTitle: "Delete",
   deleteWaiting: "Delete waiting swipes",
-  deleteAll: "Delete what I sent",
+  deleteAll: "Delete what I've sent",
   idTitle: "Your contributor ID",
-  idNote: "A random ID for your swipes. Keep a copy: with it, you can ask for deletion even after you remove TitanKeys.",
+  idNote: "A random ID for your swipes. Keep a copy: you'll need it to ask us to delete them if you uninstall TitanKeys.",
   copy: "Copy ID",
   copied: "Copied",
-  notReady: "Sending starts when the TitanKeys server is ready. Until then, swipes wait on this phone.",
-  deletionWaiting: "Your request to delete what you sent waits for a connection.",
+  notReady: "Sending starts once the TitanKeys server is up. Until then, your swipes wait on your phone.",
+  deletionWaiting: "Your delete request goes out as soon as you're online.",
   confirmTitle: "Delete your swipes?",
-  confirmSubtitle: "This deletes the swipes that wait on this phone, and asks the TitanKeys server to delete all the swipes that you sent. You cannot undo this.",
+  confirmSubtitle: "This deletes the swipes waiting on your phone and asks our server to delete everything you've sent. You can't undo it.",
   confirm: "Delete my swipes",
 };
 

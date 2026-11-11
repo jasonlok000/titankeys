@@ -122,7 +122,7 @@ object Announcements {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         // A short pop-up, with no sound and no vibration.
         val channel = NotificationChannel(CHANNEL, "News from TitanKeys", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "New versions and other news. They never show while you type."
+            description = "New versions and other news. It never shows up while you're typing."
             setSound(null, null)
             enableVibration(false)
             setShowBadge(false)

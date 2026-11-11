@@ -1493,8 +1493,8 @@ class GuideActivity : Activity() {
         private const val PLAYGROUND = "playground"
         private const val PLAYGROUND_LABEL = "Playground"
         /** The last slide's offer to share swipes (#34), while it is unanswered. The close button still just leaves. */
-        private const val SHARE_HINT = "Help make swiping better on every Titan: share your swipes, if you agree."
-        private const val SHARE_OFFER = "Share your swipes"
+        private const val SHARE_HINT = "Want swiping to get even better? Share your swipes with us. You'll see exactly what's sent first."
+        private const val SHARE_OFFER = "Share my swipes"
         private const val PLAYGROUND_TITLE = "TitanKeys"
         private const val PLAYGROUND_BODY = "Type or swipe anything. Follow the line above, or write your own."
 

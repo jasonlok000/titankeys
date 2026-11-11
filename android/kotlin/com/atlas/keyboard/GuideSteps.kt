@@ -658,9 +658,9 @@ internal const val DELETE_TEXT = "Delete these words, because you clearly regret
     "morning. Start with the last letter, then whole words, then everything you've ever typed. This sentence especially. It " +
     "knows what you did."
 internal val DELETE_RESETS = listOf(
-    "Deleted it all? But you can't delete all your regrets." to
+    "Deleted it all? Your regrets stay." to
         "Wow, you deleted everything. Here's more to regret. Try deleting just a little this time.",
-    "Twice? You're not deleting text, you're deleting our hope in you." to
+    "Twice? Now you're deleting our hope." to
         "Deleted it all again. Impressive commitment to destruction, terrible commitment to instructions. Here's an even longer " +
         "one so you can't get rid of it so fast. Every word in here is a word you'll have to delete by hand, one at a time, like " +
         "a person who reads. Start with the last word. Just the last word. Please.",
@@ -868,40 +868,39 @@ internal val GUIDE_STEPS = listOf(
         lessons = setOf(GuideLesson.Swipe, GuideLesson.BarTap, GuideLesson.BarHold),
         bar = GuideBar.Menu,
     ),
-    // DELETE: each slide starts with the text box in the field, its end showing.
+    // DELETE, in the new layout: each slide starts with the text box in the field, its end showing; one-line titles, chips for
+    // real mistakes, and each slide locked to what it teaches. Backspace always works.
     GuideStep(
         id = "backspace", chapter = GuideChapter.Delete,
         title = "The old way. Humour us.",
         stages = listOf(GuideStage("Press Backspace.", GuideCue.Spot(listOf(Layout.BACKSPACE))) { event ->
-            when {
-                event is Pushed && event.code == KEY_DEL -> GuideVerdict.Done
-                event is DeletedWord -> counts("Skipped ahead. Show-off move.", "It counts. Press Next.")
-                else -> GuideVerdict.Wait
-            }
+            if (event is Pushed && event.code == KEY_DEL) GuideVerdict.Done else GuideVerdict.Wait
         }),
         done = "One letter. Thrilling.",
-        praise = "That's how everyone deletes. Next, a whole word at once.",
+        // v3.1's "That's how everyone deletes. Next, a whole word at once." is two lines.
+        praise = "That's how everyone deletes. Next, whole words.",
         seed = DELETE_TEXT,
+        lessons = emptySet(),
         demo = GuideDemo.DeleteLast,
     ),
     GuideStep(
         id = "flick", chapter = GuideChapter.Delete,
-        title = "Delete a whole word. Your regrets are bigger than a letter.",
-        stages = listOf(GuideStage("Flick left from Backspace, fast, and lift your finger at once.") { event ->
+        // v3.1's "Delete a whole word. Your regrets are bigger than a letter." is two lines.
+        title = "Your regrets come in whole words.",
+        stages = listOf(GuideStage("Flick left from Backspace, and lift at once.") { event ->
             when {
                 // A hold is the next slide's lesson: it's done, so that slide is passed over, and this one still wants its flick.
                 event is DeleteHoldStarted -> {
                     mark = 1
                     skip = "hold"
-                    roast("Straight to the hold? We see you. Skipping that lesson for you.", "Now one quick flick left from Backspace, and lift.")
+                    chip("Straight to the hold? Skipping that lesson.")
                 }
                 event is DeletedWord && (event.held || mark == 1) -> {
                     if (!event.held) mark = -1
                     GuideVerdict.Wait
                 }
                 event is DeletedWord -> GuideVerdict.Done
-                event is Recognised && event.words.isNotEmpty() -> roast("That typed something. Delete it, maybe?", "Start on Backspace and flick left, fast.")
-                event is Pushed && event.code == KEY_DEL -> roast("That's the last slide's trick.", "Flick left from Backspace instead, and lift.")
+                event is Pushed && event.code == KEY_DEL -> chip("That's the last slide's trick. Flick it.")
                 else -> GuideVerdict.Wait
             }
         }),
@@ -910,12 +909,13 @@ internal val GUIDE_STEPS = listOf(
         seed = DELETE_TEXT,
         cue = GuideCue.Flick(hold = false),
         needs = GuideNeed.SwipeTyping,
+        lessons = setOf(GuideLesson.Flick),
         demo = GuideDemo.DeleteLast,
     ),
     GuideStep(
         id = "hold", chapter = GuideChapter.Delete,
         title = "Mass deletion. Very therapeutic.",
-        stages = listOf(GuideStage("Flick left from Backspace, then keep holding your finger down. It keeps deleting until you lift.") { event ->
+        stages = listOf(GuideStage("Flick left from Backspace, then hold it down.") { event ->
             when {
                 event is DeleteHoldStarted -> {
                     mark = 1
@@ -923,7 +923,7 @@ internal val GUIDE_STEPS = listOf(
                 }
                 event is DeletedWord && event.held -> GuideVerdict.Done
                 event is DeletedWord && mark == 1 -> GuideVerdict.Wait
-                event is DeletedWord -> roast("That was one word. Commit.", "Flick and keep your finger down.")
+                event is DeletedWord -> chip("That was one word. Hold it down.")
                 else -> GuideVerdict.Wait
             }
         }),
@@ -932,6 +932,7 @@ internal val GUIDE_STEPS = listOf(
         seed = DELETE_TEXT,
         cue = GuideCue.Flick(hold = true),
         needs = GuideNeed.SwipeTyping,
+        lessons = setOf(GuideLesson.Flick),
         demo = GuideDemo.DeleteLast,
     ),
     // STEERING: a line that loops forever, with the cursor in the middle.

@@ -443,7 +443,16 @@ private fun chapterOne() {
     same(typing.map { it.lessons }, listOf(emptySet(), setOf(GuideLesson.Swipe, GuideLesson.BarTap),
         setOf(GuideLesson.Swipe, GuideLesson.BarTap), setOf(GuideLesson.Swipe, GuideLesson.BarTap, GuideLesson.BarHold)),
         "Each slide unlocks what it teaches, and keeps what was taught")
-    same(GUIDE_STEPS.filter { it.chapter != GuideChapter.Typing }.all { it.lessons == null }, true, "The other chapters lock nothing yet")
+    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }.map { it.lessons }, listOf(emptySet(), setOf(GuideLesson.Flick),
+        setOf(GuideLesson.Flick)), "Delete unlocks the flick on its flick and hold slides; Backspace always works")
+    // The chapters in the new layout: every title and success line on one line, every instruction and praise too.
+    for (step in GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }) {
+        for (line in listOf(step.title, step.done)) same(line.length <= TITLE_MOST, true, "\"$line\" is one line")
+        for (line in step.stages.map { it.text } + step.praise) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
+    }
+    for ((line, _) in DELETE_RESETS) same(line.length <= LINE_MOST, true, "The reset chip \"$line\" is one line")
+    same(GUIDE_STEPS.filter { it.chapter !in setOf(GuideChapter.Typing, GuideChapter.Delete) }.all { it.lessons == null }, true,
+        "The chapters not in the new layout yet lock nothing")
     same(typing.map { it.sides }, listOf(false, true, true, true), "Only the first slide shows just the bar's middle word")
     val typos = TYPING_TYPOS.split(' ')
     val words = TYPING_TEXT.split(' ').take(typos.size)
@@ -503,7 +512,7 @@ private fun scenarios() {
 
     val backspace = GuideFlow({ GuideSettings() })
     backspace.start("backspace")
-    same(backspace.event(DeletedWord(held = false)).let { it is GuideVerdict.Hint && it.passes }, true, "A flick on the Backspace slide counts")
+    same(backspace.event(DeletedWord(held = false)), GuideVerdict.Wait, "A flick on the Backspace slide: the lock stops it, not the slide")
 
     val flick = GuideFlow({ GuideSettings() })
     flick.start("flick")

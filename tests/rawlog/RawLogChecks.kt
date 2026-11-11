@@ -13,6 +13,7 @@ private const val REFERENCE = "com.titankeys.rawlog.reference"
 private const val HEADER = """{"k":"header"}"""
 
 fun main() {
+    debugOnly()
     fieldRule()
     lineFormat()
     rotationAndCap()
@@ -35,6 +36,14 @@ private fun same(actual: Any?, expected: Any?, message: String) {
 private fun temporary() = Files.createTempDirectory("rawlog").toFile().also { it.deleteOnExit() }
 
 private fun logFiles(directory: File) = directory.listFiles().orEmpty().sortedBy { it.name }
+
+/** The full typing log is only in TitanKeys Debug. Public releases, GitHub and Play, are com.titankeys. */
+private fun debugOnly() {
+    must(RawLogGate.allows("com.titankeys.debug"), "TitanKeys Debug has the typing log")
+    must(!RawLogGate.allows("com.titankeys"), "The public release has no typing log")
+    must(!RawLogGate.allows("com.titankeys.debugger"), "Only the .debug ending counts")
+    must(!RawLogGate.allows("com.titankeys.play"), "No other build has it")
+}
 
 private fun fieldRule() {
     must(Field.logged(TEXT, 0, null), "An ordinary text field must be logged")

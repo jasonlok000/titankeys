@@ -14,6 +14,8 @@ export default function RawLog() {
   const save = useAction(update);
   const exporting = useAction(exportRawLog);
   if (result.status !== "ready") return <Screen title={title} subtitle={subtitle} note={note} />;
+  // The full typing log is only in TitanKeys Debug. A public release never offers it, even through a direct link.
+  if (!result.data.rawLogAvailable) return <Screen title={title} subtitle="The typing log is only in TitanKeys Debug. To show us a bug, use Settings > Record a bug." />;
   const { rawLog, rawLogBytes } = result.data;
   const exportResult = exporting.status === "pending" ? "Exporting"
     : exporting.status === "error" ? "Failed"

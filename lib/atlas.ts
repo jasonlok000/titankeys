@@ -83,6 +83,8 @@ export type State = {
   hapticPreset: HapticPreset;
   spelling: Spelling;
   /** Records touches, keys and typed text in a log on this phone. */
+  /** This build has the full typing log: only TitanKeys Debug does. */
+  rawLogAvailable: boolean;
   rawLog: boolean;
   rawLogBytes: number;
   words: { word: string; description: string }[];

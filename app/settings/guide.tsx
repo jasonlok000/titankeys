@@ -83,7 +83,7 @@ export default function Guide() {
     <Section title="News and sharing">
       <Topic title="News">{"TitanKeys can tell you about a new version and anything else worth knowing. It checks the TitanKeys website once a day and sends nothing about you. News shows as a silent notification, never while you type, with Snooze and Don't show again. Settings > News has the same news and a switch to turn it off."}</Topic>
       <Topic title="Share swipes">{"If you agree, TitanKeys sends us examples of your swipes, and we use them to make swiping better on every Titan 2 Elite. It's off until you agree, and you see exactly what's sent first. Swipes are encrypted on your phone and sent on Wi-Fi. You can stop and delete them any time in Settings > Share swipes. The interactive guide asks once, near its end."}</Topic>
-      <Topic title="Typing log">{"Got a bug that's hard to explain? Turn on Record my typing in Settings > Typing log, make it happen, then export the log and send it with your feedback. The log stays on your phone until you export it. Delete all wipes it."}</Topic>
+      <Topic title="Record a bug">{"Got a bug that's hard to explain? Settings > Record a bug. Press Record, do the thing, come back and press Stop. You see what's in the file, then share it wherever you like. TitanKeys doesn't upload it."}</Topic>
       <Topic title="Send feedback">{"Settings > Send feedback. Tell us what broke, or what you'd love."}</Topic>
     </Section>
     <Section title="Problems">

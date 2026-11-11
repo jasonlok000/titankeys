@@ -414,7 +414,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val STEER_CARET = 3f
         const val STEER_CARET_HEIGHT = 14f
         /** The gap between the pill and the nearest letter on each side. */
-        const val PILL_GAP = 5f
+        const val PILL_GAP = 6.5f
         /** While steering the underglow lies across the strip this strong, and the side it leans to grows from this far out. */
         const val UNDERGLOW = .4f
         /** The side it leans to brightens in this many soft layers, each a little past its edge so none shows. */

@@ -51,18 +51,20 @@ class GuideFrameActivity : Activity() {
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
 
+        // Each line has its own fixed height, from its font with room for descenders, and the same gap between them all.
+        val titleSize = titleSize()
+        val instructionSize = capped(INSTRUCTION_SP, INSTRUCTION_DP)
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         column.addView(topBar(passed), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(TOP_BAR)))
-        column.addView(title(passed), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(TITLE_HEIGHT)).apply {
-            topMargin = dp(10)
-        })
-        column.addView(instruction(state == "b", passed), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(INSTRUCTION_HEIGHT)).apply {
-            topMargin = dp(4)
-        })
+        column.addView(title(passed, titleSize), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            lineHeight(heavy, titleSize)).apply { topMargin = dp(GAP) })
+        column.addView(instruction(state == "b", passed, instructionSize), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            lineHeight(medium, instructionSize) + dp(HINT_PAD) * 2).apply { topMargin = dp(GAP) })
         column.addView(field(passed), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(10)
+            topMargin = dp(GAP)
         })
-        // The rest of the room goes above the drawing, so the drawing and the bar sit at the bottom as the keyboard would.
+        // The rest of the room goes above the drawing, so the drawing and the bar sit at the bottom, as in the guide, where the
+        // drawing is the last thing in the column and the keyboard's bar is right under it.
         column.addView(View(this), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         val keys = GuideKeyboardView(this).apply { tone = GuideTone.Ink }
         column.addView(keys, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0).apply { topMargin = dp(8) })
@@ -79,13 +81,53 @@ class GuideFrameActivity : Activity() {
             column.setPadding(side, bars.top + dp(4), side, bars.bottom + dp(BAR_HEIGHT) + dp(8))
             bar.setPadding(0, 0, 0, bars.bottom)
             (bar.layoutParams as FrameLayout.LayoutParams).height = dp(BAR_HEIGHT) + bars.bottom
-            val width = root.width - 2 * side
-            if (width > 0) (keys.layoutParams as LinearLayout.LayoutParams).height = (width * KEYS_ASPECT).toInt()
             root.post { column.requestLayout(); bar.requestLayout() }
             insets
         }
+        // The drawing of the keys gets the room that the guide gives it: as wide as the column, as tall as its shape allows, and
+        // never more than its share of the height. See GuideActivity.fitKeys.
+        root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            val free = root.height - column.paddingTop - column.paddingBottom
+            val width = root.width - column.paddingLeft - column.paddingRight
+            if (free <= 0 || width <= 0) return@addOnLayoutChangeListener
+            val target = minOf(width * KEYS_ASPECT, free * KEYS_SHARE).toInt()
+            val params = keys.layoutParams
+            if (params.height != target) {
+                params.height = target
+                root.post { keys.requestLayout() }
+            }
+        }
         setContentView(root)
         keys.appear()
+    }
+
+    // A second adb launch reaches this screen while it's open: it shows that state.
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        recreate()
+    }
+
+    /** A text size in px: [sp], but no bigger than [most] dp, so a large font setting can't push a line out of its place. */
+    private fun capped(sp: Float, most: Int) = minOf(sp(sp), dp(most).toFloat())
+
+    /** The height of one line of [face] at [px], from its font's top to its bottom, so nothing is cut. */
+    private fun lineHeight(face: Typeface, px: Float): Int {
+        val metrics = Paint().apply { typeface = face; textSize = px }.fontMetrics
+        return kotlin.math.ceil(metrics.bottom - metrics.top).toInt()
+    }
+
+    /** One size for every title, the largest that fits the longest of them, with its check, on one line across the screen. */
+    private fun titleSize(): Float {
+        val room = resources.displayMetrics.widthPixels - 2 * dp(Layout.KEY_SIDE_DP) - dp(TITLE_SLACK)
+        val probe = Paint().apply { typeface = heavy; letterSpacing = -.02f }
+        var size = capped(TITLE_LARGEST, TITLE_LARGEST.toInt())
+        while (size > sp(TITLE_SMALLEST)) {
+            probe.textSize = size
+            if (TITLES.all { probe.measureText(it + CHECK_ROOM) <= room }) break
+            size -= 1f
+        }
+        return size
     }
 
     /** The chapters' progress, the chapter's name, Skip (or Next once passed) and ✕, on one line. */
@@ -106,7 +148,7 @@ class GuideFrameActivity : Activity() {
             includeFontPadding = false
             maxLines = 1
             setTextColor(GuideMotion.faded(GuideColours.CREAM, CHAPTER_ALPHA))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, capped(11f, 15))
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             marginStart = dp(10)
         })
@@ -114,17 +156,17 @@ class GuideFrameActivity : Activity() {
             text = if (passed) "Next" else "Skip"
             typeface = heavy
             gravity = Gravity.CENTER
-            includeFontPadding = false
             maxLines = 1
-            setPadding(dp(12), dp(5), dp(12), dp(5))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            // Sized to its text: the font's own padding keeps every letter whole, and a little more round it.
+            setPadding(dp(12), dp(3), dp(12), dp(3))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, capped(12f, 15))
             setTextColor(if (passed) GuideColours.INK else GuideMotion.faded(GuideColours.CREAM, PILL_FADED))
             background = GradientDrawable().apply {
                 cornerRadius = dp(PILL_HEIGHT).toFloat()
                 if (passed) setColor(GuideColours.ORANGE)
                 else setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(GuideColours.CREAM, PILL_FADED))
             }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(PILL_HEIGHT)).apply { marginStart = dp(12) })
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(12) })
         addView(ImageView(context).apply {
             setImageResource(R.drawable.panel_close)
             imageTintList = android.content.res.ColorStateList.valueOf(GuideColours.CREAM)
@@ -134,26 +176,14 @@ class GuideFrameActivity : Activity() {
     }
 
     /** One line, one size for every title, never wrapping: the size that fits the longest title this frame has. */
-    private fun title(passed: Boolean) = object : TextView(this) {
-        override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-            super.onSizeChanged(w, h, oldw, oldh)
-            val room = (w - paddingLeft - paddingRight).toFloat()
-            val probe = Paint(getPaint()).apply { typeface = heavy }
-            var size = sp(TITLE_LARGEST)
-            while (size > sp(TITLE_SMALLEST)) {
-                probe.textSize = size
-                if (TITLES.all { probe.measureText(it + CHECK_ROOM) <= room }) break
-                size -= 1f
-            }
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
-        }
-    }.apply {
+    private fun title(passed: Boolean, size: Float) = TextView(this).apply {
         typeface = heavy
         maxLines = 1
         isSingleLine = true
         ellipsize = null
         letterSpacing = -.02f
         includeFontPadding = false
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
         gravity = Gravity.CENTER_VERTICAL or Gravity.START
         setTextColor(GuideColours.CREAM)
         text = if (!passed) TITLES[0] else SpannableStringBuilder(TITLES[1]).apply {
@@ -166,7 +196,7 @@ class GuideFrameActivity : Activity() {
     }
 
     /** The instruction, one plain line, and the hint that slides over it in state b. */
-    private fun instruction(hinted: Boolean, passed: Boolean) = FrameLayout(this).apply {
+    private fun instruction(hinted: Boolean, passed: Boolean, size: Float) = FrameLayout(this).apply {
         val line = TextView(context).apply {
             text = if (passed) "Space fixes typos. Keep typing if you like." else "Make a typo, then press Space."
             typeface = medium
@@ -176,7 +206,7 @@ class GuideFrameActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             includeFontPadding = false
             setTextColor(GuideMotion.faded(GuideColours.CREAM, BODY_ALPHA))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
         }
         addView(line, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         if (!hinted) return@apply
@@ -189,9 +219,9 @@ class GuideFrameActivity : Activity() {
             includeFontPadding = false
             setPadding(dp(12), 0, dp(12), 0)
             setTextColor(GuideColours.INK)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, size * HINT_SCALE)
             background = GradientDrawable().apply {
-                cornerRadius = dp(INSTRUCTION_HEIGHT).toFloat()
+                cornerRadius = dp(PILL_HEIGHT).toFloat()
                 setColor(GuideColours.CREAM)
             }
         }
@@ -206,8 +236,10 @@ class GuideFrameActivity : Activity() {
     /** The field, exactly two lines: what's typed in cream, the cursor, and the rest of the text in grey ahead of it. */
     private fun field(passed: Boolean) = TextView(this).apply {
         val typed = if (passed) "This keyboard " else "This keyb"
-        val ahead = if (passed) "fixes your typos, so you can keep pretending you never make any."
-            else "aord fixes your typos, so you can keep pretending you never make any."
+        // Every word but "typos" has a small typo that autocorrect really fixes, checked against the engine: no typo of "typos"
+        // is fixed, so it stays right.
+        val ahead = if (passed) "fxies yuor typos, sp yuo cna kepe pretendign yuo nevr maek ayn."
+            else "aord fxies yuor typos, sp yuo cna kepe pretendign yuo nevr maek ayn."
         text = SpannableStringBuilder().apply {
             append(typed)
             setSpan(ForegroundColorSpan(GuideColours.CREAM), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -218,13 +250,12 @@ class GuideFrameActivity : Activity() {
             append(ahead)
             setSpan(ForegroundColorSpan(GuideMotion.faded(GuideColours.CREAM, AHEAD_ALPHA)), rest, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
+        // The guide's own field: its font, size and padding, and exactly two lines, so the frame shows its true height.
         typeface = medium
         setLines(2)
         ellipsize = TextUtils.TruncateAt.END
-        includeFontPadding = false
-        setLineSpacing(dp(4).toFloat(), 1f)
-        setPadding(dp(14), dp(12), dp(14), dp(12))
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+        setPadding(dp(14), dp(10), dp(14), dp(10))
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, capped(18f, 24))
         background = GradientDrawable().apply {
             cornerRadius = Radii.px(resources, Radii.MEDIUM)
             setColor(GuideMotion.faded(GuideColours.CREAM, FIELD_FILL))
@@ -278,9 +309,17 @@ class GuideFrameActivity : Activity() {
         // The frame's fixed heights, in dp.
         private const val TOP_BAR = 32
         private const val PILL_HEIGHT = 24
-        private const val TITLE_HEIGHT = 40
-        private const val INSTRUCTION_HEIGHT = 28
         private const val BAR_HEIGHT = 56
+        /** The same gap between the top bar, the title, the instruction and the field. */
+        private const val GAP = 10
+        /** Room above and below the instruction, for the hint that slides over it. */
+        private const val HINT_PAD = 3
+        private const val HINT_SCALE = .94f
+        private const val INSTRUCTION_SP = 16f
+        private const val INSTRUCTION_DP = 20
+        /** Room the title keeps at its end, so it never touches the edge. */
+        private const val TITLE_SLACK = 8
+        private const val KEYS_SHARE = .36f
         private const val SEGMENT_HEIGHT = 4
 
         private const val TITLE_LARGEST = 32f

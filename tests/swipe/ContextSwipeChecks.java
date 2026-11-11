@@ -55,12 +55,14 @@ public final class ContextSwipeChecks {
         String[][] typed = {
             { "", "were", "going", "we're" }, { "", "were", "gonna", "we're" }, { "", "its", "not", "it's" },
             { "", "ill", "be", "i'll" }, { "maybe", "ill", "see", "i'll" }, { "", "well", "be", "we'll" },
-            { "", "id", "like", "i'd" }, { "she said", "shed", "come", "she'd" },
+            { "", "id", "like", "i'd" }, { "", "id", "rather", "i'd" }, { "", "id", "go", "i'd" }, { "", "id", "just", "i'd" },
+            { "but", "id", "just", "i'd" }, { "she said", "shed", "come", "she'd" },
             { "they", "were", "going", null }, { "", "were", "you", null }, { "", "were", "there", null },
             { "", "were", "all", null }, { "", "were", "either", null }, { "", "well", "look", null },
             { "", "were", "the", null }, { "the dog wagged", "its", "tail", null }, { "very", "well", "done", null },
             { "", "well", "it", null }, { "she is", "ill", "and", null }, { "she", "lets", "me", null },
-            { "the garden", "shed", "is", null }, { "your", "id", "card", null }, { "get", "well", "soon", null },
+            { "the garden", "shed", "is", null }, { "your", "id", "card", null },
+            { "", "id", "card", null }, { "", "id", "is", null }, { "user", "id", "for", null }, { "enter", "id", "and", null }, { "get", "well", "soon", null },
         };
         for (String[] example : typed) {
             String found = recogniser.lookAlike(SentenceContext.words(example[0]), example[1], example[2], true);

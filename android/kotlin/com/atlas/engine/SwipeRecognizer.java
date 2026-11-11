@@ -18,6 +18,9 @@ public final class SwipeRecognizer implements AutoCloseable {
     // Stands in for the start of a sentence, which the context model would otherwise not score at all.
     private static final String[] SENTENCE_START = {"so"};
     private static final double LOOK_ALIKE_NEXT_WORD_EVIDENCE = 3;
+    // The model mostly saw "id" as "I'd" without its apostrophe, so "id rather" looks nearly as usual as "I'd rather".
+    // The real word "id" is a noun, and the next word always speaks against "I'd" then, as in "id card".
+    private static final Set<String> CASUAL_LOOK_ALIKES = Set.of("i'd");
     // A typed word was not chosen from the earlier words, so they must agree with the next word strongly.
     // A missed change costs little; a wrong one changes what the user typed, so this stays far from real words.
     private static final double TYPED_LOOK_ALIKE_EVIDENCE = 5;
@@ -176,7 +179,7 @@ public final class SwipeRecognizer implements AutoCloseable {
         String shown = SwipeSpelling.restore(SwipeSpelling.lookAlike(other));
         String replacement = SwipeSpelling.restore(other);
         double after = chance(decoder, followedBy(context, replacement), next) - chance(decoder, followedBy(context, shown), next);
-        if (after < LOOK_ALIKE_NEXT_WORD_EVIDENCE) return null;
+        if (after < (CASUAL_LOOK_ALIKES.contains(other) ? 0 : LOOK_ALIKE_NEXT_WORD_EVIDENCE)) return null;
         String[] before = scoringContext(context);
         double earlier = chance(decoder, before, replacement) - chance(decoder, before, shown);
         return after + earlier >= (typed ? TYPED_LOOK_ALIKE_EVIDENCE : 0) ? other : null;

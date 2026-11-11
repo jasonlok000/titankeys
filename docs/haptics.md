@@ -15,9 +15,12 @@ Every gesture has its own feel, so you can tell what happened without looking. O
 | Nothing | — | Single taps on Space (most are a resting finger). Shift or Alt once or off. Opening Sym. A swiped word landing (its ticks already played). |
 
 **Space gestures, by count:**
-- Steering (tap, then slide) is one click.
-- Selecting (a double tap, or tap tap and slide) is a double click.
-- The feel plays when TitanKeys recognises the gesture, so a resting finger never buzzes.
+- Steering (tap, then hold and slide) is one click. It plays as soon as the held touch counts (70 ms), before the slide, and the strip shows the gesture then too.
+- Selecting (a double tap, a triple tap, or tap tap then hold and slide) is a double click, also as soon as the held touch counts.
+- A double or triple tap with no slide picks the word once no further touch follows (150 ms), so a resting finger's run of short touches never picks one.
+- While steering, a space or a line end is a tick and every other character the lightest tick. Punctuation gets no third feel: the other effects already mean done, stays and removed, and punctuation almost always sits next to a space, whose tick already marks the word's end.
+- A resting finger's touches last about 40 ms, so they never get to the 70 ms that a held touch needs.
+- **Debug build only:** Settings > Vibration > Word pick feel tries three ways to feel a picked word's length: one buzz that lasts longer for a longer word, a short buzz per syllable, or a heavier effect for a longer word.
 
 **Calm while typing fast:**
 - Plain key presses never vibrate.

@@ -11,6 +11,10 @@ import kotlin.math.max
  * quick taps and is dragged sideways or up, that selects words. Up takes the finger onto the letter rows, which the
  * touchpad reads better than the bottom row, and [CursorMode] follows it there.
  *
+ * A held touch registers as soon as it has stayed down for [REGISTER_MILLIS], before any slide: see [held]. That is when the
+ * keyboard shows the gesture on the strip and plays its feel. Three quick taps pick the word at the cursor with no slide, after the
+ * same wait as two: see [tripled]. A resting finger's series of short touches looks like three taps, and its fourth calls them off.
+ *
  * The touchpad reports one point only, and a resting finger is reported again as short touches at the same place,
  * which look like repeated taps. So the first tap must come alone, a double tap only counts once [CONFIRM_MILLIS]
  * have passed with no third touch, and a third touch that lifts without a drag does nothing. A wrong selection is
@@ -35,6 +39,7 @@ class CursorGesture {
         class Tapped(val taps: Int, val landed: Sample, val lifted: Long) : State
         /** The touch that came after [taps] quick taps. */
         class NextTouch(val taps: Int, val landed: Sample, val gap: Long, val tapLanded: Sample) : State {
+            var registered = false
             var last = landed
             var across = 0f
             var up = 0f
@@ -46,11 +51,32 @@ class CursorGesture {
     /** A touch that lands before this time can't be a first tap. */
     private var firstTapFrom = 0L
 
+    /** True after an [up] that finished three quick taps on Space, for [confirmTriple] to check after [CONFIRM_MILLIS]. */
+    var tripled = false
+        private set
+
+    /** True while a second or third touch is down that may still become a gesture, for the keyboard to check [held] after a while. */
+    val touchPending get() = state is State.NextTouch
+
+    /**
+     * Once the second or third touch has stayed down for [REGISTER_MILLIS] by [now], the count of touches so far: 2 for a tap then
+     * a held touch (steering), 3 for two taps then a held touch (picking words). It answers once, and 0 otherwise. A resting
+     * finger's touches last about 40 ms, so they never get this far.
+     */
+    fun held(now: Long): Int {
+        val current = state as? State.NextTouch ?: return 0
+        if (current.registered || now - current.landed.time < REGISTER_MILLIS) return 0
+        current.registered = true
+        return current.taps + 1
+    }
+
     /** A finger landed. [counts] is false for a touch that can't type, such as one in the pause after a key press. */
     fun down(sample: Sample, counts: Boolean) {
         val previous = state
         state = when {
             !counts || !sample.valid || !inZone(sample.x, sample.y) -> State.Idle
+            // A fourth touch is a resting finger's series, which never makes a gesture.
+            previous is State.Tapped && previous.taps == 3 -> State.Idle
             previous is State.Tapped && follows(previous, sample) -> State.NextTouch(previous.taps, sample, sample.time - previous.lifted, previous.landed)
             sample.time >= firstTapFrom -> State.FirstTouch(sample)
             else -> State.Idle
@@ -94,6 +120,14 @@ class CursorGesture {
         firstTapFrom = max(firstTapFrom, time + ALONE_MILLIS)
         val current = state
         state = State.Idle
+        tripled = false
+        // A third quick tap on Space, after two quick ones there, picks the word at the cursor once no fourth touch follows.
+        if (current is State.NextTouch && current.taps == 2 && time - current.landed.time <= SECOND_TAP_MILLIS && current.travel < TAP_KEYS
+            && current.gap <= MAX_GAP_MILLIS && current.landed.y >= BOTTOM_ROW_TOP && current.tapLanded.y >= BOTTOM_ROW_TOP) {
+            state = State.Tapped(3, current.landed, time)
+            tripled = true
+            return false
+        }
         if (current is State.FirstTouch && time - current.landed.time <= FIRST_TAP_MILLIS && current.travel < TAP_KEYS) {
             state = State.Tapped(1, current.landed, time)
         }
@@ -114,6 +148,13 @@ class CursorGesture {
         return true
     }
 
+    /** True if the triple tap still stands [CONFIRM_MILLIS] after it lifted, with no fourth touch. It can only be used once. */
+    fun confirmTriple(): Boolean {
+        if ((state as? State.Tapped)?.taps != 3) return false
+        state = State.Idle
+        return true
+    }
+
     /** A key press or something else interrupted the touchpad at [time]. */
     fun cancel(time: Long) {
         state = State.Idle
@@ -122,7 +163,7 @@ class CursorGesture {
 
     /** Whether the taps so far may still become a gesture at [now], so a tap key must not type them yet. */
     fun deciding(now: Long) = when (val current = state) {
-        is State.Tapped -> current.taps == 2 || now < current.lifted + MAX_GAP_MILLIS
+        is State.Tapped -> current.taps >= 2 || now < current.lifted + MAX_GAP_MILLIS
         is State.NextTouch -> true
         else -> false
     }
@@ -153,6 +194,8 @@ class CursorGesture {
         private const val ALONE_MILLIS = 200L
         /** The first tap must come this long after a key press. */
         private const val AFTER_KEY_MILLIS = 500L
+        /** A second or third touch that stays down this long registers, before any slide. Resting touches last about 40 ms. */
+        const val REGISTER_MILLIS = 70L
         /** How long a double tap waits for a third touch, which would make it part of a series or a word drag. */
         const val CONFIRM_MILLIS = MAX_GAP_MILLIS
         /** How far sideways the second or third touch must go to start a drag. */
@@ -185,7 +228,7 @@ class CursorGesture {
             "minGapMillis" to MIN_GAP_MILLIS, "maxGapMillis" to MAX_GAP_MILLIS, "maxApartKeys" to MAX_APART_KEYS,
             "aloneMillis" to ALONE_MILLIS, "afterKeyMillis" to AFTER_KEY_MILLIS, "confirmMillis" to CONFIRM_MILLIS,
             "dragKeys" to DRAG_KEYS, "sideways" to SIDEWAYS, "upRows" to UP_ROWS, "jumpKeys" to JUMP_KEYS,
-            "maxDragGapMillis" to MAX_DRAG_GAP_MILLIS, "aboveSideways" to ABOVE_SIDEWAYS,
+            "maxDragGapMillis" to MAX_DRAG_GAP_MILLIS, "aboveSideways" to ABOVE_SIDEWAYS, "registerMillis" to REGISTER_MILLIS,
         )
     }
 }

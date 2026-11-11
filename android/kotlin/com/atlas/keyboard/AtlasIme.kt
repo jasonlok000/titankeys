@@ -68,6 +68,12 @@ class AtlasIme : InputMethodService() {
     private val cursorGesture = CursorGesture()
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
     private var cursorPath = ArrayList<Sample>()
+    /** The touch of a Space gesture registered before any slide, so the strip shows it and its feel has played. */
+    private var gestureRegistered = false
+    /** Where that touch landed, for the strip's track. */
+    private var gestureLanded: Sample? = null
+    /** The cursor has moved far from where its text was read, so the next step reads it again. */
+    private var rereadCursorText = false
     private var cursorControl = true
     /** Taps on a tap key that may be part of a double tap. Each call gives its input, typed if the argument is true. */
     private val heldTaps = ArrayList<(Boolean) -> Unit>()
@@ -335,10 +341,9 @@ class AtlasIme : InputMethodService() {
         if (!cursorGesture.confirm()) return@Runnable
         Recording.sink?.gesture("double", SystemClock.uptimeMillis(), "")
         finishHeldTaps(type = false)
-        haptics.stays()
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
         // A terminal or a remote view has no text to select here.
-        if (!field.exact) enqueue { selectWord() }
+        if (field.exact) haptics.stays() else enqueue { selectWord() }
     }
 
     private val checkHeldTaps = Runnable { settleHeldTaps() }
@@ -402,10 +407,61 @@ class AtlasIme : InputMethodService() {
         contact.cancelActive()
         finishHeldTaps(type = false)
         Trace.touch(cursorPath, false)
-        if (drag.words) haptics.stays() else haptics.confirm()
+        if (!gestureRegistered) {
+            gestureRegistered = true
+            if (drag.words) haptics.stays() else haptics.confirm()
+        }
+        if (!drag.words) readCursorText()
         if (drag.words && !field.exact) enqueue { startWordDrag() }
         stepCursor.reset()
         stepCursor.run()
+    }
+
+    private val registerGestureLater = Runnable { registerGesture(SystemClock.uptimeMillis()) }
+
+    /**
+     * A second or third touch of a Space gesture has stayed down long enough to count, before any slide: the strip shows the
+     * gesture and its feel plays now. A tap then a held touch steers (a click), and two taps then a held touch pick words (a
+     * double click). If the touch lifts without a slide, the strip lets the gesture go.
+     */
+    private fun registerGesture(now: Long) {
+        val taps = cursorGesture.held(now)
+        if (taps == 0 || gestureRegistered) return
+        gestureRegistered = true
+        val words = taps >= 3
+        Recording.sink?.gesture("registered", now, "taps=$taps")
+        if (words) haptics.stays() else haptics.confirm()
+        if (words) readWordsAroundCursor() else readCursorText()
+        strip?.gesture?.cursorFrame((gestureLanded?.x ?: .5f) * 10, 0, 0f, words, now)
+    }
+
+    /** The real text around the cursor, for the strip's line of letters while steering. */
+    private fun readCursorText() {
+        rereadCursorText = false
+        val connection = currentInputConnection ?: return
+        val before = connection.getTextBeforeCursor(GestureDisplay.LINE_REACH, 0) ?: return
+        val after = connection.getTextAfterCursor(GestureDisplay.LINE_REACH, 0) ?: return
+        strip?.gesture?.cursorText(before, after)
+    }
+
+    /** The real words around the cursor, for the strip's row of words before a word drag has selected anything. */
+    private fun readWordsAroundCursor() {
+        val connection = currentInputConnection ?: return
+        val before = connection.getTextBeforeCursor(GestureDisplay.LINE_REACH, 0) ?: return
+        val after = connection.getTextAfterCursor(GestureDisplay.LINE_REACH, 0) ?: return
+        val head = before.takeLastWhile { !it.isWhitespace() }
+        val tail = after.takeWhile { !it.isWhitespace() }
+        strip?.gesture?.wordText(before.dropLast(head.length), head.length + tail.length, after.drop(tail.length))
+    }
+
+    /** Three quick taps on Space: the word at the cursor, as soon as no fourth touch has followed. */
+    private val confirmTripleTap = Runnable {
+        if (!cursorGesture.confirmTriple()) return@Runnable
+        Recording.sink?.gesture("triple", SystemClock.uptimeMillis(), "")
+        main.removeCallbacks(confirmDoubleTap)
+        finishHeldTaps(type = false)
+        KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
+        if (field.exact) haptics.stays() else enqueue { selectWord() }
     }
 
     /** Space set as a tap key would type the first tap of a double tap, so a tap waits until it can't be one. */
@@ -1416,6 +1472,7 @@ class AtlasIme : InputMethodService() {
                 contact.move(samples.drop(1))
                 stopCursor()
                 main.removeCallbacks(confirmDoubleTap)
+                main.removeCallbacks(confirmTripleTap)
                 cursorPath = ArrayList(samples.filter { it.valid })
                 // With Alt on or the panel open the touchpad does not type, so the cursor waits until they are off.
                 // A finger the contact ignored landed while typing, so it must not start the cursor.
@@ -1423,6 +1480,12 @@ class AtlasIme : InputMethodService() {
                 Recording.sink?.gesture("down", first.time, "counts=$gestureCounts cursorControl=$cursorControl " +
                     "altOrPanel=$altOrPanel contact=${contact.travel != null}")
                 cursorGesture.down(first, gestureCounts)
+                gestureRegistered = false
+                main.removeCallbacks(registerGestureLater)
+                if (cursorGesture.touchPending) {
+                    gestureLanded = first
+                    main.postDelayed(registerGestureLater, CursorGesture.REGISTER_MILLIS)
+                }
                 cursorGesture.move(samples.drop(1))?.let {
                     startCursor(it, samples.drop(1))
                     return
@@ -1445,6 +1508,7 @@ class AtlasIme : InputMethodService() {
                 contact.move(samples)
                 // A held delete flick only waits for the finger to lift.
                 if (contact.deleting) return
+                samples.lastOrNull()?.let { registerGesture(it.time) }
                 cursorGesture.move(samples)?.let {
                     startCursor(it, samples)
                     return
@@ -1479,6 +1543,9 @@ class AtlasIme : InputMethodService() {
             false
         } else cursorGesture.up(samples, event.eventTime)
         Recording.sink?.gesture("up", event.eventTime, "doubleTapped=$doubleTapped" + if (cancelled) " cancelled=true" else "")
+        main.removeCallbacks(registerGestureLater)
+        // Three quick taps pick the word at the cursor, with no slide, once no fourth touch follows.
+        if (!cancelled && cursorGesture.tripled) main.postAtTime(confirmTripleTap, event.eventTime + CursorGesture.CONFIRM_MILLIS)
         if (cursor.active) {
             main.removeCallbacks(stepCursor)
             cursor.move(samples)
@@ -1599,6 +1666,8 @@ class AtlasIme : InputMethodService() {
         Recording.sink?.gesture("cancel", SystemClock.uptimeMillis(), "")
         stopCursor()
         main.removeCallbacks(confirmDoubleTap)
+        main.removeCallbacks(confirmTripleTap)
+        main.removeCallbacks(registerGestureLater)
         cursorGesture.cancel(SystemClock.uptimeMillis())
         settleHeldTaps()
     }
@@ -1633,16 +1702,26 @@ class AtlasIme : InputMethodService() {
             // Going past a space feels different from a letter, so that you can count words without looking.
             val connection = currentInputConnection
             val next = if (direction > 0) connection?.getTextAfterCursor(1, 0) else connection?.getTextBeforeCursor(1, 0)
-            if (next?.isEmpty() != true && Haptics.enabled(this)) {
-                if (next?.firstOrNull()?.isWhitespace() == true) haptics.tick() else haptics.texture()
-            }
+            // An app that does not answer still gets the light tick.
+            HapticPalette.cursorStep(if (next == null) 'a' else next.firstOrNull())?.let(haptics::play)
+            if (rereadCursorText) readCursorText()
             command(arrow)
+            if (next?.isEmpty() != true) rereadCursorText = strip?.gesture?.cursorStepped(direction) == true
         }
     }
 
     /** Selects the word at the cursor, or does nothing between words. */
     private fun selectWord() = changeSelection { text, start, end, _ ->
-        WordSelection.at(text, start, end)?.also { strip?.gesture?.wordSelected(SystemClock.uptimeMillis()) }
+        val word = WordSelection.at(text, start, end)
+        if (word == null) {
+            haptics.stays()
+            return@changeSelection null
+        }
+        // The pick plays with the word, so the debug build's pick feel can follow its length.
+        haptics.picked(text.subSequence(word.first, word.second).toString(), Feel.Stays)
+        strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
+        strip?.gesture?.wordSelected(SystemClock.uptimeMillis())
+        word
     }
 
     /** Selects the word at the cursor, the part that a word drag keeps selected. Between words the drag starts from the cursor. */
@@ -1651,6 +1730,7 @@ class AtlasIme : InputMethodService() {
         changeSelection { text, start, end, offset ->
             val word = WordSelection.at(text, start, end) ?: (start to end)
             wordAnchor = offset + word.first to offset + word.second
+            strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
             word
         }
     }
@@ -1661,7 +1741,10 @@ class AtlasIme : InputMethodService() {
             val anchor = wordAnchor ?: return@changeSelection null
             val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction)
             if (range == start to end) return@changeSelection null
-            haptics.tick()
+            // The word that this step took or gave back.
+            val moved = if (range.second != end) text.subSequence(minOf(end, range.second), maxOf(end, range.second))
+                else text.subSequence(minOf(start, range.first), maxOf(start, range.first))
+            haptics.picked(moved.toString().trim(), Feel.Tick)
             strip?.gesture?.wordStep(direction)
             range
         }

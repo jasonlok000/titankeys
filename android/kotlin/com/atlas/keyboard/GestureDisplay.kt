@@ -74,6 +74,30 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     var camera = 0f
         private set
 
+    /**
+     * The real text around the caret while steering, read when the gesture starts: the caret sits before index [caretAt]. Null
+     * where the field gives no text, and then a made-up line moves past the caret instead.
+     */
+    var line: CharSequence? = null
+        private set
+    var caretAt = 0
+        private set
+    /** Characters that the cursor has moved since [line] was read, and the same number as it shows, which follows it smoothly. */
+    var stepped = 0
+        private set
+    var shownStep = 0f
+        private set
+    /** Whether more text may lie past each end of [line], so that the cursor going there reads it again. */
+    private var moreBefore = false
+    private var moreAfter = false
+    /** The real words of a word drag or a picked word, as letter counts: the first word, then nearest first on each side. Null where unknown. */
+    var anchorLetters: Int? = null
+        private set
+    var leftWords = IntArray(0)
+        private set
+    var rightWords = IntArray(0)
+        private set
+
     /** Words that the hold has deleted, and the same number as it shows, which follows it smoothly. */
     var deleted = 0
         private set
@@ -122,6 +146,50 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     fun cursorEnded() {
         if (scene == Scene.Cursor || scene == Scene.WordDrag) leave()
+    }
+
+    /** The text around the caret, [before] and [after] it, as the cursor drag starts or after it has gone far. */
+    fun cursorText(before: CharSequence, after: CharSequence) {
+        val left = before.takeLast(LINE_REACH)
+        line = left.toString() + after.take(LINE_REACH)
+        caretAt = left.length
+        moreBefore = before.length >= LINE_REACH
+        moreAfter = after.length >= LINE_REACH
+        // The picture keeps where it was: the new text is read where the cursor is now.
+        shownStep -= stepped
+        stepped = 0
+        changed()
+    }
+
+    /** The cursor moved one character. True when it is far enough from where the text was read to read it again. */
+    fun cursorStepped(direction: Int): Boolean {
+        stepped += direction
+        changed()
+        val text = line ?: return false
+        return moreBefore && caretAt + stepped < REREAD_MARGIN || moreAfter && text.length - caretAt - stepped < REREAD_MARGIN
+    }
+
+    /** The words around a word drag or a picked word: [before] it, the word itself of [letters], and [after] it. */
+    fun wordText(before: CharSequence, letters: Int, after: CharSequence) {
+        anchorLetters = letters
+        leftWords = wordLengths(before).reversedArray()
+        rightWords = wordLengths(after)
+        changed()
+    }
+
+    /**
+     * How much of a word's place the word at [index] fills, in a word drag: 0 is the first word, below 0 the words before it.
+     * Real words get a width from their length. Past the end of the text there is no word, which is 0. With no text known, a
+     * made-up row reads as a line of text.
+     */
+    fun wordWidth(index: Int): Float {
+        val first = anchorLetters ?: return MADE_UP_WIDTHS[index.mod(MADE_UP_WIDTHS.size)]
+        val letters = when {
+            index == 0 -> first
+            index < 0 -> leftWords.getOrNull(-index - 1) ?: return 0f
+            else -> rightWords.getOrNull(index - 1) ?: return 0f
+        }
+        return widthFor(letters)
     }
 
     /** One step of a word drag changed the selection. It gives back a word from the far side first, as [WordSelection.extend] does. */
@@ -181,6 +249,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         when (scene) {
             Scene.Cursor -> {
                 intensity = ease(intensity, speedTarget, elapsed, EASE_MILLIS, motion)
+                shownStep = ease(shownStep, stepped.toFloat(), elapsed, STEP_MILLIS, motion)
                 if (motion) {
                     val next = flow + leaning * flowRate(intensity) * seconds
                     letters = (letters + floor(next).toInt()).mod(PATTERN_LETTERS)
@@ -257,6 +326,13 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         reveal = 0f
         leaving = false
         resetPieces()
+        line = null
+        caretAt = 0
+        stepped = 0
+        shownStep = 0f
+        anchorLetters = null
+        leftWords = IntArray(0)
+        rightWords = IntArray(0)
     }
 
     private fun resetPieces() {
@@ -319,6 +395,33 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         private const val STILL_MILLIS = 320f
 
         private fun flowRate(level: Float) = FLOW_SLOWEST + (FLOW_FASTEST - FLOW_SLOWEST) * level
+
+        /** Characters of real text read on each side of the caret, more than the strip can show. */
+        const val LINE_REACH = 64
+        /** Read the text again when the cursor comes this close to the end of what was read. */
+        private const val REREAD_MARGIN = 24
+        /** Made-up word widths, for a field that gives no text. */
+        private val MADE_UP_WIDTHS = floatArrayOf(.62f, .82f, .5f, .74f, .88f, .56f, .7f)
+        /** A real word fills from [SHORTEST_WORD] of its place for one letter to all of it at [LONG_WORD] letters. */
+        private const val SHORTEST_WORD = .3f
+        private const val LONG_WORD = 10
+
+        /** How much of its place a word of [letters] fills. */
+        fun widthFor(letters: Int) = SHORTEST_WORD + (1f - SHORTEST_WORD) * (letters.coerceIn(1, LONG_WORD) - 1) / (LONG_WORD - 1)
+
+        /** The letter counts of the words in [text], in order, split at spaces and line ends. */
+        fun wordLengths(text: CharSequence): IntArray {
+            val lengths = ArrayList<Int>()
+            var run = 0
+            for (char in text) {
+                if (char.isWhitespace()) {
+                    if (run > 0) lengths += run
+                    run = 0
+                } else run++
+            }
+            if (run > 0) lengths += run
+            return lengths.toIntArray()
+        }
 
         /**
          * How fast the cursor goes, from 0 to 1. [CursorMode] speeds grow by even factors, so this goes by factors too. A word

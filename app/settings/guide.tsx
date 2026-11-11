@@ -52,7 +52,7 @@ export default function Guide() {
     <Section title="Cursor and picking text">
       <Topic title="Move the cursor">{"Tap twice, quickly, just above the middle of Space, and keep your finger down after the second tap. Slide left or right. The cursor goes slowly near the middle and fast near the edges, and stops when you come back to the middle. You feel a stronger buzz each time it passes a space. Turn it off with Space taps move the cursor in Settings."}</Topic>
       <Topic title="Pick a word">{"Tap twice just above Space, lifting after each tap. That picks the word at the cursor."}</Topic>
-      <Topic title="Pick more words">{"Tap three times and keep your finger down after the third. Slide to take more words. Lean back the other way to give them back, one at a time."}</Topic>
+      <Topic title="Pick more words">{"Tap three times to pick the word at the cursor. Keep your finger down after the third tap and slide to take more words. Lean back the other way to give them back, one at a time."}</Topic>
     </Section>
     <Section title="Symbols and emoji">
       <Topic title="Alt symbols">{"Each letter has a symbol printed in its corner. Press Alt, then the letter, to type it. Or hold the letter, if that's on."}</Topic>

@@ -48,16 +48,25 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val line = mid - dp(LINE_LIFT)
         val caret = (left + right) / 2
         val pitch = dp(LETTER_PITCH)
-        val moved = display.letters + display.flow
-        val reach = ceil((right - left) / 2 / pitch).toInt() + 1
-        val start = floor(moved).toInt() - reach
-        for (index in start..start + 2 * reach + 1) {
-            if (isSpace(index)) continue
-            val x = caret + (index - moved + .5f) * pitch
-            if (x < left || x > right) continue
-            // The letters fade towards the ends, so the eye stays on the caret.
-            val fade = 1f - abs(x - caret) / ((right - left) / 2)
-            dot(canvas, x, line, dp(LETTER_DOT), GuideMotion.faded(look.ink, (LETTER + (1f - LETTER) * .4f * fade) * fade * alpha))
+        val text = display.line
+        if (text != null) {
+            // The real text: a dot for each character, a gap for each space, and nothing past either end of the text.
+            for (index in text.indices) {
+                if (text[index].isWhitespace()) continue
+                val x = caret + (index - display.caretAt - display.shownStep + .5f) * pitch
+                if (x < left || x > right) continue
+                letterDot(canvas, x, caret, left, right, line, look, alpha)
+            }
+        } else {
+            val moved = display.letters + display.flow
+            val reach = ceil((right - left) / 2 / pitch).toInt() + 1
+            val start = floor(moved).toInt() - reach
+            for (index in start..start + 2 * reach + 1) {
+                if (isSpace(index)) continue
+                val x = caret + (index - moved + .5f) * pitch
+                if (x < left || x > right) continue
+                letterDot(canvas, x, caret, left, right, line, look, alpha)
+            }
         }
         bar(canvas, caret, line, dp(CARET_HEIGHT), GuideMotion.faded(look.accent, alpha))
         // The track: the whole keyboard across, the dead zone in the middle of Space, and the finger.
@@ -74,6 +83,12 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
                 GuideMotion.faded(look.accent, alpha))
         }
         dot(canvas, finger, track, dp(FINGER + FINGER_GROW * display.intensity), GuideMotion.faded(look.accent, alpha))
+    }
+
+    /** One letter of the line, fading towards the ends so the eye stays on the caret. */
+    private fun letterDot(canvas: Canvas, x: Float, caret: Float, left: Float, right: Float, line: Float, look: Look, alpha: Float) {
+        val fade = 1f - abs(x - caret) / ((right - left) / 2)
+        dot(canvas, x, line, dp(LETTER_DOT), GuideMotion.faded(look.ink, (LETTER + (1f - LETTER) * .4f * fade) * fade * alpha))
     }
 
     /** A row of words, with the selection over them. A word drag shows it growing and shrinking by whole words. */
@@ -101,7 +116,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         for (index in first..last) {
             if ((index > display.spanStart && index < display.spanEnd) != selected) continue
             val x = centre + (index - display.camera) * slot
-            val half = slot * widthOf(index) / 2
+            val half = slot * display.wordWidth(index) / 2
             word(canvas, x - half, x + half, mid, colour)
         }
     }

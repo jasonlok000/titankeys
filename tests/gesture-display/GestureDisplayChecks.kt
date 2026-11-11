@@ -12,6 +12,8 @@ private const val ON_SPACE = 5.3f
 private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
+    realTextFollowsTheCursor()
+    realWordsForAWordDrag()
     nothingShowsAtFirst()
     onSpaceOnlyTheFingerShows()
     leaningLeftStretchesFromTheEndOfSpace()
@@ -521,4 +523,40 @@ private fun aRecoveredGestureStartsClean() {
     same(display.wordsRight, 0, "A new word drag must not keep the old words")
     display.run(1_500, 1_600)
     near(display.spanEnd, .5f, "A new word drag must start at its first word", .01f)
+}
+
+/** While steering, the line of letters is the real text around the caret, and it follows each step of the cursor. */
+private fun realTextFollowsTheCursor() {
+    val display = GestureDisplay()
+    display.cursorFrame(5f, 0, 0f, words = false, now = 0L)
+    display.cursorText("Hello there", " world")
+    if (display.line.toString() != "Hello there world" || display.caretAt != 11) throw AssertionError("The line is the text, with the caret after 'there'")
+    if (display.cursorStepped(-1)) throw AssertionError("One step needs no new text")
+    if (display.stepped != -1) throw AssertionError("A step to the left moves the caret one character left")
+    display.advance(1_000L, 0f)
+    if (display.shownStep != -1f) throw AssertionError("With motion off the line is where the cursor is")
+    val long = GestureDisplay()
+    long.cursorFrame(5f, 0, 0f, words = false, now = 0L)
+    long.cursorText("a".repeat(100), "")
+    if (long.line!!.length != GestureDisplay.LINE_REACH) throw AssertionError("Only what the strip can use is kept")
+    var reread = false
+    repeat(GestureDisplay.LINE_REACH) { if (long.cursorStepped(-1)) reread = true }
+    if (!reread) throw AssertionError("Near the end of the text read, it asks for the text again")
+    long.cursorText("a".repeat(20), "b".repeat(20))
+    if (long.stepped != 0) throw AssertionError("New text starts from the caret")
+    if (GestureDisplay().line != null) throw AssertionError("With no text, the made-up line shows")
+}
+
+/** A word drag and a picked word show the real words around them, as wide as their letters, and none past the text. */
+private fun realWordsForAWordDrag() {
+    if (!GestureDisplay.wordLengths("  one two  three ").contentEquals(intArrayOf(3, 3, 5))) throw AssertionError("Words split at spaces")
+    val display = GestureDisplay()
+    display.wordText("the quick ", 5, " fox")
+    if (display.wordWidth(0) != GestureDisplay.widthFor(5)) throw AssertionError("The first word is as wide as its letters")
+    if (display.wordWidth(-1) != GestureDisplay.widthFor(5)) throw AssertionError("The word before it is quick")
+    if (display.wordWidth(-2) != GestureDisplay.widthFor(3)) throw AssertionError("and then the")
+    if (display.wordWidth(-3) != 0f) throw AssertionError("Past the start of the text there is no word")
+    if (display.wordWidth(1) != GestureDisplay.widthFor(3) || display.wordWidth(2) != 0f) throw AssertionError("After it, fox and then nothing")
+    if (GestureDisplay.widthFor(1) >= GestureDisplay.widthFor(9)) throw AssertionError("A longer word is wider")
+    if (GestureDisplay().wordWidth(5) <= 0f) throw AssertionError("With no text known, a made-up row shows")
 }

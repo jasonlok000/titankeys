@@ -97,6 +97,8 @@ fun main() {
     aboveSpaceOnlyAsWideAsSpace()
     aboveSpaceOnlyTheLowerHalfOfTheRow()
     aWordFromVWithoutTapsStaysAWord()
+    aHeldTouchRegistersBeforeAnySlide()
+    threeQuickTapsPickAWord()
     println("Cursor checks passed")
 }
 
@@ -828,16 +830,18 @@ private fun wordSpeedStaysCountable() {
     same(far < cursorFrom(5f, .65f).speed(100), true, "A word drag must take fewer steps than letters")
 }
 
+/** The owner changed this (2026-11-10): a triple tap with no drag now picks the word, after the wait for a fourth touch. */
 private fun tripleTapWithoutADragDoesNothing() {
     val pad = Pad()
     val landed = pad.twoTapsThenLand()
     same(pad.gesture.confirm(), false, "A third touch must call off the waiting double tap")
     pad.up(landed + 60)
     same(pad.tapped, false, "A third tap must not finish a double tap")
-    same(pad.gesture.confirm(), false, "A triple tap with no drag must not select")
+    same(pad.gesture.confirm(), false, "A triple tap is not a double tap's selection")
     same(pad.started, null, "A triple tap with no drag must not start a drag")
-    same(pad.gesture.deciding(landed + 61), false, "A triple tap with no drag must free the tap key")
+    same(pad.gesture.deciding(landed + 61), true, "A triple tap holds the tap key while a fourth touch may still call it off")
     pad.tap(COLUMN, landed + 60 + 80, FIRST_MILLIS)
+    same(pad.gesture.confirmTriple(), false, "A fourth touch calls the triple tap off")
     pad.tap(COLUMN, landed + 60 + 80 + FIRST_MILLIS + GAP_MILLIS, 90)
     same(pad.selects(), false, "A tap straight after a triple tap must not start another gesture")
 }
@@ -1052,4 +1056,59 @@ private fun tapsJustAboveSpaceSelectWithASidewaysDrag() {
     same(pad.words, true, "It selects words, which starts with the word before the cursor and its space")
     // What it selects first is WordSelection.at, as on Space: "text |" takes "text ", inside a word the word, else nothing.
     same(picked("text ", range("text ", 5)), "text ", "The word before the cursor and its space")
+}
+
+/** A tap then a held touch, or two taps then a held touch, register once the touch has stayed down, before any slide. */
+private fun aHeldTouchRegistersBeforeAnySlide() {
+    val steer = Pad()
+    val landed = steer.tapThenLand()
+    same(steer.gesture.held(landed + 40), 0, "A touch as short as a resting finger's does not register")
+    same(steer.gesture.held(landed + CursorGesture.REGISTER_MILLIS), 2, "A tap then a held touch registers as steering")
+    same(steer.gesture.held(landed + 200), 0, "It registers once")
+    steer.move(at(COLUMN + 1f, landed + 250))
+    same(steer.words, false, "The slide after it steers")
+    same(steer.started, at(COLUMN, landed), "from where the touch landed")
+
+    val pick = Pad()
+    val third = pick.twoTapsThenLand()
+    same(pick.gesture.held(third + CursorGesture.REGISTER_MILLIS), 3, "Two taps then a held touch register as picking words")
+
+    val single = Pad()
+    single.down(at(COLUMN, 1_000))
+    same(single.gesture.held(1_000 + 500), 0, "A first touch alone never registers")
+}
+
+/** Three quick taps on Space pick the word at the cursor, once no fourth touch has followed. */
+private fun threeQuickTapsPickAWord() {
+    val pad = Pad()
+    val third = pad.twoTapsThenLand()
+    pad.up(third + 90)
+    same(pad.gesture.tripled, true, "Three quick taps are a triple tap")
+    same(pad.tapped, false, "A triple tap is not a double tap")
+    same(pad.gesture.deciding(third + 100), true, "A tap key waits while the triple tap may still be called off")
+    same(pad.gesture.confirmTriple(), true, "With no fourth touch, the triple tap picks the word")
+    same(pad.gesture.confirmTriple(), false, "It picks only once")
+    same(pad.started, null, "A triple tap starts no drag")
+
+    val series = Pad()
+    val landed = series.twoTapsThenLand()
+    series.up(landed + 90)
+    series.down(at(COLUMN, landed + 150))
+    same(series.gesture.confirmTriple(), false, "A fourth touch calls the triple tap off: it was a resting finger")
+    series.move(at(COLUMN + 1.5f, landed + 300))
+    same(series.started, null, "A fourth touch never starts a drag")
+
+    val resting = Pad()
+    var time = 1_000L
+    repeat(6) {
+        resting.tap(COLUMN, time, 40)
+        time += 40 + 60
+    }
+    same(resting.gesture.confirmTriple(), false, "A resting finger's series never picks a word")
+
+    val above = Pad()
+    above.tap(COLUMN, 1_000, FIRST_MILLIS, row = 2.7f)
+    above.tap(COLUMN, 1_000 + FIRST_MILLIS + GAP_MILLIS, SECOND_MILLIS, row = 2.7f)
+    above.tap(COLUMN, 1_000 + FIRST_MILLIS + GAP_MILLIS + SECOND_MILLIS + GAP_MILLIS, SECOND_MILLIS, row = 2.7f)
+    same(above.gesture.tripled, false, "Above Space, three taps never pick a word")
 }

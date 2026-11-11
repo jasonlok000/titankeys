@@ -70,6 +70,14 @@ Push Sym two times for emoji. In the panel, Alt opens quick settings, with a let
 
 Right after you copy text, the strip shows it: touch it to paste. For older clips, push Sym, then A for the clipboard. It works like the symbols: six clips to a page, two to a row, each in a wide field over half a row of keys. Push any key under a clip to paste it, swipe up or down for more, and swipe sideways or rest a finger on the bottom row for **Pinned**. Clips go after an hour, unless you pin them: push Enter, then a key under the clip. Push Backspace two times to clear all but the pinned clips. TitanKeys keeps no text that an app marks as sensitive, nothing copied from a password field, and nothing leaves the phone.
 
+### Snippets and emoji by name
+
+Type `;addr` and press Space, and your address shows up. Type `:smile:` and you get 😄. Changed your mind? Backspace right after puts the shortcut back. The strip shows matching snippets and emoji as you type. Snippets live on your phone, you can import and export them, and they never fire in password fields.
+
+### Exact typing for terminals and remote computers
+
+In terminals, remote desktops and game streaming, every key goes straight to the app, exactly as you press it, with Shift, Alt and Ctrl (fn too). TitanKeys doesn't fix or suggest a thing there. Termux, ConnectBot, Termius, AnyDesk, TeamViewer, Windows App, Chrome Remote Desktop, RustDesk, RealVNC Viewer, bVNC, aRDP, Moonlight and Parsec are on the list out of the box, and you can add or remove any app in Settings. Password, email and number fields keep the bar for Shift, Alt and Ctrl, but they get no words and swipes do nothing there.
+
 ## TitanKeys and Atlas
 
 Atlas is a great keyboard, and TitanKeys only exists because Julian built it and shared it. The two projects just aim for slightly different things. Atlas stays simple and keeps swiping for typing only. TitanKeys takes on more complexity to get the most out of the Titan 2 Elite, one-handed swipes included. If you'd rather have something simpler, Atlas is an excellent choice.
@@ -215,17 +223,26 @@ These changes aren't free, and Atlas's simpler approach avoids all of this:
 
 ## Privacy
 
-Everything runs and is stored on your phone, including both language models. Nothing you type is sent anywhere, and no data is stored or monitored by me or any third party.
+What you type stays on your phone. The swipe engine and both language models run on the phone, and nothing you type is ever sent.
+
+TitanKeys uses the internet for two things only, and both are strictly limited:
+
+- **News:** at most once a day, it downloads a short signed list of news from the TitanKeys website, such as a new version. It sends nothing about you or your phone. It shows as a silent notification, never while you type, and you can turn it off in **Settings > News**.
+- **Swipe contributions, only if you agree:** you can send examples of your swipes to help train the swipe models. It's off until you agree on a screen that says exactly what is sent: the swipe path, the kept word if it's a dictionary word, and the engine's numbers, never the text around it. Examples are encrypted on your phone, sent on Wi-Fi, used only for training, and you can stop and delete them at any time.
+
+The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what is sent, why, how it's protected, how long it's kept and how to delete it. There are no ads, analytics or trackers.
 
 TitanKeys doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
 
-TitanKeys asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "TitanKeys is displaying over other apps" notification while it's there, which you can turn off. Its Accessibility service only sends Back and, while the Sym panel is open or in a launcher search, reads the keys you push.
+TitanKeys asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "TitanKeys is displaying over other apps" notification while it's there, which you can turn off. Its Accessibility service only sends Back and, while the Sym panel is open or in a launcher search, reads the keys you push. While you type, it also keeps a 1-pixel window above the notification shade, so that a notification can't take the touchpad.
 
 The typing log in Settings, which records touches and typed text to tune the keyboard, is off until you turn it on, and it stays on your phone.
 
 ## Install
 
 Download the latest APK from [releases](https://github.com/jasonlok000/titankeys/releases) and install it, then open TitanKeys: the guide takes it from there. TitanKeys installs next to Atlas, so it doesn't replace it or touch Atlas's saved words.
+
+When a new version is out, TitanKeys tells you with a short, silent notification, never while you type. The same news is in **Settings > News**, where you can turn it off.
 
 To build it yourself, follow the setup in the [contributing guide](CONTRIBUTING.md), then run:
 
@@ -238,6 +255,8 @@ This installs **TitanKeys Debug**, a separate test build.
 ## Feedback
 
 Bugs and ideas are welcome in [issues](https://github.com/jasonlok000/titankeys/issues). If something also happens in Atlas, please report it [there](https://github.com/juleshall4/atlas/issues) too.
+
+You can also help swipe typing get better for every Titan 2 Elite: **Settings > Share swipes** sends examples of your swipes, only if you agree. The guide offers it at its end until you answer. See [Privacy](#privacy) for what is sent.
 
 Work is shared in both directions. Anything here is free to use in Atlas, and improvements from Atlas are welcome here.
 
@@ -257,6 +276,7 @@ TitanKeys is built on the work of these projects:
 - [CleverKeys](https://github.com/tribixbite/CleverKeys): the swipe encoder that swipe engine 2.0 fine-tunes for the Titan touchpad (GPL-3.0)
 - [DistilGPT-2](https://huggingface.co/distilbert/distilgpt2): the next-word model (Apache 2.0)
 - [ONNX Runtime](https://github.com/microsoft/onnxruntime): runs these two models on the phone (MIT). See [`licences/Swipe-engine-2-models.md`](licences/Swipe-engine-2-models.md)
+- [gemoji](https://github.com/github/gemoji): the emoji names for shortcodes such as `:smile:` (MIT). See [`licences/gemoji-MIT.txt`](licences/gemoji-MIT.txt)
 
 TitanKeys is powered by FUTO Swipe. "Titan 2 Elite" is a product of Unihertz.
 

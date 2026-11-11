@@ -1,5 +1,5 @@
 <resources>
-    <string name="back_service_description">Sends Back, so one push of Back closes the keyboard and goes back. While the Sym panel is open, in the Smart Launcher search field and for a moment after you push Back, TitanKeys sees the keys you push. It can\'t read your screen, and it doesn\'t keep or send anything.</string>
+    <string name="back_service_description">Sends Back, so one press of Back closes the keyboard and goes back. While the Sym panel is open, in the Smart Launcher search field and for a moment after you press Back, TitanKeys sees the keys you press. While you type, it keeps the touchpad on the keys when a notification shows at the top of the screen. It can\'t read your screen, and it doesn\'t keep or send anything.</string>
     <!-- The confirm on the suggestion strip after you hold a word to forget it. -->
     <string name="strip_forgot">Forgot “%1$s”</string>
     <string name="strip_undo">Undo</string>
@@ -8,37 +8,42 @@
     <string name="strip_save">Save</string>
     <string name="strip_forget">Forget</string>
     <string name="strip_back">Back</string>
+    <!-- Shows on the strip for a second after TitanKeys has hidden and shown itself to work around Microsoft Teams. The owner's wish. -->
+    <string name="strip_teams_egg">FUCK MICROSOFT!!</string>
     <string name="strip_saved">Saved “%1$s”</string>
 
     <!-- The clipboard page of the Sym panel, and the newest clip on the strip. -->
     <string name="clipboard_open">Open the clipboard</string>
-    <string name="clipboard_empty">Copy text, and it shows here for an hour.</string>
+    <string name="clipboard_empty">Copy something and it shows up here for an hour.</string>
     <string name="clipboard_group_recent">Clipboard</string>
     <string name="clipboard_group_pinned">Pinned</string>
-    <string name="clipboard_pinned_empty">To pin a clip, push Enter, then a key under the clip.</string>
-    <string name="clipboard_pinning">Push a key under a clip to pin or unpin it</string>
-    <string name="clipboard_clear_again">Push Backspace or Clear again to clear all but pinned</string>
+    <string name="clipboard_pinned_empty">To pin a clip, press Enter, then the key under it.</string>
+    <string name="clipboard_pinning">Press the key under a clip to pin or unpin it</string>
+    <string name="clipboard_clear_again">Press Backspace or Clear again. Pinned clips stay.</string>
     <string name="clipboard_clear">Clear</string>
     <string name="clipboard_pin">Pin</string>
     <string name="clipboard_pin_done">Done</string>
     <string name="clipboard_pinned">%1$s · Pinned</string>
     <string name="clipboard_paste">Paste %1$s</string>
-    <string name="clipboard_description">Clipboard. The texts that you copied in the last hour, and the ones you pinned. Push a key under a clip to paste it. Swipe up or down to see more, and left or right for Pinned. Enter pins, Backspace clears, and Alt goes back.</string>
+    <string name="clipboard_description">Clipboard. What you copied in the last hour, and the clips you pinned. Press the key under a clip to paste it. Swipe up or down for more, and left or right for Pinned. Enter pins, Backspace clears, and Alt goes back.</string>
     <!-- Shows once, under the first clip that the strip offers. -->
-    <string name="strip_clip_hint">Older clips: push Sym, then A</string>
-    <string name="contacts_permission_in_settings">To use names from your contacts, allow Contacts for TitanKeys on this page.</string>
+    <string name="strip_clip_hint">Older clips: press Sym, then A</string>
+    <string name="contacts_permission_in_settings">To use names from your contacts, allow Contacts for TitanKeys here.</string>
+    <!-- The playground's live speed, after the number, in place of the name while you type. -->
+    <string name="playground_wpm">" wpm"</string>
     <string name="back_disclosure_title">Let TitanKeys handle Back?</string>
     <string name="back_disclosure_intro">TitanKeys can use Android\'s Accessibility service to make Back and a few keys work better. It\'s optional.</string>
     <string name="back_disclosure_does_title">What it does</string>
-    <string name="back_disclosure_back">Back: when you push Back, TitanKeys sends it on for you, so one push closes the keyboard and goes back in the app.</string>
-    <string name="back_disclosure_keys">Keys: at these times only, it sees which keys you push before the app does:</string>
+    <string name="back_disclosure_back">Back: when you press Back, TitanKeys sends it on for you, so one press closes the keyboard and goes back in the app.</string>
+    <string name="back_disclosure_keys">Keys: at these times only, it sees which keys you press before the app does:</string>
     <string name="back_disclosure_keys_sym">while the Sym panel is open, so Enter and Backspace turn its pages instead of reaching the app;</string>
-    <string name="back_disclosure_keys_launcher">in the Smart Launcher search field, so holding a key for a symbol and pushing Shift or Alt twice work there;</string>
-    <string name="back_disclosure_keys_back">for a moment after you push Back, so your next push of Back reaches the app.</string>
+    <string name="back_disclosure_keys_launcher">in the Smart Launcher search field, so holding a key for a symbol and pressing Shift or Alt twice work there;</string>
+    <string name="back_disclosure_keys_back">for a moment after you press Back, so your next press of Back reaches the app.</string>
+    <string name="back_disclosure_touchpad">Touchpad: while you type, it keeps the touchpad on the keys when a notification shows at the top of the screen.</string>
     <string name="back_disclosure_never_title">What it never does</string>
     <string name="back_disclosure_never_screen">It can\'t read your screen or the text in your apps.</string>
     <string name="back_disclosure_never_keep">It doesn\'t keep or send the keys it sees. They\'re used on your phone straight away, then forgotten.</string>
-    <string name="back_disclosure_no">If you say no: TitanKeys still types and swipes. Back may take two pushes, and those keys work as they would without TitanKeys. You can turn it on later in Settings &gt; Setup.</string>
+    <string name="back_disclosure_no">If you say no: TitanKeys still types and swipes. Back may take two presses, and those keys work as they would without TitanKeys. You can turn it on later in Settings &gt; Setup.</string>
     <string name="back_disclosure_decline">No thanks</string>
     <string name="back_disclosure_agree">Agree</string>
 </resources>

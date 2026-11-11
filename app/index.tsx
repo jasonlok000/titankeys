@@ -3,6 +3,8 @@ import { Canvas, CanvasIcon, CanvasText, Rectangle, Screen, Stack, Text, replace
 import { arrowOutward } from "ink/icons";
 import { cancelPlayground, markNotesSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
 import { INK, ORANGE } from "../lib/brand";
+import { connectedState, declineContributions, setContribute } from "../lib/connected";
+import { Disclosure } from "../lib/contribute";
 import { hasReleaseNotes } from "../lib/release-notes";
 import { WhatsNew } from "../lib/whats-new";
 
@@ -31,7 +33,7 @@ function SetupStart({ first }: { first: boolean }) {
     <Stack align="center" gap={44}>
       <Stack align="center" gap={14}>
         <Text size={60} align="center">Set up TitanKeys</Text>
-        <Text size={30} align="center">A few switches in Settings. The guide opens each one and comes back by itself.</Text>
+        <Text size={30} align="center">A few switches in Settings. The guide takes you to each one and brings you back.</Text>
       </Stack>
       <Action label="Start" onPress={() => void openGuide()} />
     </Stack>
@@ -84,10 +86,16 @@ function FrontPage() {
 
 export default function Home() {
   const result = useSnapshot(state);
+  const connected = useSnapshot(connectedState);
   if (result.status !== "ready") return <Screen />;
   const { enabled, selected, overlay, scrollAssistant, backService, version, whatsNew, guideDue } = result.data;
   if (!enabled || !selected || !overlay || !scrollAssistant || !backService) return <SetupStart first={guideDue} />;
   if (guideDue) return <GuideStart />;
   if (whatsNew && hasReleaseNotes(version)) return <WhatsNew version={version} onClose={() => void markNotesSeen()} />;
+  // The guide offers data contributions once, at its end. The answer can change any time in Settings. The playground
+  // waits for this answer, so that it does not open only to close again.
+  if (connected.status === "loading") return <Screen />;
+  if (connected.status === "ready" && connected.data.offerDue)
+    return <Disclosure onAgree={() => void setContribute(true)} onDecline={() => void declineContributions()} />;
   return <FrontPage />;
 }

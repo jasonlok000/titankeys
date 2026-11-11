@@ -11,7 +11,7 @@ export const liftLabel = ({ liftOff, liftOffMillis }: State) => liftOff ? `${lif
 
 export default function Lift() {
   return <ChoicePage title="Keep swiping"
-    subtitle="If your finger leaves the keys for less than this time, the swipe or the cursor continues."
+    subtitle="Fingers slip. If yours leaves the keys for less than this, the swipe or the cursor carries on."
     options={options}
     read={({ liftOff, liftOffMillis }) => liftOff ? String(liftOffMillis) : "off"}
     write={value => value === "off" ? { liftOff: false } : { liftOff: true, liftOffMillis: Number(value) }} />;

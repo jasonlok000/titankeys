@@ -1,5 +1,6 @@
 package com.atlas.keyboard
 
+import com.atlas.connected.Contributions
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
 import java.util.concurrent.atomic.AtomicBoolean
@@ -41,15 +42,18 @@ class EngineWords(private val typing: SwipeTyping) : Words {
     override fun chosen(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) {
         val learning = recognition.token as? Learning ?: return
         typing.confirm(swipe, context, word, learning.generation, learning.prediction, true)
+        Contributions.record(typing, swipe, word, "chosen", learning.prediction)
     }
 
     override fun corrected(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) {
         val learning = recognition.token as? Learning ?: return
         typing.confirm(swipe, context, word, learning.generation, learning.prediction, false)
+        Contributions.record(typing, swipe, word, "corrected", learning.prediction)
     }
 
     override fun kept(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) {
         val learning = recognition.token as? Learning ?: return
         typing.retained(swipe, context, word, learning.generation, learning.prediction)
+        Contributions.record(typing, swipe, word, "kept", learning.prediction)
     }
 }

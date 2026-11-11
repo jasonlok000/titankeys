@@ -1,0 +1,24 @@
+# The TitanKeys contributions Worker, on the Workers Free plan with no payment method. Deploy steps are in README.md.
+name = "titankeys-contributions"
+main = "src/worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+preview_urls = false
+
+# The sealed batches, in 64 SQLite-backed storage objects (Shard), and one counter for the caps and the per-client
+# limit (Cap). SQLite-backed Durable Objects are part of the Free plan.
+[[durable_objects.bindings]]
+name = "SHARDS"
+class_name = "Shard"
+
+[[durable_objects.bindings]]
+name = "CAP"
+class_name = "Cap"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Cap", "Shard"]
+
+# No request logs, so no internet addresses are kept, as the privacy policy says.
+[observability]
+enabled = false

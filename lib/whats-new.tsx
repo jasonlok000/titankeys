@@ -5,7 +5,7 @@ import { Topic } from "./topic";
 
 /** The current version's release notes. With `onClose` it opens by itself after an update; otherwise it has a back arrow. */
 export function WhatsNew({ version, onClose }: { version: string; onClose?: () => void }) {
-  return <Screen title="What's new" subtitle={onClose ? `TitanKeys updated to ${version}.` : `Version ${version}`}
+  return <Screen title="What's new" subtitle={onClose ? `You're on TitanKeys ${version}.` : `Version ${version}`}
     rightAction={onClose && { icon: close, onPress: onClose }}>
     {releaseNotes.sections.map(section => <Section key={section.title} title={section.title}>
       {section.notes.map(note => note.detail

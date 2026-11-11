@@ -9,7 +9,7 @@ export const enterKeyLabel = ({ enterKey }: State) => labels[enterKey];
 
 export default function EnterKeyPage() {
   return <ChoicePage title="Enter key"
-    subtitle={"This setting changes Enter in messages. Search and other fields with one line do not change.\nAlways send: Push Shift and Enter to add a new line. In notes, Enter adds a new line.\nAlways new line: Push Shift and Enter to send the message. You can also push Ctrl and Enter."}
+    subtitle={"This changes Enter in message boxes. Search and other one-line fields stay as they are.\nAlways send: press Shift and Enter for a new line. In notes, Enter still adds a new line.\nAlways new line: press Shift and Enter to send. Ctrl and Enter sends too."}
     options={options}
     read={({ enterKey }) => enterKey}
     write={enterKey => ({ enterKey })}>

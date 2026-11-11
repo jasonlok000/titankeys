@@ -25,6 +25,7 @@ import android.text.TextUtils
 import android.text.TextWatcher
 import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.util.Log
 import android.util.TypedValue
@@ -43,6 +44,8 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.atlas.connected.Connected
+import com.atlas.connected.Contributions
 import com.atlas.engine.TypingSettings
 import org.json.JSONObject
 import kotlin.math.hypot
@@ -434,7 +437,7 @@ class GuideActivity : Activity() {
         if (stopTrace == null) stopTrace = Trace.listen { message -> trace(message) }
         // A word that comes out different gets the script's word on the strip, so the line above is always one touch away.
         // The playground is free typing, so there the strip keeps to your own words.
-        if (!playground) GuideHooks.script = { before -> GuideScript.wordAt(GuideScript.progress(before)).trim { !it.isLetter() } }
+        if (!playground) GuideHooks.script = { before -> GuideScript.wordFrom(GuideScript.progress(before)).trim { !it.isLetter() } }
         contentResolver.registerContentObserver(Settings.Secure.getUriFor(Settings.Secure.DEFAULT_INPUT_METHOD), false, keyboardChanges)
     }
 
@@ -447,6 +450,8 @@ class GuideActivity : Activity() {
         stopTrace = null
         GuideHooks.script = null
         contentResolver.unregisterContentObserver(keyboardChanges)
+        // A hidden playground keeps no clock going; its speed starts over when you type again.
+        main.removeCallbacks(wpmTick)
     }
 
     override fun onDestroy() {
@@ -799,11 +804,16 @@ class GuideActivity : Activity() {
         previous.visibility = if (flow.canGoBack) View.VISIBLE else View.INVISIBLE
         chapter.text = step.chapter.label
         GuideHooks.nearMiss = step.nearMiss
+        // A slide with nothing to try is done as it opens, and the one that opens a section asks first.
+        passed = step.info || step.opensSection
+        next.text = if (step.opensSection) "Show me" else "Next"
         paintNext()
         offerFor(step)
         swapIn(title, step.title, 0)
         swapIn(body, step.body, ENTER_STAGGER_MILLIS)
         hideHint()
+        // While the user has not answered the offer to share swipes, the last slide makes it, under the title.
+        if (step.chapter == GuideChapter.End && Contributions.unanswered(this)) showHint(SHARE_HINT)
         // The whole guide is one text. A step that works on text gets more of the script if the text is too short.
         val words = field.text.split(' ', '\n').count { it.isNotEmpty() }
         if (step.needsWords > words) addText(GuideScript.continueFrom(GuideScript.progress(field.text.toString()), step.needsWords - words))
@@ -813,8 +823,11 @@ class GuideActivity : Activity() {
         paintSegments(flow.stepIndex)
         main.removeCallbacks(showHelp)
         if (step.help != null) main.postDelayed(showHelp, HELP_AFTER_MILLIS)
-        if (step.chapter == GuideChapter.End) preferences.edit().remove(RESUME).apply()
-        else preferences.edit().putString(RESUME, flow.resumeId).apply()
+        if (step.chapter == GuideChapter.End) {
+            preferences.edit().remove(RESUME).apply()
+            // The end of the guide offers to share swipes until the user answers: here, and in the app if they leave.
+            Contributions.guideEnded(this)
+        } else preferences.edit().putString(RESUME, flow.resumeId).apply()
         busy = false
         // A new slide shows its gesture at once, as soon as its words are in.
         acted(DEMO_ENTER_MILLIS)
@@ -836,12 +849,13 @@ class GuideActivity : Activity() {
         val next = GuideScript.progress(field.text.toString())
         val strong = if (tone == GuideTone.Ink) GuideColours.CREAM else GuideColours.INK
         val accent = if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK
-        val word = GuideScript.wordAt(next)
-        val rest = (1..SCRIPT_WORDS).joinToString(" ") { GuideScript.wordAt(next + it) }
+        // The next step is a word, or the marks after one, which wait their turn to be typed.
+        val word = GuideScript.stepAt(next)
+        val rest = GuideScript.lineFrom(next + 1, SCRIPT_WORDS)
         script.text = SpannableStringBuilder().apply {
             append(word, ForegroundColorSpan(accent), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             setSpan(StyleSpan(Typeface.BOLD), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            append(" ")
+            if (!GuideScript.isMarks(GuideScript.stepAt(next + 1))) append(" ")
             append(rest, ForegroundColorSpan(GuideMotion.faded(strong, SCRIPT_REST)), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         val shown = ghostCue(if (playground) GuideCue.Free else flow.step.cue)
@@ -851,8 +865,10 @@ class GuideActivity : Activity() {
     /** What the drawing of the keys can draw for [cue]: the next word of the script is turned into that word's letters. */
     private fun ghostCue(cue: GuideCue): GuideCue {
         if (cue != GuideCue.NextWord) return cue
-        val word = GuideScript.wordAt(GuideScript.progress(field.text.toString()))
-        return GuideCue.Word(GuideScript.letters(word).ifEmpty { "titan" })
+        val step = GuideScript.stepAt(GuideScript.progress(field.text.toString()))
+        // Marks that are next glow on their keys: Alt and the key, or Space for a full stop.
+        if (GuideScript.isMarks(step)) return GuideCue.Spot(markPushes(step).flatten().distinct())
+        return GuideCue.Word(GuideScript.letters(step).ifEmpty { "titan" })
     }
 
     // Demonstrations. A slide shows its gesture by itself, in grey over the field, again and again until you take over. It types
@@ -936,7 +952,7 @@ class GuideActivity : Activity() {
         // Android logs an error for a span with no length, and this runs for every frame.
         if (text.isNotEmpty()) built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         val gap = if (text.isEmpty() || text.endsWith(' ')) "" else " "
-        val next = GuideScript.wordAt(GuideScript.progress(text))
+        val next = GuideScript.stepAt(GuideScript.progress(text))
         fun add(added: String) {
             if (added.isEmpty()) return
             val start = built.length
@@ -945,7 +961,17 @@ class GuideActivity : Activity() {
         }
         val lastStart = text.trimEnd().lastIndexOf(' ') + 1
         val lastEnd = text.trimEnd().length
-        when (demo) {
+        val typing = demo == GuideDemo.TypeNext || demo == GuideDemo.SwipeNext || demo == GuideDemo.FixNext
+        if (typing && GuideScript.isMarks(next)) {
+            // Marks go right after their word: the keys light one push at a time, and then the marks show in place.
+            val pushes = markPushes(next)
+            val shown = ((t / TYPE_SHARE) * pushes.size).toInt().coerceIn(0, pushes.size)
+            while (demoKeys < shown) pushes[demoKeys++].forEach(keys::light)
+            if (t > TYPE_SHARE) {
+                built.delete(text.trimEnd().length, built.length)
+                add(next + " ")
+            }
+        } else when (demo) {
             GuideDemo.TypeNext -> {
                 val pushes = pushesFor(next, swiped = false)
                 val shown = ((t / TYPE_SHARE) * pushes.size).toInt().coerceIn(0, pushes.size)
@@ -1003,6 +1029,8 @@ class GuideActivity : Activity() {
         phantom.scrollTo(0, field.scrollY)
     }
 
+    private fun markPushes(marks: String) = GuideScript.markKeys(marks, TypingSettings.autoPunctuation(this)) { altKeys[it] }
+
     private fun pushesFor(word: String, swiped: Boolean) = demoPushes
         ?: GuideScript.pushes(word, swiped, TypingSettings.autoPunctuation(this)) { altKeys[it] }.also { demoPushes = it }
 
@@ -1048,8 +1076,10 @@ class GuideActivity : Activity() {
     private fun offerFor(step: GuideStep) {
         val missing = flow.missing
         when {
-            step.chapter == GuideChapter.End || step.pause -> showOffer("Start typing")
-            !ready -> showOffer("Choose TitanKeys")
+            step.chapter == GuideChapter.End && Contributions.unanswered(this) -> showOffer(SHARE_OFFER)
+            step.chapter == GuideChapter.End || step.pause -> showOffer("Go type something")
+            step.opensSection -> showOffer("Skip")
+            !ready -> showOffer("Pick TitanKeys")
             missing != null && (!missing.optional || helpShown) -> showOffer(missing.offer)
             else -> offer.visibility = View.GONE
         }
@@ -1068,7 +1098,13 @@ class GuideActivity : Activity() {
         }
         val step = flow.step
         when {
+            step.chapter == GuideChapter.End && Contributions.unanswered(this) -> {
+                // The app shows the full disclosure, with "I agree" and "No thanks". Nothing is shared before that.
+                startActivity(Connected.pageIntent(this, Contributions.PAGE))
+                finish()
+            }
             step.chapter == GuideChapter.End || step.pause -> leave()
+            step.opensSection -> if (!changing && ready) moveOn(skip = true)
             !ready -> input.showInputMethodPicker()
             else -> flow.missing?.let { need ->
                 writeNeed(need)
@@ -1291,7 +1327,55 @@ class GuideActivity : Activity() {
         if (!busy && ready) judge(KeyboardEvent.Moved(travel, lifted))
     }
 
+    // The playground's speed: while you type, the name turns into words a minute, and the screen warms towards orange.
+
+    private val wpm = WpmMeter()
+    /** How orange the playground is now, from 0 to 1. It eases towards the speed, or jumps there with animations off. */
+    private var heat = 0f
+    private var showingWpm = false
+    private val wpmTick = object : Runnable {
+        override fun run() = showWpm()
+    }
+
+    private fun countWpm(event: KeyboardEvent) {
+        val now = SystemClock.uptimeMillis()
+        when (event) {
+            is KeyboardEvent.Pushed, is KeyboardEvent.Tapped, is KeyboardEvent.Recognised, is KeyboardEvent.DeletedWord,
+            is KeyboardEvent.Chosen -> wpm.input(now, field.length())
+            is KeyboardEvent.FieldChanged -> wpm.text(event.text.length)
+            else -> return
+        }
+        if (wpm.active(now) && !showingWpm) showWpm()
+    }
+
+    private fun showWpm() {
+        main.removeCallbacks(wpmTick)
+        val now = SystemClock.uptimeMillis()
+        val speed = wpm.wpm(now)
+        val target = WpmMeter.heat(speed)
+        heat = if (GuideMotion.enabled) heat + (target - heat) * WPM_EASE else target
+        if (speed != null) {
+            showingWpm = true
+            title.text = SpannableStringBuilder("$speed").apply {
+                val start = length
+                append(getString(R.string.playground_wpm))
+                setSpan(RelativeSizeSpan(WPM_LABEL_SIZE), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        } else if (showingWpm) {
+            showingWpm = false
+            title.text = PLAYGROUND_TITLE
+        }
+        backdrop.show(GuideMotion.blend(backgroundOf(tone), GuideColours.ORANGE, heat * WPM_MOST_ORANGE))
+        // It stops ticking once the burst is over and the colour is back.
+        if (speed != null || heat > .005f) main.postDelayed(wpmTick, WPM_TICK_MILLIS)
+        else {
+            heat = 0f
+            backdrop.show(backgroundOf(tone))
+        }
+    }
+
     private fun handle(event: KeyboardEvent) {
+        if (playground) countWpm(event)
         // The keyboard reports its modifiers whenever it redraws them, as when a slide opens a panel. That is not you acting.
         if (::phantom.isInitialized && event !is KeyboardEvent.ModifierState) acted()
         when (event) {
@@ -1368,7 +1452,7 @@ class GuideActivity : Activity() {
     }
 
     /** The story goes on, or back a step: to ink for a step behind the cream line, or orange for the ending. */
-    private fun moveOn(forward: Boolean = true) {
+    private fun moveOn(forward: Boolean = true, skip: Boolean = false) {
         changing = true
         busy = true
         passed = false
@@ -1378,7 +1462,11 @@ class GuideActivity : Activity() {
         main.removeCallbacks(showHelp)
         main.removeCallbacks(settleReaction)
         hideHint()
-        if (forward) flow.advance() else flow.back()
+        when {
+            skip -> flow.skipSection()
+            forward -> flow.advance()
+            else -> flow.back()
+        }
         val coming = flow.step
         val target = if (coming.chapter == GuideChapter.End) GuideTone.Orange else GuideTone.Ink
         val away = (if (forward) -dp(ENTER_OFFSET) else dp(ENTER_OFFSET)).toFloat()
@@ -1512,14 +1600,23 @@ class GuideActivity : Activity() {
         private const val SETUP_AUTO_MILLIS = 1300L
         /** How long "All set." stays before the story starts. */
         private const val SETUP_FINISH_MILLIS = 1400L
-        private const val SETUP_NO_PAGE = "This phone does not have that page. Open it in Settings, then come back."
+        private const val SETUP_NO_PAGE = "This phone doesn't have that page. Find it in Settings, then come back."
 
-        private const val FIELD_HINT = "Your words go here."
+        private const val FIELD_HINT = "Type here. Or swipe."
         private const val TAG = "TitanKeysGuide"
         private const val PLAYGROUND = "playground"
         private const val PLAYGROUND_LABEL = "Playground"
+        /** The last slide's offer to share swipes (#34), while it is unanswered. The close button still just leaves. */
+        private const val SHARE_HINT = "Want swiping to get even better? Share your swipes with us. You'll see exactly what's sent first."
+        private const val SHARE_OFFER = "Share my swipes"
         private const val PLAYGROUND_TITLE = "TitanKeys"
-        private const val PLAYGROUND_BODY = "Type or swipe anything. Follow the line above, or write your own."
+        /** The playground's speed updates this often while you type, and its colour eases this much of the way each time. */
+        private const val WPM_TICK_MILLIS = 120L
+        private const val WPM_EASE = .25f
+        private const val WPM_LABEL_SIZE = .35f
+        /** At full speed the screen is this much of the way to orange, so that the words stay easy to read. */
+        private const val WPM_MOST_ORANGE = .85f
+        private const val PLAYGROUND_BODY = "Type or swipe whatever you like. Follow the line above, or ignore it."
 
         // The look, in dp. These are safe to change. Words fit their box at any system font size, because the boxes set their size.
         private val HEAVY: Typeface = Typeface.create(Typeface.DEFAULT, 900, false)
@@ -1584,7 +1681,7 @@ class GuideActivity : Activity() {
 
         // Demonstrations: back to back until you act. These are safe to change.
         /** How long nobody acts before a slide shows its gesture again after you act. */
-        private const val DEMO_IDLE_MILLIS = 8000L
+        private const val DEMO_IDLE_MILLIS = 3000L
         /** When a new slide shows its gesture: as soon as the slide's words have slid in. */
         private const val DEMO_ENTER_MILLIS = ENTER_STAGGER_MILLIS + ENTER_MILLIS
         /** The pause between one showing and the next. */

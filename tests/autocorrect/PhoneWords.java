@@ -41,6 +41,8 @@ public final class PhoneWords {
 
     public boolean contains(String word) { return predictions.contains(word); }
 
+    public boolean acronym(String word) { return predictions.acronym(word); }
+
     public int frequency(String word) { return predictions.frequencyOf(word); }
 
     public String name(String word) {

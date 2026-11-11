@@ -20,14 +20,23 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "type" to listOf(Pushed(29), FieldChanged("Nothing", 7, 7), FieldChanged("Nothing ", 8, 8)),
     "swipe" to swiped(1),
     "strip" to listOf(Chosen("to")),
-    "flick" to listOf(DeletedWord(held = false)),
     "steer" to listOf(CursorStarted(false), FieldChanged("Nothing to unlearn", 18, 18),
         FieldChanged("Nothing to unlearn", 14, 14)),
     "symbols" to listOf(keys(Panel.Symbols), keys(Panel.Closed)),
     "panel" to listOf(keys(Panel.Emoji)),
+    // Some boring stuff. Its slides only tell you something, and Next moves on, but deleting is still a gesture to try.
+    "boring" to emptyList(),
+    "flick" to listOf(DeletedWord(held = false)),
+    "menu" to emptyList(),
+    "clipboard" to emptyList(),
+    "snippets" to emptyList(),
+    "exact" to emptyList(),
+    "names" to emptyList(),
 )
 
 fun main() {
+    steadyKeyLight()
+    playgroundSpeed()
     everyStepIsReachable()
     theStepsHaveOkayWords()
     oneStepForEachIdea()
@@ -88,6 +97,20 @@ private fun theStepsHaveOkayWords() {
         "The slides do not say how to hold the phone, as some type with other fingers")
     same(GUIDE_STEPS.map { it.chapter }.distinct(), GuideChapter.entries, "The story comes first, then the end")
     same(GUIDE_STEPS.count { it.pause }, 0, "The story has no stops")
+    same(GUIDE_STEPS.filter { it.opensSection }.map { it.id }, listOf("boring"), "One slide opens the boring stuff, and offers to skip it")
+    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Boring }.all { it.info || it.opensSection || it.id == "flick" }, true,
+        "The boring stuff only tells you things, but for the delete flick, which you try")
+    same(GUIDE_STEPS.filter { it.info }.all { it.chapter == GuideChapter.Boring }, true, "The story has no slides without something to try")
+    run {
+        val flow = GuideFlow({ GuideSettings() })
+        flow.start("boring")
+        same(flow.skipSection().id, "boring", "Skip leaves the opening slide")
+        same(flow.step.id, "end", "Skip goes past the boring stuff, to the end")
+        same(flow.stepIndex, flow.stepCount, "After Skip the bar at the top is full")
+        flow.start("names")
+        same(flow.skipSection().id, "names", "Skip from the last slide of the section also goes to the end")
+        same(flow.step.id, "end", "And it lands on the end")
+    }
     same(GuideScript.TEXT.any { it.isDigit() }, false, "The script must be easy to swipe, with no numbers")
     for (word in GuideScript.words) same(GuideScript.letters(word).isNotEmpty(), true, "Each word of the script has letters to swipe: $word")
     same(GuideScript.TEXT.contains("two hands or one") && GuideScript.TEXT.contains("ultimate"), true,
@@ -155,8 +178,10 @@ private fun stepsStartInTheRightMenu() {
     same(byId.getValue("symbols").setup, Panel.Closed, "The symbol step starts closed, so that Sym opens the panel")
     same(byId.getValue("panel").setup, Panel.Closed, "The emoji step starts closed, so that Sym two times shows the emoji")
     for (step in GUIDE_STEPS.filter { !it.usesPanel }) same(step.setup, Panel.Closed, "${step.id} types, so the panel is closed for it")
-    for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.End })
+    // A slide that only tells you something has no gesture to show, unless its keys can light up.
+    for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.End && !it.info && !it.opensSection })
         same(step.demo != null, true, "${step.id} must show its gesture by itself when nobody acts")
+    same(byId.getValue("clipboard").demo, GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""), "The clipboard slide lights Sym, then A")
     same(byId.getValue("symbols").demo, GuideDemo.HoldLetter("J"), "The symbol slide shows J held down, the key that it names")
 }
 
@@ -283,6 +308,59 @@ private fun theTrailFollowsTouchSize() {
     same(trail.next(.45f, .4f, 0), trail.next(.45f, .4f, 0), "A point of unknown size should keep the thickness")
 }
 
+/** The guide's key light under a finger: steady at key edges, and through the touchpad's short dropouts of contact. */
+private fun steadyKeyLight() {
+    val hover = KeyHover()
+    same(hover.current(0), null, "No finger, no key")
+    hover.point(.15f, .125f)
+    same(hover.current(0), "W", "A finger lights the key under it at once")
+    // W is from .1 to .2 across. Just over the border into E stays on W.
+    hover.point(.205f, .125f)
+    same(hover.current(10), "W", "Just over a border, the light stays where it was")
+    hover.point(.195f, .125f)
+    hover.point(.21f, .125f)
+    same(hover.current(20), "W", "Wobbling on a border does not flip the light")
+    hover.point(.225f, .125f)
+    same(hover.current(30), "E", "Clearly inside the next key, the light moves")
+    hover.point(.25f, .27f)
+    same(hover.current(40), "E", "Just below a row's border, it stays in the row it was in")
+    hover.point(.25f, .36f)
+    same(hover.current(50), "D", "Well inside the next row, it moves")
+    hover.lift(100)
+    same(hover.current(150), "D", "A short dropout keeps the light")
+    hover.point(.25f, .37f)
+    same(hover.current(200), "D", "The finger back after a dropout carries on")
+    hover.lift(300)
+    same(hover.current(300 + KeyHover.DROPOUT_MILLIS), "D", "Up to the end of the grace the light stays")
+    same(hover.current(301 + KeyHover.DROPOUT_MILLIS), null, "After a real lift the light goes")
+    hover.point(.55f, .62f)
+    same(hover.current(500), "B", "A new touch after a lift lights its key at once")
+    hover.point(.05f, .375f)
+    same(hover.current(510), "A", "An edge key can be reached, as far as the touchpad goes")
+}
+
+/** The playground's speed: one burst from the first input, five characters a word, and gone after a quiet while. */
+private fun playgroundSpeed() {
+    val meter = WpmMeter()
+    same(meter.wpm(0), null, "Before any typing there is no speed")
+    meter.input(1000, 0)
+    meter.text(5)
+    same(meter.wpm(2000), 15, "One word in the first seconds counts over the shortest span, so it is not a wild number")
+    for (i in 1..60) meter.input(1000L + i * 1000, 5 + i * 5)
+    same(meter.wpm(61_000), 61, "Sixty more words in a minute is about sixty words a minute")
+    same(meter.active(61_000 + WpmMeter.IDLE_MILLIS), true, "The burst lasts through a short pause")
+    same(meter.wpm(61_001 + WpmMeter.IDLE_MILLIS), null, "After the quiet while the speed goes, and the name comes back")
+    meter.input(100_000, 400)
+    meter.text(410)
+    same(meter.wpm(105_000), 24, "A new burst counts from its own start, not from the text before it")
+    meter.input(105_500, 300)
+    same(meter.wpm(106_000), 0, "Deleting gives no negative speed")
+    same(WpmMeter.heat(null), 0f, "No speed, no orange")
+    same(WpmMeter.heat(90), 1f, "Full orange near ninety words a minute")
+    same(WpmMeter.heat(200), 1f, "It saturates there")
+    check(WpmMeter.heat(30) < WpmMeter.heat(60) && WpmMeter.heat(30) < .3f) { "Slow typing barely warms the screen" }
+}
+
 /** #59: a demonstration types a word's marks as the keyboard really does, and counting still ignores them. */
 private fun demonstrationsTypePunctuation() {
     val alt = mapOf(',' to "M", ':' to "Z", '.' to "N")
@@ -300,9 +378,21 @@ private fun demonstrationsTypePunctuation() {
         val text = GuideScript.pushes(word, false, true) { alt[it] }.last().text
         same(text.trimEnd(), word, "Typing $word ends in the script's own word")
     }
-    // Counting stays lenient: a word counts with or without its marks.
-    same(GuideScript.progress("Nothing to unlearn "), GuideScript.progress("Nothing to unlearn: "), "Marks do not change the count")
-    same(GuideScript.progress("Nothing to unlearn"), 3, "A word without its colon still counts")
+    // The marks after a word are a step of their own, so that you get to type them, and counting stays lenient.
+    same(GuideScript.steps.take(5), listOf("Nothing", "to", "unlearn", ":", "type"), "A word's marks are a step after it")
+    same(GuideScript.steps.count(GuideScript::isMarks), GuideScript.words.count { !it.last().isLetterOrDigit() }, "Each word with marks gives one step of marks")
+    same(GuideScript.progress("Nothing to unlearn"), 3, "A word without its colon counts")
+    same(GuideScript.stepAt(GuideScript.progress("Nothing to unlearn ")), ":", "After the word, the colon is next")
+    same(GuideScript.progress("Nothing to unlearn: "), 4, "Typing the colon moves on")
+    same(GuideScript.progress("Nothing to unlearn:"), 4, "The colon counts at once")
+    same(GuideScript.progress("Nothing to unlearn type "), 5, "Typing the next word instead counts for the colon too, so nobody is stuck")
+    same(GuideScript.progress("Nothing to unlearn ty"), 4, "The start of the next word still waits, past the colon")
+    same(GuideScript.progress("Nothing, to "), 2, "A mark where a word is next is passed over")
+    same(GuideScript.wordFrom(3), "type", "The word to expect after the colon is the next word")
+    same(GuideScript.lineFrom(2, 4), "unlearn: type with", "The line puts marks right after their word")
+    same(GuideScript.markKeys(".", true) { "N" }, listOf(listOf(Layout.SPACE), listOf(Layout.SPACE)), "A full stop is Space twice")
+    same(GuideScript.markKeys(":", true) { "Z" }, listOf(listOf(Layout.ALT), listOf("Z")), "A colon is Alt and its key")
+    same(GuideScript.markKeys("?", true) { null }, emptyList<List<String>>(), "A mark that no key has lights nothing")
     val flow = GuideFlow({ GuideSettings() })
     flow.start("swipe")
     same(flow.step.id, "swipe", "The swipe slide should open")

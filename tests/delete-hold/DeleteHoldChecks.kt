@@ -37,7 +37,25 @@ fun main() {
     aFlickThatDoesNotCountGivesNoHold()
     aBusyEditDoesNotChangeTheWait()
     aStrokeJustAfterASwipeCannotDelete()
+    theGuideZoneIsWhereFlicksStart()
     println("Delete hold checks passed")
+}
+
+/** The guide shades where a delete flick can start, and its ghost flick starts there and really deletes. */
+private fun theGuideZoneIsWhereFlicksStart() {
+    val (x, y) = GUIDE_FLICK_START
+    same(startsDeleteFlick(x, y), true, "The ghost's flick starts inside the shaded zone")
+    same(Layout.keyAt(x, y), Layout.BACKSPACE, "The ghost's flick starts on Backspace")
+    val ghost = (0..10).map { at(x + (GUIDE_FLICK_END_X - x) * it / 10, y, it * 15L) }
+    same(isDeleteWordSwipe(ghost), true, "The ghost's flick is a real delete flick")
+    // Each corner of each box, just inside, starts a flick that deletes; just outside the zone, a flick does not.
+    for ((left, top, right, bottom) in deleteStartBoxes) for ((cx, cy) in listOf(left + .01f to top + .01f, minOf(right, 1f) - .01f to bottom - .01f)) {
+        val stroke = (0..10).map { at(cx - .3f * it / 10, cy, it * 15L) }
+        same(startsDeleteFlick(cx, cy), true, "A point just inside the zone can start a flick")
+        same(isDeleteWordSwipe(stroke), true, "A flick from just inside the zone at $cx, $cy deletes")
+    }
+    same(startsDeleteFlick(.7f, .375f), false, "Left of K is outside the zone")
+    same(isDeleteWordSwipe((0..10).map { at(.7f - .3f * it / 10, .375f, it * 15L) }), false, "A flick from outside the zone does not delete")
 }
 
 private fun same(actual: Any?, expected: Any?, message: String) {

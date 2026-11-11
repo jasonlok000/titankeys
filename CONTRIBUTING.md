@@ -14,7 +14,7 @@ Thank you for your help with Atlas. This guide tells you how to report a problem
 
 Atlas has these goals:
 
-- **Local:** All data stays on the device. Do not add network calls, analytics, or tracking.
+- **Private:** What the user types stays on the device. TitanKeys uses the internet only as the [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says: signed news, and swipe contributions only with consent. Do not add other network calls, analytics, or tracking.
 - **Simple:** Write clear code. Clear code is better than clever code.
 - **Made for the Titan 2 Elite:** Each feature must operate well with the physical keyboard.
 
@@ -120,12 +120,33 @@ If you want to do the work, write this in the issue. Wait until I give the issue
 1. Make a branch from `main`. Give the branch a short name, for example `fix-cursor-swipe`.
 2. Make your change. Keep each pull request to one issue.
 3. Follow the style of the code near your change.
-4. Write all text that the user sees in [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/). This includes the guide, settings, and release notes.
+4. Write all text that the user sees in the TitanKeys voice. See [Writing](#writing).
 5. Run the checks:
 
    ```bash
    bun run check
    ```
+
+## Writing
+
+TitanKeys talks like a person: casual, direct, a bit cheeky. This goes for every text the user sees, including the guide, settings, release notes, the README and the website.
+
+- Use contractions: don't, can't, it's, you're.
+- Say "press", not "push". Say "once" and "twice", not "one time" and "two times".
+- Say "works", not "operates". Say "pick" or "choose", not "select".
+- Keep sentences short. Say what to do, not how the system behaves. One idea per line where you can.
+- Talk to the user as "you". TitanKeys can say "we" for the people behind it, such as in privacy texts.
+- Be dry and confident. Personality comes from plain, slightly blunt statements, not from a joke in every line.
+- Swearing is fine, but rarely: only where it really lands.
+- A joke never hides the instruction. The user must still know exactly what to do.
+- Keep labels short enough for their row on the Titan's screen. Don't change a setting's name without changing every text that mentions it.
+
+Avoid:
+
+- Patterns that sound machine-written: "not just X, but Y", chains like "no X, no Y, no Z", "X. No Y." punchlines, "Wild, right?", lists of three for rhythm, and dashes for asides.
+- Lines that try too hard: winking at the reader, calling the user names, forced jokes. If a line makes you wince, cut the joke and keep it plain.
+
+Keep these clean, with no swearing, but still casual: the Accessibility description and its disclosure, permission reasons, consent screens, the privacy policy, store listings, and anything about deleting or losing data.
 
 ## Test on your device
 

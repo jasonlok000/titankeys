@@ -40,11 +40,11 @@ final class LanguageHabits {
 
     void add(String intended, int today) {
         String word = SwipeWords.normalise(intended);
-        if (word.isEmpty()) throw new IllegalArgumentException("Enter one word with 2–24 letters. Apostrophes are allowed.");
-        if (!SuggestionPolicy.allowed(word)) throw new IllegalArgumentException("This word cannot be saved.");
+        if (word.isEmpty()) throw new IllegalArgumentException("Type one word of 2 to 24 letters. Apostrophes are fine.");
+        if (!SuggestionPolicy.allowed(word)) throw new IllegalArgumentException("TitanKeys can't save that word.");
         Entry entry = words.get(word);
         if (entry == null) entry = create(word, today);
-        if (entry == null) throw new IllegalStateException("The word list is full. Remove a word and try again.");
+        if (entry == null) throw new IllegalStateException("Your word list is full. Remove a word, then try again.");
         entry.spelling = intended.replace('\u2019', '\'');
         entry.typedUses = Math.max(USES_TO_ACTIVATE, entry.support(today));
         entry.confirmations = Math.max(0, entry.confirmations - entry.decay(today));

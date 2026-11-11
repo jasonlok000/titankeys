@@ -1,6 +1,7 @@
 import { Canvas, CanvasText, Row, Screen, Stack, Text, openURL, useSnapshot } from "ink";
 import { arrowOutward, chevronRight } from "ink/icons";
 import { state } from "../../lib/atlas";
+import { PRIVACY_URL } from "../../lib/connected";
 import { MUTED } from "../../lib/brand";
 import { hasReleaseNotes } from "../../lib/release-notes";
 import icon from "../../assets/atlas-glyph.png";
@@ -17,6 +18,7 @@ export default function About() {
         <Row title="Based on Atlas" subtitle="A modified version of Atlas by Julian Hall" endIcon={arrowOutward}
           onPress={() => void openURL("https://github.com/juleshall4/atlas")} />
         <Row title="Licences" endIcon={chevronRight} href="/settings/licences" />
+        <Row title="Privacy policy" endIcon={arrowOutward} onPress={() => void openURL(PRIVACY_URL)} />
       </Stack>
       <Stack align="center" gap={4}>
         <Canvas width={596} height={28}>

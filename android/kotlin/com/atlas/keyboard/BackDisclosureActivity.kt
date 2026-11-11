@@ -36,6 +36,7 @@ class BackDisclosureActivity : Activity() {
             addView(text(boldLead(getString(R.string.back_disclosure_keys)), 17f))
             for (line in listOf(R.string.back_disclosure_keys_sym, R.string.back_disclosure_keys_launcher, R.string.back_disclosure_keys_back))
                 addView(text("•  " + getString(line), 17f, indent = 16))
+            addView(text(boldLead(getString(R.string.back_disclosure_touchpad)), 17f))
             addView(text(getString(R.string.back_disclosure_never_title), 19f, bold = true, top = 20))
             addView(text("•  " + getString(R.string.back_disclosure_never_screen), 17f))
             addView(text("•  " + getString(R.string.back_disclosure_never_keep), 17f))

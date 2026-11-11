@@ -133,8 +133,10 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             val half = slot * widthOf(index) / 2
             if (x - half >= stop || x + half < left) continue
             val going = x + half > stop
-            val colour = if (going) GuideMotion.faded(look.accent, alpha) else GuideMotion.faded(look.ink, WORD * alpha)
-            word(canvas, maxOf(x - half, left), min(x + half, stop), mid, colour)
+            // A single flick's word fades and shrinks as it passes into the caret, so it leaves smoothly.
+            val passed = if (going && display.softDelete) ((x + half - stop) / (2 * half)).coerceIn(0f, 1f) else 0f
+            val colour = if (going) GuideMotion.faded(look.accent, alpha * (1f - passed)) else GuideMotion.faded(look.ink, WORD * alpha)
+            word(canvas, maxOf(x - half, left), min(x + half, stop), mid, colour, 1f - passed * SHRINK)
         }
         // The caret beats once for each word, quicker for a longer flick.
         val beat = 1f - BEAT * display.flow
@@ -151,9 +153,10 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         return true
     }
 
-    private fun word(canvas: Canvas, start: Float, end: Float, mid: Float, colour: Int) {
+    private fun word(canvas: Canvas, start: Float, end: Float, mid: Float, colour: Int, size: Float = 1f) {
         if (end <= start) return
-        rounded(canvas, start, mid - dp(WORD_HEIGHT / 2), end, mid + dp(WORD_HEIGHT / 2), dp(WORD_HEIGHT / 2), colour)
+        val half = dp(WORD_HEIGHT / 2) * size
+        rounded(canvas, start, mid - half, end, mid + half, half, colour)
     }
 
     /** The caret: a short upright bar centred on [x], [y]. */
@@ -199,6 +202,8 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val WORD = .28f
         const val SELECTED = .85f
         const val WORD_HEIGHT = 11f
+        /** How much of its height a single flick's word loses by the time it has gone into the caret. */
+        const val SHRINK = .6f
         const val WORD_GAP = 8f
         const val SELECTION_HEIGHT = 26f
         const val SELECTION_PAD = 5f

@@ -362,7 +362,11 @@ private fun aFlickHasABriefFlourish() {
     display.run(1_000, 1_100)
     isTrue(display.flourish > 0f, "The flourish must move")
     isTrue(display.reveal > 0f, "The flourish must show")
-    display.run(1_116, 1_260)
+    same(display.softDelete, true, "A single flick's word fades and shrinks as it goes")
+    isTrue(display.shownDeleted > 0f && display.shownDeleted < 1f, "Halfway, the word is still on its way into the caret")
+    display.run(1_116, 1_180)
+    same(display.shownDeleted, 1f, "It has gone by about 170 ms")
+    display.run(1_196, 1_260)
     same(display.scene, Scene.None, "The flourish must be over by 260 ms, so it cannot delay typing")
 }
 

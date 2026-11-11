@@ -102,7 +102,7 @@ bash tools/setup-native.sh
    | App shortcuts | `bash tests/shortcuts/run.sh` |
    | Swipe recognition | `bash tests/swipe/run.sh` |
    | Swipe preview | `bash tests/preview/run.sh` |
-   | Keyboard show and hide | `python3 tests/ime-window/run.py <app package>` |
+   | Keyboard show and hide | `APP=com.atlas.debug python3 tests/ime-window/run.py <app package>` |
    | App screens | `APP=com.atlas.debug bun run check:phone` |
 
    The last four tests need your Titan 2 Elite connected over USB.

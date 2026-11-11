@@ -3,13 +3,17 @@
 
 Focus the affected field on a connected Android device, then run:
     python3 tests/ime-window/run.py org.mozilla.firefox
-The check does not type, submit forms, or change keyboard settings.
+The check does not type, submit forms, or change keyboard settings. APP=com.atlas.debug checks
+the debug build instead.
 """
 
 import argparse
+import os
 import re
 import subprocess
 import time
+
+APP = os.environ.get("APP", "com.atlas")
 
 
 def shell(*args):
@@ -26,7 +30,7 @@ def state():
     return (
         package.group(1) if package else None,
         int(input_type.group(1), 16) if input_type else 0,
-        "package=com.atlas " in window and "isVisible=true" in window,
+        f"package={APP} " in window and "isVisible=true" in window,
     )
 
 
@@ -37,7 +41,7 @@ def main():
     args = parser.parse_args()
     assert args.cycles > 0, "cycles must be positive"
     selected = shell("settings", "get", "secure", "default_input_method").strip()
-    assert selected == "com.atlas/.keyboard.AtlasIme", "Select Atlas before running"
+    assert selected.startswith(f"{APP}/"), f"Select {APP} as the keyboard before running, not {selected}"
     package, input_type, _ = state()
     assert package == args.package and input_type & 0xF == 1, "Focus a text field in the specified app first"
     component = shell(

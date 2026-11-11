@@ -29,7 +29,7 @@ Patterns are on and off in ms, starting with on.
 
 | Family | Pattern | Plays for |
 |---|---|---|
-| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, words in a held delete, the marked button in the word menu or a panel |
+| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, words in a held delete (fading, below), the marked button in the word menu or a panel |
 | **Boundary** | 30 | The cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel |
 | **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, Save, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
 | **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol |
@@ -55,6 +55,22 @@ Then the dots go into the caret one after another, and every dot ticks as it lan
 
 A tick within 35 ms of the flick's tail is left out. Any key or touch cuts the dots at once, and the ticks still to come with them. A tick also only plays while that flick's dots are still on the bar. With animations off there are none. A long delete's lift turns its lines into dots too, which go in the same way and tick the same way, with the same switch. Its last word's tick or its no may have just played, so a dot tick within 35 ms of that is left out.
 
+### Held delete fade
+
+A held delete ticks once for each further word. On a long hold that turned into one constant buzz, so the ticks fade as more words go.
+
+The Titan has no strength control, so the fade is by length:
+
+- **Start.** The first word's tick plays the start length, 17 ms.
+- **Fade.** Each word after it is shorter, in even steps, until the floor, 9 ms. It gets there after 8 words, so word 9 plays 9 ms.
+- **Thin.** From there only every other tick plays.
+
+So a hold plays 17, 16, 15, 14, 13, 12, 11, 10, 9, then 9 on every other word. A new hold starts again at 17.
+
+The floor is 9 ms, not lower: the phone's own vibration log shows that 8 ms buzzes barely register on this motor. A lower floor would fade to nothing.
+
+The ticks are still texture for the gate, so they never block a message. A thinned tick plays nothing, and the gate never hears of it. `HeldDeleteFade` holds the rule, and it has no Android parts, so tests/haptics can run it.
+
 ## What plays what
 
 **Swipe**
@@ -66,7 +82,7 @@ A tick within 35 ms of the flick's tail is left out. Any key or touch cuts the d
 - A delete flick: gone flick.
 - The flick's dots land in the caret: a light texture tick for every dot as it lands.
 - A long delete's lines turn into dots as you lift, and those tick the same way as each lands.
-- Each further word while you hold: texture.
+- Each further word while you hold: texture, shorter as more words go, then only every other one (see Held delete fade).
 - Nothing left to delete: no. This goes for the flick and the hold.
 
 **Space gestures**
@@ -154,8 +170,10 @@ Haptics go with what you do too closely to judge one alone, so TitanKeys Debug's
 
 - A timeline shows the last 5 s, newest on the right. Each haptic is its pulses to scale, with its name, its family and what set it off. One the gate or a switch dropped is hollow, with the reason: busy, too soon, switched off, or all off.
 - A list under it has the last 15. Tap one to open its family's editor: a slider for each pulse (4 to 120 ms) and each gap (35 to 200 ms), a Play for that pattern alone, and Reset. The next real action plays the edited pattern.
-- Notes: one overall, one per family and one per haptic. They go in `comments.json` in the app's files, with each family's pattern in use and each haptic's family and pattern.
+- **Held delete fade** has its own editor, under the families or from a held delete's tick in the list. It has a slider for the start (4 to 40 ms), the floor (4 to 40 ms, never above the start), the words to fade (1 to 20) and how often a tick plays after that (1 in 1 to 1 in 4). A strip shows a hold's first 16 ticks to scale, with thinned ones hollow. Play holds for 10 words, 350 ms apart, as a hold starts. The next real held delete plays the edits.
+- On the timeline, each held delete tick shows at the length it played, with its word: "Held delete word 5 · Texture 13 ms". A thinned one is hollow, with the reason "thinned".
+- Notes: one overall, one per family, one on the fade and one per haptic. They go in `comments.json` in the app's files, with each family's pattern in use, the fade's four numbers, and each haptic's family and pattern.
 
-A tried pattern is kept in the `swipe_haptics` preferences, and only a package that ends in ".debug" reads it. Every other build plays the patterns above.
+A tried pattern or fade is kept in the `swipe_haptics` preferences, and only a package that ends in ".debug" reads it. Every other build plays the patterns and the fade above.
 
 The keyboard and Settings run in one process, so the feed is a plain object, `HapticFeed`: the keyboard's `Haptics` records each play there with its result, and the lab listens while it shows, and stops when it goes. The feed keeps the last 64, so the lab shows recent ones as it opens. Only a ".debug" package turns it on. In every other build it's off, and nothing is recorded.

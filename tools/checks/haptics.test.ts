@@ -24,3 +24,9 @@ test("the lab says where each haptic plays", () => {
     expect(about.endsWith("."), id).toBe(true);
   }
 });
+
+test("the lab says a held delete's ticks fade", () => {
+  const about = hapticGroups.flatMap(group => group.haptics).find(({ id }) => id === "delete_word")?.about ?? "";
+  expect(about).toContain("shorter as more go");
+  expect(about).toContain("every other one");
+});

@@ -76,6 +76,20 @@ object HapticTimeline {
         Haptic.GuideCelebration -> "The guide celebrated"
     }
 
+    /**
+     * The live timeline's top line for [event], with [name] its haptic's name: the name and family, or for a held delete its
+     * word and length, "Held delete word 5 · Texture 13 ms".
+     */
+    fun title(event: HapticEvent, name: String) = if (event.word == null) "$name · ${event.haptic.family.label}"
+        else "Held delete word ${event.word} · ${event.haptic.family.label} ${event.pattern.first()} ms"
+
+    /** The line under it: what set it off, or why it didn't play. A thinned tick is the fade's plan, so it isn't "dropped". */
+    fun outcome(event: HapticEvent) = when {
+        event.result.played -> trigger(event.haptic)
+        event.result == HapticResult.Thinned -> event.result.words
+        else -> "dropped: ${event.result.words}"
+    }
+
     /** The live timeline shows the last 5 s, and the list under it the last 15 haptics. */
     const val LIVE_MILLIS = 5000L
     const val RECENT = 15

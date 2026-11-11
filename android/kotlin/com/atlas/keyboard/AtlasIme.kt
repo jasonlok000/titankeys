@@ -66,6 +66,8 @@ class AtlasIme : InputMethodService() {
     private lateinit var overlay: TouchpadOverlay
     private val contact = Contact()
     private val deleteHold = DeleteHold(contact)
+    /** The held delete's words, so its ticks fade as more go. */
+    private val heldWords = HeldDeleteCount()
     private val cursor = CursorMode()
     private val cursorGesture = CursorGesture()
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
@@ -372,12 +374,15 @@ class AtlasIme : InputMethodService() {
     private fun endDeleteHold() {
         main.removeCallbacks(stepDeleteHold)
         deleteHold.reset()
+        heldWords.reset()
         deleteDots()
     }
 
     /** Each word goes the way of a normal delete flick. [flick] is the first word's flick, and is null for the words after it. */
     private fun deleteHeldWord(flick: Contact.Outcome.Swipe?) {
         if (flick != null) {
+            // A new hold, so its ticks fade from the start again.
+            heldWords.reset()
             strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis())
             // The contact was a delete and not part of a word, as it would be at a lift.
             pieces.clear()
@@ -388,6 +393,7 @@ class AtlasIme : InputMethodService() {
             enqueue { outcome(flick) }
             return
         }
+        val word = heldWords.next()
         enqueue {
             // At the start of the text nothing is left to delete, so the hold ends with a no.
             if (currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true) {
@@ -395,7 +401,7 @@ class AtlasIme : InputMethodService() {
                 haptics.play(Haptic.DeleteNothing)
                 return@enqueue
             }
-            haptics.play(Haptic.DeleteWord)
+            haptics.heldDeleteWord(word)
             // A dot for each character of the word, for the dots that play when the hold lifts.
             val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
             composer.backspace(true)

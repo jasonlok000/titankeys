@@ -24,6 +24,7 @@ function Lab({ lab }: { lab: HapticsLab }) {
     <Section title="Patterns">
       {Object.entries(lab.families).map(([id, family]) =>
         <Field key={id} label={family.name}>{family.tried ? `${family.plays} (tried)` : family.plays}</Field>)}
+      <Field label={lab.heldDeleteFade.name}>{lab.heldDeleteFade.tried ? `${lab.heldDeleteFade.plays} (tried)` : lab.heldDeleteFade.plays}</Field>
     </Section>
   </Screen>;
 }

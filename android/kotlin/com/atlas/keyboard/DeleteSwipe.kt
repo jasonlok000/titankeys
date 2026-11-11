@@ -71,7 +71,7 @@ private const val HOLD_MILLIS = 400L
 /** The finger counts as staying while it is this close to where it stopped, in key widths. */
 private const val HOLD_KEYS = .25f
 /** The wait between words after a short flick, close to how quickly a person flicks again by hand. */
-private const val REPEAT_SLOW_MILLIS = 350L
+internal const val REPEAT_SLOW_MILLIS = 350L
 /** The wait between words after a long flick. */
 private const val REPEAT_FAST_MILLIS = 80L
 /** A flick of this many key widths or fewer is short. Between short and long, the wait follows a straight line. */

@@ -110,10 +110,11 @@ export type State = {
 
 /**
  * Each pattern family's pattern in use, on and off in ms starting with on, by its id in Haptics.kt, and whether it is one tried
- * in the lab. Each haptic's family and what it plays, by its id.
+ * in the lab. The held delete fade's four numbers in use, lengths in ms. Each haptic's family and what it plays, by its id.
  */
 export type HapticsLab = {
   families: Record<string, { name: string; pattern: number[]; plays: string; tried: boolean }>;
+  heldDeleteFade: { name: string; start: number; floor: number; words: number; thinEvery: number; plays: string; tried: boolean };
   haptics: Record<string, { family: string; pattern: number[]; plays: string }>;
 };
 

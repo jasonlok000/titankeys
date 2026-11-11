@@ -27,7 +27,7 @@ class HapticsLab(private val context: Context) {
     /** The notes: one on the whole, one per family and one per haptic, by id. Read from the file the first time. */
     private val notes by lazy { readNotes() }
 
-    private class Notes(var general: String, val families: MutableMap<String, String>, val haptics: MutableMap<String, String>)
+    private class Notes(var general: String, val families: MutableMap<String, String>, val haptics: MutableMap<String, String>, var fade: String)
 
     /** What [family] plays now. */
     fun pattern(family: Family) = Haptics.pattern(context, family)
@@ -41,6 +41,18 @@ class HapticsLab(private val context: Context) {
     /** Plays what [family] plays now, alone, with no switch or gate. */
     fun preview(family: Family) = haptics.preview(pattern(family))
 
+    /** How a held delete fades now. */
+    fun fade() = Haptics.heldDeleteFade(context)
+
+    /** Tries [fade] for a held delete, or puts the defaults back with null. The next real held delete plays it. */
+    fun tryFade(fade: HeldDeleteFade.Settings?) {
+        Haptics.tryFade(context, fade)
+        later()
+    }
+
+    /** Plays a held delete with the fade in use now, its words as far apart as when a hold starts, with no switch or gate. */
+    fun previewFade() = haptics.previewHold(fade(), REPEAT_SLOW_MILLIS)
+
     fun stop() {
         if (main.hasCallbacks(write)) {
             main.removeCallbacks(write)
@@ -51,8 +63,14 @@ class HapticsLab(private val context: Context) {
     /** Opens the lab's screen. [labels] are Settings' names for the haptics, as JSON. */
     fun showGraph(labels: String) = context.startActivity(HapticsLabActivity.intent(context, labels))
 
-    /** Each family's pattern in use now, and each haptic's family and what it plays. */
-    fun state(): JSONObject = JSONObject().put("families", families()).put("haptics", haptics())
+    /** Each family's pattern in use now, the held delete fade, and each haptic's family and what it plays. */
+    fun state(): JSONObject = JSONObject().put("families", families()).put("heldDeleteFade", heldDeleteFade()).put("haptics", haptics())
+
+    /** The held delete fade's four numbers in use now, and whether they're tried. */
+    private fun heldDeleteFade() = fade().let { fade ->
+        JSONObject().put("name", "Held delete fade").put("start", fade.start).put("floor", fade.floor).put("words", fade.words)
+            .put("thinEvery", fade.thinEvery).put("plays", HeldDeleteFade.describe(fade)).put("tried", fade != HeldDeleteFade.DEFAULT)
+    }
 
     private fun families() = JSONObject().apply {
         for (family in Family.entries) {
@@ -64,15 +82,18 @@ class HapticsLab(private val context: Context) {
 
     private fun haptics() = JSONObject().apply {
         for (haptic in Haptic.entries) {
-            val pattern = pattern(haptic.family)
+            // A held delete's word plays the fade, which starts at its own length.
+            val fade = if (haptic == Haptic.DeleteWord) fade() else null
+            val pattern = if (fade != null) listOf(fade.start) else pattern(haptic.family)
             put(haptic.id, JSONObject().put("family", haptic.family.label).put("pattern", JSONArray(pattern))
-                .put("plays", HapticPalette.describe(pattern)))
+                .put("plays", if (fade != null) HeldDeleteFade.describe(fade) else HapticPalette.describe(pattern)))
         }
     }
 
     fun general() = notes.general
     fun note(family: Family) = notes.families[family.id].orEmpty()
     fun note(haptic: Haptic) = notes.haptics[haptic.id].orEmpty()
+    fun fadeNote() = notes.fade
 
     fun general(text: String) {
         notes.general = text
@@ -86,6 +107,11 @@ class HapticsLab(private val context: Context) {
 
     fun note(haptic: Haptic, text: String) {
         notes.haptics[haptic.id] = text
+        later()
+    }
+
+    fun fadeNote(text: String) {
+        notes.fade = text
         later()
     }
 
@@ -108,11 +134,12 @@ class HapticsLab(private val context: Context) {
             val comment = entry.optString("comment")
             if (comment.isNotEmpty()) haptics[entry.optString("id")] = comment
         }
-        return Notes(file.optString("general"), families, haptics)
+        return Notes(file.optString("general"), families, haptics, file.optJSONObject("heldDeleteFade")?.optString("comment").orEmpty())
     }
 
     /**
-     * The file adb pulls: the notes, each family's pattern in use and whether it's tried, and each haptic's family and pattern.
+     * The file adb pulls: the notes, each family's pattern in use and whether it's tried, the held delete fade's four numbers,
+     * and each haptic's family and pattern.
      * It goes to a new file first, so a write that fails never leaves half a file.
      */
     private fun writeNotes() {
@@ -129,7 +156,7 @@ class HapticsLab(private val context: Context) {
         }
         val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
         val text = JSONObject().put("savedAt", Instant.now().toString()).put("version", version).put("general", notes.general)
-            .put("families", families).put("haptics", list).toString(2)
+            .put("families", families).put("heldDeleteFade", heldDeleteFade().put("comment", notes.fade)).put("haptics", list).toString(2)
         val file = file()
         val written = File(file.parentFile, "${file.name}.new")
         written.writeText(text)

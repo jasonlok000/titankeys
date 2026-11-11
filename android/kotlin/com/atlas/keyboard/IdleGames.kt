@@ -1000,10 +1000,13 @@ internal class Firework(glyphs: List<Glyph>, width: Float, random: Random) : Idl
  * Runs the idle games on one bar: a game picked at random, round after round, until you come back; then a way home. While it
  * plays, the bar's own words are hidden and these letters stand in for them, so when it ends the bar is exactly as it was.
  */
-internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val random: Random) {
-    enum class Kind { Drift, Pong, Bowling, JumpRope, Race, Juggle }
+internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val random: Random, chosen: Kind? = null) {
+    /** The games, with the numbers of the owner's demo. */
+    enum class Kind(val number: Int) { Drift(1), Pong(2), Bowling(3), JumpRope(5), Race(7), Juggle(8) }
+    /** The ways home, for the debug build's trigger; normally [comeBack] picks one. */
+    enum class Way(val number: Int) { Shell(4), Firework(6), Drop(0), Exit(0) }
 
-    val kind = Kind.entries[random.nextInt(Kind.entries.size)]
+    val kind = chosen ?: Kind.entries[random.nextInt(Kind.entries.size)]
     var game: IdleGame = make(kind)
         private set
     /** True once you came back and the letters are on their way home. */
@@ -1031,10 +1034,20 @@ internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val
      * You came back. Juggled letters are dropped; any other game goes home quickly, or now and then by way of a Shell game or a
      * Firework, so that it stays a surprise and never gets tiring.
      */
-    fun comeBack() {
+    fun comeBack(way: Way? = null) {
         if (game.returning) return
         val current = game
         val figure = current.figure
+        if (way != null) {
+            // The debug build's trigger asks for a way home by name, to show each one.
+            game = when (way) {
+                Way.Shell -> Shell(glyphs, width, random)
+                Way.Firework -> Firework(glyphs, width, random)
+                Way.Drop -> Drop(glyphs, width, random, figure, (current as? Juggle)?.balls ?: glyphs.take(3))
+                Way.Exit -> Exit(glyphs, width, random, figure)
+            }
+            return
+        }
         game = when {
             current is Juggle -> Drop(glyphs, width, random, figure, current.balls)
             figure != null -> Exit(glyphs, width, random, figure)

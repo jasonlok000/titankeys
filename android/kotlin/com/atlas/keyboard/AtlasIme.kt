@@ -620,11 +620,33 @@ class AtlasIme : InputMethodService() {
 
     private val idleBar = Runnable { startIdleBar() }
     private var idleBarTriggerRegistered = false
+    /**
+     * The debug build's trigger, from adb. With no extra it starts a game picked at random. The extra "game" picks one by name or by
+     * the demo's number (1 drift, 2 pong, 3 bowling, 5 rope, 7 race, 8 juggle); the extra "return" sends the running game home by
+     * one way (shell, firework, drop, exit), as coming back would.
+     */
     private val idleBarTrigger = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            val game = intent.getStringExtra("game")?.lowercase()
+            val way = intent.getStringExtra("return")?.lowercase()
             main.post {
-                val started = startIdleBar()
-                Log.i("Atlas", if (started) "Idle bar: started" else "Idle bar: not started, as no plain words show or it is off here")
+                if (way != null) {
+                    val chosen = IdlePlayer.Way.entries.firstOrNull { it.name.lowercase() == way || it.number.toString() == way && it.number > 0 }
+                    val sent = chosen != null && strip?.comeBackFromIdle(chosen) == true
+                    Log.i("Atlas", if (sent) "Idle bar: going home by $chosen" else "Idle bar: no game is playing, or no way home is called $way")
+                    return@post
+                }
+                val kind = game?.let { name ->
+                    IdlePlayer.Kind.entries.firstOrNull { it.name.lowercase() == name || it.number.toString() == name || name == "rope" && it == IdlePlayer.Kind.JumpRope }
+                }
+                if (game != null && kind == null) {
+                    Log.i("Atlas", "Idle bar: no game called $game. Shell (4) and firework (6) are ways home: use the extra return")
+                    return@post
+                }
+                // A game that plays now starts again as the one asked for.
+                strip?.stopIdle()
+                val started = startIdleBar(kind)
+                Log.i("Atlas", if (started) "Idle bar: started ${kind ?: "a random game"}" else "Idle bar: not started, as no plain words show or it is off here")
             }
         }
     }
@@ -636,7 +658,7 @@ class AtlasIme : InputMethodService() {
     private fun idleBarAllowed() = editing && isInputViewShown && !panelOpen && !field.exact && !barHidden && field.suggestions &&
         field.autocorrect && showSuggestions() && ValueAnimator.areAnimatorsEnabled() && getSystemService(PowerManager::class.java).isInteractive
 
-    private fun startIdleBar() = idleBarAllowed() && strip?.startIdle(Random(System.nanoTime())) == true
+    private fun startIdleBar(kind: IdlePlayer.Kind? = null) = idleBarAllowed() && strip?.startIdle(Random(System.nanoTime()), kind) == true
 
     /**
      * Input starts the wait again. Coming back, with a finger on the touchpad or a touch on the bar, sends the idle game's letters

@@ -532,7 +532,7 @@ class Strip(
     val idling get() = idle != null
 
     /** Starts an idle game with the words on the bar, if plain words show. Returns false if there is nothing to play with. */
-    fun startIdle(random: kotlin.random.Random): Boolean {
+    internal fun startIdle(random: kotlin.random.Random, kind: IdlePlayer.Kind? = null): Boolean {
         if (idle != null || !isShown || !showSuggestions || modifiers?.replacesWords == true || notice != null || clip != null || selected != null
             || gesture.showing) return false
         val scale = idleScale
@@ -554,7 +554,7 @@ class Strip(
             }
         }
         if (glyphs.isEmpty()) return false
-        idle = IdlePlayer(glyphs, width / scale, random)
+        idle = IdlePlayer(glyphs, width / scale, random, kind)
         idleFrameAt = SystemClock.uptimeMillis()
         render()
         invalidate()
@@ -562,8 +562,10 @@ class Strip(
     }
 
     /** You came back: the letters go home, by the game's own way. Typing or swiping still cuts to the words at once with [stopIdle]. */
-    fun comeBackFromIdle() {
-        idle?.comeBack()
+    internal fun comeBackFromIdle(way: IdlePlayer.Way? = null): Boolean {
+        val player = idle ?: return false
+        player.comeBack(way)
+        return true
     }
 
     /** Ends the idle game at once, and the bar is as it was. */

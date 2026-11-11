@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TitanKeys: the keys your Titan deserves</title>
+<meta name="description" content="TitanKeys is a keyboard made only for the Unihertz Titan 2 Elite. Type as you always have, swipe whole words on the same keys, and reach every symbol, emoji and setting without touching the screen.">
+<meta name="theme-color" content="#160A04">
+<link rel="icon" href="images/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<!--
+  The TitanKeys webpage (#58). One page, no JavaScript, no cookies, no trackers, and nothing loaded from another server.
+  Words are plain on purpose: #54 sets the final tone with the owner.
+-->
+<header class="bar">
+  <a class="brand" href="#top"><img src="images/icon.svg" alt="TitanKeys" width="32" height="32"> <span>TitanKeys</span></a>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#engine">Swiping</a>
+    <a href="#install">Install</a>
+    <a href="#privacy">Privacy</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <p class="eyebrow">Built for Titan 2 Elite</p>
+    <h1>TitanKeys</h1>
+    <p class="tagline">The keys your Titan deserves.</p>
+    <p class="lead">A keyboard made only for the Unihertz Titan 2 Elite. Type as you always have, swipe whole words on the same
+      keys, and reach every symbol, emoji and setting without touching the screen.</p>
+    <p class="actions">
+      <a class="button" href="https://github.com/jasonlok000/titankeys/releases/latest">Download for free</a>
+      <!-- GOOGLE PLAY: show this link when the listing is live (#36).
+      <a class="button secondary" href="https://play.google.com/store/apps/details?id=com.titankeys">Get it on Google Play</a>
+      -->
+      <a class="button quiet" href="#install">How to install</a>
+    </p>
+    <!-- TRAILER (#57): when the hand-filmed trailer exists, put it here, for example:
+    <figure class="trailer">
+      <video controls preload="none" playsinline poster="images/trailer-poster.jpg" src="trailer.mp4"></video>
+    </figure>
+    Keep the video file on this site, so that playing it asks nothing from any other server. -->
+  </section>
+
+  <section id="features" class="section">
+    <h2>Everything from the keys</h2>
+    <p class="intro">The Titan's keys are a touchpad too. TitanKeys uses both, so your thumbs never leave the keyboard.
+      The guide in the app teaches each one on the real keys.</p>
+
+    <div class="features">
+      <article class="feature">
+        <figure class="shot"><img src="images/guide-type.png" width="540" height="507" loading="lazy"
+          alt="The guide's first slide, Nothing to unlearn, with a text field and a drawing of the keys"></figure>
+        <h3>Nothing to unlearn</h3>
+        <p>Type with two hands or one. When you push Space, TitanKeys fixes the typo in the word you just typed.</p>
+      </article>
+      <article class="feature">
+        <figure class="shot"><img src="images/playground.png" width="540" height="507" loading="lazy"
+          alt="The playground: a line to follow, a text field and the keys"></figure>
+        <h3>Swipe on the same keys</h3>
+        <p>Slide across the letters of a word without pushing, then lift. A thumb that slips off the top and comes back
+          keeps the same word.</p>
+      </article>
+      <!-- SCREENSHOT: images/pick.png, the guide's "Missed? One touch fixes it" slide. -->
+      <article class="feature">
+        <h3>Missed? One touch fixes it</h3>
+        <p>The strip above the keys shows the other words a swipe could be. Touch one to put it in. Before you type, it
+          suggests the next word.</p>
+      </article>
+      <!-- SCREENSHOT: images/delete.png, the guide's "Delete without reaching up" slide. -->
+      <article class="feature">
+        <h3>Delete without reaching up</h3>
+        <p>Flick left from Backspace to delete a word. Keep your finger down to delete more.</p>
+      </article>
+      <!-- SCREENSHOT: images/steer.png, the guide's "Steer and select from Space" slide. -->
+      <article class="feature">
+        <h3>Steer and select from Space</h3>
+        <p>Touch Space two times and keep the second touch down, then lean left or right to move the cursor. Touch it
+          three times to select words.</p>
+      </article>
+      <!-- SCREENSHOT: images/symbols.png, the guide's "Every symbol within reach" slide. -->
+      <article class="feature">
+        <h3>Every symbol within reach</h3>
+        <p>Hold a letter for the symbol printed on it. Push Sym for every other symbol, in groups.</p>
+      </article>
+      <!-- SCREENSHOT: images/panel.png, the guide's "Emoji and settings, no screen" slide. -->
+      <article class="feature">
+        <h3>Emoji and settings, no screen</h3>
+        <p>Push Sym two times for emoji. In the panel, Alt opens quick settings, with a letter for each one.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="engine" class="section">
+    <h2>Swiping that knows this phone</h2>
+    <p class="intro">Swipe engine 2.0 adds three trained parts to the FUTO swipe engine: a swipe reader fine-tuned on real
+      swipes from the Titan's touchpad, a small language model that reads your sentence, and a ranker that picks the best
+      three words. Everything runs on the phone.</p>
+
+    <div class="numbers">
+      <div class="number"><strong>91%</strong><span>right word first, on 126 words swiped in real sentences</span></div>
+      <div class="number"><strong>96%</strong><span>right word in the top 3, on the same words</span></div>
+      <div class="number"><strong>78.9%</strong><span>right word first, on 540 swipes held back from all tuning</span></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <caption>The same recorded touches, replayed through each keyboard on the phone.</caption>
+        <thead><tr><th>Right word first</th><th>Atlas</th><th>TitanKeys 1.2</th><th>TitanKeys 2.0</th></tr></thead>
+        <tbody>
+          <tr><td>126 words in real sentences</td><td>68%</td><td>84%</td><td class="best">91%</td></tr>
+          <tr><td>540 swipes held back from tuning</td><td>–</td><td>72.6%</td><td class="best">78.9%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- ENGINE 2.1: add its numbers here when 2.1 ships, the same ones as its release notes (#55, workstream B). -->
+
+    <div class="swipes">
+      <figure>
+        <img src="images/power.gif" width="720" height="321" loading="lazy" alt="A recorded swipe of the word power, along the top row">
+        <figcaption>Swiped “power”. Atlas typed “pure”; TitanKeys typed “power”.</figcaption>
+      </figure>
+      <figure>
+        <img src="images/recognition.gif" width="720" height="321" loading="lazy" alt="A recorded swipe of the word recognition, broken into two touches">
+        <figcaption>Swiped “recognition” in two touches. Atlas typed “trinity on”; TitanKeys typed “recognition”.</figcaption>
+      </figure>
+    </div>
+    <p class="small">All of this is one person's swipes on one phone, so your results may differ. The recordings and the
+      tools to check them are in the <a href="https://github.com/jasonlok000/titankeys/tree/titankeys/android/debug/recorder">source</a>.</p>
+  </section>
+
+  <section id="install" class="section">
+    <h2>Install</h2>
+    <div class="install">
+      <ol class="steps">
+        <li><strong>Download</strong> the latest APK from <a href="https://github.com/jasonlok000/titankeys/releases/latest">GitHub</a>
+          and install it on your Titan 2 Elite.</li>
+        <li><strong>Open TitanKeys.</strong> The guide opens each Settings page for you and comes back by itself when the
+          switch is on.</li>
+        <li><strong>Learn the keys.</strong> Seven short chapters teach each feature on the real keys. Then the app opens on
+          a playground to type and swipe freely.</li>
+      </ol>
+      <figure class="shot"><img src="images/guide-setup.png" width="540" height="552" loading="lazy"
+        alt="The guide's setup slide, with a button that opens Accessibility"></figure>
+    </div>
+    <p class="small">TitanKeys installs next to Atlas and doesn't touch its saved words. It works only on the Titan 2 Elite.</p>
+  </section>
+
+  <section id="privacy" class="section">
+    <h2>Privacy</h2>
+    <ul class="points">
+      <li><strong>What you type stays on your phone.</strong> The swipe engine and the language models run on the phone.</li>
+      <li><strong>News:</strong> once a day at most, TitanKeys downloads a short signed list of news, such as a new version.
+        It sends nothing about you, and you can turn it off.</li>
+      <li><strong>Share swipes, only if you agree:</strong> you can send examples of your swipes to help train the swipe
+        models. They are encrypted on your phone, and you can stop and delete them at any time.</li>
+      <li>No ads, no analytics and no trackers, in the app or on this page.</li>
+    </ul>
+    <p><a class="button quiet" href="privacy/">Read the privacy policy</a></p>
+  </section>
+
+  <section id="faq" class="section">
+    <h2>Questions</h2>
+    <details>
+      <summary>Does it work on other phones?</summary>
+      <p>No. TitanKeys is made for the Titan 2 Elite's keys and touchpad, and it needs them.</p>
+    </details>
+    <details>
+      <summary>Is it free?</summary>
+      <p>Yes. TitanKeys is free and open source, under the GPL-3.0. Parts of it use the FUTO Source First License, so it
+        can only be shared for free, for non-commercial use.</p>
+    </details>
+    <details>
+      <summary>How is it different from Atlas?</summary>
+      <p>TitanKeys is a modified version of <a href="https://github.com/juleshall4/atlas">Atlas</a> by Julian Hall. Atlas
+        stays simple. TitanKeys takes on more to get the most out of the Titan 2 Elite, such as swipe engine 2.0 and
+        one-handed swipes. If you'd rather have something simpler, Atlas is an excellent choice.</p>
+    </details>
+    <details>
+      <summary>Does it need the internet?</summary>
+      <p>Not to type. It uses the internet only for news and, if you agree, to share swipes. The privacy policy says
+        exactly what is sent.</p>
+    </details>
+    <details>
+      <summary>How do I report a bug or suggest an idea?</summary>
+      <p>Open an <a href="https://github.com/jasonlok000/titankeys/issues">issue on GitHub</a>, or use Settings &gt; Send
+        feedback in the app.</p>
+    </details>
+  </section>
+
+  <section id="credits" class="section">
+    <h2>Credits</h2>
+    <p class="small">TitanKeys is built on the work of
+      <a href="https://github.com/juleshall4/atlas">Atlas</a> by Julian Hall,
+      <a href="https://github.com/No-Scrolling/ink">Ink</a>,
+      <a href="https://gitlab.futo.org/keyboard/swipe-library">FUTO Swipe</a> and the
+      <a href="https://github.com/futo-org/android-keyboard">FUTO Keyboard</a>,
+      <a href="https://github.com/tribixbite/CleverKeys">CleverKeys</a>,
+      <a href="https://huggingface.co/distilbert/distilgpt2">DistilGPT-2</a>,
+      <a href="https://github.com/microsoft/onnxruntime">ONNX Runtime</a>,
+      <a href="https://github.com/palsoftware/pastiera">Pastiera</a>,
+      <a href="https://github.com/jlo-aug/numen">Numen</a>, the
+      <a href="https://codeberg.org/Helium314/aosp-dictionaries">AOSP dictionaries</a> and
+      <a href="https://github.com/rsms/inter">Inter</a>.
+      Every licence is in the <a href="https://github.com/jasonlok000/titankeys/tree/titankeys/licences">source</a>.</p>
+  </section>
+</main>
+
+<footer class="footer">
+  <p>
+    <a href="https://github.com/jasonlok000/titankeys">Source code</a> ·
+    <a href="https://github.com/jasonlok000/titankeys/blob/titankeys/CONTRIBUTING.md">Contributing</a> ·
+    <a href="https://github.com/jasonlok000/titankeys/issues">Issues</a> ·
+    <a href="privacy/">Privacy policy</a>
+  </p>
+  <p class="small">TitanKeys is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz. "Titan 2 Elite" is a
+    product of Unihertz.</p>
+</footer>
+</body>
+</html>

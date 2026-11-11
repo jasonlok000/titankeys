@@ -279,21 +279,112 @@ private class GuideSegment(context: Context) : View(context) {
     private var on = 0
     private var off = 0
     private var fill = 0f
+    /** How strong the glow round the filled part is, from 0 to 1, as the segment steps forward on a pass. */
+    private var glow = 0f
+    private var stepping: ValueAnimator? = null
+    private val line = context.resources.displayMetrics.density * LINE_DP
+    private val reach = context.resources.displayMetrics.density * GLOW_DP
 
     fun paint(on: Int, off: Int, fill: Float) {
         this.on = on
         this.off = off
-        this.fill = fill.coerceIn(0f, 1f)
+        if (stepping?.isRunning != true) this.fill = fill.coerceIn(0f, 1f)
         invalidate()
     }
 
+    /** Fills on to [to], with a small glow that comes and goes: the chapter moving on a step as a slide is passed. */
+    fun advance(to: Float) {
+        stepping?.cancel()
+        val from = fill
+        val target = to.coerceIn(0f, 1f)
+        if (!GuideMotion.enabled) {
+            fill = target
+            invalidate()
+            return
+        }
+        stepping = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = STEP_MILLIS
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener {
+                val t = it.animatedFraction
+                fill = from + (target - from) * t
+                // Up quickly, then away.
+                glow = if (t < .3f) t / .3f else 1f - (t - .3f) / .7f
+                invalidate()
+            }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    fill = target
+                    glow = 0f
+                    invalidate()
+                }
+            })
+            start()
+        }
+    }
+
     override fun onDraw(canvas: Canvas) {
-        val radius = height / 2f
+        val top = (height - line) / 2
+        val radius = line / 2
+        val filled = maxOf(line, width * fill)
+        if (glow > 0f && fill > 0f) {
+            pen.color = GuideMotion.faded(on, GLOW_ALPHA * glow)
+            val spread = reach * glow
+            canvas.drawRoundRect(0f, top - spread, minOf(width.toFloat(), filled + spread), top + line + spread, radius + spread,
+                radius + spread, pen)
+        }
         pen.color = off
-        canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), radius, radius, pen)
+        canvas.drawRoundRect(0f, top, width.toFloat(), top + line, radius, radius, pen)
         if (fill <= 0f) return
         pen.color = on
-        canvas.drawRoundRect(0f, 0f, maxOf(height.toFloat(), width * fill), height.toFloat(), radius, radius, pen)
+        canvas.drawRoundRect(0f, top, filled, top + line, radius, radius, pen)
+    }
+
+    private companion object {
+        const val LINE_DP = 4f
+        const val GLOW_DP = 4f
+        const val GLOW_ALPHA = .35f
+        const val STEP_MILLIS = 600L
+    }
+}
+
+/** The orange check after a success line: it draws itself in, stroke by stroke, as [progress] goes from 0 to 1. */
+private class CheckSpan(private val colour: Int) : android.text.style.ReplacementSpan() {
+    var progress = 1f
+    private val pen = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    private val path = android.graphics.Path()
+    private val part = android.graphics.Path()
+
+    override fun getSize(paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
+        if (fm != null) paint.getFontMetricsInt(fm)
+        return Math.round(paint.textSize * WIDTH)
+    }
+
+    override fun draw(canvas: Canvas, text: CharSequence?, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
+        val size = paint.textSize * SIZE
+        val left = x + paint.textSize * GAP
+        val base = y.toFloat()
+        path.reset()
+        path.moveTo(left, base - size * .45f)
+        path.lineTo(left + size * .36f, base - size * .08f)
+        path.lineTo(left + size, base - size * .86f)
+        part.reset()
+        val measure = android.graphics.PathMeasure(path, false)
+        measure.getSegment(0f, measure.length * progress.coerceIn(0f, 1f), part, true)
+        pen.color = colour
+        pen.strokeWidth = paint.textSize * STROKE
+        canvas.drawPath(part, pen)
+    }
+
+    private companion object {
+        const val WIDTH = .78f
+        const val SIZE = .5f
+        const val GAP = .18f
+        const val STROKE = .1f
     }
 }
 
@@ -855,8 +946,9 @@ class GuideActivity : Activity() {
                 true
             }
         }
+        // Each segment's view is taller than its line, so the glow as it steps forward has room.
         for (chapter in flow.barChapters) segments.addView(GuideSegment(this),
-            LinearLayout.LayoutParams(0, dp(SEGMENT_HEIGHT), 1f).apply { marginEnd = dp(3) })
+            LinearLayout.LayoutParams(0, dp(SEGMENT_HEIGHT + 2 * SEGMENT_GLOW), 1f).apply { marginEnd = dp(3) })
         again = topAction("Start again") { startAgain() }.apply { visibility = View.GONE }
         guideAction = topAction("Guide") {
             if (playground) leavePlayground(PLAYGROUND_GUIDE) else {
@@ -1172,22 +1264,23 @@ class GuideActivity : Activity() {
      * rest wait. [done] is not used: the flow knows where it is.
      */
     @Suppress("UNUSED_PARAMETER")
-    private fun paintSegments(done: Int) {
+    private fun paintSegments(done: Int, advancing: Boolean = false) {
         val strong = if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK
         val current = flow.barChapters.indexOf(flow.step.chapter).let { if (it < 0) flow.barChapters.size else it }
         // The chapter you're in fills with the slides passed in it: all of them, and it's full.
         val ids = flow.idsOf(flow.step.chapter)
         val passedHere = passedIds()
         val within = ids.count { it in passedHere }.toFloat() / ids.size.coerceAtLeast(1)
-        for (index in 0 until segments.childCount) (segments.getChildAt(index) as GuideSegment).paint(
-            on = strong,
-            off = GuideMotion.faded(strong, SEGMENT_OFF),
-            fill = when {
+        for (index in 0 until segments.childCount) {
+            val segment = segments.getChildAt(index) as GuideSegment
+            val fill = when {
                 index < current -> 1f
                 index == current -> within
                 else -> 0f
-            },
-        )
+            }
+            segment.paint(on = strong, off = GuideMotion.faded(strong, SEGMENT_OFF), fill = fill)
+            if (advancing && index == current) segment.advance(fill)
+        }
     }
 
     // The story.
@@ -2188,7 +2281,7 @@ class GuideActivity : Activity() {
                 field.setSelection(field.length())
                 seeding = false
                 flow.seed(field.text.toString())
-                if (!passed) showScenario(heading, flow.instruction) else showReaction(heading)
+                if (!passed) showScenario(heading, flow.instruction)
                 return true
             }
             GuideChapter.Steering -> {
@@ -2197,7 +2290,7 @@ class GuideActivity : Activity() {
                     seedSteering(STEER_RESET.second)
                     seeding = false
                     flow.seed(field.text.toString())
-                    if (!passed) showScenario(STEER_RESET.first, flow.instruction) else showReaction(STEER_RESET.first)
+                    if (!passed) showScenario(STEER_RESET.first, flow.instruction)
                     return true
                 }
                 recentre()
@@ -2630,17 +2723,16 @@ class GuideActivity : Activity() {
         main.removeCallbacks(showHelp)
         hideHint()
         hint.setOnClickListener(null)
-        next.text = "Next"
-        paintNext()
+        // The pass beat, all at once: the title becomes the success line with a pop and a check that draws in, the chapter steps
+        // forward with a glow, Skip turns into a filled Next with one pulse, and the phone celebrates. Nothing else moves.
         haptics.celebrate()
-        keys.celebrate()
-        // Frozen until Next: the title is the success line with an orange check, the instruction what was learned.
+        morphNext()
         val step = flow.step
         markPassed(step)
         showSuccess(reaction ?: step.done)
         val said = praise ?: if (step.id == "symgroups") groupsPraise(flow.counted) else step.praise
-        if (said.isNotEmpty()) swapIn(body, said, ENTER_STAGGER_MILLIS)
-        paintSegments(flow.stepIndex)
+        if (said.isNotEmpty()) body.text = said
+        paintSegments(flow.stepIndex, advancing = true)
         settledPraise = said
         step.rain?.let { effects.burst(it, RAIN_PIECES) }
         // Done in a way that does the next slide too: it opens, done.
@@ -2656,23 +2748,76 @@ class GuideActivity : Activity() {
         main.removeCallbacks(settleReaction)
     }
 
-    /** The success line, in the title's place for good, with a small orange check, and a small pop from its corner. */
+    /**
+     * The success line, in the title's place until Next: the old title fades, the new one comes in a little big and settles, and
+     * then its orange check draws itself in.
+     */
     private fun showSuccess(text: String) {
-        title.animate().cancel()
-        title.text = SpannableStringBuilder(text).apply {
+        val check = CheckSpan(GuideColours.ORANGE).apply { progress = if (GuideMotion.enabled) 0f else 1f }
+        val line = SpannableStringBuilder(text).apply {
+            append(" ")
             val start = length
-            append(" ✓")
-            setSpan(ForegroundColorSpan(GuideColours.ORANGE), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            setSpan(RelativeSizeSpan(CHECK_SIZE), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            append("✓")
+            setSpan(check, start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
+        title.animate().cancel()
         title.translationX = 0f
-        title.pivotX = 0f
-        title.pivotY = title.height.toFloat()
-        title.alpha = 0f
-        title.scaleX = REACTION_FROM
-        title.scaleY = REACTION_FROM
-        title.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(REACTION_IN_MILLIS)
-            .setInterpolator(OvershootInterpolator(REACTION_OVERSHOOT)).start()
+        if (!GuideMotion.enabled) {
+            title.text = line
+            title.alpha = 1f
+            title.scaleX = 1f
+            title.scaleY = 1f
+            return
+        }
+        title.animate().alpha(0f).setStartDelay(0).setDuration(SUCCESS_OUT_MILLIS).withEndAction {
+            title.text = line
+            title.pivotX = 0f
+            title.pivotY = title.height / 2f
+            title.scaleX = SUCCESS_POP
+            title.scaleY = SUCCESS_POP
+            title.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(SUCCESS_IN_MILLIS)
+                .setInterpolator(android.view.animation.DecelerateInterpolator()).withEndAction {
+                    ValueAnimator.ofFloat(0f, 1f).apply {
+                        duration = CHECK_MILLIS
+                        addUpdateListener {
+                            check.progress = it.animatedFraction
+                            title.invalidate()
+                        }
+                        start()
+                    }
+                }.start()
+        }.start()
+    }
+
+    /** Skip turns into a filled orange Next: the outline fills in, the words turn dark, and the pill gives one pulse. */
+    private fun morphNext() {
+        next.text = "Next"
+        if (!GuideMotion.enabled || tone != GuideTone.Ink) {
+            paintNext()
+            return
+        }
+        val strong = GuideColours.CREAM
+        val pill = GradientDrawable().apply { cornerRadius = Radii.px(resources, OFFER_RADIUS) }
+        next.background = pill
+        ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = MORPH_MILLIS
+            addUpdateListener {
+                val t = it.animatedFraction
+                pill.setColor(GuideMotion.faded(GuideColours.ORANGE, t))
+                pill.setStroke(dp(1).coerceAtLeast(2), GuideMotion.blend(GuideMotion.faded(strong, NEXT_WAITING), GuideColours.ORANGE, t))
+                next.setTextColor(GuideMotion.blend(GuideMotion.faded(strong, NEXT_WAITING), GuideColours.INK, t))
+            }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    paintNext()
+                    next.animate().cancel()
+                    next.animate().scaleX(NEXT_PULSE).scaleY(NEXT_PULSE).setDuration(PULSE_MILLIS / 2).withEndAction {
+                        next.animate().scaleX(1f).scaleY(1f).setDuration(PULSE_MILLIS / 2).start()
+                    }.start()
+                }
+            })
+            start()
+        }
     }
 
     private fun nextPressed() {
@@ -3068,6 +3213,14 @@ class GuideActivity : Activity() {
         private const val CHIP_IN_MILLIS = 220L
         private const val CHIP_OUT_MILLIS = 180L
         private const val CHECK_SIZE = .7f
+        /** The pass beat: the old title's fade, the success line's pop from this size, its check, and the pill's morph and pulse. */
+        private const val SUCCESS_OUT_MILLIS = 90L
+        private const val SUCCESS_IN_MILLIS = 250L
+        private const val SUCCESS_POP = 1.08f
+        private const val CHECK_MILLIS = 220L
+        private const val MORPH_MILLIS = 220L
+        private const val PULSE_MILLIS = 240L
+        private const val NEXT_PULSE = 1.12f
         /** The field's fill on ink, and how grey the ghost is, as in the approved frame. */
         private const val FIELD_FILL = .08f
         private const val GHOST_ALPHA = .38f
@@ -3169,6 +3322,7 @@ class GuideActivity : Activity() {
         private const val LINE = 5f
         private const val SEGMENT_HEIGHT = 4
         private const val SEGMENT_OFF = .25f
+        private const val SEGMENT_GLOW = 4
         /** Below this much height the screen is too short for the drawing of the keys. */
         private const val COMPACT_HEIGHT = 240
         /** The drawing's height against its width, and against the room there is. */

@@ -845,10 +845,8 @@ class AtlasIme : InputMethodService() {
         words.words = barWords
         words.showSuggestions = showSuggestions()
         showModifiers()
-        val exact = ExactBar(this, ::exactChip, ::exactBarKey, ::typeClip, ::expandExactBar)
+        val exact = ExactBar(this, ::exactChip, ::exactBarKey, ::typeClip) {}
         exactBar = exact
-        // With the bar folded to its line, a touch on the line brings it back.
-        words.setOnClickListener { if (field.exact) expandExactBar() }
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(keys)
@@ -926,10 +924,8 @@ class AtlasIme : InputMethodService() {
         updateOverlay()
         if (!restarting) {
             sticky.clear()
-            exactFolded = false
             clipTyping = null
         }
-        waitToFoldExactBar()
         updateExactBar()
         hold.started(info.packageName, editing)
         if (!statusReported) {
@@ -1464,8 +1460,6 @@ class AtlasIme : InputMethodService() {
 
     /** Android calls this when you tap the field, so the tap also brings the strip back after Back. */
     override fun onShowInputRequested(flags: Int, configChange: Boolean): Boolean {
-        // A tap on the field brings exact typing's bar back.
-        if (field.exact) expandExactBar()
         if (field.exact || currentInputEditorInfo?.inputType == EditorInfo.TYPE_NULL)
             logExact("show asked by ${currentInputEditorInfo?.packageName} editing $editing")
         hiddenByBack = false
@@ -2202,7 +2196,6 @@ class AtlasIme : InputMethodService() {
             return true
         }
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) return super.onKeyDown(keyCode, event)
-        if (field.exact && (Modifiers.isModifier(keyCode) || modifiers.isCtrl(keyCode))) expandExactBar()
         typedInField = true
         if (touchpad.isGestureKey(event)) return true
         // Keys like volume reach the keyboard too, but they are not typing.
@@ -2540,18 +2533,14 @@ class AtlasIme : InputMethodService() {
     private var shownShift = Modifiers.Level.Off
     private var shownAlt = Modifiers.Level.Off
 
-    /**
-     * Exact typing's own bar: half the strip, worked by touch. See [ExactBar]. After [EXACT_IDLE_MILLIS] with no modifier on it
-     * folds to the strip's line, and a modifier or a touch on the line brings it back. It follows the settings that hide the bar.
-     */
+    /** Exact typing's own bar: half the strip, worked by touch, always up. See [ExactBar]. It follows the settings that hide the bar. */
     private var exactBar: ExactBar? = null
     private val sticky = ExactTyping.Sticky()
-    private var exactFolded = false
     private var clipTyping: Runnable? = null
 
     private fun updateExactBar() {
         val bar = exactBar ?: return
-        val shown = editing && field.exact && barAllowed() && !exactFolded && !panelOpen
+        val shown = editing && field.exact && barAllowed() && !panelOpen
         bar.visibility = if (shown) View.VISIBLE else View.GONE
         if (!shown) return
         bar.show { key ->
@@ -2568,27 +2557,6 @@ class AtlasIme : InputMethodService() {
                 else -> ExactTyping.Level.Off
             }
         }
-    }
-
-    private val foldExactBar = Runnable {
-        if (sticky.any || modifiers.shift != Modifiers.Level.Off || modifiers.alt != Modifiers.Level.Off || modifiers.ctrlHeld) {
-            waitToFoldExactBar()
-            return@Runnable
-        }
-        exactFolded = true
-        updateExactBar()
-    }
-
-    private fun waitToFoldExactBar() {
-        main.removeCallbacks(foldExactBar)
-        if (field.exact) main.postDelayed(foldExactBar, EXACT_IDLE_MILLIS)
-    }
-
-    private fun expandExactBar() {
-        if (!field.exact) return
-        exactFolded = false
-        updateExactBar()
-        waitToFoldExactBar()
     }
 
     /** A tap on a chip turns it on for the next key, or off; a long press locks it. */
@@ -2726,8 +2694,6 @@ class AtlasIme : InputMethodService() {
         /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"
         private const val SMART_LAUNCHER = "ginlemon.flowerfree"
-        /** How long exact typing's bar stays up with no modifier on before it folds to a line. */
-        private const val EXACT_IDLE_MILLIS = 4000L
         /** Characters of a typed clip sent each frame. */
         private const val CLIP_CHUNK = 40
         /** Characters read before the cursor to tell a sentence start. A sentence ends within a few spaces of the next one. */

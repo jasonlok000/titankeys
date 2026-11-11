@@ -20,7 +20,7 @@ internal class ExactBar(
     private val chip: (ExactTyping.BarKey, Boolean) -> Unit,
     private val key: (Int) -> Unit,
     private val typeClip: () -> Unit,
-    /** Any touch on the bar, which keeps it up. */
+    /** Any touch on the bar. */
     private val touched: () -> Unit,
 ) : LinearLayout(context) {
     private val density = resources.displayMetrics.density

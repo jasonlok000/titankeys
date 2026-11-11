@@ -5,6 +5,9 @@ import com.atlas.keyboard.KeyboardEvent.Copied
 import com.atlas.keyboard.KeyboardEvent.CursorStarted
 import com.atlas.keyboard.KeyboardEvent.DeleteHoldStarted
 import com.atlas.keyboard.KeyboardEvent.DoubleTapped
+import com.atlas.keyboard.KeyboardEvent.EmptyKey
+import com.atlas.keyboard.KeyboardEvent.Released
+import com.atlas.keyboard.KeyboardEvent.TwoTapsAbove
 import com.atlas.keyboard.KeyboardEvent.Moved
 import com.atlas.keyboard.KeyboardEvent.DeletedWord
 import com.atlas.keyboard.KeyboardEvent.FieldChanged
@@ -605,6 +608,10 @@ private fun isLetter(code: Int) = code in 29..54
 private const val KEY_DEL = 67
 private const val KEY_SPACE = 62
 private const val KEY_ENTER = 66
+/** Left and right Alt. */
+private val ALT_KEYS = setOf(57, 58)
+/** A steer that moves the cursor this far is no nudge. */
+private const val CURSOR_TRAVEL = 3
 /** U, I, O, J, K and L: the keys that pick the word menu's buttons. */
 private val MENU_KEYS = setOf(49, 37, 43, 38, 39, 40)
 /** The emoji that the symbols chapter has you find. */
@@ -903,18 +910,28 @@ internal val GUIDE_STEPS = listOf(
                 when {
                     event is CursorStarted && !event.words -> GuideVerdict.Done
                     event is CursorStarted -> roast("One tap too many. Counting is hard.", "Two taps, the second one held.")
-                    event is DoubleTapped -> roast("You lifted. Read the instructions, genius.", "Tap twice and keep your finger down on the second tap.")
+                    event is DoubleTapped || event is TwoTapsAbove ->
+                        roast("You lifted. Read the instructions, genius.", "Tap twice and keep your finger down on the second tap.")
                     event is Recognised && event.words.isNotEmpty() -> roast("That typed a word. Not the plan.", "Quick, light taps on Space or just above it.")
                     else -> GuideVerdict.Wait
                 }
             },
             GuideStage("Now slide left or right. The cursor follows.") { event ->
                 when {
-                    // Any movement passes: a nudge is a steer too.
-                    event is FieldChanged -> {
-                        if (mark < 0) mark = event.start
-                        if (event.start != mark || event.end != event.start) GuideVerdict.Done else GuideVerdict.Wait
+                    // A real steer passes as it goes. A nudge passes too, with its own line, once the finger lifts.
+                    event is FieldChanged -> when {
+                        mark < 0 -> {
+                            mark = event.start
+                            GuideVerdict.Wait
+                        }
+                        abs(event.start - mark) >= CURSOR_TRAVEL || event.end != event.start -> GuideVerdict.Done
+                        else -> {
+                            if (event.start != mark) used = 1
+                            GuideVerdict.Wait
+                        }
                     }
+                    event is Moved && event.lifted && used == 1 ->
+                        counts("That's a nudge, not a steer, but ok.", "Slide further from the middle next time.")
                     event is Moved && event.lifted -> roast("Held it, then chickened out.", "Tap twice again, keep it down, then slide.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
@@ -932,6 +949,9 @@ internal val GUIDE_STEPS = listOf(
         title = "Pick a word. Any word.",
         stages = listOf(GuideStage("Tap three times, quickly, on Space or just above it, and lift each time.") { event ->
             when {
+                // Two taps on Space pick the word at the cursor, which counts.
+                event is DoubleTapped && event.taps == 2 -> counts("Fine, that works too. Overachiever.", "It counts. Press Next.")
+                event is TwoTapsAbove -> roast("Two taps up there do nothing. On purpose.", "Tap three times, lifting each time.")
                 event is FieldChanged && event.end > event.start -> GuideVerdict.Done
                 event is CursorStarted -> roast("That's steering, or selecting. The keyboard is confused, and so are we.",
                     "Three quick taps, lifting each time.")
@@ -990,6 +1010,13 @@ internal val GUIDE_STEPS = listOf(
             GuideStage("Keep holding Alt and press the key with $ in its corner.") { event ->
                 when {
                     typedSymbol(event, "$") -> GuideVerdict.Done
+                    event is Pushed && isLetter(event.code) -> {
+                        armed = true
+                        GuideVerdict.Wait
+                    }
+                    // Alt let go before any key: it waits for one key, which works too.
+                    event is Released && event.code in ALT_KEYS && !armed ->
+                        roast("Fine, that works too. Alt waits for one key.", "Press the key with $ in its corner.")
                     otherSymbol(event, "$") -> roast("That's not $. Money's not your thing, huh.", "Hold Alt and press the key with $ in its corner.")
                     event is ModifierState && event.alt == Level.Locked ->
                         roast("Locked it. Commitment, finally.", "Press the key with $ in its corner. Press Alt again to let go.")
@@ -1017,6 +1044,15 @@ internal val GUIDE_STEPS = listOf(
                 event is ModifierState && event.alt != Level.Off -> {
                     armed = true
                     GuideVerdict.Wait
+                }
+                // A letter let go before it turned into its symbol.
+                event is Pushed && isLetter(event.code) -> {
+                    mark = event.code
+                    GuideVerdict.Wait
+                }
+                event is Released && event.code == mark && !armed -> {
+                    mark = -1
+                    roast("Too quick. Hold it like a grudge.", "Hold the key with @ in its corner a bit longer.")
                 }
                 typedSymbol(event, "@") && armed -> counts("Old habits.", "It counts. Next time, just hold the key.")
                 typedSymbol(event, "@") -> GuideVerdict.Done
@@ -1047,6 +1083,7 @@ internal val GUIDE_STEPS = listOf(
                 when {
                     typedSymbol(event, "&") -> GuideVerdict.Done
                     otherSymbol(event, "&") -> roast("Not &. Read, then type.", "Press Sym and find &.", stage = 0)
+                    event is EmptyKey -> roast("That one's empty. Like this joke.", "Pick a key that shows a symbol.")
                     panel(event, Panel.Emoji) -> roast("Emoji already? Patience.", "Press Sym to close them, then press it once.")
                     panel(event, Panel.Closed) -> roast("Just looking? Window shopper.", "Press Sym again and find &.", stage = 0)
                     else -> GuideVerdict.Wait
@@ -1156,6 +1193,11 @@ internal val GUIDE_STEPS = listOf(
                     roast("That's copy. V for paste. Nobody knows why it's V.", "Hold fn and press V.")
                 grew(event) && (event as FieldChanged).text.length - stageLength > 2 ->
                     roast("That's not ours. Ours is better.", "Hold fn and press V.")
+                // The slide starts with a word selected: a cursor alone means it's gone.
+                event is FieldChanged && event.start == event.end && mark != 1 -> {
+                    mark = 1
+                    roast("Lost the selection. Classic.", "Paste anyway. It goes where the cursor is.")
+                }
                 else -> GuideVerdict.Wait
             }
         }),

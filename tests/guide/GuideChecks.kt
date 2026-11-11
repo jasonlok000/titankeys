@@ -9,6 +9,9 @@ import com.atlas.keyboard.KeyboardEvent.CursorStarted
 import com.atlas.keyboard.KeyboardEvent.DeleteHoldStarted
 import com.atlas.keyboard.KeyboardEvent.DeletedWord
 import com.atlas.keyboard.KeyboardEvent.DoubleTapped
+import com.atlas.keyboard.KeyboardEvent.EmptyKey
+import com.atlas.keyboard.KeyboardEvent.Released
+import com.atlas.keyboard.KeyboardEvent.TwoTapsAbove
 import com.atlas.keyboard.KeyboardEvent.FieldChanged
 import com.atlas.keyboard.KeyboardEvent.HeldSymbol
 import com.atlas.keyboard.KeyboardEvent.ModifierState
@@ -36,7 +39,7 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "backspace" to listOf(Pushed(KEY_DEL)),
     "flick" to listOf(DeletedWord(held = false)),
     "hold" to listOf(DeleteHoldStarted, DeletedWord(held = true)),
-    "steer" to listOf(CursorStarted(false), FieldChanged("on and on ", 4, 4), FieldChanged("on and on ", 3, 3)),
+    "steer" to listOf(CursorStarted(false), FieldChanged("on and on ", 9, 9), FieldChanged("on and on ", 4, 4)),
     "selectword" to listOf(FieldChanged("on and on ", 3, 6)),
     "selectmore" to listOf(CursorStarted(true), FieldChanged("on and on ", 0, 9)),
     "alt" to listOf(altOn, FieldChanged("$", 1, 1)),
@@ -203,7 +206,9 @@ private fun oneInstructionAtATime() {
     same(paste.step.clip, PASTE_TEXT, "The paste lesson puts something stupid on the clipboard")
     same(paste.step.preselect, true, "and starts with a word selected, so the paste goes in its place")
     same(paste.step.done, "Yes, we know.", "with a line that says so")
-    same(paste.event(FieldChanged("Paste over", 10, 10)), GuideVerdict.Wait, "Nothing pasted yet")
+    same((paste.event(FieldChanged("Paste over", 10, 10)) as GuideVerdict.Hint).title, "Lost the selection. Classic.",
+        "The selected word lost, so the paste goes where the cursor is")
+    same(paste.event(FieldChanged("Paste ove", 9, 9)), GuideVerdict.Wait, "It says so once")
     same(paste.event(FieldChanged("Paste $PASTE_TEXT", 19, 19)), GuideVerdict.Done, "The paste finishes it")
 
     val clips = GuideFlow({ GuideSettings() })
@@ -408,7 +413,8 @@ private fun scenarios() {
 
     val steer = GuideFlow({ GuideSettings() })
     steer.start("steer")
-    same(title(steer.event(DoubleTapped)).startsWith("You lifted"), true, "Two taps that lift")
+    same(title(steer.event(DoubleTapped(2))).startsWith("You lifted"), true, "Two taps that lift")
+    same(title(steer.event(TwoTapsAbove)).startsWith("You lifted"), true, "Two taps above Space that lift")
     same(title(steer.event(CursorStarted(true))).startsWith("One tap too many"), true, "Three taps")
     same(steer.event(CursorStarted(false)), GuideVerdict.Stage(1), "Two taps, the second held")
     same(steer.event(Moved(0f, lifted = true)).let { it is GuideVerdict.Hint && it.stage == 0 }, true, "Held, then let go")
@@ -433,6 +439,32 @@ private fun scenarios() {
     same(symmain.event(keys(Panel.Symbols)), GuideVerdict.Stage(1), "Sym once, then &")
     same(title(symmain.event(keys(Panel.Closed))).startsWith("Just looking"), true, "Closed without typing")
 
+    val word = GuideFlow({ GuideSettings() })
+    word.start("selectword")
+    same(title(word.event(TwoTapsAbove)).startsWith("Two taps up there"), true, "Two taps above Space pick nothing")
+    same(word.event(DoubleTapped(3)), GuideVerdict.Wait, "Three taps wait for the word to be picked")
+    same(word.event(DoubleTapped(2)).let { it is GuideVerdict.Hint && it.passes }, true, "Two taps on Space pick a word too, and count")
+
+    val altLetGo = GuideFlow({ GuideSettings() })
+    altLetGo.start("alt")
+    altLetGo.event(altOn)
+    same(title(altLetGo.event(Released(57))).startsWith("Fine, that works too"), true, "Alt let go before a key waits for one key")
+    val altHeld = GuideFlow({ GuideSettings() })
+    altHeld.start("alt")
+    altHeld.event(altOn)
+    altHeld.event(Pushed(KEY_A))
+    same(altHeld.event(Released(57)), GuideVerdict.Wait, "Alt let go after a key is a hold")
+
+    val quick = GuideFlow({ GuideSettings() })
+    quick.start("holdsym")
+    quick.event(Pushed(KEY_Q))
+    same(title(quick.event(Released(KEY_Q))).startsWith("Too quick"), true, "A letter let go before its symbol")
+
+    val empty = GuideFlow({ GuideSettings() })
+    empty.start("symmain")
+    empty.event(keys(Panel.Symbols))
+    same(title(empty.event(EmptyKey)).startsWith("That one's empty"), true, "A key with nothing on it")
+
     val settings = GuideFlow({ GuideSettings() })
     settings.start("swipe")
     same(title(settings.event(ModifierState(Level.Off, Level.Off, Panel.Settings, false))), "Settings? Nobody asked.", "Quick settings opened")
@@ -446,7 +478,14 @@ private fun theCursorHasToMove() {
     same(flow.event(FieldChanged("on and on", 4, 4)), GuideVerdict.Wait, "A cursor change before the drag starts means nothing")
     same(flow.event(CursorStarted(false)), GuideVerdict.Stage(1), "The taps start the cursor, so sliding is next")
     same(flow.event(FieldChanged("on and on", 4, 4)), GuideVerdict.Wait, "The first change sets the mark")
-    same(flow.event(FieldChanged("on and on", 3, 3)), GuideVerdict.Done, "Any movement is a steer, even a nudge")
+    same(flow.event(FieldChanged("on and on", 3, 3)), GuideVerdict.Wait, "A nudge waits for the lift")
+    same(flow.event(Moved(0f, lifted = true)).let { it is GuideVerdict.Hint && it.passes && it.title!!.startsWith("That's a nudge") }, true,
+        "A nudge counts, with its own line")
+    val far = GuideFlow({ GuideSettings() })
+    far.start("steer")
+    far.event(CursorStarted(false))
+    far.event(FieldChanged("on and on", 9, 9))
+    same(far.event(FieldChanged("on and on", 2, 2)), GuideVerdict.Done, "A real steer finishes it as it goes")
 
     val select = GuideFlow({ GuideSettings() })
     select.start("selectword")

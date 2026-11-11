@@ -2,6 +2,7 @@ package com.atlas.keyboard
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.view.KeyEvent
 
@@ -10,7 +11,7 @@ object AppShortcuts {
     /** No hyper key, so no key opens a shortcut. */
     const val NONE = KeyEvent.KEYCODE_UNKNOWN
 
-    class App(val packageName: String, val name: String)
+    class App(val packageName: String, val name: String, val activity: ActivityInfo)
 
     private fun preferences(context: Context) = context.getSharedPreferences("app_shortcuts", Context.MODE_PRIVATE)
 
@@ -68,7 +69,7 @@ object AppShortcuts {
         val manager = context.packageManager
         val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         return manager.queryIntentActivities(launcher, PackageManager.ResolveInfoFlags.of(0))
-            .map { App(it.activityInfo.packageName, it.loadLabel(manager).toString()) }
+            .map { App(it.activityInfo.packageName, it.loadLabel(manager).toString(), it.activityInfo) }
             .distinctBy { it.packageName }
             .sortedBy { it.name.lowercase() }
     }

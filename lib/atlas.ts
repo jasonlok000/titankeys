@@ -50,7 +50,8 @@ export type State = {
 
 export type Shortcut = { letter: string; app: string; name: string };
 
-export type App = { app: string; name: string };
+/** An app with a launcher icon. `icon` is a picture of it, or null when it cannot be drawn. */
+export type App = { app: string; name: string; icon: string | null };
 
 /** A key pressed to choose the hyper key, with why it cannot be one. */
 export type HyperKeyPress = { code: number; label: string; problem: string | null };

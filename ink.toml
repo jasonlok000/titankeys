@@ -3,7 +3,8 @@ package = "com.atlas"
 version = "1.4.0"
 version_code = 57
 # Row images need native decoding; Ink's detection misses them with preserved symlinks.
-capabilities = ["image"]
+# App icons on Open apps are managed files, which need "files". It adds no permissions.
+capabilities = ["image", "files"]
 
 [signing]
 keystore = "signing/atlas.keystore"

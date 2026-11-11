@@ -6,6 +6,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -28,6 +30,8 @@ import com.atlas.keyboard.Trace
 import com.atlas.keyboard.TouchpadPreview
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.security.MessageDigest
 
 internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> =
     mapOf("atlas" to AtlasAdapter(activity))
@@ -222,9 +226,18 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     "null"
                 }
                 "apps" -> {
-                    val apps = JSONArray()
-                    for (app in AppShortcuts.apps(activity)) apps.put(JSONObject().put("app", app.packageName).put("name", app.name))
-                    apps.toString()
+                    // Drawing the icons takes a moment the first time, so it stays off the main thread.
+                    Thread {
+                        try {
+                            val apps = JSONArray()
+                            for (app in AppShortcuts.apps(activity))
+                                apps.put(JSONObject().put("app", app.packageName).put("name", app.name).put("icon", icon(app) ?: JSONObject.NULL))
+                            complete(NativeResult.Success(apps.toString()))
+                        } catch (error: Exception) {
+                            operationResult(error.message ?: "Could not list the apps", complete)
+                        }
+                    }.start()
+                    null
                 }
                 else -> throw IllegalArgumentException("Unknown Atlas operation: $operation")
             }
@@ -300,6 +313,30 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         return get.invoke(null, "persist.sys.scroll_assistant", "0") == "1"
     }
 
+    private val managedFiles by lazy { InkManagedFiles(activity) }
+
+    /** The app's icon as the home screen shows it, saved as a picture the settings can show. Null when it cannot be drawn. */
+    private fun icon(app: AppShortcuts.App): String? = try {
+        val id = "app-icon-" + MessageDigest.getInstance("SHA-1").digest(app.activity.name.toByteArray())
+            .joinToString("") { "%02x".format(it) }.take(32)
+        val directory = File(activity.filesDir, "ink-files/app-icons").apply { mkdirs() }
+        val file = File(directory, "$id.png")
+        val updated = activity.packageManager.getPackageInfo(app.packageName, 0).lastUpdateTime
+        if (!file.isFile || file.lastModified() < updated) {
+            val drawable = app.activity.loadIcon(activity.packageManager)
+            val bitmap = Bitmap.createBitmap(ICON_PIXELS, ICON_PIXELS, Bitmap.Config.ARGB_8888)
+            drawable.setBounds(0, 0, ICON_PIXELS, ICON_PIXELS)
+            drawable.draw(Canvas(bitmap))
+            val partial = File(directory, "$id.png.partial")
+            partial.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            check(partial.renameTo(file)) { "Icon could not be saved" }
+        }
+        if (managedFiles.open(id) == null) managedFiles.adopt(file, "image/png", id = id, width = ICON_PIXELS, height = ICON_PIXELS)
+        "ink-file://$id"
+    } catch (error: Exception) {
+        null
+    }
+
     private fun installedVersion(): String = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
 
     /** Release notes show once after each update. A fresh install has nothing new, so it starts as seen. */
@@ -342,3 +379,5 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
 }
 
 private const val SEEN_NOTES = "seen_release_notes"
+/** Icons show at 50 points; this keeps them sharp at the Titan's density. */
+private const val ICON_PIXELS = 144

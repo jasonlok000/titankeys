@@ -39,3 +39,16 @@ test("a short preview is laid out to the strip's width, so it is centred in sigh
   const place = block(marquee, "private fun place()");
   expect(place.indexOf("setHorizontallyScrolling(long)")).toBeLessThan(place.indexOf("scrollTo(0, 0)"));
 });
+
+test("five clips to a page, each four keys wide; Sym's ✕, the page, Clear and Pin stay on their keys", () => {
+  const history = readFileSync(join(keyboard, "ClipboardHistory.kt"), "utf8");
+  expect(history).toContain("const val PER_PAGE = 5");
+  // No field past the fifth: the bottom row's right half, B, N and M, by Sym, holds none.
+  expect(panel).toMatch(/index \* 2 \+ half < ClipboardHistory\.PER_PAGE/);
+  expect(history).toMatch(/takeIf \{ it < PER_PAGE \}/);
+  // The keys around the clips keep their jobs.
+  const label = block(panel, "private fun label(key: String)");
+  expect(label).toContain("Layout.BACKSPACE -> context.getString(R.string.clipboard_clear)");
+  expect(label).toContain("Layout.ENTER ->");
+  expect(label).toContain("showsPosition(key)");
+});

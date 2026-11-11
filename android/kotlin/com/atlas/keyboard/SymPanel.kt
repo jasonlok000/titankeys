@@ -196,7 +196,7 @@ class SymPanel(
         for ((index, row) in Layout.rows.take(3).withIndex()) grid.addView(LinearLayout(context).apply {
             for ((column, key) in row.withIndex()) {
                 val half = ClipboardHistory.halfAt(index, column)
-                if (half != null && ClipboardHistory.firstColumn(index, half) == column) {
+                if (half != null && index * 2 + half < ClipboardHistory.PER_PAGE && ClipboardHistory.firstColumn(index, half) == column) {
                     val field = clipFields[index * 2 + half]
                     addView(field.frame, LayoutParams(0, LayoutParams.MATCH_PARENT, ClipboardHistory.width(index, half).toFloat()).apply {
                         setMargins(dp(2), dp(3), dp(2), dp(3))

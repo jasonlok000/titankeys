@@ -593,6 +593,12 @@ internal class GuideStep(
      * the slide is done. [ANY_SYMBOL] takes any.
      */
     val symbol: String? = null,
+    /** What the field's grey ghost shows ahead of the cursor in place of [text], word for word, such as a typo in every word. */
+    val ghost: String = "",
+    /** What this slide unlocks on the keyboard, in the guide's field only, besides letters, Backspace and Space. Null locks nothing. */
+    val lessons: Set<GuideLesson>? = null,
+    /** The bar shows its side words. False shows only the middle one. */
+    val sides: Boolean = true,
     /** What the line under the title says once the slide is done: about what you just did, never the next instruction. */
     val praise: String = "",
     /** The slide offers to share swipes: its offer opens the disclosure, and an answer finishes it. */
@@ -612,8 +618,10 @@ private const val KEY_ENTER = 66
 private val ALT_KEYS = setOf(57, 58)
 /** A steer that moves the cursor this far is no nudge. */
 private const val CURSOR_TRAVEL = 3
-/** U, I, O, J, K and L: the keys that pick the word menu's buttons. */
-private val MENU_KEYS = setOf(49, 37, 43, 38, 39, 40)
+/** I, O, P, K and L: the keys that pick the word menu's buttons. */
+private val MENU_KEYS = setOf(37, 43, 44, 39, 40)
+/** Swiped words that pass the swipe slide. */
+private const val SWIPES_TO_PASS = 3
 /** The emoji that the symbols chapter has you find. */
 internal const val CLOWN = "🤡"
 
@@ -627,10 +635,19 @@ private fun otherGroup(event: KeyboardEvent) = event is GroupPicked || event is 
 /** A scenario: [title] and [text] take the slide's place until the user is back on track. [stage] moves the slide too. */
 internal fun roast(title: String, text: String, stage: Int? = null) = GuideVerdict.Hint(text, title, stage)
 
+/** A chip over the instruction, for a real mistake: the slide's own title and instruction stay. */
+internal fun chip(text: String) = GuideVerdict.Hint(text)
+
 /** A scenario that counts: the slide is done, with [title] as the line that lands and [text] under it. */
 internal fun counts(title: String, text: String) = GuideVerdict.Hint(text, title, passes = true)
 
 /** The Typing chapter's one text box, across its four slides. */
+/**
+ * The first sentence of [TYPING_TEXT] with a small typo in every word that autocorrect really fixes, checked against the engine
+ * word by word. No typo of "typos" is fixed, so it stays right.
+ */
+internal const val TYPING_TYPOS = "Tihs keybaord fxies yuor typos, sp yuo cna kepe pretendign yuo nevr maek ayn."
+
 internal const val TYPING_TEXT = "This keyboard fixes your typos, so you can keep pretending you never make any. Swipe the words on the " +
     "same keys and lift after each one. When a swipe misses, the right word is one tap away on the bar. Hold a word on the bar to " +
     "judge it like you judge everyone else."
@@ -720,38 +737,38 @@ private fun otherSymbol(event: KeyboardEvent, symbol: String) =
 
 /** The guide's one list, from the owner's approved text (v3.1). Each slide's words, scenarios and check are together. */
 internal val GUIDE_STEPS = listOf(
-    // TYPING: one text box across the four slides, and the field carries on.
+    // TYPING, the reference chapter in the new layout: one running text with a grey ghost in the field, one line each for the
+    // title and the instruction, chips for real mistakes, and each slide locked to what it teaches.
     GuideStep(
         id = "type", chapter = GuideChapter.Typing,
         title = "Type like a normal person.",
-        stages = listOf(GuideStage("Type the text in the box. Make a typo, then press Space.") { event ->
+        stages = listOf(GuideStage("Make a typo, then press Space.", GuideCue.Spot(listOf(Layout.SPACE))) { event ->
             when {
                 event is KeyboardEvent.Fixed && event.isRealFix -> GuideVerdict.Done
-                event is KeyboardEvent.Fixed && event.typed != event.word ->
-                    roast("That's just a capital. It does that by itself.", "Type a word wrong, then Space, to see a real fix.")
-                event is KeyboardEvent.Fixed -> roast("Perfect spelling. Impressive. Annoying, but impressive.",
-                    "Type a word wrong on purpose, then press Space.")
-                event is Recognised && event.words.isNotEmpty() ->
-                    roast("Swiping already? That's the next slide, keen bean.", "Press the keys to type a word, with a typo. Then Space.")
+                event is KeyboardEvent.Fixed && event.typed != event.word -> chip("That's just a capital. Make a real typo.")
+                event is KeyboardEvent.Fixed -> chip("Perfect spelling. Annoying. Make a typo.")
                 event is Pushed && isLetter(event.code) -> {
                     armed = true
                     GuideVerdict.Wait
                 }
-                event is Pushed && event.code == KEY_SPACE && !armed -> roast("Nothing to fix. Yet.", "Type a word first. Ideally a wrong one.")
+                event is Pushed && event.code == KEY_SPACE && !armed -> chip("Nothing to fix. Yet. Type a word first.")
                 else -> GuideVerdict.Wait
             }
         }),
         done = "Fixed. Nobody saw a thing.",
         praise = "Space fixes typos. Keep typing if you like.",
         text = TYPING_TEXT,
-        cue = GuideCue.Free,
+        ghost = TYPING_TYPOS,
+        lessons = emptySet(),
+        sides = false,
         demo = GuideDemo.TypeSlip,
         bar = GuideBar.Fix,
     ),
     GuideStep(
         id = "swipe", chapter = GuideChapter.Typing,
-        title = "Type with one hand. We won't ask what the other one's doing.",
-        stages = listOf(GuideStage("Slide over the letters of the next word in the box without pressing. Lift at the end.") { event ->
+        // v3.1's "Type with one hand. We won't ask what the other one's doing." is two lines; this keeps its joke on one.
+        title = "One hand. We won't ask why.",
+        stages = listOf(GuideStage("Slide over the next grey word. Lift at the end.") { event ->
             when {
                 // The right word is on the bar after a miss. Tapping it does the next slide too.
                 event is Chosen && mark == 1 -> {
@@ -761,11 +778,13 @@ internal val GUIDE_STEPS = listOf(
                 event is Recognised && event.words.isNotEmpty() && expected.isNotEmpty() &&
                     GuideScript.letters(event.words.first()) != expected -> {
                     mark = 1
-                    roast("Missed. Good news: the next slide is about exactly that.", "Tap the right word on the bar.")
+                    chip("Close. Tap the right one on the bar.")
                 }
-                event is Recognised && event.words.isNotEmpty() -> GuideVerdict.Done
-                event is Tapped -> roast("That's a tap. Tapping is so slide one.", "Don't lift between letters. Slide from the first letter to the last.")
-                event is Pushed && isLetter(event.code) -> roast("You pressed it. Not what we asked for, but ok.", "Touch lightly and slide. No pressing.")
+                event is Recognised && event.words.isNotEmpty() -> {
+                    mark = -1
+                    if (++count >= SWIPES_TO_PASS) GuideVerdict.Done else GuideVerdict.Wait
+                }
+                event is Tapped -> chip("That's a tap. Slide, don't lift.")
                 else -> GuideVerdict.Wait
             }
         }),
@@ -774,65 +793,69 @@ internal val GUIDE_STEPS = listOf(
         text = TYPING_TEXT,
         cue = GuideCue.NextWord,
         needs = GuideNeed.SwipeTyping,
+        lessons = setOf(GuideLesson.Swipe, GuideLesson.BarTap),
         demo = GuideDemo.SwipeNext,
     ),
     GuideStep(
         id = "strip", chapter = GuideChapter.Typing,
         title = "Missed? We did that on purpose.",
         stages = listOf(
-            GuideStage("Swipe or type the next word. It'll come out wrong, on purpose.") { event ->
+            GuideStage("Swipe the next word. It'll come out wrong.") { event ->
                 when {
                     event is Recognised && event.words.isNotEmpty() -> GuideVerdict.Done
-                    event is Tapped -> roast("If you want to tap a keyboard, why did you even buy this phone?", "Swipe the word, or press its keys.")
+                    event is Tapped -> chip("That's a tap. Swipe the word.")
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Tap the right word on the bar. It's the one dancing.", GuideCue.Free) { event ->
+            GuideStage("Tap the right word. It's the one dancing.", GuideCue.Free) { event ->
                 when {
                     event is Chosen && (expected.isEmpty() || GuideScript.letters(event.word) == expected) -> GuideVerdict.Done
-                    event is Chosen -> roast("Not that one. It was literally dancing for you.",
-                        "Swipe or type the next word again, then tap the dancing one.", stage = 0)
-                    event is Recognised && event.words.isNotEmpty() ->
-                        roast("You just left it there? Forever? In your text?", "Tap the dancing word on the bar.")
+                    event is Chosen -> GuideVerdict.Hint("Not that one. It was dancing for you.", stage = 0)
+                    event is Recognised && event.words.isNotEmpty() -> chip("Tap the dancing word on the bar.")
                     event is DeletedWord || event is Pushed && event.code == KEY_DEL ->
-                        roast("The hard way. Works, sure.", "Try the lazy way: type the word again, then tap the dancing one.", stage = 0)
+                        GuideVerdict.Hint("The hard way. Swipe it again, then tap.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
-        done = "It stays wrong until you leave, because we're petty.",
+        // v3.1's "It stays wrong until you leave, because we're petty." is two lines.
+        done = "It stays wrong. We're petty.",
         praise = "Keep going if you like, or press Next.",
         text = TYPING_TEXT,
         cue = GuideCue.NextWord,
         needs = GuideNeed.SwipeTyping,
         nearMiss = true,
+        lessons = setOf(GuideLesson.Swipe, GuideLesson.BarTap),
         demo = GuideDemo.FixNext,
     ),
     GuideStep(
         id = "menu", chapter = GuideChapter.Typing,
-        title = "Judge a word like you judge everyone else.",
+        // v3.1's "Judge a word like you judge everyone else." is two lines.
+        title = "Judge a word. You judge everyone.",
         stages = listOf(
             GuideStage("Hold a word on the bar until its menu opens.") { event ->
                 when (event) {
                     is WordMenu -> GuideVerdict.Done
-                    is Chosen -> roast("That typed it. Commitment issues?", "Hold the word until the menu opens.")
+                    is Chosen -> chip("That typed it. Hold it instead.")
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Rest a finger on U, I or O to mark a button, then press that key. O closes it.") { event ->
+            GuideStage("Rest on I, O or P, then press it.") { event ->
                 when {
+                    // Save and Forget do nothing in the guide, and it says so. Any pick passes.
                     event is MenuPicked && (event.action == "Save" || event.action == "Forget") ->
-                        counts("Srsly? Relax. Thankfully we didn't actually save it.", "It's a guide. Nothing was saved or forgotten.")
+                        GuideVerdict.Hint("Relax. Nothing was saved.", passes = true)
                     event is MenuPicked -> GuideVerdict.Done
-                    event is Pushed && isLetter(event.code) && event.code !in MENU_KEYS ->
-                        roast("Wrong key. Do you read instructions??", "Rest on U, I or O to mark a button, then press that key.")
+                    event is Pushed && isLetter(event.code) && event.code !in MENU_KEYS -> chip("Wrong key. Rest on I, O or P.")
                     else -> GuideVerdict.Wait
                 }
             },
         ),
-        done = "Judged and dealt with. Brutal.",
-        praise = "U saves a word, I forgets it, O closes the menu.",
+        // The end of the chapter: its roast is this slide's success line.
+        done = "OK, you're not that dumb.",
+        praise = "I saves a word, O forgets it, P closes the menu.",
         text = TYPING_TEXT,
+        lessons = setOf(GuideLesson.Swipe, GuideLesson.BarTap, GuideLesson.BarHold),
         bar = GuideBar.Menu,
     ),
     // DELETE: each slide starts with the text box in the field, its end showing.

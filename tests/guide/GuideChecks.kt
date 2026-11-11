@@ -33,7 +33,7 @@ private const val KEY_DEL = 67
 /** The real things a person does, in the order of the guide. Each slide teaches one instruction at a time. */
 private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "type" to listOf(Pushed(KEY_A), Fixed("teh", "the")),
-    "swipe" to listOf(Recognised(listOf("this"))),
+    "swipe" to listOf(Recognised(listOf("this")), Recognised(listOf("keyboard")), Recognised(listOf("fixes"))),
     "strip" to listOf(Recognised(listOf("tp", "to")), Chosen("to")),
     "menu" to listOf(WordMenu("to"), MenuPicked("Close")),
     "backspace" to listOf(Pushed(KEY_DEL)),
@@ -84,6 +84,7 @@ fun main() {
     theStripOffersTheScriptsWord()
     stepsStartInTheRightMenu()
     wrongEventsDoNotFinish()
+    chapterOne()
     scenarios()
     theCursorHasToMove()
     settingsThatStepsNeed()
@@ -225,8 +226,9 @@ private fun oneInstructionAtATime() {
     menu.start("menu")
     same(menu.event(MenuPicked("Save")), GuideVerdict.Wait, "A pick before the menu opens means nothing")
     same(menu.event(WordMenu("to")), GuideVerdict.Stage(1), "The menu opens, so picking is next")
-    same(menu.event(Pushed(KEY_Q)).let { it is GuideVerdict.Hint && it.title!!.startsWith("Wrong key") }, true, "Q picks nothing, and the slide says so")
-    same(menu.event(MenuPicked("Save")).let { it is GuideVerdict.Hint && it.passes }, true, "Save counts, but nothing was saved")
+    same(menu.event(Pushed(KEY_Q)).let { it is GuideVerdict.Hint && it.text.startsWith("Wrong key") }, true, "Q picks nothing, and the slide says so")
+    same(menu.event(MenuPicked("Save")).let { it is GuideVerdict.Hint && it.passes && it.title == null && it.text == "Relax. Nothing was saved." },
+        true, "Save counts, with its chip and the slide's own success line")
 }
 
 /** On the slide about the bar the swipe always comes out wrong, so there is always a word to fix with one tap. */
@@ -357,6 +359,38 @@ private fun stepsStartInTheRightMenu() {
     same(byId.getValue("menu").bar, GuideBar.Menu, "The word menu shows a ghost hold on the bar, and the menu opening")
 }
 
+/** Chapter one, the reference slice: one-line titles, a typo in every grey word, and each slide unlocks only what it teaches. */
+private fun chapterOne() {
+    val typing = GUIDE_STEPS.filter { it.chapter == GuideChapter.Typing }
+    for (step in typing) {
+        // One line at one size: these fit the phone's width with the check after them.
+        for (line in listOf(step.title, step.done)) same(line.length <= TITLE_MOST, true, "\"$line\" is one line")
+        for (line in step.stages.map { it.text } + step.praise) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
+    }
+    same(typing.last().done, "OK, you're not that dumb.", "The chapter's roast is its last success line")
+    same(typing.map { it.lessons }, listOf(emptySet(), setOf(GuideLesson.Swipe, GuideLesson.BarTap),
+        setOf(GuideLesson.Swipe, GuideLesson.BarTap), setOf(GuideLesson.Swipe, GuideLesson.BarTap, GuideLesson.BarHold)),
+        "Each slide unlocks what it teaches, and keeps what was taught")
+    same(GUIDE_STEPS.filter { it.chapter != GuideChapter.Typing }.all { it.lessons == null }, true, "The other chapters lock nothing yet")
+    same(typing.map { it.sides }, listOf(false, true, true, true), "Only the first slide shows just the bar's middle word")
+    val typos = TYPING_TYPOS.split(' ')
+    val words = TYPING_TEXT.split(' ').take(typos.size)
+    same(typos.size, 14, "The first sentence, word for word")
+    for ((typo, word) in typos.zip(words)) {
+        // Only "typos" stays right: no typo of it is fixed.
+        same(typo == word, word == "typos,", "\"$typo\" has a typo of \"$word\"")
+        same(typo.takeLastWhile { !it.isLetter() }, word.takeLastWhile { !it.isLetter() }, "\"$typo\" keeps \"$word\"'s marks")
+    }
+    same(GUIDE_STEPS.first { it.id == "type" }.ghost, TYPING_TYPOS, "The first slide's ghost has the typos")
+    GuideHooks.lessons = setOf(GuideLesson.Swipe)
+    same(GuideHooks.allows(GuideLesson.Swipe) to GuideHooks.allows(GuideLesson.BarHold), true to false, "The lock lets through what's taught")
+    GuideHooks.lessons = null
+    same(GuideHooks.allows(GuideLesson.Symbols), true, "With no lock, everything works")
+}
+
+private const val TITLE_MOST = 33
+private const val LINE_MOST = 50
+
 private fun wrongEventsDoNotFinish() {
     val flow = GuideFlow({ GuideSettings() })
     same(flow.step.id, "type", "The guide starts with typing")
@@ -374,23 +408,24 @@ private fun wrongEventsDoNotFinish() {
 
 /** The owner's scenarios: what happens says so, in the slide's place, and some of it counts. */
 private fun scenarios() {
-    fun title(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.title.orEmpty()
+    // What a scenario says: its title, or the chip's text when it has no title.
+    fun title(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.let { it.title ?: it.text }.orEmpty()
     val type = GuideFlow({ GuideSettings() })
     same(title(type.event(Pushed(62))).startsWith("Nothing to fix"), true, "Space with nothing typed")
     type.event(Pushed(KEY_A))
     same(title(type.event(Fixed("the", "the"))).startsWith("Perfect spelling"), true, "A word typed right")
     same(title(type.event(Fixed("i", "I"))).startsWith("That's just a capital"), true, "Only a capital changed")
-    same(title(type.event(Recognised(listOf("this")))).startsWith("Swiping already"), true, "A swipe on the typing slide")
+    same(type.event(Recognised(listOf("this"))), GuideVerdict.Wait, "A swipe on the typing slide: the keyboard's lock stops it, not the slide")
     same(type.event(Fixed("teh", "the")), GuideVerdict.Done, "A real fix finishes it")
 
     val swipe = GuideFlow({ GuideSettings() })
     swipe.start("swipe")
-    same(title(swipe.event(Recognised(listOf("tp")), "to")).startsWith("Missed"), true, "A missed swipe says the next slide is about it")
+    same(title(swipe.event(Recognised(listOf("tp")), "to")), "Close. Tap the right one on the bar.", "A missed swipe points at the bar")
     same(swipe.event(Chosen("to"), "to"), GuideVerdict.Done, "The right word on the bar finishes it")
     same(swipe.jumps, true, "and does the next slide too")
     swipe.advance()
     same(swipe.step.id, "strip", "which opens next, done")
-    same(title(swipe.event(Tapped("A"))).startsWith("If you want to tap"), true, "A tap, with tap keys on")
+    same(title(swipe.event(Tapped("A"))), "That's a tap. Swipe the word.", "A tap, with tap keys on")
 
     val backspace = GuideFlow({ GuideSettings() })
     backspace.start("backspace")

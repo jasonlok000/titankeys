@@ -27,6 +27,8 @@ export type State = {
   suggestionBar: boolean;
   /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
   cursorControl: boolean;
+  /** A slide on the keys outside a text field turns on the keyboard light. */
+  touchLight: boolean;
   /** A swipe across the touchpad types a word. */
   swipeTyping: boolean;
   liftOff: boolean;
@@ -53,7 +55,7 @@ export type App = { app: string; name: string };
 /** A key pressed to choose the hyper key, with why it cannot be one. */
 export type HyperKeyPress = { code: number; label: string; problem: string | null };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autoPunctuation" | "suggestionBar" | "cursorControl" | "swipeTyping" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "appShortcuts" | "shortcutAnimation">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autoPunctuation" | "suggestionBar" | "cursorControl" | "touchLight" | "swipeTyping" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "appShortcuts" | "shortcutAnimation">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];

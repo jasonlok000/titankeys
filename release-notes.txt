@@ -7,7 +7,7 @@
 ## New
 - App shortcuts: Push the hyper key and a letter to open an app. Hold the hyper key, or push it and then push the letter in 1 second. To set the keys, open Settings and select Hyper key and Apps. To open apps with no animation, turn off Animations.
 - Shortcuts: Push and hold Alt, then push a letter. Z is undo. Y is redo. A selects all text. C is copy. X is cut. V is paste.
-- Keyboard light: When you slide your finger on the keys outside a text field, the keyboard light comes on.
+- Keyboard light: When you slide your finger on the keys outside a text field, the keyboard light comes on. To stop this, set Light keys on touch to off in Settings.
 
 ## Fixed
 - Notifications: When a notification shows at the top of the screen, your swipes go to the keyboard. Before, the notification got swipes that started on the top row of keys. Atlas must be on in Accessibility for this fix.

@@ -50,6 +50,15 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("cursor_control", enabled).apply();
     }
 
+    /** A slide on the keys outside a text field turns on the keyboard light. */
+    public static boolean touchLight(Context context) {
+        return preferences(context).getBoolean("touch_light", true);
+    }
+
+    public static void touchLight(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("touch_light", enabled).apply();
+    }
+
     public static boolean liftOffGrace(Context context) { return preferences(context).getBoolean("lift_off_grace", true); }
 
     public static void liftOffGrace(Context context, boolean enabled) {

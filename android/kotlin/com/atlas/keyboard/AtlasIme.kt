@@ -414,10 +414,10 @@ class AtlasIme : InputMethodService() {
     /**
      * Turns on the keyboard light for a touch outside a text field. The Titan lights the keys for a key press, or
      * when the keyboard reports an active window, so ask to show the keyboard: Atlas refuses, but the request still
-     * reports an active window. In a text field, the Titan keeps the light on by itself.
+     * reports an active window. In a text field, the Titan keeps the light on by itself. Settings can turn this off.
      */
     private fun light() {
-        if (!editing) requestShowSelf(0)
+        if (!editing && TypingSettings.touchLight(this)) requestShowSelf(0)
     }
 
     private fun traceCursor(samples: List<Sample>, ended: Boolean) {

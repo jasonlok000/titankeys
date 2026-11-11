@@ -24,6 +24,8 @@ export const guide: { title: string; rows: GuideRow[] }[] = [
     title: "Keys", rows: [
       { title: "Tap keys", text: "Touch these keys lightly to type them. Select the keys in Settings.",
         terms: ["light touch", "soft press", "touch to type", "no press", "without clicking", "tap to type", "brush", "sensitive keys", "touch keyboard"] },
+      { title: "Keyboard light", text: "Outside a text field, slide your finger on the keys to turn on the keyboard light. To stop this, set Light keys on touch to off in Settings.",
+        terms: ["backlight", "back light", "lights", "lit", "glow", "illuminate", "dark", "night", "see keys", "turn off light", "light comes on", "battery"] },
       { title: "Full stop", text: "Push the space bar two times.",
         terms: ["period", "dot", "point", "punctuation", "double space", "double tap space", "two spaces", "end sentence", "finish sentence", "auto punctuation"] },
       { title: "Shift and Alt", text: "Push one time for the next letter only. Push two times quickly to lock. Push again to unlock.",

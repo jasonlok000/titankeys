@@ -549,7 +549,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private fun distance(a: FloatArray, b: FloatArray) = hypot((b[0] - a[0]) * width, (b[1] - a[1]) * height)
 
     /**
-     * A soft patch over the part of the keys where the steer and select taps are easiest to land: from halfway down the
+     * A soft patch over the part of the keys where the steer and select taps are easiest to land: from the top of the
      * bottom letter row to as far down Space as the touchpad feels, as wide as the Space bar ([CursorGesture.inZone]).
      */
     private fun drawTapZone(canvas: Canvas) {

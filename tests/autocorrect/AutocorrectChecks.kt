@@ -8,6 +8,7 @@ import com.atlas.engine.SwipeTyping
 import com.atlas.keyboard.Composer
 import com.atlas.keyboard.Editor
 import com.atlas.keyboard.EnterKey
+import com.atlas.keyboard.Expansions
 import com.atlas.keyboard.Field
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Words
@@ -37,12 +38,16 @@ private val near: (Char, Char) -> Boolean = { a, b -> KeyNeighbours.near(a, b) }
 
 /** The word list and the user's own words, as AutocorrectLoader gives them. British spelling is the setting's default. */
 private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = PhoneWords.Habits(),
-                    val spelling: (String) -> String = { PhoneWords.spelled(it, false) }) : Lexicon {
-    override fun known(word: String) = words.contains(word) || habits.active(word)
+                    val spelling: (String) -> String = { PhoneWords.spelled(it, false) },
+                    /** Names on this phone, by their lowercase form, as SwipeTyping holds them. */
+                    val phoneNames: Map<String, String> = emptyMap()) : Lexicon {
+    override fun known(word: String) = words.contains(word) || habits.active(word) || word.lowercase() in phoneNames
     override fun frequency(word: String) = words.frequency(word)
-    override fun personal(word: String) = habits.active(word)
-    override fun name(word: String): String? = words.name(word)
+    override fun personal(word: String) = habits.active(word) || word.lowercase() in phoneNames
+    override fun name(word: String): String? = words.name(word) ?: habits.capitals(word)
+        ?: phoneNames[word.lowercase()]?.takeIf { it != word.lowercase() }
     override fun preferredSpelling(word: String) = spelling(word)
+    override fun acronym(word: String) = words.acronym(word)
     override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
 }
 
@@ -139,6 +144,8 @@ private class FakeWords(private val lists: Lists) : Words {
     var holdSwipes = false
     val unrecognised = ArrayDeque<() -> Unit>()
     val blocked = HashSet<String>()
+    /** Fixes refused by holding them on the strip, as "typed>fix" in lower case. */
+    val refusedFixes = HashSet<String>()
 
     /** The next swipe readings, each a word and how clearly it was read. When this is empty, a swipe reads as [swiped]. */
     val readings = ArrayDeque<Pair<String, Float?>>()
@@ -157,6 +164,7 @@ private class FakeWords(private val lists: Lists) : Words {
     override fun prepare(text: String, cancelled: AtomicBoolean) = Unit
     override fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit) = result(lookAlike)
     override fun allowed(word: String) = word.lowercase() !in blocked
+    override fun fixAllowed(typed: String, fix: String) = "${typed.lowercase()}>${fix.lowercase()}" !in refusedFixes
     override fun known(word: String) = lists.known(word) || lists.habits.seen(word)
     override fun typed(word: String, rememberCase: Boolean) {
         typed += word
@@ -548,6 +556,12 @@ private fun composerFlow(world: Realistic) {
     same(typed("teh\n").text, "the\n", "A slip is fixed before a new line")
     same(typed("Teh ").text, "The ", "The fix keeps the capital")
     same(typed("THe ").text, "The ", "Shift held too long is fixed")
+    run {
+        val refusing = FakeWords(Lists(world.words)).also { it.refusedFixes += "teh>the" }
+        same(Typist(world, words = refusing).type("teh ").text, "teh ", "A fix held on the strip to forget it is not made again")
+        same(Typist(world, words = refusing).type("adn ").text, "and ", "Refusing one fix leaves the other fixes")
+        same(Typist(world, words = refusing).type("Teh ").text, "Teh ", "A refused fix stays refused in capitals")
+    }
     same(typed("doesnt ").text, "doesn't ", "A missing apostrophe is fixed")
 
     // Auto-punctuation.
@@ -822,6 +836,63 @@ private fun composerFlow(world: Realistic) {
         same(corrected("get dome food "), "get dome food ", "A word that the user added stays in the second check")
     }
 
+    // A word whose spelling has fixed capitals gets them, however it was typed.
+    run {
+        fun typed(text: String, lists: Lists = Lists(world.words)) =
+            Typist(world, world.autocorrect(lists), lists = lists).type("$text ").text.trimEnd()
+        val capitals = listOf(
+            "titankeys is great" to "TitanKeys is great",
+            "Titankeys is great" to "TitanKeys is great",
+            "we love titankeys" to "we love TitanKeys",
+            // "I" and its contractions, mid-sentence and at the start.
+            "So i made one for every phone" to "So I made one for every phone",
+            "i think so" to "I think so",
+            "and i'm here" to "and I'm here",
+            "since i've seen it" to "since I've seen it",
+            "then i'll go" to "then I'll go",
+            "said i'd come" to "said I'd come",
+            "and i’m sure" to "and I’m sure",
+            "the I key" to "the I key",
+            // Titles are always capitalised; acronyms stay as typed.
+            "and mrs Jones" to "and Mrs Jones",
+            "see dr lee" to "see Dr lee",
+            "the jr team won" to "the Jr team won",
+            "she has a phd now" to "she has a PhD now",
+            "that is ok with me" to "that is ok with me",
+            // A word that the list writes only in capitals, typed in lowercase, is meant: never another word, case kept.
+            "my pc is slow" to "my pc is slow",
+            "burn a cd for me" to "burn a cd for me",
+            "back in the uk now" to "back in the uk now",
+            "watch the bbc news" to "watch the bbc news",
+            "My PC is slow" to "My PC is slow",
+            "be curt with them" to "be curt with them",
+            "my iphone works" to "my iPhone works",
+            "Iphone works" to "iPhone works",
+            "see you on friday" to "see you on Friday",
+            "jason is here" to "Jason is here",
+            "watch it on youtube" to "watch it on YouTube",
+            // A rare name may be a slip for another word.
+            "a quick cali" to "a quick cali",
+            // Typed on purpose: all capitals, or capitals of its own.
+            "TITANKEYS is great" to "TITANKEYS is great",
+            "the TitanKEYS app" to "the TitanKEYS app",
+            // Ordinary words that are also names keep their case.
+            "bill me later" to "bill me later",
+            "mark my words" to "mark my words",
+            "will you come" to "will you come",
+        )
+        for ((text, expected) in capitals) same(typed(text), expected, "Fixed capitals for \"$text\"")
+        val saved = Lists(world.words)
+        saved.habits.add("Lok")
+        same(typed("jason lok is here", saved), "Jason Lok is here", "A saved word with capitals gets them when typed")
+        same(typed("jason lok is here"), "Jason lok is here", "An unsaved word keeps its case")
+        val apps = Lists(world.words, phoneNames = mapOf("whatsapp" to "WhatsApp", "spotify" to "Spotify"))
+        same(typed("open whatsapp now", apps), "open WhatsApp now", "An app's name on this phone gets its capitals when typed")
+        same(typed("play spotify", apps), "play Spotify", "A rare brand from an app's name gets its capitals")
+        val undone = Typist(world, world.autocorrect(saved), lists = saved).type("titankeys ").backspace().type(" ")
+        same(undone.text, "titankeys ", "An undone capital fix stays undone")
+    }
+
     // The Learn my words setting.
     run {
         val store = KeptOnceStore.inMemory()
@@ -930,6 +1001,61 @@ private fun composerFlow(world: Realistic) {
 
 /** Where suggestions are allowed the bar always has words, and popular sentence starts fill it when nothing else can. */
 /** In the interactive guide, a word that comes out different has the guide's word on the strip, one touch away. */
+/** Snippets and emoji shortcodes (issues 47 and 50) go through the composer like an autocorrect, with the same Backspace undo. */
+private fun expansions(world: Realistic) {
+    val snippets = mapOf("addr" to "1 Main Street", "hi" to "Hello there")
+    val emoji = mapOf("smile" to "😄", "smiley" to "😃", "+1" to "👍")
+    fun typist(field: Field = Typist.FIELD) =
+        Typist(world, field = field).also { it.composer.expansions = Expansions(snippets, ';', emoji) }
+
+    same(typist().type("at ;addr ").text, "at 1 Main Street ", "Space after a shortcut puts in the snippet")
+    same(typist().type("at ;addr ").backspace().text, "at ;addr ", "Backspace straight after puts the shortcut back")
+    same(typist().type("at ;addr ").backspace().type("x").text, "at ;addr x", "Typing goes on after the shortcut")
+    same(typist().type("at ;addr ").type("now").backspace().text, "at 1 Main Street no", "A later Backspace is a normal one")
+    same(typist().type(";hi ").text, "Hello there ", "At the start of the text")
+    same(typist().type("a;addr ").text, "a;addr ", "Not inside a word")
+    same(typist().type("at ;adr ").text, "at;adr ", "Not for a shortcut that is not saved: the space moves behind the mark as before")
+    typist().type("at ;addr and more ").also {
+        must(it.words.typed.none { word -> word in setOf("Main", "Street", "1") }, "No word of a snippet is learned")
+        must(it.words.pairs.none { pair -> "Main" in pair || "Street" in pair }, "No pair of a snippet is learned")
+    }
+    val password = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD, 0)
+    same(typist(field = password).type(";addr ").text, ";addr ", "Never in a password field")
+    same(typist(field = Field.Exact).type(";addr ").text, ";addr ", "Never with exact typing")
+
+    same(typist().type("ok :smile:").text, "ok 😄", "A closing colon puts in the emoji")
+    same(typist().type("ok :smile:").backspace().text, "ok :smile:", "Backspace puts the shortcode back")
+    same(typist().type("ok :+1: ").text, "ok 👍 ", "A name with a plus")
+    same(typist().type("at 12:30:").text, "at 12:30:", "A time is not a shortcode")
+    same(typist().type("ok :nothing:").text, "ok:nothing:", "An unknown name stays")
+    same(typist(field = password).type(":smile:").text, ":smile:", "No shortcode in a password field")
+
+    typist().type("ok :smi").also {
+        same(it.bar, listOf("😄", "😃"), "The strip offers emoji for a part of a name")
+        same(it.choose(1).text, "ok 😃", "A touch puts in that emoji")
+        same(it.backspace().text, "ok :smi", "Backspace puts back what was typed")
+    }
+    typist().type("at ;a").also {
+        same(it.bar, listOf("1 Main Street"), "The strip offers a snippet for a part of its shortcut")
+        same(it.choose(0).text, "at 1 Main Street ", "A touch puts in the snippet with a space")
+    }
+    same(Typist(world).type("at ;addr ").text, "at;addr ", "Nothing expands when there are no snippets")
+
+    // Fields with no suggestions (issue 45): keys type as they are, and the touchpad types no words.
+    val email = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, 0)
+    same(Typist(world, field = email).swipe("hello").text, "", "A swipe types no word in an email field")
+    same(Typist(world, field = password).swipe("hello").text, "", "A swipe types no word in a password field")
+    same(Typist(world, field = password).tap("a").text, "", "A light touch types nothing in a password field")
+    fun panelSymbol(field: Field, symbol: String) = Typist(world, field = field).type("a").also {
+        it.composer.symbol(symbol)
+        it.settle()
+    }.text
+    same(panelSymbol(password, "&"), "a&", "A symbol from the panel goes in alone in a password")
+    same(panelSymbol(email, ";"), "a;", "A symbol from the panel goes in alone in an email field")
+    same(panelSymbol(Typist.FIELD, "&"), "a & ", "Prose still gets spaces around the symbol")
+    same(Typist(world, field = password).type("Ab1 x").text, "Ab1 x", "A password is typed as it is")
+}
+
 private fun theGuideOffersItsWord(world: Realistic) {
     fun guide(miss: Boolean = false) = Typist(world, null).also {
         it.composer.intended = { "to" }
@@ -1059,6 +1185,24 @@ private fun suggestionBar(world: Realistic) {
         refused.composer.type("a")
         refused.settle()
         same(refused.bar, inside, "An edit that the app refused leaves words on the bar")
+    }
+
+    // A word held on the strip to forget it.
+    run {
+        val typist = typist(fakeWords())
+        val shown = typist.bar
+        same(typist.composer.shownWord(1), shown[1] to "", "The held place names the word under the finger")
+        typist.composer.hide(shown[0])
+        same(typist.bar, shown.drop(1), "A held word leaves the bar while its Undo shows")
+        typist.composer.unhide(shown[0])
+        same(typist.bar, shown, "Undo puts the word back in its place")
+        typist.composer.hide(shown[0])
+        same(typist.choose(0).text, shown[1] + " ", "A touch after a held word picks the word now in that place")
+    }
+    run {
+        val words = fakeWords().also { it.completions = listOf("the", "then") }
+        val typist = typist(words).type("teh")
+        same(typist.composer.shownWord(0), "the" to "Teh", "A held fix names the letters it would replace")
     }
 
     // Every start was blocked, or the search words were.
@@ -1557,6 +1701,7 @@ fun main() {
     composerFlow(world)
     suggestionBar(world)
     theGuideOffersItsWord(world)
+    expansions(world)
     typoBenchmark(world)
     sentenceAware(world)
     fieldReports(world)

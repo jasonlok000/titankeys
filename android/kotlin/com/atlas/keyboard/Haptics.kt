@@ -32,11 +32,8 @@ class Haptics(private val context: Context) {
     private val vibrator = context.getSystemService(Vibrator::class.java)
     private var preset = HapticPreset.Normal
     private var enabled = true
-    private var lastTick = -1L
     private var clickUntil = 0L
-    private var travel = 0f
-    private var origin: Sample? = null
-    private var last: Sample? = null
+    private val ticks = SwipeTicks()
 
     fun tap() {
         if (enabled(context)) pulse(HapticPreset.Strong)
@@ -91,35 +88,12 @@ class Haptics(private val context: Context) {
     fun begin(sample: Sample?) {
         preset = preset(context)
         enabled = enabled(context)
-        lastTick = -1
-        travel = 0f
-        origin = sample
-        last = sample
+        ticks.begin(sample)
     }
 
     fun move(samples: List<Sample>) {
-        val start = origin ?: return
-        if (!enabled) return
-        var ticked = false
-        for (sample in samples) {
-            last?.let { travel += distance(it, sample) }
-            last = sample
-            if (!Layout.isLetter(Layout.keyAt(sample.x, sample.y))) {
-                travel = 0f
-                continue
-            }
-            // The first pulse follows movement, so a resting finger stays quiet.
-            val ready = if (lastTick < 0) distance(start, sample) >= .2f
-                else travel >= preset.spacing && sample.time - lastTick >= preset.intervalMillis
-            if (!ready || ticked) continue
-            lastTick = sample.time
-            travel = 0f
-            ticked = true
-            pulse(preset)
-        }
+        if (enabled && ticks.move(samples, preset)) pulse(preset)
     }
-
-    private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
 
     /** A swipe tick at full strength when cursor mode starts. */
     fun click() {
@@ -162,4 +136,44 @@ class Haptics(private val context: Context) {
             preferences(context).edit().putString("haptic_preset_v1", preset.id).putBoolean("enabled", enabled).apply()
         }
     }
+}
+
+/** When a swipe ticks. It has no Android parts, so the touchpad checks can run it. */
+class SwipeTicks {
+    private var lastTick = -1L
+    private var travel = 0f
+    private var origin: Sample? = null
+    private var last: Sample? = null
+
+    fun begin(sample: Sample?) {
+        lastTick = -1
+        travel = 0f
+        origin = sample
+        last = sample
+    }
+
+    /** Whether these new points of the contact tick, at most once. */
+    fun move(samples: List<Sample>, preset: HapticPreset): Boolean {
+        val start = origin ?: return false
+        var ticked = false
+        for (sample in samples) {
+            last?.let { travel += distance(it, sample) }
+            last = sample
+            if (!Layout.isLetter(Layout.keyAt(sample.x, sample.y))) {
+                travel = 0f
+                continue
+            }
+            // The first tick waits until the contact has gone far enough to be a swipe, so a finger that only brushes the
+            // keys, or slides a little while pushing one, stays quiet (#30).
+            val ready = if (lastTick < 0) distance(start, sample) >= Contact.SWIPE_KEYS
+                else travel >= preset.spacing && sample.time - lastTick >= preset.intervalMillis
+            if (!ready || ticked) continue
+            lastTick = sample.time
+            travel = 0f
+            ticked = true
+        }
+        return ticked
+    }
+
+    private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
 }

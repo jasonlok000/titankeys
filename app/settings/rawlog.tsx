@@ -2,8 +2,8 @@ import { Field, Screen, Section, Toggle, useAction, useSnapshot } from "ink";
 import { type State, exportRawLog, state, update } from "../../lib/atlas";
 
 const title = "Typing log";
-const subtitle = "A record of your touches on the keys, the keys that you push and the text that you type, to help make TitanKeys better. It does not record password, email, web address or private fields.";
-const note = "The log stays on this phone until you export it. It holds the text that you typed. Examine it for personal text before you send it to a different person. The maximum size is 200 MB. When the log is full, TitanKeys removes the oldest data first.";
+const subtitle = "A record of your touches on the keys, the keys you press and the text you type, to help make TitanKeys better. It skips password, email, web address and private fields.";
+const note = "The log stays on your phone until you export it. It holds what you typed, so check it for anything personal before you send it to anyone. It tops out at 200 MB, then the oldest data goes first.";
 
 export const rawLogLabel = ({ rawLog }: State) => rawLog ? "On" : "Off";
 

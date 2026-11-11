@@ -7,7 +7,7 @@ kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 android=$sdk/platforms/android-36/android.jar
 # ONNX Runtime classes, which the engine needs to compile.
-ort=android/libs/onnxruntime-android-1.20.0.jar
+ort=android/libs/onnxruntime-android-1.23.2.jar
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 javac --release 17 -d "$work" android/kotlin/com/atlas/engine/HoldEngine.java tests/hold/HoldEngineChecks.java
@@ -17,7 +17,7 @@ root=android/kotlin
 engine=$root/com/atlas/engine
 keyboard=$root/com/atlas/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$android:$ort" -d "$work" \
-  "$root/com/atlas/autocorrect" "$keyboard/Composer.kt" "$keyboard/Layout.kt" "$keyboard/Field.kt" "$keyboard/EnterKey.kt" \
+  "$root/com/atlas/autocorrect" "$keyboard/Composer.kt" "$keyboard/Expansions.kt" "$keyboard/ExactTyping.kt" "$keyboard/Layout.kt" "$keyboard/Field.kt" "$keyboard/EnterKey.kt" \
   "$keyboard/RawLogLine.kt" "$keyboard/Recording.kt" "$keyboard/KeyboardEvents.kt" "$keyboard/Modifiers.kt" "$keyboard/QuickSetting.kt" "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/Touchpad.kt" \
   "$keyboard/Haptics.kt" tests/hold/HoldLetterChecks.kt $(find "$engine" "$root/org" -name '*.java')
 javac --release 17 -nowarn -cp "$work:$stdlib:$android:$ort" -d "$work" $(find "$engine" "$root/org" -name '*.java')

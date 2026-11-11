@@ -26,7 +26,7 @@ class RawLogExportActivity : Activity() {
         try {
             startActivityForResult(picker, PICK_DOCUMENT)
         } catch (_: ActivityNotFoundException) {
-            complete(false, "Could not open the Android file picker.")
+            complete(false, "Couldn't open the file picker.")
         }
     }
 
@@ -40,7 +40,7 @@ class RawLogExportActivity : Activity() {
         }
         val uri = data?.data
         if (uri == null) {
-            complete(false, "Could not open the selected file.")
+            complete(false, "Couldn't open that file.")
             return
         }
         // The log can be 200 MB.
@@ -50,7 +50,7 @@ class RawLogExportActivity : Activity() {
                 contentResolver.openOutputStream(uri, "wt")!!.use { RawLog.export(this, it) }
                 null
             } catch (_: Exception) {
-                "Could not save the file."
+                "Couldn't save the file."
             }
             runOnUiThread { complete(error == null, error) }
         }.start()

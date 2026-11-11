@@ -10,6 +10,7 @@ import android.util.Log;
 import org.futo.ml.inference.SwipeDecoder;
 import java.io.*;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -22,6 +23,8 @@ public final class SwipeTyping {
     private static volatile SwipeTyping instance;
     private final Context context;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    /** The fixes that you refused by holding them on the strip. Never part of a data contribution. */
+    private static final String REFUSED_FIXES = "refused_fixes";
     private final Handler main = new Handler(Looper.getMainLooper());
     private final AtomicInteger pendingExamples = new AtomicInteger();
     private SwipeRecognizer recogniser;
@@ -46,9 +49,26 @@ public final class SwipeTyping {
     private volatile String learningStatus = "Loading personal dictionary…", accuracyStatus = "Loading accuracy stats…";
     private long configuredRevision = -1;
     private int configuredDay = -1, activeCount;
+    /** The names on this phone that the engines last took, and the state they were configured for. */
+    private int nameCount;
+    private long configuredNames = -1;
+    private boolean configuredLearning;
     private volatile Words wordView = new Words(new String[0], new String[0], new String[0]);
     private volatile java.util.Set<String> activeWords = java.util.Set.of();
+    /** Saved words whose spelling has capitals, such as "Lok", by their lowercase form. Read while typing. */
+    private volatile Map<String, String> savedCapitals = Map.of();
+    /** Names on this phone (see {@link PhoneNames}), by their lowercase form. Never learned, saved or logged. */
+    private volatile Map<String, String> phoneNames = Map.of();
+    /** The same names in the order they go to the swipe engines while there is room: contacts' names first, then apps'. */
+    private volatile List<String> phoneNameOrder = List.of();
+    /**
+     * How many words the FUTO engine's personal list holds: its native library refuses more (personal_dictionary.cpp),
+     * and the refusal would stop every swipe. Saved words come first, then names on this phone while there is room.
+     */
+    static final int PERSONAL_LIMIT = 256;
+    private volatile long namesRevision;
     private volatile BlockedWords blockedWords;
+    private volatile ForgetWords.RefusedFixes refusedFixes;
     private final NextWordPredictor nextWords;
     /** Swipe engine 2.0's models, once loaded. Until then, or if they fail, the FUTO engine works alone. */
     private volatile SwipeModels models;
@@ -101,6 +121,7 @@ public final class SwipeTyping {
         nextWords = new NextWordPredictor(new UserNGramStore(context), System::currentTimeMillis,
                 word -> wordAllowed(rendered(word, TypingSettings.spelling(context))));
         blockedWords = new BlockedWords(context.getSharedPreferences("blocked_words", 0).getStringSet("words", java.util.Set.of()));
+        refusedFixes = new ForgetWords.RefusedFixes(context.getSharedPreferences(REFUSED_FIXES, 0).getStringSet("fixes", java.util.Set.of()));
         Calibration.init(context);
         learningEnabled = context.getSharedPreferences("word_learning", 0).getBoolean("enabled",
                 context.getSharedPreferences("swipe_calibration", 0).getBoolean("enabled", true));
@@ -237,7 +258,9 @@ public final class SwipeTyping {
             try {
                 if (recogniser == null) throw new IllegalStateException(loadError);
                 syncDictionary();
-                boolean personalized = learningEnabled && wordsAvailable && personalise && activeCount > 0;
+                boolean saved = learningEnabled && wordsAvailable && activeCount > 0;
+                // Saved words and names on this phone both reach the engines through the personal list.
+                boolean personalized = personalise && (saved || nameCount > 0);
                 java.util.function.Predicate<String> allowed = word -> wordAllowed(rendered(word, variant));
                 SwipeDecoder.Result[] decoded = recogniser.recognise(gesture, contextWords, personalized, allowed);
                 SwipeModels loaded = models;
@@ -248,9 +271,13 @@ public final class SwipeTyping {
                     catch (Exception | LinkageError error) { Log.w("TouchpadSwipe", "Swipe ranker skipped", error); }
                 }
                 String[] words = blockedWords.filter(EnglishSpelling.candidates(Arrays.stream(decoded).map(result -> result.word).toArray(String[]::new), variant));
-                if (personalized) for (int i = 0; i < words.length; i++) words[i] = dictionary.restoreCase(words[i], configuredDay);
+                // Saved spellings only where the swipe was personalised. A name on this phone gets its capitals in any
+                // field, a search field too, as reading it keeps nothing.
+                for (int i = 0; i < words.length; i++)
+                    words[i] = nameCase(personalized && saved ? dictionary.restoreCase(words[i], configuredDay) : words[i]);
+                // Accuracy stats follow saved words only, as they did before names on this phone.
                 Prediction prediction = new Prediction(words.length == 0 ? "" : words[0], variant,
-                        personalized, epoch, generation, decoded, ranked);
+                        personalise && saved, epoch, generation, decoded, ranked);
                 prediction.features = features;
                 long elapsed = SystemClock.uptimeMillis() - began;
                 timing.finish();
@@ -326,8 +353,14 @@ public final class SwipeTyping {
                 SwipeModels loaded = models;
                 if (loaded != null) {
                     try {
+                        // After letters, the user's own words count too: how often they kept each one (#38, #39).
+                        Map<String, Integer> kept = Map.of();
+                        if (!prefix.isEmpty() && learningEnabled) {
+                            try { kept = nextWords.keptStarting(TypedPredictions.key(prefix)); }
+                            catch (RuntimeException error) { Log.w("TouchpadSwipe", "Could not read the kept words", error); }
+                        }
                         Map<String, Double> predicted = prefix.isEmpty() ? loaded.nextWords(contextText, typedPredictions::contains)
-                                : loaded.completions(contextText, prefix, typedPredictions::contains);
+                                : loaded.completions(contextText, prefix, typedPredictions::contains, kept);
                         if (!predicted.isEmpty()) likely = predicted;
                     } catch (Exception | LinkageError error) { Log.w("TouchpadSwipe", "Next-word model skipped", error); }
                 }
@@ -338,7 +371,7 @@ public final class SwipeTyping {
                 boolean upper = prefix.length() > 1 && prefix.equals(prefix.toUpperCase(Locale.UK));
                 String casedAfter = beforeSuggestion(contextText, prefix);
                 for (int i = 0; i < result.length; i++) {
-                    String word = learningEnabled && wordsAvailable ? dictionary.restoreCase(result[i], today()) : result[i];
+                    String word = nameCase(learningEnabled && wordsAvailable ? dictionary.restoreCase(result[i], today()) : result[i]);
                     result[i] = upper ? word.toUpperCase(Locale.UK) : capitalise(word, casedAfter, 0,
                             !prefix.isEmpty() && Character.isUpperCase(prefix.charAt(0)), autoCapitalise);
                 }
@@ -373,6 +406,8 @@ public final class SwipeTyping {
     /** The user kept {@code next} after {@code previous}, which is null if {@code next} starts a sentence. */
     public void keptPair(String previous, String next) {
         if (!learningEnabled) return;
+        // Names on this phone are never learned, so no pair with one is kept either.
+        if (phoneName(next) || previous != null && phoneName(previous)) return;
         if (previous == null) nextWords.learnSentenceStart(next);
         else nextWords.learn(previous, next);
     }
@@ -397,7 +432,48 @@ public final class SwipeTyping {
 
     /** Whether the user added this word or used it enough to count as learned. A word typed once or twice may be a typo. */
     public boolean personalWord(String word) {
-        return activeWords.contains(SwipeWords.normalise(word));
+        String key = SwipeWords.normalise(word);
+        return activeWords.contains(key) || phoneNames.containsKey(key);
+    }
+
+    /**
+     * The spelling that the user gave a saved word when it has capitals, such as "Lok" for "lok", or null. Only while
+     * learning is on, as the saved words only count then.
+     */
+    public String savedSpelling(String word) {
+        String key = SwipeWords.normalise(word);
+        String saved = learningEnabled ? savedCapitals.get(key) : null;
+        if (saved != null) return saved;
+        String name = phoneNames.get(key);
+        return name == null || name.equals(key) ? null : name;
+    }
+
+    /**
+     * Takes the names on this phone: the words of app names and, if the user turned it on, of contacts' names. Replaces
+     * the earlier ones, so turning contacts off clears theirs at once. The engines take them before the next swipe.
+     */
+    public void phoneNames(Map<String, String> contacts, Map<String, String> apps) {
+        phoneNames = Map.copyOf(PhoneNames.merged(apps, contacts));
+        phoneNameOrder = PhoneNames.order(contacts, apps);
+        namesRevision++;
+    }
+
+    /** How common the base list makes this word, 0 if it lacks it, for names on this phone. 0 until the lists load. */
+    public float baseFrequency(String word) {
+        SwipeRecognizer loaded = recogniser;
+        return loaded == null ? 0 : loaded.frequency(SwipeWords.normalise(word));
+    }
+
+    /** Whether this word is one of the names on this phone, for anything that must leave them out, such as contributions. */
+    public boolean phoneName(String word) {
+        return phoneNames.containsKey(SwipeWords.normalise(word));
+    }
+
+    /** A swiped or completed word in a name's own capitals, when it is a name on this phone written in lowercase. */
+    private String nameCase(String word) {
+        if (!word.equals(word.toLowerCase(Locale.ROOT))) return word;
+        String name = phoneNames.get(SwipeWords.normalise(word));
+        return name == null ? word : name;
     }
 
     /** The spelling of a name, such as "Monday" for "monday", or null for any other word. */
@@ -419,28 +495,75 @@ public final class SwipeTyping {
     }
 
     public void setWordBlocked(String word, boolean blocked, OperationCallback callback) {
+        worker.execute(() -> operationResult(callback, block(word, blocked)));
+    }
+
+    /** Runs on the worker. Returns why it failed, or null. A word that comes back can be a fix again. */
+    private String block(String word, boolean blocked) {
+        boolean persisted = false;
+        try {
+            BlockedWords replacement = blocked ? blockedWords.add(word) : blockedWords.remove(word);
+            if (!context.getSharedPreferences("blocked_words", 0).edit().putStringSet("words", replacement.entries()).commit())
+                throw new IOException("Could not save blocked words");
+            blockedWords = replacement;
+            learningGeneration++;
+            configuredRevision = -1;
+            persisted = true;
+            if (blocked) nextWords.forget(word);
+            else allowFixesTo(word);
+            syncDictionary();
+            return null;
+        } catch (IllegalArgumentException error) {
+            return error.getMessage();
+        } catch (IOException | RuntimeException | LinkageError error) {
+            return persisted ? "Blocked words are saved, but the swipe dictionary didn't update."
+                    : "Couldn't save blocked words. Try again.";
+        }
+    }
+
+    /** Whether autocorrect may change the letters [typed] to [fix]. Holding a fix on the strip refuses it. */
+    public boolean fixAllowed(String typed, String fix) { return refusedFixes.allowed(typed, fix); }
+
+    /** What holding [word] on the strip would do to it. */
+    public ForgetWords.Kind forgetKind(String word) {
+        TypedPredictions predictions = typedPredictions;
+        boolean builtIn = predictions != null && predictions.contains(word);
+        boolean saved = Arrays.stream(wordView.words).anyMatch(word::equalsIgnoreCase);
+        return ForgetWords.kind(word, builtIn, saved);
+    }
+
+    /**
+     * Forgets a word that you held on the strip: it leaves Saved words with its learned pairs, or it is blocked. If it was a
+     * fix for the letters [typed], autocorrect also stops making that fix. [typed] is empty when no letters were typed.
+     */
+    public void forgetWord(String word, String typed, OperationCallback callback) {
         worker.execute(() -> {
             String failure = null;
-            boolean persisted = false;
-            try {
-                BlockedWords replacement = blocked ? blockedWords.add(word) : blockedWords.remove(word);
-                if (!context.getSharedPreferences("blocked_words", 0).edit().putStringSet("words", replacement.entries()).commit())
-                    throw new IOException("Could not save blocked words");
-                blockedWords = replacement;
-                learningGeneration++;
-                configuredRevision = -1;
-                persisted = true;
-                if (blocked) nextWords.forget(word);
-                syncDictionary();
-            } catch (IllegalArgumentException error) {
-                failure = error.getMessage();
-            } catch (IOException | RuntimeException | LinkageError error) {
-                failure = persisted ? "Blocked words were saved, but the swipe dictionary could not be refreshed."
-                        : "Could not save blocked words. Try again.";
+            if (ForgetWords.fix(typed, word)) {
+                ForgetWords.RefusedFixes replacement = refusedFixes.add(typed, word);
+                if (saveRefusedFixes(replacement)) refusedFixes = replacement;
+                else failure = "Could not save the change to autocorrect.";
             }
-            operationResult(callback, failure);
+            ForgetWords.Kind kind = forgetKind(word);
+            String result = null;
+            if (kind == ForgetWords.Kind.BLOCK) result = block(word, true);
+            else if (kind == ForgetWords.Kind.REMOVE) {
+                result = remove(word);
+                publish();
+            }
+            operationResult(callback, result != null ? result : failure);
         });
     }
+
+    private void allowFixesTo(String word) {
+        ForgetWords.RefusedFixes replacement = refusedFixes.withoutFix(word);
+        if (replacement != refusedFixes && saveRefusedFixes(replacement)) refusedFixes = replacement;
+    }
+
+    private boolean saveRefusedFixes(ForgetWords.RefusedFixes fixes) {
+        return context.getSharedPreferences(REFUSED_FIXES, 0).edit().putStringSet("fixes", fixes.entries()).commit();
+    }
+
     public void learningEnabled(boolean enabled) {
         learningEnabled = enabled; learningGeneration++;
         context.getSharedPreferences("word_learning", 0).edit().putBoolean("enabled", enabled).apply();
@@ -462,8 +585,8 @@ public final class SwipeTyping {
                 persisted = true;
                 refreshDictionary();
             } catch (IOException | RuntimeException | LinkageError error) {
-                failure = persisted ? "Saved words were cleared, but the swipe dictionary could not be refreshed."
-                        : "Could not reset saved words. Existing words were kept.";
+                failure = persisted ? "Saved words are cleared, but the swipe dictionary didn't update."
+                        : "Couldn't reset saved words. Your words are still there.";
                 wordsSaveError = persisted ? " · Swipe dictionary refresh failed" : " · Could not reset saved words";
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
             }
@@ -479,17 +602,18 @@ public final class SwipeTyping {
                 configs();
                 if (!wordsAvailable) throw new IOException("Saved words unavailable");
                 LanguageHabits replacement = dictionary.copy();
-                if (blockedWords.contains(word)) throw new IllegalArgumentException("This word is blocked. Remove it from Blocked words first.");
+                if (blockedWords.contains(word)) throw new IllegalArgumentException("That word is blocked. Take it off Blocked words first.");
                 replacement.add(word.trim(), today());
                 configs.saveWords(replacement);
+                allowFixesTo(word);
                 dictionary = replacement; configuredRevision = -1; wordsSaveError = "";
                 persisted = true;
                 refreshDictionary();
             } catch (IllegalArgumentException error) {
                 failure = error.getMessage();
             } catch (IOException | RuntimeException | LinkageError error) {
-                failure = persisted ? "The word was saved, but the swipe dictionary could not be refreshed."
-                        : "Could not save the word. Try again.";
+                failure = persisted ? "The word is saved, but the swipe dictionary didn't update."
+                        : "Couldn't save the word. Try again.";
                 wordsSaveError = persisted ? " · Swipe dictionary refresh failed" : " · Could not save word";
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
             }
@@ -499,27 +623,34 @@ public final class SwipeTyping {
     public void removeWord(String word, OperationCallback callback) {
         learningGeneration++;
         worker.execute(() -> {
-            boolean persisted = false;
-            String failure = null;
-            try {
-                configs();
-                if (!wordsAvailable) throw new IOException("Saved words unavailable");
-                String normalised = SwipeWords.normalise(word);
-                if (normalised.isEmpty()) throw new IllegalArgumentException("Invalid saved word");
-                LanguageHabits replacement = dictionary.copy();
-                replacement.remove(normalised);
-                configs.saveWords(replacement);
-                dictionary = replacement; configuredRevision = -1; wordsSaveError = "";
-                persisted = true;
-                refreshDictionary();
-            } catch (IOException | RuntimeException | LinkageError error) {
-                failure = persisted ? "The word was removed, but the swipe dictionary could not be refreshed."
-                        : "Could not remove the word. Existing words were kept.";
-                wordsSaveError = persisted ? " · Swipe dictionary refresh failed" : " · Could not remove saved word";
-                if (recogniser != null && !recogniser.isOpen()) unavailable(error);
-            }
+            String failure = remove(word);
             try { publish(); } finally { operationResult(callback, failure); }
         });
+    }
+
+    /** Runs on the worker: takes [word] out of Saved words, with the pairs learned with it. Returns why it failed, or null. */
+    private String remove(String word) {
+        learningGeneration++;
+        boolean persisted = false;
+        try {
+            configs();
+            if (!wordsAvailable) throw new IOException("Saved words unavailable");
+            String normalised = SwipeWords.normalise(word);
+            if (normalised.isEmpty()) throw new IllegalArgumentException("Invalid saved word");
+            LanguageHabits replacement = dictionary.copy();
+            replacement.remove(normalised);
+            configs.saveWords(replacement);
+            dictionary = replacement; configuredRevision = -1; wordsSaveError = "";
+            persisted = true;
+            nextWords.forget(word);
+            refreshDictionary();
+            return null;
+        } catch (IOException | RuntimeException | LinkageError error) {
+            wordsSaveError = persisted ? " · Swipe dictionary refresh failed" : " · Could not remove saved word";
+            if (recogniser != null && !recogniser.isOpen()) unavailable(error);
+            return persisted ? "The word is gone, but the swipe dictionary didn't update."
+                    : "Couldn't remove the word. Nothing else changed.";
+        }
     }
 
     public void exportConfig(Uri destination, OperationCallback callback) {
@@ -550,7 +681,7 @@ public final class SwipeTyping {
                 imported.merge(LearningConfigs.readExport(input));
             } catch (IOException | RuntimeException error) {
                 Log.w("TouchpadSwipe", "Could not read learning backup", error);
-                operationResult(callback, "Could not read the backup. Choose a valid TitanKeys backup file.");
+                operationResult(callback, "Yeah, that's not a TitanKeys backup. Pick the right file.");
                 return;
             }
             try {
@@ -589,12 +720,34 @@ public final class SwipeTyping {
     }
     static int today() { return (int) (System.currentTimeMillis() / 86400000L); }
     private void syncDictionary() {
-        if (recogniser == null || (configuredRevision == dictionary.revision && configuredDay == today())) return;
-        List<LanguageHabits.Entry> active = wordsAvailable ? dictionary.active(today()).stream()
-                .filter(entry -> wordAllowed(entry.word)).toList() : java.util.Collections.emptyList();
-        String[] words = active.stream().map(entry -> entry.word).toArray(String[]::new);
-        float[] frequencies = new float[active.size()];
-        for (int i = 0; i < frequencies.length; i++) frequencies[i] = active.get(i).frequency(recogniser.frequency(words[i]), today());
+        long names = namesRevision;
+        boolean learning = learningEnabled;
+        if (recogniser == null || (configuredRevision == dictionary.revision && configuredDay == today()
+                && configuredNames == names && configuredLearning == learning)) return;
+        // Saved words only count while learning is on. Names on this phone count either way, as they are never learned.
+        int day = today();
+        // Over the limit, the most used saved words stay.
+        List<LanguageHabits.Entry> active = wordsAvailable && learning ? dictionary.active(day).stream()
+                .filter(entry -> wordAllowed(entry.word))
+                .sorted(java.util.Comparator.comparingDouble((LanguageHabits.Entry entry) -> -entry.frequency(0, day)))
+                .limit(PERSONAL_LIMIT).toList() : java.util.Collections.emptyList();
+        java.util.Set<String> savedKeys = new java.util.HashSet<>();
+        for (LanguageHabits.Entry entry : active) savedKeys.add(entry.word);
+        Map<String, String> phone = phoneNames;
+        List<String> nameWords = phoneNameOrder.stream()
+                .filter(word -> phone.containsKey(word) && !savedKeys.contains(word) && recogniser.frequency(word) <= 0
+                        && wordAllowed(phone.get(word)))
+                .limit(PERSONAL_LIMIT - active.size()).toList();
+        String[] words = new String[active.size() + nameWords.size()];
+        float[] frequencies = new float[words.length];
+        for (int i = 0; i < active.size(); i++) {
+            words[i] = active.get(i).word;
+            frequencies[i] = active.get(i).frequency(recogniser.frequency(words[i]), today());
+        }
+        for (int i = 0; i < nameWords.size(); i++) {
+            words[active.size() + i] = nameWords.get(i);
+            frequencies[active.size() + i] = PhoneNames.FREQUENCY;
+        }
         try { recogniser.personalWords(words, frequencies); }
         catch (RuntimeException | LinkageError error) {
             if (!recogniser.isOpen()) unavailable(error);
@@ -603,7 +756,8 @@ public final class SwipeTyping {
         personalWords = words; personalFrequencies = frequencies;
         SwipeModels loaded = models;
         if (loaded != null) loaded.personalWords(words, frequencies);
-        activeCount = active.size(); configuredRevision = dictionary.revision; configuredDay = today();
+        activeCount = active.size(); nameCount = nameWords.size(); configuredRevision = dictionary.revision; configuredDay = today();
+        configuredNames = names; configuredLearning = learning;
         publish();
     }
     private static String rendered(String word, EnglishSpelling.Variant variant) { return EnglishSpelling.convert(SwipeSpelling.restore(word), variant); }
@@ -613,6 +767,11 @@ public final class SwipeTyping {
         int day = today();
         wordView = new Words(dictionary.spellings(day), dictionary.descriptions(day), dictionary.swipeStatuses(day));
         activeWords = dictionary.activeWords(day);
+        Map<String, String> capitals = new HashMap<>();
+        if (wordsAvailable) for (LanguageHabits.Entry entry : dictionary.active(day))
+            if (!entry.spelling.equals(entry.spelling.toLowerCase(Locale.ROOT)) && entry.spelling.equalsIgnoreCase(entry.word))
+                capitals.put(entry.word, entry.spelling);
+        savedCapitals = capitals;
         accuracyStatus = accuracy.summary();
     }
 
@@ -625,7 +784,7 @@ public final class SwipeTyping {
         if (!learningEnabled || !wordsAvailable || generation != learningGeneration || word.isEmpty()) return;
         worker.execute(() -> {
             if (!learningEnabled || !wordsAvailable || generation != learningGeneration || recogniser == null) return;
-            if (standard(word) || !wordAllowed(word)) return;
+            if (standard(word) || !wordAllowed(word) || phoneName(word)) return;
             long revision = dictionary.revision;
             dictionary.typed(intended, today(), rememberCase);
             lastTyped = revision == dictionary.revision ? null : word;
@@ -671,7 +830,8 @@ public final class SwipeTyping {
         if (normalised.isEmpty() || prediction == null) return;
         worker.execute(() -> {
             try {
-                if (recogniser == null || !standard(normalised)) return;
+                // Names on this phone are never sent, even one that is also a dictionary word.
+                if (recogniser == null || !standard(normalised) || phoneName(normalised)) return;
                 Map<String, double[]> features = prediction.features;
                 double[][] rows = features == null ? new double[0][] : features.values().toArray(new double[0][]);
                 int kept = -1, index = 0;
@@ -730,7 +890,8 @@ public final class SwipeTyping {
                     if (!PersonalizationStats.sameWord(previous, word) && dictionary.active(today()).stream().anyMatch(entry -> entry.word.equals(SwipeWords.normalise(previous))))
                         dictionary.regret(previous);
                 }
-                if (!direct) dictionary.retained(word, today());
+                if (phoneName(word)) { /* A name on this phone is never learned. */ }
+                else if (!direct) dictionary.retained(word, today());
                 else if (!standard(word)) dictionary.confirm(word, today());
                 saveLearningChanges(revision);
             } catch (RuntimeException | LinkageError error) {

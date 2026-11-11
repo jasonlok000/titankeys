@@ -21,13 +21,16 @@ import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
 import com.atlas.keyboard.BackService
 import com.atlas.keyboard.EnterKey
+import com.atlas.keyboard.ExactTyping
 import com.atlas.keyboard.GuideActivity
 import com.atlas.keyboard.HapticPreset
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.KeyCapture
+import com.atlas.keyboard.PhoneNameSource
 import com.atlas.keyboard.PhoneSetup
 import com.atlas.keyboard.RawLog
 import com.atlas.keyboard.SetupPart
+import com.atlas.keyboard.Snippets
 import com.atlas.keyboard.Trace
 import com.atlas.keyboard.TouchpadPreview
 import org.json.JSONArray
@@ -151,6 +154,51 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     TypingSettings.enterApps(activity, EnterKey.savedApps(TypingSettings.enterApps(activity), data.getString("app"), null))
                     "null"
                 }
+                "setListedApp" -> {
+                    val app = data.getString("app")
+                    val on = data.getBoolean("on")
+                    when (val list = data.getString("list")) {
+                        "exact" -> ExactTyping.apps(activity, ExactTyping.apps(activity).toMutableSet().apply { if (on) add(app) else remove(app) })
+                        "hiddenBar" -> TypingSettings.hiddenBarApps(activity,
+                            TypingSettings.hiddenBarApps(activity).toMutableSet().apply { if (on) add(app) else remove(app) })
+                        else -> throw IllegalArgumentException("Unknown app list: $list")
+                    }
+                    "null"
+                }
+                "installedApps" -> {
+                    // Reading every app's name can take a moment, so it happens away from the main thread.
+                    Thread {
+                        val apps = installedApps()
+                        activity.runOnUiThread { complete(NativeResult.Success(apps.toString())) }
+                    }.start()
+                    null
+                }
+                "putSnippet" -> {
+                    Snippets.put(activity, data.getString("shortcut").trim(), data.getString("text"),
+                        data.optString("previous").takeIf { it.isNotEmpty() })
+                    "null"
+                }
+                "removeSnippet" -> {
+                    Snippets.remove(activity, data.getString("shortcut"))
+                    "null"
+                }
+                "transferSnippets" -> {
+                    check(!transferring) { "A transfer is already open." }
+                    val mode = data.getString("mode")
+                    require(mode == "import" || mode == "export")
+                    transferring = true
+                    try {
+                        LearningTransferActivity.start(activity, mode == "export", snippets = true) { transferred, error ->
+                            transferring = false
+                            if (error == null) complete(NativeResult.Success(transferred.toString()))
+                            else operationResult(error, complete)
+                        }
+                    } catch (error: Exception) {
+                        transferring = false
+                        throw error
+                    }
+                    null
+                }
                 "addWord" -> {
                     typing.addWord(data.getString("word")) { error -> operationResult(error, complete) }
                     null
@@ -168,7 +216,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     null
                 }
                 "transferLearning" -> {
-                    check(!transferring) { "A learning transfer is already open." }
+                    check(!transferring) { "An export or import is already open." }
                     val mode = data.getString("mode")
                     require(mode == "import" || mode == "export")
                     transferring = true
@@ -185,7 +233,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     null
                 }
                 "exportRawLog" -> {
-                    check(!transferring) { "A transfer is already open." }
+                    check(!transferring) { "An export or import is already open." }
                     transferring = true
                     try {
                         RawLogExportActivity.start(activity) { exported, error ->
@@ -283,7 +331,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             }
             if (result != null) complete(NativeResult.Success(result))
         } catch (error: Exception) {
-            complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "TitanKeys request failed", false))
+            complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "Something went wrong. Try again.", false))
         }
     }
 
@@ -311,6 +359,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("scrollAssistant", PhoneSetup.scrollAssistant())
             .put("backService", BackService.enabled(activity))
             .put("learning", typing.learningEnabled())
+            .put("contactNames", PhoneNameSource.contactsAllowed(activity))
             .put("tapKeys", TypingSettings.tapKeys(activity))
             .put("holdSymbols", TypingSettings.holdSymbols(activity))
             .put("holdSymbolMillis", TypingSettings.holdSymbolMillis(activity))
@@ -327,6 +376,12 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("orangeAccents", TypingSettings.orangeAccents(activity))
             .put("enterKey", TypingSettings.enterKey(activity))
             .also(::putEnterApps)
+            .also(::putExactApps)
+            .put("snippetStart", TypingSettings.snippetStart(activity).toString())
+            .put("shortcodes", TypingSettings.shortcodes(activity))
+            .put("snippets", JSONArray(Snippets.load(activity).map { (shortcut, text) ->
+                JSONObject().put("shortcut", shortcut).put("text", text)
+            }))
             .put("liftOff", TypingSettings.liftOffGrace(activity))
             .put("liftOffMillis", TypingSettings.liftOffDurationMillis(activity))
             .put("haptics", Haptics.enabled(activity))
@@ -352,8 +407,42 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .map { JSONObject().put("app", it).put("name", appName(it)) }))
     }
 
+    private fun putExactApps(state: JSONObject) {
+        state.put("exactApps", listedApps(ExactTyping.apps(activity)))
+        state.put("hiddenBarApps", listedApps(TypingSettings.hiddenBarApps(activity)))
+        state.put("recentApps", JSONArray(TypingSettings.recentApps(activity)
+            .map { JSONObject().put("app", it).put("name", appName(it)) }))
+    }
+
+    /** Apps on the phone first, by name. An app that is not on the phone, such as a default, still shows, so that it can be removed. */
+    private fun listedApps(apps: Set<String>) =
+        JSONArray(apps.map { JSONObject().put("app", it).put("name", appName(it)).put("installed", installed(it)) }
+            .sortedWith(compareBy({ !it.getBoolean("installed") }, { it.getString("name").lowercase() })))
+
     private fun enterApp(app: String, name: String, method: EnterKey.SendMethod) =
         JSONObject().put("app", app).put("name", name).put("method", method.id)
+
+    private fun installed(app: String) = try {
+        activity.packageManager.getApplicationInfo(app, 0)
+        true
+    } catch (error: PackageManager.NameNotFoundException) {
+        false
+    }
+
+    /**
+     * The apps with a screen in the launcher, for the exact typing list. The manifest asks to see only these, which Google Play
+     * allows without the permission to see every app.
+     */
+    private fun installedApps(): JSONArray {
+        val packages = activity.packageManager
+        val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        return JSONArray(packages.queryIntentActivities(launcher, 0)
+            .map { it.activityInfo.packageName to it.loadLabel(packages).toString() }
+            .filter { (app, _) -> app != activity.packageName }
+            .distinctBy { it.first }
+            .sortedBy { it.second.lowercase() }
+            .map { (app, name) -> JSONObject().put("app", app).put("name", name) })
+    }
 
     /** Android lets a keyboard see the apps that it has typed in. If it cannot see one now, the package name is shown. */
     private fun appName(app: String) = appNames.getOrPut(app) {
@@ -384,6 +473,9 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private fun set(key: String, value: Any) {
         when (key) {
             "learning" -> typing.learningEnabled(value as Boolean)
+            // Turning it on asks Android first, from a screen of its own. It is on only once Android allows it.
+            "contactNames" -> if (value as Boolean && !PhoneNameSource.contactsAllowed(activity)) ContactsPermissionActivity.start(activity)
+                else TypingSettings.contactNames(activity, value)
             "tapKeys" -> TypingSettings.tapKeys(activity, value as String)
             "holdSymbols" -> TypingSettings.holdSymbols(activity, value as Boolean)
             "holdSymbolMillis" -> TypingSettings.holdSymbolMillis(activity, (value as Number).toInt())
@@ -399,6 +491,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "touchpadOnlyInFields" -> TypingSettings.touchpadOnlyInFields(activity, value as Boolean)
             "orangeAccents" -> TypingSettings.orangeAccents(activity, value as Boolean)
             "enterKey" -> TypingSettings.enterKey(activity, value as String)
+            "snippetStart" -> TypingSettings.snippetStart(activity, value as String)
+            "shortcodes" -> TypingSettings.shortcodes(activity, value as Boolean)
             "liftOff" -> TypingSettings.liftOffGrace(activity, value as Boolean)
             "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())
             "haptics" -> Haptics.select(activity, Haptics.preset(activity), value as Boolean)

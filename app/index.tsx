@@ -33,7 +33,7 @@ function SetupStart({ first }: { first: boolean }) {
     <Stack align="center" gap={44}>
       <Stack align="center" gap={14}>
         <Text size={60} align="center">Set up TitanKeys</Text>
-        <Text size={30} align="center">A few switches in Settings. The guide opens each one and comes back by itself.</Text>
+        <Text size={30} align="center">A few switches in Settings. The guide takes you to each one and brings you back.</Text>
       </Stack>
       <Action label="Start" onPress={() => void openGuide()} />
     </Stack>

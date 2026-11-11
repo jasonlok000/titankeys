@@ -27,3 +27,15 @@
             android:name="com.atlas.keyboard.ConnectedReset"
             android:exported="true"
             android:permission="android.permission.DUMP" />
+        <activity
+            android:name="com.atlas.keyboard.SpaceGestureActivity"
+            android:label="TitanKeys Space gestures"
+            android:exported="true"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
+            android:theme="@android:style/Theme.Material.NoActionBar"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>

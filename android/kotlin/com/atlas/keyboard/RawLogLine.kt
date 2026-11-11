@@ -6,6 +6,7 @@ enum class EditCause(val cause: String, val via: String? = null, val automatic: 
     Tap("commit", "tap"),
     Key("commit", "key"),
     Symbol("commit", "symbol"),
+    Paste("commit", "paste"),
     Space("commit", "space"),
     Newline("commit", "enter"),
     Backspace("backspace", "letter"),
@@ -17,6 +18,9 @@ enum class EditCause(val cause: String, val via: String? = null, val automatic: 
     DropSpace("spacedrop", automatic = true),
     Autocorrect("autocorrect", automatic = true),
     AutocorrectUndo("autocorrectundo", automatic = true),
+    /** A snippet or an emoji shortcode took the place of its code. */
+    Expand("expand", automatic = true),
+    ExpandUndo("expandundo", automatic = true),
 }
 
 /** One word the swipe engine considered, with the parts of its score. */

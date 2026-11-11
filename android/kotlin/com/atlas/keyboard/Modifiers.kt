@@ -15,7 +15,7 @@ import android.view.KeyEvent
 class Modifiers {
     enum class Level { Off, Once, Locked }
     enum class Key { Shift, Alt }
-    enum class Panel { Closed, Symbols, Emoji, Settings }
+    enum class Panel { Closed, Symbols, Emoji, Settings, Clipboard }
     /** What happens to a push of Shift or Alt in an app that latches them by itself. */
     enum class AppPush { Pass, Hide, HideAndClear }
 
@@ -109,10 +109,10 @@ class Modifiers {
         return hiddenFromApp.remove(code)
     }
 
-    /** From the symbols or emoji to the quick settings page, or back to the page that it came from. */
+    /** From the symbols or emoji to the quick settings page, or back to the page that it came from. The clipboard goes back too. */
     fun toggleSettings() {
         if (panel == Panel.Closed) return
-        if (panel == Panel.Settings) panel = beforeSettings
+        if (panel == Panel.Settings || panel == Panel.Clipboard) panel = beforeSettings
         else {
             beforeSettings = panel
             panel = Panel.Settings
@@ -126,7 +126,22 @@ class Modifiers {
         panel = when (panel) {
             Panel.Closed -> Panel.Symbols
             Panel.Symbols -> Panel.Emoji
-            Panel.Emoji, Panel.Settings -> Panel.Closed
+            Panel.Emoji, Panel.Settings, Panel.Clipboard -> Panel.Closed
+        }
+    }
+
+    /**
+     * To the clipboard, from A on the symbols or emoji, or X on the quick settings page. Alt then goes back to the symbols or
+     * emoji, as from the quick settings.
+     */
+    fun openClipboard() {
+        when (panel) {
+            Panel.Settings -> panel = Panel.Clipboard
+            Panel.Symbols, Panel.Emoji -> {
+                beforeSettings = panel
+                panel = Panel.Clipboard
+            }
+            Panel.Closed, Panel.Clipboard -> Unit
         }
     }
 
@@ -246,7 +261,7 @@ class Modifiers {
             return when (panel) {
                 Panel.Closed -> null
                 Panel.Symbols, Panel.Emoji -> rows
-                Panel.Settings -> 0f
+                Panel.Settings, Panel.Clipboard -> 0f
             }
         }
 

@@ -42,6 +42,7 @@ public final class HoldEngineChecks {
         otherKeys();
         modifiers();
         repeats();
+        keyRepeatOnAndOff();
         leavingTheField();
         lostRelease();
         twoDevices();
@@ -235,6 +236,21 @@ public final class HoldEngineChecks {
         check(drain().isEmpty() && e.pending() != null, "Another key's repeat does not decide the letter");
         up(e, T, 5050);
         check(drain().isEmpty(), "The letter stays a letter after a quick release");
+    }
+
+    /** Android's key repeat can be on or off on the phone. A held J gives its symbol either way, once (issue 45). */
+    private static void keyRepeatOnAndOff() {
+        final int j = 38;
+        for (boolean repeats : new boolean[] {false, true}) {
+            HoldEngine e = engine(250);
+            String setting = repeats ? "with key repeat on" : "with key repeat off";
+            check(!down(e, j, 1000), "The letter types at once " + setting);
+            for (int i = 0; repeats && i < 10; i++) check(repeat(e, j, 1000), "A repeat before the hold time is consumed " + setting);
+            check(e.holdDue(e.pending().id, 0), "The timer gives the symbol " + setting);
+            for (int i = 0; repeats && i < 10; i++) check(repeat(e, j, 1000), "A repeat after the symbol is consumed " + setting);
+            check(up(e, j, 1600), "The release is consumed " + setting);
+            check(drain().equals("hold:38") && e.swallowing() == 0, "One symbol and no letters " + setting);
+        }
     }
 
     private static void leavingTheField() {

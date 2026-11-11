@@ -12,7 +12,7 @@ The files in `android/assets/swipe2` and the ONNX Runtime library come from thes
 - Source: [DistilGPT-2](https://huggingface.co/distilbert/distilgpt2) by Hugging Face, under the Apache License 2.0. See [`AOSP-Apache-2.0.txt`](AOSP-Apache-2.0.txt) for the licence text.
 - Changes: exported to ONNX to give only the chances of the next token, and the weights are stored as 8-bit numbers. The tokenizer files `lm-vocab.txt` and `lm-merges.txt` come from the same model.
 
-## Runtime: ONNX Runtime 1.20.0
+## Runtime: ONNX Runtime 1.23.2
 
 - Source: [ONNX Runtime](https://github.com/microsoft/onnxruntime) by Microsoft, under the MIT License:
 

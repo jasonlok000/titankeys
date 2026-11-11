@@ -19,6 +19,11 @@ interface UserNGramRepository {
 
     void learn(String prefix, String nextWord, long nowMs);
     List<Prediction> predict(String prefix, int limit);
+    /**
+     * How often each word that starts with {@code letters} was kept, the most first, in lower case. Every kept word is
+     * stored as the second word of a pair, so this adds up its pairs.
+     */
+    java.util.Map<String, Integer> keptStarting(String letters, int limit);
     /** Removes each pair with this word on either side, in any case. {@code prefix} is the form the word takes as a prefix. */
     int deleteWord(String prefix, String nextWord);
     void clearAll();

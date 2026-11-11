@@ -117,8 +117,33 @@ final class SwipeModels implements AutoCloseable {
      * model holds whole, which are most of the common ones.
      */
     Map<String, Double> completions(String text, String letters, Predicate<String> known) throws Exception {
-        return predictor.wordsStarting(predictor.after(text), letters.toLowerCase(java.util.Locale.ROOT).replace('’', '\''), known);
+        return completions(text, letters, known, Map.of());
     }
+
+    /**
+     * The same, with the user's own words lifted by how often they kept them (#38, #39): each gets
+     * min(3, 0.5 x ln(1 + times kept)) on top of its log chance. A kept word that the model does not hold whole gets its
+     * first token's chance, less 2 for each further token. On 2026-11-10's pilot this cut the letters typed before an
+     * everyday word reached the top 3 from 1.96 to 1.89 on held-back words and from 2.12 to 2.04 on new ones, with no
+     * cost on prompted text (tools/CompletionPilot.java in the swipe baseline).
+     */
+    Map<String, Double> completions(String text, String letters, Predicate<String> known, Map<String, Integer> kept) throws Exception {
+        float[] chances = predictor.after(text);
+        String typed = letters.toLowerCase(java.util.Locale.ROOT).replace('’', '\'');
+        Map<String, Double> scores = predictor.wordsStarting(chances, typed, known);
+        if (kept.isEmpty()) return scores;
+        Map<String, Double> lifted = new HashMap<>(scores);
+        for (Map.Entry<String, Integer> word : kept.entrySet()) {
+            String w = word.getKey();
+            if (!w.startsWith(typed) || !known.test(w)) continue;
+            Double chance = lifted.get(w);
+            if (chance == null) chance = predictor.word(chances, w) - KEPT_SPLIT_COST * Math.max(0, predictor.tokens(w) - 1);
+            lifted.put(w, chance + Math.min(KEPT_LIFT_CAP, KEPT_LIFT * Math.log1p(word.getValue())));
+        }
+        return lifted;
+    }
+
+    private static final double KEPT_LIFT = .5, KEPT_LIFT_CAP = 3, KEPT_SPLIT_COST = 2;
 
     /** The next-word model's log chance of this word after this text, or NaN when the chances are not ready yet. */
     double ifReady(String text, String word) {

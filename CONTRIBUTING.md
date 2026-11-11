@@ -18,6 +18,28 @@ Atlas has these goals:
 - **Simple:** Write clear code. Clear code is better than clever code.
 - **Made for the Titan 2 Elite:** Each feature must operate well with the physical keyboard.
 
+## Bring TitanKeys to another device
+
+TitanKeys is made for the Unihertz Titan 2 Elite. If you own another phone with a physical keyboard, such as the Titan 2 or a future Communicator, you are welcome to make TitanKeys work on it.
+
+**Do it inside TitanKeys, not in a fork.** A port inside this app gets every new feature and fix, and it stays maintained in one place. Open an issue first to describe the device, and wait for approval, as for any other work.
+
+**Fork if your direction is different.** If you want TitanKeys to go in a direction that I do not agree with, for example a different philosophy, then a fork is the right choice. The GPL-3.0 licence allows it. Give the fork its own name, and keep the credits.
+
+**What is specific to the Titan 2 Elite today:**
+
+- The touchpad: its input device name and ranges (`Touchpad.kt`), and how the firmware sends it to the keyboard's window (`TouchpadOverlay.kt`).
+- The keys: the layout (`Layout.kt`), the phone's key map (`Keys.kt`), and the drawing of the keys in the guide.
+- The calibration of touch positions (`android/assets/calibration`).
+- The vendor settings that setup reads and opens (`PhoneSetup.kt`).
+- Swipe engine 2.0: its models were trained on swipes from the Titan 2 Elite's touchpad. Another touchpad needs its own recordings, made with the tools in `android/debug/recorder`.
+
+**Rules for a port:**
+
+- Nothing gets worse on the Titan 2 Elite. A device profile chooses what is different, and the Titan 2 Elite keeps its current behaviour.
+- Test on the real device, and on a Titan 2 Elite if you change shared code.
+- Share recordings from the new device, so that the engine can learn its touchpad.
+
 ## Open an issue
 
 1. Search the [issues](https://github.com/jasonlok000/titankeys/issues) first. Make sure that your issue is not a duplicate.
@@ -98,12 +120,33 @@ If you want to do the work, write this in the issue. Wait until I give the issue
 1. Make a branch from `main`. Give the branch a short name, for example `fix-cursor-swipe`.
 2. Make your change. Keep each pull request to one issue.
 3. Follow the style of the code near your change.
-4. Write all text that the user sees in [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/). This includes the guide, settings, and release notes.
+4. Write all text that the user sees in the TitanKeys voice. See [Writing](#writing).
 5. Run the checks:
 
    ```bash
    bun run check
    ```
+
+## Writing
+
+TitanKeys talks like a person: casual, direct, a bit cheeky. This goes for every text the user sees, including the guide, settings, release notes, the README and the website.
+
+- Use contractions: don't, can't, it's, you're.
+- Say "press", not "push". Say "once" and "twice", not "one time" and "two times".
+- Say "works", not "operates". Say "pick" or "choose", not "select".
+- Keep sentences short. Say what to do, not how the system behaves. One idea per line where you can.
+- Talk to the user as "you". TitanKeys can say "we" for the people behind it, such as in privacy texts.
+- Be dry and confident. Personality comes from plain, slightly blunt statements, not from a joke in every line.
+- Swearing is fine, but rarely: only where it really lands.
+- A joke never hides the instruction. The user must still know exactly what to do.
+- Keep labels short enough for their row on the Titan's screen. Don't change a setting's name without changing every text that mentions it.
+
+Avoid:
+
+- Patterns that sound machine-written: "not just X, but Y", chains like "no X, no Y, no Z", "X. No Y." punchlines, "Wild, right?", lists of three for rhythm, and dashes for asides.
+- Lines that try too hard: winking at the reader, calling the user names, forced jokes. If a line makes you wince, cut the joke and keep it plain.
+
+Keep these clean, with no swearing, but still casual: the Accessibility description and its disclosure, permission reasons, consent screens, the privacy policy, store listings, and anything about deleting or losing data.
 
 ## Test on your device
 

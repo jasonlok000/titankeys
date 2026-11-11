@@ -5,7 +5,10 @@ import android.view.inputmethod.EditorInfo
 
 /** What the focused text field allows. */
 data class Field(
-    /** Swipes and touchpad taps type words. */
+    /**
+     * Swipes, touchpad taps, the delete flick, snippets and shortcodes type here. Where this is false, as in password, email and
+     * number fields and with exact typing, the touchpad only steers the cursor and works the panel, and keys type as they are.
+     */
     val words: Boolean,
     /** Typing here may teach the keyboard new words. */
     val learning: Boolean,
@@ -19,10 +22,17 @@ data class Field(
     val autocorrect: Boolean = false,
     /** Typed words get suggestions. Nothing is learned unless [learning] is also true. */
     val suggestions: Boolean = learning,
+    /** Each key goes to the app as a key event, as in a terminal. See [ExactTyping]. */
+    val exact: Boolean = false,
+    /** A password field. Text copied from it never goes into the clipboard history. */
+    val secret: Boolean = false,
 ) {
     companion object {
         val None = Field(words = false, learning = false, fullStops = false, starters = false,
             sentenceCapitalisation = false)
+
+        /** Exact typing: nothing is fixed, added, suggested or learned. */
+        val Exact = None.copy(exact = true)
 
         fun of(inputType: Int, imeOptions: Int): Field {
             if (inputType and InputType.TYPE_MASK_CLASS != InputType.TYPE_CLASS_TEXT) return None
@@ -40,12 +50,13 @@ data class Field(
             val exact = variation == InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS
                 || variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
                 || variation == InputType.TYPE_TEXT_VARIATION_FILTER
-            return Field(words = !password, learning = !password && !address && !private,
+            // A field with no suggestions types no words either: an address or a password is typed key by key.
+            return Field(words = !password && !email, learning = !password && !address && !private,
                 fullStops = !password && !address, starters = search,
                 sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
                 autocorrect = !password && !address && !exact,
                 // An address bar that asks for no suggestions still gets the bar: browsers search from it too.
-                suggestions = !password && !email)
+                suggestions = !password && !email, secret = password)
         }
 
         /**

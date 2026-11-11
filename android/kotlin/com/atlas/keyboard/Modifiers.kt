@@ -11,6 +11,10 @@ import android.view.KeyEvent
  * Only one of them is on at a time. While the panel is open, Alt opens the quick settings page and goes back from it.
  *
  * Ctrl is separate from those: it has no sticky state and applies only while it is held.
+ *
+ * Where a sentence starts, Shift comes on by itself, the same as one push, so the first letter is a capital: see [autoShift].
+ * Pushing Shift while it is on by itself turns it off, and it stays off until the cursor leaves that place, so the letter there
+ * can be lowercase.
  */
 class Modifiers {
     enum class Level { Off, Once, Locked }
@@ -36,6 +40,12 @@ class Modifiers {
     private val ctrlKeys = HashSet<Int>()
     /** The Shift and Alt keys whose current press the app must not see. */
     private val hiddenFromApp = HashSet<Int>()
+
+    /** Shift is on for one key because a sentence starts here, not because of a push. */
+    var autoShifted = false
+        private set
+    /** Shift was pushed off where it had come on by itself. It stays off until the place is no longer a sentence start. */
+    private var autoDeclined = false
 
     /** fn counts as a Ctrl key, for the Use fn as Ctrl setting. */
     var fnIsCtrl = false
@@ -63,11 +73,39 @@ class Modifiers {
     /** A finger holds the physical key down now, as opposed to a push that has ended and still applies. */
     fun holding(key: Key) = held.keys.any { keyOf(it) == key }
 
+    /**
+     * Turns the automatic Shift on or off. [sentenceStart] is true where the next letter starts a sentence. Shift comes on as one
+     * push would, unless the user pushed it off here, or Shift, Alt, Ctrl or the panel is already on. Away from a sentence start,
+     * a Shift that came on by itself goes off, and one that the user pushed stays.
+     */
+    fun autoShift(sentenceStart: Boolean) {
+        if (!sentenceStart) {
+            autoDeclined = false
+            if (autoShifted) shift = Level.Off
+            autoShifted = false
+            return
+        }
+        if (autoShifted || autoDeclined || shift != Level.Off || alt != Level.Off || panel != Panel.Closed
+            || held.isNotEmpty() || ctrlKeys.isNotEmpty()) return
+        shift = Level.Once
+        autoShifted = true
+    }
+
     /** Pressing Shift or Alt on the touchpad or the keyboard. With the panel open, Alt is the quick settings key. */
     fun press(key: Key, time: Long) {
         if (key == Key.Alt && panel != Panel.Closed) {
             toggleSettings()
             return
+        }
+        if (autoShifted) {
+            autoShifted = false
+            // A push of Shift on a Shift that came on by itself turns it off for this letter. The next push starts afresh.
+            if (key == Key.Shift) {
+                shift = Level.Off
+                autoDeclined = true
+                last[key.ordinal] = time - DOUBLE_PRESS_MILLIS
+                return
+            }
         }
         val level = level(key)
         val quick = time - last[key.ordinal] < DOUBLE_PRESS_MILLIS
@@ -122,6 +160,7 @@ class Modifiers {
     /** Pressing Sym moves the panel on: symbols, then emoji, then closed. From the quick settings page it closes the panel. */
     fun pressSym() {
         shift = Level.Off
+        autoShifted = false
         alt = Level.Off
         panel = when (panel) {
             Panel.Closed -> Panel.Symbols
@@ -153,6 +192,7 @@ class Modifiers {
     /** Puts the panel at [target] at once, for the guide that sets up a step. Shift and Alt go off, as a push of Sym does. */
     fun openPanel(target: Panel) {
         shift = Level.Off
+        autoShifted = false
         alt = Level.Off
         if (target == Panel.Settings) beforeSettings = Panel.Symbols
         panel = target
@@ -205,6 +245,10 @@ class Modifiers {
 
     /** A character was typed with the current modifiers. */
     fun consume() {
+        if (autoShifted) {
+            autoShifted = false
+            shift = Level.Off
+        }
         if (held.isNotEmpty()) {
             useHeld()
             return
@@ -223,6 +267,8 @@ class Modifiers {
     /** An app can restart its field after a shortcut. With [keepCtrl], Ctrl stays down through that so that another can follow. */
     fun clear(keepCtrl: Boolean = false) {
         shift = Level.Off
+        autoShifted = false
+        autoDeclined = false
         alt = Level.Off
         panel = Panel.Closed
         held.clear()

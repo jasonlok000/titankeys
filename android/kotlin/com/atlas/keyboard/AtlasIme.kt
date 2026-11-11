@@ -422,7 +422,8 @@ class AtlasIme : InputMethodService() {
             { delay, action -> main.postDelayed(action, delay) }, { enterApps })
         composer = Composer(editor, EngineWords(SwipeTyping.get(this)),
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
-            { TypingSettings.autoCapitalise(this) }) { barWords = it; strip?.words = it }
+            // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
+            { modifiers.autoShifted }) { barWords = it; strip?.words = it }
         composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
         composer.onStroke = Trace::stroke
         composer.onAutocorrect = haptics::wordChanged
@@ -1245,6 +1246,8 @@ class AtlasIme : InputMethodService() {
             strip?.showSuggestions = showSuggestions()
         }
         if (editing && composer.selectionChanged(newStart, newEnd)) clearSettlements()
+        // Deleting back to a sentence start, or moving the cursor there, turns the automatic Shift on again.
+        if (updateAutoShift()) showModifiers()
         if (editing && field.suggestions) showSelectedWord(newStart, newEnd)
     }
 
@@ -1834,7 +1837,8 @@ class AtlasIme : InputMethodService() {
         // Every field that the keyboard types in has this, also password, number and exact typing fields.
         if (!holdSymbols || !editing || !HoldEngine.isLetter(event.keyCode) || deadKeyPending) return false
         if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
-        if (modifiers.shift != Modifiers.Level.Off || altOrPanel || !event.hasNoModifiers() || event.isCapsLockOn) return false
+        // A Shift that came on by itself still lets the first letter of a sentence become its symbol.
+        if (modifiers.shift != Modifiers.Level.Off && !modifiers.autoShifted || altOrPanel || !event.hasNoModifiers() || event.isCapsLockOn) return false
         // A modifier still in the queue has not changed the levels above yet.
         if (pendingInput.any { it.event?.keyCode?.let(Modifiers::isModifier) == true }) return false
         val device = event.device ?: return false
@@ -2135,7 +2139,8 @@ class AtlasIme : InputMethodService() {
         if (event.keyCode != KeyEvent.KEYCODE_ENTER && event.keyCode != KeyEvent.KEYCODE_NUMPAD_ENTER) return false
         val info = currentInputEditorInfo
         // A locked Shift is Caps Lock, so Enter still sends.
-        val shift = event.isShiftPressed || modifiers.shift == Modifiers.Level.Once
+        // A Shift that came on by itself at a sentence start is not Shift and Enter.
+        val shift = event.isShiftPressed || modifiers.shift == Modifiers.Level.Once && !modifiers.autoShifted
         // The Enter key setting is postponed (issue 26) and has no row in Settings, so each field decides for now.
         val press = EnterKey.AppDecides.press(info?.inputType ?: 0, info?.imeOptions ?: 0,
             info?.actionId ?: 0, info?.packageName, shift, event.isCtrlPressed, enterApps)
@@ -2198,7 +2203,9 @@ class AtlasIme : InputMethodService() {
         " kept: shift ${modifiers.shift} alt ${modifiers.alt} panel ${modifiers.panel}")
 
     private fun command(event: KeyEvent, textKey: Boolean = false) {
-        val meta = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState)
+        // A Shift that came on by itself is for a letter. Ctrl + C, Tab or an arrow must not become Ctrl + Shift + C or a selection.
+        val sticky = if (modifiers.autoShifted && !textKey) modifiers.metaState and KeyEvent.META_SHIFT_MASK.inv() else modifiers.metaState
+        val meta = KeyEvent.normalizeMetaState(event.metaState or sticky)
         val down = KeyEvent(event.downTime, event.eventTime, KeyEvent.ACTION_DOWN, event.keyCode,
             event.repeatCount, meta, event.deviceId, event.scanCode, event.flags, event.source)
         val up = KeyEvent(event.downTime, event.eventTime, KeyEvent.ACTION_UP, event.keyCode,
@@ -2226,12 +2233,31 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun showModifiers() {
+        updateAutoShift()
         strip?.visibility = if (panelOpen) View.GONE else View.VISIBLE
         showModifierBar()
         panel?.mode = modifiers.panel
         contact.paging = panelOpen
         updateKeyWatch()
         KeyboardEvents.publish { KeyboardEvent.ModifierState(modifiers.shift, modifiers.alt, modifiers.panel, modifiers.ctrlHeld) }
+    }
+
+    /**
+     * Turns Shift on by itself where the next letter starts a sentence, only in fields that ask for sentence capitals and while the
+     * setting is on. It looks like one push of Shift on the bar, and the first letter typed or swiped uses it up. Returns true if
+     * Shift changed. While input still waits to reach the field, the text is not final, so nothing changes until it has.
+     */
+    private fun updateAutoShift(): Boolean {
+        if (composer.hasPendingInput || pendingInput.isNotEmpty()) return false
+        val before = modifiers.shift
+        modifiers.autoShift(sentenceStartHere())
+        return modifiers.shift != before
+    }
+
+    private fun sentenceStartHere(): Boolean {
+        if (!editing || field.exact || !field.sentenceCapitalisation || panelOpen || !TypingSettings.autoCapitalise(this)) return false
+        val before = currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH, 0) ?: return false
+        return SwipeTyping.startsSentence(before)
     }
 
     private fun showModifierBar() {
@@ -2279,6 +2305,8 @@ class AtlasIme : InputMethodService() {
         /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"
         private const val SMART_LAUNCHER = "ginlemon.flowerfree"
+        /** Characters read before the cursor to tell a sentence start. A sentence ends within a few spaces of the next one. */
+        private const val SENTENCE_REACH = 64
         private const val MAX_PENDING_INPUT = 128
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"

@@ -1577,7 +1577,7 @@ class Composer(
         val cancelled = AtomicBoolean(false)
         completion = cancelled
         completionSnapshot = anchor
-        words.complete(context, cancelled, field.sentenceCapitalisation) { found ->
+        words.complete(context, cancelled, field.sentenceCapitalisation && autoCapitalise()) { found ->
             if (cancelled.get() || current != epoch || snapshot() != anchor) return@complete
             val prefix = TypedPredictions.prefix(context)
             val suggestions = guideSuggestions(found, prefix, intended(context.dropLast(prefix.length)))

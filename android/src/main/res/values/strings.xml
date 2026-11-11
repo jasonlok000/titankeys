@@ -25,7 +25,6 @@
     <string name="clipboard_clear">Clear</string>
     <string name="clipboard_pin">Pin</string>
     <string name="clipboard_pin_done">Done</string>
-    <string name="clipboard_pinned">%1$s · Pinned</string>
     <string name="clipboard_paste">Paste %1$s</string>
     <string name="clipboard_description">Clipboard. What you copied in the last hour, and the clips you pinned. Press the key under a clip to paste it. Swipe up or down for more, and left or right for Pinned. Enter pins, Backspace clears, and Alt goes back.</string>
     <!-- Shows once, under the first clip that the strip offers. -->

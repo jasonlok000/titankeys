@@ -19,7 +19,6 @@ internal class BandMarquee(private val view: TextView) {
     private val scroll = Runnable { scrollOnce() }
 
     init {
-        view.setHorizontallyScrolling(true)
         view.isSingleLine = true
         view.ellipsize = null
     }
@@ -54,7 +53,10 @@ internal class BandMarquee(private val view: TextView) {
             return
         }
         val long = overflow() > 0
-        view.gravity = (if (long) Gravity.START else Gravity.CENTER_HORIZONTAL) or Gravity.CENTER_VERTICAL
+        // Only a line too long for the strip scrolls. A short one is laid out to the strip's width and centred: laid out to scroll,
+        // it would sit in the middle of a very wide line, and the scroll back to the start would put it out of sight.
+        view.setHorizontallyScrolling(long)
+        view.gravity = gravityFor(long)
         view.scrollTo(0, 0)
         if (long && ValueAnimator.areAnimatorsEnabled()) view.postDelayed(scroll, START_MILLIS)
     }
@@ -87,8 +89,11 @@ internal class BandMarquee(private val view: TextView) {
     }
 
     companion object {
-        /** How long a finger rests before a long line starts to move. */
-        const val START_MILLIS = 2000L
+        /** A long line starts at its start and scrolls; a short one is centred and stays still. */
+        fun gravityFor(long: Boolean) = (if (long) Gravity.START else Gravity.CENTER_HORIZONTAL) or Gravity.CENTER_VERTICAL
+
+        /** How long a finger rests before a long line starts to move: soon, so it reads as the clip's preview. */
+        const val START_MILLIS = 300L
         const val END_PAUSE_MILLIS = 1500L
         const val START_PAUSE_MILLIS = 1500L
         /** Slow enough to read as it goes. */

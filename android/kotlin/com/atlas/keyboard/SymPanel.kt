@@ -155,13 +155,14 @@ class SymPanel(
     private fun clipAt(key: String) = clipIndex(key)?.let(clips::get)
 
     /**
-     * One wide field of the clipboard page, in the place of the letter keys of half a row: the clip in up to two lines that end
-     * in "…", with a small pin in its top corner when it is pinned. It sits inside the inner columns, as the symbols do.
+     * One wide field of the clipboard page, in the place of the letter keys of half a row: the clip on one line that ends in "…",
+     * with a small pin in its top corner when it is pinned. The whole clip shows in the strip at the bottom under a resting finger. It sits inside the inner columns, as the symbols do.
      */
     private inner class ClipField(val slot: Int) {
         val text = TextView(context).apply {
             typeface = this@SymPanel.typeface
-            maxLines = 2
+            isSingleLine = true
+            maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
             includeFontPadding = false
             gravity = Gravity.CENTER_VERTICAL or Gravity.START
@@ -367,9 +368,7 @@ class SymPanel(
 
     /** What the strip at the bottom says for a key under a finger on the quick settings page, or null if it says nothing. */
     private fun detail(key: String) = if (quick) QuickSetting.on(key)?.takeIf { key !in blockedKeys }?.let(::describe)
-        else clipAt(key)?.let { clip ->
-            ClipboardHistory.preview(clip.text).let { if (clip.pinned) context.getString(R.string.clipboard_pinned, it) else it }
-        }
+        else clipAt(key)?.let { clip -> ClipboardHistory.preview(clip.text) }
 
     /**
      * What the strip at the bottom of the clipboard page says in the place of the groups: the whole clip under a resting finger,

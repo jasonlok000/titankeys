@@ -1672,9 +1672,15 @@ class AtlasIme : InputMethodService() {
                 }
                 cursorPath.addAll(samples.filter { it.valid })
                 contact.move(samples)
-                // A held delete flick only waits for the finger to lift.
+                // A held delete flick waits for the finger to lift, and goes faster the further the finger is from where it started.
                 if (contact.deleting) {
                     strip?.gesture?.swipeCancelled()
+                    samples.lastOrNull { it.valid }?.let { finger ->
+                        deleteHold.follow(finger)?.let {
+                            nextDeleteHoldStep(it)
+                            if (strip?.gesture?.scene == GestureDisplay.Scene.DeleteHold) strip?.gesture?.deleteHeld(deleteHold.repeatMillis, finger.time)
+                        }
+                    }
                     return
                 }
                 samples.lastOrNull()?.let { registerGesture(it.time) }

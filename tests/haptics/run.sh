@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Checks the keyboard's haptic feels (docs/haptics.md), which needs no phone.
+# Checks the keyboard's haptic patterns and the gate (docs/haptics.md), which needs no phone.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}

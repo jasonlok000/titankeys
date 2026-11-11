@@ -10,49 +10,55 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.SystemClock
-import android.provider.Settings
+import android.text.Editable
+import android.text.InputType
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextPaint
-import android.text.TextUtils
+import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import org.json.JSONArray
+import java.util.Locale
 
-/** The Haptics lab's colours: the app's dark page and cards, ours in orange, the phone's own effects in tan. */
+/** The Haptics lab's colours: the app's dark page and cards, the motor in orange. */
 private object LabColours {
     const val INK = 0xFF160A04.toInt()
     const val CARD = 0xFF21140C.toInt()
     const val TRACK = 0xFF3A2A20.toInt()
     const val ORANGE = 0xFFEF804E.toInt()
-    const val PHONE = 0xFFC9A27E.toInt()
     const val CREAM = 0xFFFFF1E6.toInt()
     const val DIM = 0xFFA2958C.toInt()
 }
 
 /**
- * The Haptics lab's graph, in TitanKeys Debug only: sliders for the lengths of moving and a step, and when the motor is on for
- * each feel, each fast run and each haptic. A tap on a row plays it, and a playhead sweeps the row as the motor runs.
+ * The Haptics lab's screen, in TitanKeys Debug only. Haptics go with what you do too closely to judge one alone, so you type,
+ * swipe and steer in its practice field, and it shows each haptic the keyboard really plays, live: on a timeline of the last
+ * 5 s, and in a list of the last 15. A haptic in the list opens its family's editor, whose patterns the next real action plays.
+ * The notes and the patterns in use go in a file that adb can pull.
  */
 class HapticsLabActivity : Activity() {
     private lateinit var lab: HapticsLab
-    private lateinit var feels: HapticTimelineView
-    private lateinit var runs: HapticTimelineView
-    private lateinit var each: HapticTimelineView
-    private val movingLabel by lazy { text("", 16f, LabColours.CREAM) }
-    private val stepLabel by lazy { text("", 16f, LabColours.CREAM) }
-    /** The haptics in Settings' order with Settings' names. The guide's celebration is longer than a row, so it isn't here. */
-    private var listed: List<Pair<Haptic, String>> = emptyList()
-    private val runList = listOf(
-        Triple("Swipe, 10 in a row", "moving every ${HapticTimeline.RUN_MILLIS} ms", HapticTimeline.swipeRun),
-        Triple("Steering, 10 in a row", "\"${HapticTimeline.STEERING_TEXT}\": letters move, spaces step", HapticTimeline.steeringRun),
-    )
+    private lateinit var timeline: LiveTimeline
+    private lateinit var list: LinearLayout
+    private lateinit var editor: LinearLayout
+    private val events = ArrayList<HapticEvent>()
+    private val opened = SystemClock.uptimeMillis()
+    /** Settings' names for the haptics, by haptic. */
+    private var names: Map<Haptic, HapticsLab.Named> = emptyMap()
+    /** The editor's family, its bars and sliders, to draw again after a change. */
+    private var editing: Editing? = null
+
+    private class Editing(val family: Family, val bars: PatternBars, val plays: TextView, val sliders: List<Pair<TextView, SeekBar>>)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,104 +68,181 @@ class HapticsLabActivity : Activity() {
             return
         }
         lab = HapticsLab(this)
-        listed = labels(intent.getStringExtra(LABELS))
-        feels = HapticTimelineView(this, HapticTimeline.FEEL_SPAN_MILLIS, HapticTimeline.FEEL_GRID_MILLIS) { row ->
-            playFeel(feels, row, HapticTimeline.sample(HapticTimeline.feels[row].first))
-        }
-        runs = HapticTimelineView(this, HapticTimeline.RUN_SPAN_MILLIS, HapticTimeline.RUN_GRID_MILLIS, ::playRun)
-        each = HapticTimelineView(this, HapticTimeline.FEEL_SPAN_MILLIS, HapticTimeline.FEEL_GRID_MILLIS) { row ->
-            playFeel(each, row, listed[row].first)
-        }
-        refresh()
+        lab.names = labels(intent.getStringExtra(LABELS))
+        names = lab.names.associateBy { it.haptic }
+        timeline = LiveTimeline(this, ::name)
+        list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        editor = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
+        val practice = field("Type, swipe, steer, open panels and menus here.", 3)
         val padding = dp(16)
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
-            addView(text("Haptics graph", 24f, LabColours.CREAM, bold = true))
-            addView(text("Drag a length. Tap a row to feel it.", 15f, LabColours.DIM))
-            addView(card("Lengths",
-                movingLabel, slider(Feel.Moving, Haptics.movingMillis(this@HapticsLabActivity)),
-                stepLabel, slider(Feel.Step, Haptics.stepMillis(this@HapticsLabActivity))))
-            addView(card("Feels", feels, key()))
-            addView(card("Runs", text("A hollow tick is one the gate dropped.", 14f, LabColours.DIM), runs))
-            addView(card("Each haptic", each))
+            addView(text("Haptics lab", 24f, LabColours.CREAM, bold = true))
+            addView(text("Each haptic the keyboard plays shows below as it plays. Tap one in the list to change its family.", 15f, LabColours.DIM))
+            addView(practice)
+            addView(card("Last 5 seconds", timeline, key()))
+            addView(card("Last ${HapticTimeline.RECENT}", list))
+            addView(card("Patterns", editor))
+            addView(card("Overall", field("How do they feel together?", 2, lab.general()) { lab.general(it) }))
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(LabColours.INK)
             fitsSystemWindows = true
             addView(content)
         })
+        showFamilies()
+        practice.requestFocus()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!::lab.isInitialized) return
+        events.clear()
+        events += HapticFeed.recent()
+        shown()
+        // The keyboard plays on the main thread, but a post keeps the screen's changes in order whatever thread it came from.
+        HapticFeed.listen { event -> timeline.post { heard(event) } }
     }
 
     override fun onPause() {
         super.onPause()
-        if (::lab.isInitialized) stop()
-    }
-
-    /** Plays [haptic] and sweeps [row] of [view] from the same call, hollow if the gate dropped it. */
-    private fun playFeel(view: HapticTimelineView, row: Int, haptic: Haptic) {
-        stop()
-        val start = SystemClock.uptimeMillis()
-        val played = lab.play(haptic)
-        view.buzzes(row, HapticTimeline.buzzes(haptic.feel, moving(), step(), dropped = !played))
-        view.sweep(row, start)
-    }
-
-    /** Plays a run and sweeps its strip. Each tick moves to when it really played, hollow if the gate dropped it. */
-    private fun playRun(row: Int) {
-        stop()
-        val run = runList[row].third
-        val moving = moving()
-        val step = step()
-        val ticks = HapticTimeline.ticks(run, moving, step).toMutableList()
-        val start = SystemClock.uptimeMillis()
-        runs.sweep(row, start)
-        lab.playRun(run, start) { index, atMillis, admitted ->
-            ticks[index] = HapticTimeline.tick(run[index].haptic, atMillis, moving, step, admitted)
-            runs.buzzes(row, ticks.toList())
-        }
-        runs.buzzes(row, ticks.toList())
-    }
-
-    private fun stop() {
+        if (!::lab.isInitialized) return
+        HapticFeed.stop()
         lab.stop()
-        for (view in listOf(feels, runs, each)) view.stopSweep()
     }
 
-    private fun moving() = Haptics.movingMillis(this)
-    private fun step() = Haptics.stepMillis(this)
-
-    /** Draws every row again with the lengths in use now. */
-    private fun refresh() {
-        val moving = moving()
-        val step = step()
-        movingLabel.text = "Moving: $moving ms"
-        stepLabel.text = "Step: $step ms"
-        feels.rows(HapticTimeline.feels.map { (feel, words) ->
-            HapticTimelineView.Row(feel.name, words, HapticTimeline.buzzes(feel, moving, step))
-        })
-        runs.rows(runList.map { (name, words, run) -> HapticTimelineView.Row(name, words, HapticTimeline.ticks(run, moving, step)) })
-        each.rows(listed.map { (haptic, label) ->
-            HapticTimelineView.Row(label, "${haptic.feel.name}: ${HapticPalette.describe(haptic, moving, step)}",
-                HapticTimeline.buzzes(haptic.feel, moving, step))
-        })
+    private fun heard(event: HapticEvent) {
+        events += event
+        while (events.size > HapticFeed.KEEP) events.removeAt(0)
+        shown()
     }
 
-    /** A slider from 4 to 40 ms that tries each length as it moves. */
-    private fun slider(feel: Feel, millis: Long) = SeekBar(this).apply {
-        min = HapticPalette.MOVING_TRY_MILLIS.first.toInt()
-        max = HapticPalette.MOVING_TRY_MILLIS.last.toInt()
-        progress = millis.toInt()
+    /** Draws the timeline and the list again from [events]. */
+    private fun shown() {
+        timeline.events(events.toList())
+        list.removeAllViews()
+        val recent = events.takeLast(HapticTimeline.RECENT).asReversed()
+        if (recent.isEmpty()) list.addView(text("Nothing yet. Swipe a word in the field above.", 14f, LabColours.DIM))
+        for (event in recent) list.addView(row(event))
+    }
+
+    private fun name(haptic: Haptic) = names[haptic]?.label ?: haptic.id
+
+    /** One haptic in the list: when, what, its family and pattern, and whether it played. A tap opens its family's editor. */
+    private fun row(event: HapticEvent) = TextView(this).apply {
+        val seconds = String.format(Locale.ROOT, "%.2f s", (event.atMillis - opened) / 1000f)
+        val outcome = if (event.result.played) "played" else "dropped: ${event.result.words}"
+        val first = "$seconds  ${name(event.haptic)} · ${event.haptic.family.label}"
+        text = SpannableStringBuilder("$first\n${HapticPalette.describe(event.pattern)} · $outcome").apply {
+            setSpan(ForegroundColorSpan(LabColours.CREAM), 0, first.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            if (!event.result.played) setSpan(ForegroundColorSpan(LabColours.ORANGE), length - outcome.length, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        textSize = 14f
+        setTextColor(LabColours.DIM)
+        minHeight = dp(48)
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(0, dp(6), 0, dp(6))
+        isClickable = true
+        isFocusable = true
+        setOnClickListener { edit(event.haptic.family, event.haptic) }
+    }
+
+    /** The editor with nothing picked: each family, to open its editor without waiting for it to play. */
+    private fun showFamilies() {
+        editing = null
+        editor.removeAllViews()
+        editor.addView(text("Tap a haptic in the list, or a family here.", 14f, LabColours.DIM).apply { setPadding(0, 0, 0, dp(4)) })
+        for (family in Family.entries) {
+            val pattern = lab.pattern(family)
+            editor.addView(TextView(this).apply {
+                text = "${family.label}: ${HapticPalette.describe(pattern)}" + if (pattern != family.pattern) "  (tried)" else ""
+                textSize = 15f
+                setTextColor(LabColours.CREAM)
+                minHeight = dp(48)
+                gravity = Gravity.CENTER_VERTICAL
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { edit(family, null) }
+            })
+        }
+    }
+
+    /** [family]'s editor: its bars, a slider for each pulse and gap, Play and Reset, and notes on it and on [haptic]. */
+    private fun edit(family: Family, haptic: Haptic?) {
+        editor.removeAllViews()
+        val bars = PatternBars(this)
+        val plays = text("", 14f, LabColours.DIM)
+        val sliders = family.pattern.indices.map { index ->
+            val range = if (index % 2 == 0) HapticPalette.PULSE_MILLIS else HapticPalette.GAP_MILLIS
+            text("", 14f, LabColours.CREAM) to slider(range) { millis -> tryMillis(family, index, millis) }
+        }
+        editing = Editing(family, bars, plays, sliders)
+        editor.addView(text(family.label, 18f, LabColours.CREAM, bold = true))
+        editor.addView(text(HapticTimeline.meaning(family), 14f, LabColours.DIM))
+        editor.addView(plays)
+        editor.addView(bars)
+        for ((label, bar) in sliders) {
+            editor.addView(label)
+            editor.addView(bar)
+        }
+        editor.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(button("Play", "Play ${family.label} alone") { lab.preview(family) })
+            addView(button("Reset", "Reset ${family.label}") {
+                lab.tryPattern(family, null)
+                drawEditor()
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginStart = dp(12) })
+            addView(button("All families", "Show all families") { showFamilies() },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginStart = dp(12) })
+        })
+        editor.addView(text("Notes on ${family.label}", 14f, LabColours.CREAM).apply { setPadding(0, dp(12), 0, 0) })
+        editor.addView(field("How does ${family.label} feel?", 1, lab.note(family)) { lab.note(family, it) })
+        if (haptic != null) {
+            editor.addView(text("Notes on ${name(haptic)}", 14f, LabColours.CREAM).apply { setPadding(0, dp(12), 0, 0) })
+            editor.addView(text(names[haptic]?.about ?: HapticTimeline.trigger(haptic), 13f, LabColours.DIM))
+            editor.addView(field("How does it feel here?", 1, lab.note(haptic)) { lab.note(haptic, it) })
+        }
+        drawEditor()
+    }
+
+    /** Sets one pulse or gap of [family]'s pattern to [millis], and tries it. The next real action plays it. */
+    private fun tryMillis(family: Family, index: Int, millis: Long) {
+        val pattern = lab.pattern(family).toMutableList()
+        pattern[index] = millis
+        lab.tryPattern(family, pattern)
+        drawEditor()
+    }
+
+    /** Draws the editor again with the pattern in use now. */
+    private fun drawEditor() {
+        val editing = editing ?: return
+        val pattern = lab.pattern(editing.family)
+        val tried = pattern != editing.family.pattern
+        editing.plays.text = HapticPalette.describe(pattern) + if (tried) "  (tried)" else ""
+        val span = HapticTimeline.span(HapticPalette.millis(pattern))
+        editing.bars.show(span, HapticTimeline.grid(span), HapticTimeline.buzzes(pattern))
+        for ((index, slider) in editing.sliders.withIndex()) {
+            val (label, bar) = slider
+            val kind = if (index % 2 == 0) "Pulse ${index / 2 + 1}" else "Gap ${index / 2 + 1}"
+            label.text = "$kind: ${pattern[index]} ms"
+            if (bar.progress != pattern[index].toInt()) bar.progress = pattern[index].toInt()
+        }
+    }
+
+    /** A slider over [range] that tries each value as it moves. */
+    private fun slider(range: LongRange, changed: (Long) -> Unit) = SeekBar(this).apply {
+        min = range.first.toInt()
+        max = range.last.toInt()
         progressTintList = ColorStateList.valueOf(LabColours.ORANGE)
         thumbTintList = ColorStateList.valueOf(LabColours.ORANGE)
         progressBackgroundTintList = ColorStateList.valueOf(LabColours.TRACK)
         setPadding(dp(12), dp(12), dp(12), dp(16))
         setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, value: Int, fromUser: Boolean) {
-                if (!fromUser) return
-                lab.length(feel, value.toLong())
-                refresh()
+                if (fromUser) changed(value.toLong())
             }
 
             override fun onStartTrackingTouch(bar: SeekBar) = Unit
@@ -167,13 +250,55 @@ class HapticsLabActivity : Activity() {
         })
     }
 
+    /** A small pill button, still 48 dp tall so it's easy to press. */
+    private fun button(label: String, description: String, pressed: () -> Unit) = TextView(this).apply {
+        text = label
+        contentDescription = description
+        textSize = 15f
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.CENTER
+        setTextColor(LabColours.INK)
+        minHeight = dp(48)
+        setPadding(dp(20), 0, dp(20), 0)
+        background = GradientDrawable().apply {
+            setColor(LabColours.ORANGE)
+            cornerRadius = dp(24).toFloat()
+        }
+        isClickable = true
+        isFocusable = true
+        setOnClickListener { pressed() }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48))
+    }
+
+    /** A text box. [changed] hears each change; with none it is the practice field, whose text goes nowhere. */
+    private fun field(hint: String, lines: Int, value: String = "", changed: ((String) -> Unit)? = null) = EditText(this).apply {
+        setText(value)
+        this.hint = hint
+        textSize = 16f
+        setTextColor(LabColours.CREAM)
+        setHintTextColor(LabColours.DIM)
+        minLines = lines
+        gravity = Gravity.TOP or Gravity.START
+        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT
+        background = GradientDrawable().apply {
+            setColor(LabColours.TRACK)
+            cornerRadius = dp(8).toFloat()
+        }
+        setPadding(dp(12), dp(10), dp(12), dp(10))
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            .apply { topMargin = dp(12) }
+        if (changed != null) addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(text: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(text: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(text: Editable?) = changed(text?.toString().orEmpty())
+        })
+    }
+
     private fun key() = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(8), 0, 0)
-        addView(keyLine("■", LabColours.ORANGE, "on (we set the length)"))
-        addView(keyLine("■", LabColours.PHONE, "on (the phone's own effect, length fixed)"))
-        addView(keyLine("■", LabColours.TRACK, "off"))
-        addView(keyLine("□", LabColours.ORANGE, "dropped by the gate"))
+        addView(keyLine("■", LabColours.ORANGE, "on"))
+        addView(keyLine("□", LabColours.ORANGE, "dropped, with the reason"))
     }
 
     private fun keyLine(mark: String, colour: Int, words: String) = TextView(this).apply {
@@ -209,171 +334,98 @@ class HapticsLabActivity : Activity() {
     companion object {
         private const val LABELS = "labels"
 
-        /** The graph, with [labels]: Settings' names for the haptics, as a JSON list of { id, label }. */
+        /** The lab, with [labels]: Settings' names for the haptics, as a JSON list of { id, label, group, about }. */
         fun intent(context: Context, labels: String) = Intent(context, HapticsLabActivity::class.java).putExtra(LABELS, labels)
 
-        private fun labels(json: String?): List<Pair<Haptic, String>> {
+        private fun labels(json: String?): List<HapticsLab.Named> {
             val list = JSONArray(json ?: "[]")
             return (0 until list.length()).mapNotNull { index ->
                 val item = list.getJSONObject(index)
                 val haptic = Haptic.of(item.getString("id")) ?: return@mapNotNull null
-                if (haptic == Haptic.GuideCelebration) null else haptic to item.getString("label")
+                HapticsLab.Named(haptic, item.getString("label"), item.optString("group"), item.optString("about"))
             }
         }
     }
 }
 
 /**
- * Rows of motor on/off bars, to scale over [spanMillis], with a gridline every [gridMillis]. A tap on a row calls [tapped].
- * It draws only when something changes, and on every frame only while a playhead sweeps.
+ * The last 5 s of haptics, newest on the right, moving left as time goes. Each is its pulses to scale, hollow if it was
+ * dropped, with its name and family above it, and what set it off, or why it dropped. It draws on every frame only while a
+ * haptic is still in view.
  */
-internal class HapticTimelineView(
-    context: Context,
-    private val spanMillis: Long,
-    private val gridMillis: Long,
-    private val tapped: (row: Int) -> Unit,
-) : View(context) {
-    data class Row(val name: String, val description: String, val buzzes: List<Buzz>)
-
-    private var rows: List<Row> = emptyList()
-    private var sweepRow = -1
-    private var sweepStart = 0L
-    private var flashRow = -1
-    private var flashUntil = 0L
-
+internal class LiveTimeline(context: Context, private val name: (Haptic) -> String) : View(context) {
+    private var events: List<HapticEvent> = emptyList()
     private val density = resources.displayMetrics.density
-    private val axisHeight = 18 * density
-    private val rowHeight = 46 * density
-    private val barTop = 24 * density
-    private val barHeight = 12 * density
+    private val laneHeight = 30 * density
+    private val barTop = LANES * laneHeight + 8 * density
+    private val barHeight = 18 * density
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1.5f * density
     }
-    private val grid = Paint().apply {
+    private val line = Paint().apply {
         color = LabColours.DIM
-        alpha = 0x60
+        alpha = 0x80
         strokeWidth = density
     }
-    private val playhead = Paint().apply {
-        color = LabColours.CREAM
-        strokeWidth = 2 * density
-    }
-    private val nameText = text(14f, LabColours.CREAM).apply { typeface = Typeface.DEFAULT_BOLD }
-    private val wordsText = text(12f, LabColours.DIM)
+    private val nameText = text(11f, LabColours.CREAM).apply { typeface = Typeface.DEFAULT_BOLD }
+    private val wordsText = text(11f, LabColours.DIM)
+    private val droppedText = text(11f, LabColours.ORANGE)
     private val axisText = text(10f, LabColours.DIM)
 
-    fun rows(rows: List<Row>) {
-        val resized = rows.size != this.rows.size
-        this.rows = rows
-        if (resized) requestLayout()
-        invalidate()
-    }
-
-    fun buzzes(row: Int, buzzes: List<Buzz>) {
-        rows = rows.toMutableList().also { it[row] = it[row].copy(buzzes = buzzes) }
-        invalidate()
-    }
-
-    /**
-     * Sweeps a playhead across [row] in real time, from [start], an uptime taken in the call that started the motor. With
-     * Android's animations off, the row only flashes.
-     */
-    fun sweep(row: Int, start: Long) {
-        if (Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f) {
-            flashRow = row
-            flashUntil = start + FLASH_MILLIS
-            postInvalidateDelayed(FLASH_MILLIS)
-        } else {
-            sweepRow = row
-            sweepStart = start
-        }
-        invalidate()
-    }
-
-    fun stopSweep() {
-        if (sweepRow < 0 && flashRow < 0) return
-        sweepRow = -1
-        flashRow = -1
+    fun events(events: List<HapticEvent>) {
+        this.events = events
         invalidate()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), (axisHeight + rows.size * rowHeight).toInt())
+        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), (barTop + barHeight + 22 * density).toInt())
     }
 
     override fun onDraw(canvas: Canvas) {
         val now = SystemClock.uptimeMillis()
-        for (millis in 0..spanMillis step gridMillis) {
-            axisText.textAlign = when (millis) {
-                0L -> Paint.Align.LEFT
-                spanMillis -> Paint.Align.RIGHT
-                else -> Paint.Align.CENTER
-            }
-            canvas.drawText("$millis ms", x(millis), 12 * density, axisText)
+        fill.color = LabColours.TRACK
+        canvas.drawRect(0f, barTop, width.toFloat(), barTop + barHeight, fill)
+        for (second in 0..HapticTimeline.LIVE_MILLIS / 1000) {
+            val x = x(now - second * 1000, now)
+            canvas.drawLine(x, barTop - 2 * density, x, barTop + barHeight + 2 * density, line)
+            axisText.textAlign = if (second == 0L) Paint.Align.RIGHT else Paint.Align.CENTER
+            canvas.drawText(if (second == 0L) "now" else "-$second s", x.coerceAtLeast(12 * density), barTop + barHeight + 16 * density, axisText)
         }
-        for ((index, row) in rows.withIndex()) {
-            val top = axisHeight + index * rowHeight
-            if (index == flashRow && now < flashUntil) {
-                fill.color = LabColours.TRACK
-                canvas.drawRect(0f, top, width.toFloat(), top + rowHeight - 4 * density, fill)
-            }
-            val name = row.name
-            canvas.drawText(name, 0f, top + 15 * density, nameText)
-            val wordsLeft = nameText.measureText(name) + 8 * density
-            val words = TextUtils.ellipsize(row.description, wordsText, width - wordsLeft, TextUtils.TruncateAt.END)
-            canvas.drawText(words, 0, words.length, wordsLeft, top + 15 * density, wordsText)
-
-            val bar = top + barTop
-            fill.color = LabColours.TRACK
-            canvas.drawRect(0f, bar, width.toFloat(), bar + barHeight, fill)
-            for (millis in gridMillis until spanMillis step gridMillis)
-                canvas.drawLine(x(millis), bar - 2 * density, x(millis), bar + barHeight + 2 * density, grid)
-            for (buzz in row.buzzes) {
-                val left = x(buzz.fromMillis)
-                // A 4 ms buzz is still wide enough to see.
-                val right = maxOf(x(buzz.toMillis), left + 2 * density)
-                val colour = if (buzz.ours) LabColours.ORANGE else LabColours.PHONE
-                if (buzz.dropped) {
-                    outline.color = colour
+        val shown = events.filter { now - it.atMillis <= HapticTimeline.LIVE_MILLIS }
+        for ((index, event) in shown.withIndex()) {
+            val dropped = !event.result.played
+            for (buzz in HapticTimeline.buzzes(event.pattern, event.atMillis, dropped)) {
+                val left = x(buzz.fromMillis, now)
+                // A 17 ms pulse is about a pixel at this scale, so every pulse gets at least 2 dp.
+                val right = maxOf(x(buzz.toMillis, now), left + 2 * density)
+                if (dropped) {
+                    outline.color = LabColours.ORANGE
                     val inset = outline.strokeWidth / 2
-                    canvas.drawRect(left + inset, bar + inset, right - inset, bar + barHeight - inset, outline)
+                    canvas.drawRect(left + inset, barTop + inset, right - inset, barTop + barHeight - inset, outline)
                 } else {
-                    fill.color = colour
-                    canvas.drawRect(left, bar, right, bar + barHeight, fill)
+                    fill.color = LabColours.ORANGE
+                    canvas.drawRect(left, barTop, right, barTop + barHeight, fill)
                 }
             }
-            if (index == sweepRow) {
-                val elapsed = now - sweepStart
-                if (elapsed > spanMillis) {
-                    sweepRow = -1
-                } else {
-                    val x = x(elapsed)
-                    canvas.drawLine(x, bar - 5 * density, x, bar + barHeight + 5 * density, playhead)
-                    postInvalidateOnAnimation()
-                }
-            }
+            // Labels take turns over three lanes, so ones close together don't sit on each other.
+            val lane = index % LANES
+            val top = lane * laneHeight
+            val at = x(event.atMillis, now)
+            val title = "${name(event.haptic)} · ${event.haptic.family.label}"
+            val words = if (dropped) "dropped: ${event.result.words}" else HapticTimeline.trigger(event.haptic)
+            val wordsPaint = if (dropped) droppedText else wordsText
+            val wide = maxOf(nameText.measureText(title), wordsPaint.measureText(words))
+            val left = if (at + wide > width) maxOf(0f, at - wide) else at
+            canvas.drawLine(at, top + laneHeight - 4 * density, at, barTop, line)
+            canvas.drawText(title, left, top + 12 * density, nameText)
+            canvas.drawText(words, left, top + 25 * density, wordsPaint)
         }
+        if (shown.isNotEmpty()) postInvalidateOnAnimation()
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_UP) {
-            val row = ((event.y - axisHeight) / rowHeight).toInt()
-            if (event.y >= axisHeight && row in rows.indices) {
-                performClick()
-                tapped(row)
-            }
-        }
-        return true
-    }
-
-    override fun performClick(): Boolean {
-        super.performClick()
-        return true
-    }
-
-    private fun x(millis: Long) = millis.coerceIn(0, spanMillis).toFloat() / spanMillis * width
+    private fun x(millis: Long, now: Long) = width - (now - millis).toFloat() / HapticTimeline.LIVE_MILLIS * width
 
     private fun text(size: Float, colour: Int) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, size, resources.displayMetrics)
@@ -381,7 +433,61 @@ internal class HapticTimelineView(
     }
 
     companion object {
-        /** With animations off, a played row lights up this long instead. */
-        const val FLASH_MILLIS = 150L
+        const val LANES = 3
     }
+}
+
+/** One pattern's motor on and off bars, to scale, with a gridline every so often and the ms above them. */
+internal class PatternBars(context: Context) : View(context) {
+    private var spanMillis = HapticTimeline.SPAN_MILLIS
+    private var gridMillis = HapticTimeline.GRID_MILLIS
+    private var buzzes: List<Buzz> = emptyList()
+
+    private val density = resources.displayMetrics.density
+    private val barTop = 22 * density
+    private val barHeight = 18 * density
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val grid = Paint().apply {
+        color = LabColours.DIM
+        alpha = 0x60
+        strokeWidth = density
+    }
+    private val axisText = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10f, resources.displayMetrics)
+        color = LabColours.DIM
+    }
+
+    /** Shows [buzzes] over [spanMillis], with a gridline every [gridMillis]. */
+    fun show(spanMillis: Long, gridMillis: Long, buzzes: List<Buzz>) {
+        this.spanMillis = spanMillis
+        this.gridMillis = gridMillis
+        this.buzzes = buzzes
+        invalidate()
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), (barTop + barHeight + 8 * density).toInt())
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        for (millis in 0..spanMillis step gridMillis) {
+            axisText.textAlign = when (millis) {
+                0L -> Paint.Align.LEFT
+                spanMillis -> Paint.Align.RIGHT
+                else -> Paint.Align.CENTER
+            }
+            canvas.drawText("$millis", x(millis), 14 * density, axisText)
+        }
+        fill.color = LabColours.TRACK
+        canvas.drawRect(0f, barTop, width.toFloat(), barTop + barHeight, fill)
+        for (millis in gridMillis until spanMillis step gridMillis)
+            canvas.drawLine(x(millis), barTop - 2 * density, x(millis), barTop + barHeight + 2 * density, grid)
+        fill.color = LabColours.ORANGE
+        for (buzz in buzzes) {
+            val left = x(buzz.fromMillis)
+            canvas.drawRect(left, barTop, maxOf(x(buzz.toMillis), left + 2 * density), barTop + barHeight, fill)
+        }
+    }
+
+    private fun x(millis: Long) = millis.coerceIn(0, spanMillis).toFloat() / spanMillis * width
 }

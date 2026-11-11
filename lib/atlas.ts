@@ -102,8 +102,14 @@ export type State = {
   blockedWords: string[];
 };
 
-/** The lengths in use for moving and a step, in ms, and each haptic's feel and what it plays, by its id in Haptics.kt. */
-export type HapticsLab = { movingMillis: number; stepMillis: number; haptics: Record<string, { feel: string; plays: string }> };
+/**
+ * Each pattern family's pattern in use, on and off in ms starting with on, by its id in Haptics.kt, and whether it is one tried
+ * in the lab. Each haptic's family and what it plays, by its id.
+ */
+export type HapticsLab = {
+  families: Record<string, { name: string; pattern: number[]; plays: string; tried: boolean }>;
+  haptics: Record<string, { family: string; pattern: number[]; plays: string }>;
+};
 
 export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
 
@@ -226,17 +232,11 @@ export async function transferLearning(mode: "import" | "export") {
   }
 }
 
-/** Plays a haptic in the Haptics lab, as the keyboard does. TitanKeys Debug only. */
-export const playHaptic = (id: string) => atlas("labPlay", { id });
 /**
- * Opens the lab's graph: sliders for the lengths, the timeline of each feel and the fast runs. It shows the haptics with
- * these names. TitanKeys Debug only.
+ * Opens the lab's screen: a practice field, the haptics the keyboard really plays as you type, and an editor and notes for each
+ * family. It shows the haptics with these names, groups and words on where each plays. TitanKeys Debug only.
  */
-export const showHapticsGraph = (haptics: { id: string; label: string }[]) => atlas("labGraph", { haptics });
-
-/** The Haptics lab's saved comments file, as JSON. TitanKeys Debug only. */
-export const readLabComments = async (): Promise<unknown> => JSON.parse(await atlas("labComments"));
-export const saveLabComments = (text: string) => atlas("labSaveComments", { text });
+export const showHapticsGraph = (haptics: { id: string; label: string; group: string; about: string }[]) => atlas("labGraph", { haptics });
 
 /** Opens the file picker. Returns false if the picker was cancelled. */
 export async function exportRawLog() {

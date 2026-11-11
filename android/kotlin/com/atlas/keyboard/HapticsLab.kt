@@ -3,80 +3,145 @@ package com.atlas.keyboard
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.time.Instant
 
 /**
- * The Haptics lab in TitanKeys Debug's Settings. It plays each haptic as the keyboard does, tries the lengths of the swipe tick
- * and a step in its graph ([HapticsLabActivity]), and keeps the owner's comments in a file that adb can pull. Only a package
+ * The Haptics lab in TitanKeys Debug's Settings. Its screen ([HapticsLabActivity]) shows the haptics the keyboard really plays
+ * as you type, lets you try other patterns for each family, and keeps your notes in a file that adb can pull. Only a package
  * that ends in ".debug" has it.
  */
 class HapticsLab(private val context: Context) {
-    // Settings has no keyboard to borrow from, so the lab has its own Haptics, with its own gate.
+    // Settings has no keyboard to borrow from, so the lab has its own Haptics, for the editor's Play.
     private val haptics = Haptics(context)
     private val main = Handler(Looper.getMainLooper())
+    private val write = Runnable { writeNotes() }
 
-    /** Plays [id] through the switches and the gate, as the keyboard does. The guide's celebration plays as the guide does. */
-    fun play(id: String) {
-        val haptic = requireNotNull(Haptic.of(id)) { "Unknown haptic: $id" }
-        if (haptic == Haptic.GuideCelebration) haptics.celebrate() else haptics.play(haptic)
+    /** Settings' names for the haptics, with their groups, for the notes file. */
+    var names: List<Named> = emptyList()
+
+    data class Named(val haptic: Haptic, val label: String, val group: String, val about: String)
+
+    /** The notes: one on the whole, one per family and one per haptic, by id. Read from the file the first time. */
+    private val notes by lazy { readNotes() }
+
+    private class Notes(var general: String, val families: MutableMap<String, String>, val haptics: MutableMap<String, String>)
+
+    /** What [family] plays now. */
+    fun pattern(family: Family) = Haptics.pattern(context, family)
+
+    /** Tries [pattern] for [family], or puts the rulebook's back with null. The next real action plays it. */
+    fun tryPattern(family: Family, pattern: List<Long>?) {
+        Haptics.tryPattern(context, family, pattern)
+        later()
     }
 
-    /** Plays [haptic] through the switches and the gate, and says whether it played. */
-    fun play(haptic: Haptic) = haptics.play(haptic)
+    /** Plays what [family] plays now, alone, with no switch or gate. */
+    fun preview(family: Family) = haptics.preview(pattern(family))
 
-    /**
-     * Plays [run], each beat at its time after [start] (an uptime), like a fast swipe or steer. The gate still decides which ones
-     * play. [played] hears each beat: its index, when it really played after [start], and whether the gate let it through. A
-     * beat at 0 plays now, in this call, so the graph's playhead starts with it.
-     */
-    fun playRun(run: List<RunBeat>, start: Long, played: (index: Int, atMillis: Long, admitted: Boolean) -> Unit) {
-        stop()
-        for ((index, beat) in run.withIndex()) {
-            val play = Runnable { played(index, SystemClock.uptimeMillis() - start, haptics.play(beat.haptic)) }
-            if (beat.atMillis == 0L) play.run() else main.postAtTime(play, start + beat.atMillis)
+    fun stop() {
+        if (main.hasCallbacks(write)) {
+            main.removeCallbacks(write)
+            writeNotes()
         }
     }
 
-    fun stop() = main.removeCallbacksAndMessages(null)
-
-    /** Tries a length for moving or a step, in ms. */
-    fun length(feel: Feel, millis: Long) = when (feel) {
-        Feel.Moving -> Haptics.tryMovingMillis(context, millis)
-        Feel.Step -> Haptics.tryStepMillis(context, millis)
-        else -> throw IllegalArgumentException("Only moving and a step have a length to try, not $feel")
-    }
-
-    /** Opens the graph, with the sliders, the timeline and the runs. [labels] are Settings' names for the haptics, as JSON. */
+    /** Opens the lab's screen. [labels] are Settings' names for the haptics, as JSON. */
     fun showGraph(labels: String) = context.startActivity(HapticsLabActivity.intent(context, labels))
 
-    /** The lengths in use now, and each haptic's feel and what it plays with them. */
-    fun state(): JSONObject {
-        val moving = Haptics.movingMillis(context)
-        val step = Haptics.stepMillis(context)
-        val haptics = JSONObject()
-        for (haptic in Haptic.entries)
-            haptics.put(haptic.id, JSONObject().put("feel", haptic.feel.name).put("plays", HapticPalette.describe(haptic, moving, step)))
-        return JSONObject().put("movingMillis", moving).put("stepMillis", step).put("haptics", haptics)
+    /** Each family's pattern in use now, and each haptic's family and what it plays. */
+    fun state(): JSONObject = JSONObject().put("families", families()).put("haptics", haptics())
+
+    private fun families() = JSONObject().apply {
+        for (family in Family.entries) {
+            val pattern = pattern(family)
+            put(family.id, JSONObject().put("name", family.label).put("pattern", JSONArray(pattern))
+                .put("plays", HapticPalette.describe(pattern)).put("tried", pattern != family.pattern))
+        }
     }
 
-    /** The saved comments file, or {} if there is none yet. */
-    fun comments(): String = file().takeIf { it.exists() }?.readText() ?: "{}"
+    private fun haptics() = JSONObject().apply {
+        for (haptic in Haptic.entries) {
+            val pattern = pattern(haptic.family)
+            put(haptic.id, JSONObject().put("family", haptic.family.label).put("pattern", JSONArray(pattern))
+                .put("plays", HapticPalette.describe(pattern)))
+        }
+    }
 
-    /** Replaces the comments file with [text]. It goes to a new file first, so a write that fails never leaves half a file. */
-    fun saveComments(text: String) {
-        JSONObject(text)
+    fun general() = notes.general
+    fun note(family: Family) = notes.families[family.id].orEmpty()
+    fun note(haptic: Haptic) = notes.haptics[haptic.id].orEmpty()
+
+    fun general(text: String) {
+        notes.general = text
+        later()
+    }
+
+    fun note(family: Family, text: String) {
+        notes.families[family.id] = text
+        later()
+    }
+
+    fun note(haptic: Haptic, text: String) {
+        notes.haptics[haptic.id] = text
+        later()
+    }
+
+    /** Writes the file a moment after the last change, so typing doesn't write on every letter. [stop] writes at once. */
+    private fun later() {
+        main.removeCallbacks(write)
+        main.postDelayed(write, WRITE_DELAY_MILLIS)
+    }
+
+    private fun readNotes(): Notes {
+        val file = runCatching { JSONObject(file().takeIf { it.exists() }?.readText() ?: "{}") }.getOrElse { JSONObject() }
+        val families = HashMap<String, String>()
+        file.optJSONObject("families")?.let { saved ->
+            for (id in saved.keys()) saved.optJSONObject(id)?.optString("comment")?.takeIf { it.isNotEmpty() }?.let { families[id] = it }
+        }
+        val haptics = HashMap<String, String>()
+        val list = file.optJSONArray("haptics") ?: JSONArray()
+        for (index in 0 until list.length()) {
+            val entry = list.optJSONObject(index) ?: continue
+            val comment = entry.optString("comment")
+            if (comment.isNotEmpty()) haptics[entry.optString("id")] = comment
+        }
+        return Notes(file.optString("general"), families, haptics)
+    }
+
+    /**
+     * The file adb pulls: the notes, each family's pattern in use and whether it's tried, and each haptic's family and pattern.
+     * It goes to a new file first, so a write that fails never leaves half a file.
+     */
+    private fun writeNotes() {
+        val families = families()
+        for (family in Family.entries) families.getJSONObject(family.id).put("comment", note(family))
+        val haptics = haptics()
+        val list = JSONArray()
+        val named = names.associateBy { it.haptic }
+        for (haptic in Haptic.entries) {
+            val state = haptics.getJSONObject(haptic.id)
+            list.put(JSONObject().put("id", haptic.id).put("name", named[haptic]?.label ?: haptic.id).put("group", named[haptic]?.group ?: "")
+                .put("family", state.getString("family")).put("pattern", state.getJSONArray("pattern")).put("plays", state.getString("plays"))
+                .put("comment", note(haptic)))
+        }
+        val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
+        val text = JSONObject().put("savedAt", Instant.now().toString()).put("version", version).put("general", notes.general)
+            .put("families", families).put("haptics", list).toString(2)
         val file = file()
         val written = File(file.parentFile, "${file.name}.new")
         written.writeText(text)
-        check(written.renameTo(file)) { "Couldn't save the comments." }
+        check(written.renameTo(file)) { "Couldn't save the notes." }
     }
 
     /** /sdcard/Android/data/<package>/files/haptics-lab/comments.json, which adb can pull. */
-    private fun file() = File(requireNotNull(context.getExternalFilesDir("haptics-lab")) { "No storage for the comments." }, "comments.json")
+    private fun file() = File(requireNotNull(context.getExternalFilesDir("haptics-lab")) { "No storage for the notes." }, "comments.json")
 
     companion object {
         fun available(context: Context) = context.packageName.endsWith(".debug")
+
+        private const val WRITE_DELAY_MILLIS = 800L
     }
 }

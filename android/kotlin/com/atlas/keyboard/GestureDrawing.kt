@@ -325,7 +325,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             inGroup++
             val place = i + group
             val order = i.toFloat() / count
-            val popped = ((display.dotsIn - order * .6f) / .4f).coerceIn(0f, 1f)
+            val popped = ((display.dotsIn - order * GestureDisplay.POP_SPREAD) / GestureDisplay.POP_LENGTH).coerceIn(0f, 1f)
             // Each dot has its own part of the way out; it lands in the caret at 1.
             val travel = (display.dotsOut - order * DOT_STAGGER) / (1f - DOT_STAGGER)
             if (travel >= 1f) {

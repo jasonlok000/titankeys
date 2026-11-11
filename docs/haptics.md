@@ -1,72 +1,110 @@
 # How TitanKeys feels
 
+## The rulebook
+
+1. **Two kinds.**
+   - **Texture:** fast, repeating things. One pulse of about 17 ms, never a pattern.
+   - **Message:** something happened. Always a pattern of two pulses or more, or one long pulse, with each pulse about 25 ms or more.
+2. **Meaning comes from rhythm, the same everywhere.**
+   - Rising (short then long) means confirm, or done.
+   - Falling (long then short) means undo, or back.
+   - Two equal firm pulses mean lock: it stays.
+   - Two quick light pulses mean changed.
+   - One long pulse means gone.
+   - Three quick hard pulses mean no.
+   - A rising run of three means celebrate.
+3. **Strength is length only.** More important or more destructive means longer.
+4. **Gaps.** At least 35 ms between pulses, so each one reads on its own.
+5. **No prebaked effects at all.** Everything is our own waveform, `VibrationEffect.createWaveform` with timings. The Titan has no strength control, so every pulse is at the default strength. A single pulse may be a one-shot.
+6. **Repeats.** A message can't repeat within 300 ms. Texture can.
+7. **Boundaries.** A space, or a selection grabbing a word, gets one stronger pulse of about 30 ms instead of a texture tick.
+
+The owner's lab notes led here: swipe and cursor ticks at 17 ms felt very good, every prebaked effect felt generic, messages were too subtle, and "can't save" didn't feel like an error.
+
 **Haptics are only for what your thumb can't feel or see.** A physical key press already clicks under your thumb, so it never buzzes. A buzz is for the touchpad, which has no click of its own, and for what changes where you aren't looking.
 
-## Six feels, one meaning each
+## The families
 
-The Titan 2 Elite has five ready-made effects and no strength control, so each meaning is its own effect. They go from lightest to heaviest:
+Patterns are on and off in ms, starting with on.
 
-| Feel | Effect | Means |
+| Family | Pattern | Plays for |
 |---|---|---|
-| **Texture tick** | one 8 ms buzz, not `TEXTURE_TICK`: on the Titan every ready-made effect lasts 55 to 105 ms (the texture tick 57 ms), too strong for a tick per key | Moving |
-| **Tick** | one 16 ms buzz, not `TICK`: the Titan's tick lasts 85 ms, longer than its click (63 ms), which broke the order from light to heavy | A step |
-| **Click** | `CLICK` (0) | Done |
-| **Double click** | `DOUBLE_CLICK` (1) | Locked, or selecting armed |
-| **Heavy click** | `HEAVY_CLICK` (5) | Gone |
-| **No** | Three 12 ms pulses, 50 ms apart | Nothing happened |
+| **Texture** | 17 | Swipe start, keys crossed, a light touch typing a key, each counted Space tap, cursor letters, words in a held delete, the marked button in the word menu or a panel |
+| **Boundary** | 30 | The cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel |
+| **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, Save, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key on exact typing's bar |
+| **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol |
+| **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar |
+| **Release** | 30 | Shift or Alt unlocked, a clip unpinned |
+| **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
+| **Gone** | 60 | Forget, the clipboard cleared |
+| **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
+| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, nothing left to delete (flick and hold), the cursor hitting the start or end of the text |
+| **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations |
 
-A meaning is the same everywhere. "No" is the only timed pattern, so it can't be mistaken for anything else. A phone without one of the effects gets timed buzzes in its place.
+The rising and falling patterns use a short first or last pulse on purpose: the short pulse is what makes the rise or the fall. So Confirm's 15 ms and Change's 20 ms are under rule 1's "about 25". The table wins over that guide.
+
+Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single 30 ms pulse too, but it comes once, so it's a message.
+
+The owner's table had the delete flick at 50, 30, 20. Its gap is 35 instead, so it keeps rule 4.
+
+### The delete flick and its dots
+
+A flick shows a dot for each letter that went. The dots pop in one after another over 120 ms, at Android's animation speed. The flick's first pulse plays at the flick, and its 20 ms tail plays as a second vibration once the last dot has popped in: at 85 ms for a word of one or two letters, and up to just under 120 ms for a long one. The gate takes both parts as one message. With animations off, or no dots on the bar, it plays as one waveform, 50, 35, 20.
 
 ## What plays what
 
 **Swipe**
-- The swipe is recognised: texture tick. This is the first tick, once the finger has gone as far as a swipe.
-- Each key the swipe crosses: texture tick. The ticks come every 0.7 keys, at most one each 40 ms.
-- A light touch types a key: tick. The touchpad has no click, so this stands in for the key's.
+- The swipe is recognised: texture. This is the first tick, once the finger has gone as far as a swipe.
+- Each key the swipe crosses: texture. The ticks come every 0.7 keys, at most one each 40 ms.
+- A light touch types a key: texture. The touchpad has no click, so this stands in for the key's.
 
 **Delete**
-- A delete flick: heavy click.
-- Each further word while you hold: tick.
+- A delete flick: gone flick.
+- Each further word while you hold: texture.
 - Nothing left to delete: no. This goes for the flick and the hold.
 
 **Space gestures**
-- Steering armed: click.
-- Selecting armed (tap, tap, then hold): double click.
-- A double or triple tap picks a word: double click, as the word is now selected.
-- The cursor passes a letter: texture tick. It passes a space or a line end: tick. So you can count words without looking. Punctuation has no feel of its own, as it almost always sits next to a space.
-- The selection grows or shrinks by a word: tick.
-- The cursor hits the start or end of the text: heavy click, once each time it gets there. It plays again once the cursor has moved away and comes back.
+- Each Space tap that counts toward a gesture: texture, so you feel tap 1 and tap 2 land. It's texture, so it never holds up the confirm or lock that follows.
+- Steering starts: confirm.
+- Selecting starts (tap, tap, then hold): lock.
+- A double or triple tap picks a word: lock, as the word is now selected.
+- The cursor passes a letter: texture. It passes a space or a line end: boundary. So you can count words without looking. Punctuation has no tick of its own, as it almost always sits next to a space.
+- The selection grows or shrinks by a word: boundary.
+- The cursor hits the start or end of the text: no, once each time it gets there. It plays again once the cursor has moved away and comes back.
 
 **Changes**
-- Autocorrect on Space: tick. Shorthand spelled out goes through autocorrect, so it ticks too.
-- A held letter becomes its symbol: click.
-- A :name: becomes its emoji, or a snippet its text: tick.
+- Autocorrect on Space: change. Shorthand spelled out goes through autocorrect, so it plays change too.
+- Backspace right after a change puts back what you typed: back.
+- A held letter becomes its symbol: change.
+- A :name: becomes its emoji, or a snippet its text: change.
 
 **Bar**
-- Tap a word: tick.
-- The word menu opens: click.
-- The marked menu button changes: texture tick.
-- Save, or Undo after Forget: click.
-- Forget: heavy click.
+- Tap a word: confirm.
+- The word menu opens: confirm.
+- The marked menu button changes: texture.
+- Save: confirm.
+- Forget: gone.
+- Undo after Forget: back.
 - Save goes wrong: no.
-- Paste the offered clip: click.
+- Paste the offered clip: confirm.
+- Exact typing's bar: a key is confirm, and a lock is lock.
 
 **Shift and Alt**
-- Locked: double click.
-- Unlocked, from locked: tick.
+- Locked: lock.
+- Unlocked, from locked: release.
 - Once, or off: nothing. That's a key press you already felt.
 
 **Sym, emoji, quick settings and clipboard**
-- The mark moves to another key: texture tick.
-- A new page: tick. A new group: tick.
-- A quick setting switched: click.
-- Paste a clip: click.
-- Pin a clip: double click. Unpin it: tick.
-- Clear the clipboard: heavy click.
+- The mark moves to another key: texture.
+- A new page: boundary. A new group: boundary.
+- A quick setting switched: confirm.
+- Paste a clip: confirm.
+- Pin a clip: lock. Unpin it: release.
+- Clear the clipboard: gone.
 
 **Other**
-- Record a bug starts or stops: click.
-- The guide's celebrations: three ticks rising into a click. The Titan can't make a tick stronger, so there the rise is the click at the end. A phone that can compose effects gets ticks that really grow.
+- Record a bug starts or stops: confirm.
+- The guide's celebrations: celebrate.
 
 ## What plays nothing, and why
 
@@ -76,19 +114,19 @@ A meaning is the same everywhere. "No" is the only timed pattern, so it can't be
 - **A swiped word landing.** Its ticks already played.
 - **Slipping and carrying on.** The swipe or the cursor just goes on.
 - **Lifting to end a steer.** You lifted, so you know.
-- **Backspace undoing autocorrect.** A key press.
 - **Typing in the Sym panel, and opening any panel.** Key presses, and you see the panel.
 - **The touchpad's scroll, cursor and Back.** The screen moves.
 - **The first press of Clear, and Pin mode.** Key presses, and the page shows them.
-- **A key that picks a button in the word menu.** A key press. What the button does plays its own feel.
+- **A key that picks a button in the word menu.** A key press. What the button does plays its own haptic.
 - **A new step in the guide, and setup changes there.** You're looking at the guide.
 - **Speed effects and idle games.** They're for your eyes.
 
-## Three rules that keep it calm
+## The gate
 
-1. **No overlap.** Within 80 ms of the last feel that played, only the first plays. Moving is the exception: the owner kept a tick for each key a swipe or the cursor crosses, so moving ticks keep their own pace, up to one each 40 ms. A moving tick still never cuts or blocks a heavier feel, and it waits out a heavier feel's 80 ms.
-2. **Priority.** Gone and no beat a step, which beats moving. Clicks and double clicks sit between a step and gone. A higher feel inside the 80 ms still plays, but only once the earlier one has finished.
-3. **Nothing cuts a playing feel.** A feel is busy until it ends, and nothing starts before then.
+1. **Nothing cuts a playing message.** Until it ends, nothing else plays, and the next message waits 35 ms more, so the two read apart.
+2. **A message can't repeat.** A message of the same family doesn't play within 300 ms of the last one that played. The rule is by family, not by haptic: two of the same rhythm that close run together into one longer pattern, whichever haptics they came from.
+3. **Texture keeps its own pace.** Texture and boundaries aren't held to the repeat rule, and they never block a message.
+4. **Messages beat texture.** A message plays even right on top of a tick, and texture waits while a message plays.
 
 The rules live in `HapticGate`, which has no Android parts, so tests/haptics can run it.
 
@@ -100,4 +138,16 @@ The rules live in `HapticGate`, which has no Android parts, so tests/haptics can
 - **Vibration** on the quick settings page (Alt on the Sym panel, then V) is the same as All haptics.
 - Android's **Touch feedback** switch turns everything off too.
 
-There is no strength setting. The Titan 2 Elite can't make a vibration stronger, only different.
+There is no strength setting. The Titan 2 Elite can't make a vibration stronger, only longer.
+
+## The Haptics lab
+
+Haptics go with what you do too closely to judge one alone, so TitanKeys Debug's Haptics lab shows the ones the keyboard really plays. Open it from Settings, then type, swipe and steer in its practice field.
+
+- A timeline shows the last 5 s, newest on the right. Each haptic is its pulses to scale, with its name, its family and what set it off. One the gate or a switch dropped is hollow, with the reason: busy, too soon, switched off, or all off.
+- A list under it has the last 15. Tap one to open its family's editor: a slider for each pulse (4 to 120 ms) and each gap (35 to 200 ms), a Play for that pattern alone, and Reset. The next real action plays the edited pattern.
+- Notes: one overall, one per family and one per haptic. They go in `comments.json` in the app's files, with each family's pattern in use and each haptic's family and pattern.
+
+A tried pattern is kept in the `swipe_haptics` preferences, and only a package that ends in ".debug" reads it. Every other build plays the patterns above.
+
+The keyboard and Settings run in one process, so the feed is a plain object, `HapticFeed`: the keyboard's `Haptics` records each play there with its result, and the lab listens while it shows, and stops when it goes. The feed keeps the last 64, so the lab shows recent ones as it opens. Only a ".debug" package turns it on. In every other build it's off, and nothing is recorded.

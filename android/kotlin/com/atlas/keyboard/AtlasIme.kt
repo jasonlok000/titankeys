@@ -542,7 +542,10 @@ class AtlasIme : InputMethodService() {
         composer.nearMiss = { right -> GuideScript.slip(right).takeIf { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) } }
         composer.intended = { before -> GuideHooks.intended(currentInputEditorInfo?.privateImeOptions, before) }
         composer.guidePlaced = { place -> GuideHooks.rightPlace = place }
-        composer.onRestored = { KeyboardEvents.publish { KeyboardEvent.Restored } }
+        composer.onRestored = {
+            haptics.play(Haptic.AutocorrectUndone)
+            KeyboardEvents.publish { KeyboardEvent.Restored }
+        }
         // The guide asks whether the bar has words to hold, for its word menu slide. Only in its own field.
         GuideHooks.barCount = { if (inGuide) barWords.size else -1 }
         // The interactive guide acts out a gesture on this bar, only in its own field. See [Strip.playDemo].
@@ -601,8 +604,6 @@ class AtlasIme : InputMethodService() {
         // marked debuggable, so its own package name tells it apart.
         if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) {
             registerReceiver(idleBarTrigger, IntentFilter(IDLE_BAR_ACTION), RECEIVER_EXPORTED)
-            registerReceiver(movingTry, IntentFilter(MOVING_ACTION), RECEIVER_EXPORTED)
-            registerReceiver(stepTry, IntentFilter(STEP_ACTION), RECEIVER_EXPORTED)
             idleBarTriggerRegistered = true
         }
         updateOverlay()
@@ -655,24 +656,6 @@ class AtlasIme : InputMethodService() {
     }
     private val idleSchedule = IdleSchedule()
     private var idleBarTriggerRegistered = false
-    /** The debug build's swipe tick length to try, from adb: the extra "ms", or 0 to go back to the usual length. It plays one. */
-    private val movingTry = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            Haptics.tryMovingMillis(context, intent.getIntExtra("ms", 0).toLong())
-            Log.i("Atlas", "Swipe tick: ${Haptics.movingMillis(context)} ms")
-            main.post { haptics.play(Haptic.SwipeKey) }
-        }
-    }
-
-    /** The same for a step (a cursor passing a space, a bar tap): the extra "ms", or 0 for the usual length. It plays one. */
-    private val stepTry = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            Haptics.tryStepMillis(context, intent.getIntExtra("ms", 0).toLong())
-            Log.i("Atlas", "Step: ${Haptics.stepMillis(context)} ms")
-            main.post { haptics.play(Haptic.CursorSpace) }
-        }
-    }
-
     /**
      * The debug build's trigger, from adb. It always starts a game, with no roll of the chance. With no extra the game is picked by
      * rarity among the ones the letters fit. The extra "game" picks one by name or by the demo's number (1 drift, 2 pong, 3 bowling,
@@ -1466,7 +1449,7 @@ class AtlasIme : InputMethodService() {
     private fun undoForget() {
         val pending = pendingForget ?: return
         pendingForget = null
-        haptics.play(Haptic.WordSaved)
+        haptics.play(Haptic.ForgetUndone)
         main.removeCallbacks(forgetNow)
         strip?.notice = null
         composer.unhide(pending.word)
@@ -1734,14 +1717,16 @@ class AtlasIme : InputMethodService() {
     }
 
     /**
-     * A Space tap that the gesture code counted grows the glow under the middle word. A first tap on a key that types by tapping
-     * may become that key, so it shows nothing; a key press puts the glow out (see [onKeyDown]).
+     * A Space tap that the gesture code counted grows the glow under the middle word, and ticks, so each tap is felt as it
+     * counts. A first tap on a key that types by tapping may become that key, so it shows nothing and plays that key's own tick;
+     * a key press puts the glow out (see [onKeyDown]).
      */
     private fun glowSpaceTap(cancelled: Boolean) {
         val taps = cursorGesture.tapped
         if (cancelled || taps == 0) return
         val landed = cursorGesture.tappedLanded
         if (taps == 1 && landed != null && isTapKey(Layout.keyAt(landed.x, landed.y))) return
+        haptics.play(Haptic.SpaceTap)
         strip?.gesture?.spaceTapped(taps, SystemClock.uptimeMillis())
     }
 
@@ -2188,10 +2173,15 @@ class AtlasIme : InputMethodService() {
                 if (outcome.deletesWord) {
                     val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
                     val nothingLeft = before?.isEmpty() == true
-                    haptics.play(if (nothingLeft) Haptic.DeleteNothing else Haptic.DeleteFlick)
+                    if (nothingLeft) haptics.play(Haptic.DeleteNothing)
                     composer.backspace(true)
-                    // A dot for each character of the word that went, not counting spaces.
-                    if (!nothingLeft) strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
+                    if (!nothingLeft) {
+                        // A dot for each character of the word that went, not counting spaces. The haptic's tail lands as they pop.
+                        val gesture = strip?.gesture
+                        gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
+                        val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
+                        haptics.flick(gesture?.dotsPoppedMillis(scale))
+                    }
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return
                 }
@@ -2756,8 +2746,6 @@ class AtlasIme : InputMethodService() {
         unregisterReceiver(screenOff)
         if (idleBarTriggerRegistered) {
             unregisterReceiver(idleBarTrigger)
-            unregisterReceiver(movingTry)
-            unregisterReceiver(stepTry)
         }
         sleepIdleBar()
         clipboard?.removePrimaryClipChangedListener(clipChanged)
@@ -2787,8 +2775,6 @@ class AtlasIme : InputMethodService() {
         private const val IDLE_BAR_MILLIS = 3 * 60 * 1000L
         /** The debug build starts the idle scene at once on this broadcast, from adb. */
         private const val IDLE_BAR_ACTION = "com.titankeys.debug.IDLE_BAR"
-        private const val MOVING_ACTION = "com.titankeys.debug.MOVING_MILLIS"
-        private const val STEP_ACTION = "com.titankeys.debug.STEP_MILLIS"
         private const val DEBUG_PACKAGE_SUFFIX = ".debug"
         /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"

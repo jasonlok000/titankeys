@@ -1,8 +1,11 @@
 package com.atlas.keyboard
 
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Shader
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -24,12 +27,34 @@ import kotlin.math.sin
 internal class GestureDrawing(private val density: Float, private val radius: Float) {
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val box = RectF()
+    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    private val keyText = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
+    private val path = Path()
+    private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var glowHeight = 0f
+    private var glowColour = 0
 
     fun draw(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, height: Int, look: Look) {
         val h = height.toFloat()
-        // The words stay where they are, under a cover in the strip's own colour, so nothing moves when this comes and goes.
-        fill.color = GuideMotion.faded(look.paper, display.reveal)
+        if (display.scene != GestureDisplay.Scene.None) scene(canvas, display, left, right, h, look)
+        if (display.glowTaps > 0) glow(canvas, display, left, right, h, look)
+    }
+
+    private fun scene(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
+        // The words stay where they are, under a cover in the strip's own colour, so nothing moves when this comes and goes. A swipe
+        // only dims them.
+        val cover = if (display.scene == GestureDisplay.Scene.Swipe) SWIPE_DIM else 1f
+        fill.color = GuideMotion.faded(look.paper, display.reveal * cover)
         canvas.drawRect(0f, 0f, right + left, h, fill)
+        if (display.scene == GestureDisplay.Scene.Swipe) {
+            // No settling here: the path stays on the keys' map as the finger draws it.
+            swipe(canvas, display, left + dp(SIDE), right - dp(SIDE), h, look)
+            return
+        }
         val mid = h / 2
         val settle = REST_SCALE + (1f - REST_SCALE) * display.reveal
         canvas.save()
@@ -40,9 +65,65 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             GestureDisplay.Scene.Cursor -> cursor(canvas, display, inside, outside, mid, look)
             GestureDisplay.Scene.WordDrag, GestureDisplay.Scene.WordSelected -> words(canvas, display, inside, outside, mid, look)
             GestureDisplay.Scene.DeleteHold, GestureDisplay.Scene.DeleteFlick -> delete(canvas, display, inside, outside, mid, look)
-            GestureDisplay.Scene.None -> Unit
+            GestureDisplay.Scene.Swipe, GestureDisplay.Scene.None -> Unit
         }
         canvas.restore()
+    }
+
+    /**
+     * A word swipe's mini path: the letter keys, faint, at their real places across the strip, and the path over them in the accent
+     * colour, with a dot at the finger. It all fades with [GestureDisplay.reveal].
+     */
+    private fun swipe(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
+        val alpha = display.reveal
+        val across = right - left
+        keyText.textSize = dp(KEY_TEXT)
+        keyText.color = GuideMotion.faded(look.muted, KEY_FAINT * alpha)
+        val lift = (keyText.ascent() + keyText.descent()) / 2
+        for (index in 0 until 26) {
+            val letter = Layout.LETTERS[index]
+            canvas.drawText(letter.uppercase(), left + across * Layout.KEY_X[index], swipeY(Layout.KEY_Y[index] * .75f, h) - lift, keyText)
+        }
+        val count = display.pathSize
+        if (count == 0) return
+        path.reset()
+        path.moveTo(left + across * display.pathX[0], swipeY(display.pathY[0], h))
+        for (index in 1 until count) path.lineTo(left + across * display.pathX[index], swipeY(display.pathY[index], h))
+        stroke.strokeWidth = dp(PATH_WIDTH)
+        stroke.color = GuideMotion.faded(look.accent, alpha)
+        canvas.drawPath(path, stroke)
+        dot(canvas, left + across * display.pathX[count - 1], swipeY(display.pathY[count - 1], h), dp(PATH_FINGER), GuideMotion.faded(look.accent, alpha))
+    }
+
+    /** A touchpad height, from the top row down to the bottom of the letter rows, as a height on the strip's three rows of keys. */
+    private fun swipeY(y: Float, h: Float): Float {
+        val row = dp(KEY_ROW)
+        val top = h / 2 - row
+        return (top + (y / .75f * 3 - .5f) * row).coerceIn(dp(KEY_TEXT) / 2, h - dp(KEY_TEXT) / 2)
+    }
+
+    /**
+     * The Space glow: soft orange rising from the strip's bottom edge under the middle word, as wide and as strong as the taps so far
+     * make it, with a thin line along the bottom on the third tap.
+     */
+    private fun glow(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
+        if (display.glowAlpha <= 0f) return
+        val tall = dp(GLOW_HEIGHT)
+        if (glowHeight != h || glowColour != look.accent) {
+            // Made again only when the strip or the colour changes, so a frame makes no garbage.
+            glowHeight = h
+            glowColour = look.accent
+            glow.shader = LinearGradient(0f, h, 0f, h - tall, look.accent, GuideMotion.faded(look.accent, 0f), Shader.TileMode.CLAMP)
+        }
+        val centre = (left + right) / 2
+        val half = (right - left) * display.glowWidth / 2
+        glow.alpha = (display.glowAlpha.coerceIn(0f, 1f) * 255).toInt()
+        box.set(centre - half, h - tall, centre + half, h + tall)
+        canvas.drawOval(box, glow)
+        if (display.glowPulse > 0f) {
+            fill.color = GuideMotion.faded(look.accent, PULSE * display.glowPulse * display.glowAlpha / GestureDisplay.GLOW_ALPHAS[3])
+            canvas.drawRect(centre - half, h - dp(PULSE_HEIGHT), centre + half, h, fill)
+        }
     }
 
     /** A line of letters that moves past the caret, and under it the track with the dead zone and the finger. */
@@ -295,6 +376,16 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         /** How much of a word's slot each word takes, in a fixed pattern that reads as a line of text. */
         val WORD_WIDTHS = floatArrayOf(.62f, .82f, .5f, .74f, .88f, .56f, .7f)
         const val REST_SCALE = .86f
+        /** A swipe dims the words to about an eighth, as in the owner's mockup, and its keys are a faint map at this size. */
+        const val SWIPE_DIM = .88f
+        const val KEY_TEXT = 9f
+        const val KEY_ROW = 14f
+        const val KEY_FAINT = .35f
+        const val PATH_WIDTH = 1.6f
+        const val PATH_FINGER = 2.8f
+        const val GLOW_HEIGHT = 10f
+        const val PULSE = .25f
+        const val PULSE_HEIGHT = 1f
         const val SIDE = 10f
         const val LINE_LIFT = 5f
         const val LETTER_PITCH = 9f

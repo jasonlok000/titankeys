@@ -57,6 +57,12 @@ class CursorGesture {
     /** True while a second or third touch is down that may still become a gesture, for the keyboard to check [held] after a while. */
     val touchPending get() = state is State.NextTouch
 
+    /** The quick taps that the last [up] finished, 1 to 3, for the strip's Space glow, or 0 when it finished none. */
+    val tapped get() = (state as? State.Tapped)?.taps ?: 0
+
+    /** Where the last of those taps landed. */
+    val tappedLanded get() = (state as? State.Tapped)?.landed
+
     /** The quick taps before the touch that is down now: 2 when it is the third touch, which picks the word as it lands. */
     val tapsBefore get() = (state as? State.NextTouch)?.taps ?: 0
 

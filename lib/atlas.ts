@@ -73,6 +73,8 @@ export type State = {
   exactApps: App[];
   /** Apps where the bar is not drawn. The keyboard stays active there, one pixel high. */
   hiddenBarApps: App[];
+  /** In exact typing apps (experimental), the physical Alt sends Alt, not symbols. */
+  exactRealAlt: boolean;
   /** Apps where a field started recently, newest first, which the user can add to a list. */
   recentApps: App[];
   /** The character that starts a snippet's shortcut. */
@@ -103,7 +105,7 @@ export type State = {
 /** The lengths in use for moving and a step, in ms, and each haptic's feel and what it plays, by its id in Haptics.kt. */
 export type HapticsLab = { movingMillis: number; stepMillis: number; haptics: Record<string, { feel: string; plays: string }> };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
 
 /**
  * Touchpad points from 0 to 1 across the keyboard and down its four rows, with how thick to draw the trail there: 1 for a

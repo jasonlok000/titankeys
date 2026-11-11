@@ -53,6 +53,13 @@ class HapticsLab(private val context: Context) {
 
     /** Each family's pattern in use now, and each haptic's family and what it plays. */
     fun state(): JSONObject = JSONObject().put("families", families()).put("haptics", haptics())
+        .put("experiments", JSONObject().put(DOTS_SPEED_UP, Haptics.dotsSpeedUp(context)))
+
+    /** Turns one of the lab's experiments on or off, by its id. */
+    fun experiment(id: String, on: Boolean) = when (id) {
+        DOTS_SPEED_UP -> Haptics.tryDotsSpeedUp(context, on)
+        else -> throw IllegalArgumentException("No experiment called $id")
+    }
 
     private fun families() = JSONObject().apply {
         for (family in Family.entries) {
@@ -141,6 +148,8 @@ class HapticsLab(private val context: Context) {
 
     companion object {
         fun available(context: Context) = context.packageName.endsWith(".debug")
+        /** The id of the experiment "Dots speed up when long", as the lab's page names it. */
+        const val DOTS_SPEED_UP = "dotsSpeedUp"
 
         private const val WRITE_DELAY_MILLIS = 800L
     }

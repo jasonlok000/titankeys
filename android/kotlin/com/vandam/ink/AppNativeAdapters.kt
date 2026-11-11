@@ -342,6 +342,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     lab().showGraph(data.getJSONArray("haptics").toString())
                     "null"
                 }
+                "labExperiment" -> {
+                    lab().experiment(data.getString("id"), data.getBoolean("on"))
+                    "null"
+                }
                 else -> throw IllegalArgumentException("Unknown Atlas operation: $operation")
             }
             if (result != null) complete(NativeResult.Success(result))

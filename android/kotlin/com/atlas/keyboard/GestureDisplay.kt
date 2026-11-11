@@ -6,6 +6,7 @@ import kotlin.math.floor
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToLong
 
 /**
@@ -193,17 +194,49 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         private set
     /** The letters of each word a hold deleted, in order. */
     private val held = ArrayList<Int>()
-    /** How long the dots take to come in: a flick's pop, or a lifted hold's morph. */
+    /** How long the first dots take to come in: a flick's pop, or a lifted hold's morph. */
     private var dotsInMillis = FLICK_IN
-    /** How far the dots have come in, from 0 to 1, and how far their way into the caret has gone at the end. */
+    /** How far the first dots have come in, from 0 to 1, and how far the whole stream's way into the caret has gone. */
     var dotsIn = 0f
         private set
     var dotsOut = 0f
         private set
-    /** The dots' way into the caret, in animation ms: how long it takes, how far it has gone, and how far apart the dots set off. */
-    private var outLength = FLICK_OUT
-    private var outElapsed = 0f
-    private var dotStep = 0f
+
+    /**
+     * The dots are one stream: each delete that comes while they play adds its dots after the ones still to land, as a queue,
+     * and nothing starts over. A batch is one delete's dots: its first dot, how many, and when it came, in real ms after the
+     * stream started. Each dot's times are worked out for an animator scale ([planned]), in real ms after the stream started.
+     */
+    private val batchFrom = IntArray(MAX_BATCHES)
+    private val batchCount = IntArray(MAX_BATCHES)
+    private val batchAt = FloatArray(MAX_BATCHES)
+    private var batches = 0
+    private val dotLand = FloatArray(MAX_STREAM)
+    private val dotPopAt = FloatArray(MAX_STREAM)
+    private val dotPlace = IntArray(MAX_STREAM)
+    /** One step after the last dot lands: then the words come back. */
+    private var doneAt = 0f
+    private var planned = Float.NaN
+    /** Real ms since the stream started, at the last frame, and whether that frame had motion. */
+    private var streamAt = 0f
+    private var still = false
+    /** The place in the row that sits next to the caret, and how many places the row must fit, both following the queue smoothly. */
+    var shownBase = 0f
+        private set
+    var shownUnits = 1f
+        private set
+    private var baseTarget = 0f
+    private var unitsTarget = 1f
+    /** True when the last delete added its dots to a stream that was still playing. */
+    var chained = false
+        private set
+
+    /** The experiment "Dots speed up when long", from the Haptics lab: after the first few, each dot lands a little sooner. */
+    var speedUp = false
+        set(value) {
+            if (field != value) planned = Float.NaN
+            field = value
+        }
 
     /** The cursor or word drag at this frame. [column] is in key widths, as [CursorMode] gives it. [speed] is 0 on Space. */
     fun cursorFrame(column: Float, direction: Int, speed: Float, words: Boolean, now: Long) {
@@ -298,20 +331,131 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             changed()
         } else {
             if (!allowed || live) return
+            // Dots still playing take the new ones at the end of their queue, and go on.
+            if (scene == Scene.DeleteFlick && dots > 0 && !still && batches < MAX_BATCHES && now - flourishAt < doneAt) {
+                chain(letters, (now - flourishAt).toFloat())
+                return
+            }
             setGroups(listOf(letters))
             startFlourish(Scene.DeleteFlick, now)
             fromHold = false
             dotsInMillis = FLICK_IN
+            startStream()
         }
     }
+
+    /** The first batch of a stream: the dots that [setGroups] put in place. */
+    private fun startStream() {
+        batches = 1
+        batchFrom[0] = 0
+        batchCount[0] = dots
+        batchAt[0] = 0f
+        placeDots(0)
+        planned = Float.NaN
+        chained = false
+        baseTarget = 0f
+        shownBase = 0f
+        unitsTarget = places().toFloat()
+        shownUnits = unitsTarget
+    }
+
+    /** Each dot's place in the row from [from] on: one after another, with a gap where each space was. */
+    private fun placeDots(from: Int) {
+        var index = 0
+        var place = 0
+        for ((group, count) in groups.withIndex()) {
+            for (k in 0 until count) {
+                if (index >= from) dotPlace[index] = place
+                index++
+                place++
+            }
+            if (group < groups.lastIndex) place++
+        }
+    }
+
+    private fun places() = if (dots == 0) 1 else dotPlace[dots - 1] + 1
+
+    /** A delete of [letters] [at] real ms into a stream that still plays: its dots go at the end of the queue. */
+    private fun chain(letters: Int, at: Float) {
+        val room = MAX_STREAM - dots
+        if (room <= 0) return
+        val count = min(letters.coerceIn(1, MAX_DOTS), room)
+        val from = dots
+        groups += count
+        dots += count
+        placeDots(from)
+        batchFrom[batches] = from
+        batchCount[batches] = count
+        batchAt[batches] = at
+        batches++
+        planned = Float.NaN
+        chained = true
+        // The row slides along: the place next to the caret is now the first dot that hasn't landed, and the rest fit after it.
+        var next = 0
+        while (next < from && dotLand[next] <= at) next++
+        baseTarget = dotPlace[next].toFloat()
+        unitsTarget = (places() - baseTarget).coerceAtLeast(1f)
+        changed()
+    }
+
+    /** Works out when each dot pops in and lands, in real ms after the stream started, at animator [scale]. */
+    private fun plan(scale: Float) {
+        if (planned == scale || scale <= 0f) return
+        planned = scale
+        var last = 0f
+        var interval = 0f
+        for (b in 0 until batches) {
+            val from = batchFrom[b]
+            val count = batchCount[b]
+            val base = dotStepMillis(count, scale)
+            val inMillis = if (b == 0) dotsInMillis else FLICK_IN
+            val earliest = batchAt[b] + (inMillis + FLICK_HOLD + DOT_TRAVEL) * scale
+            for (j in 0 until count) {
+                val index = from + j
+                interval = if (speedUp) max(DOT_FASTEST_GAP, base * DOT_SPEED_UP.pow(max(0, index - DOT_SPEED_FROM))) else base
+                last = when {
+                    // The first batch keeps exact steps, so its dots land just where they always did.
+                    !speedUp && b == 0 -> earliest + j * base
+                    j == 0 && b == 0 -> earliest
+                    j == 0 -> max(earliest, last + interval)
+                    else -> last + interval
+                }
+                dotLand[index] = last
+                dotPopAt[index] = if (b == 0 && fromHold) Float.NEGATIVE_INFINITY
+                    else batchAt[b] + j.toFloat() / count * POP_SPREAD * FLICK_IN * scale
+            }
+        }
+        doneAt = last + interval
+    }
+
+    /**
+     * How far dot [index] has popped in, from 0 to 1. A lifted hold's first dots come out of its lines instead: see [dotsIn].
+     */
+    fun dotPopped(index: Int): Float {
+        if (still || index >= dots) return 1f
+        val at = dotPopAt[index]
+        if (at == Float.NEGATIVE_INFINITY) return 1f
+        return ((streamAt - at) / (POP_LENGTH * FLICK_IN * planned)).coerceIn(0f, 1f)
+    }
+
+    /** When dot [index] lands, in real ms after the stream started, at animator [scale]. */
+    fun dotLandsAt(index: Int, scale: Float = 1f): Float {
+        plan(scale)
+        return dotLand[index]
+    }
+
+    /** The place in the row of dot [index], counting a gap for each space; the row's place [shownBase] is next to the caret. */
+    fun dotPlace(index: Int) = dotPlace[index]
 
     /**
      * When the last of a single flick's dots has popped in, in ms after the flick, at Android's animator duration [scale]. Null
      * when no flick's dots pop in now, or with no motion. The delete flick's haptic lands its tail then.
      */
     fun dotsPoppedMillis(scale: Float): Long? {
-        if (scene != Scene.DeleteFlick || fromHold || dots == 0 || scale <= 0f) return null
-        val last = (dots - 1).toFloat() / dots
+        if (scene != Scene.DeleteFlick || dots == 0 || scale <= 0f || batches == 0) return null
+        if (batches == 1 && fromHold) return null
+        val count = batchCount[batches - 1]
+        val last = (count - 1).toFloat() / count
         return ((last * POP_SPREAD + POP_LENGTH) * FLICK_IN * scale).toLong()
     }
 
@@ -321,15 +465,29 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * ticks on these.
      */
     fun dotLandings(scale: Float): List<Long> {
-        if (scene != Scene.DeleteFlick || dots == 0 || scale <= 0f) return emptyList()
-        // Each dot sets off one step after the one before, and lands as its own way ends.
-        val first = ((dotsInMillis + FLICK_HOLD + DOT_TRAVEL) * scale).roundToLong()
-        val step = dotStepMillis(dots, scale)
-        return (0 until dots).map { index -> first + (index * step).roundToLong() }
+        if (scene != Scene.DeleteFlick || dots == 0 || scale <= 0f || batches == 0) return emptyList()
+        plan(scale)
+        // The latest delete's dots, in ms after it came. A dot that lands within 30 ms of the last tick lands without one, so
+        // the ticks stay apart when the dots speed up; a whole stream is counted, so a new batch keeps clear of the last.
+        val from = batchFrom[batches - 1]
+        val at = batchAt[batches - 1]
+        val ticks = ArrayList<Long>()
+        var lastTick = Float.NEGATIVE_INFINITY
+        val first = (dotLand[from] - at).roundToLong()
+        for (index in 0 until dots) {
+            val land = dotLand[index]
+            if (land - lastTick < DOT_LAND_GAP - .5f) continue
+            lastTick = land
+            if (index >= from) ticks += first + (land - dotLand[from]).roundToLong()
+        }
+        return ticks
     }
 
     /** How far dot [index] has gone on its way into the caret: 0 before it sets off, 1 as it lands, and more after. */
-    fun dotTravel(index: Int) = (outElapsed - index * dotStep) / DOT_TRAVEL
+    fun dotTravel(index: Int): Float {
+        if (still || index >= dots || planned.isNaN()) return 0f
+        return (streamAt - (dotLand[index] - DOT_TRAVEL * planned)) / (DOT_TRAVEL * planned)
+    }
 
     /** When the dots that show now started, an uptime, or null when none show. Tells one flick's or hold's dots from the next. */
     val dotsAt get() = if (scene == Scene.DeleteFlick) flourishAt else null
@@ -377,6 +535,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         morphFrom = from
         morphFlow = beat
         dotsInMillis = MORPH_IN
+        startStream()
         changed()
         return true
     }
@@ -532,12 +691,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         lastFrame = now
         val motion = scale > 0f
         if (flourishing) {
-            if (scene == Scene.DeleteFlick && motion && dots > 0) {
-                outLength = outMillis(dots, scale) / scale
-                dotStep = dotStepMillis(dots, scale) / scale
-            }
+            if (scene == Scene.DeleteFlick && motion && dots > 0) plan(scale)
             val length = if (!motion) STILL_MILLIS else when (scene) {
-                Scene.DeleteFlick -> flickMillis
+                Scene.DeleteFlick -> if (dots > 0) (doneAt + FLICK_BACK * scale) / scale else FLICK_MILLIS
                 Scene.WordSelected -> PICK_MILLIS
                 else -> FLOURISH_MILLIS
             } * scale
@@ -548,7 +704,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             }
             flourish = if (motion) easeOut(t) else 1f
             reveal = if (!motion) 1f
-                else if (scene == Scene.DeleteFlick) flickReveal((now - flourishAt) / scale)
+                else if (scene == Scene.DeleteFlick) flickReveal((now - flourishAt).toFloat(), scale)
                 else if (scene == Scene.WordSelected) pickReveal((now - flourishAt) / scale)
                 else min(revealedAtStart + (1f - revealedAtStart) * t / FLOURISH_IN, (1f - t) / FLOURISH_OUT).coerceIn(0f, 1f)
         } else {
@@ -590,10 +746,24 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             }
             Scene.DeleteFlick -> {
                 // The text is already gone; only the picture moves. The dots come in, stay a while, and go into the caret.
-                val elapsed = if (motion) (now - flourishAt) / scale else dotsInMillis
-                dotsIn = (elapsed / dotsInMillis).coerceIn(0f, 1f)
-                outElapsed = if (motion) (elapsed - dotsInMillis - FLICK_HOLD).coerceIn(0f, outLength) else 0f
-                dotsOut = outElapsed / outLength
+                still = !motion
+                streamAt = (now - flourishAt).toFloat()
+                val sinceStart = if (motion) streamAt / scale else dotsInMillis
+                dotsIn = (sinceStart / dotsInMillis).coerceIn(0f, 1f)
+                dotsOut = if (motion && dots > 0) {
+                    val from = dotLand[0] - DOT_TRAVEL * scale
+                    ((streamAt - from) / (doneAt - from)).coerceIn(0f, 1f)
+                } else 0f
+                // A stream that deletes joined moves along like a queue: as each dot lands, the ones behind it close up towards the
+                // caret, so the newest never wait far off. A single delete's row stays put, as it always has.
+                if (batches > 1 && motion && !planned.isNaN()) {
+                    var next = 0
+                    while (next < dots - 1 && dotLand[next] - DOT_TRAVEL * scale <= streamAt) next++
+                    baseTarget = max(baseTarget, dotPlace[next].toFloat())
+                    unitsTarget = (places() - baseTarget).coerceAtLeast(1f)
+                }
+                shownBase = ease(shownBase, baseTarget, elapsed, SLIDE_MILLIS, motion)
+                shownUnits = ease(shownUnits, unitsTarget, elapsed, SLIDE_MILLIS, motion)
                 shownDeleted = 0f
                 flow = 0f
             }
@@ -653,14 +823,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * A single flick's cover: in quickly, from where it was, so the old words never show through; it stays while the dots go into
      * the caret, and then the words fade back in.
      */
-    private fun flickReveal(elapsed: Float): Float {
-        val back = ((elapsed - dotsInMillis - FLICK_HOLD - outLength) / FLICK_BACK).coerceIn(0f, 1f)
+    private fun flickReveal(real: Float, scale: Float): Float {
+        val back = ((real - doneAt) / (FLICK_BACK * scale)).coerceIn(0f, 1f)
         if (back > 0f) return 1f - back * back * (3 - 2 * back)
-        return revealedAtStart + (1f - revealedAtStart) * (elapsed / FLICK_COVER_IN).coerceIn(0f, 1f)
+        return revealedAtStart + (1f - revealedAtStart) * (real / scale / FLICK_COVER_IN).coerceIn(0f, 1f)
     }
-
-    /** How long the dots play in all, in animation ms: in, a while, into the caret, and the words back. */
-    val flickMillis get() = dotsInMillis + FLICK_HOLD + outLength + FLICK_BACK
 
     /** A picked word's cover: in quickly from where it was, so the suggestions never show through, it holds, then it fades out. */
     private fun pickReveal(elapsed: Float): Float {
@@ -673,9 +840,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         scene = Scene.None
         if (glowHeld) endGlow()
         fromHold = false
-        outLength = FLICK_OUT
-        outElapsed = 0f
-        dotStep = 0f
+        batches = 0
+        dots = 0
+        groups = IntArray(0)
+        chained = false
+        still = false
+        planned = Float.NaN
         reveal = 0f
         leaving = false
         resetPieces()
@@ -770,6 +940,19 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
          * dots keep the owner's 450 ms way in. More dots stretch it, so 30 of them land over about 900 ms, one after another.
          */
         const val DOT_LAND_GAP = 30f
+        /**
+         * The experiment "Dots speed up when long": from the [DOT_SPEED_FROM]th dot on, each lands this much sooner after the one
+         * before than that one did, down to [DOT_FASTEST_GAP] real ms, so a long delete whooshes in at the end. A dot that lands
+         * within 30 ms of the last tick lands without one.
+         */
+        const val DOT_SPEED_FROM = 3
+        const val DOT_SPEED_UP = .92f
+        const val DOT_FASTEST_GAP = 10f
+        /** The most deletes one stream of dots takes, and the most dots it holds. */
+        const val MAX_BATCHES = 64
+        const val MAX_STREAM = 256
+        /** The row slides along this smoothly when a delete joins the queue. */
+        private const val SLIDE_MILLIS = 90f
 
         /** How far apart [dots] land in the caret, in real ms at animator [scale]: their share of the way in, or [DOT_LAND_GAP]. */
         fun dotStepMillis(dots: Int, scale: Float) = max(FLICK_OUT * DOT_STAGGER * scale / dots, DOT_LAND_GAP)

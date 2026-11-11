@@ -493,6 +493,11 @@ private fun aCutDropsTheTicksToCome() {
     ticks.schedule(listOf(10L)) { played++ }
     ticks.schedule(listOf(20L)) { played++ }
     check(posted.map { it.second } == listOf(20L)) { "Only the new flick's ticks wait: $posted" }
+    // A flick that joins dots still playing adds its ticks to theirs.
+    ticks.add(listOf(70L, 100L)) { played++ }
+    check(posted.map { it.second } == listOf(20L, 70L, 100L) && ticks.pending == 3) { "The stream's ticks all wait: $posted" }
+    ticks.cut()
+    check(posted.isEmpty()) { "and a cut drops them all" }
 }
 
 /** A long delete's lines turn into dots at the lift, which tick as each lands, the same way a flick's do. */

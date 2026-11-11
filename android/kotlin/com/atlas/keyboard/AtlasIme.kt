@@ -351,6 +351,7 @@ class AtlasIme : InputMethodService() {
     /** The hold ended: its lines turn into dots, which tick as each lands in the caret while those same dots are on the bar. */
     private fun deleteDots() {
         val gesture = strip?.gesture ?: return
+        gesture.speedUp = Haptics.dotsSpeedUp(this)
         if (!gesture.deleteEnded(SystemClock.uptimeMillis())) return
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
         val dotsAt = gesture.dotsAt
@@ -378,6 +379,8 @@ class AtlasIme : InputMethodService() {
     /** Each word goes the way of a normal delete flick. [flick] is the first word's flick, and is null for the words after it. */
     private fun deleteHeldWord(flick: Contact.Outcome.Swipe?) {
         if (flick != null) {
+            // A hold takes the bar from any dots still playing, and their ticks stop.
+            haptics.cutDots()
             strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis())
             // The contact was a delete and not part of a word, as it would be at a lift.
             pieces.clear()
@@ -405,6 +408,7 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun startCursor(drag: CursorGesture.Drag, samples: List<Sample>) {
+        if (strip?.gesture?.softDelete == true) interruptGesture()
         // A slide before the hold registered still steers nothing where there is no text. Selecting was decided on landing.
         if (!gestureEmpty && !gestureRegistered && !drag.words && nothingHere(words = false)) nothingToPick()
         if (gestureEmpty) {
@@ -1775,8 +1779,9 @@ class AtlasIme : InputMethodService() {
     private fun motion(event: MotionEvent) {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             clearTeamsEgg()
-            // A delete flick's dots are only a picture, so the next touch ends them.
-            interruptGesture()
+            // A flourish is only a picture, so the next touch ends it. A delete's dots wait for what the touch turns out to be: another
+            // delete joins their queue, and anything else cuts them (see [outcome]).
+            if (strip?.gesture?.softDelete != true) interruptGesture()
             // A finger landing is you coming back; the letters go home. A tap or swipe that types cuts to the words: see [outcome].
             wakeIdleBar(cut = false)
         }
@@ -1908,6 +1913,8 @@ class AtlasIme : InputMethodService() {
      */
     private fun showSwipe() {
         val gesture = strip?.gesture ?: return
+        // While a delete's dots play, the next stroke draws no path: it may be another delete, which joins them.
+        if (gesture.softDelete) return
         val points = contact.points
         val travel = contact.travel
         val first = points.firstOrNull()
@@ -2373,6 +2380,8 @@ class AtlasIme : InputMethodService() {
         if (strip?.idling == true) wakeIdleBar()
         Recording.sink?.outcome(outcome)
         inputLog()?.outcome(outcome)
+        // A touch that is no delete flick cuts a delete's dots, which waited for it.
+        if (!(outcome is Contact.Outcome.Swipe && outcome.deletesWord) && strip?.gesture?.softDelete == true) interruptGesture()
         // The word menu keeps the touchpad for itself: a finger there only marks its buttons, and nothing types.
         if (menuOpen && !altOrPanel) return
         if (!altOrPanel) {
@@ -2397,13 +2406,14 @@ class AtlasIme : InputMethodService() {
                     if (!nothingLeft) {
                         // A dot for each character of the word that went, not counting spaces. The haptic's tail lands as they pop.
                         val gesture = strip?.gesture
+                        gesture?.speedUp = Haptics.dotsSpeedUp(this)
                         gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
                         val dotsAt = gesture?.dotsAt
-                        haptics.flick(gesture?.dotsPoppedMillis(scale), gesture?.dotLandings(scale).orEmpty()) {
-                            dotsAt != null && strip?.gesture?.dotsAt == dotsAt
-                        }
+                        // A flick while dots still play adds its dots to theirs, and its ticks to theirs.
+                        haptics.flick(gesture?.dotsPoppedMillis(scale), gesture?.dotLandings(scale).orEmpty(),
+                            { dotsAt != null && strip?.gesture?.dotsAt == dotsAt }, chained = gesture?.chained == true)
                     }
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return

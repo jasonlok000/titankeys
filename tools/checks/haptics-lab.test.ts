@@ -17,7 +17,7 @@ test("only a debug package has the lab", () => {
 test("every lab operation refuses outside a debug package", () => {
   const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
   const operations = [...adapter.matchAll(/^\s+"(lab\w+)" -> \{?\s*(.*)$/gm)];
-  expect(operations.map(match => match[1]).sort()).toEqual(["labGraph"]);
+  expect(operations.map(match => match[1]).sort()).toEqual(["labExperiment", "labGraph"]);
   for (const [line, , body] of operations) {
     const first = body || adapter.slice(adapter.indexOf(line) + line.length).trimStart().split("\n")[0];
     expect(first.startsWith("lab().")).toBe(true);
@@ -138,9 +138,14 @@ test("steering ticks when it picks up after a slip, and exact typing's chips pla
 test("any key or touch cuts a flick's dots and the dot ticks still to come, at the same point", () => {
   const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
   expect(ime).toMatch(/private fun interruptGesture\(\) \{\s+strip\?\.gesture\?\.interrupt\(\)\s+haptics\.cutDots\(\)\s+\}/);
-  // Nothing else cuts the dots, so the ticks can't outlive them.
+  // Nothing else cuts the dots, so the ticks can't outlive them: a key, a touch that's no delete, a word's outcome, the cursor.
   expect(ime.match(/gesture\?\.interrupt\(\)/g)?.length).toBe(1);
-  expect(ime.match(/interruptGesture\(\)/g)?.length).toBe(3);
+  expect(ime.match(/interruptGesture\(\)/g)?.length).toBe(5);
+  // A delete's dots wait for what the next touch turns out to be: another delete joins them, anything else cuts them.
+  expect(ime).toContain("if (strip?.gesture?.softDelete != true) interruptGesture()");
+  expect(ime).toContain("if (!(outcome is Contact.Outcome.Swipe && outcome.deletesWord) && strip?.gesture?.softDelete == true) interruptGesture()");
+  // A hold takes the bar from them, and their ticks stop with it.
+  expect(ime).toMatch(/haptics\.cutDots\(\)\s+strip\?\.gesture\?\.deleteHeld\(/);
 });
 
 test("taps that find no word, and steering with no text, do nothing but play Nothing to pick", () => {

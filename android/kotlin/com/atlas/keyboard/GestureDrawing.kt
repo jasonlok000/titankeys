@@ -19,8 +19,8 @@ import kotlin.math.sin
  * makes no garbage.
  *
  * Text is drawn as it looks from far away: letters as dots, words as short bars. The caret is the one mark in the accent colour.
- * For the cursor the line of letters moves past the caret at the cursor's speed, over a track of the keyboard that shows the dead
- * zone and the finger. For a word drag the selection grows over the words. For a delete the words run into the caret and go.
+ * For the cursor the line of letters moves past the caret at the cursor's speed, and the Space glow lies under it, brighter
+ * on the side it leans to. For a word drag the selection grows over the words. For a delete the words run into the caret and go.
  */
 /** [radius] rounds the selection's corners, from [Radii]. */
 internal class GestureDrawing(private val density: Float, private val radius: Float) {
@@ -116,27 +116,52 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         }
         val centre = (left + right) / 2
         val half = (right - left) * display.glowWidth / 2
-        glow.alpha = (display.glowAlpha.coerceIn(0f, 1f) * 255).toInt()
+        // While steering, the glow is a soft underglow across the whole strip, brighter on the side you steer towards.
+        val steering = display.scene == GestureDisplay.Scene.Cursor
+        val base = if (steering) UNDERGLOW else 1f
+        glow.alpha = (display.glowAlpha.coerceIn(0f, 1f) * base * 255).toInt()
         box.set(centre - half, h - tall, centre + half, h + tall)
         canvas.drawOval(box, glow)
+        val lean = display.steerLean
+        if (steering && lean != 0f) {
+            // Layers that each reach a little further in from the side's edge, so it brightens smoothly towards the edge, with no
+            // edge of its own that could read as a slider.
+            // At a full lean the side comes to about 2.5 times the other side, see [UNDERGLOW] and [SIDE_LAYER].
+            glow.alpha = (display.glowAlpha.coerceIn(0f, 1f) * abs(lean).coerceAtMost(1f) * SIDE_LAYER * 255).toInt()
+            val far = centre + if (lean < 0) -half else half
+            for (layer in 1..SIDE_LAYERS) {
+                val near = far + (centre - far) * layer / SIDE_LAYERS
+                box.set(max(min(near, far) - half * SIDE_SPILL, centre - half), h - tall, min(max(near, far) + half * SIDE_SPILL, centre + half), h + tall)
+                canvas.drawOval(box, glow)
+            }
+        }
         if (display.glowPulse > 0f) {
             fill.color = GuideMotion.faded(look.accent, PULSE * display.glowPulse * display.glowAlpha / GestureDisplay.GLOW_ALPHAS[3])
             canvas.drawRect(centre - half, h - dp(PULSE_HEIGHT), centre + half, h, fill)
         }
     }
 
-    /** A line of letters that moves past the caret, and under it the track with the dead zone and the finger. */
+    /**
+     * Steering: the real text as a line of dots through the middle that moves past the caret, and the caret in a filled accent pill
+     * as tall as select's, in the dark colour, the other way round from select's dark word in its pill. The dots part round the
+     * pill with a small gap, so a letter the cursor passes hops to the other side. Which way it leans shows in the underglow, see
+     * [glow].
+     */
     private fun cursor(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, mid: Float, look: Look) {
         val alpha = display.reveal
-        val line = mid - dp(LINE_LIFT)
+        val line = mid
         val caret = (left + right) / 2
         val pitch = dp(LETTER_PITCH)
+        val pill = dp(STEER_PILL / 2)
+        // How far each side's dots move out, so the nearest letter sits a small gap from the pill.
+        val part = pill + dp(PILL_GAP) + dp(LETTER_DOT) - pitch / 2
         val text = display.line
         if (text != null) {
             // The real text: a dot for each character, a gap for each space, and nothing past either end of the text.
             for (index in text.indices) {
                 if (text[index].isWhitespace()) continue
-                val x = caret + (index - display.caretAt - display.shownStep + .5f) * pitch
+                val d = (index - display.caretAt - display.shownStep + .5f) * pitch
+                val x = caret + d + if (d < 0) -part else part
                 if (x < left || x > right) continue
                 letterDot(canvas, x, caret, left, right, line, look, alpha)
             }
@@ -146,32 +171,25 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             val start = floor(moved).toInt() - reach
             for (index in start..start + 2 * reach + 1) {
                 if (isSpace(index)) continue
-                val x = caret + (index - moved + .5f) * pitch
+                val d = (index - moved + .5f) * pitch
+                val x = caret + d + if (d < 0) -part else part
                 if (x < left || x > right) continue
                 letterDot(canvas, x, caret, left, right, line, look, alpha)
             }
         }
-        bar(canvas, caret, line, dp(CARET_HEIGHT), GuideMotion.faded(look.accent, alpha))
-        // The track: the whole keyboard across, the dead zone in the middle of Space, and the finger.
-        val track = mid + dp(TRACK_DROP)
-        val across = right - left
-        rounded(canvas, left, track - dp(TRACK / 2), right, track + dp(TRACK / 2), dp(TRACK / 2), GuideMotion.faded(look.ink, FAINT * alpha))
-        rounded(canvas, left + across * display.spaceStart, track - dp(DEAD_HEIGHT / 2), left + across * display.spaceEnd,
-            track + dp(DEAD_HEIGHT / 2), dp(DEAD_HEIGHT / 2), GuideMotion.faded(look.ink, FAINT * alpha))
-        val finger = left + across * display.marker
-        if (display.leaning != 0) {
-            val from = left + across * if (display.leaning < 0) display.spaceStart else display.spaceEnd
-            val thickness = dp(LEAN + LEAN_GROW * display.intensity)
-            rounded(canvas, min(from, finger), track - thickness / 2, maxOf(from, finger), track + thickness / 2, thickness / 2,
-                GuideMotion.faded(look.accent, alpha))
-        }
-        dot(canvas, finger, track, dp(FINGER + FINGER_GROW * display.intensity), GuideMotion.faded(look.accent, alpha))
+        rounded(canvas, caret - pill, line - dp(SELECTION_HEIGHT / 2), caret + pill, line + dp(SELECTION_HEIGHT / 2), radius,
+            GuideMotion.faded(look.accent, alpha))
+        bar(canvas, caret, line, dp(STEER_CARET_HEIGHT), GuideMotion.faded(look.onAccent, SELECTED * alpha), dp(STEER_CARET))
     }
 
-    /** One letter of the line, fading towards the ends so the eye stays on the caret. */
+    /**
+     * One letter of the line: as strong as select's words far off and stronger next to the caret, so the eye stays on it, and
+     * fading out only at the very ends.
+     */
     private fun letterDot(canvas: Canvas, x: Float, caret: Float, left: Float, right: Float, line: Float, look: Look, alpha: Float) {
         val fade = 1f - abs(x - caret) / ((right - left) / 2)
-        dot(canvas, x, line, dp(LETTER_DOT), GuideMotion.faded(look.ink, (LETTER + (1f - LETTER) * .4f * fade) * fade * alpha))
+        val strength = (WORD + (LETTER_NEAR - WORD) * fade * fade) * min(1f, fade * LETTER_ENDS)
+        dot(canvas, x, line, dp(LETTER_DOT), GuideMotion.faded(look.ink, strength * alpha))
     }
 
     /** A row of words, with the selection over them. A word drag shows it growing and shrinking by whole words. */
@@ -351,8 +369,8 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
 
     /** The caret: a short upright bar centred on [x], [y]. */
-    private fun bar(canvas: Canvas, x: Float, y: Float, height: Float, colour: Int) =
-        rounded(canvas, x - dp(CARET_WIDTH / 2), y - height / 2, x + dp(CARET_WIDTH / 2), y + height / 2, dp(CARET_WIDTH / 2), colour)
+    private fun bar(canvas: Canvas, x: Float, y: Float, height: Float, colour: Int, width: Float = dp(CARET_WIDTH)) =
+        rounded(canvas, x - width / 2, y - height / 2, x + width / 2, y + height / 2, width / 2, colour)
 
     private fun dot(canvas: Canvas, x: Float, y: Float, radius: Float, colour: Int) {
         fill.color = colour
@@ -384,22 +402,28 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val PULSE = .25f
         const val PULSE_HEIGHT = 1f
         const val SIDE = 10f
-        const val LINE_LIFT = 5f
-        const val LETTER_PITCH = 9f
-        const val LETTER_DOT = 2.2f
-        const val LETTER = .3f
+        const val LETTER_PITCH = 11f
+        const val LETTER_DOT = 3.5f
+        /** A letter next to the caret is this strong; far off it is as strong as select's words, and it fades out only at the ends. */
+        const val LETTER_NEAR = .75f
+        const val LETTER_ENDS = 4f
+        /** Steering's pill: as tall and as round as select's, and narrow, with its dark caret inside. */
+        const val STEER_PILL = 38f
+        const val STEER_CARET = 3f
+        const val STEER_CARET_HEIGHT = 14f
+        /** The gap between the pill and the nearest letter on each side. */
+        const val PILL_GAP = 6.5f
+        /** While steering the underglow lies across the strip this strong, and the side it leans to grows from this far out. */
+        const val UNDERGLOW = .4f
+        /** The side it leans to brightens in this many soft layers, each a little past its edge so none shows. */
+        const val SIDE_LAYERS = 6
+        const val SIDE_SPILL = .08f
+        /** Each layer is this strong at a full lean, so the edge itself comes to nearly full strength. */
+        const val SIDE_LAYER = .45f
         const val CARET_WIDTH = 2.5f
         const val CARET_HEIGHT = 24f
         const val CARET_GAP = 4f
         const val CARET_END = 8f
-        const val TRACK_DROP = 17f
-        const val TRACK = 2f
-        const val DEAD_HEIGHT = 6f
-        const val LEAN = 2.5f
-        const val LEAN_GROW = 2f
-        const val FINGER = 4f
-        const val FINGER_GROW = 1.5f
-        const val FAINT = .18f
         const val WORD = .28f
         const val SELECTED = .85f
         const val WORD_HEIGHT = 11f

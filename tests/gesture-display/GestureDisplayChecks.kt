@@ -73,6 +73,7 @@ fun main() {
     theGlowCarriesIntoASteer()
     theGlowCarriesIntoASelect()
     theHeldGlowGoesWithTheDisplay()
+    theUnderglowLeansWithTheSteering()
     println("Gesture display checks passed")
 }
 
@@ -1114,4 +1115,34 @@ private fun aFlicksWayInStretchesToFitItsDots() {
     fast.interrupt()
     same(fast.scene, Scene.None, "Any key or touch cuts the dots")
     same(fast.dotLandings(1f), emptyList<Long>(), "and they have nowhere left to land")
+}
+
+/** While steering, the underglow brightens on the side it leans to, more the faster it goes, and eases there with no jump. */
+private fun theUnderglowLeansWithTheSteering() {
+    val display = GestureDisplay()
+    display.spaceTapped(1, 0L)
+    display.cursorFrame(5f, 0, 0f, false, 100L)
+    display.advance(400L, 1f)
+    near(display.steerLean, 0f, "On Space it leans neither way")
+    display.cursorFrame(8.5f, 1, CursorMode.SLOWEST_PER_SECOND, false, 400L)
+    display.advance(416L, 1f)
+    if (display.steerLean <= 0f || display.steerLean >= GestureDisplay.LEAN_BASE) throw AssertionError("It eases to the right, with no jump: ${display.steerLean}")
+    var now = 416L
+    while (now < 1200L) { now += 16; display.cursorFrame(8.5f, 1, CursorMode.SLOWEST_PER_SECOND, false, now); display.advance(now, 1f) }
+    val slow = display.steerLean
+    if (slow < GestureDisplay.LEAN_BASE - .01f || slow > .7f) throw AssertionError("A slow lean brightens its side part way: $slow")
+    while (now < 2000L) { now += 16; display.cursorFrame(9.8f, 1, CursorMode.FASTEST_PER_SECOND, false, now); display.advance(now, 1f) }
+    if (display.steerLean < .95f) throw AssertionError("A fast lean brightens it fully: ${display.steerLean}")
+    while (now < 2800L) { now += 16; display.cursorFrame(1f, -1, CursorMode.FASTEST_PER_SECOND, false, now); display.advance(now, 1f) }
+    if (display.steerLean > -.95f) throw AssertionError("Leaning left brightens the left: ${display.steerLean}")
+    display.cursorPaused()
+    display.advance(now + 1000L, 1f)
+    near(display.steerLean, 0f, "A slip lets it go back to even")
+    val still = GestureDisplay()
+    still.cursorFrame(9.8f, 1, CursorMode.FASTEST_PER_SECOND, false, 0L)
+    still.advance(1L, 0f)
+    near(still.steerLean, 1f, "With animations off it shows the lean at once")
+    still.cursorEnded()
+    still.advance(2L, 0f)
+    near(still.steerLean, 0f, "and none once steering is gone")
 }

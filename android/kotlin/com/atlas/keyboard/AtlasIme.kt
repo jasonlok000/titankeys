@@ -530,6 +530,26 @@ class AtlasIme : InputMethodService() {
                 else if (editing && currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) == true) strip?.playDemo(demo)
             }
         }
+        // The guide's clipboard lesson pins a few clips, so that the clipboard has something to show. Only in its own field.
+        GuideHooks.clipSeeds = { clips ->
+            main.post {
+                if (!editing || currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) != true) return@post
+                val now = System.currentTimeMillis()
+                for (text in clips.reversed()) {
+                    if (clipHistory.clips.any { it.text == text }) continue
+                    if (!clipHistory.add(text, now)) continue
+                    clipHistory.togglePin(0)
+                }
+                saveClips()
+                showClips()
+            }
+        }
+        GuideHooks.stripPoints = { index ->
+            main.post {
+                if (index == null) strip?.point(null)
+                else if (editing && currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) == true) strip?.point(index)
+            }
+        }
         // The interactive guide puts the keyboard in the menu that a step needs, only in its own field.
         GuideHooks.panelRequests = { target ->
             main.post {
@@ -1228,6 +1248,7 @@ class AtlasIme : InputMethodService() {
         commitForget()
         main.removeCallbacks(endNotice)
         menuWord = held
+        strip?.menuMark = -1
         // A step: the menu opened.
         haptics.tick()
         strip?.notice = Strip.Notice.Menu(held.word, canForget(held))
@@ -1240,11 +1261,36 @@ class AtlasIme : InputMethodService() {
     private fun closeMenu() {
         if (menuWord == null) return
         menuWord = null
+        strip?.menuMark = -1
         if (strip?.notice is Strip.Notice.Menu) strip?.notice = null
+    }
+
+    /**
+     * The word menu is open on the strip. It stays until you pick a button or close it: the touchpad only marks its buttons then,
+     * and the top two rows of keys pick them. See [MenuKeys].
+     */
+    private val menuOpen get() = menuWord != null && strip?.notice is Strip.Notice.Menu
+
+    /** The key that picked a menu button, whose release must not reach the app. */
+    private var menuKey = -1
+
+    /** The menu's button that [key] picks, or null for a key that picks none. */
+    private fun menuAction(key: String): Strip.Action? {
+        val strip = strip ?: return null
+        val actions = strip.noticeActions(strip.notice)
+        return actions.getOrNull(MenuKeys.button(key, actions.size))
+    }
+
+    /** A resting finger marks the button over its key, as on the Sym panel. */
+    private fun markMenu(key: String) {
+        val strip = strip ?: return
+        val actions = strip.noticeActions(strip.notice)
+        strip.menuMark = if (menuOpen) MenuKeys.button(key, actions.size) else -1
     }
 
     private fun stripAction(action: Strip.Action) {
         val held = menuWord
+        if (held != null && action != Strip.Action.OpenSelected) KeyboardEvents.publish { KeyboardEvent.MenuPicked(action.name) }
         when (action) {
             Strip.Action.OpenSelected -> strip?.selected?.let { openMenu(HeldWord(it, "")) }
             Strip.Action.Close -> closeMenu()
@@ -1617,6 +1663,7 @@ class AtlasIme : InputMethodService() {
         if (panelHover.expire(now)) panel?.hover = ""
         if (barHover.expire(now)) {
             restingKey = ""
+            markMenu("")
             showModifierBar()
         }
     }
@@ -1631,6 +1678,7 @@ class AtlasIme : InputMethodService() {
         }
         if (last == null || !barHover.touch(last.x, last.y)) return
         restingKey = barHover.key
+        markMenu(restingKey)
         showModifierBar()
     }
 
@@ -1940,6 +1988,8 @@ class AtlasIme : InputMethodService() {
     private fun outcome(outcome: Contact.Outcome) {
         Recording.sink?.outcome(outcome)
         inputLog()?.outcome(outcome)
+        // The word menu keeps the touchpad for itself: a finger there only marks its buttons, and nothing types.
+        if (menuOpen && !altOrPanel) return
         if (!altOrPanel) {
             dismissClipOffer()
             closeMenu()
@@ -2087,6 +2137,18 @@ class AtlasIme : InputMethodService() {
             logExact("bar back for a key")
             main.post(showStrip)
         }
+        // With the word menu open, the top two rows of letters pick its buttons, as the keys pick symbols on the Sym panel.
+        if (!event.isSystem && menuOpen && keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) {
+            val action = menuAction(('A' + (keyCode - KeyEvent.KEYCODE_A)).toString())
+            if (action != null) {
+                if (event.repeatCount == 0) {
+                    menuKey = keyCode
+                    haptics.tick()
+                    stripAction(action)
+                }
+                return true
+            }
+        }
         // Typing on means the forgotten word can go, and the strip shows words again. The newest clip goes from the strip too.
         if (!event.isSystem && !Modifiers.isModifier(keyCode)) {
             closeMenu()
@@ -2126,6 +2188,11 @@ class AtlasIme : InputMethodService() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
+        // The release of a key that picked a menu button belongs to that pick.
+        if (keyCode == menuKey) {
+            menuKey = -1
+            return true
+        }
         if (KeyCapture.waiting?.invoke(event) == true) return true
         if (keyCode == KeyEvent.KEYCODE_BACK && hold.held && !editing) return heldBack(event, down = false)
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
@@ -2441,6 +2508,8 @@ class AtlasIme : InputMethodService() {
         editing = false
         GuideHooks.panelRequests = null
         GuideHooks.stripDemos = null
+        GuideHooks.stripPoints = null
+        GuideHooks.clipSeeds = null
         // A held status must not outlive the keyboard.
         if (hold.held) hideHeldWindow()
         unregisterReceiver(screenOn)

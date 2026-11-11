@@ -151,8 +151,36 @@ class Strip(
     var words: List<String> = emptyList()
         set(value) {
             field = value
+            // A word that the guide points at stops when it is no longer in its place.
+            if (pointed != null && value.getOrNull(pointedIndex) != pointed) point(null)
             render()
         }
+
+    // The guide points at a word: it wiggles up and down in its place until it is picked or changes. See [GuideHooks.stripPoint].
+
+    private var pointedIndex = -1
+    private var pointed: String? = null
+    private var pointer: android.animation.ValueAnimator? = null
+
+    /** Points at the word at [index], as the keyboard ranks them, or stops with null. */
+    internal fun point(index: Int?) {
+        pointer?.cancel()
+        pointer = null
+        for (view in wordViews) view.translationY = 0f
+        pointed = null
+        pointedIndex = -1
+        if (index == null || index !in words.indices || !GuideMotion.enabled) return
+        val view = wordViews[WORD_ORDER.indexOf(index)]
+        pointedIndex = index
+        pointed = words[index]
+        val reach = dp(POINT_DP).toFloat()
+        pointer = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = POINT_MILLIS
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            addUpdateListener { view.translationY = -reach * kotlin.math.sin(it.animatedFraction * 2 * Math.PI).toFloat() }
+            start()
+        }
+    }
 
     /** A word's menu or a notice about a word, in the place of everything else. */
     var notice: Notice? = null
@@ -216,6 +244,7 @@ class Strip(
     }
 
     private fun item(press: (TextView) -> Unit, hold: () -> Boolean) = TextView(context).apply {
+        // A touch on a word ends the guide's pointing, whichever word it was.
         typeface = this@Strip.typeface
         textSize = WORD_SIZE
         gravity = Gravity.CENTER
@@ -224,7 +253,10 @@ class Strip(
         ellipsize = null
         isFocusable = false
         setPadding(dp(WORD_PADDING), 0, dp(WORD_PADDING), 0)
-        setOnClickListener { press(this) }
+        setOnClickListener {
+            point(null)
+            press(this)
+        }
         setOnLongClickListener { hold() }
     }
 
@@ -387,6 +419,32 @@ class Strip(
         if (more) postInvalidateOnAnimation()
     }
 
+    /**
+     * The button of the word's menu that a resting finger marks, from the left, or -1. The keys pick the menu's buttons as they
+     * pick symbols on the Sym panel: see [MenuKeys].
+     */
+    var menuMark = -1
+        set(value) {
+            if (field == value) return
+            field = value
+            render()
+        }
+
+    /** The buttons that a notice shows, from the left. */
+    fun noticeActions(shown: Notice?): List<Action> = when (shown) {
+        is Notice.Menu -> listOfNotNull(Action.Save, Action.Forget.takeIf { shown.forget }, Action.Close)
+        is Notice.Forgot -> listOf(Action.Undo)
+        is Notice.Saved, Notice.TeamsEgg, null -> emptyList()
+    }
+
+    private fun label(action: Action) = when (action) {
+        Action.Save -> R.string.strip_save
+        Action.Forget -> R.string.strip_forget
+        Action.Close -> R.string.strip_back
+        Action.Undo -> R.string.strip_undo
+        Action.OpenSelected -> R.string.strip_back
+    }
+
     /** The label and buttons of a word's menu, or of what just happened to a word. */
     private fun showNotice(shown: Notice?) {
         noticeRow.visibility = if (shown != null) VISIBLE else GONE
@@ -400,19 +458,19 @@ class Strip(
             null -> ""
         }
         noticeLabel.setTextColor(look.ink)
-        val buttons = when (shown) {
-            is Notice.Menu -> listOfNotNull(Action.Save to R.string.strip_save, (Action.Forget to R.string.strip_forget).takeIf { shown.forget },
-                Action.Close to R.string.strip_back)
-            is Notice.Forgot -> listOf(Action.Undo to R.string.strip_undo)
-            is Notice.Saved, Notice.TeamsEgg, null -> emptyList()
-        }
+        val buttons = noticeActions(shown).map { it to label(it) }
         for ((index, button) in noticeButtons.withIndex()) {
             val action = buttons.getOrNull(index)
             button.visibility = if (action != null) VISIBLE else GONE
             if (action == null) continue
             button.text = context.getString(action.second)
-            // Back is the calm way out, so only the actions take the accent.
-            button.setTextColor(if (action.first == Action.Close) look.muted else look.accent)
+            // Back is the calm way out, so only the actions take the accent. The button that a resting finger marks is filled.
+            val marked = shown is Notice.Menu && index == menuMark
+            button.setTextColor(if (marked) look.onAccent else if (action.first == Action.Close) look.muted else look.accent)
+            button.background = if (!marked) null else GradientDrawable().apply {
+                cornerRadius = Radii.px(resources, Radii.SMALL)
+                setColor(look.accent)
+            }
             button.setOnClickListener { act(action.first) }
         }
     }
@@ -590,6 +648,9 @@ class Strip(
 
     companion object {
         private val WORD_ORDER = listOf(1, 0, 2)
+        /** How far, in dp, and how quickly a word that the guide points at wiggles. */
+        private const val POINT_DP = 3
+        private const val POINT_MILLIS = 650L
         /** The words' size, in sp, and the room on each side of a word. */
         private const val WORD_SIZE = 17f
         private const val WORD_PADDING = 6

@@ -50,8 +50,17 @@ class HapticsLab(private val context: Context) {
         later()
     }
 
-    /** Plays a held delete with the fade in use now, its words as far apart as when a hold starts, with no switch or gate. */
-    fun previewFade() = haptics.previewHold(fade(), REPEAT_SLOW_MILLIS)
+    /** Whether a held delete fades now. */
+    fun fading() = Haptics.heldDeleteFading(context)
+
+    /** Turns the held delete fade on or off. The next real held delete plays it, or plain texture. */
+    fun fadeOn(on: Boolean) {
+        Haptics.fadeOn(context, on)
+        later()
+    }
+
+    /** Plays a held delete as it plays now, its words as far apart as when a hold starts, with no switch or gate. */
+    fun previewFade() = haptics.previewHold(fade(), fading(), REPEAT_SLOW_MILLIS)
 
     fun stop() {
         if (main.hasCallbacks(write)) {
@@ -66,11 +75,17 @@ class HapticsLab(private val context: Context) {
     /** Each family's pattern in use now, the held delete fade, and each haptic's family and what it plays. */
     fun state(): JSONObject = JSONObject().put("families", families()).put("heldDeleteFade", heldDeleteFade()).put("haptics", haptics())
 
-    /** The held delete fade's four numbers in use now, and whether they're tried. */
+    /** The held delete fade's switch and four numbers in use now, and whether they're tried. */
     private fun heldDeleteFade() = fade().let { fade ->
-        JSONObject().put("name", "Held delete fade").put("start", fade.start).put("floor", fade.floor).put("words", fade.words)
-            .put("thinEvery", fade.thinEvery).put("plays", HeldDeleteFade.describe(fade)).put("tried", fade != HeldDeleteFade.DEFAULT)
+        val on = fading()
+        JSONObject().put("name", "Held delete fade").put("on", on).put("start", fade.start).put("floor", fade.floor)
+            .put("words", fade.words).put("thinEvery", fade.thinEvery).put("plays", plays(fade, on))
+            .put("tried", !on || fade != HeldDeleteFade.DEFAULT)
     }
+
+    /** What a held delete plays: the fade, or with it off, plain texture on every word. */
+    fun plays(fade: HeldDeleteFade.Settings, on: Boolean) =
+        if (on) HeldDeleteFade.describe(fade) else "Off: ${pattern(Family.Texture).first()} ms every word, no fade"
 
     private fun families() = JSONObject().apply {
         for (family in Family.entries) {
@@ -82,8 +97,8 @@ class HapticsLab(private val context: Context) {
 
     private fun haptics() = JSONObject().apply {
         for (haptic in Haptic.entries) {
-            // A held delete's word plays the fade, which starts at its own length.
-            val fade = if (haptic == Haptic.DeleteWord) fade() else null
+            // A held delete's word plays the fade while it's on, which starts at its own length.
+            val fade = if (haptic == Haptic.DeleteWord && fading()) fade() else null
             val pattern = if (fade != null) listOf(fade.start) else pattern(haptic.family)
             put(haptic.id, JSONObject().put("family", haptic.family.label).put("pattern", JSONArray(pattern))
                 .put("plays", if (fade != null) HeldDeleteFade.describe(fade) else HapticPalette.describe(pattern)))

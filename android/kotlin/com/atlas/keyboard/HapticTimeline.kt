@@ -78,10 +78,10 @@ object HapticTimeline {
 
     /**
      * The live timeline's top line for [event], with [name] its haptic's name: the name and family, or for a held delete its
-     * word and length, "Held delete word 5 · Texture 13 ms".
+     * word and length, "Held delete word 5 · Texture 13 ms", and "no fade" when the lab's fade switch was off.
      */
     fun title(event: HapticEvent, name: String) = if (event.word == null) "$name · ${event.haptic.family.label}"
-        else "Held delete word ${event.word} · ${event.haptic.family.label} ${event.pattern.first()} ms"
+        else "Held delete word ${event.word} · ${event.haptic.family.label} ${event.pattern.first()} ms" + if (event.fading) "" else " · no fade"
 
     /** The line under it: what set it off, or why it didn't play. A thinned tick is the fade's plan, so it isn't "dropped". */
     fun outcome(event: HapticEvent) = when {

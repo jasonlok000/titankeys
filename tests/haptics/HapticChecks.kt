@@ -42,6 +42,7 @@ fun main() {
     theFadeIsOnlyTriedInDebug()
     theFadeNeverBlocksAMessage()
     theTimelineShowsEachHeldWord()
+    theFadeSwitchIsDebugOnly()
     println("Haptic checks passed")
 }
 
@@ -654,4 +655,29 @@ private fun theTimelineShowsEachHeldWord() {
     val other = HapticEvent(1, Haptic.SwipeKey, Family.Texture.pattern, HapticResult.Busy)
     check(HapticTimeline.title(other, "Swipe key") == "Swipe key · Texture") { "Every other haptic keeps its name" }
     check(HapticTimeline.outcome(other) == "dropped: busy") { "and a dropped one its reason" }
+}
+
+/**
+ * The fade is a debug experiment for now. Debug fades while the lab's switch is on, and it is to start with. Off, and in every
+ * other build whatever is stored, each word plays plain Texture, 17 ms.
+ */
+private fun theFadeSwitchIsDebugOnly() {
+    val fade = HeldDeleteFade.DEFAULT
+    fun hold(fading: Boolean) = (1..16).map { HeldDeleteFade.lengthFor(it, fade, fading) }
+    check(HeldDeleteFade.fading(debug = true, stored = null)) { "Debug fades to start with" }
+    check(HeldDeleteFade.fading(debug = true, stored = true)) { "Debug with the switch on fades" }
+    check(!HeldDeleteFade.fading(debug = true, stored = false)) { "Debug with the switch off doesn't" }
+    check(!HeldDeleteFade.fading(debug = false, stored = true) && !HeldDeleteFade.fading(debug = false, stored = null)) {
+        "Release never fades, even with a stored on"
+    }
+    val on = hold(HeldDeleteFade.fading(debug = true, stored = true))
+    check(on == listOf<Long?>(17, 16, 15, 14, 13, 12, 11, 10, 9, null, 9, null, 9, null, 9, null)) { "Switch on: $on" }
+    check(HeldDeleteFade.ticks(fade, fading = true) == on) { "The lab's strip shows the same" }
+    val off = hold(HeldDeleteFade.fading(debug = true, stored = false))
+    check(off == List(16) { 17L }) { "Switch off: 17 every word, $off" }
+    val release = hold(HeldDeleteFade.fading(debug = false, stored = true))
+    check(release == List(16) { 17L }) { "Release: 17 every word, $release" }
+    check(HeldDeleteFade.ticks(fade, fading = false) == off) { "The strip with the fade off" }
+    val event = HapticEvent(1, Haptic.DeleteWord, listOf(17), HapticResult.Played, word = 12, fading = false)
+    check(HapticTimeline.title(event, "") == "Held delete word 12 · Texture 17 ms · no fade") { HapticTimeline.title(event, "") }
 }

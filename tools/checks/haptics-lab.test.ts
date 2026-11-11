@@ -185,9 +185,25 @@ test("only a debug package reads or saves a tried held delete fade, and the lab 
   // The editor has its four sliders, its strip, Play and Reset, and comments.json keeps the four numbers.
   const screen = read("android/kotlin/com/atlas/keyboard/HapticsLabActivity.kt");
   for (const words of ["Start: ", "Floor: ", "Words to fade: ", "Thin every: "]) expect(screen).toContain(words);
-  expect(screen).toContain("fading.strip.show(HeldDeleteFade.ticks(fade))");
+  expect(screen).toContain("fading.strip.show(HeldDeleteFade.ticks(fade, fading = on))");
   expect(screen).toContain('button("Reset", "Reset $FADE")');
   const lab = read("android/kotlin/com/atlas/keyboard/HapticsLab.kt");
   expect(lab).toContain('.put("heldDeleteFade", heldDeleteFade().put("comment", notes.fade))');
   for (const key of ["start", "floor", "words", "thinEvery"]) expect(lab).toContain(`.put("${key}", fade.`);
+});
+
+test("the held delete fade is a debug experiment: release never fades, and the lab switches it", () => {
+  const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
+  expect(haptics).toContain("fun fading(debug: Boolean, stored: Boolean?) = debug && (stored ?: true)");
+  // Every other build never fades, before it looks at the stored switch.
+  expect(haptics).toMatch(/fun heldDeleteFading\(context: Context\): Boolean \{\s+if \(!debug\(context\)\) return false\n/);
+  expect(haptics).toMatch(/fun fadeOn\(context: Context, on: Boolean\) \{\s+check\(debug\(context\)\)/);
+  expect(haptics).toContain('private const val FADE_ON_KEY = "debug_held_delete_fade_on"');
+  // Off, a held word plays the plain texture tick, as before the fade.
+  expect(haptics).toMatch(/fun heldDeleteWord\(word: Int\): HapticResult \{\s+if \(!heldDeleteFading\(context\)\) return attempt\(Haptic\.DeleteWord, pattern\(context, Haptic\.DeleteWord\.family\), word, fading = false\)/);
+  const users = [...new Bun.Glob("**/*.{kt,java}").scanSync(join(root, "android"))].filter(path =>
+    read(join("android", path)).includes("Haptics.fadeOn"));
+  expect(users.map(path => path.replaceAll("\\", "/"))).toEqual(["kotlin/com/atlas/keyboard/HapticsLab.kt"]);
+  expect(read("android/kotlin/com/atlas/keyboard/HapticsLab.kt")).toContain('.put("on", on)');
+  expect(read("android/kotlin/com/atlas/keyboard/HapticTimeline.kt")).toContain('" · no fade"');
 });

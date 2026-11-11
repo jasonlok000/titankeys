@@ -26,6 +26,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
+import android.widget.Switch
 import android.widget.TextView
 import org.json.JSONArray
 import java.util.Locale
@@ -62,7 +63,7 @@ class HapticsLabActivity : Activity() {
 
     private class Editing(val family: Family, val bars: PatternBars, val plays: TextView, val sliders: List<Pair<TextView, SeekBar>>)
 
-    private class Fading(val strip: FadeStrip, val plays: TextView, val sliders: List<Pair<TextView, SeekBar>>)
+    private class Fading(val on: Switch, val strip: FadeStrip, val plays: TextView, val sliders: List<Pair<TextView, SeekBar>>)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -180,7 +181,8 @@ class HapticsLabActivity : Activity() {
         }
         val fade = lab.fade()
         editor.addView(TextView(this).apply {
-            text = "$FADE: ${HeldDeleteFade.describe(fade)}" + if (fade != HeldDeleteFade.DEFAULT) "  (tried)" else ""
+            val on = lab.fading()
+            text = "$FADE: ${lab.plays(fade, on)}" + if (on && fade != HeldDeleteFade.DEFAULT) "  (tried)" else ""
             textSize = 15f
             setTextColor(LabColours.CREAM)
             minHeight = dp(48)
@@ -245,9 +247,25 @@ class HapticsLabActivity : Activity() {
             text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.WORDS.longs()) { words -> tryFade { it.copy(words = words.toInt()) } },
             text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.THIN_EVERY.longs()) { every -> tryFade { it.copy(thinEvery = every.toInt()) } },
         )
-        fading = Fading(strip, plays, sliders)
+        // Off, every word plays plain texture, as before the fade, so the two can be felt back to back.
+        val on = Switch(this).apply {
+            text = FADE
+            textSize = 15f
+            setTextColor(LabColours.CREAM)
+            minHeight = dp(48)
+            thumbTintList = ColorStateList.valueOf(LabColours.ORANGE)
+            trackTintList = ColorStateList.valueOf(LabColours.TRACK)
+            setOnCheckedChangeListener { _, checked ->
+                if (checked != lab.fading()) {
+                    lab.fadeOn(checked)
+                    drawFade()
+                }
+            }
+        }
+        fading = Fading(on, strip, plays, sliders)
         editor.addView(text(FADE, 18f, LabColours.CREAM, bold = true))
         editor.addView(text("Each word of a held delete ticks a bit shorter, then only some tick. The Titan can't buzz softer, only shorter.", 14f, LabColours.DIM))
+        editor.addView(on)
         editor.addView(plays)
         editor.addView(strip)
         for ((label, bar) in sliders) {
@@ -286,8 +304,10 @@ class HapticsLabActivity : Activity() {
     private fun drawFade() {
         val fading = fading ?: return
         val fade = lab.fade()
-        fading.plays.text = HeldDeleteFade.describe(fade) + if (fade != HeldDeleteFade.DEFAULT) "  (tried)" else ""
-        fading.strip.show(HeldDeleteFade.ticks(fade))
+        val on = lab.fading()
+        if (fading.on.isChecked != on) fading.on.isChecked = on
+        fading.plays.text = lab.plays(fade, on) + if (on && fade != HeldDeleteFade.DEFAULT) "  (tried)" else ""
+        fading.strip.show(HeldDeleteFade.ticks(fade, fading = on))
         val values = listOf(fade.start, fade.floor, fade.words.toLong(), fade.thinEvery.toLong())
         val labels = listOf("Start: ${fade.start} ms", "Floor: ${fade.floor} ms", "Words to fade: ${fade.words}",
             if (fade.thinEvery == 1) "Thin every: 1, so all play" else "Thin every: ${fade.thinEvery}, so 1 in ${fade.thinEvery} plays")

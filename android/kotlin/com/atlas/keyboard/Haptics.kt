@@ -236,8 +236,21 @@ object HeldDeleteFade {
         return if ((word - fade.words - 1) % fade.thinEvery == 0) fade.floor else null
     }
 
+    /**
+     * How long [word]'s tick plays with the lab's switch: faded by [settings] when [fading], or else the plain [texture] tick
+     * on every word, as before the fade.
+     */
+    fun lengthFor(word: Int, settings: Settings, fading: Boolean, texture: Long = HapticPalette.TEXTURE_MILLIS): Long? =
+        if (fading) lengthFor(word, settings) else texture
+
     /** The first [count] ticks of a hold, null where one is thinned. */
-    fun ticks(settings: Settings, count: Int = STRIP_TICKS) = (1..count).map { lengthFor(it, settings) }
+    fun ticks(settings: Settings, count: Int = STRIP_TICKS, fading: Boolean = true) = (1..count).map { lengthFor(it, settings, fading) }
+
+    /**
+     * Whether a held delete fades. It's an experiment the owner hasn't approved yet, so only a [debug] build fades, while its
+     * lab switch is on, and it is to start with. Every other build plays plain texture on every word, whatever is [stored].
+     */
+    fun fading(debug: Boolean, stored: Boolean?) = debug && (stored ?: true)
 
     /** "17 down to 9 ms over 8 words, then 1 in 2". */
     fun describe(settings: Settings): String {
@@ -395,9 +408,12 @@ class HapticGate(private val clock: () -> Long) {
 
 /**
  * One haptic the keyboard tried to play, for the debug Haptics lab: when (an uptime), what, its pattern as played, and the result.
- * [word] is a held delete's word, from 1, and null for everything else.
+ * [word] is a held delete's word, from 1, and null for everything else. [fading] says if that word played the fade.
  */
-data class HapticEvent(val atMillis: Long, val haptic: Haptic, val pattern: List<Long>, val result: HapticResult, val word: Int? = null)
+data class HapticEvent(
+    val atMillis: Long, val haptic: Haptic, val pattern: List<Long>, val result: HapticResult, val word: Int? = null,
+    val fading: Boolean = true,
+)
 
 /**
  * The debug Haptics lab's live feed. The keyboard and the lab share one process, so this is a plain object: the keyboard's
@@ -485,29 +501,31 @@ class Haptics(private val context: Context) {
      * Plays [pattern] for [haptic] through its switches and the gate. A [thinned] tick of a held delete doesn't play, and the
      * gate never hears of it. [word] is the held delete's word, for the lab.
      */
-    private fun attempt(haptic: Haptic, pattern: List<Long>, word: Int? = null, thinned: Boolean = false): HapticResult {
+    private fun attempt(haptic: Haptic, pattern: List<Long>, word: Int? = null, thinned: Boolean = false, fading: Boolean = true): HapticResult {
         val result = switches.stops(haptic)
             ?: if (thinned) HapticResult.Thinned else gate.check(haptic.family, HapticPalette.millis(pattern))
         if (result.played) {
             vibrate(pattern)
             lastPlayedAt = SystemClock.uptimeMillis()
         }
-        report(haptic, pattern, result, word)
+        report(haptic, pattern, result, word, fading)
         return result
     }
 
     /**
      * [word] of a held delete, counting from 1: its tick, shorter as more words go, or nothing where the fade thins it out
-     * (see [HeldDeleteFade]). A thinned tick shows in the lab at the floor's length.
+     * (see [HeldDeleteFade]). A thinned tick shows in the lab at the floor's length. With the fade off, and in every build
+     * but debug, each word plays plain texture, as before the fade.
      */
     fun heldDeleteWord(word: Int): HapticResult {
+        if (!heldDeleteFading(context)) return attempt(Haptic.DeleteWord, pattern(context, Haptic.DeleteWord.family), word, fading = false)
         val fade = heldDeleteFade(context)
         val millis = HeldDeleteFade.lengthFor(word, fade)
         return attempt(Haptic.DeleteWord, listOf(millis ?: fade.fitted().floor), word, thinned = millis == null)
     }
 
-    private fun report(haptic: Haptic, pattern: List<Long>, result: HapticResult, word: Int? = null) {
-        if (feeds) HapticFeed.record(HapticEvent(SystemClock.uptimeMillis(), haptic, pattern, result, word))
+    private fun report(haptic: Haptic, pattern: List<Long>, result: HapticResult, word: Int? = null, fading: Boolean = true) {
+        if (feeds) HapticFeed.record(HapticEvent(SystemClock.uptimeMillis(), haptic, pattern, result, word, fading))
     }
 
     /** Plays [pattern] alone, with no switch or gate, for the lab's editor. It still needs Android's touch feedback. */
@@ -517,9 +535,10 @@ class Haptics(private val context: Context) {
      * Plays the first [HeldDeleteFade.PLAY_WORDS] ticks of a held delete with [fade], [spacingMillis] apart, with no switch or
      * gate, for the lab's editor. A new Play drops the ticks of the last one still to come.
      */
-    fun previewHold(fade: HeldDeleteFade.Settings, spacingMillis: Long) {
+    fun previewHold(fade: HeldDeleteFade.Settings, fading: Boolean, spacingMillis: Long) {
+        val texture = pattern(context, Haptic.DeleteWord.family).first()
         val ticks = (1..HeldDeleteFade.PLAY_WORDS).mapNotNull { word ->
-            HeldDeleteFade.lengthFor(word, fade)?.let { (word - 1) * spacingMillis to it }
+            HeldDeleteFade.lengthFor(word, fade, fading, texture)?.let { (word - 1) * spacingMillis to it }
         }
         var next = 0
         holdTicks.schedule(ticks.map { it.first }) { vibrate(listOf(ticks[next++].second)) }
@@ -639,8 +658,23 @@ class Haptics(private val context: Context) {
             }.apply()
         }
 
+        /** Whether a held delete fades. Only the debug build fades, while the lab's switch is on. Every other build never does. */
+        fun heldDeleteFading(context: Context): Boolean {
+            if (!debug(context)) return false
+            val preferences = preferences(context)
+            return HeldDeleteFade.fading(true, if (preferences.contains(FADE_ON_KEY)) preferences.getBoolean(FADE_ON_KEY, true) else null)
+        }
+
+        /** Turns the held delete fade on or off, to compare the two. Debug build only. */
+        fun fadeOn(context: Context, on: Boolean) {
+            check(debug(context)) { "Only TitanKeys Debug can switch the fade" }
+            preferences(context).edit().apply { if (on) remove(FADE_ON_KEY) else putBoolean(FADE_ON_KEY, false) }.apply()
+        }
+
         /** Stored like a family's tried pattern, as "17,9,8,2". */
         private const val FADE_KEY = "debug_pattern_held_delete_fade"
+        /** The lab's switch for the fade, stored only while it's off. */
+        private const val FADE_ON_KEY = "debug_held_delete_fade_on"
 
         /** The master switch: All haptics in Settings, and Vibration on the quick settings page. */
         fun enabled(context: Context) = switches(context).master

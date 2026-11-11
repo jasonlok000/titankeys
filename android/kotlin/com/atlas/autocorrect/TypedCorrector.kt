@@ -244,7 +244,18 @@ class TypedCorrector(
     fun check(word: String, before: String, typedPrevious: String?): Fix? =
         firstFix(word, before, typedPrevious)?.takeUnless { it.word == it.typed }
 
+    /**
+     * The owner's order: a wrong word is corrected first, and then the right word gets its fixed capitals ("mr" is "me"
+     * where the slip is clear, and "Mr" where it isn't). A word that is not wrong gets its capitals anyway.
+     */
     private fun firstFix(word: String, before: String, typedPrevious: String?): Fix? {
+        val fix = typoFix(word, before, typedPrevious)
+        if (fix != null) return fixedCapitals(fix.word)?.let { Fix(word, it) } ?: fix
+        if (isInsideAddress(before + word) || word.lowercase() in rejected) return null
+        return fixedCapitals(word)?.let { Fix(word, it) }
+    }
+
+    private fun typoFix(word: String, before: String, typedPrevious: String?): Fix? {
         if (isInsideAddress(before + word)) return null
         val lower = word.lowercase()
         val isRejected = lower in rejected
@@ -253,7 +264,6 @@ class TypedCorrector(
             if (isRejected || isKnown(word)) return null
             return nameSplit(word)?.let { Fix(word, it) }
         }
-        if (!isRejected) fixedCapitals(word)?.let { return Fix(word, it) }
         if (!isRejected && !hasExactCase(word)) shiftHeldTooLongFix(word, lexicon::frequency)?.let { return Fix(word, it) }
         if (!isRejected) spacedContraction(word, before, typedPrevious)?.let { return it }
         val letters = word.all { it.isLetter() }
@@ -315,6 +325,11 @@ class TypedCorrector(
         if (!same(trailing.next, latest)) return null
         if (earlier != null && same(trailing.word, earlier.word) && !isDeliberate(trailing.word)) {
             val typo = earlier.typo
+            // "mr" fixed to "me", then a word that never follows "me" ("me smith"): it was the title after all.
+            if (typo != null && typo.equals("mr", ignoreCase = true) && trailing.word.equals("me", ignoreCase = true)
+                && trailing.next.all { it.isLetter() } && data.pairs.count("me", trailing.next.lowercase()) == 0)
+                return Review(trailing.word, "Mr", "${trailing.word} ${trailing.next}${trailing.tail}",
+                    "Mr ${trailing.next}${trailing.tail}", false)
             // A fix made at the last space, seen again with the word after it.
             val fixed = respelled(typo?.let { context.reconsiderFix(trailing.before, it, trailing.word, trailing.next) }, trailing.word)
                 ?: respelled(context.review(trailing.before, trailing.word, trailing.next, trailing.beforePrevious, typedAsIs = typo == null), trailing.word)
@@ -448,8 +463,8 @@ class TypedCorrector(
         /** Words that are always written with a capital, however they are typed. */
         private val ALWAYS_CAPITAL = mapOf("i" to "I", "i'm" to "I'm", "i've" to "I've", "i'll" to "I'll", "i'd" to "I'd",
             // Titles that are never ordinary words. Acronyms such as OK, PC and CD stay as typed: lowercase is common in chat.
-            // "mr" is left out: it is a common slip for "me", which the benchmark lost to "Mr".
-            "mrs" to "Mrs", "dr" to "Dr", "jr" to "Jr", "phd" to "PhD")
+            // "mr" can be a slip for "me": the typo check runs first, and only a "mr" it leaves becomes "Mr".
+            "mr" to "Mr", "mrs" to "Mrs", "dr" to "Dr", "jr" to "Jr", "phd" to "PhD")
         /** How common a name must be to take its capitals by itself: "England" (141) and "iPhone" (100) are, "Cali" (78) is not. */
         private const val COMMON_NAME_FREQUENCY = 95
         private val SENTENCE_END_MARKS = setOf('.', '!', '?')

@@ -855,6 +855,12 @@ private fun composerFlow(world: Realistic) {
             "the I key" to "the I key",
             // Titles are always capitalised; acronyms stay as typed.
             "and mrs Jones" to "and Mrs Jones",
+            // Typo correction first, then capitals: "mr" is "me" where the slip is clear, and "Mr" where it isn't.
+            "ask mr smith" to "ask Mr smith",
+            "dear mr brown" to "dear Mr brown",
+            "call mr lee" to "call Mr lee",
+            "that works for mr." to "that works for me.",
+            "you and mr and her" to "you and me and her",
             "see dr lee" to "see Dr lee",
             "the jr team won" to "the Jr team won",
             "she has a phd now" to "she has a PhD now",

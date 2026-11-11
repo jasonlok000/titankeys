@@ -17,6 +17,7 @@ import android.os.PowerManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.provider.Settings
 import android.util.AtomicFile
 import android.util.Log
 import android.view.Display
@@ -182,23 +183,73 @@ class AtlasIme : InputMethodService() {
     }
 
     /**
-     * The owner's word on Teams, for a moment after the strip comes back from [recycle], once in [TEAMS_EGG_CHANCE] times at
-     * random. Never over a word's menu.
+     * The owner's word on Teams, the first time the strip comes back from [recycle] after the phone starts, and never again
+     * until it starts again. It flickers for about a second, or simply shows for a second with animations off. Never over a
+     * word's menu.
      */
     private fun showTeamsEgg() {
         val strip = strip ?: return
-        if (strip.notice != null || Random.nextInt(TEAMS_EGG_CHANCE) != 0) return
+        if (strip.notice != null) return
+        val boot = currentBoot()
+        if (!OncePerBoot.due(lastEggBoot(), boot)) return
+        rememberEggBoot(boot)
+        teamsEggStep = 0
         strip.notice = Strip.Notice.TeamsEgg
-        main.removeCallbacks(endTeamsEgg)
-        main.postDelayed(endTeamsEgg, TEAMS_EGG_MILLIS)
+        main.removeCallbacks(stepTeamsEgg)
+        main.postDelayed(stepTeamsEgg, if (ValueAnimator.areAnimatorsEnabled()) TEAMS_EGG_PULSES[0] else TEAMS_EGG_MILLIS)
     }
 
-    private val endTeamsEgg = Runnable { clearTeamsEgg() }
+    private var teamsEggStep = 0
+
+    /** Each step turns the word off or on, until the last, which ends it. */
+    private val stepTeamsEgg = object : Runnable {
+        override fun run() {
+            val strip = strip ?: return
+            // A word's menu or an Undo that took the strip's place ends it.
+            if (strip.notice != null && strip.notice != Strip.Notice.TeamsEgg) return
+            teamsEggStep++
+            if (!ValueAnimator.areAnimatorsEnabled() || teamsEggStep >= TEAMS_EGG_PULSES.size) {
+                strip.notice = null
+                return
+            }
+            strip.notice = if (teamsEggStep % 2 == 0) Strip.Notice.TeamsEgg else null
+            main.postDelayed(this, TEAMS_EGG_PULSES[teamsEggStep] - TEAMS_EGG_PULSES[teamsEggStep - 1])
+        }
+    }
 
     /** Any key or touch clears it at once, so it never stands in the way of typing. */
     private fun clearTeamsEgg() {
-        main.removeCallbacks(endTeamsEgg)
+        if (!main.hasCallbacks(stepTeamsEgg) && strip?.notice != Strip.Notice.TeamsEgg) return
+        main.removeCallbacks(stepTeamsEgg)
         if (strip?.notice == Strip.Notice.TeamsEgg) strip?.notice = null
+    }
+
+    /** Android's boot count, where an app can read it, and the time this boot started. Neither changes when TitanKeys restarts. */
+    private fun currentBoot(): OncePerBoot.Boot {
+        val count = try {
+            Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1).takeIf { it >= 0 }
+        } catch (error: RuntimeException) {
+            null
+        }
+        return OncePerBoot.Boot(count, System.currentTimeMillis() - SystemClock.elapsedRealtime())
+    }
+
+    /** The boot that the word last showed in. Storage can be locked just after a start, which counts as never. */
+    private fun lastEggBoot(): OncePerBoot.Boot? = try {
+        val saved = getSharedPreferences(EGG_PREFERENCES, MODE_PRIVATE)
+        if (!saved.contains(EGG_BOOT_STARTED)) null
+        else OncePerBoot.Boot(saved.getInt(EGG_BOOT_COUNT, -1).takeIf { it >= 0 }, saved.getLong(EGG_BOOT_STARTED, 0L))
+    } catch (error: IllegalStateException) {
+        null
+    }
+
+    private fun rememberEggBoot(boot: OncePerBoot.Boot) {
+        try {
+            getSharedPreferences(EGG_PREFERENCES, MODE_PRIVATE).edit()
+                .putInt(EGG_BOOT_COUNT, boot.count ?: -1).putLong(EGG_BOOT_STARTED, boot.startedAt).apply()
+        } catch (error: IllegalStateException) {
+            Log.w("Atlas", "Could not keep the boot of the Teams word", error)
+        }
     }
 
     private fun cancelRecycle() {
@@ -2325,9 +2376,12 @@ class AtlasIme : InputMethodService() {
         /** How long the strip stays hidden, from the moment its window has gone. Tuned on the phone: none is needed. */
         private const val RECYCLE_GAP_MILLIS = 0L
         /** How long the strip shows its word on Teams. */
-        private const val TEAMS_EGG_MILLIS = 200L
-        /** The word shows after one in this many hides and shows for Teams. */
-        private const val TEAMS_EGG_CHANCE = 10
+        private const val TEAMS_EGG_MILLIS = 1000L
+        /** When the word on Teams turns off, on, off and so on, in milliseconds from when it first shows. The last ends it. */
+        private val TEAMS_EGG_PULSES = longArrayOf(180, 260, 440, 520, 700, 760, TEAMS_EGG_MILLIS)
+        private const val EGG_PREFERENCES = "easter_egg"
+        private const val EGG_BOOT_COUNT = "teams_boot_count"
+        private const val EGG_BOOT_STARTED = "teams_boot_started"
         /** If the window has not gone by then, the strip comes back anyway. */
         private const val RECYCLE_HIDE_TIMEOUT_MILLIS = 1000L
         /**

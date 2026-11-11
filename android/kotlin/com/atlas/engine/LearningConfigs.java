@@ -82,17 +82,25 @@ final class LearningConfigs {
     }
 
     static JSONObject export(LanguageHabits words) throws IOException {
-        try { return new JSONObject().put("format", "physical-swipe-habits").put("version", 2)
+        try { return new JSONObject().put("format", BackupFormat.FORMAT).put("version", 2)
                 .put("words", words.config()); }
         catch (JSONException error) { throw new IOException("Could not encode habits", error); }
     }
 
-    /** Version 1 backups also hold swipe habits, which are ignored. */
+    /**
+     * Version 1 backups also hold swipe habits, which are ignored. A file that does not name the backup format throws
+     * [BackupFormat.NotABackup]; a backup that can't be read throws a plain IOException, so the import can say which.
+     */
     static LanguageHabits readExport(InputStream input) throws IOException {
+        byte[] bytes;
+        try { bytes = readBytes(input); }
+        // A backup is never this large, so this is some other file.
+        catch (TooLarge error) { throw new BackupFormat.NotABackup("Too large for a habits config"); }
+        if (!BackupFormat.claimsToBe(bytes)) throw new BackupFormat.NotABackup("Not a habits config");
         try {
-            JSONObject root = readJson(input);
+            JSONObject root = parseJson(bytes);
             int version = root.getInt("version");
-            if (!"physical-swipe-habits".equals(root.getString("format")) || version != 1 && version != 2)
+            if (!BackupFormat.FORMAT.equals(root.getString("format")) || version != 1 && version != 2)
                 throw new IOException("Unsupported habits config");
             return decodeWords(root.getJSONObject("words"));
         } catch (JSONException error) { throw new IOException("Invalid habits config", error); }
@@ -159,14 +167,24 @@ final class LearningConfigs {
         }
     }
 
-    static JSONObject readJson(InputStream input) throws IOException {
+    static JSONObject readJson(InputStream input) throws IOException { return parseJson(readBytes(input)); }
+
+    private static final class TooLarge extends IOException {
+        TooLarge() { super("Habits config is too large"); }
+    }
+
+    private static byte[] readBytes(InputStream input) throws IOException {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         byte[] buffer = new byte[8192]; int count;
         while ((count = input.read(buffer)) != -1) {
-            if (bytes.size() + count > MAX_BYTES) throw new IOException("Habits config is too large");
+            if (bytes.size() + count > MAX_BYTES) throw new TooLarge();
             bytes.write(buffer, 0, count);
         }
-        try { return new JSONObject(new String(bytes.toByteArray(), StandardCharsets.UTF_8)); }
+        return bytes.toByteArray();
+    }
+
+    private static JSONObject parseJson(byte[] bytes) throws IOException {
+        try { return new JSONObject(new String(bytes, StandardCharsets.UTF_8)); }
         catch (JSONException error) { throw new IOException("Invalid habits JSON", error); }
     }
 

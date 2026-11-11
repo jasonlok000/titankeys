@@ -102,6 +102,78 @@ object HapticPalette {
 
     /** Two confirmations closer than this play only the first, so a fast run of actions stays calm. */
     const val CONFIRM_SPACING_MILLIS = 80L
+
+    /**
+     * What the cursor plays as it steps past [next], the character it crosses, or nothing at either end of the text. A space or a
+     * line end is a step between words, so it is a [Feel.Tick], and every other character is the lightest [Feel.Texture].
+     * Punctuation gets no third feel: the Titan has five ready-made effects, and the three others already mean done, stays and
+     * removed. A full stop or a comma almost always sits next to a space, so the space's tick already marks the end of the word,
+     * and a third feel in a fast run of steps would only make it noisier.
+     */
+    fun cursorStep(next: Char?): Feel? = when {
+        next == null -> null
+        next.isWhitespace() -> Feel.Tick
+        else -> Feel.Texture
+    }
+
+    /**
+     * Ways to feel how long a picked word is, for the owner to try in the debug build only. [Off] plays the usual feel. Each one
+     * plays on its own when a word is picked: by a double or triple tap, or as a word drag takes one more word.
+     */
+    enum class PickFeel(val id: String) {
+        Off("off"),
+        /** One buzz that lasts longer for a longer word: [PICK_BASE_MILLIS] and [PICK_LETTER_MILLIS] a letter, up to [PICK_MOST_MILLIS]. */
+        Length("length"),
+        /** A short buzz for each syllable, so "cat" is one and "remember" three, up to [MOST_SYLLABLES]. */
+        Syllables("syllables"),
+        /** One of the phone's effects by word size: a tick up to 3 letters, a click up to 7, a heavy click for longer. */
+        Weight("weight");
+
+        companion object {
+            fun of(id: String?) = entries.firstOrNull { it.id == id } ?: Off
+        }
+    }
+
+    const val PICK_BASE_MILLIS = 8L
+    const val PICK_LETTER_MILLIS = 4L
+    const val PICK_MOST_MILLIS = 60L
+    const val SYLLABLE_MILLIS = 14L
+    const val SYLLABLE_GAP_MILLIS = 45L
+    const val MOST_SYLLABLES = 6
+
+    /** How [option] plays a picked [word], or null for the usual feel. */
+    fun pick(word: String, option: PickFeel): Pattern? {
+        val letters = word.count { it.isLetterOrDigit() }.coerceAtLeast(1)
+        return when (option) {
+            PickFeel.Off -> null
+            PickFeel.Length -> Pattern(null, Buzzes(listOf(minOf(PICK_BASE_MILLIS + PICK_LETTER_MILLIS * letters, PICK_MOST_MILLIS)), listOf(255)))
+            PickFeel.Syllables -> {
+                val count = syllables(word).coerceIn(1, MOST_SYLLABLES)
+                val timings = (0 until count).flatMap { if (it == 0) listOf(SYLLABLE_MILLIS) else listOf(SYLLABLE_GAP_MILLIS, SYLLABLE_MILLIS) }
+                Pattern(null, Buzzes(timings, timings.indices.map { if (it % 2 == 0) 255 else 0 }))
+            }
+            PickFeel.Weight -> when {
+                letters <= 3 -> of(Feel.Tick)
+                letters <= 7 -> of(Feel.Confirm)
+                else -> of(Feel.Removed)
+            }
+        }
+    }
+
+    /** About how many syllables [word] has: groups of vowels, with a final silent e left out. Good enough to feel a word's length. */
+    fun syllables(word: String): Int {
+        val letters = word.lowercase().filter { it.isLetter() }
+        if (letters.isEmpty()) return 1
+        var count = 0
+        var inVowels = false
+        for (letter in letters) {
+            val vowel = letter in "aeiouy"
+            if (vowel && !inVowels) count++
+            inVowels = vowel
+        }
+        if (letters.length > 2 && letters.endsWith("e") && !letters.endsWith("le") && count > 1) count--
+        return count.coerceAtLeast(1)
+    }
 }
 
 /** Plays the keyboard's feels ([Feel]), only while the Vibration setting and Android's touch feedback are on. */
@@ -126,6 +198,16 @@ class Haptics(private val context: Context) {
     fun play(feel: Feel) {
         if (!enabled(context)) return
         perform(feel)
+    }
+
+    /** A word was picked. The debug build's pick feel can play instead of [usual]: see [HapticPalette.PickFeel]. */
+    fun picked(word: String, usual: Feel) {
+        if (!enabled(context)) return
+        val custom = HapticPalette.pick(word, pickFeel(context)) ?: return perform(usual)
+        val now = SystemClock.uptimeMillis()
+        if (now < busyUntil) return
+        if (!vibrate(effect(custom))) return
+        busyUntil = now + custom.millis
     }
 
     /** A finished part of the interactive guide: two ticks, the second one stronger. */
@@ -197,6 +279,14 @@ class Haptics(private val context: Context) {
         fun preset(context: Context) = HapticPreset.of(preferences(context).getString("haptic_preset_v1", null))
 
         fun enabled(context: Context) = preferences(context).getBoolean("enabled", true)
+
+        /** The pick feel to try. Only TitanKeys Debug reads it, so a normal build always plays the usual feel. */
+        fun pickFeel(context: Context) = if (!context.packageName.endsWith(".debug")) HapticPalette.PickFeel.Off
+            else HapticPalette.PickFeel.of(preferences(context).getString("pick_feel", null))
+
+        fun pickFeel(context: Context, option: HapticPalette.PickFeel) {
+            preferences(context).edit().putString("pick_feel", option.id).apply()
+        }
 
         fun select(context: Context, preset: HapticPreset, enabled: Boolean) {
             preferences(context).edit().putString("haptic_preset_v1", preset.id).putBoolean("enabled", enabled).apply()

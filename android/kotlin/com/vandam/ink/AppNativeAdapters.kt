@@ -386,6 +386,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("liftOffMillis", TypingSettings.liftOffDurationMillis(activity))
             .put("haptics", Haptics.enabled(activity))
             .put("hapticPreset", Haptics.preset(activity).id)
+            .put("debugBuild", activity.packageName.endsWith(".debug"))
+            .put("pickFeel", Haptics.pickFeel(activity).id)
             .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
             .put("rawLog", TypingSettings.rawLog(activity))
             .put("rawLogBytes", RawLog.size(activity))
@@ -497,6 +499,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())
             "haptics" -> Haptics.select(activity, Haptics.preset(activity), value as Boolean)
             "hapticPreset" -> Haptics.select(activity, HapticPreset.of(value as String), Haptics.enabled(activity))
+            "pickFeel" -> Haptics.pickFeel(activity, com.atlas.keyboard.HapticPalette.PickFeel.of(value as String))
             "spelling" -> TypingSettings.spelling(activity,
                 if (value == "american") EnglishSpelling.Variant.AMERICAN else EnglishSpelling.Variant.BRITISH)
             "rawLog" -> RawLog.enabled(activity, value as Boolean)

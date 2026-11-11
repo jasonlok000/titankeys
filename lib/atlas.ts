@@ -2,6 +2,8 @@ import { resource } from "ink";
 import { callNative, onNativeMessage } from "ink/native";
 
 export type HapticPreset = "normal" | "strong";
+/** How a picked word feels, to try in the debug build only. */
+export type PickFeel = "off" | "length" | "syllables" | "weight";
 export type Spelling = "british" | "american";
 export type EnterKey = "send" | "newline" | "app";
 /** How a message goes out in an app: the field's action, or a plain Enter key. */
@@ -81,6 +83,9 @@ export type State = {
   liftOffMillis: number;
   haptics: boolean;
   hapticPreset: HapticPreset;
+  /** TitanKeys Debug, where the pick feel can be tried. */
+  debugBuild: boolean;
+  pickFeel: PickFeel;
   spelling: Spelling;
   /** Records touches, keys and typed text in a log on this phone. */
   rawLog: boolean;
@@ -89,7 +94,7 @@ export type State = {
   blockedWords: string[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "pickFeel" | "spelling" | "rawLog">;
 
 /**
  * Touchpad points from 0 to 1 across the keyboard and down its four rows, with how thick to draw the trail there: 1 for a

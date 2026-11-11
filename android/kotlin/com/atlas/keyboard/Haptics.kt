@@ -101,6 +101,7 @@ class Haptics(private val context: Context) {
 
         fun preset(context: Context) = HapticPreset.of(preferences(context).getString("haptic_preset_v1", null))
 
+        /** The Swipe vibration setting, for swipe ticks and tap keys. Other clicks follow only Android's Touch feedback. */
         fun enabled(context: Context) = preferences(context).getBoolean("enabled", true)
 
         fun select(context: Context, preset: HapticPreset, enabled: Boolean) {

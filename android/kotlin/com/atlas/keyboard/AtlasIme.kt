@@ -187,7 +187,7 @@ class AtlasIme : InputMethodService() {
         }.start()
     }
 
-    override fun onCreateInputView(): View = Strip(this, { index -> if (Haptics.enabled(this)) haptics.click(); enqueue { composer.choose(index) } },
+    override fun onCreateInputView(): View = Strip(this, { index -> haptics.click(); enqueue { composer.choose(index) } },
         ::symbol, ::pickEmoji).also {
         strip = it
         it.emoji = emoji
@@ -449,7 +449,7 @@ class AtlasIme : InputMethodService() {
             // answer still gets the pulse.
             val connection = currentInputConnection
             val next = if (direction > 0) connection?.getTextAfterCursor(1, 0) else connection?.getTextBeforeCursor(1, 0)
-            if (next?.isEmpty() != true && Haptics.enabled(this)) haptics.pulse()
+            if (next?.isEmpty() != true) haptics.pulse()
             command(arrow)
         }
     }
@@ -826,7 +826,7 @@ class AtlasIme : InputMethodService() {
         // The picker can take the Sym release, so Sym must not stay held.
         modifiers.cancel(KeyEvent.KEYCODE_SYM)
         showModifiers()
-        if (Haptics.enabled(this)) haptics.click()
+        haptics.click()
         getSystemService(InputMethodManager::class.java).showInputMethodPicker()
     }
 

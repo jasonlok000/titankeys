@@ -83,10 +83,11 @@ class Strip(
      */
     private val clipText = TextView(context).apply {
         typeface = this@Strip.typeface
-        textSize = 17f
+        textSize = WORD_SIZE
         gravity = Gravity.CENTER
         isSingleLine = true
-        ellipsize = TextUtils.TruncateAt.END
+        // StripFit shrinks and cuts the clip, as it does the words.
+        ellipsize = null
         isFocusable = false
         compoundDrawablePadding = dp(8)
     }
@@ -214,12 +215,12 @@ class Strip(
 
     private fun item(press: (TextView) -> Unit, hold: () -> Boolean) = TextView(context).apply {
         typeface = this@Strip.typeface
-        textSize = 17f
+        textSize = WORD_SIZE
         gravity = Gravity.CENTER
         isSingleLine = true
         ellipsize = TextUtils.TruncateAt.END
         isFocusable = false
-        setPadding(dp(6), 0, dp(6), 0)
+        setPadding(dp(WORD_PADDING), 0, dp(WORD_PADDING), 0)
         setOnClickListener { press(this) }
         setOnLongClickListener { hold() }
     }
@@ -256,12 +257,25 @@ class Strip(
         setPadding(side, 0, side, if (showSuggestions) navigationInset else 0)
         // Keep a window for firmware touchpad routing when there is nothing to display.
         minimumHeight = if (showSuggestions) 0 else 1
+        // Long words shrink, borrow room from short ones, and as a last resort lose the part they share with the others.
+        val shown = WORD_ORDER.map { words.getOrElse(it) { "" } }
+        val room = (width - paddingLeft - paddingRight).toFloat()
+        val fits = if (room > 0) StripFit.fit(shown, room, dp(WORD_PADDING).toFloat(), ::measureWord) else null
         for ((slot, view) in wordViews.withIndex()) {
             val index = WORD_ORDER[slot]
             // While the idle scene plays, it draws the letters itself, and the words keep their places underneath.
             view.visibility = if (showSuggestions && bar == null && confirm == null && offer == null && chosen == null)
                 (if (idle != null) INVISIBLE else VISIBLE) else GONE
-            view.text = words.getOrElse(index) { "" }
+            val fit = fits?.get(slot)
+            view.text = fit?.text ?: shown[slot]
+            view.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (fit?.scale ?: 1f))
+            // Each place is as wide as what it shows, so a touch lands on the word that it shows.
+            val params = view.layoutParams as LayoutParams
+            val weight = fit?.width ?: 1f
+            if (params.weight != weight) {
+                params.weight = weight
+                view.layoutParams = params
+            }
             view.isEnabled = index < words.size
             view.setTextColor(look.ink)
         }
@@ -284,10 +298,15 @@ class Strip(
         showNotice(confirm)
         clipView.visibility = if (offer != null) VISIBLE else GONE
         // The start of the clip, cut cleanly at the end of the line.
-        clipText.text = offer?.let { ClipboardHistory.preview(it, CLIP_PREVIEW_LENGTH) }.orEmpty()
+        // The clip follows the words' rules: it shrinks to fit, then loses its end.
+        val preview = offer?.let { ClipboardHistory.preview(it, CLIP_PREVIEW_LENGTH) }.orEmpty()
+        val icon = Math.round(wordPixels() * CLIP_ICON_SCALE)
+        val clipRoom = (width - paddingLeft - paddingRight - clipView.paddingLeft - clipView.paddingRight - icon - clipText.compoundDrawablePadding).toFloat()
+        val clipFit = if (clipRoom > 0 && preview.isNotEmpty()) StripFit.fit(listOf(preview), clipRoom, 0f, ::measureWord).single() else null
+        clipText.text = clipFit?.text ?: preview
+        clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (clipFit?.scale ?: 1f))
         clipText.setTextColor(look.ink)
-        // The icon is as tall as the letters, so it sits on their line.
-        val icon = Math.round(clipText.textSize * CLIP_ICON_SCALE)
+        // The icon is as tall as the words' letters, so it sits on their line.
         clipText.setCompoundDrawablesRelative(context.getDrawable(R.drawable.clipboard)?.mutate()?.apply {
             setBounds(0, 0, icon, icon)
             setTint(look.accent)
@@ -297,6 +316,24 @@ class Strip(
         selectedView.visibility = if (chosen != null) VISIBLE else GONE
         selectedView.text = chosen.orEmpty()
         selectedView.setTextColor(look.ink)
+    }
+
+    /** The words' size in pixels, at full size. */
+    private fun wordPixels() = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, WORD_SIZE, resources.displayMetrics)
+
+    private val measurePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+
+    /** How wide a word is at the words' full size. */
+    private fun measureWord(text: String): Float {
+        measurePaint.typeface = typeface
+        measurePaint.textSize = wordPixels()
+        return measurePaint.measureText(text)
+    }
+
+    /** The words' places depend on the strip's width, so they are laid out again when it changes. */
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (w != oldw) post { render() }
     }
 
     override fun dispatchDraw(canvas: Canvas) {
@@ -405,6 +442,9 @@ class Strip(
 
     companion object {
         private val WORD_ORDER = listOf(1, 0, 2)
+        /** The words' size, in sp, and the room on each side of a word. */
+        private const val WORD_SIZE = 17f
+        private const val WORD_PADDING = 6
         /** About 30 frames a second while the idle scene moves. */
         private const val IDLE_FRAME_MILLIS = 33L
         /** Enough of the clip for one line. The line itself cuts it cleanly where it ends. */

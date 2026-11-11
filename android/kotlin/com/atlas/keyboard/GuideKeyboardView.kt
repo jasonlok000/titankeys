@@ -318,7 +318,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val radius = min(Radii.px(resources, Radii.SMALL), min(key.box.width(), key.box.height()) / 2)
         // A key that the open panel leaves empty is drawn faint, as an empty key, not as a blank button that might do something.
         val emptyKey = faced != null && label.isEmpty()
-        boxPaint.color = if (emptyKey) GuideMotion.faded(idleFill, EMPTY_KEY) else GuideMotion.blend(idleFill, litFill, heat.coerceIn(0f, 1f))
+        // Faded from the key's own fill, so an empty key is darker than the others, never brighter.
+        val emptyFill = GuideMotion.faded(idleFill, (idleFill ushr 24) / 255f * EMPTY_KEY)
+        boxPaint.color = if (emptyKey) emptyFill else GuideMotion.blend(idleFill, litFill, heat.coerceIn(0f, 1f))
         canvas.drawRoundRect(key.box.left + inset, key.box.top + inset, key.box.right - inset, key.box.bottom - inset, radius, radius, boxPaint)
         val labelColour = GuideMotion.blend(idleLabel, litLabel, heat.coerceIn(0f, 1f))
         drawLabel(canvas, key, label, labelColour)
@@ -498,10 +500,16 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     private fun drawGhostPath(canvas: Canvas, points: List<FloatArray>, t: Float, colour: Int) {
         val hold = (cue as? GuideCue.Flick)?.hold == true
-        val travel = (if (hold) t / .5f else t / .7f).coerceIn(0f, 1f)
+        // A flick snaps: fast out, easing at the end, and the finger lifts at once. A hold travels, then stays and pulses.
+        val snap = cue is GuideCue.Flick && !hold
+        val travel = when {
+            hold -> t / .5f
+            snap -> 1f - (1f - (t / FLICK_SNAP).coerceIn(0f, 1f)).let { it * it * it }
+            else -> t / .7f
+        }.coerceIn(0f, 1f)
         val alpha = when {
+            snap && t > FLICK_SNAP -> 1f - (t - FLICK_SNAP) / FLICK_FADE
             t > .9f -> (1f - t) / .1f
-            hold && t > .5f -> 1f
             else -> 1f
         }.coerceIn(0f, 1f)
         // All the ghost's path, thin and faint, so the shape shows at once.
@@ -516,6 +524,13 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         canvas.drawPath(path, ghostPaint)
         dotPaint.color = GuideMotion.faded(GuideColours.CREAM, alpha)
         canvas.drawCircle(head[0], head[1], dp(GHOST_FINGER), dotPaint)
+        if (snap && t in FLICK_SNAP..FLICK_SNAP + FLICK_FADE) {
+            // The lift: one ring pops out from where the finger left.
+            val pop = (t - FLICK_SNAP) / FLICK_FADE
+            ringPaint.color = GuideMotion.faded(GuideColours.CREAM, 1f - pop)
+            ringPaint.strokeWidth = dp(2f)
+            canvas.drawCircle(head[0], head[1], dp(GHOST_FINGER) * (1f + pop * 2f), ringPaint)
+        }
         if (hold && t in .5f..0.9f) {
             // A flick that stays: the finger pulses in place, and words would keep going.
             val pulse = ((t - .5f) * 6f) % 1f
@@ -654,6 +669,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         /** How long the light under a finger takes to come on, and to go once the finger has left. */
         const val HOVER_FADE_MILLIS = 100f
         const val SPOT_PULSE_MILLIS = 900f
+        /** A flick's ghost snaps to its end in this part of the demo, then lifts and fades in this part. */
+        const val FLICK_SNAP = .25f
+        const val FLICK_FADE = .2f
 
         // The wave that runs over the keys when something works.
         const val WAVE_MILLIS = 360L

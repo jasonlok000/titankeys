@@ -324,12 +324,17 @@ class AtlasIme : InputMethodService() {
         if (!cursorGesture.confirm()) return@Runnable
         Recording.sink?.gesture("double", SystemClock.uptimeMillis(), "")
         finishHeldTaps(type = false)
-        KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
+        KeyboardEvents.publish { KeyboardEvent.DoubleTapped(2) }
         // A terminal or a remote view has no text to select here.
         if (field.exact) haptics.play(Haptic.WordPicked) else enqueue { selectWord() }
     }
 
     private val checkHeldTaps = Runnable { settleHeldTaps() }
+
+    /** Two taps above Space pick nothing; the guide says so, once no third tap follows. Only in its own field. */
+    private val confirmTwoAbove = Runnable {
+        if (inGuide && cursorGesture.confirmTwoAbove()) KeyboardEvents.publish { KeyboardEvent.TwoTapsAbove }
+    }
 
     /** Deletes the next word of a held delete flick. Only one edit is on its way at a time, so a lift leaves no words waiting. */
     private val stepDeleteHold = Runnable {
@@ -451,7 +456,7 @@ class AtlasIme : InputMethodService() {
         gestureRegistered = true
         main.removeCallbacks(confirmDoubleTap)
         finishHeldTaps(type = false)
-        KeyboardEvents.publish { KeyboardEvent.DoubleTapped }
+        KeyboardEvents.publish { KeyboardEvent.DoubleTapped(3) }
         if (field.exact) haptics.play(Haptic.WordPicked) else enqueue { selectWord(inFront = true) }
     }
 
@@ -532,9 +537,14 @@ class AtlasIme : InputMethodService() {
         composer.onStroke = Trace::stroke
         // Backspace putting a word back plays nothing: the key press is felt already.
         composer.onAutocorrect = { haptics.play(Haptic.Autocorrect) }
+        composer.onFixed = { typed, word -> KeyboardEvents.publish { KeyboardEvent.Fixed(typed, word) } }
         composer.onExpanded = { haptics.play(Haptic.Expansion) }
         composer.nearMiss = { right -> GuideScript.slip(right).takeIf { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) } }
         composer.intended = { before -> GuideHooks.intended(currentInputEditorInfo?.privateImeOptions, before) }
+        composer.guidePlaced = { place -> GuideHooks.rightPlace = place }
+        composer.onRestored = { KeyboardEvents.publish { KeyboardEvent.Restored } }
+        // The guide asks whether the bar has words to hold, for its word menu slide. Only in its own field.
+        GuideHooks.barCount = { if (inGuide) barWords.size else -1 }
         // The interactive guide acts out a gesture on this bar, only in its own field. See [Strip.playDemo].
         GuideHooks.stripDemos = { demo ->
             main.post {
@@ -547,6 +557,8 @@ class AtlasIme : InputMethodService() {
             main.post {
                 if (!editing || currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) != true) return@post
                 val now = System.currentTimeMillis()
+                // The newest of them flashes, to show where to look.
+                guideFlashClip = clips.firstOrNull()
                 for (text in clips.reversed()) {
                     if (clipHistory.clips.any { it.text == text }) continue
                     if (!clipHistory.add(text, now)) continue
@@ -1176,6 +1188,8 @@ class AtlasIme : InputMethodService() {
     private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
     private var clipHistory = ClipboardHistory()
     private val clipFile by lazy { AtomicFile(java.io.File(noBackupFilesDir, CLIP_FILE)) }
+    /** The guide's clip that flashes on the clipboard page until a clip is pasted. */
+    private var guideFlashClip: String? = null
     private var clipPinning = false
     private var clipClearing = false
     /** The time of the clip that the strip last offered and that was then pasted or passed over, so it is not offered again. */
@@ -1235,6 +1249,7 @@ class AtlasIme : InputMethodService() {
         panel?.clipPinning = clipPinning
         panel?.clipClearing = clipClearing
         panel?.clips = clipHistory.clips.toList()
+        panel?.flashClip = guideFlashClip.takeIf { inGuide }
         panel?.render()
     }
 
@@ -1302,7 +1317,9 @@ class AtlasIme : InputMethodService() {
                 clipClearing = false
                 if (clipPinning) pin(index) else {
                     haptics.play(Haptic.ClipPasted)
-                    composer.paste(clip.text)
+                    // The guide swaps one clip for a prank, and says so; anywhere else a clip pastes as it is.
+                    composer.paste(if (inGuide) GuideHooks.swapClip(clip.text) else clip.text)
+                    guideFlashClip = null
                     closePanel()
                     return
                 }
@@ -1380,18 +1397,21 @@ class AtlasIme : InputMethodService() {
     /** The key that picked a menu button, whose release must not reach the app. */
     private var menuKey = -1
 
-    /** The menu's button that [key] picks, or null for a key that picks none. */
+    /** The menu's button that [key] picks: U saves, I forgets, O goes back. Null for a key that picks none. */
     private fun menuAction(key: String): Strip.Action? {
-        val strip = strip ?: return null
-        val actions = strip.noticeActions(strip.notice)
-        return actions.getOrNull(MenuKeys.button(key, actions.size))
+        val menu = strip?.notice as? Strip.Notice.Menu ?: return null
+        return when (MenuKeys.button(key)) {
+            MenuKeys.SAVE -> Strip.Action.Save
+            MenuKeys.FORGET -> Strip.Action.Forget.takeIf { menu.forget }
+            MenuKeys.BACK -> Strip.Action.Close
+            else -> null
+        }
     }
 
     /** A resting finger marks the button over its key, as on the Sym panel. */
     private fun markMenu(key: String) {
         val strip = strip ?: return
-        val actions = strip.noticeActions(strip.notice)
-        val mark = if (menuOpen) MenuKeys.button(key, actions.size) else -1
+        val mark = if (menuOpen && menuAction(key) != null) MenuKeys.button(key) else -1
         if (mark >= 0 && mark != strip.menuMark) haptics.play(Haptic.MenuMark)
         strip.menuMark = mark
     }
@@ -1751,6 +1771,7 @@ class AtlasIme : InputMethodService() {
         stopCursor()
         val points = contact.points
         if (doubleTapped) main.postAtTime(confirmDoubleTap, event.eventTime + CursorGesture.CONFIRM_MILLIS)
+        else if (inGuide && cursorGesture.twoAbove) main.postAtTime(confirmTwoAbove, event.eventTime + CursorGesture.CONFIRM_MILLIS)
         contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
             lastTouch = pending.points
             if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
@@ -2353,6 +2374,8 @@ class AtlasIme : InputMethodService() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
+        // The guide tells Alt pressed and let go from Alt held, and a letter let go before its symbol. Only in its own field.
+        if (inGuide && (Modifiers.isShiftOrAlt(keyCode) || HoldEngine.isLetter(keyCode))) KeyboardEvents.publish { KeyboardEvent.Released(keyCode) }
         // The release of a key that picked a menu button belongs to that pick.
         if (keyCode == menuKey) {
             menuKey = -1
@@ -2512,7 +2535,7 @@ class AtlasIme : InputMethodService() {
         } else panel?.item(letter)?.let { item ->
             pickedKey = event.keyCode
             typePanelItem(item)
-        }
+        } ?: run { if (inGuide) KeyboardEvents.publish { KeyboardEvent.EmptyKey } }
         return true
     }
 
@@ -2725,6 +2748,7 @@ class AtlasIme : InputMethodService() {
         GuideHooks.stripDemos = null
         GuideHooks.stripPoints = null
         GuideHooks.clipSeeds = null
+        GuideHooks.barCount = null
         GuideHooks.clipDismissals = null
         // A held status must not outlive the keyboard.
         if (hold.held) hideHeldWindow()

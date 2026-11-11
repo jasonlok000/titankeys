@@ -45,8 +45,20 @@ sealed interface KeyboardEvent {
     /** A key on the quick settings page was used. [on] is the setting as it is now. */
     data class QuickSettingUsed(val item: QuickSetting, val on: Boolean) : KeyboardEvent
 
-    /** Two quick taps on the bottom row selected the word at the cursor. */
-    data object DoubleTapped : KeyboardEvent
+    /** Quick taps on the bottom row picked a word: two on Space pick the word at the cursor, three the word in front of it. */
+    data class DoubleTapped(val taps: Int) : KeyboardEvent
+
+    /** Two quick taps above Space that both lifted, which pick nothing there. Only in the guide's field. */
+    data object TwoTapsAbove : KeyboardEvent
+
+    /** A key went up: only Shift, Alt and letters, and only in the guide's field, so the guide can tell a press that let go from a hold. */
+    data class Released(val code: Int) : KeyboardEvent
+
+    /** A key on the Sym panel with nothing on it was pressed. Only in the guide's field. */
+    data object EmptyKey : KeyboardEvent
+
+    /** Backspace right after a typo fix put the typed word back. */
+    data object Restored : KeyboardEvent
 
     /** A finger that tapped the bottom row started to steer the cursor. After three taps it selects whole [words]. */
     data class CursorStarted(val words: Boolean) : KeyboardEvent
@@ -59,6 +71,13 @@ sealed interface KeyboardEvent {
 
     /** Something was copied to the clipboard. The screen that owns the field sends this, as only it may read the clipboard. */
     data class Copied(val text: String) : KeyboardEvent
+
+    /**
+     * Autocorrect changed [typed] into [word]. A change of capitals alone is no typo fixed: see [isRealFix].
+     */
+    data class Fixed(val typed: String, val word: String) : KeyboardEvent {
+        val isRealFix get() = !typed.filter(Char::isLetter).equals(word.filter(Char::isLetter), ignoreCase = true)
+    }
 
     /** A word on the strip was held, and its menu opened. */
     data class WordMenu(val word: String) : KeyboardEvent

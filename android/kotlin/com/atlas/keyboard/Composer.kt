@@ -206,6 +206,11 @@ class Composer(
     var onStroke: ((Swipe) -> Unit)? = null
     /** Told when a word changes by itself, unless that lands as a swipe ends, where a vibration would run into the swipe's own. */
     var onAutocorrect: (() -> Unit)? = null
+    /**
+     * Told how a typed word ended, from [typed] to [word], for the guide, which waits for a real fix: the same word twice when
+     * nothing was fixed.
+     */
+    var onFixed: ((typed: String, word: String) -> Unit)? = null
     /** Told when an automatic change is undone and the typed word is back. */
     var onRestored: (() -> Unit)? = null
     /** Told when a :name: becomes its emoji, or a snippet's shortcut its text. */
@@ -220,6 +225,8 @@ class Composer(
      * different gets the guide's word on the strip, so that one touch puts it right. See [GuideHooks].
      */
     var intended: (String) -> String? = { null }
+    /** Told where the guide's word went among a swipe's choices, as they rank, so that the guide can point at it. */
+    var guidePlaced: (Int) -> Unit = {}
     /** Only the keyboard sets this, so replaying a recording never adds to the raw input log. */
     var log: EditLog? = null
     /** Only the keyboard sets this, and only while the setting is on, so replaying a recording never changes a word. */
@@ -1401,6 +1408,7 @@ class Composer(
         }
         if (fix != null) {
             onAutocorrect?.invoke()
+            onFixed?.invoke(fix.typed, fix.word)
             val typedMark = mark.trimEnd()
             offerUndo(fix.word + mark, fix.typed + typedMark, fix.typed, typedMark.isNotEmpty())
             val last = fix.word.substringAfterLast(' ')
@@ -1420,10 +1428,11 @@ class Composer(
         if (review != null) {
             if (!replaceBehind(Composition.None, anchor, EditCause.Autocorrect, review.original.length, review.replaced)) return null
             onAutocorrect?.invoke()
+            onFixed?.invoke(review.original, review.replaced)
             offerUndo(review.replaced, review.original, review.word, true)
             if (review.word.equals(heldWord, ignoreCase = true)) heldWord = null
             if (field.learning) words.typed(review.fix, false)
-        }
+        } else onFixed?.invoke(word, word)
         learnHeldWord()
         val latest = if (review?.reviewedLast == true) review.fix else word
         endedWord = EndedWord(latest, null)
@@ -1554,8 +1563,15 @@ class Composer(
         val at = guessed.indexOfFirst { sameLetters(it, wanted) }
         val right = guessed.getOrNull(at) ?: wanted
         val others = guessed.filterIndexed { index, _ -> index != at }
-        nearMiss(right)?.let { slip -> return listOf(others.firstOrNull() ?: slip, right) + others.drop(1) }
+        nearMiss(right)?.let { slip ->
+            // The right word takes a random place after the wrong one, so it has to be looked for. The guide points at it.
+            val rest = others.drop(1)
+            val place = 1 + kotlin.random.Random.nextInt(minOf(rest.size, GUIDE_RIGHT_PLACES - 1) + 1)
+            guidePlaced(place)
+            return (listOf(others.firstOrNull() ?: slip) + rest).toMutableList().apply { add(place, right) }
+        }
         if (others.isEmpty() || at == 0) return guessed
+        guidePlaced(1)
         return listOf(others[0], right) + others.drop(1)
     }
 
@@ -1739,6 +1755,8 @@ class Composer(
         private const val AFTER_CONTEXT_LENGTH = 32
         /** Where the interactive guide's word goes among typed suggestions: second, after the best of the rest. */
         private const val GUIDE_PLACE = 1
+        /** How many places after the wrong word the right one may take, on the guide's slide about the bar. */
+        private const val GUIDE_RIGHT_PLACES = 2
         private const val FULL_STOP_MILLIS = 400L
         private const val PREDICTION_DELAY_MILLIS = 60L
         /** A swipe this soon after the last one may be its other half, so it is also read joined to it. */

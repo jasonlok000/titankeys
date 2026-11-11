@@ -64,6 +64,15 @@ internal object GuideHooks {
         stripPoints?.invoke(index)
     }
 
+    /** How many words the bar shows now, or -1 outside the guide's field. The keyboard sets it. */
+    @Volatile var barCount: (() -> Int)? = null
+
+    /** Where the right word is on the bar after a miss, as the keyboard ranks the words, for the guide to point at. */
+    @Volatile var rightPlace = 1
+
+    /** The guide's prank: the one nice clip in its clipboard lesson pastes something else, which the guide owns up to. */
+    fun swapClip(text: String) = if (text == PRANK_CLIP) PRANK_PASTE else text
+
     /** The keyboard listens here, so that the bar stops offering the newest clip once the guide is done with it. */
     @Volatile var clipDismissals: (() -> Unit)? = null
 

@@ -2063,7 +2063,8 @@ class GuideActivity : Activity() {
         // The look, in dp. These are safe to change. Words fit their box at any system font size, because the boxes set their size.
         private val HEAVY: Typeface = Typeface.create(Typeface.DEFAULT, 900, false)
         private val MEDIUM: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        private const val GUTTER = 18
+        /** The same as the key columns' side, so that the drawn keys line up with the Sym panel's labels. */
+        private const val GUTTER = Layout.KEY_SIDE_DP
         private const val TOP_ACTION = 32
         private const val TITLE_SMALLEST = 22
         private const val TITLE_LARGEST = 76

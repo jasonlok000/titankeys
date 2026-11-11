@@ -200,6 +200,9 @@ class SymPanel(
                 addView(cells[key] ?: Space(context), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
             }
         }, LayoutParams(LayoutParams.MATCH_PARENT, dp(ROW_HEIGHT)))
+        // The ten columns sit where the keys are, as the guide draws them, so each label is centred over its own key. The panel's
+        // own padding is part of that.
+        grid.setPadding(dp(Layout.KEY_SIDE_DP - PANEL_SIDE_DP), 0, dp(Layout.KEY_SIDE_DP - PANEL_SIDE_DP), 0)
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         band.addView(clipLine, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         addView(band, LayoutParams(LayoutParams.MATCH_PARENT, dp(BAND_HEIGHT)))
@@ -411,7 +414,7 @@ class SymPanel(
         look = Look.of(context)
         visibility = if (mode == Modifiers.Panel.Closed) GONE else VISIBLE
         setBackgroundColor(look.paper)
-        setPadding(dp(4), 0, dp(4), navigationInset)
+        setPadding(dp(PANEL_SIDE_DP), 0, dp(PANEL_SIDE_DP), navigationInset)
         val current = pages
         categories.visibility = if (quick) GONE else VISIBLE
         preview.visibility = if (quick) VISIBLE else GONE
@@ -482,7 +485,8 @@ class SymPanel(
         for ((index, row) in Layout.rows.take(3).withIndex()) {
             val rowsBelow = 2 - index
             val above = navigationInset + dp(BAND_HEIGHT + rowsBelow * ROW_HEIGHT + ROW_CONTENT_ABOVE)
-            val inset = (corners.inset(above.toFloat()) - dp(4)).coerceAtLeast(0)
+            // The outer cells already sit in by the key columns' side, so only a corner deeper than that moves their content.
+            val inset = (corners.inset(above.toFloat()) - dp(Layout.KEY_SIDE_DP)).coerceAtLeast(0)
             cells[row.first()]?.setPadding(inset, 0, 0, 0)
             cells[row.last()]?.setPadding(0, 0, inset, 0)
         }
@@ -608,6 +612,8 @@ class SymPanel(
         /** How much of a clip the guide's drawing shows on its key. */
         const val FACE_CLIP_LENGTH = 4
         const val BAND_HEIGHT = 32
+        /** The panel's own room on each side, in dp. */
+        const val PANEL_SIDE_DP = 4
         const val ROW_HEIGHT = 46
         /** How far the lowest content of a row is over the row's bottom: an icon in the middle of the row. */
         const val ROW_CONTENT_ABOVE = 11

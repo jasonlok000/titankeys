@@ -17,7 +17,10 @@ function indent(radius: number, down: number) {
 
 const clamp = ({ width, height, radius }: Box) => Math.max(0, Math.min(radius, width / 2, height / 2));
 
-/** A filled box with round corners. [onPress] gets the whole box, square corners included, so the hit area does not change. */
+/**
+ * A filled box with round corners. Every piece of it takes [onPress], so the whole visible button is the hit area. Ink only takes
+ * #RRGGBB colours, with no transparency, so there is no invisible rectangle for the press.
+ */
 export function RoundedFill(props: Box & { fill: string; onPress?: () => void; keyPrefix?: string }) {
   const { x, y, width, height, fill, onPress, keyPrefix = "rounded" } = props;
   const radius = clamp(props);
@@ -26,14 +29,14 @@ export function RoundedFill(props: Box & { fill: string; onPress?: () => void; k
   for (let row = 0; row < rows; row++) {
     const inset = indent(radius, row + .5);
     const sliceHeight = Math.min(1, radius - row);
-    slices.push(<Rectangle key={`${keyPrefix}-top-${row}`} x={x + inset} y={y + row} width={width - 2 * inset} height={sliceHeight} fill={fill} />);
+    slices.push(<Rectangle key={`${keyPrefix}-top-${row}`} x={x + inset} y={y + row} width={width - 2 * inset} height={sliceHeight} fill={fill}
+      onPress={onPress} />);
     slices.push(<Rectangle key={`${keyPrefix}-bottom-${row}`} x={x + inset} y={y + height - row - sliceHeight} width={width - 2 * inset}
-      height={sliceHeight} fill={fill} />);
+      height={sliceHeight} fill={fill} onPress={onPress} />);
   }
   return [
     ...slices,
-    <Rectangle key={`${keyPrefix}-middle`} x={x} y={y + radius} width={width} height={height - 2 * radius} fill={fill} />,
-    ...(onPress ? [<Rectangle key={`${keyPrefix}-press`} x={x} y={y} width={width} height={height} fill="#00000000" onPress={onPress} />] : []),
+    <Rectangle key={`${keyPrefix}-middle`} x={x} y={y + radius} width={width} height={height - 2 * radius} fill={fill} onPress={onPress} />,
   ];
 }
 

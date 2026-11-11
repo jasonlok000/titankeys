@@ -59,6 +59,15 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("touch_light", enabled).apply();
     }
 
+    /** Holding Alt with a key does an action, such as undo. Off, a held Alt types symbols. */
+    public static boolean actions(Context context) {
+        return preferences(context).getBoolean("alt_actions", true);
+    }
+
+    public static void actions(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("alt_actions", enabled).apply();
+    }
+
     public static boolean liftOffGrace(Context context) { return preferences(context).getBoolean("lift_off_grace", true); }
 
     public static void liftOffGrace(Context context, boolean enabled) {

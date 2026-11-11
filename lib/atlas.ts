@@ -44,6 +44,8 @@ export type State = {
   shortcutAnimation: boolean;
   /** The name of the key that opens app shortcuts, or null when none is set. */
   hyperKey: string | null;
+  /** A held Alt and a key do an action, such as undo. Off, a held Alt types symbols. */
+  actions: boolean;
   /** Each letter with an app, from A to Z. */
   shortcuts: Shortcut[];
 };
@@ -56,7 +58,7 @@ export type App = { app: string; name: string; icon: string | null };
 /** A key pressed to choose the hyper key, with why it cannot be one. */
 export type HyperKeyPress = { code: number; label: string; problem: string | null };
 
-export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autoPunctuation" | "suggestionBar" | "cursorControl" | "touchLight" | "swipeTyping" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "appShortcuts" | "shortcutAnimation">;
+export type Settings = Pick<State, "learning" | "tapKeys" | "autoCapitalise" | "autoPunctuation" | "suggestionBar" | "cursorControl" | "touchLight" | "swipeTyping" | "liftOff" | "liftOffMillis" | "haptics" | "hapticPreset" | "spelling" | "appShortcuts" | "shortcutAnimation" | "actions">;
 
 /** Touchpad points from 0 to 1 across the keyboard and down its four rows. */
 export type Point = [x: number, y: number];

@@ -36,6 +36,7 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "bar_word", label: "Tap a word", about: "When you tap a word on the bar to put it in." },
     { id: "menu_open", label: "Word menu opens", about: "When you hold a word on the bar and its menu opens." },
     { id: "menu_mark", label: "Marked menu button changes", about: "When your finger moves the mark to another button in the word menu." },
+    { id: "menu_closed", label: "Word menu closed", about: "When you press Back and the word menu closes without a pick." },
     { id: "word_saved", label: "Save", about: "When you press Save in the word menu." },
     { id: "word_forgotten", label: "Forget", about: "When you press Forget in the word menu." },
     { id: "forget_undone", label: "Undo after Forget", about: "When you press Undo right after Forget and the word is back." },

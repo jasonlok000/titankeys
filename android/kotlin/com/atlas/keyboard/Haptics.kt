@@ -97,6 +97,8 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     BarWord("bar_word", HapticGroup.Bar, Family.Confirm),
     MenuOpen("menu_open", HapticGroup.Bar, Family.Confirm),
     MenuMark("menu_mark", HapticGroup.Bar, Family.Texture),
+    /** Back closed the word menu, by P or the strip, with nothing picked. */
+    MenuClosed("menu_closed", HapticGroup.Bar, Family.Release),
     WordSaved("word_saved", HapticGroup.Bar, Family.Confirm),
     WordForgotten("word_forgotten", HapticGroup.Bar, Family.Gone),
     /** Undo right after Forget: the word is back. */

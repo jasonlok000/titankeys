@@ -1601,7 +1601,11 @@ class AtlasIme : InputMethodService() {
         }
         when (action) {
             Strip.Action.OpenSelected -> strip?.selected?.let { openMenu(HeldWord(it, "")) }
-            Strip.Action.Close -> closeMenu()
+            Strip.Action.Close -> {
+                // Back closed the menu by hand. It closing for any other reason, such as typing, plays nothing.
+                if (held != null) haptics.play(Haptic.MenuClosed)
+                closeMenu()
+            }
             Strip.Action.Undo -> undoForget()
             Strip.Action.Save -> if (held != null) saveWord(held)
             Strip.Action.Forget -> if (held != null && canForget(held)) forgetWord(held)

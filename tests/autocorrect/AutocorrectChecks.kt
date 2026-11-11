@@ -1621,7 +1621,7 @@ private fun smallerChecks() {
         val pairs = mapOf("going to" to 900, "to the" to 800, "going on" to 5, "on the" to 600, "so tired" to 300, "am so" to 200)
         val context = ContextCorrector(frequencyOf = { 0 }, isNeighborKey = { _, _ -> false }, pairCount = { a, b -> pairs["$a $b"] ?: 0 },
             shortWords = mapOf("to" to 5000, "on" to 3000, "so" to 2000, "of" to 6000))
-        same(context.review("going", "o", "the"), "to", "A lone letter becomes the short word that fits")
+        same(context.review("going", "o", "the"), null, "A single letter stays, even where a short word would fit")
         same(context.review("love", "u", "too"), null, "Texting shorthand stays")
     }
 
@@ -1976,6 +1976,28 @@ private fun ownerTypos(world: Realistic) {
     same(bar.bar.drop(1).take(2), listOf("hello", "help"), "Completions follow the middle word")
 }
 
+/** The owner's rule, Nov 11: a single letter stays as typed, as "p" kept turning into "up". Only "i" gets its capital. */
+private fun singleLetters(world: Realistic) {
+    fun typed(text: String) = Typist(world).type("$text ").text.trimEnd()
+    for (letter in listOf("p", "x", "b", "c", "a", "q")) {
+        same(typed(letter), letter, "\"$letter\" alone stays")
+        same(typed("so $letter"), "so $letter", "\"$letter\" at the end of a sentence stays")
+        // The second check sees the next word, and still leaves the letter.
+        same(typed("so $letter might work"), "so $letter might work", "\"$letter\" inside a sentence stays")
+        same(typed("I said $letter and left"), "I said $letter and left", "\"$letter and\" stays")
+        same(typed("go $letter."), "go $letter.", "\"$letter\" before a full stop stays")
+        val bar = Typist(world, words = FakeWords(Lists(world.words)).also { it.completions = listOf("up", "pm", "put") })
+        bar.type("so $letter")
+        same(bar.bar.firstOrNull(), letter, "The bar's middle word for \"$letter\" is the letter itself (bar ${bar.bar})")
+    }
+    same(typed("i"), "I", "\"i\" alone is still \"I\"")
+    same(typed("so i might go"), "so I might go", "\"i\" inside a sentence is still \"I\"")
+    val bar = Typist(world, words = FakeWords(Lists(world.words)).also { it.completions = listOf("it", "in", "is") })
+    bar.type("so i")
+    same(bar.bar.firstOrNull(), "I", "The bar's middle word for \"i\" is \"I\"")
+    same(typed("so lt is"), "so it is", "Two letters can still change")
+}
+
 fun main() {
     val world = Realistic()
     smallerChecks()
@@ -1989,6 +2011,7 @@ fun main() {
     sentenceAware(world)
     fieldReports(world)
     ownerTypos(world)
+    singleLetters(world)
     simulation(world)
     speed(world)
     if (failures.isNotEmpty()) {

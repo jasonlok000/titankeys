@@ -269,6 +269,12 @@ class TypedCorrector(
      * where the slip is clear, and "Mr" where it isn't). A word that is not wrong gets its capitals anyway.
      */
     private fun firstFix(word: String, before: String, typedPrevious: String?): Fix? {
+        // A single letter is meant as typed: "p" never becomes "up". Only "i" gets its capital.
+        // A missed apostrophe ("don t") still joins up, as the letter itself stays.
+        if (word.length == 1) {
+            if (isInsideAddress(before + word) || word.lowercase() in rejected) return null
+            return spacedContraction(word, before, typedPrevious) ?: fixedCapitals(word)?.let { Fix(word, it) }
+        }
         // Shorthand stays as typed, unless the setting asks for its full word (#63). Backspace undoes it as any fix.
         if (isShorthand(word)) {
             if (!lexicon.expandShorthand() || isInsideAddress(before + word) || word.lowercase() in rejected) return null

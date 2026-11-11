@@ -55,6 +55,8 @@ class ContextCorrector(
         /** False for a word autocorrect just wrote: it fixed a typo, not a mix-up of real words. */
         typedAsIs: Boolean = true
     ): String? {
+        // A single letter is meant as typed, whatever comes after it ("p might" stays).
+        if (word.length == 1) return null
         CONFUSABLES[word.lowercase().replace('’', '\'')]?.let { other ->
             return reviewConfusable(before, word, after, other)
         }
@@ -64,14 +66,12 @@ class ContextCorrector(
     }
 
     /**
-     * A lone letter or two-letter non-word ("o tired", "te best") is a short word missing a
-     * letter or hit off-key: the one that fits its neighbours clearly best. Texting shorthand
-     * ("u", "r", "k") and known abbreviations stay.
+     * A two-letter non-word ("te best") is a short word missing a letter or hit off-key: the
+     * one that fits its neighbours clearly best. Known abbreviations stay.
      */
     private fun reviewShortWord(before: String, word: String, after: String, beforePrevious: String?): String? {
-        if (shortWords.isEmpty() || after == PairCounts.SENTENCE_END || word.length > 2 || !word.all { it in 'a'..'z' }) return null
-        if (word == "a" || word == "i" || word.length == 1 && word[0] in TEXTING_LETTERS) return null
-        if (word.length == 2 && frequencyOf(word) >= SHORT_REAL_WORD_FREQUENCY) return null
+        if (shortWords.isEmpty() || after == PairCounts.SENTENCE_END || word.length != 2 || !word.all { it in 'a'..'z' }) return null
+        if (frequencyOf(word) >= SHORT_REAL_WORD_FREQUENCY) return null
         if (word in rejected || isProtected(word) || isNameOrAcronym(word)) return null
         val previous = before.lowercase()
         val next = after.lowercase()
@@ -278,8 +278,7 @@ class ContextCorrector(
         private const val CONFUSION_MAX_PRIOR_LOG_ODDS = -1.0
         private const val CONFUSION_TRIPLE_WEIGHT = 0.5
         private const val PAIR_SMOOTHING = 0.5
-        // Lone letters and two-letter non-words (tuned on held-out real typing).
-        private const val TEXTING_LETTERS = "urkycbwnx"
+        // Two-letter non-words (tuned on held-out real typing).
         // Retuned for the keyboard's word list, where "hi" is 97.
         private const val SHORT_REAL_WORD_FREQUENCY = 90
         private const val SHORT_WORD_MAX_COST = 1.0

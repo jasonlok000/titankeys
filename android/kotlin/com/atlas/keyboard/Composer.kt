@@ -57,6 +57,11 @@ interface Words {
     fun chosen(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun corrected(swipe: Swipe, context: String, recognition: Recognition, word: String)
     fun kept(swipe: Swipe, context: String, recognition: Recognition, word: String)
+    /**
+     * The user left the field with this swiped word still there as it was typed, the last word, which [kept] never hears
+     * about. Only data sharing listens: the keyboard learns nothing from it, as before.
+     */
+    fun keptAtEnd(swipe: Swipe, context: String, recognition: Recognition, word: String) = Unit
 }
 
 /** Told what the keyboard does to the text, only while the raw input log records the field. */
@@ -261,8 +266,11 @@ class Composer(
 
     fun stop(terminal: Boolean = false) {
         keptWords.settle()
-        if (terminal && sameIdentity(identity, editor.identity())
-            && (composition as? Composition.Swiped)?.chosen == true) leave()
+        if (terminal && sameIdentity(identity, editor.identity())) {
+            val swiped = composition as? Composition.Swiped
+            if (swiped?.chosen == true) leave()
+            else if (swiped != null) leaveKept(swiped)
+        }
         field = Field.None
         if (barrier?.navigation == true) {
             composition = Composition.None
@@ -1243,11 +1251,21 @@ class Composer(
         val swiped = composition as? Composition.Swiped ?: return
         if (swiped.finalised) return
         swiped.finalised = true
-        if (!field.learning || !selectionConfirmed || snapshot() != swiped.snapshot || !swiped.snapshot.available
-            || swiped.snapshot.selected || swiped.snapshot.before?.endsWith(swiped.inserted) != true) return
+        if (!stillAsSwiped(swiped)) return
         if (swiped.chosen) words.chosen(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
         else words.kept(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
     }
+
+    /** The field is closing with a swiped word that was not chosen from the strip: only data sharing hears of it. */
+    private fun leaveKept(swiped: Composition.Swiped) {
+        if (swiped.finalised) return
+        swiped.finalised = true
+        if (stillAsSwiped(swiped)) words.keptAtEnd(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
+    }
+
+    /** The field allows learning, and the text is just as the swipe left it: the word was kept. */
+    private fun stillAsSwiped(swiped: Composition.Swiped) = field.learning && selectionConfirmed && snapshot() == swiped.snapshot
+        && swiped.snapshot.available && !swiped.snapshot.selected && swiped.snapshot.before?.endsWith(swiped.inserted) == true
 
     private fun observe(text: String) {
         val corrects = field.autocorrect && autocorrect != null

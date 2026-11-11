@@ -56,4 +56,10 @@ class EngineWords(private val typing: SwipeTyping) : Words {
         typing.retained(swipe, context, word, learning.generation, learning.prediction)
         Contributions.record(typing, swipe, word, "kept", learning.prediction)
     }
+
+    /** The last word in a field: shared if the user agreed, but not learned, as the keyboard never learned it before. */
+    override fun keptAtEnd(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) {
+        val learning = recognition.token as? Learning ?: return
+        Contributions.record(typing, swipe, word, "kept", learning.prediction)
+    }
 }

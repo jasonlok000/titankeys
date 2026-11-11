@@ -232,7 +232,7 @@ TitanKeys uses the internet for two things only, and both are strictly limited:
 - **News:** at most once a day, it downloads a short signed list of news from the TitanKeys website, such as a new version. It sends nothing about you or your phone. It shows as a silent notification, never while you type, and you can turn it off in **Settings > News**.
 - **Swipe contributions, only if you agree:** you can send examples of your swipes to help train the swipe models. It's off until you agree on a screen that says exactly what is sent: the swipe path, the kept word if it's a dictionary word, and the engine's numbers, never the text around it. Examples are encrypted on your phone, sent on Wi-Fi, used only for training, and you can stop and delete them at any time.
 
-The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what is sent, why, how it's protected, how long it's kept and how to delete it. There are no ads, analytics or trackers.
+The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what is sent, why, how it's protected, how long it's kept and how to delete it.
 
 TitanKeys doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
 

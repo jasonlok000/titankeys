@@ -1,7 +1,6 @@
-import type { ReactNode } from "react";
 import { Canvas, CanvasText, Field, Row, Screen, Section, Text, openURL } from "ink";
 import { arrowOutward } from "ink/icons";
-import { contributeText as text } from "./connected-text";
+import { contributeText as text, sharePolicyText as policy } from "./connected-text";
 import { PRIVACY_URL } from "./connected";
 
 /** Long text on these pages uses the subtitle's size, as the rest of Settings does, so that it fits the square screen. */
@@ -10,16 +9,17 @@ export const SMALL = 30;
 const WIDTH = 596;
 
 /**
- * The full disclosure for data contributions, as Google Play asks: what is sent, what is never sent, and how it is
- * protected, with "I agree" and "No thanks". Nothing is collected until the user agrees here.
+ * The policy in short, shown every time before Share swipes turns on, as Google Play asks: what's sent and what never
+ * is, then a plain choice. Nothing is collected until the user confirms here. Turning it off needs no screen.
  */
-export function Disclosure({ onAgree, onDecline, children }: { onAgree: () => void; onDecline: () => void; children?: ReactNode }) {
-  return <Screen title={text.title} subtitle={text.subtitle}>
-    <Field label={text.agree} onPress={onAgree}>{""}</Field>
-    <Field label={text.decline} onPress={onDecline}>{""}</Field>
-    <WhatIsSent />
-    <Row title={text.policy} endIcon={arrowOutward} onPress={() => void openURL(PRIVACY_URL)} />
-    {children}
+export function Disclosure({ onAgree, onDecline }: { onAgree: () => void; onDecline: () => void }) {
+  return <Screen title={policy.title} subtitle={policy.subtitle}>
+    <Points title={policy.sentTitle} points={policy.sent} />
+    <Points title={policy.neverTitle} points={policy.never} />
+    <Text size={SMALL}>{policy.how}</Text>
+    <Field label={policy.agree} onPress={onAgree}>{""}</Field>
+    <Field label={policy.decline} onPress={onDecline}>{""}</Field>
+    <Row title={policy.policy} endIcon={arrowOutward} onPress={() => void openURL(PRIVACY_URL)} />
   </Screen>;
 }
 

@@ -17,6 +17,30 @@ export const newsText = {
   hidden: "Hidden",
 };
 
+/** The short policy shown before Share swipes turns on. A clean zone: serious and plain, no jokes. */
+export const sharePolicyText = {
+  title: "Before you share",
+  subtitle: "Share swipes sends us examples of your swipes, to train the swipe models. Nothing is sent until you turn it on.",
+  sentTitle: "What's sent",
+  sent: [
+    "How each swipe moved across the keys, with its timing and touch size.",
+    "The word you kept, only if it's in the dictionary.",
+    "The numbers the swipe engine used to rank the words, without the words.",
+    "The app and model versions, your phone model, and a random ID.",
+  ],
+  neverTitle: "What's never sent",
+  never: [
+    "What you type, or the text around a word.",
+    "Names and other words that aren't in the dictionary.",
+    "Anything from password, email, web address or private fields.",
+    "Your clipboard, snippets and shortcuts.",
+  ],
+  how: "It's sent encrypted, on Wi-Fi only. You can turn it off and delete what you've sent any time in Settings > Share swipes.",
+  agree: "Turn on Share swipes",
+  decline: "Not now",
+  policy: "Read the full privacy policy",
+};
+
 export const contributeText = {
   title: "Share swipes",
   settingsLabel: "Share swipes",

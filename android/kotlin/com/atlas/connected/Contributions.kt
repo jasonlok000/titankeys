@@ -65,7 +65,7 @@ object Contributions {
     fun unanswered(context: Context) = !enabled(context) && Connected.preferences(context).getString(OFFER, null) != ANSWERED
 
     /** The disclosure page, with "I agree" and "No thanks". */
-    const val PAGE = "/settings/contribute"
+    const val PAGE = "/settings/share-policy"
 
     /** "No thanks": the offer does not come back. Settings still has the switch. */
     fun declined(context: Context) {

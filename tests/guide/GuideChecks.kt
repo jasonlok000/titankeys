@@ -467,6 +467,51 @@ private fun playgroundSpeed() {
     same(meter.wpm(105_000), 24, "A new burst counts from its own start, not from the text before it")
     meter.input(105_500, 300)
     same(meter.wpm(106_000), 0, "Deleting gives no negative speed")
+    same(WpmMeter.IDLE_MILLIS, 5000L, "Five seconds with nothing ends the burst")
+    // The comments: one for each step, from its step until the next one. Most people type around thirty, so it starts low.
+    same(WpmComments.STEPS.first(), 15, "The comments start at fifteen")
+    same(WpmComments.STEPS.last(), 200, "and end at two hundred")
+    same(WpmComments.STEPS.size, 28, "Twenty-eight steps")
+    same(WpmComments.STEPS.zipWithNext { a, b -> b - a }.distinct(), listOf(5, 10), "Steps of five to a hundred, then ten")
+    same(WpmComments.step(14), -1, "Below fifteen there is no comment")
+    same(WpmComments.step(15), 0, "Fifteen shows the first")
+    same(WpmComments.step(19), 0, "and keeps it until the next step")
+    same(WpmComments.step(30), WpmComments.STEPS.indexOf(30), "Thirty has its own line")
+    same(WpmComments.step(104), WpmComments.STEPS.indexOf(100), "A hundred and four still shows the hundred line")
+    same(WpmComments.step(450), WpmComments.STEPS.lastIndex, "Above two hundred the last line stays")
+    val strings = java.io.File("android/src/main/res/values/strings.xml").readText()
+    val array = strings.substringAfter("<string-array name=\"playground_comments\">").substringBefore("</string-array>")
+    val lines = Regex("<item>\"(.*)\"</item>").findAll(array).map { it.groupValues[1] }.toList()
+    same(lines.size, WpmComments.STEPS.size, "One comment in the strings for each step")
+    same(lines[WpmComments.step(15)], "Hey, you're typing.", "Fifteen's line")
+    same(lines[WpmComments.step(30)], "Oh wow, actual typing.", "Thirty's line")
+    same(lines[WpmComments.step(95)], "Last chance to slow down.", "Ninety-five's line")
+    same(lines[WpmComments.step(100)], "You sure you're not just mashing shit?", "A hundred's line")
+    same(lines[WpmComments.step(200)], "Fuck it, you win. Go touch grass.", "Two hundred's line")
+    // The show builds step by step with the lines, and stops for one plant at the top.
+    fun at(wpm: Int) = WpmEffects.at(wpm)
+    same(at(14), WpmEffects.NONE, "Nothing below fifteen")
+    check(at(15).glow > 0f && at(25).glow > at(20).glow && at(20).glow > at(15).glow) { "The glow starts at fifteen and gets brighter" }
+    same(at(25).sparks, 0f, "No sparks before thirty")
+    check(at(30).sparks > 0f && at(35).sparks > at(30).sparks) { "Sparks at thirty, more at thirty-five" }
+    check(at(40).pop > 0 && at(45).pop > at(40).pop && at(50).pop == 0) { "A confetti pop at forty, a bigger one at forty-five" }
+    same(at(45).flames, 0f, "No flames before fifty")
+    check(listOf(50, 55, 60, 65, 70).map { at(it).flames }.zipWithNext().all { (a, b) -> b > a }) { "The flames grow at each step from fifty" }
+    check(at(65).edges == 0f && at(70).edges > 0f && at(75).edges > at(70).edges) { "The edges glow at seventy, hotter at seventy-five" }
+    check(at(75).shower == 0 && at(80).shower > 0 && at(85).shower > at(80).shower && at(90).shower > at(85).shower) { "Confetti showers from eighty" }
+    check(at(90).flames > at(85).flames && at(90).sparks > at(85).sparks) { "Ninety is full blast" }
+    same(at(95).brown to at(90).brown, true to false, "At ninety-five the confetti flickers brown")
+    check(at(100).shower == 0 && at(100).rain > 0f) { "At a hundred the confetti turns into rain" }
+    check(at(110).rain > at(100).rain && at(110).wobble && !at(100).wobble) { "A hundred and ten rains harder, and wobbles" }
+    check(at(120).rain > at(110).rain) { "A hundred and twenty is steady rain" }
+    same(at(130).clowns to at(120).clowns, true to false, "Clowns join at a hundred and thirty")
+    same(at(140).sweat to at(130).sweat, true to false, "The number sweats at a hundred and forty")
+    same(at(150).shake to at(140).shake, true to false, "The screen shakes at a hundred and fifty")
+    same(at(160).toilets to at(150).toilets, true to false, "Toilets at a hundred and sixty")
+    check(at(170).rain >= 14f) { "A storm at a hundred and seventy" }
+    same(at(180).lightning to at(170).lightning, true to false, "Lightning at a hundred and eighty")
+    check(at(190).rain > at(180).rain) { "The storm at its worst at a hundred and ninety" }
+    same(at(200), WpmEffects(sprout = true), "At two hundred everything stops for one plant")
     same(WpmMeter.heat(null), 0f, "No speed, no orange")
     same(WpmMeter.heat(90), 1f, "Full orange near ninety words a minute")
     same(WpmMeter.heat(200), 1f, "It saturates there")

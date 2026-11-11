@@ -3,7 +3,6 @@ package com.atlas.keyboard
 import android.graphics.Canvas
 import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import kotlin.math.PI
@@ -32,8 +31,6 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
     }
-    private val keyText = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
-    private val path = Path()
     private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
     private var glowHeight = 0f
     private var glowColour = 0
@@ -41,7 +38,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     fun draw(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, height: Int, look: Look) {
         val h = height.toFloat()
         if (display.scene != GestureDisplay.Scene.None) scene(canvas, display, left, right, h, look)
-        if (display.glowTaps > 0) glow(canvas, display, left, right, h, look)
+        if (display.glowing) glow(canvas, display, left, right, h, look)
     }
 
     private fun scene(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
@@ -71,35 +68,37 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
 
     /**
-     * A word swipe's mini path: the letter keys, faint, at their real places across the strip, and the path over them in the accent
-     * colour, with a dot at the finger. It all fades with [GestureDisplay.reveal].
+     * A word swipe's mini path over the dimmed words, in the accent colour, with a dot at the finger. Each stretch is as thick as the
+     * touch was firm there. It all fades with [GestureDisplay.reveal]; while it fades it is drawn whole and then faded, so the round
+     * ends where stretches meet never show as darker spots.
      */
     private fun swipe(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
-        val alpha = display.reveal
-        val across = right - left
-        keyText.textSize = dp(KEY_TEXT)
-        keyText.color = GuideMotion.faded(look.muted, KEY_FAINT * alpha)
-        val lift = (keyText.ascent() + keyText.descent()) / 2
-        for (index in 0 until 26) {
-            val letter = Layout.LETTERS[index]
-            canvas.drawText(letter.uppercase(), left + across * Layout.KEY_X[index], swipeY(Layout.KEY_Y[index] * .75f, h) - lift, keyText)
-        }
         val count = display.pathSize
         if (count == 0) return
-        path.reset()
-        path.moveTo(left + across * display.pathX[0], swipeY(display.pathY[0], h))
-        for (index in 1 until count) path.lineTo(left + across * display.pathX[index], swipeY(display.pathY[index], h))
-        stroke.strokeWidth = dp(PATH_WIDTH)
-        stroke.color = GuideMotion.faded(look.accent, alpha)
-        canvas.drawPath(path, stroke)
-        dot(canvas, left + across * display.pathX[count - 1], swipeY(display.pathY[count - 1], h), dp(PATH_FINGER), GuideMotion.faded(look.accent, alpha))
+        val alpha = display.reveal
+        val across = right - left
+        val faded = alpha < 1f
+        if (faded) canvas.saveLayerAlpha(0f, 0f, right + left, h, (alpha.coerceIn(0f, 1f) * 255).toInt())
+        stroke.color = look.accent
+        var x = left + across * display.pathX[0]
+        var y = swipeY(display.pathY[0], h)
+        for (index in 1 until count) {
+            val nextX = left + across * display.pathX[index]
+            val nextY = swipeY(display.pathY[index], h)
+            stroke.strokeWidth = dp(PATH_WIDTH) * (display.pathWidth[index - 1] + display.pathWidth[index]) / 2
+            canvas.drawLine(x, y, nextX, nextY, stroke)
+            x = nextX
+            y = nextY
+        }
+        dot(canvas, x, y, dp(PATH_FINGER) * display.pathWidth[count - 1].coerceAtLeast(1f), look.accent)
+        if (faded) canvas.restore()
     }
 
-    /** A touchpad height, from the top row down to the bottom of the letter rows, as a height on the strip's three rows of keys. */
+    /** A touchpad height, from the top row down to the bottom of the letter rows, as a height on the strip. */
     private fun swipeY(y: Float, h: Float): Float {
-        val row = dp(KEY_ROW)
+        val row = dp(PATH_ROW)
         val top = h / 2 - row
-        return (top + (y / .75f * 3 - .5f) * row).coerceIn(dp(KEY_TEXT) / 2, h - dp(KEY_TEXT) / 2)
+        return (top + (y / .75f * 3 - .5f) * row).coerceIn(dp(PATH_EDGE), h - dp(PATH_EDGE))
     }
 
     /**
@@ -376,11 +375,11 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         /** How much of a word's slot each word takes, in a fixed pattern that reads as a line of text. */
         val WORD_WIDTHS = floatArrayOf(.62f, .82f, .5f, .74f, .88f, .56f, .7f)
         const val REST_SCALE = .86f
-        /** A swipe dims the words to about an eighth, as in the owner's mockup, and its keys are a faint map at this size. */
+        /** A swipe dims the words to about an eighth, as in the owner's mockup; they are the path's backdrop. */
         const val SWIPE_DIM = .88f
-        const val KEY_TEXT = 9f
-        const val KEY_ROW = 14f
-        const val KEY_FAINT = .35f
+        /** The path's three rows of letters lie this far apart on the strip, and it keeps this far from the strip's edges. */
+        const val PATH_ROW = 14f
+        const val PATH_EDGE = 4.5f
         const val PATH_WIDTH = 1.6f
         const val PATH_FINGER = 2.8f
         const val GLOW_HEIGHT = 10f

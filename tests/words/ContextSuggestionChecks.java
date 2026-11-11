@@ -62,6 +62,8 @@ public final class ContextSuggestionChecks {
                 "Words from the full dictionary must complete, without unused, offensive or name entries");
         check(full.contains("chicken") && full.contains("nuggets") && !full.contains("nugent"),
                 "Both word lists must count as known words");
+        check(full.lowercase("nuggets") && full.lowercase("Nugg") && full.lowercase("nuggety") && !full.lowercase("nugent")
+                && !full.lowercase("chicken"), "Only the full list's lowercase lines, whatever their flags, make an ordinary word");
         System.out.println("Context suggestion checks passed");
     }
 

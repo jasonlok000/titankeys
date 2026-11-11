@@ -35,6 +35,8 @@ public final class TypedPredictions {
      * not offered as words, but a lowercase "pc" is one of them typed on purpose, not a slip for another word.
      */
     private final String[] acronyms;
+    /** The full word list's lowercase words, sorted, or null without it. See {@link #lowercase}. */
+    private final String[] lowercase;
     /** How common an acronym must be to count. At 80, rarer ones such as "DL" hid real slips ("dl" for "do"). */
     static final int ACRONYM_FREQUENCY = 100;
 
@@ -49,9 +51,12 @@ public final class TypedPredictions {
         String line;
         while ((line = reader.readLine()) != null) add(vocabulary, key(line), frequency);
         java.util.Set<String> capitals = new java.util.HashSet<>();
+        java.util.Set<String> plain = new java.util.HashSet<>();
         if (dictionary != null) {
             reader = new BufferedReader(dictionary);
             while ((line = reader.readLine()) != null) {
+                String lower = lowercaseOn(line);
+                if (lower != null) plain.add(key(lower));
                 String word = dictionaryWord(line);
                 if (word != null) add(vocabulary, key(word), frequency);
                 String acronym = acronymOn(line);
@@ -60,6 +65,8 @@ public final class TypedPredictions {
         }
         capitals.removeAll(vocabulary.keySet());
         acronyms = capitals.toArray(new String[0]);
+        lowercase = dictionary == null ? null : plain.toArray(new String[0]);
+        if (lowercase != null) Arrays.sort(lowercase);
         Arrays.sort(acronyms);
         for (String word : BuiltInWords.SPELLINGS.keySet()) vocabulary.putIfAbsent(word, (double) BuiltInWords.FREQUENCY);
         words = vocabulary.keySet().toArray(new String[0]);
@@ -101,6 +108,23 @@ public final class TypedPredictions {
         String word = fields[0].substring(5), flags = fields[2].substring(6);
         if (fields[1].equals("f=0") || flags.contains("offensive") || flags.contains("nonword")) return null;
         return word.equals(word.toLowerCase(Locale.ROOT)) ? word : null;
+    }
+
+    /** The word on any " word=toggle,…" line written in lowercase, whatever its flags, or null. */
+    public static String lowercaseOn(String line) {
+        if (!line.startsWith(" word=")) return null;
+        int end = line.indexOf(',');
+        String word = line.substring(6, end < 0 ? line.length() : end);
+        return !word.isEmpty() && word.equals(word.toLowerCase(Locale.ROOT)) ? word : null;
+    }
+
+    /**
+     * Whether the full word list writes this word in lowercase, so it is an ordinary word such as "toggle", not only a
+     * name such as "Spotify". Without the full list, any word it holds counts.
+     */
+    public boolean lowercase(String word) {
+        String key = key(word);
+        return lowercase == null ? contains(key) : Arrays.binarySearch(lowercase, key) >= 0;
     }
 
     static String key(String word) {

@@ -1775,13 +1775,16 @@ private fun ownerTypos(world: Realistic) {
     val undone = Typist(world, world.autocorrect(spelled), lists = spelled).type("shd ").backspace()
     same(undone.text, "shd", "Backspace right after puts the shorthand back")
 
-    // The bar and Space agree: when the bar's best guess is the typed letters with an apostrophe, Space puts it in.
-    val bar = Typist(world, words = FakeWords(Lists(world.words)).also { it.completions = listOf("flob's", "flob") })
-    bar.type("flobs")
-    same(bar.type(" ").text, "flob's ", "Space takes the bar's middle word when it only adds an apostrophe")
-    val plain = Typist(world, words = FakeWords(Lists(world.words)).also { it.completions = listOf("it's", "its") })
-    plain.type("its")
-    same(plain.type(" ").text, "its ", "A real word stays when the bar only suggests its apostrophe spelling")
+    // The owner's rule: the bar's middle word is what Space puts in, whether autocorrect fixes the word or not.
+    for (word in listOf("todays", "teh", "recieve", "hel", "its", "whats", "yeahh", "shd", "the")) {
+        val typist = Typist(world, words = FakeWords(Lists(world.words)).also { it.completions = listOf("today's", "hello", "the") })
+        typist.type("so $word")
+        val middle = typist.bar.firstOrNull()
+        same(typist.type(" ").text, "so $middle ", "Space puts in the bar's middle word for \"$word\" (bar ${typist.bar})")
+    }
+    val bar = Typist(world, words = FakeWords(Lists(world.words)).also { it.completions = listOf("hello", "help", "held") })
+    bar.type("hel")
+    same(bar.bar.drop(1).take(2), listOf("hello", "help"), "Completions follow the middle word")
 }
 
 fun main() {

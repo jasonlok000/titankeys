@@ -215,4 +215,12 @@ private fun stickyBarKeys() {
     sticky.tap(ExactTyping.BarKey.Fn)
     same(sticky.any, false, "A second tap turns it off")
     same(ExactTyping.MAX_TYPED_CLIP, 2000, "A typed clip stops at 2,000 characters")
+    // UAT, 2026-11-11: the bar showed above the strip in the guide's normal field.
+    for (allowed in listOf(true, false)) for (panel in listOf(true, false))
+        same(ExactTyping.barShown(editing = true, exact = false, barAllowed = allowed, panelOpen = panel), false,
+            "A field without exact typing never shows the exact bar")
+    same(ExactTyping.barShown(editing = true, exact = true, barAllowed = true, panelOpen = false), true, "An exact field shows it")
+    same(ExactTyping.barShown(editing = true, exact = true, barAllowed = false, panelOpen = false), false, "The hide-bar setting hides it")
+    same(ExactTyping.barShown(editing = true, exact = true, barAllowed = true, panelOpen = true), false, "The Sym panel takes its place")
+    same(ExactTyping.barShown(editing = false, exact = true, barAllowed = true, panelOpen = false), false, "No field, no bar")
 }

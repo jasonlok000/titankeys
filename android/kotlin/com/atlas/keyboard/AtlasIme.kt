@@ -868,10 +868,11 @@ class AtlasIme : InputMethodService() {
         keys.emoji = emoji
         // Android can make this view after the field has started, and again when the screen settings change.
         words.words = barWords
+        // Exact typing's bar starts hidden and is made before the first check, so a normal field never shows it.
+        val exact = ExactBar(this, ::exactChip, ::exactBarKey, ::typeClip) {}.apply { visibility = View.GONE }
+        exactBar = exact
         words.showSuggestions = showSuggestions()
         showModifiers()
-        val exact = ExactBar(this, ::exactChip, ::exactBarKey, ::typeClip) {}
-        exactBar = exact
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(keys)
@@ -2568,7 +2569,7 @@ class AtlasIme : InputMethodService() {
 
     private fun updateExactBar() {
         val bar = exactBar ?: return
-        val shown = editing && field.exact && barAllowed() && !panelOpen
+        val shown = ExactTyping.barShown(editing, field.exact, barAllowed(), panelOpen)
         bar.visibility = if (shown) View.VISIBLE else View.GONE
         if (!shown) return
         bar.show { key ->

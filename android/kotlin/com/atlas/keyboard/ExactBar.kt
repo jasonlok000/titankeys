@@ -99,10 +99,12 @@ internal class ExactBar(
         this.text = text
         textSize = TEXT_SIZE
         gravity = Gravity.CENTER
-        isSingleLine = true
+        maxLines = 1
+        // A label shrinks to fit its place, so a narrow phone or a large font never cuts it.
+        setAutoSizeTextTypeUniformWithConfiguration(SMALLEST_TEXT.toInt(), TEXT_SIZE.toInt(), 1, android.util.TypedValue.COMPLEX_UNIT_SP)
         includeFontPadding = false
         setTextColor(look.ink)
-        setPadding(dp(7f).toInt(), dp(3f).toInt(), dp(7f).toInt(), dp(3f).toInt())
+        setPadding(dp(4f).toInt(), dp(2f).toInt(), dp(4f).toInt(), dp(2f).toInt())
     }
 
     private fun chipName(key: ExactTyping.BarKey) = when (key) {
@@ -118,5 +120,6 @@ internal class ExactBar(
         /** About half the strip's 56 dp. */
         const val HEIGHT = 28f
         const val TEXT_SIZE = 13f
+        const val SMALLEST_TEXT = 8f
     }
 }

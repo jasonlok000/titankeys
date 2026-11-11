@@ -143,6 +143,13 @@ object ExactTyping {
         }
     }
 
+    /**
+     * Whether exact typing's bar shows: only in an exact typing field that the keyboard serves, where the bar may show, with no
+     * panel open. Everywhere else it is gone, and the strip shows as usual. In an exact field the strip is a line under it.
+     */
+    fun barShown(editing: Boolean, exact: Boolean, barAllowed: Boolean, panelOpen: Boolean) =
+        editing && exact && barAllowed && !panelOpen
+
     /** The most of a clip that "type clipboard" sends as key presses. */
     const val MAX_TYPED_CLIP = 2000
 

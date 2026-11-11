@@ -92,6 +92,13 @@ internal class WpmEffectsView(context: Context) : View(context) {
         postInvalidateOnAnimation()
     }
 
+    /** A shower of confetti from the top, once: the guide's little cheer at the end of a chapter. */
+    fun confetti() {
+        if (!GuideMotion.enabled || width == 0) return
+        shower(CHAPTER_CONFETTI, false)
+        postInvalidateOnAnimation()
+    }
+
     /**
      * Rains [count] of [emoji] down the screen once, as a reward, whatever the speed: the guide's paste lesson uses it. With
      * animations off it does nothing.
@@ -417,6 +424,7 @@ internal class WpmEffectsView(context: Context) : View(context) {
         /** A burst starts this much of the screen's height above it, so that it arrives over a second or two. */
         const val BURST_SPREAD = .8f
         const val SHOWER_SECONDS = 6f
+        const val CHAPTER_CONFETTI = 45
         const val BROWN_FLICKER = 18f
         /** The last part of a life over which a bit fades. */
         const val FADE_END = .3f

@@ -362,6 +362,8 @@ class AtlasIme : InputMethodService() {
             pieces.clear()
             lastTouch = null
             Trace.touch(emptyList(), true)
+            // The guide wants to know that this delete stays down, before its first word goes.
+            KeyboardEvents.publish { KeyboardEvent.DeleteHoldStarted }
             enqueue { outcome(flick) }
             return
         }
@@ -763,6 +765,18 @@ class AtlasIme : InputMethodService() {
     }
 
     /** Reads the emoji list away from the main thread, which also loads the emoji font before Sym is first pressed. */
+    /** The guide's field is the one that this keyboard serves now. */
+    private val inGuide get() = editing && currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) == true
+    private var guideEmoji: EmojiPages? = null
+
+    /** In the guide, the panel has its emoji to start from and keeps O shut; anywhere else it's as always. */
+    private fun showGuideExtras() {
+        val guide = inGuide
+        panel?.blockedKeys = if (guide) setOf(QuickSetting.OpenSettings.key) else emptySet()
+        val pages = if (guide) guideEmoji ?: emoji else emoji
+        if (pages != null && panel?.emoji !== pages) panel?.emoji = pages
+    }
+
     private fun loadEmoji() {
         Thread {
             val recents = getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).getString(RECENT_EMOJI, "").orEmpty().split(" ")
@@ -773,7 +787,12 @@ class AtlasIme : InputMethodService() {
                 Log.w("Atlas", "Could not read the emoji list", error)
                 return@Thread
             }
-            main.post { emoji = EmojiPages(groups, recents).also { panel?.emoji = it } }
+            main.post {
+                emoji = EmojiPages(groups, recents).also { panel?.emoji = it }
+                // The guide shows some recent emoji, if you have none yet, so that Recent has something to show. Only there.
+                guideEmoji = EmojiPages(groups, recents.filter { it.isNotEmpty() }.ifEmpty { GUIDE_RECENT_EMOJI })
+                showGuideExtras()
+            }
         }.start()
     }
 
@@ -822,6 +841,7 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
+        main.post { showGuideExtras() }
         // A press from the field before must not change a letter here.
         holdEngine.cancel()
         heldLetter = null
@@ -1294,6 +1314,11 @@ class AtlasIme : InputMethodService() {
     private fun stripAction(action: Strip.Action) {
         val held = menuWord
         if (held != null && action != Strip.Action.OpenSelected) KeyboardEvents.publish { KeyboardEvent.MenuPicked(action.name) }
+        // In the guide, Save and Forget are only for show: nothing is saved or forgotten, and the guide says so.
+        if (inGuide && held != null && (action == Strip.Action.Save || action == Strip.Action.Forget)) {
+            closeMenu()
+            return
+        }
         when (action) {
             Strip.Action.OpenSelected -> strip?.selected?.let { openMenu(HeldWord(it, "")) }
             Strip.Action.Close -> closeMenu()
@@ -1858,6 +1883,10 @@ class AtlasIme : InputMethodService() {
 
     /** Pushing a key on the quick settings page. The change applies at once and the page stays open. Only the key that opens Settings leaves. */
     private fun useQuickSetting(item: QuickSetting) {
+        if (inGuide && item == QuickSetting.OpenSettings) {
+            haptics.refused()
+            return
+        }
         when (item) {
             QuickSetting.OpenSettings -> {
                 openSettings()
@@ -2473,6 +2502,7 @@ class AtlasIme : InputMethodService() {
     private var shownAlt = Modifiers.Level.Off
 
     private fun showModifiers() {
+        showGuideExtras()
         updateAutoShift()
         // Locked now stays, so it plays the feel for that. Once and off are key presses, which the keys already click.
         if (modifiers.shift == Modifiers.Level.Locked && shownShift != Modifiers.Level.Locked
@@ -2558,6 +2588,8 @@ class AtlasIme : InputMethodService() {
         private const val MAX_PENDING_INPUT = 128
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"
+        /** The guide's recent emoji when you have none yet. No clown: the guide has you find that one. */
+        private val GUIDE_RECENT_EMOJI = listOf("😂", "🙄", "😭", "👍", "🔥", "💀", "🥲", "😎", "🫠", "👀", "🤌", "❤️")
         /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
         private const val STALE_HIDE_MILLIS = 500L
         /** How long Android has to show the strip before the keyboard shows its window itself. */

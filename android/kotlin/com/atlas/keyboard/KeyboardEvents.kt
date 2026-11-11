@@ -10,6 +10,9 @@ sealed interface KeyboardEvent {
     /** A word was picked from the strip. */
     data class Chosen(val word: String) : KeyboardEvent
 
+    /** A delete flick stayed down, so it keeps deleting: the word that it deletes first follows as a [DeletedWord]. */
+    data object DeleteHoldStarted : KeyboardEvent
+
     /** A delete flick deleted a word. [held] is true for each word after the first one, while the finger stays on the keys. */
     data class DeletedWord(val held: Boolean) : KeyboardEvent
 

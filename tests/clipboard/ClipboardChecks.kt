@@ -85,7 +85,9 @@ fun main() {
         same(pages.pageCount(clips), 3, "Fourteen clips take three pages of six")
         same(pages.index(clips, 0), 0, "The first field holds the newest clip")
         same(pages.swipe(clips, 0f, -1f), true, "A swipe up turns to the next page")
-        same(pages.index(clips, 0), 6, "The second page starts at the seventh clip")
+        // Clips that aren't pinned come first, and the pins after them: the seventh of those is at index 7, past the pin at 4.
+        same(pages.index(clips, 0), 7, "The second page starts at the seventh clip that isn't pinned")
+        same(pages.items(clips).takeLast(2), listOf(4, 9), "The pins come after the rest")
         pages.swipe(clips, 0f, -1f)
         same(pages.index(clips, 2), null, "The last page has empty fields")
         same(pages.swipe(clips, 0f, -1f), true, "The pages wrap round, as on the symbols")

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Screen, Section, replace, useRouteParams } from "ink";
 import { close } from "ink/icons";
 import { Topic } from "../../lib/topic";
@@ -10,7 +11,14 @@ export default function BoringGuide() {
   // Opened from the front page, the guide closes back to it, like Settings does.
   const fromHome = useRouteParams().from === "home";
   const closeAction = fromHome ? { icon: close, onPress: () => replace("/") } : undefined;
-  return <Screen title="The boring guide" subtitle="Reading the manual? Nerd. Fine, here's everything TitanKeys does." rightAction={closeAction}>
+  // First, briefly, like a loading screen: we know who reads the manual.
+  const [splash, setSplash] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setSplash(false), SPLASH_MILLIS);
+    return () => clearTimeout(timer);
+  }, []);
+  if (splash) return <Screen title="We know you're a nerd." subtitle="It's fine. Loading the boring stuff." rightAction={closeAction} />;
+  return <Screen title="The boring guide" subtitle="Every feature, every setting, in words. Enjoy, nerd." rightAction={closeAction}>
     <Section title="Start here">
       <Topic title="The fun guide">{"The fun guide teaches the main stuff right on the keys, a chapter at a time. Open it from Settings > Guide. This one is for everything else."}</Topic>
       <Topic title="The front page">{"Open TitanKeys and you land on a place to type and swipe whatever you like. The line above the field suggests words if you want something to follow. Type fast and it shows your words a minute, and the screen warms up to orange. Guide and Settings are at the top."}</Topic>
@@ -94,3 +102,6 @@ export default function BoringGuide() {
     </Section>
   </Screen>;
 }
+
+/** How long the nerd screen shows before the boring guide. */
+const SPLASH_MILLIS = 1400;

@@ -105,6 +105,9 @@ class SymPanel(
     /** On the clipboard page, Backspace was pushed once, so a second push clears all. */
     var clipClearing = false
 
+    /** Quick settings that don't work here, as the key that opens all settings in the guide: no mark, no name, no switch. */
+    var blockedKeys: Set<String> = emptySet()
+
     /** Null until the emoji list has loaded. */
     var emoji: EmojiPages? = null
         set(value) {
@@ -356,7 +359,7 @@ class SymPanel(
         if (item == QuickSetting.OpenSettings || item == QuickSetting.ChangeKeyboard || item == QuickSetting.Clipboard) item.title else "${item.title}: ${if (quickSettingOn(item)) "On" else "Off"}"
 
     /** What the strip at the bottom says for a key under a finger on the quick settings page, or null if it says nothing. */
-    private fun detail(key: String) = if (quick) QuickSetting.on(key)?.let(::describe)
+    private fun detail(key: String) = if (quick) QuickSetting.on(key)?.takeIf { key !in blockedKeys }?.let(::describe)
         else clipAt(key)?.let { clip ->
             ClipboardHistory.preview(clip.text).let { if (clip.pinned) context.getString(R.string.clipboard_pinned, it) else it }
         }
@@ -377,7 +380,7 @@ class SymPanel(
         return context.getString(message)
     }
 
-    private fun dim(key: String) = quick && QuickSetting.on(key)?.let(quickSettingOn) == false
+    private fun dim(key: String) = quick && (key in blockedKeys || QuickSetting.on(key)?.let(quickSettingOn) == false)
 
     private fun categoryTab(sample: String, name: String, index: Int) = TextView(context).apply {
         text = sample

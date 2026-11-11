@@ -53,7 +53,9 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
             private set
 
         /** The places in [clips] of the open group's clips, in order. */
-        fun items(clips: List<Clip>) = if (group == PINNED) clips.indices.filter { clips[it].pinned } else clips.indices.toList()
+        /** On Recent, the clips that aren't pinned always come first, newest first, and the pins after them. */
+        fun items(clips: List<Clip>) = if (group == PINNED) clips.indices.filter { clips[it].pinned }
+            else clips.indices.filter { !clips[it].pinned } + clips.indices.filter { clips[it].pinned }
 
         fun pageCount(clips: List<Clip>) = maxOf(1, (items(clips).size + PER_PAGE - 1) / PER_PAGE)
 

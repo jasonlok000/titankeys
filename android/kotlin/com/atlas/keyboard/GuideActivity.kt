@@ -496,7 +496,7 @@ class GuideActivity : Activity() {
         if (stopTrace == null) stopTrace = Trace.listen { message -> trace(message) }
         // A word that comes out different gets the script's word on the strip, so the line above is always one touch away.
         // The playground is free typing, so there the strip keeps to your own words.
-        if (!playground) GuideHooks.script = { before -> GuideScript.wordFrom(GuideScript.progress(before)).trim { !it.isLetter() } }
+        if (!playground) GuideHooks.script = { before -> GuideScript.letters(passage.wordAt(passage.track(typedSince(before)).next)) }
         contentResolver.registerContentObserver(Settings.Secure.getUriFor(Settings.Secure.DEFAULT_INPUT_METHOD), false, keyboardChanges)
         clipboard.addPrimaryClipChangedListener(clipChanged)
         // Back from the disclosure: the end screen shows the answer, or keeps asking.
@@ -581,7 +581,7 @@ class GuideActivity : Activity() {
             gravity = Gravity.BOTTOM or Gravity.START
             includeFontPadding = false
             letterSpacing = -.02f
-            maxLines = 3
+            maxLines = 2
             setAutoSizeTextTypeUniformWithConfiguration(TITLE_SMALLEST, TITLE_LARGEST, 2, TypedValue.COMPLEX_UNIT_DIP)
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
@@ -589,7 +589,7 @@ class GuideActivity : Activity() {
             typeface = MEDIUM
             gravity = Gravity.TOP or Gravity.START
             includeFontPadding = false
-            maxLines = 4
+            maxLines = 5
             setAutoSizeTextTypeUniformWithConfiguration(BODY_SMALLEST, BODY_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
         }
         hint = TextView(this).apply {
@@ -668,8 +668,14 @@ class GuideActivity : Activity() {
         script = TextView(this).apply {
             typeface = MEDIUM
             includeFontPadding = false
-            // Exactly two lines, always: the passage moves a whole line at a time. See [showScript].
+            // Exactly two lines, always: the passage moves a whole line at a time. See [showScript]. It has its own box, so it
+            // reads as the text to type and not as more instructions.
             setLines(2)
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            background = GradientDrawable().apply {
+                setColor(GuideMotion.faded(GuideColours.CREAM, PASSAGE_BOX))
+                cornerRadius = dp(10).toFloat()
+            }
             isVerticalScrollBarEnabled = false
             setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(16f), dp(22).toFloat()))
             contentDescription = "Text to type"
@@ -686,7 +692,12 @@ class GuideActivity : Activity() {
         for (chapter in flow.barChapters) segments.addView(GuideSegment(this),
             LinearLayout.LayoutParams(0, dp(SEGMENT_HEIGHT), 1f).apply { marginEnd = dp(3) })
         again = topAction("Start again") { startAgain() }.apply { visibility = View.GONE }
-        guideAction = topAction("Guide") { leavePlayground(PLAYGROUND_GUIDE) }.apply { visibility = View.GONE }
+        guideAction = topAction("Guide") {
+            if (playground) leavePlayground(PLAYGROUND_GUIDE) else {
+                startActivity(Connected.pageIntent(this, BORING_GUIDE))
+                finish()
+            }
+        }.apply { visibility = View.GONE }
         settingsAction = topAction("Settings") { leavePlayground(PLAYGROUND_SETTINGS) }.apply { visibility = View.GONE }
         close = ImageView(this).apply {
             setImageResource(R.drawable.panel_close)
@@ -717,7 +728,7 @@ class GuideActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(chapter, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
-            addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, TITLE_SHARE))
+            addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, TITLE_SHARE).apply { topMargin = dp(6) })
             addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, BODY_SHARE).apply { topMargin = dp(4) })
             addView(hint, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
             addView(script, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
@@ -909,10 +920,11 @@ class GuideActivity : Activity() {
         // The whole guide is one text. A step that works on text gets more of the script if the text is too short, and a step
         // with words to practise on gets them, once.
         val words = field.text.split(' ', '\n').count { it.isNotEmpty() }
-        if (step.needsWords > words) addText(GuideScript.continueFrom(GuideScript.progress(field.text.toString()), step.needsWords - words))
+        if (step.needsWords > words) addText(Passage(step.text).words.take(step.needsWords - words).joinToString(" ") + ".")
         step.passage?.let { if (!field.text.contains(it)) addText(it) }
         setUpLesson(step)
         flow.seed(field.text.toString())
+        startPassage(step.text)
         swapIn(title, step.title, 0)
         // Only the instruction that is needed now. The slide moves on, or back, as the keyboard changes. See [showStage].
         swapIn(body, flow.instruction, ENTER_STAGGER_MILLIS)
@@ -965,6 +977,27 @@ class GuideActivity : Activity() {
     private var passageLine = -1
     private var passageSlide: ValueAnimator? = null
 
+    /** The text to type along to now, and where in the field it began: what's typed since then is matched against it. */
+    private var passage = Passage(GuideScript.TEXT)
+    private var passageFrom = 0
+    private var passageText = ""
+
+    /** Starts [text] as the text to type along to, from the end of the field. */
+    private fun startPassage(text: String) {
+        if (text.isEmpty()) return
+        passage = Passage(text)
+        passageFrom = field.length()
+        passageLayout = null
+        passageLine = -1
+        passageText = text
+    }
+
+    /** What's been typed since the passage began, out of [text]: if text before it was deleted, from wherever it ends now. */
+    private fun typedSince(text: String): String {
+        if (text.length < passageFrom) passageFrom = text.length
+        return text.substring(passageFrom)
+    }
+
     private fun showPassage() {
         val width = script.width - script.totalPaddingLeft - script.totalPaddingRight
         if (width <= 0) {
@@ -972,15 +1005,15 @@ class GuideActivity : Activity() {
             script.post { if (script.width > 0) showPassage() }
             return
         }
-        val text = GuideScript.TEXT
+        val text = passage.text
         val layout = passageLayout?.takeIf { passageWidth == width }
             ?: StaticLayout.Builder.obtain(text, 0, text.length, script.paint, width).setIncludePad(false).build()
                 .also { passageLayout = it; passageWidth = width; passageLine = -1 }
-        val track = GuideScript.track(field.text.toString())
-        val count = GuideScript.steps.size
+        val track = passage.track(typedSince(field.text.toString()))
+        val count = passage.words.size
         val next = track.next.mod(count)
         val cycle = track.next - next
-        val line = layout.getLineForOffset(GuideScript.ranges[next].first)
+        val line = layout.getLineForOffset(passage.ranges[next].first)
         val styled = passageSpans(track, next, cycle)
         // The line after the last is the first again, as the script starts over.
         fun lineText(at: Int): CharSequence {
@@ -1021,25 +1054,26 @@ class GuideActivity : Activity() {
         }
     }
 
-    /** The whole script, coloured for where typing is: behind you dimmed, the word you're on underlined, mistakes boxed. */
-    private fun passageSpans(track: GuideScript.Track, next: Int, cycle: Int): SpannableStringBuilder {
+    /** The whole passage, coloured for where typing is: right words grey, skipped ones boxed, the word you're on underlined. */
+    private fun passageSpans(track: Passage.Track, next: Int, cycle: Int): SpannableStringBuilder {
         val strong = if (tone == GuideTone.Ink) GuideColours.CREAM else GuideColours.INK
         val accent = if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK
         val wrong = GuideMotion.faded(PASSAGE_WRONG, PASSAGE_WRONG_ALPHA)
-        val built = SpannableStringBuilder(GuideScript.TEXT)
+        val built = SpannableStringBuilder(passage.text)
         fun span(what: Any, range: IntRange) = built.setSpan(what, range.first, range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         built.setSpan(ForegroundColorSpan(strong), 0, built.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        for ((index, range) in GuideScript.ranges.withIndex()) {
+        for ((index, range) in passage.ranges.withIndex()) {
             when {
                 index < next -> {
                     span(ForegroundColorSpan(GuideMotion.faded(strong, PASSAGE_DONE)), range)
-                    if (cycle + index in track.wrong) span(BackgroundColorSpan(wrong), range)
+                    // A word skipped over keeps a faint box, so you can see what you missed.
+                    if (cycle + index !in track.done) span(BackgroundColorSpan(GuideMotion.faded(PASSAGE_WRONG, PASSAGE_SKIPPED_ALPHA)), range)
                 }
                 index == next -> {
                     span(ForegroundColorSpan(accent), range)
                     span(UnderlineSpan(), range)
-                    // The letters typed so far: each one that doesn't match the script is boxed, and so is anything past its end.
-                    val expected = GuideScript.TEXT.substring(range.first, range.last + 1)
+                    // The letters typed so far: each one that doesn't match is boxed, and so is anything past the word's end.
+                    val expected = passage.text.substring(range.first, range.last + 1)
                     var letter = 0
                     for ((offset, char) in expected.withIndex()) {
                         if (!char.isLetter()) continue
@@ -1063,10 +1097,8 @@ class GuideActivity : Activity() {
     /** What the drawing of the keys can draw for [cue]: the next word of the script is turned into that word's letters. */
     private fun ghostCue(cue: GuideCue): GuideCue {
         if (cue != GuideCue.NextWord) return cue
-        val step = GuideScript.stepAt(GuideScript.progress(field.text.toString()))
-        // Marks that are next glow on their keys: Alt and the key, or Space for a full stop.
-        if (GuideScript.isMarks(step)) return GuideCue.Spot(markPushes(step).flatten().distinct())
-        return GuideCue.Word(GuideScript.letters(step).ifEmpty { "titan" })
+        val word = passage.wordAt(passage.track(typedSince(field.text.toString())).next)
+        return GuideCue.Word(GuideScript.letters(word).ifEmpty { "titan" })
     }
 
     // Demonstrations. A slide shows its gesture by itself, in grey over the field, again and again until you take over. It types
@@ -1115,7 +1147,7 @@ class GuideActivity : Activity() {
         // The word menu is a gesture on the bar itself, so the bar acts it out.
         if (step.bar == GuideBar.Menu) {
             demoBarPlayed = true
-            GuideHooks.stripDemo(GuideHooks.StripDemo.Menu(barWords()))
+            GuideHooks.stripDemo(GuideHooks.StripDemo.Menu(emptyList()))
         }
         keys.demo(true)
         // The grey words would sit on top of the empty field's hint.
@@ -1159,7 +1191,7 @@ class GuideActivity : Activity() {
         // Android logs an error for a span with no length, and this runs for every frame.
         if (text.isNotEmpty()) built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         val gap = if (text.isEmpty() || text.endsWith(' ')) "" else " "
-        val next = GuideScript.stepAt(GuideScript.progress(text))
+        val next = passage.wordAt(passage.track(typedSince(text)).next)
         fun add(added: String) {
             if (added.isEmpty()) return
             val start = built.length
@@ -1270,13 +1302,6 @@ class GuideActivity : Activity() {
         }
         phantom.text = built
         phantom.scrollTo(0, field.scrollY)
-    }
-
-    /** Words for the bar's demonstrations: the next words of the script, as the bar might offer them. */
-    private fun barWords(): List<String> {
-        val next = GuideScript.progress(field.text.toString())
-        return GuideScript.lineFrom(next, BAR_WORDS * 2).split(' ').map { word -> word.trim { !it.isLetter() } }
-            .filter { it.isNotEmpty() }.distinct().take(BAR_WORDS).ifEmpty { listOf("Titan") }
     }
 
     /**
@@ -1522,6 +1547,8 @@ class GuideActivity : Activity() {
         guideAction.visibility = View.VISIBLE
         settingsAction.visibility = View.VISIBLE
         chapter.text = PLAYGROUND_LABEL
+        // The playground's own text, made for speed, in a new order each time.
+        startPassage(PlaygroundText.make(kotlin.random.Random(SystemClock.uptimeMillis())))
         swapIn(title, PLAYGROUND_TITLE, 0)
         swapIn(body, PLAYGROUND_BODY, ENTER_STAGGER_MILLIS)
         for (view in listOf(field, keys, chapter, script, guideAction, settingsAction))
@@ -1710,7 +1737,15 @@ class GuideActivity : Activity() {
             // The drawing of the keys shows the panel as it is, so the slide mirrors the keyboard.
             is KeyboardEvent.PanelFace -> keys.face = event.labels.takeIf { event.panel != Modifiers.Panel.Closed }
             // On the slide about the bar, every swipe comes out wrong, so that there is always something to fix with one tap.
-            is KeyboardEvent.Recognised -> if (!playground && !passed && flow.step.nearMiss) GuideHooks.nearMiss = true
+            is KeyboardEvent.Recognised -> if (!playground && flow.step.nearMiss) {
+                GuideHooks.nearMiss = true
+                if (passed) main.post { GuideHooks.stripPoint(1) }
+            }
+            // Save and Forget are only for show here, and the guide owns up to it.
+            is KeyboardEvent.MenuPicked -> if (!playground) when (event.action) {
+                "Save" -> main.postDelayed({ showHint(MENU_SAVED) }, MENU_HINT_MILLIS)
+                "Forget" -> main.postDelayed({ showHint(MENU_FORGOT) }, MENU_HINT_MILLIS)
+            }
             else -> Unit
         }
         if (!busy && ready) judge(event)
@@ -1782,6 +1817,9 @@ class GuideActivity : Activity() {
         main.postDelayed({ if (passed) applyTone(GuideTone.Orange) }, WIPE_MILLIS)
         showReaction(flow.step.done)
         flow.step.rain?.let { effects.burst(it, RAIN_PIECES) }
+        startPassage(flow.step.after)
+        showScript()
+        if (flow.chapterEnds) effects.confetti()
         main.removeCallbacks(settleReaction)
         main.postDelayed(settleReaction, REACTION_MILLIS)
     }
@@ -1878,6 +1916,8 @@ class GuideActivity : Activity() {
      * playground.
      */
     private fun showEndChoices() {
+        guideAction.text = BORING_GUIDE_LABEL
+        guideAction.visibility = View.VISIBLE
         next.visibility = View.VISIBLE
         next.text = END_NEXT
         val asking = Contributions.unanswered(this)
@@ -2030,8 +2070,8 @@ class GuideActivity : Activity() {
         private const val BODY_SMALLEST = 11
         private const val BODY_LARGEST = 20
         private const val CHAPTER_ALPHA = .55f
-        private const val TITLE_SHARE = 2.6f
-        private const val BODY_SHARE = 1f
+        private const val TITLE_SHARE = 2.2f
+        private const val BODY_SHARE = 1.4f
         private const val FIELD_RADIUS = Radii.MEDIUM
         private const val HINT_RADIUS = Radii.MEDIUM
         private const val OFFER_RADIUS = Radii.LARGE
@@ -2085,6 +2125,14 @@ class GuideActivity : Activity() {
         private const val PASSAGE_WRONG = 0xFFFF4D4D.toInt()
         private const val PASSAGE_WRONG_ALPHA = .55f
         private const val PASSAGE_SLIDE_MILLIS = 260L
+        private const val PASSAGE_SKIPPED_ALPHA = .22f
+        private const val PASSAGE_BOX = .08f
+        /** What the guide says when Save or Forget is pressed, as they're only for show here. */
+        private const val MENU_SAVED = "Srsly? Relax, we didn't actually save it. It's a guide."
+        private const val MENU_FORGOT = "Srsly? Relax, we didn't actually forget it. It's a guide."
+        private const val MENU_HINT_MILLIS = 120L
+        private const val BORING_GUIDE = "/settings/guide-boring"
+        private const val BORING_GUIDE_LABEL = "The boring guide"
 
         // Demonstrations: back to back until you act. These are safe to change.
         /** How long nobody acts before a slide shows its gesture again after you act. */

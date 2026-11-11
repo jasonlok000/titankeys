@@ -659,9 +659,12 @@ class Strip(
                 if (time >= FIX_END_MILLIS) return stopDemo()
             }
             is GuideHooks.StripDemo.Menu -> {
-                // The words, a finger comes down on the middle one and stays, the menu opens, then the finger lifts.
-                if (demoWords != playing.words) {
-                    demoWords = playing.words
+                // The bar's own words, or the ones given: a finger comes down on the middle one and stays, the menu opens, then
+                // the finger lifts. With no words on the bar there's nothing to hold, so nothing plays.
+                val shown = playing.words.ifEmpty { words.take(MENU_WORDS) }
+                if (shown.isEmpty()) return stopDemo()
+                if (demoWords != shown) {
+                    demoWords = shown
                     render()
                 }
                 fingerAlpha = when {
@@ -672,7 +675,7 @@ class Strip(
                     else -> 0f
                 }
                 fingerHold = ((time - MENU_PRESS_MILLIS).toFloat() / (MENU_OPEN_MILLIS - MENU_PRESS_MILLIS)).coerceIn(0f, 1f)
-                val menu = if (time >= MENU_OPEN_MILLIS) Notice.Menu(playing.words.firstOrNull().orEmpty(), true) else null
+                val menu = if (time >= MENU_OPEN_MILLIS) Notice.Menu(shown.first(), true) else null
                 if (menu != demoNotice) {
                     demoNotice = menu
                     render()
@@ -735,6 +738,7 @@ class Strip(
         private const val MENU_OPEN_MILLIS = 1300L
         private const val FINGER_FADE_MILLIS = 150L
         private const val MENU_END_MILLIS = 3600L
+        private const val MENU_WORDS = 3
         /** Enough of the clip for one line. The line itself cuts it cleanly where it ends. */
         private const val CLIP_PREVIEW_LENGTH = 200
         /** The clipboard icon beside a clip, as a part of the text size. */

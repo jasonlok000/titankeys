@@ -316,7 +316,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             } else moving = true
         }
         val radius = min(Radii.px(resources, Radii.SMALL), min(key.box.width(), key.box.height()) / 2)
-        boxPaint.color = GuideMotion.blend(idleFill, litFill, heat.coerceIn(0f, 1f))
+        // A key that the open panel leaves empty is drawn faint, as an empty key, not as a blank button that might do something.
+        val emptyKey = faced != null && label.isEmpty()
+        boxPaint.color = if (emptyKey) GuideMotion.faded(idleFill, EMPTY_KEY) else GuideMotion.blend(idleFill, litFill, heat.coerceIn(0f, 1f))
         canvas.drawRoundRect(key.box.left + inset, key.box.top + inset, key.box.right - inset, key.box.bottom - inset, radius, radius, boxPaint)
         val labelColour = GuideMotion.blend(idleLabel, litLabel, heat.coerceIn(0f, 1f))
         drawLabel(canvas, key, label, labelColour)
@@ -638,6 +640,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val KEY_LABEL_INK = .85f
         const val LABEL_LETTER = .52f
         const val LABEL_SMALL = .36f
+        /** How much of a key's fill an empty key of the panel keeps. */
+        const val EMPTY_KEY = .35f
         /** The part of a key's width that a label may take. */
         const val LABEL_ROOM = .86f
         // The Alt symbol in the corner of a letter key, as parts of the key's size.

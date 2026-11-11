@@ -26,7 +26,7 @@ export default function Settings() {
         onChange={suggestionBar => save.run({ suggestionBar })} />
       <Toggle label="Cursor control" value={settings.cursorControl}
         onChange={cursorControl => save.run({ cursorControl })} />
-      <Toggle label="Light keys on touch" value={settings.touchLight}
+      <Toggle label="Backlight on touch" value={settings.touchLight}
         onChange={touchLight => save.run({ touchLight })} />
     </Section>
     <Section title="Swipe typing">

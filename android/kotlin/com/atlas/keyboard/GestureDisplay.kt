@@ -434,10 +434,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
          * A single flick's dots come in, stay a while so you can see them, go into the caret one by one, and then the words fade back
          * in. It is only a picture, so nothing waits for it, and any new input ends it.
          */
-        const val FLICK_IN = 120f
-        const val FLICK_HOLD = 700f
-        const val FLICK_OUT = 450f
-        const val FLICK_BACK = 150f
+        const val FLICK_IN = 90f
+        const val FLICK_HOLD = 380f
+        const val FLICK_OUT = 320f
+        const val FLICK_BACK = 120f
         const val FLICK_MILLIS = FLICK_IN + FLICK_HOLD + FLICK_OUT + FLICK_BACK
         /** The cover comes in this quickly, so the old words never show through it. */
         private const val FLICK_COVER_IN = 60f

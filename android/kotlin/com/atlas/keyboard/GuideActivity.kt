@@ -9,6 +9,7 @@ import android.database.ContentObserver
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Path
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
@@ -310,6 +311,8 @@ class GuideActivity : Activity() {
     private lateinit var root: FrameLayout
     private lateinit var backdrop: GuideBackdrop
     private lateinit var overlay: GuideOverlay
+    /** The playground's show around its speed, behind the words. See [WpmEffectsView]. */
+    private lateinit var effects: WpmEffectsView
     private lateinit var column: LinearLayout
     private lateinit var segments: LinearLayout
     private lateinit var next: TextView
@@ -464,6 +467,7 @@ class GuideActivity : Activity() {
         endDemo()
         // A hidden playground keeps no clock going; its speed starts over when you type again.
         main.removeCallbacks(wpmTick)
+        if (playground) calmWpm()
     }
 
     override fun onDestroy() {
@@ -518,6 +522,10 @@ class GuideActivity : Activity() {
         root = FrameLayout(this)
         backdrop = GuideBackdrop(this)
         overlay = GuideOverlay(this)
+        effects = WpmEffectsView(this).apply {
+            visibility = if (playground) View.VISIBLE else View.GONE
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
         keys = GuideKeyboardView(this)
         title = TextView(this).apply {
             typeface = HEAVY
@@ -673,6 +681,7 @@ class GuideActivity : Activity() {
             addView(keys, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0).apply { topMargin = dp(8) })
         }
         root.addView(backdrop, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        root.addView(effects, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(column, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(overlay, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.setOnApplyWindowInsetsListener { _, insets ->
@@ -688,6 +697,11 @@ class GuideActivity : Activity() {
             insets
         }
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitKeys() }
+        effects.shaking = { tip, dx, dy ->
+            title.rotation = tip
+            column.translationX = dx
+            column.translationY = dy
+        }
         return root
     }
 
@@ -1389,12 +1403,17 @@ class GuideActivity : Activity() {
         if (!busy && ready) judge(KeyboardEvent.Moved(travel, lifted))
     }
 
-    // The playground's speed: while you type, the name turns into words a minute, and the screen warms towards orange.
+    // The playground's speed: while you type, the name turns into words a minute, the screen warms towards orange, and from 40
+    // words a minute the playground comments on it and puts on a show: see [WpmComments] and [WpmEffects]. Five seconds with
+    // nothing, and the number counts back down to nothing, and the show winds down with it.
 
     private val wpm = WpmMeter()
-    /** How orange the playground is now, from 0 to 1. It eases towards the speed, or jumps there with animations off. */
-    private var heat = 0f
+    /** The speed that shows: it counts up and down towards the real one, so that nothing ever jumps or cuts off. */
+    private var shownWpm = 0f
     private var showingWpm = false
+    /** The comment's step that shows, from [WpmComments.STEPS], or -1 for none. */
+    private var commentStep = -1
+    private val comments by lazy { resources.getStringArray(R.array.playground_comments) }
     private val wpmTick = object : Runnable {
         override fun run() = showWpm()
     }
@@ -1414,11 +1433,18 @@ class GuideActivity : Activity() {
         main.removeCallbacks(wpmTick)
         val now = SystemClock.uptimeMillis()
         val speed = wpm.wpm(now)
-        val target = WpmMeter.heat(speed)
-        heat = if (GuideMotion.enabled) heat + (target - heat) * WPM_EASE else target
-        if (speed != null) {
+        val target = (speed ?: 0).toFloat()
+        shownWpm = when {
+            !GuideMotion.enabled -> target
+            target > shownWpm -> shownWpm + (target - shownWpm) * WPM_RISE
+            // Down, it counts at a steady pace at least, so that it reaches nothing in a few seconds, not in a long tail.
+            else -> max(target, shownWpm - max((shownWpm - target) * WPM_FALL, WPM_FALL_LEAST))
+        }
+        val shown = Math.round(shownWpm)
+        val heat = WpmMeter.heat(shown)
+        if (speed != null || shown > 0) {
             showingWpm = true
-            title.text = SpannableStringBuilder("$speed").apply {
+            title.text = SpannableStringBuilder("$shown").apply {
                 val start = length
                 append(getString(R.string.playground_wpm))
                 setSpan(RelativeSizeSpan(WPM_LABEL_SIZE), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -1427,13 +1453,65 @@ class GuideActivity : Activity() {
             showingWpm = false
             title.text = PLAYGROUND_TITLE
         }
+        showComment(WpmComments.step(shown))
         backdrop.show(GuideMotion.blend(backgroundOf(tone), GuideColours.ORANGE, heat * WPM_MOST_ORANGE))
-        // It stops ticking once the burst is over and the colour is back.
-        if (speed != null || heat > .005f) main.postDelayed(wpmTick, WPM_TICK_MILLIS)
+        title.post { effects.update(WpmEffects.at(shown), commentStep, numberBounds("$shown")) }
+        // It stops ticking once the burst is over and the number is back to nothing.
+        if (speed != null || shown > 0) main.postDelayed(wpmTick, WPM_TICK_MILLIS)
         else {
-            heat = 0f
+            shownWpm = 0f
             backdrop.show(backgroundOf(tone))
         }
+    }
+
+    /**
+     * The comment for [step], in the place of the playground's line, from its step until the next one. Going up, it slides in and
+     * the number gives a small pulse; counting down, it steps back quietly, and below the first step the playground's line returns.
+     */
+    private fun showComment(step: Int) {
+        if (step == commentStep) return
+        val rose = step > commentStep
+        commentStep = step
+        val line = comments.getOrNull(step) ?: PLAYGROUND_BODY
+        if (rose && GuideMotion.enabled) {
+            swapIn(body, line, 0)
+            title.animate().cancel()
+            title.scaleX = WPM_PULSE
+            title.scaleY = WPM_PULSE
+            title.animate().scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(WPM_PULSE_MILLIS)
+                .setInterpolator(OvershootInterpolator(ENTER_OVERSHOOT)).start()
+        } else body.text = line
+    }
+
+    /** Where the number is, in the show's own pixels, and the point that it pulses and wobbles around. */
+    private fun numberBounds(number: String): RectF? {
+        val layout = title.layout ?: return null
+        val at = IntArray(2)
+        val origin = IntArray(2)
+        title.getLocationInWindow(at)
+        effects.getLocationInWindow(origin)
+        val inside = title.totalPaddingLeft + layout.getLineLeft(0)
+        val baseline = title.totalPaddingTop + layout.getLineBaseline(0).toFloat()
+        val wide = title.paint.measureText(number)
+        title.pivotX = inside + wide / 2
+        title.pivotY = baseline
+        val left = at[0] - origin[0] + inside
+        val top = at[1] - origin[1] + baseline
+        return RectF(left, top + title.paint.ascent() * .8f, left + wide, top + title.paint.descent() * .2f)
+    }
+
+    /** The playground went away: the speed starts over, and the show stops at once, with everything back in place. */
+    private fun calmWpm() {
+        shownWpm = 0f
+        if (showingWpm) title.text = PLAYGROUND_TITLE
+        showingWpm = false
+        backdrop.show(backgroundOf(tone))
+        if (commentStep >= 0) body.text = PLAYGROUND_BODY
+        commentStep = -1
+        effects.update(WpmEffects.NONE, -1, null)
+        title.rotation = 0f
+        column.translationX = 0f
+        column.translationY = 0f
     }
 
     private fun handle(event: KeyboardEvent) {
@@ -1688,7 +1766,13 @@ class GuideActivity : Activity() {
         private const val PLAYGROUND_TITLE = "TitanKeys"
         /** The playground's speed updates this often while you type, and its colour eases this much of the way each time. */
         private const val WPM_TICK_MILLIS = 120L
-        private const val WPM_EASE = .25f
+        /** How much of the way to the real speed the number goes each tick, up and down, and the least it counts down by. */
+        private const val WPM_RISE = .35f
+        private const val WPM_FALL = .12f
+        private const val WPM_FALL_LEAST = 1.5f
+        /** The number's pulse at each new step of the comments. */
+        private const val WPM_PULSE = 1.14f
+        private const val WPM_PULSE_MILLIS = 320L
         private const val WPM_LABEL_SIZE = .35f
         /** At full speed the screen is this much of the way to orange, so that the words stay easy to read. */
         private const val WPM_MOST_ORANGE = .85f

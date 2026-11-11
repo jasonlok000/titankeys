@@ -31,4 +31,35 @@
     <string name="contacts_permission_in_settings">To use names from your contacts, allow Contacts for TitanKeys here.</string>
     <!-- The playground's live speed, after the number, in place of the name while you type. -->
     <string name="playground_wpm">" wpm"</string>
+    <!-- The playground's comments on your speed, one for each step in WpmComments.STEPS: 15 to 100 by 5, then 110 to 200 by 10. -->
+    <string-array name="playground_comments">
+        <item>"Hey, you're typing."</item>
+        <item>"Okay, that's a start."</item>
+        <item>"Getting there. Slowly."</item>
+        <item>"Oh wow, actual typing."</item>
+        <item>"Careful, you might break a sweat."</item>
+        <item>"Okay, someone's been practising."</item>
+        <item>"Wow. Truly. A gift to us all."</item>
+        <item>"Slow down, nobody's reading this anyway."</item>
+        <item>"Typing like the group chat owes you money."</item>
+        <item>"Who hurt you?"</item>
+        <item>"Your Titan's getting warm. Like, actually warm."</item>
+        <item>"Easy, it's a keyboard, not a fight."</item>
+        <item>"Are you even reading what you type?"</item>
+        <item>"Fast enough to text your ex. Don't."</item>
+        <item>"Impressive. Pointless, but impressive."</item>
+        <item>"Okay, you can stop now."</item>
+        <item>"Last chance to slow down."</item>
+        <item>"You sure you're not just mashing shit?"</item>
+        <item>"Okay, now you're just showing off."</item>
+        <item>"Your thumbs filed a complaint with HR."</item>
+        <item>"Did you paste that? Be honest."</item>
+        <item>"Calm the fuck down."</item>
+        <item>"Is this a cry for help? Blink twice."</item>
+        <item>"Stenographers are mad at you."</item>
+        <item>"Pretty sure this counts as cheating."</item>
+        <item>"Your phone just asked for a safe word."</item>
+        <item>"Okay, seriously, what are you on?"</item>
+        <item>"Fuck it, you win. Go touch grass."</item>
+    </string-array>
 </resources>

@@ -33,6 +33,7 @@ object HapticTimeline {
         Haptic.SwipeKey -> "The swipe crossed a key"
         Haptic.TapKey -> "A light touch typed a key"
         Haptic.DeleteFlick -> "A flick deleted a word"
+        Haptic.DeleteDotsLand -> "The dots landed in the caret"
         Haptic.DeleteWord -> "The hold deleted a word"
         Haptic.DeleteNothing -> "Nothing left to delete"
         Haptic.SpaceTap -> "A Space tap counted"

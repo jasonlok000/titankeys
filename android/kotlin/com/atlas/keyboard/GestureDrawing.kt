@@ -327,7 +327,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             val order = i.toFloat() / count
             val popped = ((display.dotsIn - order * GestureDisplay.POP_SPREAD) / GestureDisplay.POP_LENGTH).coerceIn(0f, 1f)
             // Each dot has its own part of the way out; it lands in the caret at 1.
-            val travel = (display.dotsOut - order * DOT_STAGGER) / (1f - DOT_STAGGER)
+            val travel = display.dotTravel(i)
             if (travel >= 1f) {
                 // Landed: the caret pulses for a moment.
                 pulse = max(pulse, 1f - ((travel - 1f) / DOT_PULSE).coerceIn(0f, 1f))
@@ -409,8 +409,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         /** The dots: their size and how far apart they are at most. */
         const val DOT_RADIUS = 1.7f
         const val DOT_STEP = 6f
-        /** On their way into the caret: how much later the farthest dot leaves, how far each winds back, and how much it swells. */
-        const val DOT_STAGGER = .55f
+        /** On their way into the caret: how far each winds back, and how much it swells. How much later the farthest leaves is in GestureDisplay. */
         const val BACK = 1.4f
         const val DOT_SWELL = .3f
         /** How long the caret pulses for each dot that lands, as a part of the way out, and how much taller it gets. */

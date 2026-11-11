@@ -134,3 +134,11 @@ test("steering ticks when it picks up after a slip, and exact typing's chips pla
   // The level is read before the tap changes it.
   expect(ime.indexOf("Haptic.chipTapped(")).toBeLessThan(ime.indexOf("sticky.tap(key)"));
 });
+
+test("any key or touch cuts a flick's dots and the dot ticks still to come, at the same point", () => {
+  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  expect(ime).toMatch(/private fun interruptGesture\(\) \{\s+strip\?\.gesture\?\.interrupt\(\)\s+haptics\.cutDots\(\)\s+\}/);
+  // Nothing else cuts the dots, so the ticks can't outlive them.
+  expect(ime.match(/gesture\?\.interrupt\(\)/g)?.length).toBe(1);
+  expect(ime.match(/interruptGesture\(\)/g)?.length).toBe(3);
+});

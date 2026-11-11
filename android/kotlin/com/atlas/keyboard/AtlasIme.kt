@@ -1587,11 +1587,17 @@ class AtlasIme : InputMethodService() {
         return true
     }
 
+    /** New input ends a flourish at once, and a flick's dot ticks still to come with it. */
+    private fun interruptGesture() {
+        strip?.gesture?.interrupt()
+        haptics.cutDots()
+    }
+
     private fun motion(event: MotionEvent) {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             clearTeamsEgg()
             // A delete flick's dots are only a picture, so the next touch ends them.
-            strip?.gesture?.interrupt()
+            interruptGesture()
             // A finger landing is you coming back; the letters go home. A tap or swipe that types cuts to the words: see [outcome].
             wakeIdleBar(cut = false)
         }
@@ -2184,7 +2190,11 @@ class AtlasIme : InputMethodService() {
                         val gesture = strip?.gesture
                         gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
-                        haptics.flick(gesture?.dotsPoppedMillis(scale))
+                        // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
+                        val flickAt = gesture?.flickAt
+                        haptics.flick(gesture?.dotsPoppedMillis(scale), gesture?.dotLandings(scale).orEmpty()) {
+                            flickAt != null && strip?.gesture?.flickAt == flickAt
+                        }
                     }
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return
@@ -2295,7 +2305,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         clearTeamsEgg()
-        strip?.gesture?.interrupt()
+        interruptGesture()
         strip?.gesture?.glowOff()
         wakeIdleBar()
         if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }

@@ -12,6 +12,7 @@ private const val ON_SPACE = 5.3f
 private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
+    aFlicksWayInStretchesToFitItsDots()
     aPickedWordHoldsABeat()
     realTextFollowsTheCursor()
     realWordsForAWordDrag()
@@ -374,8 +375,8 @@ private fun theHoldEndsHideIt() {
     same(display.dotsOut, 0f, "and they stay about 200 ms")
     display.run(1_976, 2_400)
     isTrue(display.dotsOut > 0f && display.dotsOut < 1f, "Then they go into the caret")
-    display.run(2_416, 2_600)
-    same(display.scene, Scene.None, "and the words come back, by about 1.04 s after the lift")
+    display.run(2_416, 2_700)
+    same(display.scene, Scene.None, "and the words come back, by about 1.15 s after the lift: twelve dots need 30 ms each to land")
 
     val empty = GestureDisplay()
     empty.deleteHeld(200, 1_000)
@@ -859,4 +860,43 @@ private fun aPickedWordHoldsABeat() {
     cut.advance(150L, 1f)
     cut.interrupt()
     if (cut.scene != GestureDisplay.Scene.None) throw AssertionError("A key or touch ends the pick at once")
+}
+
+/**
+ * The dots go into the caret over the owner's 450 ms while they fit, at least 30 ms apart. More dots stretch the way in, so each
+ * lands on its own, and the haptic ticks with them come from the same numbers.
+ */
+private fun aFlicksWayInStretchesToFitItsDots() {
+    for ((letters, out) in listOf(1 to 450f, 8 to 450f, 30 to 202.5f + 30 * 30)) {
+        val display = GestureDisplay()
+        display.wordDeleted(1_000, letters)
+        val landings = display.dotLandings(1f)
+        same(landings.size, letters, "$letters dots land one by one")
+        isTrue(kotlin.math.abs(GestureDisplay.outMillis(letters, 1f) - out) < .01f, "$letters dots go in over ${out} ms")
+        isTrue(landings.zipWithNext().all { (a, b) -> b - a >= 30 }, "$letters dots land at least 30 ms apart: $landings")
+        // The drawing's dots land when the haptic says: each is just short of the caret a frame before, and in it after.
+        display.run(1_000, 1_000 + landings.last() - 2)
+        isTrue(display.dotTravel(letters - 1) < 1f, "$letters dots: the last isn't in yet")
+        isTrue(letters == 1 || display.dotTravel(letters - 2) >= 1f, "$letters dots: the one before it is")
+        display.run(1_000 + landings.last() + 2, 1_000 + landings.last() + 2)
+        isTrue(display.dotTravel(letters - 1) >= 1f, "$letters dots: then the last lands")
+        same(display.scene, Scene.DeleteFlick, "$letters dots: the words come back only after")
+    }
+    // Thirty dots land over about 900 ms, then the words come back.
+    val thirty = GestureDisplay()
+    thirty.wordDeleted(1_000, 30)
+    val landings = thirty.dotLandings(1f)
+    isTrue(landings.last() - landings.first() == 29L * 30, "Thirty dots land 30 ms apart: ${landings.first()} to ${landings.last()}")
+    thirty.run(1_000, 1_000 + (GestureDisplay.FLICK_IN + GestureDisplay.FLICK_HOLD + GestureDisplay.outMillis(30, 1f) + GestureDisplay.FLICK_BACK).toLong() + 20)
+    same(thirty.scene, Scene.None, "and it's over once the words are back")
+    // Faster animations shrink the way in, but never below 30 ms a dot.
+    val fast = GestureDisplay()
+    fast.wordDeleted(1_000, 10)
+    val quick = fast.dotLandings(.25f)
+    isTrue(quick.zipWithNext().all { (a, b) -> b - a >= 30 }, "At a quarter speed the dots still land 30 ms apart: $quick")
+    same(fast.dotLandings(0f), emptyList<Long>(), "With no motion the dots don't land")
+    // New input ends it at once.
+    fast.interrupt()
+    same(fast.scene, Scene.None, "Any key or touch cuts the dots")
+    same(fast.dotLandings(1f), emptyList<Long>(), "and they have nowhere left to land")
 }

@@ -21,6 +21,8 @@ fun main() {
     theGateSaysWhy()
     theFeedOnlyRecordsWhenOn()
     theOwnersFourAdditions()
+    theDotsTickAsTheyLand()
+    aCutDropsTheTicksToCome()
     nothingCutsAPlayingMessage()
     triedPatternsOnlyInDebug()
     everyHapticIsOnByDefault()
@@ -44,6 +46,7 @@ private val table = mapOf(
     Haptic.SwipeKey to Family.Texture,
     Haptic.TapKey to Family.Texture,
     Haptic.DeleteFlick to Family.GoneFlick,
+    Haptic.DeleteDotsLand to Family.Texture,
     Haptic.DeleteWord to Family.Texture,
     Haptic.DeleteNothing to Family.No,
     Haptic.SpaceTap to Family.Texture,
@@ -408,4 +411,90 @@ private fun theOwnersFourAdditions() {
     // Its plain words for the lab.
     for (haptic in listOf(Haptic.SteerResumed, Haptic.TwoTapsAbove, Haptic.ExactChip, Haptic.ExactUnlock))
         check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic has a trigger" }
+}
+
+/** A flick's dots, as the bar shows them for a word of [letters] at animation speed [scale], and when each lands. */
+private fun landings(letters: Int, scale: Float = 1f): List<Long> {
+    val display = GestureDisplay()
+    display.wordDeleted(1000, letters)
+    return display.dotLandings(scale)
+}
+
+/** The into-caret phase at [scale], in real ms after the flick: from the end of the hold until the last dot's way ends. */
+private fun phase(dots: Int, scale: Float = 1f): ClosedFloatingPointRange<Float> {
+    val start = (GestureDisplay.FLICK_IN + GestureDisplay.FLICK_HOLD) * scale
+    return start..start + GestureDisplay.outMillis(dots, scale) + 1
+}
+
+private fun about(actual: Float, expected: Float) = kotlin.math.abs(actual - expected) < .01f
+
+private fun theDotsTickAsTheyLand() {
+    check(Haptic.DeleteDotsLand.group == HapticGroup.Delete && Haptic.DeleteDotsLand.family == Family.Texture) { "Delete, texture" }
+    // The way in: the owner's 450 ms for a few dots, stretched to 30 ms a dot for more, and kept at 30 ms a dot when faster
+    // animations would squeeze it.
+    check(about(GestureDisplay.outMillis(1, 1f), 450f)) { "One dot: 450 ms" }
+    check(about(GestureDisplay.outMillis(8, 1f), 450f)) { "Eight dots just fit in 450 ms" }
+    check(GestureDisplay.dotStepMillis(8, 1f) >= GestureDisplay.DOT_LAND_GAP) { "and land at least 30 ms apart" }
+    check(GestureDisplay.outMillis(9, 1f) > 450f && GestureDisplay.dotStepMillis(9, 1f) == 30f) { "Nine dots stretch it" }
+    check(about(GestureDisplay.outMillis(30, 1f), 202.5f + 900f)) { "Thirty dots land over 900 ms: ${GestureDisplay.outMillis(30, 1f)}" }
+    check(about(GestureDisplay.outMillis(1, .5f), 225f)) { "Half speed halves a short way in" }
+    check(GestureDisplay.dotStepMillis(5, .5f) == 30f) { "but never below 30 ms a dot" }
+
+    val tail = 105L
+    for ((letters, scale) in listOf(1 to 1f, 3 to 1f, 6 to 1f, 8 to 1f, 9 to 1f, 30 to 1f, 40 to 1f, 6 to .5f, 30 to .5f, 30 to 2f)) {
+        val lands = landings(letters, scale)
+        val dots = minOf(letters, GestureDisplay.MAX_DOTS)
+        val ticks = DotTicks.times(lands, tail)
+        check(ticks == lands && ticks.size == dots) { "$letters letters at $scale: a tick for each of $dots dots: $ticks" }
+        check(ticks.all { it.toFloat() in phase(dots, scale) }) { "$letters letters at $scale: every tick lands in the phase: $ticks" }
+        check(ticks.zipWithNext().all { (a, b) -> b - a >= 30 }) { "$letters letters at $scale: 30 ms apart or more: $ticks" }
+    }
+    // One dot lands as its way ends, 450 ms into the way in, so at 120 + 200 + 202.5 ms.
+    check(landings(1) == listOf(523L)) { "One dot: ${landings(1)}" }
+    // Three keep the owner's timing: 82.5 ms apart.
+    check(landings(3) == listOf(523L, 606L, 688L)) { "Three dots: ${landings(3)}" }
+    // Thirty land 30 ms apart, the last about 900 ms after the first.
+    val thirty = landings(30)
+    check(thirty.first() == 523L && thirty.last() == 523L + 29 * 30) { "Thirty dots: ${thirty.first()} to ${thirty.last()}" }
+    // With no motion the dots don't move, so nothing ticks.
+    check(landings(5, 0f).isEmpty() && DotTicks.times(landings(5, 0f), tail).isEmpty()) { "None with animations off" }
+    // A tick within 35 ms of the flick's tail is left out, and only those.
+    val six = landings(6)
+    check(DotTicks.times(six, six[2]) == six - six[2]) { "The tick on the tail goes" }
+    check(DotTicks.times(six, six[2] + 20) == six - six[2] - six[3]) { "Both within 35 ms of it go" }
+    check(DotTicks.times(six, six[0] - 35) == six) { "One 35 ms away stays" }
+    // A hold's lift turns its lines into dots, which go in the same way, but only a flick's dots tick.
+    val held = GestureDisplay()
+    held.deleteHeld(200, 1000)
+    held.wordDeleted(1100, 4)
+    held.deleteEnded(1300)
+    check(held.dotLandings(1f).isEmpty()) { "A hold's dots don't tick" }
+    // The ticks are texture: they never hold up or cut the flick's message, and a busy flick drops a tick instead.
+    val clock = Clock()
+    val gate = HapticGate { clock.now }
+    check(gate.admit(Family.GoneFlick, 140)) { "The flick plays" }
+    clock.now += 100
+    check(gate.check(Family.Texture) == HapticResult.Busy) { "A tick while the flick plays drops, so it never cuts it" }
+    clock.now += 40
+    check(gate.admit(Family.Texture)) { "Once the flick ends, a tick plays" }
+}
+
+/** Any key or touch cuts the dots, and no tick plays after the cut. */
+private fun aCutDropsTheTicksToCome() {
+    val posted = ArrayList<Pair<Runnable, Long>>()
+    val ticks = PendingTicks({ tick, at -> posted += tick to at }, { tick -> posted.removeAll { it.first === tick } })
+    var played = 0
+    ticks.schedule(listOf(523L, 553L, 583L)) { played++ }
+    check(posted.map { it.second } == listOf(523L, 553L, 583L) && ticks.pending == 3) { "Three ticks wait: $posted" }
+    posted.removeAt(0).first.run()
+    check(played == 1 && ticks.pending == 2) { "The first lands" }
+    val left = posted.toList()
+    ticks.cut()
+    check(posted.isEmpty() && ticks.pending == 0) { "A cut takes back the rest" }
+    for ((tick) in left) if (posted.any { it.first === tick }) tick.run()
+    check(played == 1) { "No tick plays after the cut" }
+    // A new flick drops the last one's ticks first.
+    ticks.schedule(listOf(10L)) { played++ }
+    ticks.schedule(listOf(20L)) { played++ }
+    check(posted.map { it.second } == listOf(20L)) { "Only the new flick's ticks wait: $posted" }
 }

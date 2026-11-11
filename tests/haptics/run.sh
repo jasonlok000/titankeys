@@ -11,5 +11,5 @@ keyboard=android/kotlin/com/atlas/keyboard
 engine=android/kotlin/com/atlas/engine
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   "$engine/Swipe.java" "$engine/Calibration.java" "$engine/TouchAlignment.java" \
-  "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" "$keyboard/Haptics.kt" "$keyboard/HapticTimeline.kt" tests/haptics/HapticChecks.kt
+  "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" "$keyboard/Haptics.kt" "$keyboard/HapticTimeline.kt"   "$keyboard/CursorGesture.kt" "$keyboard/CursorMode.kt" "$keyboard/WordSelection.kt" "$keyboard/GestureDisplay.kt" tests/haptics/HapticChecks.kt
 java -cp "$work:$stdlib" com.atlas.keyboard.HapticChecksKt

@@ -95,7 +95,7 @@ fun main() {
     aboveSpaceADragUpIsAWord()
     aboveSpaceTwoTapsNeverSelectAWord()
     aboveSpaceOnlyAsWideAsSpace()
-    aboveSpaceOnlyTheLowerHalfOfTheRow()
+    aboveSpaceTheWholeBottomLetterRow()
     aWordFromVWithoutTapsStaysAWord()
     aHeldTouchRegistersBeforeAnySlide()
     threeQuickTapsPickAWord()
@@ -1020,10 +1020,13 @@ private fun aboveSpaceOnlyAsWideAsSpace() {
     same(steersFrom(7.5f, ABOVE_ROW), false, "M keeps typing")
 }
 
-private fun aboveSpaceOnlyTheLowerHalfOfTheRow() {
+/** The owner moved the top of the zone to the top of the C V B N row (2026-11-11). */
+private fun aboveSpaceTheWholeBottomLetterRow() {
     same(steersFrom(5f, ABOVE_ROW), true, "The lower half of B takes a tap")
-    same(steersFrom(5f, 2.4f), false, "The upper half of V and B is left to typing")
-    same(steersFrom(5f, 1.5f), false, "The row above never takes the taps")
+    same(steersFrom(5f, 2.4f), true, "The upper half of V and B takes a tap too")
+    same(steersFrom(5f, 2.05f), true, "up to the top of the row")
+    same(steersFrom(5f, 1.95f), false, "The row above never takes the taps")
+    same(steersFrom(5f, 1.5f), false, "nor anywhere on it")
 }
 
 private fun aWordFromVWithoutTapsStaysAWord() {

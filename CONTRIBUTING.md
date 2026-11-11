@@ -40,6 +40,14 @@ TitanKeys is made for the Unihertz Titan 2 Elite. If you own another phone with 
 - Test on the real device, and on a Titan 2 Elite if you change shared code.
 - Share recordings from the new device, so that the engine can learn its touchpad.
 
+## Languages
+
+TitanKeys is English only for now. Other languages are welcome, but only from a native speaker who really knows the language.
+
+I won't build a language I don't speak myself, because I can't tell when it's wrong. So a language happens only if a native speaker brings it and keeps it right: the word list, the autocorrect and the guide's words.
+
+Want to help? Say which language in [issue #56](https://github.com/jasonlok000/titankeys/issues/56).
+
 ## Open an issue
 
 1. Search the [issues](https://github.com/jasonlok000/titankeys/issues) first. Make sure that your issue is not a duplicate.

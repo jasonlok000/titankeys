@@ -42,7 +42,9 @@ private val near: (Char, Char) -> Boolean = { a, b -> KeyNeighbours.near(a, b) }
 private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = PhoneWords.Habits(),
                     val spelling: (String) -> String = { PhoneWords.spelled(it, false) },
                     /** Names on this phone, by their lowercase form, as SwipeTyping holds them. */
-                    val phoneNames: Map<String, String> = emptyMap()) : Lexicon {
+                    val phoneNames: Map<String, String> = emptyMap(),
+                    /** Settings > Spell out shorthand. */
+                    val expand: Boolean = false) : Lexicon {
     override fun known(word: String) = words.contains(word) || habits.active(word) || word.lowercase() in phoneNames
     override fun frequency(word: String) = words.frequency(word)
     override fun personal(word: String) = habits.active(word) || word.lowercase() in phoneNames
@@ -50,6 +52,7 @@ private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = Phone
         ?: phoneNames[word.lowercase()]?.takeIf { it != word.lowercase() }
     override fun preferredSpelling(word: String) = spelling(word)
     override fun acronym(word: String) = words.acronym(word)
+    override fun expandShorthand() = expand
     override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
 }
 
@@ -1790,6 +1793,57 @@ private fun nextWordChecks() {
     same(off.pick("abc", null, null, null, chance = { if (it == "abe") -1.0 else -9.0 })?.word, "abd", "Weight 0 turns the model off")
 }
 
+/** The owner's typo audit, Nov 10: missing apostrophes before a final s, shorthand, and slips that were left as typed. */
+private fun ownerTypos(world: Realistic) {
+    fun typed(text: String, lists: Lists = Lists(world.words)) =
+        Typist(world, world.autocorrect(lists), lists = lists).type("$text ").text.trimEnd()
+    val cases = listOf(
+        // Rule A: an apostrophe left out before a final s, where the word without it is no word.
+        "todays plan" to "today's plan",
+        "check todays log" to "check today's log",
+        "Todays plan" to "Today's plan",
+        "nobodys fault" to "nobody's fault",
+        "whats that" to "what's that",
+        "it was someones idea" to "it was someone's idea",
+        "shes here" to "she's here",
+        // Words that are words without the apostrophe stay.
+        "two weeks ago" to "two weeks ago",
+        "the teams plan" to "the teams plan",
+        "lets go" to "lets go",
+        "its done now" to "it's done now",
+        // Rule B: shorthand stays as typed while the setting is off.
+        "i shd go" to "I shd go",
+        "do sth now" to "do sth now",
+        "it was lol" to "it was lol",
+        "cuz it rained" to "cuz it rained",
+        // C: slips the owner left as typed.
+        "to receieve the money" to "to receive the money",
+        "the defalt one" to "the default one",
+        "press bckspace now" to "press backspace now",
+        "yeahh sure" to "yeah sure",
+        "it showw up" to "it show up",
+    )
+    for ((text, expected) in cases) same(typed(text), expected, "Owner's typo \"$text\"")
+
+    // Settings > Spell out shorthand (#63): each shorthand with a full word becomes it, and Backspace takes it back.
+    val spelled = Lists(world.words, expand = true)
+    same(typed("i shd go", spelled), "I should go", "With the setting on, shd is should")
+    same(typed("cuz it rained", spelled), "because it rained", "cuz is because")
+    same(typed("Sth broke", spelled), "Something broke", "A capital stays on the full word")
+    same(typed("idk", spelled), "I don't know", "A phrase keeps its own capitals")
+    same(typed("it was lol", spelled), "it was lol", "Shorthand with no full word stays as typed")
+    val undone = Typist(world, world.autocorrect(spelled), lists = spelled).type("shd ").backspace()
+    same(undone.text, "shd", "Backspace right after puts the shorthand back")
+
+    // The bar and Space agree: when the bar's best guess is the typed letters with an apostrophe, Space puts it in.
+    val bar = Typist(world, words = FakeWords(Lists(world.words)).also { it.completions = listOf("flob's", "flob") })
+    bar.type("flobs")
+    same(bar.type(" ").text, "flob's ", "Space takes the bar's middle word when it only adds an apostrophe")
+    val plain = Typist(world, words = FakeWords(Lists(world.words)).also { it.completions = listOf("it's", "its") })
+    plain.type("its")
+    same(plain.type(" ").text, "its ", "A real word stays when the bar only suggests its apostrophe spelling")
+}
+
 fun main() {
     val world = Realistic()
     smallerChecks()
@@ -1801,6 +1855,7 @@ fun main() {
     typoBenchmark(world)
     sentenceAware(world)
     fieldReports(world)
+    ownerTypos(world)
     simulation(world)
     speed(world)
     if (failures.isNotEmpty()) {

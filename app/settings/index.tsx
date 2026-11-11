@@ -37,6 +37,8 @@ export default function Settings() {
       <Field label="Snippets" href="/settings/snippets">{snippetsLabel(settings)}</Field>
       <Toggle label="Type :name: for an emoji" value={settings.shortcodes}
         onChange={shortcodes => save.run({ shortcodes })} />
+      <Toggle label="Spell out shorthand, like shd as should" value={settings.expandShorthand}
+        onChange={expandShorthand => save.run({ expandShorthand })} />
       <Field label="Exact typing" href="/settings/exact-apps">{exactAppsLabel(settings)}</Field>
     </Section>
     <Section title="Suggestions">

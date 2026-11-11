@@ -489,6 +489,11 @@ public final class SwipeTyping {
         return spelling.equals(word) ? null : spelling;
     }
 
+    /** Whether chat shorthand such as "shd" becomes its full word, as Settings asks. */
+    public boolean expandShorthand() {
+        return TypingSettings.expandShorthand(context);
+    }
+
     /** The word in the English spelling that the settings ask for. */
     public String preferredSpelling(String word) {
         return EnglishSpelling.convert(word, TypingSettings.spelling(context));

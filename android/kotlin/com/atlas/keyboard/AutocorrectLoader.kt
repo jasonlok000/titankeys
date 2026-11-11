@@ -92,6 +92,7 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
         override fun name(word: String): String? = typing.properName(word) ?: typing.savedSpelling(word)
         override fun preferredSpelling(word: String): String = typing.preferredSpelling(word)
         override fun acronym(word: String) = words.acronym(word)
+        override fun expandShorthand() = typing.expandShorthand()
         override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
     }
 

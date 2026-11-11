@@ -320,8 +320,9 @@ class SwipeTicks {
                 continue
             }
             // The first tick waits until the contact has gone far enough to be a swipe, so a finger that only brushes the
-            // keys, or slides a little while pushing one, stays quiet (#30).
-            val ready = if (lastTick < 0) distance(start, sample) >= Contact.SWIPE_KEYS
+            // keys, or slides a little while pushing one, stays quiet (#30). A finger that sets off slowly, as from resting
+            // on a key, has to go further: most phantom buzzes in the owner's logs start that way, and real swipes rarely.
+            val ready = if (lastTick < 0) distance(start, sample) >= firstTickKeys(sample.time - start.time)
                 else travel >= preset.spacing && sample.time - lastTick >= preset.intervalMillis
             if (!ready || ticked) continue
             lastTick = sample.time
@@ -332,4 +333,17 @@ class SwipeTicks {
     }
 
     private fun distance(a: Sample, b: Sample) = hypot((b.x - a.x) * 10, (b.y - a.y) * 4)
+
+    companion object {
+        /**
+         * How quickly a real swipe gets to a swipe's distance. In raw-log-17, 90% of swipes and flicks that vibrated were
+         * there within 144 ms of landing, and three in four phantom buzzes took longer (median 200 ms).
+         */
+        const val FAST_START_MILLIS = 160L
+        /** How far a slow start must go before its first tick: the owner's two keys, which the logs bear out. */
+        const val SLOW_START_KEYS = 2f
+
+        /** The distance from landing at which the first tick plays, [millis] after landing. */
+        fun firstTickKeys(millis: Long) = if (millis <= FAST_START_MILLIS) Contact.SWIPE_KEYS else SLOW_START_KEYS
+    }
 }

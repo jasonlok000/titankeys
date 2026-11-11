@@ -380,6 +380,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .also(::putExactApps)
             .put("snippetStart", TypingSettings.snippetStart(activity).toString())
             .put("shortcodes", TypingSettings.shortcodes(activity))
+            .put("expandShorthand", TypingSettings.expandShorthand(activity))
             .put("snippets", JSONArray(Snippets.load(activity).map { (shortcut, text) ->
                 JSONObject().put("shortcut", shortcut).put("text", text)
             }))
@@ -497,6 +498,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "enterKey" -> TypingSettings.enterKey(activity, value as String)
             "snippetStart" -> TypingSettings.snippetStart(activity, value as String)
             "shortcodes" -> TypingSettings.shortcodes(activity, value as Boolean)
+            "expandShorthand" -> TypingSettings.expandShorthand(activity, value as Boolean)
             "liftOff" -> TypingSettings.liftOffGrace(activity, value as Boolean)
             "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())
             "haptics" -> Haptics.select(activity, Haptics.preset(activity), value as Boolean)

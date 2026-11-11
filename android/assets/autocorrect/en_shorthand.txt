@@ -1,0 +1,28 @@
+# Chat shorthand (issue 63). Autocorrect never changes these. With Settings > Expand shorthand on, each one with a
+# full word after a tab becomes that word, and Backspace right after puts the shorthand back. One with no full word stays
+# as typed either way. Shorthand that is also a common word or acronym (cd, ur, u) is left out.
+shd	should
+shdnt	shouldn't
+wd	would
+wdnt	wouldn't
+abt	about
+bc	because
+cuz	because
+coz	because
+bcz	because
+rn	right now
+sth	something
+smth	something
+pls	please
+plz	please
+thx	thanks
+idk	I don't know
+tbh	to be honest
+imo	in my opinion
+btw	by the way
+ngl	not gonna lie
+wfh
+lol
+gf
+eg
+acc

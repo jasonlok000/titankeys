@@ -9,6 +9,7 @@ fun main() {
     feelsUseTheirEffects()
     noIsThreeShortPulses()
     theGatePlaysOnlyTheFirst()
+    movingKeepsItsOwnPace()
     aHigherFeelWaitsForTheFirstToFinish()
     nothingCutsAPlayingFeel()
     everyHapticIsOnByDefault()
@@ -117,6 +118,21 @@ private fun theGatePlaysOnlyTheFirst() {
     check(!gate.admit(Feel.Step)) { "Still within 80 ms at 79 ms" }
     clock.now += 1
     check(gate.admit(Feel.Moving)) { "After 80 ms any feel plays again" }
+}
+
+/** Moving is outside the 80 ms window: a tick per key crossed, every 40 ms, as before. It never blocks a heavier feel. */
+private fun movingKeepsItsOwnPace() {
+    val clock = Clock()
+    val gate = HapticGate { clock.now }
+    repeat(5) {
+        check(gate.admit(Feel.Moving)) { "Moving tick ${it + 1} plays, 40 ms after the last" }
+        clock.now += 40
+    }
+    check(gate.admit(Feel.Gone)) { "A heavier feel right after a moving tick still plays" }
+    clock.now += HapticPalette.of(Feel.Gone).millis
+    check(!gate.admit(Feel.Moving)) { "Moving waits out a heavier feel's window" }
+    clock.now += HapticGate.WINDOW_MILLIS
+    check(gate.admit(Feel.Moving)) { "Then it plays again" }
 }
 
 private fun aHigherFeelWaitsForTheFirstToFinish() {

@@ -175,6 +175,10 @@ class HapticGate(private val clock: () -> Long) {
     fun admit(feel: Feel, millis: Long = HapticPalette.of(feel).millis): Boolean {
         val now = clock()
         if (now < busyUntil) return false
+        // Moving keeps its own pace, a tick per key crossed, as the owner kept it. It never waits for another moving
+        // tick, but it never cuts or blocks a heavier feel either: it plays only outside a heavier feel's window, and
+        // leaves the window as it was, so a heavier feel right after it still plays.
+        if (feel == Feel.Moving) return now - lastAt >= WINDOW_MILLIS || lastPriority <= feel.priority
         if (now - lastAt < WINDOW_MILLIS && feel.priority <= lastPriority) return false
         lastAt = now
         lastPriority = feel.priority

@@ -86,7 +86,7 @@ A meaning is the same everywhere. "No" is the only timed pattern, so it can't be
 
 ## Three rules that keep it calm
 
-1. **No overlap.** Within 80 ms of the last feel that played, only the first plays.
+1. **No overlap.** Within 80 ms of the last feel that played, only the first plays. Moving is the exception: the owner kept a tick for each key a swipe or the cursor crosses, so moving ticks keep their own pace, up to one each 40 ms. A moving tick still never cuts or blocks a heavier feel, and it waits out a heavier feel's 80 ms.
 2. **Priority.** Gone and no beat a step, which beats moving. Clicks and double clicks sit between a step and gone. A higher feel inside the 80 ms still plays, but only once the earlier one has finished.
 3. **Nothing cuts a playing feel.** A feel is busy until it ends, and nothing starts before then.
 

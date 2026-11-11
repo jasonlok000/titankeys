@@ -12,6 +12,7 @@
 ## Changed
 - Tap keys: When swipe typing is off, tap keys do not type. Settings shows Tap keys in grey.
 - Swipe vibration: This setting changes only swipe and tap key vibration. Atlas always vibrates when you start the cursor, move it or select a suggestion. To stop all vibration, set Touch feedback to off in Android settings.
+- Slip recovery period: This setting changes only swipe typing. Cursor control always continues after a lift of 90 ms or less.
 - Hold Alt: When you hold Alt, letters do not type symbols. Hold Alt for shortcuts. To type a symbol, push Alt one time, or two times to lock it.
 
 ## Fixed

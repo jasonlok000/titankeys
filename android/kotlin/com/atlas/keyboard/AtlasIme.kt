@@ -332,7 +332,7 @@ class AtlasIme : InputMethodService() {
                 haptics.begin(samples.firstOrNull())
                 contact.down(first)
                 if (cursor.resume(first)) {
-                    // Back within the slip recovery period: still steering the cursor, never typing.
+                    // Back within the cursor slip time: still steering the cursor, never typing.
                     main.removeCallbacks(endSlippedCursor)
                     contact.cancelActive()
                     cursor.move(samples.drop(1))
@@ -374,10 +374,9 @@ class AtlasIme : InputMethodService() {
                     cursorEndedAt = SystemClock.uptimeMillis()
                     main.removeCallbacks(stepCursor)
                     cursor.lift()
-                    val slips = composer.liftOffMillis > 0
                     // Through a slip the path stays open, so a finger that comes back carries on drawing it.
-                    traceCursor(samples, ended = !slips)
-                    if (slips) main.postDelayed(endSlippedCursor, composer.liftOffMillis.toLong()) else endCursor()
+                    traceCursor(samples, ended = false)
+                    main.postDelayed(endSlippedCursor, CURSOR_SLIP_MILLIS)
                     return
                 }
                 endCursor()
@@ -872,6 +871,8 @@ class AtlasIme : InputMethodService() {
         }
 
         private const val MAX_PENDING_INPUT = 128
+        /** A finger that leaves the touchpad for this long can come back and keep moving the cursor. */
+        private const val CURSOR_SLIP_MILLIS = 90L
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"
         private const val BACK_SETTLE_MILLIS = 300L

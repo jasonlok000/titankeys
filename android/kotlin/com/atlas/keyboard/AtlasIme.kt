@@ -870,9 +870,12 @@ class AtlasIme : InputMethodService() {
         words.words = barWords
         words.showSuggestions = showSuggestions()
         showModifiers()
+        val exact = ExactBar(this, ::exactChip, ::exactBarKey, ::typeClip) {}
+        exactBar = exact
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(keys)
+            addView(exact)
             addView(words)
             inputRoot = this
             roundTopCorners(this)
@@ -944,6 +947,11 @@ class AtlasIme : InputMethodService() {
             main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
         }
         updateOverlay()
+        if (!restarting) {
+            sticky.clear()
+            clipTyping = null
+        }
+        updateExactBar()
         hold.started(info.packageName, editing)
         if (!statusReported) {
             statusReported = true
@@ -1056,7 +1064,10 @@ class AtlasIme : InputMethodService() {
     // so that Shift, Alt and Ctrl show on it and the gestures draw there (issue 45).
     // In an app where the user hid the bar, the strip draws nothing and keeps one pixel, so the keyboard's window stays up: keys,
     // holds, Alt and the panel work as before, and the app never sees the keyboard go away. The panel opens over it as usual.
-    private fun showSuggestions() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText) && !barHidden
+    private fun showSuggestions() = barAllowed() && !field.exact
+
+    /** The bar may show here: the setting, the empty home search and the apps where the user hid it. */
+    private fun barAllowed() = TypingSettings.suggestionBar(this) && (!inLauncher || launcherFieldHasText) && !barHidden
 
     private fun launcherPackage(): String? {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
@@ -2466,12 +2477,13 @@ class AtlasIme : InputMethodService() {
      */
     private fun exactKey(event: KeyEvent): Boolean {
         if (event.isSystem) return false
-        val meta = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState)
+        val meta = KeyEvent.normalizeMetaState(event.metaState or modifiers.metaState or sticky.meta)
         val plan = ExactTyping.plan(event.keyCode, event.repeatCount, meta, event::getUnicodeChar)
         logExact("key ${event.keyCode} repeat ${event.repeatCount} meta 0x${Integer.toHexString(meta)}" +
             if (plan.text != null) " as text from Alt" else "")
         plan.text?.let(::commitExact)
         sendExact(event, plan.events)
+        sticky.used()
         modifiers.consume()
         return true
     }
@@ -2544,6 +2556,81 @@ class AtlasIme : InputMethodService() {
     private var shownShift = Modifiers.Level.Off
     private var shownAlt = Modifiers.Level.Off
 
+    /** Exact typing's own bar: half the strip, worked by touch, always up. See [ExactBar]. It follows the settings that hide the bar. */
+    private var exactBar: ExactBar? = null
+    private val sticky = ExactTyping.Sticky()
+    private var clipTyping: Runnable? = null
+
+    private fun updateExactBar() {
+        val bar = exactBar ?: return
+        val shown = editing && field.exact && barAllowed() && !panelOpen
+        bar.visibility = if (shown) View.VISIBLE else View.GONE
+        if (!shown) return
+        bar.show { key ->
+            val own = sticky.level(key)
+            val held = when (key) {
+                ExactTyping.BarKey.Shift -> modifiers.shift
+                ExactTyping.BarKey.Alt -> modifiers.alt
+                ExactTyping.BarKey.Ctrl -> if (modifiers.ctrlHeld) Modifiers.Level.Locked else Modifiers.Level.Off
+                ExactTyping.BarKey.Fn -> Modifiers.Level.Off
+            }
+            when {
+                own == ExactTyping.Level.Locked || held == Modifiers.Level.Locked -> ExactTyping.Level.Locked
+                own == ExactTyping.Level.Once || held == Modifiers.Level.Once -> ExactTyping.Level.Once
+                else -> ExactTyping.Level.Off
+            }
+        }
+    }
+
+    /** A tap on a chip turns it on for the next key, or off; a long press locks it. */
+    private fun exactChip(key: ExactTyping.BarKey, long: Boolean) {
+        if (long) { if (sticky.lock(key)) haptics.play(Haptic.ExactLock) } else sticky.tap(key)
+        updateExactBar()
+    }
+
+    /** A key on the bar goes to the app as a key event, with the modifiers that are on, which it then uses up. */
+    private fun exactBarKey(code: Int) {
+        val time = SystemClock.uptimeMillis()
+        val like = KeyEvent(time, time, KeyEvent.ACTION_DOWN, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+            KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD)
+        val meta = KeyEvent.normalizeMetaState(modifiers.metaState or sticky.meta)
+        haptics.play(Haptic.ExactKey)
+        sendExact(like, ExactTyping.plan(code, 0, meta) { 0 }.events)
+        sticky.used()
+        modifiers.consume()
+        showModifiers()
+    }
+
+    /**
+     * Types the clipboard as key presses, for a remote desktop where pasting does nothing. At most [ExactTyping.MAX_TYPED_CLIP]
+     * characters, a few each frame so the keyboard stays responsive, and nothing at all from a clip that an app marked sensitive.
+     */
+    private fun typeClip() {
+        val clip = getSystemService(android.content.ClipboardManager::class.java)?.primaryClip ?: return
+        if (clip.description.extras?.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE) == true) return
+        val text = clip.getItemAt(0)?.coerceToText(this)?.toString()?.take(ExactTyping.MAX_TYPED_CLIP) ?: return
+        if (text.isEmpty()) return
+        haptics.play(Haptic.ExactKey)
+        val keys = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)
+        var at = 0
+        val step = object : Runnable {
+            override fun run() {
+                val connection = currentInputConnection
+                if (clipTyping !== this || !field.exact || connection == null) return
+                val end = minOf(text.length, at + CLIP_CHUNK)
+                for (char in text.substring(at, end)) {
+                    // A character with no key, such as an emoji, goes as text.
+                    val events = keys.getEvents(charArrayOf(char))
+                    if (events == null) connection.commitText(char.toString(), 1) else events.forEach(connection::sendKeyEvent)
+                }
+                at = end
+                if (at < text.length) main.post(this) else clipTyping = null
+            }
+        }
+        clipTyping = step
+        main.post(step)
+    }
+
     private fun showModifiers() {
         showGuideExtras()
         updateAutoShift()
@@ -2556,6 +2643,7 @@ class AtlasIme : InputMethodService() {
         shownShift = modifiers.shift
         shownAlt = modifiers.alt
         strip?.visibility = if (panelOpen) View.GONE else View.VISIBLE
+        updateExactBar()
         showModifierBar()
         panel?.mode = modifiers.panel
         contact.paging = panelOpen
@@ -2636,6 +2724,8 @@ class AtlasIme : InputMethodService() {
         /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"
         private const val SMART_LAUNCHER = "ginlemon.flowerfree"
+        /** Characters of a typed clip sent each frame. */
+        private const val CLIP_CHUNK = 40
         /** Characters read before the cursor to tell a sentence start. A sentence ends within a few spaces of the next one. */
         private const val SENTENCE_REACH = 64
         private const val MAX_PENDING_INPUT = 128

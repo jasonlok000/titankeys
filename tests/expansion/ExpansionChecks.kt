@@ -26,6 +26,7 @@ fun main() {
     exactSymbols()
     exactWrappers()
     recentApps()
+    stickyBarKeys()
     fieldKinds()
     println("Expansion checks passed")
 }
@@ -190,4 +191,28 @@ private fun exactWrappers() {
 private fun recentApps() {
     same(ExactTyping.recentApps(listOf("a", "b"), "b"), listOf("b", "a"), "an app moves to the front")
     same(ExactTyping.recentApps((1..12).map { "$it" }, "new").size, ExactTyping.MAX_RECENT_APPS, "the list stays short")
+}
+
+/** Exact typing's bar: a tap is for the next key, a long press locks, a tap lets go, and a key uses up what was on once. */
+private fun stickyBarKeys() {
+    val sticky = ExactTyping.Sticky()
+    same(sticky.any, false, "Nothing on at first")
+    sticky.tap(ExactTyping.BarKey.Ctrl)
+    same(sticky.level(ExactTyping.BarKey.Ctrl), ExactTyping.Level.Once, "A tap turns Ctrl on for the next key")
+    check(sticky.meta and KeyEvent.META_CTRL_ON != 0, "Its meta goes on the key")
+    sticky.used()
+    same(sticky.any, false, "The key uses it up")
+    same(sticky.lock(ExactTyping.BarKey.Alt), true, "A long press locks Alt")
+    same(sticky.lock(ExactTyping.BarKey.Alt), false, "Locking it again is no new lock")
+    sticky.tap(ExactTyping.BarKey.Shift)
+    sticky.used()
+    same(sticky.level(ExactTyping.BarKey.Alt), ExactTyping.Level.Locked, "A lock stays after a key")
+    same(sticky.level(ExactTyping.BarKey.Shift), ExactTyping.Level.Off, "while Shift on once is used up")
+    sticky.tap(ExactTyping.BarKey.Alt)
+    same(sticky.level(ExactTyping.BarKey.Alt), ExactTyping.Level.Off, "A tap lets a lock go")
+    sticky.tap(ExactTyping.BarKey.Fn)
+    check(sticky.meta and KeyEvent.META_FUNCTION_ON != 0, "fn adds the fn meta")
+    sticky.tap(ExactTyping.BarKey.Fn)
+    same(sticky.any, false, "A second tap turns it off")
+    same(ExactTyping.MAX_TYPED_CLIP, 2000, "A typed clip stops at 2,000 characters")
 }

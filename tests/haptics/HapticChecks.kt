@@ -23,6 +23,7 @@ fun main() {
     theOwnersFourAdditions()
     theDotsTickAsTheyLand()
     aCutDropsTheTicksToCome()
+    aHoldsDotsTickAtTheLift()
     nothingCutsAPlayingMessage()
     triedPatternsOnlyInDebug()
     everyHapticIsOnByDefault()
@@ -463,12 +464,6 @@ private fun theDotsTickAsTheyLand() {
     check(DotTicks.times(six, six[2]) == six - six[2]) { "The tick on the tail goes" }
     check(DotTicks.times(six, six[2] + 20) == six - six[2] - six[3]) { "Both within 35 ms of it go" }
     check(DotTicks.times(six, six[0] - 35) == six) { "One 35 ms away stays" }
-    // A hold's lift turns its lines into dots, which go in the same way, but only a flick's dots tick.
-    val held = GestureDisplay()
-    held.deleteHeld(200, 1000)
-    held.wordDeleted(1100, 4)
-    held.deleteEnded(1300)
-    check(held.dotLandings(1f).isEmpty()) { "A hold's dots don't tick" }
     // The ticks are texture: they never hold up or cut the flick's message, and a busy flick drops a tick instead.
     val clock = Clock()
     val gate = HapticGate { clock.now }
@@ -497,4 +492,35 @@ private fun aCutDropsTheTicksToCome() {
     ticks.schedule(listOf(10L)) { played++ }
     ticks.schedule(listOf(20L)) { played++ }
     check(posted.map { it.second } == listOf(20L)) { "Only the new flick's ticks wait: $posted" }
+}
+
+/** A long delete's lines turn into dots at the lift, which tick as each lands, the same way a flick's do. */
+private fun aHoldsDotsTickAtTheLift() {
+    val held = GestureDisplay()
+    held.deleteHeld(200, 1000)
+    held.wordDeleted(1100, 4)
+    held.wordDeleted(1300, 3)
+    check(held.deleteEnded(1400)) { "The lift starts the dots" }
+    check(!held.deleteEnded(1500)) { "A second lift starts nothing" }
+    check(held.dotsAt == 1400L) { "The dots started at the lift" }
+    val lands = held.dotLandings(1f)
+    // The lines shrink into the dots over 240 ms, stay 200 ms, then each dot takes its 202.5 ms way, 30 ms or more apart.
+    val first = (GestureDisplay.MORPH_IN + GestureDisplay.FLICK_HOLD + GestureDisplay.DOT_TRAVEL).let { kotlin.math.round(it + .001f).toLong() }
+    check(lands.size == 7 && lands.first() == first) { "A tick for each of the seven dots, the first at $first: $lands" }
+    check(lands.zipWithNext().all { (a, b) -> b - a >= 30 }) { "30 ms apart or more: $lands" }
+    check(held.dotLandings(0f).isEmpty()) { "None with animations off" }
+    // They're scheduled at the landing times, and a cut drops them all.
+    val posted = ArrayList<Pair<Runnable, Long>>()
+    val ticks = PendingTicks({ tick, at -> posted += tick to at }, { tick -> posted.removeAll { it.first === tick } })
+    var played = 0
+    ticks.schedule(DotTicks.times(lands, -20)) { played++ }
+    check(posted.map { it.second } == lands) { "One tick per dot, at the landings: $posted" }
+    val left = posted.toList()
+    ticks.cut()
+    for ((tick) in left) if (posted.any { it.first === tick }) tick.run()
+    check(played == 0 && posted.isEmpty()) { "None after the cut" }
+    // The hold's last word or its no may have just played. A first dot within 35 ms of it is left out.
+    check(DotTicks.times(listOf(30L, 60L, 90L), 0) == listOf(60L, 90L)) { "A tick 30 ms after the last haptic goes, one 60 ms after stays" }
+    check(DotTicks.times(listOf(30L, 60L), -10) == listOf(30L, 60L)) { "One 40 ms after stays" }
+    check(DotTicks.times(lands, -20) == lands) { "At normal speed the dots land long after it" }
 }

@@ -53,7 +53,7 @@ A flick shows a dot for each letter that went. The dots pop in one after another
 
 Then the dots go into the caret one after another, and every dot ticks as it lands, as texture. Deleting should feel satisfying. To keep each tick its own on the Titan's motor, the dots land at least 30 ms apart (`DOT_LAND_GAP`). So the way in takes max(450, 202.5 + 30 × dots) ms, times Android's animation speed, and never less than 30 ms a dot after that. Up to eight dots keep the owner's 450 ms. Thirty land over about 900 ms. Each dot's own trip takes 202.5 ms, and the first lands about 520 ms after the flick. `GestureDisplay.outMillis` and `dotStepMillis` hold this, and the drawing and the ticks both come from them.
 
-A tick within 35 ms of the flick's tail is left out. Any key or touch cuts the dots at once, and the ticks still to come with them. A tick also only plays while that flick's dots are still on the bar. With animations off there are none, and a hold's lift, whose lines turn into dots, doesn't tick.
+A tick within 35 ms of the flick's tail is left out. Any key or touch cuts the dots at once, and the ticks still to come with them. A tick also only plays while that flick's dots are still on the bar. With animations off there are none. A long delete's lift turns its lines into dots too, which go in the same way and tick the same way, with the same switch. Its last word's tick or its no may have just played, so a dot tick within 35 ms of that is left out.
 
 ## What plays what
 
@@ -65,6 +65,7 @@ A tick within 35 ms of the flick's tail is left out. Any key or touch cuts the d
 **Delete**
 - A delete flick: gone flick.
 - The flick's dots land in the caret: a light texture tick for every dot as it lands.
+- A long delete's lines turn into dots as you lift, and those tick the same way as each lands.
 - Each further word while you hold: texture.
 - Nothing left to delete: no. This goes for the flick and the hold.
 

@@ -120,11 +120,16 @@ object HapticPalette {
 
     /** "No": three 12 ms pulses, 50 ms apart. Nothing else feels like it. */
     const val NO_PULSE_MILLIS = 12L
+    /** The old Normal preset's swipe tick: 8 units of 2 ms, at strength 3 of 10. */
+    const val MOVING_MILLIS = 16L
+    const val MOVING_STRENGTH = 76
     const val NO_GAP_MILLIS = 50L
 
     fun of(feel: Feel): Pattern = when (feel) {
-        Feel.Moving -> Pattern(EFFECT_TEXTURE_TICK, Buzzes(listOf(10), listOf(80)))
-        Feel.Step -> Pattern(EFFECT_TICK, Buzzes(listOf(16), listOf(140)))
+        // Exactly the old Normal swipe tick: one 16 ms buzz, at 76 of 255 where a phone can set it. The owner found the phone's
+        // texture tick too strong on the Titan, which has no strength control (Nov 11).
+        Feel.Moving -> Pattern(null, Buzzes(listOf(MOVING_MILLIS), listOf(MOVING_STRENGTH)))
+        Feel.Step -> Pattern(EFFECT_TICK, Buzzes(listOf(18), listOf(140)))
         Feel.Done -> Pattern(EFFECT_CLICK, Buzzes(listOf(20), listOf(220)))
         Feel.Locked -> Pattern(EFFECT_DOUBLE_CLICK, Buzzes(listOf(15, 40, 15), listOf(220, 0, 220)))
         Feel.Gone -> Pattern(EFFECT_HEAVY_CLICK, Buzzes(listOf(45), listOf(255)))
@@ -260,6 +265,9 @@ class Haptics(private val context: Context) {
         if (id != null && vibrator.areAllEffectsSupported(id) != Vibrator.VIBRATION_EFFECT_SUPPORT_NO)
             return VibrationEffect.createPredefined(id)
         val buzzes = pattern.fallback
+        // One buzz is a one-shot, as the old swipe tick was.
+        if (buzzes.timings.size == 1) return VibrationEffect.createOneShot(buzzes.timings[0],
+            if (vibrator.hasAmplitudeControl()) buzzes.strengths[0] else VibrationEffect.DEFAULT_AMPLITUDE)
         val timings = LongArray(buzzes.timings.size + 1) { if (it == 0) 0 else buzzes.timings[it - 1] }
         val strengths = IntArray(timings.size) { index ->
             val strength = if (index == 0) 0 else buzzes.strengths[index - 1]

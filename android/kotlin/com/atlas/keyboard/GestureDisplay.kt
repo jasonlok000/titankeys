@@ -236,6 +236,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         private set
     private var baseTarget = 0f
     private var unitsTarget = 1f
+    /**
+     * After a hold lifts, the words show again faded behind its dots: they come out from under the hold's full cover, from 1 to
+     * 0, over the same 150 ms as a flick's words fade, so they never switch on at once.
+     */
+    var solid = 0f
+        private set
     /** True when the last delete added its dots to a stream that was still playing. */
     var chained = false
         private set
@@ -774,6 +780,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 // The text is already gone; only the picture moves. The dots come in, stay a while, and go into the caret.
                 still = !motion
                 streamAt = (now - flourishAt).toFloat()
+                solid = if (fromHold && motion) 1f - easeOut((streamAt / scale / FLICK_FADE).coerceIn(0f, 1f)) else 0f
                 val sinceStart = if (motion) streamAt / scale else dotsInMillis
                 dotsIn = (sinceStart / dotsInMillis).coerceIn(0f, 1f)
                 dotsOut = if (motion && dots > 0) {
@@ -846,13 +853,13 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     }
 
     /**
-     * A single flick's cover: in quickly, from where it was, so the old words never show through; it stays while the dots go into
-     * the caret, and then the words fade back in.
+     * The dots' cover, which fades the words behind them: the words fade out over [FLICK_FADE] from where they were, stay faded
+     * while the dots go into the caret, and fade back in over [FLICK_BACK], both easing out, so they never switch.
      */
     private fun flickReveal(real: Float, scale: Float): Float {
         val back = ((real - doneAt) / (FLICK_BACK * scale)).coerceIn(0f, 1f)
-        if (back > 0f) return 1f - back * back * (3 - 2 * back)
-        return revealedAtStart + (1f - revealedAtStart) * (real / scale / FLICK_COVER_IN).coerceIn(0f, 1f)
+        if (back > 0f) return 1f - easeOut(back)
+        return revealedAtStart + (1f - revealedAtStart) * easeOut((real / scale / FLICK_FADE).coerceIn(0f, 1f))
     }
 
     /** A picked word's cover: in quickly from where it was, so the suggestions never show through, it holds, then it fades out. */
@@ -866,6 +873,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         scene = Scene.None
         if (glowHeld) endGlow()
         fromHold = false
+        solid = 0f
         batches = 0
         dots = 0
         groups = IntArray(0)
@@ -952,7 +960,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         const val FLICK_IN = 120f
         const val FLICK_HOLD = 200f
         const val FLICK_OUT = 450f
-        const val FLICK_BACK = 150f
+        /** The words behind the dots fade out over [FLICK_FADE] and back in over [FLICK_BACK], easing out (owner, 2026-11-11). */
+        const val FLICK_FADE = 150f
+        const val FLICK_BACK = 200f
         const val FLICK_MILLIS = FLICK_IN + FLICK_HOLD + FLICK_OUT + FLICK_BACK
         /**
          * The dots pop in one after another over [FLICK_IN]: a dot whose place in the row is from 0 to 1 starts at that much of

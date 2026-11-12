@@ -43,8 +43,13 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
 
     private fun scene(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
         // The words stay where they are, under a cover in the strip's own colour, so nothing moves when this comes and goes. A swipe
-        // and a delete's dots only dim them, so the suggestions still show, faded, behind.
-        val cover = if (display.scene == GestureDisplay.Scene.Swipe || display.softDelete) SWIPE_DIM else 1f
+        // and a delete's dots only dim them, so the suggestions still show, faded, behind; after a hold they come out from under
+        // its full cover.
+        val cover = when {
+            display.scene == GestureDisplay.Scene.Swipe -> SWIPE_DIM
+            display.softDelete -> SWIPE_DIM + (1f - SWIPE_DIM) * display.solid
+            else -> 1f
+        }
         fill.color = GuideMotion.faded(look.paper, display.reveal * cover)
         canvas.drawRect(0f, 0f, right + left, h, fill)
         if (display.scene == GestureDisplay.Scene.Swipe) {

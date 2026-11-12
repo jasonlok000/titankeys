@@ -13,6 +13,7 @@ private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
     aFlicksWayInStretchesToFitItsDots()
+    aHoldsWordsFadeInBehindItsDots()
     anyNumberOfWordsShowsItsDots()
     quickFlicksMakeOneStream()
     longDotsSpeedUpWhenTried()
@@ -427,7 +428,9 @@ private fun aFlickHasABriefFlourish() {
     same(display.softDelete, true, "A single flick shows only its dots and the caret")
     same(display.dots, 5, "\"don't\" took five characters, so it shows five dots")
     display.run(1_000, 1_064)
-    same(display.reveal, 1f, "The cover is in at once, so the old words never show through")
+    isTrue(display.reveal > .5f && display.reveal < 1f, "The words fade out, easing out, over about 150 ms: ${display.reveal}")
+    display.run(1_080, 1_160)
+    same(display.reveal, 1f, "and then they stay faded")
     same(display.groups.toList(), listOf(5), "One word, one group")
     display.run(1_080, 1_310)
     same(display.dotsIn, 1f, "The dots are all in after 120 ms")
@@ -437,9 +440,9 @@ private fun aFlickHasABriefFlourish() {
     isTrue(display.dotsOut > 0f && display.dotsOut < 1f, "Then they go into the caret, over about 450 ms")
     same(display.reveal, 1f, "The words stay covered while the dots go")
     display.run(1_776, 1_910)
-    isTrue(display.reveal < 1f && display.reveal > 0f, "Then the words fade back in, over about 150 ms")
-    display.run(1_926, 1_940)
-    same(display.scene, Scene.None, "It is over by about 0.92 s, and it is only a picture, so typing never waits for it")
+    isTrue(display.reveal < 1f && display.reveal > 0f, "Then the words fade back in, over about 200 ms")
+    display.run(1_926, 1_990)
+    same(display.scene, Scene.None, "It is over by about 0.97 s, and it is only a picture, so typing never waits for it")
 }
 
 private fun aFlickCountsTheCharactersItDeleted() {
@@ -993,6 +996,28 @@ private fun theHeldGlowGoesWithTheDisplay() {
     off.cursorFrame(5f, 0, 0f, false, 100L)
     off.allowed = false
     same(off.glowing, false, "Where the strip does not show, the held glow goes too")
+}
+
+/**
+ * A hold covers the words fully; at the lift they come out from under it to the dots' faded look over about 150 ms, easing out,
+ * so they never switch on at once.
+ */
+private fun aHoldsWordsFadeInBehindItsDots() {
+    val display = GestureDisplay()
+    display.deleteHeld(200, 1_000)
+    display.wordDeleted(1_000, 4)
+    display.run(1_000, 1_200)
+    display.deleteEnded(1_216)
+    display.run(1_216, 1_216)
+    same(display.solid, 1f, "At the lift the words are still fully covered")
+    display.run(1_232, 1_280)
+    isTrue(display.solid > 0f && display.solid < .5f, "then they come out quickly at first: ${display.solid}")
+    display.run(1_296, 1_376)
+    same(display.solid, 0f, "and by about 150 ms they show faded behind the dots")
+    val flick = GestureDisplay()
+    flick.wordDeleted(1_000, 4)
+    flick.run(1_000, 1_100)
+    same(flick.solid, 0f, "A flick's words were never fully covered")
 }
 
 /**

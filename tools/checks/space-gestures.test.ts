@@ -33,7 +33,7 @@ test("a triple press's pick shows only a caret, and a double tap's keeps its box
 
 test("a held delete tells the bar its real words, how fast it goes, when it pauses, and where its glow goes", () => {
   const held = body("deleteHeldWord");
-  expect(held).toContain("gesture.deleteGlowPlace = Haptics.deleteGlow(this)");
+  expect(held).toContain("gesture.deleteGlowPlace = GestureDisplay.DeleteGlow.of(Haptics.deleteGlow(this))");
   expect(held).toContain("gesture.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), deleteHold.pace,");
   // Each word's real text goes to the bar before it goes, and with nothing left the bar gets none.
   expect(held).toContain("before?.let { strip?.gesture?.deleteText(it) }");

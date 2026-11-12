@@ -118,7 +118,7 @@ export type HapticsLab = {
   haptics: Record<string, { family: string; pattern: number[]; plays: string }>;
   /**
    * The lab's experiments, on or off, by id: dotsSpeedUp, "Dots speed up when long", heldDeleteFade, "Held delete fade",
-   * and deleteZoneTicks, "Tick at delete zones".
+   * deleteZoneTicks, "Tick at delete zones", and shortcutHaptics, "Haptics for shortcuts".
    */
   experiments: Record<string, boolean>;
   /** Where a held delete's glow goes, by id, and the places it can go, from the list "Delete glow". */

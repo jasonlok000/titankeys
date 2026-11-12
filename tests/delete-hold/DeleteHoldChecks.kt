@@ -26,6 +26,7 @@ fun main() {
     thePaceTopsOutAtTheTopSpeedLine()
     eachZoneTicksOncePerCrossing()
     theHoldWaits400()
+    aClearFlickCrunchesAndAWordDoesNot()
     moreLengthDoesNotPassTheLimits()
     theFirstWordIsTheFlickItself()
     liftingStopsAtOnceWithNoExtraWord()
@@ -545,4 +546,57 @@ private fun eachZoneTicksOncePerCrossing() {
 /** The owner tried 100 ms and went back to 400 (2026-11-12). */
 private fun theHoldWaits400() {
     same(holdMillis, 400L, "A finger waits 400 ms after a flick before the hold starts")
+}
+
+/** A stroke from [x], [y] to [toX], [toY] over [millis], sampled every 10 ms from [from], as the touchpad gives it. */
+private fun stroke(x: Float, y: Float, toX: Float, millis: Long, toY: Float = y, from: Long = 1_000): List<Sample> =
+    (0..millis / 10).map { step -> val t = step * 10f / millis; at(x + (toX - x) * t, y + (toY - y) * t, from + step * 10) }
+
+/** What [FlickCrunch] makes of [points] as they come: its state after each, and how many breaks it heard. */
+private fun crunch(points: List<Sample>, allowed: Boolean = true): Pair<List<FlickCrunch.State>, Int> {
+    val crunch = FlickCrunch()
+    crunch.begin(allowed)
+    var breaks = 0
+    val states = points.indices.map { index -> if (crunch.move(points.subList(0, index + 1))) breaks++; crunch.state }
+    return states to breaks
+}
+
+/**
+ * A stroke crunches only once it is clearly a delete flick: 1.5 keys from where it started, inside the delete zone and no higher
+ * than the middle row, within 60 ms, and passing every flick rule so far. Before that it ticks as a swipe, and a stroke that
+ * stops being a flick breaks once and ticks as a swipe again. Words from P, K and L that go left never crunch at their start.
+ */
+private fun aClearFlickCrunchesAndAWordDoesNot() {
+    // A real flick's pace: 3 keys from Backspace in 100 ms reaches 1.5 keys in 50.
+    val (flick, flickBreaks) = crunch(stroke(.95f, .35f, .65f, 100))
+    same(flick.first(), FlickCrunch.State.Waiting, "It ticks as a swipe before it is clear")
+    same(flick.last(), FlickCrunch.State.Crunching, "then crunches")
+    same(flickBreaks, 0, "and never breaks")
+    // A word from L: it starts in the zone but takes 150 ms to go 1.5 keys.
+    val (word, wordBreaks) = crunch(stroke(.85f, .4f, .2f, 650))
+    isTrue(FlickCrunch.State.Crunching !in word, "A word from L never crunches: ${word.toSet()}")
+    same(wordBreaks, 0, "nor breaks")
+    // A word from K that goes left as fast as a flick, then turns back: it breaks once, then ticks as a swipe.
+    val turn = stroke(.8f, .4f, .62f, 60) + stroke(.62f, .4f, .9f, 120, from = 1_060).drop(1)
+    val (k, kBreaks) = crunch(turn)
+    isTrue(FlickCrunch.State.Crunching in k, "As fast as a flick, it crunches at first")
+    same(kBreaks, 1, "Turning back, it breaks once")
+    same(k.last(), FlickCrunch.State.Broken, "then ticks as a swipe")
+    // A word from P, in the top row, as fast as a flick: never crunches.
+    val (p, _) = crunch(stroke(.92f, .19f, .5f, 120))
+    isTrue(FlickCrunch.State.Crunching !in p, "A start on P never crunches: ${p.toSet()}")
+    // A fast flick that goes on too far, past 5.5 keys, stops being a flick: one break.
+    val (far, farBreaks) = crunch(stroke(.95f, .35f, .2f, 250))
+    isTrue(FlickCrunch.State.Crunching in far, "A long fast stroke crunches at first")
+    same(farBreaks, 1, "then breaks once as it goes too far")
+    same(far.last(), FlickCrunch.State.Broken, "and ticks as a swipe after")
+    // A flick that then rests on the keys, for a hold, keeps crunching: resting is no reason to break.
+    val rest = stroke(.95f, .35f, .65f, 100) + (1..40).map { at(.65f, .35f, 1_100L + it * 10) }
+    val (held, heldBreaks) = crunch(rest)
+    same(held.last(), FlickCrunch.State.Crunching, "A flick that rests keeps crunching")
+    same(heldBreaks, 0, "with no break")
+    // Where a flick would not count, nothing crunches.
+    same(crunch(stroke(.95f, .35f, .65f, 100), allowed = false).first.toSet(), setOf(FlickCrunch.State.Plain), "Not allowed: plain")
+    // Outside the delete zone, plain at once.
+    same(crunch(stroke(.5f, .35f, .2f, 100)).first.first(), FlickCrunch.State.Plain, "From the middle of the keys: plain")
 }

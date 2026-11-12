@@ -25,6 +25,7 @@ object HapticTimeline {
         Family.Back -> "Long then short. Undone, back as it was."
         Family.No -> "Three hard ones. Nothing happened."
         Family.Wall -> "A hit that bounces and settles. A gesture hit its end."
+        Family.Crunch -> "Two tiny ones as one grain. A flick crossing keys, a hold's words."
         Family.Celebrate -> "A rising three. The guide's celebrations."
         Family.Saved -> "Short, short, long. The word menu saved a word."
         Family.Removed -> "Long, short, short. The word menu deleted a word."
@@ -38,6 +39,8 @@ object HapticTimeline {
         Haptic.DeleteFlick -> "A flick deleted a word"
         Haptic.DeleteDotsLand -> "A delete's dots landed"
         Haptic.DeleteWord -> "The hold deleted a word"
+        Haptic.DeleteCrunch -> "A flick crossed a key"
+        Haptic.DeleteBreak -> "The stroke stopped being a flick"
         Haptic.DeleteNothing -> "Nothing left to delete"
         Haptic.DeleteRanOut -> "The hold reached the start"
         Haptic.DeleteZone -> "The hold's finger reached a zone"
@@ -56,6 +59,10 @@ object HapticTimeline {
         Haptic.AutocorrectUndone -> "Backspace undid a change"
         Haptic.HeldSymbol -> "A held letter became its symbol"
         Haptic.Expansion -> "An emoji or snippet came in"
+        Haptic.AltSymbol -> "Alt typed a symbol"
+        Haptic.PanelSymbol -> "The Sym panel typed a symbol"
+        Haptic.CtrlShortcut -> "A Ctrl shortcut"
+        Haptic.CopyNothing -> "Copy with nothing selected"
         Haptic.BarWord -> "You tapped a word on the bar"
         Haptic.MenuOpen -> "The word menu opened"
         Haptic.MenuMark -> "The menu mark moved"
@@ -85,11 +92,11 @@ object HapticTimeline {
 
     /**
      * The live timeline's top line for [event], with [name] its haptic's name: the name and family, or for a held delete its
-     * word and length, "Held delete word 5 · Texture 13 ms", and "no fade" when the lab's fade switch was off.
+     * word and pulses, "Held delete word 5 · Crunch 6, 12, 6 ms", and "no fade" when the lab's fade switch was off.
      */
     fun title(event: HapticEvent, name: String) = when {
         event.word != null ->
-            "Held delete word ${event.word} · ${event.haptic.family.label} ${event.pattern.first()} ms" + if (event.fading) "" else " · no fade"
+            "Held delete word ${event.word} · ${event.haptic.family.label} ${event.pattern.joinToString(", ")} ms" + if (event.fading) "" else " · no fade"
         event.dot != null -> "Hold's dot ${event.dot} of ${event.dots} · ${event.haptic.family.label} ${event.pattern.first()} ms"
         else -> "$name · ${event.haptic.family.label}"
     }

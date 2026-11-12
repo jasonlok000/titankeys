@@ -44,6 +44,12 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
     Saved("saved", "Saved", listOf(20, 40, 20, 40, 50)),
     /** Long, short, short: a firm hit that trails off, Saved's mirror. The word menu took the word away. */
     Removed("removed", "Removed", listOf(50, 40, 20, 40, 20)),
+    /**
+     * Two tiny pulses close together: a grain, felt as one gritty tick, for keys crossed while a stroke is clearly a delete
+     * flick, and for each word a held delete takes (owner, 2026-11-12). Its gap is under rule 4's 35 ms on purpose, so the two
+     * read as one rough tick, not two. Each pulse is 9 ms, the least this motor shows well (see Held delete fade's floor).
+     */
+    Crunch("crunch", "Crunch", listOf(9, 12, 9)),
     /** A rising run of three: the guide's celebrations. */
     Celebrate("celebrate", "Celebrate", listOf(15, 40, 22, 40, 35));
 
@@ -51,7 +57,7 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
      * Texture and Boundary come in fast runs, so they keep their own pace and never block a message. Every other family is a
      * message: something happened.
      */
-    val texture get() = this == Texture || this == Boundary
+    val texture get() = this == Texture || this == Boundary || this == Crunch
 
     companion object {
         fun of(id: String) = entries.firstOrNull { it.id == id }
@@ -74,7 +80,11 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     DeleteFlick("delete_flick", HapticGroup.Delete, Family.GoneFlick),
     /** A flick's dots, or a hold's at its lift, going into the caret: a light tick as each one lands. */
     DeleteDotsLand("delete_dots_land", HapticGroup.Delete, Family.Texture),
-    DeleteWord("delete_word", HapticGroup.Delete, Family.Texture),
+    DeleteWord("delete_word", HapticGroup.Delete, Family.Crunch),
+    /** Each key a stroke crosses while it is clearly a delete flick: a crunch, in the place of swiping's tick. See [FlickCrunch]. */
+    DeleteCrunch("delete_crunch", HapticGroup.Delete, Family.Crunch),
+    /** A stroke that crunched stopped being a flick: one firm tick, and swiping's ticks from there. */
+    DeleteBreak("delete_break", HapticGroup.Delete, Family.Boundary),
     /** A flick with nothing at all to delete: nothing happened. */
     DeleteNothing("delete_nothing", HapticGroup.Delete, Family.No),
     /** A held delete took the last word: it hit the start of the text. It plays once, and the hold stays quiet after it. */
@@ -113,6 +123,17 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     HeldSymbol("held_symbol", HapticGroup.Changes, Family.Change),
     /** A :name: became its emoji, or a snippet's shortcut its text. */
     Expansion("expansion", HapticGroup.Changes, Family.Change),
+    /**
+     * Alt with a letter typed its symbol: the same feel as holding the letter for it. Only with the Haptics lab's experiment
+     * "Haptics for shortcuts" on.
+     */
+    AltSymbol("alt_symbol", HapticGroup.Changes, Family.Change),
+    /** A symbol typed from the Sym panel: the same feel again. Only with "Haptics for shortcuts" on. */
+    PanelSymbol("panel_symbol", HapticGroup.Changes, Family.Change),
+    /** Ctrl with C, X, V, Z or A: copy, cut, paste, undo or select all. Only with "Haptics for shortcuts" on. */
+    CtrlShortcut("ctrl_shortcut", HapticGroup.Changes, Family.Confirm),
+    /** Ctrl + C with nothing selected copies nothing: it says so, always. */
+    CopyNothing("copy_nothing", HapticGroup.Changes, Family.No),
 
     BarWord("bar_word", HapticGroup.Bar, Family.Confirm),
     MenuOpen("menu_open", HapticGroup.Bar, Family.Confirm),
@@ -184,6 +205,11 @@ object HapticPalette {
     /** What the debug lab's sliders allow: pulses from 4 to 120 ms, gaps from 35 to 200 ms, so no gap breaks the rulebook. */
     val PULSE_MILLIS = 4L..120L
     val GAP_MILLIS = MIN_GAP_MILLIS..200L
+    /** A crunch's gap, under rule 4 on purpose: its two pulses are one grain. The lab's slider keeps it in this range. */
+    val GRAIN_GAP_MILLIS = 4L..30L
+
+    /** What [family]'s gaps may be: rule 4's, or a crunch's grain. */
+    fun gapRange(family: Family) = if (family == Family.Crunch) GRAIN_GAP_MILLIS else GAP_MILLIS
 
     /** How long [pattern] runs, in ms. */
     fun millis(pattern: List<Long>) = pattern.sum()
@@ -203,7 +229,7 @@ object HapticPalette {
      * range. A tried pattern that doesn't fit is ignored.
      */
     fun fits(family: Family, pattern: List<Long>) = pattern.size == family.pattern.size &&
-        pulses(pattern).all { it in PULSE_MILLIS } && gaps(pattern).all { it in GAP_MILLIS }
+        pulses(pattern).all { it in PULSE_MILLIS } && gaps(pattern).all { it in gapRange(family) }
 
     /** A stored pattern, "15,40,35", or null if it isn't one. */
     fun parse(text: String?): List<Long>? {
@@ -253,6 +279,14 @@ object HeldDeleteFade {
     const val PLAY_WORDS = 10
 
     /** How long the tick for [word] of a hold plays, in ms, counting from 1. Null when thinning leaves it out. */
+    /**
+     * A held word's crunch as the fade has it: each of [crunch]'s pulses shortened as the fade's [millis] is from its [start],
+     * never under 6 ms, with its grain's gap as it is.
+     */
+    fun crunch(crunch: List<Long>, millis: Long, start: Long): List<Long> = crunch.mapIndexed { index, part ->
+        if (index % 2 == 1) part else maxOf(6L, Math.round(part.toDouble() * millis / start.coerceAtLeast(1)))
+    }
+
     fun lengthFor(word: Int, settings: Settings): Long? {
         require(word >= 1) { "Words count from 1" }
         val fade = settings.fitted()
@@ -279,8 +313,9 @@ object HeldDeleteFade {
     /** "17 down to 9 ms over 8 words, then 1 in 2". */
     fun describe(settings: Settings): String {
         val fade = settings.fitted()
-        val then = if (fade.thinEvery == 1) "then all" else "then 1 in ${fade.thinEvery}"
-        return "${fade.start} down to ${fade.floor} ms over ${fade.words} ${if (fade.words == 1) "word" else "words"}, $then"
+        // No-break spaces keep each number with its word, so a line never ends on "1 in" with the 2 alone below it.
+        val then = if (fade.thinEvery == 1) "then all" else "then 1 in ${fade.thinEvery}"
+        return "${fade.start} down to ${fade.floor} ms over ${fade.words} ${if (fade.words == 1) "word" else "words"}, $then"
     }
 
     /** Stored as "17,9,8,2". */
@@ -549,6 +584,22 @@ object HapticFeed {
     const val KEEP = 64
 }
 
+/** What a Ctrl shortcut plays, for the Haptics lab's experiment "Haptics for shortcuts" (owner, 2026-11-12). */
+object ShortcutFeel {
+    /** The Ctrl shortcuts that confirm with the experiment on: copy, cut, paste, undo and select all. */
+    val CONFIRMED = setOf('C', 'X', 'V', 'Z', 'A')
+
+    /**
+     * The haptic for Ctrl with [letter], or null. Ctrl + C with nothing [selected] copies nothing, and plays no whether or not the
+     * experiment is [on]; [selected] is null when the field hasn't said. The others play confirm only while it is on.
+     */
+    fun of(letter: Char?, selected: Boolean?, on: Boolean): Haptic? = when {
+        letter == 'C' && selected == false -> Haptic.CopyNothing
+        on && letter in CONFIRMED -> Haptic.CtrlShortcut
+        else -> null
+    }
+}
+
 /**
  * The rule for hitting a wall, the same in all three gestures: the first time a gesture meets its limit it plays [Haptic]s of
  * the Wall family, and while the finger keeps pushing it stays quiet. Only after it has moved away does the next hit play again.
@@ -651,10 +702,11 @@ class Haptics(private val context: Context) {
      * but debug, each word plays plain texture, as before the fade.
      */
     fun heldDeleteWord(word: Int): HapticResult {
-        if (!heldDeleteFading(context)) return attempt(Haptic.DeleteWord, pattern(context, Haptic.DeleteWord.family), word, fading = false)
+        val crunch = pattern(context, Family.Crunch)
+        if (!heldDeleteFading(context)) return attempt(Haptic.DeleteWord, crunch, word, fading = false)
         val fade = heldDeleteFade(context)
         val millis = HeldDeleteFade.lengthFor(word, fade)
-        return attempt(Haptic.DeleteWord, listOf(millis ?: fade.fitted().floor), word, thinned = millis == null)
+        return attempt(Haptic.DeleteWord, HeldDeleteFade.crunch(crunch, millis ?: fade.fitted().floor, fade.start), word, thinned = millis == null)
     }
 
     private fun report(haptic: Haptic, pattern: List<Long>, result: HapticResult, word: Int? = null, fading: Boolean = true,
@@ -677,7 +729,13 @@ class Haptics(private val context: Context) {
         var next = 0
         previewTicks.schedule(ticks.map { it.at }) {
             val tick = ticks[next++]
-            val pattern = if (tick.kind == HoldTicks.Kind.Flick) pattern(context, Family.GoneFlick) else listOf(tick.millis)
+            val pattern = when (tick.kind) {
+                HoldTicks.Kind.Flick -> pattern(context, Family.GoneFlick)
+                // A held word crunches, shortened as the fade has it.
+                HoldTicks.Kind.Word -> HeldDeleteFade.crunch(pattern(context, Family.Crunch), tick.millis,
+                    if (fading) heldDeleteFade(context).start else tick.millis)
+                HoldTicks.Kind.Dot -> listOf(tick.millis)
+            }
             if (tick.plays) vibrate(pattern)
             val result = when (tick.skipped) {
                 null -> HapticResult.Played
@@ -775,8 +833,9 @@ class Haptics(private val context: Context) {
 
     fun begin(sample: Sample?) = ticks.begin(sample)
 
-    fun move(samples: List<Sample>) {
-        ticks.move(samples)?.let(::play)
+    /** The swipe moved. While it is clearly a delete flick, [crunch], a key it crosses crunches instead of ticking. */
+    fun move(samples: List<Sample>, crunch: Boolean = false) {
+        ticks.move(samples)?.let { play(if (crunch && it == Haptic.SwipeKey) Haptic.DeleteCrunch else it) }
     }
 
     /**
@@ -853,38 +912,51 @@ class Haptics(private val context: Context) {
         private const val ZONE_TICKS = "debug_delete_zone_ticks"
 
         /**
+         * The Haptics lab's experiment "Haptics for shortcuts": Alt with a letter, the Sym panel and Ctrl's shortcuts play what
+         * their touch or held twin does. Off by default (owner, 2026-11-12), and only TitanKeys Debug can turn it on.
+         */
+        fun shortcutHaptics(context: Context) = debug(context) && preferences(context).getBoolean(SHORTCUT_HAPTICS, false)
+
+        fun tryShortcutHaptics(context: Context, on: Boolean) {
+            check(debug(context)) { "Only TitanKeys Debug has the lab's experiments" }
+            preferences(context).edit().putBoolean(SHORTCUT_HAPTICS, on).apply()
+        }
+
+        private const val SHORTCUT_HAPTICS = "debug_shortcut_haptics"
+
+        /**
          * The Haptics lab's list "Delete glow": where a held delete's glow goes. Only TitanKeys Debug reads it, and every other
          * build has the right edge, the default.
          */
-        fun deleteGlow(context: Context): GestureDisplay.DeleteGlow =
-            if (!debug(context)) GestureDisplay.DeleteGlow.RightEdge
-            else GestureDisplay.DeleteGlow.of(preferences(context).getString(DELETE_GLOW, null))
+        fun deleteGlow(context: Context): String? = if (!debug(context)) null else preferences(context).getString(DELETE_GLOW, null)
 
-        fun tryDeleteGlow(context: Context, place: GestureDisplay.DeleteGlow) {
+        /** Stores the place by its id, as [GestureDisplay.DeleteGlow] names it; the keyboard reads it as each hold starts. */
+        fun tryDeleteGlow(context: Context, id: String) {
             check(debug(context)) { "Only TitanKeys Debug has the lab's experiments" }
-            preferences(context).edit().putString(DELETE_GLOW, place.id).apply()
+            preferences(context).edit().putString(DELETE_GLOW, id).apply()
         }
 
         private const val DELETE_GLOW = "debug_delete_glow"
 
         /**
-         * In TitanKeys Debug, puts how long a single flick's dots sit on the bar, as the Haptics lab tried it, into
-         * [GestureDisplay.triedFlickHold], or the default when none is tried. Every other build never looks, and keeps the default.
+         * How long a single flick's dots sit on the bar, as the Haptics lab tried it, in ms, or null for the default. Only
+         * TitanKeys Debug looks: every other build returns null without looking. The keyboard hands it to the bar.
          */
-        fun readFlickHold(context: Context) {
-            if (!debug(context)) return
-            GestureDisplay.triedFlickHold = preferences(context).getLong(FLICK_HOLD_KEY, -1L).takeIf { it >= 0 }
-                ?.coerceIn(GestureDisplay.FLICK_HOLD_RANGE)?.toFloat()
+        fun readFlickHold(context: Context): Long? {
+            if (!debug(context)) return null
+            return preferences(context).getLong(FLICK_HOLD_KEY, -1L).takeIf { it >= 0 }?.coerceIn(FLICK_HOLD_RANGE)
         }
 
         /** Tries [millis] as how long a flick's dots sit on the bar, or puts the default back with null. Debug build only. */
         fun tryFlickHold(context: Context, millis: Long?) {
             check(debug(context)) { "Only TitanKeys Debug can try how long the dots wait" }
             preferences(context).edit().apply {
-                if (millis == null) remove(FLICK_HOLD_KEY) else putLong(FLICK_HOLD_KEY, millis.coerceIn(GestureDisplay.FLICK_HOLD_RANGE))
+                if (millis == null) remove(FLICK_HOLD_KEY) else putLong(FLICK_HOLD_KEY, millis.coerceIn(FLICK_HOLD_RANGE))
             }.commit()
-            readFlickHold(context)
         }
+
+        /** The waits that the Haptics lab can try for a single flick's dots, in ms. */
+        val FLICK_HOLD_RANGE = 0L..600L
 
         private const val FLICK_HOLD_KEY = "debug_flick_dots_wait"
 

@@ -59,6 +59,8 @@ class AtlasIme : InputMethodService() {
     private lateinit var haptics: Haptics
     /** The cursor plays gone once each time it reaches an end of the text. */
     private val cursorSteps = CursorSteps()
+    /** Whether the stroke crunches as a delete flick: see [FlickCrunch]. */
+    private val flickCrunch = FlickCrunch()
     /** Selecting and a held delete hit their walls by the same rule as steering's ends: see [WallHits]. */
     private val selectionWall = WallHits()
     private val deleteWall = WallHits()
@@ -403,7 +405,7 @@ class AtlasIme : InputMethodService() {
             deleteWall.left()
             strip?.gesture?.let { gesture ->
                 // Where its glow goes, as the Haptics lab's switch has it in TitanKeys Debug.
-                gesture.deleteGlowPlace = Haptics.deleteGlow(this)
+                gesture.deleteGlowPlace = GestureDisplay.DeleteGlow.of(Haptics.deleteGlow(this))
                 gesture.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), deleteHold.pace,
                     currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0), flick.points.lastOrNull { it.valid }?.x)
             }
@@ -1679,7 +1681,7 @@ class AtlasIme : InputMethodService() {
             return
         }
         when (action) {
-            Strip.Action.OpenSelected -> strip?.selected?.let { openMenu(HeldWord(it, "")) }
+            Strip.Action.OpenSelected -> selectedWord?.let { openMenu(HeldWord(it, "")) }
             Strip.Action.Close -> {
                 // Back closed the menu by hand. It closing for any other reason, such as typing, plays nothing.
                 if (held != null) haptics.play(Haptic.MenuClosed)
@@ -1745,12 +1747,20 @@ class AtlasIme : InputMethodService() {
 
     /** One word selected in the field shows alone on the strip, so that its menu can save or forget it. */
     private fun showSelectedWord(start: Int, end: Int) {
-        val length = end - start
-        val word = if (start < 0 || length !in 1..MAX_SELECTED_WORD) null
-            else currentInputConnection?.getSelectedText(0)?.toString()?.takeIf { SELECTED_WORD.matches(it) }
-        if (word == null && menuWord?.typed == "" && strip?.notice is Strip.Notice.Menu) closeMenu()
-        strip?.selected = word
+        // One rule, kept in step with the selection (owner, 2026-11-12): while text is selected the bar shows it alone, and with
+        // nothing selected it shows the suggestions. Only a single word opens its menu. See [WordSelection.shown].
+        val length = abs(end - start)
+        val text = if (start < 0 || length == 0) null else currentInputConnection?.let { connection ->
+            connection.getSelectedText(0) ?: connection.getSurroundingText(0, 0, 0)?.text?.takeIf { it.length == length }
+        }
+        val shown = WordSelection.shown(text, length)
+        selectedWord = shown?.takeIf { WordSelection.isWord(it) }
+        if (selectedWord == null && menuWord?.typed == "" && strip?.notice is Strip.Notice.Menu) closeMenu()
+        strip?.selected = shown
     }
+
+    /** The selected word, when the selection is one word, which its menu can save or forget; null for anything else. */
+    private var selectedWord: String? = null
 
     override fun onFinishInput() {
         // A word waiting to be forgotten is forgotten now, before the next field can offer it.
@@ -1900,6 +1910,8 @@ class AtlasIme : InputMethodService() {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
                 haptics.begin(samples.firstOrNull())
+                // Only where a delete flick would count can the stroke crunch.
+                flickCrunch.begin(!altOrPanel && field.words && pieces.canDelete(first.time) && guideAllows(GuideLesson.Flick))
                 endDeleteHold()
                 contact.down(first)
                 if (cursor.resume(first, composer.liftOffMillis.toLong())) {
@@ -1984,7 +1996,11 @@ class AtlasIme : InputMethodService() {
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
                 if (contact.swipes && !altOrPanel && guideAllows(GuideLesson.Swipe) && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
-                    || !isTapKey(Layout.keyAt(first.x, first.y)))) haptics.move(samples)
+                    || !isTapKey(Layout.keyAt(first.x, first.y)))) {
+                    // Clearly a delete flick, the keys it crosses crunch; once it stops being one, a break, then swiping's ticks.
+                    if (flickCrunch.move(contact.points)) haptics.play(Haptic.DeleteBreak)
+                    haptics.move(samples, flickCrunch.crunching)
+                }
                 Trace.touch(contact.points, false)
                 // A guide slide that doesn't teach swiping shows no word growing on the bar either.
                 if (guideAllows(GuideLesson.Swipe)) showSwipe()
@@ -2279,6 +2295,17 @@ class AtlasIme : InputMethodService() {
         }
     }
 
+    /**
+     * What a Ctrl shortcut plays, as [ShortcutFeel] has it: Ctrl + C with nothing selected plays no, always, as it copies nothing;
+     * with the lab's "Haptics for shortcuts" on, copy, cut, paste, undo and select all confirm. A key held down plays once.
+     */
+    private fun shortcutFeel(event: KeyEvent) {
+        if (!event.isCtrlPressed || event.isMetaPressed || event.repeatCount > 0) return
+        val letter = if (event.keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) 'A' + (event.keyCode - KeyEvent.KEYCODE_A) else null
+        val selected = if (lastSelectionStart < 0 || lastSelectionEnd < 0) null else lastSelectionStart != lastSelectionEnd
+        ShortcutFeel.of(letter, selected, Haptics.shortcutHaptics(this))?.let(haptics::play)
+    }
+
     /** Keeps where the cursor is, when nothing is selected, so a double space after a select can put it back there. */
     private fun rememberCursor() {
         if (lastSelectionStart >= 0 && lastSelectionStart == lastSelectionEnd) cursorBeforeSelect = lastSelectionStart
@@ -2334,6 +2361,8 @@ class AtlasIme : InputMethodService() {
 
     /** Types a symbol or emoji from the panel, then goes back to normal typing. */
     private fun typePanelItem(item: String) {
+        // With the lab's "Haptics for shortcuts" on, a symbol from the Sym panel feels like holding a letter for it.
+        if (modifiers.panel == Modifiers.Panel.Symbols && Haptics.shortcutHaptics(this)) haptics.play(Haptic.PanelSymbol)
         if (field.exact) commitExact(item) else composer.symbol(item)
         if (modifiers.panel == Modifiers.Panel.Emoji) emoji?.use(item)?.let { recents ->
             getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
@@ -2546,7 +2575,7 @@ class AtlasIme : InputMethodService() {
                         val gesture = strip?.gesture
                         gesture?.speedUp = Haptics.dotsSpeedUp(this)
                         // How long the dots wait on the bar, which the Haptics lab can try live in TitanKeys Debug.
-                        Haptics.readFlickHold(this)
+                        GestureDisplay.triedFlickHold = Haptics.readFlickHold(this)?.toFloat()
                         gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
@@ -2839,6 +2868,7 @@ class AtlasIme : InputMethodService() {
         }
         if (event.isCtrlPressed && event.keyCode != KeyEvent.KEYCODE_DEL || event.isMetaPressed) {
             modifiers.useHeld()
+            shortcutFeel(event)
             command(event)
             return true
         }
@@ -2868,6 +2898,9 @@ class AtlasIme : InputMethodService() {
                     return true
                 }
                 val text = String(Character.toChars(typed))
+                // With the lab's "Haptics for shortcuts" on, Alt's symbol feels like holding the letter for it.
+                val alt = event.isAltPressed || modifiers.alt != Modifiers.Level.Off
+                if (alt && !Character.isLetter(typed) && Haptics.shortcutHaptics(this)) haptics.play(Haptic.AltSymbol)
                 modifiers.consume()
                 // Controlled insertion avoids unacknowledged app key updates overtaking later input.
                 composer.type(text)
@@ -3230,10 +3263,6 @@ class AtlasIme : InputMethodService() {
         private const val CLIP_OFFER_MILLIS = 60_000L
         /** How long "Saved" shows on the strip after Save in a word's menu. */
         private const val SAVED_NOTICE_MILLIS = 2000L
-        /** A selection longer than this is no single word. */
-        private const val MAX_SELECTED_WORD = 32
-        /** One word: letters, and apostrophes between them, as in "Lok" or "don't". */
-        private val SELECTED_WORD = Regex("\\p{L}+(['’]\\p{L}+)*")
         /** How long the strip offers Undo after you hold a word to forget it. */
         private const val FORGET_UNDO_MILLIS = 4000L
         /** The field of a returning window started within 30 ms of its empty start. */

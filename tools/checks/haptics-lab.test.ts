@@ -206,8 +206,8 @@ test("the held delete fade is a debug experiment: release never fades, and the l
   expect(haptics).toMatch(/fun heldDeleteFading\(context: Context\): Boolean \{\s+if \(!debug\(context\)\) return false\n/);
   expect(haptics).toMatch(/fun fadeOn\(context: Context, on: Boolean\) \{\s+check\(debug\(context\)\)/);
   expect(haptics).toContain('private const val FADE_ON_KEY = "debug_held_delete_fade_on"');
-  // Off, a held word plays the plain texture tick, as before the fade.
-  expect(haptics).toMatch(/fun heldDeleteWord\(word: Int\): HapticResult \{\s+if \(!heldDeleteFading\(context\)\) return attempt\(Haptic\.DeleteWord, pattern\(context, Haptic\.DeleteWord\.family\), word, fading = false\)/);
+  // Off, a held word plays the plain crunch, with no fade.
+  expect(haptics).toMatch(/fun heldDeleteWord\(word: Int\): HapticResult \{\s+val crunch = pattern\(context, Family\.Crunch\)\s+if \(!heldDeleteFading\(context\)\) return attempt\(Haptic\.DeleteWord, crunch, word, fading = false\)/);
   const users = [...new Bun.Glob("**/*.{kt,java}").scanSync(join(root, "android"))].filter(path =>
     read(join("android", path)).includes("Haptics.fadeOn"));
   expect(users.map(path => path.replaceAll("\\", "/"))).toEqual(["kotlin/com/atlas/keyboard/HapticsLab.kt"]);
@@ -228,16 +228,19 @@ test("a held delete waits 400 ms, with no slider for it", () => {
 test("only a debug package reads or saves a tried flick dots wait, and the lab's page tries and plays it", () => {
   const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
   // Every other build returns before it looks at the stored wait, so the bar keeps its default.
-  expect(haptics).toMatch(/fun readFlickHold\(context: Context\) \{\s+if \(!debug\(context\)\) return\n/);
+  expect(haptics).toMatch(/fun readFlickHold\(context: Context\): Long\? \{\s+if \(!debug\(context\)\) return null\n/);
   expect(haptics).toMatch(/fun tryFlickHold\(context: Context, millis: Long\?\) \{\s+check\(debug\(context\)\)/);
   expect(haptics.match(/getLong\(FLICK_HOLD_KEY/g)?.length).toBe(1);
-  expect(haptics.match(/GestureDisplay\.triedFlickHold = /g)?.length).toBe(1);
+  // Only what Haptics reads sets the bar's wait.
+  for (const path of ["AtlasIme.kt", "HapticsLab.kt"].map(name => `android/kotlin/com/atlas/keyboard/${name}`))
+    for (const line of read(path).split("\n").filter(line => line.includes("GestureDisplay.triedFlickHold = ")))
+      expect(line).toContain("= Haptics.readFlickHold(");
   const display = read("android/kotlin/com/atlas/keyboard/GestureDisplay.kt");
   expect(display).toContain("fun flickHoldMillis() = triedFlickHold ?: FLICK_HOLD");
-  expect(display).toContain("val FLICK_HOLD_RANGE = 0L..600L");
+  expect(haptics).toContain("val FLICK_HOLD_RANGE = 0L..600L");
   // Only a single flick's dots wait the tried time; a lifted hold's keep the default.
   expect(display).toContain("val wait = if (b == 0 && fromHold) FLICK_HOLD else flickHoldMillis()");
-  expect(read("android/kotlin/com/atlas/keyboard/AtlasIme.kt")).toMatch(/Haptics\.readFlickHold\(this\)/);
+  expect(read("android/kotlin/com/atlas/keyboard/AtlasIme.kt")).toContain("GestureDisplay.triedFlickHold = Haptics.readFlickHold(this)?.toFloat()");
   // On the lab's main page, in Experiments, where the owner looks, with Play.
   const page = read("app/settings/haptics-lab.tsx");
   const experiments = page.slice(page.indexOf('<Section title="Experiments">'), page.indexOf('<Section title="Patterns">'));
@@ -246,7 +249,8 @@ test("only a debug package reads or saves a tried flick dots wait, and the lab's
   expect(experiments).toContain('<Toggle label="Tick at delete zones"');
   // The places a held delete's glow can go, as a list, with the right edge the default in every other build.
   expect(page).toContain('<Section title="Delete glow">');
-  expect(haptics).toMatch(/if \(!debug\(context\)\) GestureDisplay\.DeleteGlow\.RightEdge/);
+  expect(haptics).toContain("fun deleteGlow(context: Context): String? = if (!debug(context)) null else");
+  expect(read("android/kotlin/com/atlas/keyboard/GestureDisplay.kt")).toContain("fun of(id: String?) = entries.firstOrNull { it.id == id } ?: RightEdge");
   expect(page).toContain("const WAIT_MAX = 600;");
 });
 

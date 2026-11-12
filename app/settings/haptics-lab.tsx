@@ -52,6 +52,8 @@ function Lab({ lab }: { lab: HapticsLab }) {
       </Stack>
       <Toggle label="Tick at delete zones" value={lab.experiments.deleteZoneTicks ?? true}
         onChange={on => void setLabExperiment("deleteZoneTicks", on)} />
+      <Toggle label="Haptics for shortcuts" value={lab.experiments.shortcutHaptics ?? false}
+        onChange={on => void setLabExperiment("shortcutHaptics", on)} />
     </Section>
     <Section title="Delete glow">
       <SettingsChoices value={lab.deleteGlow} options={lab.deleteGlows.map(place => ({ value: place.id, label: place.label }))}

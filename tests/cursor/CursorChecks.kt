@@ -15,6 +15,7 @@ private const val GAP_MILLIS = 80L
 fun main() {
     twoQuickTapsSelect()
     aDoubleSpaceCollapsesASelection()
+    theBarShowsWhatIsSelected()
     tapsWithNoWordPickNothing()
     steeringNeedsSomeText()
     worksAnywhereOnTheRow()
@@ -1184,4 +1185,24 @@ private fun aDoubleSpaceCollapsesASelection() {
     same(WordSelection.collapseTo(4, 15, 15), 15, "and its end")
     same(WordSelection.collapseTo(4, 15, null), 15, "Not known: the selection's end")
     same(WordSelection.collapseTo(4, 15, 30), 15, "Outside the selection, as after another select: its end")
+}
+
+/**
+ * One rule for the bar while text is selected (owner, 2026-11-12): it shows the selection alone, as one word or several, and
+ * with nothing selected it shows the suggestions. Only a single word opens its menu.
+ */
+private fun theBarShowsWhatIsSelected() {
+    same(WordSelection.shown("quick", 5), "quick", "One word shows")
+    same(WordSelection.shown("quick ", 6), "quick", "with the space a select took next to it")
+    same(WordSelection.shown(" quick,", 7), "quick", "or a comma")
+    same(WordSelection.shown("quick  brown\nfox", 16), "quick brown fox", "Several words show too, with their spaces as one")
+    same(WordSelection.shown("", 0), null, "Nothing selected: the suggestions")
+    same(WordSelection.shown("quick", 0), null, "A collapsed selection never keeps the old word")
+    same(WordSelection.shown(null, 5), null, "A field that doesn't give the text: the suggestions")
+    same(WordSelection.shown(" , ", 3), null, "Only spaces and marks: the suggestions")
+    same(WordSelection.isWord("quick"), true, "One word opens its menu")
+    same(WordSelection.isWord("don't"), true, "with an apostrophe too")
+    same(WordSelection.isWord("quick brown"), false, "Several words don't")
+    same(WordSelection.isWord("42"), false, "nor a number")
+    same((WordSelection.shown("a".repeat(500), 500)?.length ?: 0) <= 200, true, "A long selection is cut, then fits the bar")
 }

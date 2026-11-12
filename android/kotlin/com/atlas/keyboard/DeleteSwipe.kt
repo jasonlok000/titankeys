@@ -126,6 +126,57 @@ internal fun isDeleteWordSwipe(points: List<Sample>): Boolean {
         last.y >= MIDDLE_ROW_TOP && last.y < INNER_END_BOTTOM && abs(last.y - first.y) <= INNER_TILT && wander <= INNER_WANDER
 }
 
+/**
+ * While a stroke is clearly a delete flick, the keys it crosses crunch instead of ticking. It becomes one once it has gone this
+ * many key widths from where it started, inside the delete zone, no higher than the middle row, and got there within
+ * [CRUNCH_MILLIS], while passing every flick rule so far. Fitted to the owner's raw logs (2026-11-12): of 1,226 real flicks
+ * that went this far, 80% get there this fast, while of 165 word swipes from the delete zone, 20 do, all from the edge by L and
+ * Backspace. A start on P, in the top row, never crunches. See tools in .dev/swipe-baseline.
+ */
+private const val CRUNCH_KEYS = 1.5f
+private const val CRUNCH_MILLIS = 60L
+private const val CRUNCH_TOP = .2f
+
+/**
+ * Whether a stroke crunches, as its points come: [Waiting] until it has gone [CRUNCH_KEYS], then [Crunching] while it is clearly
+ * a flick, or [Plain] if it never was one. A crunching stroke that stops being a flick [Broken]s once, and ticks plainly after.
+ * It has no Android parts, so the checks can run it with real strokes.
+ */
+internal class FlickCrunch {
+    enum class State { Waiting, Crunching, Plain, Broken }
+
+    var state = State.Waiting
+        private set
+    val crunching get() = state == State.Crunching
+
+    /** A new stroke. [allowed] is false where a delete flick would not count now, so it never crunches. */
+    fun begin(allowed: Boolean = true) {
+        state = if (allowed) State.Waiting else State.Plain
+    }
+
+    /** The stroke so far, [points], all of its valid ones. True when it has just stopped being a flick: the break. */
+    fun move(points: List<Sample>): Boolean {
+        val first = points.firstOrNull() ?: return false
+        val last = points.last()
+        when (state) {
+            State.Waiting -> {
+                if (!startsDeleteFlick(first.x, first.y) || first.y < CRUNCH_TOP) {
+                    state = State.Plain
+                    return false
+                }
+                if (hypot((last.x - first.x) * 10, (last.y - first.y) * 4) < CRUNCH_KEYS) return false
+                state = if (last.time - first.time <= CRUNCH_MILLIS && isDeleteWordSwipe(points)) State.Crunching else State.Plain
+            }
+            State.Crunching -> if (!isDeleteWordSwipe(points)) {
+                state = State.Broken
+                return true
+            }
+            State.Plain, State.Broken -> Unit
+        }
+        return false
+    }
+}
+
 /** The numbers above, for the raw input log. */
 internal val deleteSwipeTuning: Map<String, Any> get() = mapOf(
     "rightEdge" to RIGHT_EDGE, "edgeStartTop" to EDGE_START_TOP, "edgeStartBottom" to EDGE_START_BOTTOM,
@@ -135,7 +186,7 @@ internal val deleteSwipeTuning: Map<String, Any> get() = mapOf(
     "minTravel" to MIN_TRAVEL, "turnBack" to TURN_BACK, "deleteRectangle" to DELETE_RECTANGLE,
     "deleteHoldMillis" to deleteHoldPauseMillis(), "deleteHoldKeys" to HOLD_KEYS, "deleteRepeatSlowMillis" to REPEAT_SLOW_MILLIS,
     "deleteRepeatFastMillis" to REPEAT_FAST_MILLIS, "deleteRepeatShortKeys" to REPEAT_SHORT_KEYS,
-    "deleteRepeatLongKeys" to REPEAT_LONG_KEYS, "deletePauseKeys" to PAUSE_KEYS, "deleteMaxPathKeys" to MAX_PATH_KEYS, "deleteMaxMillis" to MAX_FLICK_MILLIS,
+    "deleteRepeatLongKeys" to REPEAT_LONG_KEYS, "crunchKeys" to CRUNCH_KEYS, "crunchMillis" to CRUNCH_MILLIS, "crunchTop" to CRUNCH_TOP, "deletePauseKeys" to PAUSE_KEYS, "deleteMaxPathKeys" to MAX_PATH_KEYS, "deleteMaxMillis" to MAX_FLICK_MILLIS,
 )
 
 /** How long the stroke took to arrive where it ends: a finger that then rests there, for a hold, does not make it slower. */

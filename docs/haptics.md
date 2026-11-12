@@ -17,7 +17,7 @@
    - Short, short, long means saved: two light taps settle into a firm one.
    - Long, short, short means removed: a firm hit that trails off.
 3. **Strength is length only.** More important or more destructive means longer.
-4. **Gaps.** At least 35 ms between pulses, so each one reads on its own.
+4. **Gaps.** At least 35 ms between pulses, so each one reads on its own. Crunch is the one exception: its two pulses are meant to be felt as one gritty tick.
 5. **No prebaked effects at all.** Everything is our own waveform, `VibrationEffect.createWaveform` with timings. The Titan has no strength control, so every pulse is at the default strength. A single pulse may be a one-shot.
 6. **Repeats.** A message can't repeat within 300 ms. Texture can.
 7. **Boundaries.** A space, or a selection grabbing a word, gets one stronger pulse of about 30 ms instead of a texture tick.
@@ -32,16 +32,17 @@ Patterns are on and off in ms, starting with on.
 
 | Family | Pattern | Plays for |
 |---|---|---|
-| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, words in a held delete (fading, below), the marked button in the word menu or a panel |
-| **Boundary** | 30 | The cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel, a long delete's finger going into the pause zone or reaching the top-speed line |
-| **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
-| **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol |
+| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, the marked button in the word menu or a panel |
+| **Crunch** | 9, 12, 9 | Keys crossed while a stroke is clearly a delete flick, and each word a long delete takes (fading, below) |
+| **Boundary** | 30 | A stroke that crunched stops being a flick, the cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel, a long delete's finger going into the pause zone or reaching the top-speed line |
+| **Confirm** | 15, 40, 35 | Ctrl's copy, cut, paste, undo and select all (lab experiment, below), tap a word on the bar, the word menu opens, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
+| **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol, and with the lab experiment below Alt's symbol and a Sym panel symbol |
 | **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar |
 | **Release** | 30 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked, Back closing the word menu |
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
 | **Gone** | 60 | The clipboard cleared |
 | **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
-| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, a flick with nothing to delete, taps on Space that find nothing to pick or steer |
+| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, a flick with nothing to delete, taps on Space that find nothing to pick or steer, Ctrl + C with nothing selected |
 | **Wall** | 40, 35, 20, 35, 12 | Steering hits the start or end of the text, selecting reaches either end, a long delete takes the last word |
 | **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations |
 | **Saved** | 20, 40, 20, 40, 50 | Save in the word menu, by I or the strip |
@@ -89,6 +90,18 @@ A hold's ticks and its dots' ticks are one sequence (`HoldTicks`): the flick tha
 
 The lab times a hold from its start, when the first word goes. The pause before that is the hold's own, 400 ms (`deleteHoldPauseMillis` in DeleteSwipe.kt), so a change to it moves the lab's hold too.
 
+### The crunch
+
+A stroke becomes a flick candidate once it is clearly a delete flick: 1.5 keys from where it started, inside the delete zone and no higher than the middle row, there within 60 ms, and passing every flick rule that can be checked so far (`FlickCrunch` in DeleteSwipe.kt). From then on the keys it crosses crunch instead of ticking. Before that they tick as a swipe. If it stops being a flick, by turning back, going too far or too slow, wandering or leaving the rows, one boundary tick plays, the break, and the rest of the stroke ticks as a swipe. The words a long delete takes crunch too.
+
+The numbers come from the owner's raw logs: of 1,226 real flicks that went 1.5 keys, 80% got there within 60 ms. Of 165 word swipes from the delete zone, 20 did, all from the edge by L and Backspace; they crunch briefly, then break. A word from P, in the top row, never crunches.
+
+A crunch's gap is 12 ms, under rule 4 on purpose: its two pulses are one grain. The lab's editor keeps its gap between 4 and 30 ms.
+
+### Haptics for shortcuts
+
+A lab experiment, off by default, for the owner to live with: should every way of doing something feel the same? With it on, Alt with a letter typing its symbol, and a symbol from the Sym panel, play change, as holding the letter does; Ctrl's copy, cut, paste, undo and select all play confirm. The gate's repeat rule keeps a fast run, such as a number typed with Alt, from piling up. Ctrl + C with nothing selected copies nothing, so it plays no, with the experiment on or off.
+
 ### A long delete's zones
 
 Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 keys out is its top-speed line, past which it goes no faster. The finger going into the pause zone plays one boundary tick, and so does reaching the top-speed line. Each plays once per crossing and nothing more while the finger stays. The lab's experiment "Tick at delete zones" turns them off; it is on to start with.
@@ -104,7 +117,8 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 - A delete flick: gone flick.
 - The flick's dots land in the caret: a light texture tick for every dot as it lands.
 - A long delete's lines turn into dots as you lift, and those tick the same way as each lands.
-- Each further word while you hold: texture. In TitanKeys Debug, with the fade on, it's shorter as more words go, then only every other one (see Held delete fade).
+- Keys crossed once the stroke is clearly a flick: crunch. If it stops being one: boundary, once, then swipe ticks (see The crunch).
+- Each further word while you hold: crunch. In TitanKeys Debug, with the fade on, its pulses are shorter as more words go, then only every other one plays (see Held delete fade).
 - A flick with nothing at all to delete: no.
 - A long delete takes the last word: wall, once. The delete stays quiet after it while you hold.
 - A long delete's finger goes into the pause zone, or reaches the top-speed line: boundary, once each time (see A long delete's zones).
@@ -126,6 +140,8 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 - Backspace right after a change puts back what you typed: back.
 - A held letter becomes its symbol: change.
 - A :name: becomes its emoji, or a snippet its text: change.
+- Alt with a letter types its symbol, or the Sym panel types one: change, only with the lab's Haptics for shortcuts on.
+- Ctrl's copy, cut, paste, undo or select all: confirm, only with Haptics for shortcuts on. Ctrl + C with nothing selected: no, always.
 
 **Bar**
 - Tap a word: confirm.

@@ -45,6 +45,28 @@ object WordSelection {
     fun collapseTo(start: Int, end: Int, before: Int?) = before?.takeIf { it in start..end } ?: end
 
     /**
+     * What the bar shows for a selection of [length] characters whose text is [text]: the text alone, without the spaces and
+     * marks at its ends, and with each run of spaces as one, so a word selected with a space or a comma next to it still shows as
+     * that word. Null with nothing selected, or when the field doesn't give the text: then the bar shows the suggestions.
+     */
+    fun shown(text: CharSequence?, length: Int): String? {
+        if (length <= 0 || text.isNullOrEmpty()) return null
+        val cut = if (text.length > MAX_SHOWN) text.subSequence(0, MAX_SHOWN) else text
+        val trimmed = cut.toString().trim { !it.isLetterOrDigit() }.replace(SPACES, " ")
+        return trimmed.ifEmpty { null }
+    }
+
+    /** One word: letters, and apostrophes between them, as in "Lok" or "don't". Only one word opens its menu. */
+    fun isWord(text: String) = text.length <= MAX_WORD && WORD.matches(text)
+
+    /** The bar shows no more of a selection than this; it shrinks to fit, then loses its end. */
+    private const val MAX_SHOWN = 200
+    /** A selection longer than this is no single word. */
+    private const val MAX_WORD = 32
+    private val WORD = Regex("\\p{L}+(['’]\\p{L}+)*")
+    private val SPACES = Regex("\\s+")
+
+    /**
      * The selection after one word of a word drag towards [direction], -1 or 1. It grows by a word. If it has already
      * grown the other way past the [anchorStart] to [anchorEnd] that the drag began with, it gives back a word instead.
      */

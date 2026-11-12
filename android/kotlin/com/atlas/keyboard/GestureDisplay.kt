@@ -260,8 +260,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private var baseTarget = 0f
     private var unitsTarget = 1f
     /**
-     * After a hold lifts, the words show again faded behind its dots: they come out from under the hold's full cover, from 1 to
-     * 0, over the same 150 ms as a flick's words fade, so they never switch on at once.
+     * 1 while a lifted hold's dots play: they stay on the hold's full cover until they have all gone in, so they never lie over
+     * the suggestions. 0 for a flick's, whose words show faded behind them.
      */
     var solid = 0f
         private set
@@ -1041,7 +1041,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 // The text is already gone; only the picture moves. The dots come in, stay a while, and go into the caret.
                 still = !motion
                 streamAt = (now - flourishAt).toFloat()
-                solid = if (fromHold && motion) 1f - easeOut((streamAt / scale / FLICK_FADE).coerceIn(0f, 1f)) else 0f
+                // A lifted hold's dots stay on the hold's full cover until they have all gone in, so its row of dots never lies
+                // over the suggestions, as it once crossed out a word (owner, 2026-11-12); the words then come back as usual.
+                solid = if (fromHold) 1f else 0f
                 val sinceStart = if (motion) streamAt / scale else dotsInMillis
                 dotsIn = (sinceStart / dotsInMillis).coerceIn(0f, 1f)
                 dotsOut = if (motion && dots > 0) {
@@ -1241,11 +1243,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
          */
         const val FLICK_IN = 120f
         const val FLICK_HOLD = 200f
-        /** The waits that TitanKeys Debug's Haptics lab can try for a single flick's dots, in ms. */
-        val FLICK_HOLD_RANGE = 0L..600L
         /**
-         * A wait tried in TitanKeys Debug's Haptics lab, or null for [FLICK_HOLD]. Only [Haptics.readFlickHold] sets it, and only in
-         * the debug build, so every other build always has [FLICK_HOLD].
+         * A wait tried in TitanKeys Debug's Haptics lab, or null for [FLICK_HOLD]. It is only set from [Haptics.readFlickHold],
+         * which every other build returns null from, so they always have [FLICK_HOLD].
          */
         @Volatile
         var triedFlickHold: Float? = null

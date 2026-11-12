@@ -22,7 +22,7 @@ fun main() {
     theTripleGlowFollowsTheHand()
     aTriplePickShowsOnlyACaret()
     aTriplePickWaitsForTheLift()
-    aHoldsWordsFadeInBehindItsDots()
+    aHoldsDotsNeverLieOverTheWords()
     anyNumberOfWordsShowsItsDots()
     quickFlicksMakeOneStream()
     longDotsSpeedUpWhenTried()
@@ -1258,21 +1258,23 @@ private fun aTriplePickWaitsForTheLift() {
 }
 
 /**
- * A hold covers the words fully; at the lift they come out from under it to the dots' faded look over about 150 ms, easing out,
- * so they never switch on at once.
+ * A hold covers the words fully, and its dots stay on that cover until they have all gone into the caret, so a row of dots never
+ * lies over the suggestions (owner, 2026-11-12: one crossed out a word). Then the words come back, easing in.
  */
-private fun aHoldsWordsFadeInBehindItsDots() {
+private fun aHoldsDotsNeverLieOverTheWords() {
     val display = GestureDisplay()
     display.deleteHeld(200, 1_000)
-    display.wordDeleted(1_000, 4)
+    repeat(3) { display.wordDeleted(1_000L + it, 4) }
     display.run(1_000, 1_200)
     display.deleteEnded(1_216)
     display.run(1_216, 1_216)
-    same(display.solid, 1f, "At the lift the words are still fully covered")
-    display.run(1_232, 1_280)
-    isTrue(display.solid > 0f && display.solid < .5f, "then they come out quickly at first: ${display.solid}")
-    display.run(1_296, 1_376)
-    same(display.solid, 0f, "and by about 150 ms they show faded behind the dots")
+    same(display.solid, 1f, "At the lift the words are fully covered")
+    val landed = display.dotLandsAt(display.dots - 1).toLong()
+    display.run(1_232, 1_216 + landed)
+    same(display.solid, 1f, "and stay covered while any dot is still on its way")
+    same(display.reveal, 1f, "the cover whole")
+    display.run(1_216 + landed + 16, 1_216 + landed + 2_000)
+    same(display.showing, false, "Once the dots are in, the words come back")
     val flick = GestureDisplay()
     flick.wordDeleted(1_000, 4)
     flick.run(1_000, 1_100)

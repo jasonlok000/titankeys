@@ -194,7 +194,7 @@ class HapticsLabActivity : Activity() {
         val bars = PatternBars(this)
         val plays = text("", 14f, LabColours.DIM)
         val sliders = family.pattern.indices.map { index ->
-            val range = if (index % 2 == 0) HapticPalette.PULSE_MILLIS else HapticPalette.GAP_MILLIS
+            val range = if (index % 2 == 0) HapticPalette.PULSE_MILLIS else HapticPalette.gapRange(family)
             text("", 14f, LabColours.CREAM) to slider(range) { millis -> tryMillis(family, index, millis) }
         }
         editing = Editing(family, bars, plays, sliders)

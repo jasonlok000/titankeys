@@ -53,6 +53,8 @@ fun main() {
     aWallBouncesAndSettles()
     allThreeGesturesHitAWallTheSameWay()
     aFlicksDotsWaitAsTheLabTries()
+    shortcutsFeelLikeTheirTwins()
+    aFlickCrunches()
     println("Haptic checks passed")
 }
 
@@ -67,7 +69,9 @@ private val table = mapOf(
     Haptic.TapKey to Family.Texture,
     Haptic.DeleteFlick to Family.GoneFlick,
     Haptic.DeleteDotsLand to Family.Texture,
-    Haptic.DeleteWord to Family.Texture,
+    Haptic.DeleteWord to Family.Crunch,
+    Haptic.DeleteCrunch to Family.Crunch,
+    Haptic.DeleteBreak to Family.Boundary,
     Haptic.DeleteNothing to Family.No,
     Haptic.DeleteRanOut to Family.Wall,
     Haptic.DeleteZone to Family.Boundary,
@@ -86,6 +90,10 @@ private val table = mapOf(
     Haptic.AutocorrectUndone to Family.Back,
     Haptic.HeldSymbol to Family.Change,
     Haptic.Expansion to Family.Change,
+    Haptic.AltSymbol to Family.Change,
+    Haptic.PanelSymbol to Family.Change,
+    Haptic.CtrlShortcut to Family.Confirm,
+    Haptic.CopyNothing to Family.No,
     Haptic.BarWord to Family.Confirm,
     Haptic.MenuOpen to Family.Confirm,
     Haptic.MenuMark to Family.Texture,
@@ -127,6 +135,7 @@ private val patterns = mapOf(
     Family.Back to listOf(35L, 40L, 15L),
     Family.No to listOf(25L, 40L, 25L, 40L, 25L),
     Family.Wall to listOf(40L, 35L, 20L, 35L, 12L),
+    Family.Crunch to listOf(9L, 12L, 9L),
     Family.Celebrate to listOf(15L, 40L, 22L, 40L, 35L),
     Family.Saved to listOf(20L, 40L, 20L, 40L, 50L),
     Family.Removed to listOf(50L, 40L, 20L, 40L, 20L),
@@ -142,7 +151,7 @@ private fun eachHapticPlaysItsFamily() {
 }
 
 private fun eachFamilyPlaysItsPattern() {
-    check(patterns.keys == Family.entries.toSet()) { "Fourteen families: ${Family.entries}" }
+    check(patterns.keys == Family.entries.toSet()) { "Fifteen families: ${Family.entries}" }
     for ((family, pattern) in patterns) check(family.pattern == pattern) { "$family plays ${family.pattern}, not $pattern" }
     // And so each haptic plays its family's pattern exactly.
     for ((haptic, family) in table) check(HapticPalette.pattern(haptic.family, false, null) == patterns.getValue(family)) {
@@ -161,8 +170,11 @@ private fun noReadyMadeEffects() {
 }
 
 private fun everyGapReadsApart() {
-    for (family in Family.entries) for (gap in HapticPalette.gaps(family.pattern))
+    // A crunch's grain is the one gap under 35 ms, on purpose: its two pulses are felt as one gritty tick.
+    for (family in Family.entries - Family.Crunch) for (gap in HapticPalette.gaps(family.pattern))
         check(gap >= 35) { "$family has a $gap ms gap, under 35 ms" }
+    check(HapticPalette.gaps(Family.Crunch.pattern).all { it in HapticPalette.GRAIN_GAP_MILLIS }) { "A crunch's gap is a grain's" }
+    check(HapticPalette.gapRange(Family.Texture) == HapticPalette.GAP_MILLIS) { "Every other family keeps rule 4 in the lab" }
     check(HapticPalette.MIN_GAP_MILLIS == 35L) { "The least gap is 35 ms" }
     check(HapticPalette.GAP_MILLIS.first >= 35) { "The lab's gap sliders can't go under 35 ms" }
     for (family in Family.entries) check(family.pattern.size % 2 == 1) { "$family starts and ends with a pulse" }
@@ -622,7 +634,8 @@ private fun aHeldDeleteFadesByLength() {
     check(HeldDeleteFade.lengthFor(1, fade) == 17L) { "Word 1 plays the start" }
     check(HeldDeleteFade.lengthFor(9, fade) == 9L) { "Word 9 is at the floor" }
     check(HeldDeleteFade.lengthFor(100, fade) == null && HeldDeleteFade.lengthFor(101, fade) == 9L) { "Far into a hold it still thins" }
-    check(HeldDeleteFade.describe(fade) == "17 down to 9 ms over 8 words, then 1 in 2") { HeldDeleteFade.describe(fade) }
+    check(HeldDeleteFade.describe(fade) == "17 down to 9 ms over 8 words, then 1 in 2") { HeldDeleteFade.describe(fade) }
+    check(HeldDeleteFade.describe(fade).replace(' ', ' ') == "17 down to 9 ms over 8 words, then 1 in 2") { "It reads the same" }
     check(HeldDeleteFade.format(fade) == "17,9,8,2") { "Stored as four numbers" }
 }
 
@@ -683,7 +696,7 @@ private fun theFadeIsOnlyTriedInDebug() {
 
 /** The fade's ticks are texture: whatever their length, they never block a message, and a thinned one never reaches the gate. */
 private fun theFadeNeverBlocksAMessage() {
-    check(Haptic.DeleteWord.family == Family.Texture) { "A held delete's word is still texture" }
+    check(Haptic.DeleteWord.family.texture) { "A held delete's word, a crunch, is still texture" }
     check(!HapticResult.Thinned.played && HapticResult.Thinned.words == "thinned") { "A thinned tick doesn't play" }
     for (fade in listOf(HeldDeleteFade.DEFAULT, HeldDeleteFade.Settings(40, 40, 1, 1), HeldDeleteFade.Settings(4, 4, 20, 4))) {
         val clock = Clock()
@@ -703,7 +716,7 @@ private fun theFadeNeverBlocksAMessage() {
 /** The live timeline shows each held delete tick with its word and the length it played, and a thinned one says so. */
 private fun theTimelineShowsEachHeldWord() {
     val played = HapticEvent(1, Haptic.DeleteWord, listOf(13), HapticResult.Played, word = 5)
-    check(HapticTimeline.title(played, "Each word while you hold") == "Held delete word 5 · Texture 13 ms") { HapticTimeline.title(played, "") }
+    check(HapticTimeline.title(played, "Each word while you hold") == "Held delete word 5 · Crunch 13 ms") { HapticTimeline.title(played, "") }
     check(HapticTimeline.outcome(played) == HapticTimeline.trigger(Haptic.DeleteWord)) { "It says what set it off" }
     val thinned = played.copy(pattern = listOf(9), result = HapticResult.Thinned, word = 10)
     check(HapticTimeline.outcome(thinned) == "thinned") { "A thinned tick says why" }
@@ -735,7 +748,7 @@ private fun theFadeSwitchIsDebugOnly() {
     check(release == List(16) { 17L }) { "Release: 17 every word, $release" }
     check(HeldDeleteFade.ticks(fade, fading = false) == off) { "The strip with the fade off" }
     val event = HapticEvent(1, Haptic.DeleteWord, listOf(17), HapticResult.Played, word = 12, fading = false)
-    check(HapticTimeline.title(event, "") == "Held delete word 12 · Texture 17 ms · no fade") { HapticTimeline.title(event, "") }
+    check(HapticTimeline.title(event, "") == "Held delete word 12 · Crunch 17 ms · no fade") { HapticTimeline.title(event, "") }
 }
 
 /** The lab's hold: the flick and 10 words 350 ms apart, a lift, and the dots of their letters at normal speed. */
@@ -876,7 +889,7 @@ private fun aWallBouncesAndSettles() {
         "Steering, selecting and a held delete hit the wall"
     }
     // No is only for nothing happening at all.
-    check(Haptic.entries.filter { it.family == Family.No }.toSet() == setOf(Haptic.DeleteNothing, Haptic.NothingToPick, Haptic.WordNotSaved)) {
+    check(Haptic.entries.filter { it.family == Family.No }.toSet() == setOf(Haptic.DeleteNothing, Haptic.NothingToPick, Haptic.WordNotSaved, Haptic.CopyNothing)) {
         "No stays for a flick or taps with nothing to work on, and a failed save"
     }
     check(HapticTimeline.meaning(Family.Wall).isNotEmpty()) { "The lab says what it means" }
@@ -928,5 +941,54 @@ private fun aFlicksDotsWaitAsTheLabTries() {
         GestureDisplay.triedFlickHold = null
     }
     check(GestureDisplay.FLICK_HOLD == 200f && GestureDisplay.flickHoldMillis() == 200f) { "The default is 200 ms" }
-    check(GestureDisplay.FLICK_HOLD_RANGE == 0L..600L) { "The lab tries 0 to 600 ms" }
+    check(Haptics.FLICK_HOLD_RANGE == 0L..600L) { "The lab tries 0 to 600 ms" }
+}
+
+/**
+ * The lab's experiment "Haptics for shortcuts", off by default: Alt's symbol and the Sym panel feel like holding a letter for its
+ * symbol, and Ctrl's copy, cut, paste, undo and select all confirm. Ctrl + C with nothing selected plays no either way.
+ */
+private fun shortcutsFeelLikeTheirTwins() {
+    check(Haptic.AltSymbol.family == Haptic.HeldSymbol.family && Haptic.PanelSymbol.family == Haptic.HeldSymbol.family) {
+        "Alt and the Sym panel feel like a held letter"
+    }
+    for (letter in "CXVZA") check(ShortcutFeel.of(letter, true, on = true) == Haptic.CtrlShortcut) { "Ctrl + $letter confirms" }
+    for (letter in "CXVZA") check(ShortcutFeel.of(letter, true, on = false) == null) { "Off, Ctrl + $letter plays nothing" }
+    check(ShortcutFeel.of('Y', true, on = true) == null && ShortcutFeel.of('B', true, on = true) == null) { "Other shortcuts play nothing" }
+    check(ShortcutFeel.of('C', false, on = false) == Haptic.CopyNothing) { "Copy with nothing selected says no, with it off" }
+    check(ShortcutFeel.of('C', false, on = true) == Haptic.CopyNothing) { "and with it on" }
+    check(ShortcutFeel.of('C', null, on = false) == null) { "A field that hasn't said what is selected gets no no" }
+    // A number typed fast with Alt: the gate keeps the 300 ms repeat rule, so changes never pile up.
+    var now = 1_000L
+    val gate = HapticGate { now }
+    check(gate.admit(Family.Change)) { "The first symbol plays" }
+    now += 120
+    check(!gate.admit(Family.Change)) { "One 120 ms later doesn't" }
+    now += 300
+    check(gate.admit(Family.Change)) { "One after 300 ms plays again" }
+    for (haptic in listOf(Haptic.AltSymbol, Haptic.PanelSymbol, Haptic.CtrlShortcut, Haptic.CopyNothing))
+        check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic has words in the lab" }
+}
+
+/**
+ * A crunch: two tiny pulses close together, felt as one gritty tick, for keys a clear flick crosses and each word a hold takes.
+ * It is texture, so it keeps its own pace, and the lab's editor can change it within its grain's range.
+ */
+private fun aFlickCrunches() {
+    val pulses = HapticPalette.pulses(Family.Crunch.pattern)
+    check(pulses.size == 2 && pulses.all { it <= HapticPalette.TEXTURE_MILLIS }) { "Two tiny pulses: $pulses" }
+    check(pulses.all { it >= 9 }) { "Each still shows on this motor" }
+    check(Family.Crunch.texture) { "Texture, with its own pace" }
+    check(HapticPalette.fits(Family.Crunch, Family.Crunch.pattern)) { "The lab can edit it" }
+    check(HapticPalette.fits(Family.Crunch, listOf(8L, 20L, 8L)) && !HapticPalette.fits(Family.Crunch, listOf(8L, 40L, 8L))) {
+        "Its gap stays a grain's"
+    }
+    check(Family.entries.filter { it != Family.Crunch }.none { it.pattern == Family.Crunch.pattern }) { "A pattern of its own" }
+    check(Haptic.DeleteWord.family == Family.Crunch && Haptic.DeleteCrunch.family == Family.Crunch) { "A flick's keys and a hold's words crunch" }
+    check(Haptic.DeleteBreak.family == Family.Boundary) { "The break is one firm tick" }
+    // The fade shortens a held word's crunch with it.
+    check(HeldDeleteFade.crunch(Family.Crunch.pattern, 17, 17) == Family.Crunch.pattern) { "At the start, the crunch itself" }
+    check(HeldDeleteFade.crunch(Family.Crunch.pattern, 9, 17) == listOf(6L, 12L, 6L)) { HeldDeleteFade.crunch(Family.Crunch.pattern, 9, 17).toString() }
+    for (haptic in listOf(Haptic.DeleteCrunch, Haptic.DeleteBreak)) check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic" }
+    check(HapticTimeline.meaning(Family.Crunch).isNotEmpty()) { "The lab says what a crunch means" }
 }

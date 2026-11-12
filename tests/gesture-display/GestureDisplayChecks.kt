@@ -16,6 +16,7 @@ fun main() {
     aHeldDeleteGlowFollowsItsPace()
     aFlicksGlowFollowsTheFinger()
     everyFlickShowsItsGlow()
+    aWordDragOnLongTextNeverRunsOutOfPills()
     aHoldDrawsTheRealWords()
     aHoldWithNoTextLeftDrawsNoPills()
     aPausedHoldFadesAndBlinks()
@@ -1680,4 +1681,59 @@ private fun everyFlickShowsItsGlow() {
     still.flickLifted(.6f, 6_000)
     still.advance(6_016, 0f)
     same(still.glowing, false, "With animations off the late glow doesn't hang on")
+}
+
+/**
+ * A word drag on long text: the keyboard reads only 64 characters each side of the selection, so it reads the words again at
+ * each step. Every selected word then has its pill, as long as the real word, however far the selection goes (owner,
+ * 2026-11-12: triple space on long text ran out of blocks). Past what was read the bar draws made-up words, never nothing.
+ */
+private fun aWordDragOnLongTextNeverRunsOutOfPills() {
+    val words = listOf("alpha", "be", "certainly", "do", "everyone's", "far", "go", "harbour", "in", "jumping", "kept", "lo", "well-known",
+        "mountains", "no", "of", "pancakes", "quietly", "r2d2", "sun", "to", "umbrella", "very", "wonderful")
+    val text = (words + words + words).joinToString(" ")
+    val reach = 64
+    fun read(display: GestureDisplay, start: Int, end: Int, anchor: Pair<Int, Int>) {
+        val from = maxOf(0, start - reach)
+        val to = minOf(text.length, end + reach)
+        val window = text.substring(from, to)
+        display.wordText(window.substring(0, anchor.first - from), anchor.second - anchor.first, window.substring(anchor.second - from),
+            moreBefore = start - from >= reach, moreAfter = to - end >= reach)
+    }
+    for (direction in listOf(1, -1)) {
+        val display = GestureDisplay()
+        display.cursorFrame(ON_SPACE, 0, 0f, true, 1_000)
+        val middle = text.indexOf("harbour", text.length / 3)
+        val anchor = middle to middle + "harbour".length
+        var start = anchor.first
+        var end = anchor.second
+        read(display, start, end, anchor)
+        var steps = 0
+        while (true) {
+            val (newStart, newEnd) = WordSelection.extend(text, start, end, anchor.first, anchor.second, direction)
+            if (newStart == start && newEnd == end) break
+            start = newStart
+            end = newEnd
+            read(display, start, end, anchor)
+            display.wordStep(direction)
+            steps++
+            // Every word the selection holds has its pill, as wide as the real word.
+            val selected = WordSelection.lengths(if (direction > 0) text.substring(anchor.second, end) else text.substring(start, anchor.first))
+            same(selected.size, if (direction > 0) display.wordsRight else display.wordsLeft, "Step $steps: a pill for each step")
+            for (k in 1..selected.size) {
+                val index = if (direction > 0) k else -k
+                val letters = if (direction > 0) selected[k - 1] else selected[selected.size - k]
+                near(display.wordWidth(index), GestureDisplay.widthFor(letters), "Step $steps: word $index is drawn as long as it is", .001f)
+            }
+            // The next words, past what was read, are still drawn.
+            isTrue(display.wordWidth(if (direction > 0) selected.size + 1 else -selected.size - 1) > 0f || (if (direction > 0) end >= text.length - 1 else start <= 1),
+                "Step $steps: the words past the selection never run out before the text does")
+        }
+        isTrue(steps > 20, "The drag went a long way: $steps steps")
+    }
+    // A hyphen, a full stop between letters and an apostrophe: the pills split where the selection's steps do.
+    same(WordSelection.lengths("well-known co-op e.g. it's fine").toList(), listOf(4, 5, 2, 2, 1, 1, 4, 4), "Pills split as the selection steps")
+    // Text cut off at the reach: the cut word is no pill.
+    same(WordSelection.lengths("own words here", cutStart = true).toList(), listOf(5, 4), "A word cut at the start is left out")
+    same(WordSelection.lengths("own words he", cutEnd = true).toList(), listOf(3, 5), "and one cut at the end")
 }

@@ -104,6 +104,8 @@ fun main() {
     aHeldTouchRegistersBeforeAnySlide()
     theThirdTouchIsKnownAsItLands()
     threeQuickTapsPickAWord()
+    manyTapsNeverLockTheGesturesOut()
+    aTripleLeavesNothingWaiting()
     println("Cursor checks passed")
 }
 
@@ -1205,4 +1207,66 @@ private fun theBarShowsWhatIsSelected() {
     same(WordSelection.isWord("quick brown"), false, "Several words don't")
     same(WordSelection.isWord("42"), false, "nor a number")
     same((WordSelection.shown("a".repeat(500), 500)?.length ?: 0) <= 200, true, "A long selection is cut, then fits the bar")
+}
+
+/**
+ * Many quick taps on Space, as in an empty field, never shut the gestures out while they go on (owner, 2026-11-12: it felt
+ * locked out). A fourth touch still calls a triple off, but a tap the rules left out doesn't start the alone wait again, so the
+ * next taps count. A resting finger's short touches still do, so its series never makes a gesture.
+ */
+private fun manyTapsNeverLockTheGesturesOut() {
+    val pad = Pad()
+    var time = 1_000L
+    val counted = ArrayList<Int>()
+    repeat(12) {
+        pad.tap(COLUMN, time, 60)
+        counted += pad.gesture.tapped
+        time += 60 + 80
+    }
+    same(counted.take(4), listOf(1, 2, 3, 0), "Three taps count, and the fourth calls the triple off")
+    if (counted.drop(4).none { it > 0 }) throw AssertionError("Taps after the fourth count again, not shut out for as long as they go on: $counted")
+    // After them, a tap alone still counts at once.
+    pad.tap(COLUMN, time + 400, 60)
+    same(pad.gesture.tapped, 1, "A tap after the run counts as a first tap")
+    // A resting finger's series of short touches still never counts.
+    val resting = Pad()
+    var at = 1_000L
+    val rest = ArrayList<Int>()
+    repeat(20) {
+        resting.tap(COLUMN, at, 20)
+        rest += resting.gesture.tapped
+        at += 20 + 40
+    }
+    // Like any three taps, its first three count (and its fourth calls them off), but after that its touches start the alone
+    // wait again each time, so nothing counts for as long as it rests.
+    same(rest.drop(3).all { it == 0 }, true, "A resting finger's series counts nothing after its fourth touch: $rest")
+}
+
+/**
+ * A triple's taps are over once no fourth touch follows: the next touch, however much later, is a first tap, and a tap key
+ * never waits for good (owner, 2026-11-12).
+ */
+private fun aTripleLeavesNothingWaiting() {
+    val pad = Pad()
+    val landed = pad.twoTapsThenLand()
+    pad.up(landed + 60)
+    val lifted = landed + 60
+    same(pad.gesture.tripled, true, "Three quick taps")
+    same(pad.gesture.deciding(lifted + 100), true, "A tap key waits while a fourth touch may still follow")
+    same(pad.gesture.deciding(lifted + 1_000), false, "but not for good, even with no confirm")
+    same(pad.gesture.confirmTriple(), true, "Once no fourth touch came, the triple is over")
+    same(pad.gesture.deciding(lifted + 151), false, "and nothing waits")
+    // Without a confirm, a touch a second later is still a first tap, not a fourth touch.
+    val late = Pad()
+    val third = late.twoTapsThenLand()
+    late.up(third + 60)
+    late.tap(COLUMN, third + 1_060, 60)
+    same(late.gesture.tapped, 1, "A tap a second after a triple is a first tap")
+    // Two taps that pick nothing, above Space, never hold a tap key for good either.
+    val two = Pad()
+    two.tap(COLUMN, 1_000, FIRST_MILLIS, row = 2.6f)
+    two.tap(COLUMN, 1_000 + FIRST_MILLIS + GAP_MILLIS, 60, row = 2.6f)
+    val twoLifted = 1_000 + FIRST_MILLIS + GAP_MILLIS + 60
+    same(two.gesture.tapped, 2, "Two taps above Space")
+    same(two.gesture.deciding(twoLifted + 1_000), false, "leave nothing waiting a second later")
 }

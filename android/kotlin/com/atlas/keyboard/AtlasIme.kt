@@ -351,6 +351,14 @@ class AtlasIme : InputMethodService() {
 
     private val checkHeldTaps = Runnable { settleHeldTaps() }
 
+    /**
+     * Three taps picked the word as the third landed; once no fourth touch follows, the taps are over: none of them types, and
+     * the next touch is a first tap again.
+     */
+    private val confirmTriple = Runnable {
+        if (cursorGesture.confirmTriple()) finishHeldTaps(type = false)
+    }
+
     /** Two taps above Space pick nothing; the guide says so, once no third tap follows. Only in its own field. */
     private val confirmTwoAbove = Runnable {
         if (!inGuide || !cursorGesture.confirmTwoAbove()) return@Runnable
@@ -600,8 +608,12 @@ class AtlasIme : InputMethodService() {
         main.postDelayed(checkHeldTaps, CursorGesture.CONFIRM_MILLIS)
     }
 
+    /** Types the held taps once they can't be a gesture any more, or looks again soon, so a held tap never waits for the next touch. */
     private fun settleHeldTaps() {
-        if (heldTaps.isNotEmpty() && !cursorGesture.deciding(SystemClock.uptimeMillis())) finishHeldTaps(type = true)
+        if (heldTaps.isEmpty()) return
+        if (!cursorGesture.deciding(SystemClock.uptimeMillis())) return finishHeldTaps(type = true)
+        main.removeCallbacks(checkHeldTaps)
+        main.postDelayed(checkHeldTaps, HELD_TAP_LOOK_MILLIS)
     }
 
     private fun finishHeldTaps(type: Boolean) {
@@ -2240,6 +2252,7 @@ class AtlasIme : InputMethodService() {
         val points = contact.points
         if (doubleTapped) main.postAtTime(confirmDoubleTap, event.eventTime + CursorGesture.CONFIRM_MILLIS)
         else if (inGuide && cursorGesture.twoAbove) main.postAtTime(confirmTwoAbove, event.eventTime + CursorGesture.CONFIRM_MILLIS)
+        else if (cursorGesture.tripled) main.postAtTime(confirmTriple, event.eventTime + CursorGesture.CONFIRM_MILLIS)
         contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
             lastTouch = pending.points
             if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
@@ -2348,6 +2361,7 @@ class AtlasIme : InputMethodService() {
         Recording.sink?.gesture("cancel", SystemClock.uptimeMillis(), "")
         stopCursor()
         main.removeCallbacks(confirmDoubleTap)
+        main.removeCallbacks(confirmTriple)
         main.removeCallbacks(registerGestureLater)
         cursorGesture.cancel(SystemClock.uptimeMillis())
         settleHeldTaps()
@@ -2402,7 +2416,7 @@ class AtlasIme : InputMethodService() {
             nothing()
             return@changeSelection null
         }
-        strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
+        showWordText(text, start, end, word)
         strip?.gesture?.wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown)
         word
     }
@@ -2415,7 +2429,7 @@ class AtlasIme : InputMethodService() {
         changeSelection { text, start, end, offset ->
             val word = WordSelection.at(text, start, end) ?: (start to end)
             wordAnchor = offset + word.first to offset + word.second
-            strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
+            showWordText(text, start, end, word)
             word
         }
     }
@@ -2435,9 +2449,21 @@ class AtlasIme : InputMethodService() {
             val moved = if (range.second != end) text.subSequence(minOf(end, range.second), maxOf(end, range.second))
                 else text.subSequence(minOf(start, range.first), maxOf(start, range.first))
             haptics.play(Haptic.SelectionWord)
+            // The words around the anchor are read again from here, so on long text the pills never run out.
+            showWordText(text, start, end, anchor.first - offset to anchor.second - offset)
             strip?.gesture?.wordStep(direction)
             range
         }
+    }
+
+    /**
+     * Shows the words around [anchor] on the bar, from [text], the text read around the selection from [start] to [end]. Where
+     * that text is cut off at its reach, more lies beyond it.
+     */
+    private fun showWordText(text: CharSequence, start: Int, end: Int, anchor: Pair<Int, Int>) {
+        if (anchor.first !in 0..text.length || anchor.second !in anchor.first..text.length) return
+        strip?.gesture?.wordText(text.subSequence(0, anchor.first), anchor.second - anchor.first,
+            text.subSequence(anchor.second, text.length), moreBefore = start >= WORD_REACH, moreAfter = text.length - end >= WORD_REACH)
     }
 
     /** What a Ctrl shortcut plays, as [ShortcutFeel] has it: only Ctrl + C with nothing selected, a no. A key held down plays once. */
@@ -3362,6 +3388,8 @@ class AtlasIme : InputMethodService() {
     }
 
     companion object {
+        /** While taps may still be a gesture, a held tap looks again this often, so it types as soon as they can't be one. */
+        private const val HELD_TAP_LOOK_MILLIS = 30L
         /** How long with no input before the idle scene starts on the bar. */
         private const val IDLE_BAR_MILLIS = 3 * 60 * 1000L
         /** The debug build starts the idle scene at once on this broadcast, from adb. */

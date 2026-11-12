@@ -323,13 +323,24 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         return moreBefore && caretAt + stepped < REREAD_MARGIN || moreAfter && text.length - caretAt - stepped < REREAD_MARGIN
     }
 
-    /** The words around a word drag or a picked word: [before] it, the word itself of [letters], and [after] it. */
-    fun wordText(before: CharSequence, letters: Int, after: CharSequence) {
+    /**
+     * The words around a word drag or a picked word: [before] it, the word itself of [letters], and [after] it, as the selection
+     * counts words ([WordSelection.lengths]), so each step takes one pill. [moreBefore] and [moreAfter] say the text was cut off
+     * there: the cut word is left out, and past the known words the bar draws made-up ones instead of running out. A word drag
+     * reads them again at each step, so on long text its pills go on as far as the selection does.
+     */
+    fun wordText(before: CharSequence, letters: Int, after: CharSequence, moreBefore: Boolean = false, moreAfter: Boolean = false) {
         anchorLetters = letters
-        leftWords = wordLengths(before).reversedArray()
-        rightWords = wordLengths(after)
+        leftWords = WordSelection.lengths(before, cutStart = moreBefore).reversedArray()
+        rightWords = WordSelection.lengths(after, cutEnd = moreAfter)
+        wordsMoreBefore = moreBefore
+        wordsMoreAfter = moreAfter
         changed()
     }
+
+    /** Whether the text read for a word drag was cut off before or after it, so more words lie past the known ones. */
+    private var wordsMoreBefore = false
+    private var wordsMoreAfter = false
 
     /**
      * How much of a word's place the word at [index] fills, in a word drag: 0 is the first word, below 0 the words before it.
@@ -338,10 +349,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      */
     fun wordWidth(index: Int): Float {
         val first = anchorLetters ?: return MADE_UP_WIDTHS[index.mod(MADE_UP_WIDTHS.size)]
+        val madeUp = MADE_UP_WIDTHS[index.mod(MADE_UP_WIDTHS.size)]
         val letters = when {
             index == 0 -> first
-            index < 0 -> leftWords.getOrNull(-index - 1) ?: return 0f
-            else -> rightWords.getOrNull(index - 1) ?: return 0f
+            index < 0 -> leftWords.getOrNull(-index - 1) ?: return if (wordsMoreBefore) madeUp else 0f
+            else -> rightWords.getOrNull(index - 1) ?: return if (wordsMoreAfter) madeUp else 0f
         }
         return widthFor(letters)
     }
@@ -1227,6 +1239,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         anchorLetters = null
         leftWords = IntArray(0)
         rightWords = IntArray(0)
+        wordsMoreBefore = false
+        wordsMoreAfter = false
     }
 
     private fun resetPieces() {

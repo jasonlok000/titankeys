@@ -49,6 +49,8 @@ class CursorGesture {
     private var state: State = State.Idle
     /** A touch that lands before this time can't be a first tap. */
     private var firstTapFrom = 0L
+    /** When the touch that is down now landed, so its lift knows how long it lasted. */
+    private var landedAt = 0L
 
     /** True after an [up] that finished three quick taps on Space, for [confirmTriple] to check after [CONFIRM_MILLIS]. */
     var tripled = false
@@ -81,10 +83,12 @@ class CursorGesture {
     /** A finger landed. [counts] is false for a touch that can't type, such as one in the pause after a key press. */
     fun down(sample: Sample, counts: Boolean) {
         val previous = state
+        landedAt = sample.time
         state = when {
             !counts || !sample.valid || !inZone(sample.x, sample.y) -> State.Idle
-            // A fourth touch is a resting finger's series, which never makes a gesture.
-            previous is State.Tapped && previous.taps == 3 -> State.Idle
+            // A fourth touch is a resting finger's series, which never makes a gesture. Only one that follows the third as a
+            // series would: a touch long after a triple is a new first tap (owner, 2026-11-12: a triple left the next touch dead).
+            previous is State.Tapped && previous.taps == 3 && follows(previous, sample) -> State.Idle
             previous is State.Tapped && follows(previous, sample) -> State.NextTouch(previous.taps, sample, sample.time - previous.lifted, previous.landed)
             sample.time >= firstTapFrom -> State.FirstTouch(sample)
             else -> State.Idle
@@ -125,8 +129,11 @@ class CursorGesture {
     /** The finger lifted at [time]. Returns true if this finished two quick taps, for [confirm] to check later. */
     fun up(samples: List<Sample>, time: Long): Boolean {
         move(samples)
-        firstTapFrom = max(firstTapFrom, time + ALONE_MILLIS)
         val current = state
+        // The next first tap must come alone: after a touch that may have been part of a gesture, or a resting finger's touch.
+        // A tap that the rules already left out doesn't start the wait again, so quick taps on Space never shut the gestures out
+        // for as long as they go on (owner, 2026-11-12: many taps in an empty field felt locked out).
+        if (current !is State.Idle || time - landedAt <= RESTING_TOUCH_MILLIS) firstTapFrom = max(firstTapFrom, time + ALONE_MILLIS)
         state = State.Idle
         tripled = false
         twoAbove = false
@@ -185,9 +192,12 @@ class CursorGesture {
         firstTapFrom = max(firstTapFrom, time + AFTER_KEY_MILLIS)
     }
 
-    /** Whether the taps so far may still become a gesture at [now], so a tap key must not type them yet. */
+    /**
+     * Whether the taps so far may still become a gesture at [now], so a tap key must not type them yet. Taps wait only while
+     * another touch could still follow them: two or three taps never leave a tap key waiting for good.
+     */
     fun deciding(now: Long) = when (val current = state) {
-        is State.Tapped -> current.taps >= 2 || now < current.lifted + MAX_GAP_MILLIS
+        is State.Tapped -> now < current.lifted + if (current.taps >= 2) MAX_DRAG_GAP_MILLIS else MAX_GAP_MILLIS
         is State.NextTouch -> true
         else -> false
     }
@@ -216,6 +226,8 @@ class CursorGesture {
         private const val MAX_APART_KEYS = 1f
         /** The first tap must come this long after the touch before it, which also leaves out a resting finger's series. */
         private const val ALONE_MILLIS = 200L
+        /** A resting finger's touches last about this long; a tap that the rules left out and lasted longer is no rest. */
+        private const val RESTING_TOUCH_MILLIS = 40L
         /** The first tap must come this long after a key press. */
         private const val AFTER_KEY_MILLIS = 500L
         /** A second or third touch that stays down this long registers, before any slide. Resting touches last about 40 ms. */

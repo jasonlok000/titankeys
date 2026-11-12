@@ -35,6 +35,28 @@ object WordSelection {
     fun anyToPick(text: CharSequence, selectionStart: Int, selectionEnd: Int, inFront: Boolean) =
         (if (inFront) atOrBefore(text, selectionStart, selectionEnd) else at(text, selectionStart, selectionEnd)) != null
 
+    /**
+     * The letter counts of the words in [text], in order, as this object finds words: runs of letters, digits and apostrophes.
+     * So "well-known" is two words, as a word drag takes it in two steps. With [cutStart] or [cutEnd], [text] was cut off there
+     * from more text, and a word touching that end may be only part of one, so it is left out.
+     */
+    fun lengths(text: CharSequence, cutStart: Boolean = false, cutEnd: Boolean = false): IntArray {
+        val lengths = ArrayList<Int>()
+        var run = 0
+        var from = 0
+        for ((index, character) in text.withIndex()) {
+            if (isWordCharacter(character)) {
+                if (run == 0) from = index
+                run++
+                continue
+            }
+            if (run > 0 && !(cutStart && from == 0)) lengths += run
+            run = 0
+        }
+        if (run > 0 && !cutEnd && !(cutStart && from == 0)) lengths += run
+        return lengths.toIntArray()
+    }
+
     /** True where steering has text to move through: anything at all before or after the cursor. */
     fun anyToSteer(before: CharSequence, after: CharSequence) = before.isNotEmpty() || after.isNotEmpty()
 

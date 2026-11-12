@@ -20,14 +20,17 @@ import android.widget.TextView
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-/** Key calibration's colours: the Haptics lab's dark page, with the keys in cream and the two edges in orange. */
+/**
+ * Key calibration's colours, the app's (v5.3): pure black, the keys in cream and the two edges in orange. The page is black where
+ * it was ink, and its cards and tracks are the divider, never brown.
+ */
 private object CalibrationColours {
-    const val INK = 0xFF160A04.toInt()
-    const val CARD = 0xFF21140C.toInt()
-    const val TRACK = 0xFF3A2A20.toInt()
-    const val ORANGE = 0xFFEF804E.toInt()
-    const val CREAM = 0xFFFFF1E6.toInt()
-    const val DIM = 0xFFA2958C.toInt()
+    const val INK = GuideColours.BLACK
+    const val CARD = 0xFF141312.toInt()
+    const val TRACK = GuideColours.DIVIDER
+    const val ORANGE = GuideColours.ORANGE
+    const val CREAM = GuideColours.CREAM
+    const val DIM = GuideColours.MUTED
     /** A gap between two keys: faint orange, so the gaps read as one line of stripes against the real keys' gaps. */
     const val GAP = 0x40EF804E
     const val LABEL = 0x80FFF1E6.toInt()
@@ -147,7 +150,7 @@ class KeyCalibrationActivity : Activity() {
     private fun button(label: String, pressed: () -> Unit) = TextView(this).apply {
         text = label
         textSize = 15f
-        typeface = Typeface.DEFAULT_BOLD
+        typeface = GuideFonts.heavy(context)
         gravity = Gravity.CENTER
         setTextColor(CalibrationColours.INK)
         minHeight = dp(48)
@@ -177,7 +180,7 @@ class KeyCalibrationActivity : Activity() {
         text = value
         textSize = size
         setTextColor(colour)
-        if (bold) typeface = Typeface.DEFAULT_BOLD
+        typeface = if (bold) GuideFonts.heavy(context) else GuideFonts.regular(context)
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
@@ -210,7 +213,7 @@ internal class KeyGrid(context: Context) : View(context) {
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        typeface = Typeface.create(Typeface.DEFAULT, 800, false)
+        typeface = GuideFonts.heavy(context)
         textAlign = Paint.Align.CENTER
     }
 

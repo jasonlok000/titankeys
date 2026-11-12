@@ -437,6 +437,12 @@ private fun oneStepForEachIdea() {
     same(byId.getValue("selectmore").cue, GuideCue.Taps(3, drag = true), "Selecting more is three taps and a slide")
     same(GUIDE_STEPS.filter { it.nearMiss }.map { it.id }, emptyList<String>(), "No slide misses on purpose any more (v5.2)")
     same(GUIDE_STEPS.filter { it.forceFix }.map { it.id }, listOf("type", "swipe"), "Typed or swiped, any word becomes the line's next")
+    // The front page's prompt is whole sentences (v5.3).
+    val front = PlaygroundText.make(kotlin.random.Random(7)).split(' ')
+    val starts = PlaygroundText.sentenceStarts(front)
+    same(starts.first() == 0 && starts.zipWithNext().all { (a, b) -> b - a >= 3 }, true, "Every sentence found is a real one")
+    val around = PlaygroundText.sentenceAround(starts, front.size, 40)
+    same(40 in around && around.first in starts, true, "A word's sentence starts where a sentence does")
     for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.Typing && it.chapter != GuideChapter.End })
         same(blockedChip(step, GuideLesson.Swipe.name).contains("Type it"), false, "${step.id}'s swipe chip fits its own slide")
     same(byId.getValue("swipe").lessons.orEmpty().contains(GuideLesson.BarTap), false, "No slide teaches picking from the bar")

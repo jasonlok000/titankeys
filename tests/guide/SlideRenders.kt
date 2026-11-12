@@ -285,7 +285,8 @@ private fun topBar(g: Graphics2D, chapter: GuideChapter, pillText: String?, fill
     val bar = dp(44)
     g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(13))
     if (chapter != GuideChapter.End) {
-        g.color = rgb(if (onOrange) Paint.INK else Paint.CREAM, .55f)
+        // The chapter's name is a section label: orange on black (v5.3).
+        g.color = if (onOrange) rgb(Paint.INK, .55f) else orange
         g.drawString(chapter.label.uppercase(), side, rowTop + bar / 2 + g.fontMetrics.ascent / 2 - dp(1))
     }
     val close = dp(44)
@@ -329,7 +330,8 @@ private fun shrinkToFit(g: Graphics2D, text: String, font: Font, smallest: Float
 
 private fun draw(frame: Frame, file: File) {
     val (image, g) = image()
-    g.color = ink
+    // Pure black, with orange titles (owner, v5.3).
+    g.color = Color.BLACK
     g.fillRect(0, 0, WIDTH, HEIGHT)
     val side = dp(Layout.KEY_SIDE_DP)
     val inner = WIDTH - 2 * side
@@ -341,7 +343,7 @@ private fun draw(frame: Frame, file: File) {
     val titleLine = dp(45)
     val (titleShown, titleLines) = shrinkToFit(g, frame.title + if (frame.passed) " ✓" else "", titleFont, titleFont.size2D * 24 / 36, inner, 1)
     g.font = titleShown
-    g.color = cream
+    g.color = orange
     val titleRoom = titleLine
     val titleTop = y + (titleRoom - titleLines.size * g.fontMetrics.height) / 2
     for ((index, line) in titleLines.withIndex()) {
@@ -358,7 +360,7 @@ private fun draw(frame: Frame, file: File) {
                 lineTo(at + size * .36f, base - size * .08f)
                 lineTo(at + size, base - size * .86f)
             })
-            g.color = cream
+            g.color = orange
         } else g.drawString(line, side, base)
     }
     if (titleLines.size > 1) mark(g, "TITLE OVER ONE LINE", y)
@@ -373,9 +375,10 @@ private fun draw(frame: Frame, file: File) {
         val width = g.fontMetrics.stringWidth(shown) + dp(24)
         val chipHeight = g.fontMetrics.height + dp(12)
         val chipTop = y + (lineHeight - chipHeight) / 2
-        g.color = cream
+        // The one chip style (v5.3): a pill of the divider colour, cream words.
+        g.color = Color(0x2A, 0x26, 0x23)
         g.fill(RoundRectangle2D.Float(side.toFloat(), chipTop.toFloat(), width.toFloat(), chipHeight.toFloat(), chipHeight.toFloat(), chipHeight.toFloat()))
-        g.color = ink
+        g.color = cream
         g.drawString(shown, side + dp(12), chipTop + chipHeight / 2 + g.fontMetrics.ascent / 2 - dp(2))
         if (g.fontMetrics.stringWidth(frame.chip) + dp(24) > inner) mark(g, "CHIP TOO LONG", y)
     } else {
@@ -397,7 +400,7 @@ private fun draw(frame: Frame, file: File) {
     val pad = dp(12)
     val fieldLine = g.fontMetrics.height
     val fieldHeight = FIELD_LINES * fieldLine + 2 * pad
-    g.color = blend(Paint.INK, Paint.CREAM, .08f)
+    g.color = blend(0xFF000000.toInt(), Paint.CREAM, .08f)
     g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), fieldHeight.toFloat(), dp(12).toFloat(), dp(12).toFloat()))
     drawField(g, frame, side + pad, y + pad, inner - 2 * pad, fieldLine)
     y += fieldHeight
@@ -510,12 +513,16 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
         var x = left
         for (offset in from..to) {
             if (offset == shown.gap && !frame.passed) {
-                // The gap: an orange box the width of a letter, where the symbol goes.
-                val wide = g.fontMetrics.stringWidth("M")
+                // The gap: an orange box its symbol's width, and the text after it moves over to make room (v5.3), as the
+                // field's GapRoom does.
+                val symbol = GUIDE_STEPS.firstOrNull { it.id == frame.name.substringBefore('-') }?.symbol ?: "M"
+                val wide = maxOf(g.fontMetrics.stringWidth(symbol), g.fontMetrics.stringWidth("n"))
                 g.color = rgb(Paint.ORANGE, .35f)
-                g.fillRoundRect(x + dp(2), top + row * line + dp(2), wide, line - dp(4), dp(4), dp(4))
+                g.fillRoundRect(x + dp(3), top + row * line + dp(2), wide, line - dp(4), dp(4), dp(4))
                 g.color = orange
-                g.fillRect(x + dp(2), top + (row + 1) * line - dp(3), wide, dp(2))
+                g.fillRect(x + dp(3), top + (row + 1) * line - dp(3), wide, dp(2))
+                if (offset == shown.start && shown.start == shown.end) g.fillRect(x - dp(1), top + row * line + dp(2), dp(2), line - dp(4))
+                x += wide + dp(6)
             }
             if (offset >= to) break
             val char = all[offset].toString().replace("\n", "")
@@ -535,13 +542,13 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
             }
             g.color = if (offset < frame.field.length) cream else rgb(Paint.CREAM, .38f)
             g.drawString(char, x, base)
-            if (offset == shown.start && shown.start == shown.end) {
+            if (offset == shown.start && shown.start == shown.end && (offset != shown.gap || frame.passed)) {
                 g.color = orange
                 g.fillRect(x - dp(1), top + row * line + dp(2), dp(2), line - dp(4))
             }
             x += w
         }
-        if (shown.start == shown.end && shown.start == to && to == all.length) {
+        if (shown.start == shown.end && shown.start == to && to == all.length && (shown.start != shown.gap || frame.passed)) {
             g.color = orange
             g.fillRect(x, top + row * line + dp(2), dp(2), line - dp(4))
         }
@@ -575,7 +582,12 @@ private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
         g.draw(shape)
         g.color = if (lit || held) ink else rgb(Paint.CREAM, .7f)
         g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(19))
-        val text = if (key.length == 1) key else key.take(3)
+        // Space has no word on it, on the phone a small cup: never "spa" (v5.3).
+        val text = when {
+            key == Layout.SPACE -> "⎵"
+            key.length == 1 -> key
+            else -> key.take(3)
+        }
         val lift = if (hint != null) dp(7) else 0
         g.drawString(text, x + box.width / 2 - g.fontMetrics.stringWidth(text) / 2, y + box.height / 2f + dp(7) - lift)
         if (hint != null) {

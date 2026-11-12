@@ -415,6 +415,28 @@ internal object PlaygroundText {
     const val SLIP_GAP_MIN = 35
     const val SLIP_GAP_MAX = 70
 
+    /**
+     * Where each sentence of a [make] text starts, by word: the text has no marks, so the sentences are found by their words. The
+     * front page shows the whole sentence you're in, never a line cut out of the middle of one (owner, v5.3).
+     */
+    fun sentenceStarts(words: List<String>): List<Int> {
+        val known = (SENTENCES + SLIP).map { it.split(' ') }
+        val starts = ArrayList<Int>()
+        var at = 0
+        while (at < words.size) {
+            starts += at
+            val match = known.filter { at + it.size <= words.size && words.subList(at, at + it.size) == it }.maxOfOrNull { it.size }
+            at += match ?: 1
+        }
+        return starts
+    }
+
+    /** The words of the sentence that word [index] is in, from its first to after its last. */
+    fun sentenceAround(starts: List<Int>, count: Int, index: Int): IntRange {
+        val at = starts.indexOfLast { it <= index }.coerceAtLeast(0)
+        return (starts.getOrNull(at) ?: 0) until (starts.getOrNull(at + 1) ?: count)
+    }
+
     /** A long text in a random order, about [count] words, with the slip in a few places. */
     fun make(random: kotlin.random.Random, count: Int = 600): String {
         val words = ArrayList<String>()

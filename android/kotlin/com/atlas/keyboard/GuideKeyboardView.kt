@@ -22,8 +22,39 @@ import kotlin.math.sin
 /** The guide's brand colours. They are the values in lib/brand.ts and the app icon. */
 internal object GuideColours {
     const val ORANGE = 0xFFEF804E.toInt()
+    /** Only as text, or a button, on orange: no background is ink any more (owner, v5.3: pure black and orange). */
     const val INK = 0xFF160A04.toInt()
     const val CREAM = 0xFFFFF1E6.toInt()
+    /** Every background (v5.3). */
+    const val BLACK = 0xFF000000.toInt()
+    /** Secondary text, and hairlines: lib/brand.ts's MUTED and DIVIDER. */
+    const val MUTED = 0xFF99918A.toInt()
+    const val DIVIDER = 0xFF2A2623.toInt()
+}
+
+/**
+ * Ink's font, Inter, for everything the guide and its screens draw (owner, v5.3: no Roboto). The app ships Inter Regular and
+ * Medium; the titles are Medium made bold, as there's no Bold file. Loaded once, from any context.
+ */
+internal object GuideFonts {
+    @Volatile private var regular: android.graphics.Typeface? = null
+    @Volatile private var medium: android.graphics.Typeface? = null
+    @Volatile private var heavy: android.graphics.Typeface? = null
+
+    fun load(context: Context) {
+        if (heavy != null) return
+        val res = context.applicationContext.resources
+        regular = runCatching { res.getFont(R.font.inter_regular) }.getOrNull()
+        medium = runCatching { res.getFont(R.font.inter_medium) }.getOrNull()
+        heavy = android.graphics.Typeface.create(medium ?: android.graphics.Typeface.DEFAULT, 700, false)
+    }
+
+    fun regular(context: Context) = load(context).let { regular ?: android.graphics.Typeface.DEFAULT }
+    fun medium(context: Context) = load(context).let { medium ?: android.graphics.Typeface.DEFAULT }
+    fun heavy(context: Context) = load(context).let { heavy ?: android.graphics.Typeface.DEFAULT_BOLD }
+    /** The same, once [load] has run: for code with no context at hand. */
+    val loadedMedium get() = medium ?: android.graphics.Typeface.DEFAULT
+    val loadedHeavy get() = heavy ?: android.graphics.Typeface.DEFAULT_BOLD
 }
 
 /** Time for the guide's motion. It follows Android's animator duration setting, and with animations off every motion ends at once. */
@@ -78,7 +109,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        typeface = Typeface.create(Typeface.DEFAULT, 800, false)
+        typeface = GuideFonts.heavy(context)
         textAlign = Paint.Align.CENTER
     }
     private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -98,7 +129,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val altPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = Typeface.create(Typeface.DEFAULT, 600, false) }
+    private val altPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = GuideFonts.medium(context) }
     /** The symbol that Alt types on each letter key, read from the phone's own keyboard, as it is printed on the key. */
     private val altSymbols = keys.filter { it.letter }.mapNotNull { key ->
         Keys.letter(key.name, android.view.KeyEvent.META_ALT_ON)?.let { key.name to it }
@@ -234,7 +265,20 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }
 
     /** How tall the drawing is when it is [width] pixels wide: the real keyboard's four rows, scaled to the width. */
-    fun heightFor(width: Int): Int = ceil(KeyGeometry(width.toFloat(), KeyCalibration.load(context)).height).toInt()
+    fun heightFor(width: Int): Int = KeyGeometry(width.toFloat(), KeyCalibration.load(context)).let {
+        ceil(if (lettersOnly) it.letterHeight else it.height).toInt()
+    }
+
+    /**
+     * Only the three letter rows, when the screen is too short for the whole keyboard at its real size: the bottom row goes,
+     * cleanly, rather than being cut by the keyboard's bar (owner, v5.3). The keys keep their real size and place.
+     */
+    var lettersOnly = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) = place(w)
 
@@ -253,7 +297,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val frameCount = if (GuideMotion.enabled) elapsed / FRAME_MILLIS else 99f
         var moving = cue != GuideCue.Free && GuideMotion.enabled && isShown
         hovered = if (pressedAt >= 0 && now - pressedAt < PRESS_QUIET_MILLIS) null else hover.current(now)
-        for (key in keys) moving = drawKey(canvas, key, now, frameCount) || moving
+        for (key in keys) if (!lettersOnly || key.box.top < geometry.letterHeight) moving = drawKey(canvas, key, now, frameCount) || moving
         drawTouchArea(canvas)
         drawTapZone(canvas)
         drawDeleteZone(canvas)

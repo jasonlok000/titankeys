@@ -31,13 +31,14 @@ import org.json.JSONArray
 import java.util.Locale
 
 /** The Haptics lab's colours: the app's dark page and cards, the motor in orange. */
+/** The lab's colours, the app's black and orange (v5.3): black where it was ink, the divider where it was brown. */
 private object LabColours {
-    const val INK = 0xFF160A04.toInt()
-    const val CARD = 0xFF21140C.toInt()
-    const val TRACK = 0xFF3A2A20.toInt()
-    const val ORANGE = 0xFFEF804E.toInt()
-    const val CREAM = 0xFFFFF1E6.toInt()
-    const val DIM = 0xFFA2958C.toInt()
+    const val INK = GuideColours.BLACK
+    const val CARD = 0xFF141312.toInt()
+    const val TRACK = GuideColours.DIVIDER
+    const val ORANGE = GuideColours.ORANGE
+    const val CREAM = GuideColours.CREAM
+    const val DIM = GuideColours.MUTED
     /** A delete's dots landing, so they stand apart from the words' ticks. */
     const val DOT = 0xFF7FD1C8.toInt()
 }
@@ -143,6 +144,7 @@ class HapticsLabActivity : Activity() {
 
     /** One haptic in the list: when, what, its family and pattern, and whether it played. A tap opens its family's editor. */
     private fun row(event: HapticEvent) = TextView(this).apply {
+        typeface = GuideFonts.regular(context)
         val seconds = String.format(Locale.ROOT, "%.2f s", (event.atMillis - opened) / 1000f)
         val outcome = when (event.result) {
             HapticResult.Played -> "played"
@@ -175,6 +177,7 @@ class HapticsLabActivity : Activity() {
         for (family in Family.entries) {
             val pattern = lab.pattern(family)
             editor.addView(TextView(this).apply {
+                typeface = GuideFonts.regular(context)
                 text = "${family.label}: ${HapticPalette.describe(pattern)}" + if (pattern != family.pattern) "  (tried)" else ""
                 textSize = 15f
                 setTextColor(LabColours.CREAM)
@@ -351,7 +354,7 @@ class HapticsLabActivity : Activity() {
         text = label
         contentDescription = description
         textSize = 15f
-        typeface = Typeface.DEFAULT_BOLD
+        typeface = GuideFonts.heavy(context)
         gravity = Gravity.CENTER
         setTextColor(LabColours.INK)
         minHeight = dp(48)
@@ -400,6 +403,7 @@ class HapticsLabActivity : Activity() {
     }
 
     private fun keyLine(mark: String, colour: Int, words: String) = TextView(this).apply {
+        typeface = GuideFonts.regular(context)
         text = SpannableStringBuilder("$mark  $words").apply {
             setSpan(ForegroundColorSpan(colour), 0, mark.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
@@ -424,7 +428,8 @@ class HapticsLabActivity : Activity() {
         text = value
         textSize = size
         setTextColor(colour)
-        if (bold) typeface = Typeface.DEFAULT_BOLD
+        // Ink's font, Inter (v5.3: no Roboto).
+        typeface = if (bold) GuideFonts.heavy(context) else GuideFonts.regular(context)
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
@@ -475,7 +480,7 @@ internal class LiveTimeline(context: Context, private val name: (Haptic) -> Stri
         alpha = 0x80
         strokeWidth = density
     }
-    private val nameText = text(11f, LabColours.CREAM).apply { typeface = Typeface.DEFAULT_BOLD }
+    private val nameText = text(11f, LabColours.CREAM).apply { typeface = GuideFonts.heavy(context) }
     private val wordsText = text(11f, LabColours.DIM)
     private val droppedText = text(11f, LabColours.ORANGE)
     private val axisText = text(10f, LabColours.DIM)
@@ -562,6 +567,7 @@ internal class LiveTimeline(context: Context, private val name: (Haptic) -> Stri
     private fun x(millis: Long, now: Long) = width - (now - millis).toFloat() / HapticTimeline.LIVE_MILLIS * width
 
     private fun text(size: Float, colour: Int) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = GuideFonts.regular(context)
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, size, resources.displayMetrics)
         color = colour
     }
@@ -588,6 +594,7 @@ internal class PatternBars(context: Context) : View(context) {
         strokeWidth = density
     }
     private val axisText = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = GuideFonts.regular(context)
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10f, resources.displayMetrics)
         color = LabColours.DIM
     }

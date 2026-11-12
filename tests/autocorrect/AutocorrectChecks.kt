@@ -570,6 +570,17 @@ private fun composerFlow(world: Realistic) {
         same(Typist(world, words = refusing).type("adn ").text, "and ", "Refusing one fix leaves the other fixes")
         same(Typist(world, words = refusing).type("Teh ").text, "Teh ", "A refused fix stays refused in capitals")
     }
+    // The owner's lab field (2026-11-12): "i am i'm i'll so i go " typed as keys gave "i am I'm I'll so i go ". Blocked words keys
+    // "I" as "i", so with "i" blocked a lone "i" lost its capital while "i'm" kept it. A capital adds no new word: it always goes in.
+    run {
+        val blocking = FakeWords(Lists(world.words)).also { it.blocked += "i" }
+        same(Typist(world, words = blocking).type("i am i'm i'll so i go ").text, "I am I'm I'll so I go ",
+            "A lone i gets its capital, even with i blocked")
+        same(Typist(world, words = blocking).type("so i\n").text, "so I\n", "and before Enter too")
+        same(typed("i am i'm i'll so i go ").text, "I am I'm I'll so I go ", "A lone i gets its capital in a fresh field")
+        val blockingWord = FakeWords(Lists(world.words)).also { it.blocked += "the" }
+        same(Typist(world, words = blockingWord).type("teh ").text, "teh ", "A blocked word is still never put in by a fix")
+    }
     same(typed("doesnt ").text, "doesn't ", "A missing apostrophe is fixed")
 
     // Auto-punctuation.

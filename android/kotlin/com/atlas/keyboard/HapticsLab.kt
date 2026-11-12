@@ -101,12 +101,14 @@ class HapticsLab(private val context: Context) {
         .put("flickHoldMillis", flickHold()).put("flickHoldDefault", GestureDisplay.FLICK_HOLD.toLong())
         .put("selectionEnd", SelectionEnd.stored(Haptics.selectionEndId(context)).id)
         .put("selectionEnds", JSONArray().apply { for (end in SelectionEnd.entries) put(JSONObject().put("id", end.id).put("label", end.label)) })
-        .put("experiments", JSONObject().put(DOTS_SPEED_UP, Haptics.dotsSpeedUp(context)).put(ZONE_TICKS, Haptics.zoneTicks(context)))
+        .put("experiments", JSONObject().put(DOTS_SPEED_UP, Haptics.dotsSpeedUp(context)).put(ZONE_TICKS, Haptics.zoneTicks(context))
+            .put(EXACT_KEYS_TEXTURE, Haptics.exactKeysTexture(context)))
 
     /** Turns one of the lab's experiments on or off, by its id. */
     fun experiment(id: String, on: Boolean) = when (id) {
         DOTS_SPEED_UP -> Haptics.tryDotsSpeedUp(context, on)
         ZONE_TICKS -> Haptics.tryZoneTicks(context, on)
+        EXACT_KEYS_TEXTURE -> Haptics.tryExactKeysTexture(context, on)
         else -> throw IllegalArgumentException("No experiment called $id")
     }
 
@@ -203,6 +205,8 @@ class HapticsLab(private val context: Context) {
         const val DOTS_SPEED_UP = "dotsSpeedUp"
         /** The id of the experiment "Tick at delete zones". */
         const val ZONE_TICKS = "deleteZoneTicks"
+        /** The id of the experiment "Exact-typing keys feel like a key (texture)". */
+        const val EXACT_KEYS_TEXTURE = "exactKeysTexture"
         /** Play's flick takes a word of this many letters. */
         private const val PLAY_LETTERS = 5
 

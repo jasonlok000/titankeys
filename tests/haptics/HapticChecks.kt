@@ -56,6 +56,8 @@ fun main() {
     aFlicksDotsWaitAsTheLabTries()
     shortcutsStayQuietButACopyOfNothing()
     aDeleteWallIsTheSameAndClean()
+    nothingFoundIsANoAndRunningOutIsAWall()
+    switchesLockOnAndReleaseOff()
     aFlickCrunches()
     println("Haptic checks passed")
 }
@@ -74,7 +76,7 @@ private val table = mapOf(
     Haptic.DeleteWord to Family.Hit,
     Haptic.DeleteCrunch to Family.Crunch,
     Haptic.DeleteBreak to Family.Boundary,
-    Haptic.DeleteNothing to Family.Wall,
+    Haptic.DeleteNothing to Family.No,
     Haptic.DeleteRanOut to Family.Wall,
     Haptic.DeleteZone to Family.Boundary,
     Haptic.SpaceTap to Family.Texture,
@@ -115,12 +117,14 @@ private val table = mapOf(
     Haptic.PanelMark to Family.Texture,
     Haptic.PanelPage to Family.Boundary,
     Haptic.PanelGroup to Family.Boundary,
-    Haptic.QuickSetting to Family.Confirm,
+    Haptic.QuickSettingOn to Family.Lock,
+    Haptic.QuickSettingOff to Family.Release,
     Haptic.ClipPasted to Family.Confirm,
     Haptic.ClipPinned to Family.Lock,
     Haptic.ClipUnpinned to Family.Release,
     Haptic.ClipboardCleared to Family.Gone,
-    Haptic.BugRecording to Family.Confirm,
+    Haptic.BugRecordingStarted to Family.Lock,
+    Haptic.BugRecordingStopped to Family.Release,
     Haptic.GuideCelebration to Family.Celebrate,
     Haptic.GuideNext to Family.Confirm,
     Haptic.GuideBlocked to Family.No,
@@ -931,15 +935,16 @@ private fun aWallBouncesAndSettles() {
     check(HapticPalette.millis(Family.Wall.pattern) <= HapticTimeline.SPAN_MILLIS) { "It fits the lab's graph" }
     check(!Family.Wall.texture) { "It is a message" }
     check(HapticPalette.fits(Family.Wall, Family.Wall.pattern)) { "The lab's editor can edit it" }
-    // The walls, and only they, play it: steering, selecting, and a delete with nothing to delete, short or held.
-    check(Haptic.entries.filter { it.family == Family.Wall }.toSet() ==
-        setOf(Haptic.CursorEnd, Haptic.SelectionEnd, Haptic.DeleteRanOut, Haptic.DeleteNothing)) {
-        "Steering, selecting, a flick with nothing to delete and a held delete hit the wall"
+    // The walls, and only they, play it: a gesture that did something and ran out: steering or selecting into an end of the
+    // text, and a held delete that took the last word.
+    check(Haptic.entries.filter { it.family == Family.Wall }.toSet() == setOf(Haptic.CursorEnd, Haptic.SelectionEnd, Haptic.DeleteRanOut)) {
+        "Steering, selecting and a held delete that ran out hit the wall"
     }
-    // No is only for nothing happening at all, as when the guide blocks something (v5). A flick with nothing to delete is a wall.
-    check(Haptic.entries.filter { it.family == Family.No }.toSet() == setOf(Haptic.NothingToPick, Haptic.WordNotSaved, Haptic.CopyNothing,
-            Haptic.GuideBlocked, Haptic.MenuSpent)) {
-        "No stays for taps with nothing to work on, a failed save, a copy of nothing, the word menu's spent heart and the guide's blocks"
+    // No is for nothing happening at all: Space taps or a steer with no text, a delete with nothing to delete, a failed save, a
+    // copy of nothing, the word menu's spent heart and the guide's blocks.
+    check(Haptic.entries.filter { it.family == Family.No }.toSet() == setOf(Haptic.NothingToPick, Haptic.DeleteNothing,
+            Haptic.WordNotSaved, Haptic.CopyNothing, Haptic.GuideBlocked, Haptic.MenuSpent)) {
+        "No is for gestures that found nothing, and the rest that did nothing"
     }
     check(HapticTimeline.meaning(Family.Wall).isNotEmpty()) { "The lab says what it means" }
     for (haptic in listOf(Haptic.SelectionEnd, Haptic.DeleteRanOut, Haptic.DeleteZone)) check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic" }
@@ -1012,9 +1017,7 @@ private fun shortcutsStayQuietButACopyOfNothing() {
  * then texture goes on (owner, 2026-11-12).
  */
 private fun aDeleteWallIsTheSameAndClean() {
-    check(Haptic.DeleteNothing.family == Haptic.DeleteRanOut.family && Haptic.DeleteRanOut.family == Haptic.CursorEnd.family) {
-        "A short and a long delete hit the same wall as steering"
-    }
+    check(Haptic.DeleteRanOut.family == Haptic.CursorEnd.family) { "A held delete that ran out hits the same wall as steering" }
     check(HapticGate.WALL_CLEAR_MILLIS == 100L) { "100 ms of quiet each side" }
     val clock = Clock(1_000)
     val gate = HapticGate { clock.now }
@@ -1063,4 +1066,50 @@ private fun aFlickCrunches() {
     check(Haptic.DeleteBreak.family == Family.Boundary) { "The break is one firm tick" }
     for (haptic in listOf(Haptic.DeleteCrunch, Haptic.DeleteBreak)) check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic" }
     check(HapticTimeline.meaning(Family.Crunch).isNotEmpty()) { "The lab says what a crunch means" }
+}
+
+/**
+ * One rule for every gesture (owner, 2026-11-12): a gesture that finds nothing at all plays a no; one that did something and
+ * then ran out plays the wall. A flick with nothing to delete, and a hold with nothing to delete, which never starts, play the
+ * same no; a hold that took the last word plays the wall. Taps or a steer with no text are a no; steering or selecting into an
+ * end of the text is a wall.
+ */
+private fun nothingFoundIsANoAndRunningOutIsAWall() {
+    check(Haptic.deleteFoundNothing(tookAny = false) == Haptic.DeleteNothing && Haptic.DeleteNothing.family == Family.No) {
+        "A flick or a hold with nothing to delete: a no"
+    }
+    check(Haptic.deleteFoundNothing(tookAny = true) == Haptic.DeleteRanOut && Haptic.DeleteRanOut.family == Family.Wall) {
+        "A hold that took the last word: the wall"
+    }
+    check(Haptic.registered(words = false, nothing = true).family == Family.No) { "A steer in a field with no text: a no" }
+    check(Haptic.registered(words = true, nothing = true).family == Family.No) { "A triple with no text: a no" }
+    check(Haptic.picked(found = false).family == Family.No) { "A double or triple tap with no word: a no" }
+    check(Haptic.CursorEnd.family == Family.Wall && Haptic.SelectionEnd.family == Haptic.CursorEnd.family) {
+        "Steering or selecting into an end of the text: the wall"
+    }
+    // The no and the wall are told apart: a no is three equal pulses, a wall bounces and settles.
+    check(Family.No.pattern != Family.Wall.pattern) { "They feel different" }
+    // A wall still plays once per hit; a delete's no once per stroke, through the same guard, so a hold that never started is
+    // quiet after its no.
+    val stroke = WallHits()
+    val heard = listOf(stroke.reached(), stroke.reached(), stroke.reached())
+    check(heard == listOf(true, false, false)) { "A stroke with nothing to delete says no once: $heard" }
+}
+
+/** A switch says which way it went (owner, 2026-11-12): on locks in, off lets go, for quick settings and Record a bug alike. */
+private fun switchesLockOnAndReleaseOff() {
+    check(Haptic.quickSetting(on = true).family == Family.Lock && Haptic.quickSetting(on = false).family == Family.Release) {
+        "A quick setting: Lock on, Release off"
+    }
+    check(Haptic.bugRecording(started = true).family == Family.Lock && Haptic.bugRecording(started = false).family == Family.Release) {
+        "Record a bug: Lock as it starts, Release as it stops"
+    }
+    // The ones that turn on keep the old ids, so a switch already turned off in Settings stays off.
+    check(Haptic.QuickSettingOn.id == "quick_setting" && Haptic.BugRecordingStarted.id == "bug_recording") { "Old ids kept" }
+    check(Haptic.of("quick_setting_off") == Haptic.QuickSettingOff && Haptic.of("bug_recording_stopped") == Haptic.BugRecordingStopped) {
+        "The new ones have their own ids"
+    }
+    // Exact typing's bar keys stay Confirm; only the lab's experiment tries texture.
+    check(Haptic.ExactKey.family == Family.Confirm) { "Exact typing keys still confirm by default" }
+    for (haptic in listOf(Haptic.QuickSettingOff, Haptic.BugRecordingStopped)) check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic" }
 }

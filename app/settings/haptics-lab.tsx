@@ -55,6 +55,8 @@ function Lab({ lab }: { lab: HapticsLab }) {
       <Field label="Reset" disabled={wait === lab.flickHoldDefault} onPress={() => void tryWait(null)}>{`${lab.flickHoldDefault} ms`}</Field>
       <Toggle label="Tick at delete zones" value={lab.experiments.deleteZoneTicks ?? true}
         onChange={on => void setLabExperiment("deleteZoneTicks", on)} />
+      <Toggle label="Exact-typing keys feel like a key (texture)" value={lab.experiments.exactKeysTexture ?? false}
+        onChange={on => void setLabExperiment("exactKeysTexture", on)} />
     </Section>
     {/* What marks the end of the selection that grows as you slide after a triple press. The next selection shows it. */}
     <Section title="Triple press selection end">

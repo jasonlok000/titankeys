@@ -22,6 +22,8 @@ private const val GAP = 100L
 private const val WORD = 900L
 
 fun main() {
+    shortcutsActOncePerPress()
+    droppedKeysUseTheirModifiers()
     onePress()
     aLongPushStaysOn()
     holdAndType()
@@ -834,6 +836,54 @@ private fun panelScrollKeys() {
     }
     same(Layout.rows[1].last(), Layout.BACKSPACE, "Backspace must be at the end of the second row")
     same(Layout.rows[2].last(), Layout.ENTER, "Enter must be at the end of the third row")
+}
+
+/** Holding Ctrl + V pasted about 25 times (owner, 2026-11-12). Each shortcut acts once a press; moving and deleting keep going. */
+private fun shortcutsActOncePerPress() {
+    for (letter in "ACXVZYSF") {
+        val code = KeyEvent.KEYCODE_A + (letter - 'A')
+        same(Modifiers.shortcutRepeats(code), false, "Ctrl + $letter held must act once")
+    }
+    for (code in listOf(KeyEvent.KEYCODE_SPACE, KeyEvent.KEYCODE_TAB, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_1)) {
+        same(Modifiers.shortcutRepeats(code), false, "Ctrl with key $code held must act once")
+    }
+    for (code in listOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_MOVE_HOME, KeyEvent.KEYCODE_MOVE_END, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_FORWARD_DEL)) {
+        same(Modifiers.shortcutRepeats(code), true, "Ctrl with key $code held must keep moving or deleting")
+    }
+}
+
+/**
+ * Typing that an outside change drops still applies Shift, Alt and Sym and every release, but a dropped key uses up its Alt as a
+ * typed one would. Alt + Z with Z dropped left Alt on, so the next key typed its symbol: a stray "7" after a word (2026-11-12).
+ */
+private fun droppedKeysUseTheirModifiers() {
+    same(Modifiers.dropUsesModifiers(LETTER, 0), true, "A dropped letter uses its modifiers")
+    same(Modifiers.dropUsesModifiers(LETTER, 1), false, "A dropped repeat does not")
+    same(Modifiers.dropUsesModifiers(KeyEvent.KEYCODE_ALT_LEFT, 0), false, "Alt itself is never dropped")
+    same(Modifiers.dropUsesModifiers(KeyEvent.KEYCODE_SYM, 0), false, "Nor is Sym")
+    // Alt held for Z, with Z dropped: Alt goes off with its release.
+    Modifiers().run {
+        down(KeyEvent.KEYCODE_ALT_LEFT, 0L)
+        consume()
+        up(KeyEvent.KEYCODE_ALT_LEFT, 100L)
+        same(alt, Modifiers.Level.Off, "Alt held for a dropped key ends with its release")
+    }
+    // Alt pushed for Z, with Z dropped: the push is used up.
+    Modifiers().run {
+        down(KeyEvent.KEYCODE_ALT_LEFT, 0L)
+        up(KeyEvent.KEYCODE_ALT_LEFT, 50L)
+        consume()
+        same(alt, Modifiers.Level.Off, "An Alt push for a dropped key is used up")
+    }
+    // A locked Alt stays locked.
+    Modifiers().run {
+        doublePressLocks = true
+        down(KeyEvent.KEYCODE_ALT_LEFT, 0L); up(KeyEvent.KEYCODE_ALT_LEFT, 20L)
+        down(KeyEvent.KEYCODE_ALT_LEFT, 100L); up(KeyEvent.KEYCODE_ALT_LEFT, 120L)
+        consume()
+        same(alt, Modifiers.Level.Locked, "A locked Alt stays locked after a dropped key")
+    }
 }
 
 private fun restingOnP() {

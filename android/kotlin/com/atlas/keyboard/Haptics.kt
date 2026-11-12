@@ -39,6 +39,10 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
     Saved("saved", "Saved", listOf(20, 40, 20, 40, 50)),
     /** Long, short, short: a firm hit that trails off, Saved's mirror. The word menu took the word away. */
     Removed("removed", "Removed", listOf(50, 40, 20, 40, 20)),
+    /** Saved, ending on a stronger hit: the word menu made a saved word a favourite. */
+    Favourite("favourite", "Favourite", listOf(20, 40, 20, 40, 80)),
+    /** Light, firm, light: a swell that settles back, so it is never Removed's fall. The word is no longer a favourite. */
+    Unfavourite("unfavourite", "Unfavourite", listOf(20, 40, 60, 40, 20)),
     /** A rising run of three: the guide's celebrations. */
     Celebrate("celebrate", "Celebrate", listOf(15, 40, 22, 40, 35));
 
@@ -107,6 +111,10 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     WordSaved("word_saved", HapticGroup.Bar, Family.Saved),
     /** Forget in the word menu, by O or the strip. */
     WordForgotten("word_forgotten", HapticGroup.Bar, Family.Removed),
+    /** Favourite in the word menu, by I on a saved word or the strip. */
+    WordFavourited("word_favourited", HapticGroup.Bar, Family.Favourite),
+    /** Unfavourite in the word menu, by O on a favourite or the strip. */
+    WordUnfavourited("word_unfavourited", HapticGroup.Bar, Family.Unfavourite),
     /** Undo right after Forget: the word is back. */
     ForgetUndone("forget_undone", HapticGroup.Bar, Family.Back),
     /** Save went wrong and the word isn't saved. */

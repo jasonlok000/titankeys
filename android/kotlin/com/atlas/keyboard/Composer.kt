@@ -206,6 +206,8 @@ class Composer(
     private var lastLearned: Learned? = null
     /** The bar holds nothing, or words that came from no text, so new starts can go up without waiting for the models. */
     private var barIdle = true
+    /** The words on the bar were for text in the field. Once the field is empty they are out of date. */
+    private var barForText = false
     /** Words held on the strip to forget, in lower case. The bar leaves them out while their Undo shows. */
     private val hidden = mutableSetOf<String>()
     /** Which of the composition's alternatives each place on the bar shows, since hidden and blocked words leave gaps. */
@@ -254,8 +256,12 @@ class Composer(
     var autocorrect: Autocorrect? = null
     /** Snippets and emoji shortcodes, or null when there are none. */
     var expansions: Expansions? = null
-    /** Words whose capital Backspace took back in this field, while autocorrect is off and has no list of its own. */
-    private val capitalsUndone = HashSet<String>()
+    /**
+     * The text up to and including an "i" whose capital Backspace took back. That one "i" stays as typed, but the next one gets
+     * its capital again: a chat app keeps one field for a whole conversation, so taking the capital back for good would take it
+     * from every later "i" there (owner, 2026-11-12).
+     */
+    private var lowercaseI: String? = null
 
     val hasPendingInput get() = recognising || barrier != null || drainScheduled || pendingInput.isNotEmpty()
     /** Whether a touch arriving now could still join the last swipe. A recognition in progress may yet allow it. */
@@ -286,7 +292,7 @@ class Composer(
         val owner = next?.let { it.packageName to it.fieldId }
         if (owner != rememberedField) {
             autocorrect?.newField()
-            capitalsUndone.clear()
+            lowercaseI = null
             // Words from the last field mean nothing here. A restart of this field keeps its words until new ones arrive.
             show(emptyList())
         }
@@ -1426,12 +1432,15 @@ class Composer(
      */
     private fun capitalsOn() = field.markSpaces && !field.exact && (autocorrect != null || autoCapitalise())
 
-    /** "i" as "I", or "i'm" as "I'm", after [before], unless Backspace took that capital back in this field. */
+    /** "i" as "I", or "i'm" as "I'm", after [before], unless Backspace took this one's capital back. */
     private fun capitalI(word: String, before: String): TypedCorrector.Fix? {
-        if (!capitalsOn() || TypedCorrector.isInsideAddress(before + word)) return null
-        if (word.lowercase() in (autocorrect?.rejected ?: capitalsUndone)) return null
+        if (!capitalsOn() || TypedCorrector.isInsideAddress(before + word) || keptLowercase(word, before)) return null
         return TypedCorrector.capitalI(word)?.let { TypedCorrector.Fix(word, it) }
     }
+
+    /** Whether [word] after [before] is the "i" whose capital Backspace took back, see [lowercaseI]. */
+    private fun keptLowercase(word: String, before: String) =
+        TypedCorrector.capitalI(word) != null && lowercaseI == (before + word).takeLast(Editor.CONTEXT_LENGTH)
 
     /** The typed word that ends at the cursor, as it stands in the text. Null if the text there is anything else. */
     private fun typedWordAt(anchor: Snapshot): String? {
@@ -1467,6 +1476,7 @@ class Composer(
         val before = anchor.before ?: return null
         guideFix(word, before)?.let { return it }
         val corrector = corrector()
+        if (keptLowercase(word, before.dropLast(word.length))) return null
         // Without the word data, only "i" changes.
         val fix = (if (corrector != null) corrector.check(word, before.dropLast(word.length), endedWord?.word)
             else capitalI(word, before.dropLast(word.length))) ?: return null
@@ -1599,8 +1609,15 @@ class Composer(
             return true
         }
         val autocorrect = autocorrect
-        if (autocorrect != null) autocorrect.undone(pending.word) else capitalsUndone += pending.word.lowercase()
         val accepted = snapshot()
+        // Only this "i" keeps its small letter. Any other word that Backspace put back stays as typed for the field.
+        if (TypedCorrector.capitalI(pending.word)?.let(pending.replaced::startsWith) == true && pending.restored.startsWith(pending.word)) {
+            val before = accepted.before.orEmpty()
+            lowercaseI = before.dropLast(pending.restored.length - pending.word.length).takeLast(Editor.CONTEXT_LENGTH)
+            confirmState(accepted)
+            return true
+        }
+        autocorrect?.undone(pending.word)
         if (pending.keptAsTyped) {
             val before = accepted.before.orEmpty().dropLast(pending.restored.length)
             if (field.learning) autocorrect?.keep(pending.word, before)
@@ -1708,6 +1725,8 @@ class Composer(
 
     private fun show(suggestions: List<String>) {
         barIdle = suggestions.isEmpty()
+        // The cursor says it without asking the app: anywhere but the start, or not known, there may be text.
+        barForText = selection.start != 0 || selection.end != 0
         shownAlternatives = suggestions.indices.filter { suggestions[it].lowercase() !in hidden && words.allowed(suggestions[it]) }
         showWords(shownAlternatives.map(suggestions::get))
     }
@@ -1751,8 +1770,9 @@ class Composer(
         val lastWord = TypedPredictions.prefix(before.dropLast(1))
         val trailingSpace = before.endsWith(" ") && lastWord.isNotEmpty() && !words.known(lastWord)
         val context = if (trailingSpace) before.dropLast(1) else before
-        // Completions wait for the models, which can take seconds to load.
-        if (barIdle) offerStarts(anchor)
+        // Completions wait for the models, which can take seconds to load. An emptied field shows its starts at once, as a chat
+        // app's does after it sends: the last message's words must not stay on the bar meanwhile (owner, 2026-11-12).
+        if (barIdle || barForText && before.isEmpty() && after.isEmpty()) offerStarts(anchor)
         val current = epoch
         completion?.set(true)
         val cancelled = AtomicBoolean(false)

@@ -25,6 +25,8 @@ interface Lexicon {
     fun acronym(word: String): Boolean = false
     /** Whether shorthand such as "shd" becomes its full word ("should"), as the setting asks. Off by default. */
     fun expandShorthand(): Boolean = false
+    /** Whether the user made [word] a favourite in its menu: it wins a close call between fixes. */
+    fun favourite(word: String): Boolean = false
     /** Calls [action] with each word in lowercase and its frequency. */
     fun forEachWord(action: (String, Int) -> Unit)
 }
@@ -192,7 +194,8 @@ class TypedCorrector(
     /** The second check: [original] at the end of the text should become [replaced], because [word] should be [fix]. */
     class Review(val word: String, val fix: String, val original: String, val replaced: String, val reviewedLast: Boolean)
 
-    private val channel = NoisyChannel(::candidates, KeyNeighbours::near, data.pairs::count, data.triples::count, contextWeight)
+    private val channel = NoisyChannel(::candidates, KeyNeighbours::near, data.pairs::count, data.triples::count, contextWeight,
+        lexicon::favourite)
 
     private val context = ContextCorrector(
         frequencyOf = lexicon::frequency,

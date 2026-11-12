@@ -75,6 +75,36 @@ private fun theMenuKeys() {
     }
     check(MenuKeys.wordRight(width, side, 21f) < MenuKeys.slot(width, side, MenuKeys.SAVE).first) { "The word ends left of Save" }
     System.getenv("MENU_PNG")?.let { drawMenuBar(it, width, side) }
+    theMenuLadder()
+}
+
+/**
+ * Save and Favourite are a ladder (owner, 2026-11-12). I: Save, then Favourite, then Favourite with its tick, which does nothing
+ * more. O: Forget, or on a favourite Unfavourite, and then Forget. A word the dictionary knows starts at Favourite.
+ */
+private fun theMenuLadder() {
+    val (new, saved, favourite) = Triple(MenuKeys.Step.New, MenuKeys.Step.Saved, MenuKeys.Step.Favourite)
+    same(MenuKeys.step(known = false, favourite = false), new, "A word nobody knows is not saved")
+    same(MenuKeys.step(known = true, favourite = false), saved, "A saved word, or one the dictionary knows, starts at Favourite")
+    same(MenuKeys.step(known = true, favourite = true), favourite, "A favourite is a favourite")
+    same(MenuKeys.step(known = false, favourite = true), favourite, "A favourite stays one, whatever the lists say")
+    same(listOf(new, saved, favourite).map(MenuKeys::first),
+        listOf(MenuKeys.Button.Save, MenuKeys.Button.Favourite, MenuKeys.Button.Favourited), "I's buttons up the ladder")
+    same(listOf(new, saved, favourite).map { MenuKeys.second(it, forget = true) },
+        listOf(MenuKeys.Button.Forget, MenuKeys.Button.Forget, MenuKeys.Button.Unfavourite), "O's buttons down the ladder")
+    same(MenuKeys.second(saved, forget = false), null, "A word no list can drop has no Forget")
+    same(MenuKeys.second(favourite, forget = false), MenuKeys.Button.Unfavourite, "but a favourite can always be unfavourited")
+    // I twice from a new word: saved, then a favourite, and the menu stays open on each.
+    var step = new
+    step = MenuKeys.after(step, MenuKeys.first(step))!!
+    same(step, saved, "I saves, and the menu stays on the saved word")
+    step = MenuKeys.after(step, MenuKeys.first(step))!!
+    same(step, favourite, "I again makes it a favourite")
+    same(MenuKeys.after(step, MenuKeys.first(step)), favourite, "I on a favourite does nothing more")
+    // O twice from a favourite: unfavourited, then forgotten, which closes the menu.
+    step = MenuKeys.after(step, MenuKeys.second(step, forget = true)!!)!!
+    same(step, saved, "O unfavourites, and the word stays saved")
+    same(MenuKeys.after(step, MenuKeys.second(step, forget = true)!!), null, "O again forgets, and the menu closes")
 }
 
 /** The menu's geometry, drawn to a PNG over the keys' columns, to look at without a phone. Set MENU_PNG to a path to get it. */

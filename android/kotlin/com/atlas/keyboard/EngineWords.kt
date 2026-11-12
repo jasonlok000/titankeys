@@ -3,10 +3,14 @@ package com.atlas.keyboard
 import com.atlas.connected.Contributions
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
+import com.atlas.engine.TypedPredictions
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** [Words] backed by the FUTO swipe engine and its learned habits. */
-class EngineWords(private val typing: SwipeTyping) : Words {
+/**
+ * [Words] backed by the FUTO swipe engine and its learned habits. A [favourite] word comes first among the swipe's candidates and a
+ * typed word's completions, as far as [Favourites.REACH]: see [Favourites].
+ */
+class EngineWords(private val typing: SwipeTyping, private val favourite: (String) -> Boolean = { false }) : Words {
     override fun allowed(word: String) = typing.wordAllowed(word)
     override fun fixAllowed(typed: String, fix: String) = typing.fixAllowed(typed, fix)
     override fun known(word: String) = typing.knownWord(word)
@@ -19,15 +23,21 @@ class EngineWords(private val typing: SwipeTyping) : Words {
         val generation = typing.learningGeneration()
         typing.recognise(swipe, context, personalise, object : SwipeTyping.Callback {
             override fun result(words: Array<String>, elapsed: Long, error: String?) =
-                result(Words.Recognition(words.toList(), null))
+                result(Words.Recognition(Favourites.first(words.toList(), favourite), null))
 
             override fun result(words: Array<String>, elapsed: Long, error: String?, prediction: SwipeTyping.Prediction) =
-                result(Words.Recognition(words.toList(), if (personalise) Learning(prediction, generation) else null, prediction))
+                result(Words.Recognition(Favourites.first(words.toList(), favourite),
+                    if (personalise) Learning(prediction, generation) else null, prediction))
         })
     }
 
-    override fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit) =
-        typing.complete(before, cancelled, sentenceCapitalisation) { words, _, _ -> if (!cancelled.get()) result(words.toList()) }
+    override fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit) {
+        // Only the completions of a word being typed are similar words. The next words after a space are not.
+        val inWord = TypedPredictions.prefix(before).isNotEmpty()
+        typing.complete(before, cancelled, sentenceCapitalisation) { words, _, _ ->
+            if (!cancelled.get()) result(if (inWord) Favourites.first(words.toList(), favourite) else words.toList())
+        }
+    }
 
     override fun prepare(text: String, cancelled: AtomicBoolean) = typing.prepare(text, cancelled)
 

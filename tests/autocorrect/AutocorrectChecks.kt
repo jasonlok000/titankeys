@@ -9,6 +9,7 @@ import com.atlas.keyboard.Composer
 import com.atlas.keyboard.Editor
 import com.atlas.keyboard.EnterKey
 import com.atlas.keyboard.Expansions
+import com.atlas.keyboard.Favourites
 import com.atlas.keyboard.Field
 import com.atlas.keyboard.Haptic
 import com.atlas.keyboard.Words
@@ -2025,7 +2026,11 @@ private fun capitalI(world: Realistic) {
         same(typist().also { it.editor.enters = Editor.Enter.Action }.type("so i\n").text, "so I",
             "\"i\" before an Enter that sends, in $name")
         same(typist().type("so i ").backspace().text, "so i", "Backspace puts \"i\" back in $name")
-        same(typist().type("so i ").backspace().type(" i ").text, "so i i ", "An undone \"i\" stays for the field in $name")
+        // Backspace takes back only that one capital: a chat app keeps its field for the whole conversation (owner, 2026-11-12).
+        same(typist().type("so i ").backspace().type(" i ").text, "so i I ", "Only the undone \"i\" stays small in $name")
+        same(typist().type("so i ").backspace().type(" ").text, "so i ", "The undone \"i\" stays small when its word ends again in $name")
+        same(typist().type("so i'm ").backspace().type(" and i'm ").text, "so i'm and I'm ", "Only the undone \"i'm\" stays in $name")
+        same(typist().type("so i,").backspace().type(" i, ok").text, "so i, I, ok", "Only the undone \"i,\" stays in $name")
         same(typist().type("so ").tap("i").text, "so I ", "A tapped \"i\" in $name")
     }
     same(Typist(world, field = noFixes).type("teh ").text, "teh ", "Typo fixes stay off where the field turns them off")
@@ -2051,10 +2056,57 @@ private fun capitalI(world: Realistic) {
             "\"i\" stays before an Enter that sends, in $name")
     }
     same(Typist(world, field = sentences).type("see my_i ").text, "see my_i ", "Code names keep their \"i\"")
+    // A chat app empties its field when it sends: the bar starts again at once, not when the next words come.
+    Typist(world, field = sentences, words = FakeWords(Lists(world.words)).also { it.completions = listOf("world", "would") }).also { chat ->
+        chat.type("hello wor")
+        must("world" in chat.bar, "The bar shows the word being typed: ${chat.bar}")
+        chat.words.completions = null
+        chat.editor.text = ""
+        chat.editor.reports += 0
+        chat.settle()
+        same(chat.bar, chat.words.starts, "An emptied field shows its starts at once")
+    }
+    // A chat app: one field for every message, emptied by the app when a message goes. An "i" undone in one message
+    // takes nothing from the next.
+    Typist(world, field = sentences).also { chat ->
+        chat.type("ok i ").backspace()
+        chat.editor.text = ""
+        chat.editor.reports += 0
+        chat.settle()
+        same(chat.type("and i went ").text, "and I went ", "An \"i\" undone in the last message gets its capital in the next")
+    }
+}
+
+/**
+ * A favourite comes first among similar words (owner, 2026-11-12): among the bar's three for a swipe or a typed word's completions,
+ * and in a close call between autocorrect's fixes. It never beats a word that clearly fits better.
+ */
+private fun favourites() {
+    val favourite = { word: String -> word.lowercase() in setOf("help", "cay") }
+    same(Favourites.first(listOf("hello", "help", "held"), favourite), listOf("help", "hello", "held"), "A favourite second goes first")
+    same(Favourites.first(listOf("hello", "held", "Help"), favourite), listOf("Help", "hello", "held"), "A favourite third goes first, in any case")
+    same(Favourites.first(listOf("hello", "held", "hell", "help"), favourite), listOf("hello", "held", "hell", "help"),
+        "A favourite past the bar's three stays where it is")
+    same(Favourites.first(listOf("help", "hello"), favourite), listOf("help", "hello"), "A favourite first stays first")
+    same(Favourites.first(listOf("hello"), favourite), listOf("hello"), "One word stays")
+    // Autocorrect: "cat" is one near key from both "car" and "cay", a tie that fixes nothing, unless one is a favourite.
+    fun channel(isFavourite: (String) -> Boolean) = NoisyChannel({ listOf("car", "cay") }, KeyNeighbours::near, { _, _ -> 0 }, { _, _, _ -> 0 },
+        favourite = isFavourite)
+    val tie = channel { false }.pick("cat", null, null, null)!!
+    same(tie.score, tie.runnerUp, "Both fixes score the same")
+    same(channel { false }.confidentFix(tie), null, "A tie fixes nothing")
+    val won = channel(favourite).pick("cat", null, null, null)!!
+    same(won.word, "cay", "The favourite wins the tie")
+    same(channel(favourite).confidentFix(won), "cay", "and is the fix")
+    // A favourite that fits clearly worse does not win: "cab" is far from "t".
+    val far = NoisyChannel({ listOf("car", "cab") }, KeyNeighbours::near, { _, _ -> 0 }, { _, _, _ -> 0 }, favourite = { it == "cab" })
+        .pick("cat", null, null, null)!!
+    same(far.word, "car", "A favourite that fits clearly worse stays behind")
 }
 
 fun main() {
     val world = Realistic()
+    favourites()
     smallerChecks()
     nextWordChecks()
     composerFlow(world)

@@ -18,6 +18,8 @@ class NoisyChannel(
     private val tripleCount: (first: String, second: String, third: String) -> Int,
     /** How much the next-word model's log chance counts, against the word counts above. */
     private val contextWeight: Double = CONTEXT_WEIGHT,
+    /** Whether the user made a word a favourite. A favourite wins a tie: see [favouriteFirst]. */
+    private val favourite: (String) -> Boolean = { false },
 ) {
     data class Pick(val word: String, val score: Double, val runnerUp: Double, val typedScore: Double)
 
@@ -49,10 +51,10 @@ class NoisyChannel(
             }
             .toList()
         val fit = contextFit(chance, slips.map { it.first } + typed)
-        val scored = slips
+        val ranked = slips
             .map { (word, cost) -> word to score(word, cost, previous, beforePrevious, next) + fit(word) }
             .sortedByDescending { it.second }
-            .take(2)
+        val scored = favouriteFirst(ranked).take(2)
         val (best, bestScore) = scored.firstOrNull() ?: return null
         return Pick(
             word = best,
@@ -60,6 +62,19 @@ class NoisyChannel(
             runnerUp = scored.getOrNull(1)?.second ?: Double.NEGATIVE_INFINITY,
             typedScore = score(typed, 0.0, previous, beforePrevious, next) + fit(typed)
         )
+    }
+
+    /**
+     * A favourite that ties with the best, within [MIN_MARGIN] of it, goes first with the best's score, and the words it tied with
+     * no longer count as its runner-up: it wins the tie, so a tie that would have fixed nothing fixes it. Words further off still
+     * count, so it is never fixed to where the typed letters clearly meant something else.
+     */
+    private fun favouriteFirst(ranked: List<Pair<String, Double>>): List<Pair<String, Double>> {
+        val best = ranked.firstOrNull() ?: return ranked
+        if (favourite(best.first)) return ranked
+        val tied = ranked.takeWhile { best.second - it.second < MIN_MARGIN }
+        val chosen = tied.firstOrNull { favourite(it.first) } ?: return ranked
+        return listOf(chosen.first to best.second) + ranked.drop(tied.size)
     }
 
     /**

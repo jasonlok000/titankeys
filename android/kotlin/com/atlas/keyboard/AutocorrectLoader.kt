@@ -58,7 +58,7 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
     }
 
     private fun load(words: TypedPredictions, request: Int) {
-        val lexicon = PhoneLexicon(typing, words)
+        val lexicon = PhoneLexicon(typing, words, FavouriteWords.get(context))
         val data = try {
             CorrectionData.read(lexicon) { name -> InputStreamReader(context.assets.open("autocorrect/$name"), Charsets.UTF_8) }
         } catch (error: IOException) {
@@ -85,7 +85,8 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
         forget.run()
     }
 
-    private class PhoneLexicon(private val typing: SwipeTyping, private val words: TypedPredictions) : Lexicon {
+    private class PhoneLexicon(private val typing: SwipeTyping, private val words: TypedPredictions,
+                               private val favourites: FavouriteWords) : Lexicon {
         override fun known(word: String) = words.contains(word) || typing.personalWord(word)
         override fun frequency(word: String) = words.frequencyOf(word)
         override fun personal(word: String) = typing.personalWord(word)
@@ -93,6 +94,7 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
         override fun preferredSpelling(word: String): String = typing.preferredSpelling(word)
         override fun acronym(word: String) = words.acronym(word)
         override fun expandShorthand() = typing.expandShorthand()
+        override fun favourite(word: String) = favourites.contains(word)
         override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
     }
 

@@ -622,7 +622,7 @@ class AtlasIme : InputMethodService() {
         touchpad = Touchpad(getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY))
         editor = ConnectionEditor(::getCurrentInputConnection, ::getCurrentInputEditorInfo,
             { delay, action -> main.postDelayed(action, delay) }, { enterApps })
-        composer = Composer(editor, EngineWords(SwipeTyping.get(this)),
+        composer = Composer(editor, EngineWords(SwipeTyping.get(this), FavouriteWords.get(this)::contains),
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
             { modifiers.autoShifted }) { barWords = it; strip?.words = it }
@@ -1536,7 +1536,6 @@ class AtlasIme : InputMethodService() {
     /** A forgotten word, which waits out its Undo before the engine forgets it. */
     private var pendingForget: HeldWord? = null
     private val forgetNow = Runnable { commitForget() }
-    private val endNotice = Runnable { strip?.notice = null }
 
     /** Holding a word on the strip opens its menu. */
     private fun holdWord(index: Int): Boolean {
@@ -1549,12 +1548,23 @@ class AtlasIme : InputMethodService() {
 
     private fun openMenu(held: HeldWord) {
         commitForget()
-        main.removeCallbacks(endNotice)
         menuWord = held
         strip?.menuMark = -1
         haptics.play(Haptic.MenuOpen)
-        strip?.notice = Strip.Notice.Menu(held.word, canForget(held))
+        // The guide's menu is only for show, and its keys say Save and Forget, so it always starts there.
+        strip?.notice = Strip.Notice.Menu(held.word, canForget(held), if (inGuide) MenuKeys.Step.New else wordStep(held.word))
         KeyboardEvents.publish { KeyboardEvent.WordMenu(held.word) }
+    }
+
+    /** Where [word] stands for the menu: a favourite, saved or known to the dictionary, or neither. See [MenuKeys.Step]. */
+    private fun wordStep(word: String) =
+        MenuKeys.step(known = SwipeTyping.get(this).knownWord(word), favourite = FavouriteWords.get(this).contains(word))
+
+    /** The open menu shows [held] at [step] now, and stays open. */
+    private fun menuAt(held: HeldWord, step: MenuKeys.Step) {
+        val menu = strip?.notice as? Strip.Notice.Menu ?: return
+        if (menuWord !== held) return
+        strip?.notice = menu.copy(step = step)
     }
 
     private fun canForget(held: HeldWord) =
@@ -1576,12 +1586,15 @@ class AtlasIme : InputMethodService() {
     /** The key that picked a menu button, whose release must not reach the app. */
     private var menuKey = -1
 
-    /** The menu's button that [key] picks: I saves, O forgets, P goes back. Null for a key that picks none. */
+    /**
+     * The menu's button that [key] picks: I saves, then favourites; O forgets, or unfavourites a favourite; P goes back. Null for
+     * a key that picks none.
+     */
     private fun menuAction(key: String): Strip.Action? {
         val menu = strip?.notice as? Strip.Notice.Menu ?: return null
         return when (MenuKeys.button(key)) {
-            MenuKeys.SAVE -> Strip.Action.Save
-            MenuKeys.FORGET -> Strip.Action.Forget.takeIf { menu.forget }
+            MenuKeys.SAVE -> menu.first
+            MenuKeys.FORGET -> menu.second
             MenuKeys.BACK -> Strip.Action.Close
             else -> null
         }
@@ -1642,9 +1655,9 @@ class AtlasIme : InputMethodService() {
     /** A resting finger marks the button over its key, as on the Sym panel. */
     private fun markMenu(key: String) {
         val strip = strip ?: return
-        // Save and Forget take the mark; Back, a way out, never does, though P still picks it.
+        // I's and O's buttons take the mark; Back, a way out, never does, though P still picks it.
         val action = if (menuOpen) menuAction(key) else null
-        val mark = if (action == Strip.Action.Save || action == Strip.Action.Forget) MenuKeys.button(key) else -1
+        val mark = if (action != null && action != Strip.Action.Close) MenuKeys.button(key) else -1
         if (mark >= 0 && mark != strip.menuMark) haptics.play(Haptic.MenuMark)
         strip.menuMark = mark
     }
@@ -1652,8 +1665,8 @@ class AtlasIme : InputMethodService() {
     private fun stripAction(action: Strip.Action) {
         val held = menuWord
         if (held != null && action != Strip.Action.OpenSelected) KeyboardEvents.publish { KeyboardEvent.MenuPicked(action.name) }
-        // In the guide, Save and Forget are only for show: nothing is saved or forgotten, and the guide says so.
-        if (inGuide && held != null && (action == Strip.Action.Save || action == Strip.Action.Forget)) {
+        // In the guide, the menu's choices are only for show: nothing is saved or forgotten, and the guide says so.
+        if (inGuide && held != null && action in MENU_CHOICES) {
             closeMenu()
             return
         }
@@ -1666,19 +1679,28 @@ class AtlasIme : InputMethodService() {
             }
             Strip.Action.Undo -> undoForget()
             Strip.Action.Save -> if (held != null) saveWord(held)
+            Strip.Action.Favourite -> if (held != null) favouriteWord(held)
+            // I on a favourite shows that it is one. It does nothing more.
+            Strip.Action.Favourited -> Unit
+            Strip.Action.Unfavourite -> if (held != null) unfavouriteWord(held)
             Strip.Action.Forget -> if (held != null && canForget(held)) forgetWord(held)
         }
     }
 
-    /** Puts the word in Saved words. A blocked word is let back in first, since Save is a clear wish for it. */
+    /**
+     * Puts the word in Saved words. A blocked word is let back in first, since Save is a clear wish for it. The menu stays open,
+     * and I is Favourite now (owner, 2026-11-12).
+     */
     private fun saveWord(held: HeldWord) {
-        menuWord = null
         val typing = SwipeTyping.get(this)
         val add = {
             typing.addWord(held.word) { error ->
                 if (error != null) {
                     Log.w("Atlas", "Could not save a word: $error")
-                    main.post { haptics.play(Haptic.WordNotSaved) }
+                    main.post {
+                        haptics.play(Haptic.WordNotSaved)
+                        menuAt(held, MenuKeys.Step.New)
+                    }
                 }
             }
         }
@@ -1687,8 +1709,28 @@ class AtlasIme : InputMethodService() {
         haptics.play(Haptic.WordSaved)
         if (!typing.wordAllowed(held.word)) typing.setWordBlocked(held.word, false) { add() } else add()
         composer.unhide(held.word)
-        strip?.notice = Strip.Notice.Saved(held.word)
-        main.postDelayed(endNotice, SAVED_NOTICE_MILLIS)
+        menuAt(held, MenuKeys.Step.Saved)
+    }
+
+    /** Makes the word a favourite: first among similar words. The menu stays open, with I showing it is one. */
+    private fun favouriteWord(held: HeldWord) {
+        if (!FavouriteWords.get(this).add(held.word)) {
+            haptics.play(Haptic.WordNotSaved)
+            return
+        }
+        haptics.play(Haptic.WordFavourited)
+        composer.unhide(held.word)
+        menuAt(held, MenuKeys.Step.Favourite)
+    }
+
+    /** The word is no longer a favourite, but stays saved. The menu stays open, and O is Forget again. */
+    private fun unfavouriteWord(held: HeldWord) {
+        if (!FavouriteWords.get(this).remove(held.word)) {
+            haptics.play(Haptic.WordNotSaved)
+            return
+        }
+        haptics.play(Haptic.WordUnfavourited)
+        menuAt(held, MenuKeys.Step.Saved)
     }
 
     /** Forget leaves the word off the bar at once, and the engine forgets it once the Undo has had its time. */
@@ -1717,6 +1759,8 @@ class AtlasIme : InputMethodService() {
         pendingForget = null
         main.removeCallbacks(forgetNow)
         if (strip?.notice is Strip.Notice.Forgot) strip?.notice = null
+        // A forgotten word is no favourite either.
+        FavouriteWords.get(this).remove(pending.word)
         SwipeTyping.get(this).forgetWord(pending.word, pending.typed) { error ->
             if (error != null) Log.w("Atlas", "Could not forget a word: $error")
         }
@@ -2373,13 +2417,16 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(checkHeldTaps)
         pieces.clear()
         lastTouch = null
-        val kept = pendingInput.filter { pending ->
-            pending.event?.let { Modifiers.survivesDiscard(it.keyCode, it.action == KeyEvent.ACTION_DOWN) } == true
-        }
+        val queued = pendingInput.toList()
         pendingInput.clear()
         contact.cancel()
-        // Discarded typing must still apply Shift, Alt and Sym presses and all releases, in order.
-        kept.forEach { it.action?.invoke() }
+        // Discarded typing must still apply Shift, Alt and Sym presses and all releases, in order. A dropped key still uses up the
+        // Shift or Alt it was pushed with: otherwise Alt + Z with Z dropped left Alt on, and the next key typed its symbol.
+        for (pending in queued) {
+            val event = pending.event ?: continue
+            if (Modifiers.survivesDiscard(event.keyCode, event.action == KeyEvent.ACTION_DOWN)) pending.action?.invoke()
+            else if (Modifiers.dropUsesModifiers(event.keyCode, event.repeatCount)) modifiers.consume()
+        }
     }
 
     /** Move only an interpretable ready key prefix into the existing navigation barrier. */
@@ -2777,6 +2824,8 @@ class AtlasIme : InputMethodService() {
             return true
         }
         if (event.isCtrlPressed && event.keyCode != KeyEvent.KEYCODE_DEL || event.isMetaPressed) {
+            // One press, one paste: a held shortcut's repeats do nothing.
+            if (event.repeatCount > 0 && !Modifiers.shortcutRepeats(event.keyCode)) return true
             modifiers.useHeld()
             command(event)
             return true
@@ -3167,8 +3216,9 @@ class AtlasIme : InputMethodService() {
         private const val CLIP_HINT_SHOWN = "hint_shown"
         /** How long after a copy the strip offers the newest clip. */
         private const val CLIP_OFFER_MILLIS = 60_000L
-        /** How long "Saved" shows on the strip after Save in a word's menu. */
-        private const val SAVED_NOTICE_MILLIS = 2000L
+        /** The word menu's choices, which the guide only shows. */
+        private val MENU_CHOICES = setOf(Strip.Action.Save, Strip.Action.Favourite, Strip.Action.Favourited, Strip.Action.Unfavourite,
+            Strip.Action.Forget)
         /** A selection longer than this is no single word. */
         private const val MAX_SELECTED_WORD = 32
         /** One word: letters, and apostrophes between them, as in "Lok" or "don't". */

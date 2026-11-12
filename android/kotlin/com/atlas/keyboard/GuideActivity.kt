@@ -2364,7 +2364,8 @@ class GuideActivity : Activity() {
     }
 
     /**
-     * Marks in orange what the slide aims at, in the field, and tells the slide (design v4): the stray letter on the Backspace slide.
+     * Marks in orange what the slide aims at, in the field, and tells the slide (design v4): the stray letter on the Backspace slide,
+     * the last word on the flick slide.
      * Nothing on other slides, or once the guide's look is off.
      */
     private fun aim() {
@@ -2372,6 +2373,7 @@ class GuideActivity : Activity() {
         val text = field.text.toString()
         val range = if (playground || guideLooks != true) null else when (flow.step.id) {
             "backspace" -> strayTarget(text)
+            "flick" -> if (passed) null else lastWordTarget(text, field.selectionStart)
             else -> null
         }
         field.target = range

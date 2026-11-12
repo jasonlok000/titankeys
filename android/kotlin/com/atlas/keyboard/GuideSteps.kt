@@ -690,6 +690,13 @@ internal val DELETE_STRAY_TEXT = DELETE_TEXT.substringBeforeLast(STRAY_FIXED) + 
 /** Where the cursor starts on the Backspace slide: right after the stray d, so one Backspace takes it. */
 internal fun strayCursor(text: String) = text.lastIndexOf(STRAY).let { if (it < 0) text.length else it + STRAY.length - 1 }
 
+/** The last word before [cursor], marks and all: the regret that the flick slide marks in orange to go. */
+internal fun lastWordTarget(text: String, cursor: Int): IntRange? {
+    val before = text.substring(0, cursor.coerceIn(0, text.length)).trimEnd()
+    if (before.isEmpty()) return null
+    return (before.lastIndexOf(' ') + 1) until before.length
+}
+
 /** The stray d, in orange, while it's there. */
 internal fun strayTarget(text: String) = text.lastIndexOf(STRAY).takeIf { it >= 0 }?.let { (it + STRAY.length - 2)..(it + STRAY.length - 2) }
 
@@ -938,6 +945,7 @@ internal val GUIDE_STEPS = listOf(
         id = "flick", chapter = GuideChapter.Delete,
         // v3.1's "Delete a whole word. Your regrets are bigger than a letter." is two lines.
         title = "Your regrets come in whole words.",
+        // The last word is marked in orange: the regret to go (design v4).
         stages = listOf(GuideStage("Flick left from Backspace, and lift at once.") { event ->
             when {
                 // A hold is the next slide's lesson: it's done, so that slide is passed over, and this one still wants its flick.

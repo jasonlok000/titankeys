@@ -550,6 +550,7 @@ private fun scenarios() {
     flick.advance()
     same(flick.step.id, "steer", "and the hold slide is passed over")
     same(flick.back() && flick.step.id == "flick", true, "Back goes past it too")
+    same(lastWordTarget("It knows what you did. ", 23), 18..21, "The flick slide marks the last word, its full stop too")
     same(blockedChip(flick.step, GuideLesson.Backspace.name), "That's the last slide's trick. Flick it.", "Backspace on the flick slide")
     same(blockedChip(GUIDE_STEPS.first { it.id == "steer" }, GuideLesson.Typing.name), "Typing's done. Keep up.", "Letters on Steering")
     same(blockedChip(GUIDE_STEPS.first { it.id == "alt" }, GuideLesson.Typing.name), "Hold Alt while you press it.", "A plain letter on Alt's slide")

@@ -51,7 +51,7 @@ private data class Frame(
 /** A mistake for each slide, as the keyboard reports it, so a drawing shows the chip that it gets. */
 private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
     "type" to listOf(Pushed(62)),
-    "flick" to listOf(Pushed(67)),
+    "flick" to listOf(KeyboardEvent.DeleteHoldStarted),
     "hold" to listOf(DeletedWord(held = false)),
     "steer" to listOf(DoubleTapped(2)),
     "selectmore" to listOf(CursorStarted(false)),
@@ -71,7 +71,7 @@ private fun fieldFor(step: GuideStep): Frame {
     return when (step.chapter) {
         GuideChapter.Typing -> at("", ghost = step.ghost.ifEmpty { TYPING_TEXT })
         GuideChapter.Delete -> if (step.id == "backspace") (DELETE_STRAY_TEXT + " ").let { at(it, strayCursor(it)).copy(target = strayTarget(it)) }
-            else at(DELETE_TEXT + " ")
+            else (DELETE_TEXT + " ").let { at(it).copy(target = if (step.id == "flick") lastWordTarget(it, it.length) else null) }
         GuideChapter.Steering -> {
             val text = looping(STEER_TEXT) + " "
             val cursor = text.indexOf(' ', text.length / 2) + 1

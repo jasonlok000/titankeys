@@ -1286,31 +1286,21 @@ internal val GUIDE_STEPS = listOf(
                         used = used or 2
                         GuideVerdict.Done
                     }
+                    // Any way of moving on counts: a new group too. The bottom row is taught in the praise (design v4).
                     otherGroup(event) -> {
                         used = used or if (event is GroupPicked) 4 else 8
-                        GuideVerdict.Wait
-                    }
-                    typedSymbol(event, ANY_SYMBOL) -> chip("That's the boring page. The weird ones are hiding.")
-                    else -> GuideVerdict.Wait
-                }
-            },
-            GuideStage("Slide along the bottom row to another group.") { event ->
-                when {
-                    event is GroupPicked -> {
-                        used = used or 4
                         GuideVerdict.Done
                     }
-                    otherGroup(event) -> {
-                        used = used or 8
-                        GuideVerdict.Hint("That works too. Show-off.", stage = 2)
-                    }
-                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. Bold.", stage = 0)
                     typedSymbol(event, ANY_SYMBOL) -> chip("That's the boring page. The weird ones are hiding.")
                     else -> GuideVerdict.Wait
                 }
             },
             GuideStage("Press the weirdest symbol you can find.", GuideCue.Free) { event ->
-                if (typedSymbol(event, ANY_SYMBOL)) GuideVerdict.Done else GuideVerdict.Wait
+                when {
+                    typedSymbol(event, ANY_SYMBOL) -> GuideVerdict.Done
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. Bold.", stage = 0)
+                    else -> GuideVerdict.Wait
+                }
             },
         ),
         // v3.1's "We saw that. We're only a little bit judging." is two lines.
@@ -1437,6 +1427,7 @@ internal val GUIDE_STEPS = listOf(
 
 /** What the symbols groups slide says once done: the way to turn pages or change group that wasn't used. See its [GuideMemory.count]. */
 internal fun groupsPraise(used: Int) = when {
+    used and 4 == 0 -> "Slide along the bottom row to change group."
     used and 2 == 0 -> "Backspace and Enter turn pages too."
     used and 8 == 0 -> "Swiping sideways on the keys changes group too."
     else -> "The bottom row works both ways."

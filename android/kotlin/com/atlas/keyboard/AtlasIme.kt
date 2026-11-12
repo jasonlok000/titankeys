@@ -1131,10 +1131,11 @@ class AtlasIme : InputMethodService() {
             // Apps also restart input on the field that stays, so only a new start ends what Back did.
             hiddenByBack = false
         }
-        // TitanKeys's own Settings fields hold snippets and words to add, which must not be learned. The guide's field is for practice.
+        // TitanKeys's own Settings fields hold snippets and words to add, which must not be learned. The guide's field is for
+        // practice, so it learns nothing either: the guide never changes your real words (owner, 2026-11-12).
         val ownSettings = info.packageName == packageName && info.privateImeOptions?.contains(GuideHooks.FIELD) != true
         field = if (exact) Field.Exact else if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
-        if (ownSettings) field = field.copy(learning = false)
+        if (info.packageName == packageName) field = field.copy(learning = false)
         // Android only calls onFinishInput first when the input is not restarting.
         rawLog?.finish()
         // Exact typing is for commands and remote computers, which are no typing to learn from.

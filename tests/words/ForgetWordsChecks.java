@@ -14,6 +14,13 @@ public final class ForgetWordsChecks {
         check(ForgetWords.kind("quokka", false, false) == ForgetWords.Kind.BLOCK, "A word only the swipe list knows must be blocked");
         check(ForgetWords.kind("R2D2", false, false) == ForgetWords.Kind.NONE, "A word that no list can drop must be left alone");
         check(ForgetWords.kind(" ", true, true) == ForgetWords.Kind.NONE, "An empty place must forget nothing");
+        // One-letter words are never forgotten from the bar: blocking "i" kept a lone "i" from its capital (owner, 2026-11-12).
+        for (String letter : new String[] {"i", "I", "a", "A"})
+            for (boolean saved : new boolean[] {false, true})
+                check(ForgetWords.kind(letter, true, saved) == ForgetWords.Kind.NONE && !ForgetWords.blocks(letter, true, saved)
+                        && !ForgetWords.removes(letter, true, saved), "\"" + letter + "\" is never forgotten from the bar");
+        check(ForgetWords.oneLetter("I") && !ForgetWords.oneLetter("I'm") && !ForgetWords.oneLetter("ok") && !ForgetWords.oneLetter("7"),
+                "Only a single letter is a one-letter word");
 
         // Forget is for good (owner's "utun", 2026-11-12): a saved word leaves Saved words and is blocked too, so typing it can't
         // learn it back, and the menu shows it as not saved. A word Blocked words can't hold still leaves Saved words.

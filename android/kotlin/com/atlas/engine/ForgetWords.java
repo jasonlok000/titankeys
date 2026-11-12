@@ -21,6 +21,9 @@ public final class ForgetWords {
      */
     public static Kind kind(String word, boolean builtIn, boolean saved) {
         if (word == null || word.trim().isEmpty()) return Kind.NONE;
+        // A one-letter word, "I" or "a", is never forgotten from the bar: blocking it would stop it being swiped, and blocking
+        // "i" once kept a lone "i" from its capital (owner, 2026-11-12). Settings > Blocked words can still take one.
+        if (oneLetter(word)) return Kind.NONE;
         if (!builtIn && saved) return Kind.REMOVE;
         return BlockedWords.valid(word) ? Kind.BLOCK : saved ? Kind.REMOVE : Kind.NONE;
     }
@@ -47,6 +50,11 @@ public final class ForgetWords {
         String letters = key(typed);
         String candidate = key(word);
         return !letters.isEmpty() && !candidate.isEmpty() && !candidate.startsWith(letters);
+    }
+
+    /** Whether [word] is a single letter, as "I" or "a" are. */
+    public static boolean oneLetter(String word) {
+        return word != null && key(word).codePointCount(0, key(word).length()) == 1 && Character.isLetter(key(word).codePointAt(0));
     }
 
     static String key(String word) {

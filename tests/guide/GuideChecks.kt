@@ -164,6 +164,10 @@ private fun theMenuHover() {
     check("keyCode == KeyEvent.KEYCODE_DEL" in ime.substringAfter("With the word menu open").substringBefore("closeMenu()")) {
         "Backspace picks Back in the word menu"
     }
+    // The guide never changes your real words: its field learns nothing, as TitanKeys' other own fields don't, and its menu is
+    // only for show (owner, 2026-11-12).
+    check("if (info.packageName == packageName) field = field.copy(learning = false)" in ime) { "The guide's field learns nothing" }
+    check("if (inGuide && held != null && action in MENU_CHOICES) {" in ime) { "The guide's menu saves and forgets nothing" }
     // The owner's "utun": after Forget the word stays selected in the field, so the bar keeps showing it alone.
     val forget = ime.substringAfter("private fun forgetWord(").substringBefore("\n    }\n")
     check("selected = null" !in forget) { "Forget keeps the selection on the bar" }

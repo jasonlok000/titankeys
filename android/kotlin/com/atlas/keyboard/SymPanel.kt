@@ -108,6 +108,8 @@ class SymPanel(
     var clipPinning = false
     /** On the clipboard page, Backspace was pushed once, so a second push clears all. */
     var clipClearing = false
+    /** The clipboard shows the guide's own clips: one group, and no Clear or Pin. */
+    var clipSandbox = false
 
     /** Quick settings that don't work here, as the key that opens all settings in the guide: no mark, no name, no switch. */
     var blockedKeys: Set<String> = emptySet()
@@ -226,7 +228,10 @@ class SymPanel(
 
     /** Follows a swipe, in keys across and rows down. Returns true if a different page now shows. */
     fun swipe(across: Float, down: Float): Boolean {
-        val moved = if (clipboard) clipPages.swipe(clips, across, down) else pages?.swipe(across, down) == true
+        // The guide's clipboard has one group: a sideways swipe there goes nowhere.
+        val sideways = kotlin.math.abs(across) > kotlin.math.abs(down)
+        val moved = if (clipboard) !(clipSandbox && sideways) && clipPages.swipe(clips, across, down)
+            else pages?.swipe(across, down) == true
         if (moved) {
             render()
             slideIn(across, down)
@@ -251,6 +256,7 @@ class SymPanel(
 
     private fun open(group: Int): Boolean {
         if (clipboard) {
+            if (clipSandbox && group != ClipboardHistory.RECENT) return false
             val before = clipPages.group
             if (!clipPages.open(group)) return false
             render()
@@ -355,8 +361,9 @@ class SymPanel(
     private fun label(key: String) = when {
         quick -> QuickSetting.on(key)?.label
         clipboard -> when (key) {
-            Layout.BACKSPACE -> context.getString(R.string.clipboard_clear).takeIf { clips.any { !it.pinned } }
-            Layout.ENTER -> context.getString(if (clipPinning) R.string.clipboard_pin_done else R.string.clipboard_pin).takeIf { clips.isNotEmpty() }
+            Layout.BACKSPACE -> context.getString(R.string.clipboard_clear).takeIf { !clipSandbox && clips.any { !it.pinned } }
+            Layout.ENTER -> context.getString(if (clipPinning) R.string.clipboard_pin_done else R.string.clipboard_pin)
+                .takeIf { !clipSandbox && clips.isNotEmpty() }
             else -> if (showsPosition(key)) position() else null
         }
         showsPosition(key) -> position()
@@ -501,7 +508,8 @@ class SymPanel(
     /** Shows a mark for each group, and washes the open one, so that you can see the other groups as you swipe. */
     private fun showCategories(current: EmojiPages?) {
         // The clipboard has two groups, named in words, where the symbols and emoji show one of their own.
-        val groups = listOf(R.string.clipboard_group_recent, R.string.clipboard_group_pinned).map(context::getString)
+        val groups = (if (clipSandbox) listOf(R.string.clipboard_group_recent)
+            else listOf(R.string.clipboard_group_recent, R.string.clipboard_group_pinned)).map(context::getString)
         val samples = if (clipboard) groups else current?.samples().orEmpty()
         if (samples != shownSamples) {
             shownSamples = samples

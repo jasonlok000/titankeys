@@ -5,7 +5,8 @@ package com.atlas.keyboard
  * is a plain shared object. No other field is ever touched: the guide's field marks itself with [FIELD] in its private options.
  */
 /** What the guide's slides teach, one by one. A slide that locks the keyboard lets only these through, besides letters. */
-internal enum class GuideLesson { Swipe, BarTap, BarHold, Flick, Cursor, Symbols, Enter, Ctrl }
+/** What a guide slide can unlock: Alt, Sym and a held key for its symbol are each their own, so a slide teaches only one. */
+internal enum class GuideLesson { Swipe, BarTap, BarHold, Flick, Cursor, Alt, Sym, HoldSymbol, Enter, Ctrl }
 
 internal object GuideHooks {
     /** A short scene on the keyboard's own bar, for the guide. It types nothing, and any input on the keyboard ends it. */
@@ -111,6 +112,7 @@ internal object GuideHooks {
     /** The keyboard listens here, so that the clipboard lesson has clips to show: it pins these, newest first, once. */
     @Volatile var clipSeeds: ((List<String>) -> Unit)? = null
 
+    /** The keyboard's clipboard shows only [clips] in the guide's field, never saved; empty shows the user's own again. */
     fun seedClips(clips: List<String>) {
         clipSeeds?.invoke(clips)
     }

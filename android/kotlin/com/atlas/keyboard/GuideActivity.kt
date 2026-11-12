@@ -1209,10 +1209,7 @@ class GuideActivity : Activity() {
         offer.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
         offer.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
         again.setTextColor(strong)
-        for (button in listOf(boringButton, shareButton)) {
-            button.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
-            button.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
-        }
+        paintEndButtons()
         for (index in 0 until endButtons.childCount) (endButtons.getChildAt(index) as TextView).let { line ->
             if (line !== boringButton && line !== shareButton) line.setTextColor(GuideMotion.faded(strong, BODY_ALPHA))
         }
@@ -1381,7 +1378,7 @@ class GuideActivity : Activity() {
         // The chapter's text box shows on the slides that have one, and stays as it is from slide to slide.
         val typing = step.text.isNotEmpty()
         // The Typing chapter has no box: its text is the grey ghost in the field. The other chapters keep their box for now.
-        script.visibility = if (typing && step.chapter != GuideChapter.Typing) View.VISIBLE else View.GONE
+        script.visibility = if (typing && step.chapter != GuideChapter.Typing && step.chapter != GuideChapter.Symbols) View.VISIBLE else View.GONE
         if (typing && (!carry || passageSource != step.text)) startPassage(step.text)
         // A setting that the slide needs is off: the slide says so, over its own words.
         val missing = flow.missing
@@ -1444,6 +1441,21 @@ class GuideActivity : Activity() {
             overlay.sweep()
             main.postDelayed({ if (passed) applyTone(GuideTone.Orange) }, WIPE_MILLIS)
         }
+        if (step.chapter == GuideChapter.End) showEnd(step)
+    }
+
+    /**
+     * The end, however it's reached: the name, the line under it and the slogan, then the two big buttons. It wraps its words, as
+     * setup does, and locks nothing. The text box goes, so the name and the buttons have the room: its words wait in the field.
+     */
+    private fun showEnd(end: GuideStep) {
+        guideLook(false)
+        unlockKeyboard()
+        script.visibility = View.GONE
+        field.hint = end.text
+        title.text = end.title
+        body.text = end.body + "\n\n" + end.done
+        showEndChoices()
     }
 
     /**
@@ -1465,7 +1477,12 @@ class GuideActivity : Activity() {
     private fun showGhost() {
         if (!::field.isInitialized) return
         // The field draws it itself, from the slide's first frame, demo or not. See [GuideField.ghost].
-        field.ghost = if (!playground && started && !settingUp && guideLooks == true && flow.step.chapter == GuideChapter.Typing) ghostText() else ""
+        field.ghost = when {
+            playground || !started || settingUp || guideLooks != true -> ""
+            flow.step.chapter == GuideChapter.Typing -> ghostText()
+            flow.step.chapter == GuideChapter.Symbols -> symbolGhost()
+            else -> ""
+        }
     }
 
     /** What the ghost says after the field's text: see [showGhost]. A slide with a [GuideStep.ghost] shows its words instead. */
@@ -1483,6 +1500,21 @@ class GuideActivity : Activity() {
         }
         for (more in 1..GHOST_WORDS) out.append(' ').append(shown(track.next + more))
         return out.toString()
+    }
+
+    /**
+     * The symbols chapter's ghost: the rest of its text after what the field has, with the symbol it waits for first. The field is
+     * only ever what the guide typed after each right symbol, so it's the start of the text; anything else typed, the ghost starts
+     * again from the slide's own symbol.
+     */
+    private fun symbolGhost(): String {
+        val text = field.text.toString()
+        val all = passage.text
+        if (all.startsWith(text)) return all.substring(text.length)
+        val part = SYMBOL_PARTS.firstOrNull { it.first == flow.step.symbol } ?: return ""
+        val from = all.indexOf(part.first + part.second.trimEnd())
+        if (from < 0) return ""
+        return (if (text.isEmpty() || text.endsWith(' ')) "" else " ") + all.substring(from)
     }
 
     /** What's left of [word] after the letters [typed], or null if they aren't its start. */
@@ -1945,7 +1977,7 @@ class GuideActivity : Activity() {
 
     /**
      * What a lesson needs before it starts: something on the clipboard to paste, a word already selected so that the paste goes in
-     * its place, and clips pinned in the keyboard's clipboard so that it has something to show.
+     * its place, and the guide's own clips in the keyboard's clipboard, in place of the user's, so that it has something to show.
      */
     private fun setUpLesson(step: GuideStep) {
         step.clip?.let { text ->
@@ -1958,7 +1990,8 @@ class GuideActivity : Activity() {
             val start = text.substring(0, end).lastIndexOf(' ') + 1
             if (end > start) field.setSelection(start, end)
         }
-        if (step.pinnedClips.isNotEmpty()) GuideHooks.seedClips(step.pinnedClips)
+        // The clipboard shows the slide's own clips, or the user's again once a slide has none.
+        GuideHooks.seedClips(step.sandboxClips)
     }
 
     /** The letter key for [key]: itself, or for a symbol, the key that types it with Alt on this phone. */
@@ -3025,11 +3058,8 @@ class GuideActivity : Activity() {
         haptics.celebrate()
         for (sweep in 0 until FINALE_SWEEPS) overlay.sweep(delay = sweep * FINALE_STAGGER_MILLIS, thickness = BEAT_LINE + sweep * 2f)
         keys.celebrate()
-        // The text stays: it is what you typed through the whole guide.
+        // The text stays: it is what you typed through the whole guide. The end's own look comes with it. See [showEnd].
         enter(end)
-        // The end wraps its words, as setup does, and locks nothing.
-        guideLook(false)
-        unlockKeyboard()
         // The name and slogan wait for the halves to land.
         for (view in listOf(title, body, chapter)) {
             view.animate().cancel()
@@ -3037,8 +3067,6 @@ class GuideActivity : Activity() {
             view.translationX = 0f
         }
         title.post { landName(end.title) }
-        body.text = end.body + "\n\n" + end.done
-        showEndChoices()
     }
 
     /**
@@ -3049,12 +3077,34 @@ class GuideActivity : Activity() {
         next.visibility = View.VISIBLE
         next.text = END_NEXT
         offer.visibility = View.GONE
-        showHint(END_HINT)
+        // Next says it already ("Go type something"), and the screen is short: the buttons get the room, not a hint.
+        hideHint()
         endButtons.visibility = View.VISIBLE
         endButtons.alpha = 1f
         val asking = Contributions.unanswered(this)
-        shareButton.text = if (asking) SHARE_OFFER else if (Contributions.enabled(this)) SHARE_ON else SHARE_OFF
+        // A switch, off until the user agrees on the share policy page; never shown on before that.
+        shareButton.text = if (Contributions.enabled(this)) SHARE_ON else SHARE_OFF
         shareLine.text = if (asking) SHARE_PLAIN else SHARE_ANSWERED
+        paintEndButtons()
+    }
+
+    /** The boring guide is a filled button; sharing is a switch, filled only while it's on. */
+    private fun paintEndButtons() {
+        val onInk = tone == GuideTone.Ink
+        val strong = if (onInk) GuideColours.CREAM else GuideColours.INK
+        boringButton.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
+        boringButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
+        if (Contributions.enabled(this)) {
+            shareButton.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
+            shareButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
+        } else {
+            shareButton.setTextColor(strong)
+            shareButton.background = GradientDrawable().apply {
+                setColor(Color.TRANSPARENT)
+                setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(strong, NEXT_WAITING))
+                cornerRadius = Radii.px(resources, OFFER_RADIUS)
+            }
+        }
     }
 
     /** Flies the two halves of the name to where the title shows it, then shows the title in their place. */
@@ -3168,7 +3218,7 @@ class GuideActivity : Activity() {
         private const val FN_OFF_BODY = "Paste needs it. Turn it on?"
         private const val DECLINE_OFF = "☐  I'd rather not paste. That's on me, and I accept the consequences."
         private const val DECLINE_ON = "☑  I'd rather not paste. That's on me, and I accept the consequences."
-        private const val SCREEN_TOUCHED = "The screen? Really? Why did you even buy this phone?"
+        private const val SCREEN_TOUCHED = "The screen? Really? Why'd you buy this phone?"
         private const val LEAVE_TITLE = "Leaving already?"
         private const val LEAVE_BODY = "You haven't finished the guide. Leave anyway?"
         private const val LEAVE_YES = "I already know everything"
@@ -3181,7 +3231,7 @@ class GuideActivity : Activity() {
         private const val NOTHING_PASTED_BODY = "fn isn't Ctrl yet. Press the button below to turn it on."
         private const val EMPTY_BAR_TITLE = "Nothing to judge. Rare for you."
         private const val EMPTY_BAR_BODY = "Type a letter so the bar fills up."
-        private const val TOO_LATE_TITLE = "Still got that open? The last slide's over, let it go."
+        private const val TOO_LATE_TITLE = "Still open? The last slide's over. Let it go."
         private const val TOO_LATE_PANEL = "Press Sym to close it."
         private const val TOO_LATE_ALT = "Press Alt to turn it off."
         /** How long the too-late line shows while the panel closes by itself. */
@@ -3276,7 +3326,6 @@ class GuideActivity : Activity() {
         /** The share slide's offer (#34), while it is unanswered. It opens the full disclosure. */
         private const val SHARE_OFFER = "Share my swipes"
         /** The end's instruction. */
-        private const val END_HINT = "Press a big button, or go type something."
         /** The one boring thing at the end, in plain words: it is about consent, so no jokes here. */
         private const val SHARE_PLAIN = "If you agree, TitanKeys sends us examples of your swipes so we can make swiping better. " +
             "It's off until you agree, and you'll see exactly what's sent first."

@@ -45,36 +45,35 @@ export default function BoringGuide() {
       <Topic title="Space after punctuation">{"Type a full stop and go straight on to the next word. The space goes in when you type its first letter. Same after , ; and :. Numbers, links and ... stay as you type them. Press Backspace right after to take the space back out. Pick one space, two or none in Settings > Space after a sentence, and turn off Space after , ; : there too."}</Topic>
       <Topic title="Shift and Alt">{"Press once for the next letter only. To cancel, press again after a pause. Want two quick presses to lock them? Turn on Press twice to lock Shift and Alt in Settings. When Shift is locked, the bar says Caps."}</Topic>
       <Topic title="Hold a letter for its symbol">{"Hold a letter and it turns into the symbol printed in its corner. Pick how long you hold in Settings > Hold a letter for its symbol, or turn it off there."}</Topic>
-      <Topic title="Type with a light touch">{"Some keys type when you barely touch them, so you don't have to press them down. Pick which ones in Settings > Type with a light touch. Press a letter or Space there to add it."}</Topic>
       <Topic title="English spelling">{"Colour or color? Pick British or American spelling for suggestions and typo fixes in Settings > English spelling."}</Topic>
       <Topic title="Password, email and number fields">{"These fields get no suggestions and no fixes, and swipes don't type there. The touchpad still moves the cursor, and the bar still shows Shift, Alt and Ctrl."}</Topic>
     </Section>
-    <Section title="Swiping">
+    <Section title="Touchpad">
       <Topic title="Swipe a word">{"Slide your finger across the letters of a word without pressing. Lift to type it, with a space after. Swipe the next one straight away."}</Topic>
       <Topic title="Wrong word?">{"Touch the right one on the bar. The bar always has the next best guesses, so one touch fixes a swipe that missed."}</Topic>
-      <Topic title="Keep swiping after a short lift">{"Fingers slip. If yours leaves the keys for a moment, the swipe carries on. Set how long a moment is in Settings > Keep swiping."}</Topic>
-      <Topic title="Feel the keys">{"A little buzz for each key your swipe crosses, so you can swipe without looking. Pick what buzzes, or turn it all off, in Settings > Haptics."}</Topic>
+      <Topic title="Keep swiping after a short lift">{"Fingers slip. If yours leaves the keys for a moment, the swipe carries on. Set how long a moment is in Settings > Keep swiping after a short lift."}</Topic>
+      <Topic title="Type with a light touch">{"Some keys type when you barely touch them, so you don't have to press them down. Pick which ones in Settings > Type with a light touch. Press a letter or Space there to add it."}</Topic>
       <Topic title="Where the touchpad reads">{"The touchpad reaches the middle of the outer keys on each side, and the middle of the top and bottom rows. Outside that, it can't read your finger well. The interactive guide dims the part it can't read."}</Topic>
       <Topic title="Turn off swipe typing">{"Turn off Swipe to type words in Settings or in the quick settings. The touchpad stops typing words. Light-touch keys and the Sym panel still work."}</Topic>
       <Topic title="Scroll assistant outside text fields">{"That's the phone's Scroll assistant: outside text fields, the touchpad scrolls the app. Turn it off in Settings or the quick settings and the touchpad only works in text fields. The touchscreen doesn't change. With it off, the shortcuts on the letter keys and the phone's shortcut on Space stop working, and in some apps Back takes two presses: the first lets go of the touchpad, the second goes back."}</Topic>
     </Section>
     <Section title="The bar">
-      <Topic title="Word suggestions">{"The bar above the keys shows words and spelling fixes as you type. Touch one to type it. The best guess is always in the middle, and the three places never move. A long word shrinks to fit its place. If it still doesn't fit, it shows the part where it differs from the others, like …mendations."}</Topic>
+      <Topic title="Word suggestions">{"The bar above the keys shows words and spelling fixes as you type. Touch one to type it. The best guess is always in the middle, and the three places never move. A long word shrinks to fit its place. If it still doesn't fit, it shows the part where it differs from the others, like …mendations. Don't want the bar at all? Turn off Show the bar in Settings."}</Topic>
       <Topic title="The word menu">{"Hold a word on the bar for its menu. Save keeps the word for good, so it's always suggested. Forget makes it go away: it stops showing up, and a word TitanKeys learned from you is unlearned. Changed your mind? Undo shows right after. Back closes the menu. You can pick with the keys too: rest a finger on the top two rows to mark a button, then press. The menu waits until you pick."}</Topic>
       <Topic title="A selected word">{"Pick a word in your text and the bar shows it alone in the middle. Touch it for the same menu: Save or Forget."}</Topic>
       <Topic title="Your newest copy">{"Right after you copy something, the bar offers it. Touch it to paste. It goes away once you type on. Older copies are in the clipboard: press Sym, then A."}</Topic>
       <Topic title="Shift, Alt and Ctrl">{"When you press or hold Shift, Alt or Ctrl, the bar shows it in place of your words. Filled means you're holding the key, an outline means you pressed it once, and Caps means Shift is locked. Rest your finger on a key to see what it types. The only exception is the capital at the start of a sentence: that one keeps your words."}</Topic>
       <Topic title="Ctrl shortcuts">{"Hold Ctrl and the bar shows what each shortcut does. Press a key while you hold Ctrl to use it."}</Topic>
-      <Topic title="Hide the bar in an app">{"Don't want the bar in some app? Settings > Hide the bar picks the apps, or hides it everywhere. The keys, holds, Alt and the Sym panel still work there."}</Topic>
+      <Topic title="Hide the bar">{"Don't want the bar in some app? Pick the apps in Settings > Hide the bar in these apps. To hide it everywhere, turn off Show the bar in Settings. Either way, the keys, holds, Alt and the Sym panel still work."}</Topic>
     </Section>
     <Section title="Deleting">
       <Topic title="Delete a word">{"Flick left, fast, from Backspace or the keys next to it. The interactive guide shades where to aim. Press Alt, then Backspace works too, and so do Ctrl and Backspace."}</Topic>
       <Topic title="Delete lots of words">{"Flick and keep your finger down. TitanKeys keeps deleting, word after word, and a longer flick goes faster. Lift your finger or press a key to stop."}</Topic>
     </Section>
     <Section title="Cursor and picking text">
-      <Topic title="Move the cursor">{"Tap twice, quickly, just above the middle of Space, and keep your finger down after the second tap. Slide left or right. The cursor goes slowly near the middle and fast near the edges, and stops when you come back to the middle. You feel a stronger buzz each time it passes a space. Turn it off with Space taps move the cursor in Settings."}</Topic>
+      <Topic title="Move the cursor">{"Tap twice, quickly, just above the middle of Space, and keep your finger down after the second tap. Slide left or right. The cursor goes slowly near the middle and fast near the edges, and stops when you come back to the middle. You feel a stronger buzz each time it passes a space. Turn it off with Space taps move and select in Settings."}</Topic>
       <Topic title="Pick a word">{"Tap twice just above Space, lifting after each tap. That picks the word at the cursor."}</Topic>
-      <Topic title="Pick more words">{"Tap three times to pick the word at the cursor. Keep your finger down after the third tap and slide to take more words. Lean back the other way to give them back, one at a time."}</Topic>
+      <Topic title="Pick more words">{"Tap three times to pick the word at the cursor. Keep your finger down after the third tap and slide to take more words. Lean back the other way to give them back, one at a time. Space taps move and select in Settings turns these taps off, with the cursor ones."}</Topic>
     </Section>
     <Section title="Symbols and emoji">
       <Topic title="Alt symbols">{"Each letter has a symbol printed in its corner. Press Alt, then the letter, to type it. Or hold the letter, if that's on."}</Topic>
@@ -90,8 +89,7 @@ export default function BoringGuide() {
     </Section>
     <Section title="Shortcuts">
       <Topic title="Snippets">{"Type a shortcut like ;addr and press Space. It turns into your address, or whatever you saved for it. Press Backspace right after to get the shortcut back. Make them in Settings > Snippets, where you can also change the ; at the start and back them up."}</Topic>
-      <Topic title="The Enter key">{"In message apps, Enter can send, or add a new line. Pick which in Settings > Enter key, app by app. Shift and Enter does the other one. Search and other one-line fields stay as they are."}</Topic>
-      <Topic title="Exact typing (experimental)">{"In terminals, remote desktops and game streaming, like Termux, AnyDesk and Moonlight, every key goes straight to the app, exactly as you press it. TitanKeys doesn't fix or suggest anything there, and the touchpad stays out of it. Add or remove apps in Settings > Exact typing."}</Topic>
+      <Topic title="Exact typing (experimental)">{"In terminals, remote desktops and game streaming, like Termux, AnyDesk and Moonlight, every key goes straight to the app, exactly as you press it. TitanKeys doesn't fix or suggest anything there, and the touchpad stays out of it. Add or remove apps in Settings > Exact typing (experimental)."}</Topic>
       <Topic title="Exact typing bar (experimental)">{"In those apps the bar shows Shift, Alt, Ctrl, Esc, Tab and More. Tap Shift, Alt or Ctrl to hold it for your next key, press and hold to lock it, and tap again to let go. They add to the keys you press: Shift on the keys and Esc on the bar sends Shift and Esc. More has the arrows, Home, End, PgUp, PgDn and F1 to F12. With Alt sends Alt on, Alt, Shift and Ctrl go to the app as real modifiers, and symbols come from Sym or from holding a key."}</Topic>
     </Section>
     <Section title="Your words">
@@ -100,7 +98,8 @@ export default function BoringGuide() {
       <Topic title="Names from your contacts">{"Turn on Names from my contacts in Settings > Your words, and the names on your phone swipe right, with their capitals. They stay on your phone."}</Topic>
       <Topic title="Backup">{"Your words > Export words saves a backup file. Import words brings it back, on this phone or a new one. Remove learned words wipes everything TitanKeys learned from you."}</Topic>
     </Section>
-    <Section title="Look">
+    <Section title="Look and feel">
+      <Topic title="Feel the keys">{"A little buzz for each key your swipe crosses, so you can swipe without looking. Pick what buzzes, or turn it all off, in Settings > Haptics."}</Topic>
       <Topic title="Orange accents">{"A few small marks on the keyboard are orange, like the key under your finger. Prefer white? Turn off Orange accents in Settings."}</Topic>
     </Section>
     <Section title="News and sharing">

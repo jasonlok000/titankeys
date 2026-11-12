@@ -4,11 +4,12 @@ import { showKeyCalibration, state, update } from "../../lib/atlas";
 import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
+import { barLabel, cursorLabel } from "../../lib/setting-names";
 import { parentOf } from "../../lib/settings-tree";
 import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
 import { hapticsLabel } from "./haptics";
-import { hiddenBarLabel } from "./hidden-bar";
+import { hiddenBarLabel, hiddenBarTitle } from "./hidden-bar";
 import { holdLabel } from "./hold";
 import { liftLabel } from "./lift";
 import { rawLogLabel } from "./rawlog";
@@ -42,7 +43,9 @@ export default function Settings() {
         onChange={autoPunctuation => save.run({ autoPunctuation })} />
       <Field label="English spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
       <Field label="Hold a letter for its symbol" href="/settings/hold">{holdLabel(settings)}</Field>
-      <Field label="Type with a light touch" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
+    </Section>
+    {/* The same topics, in the same order, as the boring guide's Shortcuts and Symbols sections. */}
+    <Section title="Shortcuts">
       <Field label="Snippets" href="/settings/snippets">{snippetsLabel(settings)}</Field>
       <Toggle label="Type :name: for an emoji" value={settings.shortcodes}
         onChange={shortcodes => save.run({ shortcodes })} />
@@ -50,27 +53,27 @@ export default function Settings() {
         onChange={expandShorthand => save.run({ expandShorthand })} />
       <Field label="Exact typing (experimental)" href="/settings/exact-apps">{exactAppsLabel(settings)}</Field>
     </Section>
-    <Section title="Suggestions">
-      <Toggle label="Show word suggestions" value={settings.suggestionBar}
+    {/* The bar is words, the Shift, Alt and Ctrl chips and the clip offer. Each setting here hides all of it, so each
+        says "the bar", and the bar is turned off in this one place only. */}
+    <Section title="The bar">
+      <Toggle label={barLabel} value={settings.suggestionBar}
         onChange={suggestionBar => save.run({ suggestionBar })} />
-      <Toggle label="Hide suggestions on an empty home search" value={settings.launcherHidesBar}
-        onChange={launcherHidesBar => save.run({ launcherHidesBar })} />
-      <Field label="Hide the bar in these apps" href="/settings/hidden-bar">{hiddenBarLabel(settings)}</Field>
+      {settings.suggestionBar && <Toggle label="Hide the bar on an empty home search" value={settings.launcherHidesBar}
+        onChange={launcherHidesBar => save.run({ launcherHidesBar })} />}
+      {settings.suggestionBar && <Field label={hiddenBarTitle} href="/settings/hidden-bar">{hiddenBarLabel(settings)}</Field>}
     </Section>
-    <Section title="Swiping">
+    <Section title="Touchpad">
       <Toggle label="Swipe to type words" value={settings.swipeTyping}
         onChange={swipeTyping => save.run({ swipeTyping })} />
-      <Toggle label="Space taps move the cursor" value={settings.cursorControl}
+      <Toggle label={cursorLabel} value={settings.cursorControl}
         onChange={cursorControl => save.run({ cursorControl })} />
       {(settings.swipeTyping || settings.cursorControl)
         && <Field label="Keep swiping after a short lift" href="/settings/lift">{liftLabel(settings)}</Field>}
-      <Field label="Haptics" href="/settings/haptics">{hapticsLabel(settings)}</Field>
-      {/* The Haptics lab is only in TitanKeys Debug. Other builds get null for it, so the row never shows there. */}
-      {settings.hapticsLab && <Field label="Haptics lab" href="/settings/haptics-lab" />}
-      {/* Key calibration is debug only too, so it shows with the Haptics lab. */}
-      {settings.hapticsLab && <Field label="Key calibration" onPress={() => void showKeyCalibration()} />}
+      <Field label="Type with a light touch" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
       <Toggle label="Scroll assistant outside text fields" value={!settings.touchpadOnlyInFields}
         onChange={scroll => save.run({ touchpadOnlyInFields: !scroll })} />
+      {/* Key calibration is only in TitanKeys Debug, as the Haptics lab is, so it shows with the Haptics lab. */}
+      {settings.hapticsLab && <Field label="Key calibration" onPress={() => void showKeyCalibration()} />}
     </Section>
     <Section title="Keys">
       <Toggle label="Press twice to lock Shift and Alt" value={settings.doublePressLocks}
@@ -78,7 +81,10 @@ export default function Settings() {
       <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}
         onChange={fnAsCtrl => save.run({ fnAsCtrl })} />
     </Section>
-    <Section title="Look">
+    <Section title="Look and feel">
+      <Field label="Haptics" href="/settings/haptics">{hapticsLabel(settings)}</Field>
+      {/* The Haptics lab is only in TitanKeys Debug. Other builds get null for it, so the row never shows there. */}
+      {settings.hapticsLab && <Field label="Haptics lab" href="/settings/haptics-lab" />}
       <Toggle label="Orange accents" value={settings.orangeAccents}
         onChange={orangeAccents => save.run({ orangeAccents })} />
     </Section>

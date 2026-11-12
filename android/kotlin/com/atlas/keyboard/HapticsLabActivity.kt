@@ -38,6 +38,8 @@ private object LabColours {
     const val ORANGE = 0xFFEF804E.toInt()
     const val CREAM = 0xFFFFF1E6.toInt()
     const val DIM = 0xFFA2958C.toInt()
+    /** A delete's dots landing, so they stand apart from the words' ticks. */
+    const val DOT = 0xFF7FD1C8.toInt()
 }
 
 /**
@@ -62,7 +64,7 @@ class HapticsLabActivity : Activity() {
 
     private class Editing(val family: Family, val bars: PatternBars, val plays: TextView, val sliders: List<Pair<TextView, SeekBar>>)
 
-    private class Fading(val strip: FadeStrip, val plays: TextView, val sliders: List<Pair<TextView, SeekBar>>)
+    private class Fading(val strip: HoldStrip, val plays: TextView, val plan: TextView, val sliders: List<Pair<TextView, SeekBar>>)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -145,6 +147,7 @@ class HapticsLabActivity : Activity() {
         val outcome = when (event.result) {
             HapticResult.Played -> "played"
             HapticResult.Thinned -> "thinned"
+            HapticResult.NearWord -> "skipped: ${event.result.words}"
             else -> "dropped: ${event.result.words}"
         }
         val first = "$seconds  ${HapticTimeline.title(event, name(event.haptic))}"
@@ -230,28 +233,30 @@ class HapticsLabActivity : Activity() {
     private fun editFade(haptic: Haptic?) {
         editor.removeAllViews()
         editing = null
-        val strip = FadeStrip(this)
+        val strip = HoldStrip(this)
         val plays = text("", 14f, LabColours.DIM)
+        val plan = text("", 13f, LabColours.DIM)
         val sliders = listOf(
             text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.MILLIS) { millis -> tryFade { it.copy(start = millis, floor = minOf(it.floor, millis)) } },
             text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.MILLIS) { millis -> tryFade { it.copy(floor = minOf(millis, it.start)) } },
             text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.WORDS.longs()) { words -> tryFade { it.copy(words = words.toInt()) } },
             text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.THIN_EVERY.longs()) { every -> tryFade { it.copy(thinEvery = every.toInt()) } },
         )
-        fading = Fading(strip, plays, sliders)
+        fading = Fading(strip, plays, plan, sliders)
         editor.addView(text(FADE, 18f, LabColours.CREAM, bold = true))
         editor.addView(text("Each word of a held delete ticks a bit shorter, then only some tick. The Titan can't buzz softer, only shorter.", 14f, LabColours.DIM))
         // The switch is with the other experiments, on the lab's page in Settings.
         editor.addView(text("Switch it on or off in Experiments, on the Haptics lab page.", 13f, LabColours.DIM))
         editor.addView(plays)
         editor.addView(strip)
+        editor.addView(plan)
         for ((label, bar) in sliders) {
             editor.addView(label)
             editor.addView(bar)
         }
         editor.addView(LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            addView(button("Play", "Play a held delete of ${HeldDeleteFade.PLAY_WORDS} words") { lab.previewFade() })
+            addView(button("Play", "Play a held delete of ${HoldTicks.PLAY_WORDS} words and its dots") { lab.previewFade() })
             addView(button("Reset", "Reset $FADE") {
                 lab.tryFade(null)
                 drawFade()
@@ -259,7 +264,8 @@ class HapticsLabActivity : Activity() {
             addView(button("All families", "Show all families") { showFamilies() },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginStart = dp(12) })
         })
-        editor.addView(text("Play holds for ${HeldDeleteFade.PLAY_WORDS} words, $REPEAT_SLOW_MILLIS ms apart, as a hold starts.", 13f, LabColours.DIM)
+        editor.addView(text("Play holds for the flick and ${HoldTicks.PLAY_WORDS} words, $REPEAT_SLOW_MILLIS ms apart, as a hold " +
+            "starts. Then it lifts and the dots land. Each shows on the timeline above as it plays.", 13f, LabColours.DIM)
             .apply { setPadding(0, dp(8), 0, 0) })
         editor.addView(text("Notes on $FADE", 14f, LabColours.CREAM).apply { setPadding(0, dp(12), 0, 0) })
         editor.addView(field("How does the fade feel?", 1, lab.fadeNote()) { lab.fadeNote(it) })
@@ -283,7 +289,9 @@ class HapticsLabActivity : Activity() {
         val fade = lab.fade()
         val on = lab.fading()
         fading.plays.text = lab.plays(fade, on) + if (on && fade != HeldDeleteFade.DEFAULT) "  (tried)" else ""
-        fading.strip.show(HeldDeleteFade.ticks(fade, fading = on))
+        val plan = lab.holdPlan()
+        fading.strip.show(plan)
+        fading.plan.text = HapticTimeline.planWords(plan)
         val values = listOf(fade.start, fade.floor, fade.words.toLong(), fade.thinEvery.toLong())
         val labels = listOf("Start: ${fade.start} ms", "Floor: ${fade.floor} ms", "Words to fade: ${fade.words}",
             if (fade.thinEvery == 1) "Thin every: 1, so all play" else "Thin every: ${fade.thinEvery}, so 1 in ${fade.thinEvery} plays")
@@ -387,6 +395,8 @@ class HapticsLabActivity : Activity() {
         setPadding(0, dp(8), 0, 0)
         addView(keyLine("■", LabColours.ORANGE, "on"))
         addView(keyLine("□", LabColours.ORANGE, "dropped or thinned, with the reason"))
+        addView(keyLine("●", LabColours.DOT, "a delete's dot landing, numbered for a hold"))
+        addView(keyLine("○", LabColours.DOT, "a hold's dot skipped near a word's tick"))
     }
 
     private fun keyLine(mark: String, colour: Int, words: String) = TextView(this).apply {
@@ -451,7 +461,9 @@ internal class LiveTimeline(context: Context, private val name: (Haptic) -> Stri
     private var events: List<HapticEvent> = emptyList()
     private val density = resources.displayMetrics.density
     private val laneHeight = 30 * density
-    private val barTop = LANES * laneHeight + 8 * density
+    /** A row for the dots' numbers, under the lanes of names. */
+    private val dotRow = LANES * laneHeight + 4 * density
+    private val barTop = dotRow + DOT_LABEL_ROWS * 10 * density + 6 * density
     private val barHeight = 18 * density
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -467,6 +479,8 @@ internal class LiveTimeline(context: Context, private val name: (Haptic) -> Stri
     private val wordsText = text(11f, LabColours.DIM)
     private val droppedText = text(11f, LabColours.ORANGE)
     private val axisText = text(10f, LabColours.DIM)
+    private val dotText = text(9f, LabColours.DOT).apply { textAlign = Paint.Align.CENTER }
+    private val skippedDotText = text(9f, LabColours.ORANGE).apply { textAlign = Paint.Align.CENTER }
 
     fun events(events: List<HapticEvent>) {
         this.events = events
@@ -488,8 +502,14 @@ internal class LiveTimeline(context: Context, private val name: (Haptic) -> Stri
             canvas.drawText(if (second == 0L) "now" else "-$second s", x.coerceAtLeast(12 * density), barTop + barHeight + 16 * density, axisText)
         }
         val shown = events.filter { now - it.atMillis <= HapticTimeline.LIVE_MILLIS }
-        for ((index, event) in shown.withIndex()) {
+        var lanes = 0
+        var dotRows = 0
+        for (event in shown) {
             val dropped = !event.result.played
+            if (HapticTimeline.isDot(event.haptic)) {
+                drawDot(canvas, event, dropped, now, dotRows++)
+                continue
+            }
             for (buzz in HapticTimeline.buzzes(event.pattern, event.atMillis, dropped)) {
                 val left = x(buzz.fromMillis, now)
                 // A 17 ms pulse is about a pixel at this scale, so every pulse gets at least 2 dp.
@@ -504,7 +524,7 @@ internal class LiveTimeline(context: Context, private val name: (Haptic) -> Stri
                 }
             }
             // Labels take turns over three lanes, so ones close together don't sit on each other.
-            val lane = index % LANES
+            val lane = lanes++ % LANES
             val top = lane * laneHeight
             val at = x(event.atMillis, now)
             val title = HapticTimeline.title(event, name(event.haptic))
@@ -519,6 +539,26 @@ internal class LiveTimeline(context: Context, private val name: (Haptic) -> Stri
         if (shown.isNotEmpty()) postInvalidateOnAnimation()
     }
 
+    /**
+     * A dot landing: a round mark in the dots' colour on the bar, hollow if it was skipped or dropped. A hold's dot has its number
+     * in the row above, taking turns over two rows, and says if it was skipped. A flick's dots have no number.
+     */
+    private fun drawDot(canvas: Canvas, event: HapticEvent, dropped: Boolean, now: Long, row: Int) {
+        val at = x(event.atMillis, now)
+        val radius = 4 * density
+        val middle = barTop + barHeight / 2
+        if (dropped) {
+            outline.color = LabColours.DOT
+            canvas.drawCircle(at, middle, radius - outline.strokeWidth / 2, outline)
+        } else {
+            fill.color = LabColours.DOT
+            canvas.drawCircle(at, middle, radius, fill)
+        }
+        val number = event.dot ?: return
+        val top = dotRow + (row % DOT_LABEL_ROWS + 1) * 10 * density
+        canvas.drawText(HapticTimeline.dotLabel(number, event.result), at, top, if (dropped) skippedDotText else dotText)
+    }
+
     private fun x(millis: Long, now: Long) = width - (now - millis).toFloat() / HapticTimeline.LIVE_MILLIS * width
 
     private fun text(size: Float, colour: Int) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -528,6 +568,7 @@ internal class LiveTimeline(context: Context, private val name: (Haptic) -> Stri
 
     companion object {
         const val LANES = 3
+        const val DOT_LABEL_ROWS = 2
     }
 }
 
@@ -587,55 +628,97 @@ internal class PatternBars(context: Context) : View(context) {
 }
 
 /**
- * The first ticks of a held delete, one bar each from left to right, as tall as it is long, to the sliders' 40 ms. A tick the
- * fade thins out is hollow, at the floor's height.
+ * A whole held delete on one time line, from when the finger stopped: the pause, the flick that takes the first word, a bar for
+ * each word as tall as its tick is long (to the sliders' 40 ms), the lift, and a round mark for each dot as it lands, in the dots'
+ * colour. A thinned word is hollow, at the floor's height. A dot skipped near a word's tick is hollow, with its reason.
  */
-internal class FadeStrip(context: Context) : View(context) {
-    private var ticks: List<Long?> = emptyList()
+internal class HoldStrip(context: Context) : View(context) {
+    private var plan: HoldTicks.Plan? = null
     private val density = resources.displayMetrics.density
     private val stripTop = 16 * density
     private val tall = 48 * density
-    private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = LabColours.ORANGE }
+    private val dotsTop = stripTop + tall + 18 * density
+    private val radius = 4 * density
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1.5f * density
-        color = LabColours.ORANGE
     }
     private val track = Paint().apply { color = LabColours.TRACK }
+    private val line = Paint().apply {
+        color = LabColours.DIM
+        strokeWidth = density
+    }
     private val small = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10f, resources.displayMetrics)
         color = LabColours.DIM
         textAlign = Paint.Align.CENTER
     }
+    private val skippedText = TextPaint(small).apply { color = LabColours.ORANGE }
 
-    /** Shows [ticks], null where one is thinned. */
-    fun show(ticks: List<Long?>) {
-        this.ticks = ticks
+    fun show(plan: HoldTicks.Plan) {
+        this.plan = plan
         invalidate()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), (stripTop + tall + 16 * density).toInt())
+        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), (dotsTop + radius + 28 * density).toInt())
     }
 
     override fun onDraw(canvas: Canvas) {
-        val floor = ticks.filterNotNull().minOrNull() ?: return
+        val plan = plan ?: return
+        val span = plan.endsAt + END_MARGIN_MILLIS
+        fun x(millis: Long) = millis.toFloat() / span * width
         canvas.drawRect(0f, stripTop, width.toFloat(), stripTop + tall, track)
-        val slot = width.toFloat() / ticks.size
-        for ((index, millis) in ticks.withIndex()) {
-            val left = index * slot + slot * .2f
-            val right = (index + 1) * slot - slot * .2f
-            val height = (millis ?: floor).toFloat() / HeldDeleteFade.MILLIS.last * tall
-            val center = (left + right) / 2
-            if (millis == null) {
-                val inset = outline.strokeWidth / 2
-                canvas.drawRect(left + inset, stripTop + tall - height + inset, right - inset, stripTop + tall - inset, outline)
-            } else {
-                canvas.drawRect(left, stripTop + tall - height, right, stripTop + tall, fill)
-                canvas.drawText("$millis", center, stripTop + tall - height - 3 * density, small)
-            }
-            // The word's number under its bar.
-            canvas.drawText("${index + 1}", center, stripTop + tall + 12 * density, small)
+        // Where the finger stopped, where the hold took its first word, and where it lifted.
+        for ((millis, words) in listOf(0L to "still", plan.pauseMillis to "hold", plan.pauseMillis + plan.liftAt to "lift")) {
+            val at = x(millis).coerceIn(density, width - density)
+            canvas.drawLine(at, stripTop - 2 * density, at, dotsTop + radius, line)
+            small.textAlign = if (millis == 0L) Paint.Align.LEFT else Paint.Align.CENTER
+            canvas.drawText(words, at, stripTop - 4 * density, small)
         }
+        small.textAlign = Paint.Align.CENTER
+        var skippedRow = 0
+        for (tick in plan.ticks) {
+            val at = x(plan.fromStill(tick))
+            when (tick.kind) {
+                HoldTicks.Kind.Dot -> {
+                    if (tick.plays) {
+                        fill.color = LabColours.DOT
+                        canvas.drawCircle(at, dotsTop, radius, fill)
+                    } else {
+                        outline.color = LabColours.DOT
+                        canvas.drawCircle(at, dotsTop, radius - outline.strokeWidth / 2, outline)
+                        val row = skippedRow++ % 2
+                        canvas.drawText("${tick.number} skipped: ${tick.skipped}", at, dotsTop + (14 + row * 11) * density, skippedText)
+                    }
+                }
+                else -> {
+                    val height = minOf(tick.millis, HeldDeleteFade.MILLIS.last).toFloat() / HeldDeleteFade.MILLIS.last * tall
+                    val right = maxOf(x(plan.fromStill(tick) + tick.millis), at + 3 * density)
+                    if (tick.plays) {
+                        fill.color = LabColours.ORANGE
+                        canvas.drawRect(at, stripTop + tall - height, right, stripTop + tall, fill)
+                    } else {
+                        outline.color = LabColours.ORANGE
+                        val inset = outline.strokeWidth / 2
+                        canvas.drawRect(at + inset, stripTop + tall - height + inset, right - inset, stripTop + tall - inset, outline)
+                    }
+                    // The word's number under its bar, and F for the flick.
+                    val label = if (tick.kind == HoldTicks.Kind.Flick) "F" else "${tick.number}"
+                    canvas.drawText(label, (at + right) / 2, stripTop + tall + 11 * density, small)
+                }
+            }
+        }
+        val dots = plan.ticks.count { it.kind == HoldTicks.Kind.Dot }
+        if (dots > 0) {
+            small.textAlign = Paint.Align.RIGHT
+            canvas.drawText("$dots dots", width.toFloat(), dotsTop + 26 * density, small)
+            small.textAlign = Paint.Align.CENTER
+        }
+    }
+
+    private companion object {
+        const val END_MARGIN_MILLIS = 100L
     }
 }

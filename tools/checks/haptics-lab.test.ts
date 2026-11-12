@@ -190,7 +190,9 @@ test("only a debug package reads or saves a tried held delete fade, and the lab 
   // The editor has its four sliders, its strip, Play and Reset, and comments.json keeps the four numbers.
   const screen = read("android/kotlin/com/atlas/keyboard/HapticsLabActivity.kt");
   for (const words of ["Start: ", "Floor: ", "Words to fade: ", "Thin every: "]) expect(screen).toContain(words);
-  expect(screen).toContain("fading.strip.show(HeldDeleteFade.ticks(fade, fading = on))");
+  // The strip shows the whole hold, its dots and all, as Play plays it.
+  expect(screen).toContain("val plan = lab.holdPlan()");
+  expect(screen).toContain("fading.strip.show(plan)");
   expect(screen).toContain('button("Reset", "Reset $FADE")');
   const lab = read("android/kotlin/com/atlas/keyboard/HapticsLab.kt");
   expect(lab).toContain('.put("heldDeleteFade", heldDeleteFade().put("comment", notes.fade))');

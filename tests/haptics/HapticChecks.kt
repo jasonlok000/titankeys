@@ -45,6 +45,10 @@ fun main() {
     theFadeNeverBlocksAMessage()
     theTimelineShowsEachHeldWord()
     theFadeSwitchIsDebugOnly()
+    aHoldAndItsDotsAreOneSequence()
+    aDotNearAWordIsSkipped()
+    theHoldFollowsItsPause()
+    theLabShowsTheDotsOfAHold()
     println("Haptic checks passed")
 }
 
@@ -721,4 +725,116 @@ private fun theFadeSwitchIsDebugOnly() {
     check(HeldDeleteFade.ticks(fade, fading = false) == off) { "The strip with the fade off" }
     val event = HapticEvent(1, Haptic.DeleteWord, listOf(17), HapticResult.Played, word = 12, fading = false)
     check(HapticTimeline.title(event, "") == "Held delete word 12 · Texture 17 ms · no fade") { HapticTimeline.title(event, "") }
+}
+
+/** The lab's hold: the flick and 10 words 350 ms apart, a lift, and the dots of their letters at normal speed. */
+private fun playPlan(pause: Long = deleteHoldPauseMillis(), fade: HeldDeleteFade.Settings = HeldDeleteFade.DEFAULT, scale: Float = 1f,
+                     speedUp: Boolean = false, repeat: Long = REPEAT_SLOW_MILLIS) =
+    HoldTicks.plan(HoldTicks.PLAY_WORDS, pause, repeat, HoldTicks.PLAY_LIFT_MILLIS, fade, true, HapticPalette.TEXTURE_MILLIS,
+        HapticPalette.millis(Family.GoneFlick.pattern), GestureDisplay.holdLandings(HoldTicks.playLetters(), scale, speedUp))
+
+/** No two ticks of a word and a dot within 35 ms, and the dots no closer than their own 30 ms. */
+private fun checkApart(ticks: List<HoldTicks.Tick>, what: String) {
+    val played = ticks.filter { it.plays }
+    check(played.zipWithNext().all { (a, b) -> b.at >= a.at }) { "$what: in time order" }
+    for (word in played.filter { it.kind != HoldTicks.Kind.Dot }) for (dot in played.filter { it.kind == HoldTicks.Kind.Dot })
+        check(kotlin.math.abs(word.at - dot.at) >= HapticPalette.MIN_GAP_MILLIS) { "$what: word ${word.number} at ${word.at} and dot ${dot.number} at ${dot.at}" }
+    for ((a, b) in played.filter { it.kind == HoldTicks.Kind.Dot }.zipWithNext())
+        check(b.at - a.at >= GestureDisplay.DOT_LAND_GAP.toLong()) { "$what: dots ${a.number} and ${b.number} are ${b.at - a.at} ms apart" }
+    for ((a, b) in played.filter { it.kind != HoldTicks.Kind.Dot }.zipWithNext())
+        check(b.at - a.at >= HapticPalette.MIN_GAP_MILLIS) { "$what: words ${a.number} and ${b.number} are ${b.at - a.at} ms apart" }
+}
+
+/**
+ * A hold of 10 words and the dots at its lift make one list: the flick, the fade's ticks just as the fade plans them, and a tick
+ * for every dot. Nothing within 35 ms of anything else of the other kind.
+ */
+private fun aHoldAndItsDotsAreOneSequence() {
+    for (scale in listOf(1f, .5f, .25f)) for (speedUp in listOf(false, true)) for (repeat in listOf(REPEAT_SLOW_MILLIS, 80L)) {
+        val plan = playPlan(scale = scale, speedUp = speedUp, repeat = repeat)
+        val what = "scale $scale, speed-up $speedUp, $repeat ms a word"
+        checkApart(plan.ticks, what)
+        val flick = plan.ticks.first()
+        check(flick.kind == HoldTicks.Kind.Flick && flick.at == 0L && flick.plays) { "$what: the hold starts with its flick at 0" }
+        // The fade's sequence is whole: every word in order, at its length, thinned where the fade thins.
+        val words = plan.ticks.filter { it.kind == HoldTicks.Kind.Word }
+        check(words.map { it.number } == (1..HoldTicks.PLAY_WORDS).toList()) { "$what: every word: ${words.map { it.number }}" }
+        check(words.map { if (it.plays) it.millis else null } == HeldDeleteFade.ticks(HeldDeleteFade.DEFAULT, HoldTicks.PLAY_WORDS)) {
+            "$what: the fade as planned: $words"
+        }
+        check(words.all { it.at == it.number * repeat }) { "$what: a word every $repeat ms from the hold's start" }
+        // Every dot is there, after the lift, and each one not near a word ticks.
+        val landings = GestureDisplay.holdLandings(HoldTicks.playLetters(), scale, speedUp)
+        val dots = plan.ticks.filter { it.kind == HoldTicks.Kind.Dot }
+        check(dots.size == landings.size && dots.map { it.at } == landings.map { plan.liftAt + it }) { "$what: a tick per dot: $dots" }
+        check(dots.size == GestureDisplay.MAX_DOTS || speedUp) { "$what: the 11 words' 41 letters fill the 30 dots: ${dots.size}" }
+        check(dots.all { it.at > plan.liftAt }) { "$what: the dots land after the lift" }
+        check(dots.all { it.plays }) { "$what: none is near a word, as they land after the lift: $dots" }
+    }
+}
+
+/** The rule: a dot within 35 ms of a word's tick is skipped, the word plays, and every other dot still ticks. */
+private fun aDotNearAWordIsSkipped() {
+    val words = listOf(HoldTicks.Tick(0, HoldTicks.Kind.Flick, 0, 105), HoldTicks.Tick(350, HoldTicks.Kind.Word, 1, 17),
+        HoldTicks.Tick(700, HoldTicks.Kind.Word, 2, 16), HoldTicks.Tick(1050, HoldTicks.Kind.Word, 3, 9, HoldTicks.THINNED))
+    val merged = HoldTicks.merge(words, listOf(640, 670, 700, 735, 765, 1040, 1070))
+    checkApart(merged, "made up")
+    val dots = merged.filter { it.kind == HoldTicks.Kind.Dot }
+    check(dots.filter { !it.plays }.map { it.at } == listOf(670L, 700L)) { "The two dots within 35 ms of word 2 are skipped: $dots" }
+    check(dots.filter { !it.plays }.all { it.skipped == HoldTicks.NEAR_WORD }) { "with the reason" }
+    check(dots.filter { it.plays }.map { it.at } == listOf(640L, 735L, 765L, 1040L, 1070L)) { "The rest tick, 35 ms or more from it: $dots" }
+    check(merged.filter { it.kind != HoldTicks.Kind.Dot } == words) { "The words are untouched: the fade's sequence stays whole" }
+    check(dots.map { it.number } == (1..7).toList()) { "Each dot keeps its number" }
+    // A thinned word plays nothing, so the dots next to it at 1040 and 1070 tick.
+    check(merged.map { it.at } == merged.map { it.at }.sorted()) { "One list in time order" }
+    check(merged.indexOfFirst { it.at == 700L && it.kind == HoldTicks.Kind.Word } < merged.indexOfFirst { it.at == 700L && it.kind == HoldTicks.Kind.Dot }) {
+        "At the same time, the word comes first"
+    }
+    // Exactly 35 ms away still ticks.
+    check(HoldTicks.dots(listOf(735), listOf(700)).single().plays) { "35 ms apart is apart" }
+    check(!HoldTicks.dots(listOf(734), listOf(700)).single().plays) { "34 ms isn't" }
+    // At the real lift: the last haptic just before it, as a no at the start of the text.
+    check(HoldTicks.dots(listOf(30, 60, 90), listOf(0)).map { it.plays } == listOf(false, true, true)) { "The first dot near the no is skipped" }
+    // The lab shows a skipped dot as skipped, and why.
+    val skipped = HapticEvent(1, Haptic.DeleteDotsLand, listOf(17), HapticResult.NearWord, dot = 3, dots = 12)
+    check(HapticTimeline.title(skipped, "") == "Hold's dot 3 of 12 · Texture 17 ms") { HapticTimeline.title(skipped, "") }
+    check(HapticTimeline.outcome(skipped) == "skipped: within 35 ms of a word's tick") { HapticTimeline.outcome(skipped) }
+    check(HapticTimeline.dotLabel(3, HapticResult.NearWord) == "3 skipped: near a word") { HapticTimeline.dotLabel(3, HapticResult.NearWord) }
+    check(HapticTimeline.dotLabel(4, HapticResult.Played) == "4") { "A dot that ticks shows its number" }
+    check(!HapticResult.NearWord.played) { "A skipped dot doesn't play" }
+}
+
+/**
+ * The lab's hold is timed from its start, when the flick takes the first word. The pause before it is the hold's own, from
+ * DeleteSwipe.kt, so a shorter pause moves the whole hold sooner after the finger stops, and changes nothing after its start.
+ */
+private fun theHoldFollowsItsPause() {
+    check(playPlan().pauseMillis == deleteHoldPauseMillis()) { "The lab reads the hold's own pause" }
+    val now = playPlan(pause = 400)
+    val shorter = playPlan(pause = 100)
+    check(now.ticks == shorter.ticks && now.liftAt == shorter.liftAt) { "From the hold's start, nothing changes" }
+    check(now.ticks.zip(shorter.ticks).all { (a, b) -> now.fromStill(a) - shorter.fromStill(b) == 300L }) {
+        "From when the finger stopped, every tick, word and dot, comes 300 ms sooner"
+    }
+    check(shorter.fromStill(shorter.ticks.first()) == 100L) { "The flick goes as the pause ends" }
+    check(now.endsAt - shorter.endsAt == 300L) { "and the hold ends 300 ms sooner" }
+}
+
+/** The lab's strip and Play show the dots of a hold with its words, and say when there are none. */
+private fun theLabShowsTheDotsOfAHold() {
+    val plan = playPlan()
+    val words = HapticTimeline.planWords(plan)
+    check(words.startsWith("Still ${deleteHoldPauseMillis()} ms, then the flick and 10 words, the lift, and 30 dots from ")) { words }
+    check(words.endsWith("0 dots skipped near a word.")) { words }
+    val still = playPlan(scale = 0f)
+    check(still.ticks.none { it.kind == HoldTicks.Kind.Dot }) { "With animations off a hold has no dots" }
+    check("animations are off" in HapticTimeline.planWords(still)) { HapticTimeline.planWords(still) }
+    check(HapticTimeline.isDot(Haptic.DeleteDotsLand) && !HapticTimeline.isDot(Haptic.DeleteWord)) { "Dots have their own look" }
+    val dot = HapticEvent(1, Haptic.DeleteDotsLand, listOf(17), HapticResult.Played, dot = 1, dots = 30)
+    check(HapticTimeline.outcome(dot) == HapticTimeline.trigger(Haptic.DeleteDotsLand)) { "A dot that ticks says what set it off" }
+    // The lab's Play plays the plan and feeds the timeline, so it plays and shows the dots with the words.
+    val source = File("android/kotlin/com/atlas/keyboard/Haptics.kt").readText()
+    check("fun previewHold(plan: HoldTicks.Plan)" in source) { "Play takes the whole hold" }
+    val lab = File("android/kotlin/com/atlas/keyboard/HapticsLab.kt").readText()
+    check("deleteHoldPauseMillis()" in lab && "GestureDisplay.holdLandings(" in lab) { "The lab's hold uses the real pause and the bar's own dots" }
 }

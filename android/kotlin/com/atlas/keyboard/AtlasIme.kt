@@ -387,6 +387,8 @@ class AtlasIme : InputMethodService() {
             // A hold takes the bar from any dots still playing, and their ticks stop.
             haptics.cutDots()
             strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis())
+            // The dots at the lift keep clear of this hold's ticks.
+            haptics.holdStarted()
             // The contact was a delete and not part of a word, as it would be at a lift.
             pieces.clear()
             lastTouch = null

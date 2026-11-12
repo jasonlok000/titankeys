@@ -1998,6 +1998,61 @@ private fun singleLetters(world: Realistic) {
     same(typed("so lt is"), "so it is", "Two letters can still change")
 }
 
+/**
+ * The owner's report, Nov 12: "i" stayed lowercase in a chat app. It gets its capital wherever words are typed in plain text, even
+ * where typo fixes are off ("teh" stays) or before the word data has loaded, and an Enter that sends takes "I" with it.
+ * Passwords, addresses and exact typing keep "i". Backspace straight after puts "i" back, and it stays for that field.
+ */
+private fun capitalI(world: Realistic) {
+    val sentences = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE, 0)
+    val noFixes = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PERSON_NAME, 0)
+    must(!noFixes.autocorrect && noFixes.markSpaces, "A name field has no typo fixes, but it is plain text")
+    // A Typist each time, so an undone capital in one case never carries into the next.
+    val typists = listOf<Pair<String, () -> Typist>>(
+        "a normal field" to { Typist(world, field = sentences) },
+        "a field with typo fixes off" to { Typist(world, field = noFixes) },
+        "a field whose word data hasn't loaded" to { Typist(world, autocorrect = Autocorrect(KeptOnceStore.inMemory(), {}), field = sentences) },
+        "a field with no suggestions" to { Typist(world, field = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0)) },
+    )
+    for ((name, typist) in typists) {
+        same(typist().type("i ").text, "I ", "\"i\" at the start of $name")
+        same(typist().type("so i ").text, "so I ", "\"i\" after a word in $name")
+        same(typist().type("so i, ok").text, "so I, ok", "\"i,\" in $name")
+        same(typist().type("so i.").text, "so I.", "\"i.\" in $name")
+        same(typist().type("so i'm ").text, "so I'm ", "\"i'm\" in $name")
+        same(typist().type("so i’ll ").text, "so I’ll ", "\"i’ll\" with a curly apostrophe in $name")
+        same(typist().type("so i\n").text, "so I\n", "\"i\" before a new line in $name")
+        same(typist().also { it.editor.enters = Editor.Enter.Action }.type("so i\n").text, "so I",
+            "\"i\" before an Enter that sends, in $name")
+        same(typist().type("so i ").backspace().text, "so i", "Backspace puts \"i\" back in $name")
+        same(typist().type("so i ").backspace().type(" i ").text, "so i i ", "An undone \"i\" stays for the field in $name")
+        same(typist().type("so ").tap("i").text, "so I ", "A tapped \"i\" in $name")
+    }
+    same(Typist(world, field = noFixes).type("teh ").text, "teh ", "Typo fixes stay off where the field turns them off")
+    same(Typist(world, autocorrect = Autocorrect(KeptOnceStore.inMemory(), {}), field = sentences).type("teh ").text, "teh ",
+        "Only \"i\" changes before the word data loads")
+    val bar = Typist(world, autocorrect = Autocorrect(KeptOnceStore.inMemory(), {}), field = sentences,
+        words = FakeWords(Lists(world.words)).also { it.completions = listOf("it", "in") }).type("so i").bar
+    same(bar.firstOrNull(), "I", "The bar's middle word is \"I\" before the word data loads (bar $bar)")
+    // The settings: autocorrect or automatic capitals must be on.
+    same(Typist(world, autocorrect = null, field = sentences).type("so i ").text, "so i ", "Both settings off keep \"i\"")
+    same(Typist(world, autocorrect = null, field = sentences, autoCapitalise = true).type("so i ").text, "So I ",
+        "Automatic capitals alone give \"I\"")
+    val password = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD, 0)
+    val url = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI, 0)
+    val email = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, 0)
+    for ((name, field) in listOf("a password" to password, "an address bar" to url, "an email field" to email, "exact typing" to Field.Exact)) {
+        for (text in listOf("i ", "so i ", "so i, ", "so i.", "so i'm ")) {
+            same(Typist(world, field = field).type(text).text, text, "\"$text\" stays in $name")
+            same(Typist(world, autocorrect = Autocorrect(KeptOnceStore.inMemory(), {}), field = field, autoCapitalise = true).type(text).text,
+                text, "\"$text\" stays in $name before the word data loads")
+        }
+        same(Typist(world, field = field).also { it.editor.enters = Editor.Enter.Action }.type("so i\n").text, "so i",
+            "\"i\" stays before an Enter that sends, in $name")
+    }
+    same(Typist(world, field = sentences).type("see my_i ").text, "see my_i ", "Code names keep their \"i\"")
+}
+
 fun main() {
     val world = Realistic()
     smallerChecks()
@@ -2012,6 +2067,7 @@ fun main() {
     fieldReports(world)
     ownerTypos(world)
     singleLetters(world)
+    capitalI(world)
     simulation(world)
     speed(world)
     if (failures.isNotEmpty()) {

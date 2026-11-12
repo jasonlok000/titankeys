@@ -79,6 +79,12 @@ The floor is 9 ms, not lower: the phone's own vibration log shows that 8 ms buzz
 
 The ticks are still texture for the gate, so they never block a message. A thinned tick plays nothing, and the gate never hears of it. `HeldDeleteFade` holds the rule, and it has no Android parts, so tests/haptics can run it.
 
+### The fade and the dots together
+
+A hold's ticks and its dots' ticks are one sequence (`HoldTicks`): the flick that takes the first word, each word's fading tick, then at the lift a tick as each dot lands. A word's tick and a dot's tick never play within 35 ms of each other. The word wins, as it's what the hold just did, and the dot's tick is skipped. A thinned word plays nothing, so a dot next to it still ticks. Every other dot ticks, and the dots keep their own 30 ms spacing. At normal animation speed the first dot lands about 640 ms after the lift, so a skip is rare: it guards a fast animation speed and a no just before the lift.
+
+The lab times a hold from its start, when the first word goes. The pause before that is the hold's own (`deleteHoldPauseMillis` in DeleteSwipe.kt), so a change to it moves the lab's hold too.
+
 ## What plays what
 
 **Swipe**
@@ -180,8 +186,9 @@ Haptics go with what you do too closely to judge one alone, so TitanKeys Debug's
 
 - A timeline shows the last 5 s, newest on the right. Each haptic is its pulses to scale, with its name, its family and what set it off. One the gate or a switch dropped is hollow, with the reason: busy, too soon, switched off, or all off.
 - A list under it has the last 15. Tap one to open its family's editor: a slider for each pulse (4 to 120 ms) and each gap (35 to 200 ms), a Play for that pattern alone, and Reset. The next real action plays the edited pattern.
-- **Held delete fade** is in Experiments on the lab's page in Settings, next to "Dots speed up when long". Its switch turns the fade off and on, so you can feel a hold with and without it back to back. "Tune the held delete fade" under it opens the lab's screen on the fade's editor, and so does a tap on a held delete's tick in the list. The editor has a slider for the start (4 to 40 ms), the floor (4 to 40 ms, never above the start), the words to fade (1 to 20) and how often a tick plays after that (1 in 1 to 1 in 4). A strip shows a hold's first 16 ticks to scale, with thinned ones hollow. Play holds for 10 words, 350 ms apart, as a hold starts. The next real held delete plays the edits.
+- **Held delete fade** is in Experiments on the lab's page in Settings, next to "Dots speed up when long". Its switch turns the fade off and on, so you can feel a hold with and without it back to back. "Tune the held delete fade" under it opens the lab's screen on the fade's editor, and so does a tap on a held delete's tick in the list. The editor has a slider for the start (4 to 40 ms), the floor (4 to 40 ms, never above the start), the words to fade (1 to 20) and how often a tick plays after that (1 in 1 to 1 in 4). A strip shows a whole hold to scale on one time line: the pause, the flick, a bar for each of 10 words, the lift, and a round mark in the dots' colour for each dot as it lands. A thinned word is hollow, and so is a dot skipped near a word, with its reason. Play plays that hold, 350 ms a word as a hold starts, then its dots at Android's animation speed, and each tick shows on the timeline as it plays. With animations off there are no dots, and the strip says so. The next real held delete plays the edits.
 - On the timeline, each held delete tick shows at the length it played, with its word: "Held delete word 5 · Texture 13 ms". A thinned one is hollow, with the reason "thinned". With the fade off, the label ends in "no fade".
+- A delete's dots show as round marks in their own colour. A hold's dots have their number over them, and one skipped near a word's tick is hollow, with "skipped: near a word". In the list each is "Hold's dot 3 of 12".
 - Notes: one overall, one per family, one on the fade and one per haptic. They go in `comments.json` in the app's files, with each family's pattern in use, the fade's four numbers, and each haptic's family and pattern.
 
 A tried pattern or fade is kept in the `swipe_haptics` preferences, and only a package that ends in ".debug" reads it. Every other build plays the patterns above, with no fade.

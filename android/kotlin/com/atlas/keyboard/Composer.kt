@@ -254,6 +254,8 @@ class Composer(
     var autocorrect: Autocorrect? = null
     /** Snippets and emoji shortcodes, or null when there are none. */
     var expansions: Expansions? = null
+    /** Words whose capital Backspace took back in this field, while autocorrect is off and has no list of its own. */
+    private val capitalsUndone = HashSet<String>()
 
     val hasPendingInput get() = recognising || barrier != null || drainScheduled || pendingInput.isNotEmpty()
     /** Whether a touch arriving now could still join the last swipe. A recognition in progress may yet allow it. */
@@ -284,6 +286,7 @@ class Composer(
         val owner = next?.let { it.packageName to it.fieldId }
         if (owner != rememberedField) {
             autocorrect?.newField()
+            capitalsUndone.clear()
             // Words from the last field mean nothing here. A restart of this field keeps its words until new ones arrive.
             show(emptyList())
         }
@@ -659,9 +662,11 @@ class Composer(
         val before = anchor.before
         val prefix = if (letterTap && !anchor.selected) wordSpace(before.orEmpty()) else spaces
         val capitals = autoCapitalise() || spaces.isNotEmpty() && sentenceCapitals()
-        val cased = if (before != null && field.sentenceCapitalisation && capitals) {
+        val sentenceCased = if (before != null && field.sentenceCapitalisation && capitals) {
             SwipeTyping.capitalise(text, before + prefix)
         } else text
+        // A tapped "i" is a word, so it gets its capital as a typed one does.
+        val cased = if (letterTap) capitalI(sentenceCased, before.orEmpty() + prefix)?.word ?: sentenceCased else sentenceCased
         val typed = if (letterTap) "$prefix$cased " else cased
         val cause = if (dropsSpace) EditCause.DropSpace else if (letterTap) EditCause.Tap else EditCause.Key
         if (spaces.isNotEmpty() && !edit(EditCause.MarkSpace, 0, spaces)) return
@@ -875,7 +880,11 @@ class Composer(
         val ending = endingWord(anchor, correction)
         val completed = completeManualWord(anchor)
         correcting = null
-        if (automaticSpace == anchor && anchor.before?.endsWith(" ") == true && !edit(EditCause.DropSpace, 1, "")) return
+        // "i" gets its capital before the Enter, which may send it: a chat app sends "I", not "i".
+        val capital = ending?.let { word -> anchor.before?.let { capitalI(word, it.dropLast(word.length)) } }
+            ?.takeIf { anchor.before?.endsWith(it.typed) == true && words.allowed(it.word) && words.fixAllowed(it.typed, it.word) }
+        if (capital != null && !edit(EditCause.Autocorrect, capital.typed.length, capital.word)) return
+        if (capital == null && automaticSpace == anchor && anchor.before?.endsWith(" ") == true && !edit(EditCause.DropSpace, 1, "")) return
         automaticSpace = null
         val owner = editor.identity()
         if (!sameIdentity(identity, owner)) {
@@ -888,8 +897,8 @@ class Composer(
         when (result) {
             Editor.Enter.Newline -> {
                 // Only a new line stays in this field. An app may act on any other Enter before a fix could land.
-                val fix = ending?.let { findFix(it, anchor) }
-                if (fix != null && !edit(EditCause.Autocorrect, fix.typed.length, fix.word)) return
+                val fix = capital ?: ending?.let { findFix(it, anchor) }
+                if (fix != null && capital == null && !edit(EditCause.Autocorrect, fix.typed.length, fix.word)) return
                 if (!edit(EditCause.Newline, 0, "\n")) return
                 val ended = wordEnded(ending, fix, "\n", completed) ?: return
                 val learned = ended.learn
@@ -1348,7 +1357,7 @@ class Composer(
     private fun observe(text: String) {
         val corrects = field.autocorrect && autocorrect != null
         if (corrects) autocorrect?.using?.invoke()
-        if (!field.learning && !corrects || selection.start < 0 || selection.end < 0) {
+        if (!field.learning && !corrects && !capitalsOn() || selection.start < 0 || selection.end < 0) {
             manualWord.clear()
             return
         }
@@ -1410,10 +1419,24 @@ class Composer(
 
     private fun corrector(): TypedCorrector? = autocorrect?.takeIf { field.autocorrect }?.corrector
 
+    /**
+     * Whether "i" and its contractions get their capital here. That's any field of plain text, even where typo fixes are off
+     * or before their word data has loaded, but never in a password, an address or exact typing: the fields that get a
+     * typed mark's space ([Field.markSpaces]). Autocorrect or automatic capitals must be on.
+     */
+    private fun capitalsOn() = field.markSpaces && !field.exact && (autocorrect != null || autoCapitalise())
+
+    /** "i" as "I", or "i'm" as "I'm", after [before], unless Backspace took that capital back in this field. */
+    private fun capitalI(word: String, before: String): TypedCorrector.Fix? {
+        if (!capitalsOn() || TypedCorrector.isInsideAddress(before + word)) return null
+        if (word.lowercase() in (autocorrect?.rejected ?: capitalsUndone)) return null
+        return TypedCorrector.capitalI(word)?.let { TypedCorrector.Fix(word, it) }
+    }
+
     /** The typed word that ends at the cursor, as it stands in the text. Null if the text there is anything else. */
     private fun typedWordAt(anchor: Snapshot): String? {
         val before = anchor.before
-        if (corrector() == null || before == null || !anchor.available || !anchor.knownSelection || anchor.selected) return null
+        if (corrector() == null && !capitalsOn() || before == null || !anchor.available || !anchor.knownSelection || anchor.selected) return null
         if (anchor.after?.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) return null
         val raw = manualWord.current()
         val start = before.length - raw.length
@@ -1443,7 +1466,10 @@ class Composer(
     private fun findFix(word: String, anchor: Snapshot): TypedCorrector.Fix? {
         val before = anchor.before ?: return null
         guideFix(word, before)?.let { return it }
-        val fix = corrector()?.check(word, before.dropLast(word.length), endedWord?.word) ?: return null
+        val corrector = corrector()
+        // Without the word data, only "i" changes.
+        val fix = (if (corrector != null) corrector.check(word, before.dropLast(word.length), endedWord?.word)
+            else capitalI(word, before.dropLast(word.length))) ?: return null
         return fix.takeIf { before.endsWith(it.typed) && it.word.split(' ').all(words::allowed) && words.fixAllowed(it.typed, it.word) }
     }
 
@@ -1468,12 +1494,8 @@ class Composer(
     private fun wordEnded(word: String?, fix: TypedCorrector.Fix?, mark: String, completed: String?): Ended? {
         val autocorrect = autocorrect
         val corrector = corrector()
-        if (autocorrect == null || corrector == null || word == null) {
-            endedWord = null
-            learnHeldWord()
-            return Ended(false, completed)
-        }
-        if (fix != null) {
+        // A fix is offered for undo even without the word data, as "i" gets its capital then too.
+        if (fix != null && word != null) {
             onAutocorrect?.invoke()
             onFixed?.invoke(fix.typed, fix.word)
             val typedMark = mark.trimEnd()
@@ -1482,10 +1504,15 @@ class Composer(
             endedWord = EndedWord(last, fix.typed.takeIf { ' ' !in fix.word && ' ' !in it })
             learnHeldWord()
             if (field.learning) {
-                autocorrect.recent.record(last)
+                autocorrect?.recent?.record(last)
                 words.typed(fix.word, false)
             }
             return Ended(true, null)
+        }
+        if (autocorrect == null || corrector == null || word == null) {
+            endedWord = null
+            learnHeldWord()
+            return Ended(false, completed)
         }
         val anchor = snapshot()
         val text = anchor.before.orEmpty()
@@ -1571,7 +1598,8 @@ class Composer(
             confirmState(snapshot())
             return true
         }
-        autocorrect?.undone(pending.word)
+        val autocorrect = autocorrect
+        if (autocorrect != null) autocorrect.undone(pending.word) else capitalsUndone += pending.word.lowercase()
         val accepted = snapshot()
         if (pending.keptAsTyped) {
             val before = accepted.before.orEmpty().dropLast(pending.restored.length)
@@ -1669,7 +1697,10 @@ class Composer(
      */
     private fun spaceFirst(found: List<String>, anchor: Snapshot): List<String> {
         val word = typedWordAt(anchor) ?: return found
-        val space = findFix(word, anchor)?.word ?: word
+        val fix = findFix(word, anchor)
+        // Without the word data the bar stays as it was, unless Space would give "i" its capital.
+        if (fix == null && corrector() == null) return found
+        val space = fix?.word ?: word
         return listOf(space) + found.filterNot { it.equals(space, ignoreCase = true) }
     }
 

@@ -1,5 +1,6 @@
 package com.atlas.keyboard
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -59,8 +60,20 @@ class HapticsLab(private val context: Context) {
         later()
     }
 
-    /** Plays a held delete as it plays now, its words as far apart as when a hold starts, with no switch or gate. */
-    fun previewFade() = haptics.previewHold(fade(), fading(), REPEAT_SLOW_MILLIS)
+    /** Plays a held delete as it plays now, its dots and all, as [holdPlan] has it, with no switch or gate. */
+    fun previewFade() = haptics.previewHold(holdPlan())
+
+    /**
+     * A held delete as it plays now: the finger stays for the hold's own pause, the flick takes the first word, then
+     * [HoldTicks.PLAY_WORDS] more go as far apart as when a hold starts, with the fade as it is now. The finger lifts and the dots
+     * land as the bar plans them, at Android's animation speed, with the dots experiment as it is now.
+     */
+    fun holdPlan(): HoldTicks.Plan {
+        val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
+        val landings = GestureDisplay.holdLandings(HoldTicks.playLetters(), scale, Haptics.dotsSpeedUp(context))
+        return HoldTicks.plan(HoldTicks.PLAY_WORDS, deleteHoldPauseMillis(), REPEAT_SLOW_MILLIS, HoldTicks.PLAY_LIFT_MILLIS, fade(),
+            fading(), pattern(Family.Texture).first(), HapticPalette.millis(pattern(Family.GoneFlick)), landings)
+    }
 
     fun stop() {
         if (main.hasCallbacks(write)) {

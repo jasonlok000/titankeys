@@ -259,6 +259,18 @@ class Strip(
             render()
         }
 
+    // The word menu's state comes before init: init renders, and the menu's drawing reads these.
+    private val pillLeft = Ease()
+    private val pillRight = Ease()
+    private val pillOpen = Ease()
+    private val wordEase = Ease()
+    /** The column whose pill shows or is shrinking away, and the action it shows. */
+    private var pillShown = -1
+    private var pillAction: Action? = null
+    /** The badge after the word, and when it last changed, for its pop. */
+    private var menuBadge: MenuKeys.Mark? = null
+    private var badgeChanged = 0L
+
     init {
         // The modifiers come first, so that their chips sit at the start of the words.
         addView(modifierRow, LayoutParams(0, dp(56), 1f))
@@ -688,17 +700,6 @@ class Strip(
 
         fun moving(now: Long, millis: Long) = !from.isNaN() && from != to && now - start < millis
     }
-
-    private val pillLeft = Ease()
-    private val pillRight = Ease()
-    private val pillOpen = Ease()
-    private val wordEase = Ease()
-    /** The column whose pill shows or is shrinking away, and the action it shows. */
-    private var pillShown = -1
-    private var pillAction: Action? = null
-    /** The badge after the word, and when it last changed, for its pop. */
-    private var menuBadge: MenuKeys.Mark? = null
-    private var badgeChanged = 0L
 
     /**
      * The word's menu, drawn on the bar (the owner's design D, 2026-11-12). The word sits centred in the room left of the buttons,

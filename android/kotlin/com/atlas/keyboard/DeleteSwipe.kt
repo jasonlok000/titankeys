@@ -148,6 +148,12 @@ internal class FlickCrunch {
     var state = State.Waiting
         private set
     val crunching get() = state == State.Crunching
+    /**
+     * True while the stroke may still turn out to be a delete flick: not yet clear either way, or clearly one. A word swipe's
+     * trail waits until then, so a flick never shows as a swipe first (owner, 2026-11-12). A word from the delete zone shows
+     * its trail, all of it, as soon as it is clearly no flick, about 1.5 keys in.
+     */
+    val mayBeFlick get() = allowed && (state == State.Waiting || state == State.Crunching)
     /** Whether a delete flick counts for this stroke, as [begin] was told: only then does it glow, even at its lift. */
     var allowed = false
         private set

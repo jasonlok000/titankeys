@@ -31,6 +31,7 @@ fun main() {
     theFirstWordIsTheFlickItself()
     liftingStopsAtOnceWithNoExtraWord()
     liftingBetweenWordsAddsNothing()
+    aBusyHoldAddsNothingAfterTheLift()
     aKeyPressStopsAHold()
     aKeyPressBeforeTheHoldStopsIt()
     aFieldStartCancelsAHold()
@@ -47,6 +48,7 @@ fun main() {
     aWordSwipeIsNotAFlick()
     aWordDeleteLeavesNoTwoSpaces()
     everyFlickGlowsAtItsLift()
+    aFlickNeverShowsAsASwipeFirst()
     println("Delete hold checks passed")
 }
 
@@ -653,4 +655,48 @@ private fun everyFlickGlowsAtItsLift() {
     same(lifted(stroke(.95f, .35f, .2f, 250)), false, "A stroke that went too far and broke: no glow")
     same(lifted(stroke(.85f, .4f, .2f, 650)), false, "A word: no glow")
     same(lifted(stroke(.5f, .35f, .2f, 100)), false, "From the middle of the keys: no glow")
+}
+
+/**
+ * A held delete never runs on after the lift (owner, 2026-11-12: the guide's hold took a word 1.1 s after it). Only one edit is
+ * on its way at a time, so a word waiting for a busy edit when the finger lifts never goes, however long the edit takes.
+ */
+private fun aBusyHoldAddsNothingAfterTheLift() {
+    val rig = Rig()
+    rig.flick(1_000)
+    val first = rig.next!!
+    rig.runTo(first)
+    val deleted = rig.words.size
+    val due = rig.next!!
+    // The next word is due, but the last edit is still going through, so it waits.
+    rig.next = rig.hold.step(due, false) { rig.words += due }
+    same(rig.words.size, deleted, "A busy edit holds the next word")
+    same(rig.contact.up(emptyList(), due + 10), null, "The finger lifts")
+    // The edit ends long after the lift; the timer looks again, and finds the hold over.
+    for (late in listOf(due + 30, due + 400, due + 1_100)) {
+        same(rig.hold.step(late, true) { rig.words += late }, null, "At ${late - due} ms after the lift the hold is over")
+    }
+    same(rig.words.size, deleted, "No word goes after the lift")
+}
+
+/**
+ * A stroke that becomes a flick never draws a swipe's trail first (owner, 2026-11-12: some fast flicks showed a trail for a
+ * frame or two). The trail waits while [FlickCrunch.mayBeFlick]; a word from the delete zone shows it once it is clearly no flick.
+ */
+private fun aFlickNeverShowsAsASwipeFirst() {
+    fun mayBe(points: List<Sample>, allowed: Boolean = true): List<Boolean> {
+        val crunch = FlickCrunch()
+        crunch.begin(allowed)
+        return points.indices.map { crunch.move(points.subList(0, it + 1)); crunch.mayBeFlick }
+    }
+    val flick = mayBe(stroke(.95f, .35f, .65f, 100))
+    isTrue(flick.all { it }, "A flick may be one at every point, so its trail never shows: $flick")
+    val fast = mayBe(listOf(at(.95f, .35f, 1_000), at(.85f, .35f, 1_015), at(.65f, .35f, 1_030)))
+    isTrue(fast.all { it }, "A very fast one too: $fast")
+    val word = mayBe(stroke(.85f, .4f, .2f, 650))
+    isTrue(word.first() && !word.last(), "A word from L holds its trail only until it is clearly no flick: $word")
+    isTrue(mayBe(stroke(.5f, .35f, .2f, 300)).none { it }, "A word from the middle of the keys shows its trail at once")
+    isTrue(mayBe(stroke(.95f, .35f, .65f, 100), allowed = false).none { it }, "Where a flick doesn't count, the trail shows at once")
+    val far = mayBe(stroke(.95f, .35f, .2f, 250))
+    isTrue(!far.last(), "A stroke that broke off being a flick shows its trail")
 }

@@ -2190,7 +2190,7 @@ class AtlasIme : InputMethodService() {
         val first = points.firstOrNull()
         val far = swipeCarried && gesture.swiping || travel != null && travel >= Contact.SWIPE_KEYS
         if (inGuide || !contact.swipes || altOrPanel || travel == null || !far || first == null
-            || startsDeleteFlick(first.x, first.y) && isDeleteWordSwipe(points)) {
+            || startsDeleteFlick(first.x, first.y) && (isDeleteWordSwipe(points) || flickCrunch.mayBeFlick)) {
             gesture.swipeCancelled()
             swipeShown = 0
             return

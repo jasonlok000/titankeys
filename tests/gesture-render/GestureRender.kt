@@ -4,6 +4,7 @@ import android.graphics.Canvas
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
+import kotlin.math.min
 
 /**
  * Draws the strip's steering and selecting displays to PNGs with the real [GestureDrawing], over a stand-in Canvas that draws
@@ -17,12 +18,14 @@ fun main(args: Array<String>) {
     val gap = (8 * DENSITY).toInt()
     val text = "The quick brown fox jumps over the lazy dog"
     val moments = listOf<Pair<String, (GestureDisplay) -> Unit>>(
-        "1-steer-rest" to { d -> steer(d, "The quick", text.drop(9), direction = 0, speed = 0f) },
-        "2-steer-left" to { d -> steer(d, "The quick", text.drop(9), direction = -1, speed = CursorMode.SLOWEST_PER_SECOND * 1.5f) },
-        "3-steer-right" to { d -> steer(d, "The quick", text.drop(9), direction = 1, speed = CursorMode.FASTEST_PER_SECOND) },
-        "4-steer-text-start" to { d -> steer(d, "", text, direction = -1, speed = CursorMode.SLOWEST_PER_SECOND * 4) },
-        "5-steer-text-end" to { d -> steer(d, text, "", direction = 1, speed = CursorMode.SLOWEST_PER_SECOND * 4) },
-        "6-select" to ::select,
+        "1-steer-rest" to { d -> steer(d, "The quick", text.drop(9), direction = 0, speed = 0f, until = 400L) },
+        "2-steer-left" to { d -> steer(d, "The quick", text.drop(9), direction = -1, speed = CursorMode.SLOWEST_PER_SECOND * 3) },
+        "3-steer-right" to { d -> steer(d, "The quick", text.drop(9), direction = 1, speed = CursorMode.FASTEST_PER_SECOND / 2) },
+        "4-steer-paused-on" to { d -> pause(d, text, after = 300L) },
+        "5-steer-paused-off" to { d -> pause(d, text, after = 300L + GestureDisplay.BLINK_MILLIS) },
+        "6-steer-text-start" to { d -> steer(d, "", text, direction = -1, speed = CursorMode.SLOWEST_PER_SECOND * 4) },
+        "7-steer-text-end" to { d -> steer(d, text, "", direction = 1, speed = CursorMode.SLOWEST_PER_SECOND * 4) },
+        "8-select" to ::select,
     )
     for (dark in listOf(true, false)) {
         val look = Look(dark, orange = true)
@@ -51,7 +54,8 @@ fun main(args: Array<String>) {
             val leftGlow = glowAt(image, WIDTH / 4, strip, dark)
             val rightGlow = glowAt(image, WIDTH * 3 / 4, strip, dark)
             println("${moment.first}$suffix: lean ${"%.2f".format(display.steerLean)}, underglow left ${"%.0f".format(leftGlow)}, " +
-                "right ${"%.0f".format(rightGlow)}, right/left ${"%.2f".format(rightGlow / leftGlow)}")
+                "right ${"%.0f".format(rightGlow)}, right/left ${"%.2f".format(rightGlow / leftGlow)}, " +
+                "caret ${if (display.caretShown) "on" else "off"} ${"%.2f".format(display.stepped - display.shownStep)} letters from the middle")
         }
         ImageIO.write(sheet, "png", File(folder, "all$suffix.png"))
     }
@@ -71,16 +75,39 @@ private fun glowAt(image: BufferedImage, x: Int, strip: Int, dark: Boolean): Flo
     return sum / count
 }
 
-/** A tap, then a held touch that steers through real text, with the caret between [before] and [after]. */
-private fun steer(display: GestureDisplay, before: String, after: String, direction: Int, speed: Float) {
+/**
+ * A tap, then a held touch that steers through real text from between [before] and [after], [speed] characters a second, until
+ * [until] ms. The cursor stops at either end of the text, as the real one does. Returns when it got to.
+ */
+private fun steer(display: GestureDisplay, before: String, after: String, direction: Int, speed: Float, until: Long = 700L): Long {
     display.spaceTapped(1, 0L)
     display.advance(100L, 1f)
     display.cursorFrame(5f, 0, 0f, false, 150L)
     display.cursorText(before, after)
     var now = 150L
-    while (now < 700L) {
+    var owed = 0f
+    var at = before.length
+    while (now < until) {
         now += 16
         display.cursorFrame(if (direction == 0) 5f else 5f + direction * 3.5f, direction, speed, false, now)
+        owed += speed * 16 / 1000
+        while (owed >= 1f && at + direction in 0..before.length + after.length) {
+            owed -= 1f
+            at += direction
+            display.cursorStepped(direction)
+        }
+        display.advance(now, 1f)
+    }
+    return now
+}
+
+/** Steering to the right through [text], then back on Space for [after] ms. */
+private fun pause(display: GestureDisplay, text: String, after: Long) {
+    var now = steer(display, text.take(9), text.drop(9), direction = 1, speed = CursorMode.SLOWEST_PER_SECOND * 4)
+    val end = now + after
+    while (now < end) {
+        now = min(now + 16, end)
+        display.cursorFrame(5f, 0, 0f, false, now)
         display.advance(now, 1f)
     }
 }

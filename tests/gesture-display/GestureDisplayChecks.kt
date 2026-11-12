@@ -74,6 +74,7 @@ fun main() {
     theGlowCarriesIntoASelect()
     theHeldGlowGoesWithTheDisplay()
     theUnderglowLeansWithTheSteering()
+    theCaretBlinksOnlyWhenSteeringPauses()
     println("Gesture display checks passed")
 }
 
@@ -1145,4 +1146,45 @@ private fun theUnderglowLeansWithTheSteering() {
     still.cursorEnded()
     still.advance(2L, 0f)
     near(still.steerLean, 0f, "and none once steering is gone")
+}
+
+/** Steering's caret stays on while the cursor moves, and blinks as a text cursor does, 530 ms on and 530 ms off, once it pauses. */
+private fun theCaretBlinksOnlyWhenSteeringPauses() {
+    val display = GestureDisplay()
+    display.spaceTapped(1, 0L)
+    display.cursorFrame(5f, 0, 0f, false, 100L)
+    display.cursorText("The quick", " brown fox")
+    display.advance(100L, 1f)
+    // Resting on Space from the start: on first, then off, then on again.
+    if (!display.caretShown) throw AssertionError("The caret shows as steering starts")
+    display.advance(100L + GestureDisplay.BLINK_MILLIS - 10, 1f)
+    if (!display.caretShown) throw AssertionError("It stays on for the first ${GestureDisplay.BLINK_MILLIS} ms")
+    display.advance(100L + GestureDisplay.BLINK_MILLIS + 10, 1f)
+    if (display.caretShown) throw AssertionError("Then it goes off")
+    display.advance(100L + 2 * GestureDisplay.BLINK_MILLIS + 10, 1f)
+    if (!display.caretShown) throw AssertionError("And comes on again")
+    // Steering: on every frame, however long.
+    var now = 1200L
+    while (now < 3000L) {
+        now += 16
+        display.cursorFrame(8.5f, 1, CursorMode.SLOWEST_PER_SECOND * 4, false, now)
+        if (now % 160L == 0L) display.cursorStepped(1)
+        display.advance(now, 1f)
+        if (!display.caretShown) throw AssertionError("The caret stays on while steering, at $now ms")
+    }
+    // Back on Space: on until the text settles and a blink's time passes, then off.
+    display.cursorFrame(5f, 0, 0f, false, now)
+    display.advance(now + 16, 1f)
+    if (!display.caretShown) throw AssertionError("It is on when steering pauses")
+    display.advance(now + GestureDisplay.BLINK_MILLIS + 200, 1f)
+    if (display.caretShown) throw AssertionError("Paused, it blinks off")
+    // Moving again turns it straight back on.
+    display.cursorFrame(1.5f, -1, CursorMode.SLOWEST_PER_SECOND * 4, false, now + GestureDisplay.BLINK_MILLIS + 216)
+    display.advance(now + GestureDisplay.BLINK_MILLIS + 216, 1f)
+    if (!display.caretShown) throw AssertionError("Steering again shows it at once")
+    // With animations off nothing moves, so it stays on.
+    val still = GestureDisplay()
+    still.cursorFrame(5f, 0, 0f, false, 0L)
+    still.advance(GestureDisplay.BLINK_MILLIS + 10, 0f)
+    if (!still.caretShown) throw AssertionError("With animations off the caret stays on")
 }

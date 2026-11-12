@@ -651,6 +651,9 @@ internal fun counts(title: String, text: String) = GuideVerdict.Hint(text, title
  */
 internal const val TYPING_TYPOS = "Tihs keybaord fxies yuor typos, sp yuo cna kepe pretendign yuo nevr maek ayn."
 
+/** The words of [TYPING_TEXT], as letters: what slide 1 counts as spelt right. */
+internal val TYPING_WORDS by lazy { TYPING_TEXT.split(' ').map { GuideScript.letters(it) }.toSet() }
+
 internal const val TYPING_TEXT = "This keyboard fixes your typos, so you can keep pretending you never make any. Swipe the words on the " +
     "same keys and lift after each one. When a swipe misses, the right word is one tap away on the bar. Hold a word on the bar to " +
     "judge it like you judge everyone else."
@@ -758,6 +761,9 @@ internal val GUIDE_STEPS = listOf(
             when {
                 event is KeyboardEvent.Fixed && event.isRealFix -> GuideVerdict.Done
                 event is KeyboardEvent.Fixed && event.typed != event.word -> chip("That's just a capital. Make a real typo.")
+                // Only a word of the text is spelt right: anything else is a typo too far gone to fix.
+                event is KeyboardEvent.Fixed && GuideScript.letters(event.word) !in TYPING_WORDS ->
+                    chip("Even we couldn't fix that one. Try another.")
                 event is KeyboardEvent.Fixed -> chip("Perfect spelling. Annoying. Make a typo.")
                 event is Pushed && isLetter(event.code) -> {
                     armed = true
@@ -771,7 +777,7 @@ internal val GUIDE_STEPS = listOf(
         praise = "Space fixes typos. Keep typing if you like.",
         text = TYPING_TEXT,
         ghost = TYPING_TYPOS,
-        lessons = emptySet(),
+        lessons = setOf(GuideLesson.Typing, GuideLesson.Backspace),
         sides = false,
         demo = GuideDemo.TypeSlip,
         bar = GuideBar.Fix,
@@ -815,7 +821,7 @@ internal val GUIDE_STEPS = listOf(
         text = TYPING_TEXT,
         cue = GuideCue.NextWord,
         needs = GuideNeed.SwipeTyping,
-        lessons = setOf(GuideLesson.Swipe, GuideLesson.BarTap),
+        lessons = setOf(GuideLesson.Swipe, GuideLesson.BarTap, GuideLesson.Typing, GuideLesson.Backspace),
         demo = GuideDemo.SwipeNext,
     ),
     GuideStep(
@@ -847,7 +853,7 @@ internal val GUIDE_STEPS = listOf(
         cue = GuideCue.NextWord,
         needs = GuideNeed.SwipeTyping,
         nearMiss = true,
-        lessons = setOf(GuideLesson.Swipe, GuideLesson.BarTap),
+        lessons = setOf(GuideLesson.Swipe, GuideLesson.BarTap, GuideLesson.Typing, GuideLesson.Backspace),
         demo = GuideDemo.FixNext,
     ),
     GuideStep(
@@ -877,11 +883,11 @@ internal val GUIDE_STEPS = listOf(
         done = "OK, you're not that dumb.",
         praise = "I saves a word, O forgets it, P closes the menu.",
         text = TYPING_TEXT,
-        lessons = setOf(GuideLesson.Swipe, GuideLesson.BarTap, GuideLesson.BarHold),
+        lessons = setOf(GuideLesson.Swipe, GuideLesson.BarTap, GuideLesson.BarHold, GuideLesson.Typing, GuideLesson.Backspace),
         bar = GuideBar.Menu,
     ),
     // DELETE, in the new layout: each slide starts with the text box in the field, its end showing; one-line titles, chips for
-    // real mistakes, and each slide locked to what it teaches. Backspace always works.
+    // real mistakes, and each slide locked to what it teaches: Backspace, then the flick.
     GuideStep(
         id = "backspace", chapter = GuideChapter.Delete,
         title = "The old way. Humour us.",
@@ -892,7 +898,7 @@ internal val GUIDE_STEPS = listOf(
         // v3.1's "That's how everyone deletes. Next, a whole word at once." is two lines.
         praise = "That's how everyone deletes. Next, whole words.",
         seed = DELETE_TEXT,
-        lessons = emptySet(),
+        lessons = setOf(GuideLesson.Backspace),
         demo = GuideDemo.DeleteLast,
     ),
     GuideStep(
@@ -912,7 +918,6 @@ internal val GUIDE_STEPS = listOf(
                     GuideVerdict.Wait
                 }
                 event is DeletedWord -> GuideVerdict.Done
-                event is Pushed && event.code == KEY_DEL -> chip("That's the last slide's trick. Flick it.")
                 else -> GuideVerdict.Wait
             }
         }),
@@ -948,7 +953,7 @@ internal val GUIDE_STEPS = listOf(
         demo = GuideDemo.DeleteLast,
     ),
     // STEERING, in the new layout: a line that loops forever, with the cursor in the middle. One-line titles, chips for real
-    // mistakes, and each slide locked to the cursor gestures. Letters, Backspace and Space still work.
+    // mistakes, and each slide locked to the cursor gestures: Space's taps start them, and nothing else types.
     GuideStep(
         id = "steer", chapter = GuideChapter.Steering,
         // v3.1's "Your finger is not a mouse. Today it is." is two lines.
@@ -993,26 +998,6 @@ internal val GUIDE_STEPS = listOf(
         demo = GuideDemo.MoveCursor,
     ),
     GuideStep(
-        id = "selectword", chapter = GuideChapter.Steering,
-        title = "Pick a word. Any word.",
-        stages = listOf(GuideStage("Tap Space three times, lifting each time.") { event ->
-            when {
-                // Two taps on Space pick the word at the cursor, which counts.
-                event is DoubleTapped && event.taps == 2 -> counts("That works too. Overachiever.", "It counts. Press Next.")
-                event is TwoTapsAbove -> chip("Two taps up there do nothing. Tap three times.")
-                event is FieldChanged && event.end > event.start -> GuideVerdict.Done
-                event is CursorStarted -> chip("Keyboard's confused, and so are we. Lift each tap.")
-                else -> GuideVerdict.Wait
-            }
-        }),
-        done = "Picked. Like a pro.",
-        praise = "Three taps pick the next word. So do two on Space.",
-        cue = GuideCue.Taps(3, drag = false),
-        needs = GuideNeed.CursorControl,
-        lessons = setOf(GuideLesson.Cursor),
-        demo = GuideDemo.SelectLast,
-    ),
-    GuideStep(
         id = "selectmore", chapter = GuideChapter.Steering,
         // v3.1's "Grab a bunch. Feel powerful for a second." is two lines.
         title = "Grab a bunch. Feel powerful.",
@@ -1034,7 +1019,8 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Selected. Screen untouched.",
-        praise = "Slide back the other way to give words back.",
+        // The one triple-tap slide (owner, 2026-11-11): "Pick a word" went, and its line came here.
+        praise = "Three taps pick the next word. So do two on Space.",
         help = "Three taps, the third held, then slide.",
         cue = GuideCue.Taps(3, drag = true),
         needs = GuideNeed.CursorControl,
@@ -1315,6 +1301,22 @@ internal fun groupsPraise(used: Int) = when {
     used and 2 == 0 -> "Backspace and Enter turn pages too."
     used and 8 == 0 -> "Swiping sideways on the keys changes group too."
     else -> "The bottom row works both ways."
+}
+
+/**
+ * The chip for a key that [step]'s lock kept from the field, by its [GuideLesson] name, or null for the plain "That's later.".
+ */
+internal fun blockedChip(step: GuideStep, lesson: String): String? = when (lesson) {
+    GuideLesson.Typing.name -> when {
+        step.chapter in NOT_TYPING -> "Typing's done. Keep up."
+        GuideLesson.Alt in step.lessons.orEmpty() -> "Hold Alt while you press it."
+        GuideLesson.Ctrl in step.lessons.orEmpty() -> "Hold fn with it. That's the trick."
+        GuideLesson.Sym in step.lessons.orEmpty() -> "Press Sym first. Letters can wait."
+        else -> null
+    }
+    GuideLesson.Backspace.name -> if (GuideLesson.Flick in step.lessons.orEmpty()) "That's the last slide's trick. Flick it." else
+        "Nothing to delete. Yet."
+    else -> null
 }
 
 /** The chapters that aren't about typing, where letters typed are a scenario of their own. */

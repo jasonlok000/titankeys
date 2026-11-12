@@ -1565,7 +1565,7 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    // The guide's lesson lock: in its own field, a slide lets through only what it teaches, besides letters, Backspace and Space.
+    // The guide's lesson lock: in its own field, a slide lets through only what it teaches. Nothing else reaches the field.
 
     /** Keys whose press the lock kept, so their release is kept too. */
     private val lockedKeys = HashSet<Int>()
@@ -1580,15 +1580,41 @@ class AtlasIme : InputMethodService() {
     }
 
     /**
-     * What a key belongs to, for the lock: Alt and Sym are their own, Enter too, except on the open panel, where it turns the page as
-     * part of Sym. fn and Ctrl are shortcuts. Others are typing.
+     * What a key belongs to, for the lock. Alt and Sym are their own, and Enter too. On the open panel every key is part of Sym. fn
+     * and Ctrl are shortcuts, and so is a key pressed with them. A key pressed with Alt on is Alt's. Space is the cursor's where the
+     * slide teaches it, since its taps start the cursor. A letter is a held symbol where the slide teaches holding. Anything else
+     * that types is typing. Other keys, like volume, aren't locked.
      */
-    private fun guideLesson(keyCode: Int): GuideLesson? = when (keyCode) {
-        KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT -> GuideLesson.Alt
-        KeyEvent.KEYCODE_SYM -> GuideLesson.Sym
-        KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (panelOpen) GuideLesson.Sym else GuideLesson.Enter
-        Modifiers.FN, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT -> GuideLesson.Ctrl
-        else -> null
+    private fun guideLesson(event: KeyEvent): GuideLesson? {
+        val keyCode = event.keyCode
+        return when {
+            keyCode == KeyEvent.KEYCODE_ALT_LEFT || keyCode == KeyEvent.KEYCODE_ALT_RIGHT -> GuideLesson.Alt
+            keyCode == KeyEvent.KEYCODE_SYM -> GuideLesson.Sym
+            panelOpen && (keyCode == KeyEvent.KEYCODE_SPACE || keyCode == KeyEvent.KEYCODE_DEL || keyCode == KeyEvent.KEYCODE_ENTER ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER || event.getUnicodeChar(KeyEvent.META_ALT_ON) > 0 || event.isPrintingKey) -> GuideLesson.Sym
+            keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER -> GuideLesson.Enter
+            keyCode == Modifiers.FN || keyCode == KeyEvent.KEYCODE_CTRL_LEFT || keyCode == KeyEvent.KEYCODE_CTRL_RIGHT -> GuideLesson.Ctrl
+            Modifiers.isModifier(keyCode) -> null
+            keyCode == KeyEvent.KEYCODE_DEL -> GuideLesson.Backspace
+            !event.isPrintingKey && keyCode != KeyEvent.KEYCODE_SPACE -> null
+            modifiers.ctrlHeld || event.isCtrlPressed -> GuideLesson.Ctrl
+            modifiers.alt != Modifiers.Level.Off || event.isAltPressed -> GuideLesson.Alt
+            keyCode == KeyEvent.KEYCODE_SPACE && GuideHooks.allows(GuideLesson.Cursor) -> GuideLesson.Cursor
+            HoldEngine.isLetter(keyCode) && GuideHooks.allows(GuideLesson.HoldSymbol) -> GuideLesson.HoldSymbol
+            else -> GuideLesson.Typing
+        }
+    }
+
+    /**
+     * On a slide that teaches holding but not typing, a letter let go before it became its symbol takes itself back: only the
+     * symbol reaches the field. True if it did.
+     */
+    private fun takeBackUnheldLetter(keyCode: Int): Boolean {
+        if (!inGuide || guideAllows(GuideLesson.Typing) || !guideAllows(GuideLesson.HoldSymbol)) return false
+        if (!HoldEngine.isLetter(keyCode) || heldLetter?.keyCode != keyCode) return false
+        heldLetter = null
+        if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter("") } else composer.replaceLetter("")
+        return true
     }
 
     /** A resting finger marks the button over its key, as on the Sym panel. */
@@ -2540,12 +2566,14 @@ class AtlasIme : InputMethodService() {
         strip?.gesture?.glowOff()
         wakeIdleBar()
         // A guide slide that doesn't teach this key yet: it does nothing at all, and its release is kept too.
-        val locked = if (editing && !event.isSystem) guideLesson(keyCode) else null
+        val locked = if (editing && inGuide && !event.isSystem) guideLesson(event) else null
         if (locked != null && !guideAllows(locked)) {
             if (event.repeatCount == 0) guideBlocked(locked)
             lockedKeys += keyCode
             return true
         }
+        // A key held on Alt's slide types one symbol, not a row of them: the guide never repeats a typing key.
+        if (locked == GuideLesson.Alt && event.repeatCount > 0 && !Modifiers.isModifier(keyCode)) return true
         if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
@@ -2620,6 +2648,8 @@ class AtlasIme : InputMethodService() {
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
         }
         if (lockedKeys.remove(keyCode)) return true
+        // Published before the take-back, so the guide hears the letter let go too soon.
+        val takeBack = inGuide && editing && heldLetter?.keyCode == keyCode
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         // The guide tells Alt pressed and let go from Alt held, and a letter let go before its symbol. Only in its own field.
@@ -2645,6 +2675,7 @@ class AtlasIme : InputMethodService() {
         }
         if (touchpad.isGestureKey(event)) return true
         contact.key(keyCode, false, event.eventTime)
+        if (takeBack) takeBackUnheldLetter(keyCode)
         if (holdEngine.up(keyCode, event.deviceId, event.eventTime)) {
             consumedKeys.remove(keyCode)
             return true

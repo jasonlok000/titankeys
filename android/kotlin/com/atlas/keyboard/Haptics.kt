@@ -792,20 +792,22 @@ class Haptics(private val context: Context) {
      * as one message, busy until the tail ends. Then a light tick as each dot lands in the caret, at [landings] (see [DotTicks]),
      * each only while [showing] says the same flick's dots are still on the bar. [cutDots] drops the ticks still to come.
      */
-    fun flick(poppedMillis: Long?, landings: List<Long> = emptyList(), showing: () -> Boolean = { false }, chained: Boolean = false): Boolean {
+    fun flick(poppedMillis: Long?, landings: List<Long> = emptyList(), showing: () -> Boolean = { false }): Boolean {
         val pattern = pattern(context, Family.GoneFlick)
         val head = pattern[0]
         val tailAt = poppedMillis?.coerceIn(head + pattern[1], head + HapticPalette.GAP_MILLIS.last)
         val played = flickNow(pattern, tailAt)
-        landTicks(landings, if (played) tailAt ?: (head + pattern[1]) else null, showing, chained)
+        landTicks(landings, if (played) tailAt ?: (head + pattern[1]) else null, showing)
         return played
     }
 
-    /** The ticks for dots that land at [landings]. Dots [chained] onto a stream that still plays keep its ticks still to come. */
-    private fun landTicks(landings: List<Long>, tailAt: Long?, showing: () -> Boolean, chained: Boolean = false) {
+    /**
+     * The ticks for dots that land at [landings]. A flick that joins a stream still playing starts the whole queue's wait again,
+     * so [landings] has every dot still to land, and its ticks take the place of the ones still to come.
+     */
+    private fun landTicks(landings: List<Long>, tailAt: Long?, showing: () -> Boolean) {
         val times = DotTicks.times(landings, tailAt)
-        val tick = { if (showing()) play(Haptic.DeleteDotsLand) }
-        if (chained) dotTicks.add(times, tick) else dotTicks.schedule(times, tick)
+        dotTicks.schedule(times) { if (showing()) play(Haptic.DeleteDotsLand) }
     }
 
     /**

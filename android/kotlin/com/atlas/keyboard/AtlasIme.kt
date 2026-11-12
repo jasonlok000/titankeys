@@ -2730,9 +2730,9 @@ class AtlasIme : InputMethodService() {
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
                         val dotsAt = gesture?.dotsAt
-                        // A flick while dots still play adds its dots to theirs, and its ticks to theirs.
+                        // A flick while dots still play adds its dots to theirs, and the whole queue's ticks go again with its wait.
                         haptics.flick(gesture?.dotsPoppedMillis(scale), gesture?.dotLandings(scale).orEmpty(),
-                            { dotsAt != null && strip?.gesture?.dotsAt == dotsAt }, chained = gesture?.chained == true)
+                            { dotsAt != null && strip?.gesture?.dotsAt == dotsAt })
                     }
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return

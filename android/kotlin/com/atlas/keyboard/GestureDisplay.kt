@@ -247,6 +247,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private var dotLand = FloatArray(64)
     private var dotPopAt = FloatArray(64)
     private var dotPlace = IntArray(64)
+    /** How long after the dot before it each dot lands, as [plan] works it out, so a join can lay the queue again with the same steps. */
+    private var dotStep = FloatArray(64)
     /** One step after the last dot lands: then the words come back. */
     private var doneAt = 0f
     private var planned = Float.NaN
@@ -539,6 +541,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             dotLand = dotLand.copyOf(size)
             dotPopAt = dotPopAt.copyOf(size)
             dotPlace = dotPlace.copyOf(size)
+            dotStep = dotStep.copyOf(size)
         }
         if (batches > batchFrom.size) {
             val size = max(batches, batchFrom.size * 2)
@@ -586,7 +589,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         changed()
     }
 
-    /** Works out when each dot pops in and lands, in real ms after the stream started, at animator [scale]. */
+    /**
+     * Works out when each dot pops in and lands, in real ms after the stream started, at animator [scale]. A delete that joins
+     * starts the wait again for the whole queue (owner, 2026-11-12): every dot that hasn't set off for the caret by then holds
+     * still, and from the join they all wait the flick's wait, then go in order at the usual pace and speed-up, the new ones last.
+     * A dot already on its way still lands as it was going to.
+     */
     private fun plan(scale: Float) {
         if (planned == scale || scale <= 0f) return
         planned = scale
@@ -602,6 +610,18 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             val inMillis = if (b == 0) dotsInMillis else FLICK_IN
             val wait = if (b == 0 && fromHold) FLICK_HOLD else flickHoldMillis()
             val earliest = batchAt[b] + (inMillis + wait + DOT_TRAVEL) * scale
+            if (b > 0) {
+                // A join: the first dot not yet on its way, and every one after it, go again from the join's wait.
+                var held = 0
+                while (held < from && dotLand[held] - DOT_TRAVEL * scale <= batchAt[b]) held++
+                // The first held one waits for the join's wait, and for the dot ahead of it; the rest keep their steps behind it.
+                for (index in held until from) dotLand[index] = when {
+                    index > held -> dotLand[index - 1] + dotStep[index]
+                    index == 0 -> earliest
+                    else -> max(earliest, dotLand[index - 1] + dotStep[index])
+                }
+                if (held < from) last = dotLand[from - 1]
+            }
             for (j in 0 until count) {
                 val index = from + j
                 interval = if (speedUp) max(min(fastest, base), base * DOT_SPEED_UP.pow(max(0, index - DOT_SPEED_FROM))) else base
@@ -613,6 +633,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                     else -> last + interval
                 }
                 dotLand[index] = last
+                dotStep[index] = interval
                 dotPopAt[index] = if (b == 0 && fromHold) Float.NEGATIVE_INFINITY
                     else batchAt[b] + j.toFloat() / count * POP_SPREAD * FLICK_IN * scale
             }
@@ -659,18 +680,21 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     fun dotLandings(scale: Float): List<Long> {
         if (scene != Scene.DeleteFlick || dots == 0 || scale <= 0f || batches == 0) return emptyList()
         plan(scale)
-        // The latest delete's dots, in ms after it came. A dot that lands within 30 ms of the last tick lands without one, so
-        // the ticks stay apart when the dots speed up; a whole stream is counted, so a new batch keeps clear of the last.
-        val from = batchFrom[batches - 1]
+        // Every dot still to land after the latest delete came, in ms after it came: a join lays the whole queue again, so its
+        // ticks all go again too. A dot that lands within 30 ms of the last tick lands without one, so the ticks stay apart when
+        // the dots speed up; a whole stream is counted, so the ticks keep clear of the ones already played.
         val at = batchAt[batches - 1]
         val ticks = ArrayList<Long>()
         var lastTick = Float.NEGATIVE_INFINITY
-        val first = (dotLand[from] - at).roundToLong()
+        // Each counted from the first to come, so their steps round as the dots' own steps do.
+        var first = Float.NaN
         for (index in 0 until dots) {
             val land = dotLand[index]
             if (land - lastTick < DOT_LAND_GAP - .5f) continue
             lastTick = land
-            if (index >= from) ticks += first + (land - dotLand[from]).roundToLong()
+            if (land <= at) continue
+            if (first.isNaN()) first = land
+            ticks += (first - at).roundToLong() + (land - first).roundToLong()
         }
         return ticks
     }

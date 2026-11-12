@@ -706,6 +706,43 @@ internal fun regretsLine(count: Int) = "Regrets deleted: $count"
 /** The count once the finger lifts after the slide passed: frozen on its last number, with the slide's praise. */
 internal fun regretsFinal(count: Int) = "$count regrets gone. " + GUIDE_STEPS.first { it.id == "hold" }.praise
 
+/** The steer slide's target is at least this many words from the cursor's column. */
+internal const val STEER_TARGET_WORDS = 3
+
+/**
+ * The steer slide's target: a word of three letters or more on the visible line that doesn't hold the cursor, [other], at least
+ * [STEER_TARGET_WORDS] words from the word in the cursor's column, the nearest such. [x] says where a character of [text] starts on
+ * its line, and [cursorX] where the cursor is. Only the word's letters are marked, not its marks.
+ */
+internal fun steerTarget(text: String, other: IntRange, cursorX: Float, x: (Int) -> Float): IntRange? {
+    val words = Regex("\\S+").findAll(text).map { it.range }.filter { it.first in other }.toList()
+    if (words.isEmpty()) return null
+    val column = words.indexOfLast { x(it.first) <= cursorX }.coerceAtLeast(0)
+    val letters = words.mapIndexedNotNull { index, word ->
+        val first = (word.first..word.last).firstOrNull { text[it].isLetter() } ?: return@mapIndexedNotNull null
+        val last = (word.first..word.last).last { text[it].isLetter() }
+        (index to (first..last)).takeIf { abs(index - column) >= STEER_TARGET_WORDS && last - first + 1 >= 3 }
+    }
+    return letters.minByOrNull { abs(it.first - column) }?.second
+}
+
+/** The steer slide, with a word marked: the cursor has to land in it, and the slide passes as the finger lifts there. */
+private fun GuideMemory.steerToward(aim: IntRange, event: KeyboardEvent): GuideVerdict = when {
+    // Where the cursor was as the slide began, to tell short of the word from past it.
+    event is FieldChanged -> {
+        if (mark < 0) mark = if (cursor >= 0) cursor else event.start
+        GuideVerdict.Wait
+    }
+    event is Moved && event.lifted -> when {
+        mark < 0 -> GuideVerdict.Hint("Held it, then chickened out. Hold, then slide.", stage = 0)
+        cursor in aim.first..aim.last + 1 -> GuideVerdict.Done
+        if (mark <= aim.first) cursor > aim.last + 1 else cursor < aim.first ->
+            GuideVerdict.Hint("Past it. Slide back a little.", stage = 0)
+        else -> GuideVerdict.Hint("Not there yet. Keep going.", stage = 0)
+    }
+    else -> GuideVerdict.Wait
+}
+
 /** The stray d, in orange, while it's there. */
 internal fun strayTarget(text: String) = text.lastIndexOf(STRAY).takeIf { it >= 0 }?.let { (it + STRAY.length - 2)..(it + STRAY.length - 2) }
 
@@ -1030,9 +1067,13 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Now slide left or right. The cursor follows.") { event ->
+            // The screen marks a word on the other line in orange, and the cursor has to land in it (design v4).
+            GuideStage("Slide the cursor into the orange word.") { event ->
+                val aim = target
                 when {
-                    // A real steer passes as it goes. A nudge passes too, with its own line, once the finger lifts.
+                    aim != null -> steerToward(aim, event)
+                    // Nothing marked, as before: a real steer passes as it goes. A nudge passes too, with its own line, once the
+                    // finger lifts.
                     event is FieldChanged -> when {
                         mark < 0 -> {
                             mark = event.start

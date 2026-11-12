@@ -158,6 +158,7 @@ fun main() {
     chapterOne()
     scenarios()
     theCursorHasToMove()
+    steeringToAWord()
     settingsThatStepsNeed()
     goingBack()
     resuming()
@@ -640,6 +641,32 @@ private fun theCursorHasToMove() {
     far.event(CursorStarted(false))
     far.event(FieldChanged("on and on", 9, 9))
     same(far.event(FieldChanged("on and on", 2, 2)), GuideVerdict.Done, "A real steer finishes it as it goes")
+}
+
+private fun steeringToAWord() {
+    fun title(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.let { it.title ?: it.text }.orEmpty()
+    // A line of words, one character wide each, so a character's place is its index.
+    val text = "aa bb cc dd eee fff ggg hhh iii. jjj"
+    val word = steerTarget(text, 0 until text.length, 0f) { it.toFloat() }
+    same(word?.let { text.substring(it.first, it.last + 1) }, "eee", "Three words or more from the cursor's column, three letters or more")
+    same(steerTarget(text, 0 until text.length, 33f) { it.toFloat() }?.let { text.substring(it.first, it.last + 1) }, "ggg",
+        "counted either way from the column")
+    same(steerTarget("ab. cd ef gh iii.", 0 until 17, 0f) { it.toFloat() }, 13..15, "only its letters, not the full stop")
+
+    val steer = GuideFlow({ GuideSettings() })
+    steer.start("steer")
+    steer.seed("x".repeat(60), 10)
+    steer.aim(30..33)
+    steer.event(CursorStarted(false))
+    same(steer.instruction, "Slide the cursor into the orange word.", "With a word marked, the slide asks for it")
+    steer.event(FieldChanged("x".repeat(60), 20, 20))
+    same(title(steer.event(Moved(20f, lifted = true))).startsWith("Not there yet"), true, "Short of the word")
+    steer.event(CursorStarted(false))
+    steer.event(FieldChanged("x".repeat(60), 40, 40))
+    same(title(steer.event(Moved(20f, lifted = true))).startsWith("Past it"), true, "Past the word")
+    steer.event(CursorStarted(false))
+    steer.event(FieldChanged("x".repeat(60), 32, 32))
+    same(steer.event(Moved(20f, lifted = true)), GuideVerdict.Done, "In the word as the finger lifts passes")
 }
 
 private fun settingsThatStepsNeed() {

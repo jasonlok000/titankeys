@@ -46,7 +46,11 @@ private data class Frame(
     val labels: Map<String, String>? = null,
     /** What the field marks in orange to aim at. See [GuideMemory.target]. */
     val target: IntRange? = null,
+    /** The steer slide's word, found as the field wraps; [SteerAim.Entered] draws the cursor in it. */
+    val steer: SteerAim = SteerAim.None,
 )
+
+private enum class SteerAim { None, Start, Entered }
 
 /** A mistake for each slide, as the keyboard reports it, so a drawing shows the chip that it gets. */
 private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
@@ -121,7 +125,7 @@ private fun framesFor(step: GuideStep): List<Frame> {
     val field = fieldFor(step)
     fun frame(name: String, title: String, line: String, chip: String? = null, passed: Boolean = false, from: Frame = field,
         panel: String? = null) = Frame("${step.id}-$name", step.chapter, title, line, chip, passed, from.field, from.start, from.end,
-        from.ghost, panel, target = from.target)
+        from.ghost, panel, target = from.target, steer = from.steer)
     val frames = ArrayList<Frame>()
     val first = step.stages.firstOrNull()?.text ?: step.body
     frames += frame("1-start", step.title, first)
@@ -142,6 +146,15 @@ private fun framesFor(step: GuideStep): List<Frame> {
             if (verdict is GuideVerdict.Hint && !verdict.passes) said = verdict.title ?: verdict.text
         }
         if (said != null) frames += frame("3-chip", step.title, flow.instruction, chip = said)
+    }
+    // The steer slide: its word marked; the cursor in it as the finger slides; passed there.
+    if (step.id == "steer") {
+        frames.removeAll { it.name.endsWith("-2-stage2") }
+        frames.replaceAll { it.copy(steer = SteerAim.Start) }
+        frames += frame("2-stage2", step.title, step.stages[1].text).copy(steer = SteerAim.Start)
+        frames += frame("2-stage2-entered", step.title, step.stages[1].text).copy(steer = SteerAim.Entered)
+        frames += frame("4-passed", step.done, step.praise, passed = true).copy(steer = SteerAim.Entered)
+        return frames
     }
     // Mass deletion counts words in the instruction's place from the first one: one gone, then passed at eight, then frozen.
     if (step.id == "hold") {
@@ -349,8 +362,25 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
     val cursorLine = starts.indexOfLast { it <= frame.start.coerceAtMost(all.length) }.coerceAtLeast(0)
     val first = when {
         frame.ghost.isNotEmpty() || frame.field.isEmpty() -> cursorLine
+        // The steer slide shows the cursor's line and the one after it, where its word is.
+        frame.steer != SteerAim.None -> cursorLine
         else -> (cursorLine - 1).coerceAtLeast(0)
     }.coerceAtMost((starts.size - 2).coerceAtLeast(0))
+    // The steer slide's word, found on the other line as the app finds it, and the cursor in it once entered.
+    var start = frame.start
+    var target = frame.target
+    if (frame.steer != SteerAim.None) {
+        val other = first + 1
+        val otherEnd = (starts.getOrNull(other + 1) ?: all.length) - 1
+        fun x(at: Int): Float {
+            val line = starts.indexOfLast { it <= at }
+            return g.fontMetrics.stringWidth(all.substring(starts[line], at)).toFloat()
+        }
+        target = steerTarget(all, starts[other]..otherEnd, x(frame.start)) { x(it) }
+        if (target == null) mark(g, "NO STEER TARGET", top)
+        if (frame.steer == SteerAim.Entered && target != null) start = target.first + 2
+    }
+    val shown = frame.copy(start = start, end = start, target = target)
     for (row in 0..1) {
         val index = first + row
         if (index >= starts.size) break
@@ -361,26 +391,26 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
         for (offset in from until to) {
             val char = all[offset].toString()
             val w = g.fontMetrics.stringWidth(char)
-            val aim = frame.target
+            val aim = shown.target
             if (aim != null && offset in aim) {
                 g.color = rgb(Paint.ORANGE, .35f)
                 g.fillRect(x, top + row * line, w, line)
                 g.color = orange
                 g.fillRect(x, top + (row + 1) * line - dp(2), w, dp(2))
             }
-            if (offset in frame.start until frame.end) {
+            if (offset in shown.start until shown.end) {
                 g.color = rgb(Paint.ORANGE, .45f)
                 g.fillRect(x, top + row * line, w, line)
             }
             g.color = if (offset < frame.field.length) cream else rgb(Paint.CREAM, .38f)
             g.drawString(char, x, base)
-            if (offset == frame.start && frame.start == frame.end) {
+            if (offset == shown.start && shown.start == shown.end) {
                 g.color = orange
                 g.fillRect(x - dp(1), top + row * line + dp(2), dp(2), line - dp(4))
             }
             x += w
         }
-        if (frame.start == frame.end && frame.start == to && to == all.length) {
+        if (shown.start == shown.end && shown.start == to && to == all.length) {
             g.color = orange
             g.fillRect(x, top + row * line + dp(2), dp(2), line - dp(4))
         }

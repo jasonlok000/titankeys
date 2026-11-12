@@ -630,6 +630,10 @@ class GuideActivity : Activity() {
     private var enteredChapter: GuideChapter? = null
     /** How many times the delete chapter's field was emptied, and the steering line's length as it was put in. */
     private var deleteResets = 0
+    /** The word that the steering slides mark, in the field's text: see [pickSteerAim]. It moves with the cursor's copy of the line. */
+    private var steerAim: IntRange? = null
+    /** The cursor is in the steer slide's word, as last heard, so entering it is felt once. */
+    private var inSteerAim = false
     /** Words that went on the mass deletion slide, counted on after it passed, until the finger lifts and the count stops. */
     private var regrets = 0
     private var regretsFrozen = false
@@ -2365,12 +2369,16 @@ class GuideActivity : Activity() {
         val start = min(field.selectionStart, field.selectionEnd).coerceAtLeast(0)
         val end = max(field.selectionStart, field.selectionEnd).coerceAtLeast(0)
         if (!playground) aim()
+        // The cursor coming into the steer slide's word is felt, once each time.
+        val entered = steerAim?.let { start == end && start in it.first..it.last + 1 } == true
+        if (entered && !inSteerAim && flow.step.id == "steer" && !passed) haptics.play(Haptic.SelectionWord)
+        inSteerAim = entered
         handle(KeyboardEvent.FieldChanged(field.text.toString(), start, end))
     }
 
     /**
      * Marks in orange what the slide aims at, in the field, and tells the slide (design v4): the stray letter on the Backspace slide,
-     * the last word on the flick slide.
+     * the last word on the flick slide, a word on the other line on the steer slide.
      * Nothing on other slides, or once the guide's look is off.
      */
     private fun aim() {
@@ -2379,6 +2387,7 @@ class GuideActivity : Activity() {
         val range = if (playground || guideLooks != true) null else when (flow.step.id) {
             "backspace" -> strayTarget(text)
             "flick" -> if (passed) null else lastWordTarget(text, field.selectionStart)
+            "steer" -> steerAim
             else -> null
         }
         field.target = range
@@ -2427,6 +2436,29 @@ class GuideActivity : Activity() {
         steerLength = text.length
         val middle = text.length / 2
         field.setSelection((text.indexOf(' ', middle) + 1).coerceIn(0, text.length))
+        steerAim = null
+        inSteerAim = false
+        if (flow.step.id == "steer") field.post { pickSteerAim() }
+    }
+
+    /**
+     * The steer slide's word, once the field has its lines: on the visible line that doesn't hold the cursor, a few words from its
+     * column, so both stay in the two lines (design v4). The field shows those two lines.
+     */
+    private fun pickSteerAim() {
+        if (flow.step.id != "steer" || playground) return
+        val own = field.layout ?: return
+        val cursor = field.selectionStart.coerceAtLeast(0)
+        val cursorLine = own.getLineForOffset(cursor)
+        val other = if (cursorLine + 1 < own.lineCount) cursorLine + 1 else cursorLine - 1
+        if (other < 0) return
+        val text = field.text.toString()
+        steerAim = steerTarget(text, own.getLineStart(other) until own.getLineEnd(other), own.getPrimaryHorizontal(cursor)) {
+            own.getPrimaryHorizontal(it)
+        }
+        field.scrollTo(0, own.getLineTop(min(cursorLine, other)))
+        inSteerAim = false
+        aim()
     }
 
     /** The cursor near either end of the steering line moves by a whole line, to the same place in a copy nearer the middle. */
@@ -2445,6 +2477,8 @@ class GuideActivity : Activity() {
             else -> return
         }
         if (start + shift < 0 || end + shift > length) return
+        // The marked word moves with the cursor, to the same word in its copy of the line.
+        steerAim = steerAim?.let { (it.first + shift)..(it.last + shift) }
         field.setSelection(start + shift, end + shift)
     }
 

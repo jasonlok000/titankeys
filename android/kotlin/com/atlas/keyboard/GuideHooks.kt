@@ -64,6 +64,13 @@ internal object GuideHooks {
      */
     @Volatile var stripDemos: ((StripDemo?) -> Unit)? = null
 
+    /** The strip listens here: its words wait for the given ms, then show once, as a slide changes. Only in the guide's field. */
+    @Volatile var barHolds: ((Long) -> Unit)? = null
+
+    fun holdBar(millis: Long) {
+        barHolds?.invoke(millis)
+    }
+
     fun stripDemo(demo: StripDemo?) {
         stripDemos?.invoke(demo)
     }

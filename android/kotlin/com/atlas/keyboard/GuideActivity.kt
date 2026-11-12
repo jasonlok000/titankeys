@@ -439,6 +439,18 @@ private class CheckSpan(private val colour: Int) : android.text.style.Replacemen
     }
 }
 
+/** Room before a letter, [extra] wide: the gap's box sits in it, so the letter and the rest of the line move over. */
+private class GapRoom(private val extra: Float) : android.text.style.ReplacementSpan() {
+    override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, metrics: Paint.FontMetricsInt?): Int {
+        metrics?.let { paint.getFontMetricsInt(it) }
+        return kotlin.math.ceil(extra + paint.measureText(text, start, end)).toInt()
+    }
+
+    override fun draw(canvas: Canvas, text: CharSequence, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
+        canvas.drawText(text, start, end, x + extra, y.toFloat(), paint)
+    }
+}
+
 private class GuideField(context: Context) : EditText(context) {
     /** Android calls [onSelectionChanged] while it builds the view, so this has to work before it is set. */
     var changed: (() -> Unit)? = null
@@ -493,13 +505,35 @@ private class GuideField(context: Context) : EditText(context) {
             invalidate()
         }
 
-    /** Where a symbol slide's gap is, in the text, or -1: an orange box the width of a letter, where the symbol goes (v5). */
+    /**
+     * Where a symbol slide's gap is, in the text, or -1: an orange box the width of [gapSymbol], where the symbol goes (v5). The text
+     * after it moves over by the box's width, so the box never sits on the next letters (owner, v5.3: it covered "c" and "4").
+     */
     var gap = -1
         set(value) {
             if (field == value) return
             field = value
+            makeRoom()
             invalidate()
         }
+
+    /** The symbol the gap waits for, which sets the box's width. */
+    var gapSymbol = ""
+
+    /** The room made after the gap, on the letter that follows it, if any. */
+    private var room: GapRoom? = null
+
+    private fun makeRoom() {
+        val own = text ?: return
+        room?.let(own::removeSpan)
+        room = null
+        val at = gap
+        if (at < 0 || at >= own.length) return
+        room = GapRoom(gapWidth()).also { own.setSpan(it, at, at + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+    }
+
+    /** The gap's box: its symbol's width and a little either side, never narrower than a letter. */
+    private fun gapWidth() = max(paint.measureText(gapSymbol.ifEmpty { "M" }), paint.measureText("n")) + resources.displayMetrics.density * 6
 
     /** The gap's box, on the line where it is, right where the cursor waits. */
     private fun drawGap(canvas: Canvas, own: android.text.Layout) {
@@ -507,8 +541,8 @@ private class GuideField(context: Context) : EditText(context) {
         if (at < 0 || at > text.length) return
         val line = own.getLineForOffset(at)
         val x = own.getPrimaryHorizontal(at)
-        val wide = paint.measureText("M")
         val unit = resources.displayMetrics.density
+        val wide = gapWidth() - unit * 6
         canvas.save()
         canvas.translate(compoundPaddingLeft.toFloat(), extendedPaddingTop.toFloat())
         targetPaint.color = GuideMotion.faded(GuideColours.ORANGE, GuideActivity.TARGET_WASH)
@@ -865,7 +899,25 @@ class GuideActivity : Activity() {
     }
 
     private var helpShown = false
-    private val showHelp = Runnable {
+    private val showHelp = Runnable { helpDue() }
+
+    /** Keys down now, as the keyboard reported them: help waits while one is held. */
+    private val heldKeys = HashSet<Int>()
+
+    /** Restarts the help's wait, on any input: help comes after a pause, never in the middle of trying (owner, v5.3). */
+    private fun waitForHelp() {
+        if (helpShown || passed || flow.step.help == null) return
+        main.removeCallbacks(showHelp)
+        main.postDelayed(showHelp, if (flow.step.helpTitle != null) HELP_TITLE_AFTER_MILLIS else HELP_AFTER_MILLIS)
+    }
+
+    private fun helpDue() {
+        // Never while a finger is down, a key is held or the word menu is open: "Hold, don't tap" showed with the menu open, and
+        // the steer help mid-steer. It waits, and asks again.
+        if (fingerDown || heldKeys.isNotEmpty() || GuideHooks.menuOpen?.invoke() == true) {
+            main.postDelayed(showHelp, HELP_RECHECK_MILLIS)
+            return
+        }
         helpShown = true
         val step = flow.step
         val help = step.help
@@ -1100,7 +1152,18 @@ class GuideActivity : Activity() {
             typeface = MEDIUM
             setTextColor(GuideColours.INK)
             setHintTextColor(GuideMotion.faded(GuideColours.INK, .45f))
-            highlightColor = GuideMotion.faded(GuideColours.ORANGE, .5f)
+            // A selection is cream, so it never reads as the orange words a slide marks to aim at (owner, v5.3).
+            highlightColor = GuideMotion.faded(GuideColours.CREAM, SELECTION_ALPHA)
+            // No Cut, Copy or Paste toolbar: it covered the instructions, stayed into the next slide, and its Cut and Paste went
+            // round the slides' locks (owner, v5.3). Copy and paste are fn and C or V, as the guide teaches.
+            val noToolbar = object : android.view.ActionMode.Callback {
+                override fun onCreateActionMode(mode: android.view.ActionMode, menu: android.view.Menu) = false
+                override fun onPrepareActionMode(mode: android.view.ActionMode, menu: android.view.Menu) = false
+                override fun onActionItemClicked(mode: android.view.ActionMode, item: android.view.MenuItem) = false
+                override fun onDestroyActionMode(mode: android.view.ActionMode) = Unit
+            }
+            customSelectionActionModeCallback = noToolbar
+            customInsertionActionModeCallback = noToolbar
             setTextCursorDrawable(GradientDrawable().apply {
                 setColor(GuideColours.ORANGE)
                 setSize(dp(3), dp(20))
@@ -1620,6 +1683,9 @@ class GuideActivity : Activity() {
     }
 
     private fun enter(step: GuideStep) {
+        heldKeys.clear()
+        // The field is set a few times as the slide opens: the bar shows only where it settles.
+        GuideHooks.holdBar(BAR_SETTLE_MILLIS)
         guideLook(true)
         showBigNext(false)
         hideChip(now = true)
@@ -2201,8 +2267,17 @@ class GuideActivity : Activity() {
         if (text.isNotEmpty()) built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         val gap = if (text.isEmpty() || text.endsWith(' ')) "" else " "
         val next = passage.wordAt(passage.track(typedSince(text)).next)
+        // On a symbol slide what the demo types goes in the gap, where the cursor waits, never after the line (owner, v5.3: a
+        // grey "p" sat after the line).
+        val inGap = field.gap.takeIf { it in 0..text.length }
         fun add(added: String) {
             if (added.isEmpty()) return
+            if (inGap != null) {
+                val shown = added.trim()
+                built.insert(inGap, shown)
+                built.setSpan(ForegroundColorSpan(grey), inGap, inGap + shown.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                return
+            }
             val start = built.length
             built.append(added)
             built.setSpan(ForegroundColorSpan(grey), start, built.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -2667,6 +2742,7 @@ class GuideActivity : Activity() {
             else -> null
         }
         // A symbol slide's gap, while it's empty: where the cursor waits for the symbol.
+        field.gapSymbol = step.symbol.orEmpty()
         field.gap = if (playground || guideLooks != true || passed || step.symbol == null || step.line.isEmpty() ||
             text.trimEnd() != gapSeed(step.line, step.symbol).trimEnd()) -1 else gapCursor(step.line, step.symbol)
         field.target = range
@@ -2808,6 +2884,7 @@ class GuideActivity : Activity() {
             lastPoint = point
         }
         keys.trace(points, reset, lifted)
+        waitForHelp()
         if (lifted) freezeRegrets()
         acted()
         if (!busy && ready) judge(KeyboardEvent.Moved(travel, lifted))
@@ -2937,12 +3014,18 @@ class GuideActivity : Activity() {
     private fun handle(event: KeyboardEvent) {
         if (playground) countWpm(event)
         // The keyboard reports its modifiers whenever it redraws them, as when a slide opens a panel. That is not you acting.
-        if (::phantom.isInitialized && event !is KeyboardEvent.ModifierState) acted()
+        if (::phantom.isInitialized && event !is KeyboardEvent.ModifierState) {
+            acted()
+            waitForHelp()
+        }
         when (event) {
             is KeyboardEvent.Pushed -> keyName(event.code)?.let {
                 lastKey = it
-                keys.light(it)
+                // The right Shift is the second ⇧ of the drawing; every other key has one.
+                keys.press(it, if (event.code == KeyEvent.KEYCODE_SHIFT_RIGHT) 1 else 0)
+                heldKeys += event.code
             }
+            is KeyboardEvent.Released -> heldKeys -= event.code
             is KeyboardEvent.Resting -> if (event.key.isNotEmpty()) {
                 keys.light(event.key)
                 keys.touched()
@@ -3035,6 +3118,23 @@ class GuideActivity : Activity() {
             flow.seed(field.text.toString(), field.selectionStart)
             haptics.play(Haptic.GuideBlocked)
             showChip(RUDE_CLIP, force = true)
+        }
+        // The held delete only ever takes the regrets (owner, v5.3: it went on 1.1 s past the lift and ate the line's first word).
+        // Once they're gone, deleting is locked for the slide, and a word of the line that goes anyway comes straight back.
+        if (event is KeyboardEvent.FieldChanged && step.id == "hold") {
+            if (holdTarget(event.text, event.start) == null) GuideHooks.lessons = emptySet()
+            if (!event.text.startsWith(HOLD_LEAD)) {
+                val tail = event.text.substring(event.start.coerceIn(0, event.text.length)).trimStart()
+                val mended = HOLD_LEAD + tail.removePrefix(HOLD_LEAD)
+                main.post {
+                    if (flow.step !== step || field.text.toString() == mended) return@post
+                    seeding = true
+                    field.setText(mended)
+                    field.setSelection(HOLD_LEAD.length.coerceAtMost(field.length()))
+                    seeding = false
+                    flow.seed(field.text.toString(), field.selectionStart)
+                }
+            }
         }
         // A wrong symbol in a symbol slide's gap is taken back out at once, so the right one passes on its own (owner, v5.2). The
         // slide's check says so with its chip.
@@ -4032,6 +4132,12 @@ class GuideActivity : Activity() {
         private const val SLOGAN_DELAY_MILLIS = 260L
         /** A slide's help shows this soon (v5: sooner, so the hint is there before anyone gives up). */
         private const val HELP_AFTER_MILLIS = 5000L
+        /** How soon help that had to wait for a finger, a key or the menu looks again. */
+        private const val HELP_RECHECK_MILLIS = 700L
+        /** How long the bar's words wait as a slide opens, so it shows the slide's words once. */
+        private const val BAR_SETTLE_MILLIS = 450L
+        /** How strong a selection's cream is in the field. */
+        private const val SELECTION_ALPHA = .32f
         /** How long Alt or the panel must stay on before the guide says so. */
         private const val MODIFIER_HINT_MILLIS = 350L
         /** How strong the words after the next one are in that line. */

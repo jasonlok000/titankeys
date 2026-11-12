@@ -168,6 +168,19 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         invalidate()
     }
 
+    /**
+     * A real key pressed: only that key lights, the [nth] of its name for the two Shifts (owner, v5.3: both lit for one press), and
+     * the finger's light goes, since the touchpad can read a finger on Sym as being on Enter beside it.
+     */
+    fun press(name: String, nth: Int = 0) {
+        keys.filter { it.name == name }.getOrNull(nth)?.heat = 1f
+        pressedAt = GuideMotion.now()
+        invalidate()
+    }
+
+    /** When a real key was last pressed: the finger's light stays off for a moment after. */
+    private var pressedAt = -1L
+
     /** The key that [name] names turns over and shows its [symbol]. */
     fun flip(name: String, symbol: String) {
         val key = byName[name] ?: return
@@ -181,6 +194,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     fun trace(points: List<FloatArray>, reset: Boolean, lifted: Boolean) {
         if (reset) trail.clear()
         trail.addAll(points)
+        // A long steer kept every point, and the trail built into a solid smear (owner, v5.3): only the newest stay.
+        if (trail.size > TRAIL_KEEP) trail.subList(0, trail.size - TRAIL_KEEP).clear()
         for (point in points) hover.point(point[0], point[1])
         liftedAt = if (lifted) GuideMotion.now() else -1
         if (lifted) {
@@ -237,7 +252,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         lastFrame = now
         val frameCount = if (GuideMotion.enabled) elapsed / FRAME_MILLIS else 99f
         var moving = cue != GuideCue.Free && GuideMotion.enabled && isShown
-        hovered = hover.current(now)
+        hovered = if (pressedAt >= 0 && now - pressedAt < PRESS_QUIET_MILLIS) null else hover.current(now)
         for (key in keys) moving = drawKey(canvas, key, now, frameCount) || moving
         drawTouchArea(canvas)
         drawTapZone(canvas)
@@ -536,7 +551,12 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             path.moveTo(startX, startY)
             path.quadTo(cx, cy, endX, endY)
             trailPaint.strokeWidth = width * thickness(corner)
+            // The oldest part fades out, so a long trail tapers away behind the finger and never piles up.
+            val colour = trailPaint.color
+            val age = (trail.size - i).toFloat() / TRAIL_KEEP
+            if (age > TRAIL_FADE_FROM) trailPaint.color = GuideMotion.faded(colour, (colour ushr 24) / 255f * ((1f - age) / (1f - TRAIL_FADE_FROM)))
             canvas.drawPath(path, trailPaint)
+            trailPaint.color = colour
             startX = endX
             startY = endY
         }
@@ -735,6 +755,11 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private companion object {
         // Keys. Sizes are in dp unless they say otherwise. Change these to adjust the look.
         const val FRAME_MILLIS = 16f
+        /** How long the finger's light stays off after a real key press, so the pressed key is the one lit. */
+        const val PRESS_QUIET_MILLIS = 400L
+        /** The most points the trail keeps, and from how far back, as a part of that, it fades out. */
+        const val TRAIL_KEEP = 120
+        const val TRAIL_FADE_FROM = .45f
         /** A key's thin outline, and how strong it is, and the very faint fill inside it, on orange and on ink. */
         const val KEY_OUTLINE = 1f
         const val KEY_OUTLINE_ORANGE = .5f

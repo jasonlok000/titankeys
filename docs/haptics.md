@@ -42,19 +42,31 @@ Patterns are on and off in ms, starting with on.
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
 | **Gone** | 60 | The clipboard cleared |
 | **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
-| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, taps on Space that find nothing to pick or steer, Ctrl + C with nothing selected |
+| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, I on a word that's already a favourite, taps on Space that find nothing to pick or steer, Ctrl + C with nothing selected, an action the guide blocks |
 | **Wall** | 40, 35, 20, 35, 12 | Steering hits the start or end of the text, selecting reaches either end, a delete with nothing left to delete, short or long |
 | **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations |
 | **Saved** | 20, 40, 20, 40, 50 | Save in the word menu, by I or the strip |
 | **Removed** | 50, 40, 20, 40, 20 | Forget in the word menu, by O or the strip |
 | **Favourite** | 20, 40, 20, 40, 80 | Favourite in the word menu, by I on a saved word or the strip |
-| **Unfavourite** | 20, 40, 60, 40, 20 | Unfavourite in the word menu, by O on a favourite or the strip |
+| **Unfavourite** | 30, 40, 20, 40, 12 | Unfavourite in the word menu, by O on a favourite or the strip |
+| **Unsaved** | 40, 40, 20, 40, 15 | Unsave in the word menu, by O on a saved word or the strip |
 
 The rising and falling patterns use a short first or last pulse on purpose: the short pulse is what makes the rise or the fall. So Confirm's 15 ms and Change's 20 ms are under rule 1's "about 25". The table wins over that guide.
 
 Saved and Removed are the word menu's own, so Save and Forget feel different from each other and from everything else. Saved rises at the end, so it isn't No's three equal pulses or Celebrate's steady rise, and it has three pulses, not Confirm's two. Removed is its mirror, so it isn't Gone's one pulse or the two of Gone flick and Back. Save used to play Confirm, the same as the menu opening, so it felt like nothing new, and the repeat rule dropped it when you saved within 300 ms of the menu opening. Each message family has its own pattern, and tests/haptics checks it.
 
-Favourite and Unfavourite are the menu's next step. Favourite is Saved with a stronger last hit, so it feels like saving, and more. Unfavourite swells and settles back: light, firm, light. Removed falls from a firm hit, so the two never feel alike, and taking a favourite away never feels like deleting the word.
+The word menu is a ladder, and its haptics are one system (owner, 2026-11-12). I moves a word one step up, and O one step down:
+
+| Step | Button | Family | Pulses | Feel |
+|---|---|---|---|---|
+| Not saved → saved | Save (I) | **Saved** | 20, 20, 50 | Rises |
+| Saved → favourite | Favourite (I) | **Favourite** | 20, 20, 80 | Rises to the strongest hit of the menu |
+| Favourite → saved | Unfavourite (O) | **Unfavourite** | 30, 20, 12 | A light fall |
+| Saved → not saved | Unsave (O) | **Unsaved** | 40, 20, 15 | A medium fall |
+| Not saved → never suggested | Forget (O) | **Removed** | 50, 20, 20 | The heaviest fall |
+| Favourite, the top | Already a favourite (I) | **No** | 25, 25, 25 | Nothing happened |
+
+Going up rises: each pattern ends on its strongest pulse, and Favourite's last hit is the strongest of all. Going down falls: each starts on its strongest pulse, and the further down a step goes, the harder it starts and the more it weighs in all (62, 75 and 90 ms of pulses). Every gap is 40 ms, so each pulse reads on its own. A word that is a dictionary word starts at Favourite, and Unfavourite takes it back there. The spent heart plays No, not nothing, so a press that does nothing still answers. tests/haptics checks the directions and that each step feels like no other family.
 
 Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single 30 ms pulse too, but it comes once, so it's a message.
 

@@ -890,7 +890,7 @@ class Composer(
         correcting = null
         // "i" gets its capital before the Enter, which may send it: a chat app sends "I", not "i".
         val capital = ending?.let { word -> anchor.before?.let { capitalI(word, it.dropLast(word.length)) } }
-            ?.takeIf { anchor.before?.endsWith(it.typed) == true && words.allowed(it.word) && words.fixAllowed(it.typed, it.word) }
+            ?.takeIf { anchor.before?.endsWith(it.typed) == true && allowedFix(it) }
         if (capital != null && !edit(EditCause.Autocorrect, capital.typed.length, capital.word)) return
         if (capital == null && automaticSpace == anchor && anchor.before?.endsWith(" ") == true && !edit(EditCause.DropSpace, 1, "")) return
         automaticSpace = null
@@ -1482,8 +1482,16 @@ class Composer(
         // Without the word data, only "i" changes.
         val fix = (if (corrector != null) corrector.check(word, before.dropLast(word.length), endedWord?.word)
             else capitalI(word, before.dropLast(word.length))) ?: return null
-        return fix.takeIf { before.endsWith(it.typed) && it.word.split(' ').all(words::allowed) && words.fixAllowed(it.typed, it.word) }
+        return fix.takeIf { before.endsWith(it.typed) && allowedFix(it) }
     }
+
+    /**
+     * Whether [fix] may go in: its words must not be blocked, and the fix not refused. A fix that only changes the capitals puts in
+     * no new word, so a blocked word can't stop it: Blocked words keys "I" as "i", and with "i" blocked, a lone "i" stayed small
+     * while "i'm" became "I'm" (owner, 2026-11-12). Blocking a word keeps it off the bar; it never stops what you type being fixed.
+     */
+    private fun allowedFix(fix: TypedCorrector.Fix) =
+        (fix.word.equals(fix.typed, ignoreCase = true) || fix.word.split(' ').all(words::allowed)) && words.fixAllowed(fix.typed, fix.word)
 
     /**
      * In the guide's typing text, a typo close to the word that the text has next always becomes that word: its first lesson is that

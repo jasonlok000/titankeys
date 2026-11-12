@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- O on a saved word: Unsave, the bookmark with a minus. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M17,3H7C5.9,3 5,3.9 5,5v16l7,-3 7,3V5C19,3.9 18.1,3 17,3zM17,18l-5,-2.2L7,18V5h10V18z" />
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M9.5,10h5" />
+</vector>

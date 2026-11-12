@@ -41,7 +41,11 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
      * The owner's start was 40, 30, 20, 20, 12; the gaps are 35 so each bounce still reads on its own.
      */
     Wall("wall", "Wall", listOf(40, 35, 20, 35, 12)),
-    /** Short, short, long: two light taps settle into a firm one. The word menu kept the word. */
+    /**
+     * The word menu's ladder (owner, 2026-11-12): each step up rises, and each step down falls, heavier the further down it goes.
+     * Up: Saved, then Favourite, ending on the strongest hit. Down: Unfavourite, light; Unsaved, medium; Removed, the heaviest.
+     * Short, short, long: two light taps settle into a firm one. The word menu kept the word.
+     */
     Saved("saved", "Saved", listOf(20, 40, 20, 40, 50)),
     /** Long, short, short: a firm hit that trails off, Saved's mirror. The word menu took the word away. */
     Removed("removed", "Removed", listOf(50, 40, 20, 40, 20)),
@@ -53,8 +57,10 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
     Crunch("crunch", "Crunch", listOf(9, 12, 9)),
     /** Saved, ending on a stronger hit: the word menu made a saved word a favourite. */
     Favourite("favourite", "Favourite", listOf(20, 40, 20, 40, 80)),
-    /** Light, firm, light: a swell that settles back, so it is never Removed's fall. The word is no longer a favourite. */
-    Unfavourite("unfavourite", "Unfavourite", listOf(20, 40, 60, 40, 20)),
+    /** A light fall, the lightest step down: the word is no longer a favourite, but stays saved. */
+    Unfavourite("unfavourite", "Unfavourite", listOf(30, 40, 20, 40, 12)),
+    /** A medium fall, between Unfavourite's and Removed's: the word left Saved words. */
+    Unsaved("unsaved", "Unsaved", listOf(40, 40, 20, 40, 15)),
     /** A rising run of three: the guide's celebrations. */
     Celebrate("celebrate", "Celebrate", listOf(15, 40, 22, 40, 35));
 
@@ -144,6 +150,10 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     WordFavourited("word_favourited", HapticGroup.Bar, Family.Favourite),
     /** Unfavourite in the word menu, by O on a favourite or the strip. */
     WordUnfavourited("word_unfavourited", HapticGroup.Bar, Family.Unfavourite),
+    /** Unsave in the word menu: one step down, out of Saved words. */
+    WordUnsaved("word_unsaved", HapticGroup.Bar, Family.Unsaved),
+    /** I on a favourite, the top of the ladder: nothing more to do. */
+    MenuSpent("menu_spent", HapticGroup.Bar, Family.No),
     /** Undo right after Forget: the word is back. */
     ForgetUndone("forget_undone", HapticGroup.Bar, Family.Back),
     /** Save went wrong and the word isn't saved. */

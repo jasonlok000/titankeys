@@ -100,6 +100,8 @@ private val table = mapOf(
     Haptic.WordForgotten to Family.Removed,
     Haptic.WordFavourited to Family.Favourite,
     Haptic.WordUnfavourited to Family.Unfavourite,
+    Haptic.WordUnsaved to Family.Unsaved,
+    Haptic.MenuSpent to Family.No,
     Haptic.ForgetUndone to Family.Back,
     Haptic.WordNotSaved to Family.No,
     Haptic.ClipOffer to Family.Confirm,
@@ -143,7 +145,8 @@ private val patterns = mapOf(
     Family.Saved to listOf(20L, 40L, 20L, 40L, 50L),
     Family.Removed to listOf(50L, 40L, 20L, 40L, 20L),
     Family.Favourite to listOf(20L, 40L, 20L, 40L, 80L),
-    Family.Unfavourite to listOf(20L, 40L, 60L, 40L, 20L),
+    Family.Unfavourite to listOf(30L, 40L, 20L, 40L, 12L),
+    Family.Unsaved to listOf(40L, 40L, 20L, 40L, 15L),
 )
 
 private fun eachHapticPlaysItsFamily() {
@@ -156,7 +159,7 @@ private fun eachHapticPlaysItsFamily() {
 }
 
 private fun eachFamilyPlaysItsPattern() {
-    check(patterns.keys == Family.entries.toSet()) { "Fifteen families: ${Family.entries}" }
+    check(patterns.keys == Family.entries.toSet()) { "Sixteen families: ${Family.entries}" }
     for ((family, pattern) in patterns) check(family.pattern == pattern) { "$family plays ${family.pattern}, not $pattern" }
     // And so each haptic plays its family's pattern exactly.
     for ((haptic, family) in table) check(HapticPalette.pattern(haptic.family, false, null) == patterns.getValue(family)) {
@@ -231,7 +234,7 @@ private fun everyFamilyHasItsOwnPattern() {
     val messages = Family.entries.filter { !it.texture }
     check(messages.map { it.pattern }.toSet().size == messages.size) { "Each message has its own pattern: ${messages.map { it.pattern }}" }
     check(messages.map { HapticPalette.pulses(it.pattern) }.toSet().size == messages.size) { "Each message has its own pulses" }
-    for (family in listOf(Family.Saved, Family.Removed, Family.Favourite, Family.Unfavourite)) for (other in Family.entries.filter { it != family })
+    for (family in ladder) for (other in Family.entries.filter { it != family })
         check(HapticPalette.pulses(family.pattern) != HapticPalette.pulses(other.pattern)) { "$family feels different from $other" }
 }
 
@@ -242,18 +245,16 @@ private fun theWordMenuHasItsOwnFeels() {
     check(Haptic.entries.filter { it.family == Family.Removed } == listOf(Haptic.WordForgotten)) { "Only Forget plays Removed" }
     check(Haptic.MenuOpen.family != Haptic.WordSaved.family) { "Save never shares the menu opening's family, so the repeat rule can't drop it" }
     check(Haptic.WordNotSaved.family == Family.No && Haptic.ForgetUndone.family == Family.Back) { "A failed save is no, and Undo is back" }
-    for (family in listOf(Family.Saved, Family.Removed, Family.Favourite, Family.Unfavourite))
-        check(HapticPalette.gaps(family.pattern).all { it == 40L }) { "$family's gaps are 40 ms" }
+    for (family in ladder) check(HapticPalette.gaps(family.pattern).all { it == 40L }) { "$family's gaps are 40 ms" }
     // Favourite is Saved with a stronger last hit; Unfavourite is never Removed's fall.
     check(Haptic.WordFavourited.family == Family.Favourite && Haptic.WordUnfavourited.family == Family.Unfavourite) { "Favourite and Unfavourite have their own" }
     check(Haptic.entries.filter { it.family == Family.Favourite } == listOf(Haptic.WordFavourited)) { "Only Favourite plays Favourite" }
     check(Haptic.entries.filter { it.family == Family.Unfavourite } == listOf(Haptic.WordUnfavourited)) { "Only Unfavourite plays Unfavourite" }
+    check(Haptic.entries.filter { it.family == Family.Unsaved } == listOf(Haptic.WordUnsaved)) { "Only Unsave plays Unsaved" }
     val saved = HapticPalette.pulses(Family.Saved.pattern)
     val favourite = HapticPalette.pulses(Family.Favourite.pattern)
     check(favourite.dropLast(1) == saved.dropLast(1) && favourite.last() > saved.last()) { "Favourite is Saved ending stronger: $favourite" }
-    val removed = HapticPalette.pulses(Family.Removed.pattern)
-    val unfavourite = HapticPalette.pulses(Family.Unfavourite.pattern)
-    check(unfavourite.first() < unfavourite[1] && removed.first() > removed[1]) { "Unfavourite rises first, Removed falls: $unfavourite, $removed" }
+    theLadderRisesAndFalls()
     // Saved, then Favourite straight after, as I pressed twice: both play.
     val pressed = Clock()
     val twice = HapticGate { pressed.now }
@@ -266,6 +267,30 @@ private fun theWordMenuHasItsOwnFeels() {
     check(gate.admit(Haptic.MenuOpen.family)) { "The menu opens" }
     clock.now += millis(Haptic.MenuOpen.family) + HapticPalette.MIN_GAP_MILLIS
     check(gate.admit(Haptic.WordSaved.family)) { "Save right after the menu opens plays" }
+}
+
+/** The word menu's ladder: its steps' families, and each one's step. */
+private val ladder = listOf(Family.Saved, Family.Removed, Family.Favourite, Family.Unfavourite, Family.Unsaved)
+
+/**
+ * The word menu's haptics are one system (owner, 2026-11-12): a step up rises, ending on its strongest pulse, and Favourite's last
+ * hit is the strongest; a step down falls, starting on its strongest pulse, and the further down, the heavier. The spent heart
+ * says no. Each button plays the family of how far it moves the word: see [MenuKeys.move].
+ */
+private fun theLadderRisesAndFalls() {
+    val family = mapOf(MenuKeys.Button.Save to Haptic.WordSaved, MenuKeys.Button.Favourite to Haptic.WordFavourited,
+        MenuKeys.Button.Favourited to Haptic.MenuSpent, MenuKeys.Button.Unfavourite to Haptic.WordUnfavourited,
+        MenuKeys.Button.Unsave to Haptic.WordUnsaved, MenuKeys.Button.Forget to Haptic.WordForgotten)
+    check(family.keys == MenuKeys.Button.entries.toSet()) { "Every menu button has its haptic" }
+    val up = family.filterKeys { MenuKeys.move(it) > 0 }.entries.sortedBy { MenuKeys.move(it.key) }.map { HapticPalette.pulses(it.value.family.pattern) }
+    val down = family.filterKeys { MenuKeys.move(it) < 0 }.entries.sortedBy { -MenuKeys.move(it.key) }.map { HapticPalette.pulses(it.value.family.pattern) }
+    for (pulses in up) check(pulses.last() == pulses.max() && pulses.last() > pulses.first()) { "A step up rises: $pulses" }
+    for (pulses in down) check(pulses.first() == pulses.max() && pulses.first() > pulses.last()) { "A step down falls: $pulses" }
+    check(up.last().last() == ladder.maxOf { HapticPalette.pulses(it.pattern).max() }) { "Favourite ends on the menu's strongest hit" }
+    check(up.zipWithNext().all { (a, b) -> b.last() > a.last() }) { "Each step up ends stronger: $up" }
+    check(down.zipWithNext().all { (a, b) -> b.first() > a.first() && b.sum() > a.sum() }) { "Each step further down is heavier: $down" }
+    check(Haptic.MenuSpent.family == Family.No) { "The spent heart says no" }
+    check(Haptic.entries.map { it.id }.containsAll(listOf("word_unsaved", "menu_spent"))) { "Unsave and the spent heart have their own switches" }
 }
 
 /** A clock the checks move by hand. */
@@ -913,8 +938,8 @@ private fun aWallBouncesAndSettles() {
     }
     // No is only for nothing happening at all, as when the guide blocks something (v5). A flick with nothing to delete is a wall.
     check(Haptic.entries.filter { it.family == Family.No }.toSet() == setOf(Haptic.NothingToPick, Haptic.WordNotSaved, Haptic.CopyNothing,
-            Haptic.GuideBlocked)) {
-        "No stays for taps with nothing to work on, a failed save, a copy of nothing and the guide's blocks"
+            Haptic.GuideBlocked, Haptic.MenuSpent)) {
+        "No stays for taps with nothing to work on, a failed save, a copy of nothing, the word menu's spent heart and the guide's blocks"
     }
     check(HapticTimeline.meaning(Family.Wall).isNotEmpty()) { "The lab says what it means" }
     for (haptic in listOf(Haptic.SelectionEnd, Haptic.DeleteRanOut, Haptic.DeleteZone)) check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic" }

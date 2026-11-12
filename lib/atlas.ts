@@ -12,6 +12,8 @@ export type EnterApp = { app: string; name: string; method: SendMethod };
 export type App = { app: string; name: string; installed?: boolean };
 /** A snippet's shortcut is written without its start character. */
 export type Snippet = { shortcut: string; text: string };
+/** Chat shorthand in lowercase and the full word it's spelled out as. */
+export type Shorthand = { shorthand: string; full: string };
 /** The characters that a snippet's shortcut can start with. Words do not use them. */
 export const snippetStarts = [";", "/", "\\", ","] as const;
 export type SnippetStart = typeof snippetStarts[number];
@@ -89,6 +91,10 @@ export type State = {
   shortcodes: boolean;
   /** Chat shorthand such as "shd" becomes its full word, "should". */
   expandShorthand: boolean;
+  /** The listed shorthand that has a full word, in the list's order, and whether the user left it on. */
+  shorthand: (Shorthand & { on: boolean })[];
+  /** The user's own shorthand, sorted. It comes before a listed one with the same shorthand. */
+  ownShorthand: Shorthand[];
   snippets: Snippet[];
   liftOff: boolean;
   liftOffMillis: number;
@@ -127,7 +133,10 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog"> & {
+  /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
+  shorthandToggles: Record<string, boolean>;
+};
 
 /**
  * Touchpad points from 0 to 1 across the keyboard and down its four rows, with how thick to draw the trail there: 1 for a
@@ -183,6 +192,20 @@ export async function putSnippet(shortcut: string, text: string, previous?: stri
   } finally {
     await state.refresh();
   }
+}
+
+/** Adds the user's own shorthand, or changes the one that was [previous]. Fails with a message if it isn't valid. */
+export async function putShorthand(shorthand: string, full: string, previous?: string) {
+  try {
+    await atlas("putShorthand", { shorthand, full, previous: previous ?? "" });
+  } finally {
+    await state.refresh();
+  }
+}
+
+export async function removeShorthand(shorthand: string) {
+  await atlas("removeShorthand", { shorthand });
+  await state.refresh();
 }
 
 export async function removeSnippet(shortcut: string) {

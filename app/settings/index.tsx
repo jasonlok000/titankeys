@@ -13,6 +13,7 @@ import { liftLabel } from "./lift";
 import { rawLogLabel } from "./rawlog";
 import { sentenceSpacesLabel } from "./sentence-spaces";
 import { setupLabel } from "./setup";
+import { shorthandLabel } from "./shorthand/index";
 import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
 import { tapKeysLabel } from "./tap-keys";
@@ -41,8 +42,7 @@ export default function Settings() {
       <Field label="Snippets" href="/settings/snippets">{snippetsLabel(settings)}</Field>
       <Toggle label="Type :name: for an emoji" value={settings.shortcodes}
         onChange={shortcodes => save.run({ shortcodes })} />
-      <Toggle label="Spell out shorthand, like shd as should" value={settings.expandShorthand}
-        onChange={expandShorthand => save.run({ expandShorthand })} />
+      <Field label="Spell out shorthand" href="/settings/shorthand">{shorthandLabel(settings)}</Field>
       <Field label="Exact typing (experimental)" href="/settings/exact-apps">{exactAppsLabel(settings)}</Field>
     </Section>
     <Section title="Suggestions">

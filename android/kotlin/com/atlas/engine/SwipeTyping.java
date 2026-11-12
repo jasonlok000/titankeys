@@ -497,6 +497,16 @@ public final class SwipeTyping {
         return TypingSettings.expandShorthand(context);
     }
 
+    /** Whether the user switched off the listed shorthand, in lowercase, so it stays as typed. */
+    public boolean shorthandOff(String shorthand) {
+        return TypingSettings.shorthandOff(context).contains(shorthand);
+    }
+
+    /** The full word of the user's own shorthand, in lowercase, or null if it isn't one of theirs. */
+    public String ownShorthand(String shorthand) {
+        return TypingSettings.ownShorthand(context).get(shorthand);
+    }
+
     /** The word in the English spelling that the settings ask for. */
     public String preferredSpelling(String word) {
         return EnglishSpelling.convert(word, TypingSettings.spelling(context));

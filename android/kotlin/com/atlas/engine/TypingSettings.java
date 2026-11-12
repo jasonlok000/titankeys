@@ -7,7 +7,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 public final class TypingSettings {
     public static final int MIN_LIFT_OFF_MILLIS = 50, MAX_LIFT_OFF_MILLIS = 200, DEFAULT_LIFT_OFF_MILLIS = 90;
@@ -268,6 +270,47 @@ public final class TypingSettings {
 
     public static void expandShorthand(Context context, boolean enabled) {
         preferences(context).edit().putBoolean("expand_shorthand", enabled).apply();
+    }
+
+    /** Listed shorthand, in lowercase, that the user switched off in Settings: it stays as typed. None at first. */
+    public static Set<String> shorthandOff(Context context) {
+        return preferences(context).getStringSet("shorthand_off", Collections.emptySet());
+    }
+
+    public static void shorthandOn(Context context, String shorthand, boolean on) {
+        Set<String> off = new HashSet<>(shorthandOff(context));
+        if (on) off.remove(shorthand); else off.add(shorthand);
+        preferences(context).edit().putStringSet("shorthand_off", off).apply();
+    }
+
+    private static final String OWN_SHORTHAND = "own_shorthand";
+    private static Set<String> ownShorthandRead;
+    private static Map<String, String> ownShorthandCache = Collections.emptyMap();
+
+    /**
+     * The user's own shorthand: each full word by its shorthand in lowercase, sorted. Kept as "shorthand, tab, full word"
+     * entries, read again only when they change, as autocorrect asks for them at each word.
+     */
+    public static synchronized Map<String, String> ownShorthand(Context context) {
+        Set<String> entries = preferences(context).getStringSet(OWN_SHORTHAND, Collections.emptySet());
+        if (entries == ownShorthandRead) return ownShorthandCache;
+        Map<String, String> own = new TreeMap<>();
+        for (String entry : entries) {
+            int tab = entry.indexOf('\t');
+            if (tab > 0 && tab < entry.length() - 1) own.put(entry.substring(0, tab), entry.substring(tab + 1));
+        }
+        ownShorthandRead = entries;
+        ownShorthandCache = Collections.unmodifiableMap(own);
+        return ownShorthandCache;
+    }
+
+    /** Saves the user's own shorthand, which the caller has checked. [full] null removes it. */
+    public static synchronized void ownShorthand(Context context, String shorthand, String full) {
+        Map<String, String> own = new TreeMap<>(ownShorthand(context));
+        if (full == null) own.remove(shorthand); else own.put(shorthand, full);
+        Set<String> entries = new HashSet<>();
+        for (Map.Entry<String, String> entry : own.entrySet()) entries.add(entry.getKey() + "\t" + entry.getValue());
+        preferences(context).edit().putStringSet(OWN_SHORTHAND, entries).apply();
     }
 
     /** A name between two colons, such as :smile:, types its emoji. */

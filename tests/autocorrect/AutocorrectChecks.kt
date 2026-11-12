@@ -43,7 +43,11 @@ private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = Phone
                     /** Names on this phone, by their lowercase form, as SwipeTyping holds them. */
                     val phoneNames: Map<String, String> = emptyMap(),
                     /** Settings > Spell out shorthand. */
-                    val expand: Boolean = false) : Lexicon {
+                    val expand: Boolean = false,
+                    /** Listed shorthand that the user switched off there. */
+                    val shorthandOff: Set<String> = emptySet(),
+                    /** The user's own shorthand there, by its shorthand in lowercase. */
+                    val ownShorthand: Map<String, String> = emptyMap()) : Lexicon {
     override fun known(word: String) = words.contains(word) || habits.active(word) || word.lowercase() in phoneNames
     override fun frequency(word: String) = words.frequency(word)
     override fun personal(word: String) = habits.active(word) || word.lowercase() in phoneNames
@@ -52,6 +56,8 @@ private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = Phone
     override fun preferredSpelling(word: String) = spelling(word)
     override fun acronym(word: String) = words.acronym(word)
     override fun expandShorthand() = expand
+    override fun shorthandOff(shorthand: String) = shorthand in shorthandOff
+    override fun ownShorthand(shorthand: String) = ownShorthand[shorthand]
     override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
 }
 
@@ -1975,6 +1981,7 @@ private fun ownerTypos(world: Realistic) {
     same(typed("it was lol", spelled), "it was lol", "Shorthand with no full word stays as typed")
     val undone = Typist(world, world.autocorrect(spelled), lists = spelled).type("shd ").backspace()
     same(undone.text, "shd", "Backspace right after puts the shorthand back")
+    shorthandSettings(world, ::typed)
 
     // The owner's rule: the bar's middle word is what Space puts in, whether autocorrect fixes the word or not.
     for (word in listOf("todays", "teh", "recieve", "hel", "its", "whats", "yeahh", "shd", "the")) {
@@ -1986,6 +1993,57 @@ private fun ownerTypos(world: Realistic) {
     val bar = Typist(world, words = FakeWords(Lists(world.words)).also { it.completions = listOf("hello", "help", "held") })
     bar.type("hel")
     same(bar.bar.drop(1).take(2), listOf("hello", "help"), "Completions follow the middle word")
+}
+
+/** The owner's call, Nov 12: a longer shorthand list, each one switched on or off in Settings, and the user's own. */
+private fun shorthandSettings(world: Realistic, typed: (String, Lists) -> String) {
+    val off = Lists(world.words)
+    val on = Lists(world.words, expand = true)
+    val grown = listOf("prob" to "probably", "esp" to "especially", "diff" to "different", "tho" to "though", "tmr" to "tomorrow",
+        "tmrw" to "tomorrow", "ppl" to "people", "msg" to "message", "b4" to "before", "def" to "definitely", "ofc" to "of course",
+        "thru" to "through", "nvm" to "never mind", "abt" to "about", "rly" to "really", "smth" to "something", "lmk" to "let me know")
+    for ((shorthand, full) in grown) {
+        same(typed("so $shorthand ok", on), "so $full ok", "With the setting on, $shorthand is $full")
+        same(typed("so $shorthand ok", off), "so $shorthand ok", "With the setting off, $shorthand stays as typed")
+    }
+    same(typed("Ofc it works", on), "Of course it works", "A capital stays on a full phrase")
+    same(typed("i saw ESP and MSG", on), "I saw ESP and MSG", "Shorthand typed in capitals is an acronym, so it stays")
+
+    // A shorthand the user switched off stays as typed, and autocorrect still leaves it alone. The others still go.
+    val switched = Lists(world.words, expand = true, shorthandOff = setOf("tho", "shd"))
+    same(typed("nice tho", switched), "nice tho", "A switched-off shorthand stays as typed")
+    same(typed("i shd go", switched), "I shd go", "Another switched-off shorthand stays as typed")
+    same(typed("do sth now", switched), "do something now", "Shorthand left on still goes")
+
+    // The user's own: it goes with the setting on, a phrase too, and it's never corrected with the setting off.
+    val own = mapOf("hw" to "homework", "brt" to "be right there", "tho" to "although")
+    val mine = Lists(world.words, expand = true, ownShorthand = own)
+    same(typed("my hw is done", mine), "my homework is done", "The user's own shorthand goes")
+    same(typed("ok brt", mine), "ok be right there", "The user's own phrase goes")
+    same(typed("nice tho", mine), "nice although", "The user's own comes before the list's")
+    same(typed("ok brt", Lists(world.words, ownShorthand = own)), "ok brt", "With the setting off, the user's own stays as typed")
+    val single = Lists(world.words, expand = true, ownShorthand = mapOf("k" to "okay"))
+    same(typed("k sure", single), "okay sure", "The user's own single letter goes")
+    same(typed("so p", single), "so p", "Other single letters still stay")
+    val ownUndone = Typist(world, world.autocorrect(mine), lists = mine).type("ok brt ").backspace()
+    same(ownUndone.text, "ok brt", "Backspace right after puts the user's own shorthand back")
+    val grownUndone = Typist(world, world.autocorrect(on), lists = on).type("ofc ").backspace()
+    same(grownUndone.text, "ofc", "Backspace right after puts a phrase's shorthand back")
+
+    // Real words are never shorthand, so typing one never spells anything out.
+    for (shorthand in world.data.shorthand.keys) must(shorthand !in world.data.known, "\"$shorthand\" is a real word, so it's no shorthand")
+    for (word in listOf("the", "nth", "def", "pic", "you", "your", "nothing"))
+        if (word !in world.data.shorthand) same(typed("so $word ok", on), "so $word ok", "The real word \"$word\" stays with the setting on")
+
+    // What Settings takes as the user's own.
+    same(Shorthand.problem("hw", "homework"), null, "A plain shorthand saves")
+    same(Shorthand.problem("b4n", "bye for now"), null, "Numbers and a phrase save")
+    same(Shorthand.problem("y'all", "you all"), null, "An apostrophe saves")
+    must(Shorthand.problem("", "x") != null, "An empty shorthand doesn't save")
+    must(Shorthand.problem("w/", "with") != null, "A slash doesn't save, as it's no word")
+    must(Shorthand.problem("abcdefghijklm", "x") != null, "Thirteen letters is too long")
+    must(Shorthand.problem("hw", " ") != null, "An empty full word doesn't save")
+    must(Shorthand.problem("hw", "x".repeat(41)) != null, "Forty-one characters is too long")
 }
 
 /** The owner's rule, Nov 11: a single letter stays as typed, as "p" kept turning into "up". Only "i" gets its capital. */

@@ -25,6 +25,10 @@ interface Lexicon {
     fun acronym(word: String): Boolean = false
     /** Whether shorthand such as "shd" becomes its full word ("should"), as the setting asks. Off by default. */
     fun expandShorthand(): Boolean = false
+    /** Whether the user switched off the listed [shorthand], in lowercase, so it stays as typed. */
+    fun shorthandOff(shorthand: String): Boolean = false
+    /** The full word of the user's own [shorthand], in lowercase, or null if it isn't one of theirs. */
+    fun ownShorthand(shorthand: String): String? = null
     /** Whether the user made [word] a favourite in its menu: it wins a close call between fixes. */
     fun favourite(word: String): Boolean = false
     /** Calls [action] with each word in lowercase and its frequency. */
@@ -106,11 +110,7 @@ class CorrectionData private constructor(
             val spelling = SymSpell(maxEditDistance = 2, prefixLength = PREFIX_LENGTH)
             val contractions = HashMap<String, String>()
             val possessives = HashMap<String, String>()
-            val shorthand = open("en_shorthand.txt").useLines { lines ->
-                lines.map { it.trim() }.filterNot { it.isEmpty() || it.startsWith("#") }
-                    .map { line -> line.split('\t').let { it[0].lowercase() to it.getOrNull(1)?.trim()?.takeIf(String::isNotEmpty) } }
-                    .toMap(HashMap())
-            }
+            val shorthand = open("en_shorthand.txt").useLines(Shorthand::parse)
             val longWords = HashMap<Char, MutableList<DictionaryEntry>>()
             lexicon.forEachWord { word, frequency ->
                 if (frequency < MIN_FREQUENCY && word !in KEY_NAMES) return@forEachWord
@@ -221,8 +221,14 @@ class TypedCorrector(
     private fun isKnown(word: String) = lexicon.known(word) || word in data.known || word in data.slang || lexicon.acronym(word) ||
         isShorthand(word)
 
-    /** Chat shorthand such as "shd" or "sth", which no correction ever turns into another word. */
-    private fun isShorthand(word: String) = word.lowercase() in data.shorthand
+    /** Chat shorthand such as "shd" or "sth", listed or the user's own, which no correction ever turns into another word. */
+    private fun isShorthand(word: String) = Shorthand.key(word).let { it in data.shorthand || lexicon.ownShorthand(it) != null }
+
+    /** The full word that [word] is spelled out as, if it's shorthand the user wants spelled out. The user's own comes first. */
+    private fun fullShorthand(word: String): String? {
+        val key = Shorthand.key(word)
+        return lexicon.ownShorthand(key) ?: data.shorthand[key]?.takeUnless { lexicon.shorthandOff(key) }
+    }
 
     private fun spelled(word: String) = lexicon.name(word) ?: word
 
@@ -272,17 +278,19 @@ class TypedCorrector(
      * where the slip is clear, and "Mr" where it isn't). A word that is not wrong gets its capitals anyway.
      */
     private fun firstFix(word: String, before: String, typedPrevious: String?): Fix? {
+        // Shorthand stays as typed, unless the setting asks for its full word (#63). Backspace undoes it as any fix. One typed
+        // in capitals ("ESP", "MSG") is an acronym, so it stays too. This goes first, as the user's own may be one letter.
+        if (isShorthand(word)) {
+            if (!lexicon.expandShorthand() || isInsideAddress(before + word) || word.lowercase() in rejected) return null
+            if (word.length >= 2 && word.none { it.isLowerCase() } && word.any { it.isUpperCase() }) return null
+            val full = fullShorthand(word) ?: return null
+            return Fix(word, if (word.first().isUpperCase()) full.replaceFirstChar { it.uppercaseChar() } else full)
+        }
         // A single letter is meant as typed: "p" never becomes "up". Only "i" gets its capital.
         // A missed apostrophe ("don t") still joins up, as the letter itself stays.
         if (word.length == 1) {
             if (isInsideAddress(before + word) || word.lowercase() in rejected) return null
             return spacedContraction(word, before, typedPrevious) ?: fixedCapitals(word)?.let { Fix(word, it) }
-        }
-        // Shorthand stays as typed, unless the setting asks for its full word (#63). Backspace undoes it as any fix.
-        if (isShorthand(word)) {
-            if (!lexicon.expandShorthand() || isInsideAddress(before + word) || word.lowercase() in rejected) return null
-            val full = data.shorthand[word.lowercase()] ?: return null
-            return Fix(word, if (word.first().isUpperCase()) full.replaceFirstChar { it.uppercaseChar() } else full)
         }
         val fix = typoFix(word, before, typedPrevious)
         if (fix != null) return fixedCapitals(fix.word)?.let { Fix(word, it) } ?: fix

@@ -16,6 +16,7 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import com.atlas.autocorrect.Shorthand
 import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
@@ -55,6 +56,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private var keyCaptureRequested = false
     private val appNames = HashMap<String, String>()
     private val hapticsLab = lazy { HapticsLab(activity) }
+    /** The listed shorthand that has a full word, with that word, in the list's order, for its switches in Settings. */
+    private val listedShorthand by lazy {
+        activity.assets.open("autocorrect/en_shorthand.txt").bufferedReader().useLines(Shorthand::parse)
+            .mapNotNull { (shorthand, full) -> full?.let { shorthand to it } }
+    }
     private val windowFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
         if (hasFocus) activity.window.decorView.post {
             // The front page opens the playground whenever the app's own window is in front, as when the playground was closed.
@@ -181,6 +187,18 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 "putSnippet" -> {
                     Snippets.put(activity, data.getString("shortcut").trim(), data.getString("text"),
                         data.optString("previous").takeIf { it.isNotEmpty() })
+                    "null"
+                }
+                "putShorthand" -> {
+                    val shorthand = data.getString("shorthand").trim()
+                    val full = data.getString("full").trim()
+                    Shorthand.problem(shorthand, full)?.let { throw IllegalArgumentException(it) }
+                    data.optString("previous").takeIf { it.isNotEmpty() }?.let { TypingSettings.ownShorthand(activity, Shorthand.key(it), null) }
+                    TypingSettings.ownShorthand(activity, Shorthand.key(shorthand), full)
+                    "null"
+                }
+                "removeShorthand" -> {
+                    TypingSettings.ownShorthand(activity, Shorthand.key(data.getString("shorthand")), null)
                     "null"
                 }
                 "removeSnippet" -> {
@@ -426,6 +444,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("snippetStart", TypingSettings.snippetStart(activity).toString())
             .put("shortcodes", TypingSettings.shortcodes(activity))
             .put("expandShorthand", TypingSettings.expandShorthand(activity))
+            .also(::putShorthand)
             .put("snippets", JSONArray(Snippets.load(activity).map { (shortcut, text) ->
                 JSONObject().put("shortcut", shortcut).put("text", text)
             }))
@@ -441,6 +460,16 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("rawLogBytes", RawLog.size(activity))
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
+    }
+
+    private fun putShorthand(state: JSONObject) {
+        val off = TypingSettings.shorthandOff(activity)
+        state.put("shorthand", JSONArray(listedShorthand.map { (shorthand, full) ->
+            JSONObject().put("shorthand", shorthand).put("full", full).put("on", shorthand !in off)
+        }))
+        state.put("ownShorthand", JSONArray(TypingSettings.ownShorthand(activity).map { (shorthand, full) ->
+            JSONObject().put("shorthand", shorthand).put("full", full)
+        }))
     }
 
     private fun putEnterApps(state: JSONObject) {
@@ -548,6 +577,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "shortcodes" -> TypingSettings.shortcodes(activity, value as Boolean)
             "exactRealAlt" -> ExactTyping.realAlt(activity, value as Boolean)
             "expandShorthand" -> TypingSettings.expandShorthand(activity, value as Boolean)
+            // Only the switches that came, as for haptics.
+            "shorthandToggles" -> (value as JSONObject).let { toggles ->
+                for (shorthand in toggles.keys()) TypingSettings.shorthandOn(activity, Shorthand.key(shorthand), toggles.getBoolean(shorthand))
+            }
             "liftOff" -> TypingSettings.liftOffGrace(activity, value as Boolean)
             "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())
             "haptics" -> Haptics.enabled(activity, value as Boolean)

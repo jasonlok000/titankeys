@@ -393,6 +393,25 @@ private class GuideField(context: Context) : EditText(context) {
     var changed: (() -> Unit)? = null
 
     /**
+     * Scrolls by whole lines only, so the field always shows whole lines and never a sliced one at its top or a peek of the next at
+     * its bottom. Android scrolls by pixels to bring the cursor into view; this rounds that to the nearest line that still shows the
+     * cursor's line.
+     */
+    override fun scrollTo(x: Int, y: Int) {
+        val own = layout
+        val shown = maxLines
+        if (own == null || shown < 1 || shown == Int.MAX_VALUE || own.lineCount <= shown) {
+            super.scrollTo(x, y)
+            return
+        }
+        val near = own.getLineForVertical(y)
+        val rounded = if (y - own.getLineTop(near) > (own.getLineTop(near + 1) - own.getLineTop(near)) / 2) near + 1 else near
+        val cursor = own.getLineForOffset(selectionEnd.coerceAtLeast(0))
+        val top = rounded.coerceIn(cursor - shown + 1, cursor).coerceIn(0, own.lineCount - shown)
+        super.scrollTo(x, own.getLineTop(top))
+    }
+
+    /**
      * Grey text that carries on right after what's typed, as one paragraph with it: the same font, size and lines, wrapping where
      * the typed text would. It isn't in the field's text, so the keyboard never sees it. See [GuideActivity.showGhost].
      */
@@ -1985,10 +2004,9 @@ class GuideActivity : Activity() {
             main.postDelayed({ GuideHooks.dismissClip() }, CLIP_HIDE_MILLIS)
         }
         if (step.preselect && field.selectionStart == field.selectionEnd) {
-            val text = field.text.toString()
-            val end = text.trimEnd().length
-            val start = text.substring(0, end).lastIndexOf(' ') + 1
-            if (end > start) field.setSelection(start, end)
+            // The words that the text's first sentence points at: "Paste over this word."
+            val start = field.text.toString().indexOf(PASTE_OVER)
+            if (start >= 0) field.setSelection(start, start + PASTE_OVER.length)
         }
         // The clipboard shows the slide's own clips, or the user's again once a slide has none.
         GuideHooks.seedClips(step.sandboxClips)

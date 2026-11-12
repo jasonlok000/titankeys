@@ -574,7 +574,7 @@ internal class GuideStep(
     val passage: String? = null,
     /** Text that the slide puts on the clipboard as it opens, to paste. */
     val clip: String? = null,
-    /** The slide starts with a word selected, so that what you paste goes in its place, if nothing is selected yet. */
+    /** The slide starts with [PASTE_OVER] selected, so that what you paste goes in its place, if nothing is selected yet. */
     val preselect: Boolean = false,
     /**
      * The clips that the keyboard's clipboard shows while this slide is open, in place of the user's own: a sandbox, never saved,
@@ -709,19 +709,23 @@ internal fun wordsAfter(symbol: String) = SYMBOL_PARTS.firstOrNull { it.first ==
 internal const val CLIP_TEXT = "Paste over this word. Then open your clipboard and paste something from it. We left you some " +
     "favourites in there."
 
+/** The words in [CLIP_TEXT] that the paste lesson selects as it opens: the ones its first sentence points at. */
+internal const val PASTE_OVER = "this word."
+
 /** What the paste lesson puts on your clipboard. */
 internal const val PASTE_TEXT = "I'm an idiot."
 
 /** The clipboard lesson's clips, newest first: a passive-aggressive thread, and one nice one that isn't what it pastes. */
 internal val GUIDE_CLIPS = listOf(
     "Per my last message, learn to read.",
-    "Sorry, I was busy ignoring you.",
     "As I said in my last two messages, I'm still ignoring you.",
     "Just circling back to remind you I'm ignoring you.",
     "Per my last four messages, please stop.",
     "Honestly, you're doing great.",
 )
 internal val PRANK_CLIP = GUIDE_CLIPS.last()
+/** Every clip that a guide ever put in the user's clipboard, this one's and older ones', to clear from it. */
+internal val OLD_GUIDE_CLIPS = GUIDE_CLIPS.toSet() + PASTE_TEXT + "Sorry, I was busy ignoring you."
 internal const val PRANK_PASTE = "I am a super idiot."
 
 /** The end's text box. */
@@ -1080,7 +1084,7 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "holdsym", chapter = GuideChapter.Symbols,
         title = "Do this one-handed.",
-        stages = listOf(GuideStage("Hold the @ key until it turns into @.") { event ->
+        stages = listOf(GuideStage("Hold P until it turns into @.") { event ->
             when {
                 event is HeldSymbol && event.symbol == "@" -> GuideVerdict.Done
                 event is HeldSymbol -> chip("Not @. Close. Not really.")

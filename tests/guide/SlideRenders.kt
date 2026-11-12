@@ -81,7 +81,8 @@ private fun fieldFor(step: GuideStep): Frame {
         GuideChapter.Clipboard -> {
             val text = CLIP_TEXT + " "
             val end = CLIP_TEXT.length
-            at(text, if (step.preselect) CLIP_TEXT.lastIndexOf(' ') + 1 else end, end)
+            val over = CLIP_TEXT.indexOf(PASTE_OVER)
+            if (step.preselect) at(text, over, over + PASTE_OVER.length) else at(text, end, end)
         }
         GuideChapter.End -> at(END_TEXT)
     }
@@ -101,7 +102,7 @@ private fun passedField(step: GuideStep, before: Frame): Frame {
             val to = before.field.indexOf(' ', from + if (step.id == "selectmore") 20 else 1)
             at(before.field, from, to)
         }
-        "paste" -> at(CLIP_TEXT.substringBeforeLast(' ') + " " + PASTE_TEXT + " ")
+        "paste" -> CLIP_TEXT.replace(PASTE_OVER, PASTE_TEXT).let { at(it + " ", CLIP_TEXT.indexOf(PASTE_OVER) + PASTE_TEXT.length) }
         "clipboard" -> at(CLIP_TEXT + " " + GUIDE_CLIPS.first() + " ")
         else -> if (step.chapter == GuideChapter.Symbols) {
             val index = SYMBOL_PARTS.indexOfFirst { it.first == step.symbol }

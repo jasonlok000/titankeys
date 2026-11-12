@@ -105,12 +105,13 @@ test("the lab has a practice field, a live timeline and an editor with small Pla
   const screen = read("android/kotlin/com/atlas/keyboard/HapticsLabActivity.kt");
   expect(screen).toContain('val practice = field("Type, swipe, steer, open panels and menus here.", 3)');
   expect(screen).toContain('card("Last 5 seconds", timeline, key())');
-  expect(screen).toContain('setOnClickListener { if (event.haptic == Haptic.DeleteWord) editFade(event.haptic) else edit(event.haptic.family, event.haptic) }');
+  // Every haptic in the list opens its family's editor: a held delete's word opens Hit's.
+  expect(screen).toContain("setOnClickListener { edit(event.haptic.family, event.haptic) }");
   expect(screen).toContain('button("Play", "Play ${family.label} alone") { lab.preview(family) }');
   expect(screen).toContain('button("Reset", "Reset ${family.label}")');
   // Nothing plays a haptic alone but the editors' Play.
   expect(screen.match(/lab\.preview\(/g)?.length).toBe(1);
-  expect(screen.match(/lab\.previewFade\(/g)?.length).toBe(1);
+  expect(screen.match(/lab\.playHold\(/g)?.length).toBe(1);
   expect(screen).not.toContain("lab.play(");
   // The sliders keep every gap at the rulebook's 35 ms or more.
   expect(read("android/kotlin/com/atlas/keyboard/Haptics.kt")).toContain("val GAP_MILLIS = MIN_GAP_MILLIS..200L");
@@ -170,49 +171,34 @@ test("taps that find no word, and steering with no text, do nothing but play Not
   expect(read("android/kotlin/com/atlas/keyboard/HapticTimeline.kt")).toContain('Haptic.NothingToPick -> "Taps found no word"');
 });
 
-test("only a debug package reads or saves a tried held delete fade, and the lab edits it", () => {
+test("a held delete's words hit at the hold's own pace, through their own switch", () => {
   const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
-  // Every other build plays the defaults before it looks at the stored fade.
-  expect(haptics).toMatch(/fun heldDeleteFade\(context: Context\): HeldDeleteFade\.Settings \{\s+if \(!debug\(context\)\) return HeldDeleteFade\.DEFAULT\n/);
-  expect(haptics).toMatch(/fun tryFade\(context: Context, fade: HeldDeleteFade\.Settings\?\) \{\s+check\(debug\(context\)\)/);
-  expect(haptics).toContain('private const val FADE_KEY = "debug_pattern_held_delete_fade"');
-  expect(haptics.match(/getString\(FADE_KEY/g)?.length).toBe(1);
-  // The pure rule itself reads nothing stored unless it's told this is debug.
-  expect(haptics).toMatch(/fun settings\(debug: Boolean, stored: String\?\): Settings \{\s+if \(!debug\) return DEFAULT\n/);
-  const users = [...new Bun.Glob("**/*.{kt,java}").scanSync(join(root, "android"))].filter(path =>
-    read(join("android", path)).includes("Haptics.tryFade"));
-  expect(users.map(path => path.replaceAll("\\", "/"))).toEqual(["kotlin/com/atlas/keyboard/HapticsLab.kt"]);
-  // A held delete's words play through the fade, and keep their own switch.
   const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
-  expect(ime).toContain("haptics.heldDeleteWord(word)");
+  expect(ime).toContain("haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)");
   expect(ime).not.toContain("haptics.play(Haptic.DeleteWord)");
-  expect(haptics).toContain("attempt(Haptic.DeleteWord, ");
-  // The editor has its four sliders, its strip, Play and Reset, and comments.json keeps the four numbers.
+  // One hit per word, as HoldHit shortens it, through the switches and the gate.
+  expect(haptics).toMatch(/fun heldDeleteWord\(word: Int, pace: Float, repeatMillis: Long\): HapticResult \{\s+val hit = pattern\(context, Family\.Hit\)\.first\(\)\s+return attempt\(Haptic\.DeleteWord, listOf\(HoldHit\.millis\(hit, pace, repeatMillis\)\), word\)/);
+  expect(haptics).toContain('DeleteWord("delete_word", HapticGroup.Delete, Family.Hit)');
+  // Hit is texture, so the 300 ms repeat rule never drops a word, and a wall's quiet still silences it.
+  expect(haptics).toContain("val texture get() = this == Texture || this == Boundary || this == Crunch || this == Hit");
+  // The lab can play a whole hold from Hit's editor.
   const screen = read("android/kotlin/com/atlas/keyboard/HapticsLabActivity.kt");
-  for (const words of ["Start: ", "Floor: ", "Words to fade: ", "Thin every: "]) expect(screen).toContain(words);
-  // The strip shows the whole hold, its dots and all, as Play plays it.
-  expect(screen).toContain("val plan = lab.holdPlan()");
-  expect(screen).toContain("fading.strip.show(plan)");
-  expect(screen).toContain('button("Reset", "Reset $FADE")');
-  const lab = read("android/kotlin/com/atlas/keyboard/HapticsLab.kt");
-  expect(lab).toContain('.put("heldDeleteFade", heldDeleteFade().put("comment", notes.fade))');
-  for (const key of ["start", "floor", "words", "thinEvery"]) expect(lab).toContain(`.put("${key}", fade.`);
+  expect(screen).toContain("if (family == Family.Hit) {");
+  expect(screen).toContain('button("Play a hold", ');
 });
 
-test("the held delete fade is on in every build, and only the debug lab switches it off", () => {
-  const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
-  expect(haptics).toContain("fun fading(debug: Boolean, stored: Boolean?) = !debug || (stored ?: true)");
-  // Every other build fades, before it looks at the stored switch.
-  expect(haptics).toMatch(/fun heldDeleteFading\(context: Context\): Boolean \{\s+if \(!debug\(context\)\) return true\n/);
-  expect(haptics).toMatch(/fun fadeOn\(context: Context, on: Boolean\) \{\s+check\(debug\(context\)\)/);
-  expect(haptics).toContain('private const val FADE_ON_KEY = "debug_held_delete_fade_on"');
-  // Off, a held word plays the plain crunch, with no fade.
-  expect(haptics).toMatch(/fun heldDeleteWord\(word: Int\): HapticResult \{\s+val crunch = pattern\(context, Family\.Crunch\)\s+if \(!heldDeleteFading\(context\)\) return attempt\(Haptic\.DeleteWord, crunch, word, fading = false\)/);
-  const users = [...new Bun.Glob("**/*.{kt,java}").scanSync(join(root, "android"))].filter(path =>
-    read(join("android", path)).includes("Haptics.fadeOn"));
-  expect(users.map(path => path.replaceAll("\\", "/"))).toEqual(["kotlin/com/atlas/keyboard/HapticsLab.kt"]);
-  expect(read("android/kotlin/com/atlas/keyboard/HapticsLab.kt")).toContain('.put("on", on)');
-  expect(read("android/kotlin/com/atlas/keyboard/HapticTimeline.kt")).toContain('" · no fade"');
+test("the held delete fade is gone, so an old stored setting does nothing", () => {
+  // It was stored on the owner's phone: with no code that reads it, the stored value can do nothing.
+  const sources = ["android", "app", "lib"].flatMap(dir =>
+    [...new Bun.Glob("**/*.{kt,java,ts,tsx}").scanSync(join(root, dir))].map(path => join(dir, path)));
+  for (const path of sources) {
+    const text = read(path);
+    for (const word of ["debug_pattern_held_delete_fade", "debug_held_delete_fade_on", "heldDeleteFading", "fun fadeOn(", "Thinned"])
+      expect(text.includes(word), `${path} has ${word}`).toBe(false);
+  }
+  // Nothing opens the lab's screen on an experiment any more.
+  expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt")).toContain('lab().showGraph(data.getJSONArray("haptics").toString())');
+  expect(read("android/kotlin/com/atlas/keyboard/HapticsLabActivity.kt")).not.toContain("OPEN");
 });
 
 test("a held delete waits 400 ms, with no slider for it", () => {
@@ -262,22 +248,20 @@ test("only a debug package reads or saves a tried flick dots wait, and the lab's
   expect(page).toContain("const WAIT_MAX = 600;");
 });
 
-test("the held delete fade sits in Experiments, next to the dots speed-up, through the same operation", () => {
+test("the lab's page has no fade switch, and its experiments keep one operation", () => {
   const lab = read("android/kotlin/com/atlas/keyboard/HapticsLab.kt");
-  expect(lab).toContain('const val HELD_DELETE_FADE = "heldDeleteFade"');
-  expect(lab).toContain("HELD_DELETE_FADE -> fadeOn(on)");
-  expect(lab).toContain(".put(HELD_DELETE_FADE, fading())");
+  expect(lab).toContain("DOTS_SPEED_UP -> Haptics.tryDotsSpeedUp(context, on)");
+  expect(lab).toContain("ZONE_TICKS -> Haptics.tryZoneTicks(context, on)");
+  expect(lab.toLowerCase()).not.toContain("fade");
   const page = read("app/settings/haptics-lab.tsx");
   const experiments = page.slice(page.indexOf('<Section title="Experiments">'), page.indexOf('<Section title="Patterns">'));
   expect(experiments).toContain('<Toggle label="Dots speed up when long"');
-  expect(experiments).toContain('<Toggle label="Held delete fade" value={lab.experiments.heldDeleteFade ?? true}');
-  expect(experiments).toContain('setLabExperiment("heldDeleteFade", on)');
-  expect(experiments).toContain('showHapticsGraph(haptics, "heldDeleteFade")');
+  expect(page.toLowerCase()).not.toContain("fade");
+  expect(read("lib/atlas.ts").toLowerCase()).not.toContain("fade");
   // One place for experiments: the lab's screen has no switch of its own.
   const screen = read("android/kotlin/com/atlas/keyboard/HapticsLabActivity.kt");
   expect(screen).not.toContain("Switch(");
-  expect(screen).not.toContain("lab.fadeOn(");
-  expect(screen).toContain("if (intent.getStringExtra(OPEN) == HapticsLab.HELD_DELETE_FADE) editFade(null)");
+  expect(screen.toLowerCase()).not.toContain("fade");
 });
 
 test("the removed shortcuts experiment leaves nothing that reads its stored switch", () => {

@@ -59,12 +59,8 @@ class HapticsLabActivity : Activity() {
     private var names: Map<Haptic, HapticsLab.Named> = emptyMap()
     /** The editor's family, its bars and sliders, to draw again after a change. */
     private var editing: Editing? = null
-    /** The held delete fade's editor, its strip and sliders, to draw again after a change. */
-    private var fading: Fading? = null
 
     private class Editing(val family: Family, val bars: PatternBars, val plays: TextView, val sliders: List<Pair<TextView, SeekBar>>)
-
-    private class Fading(val strip: HoldStrip, val plays: TextView, val plan: TextView, val sliders: List<Pair<TextView, SeekBar>>)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -100,8 +96,6 @@ class HapticsLabActivity : Activity() {
             addView(content)
         })
         showFamilies()
-        // The Experiments on the lab's page open the screen on the fade's tuning.
-        if (intent.getStringExtra(OPEN) == HapticsLab.HELD_DELETE_FADE) editFade(null)
         practice.requestFocus()
     }
 
@@ -111,8 +105,6 @@ class HapticsLabActivity : Activity() {
         events.clear()
         events += HapticFeed.recent()
         shown()
-        // The fade may have been switched in Experiments while this screen was away.
-        drawFade()
         // The keyboard plays on the main thread, but a post keeps the screen's changes in order whatever thread it came from.
         HapticFeed.listen { event -> timeline.post { heard(event) } }
     }
@@ -146,7 +138,6 @@ class HapticsLabActivity : Activity() {
         val seconds = String.format(Locale.ROOT, "%.2f s", (event.atMillis - opened) / 1000f)
         val outcome = when (event.result) {
             HapticResult.Played -> "played"
-            HapticResult.Thinned -> "thinned"
             HapticResult.NearWord -> "skipped: ${event.result.words}"
             else -> "dropped: ${event.result.words}"
         }
@@ -162,14 +153,12 @@ class HapticsLabActivity : Activity() {
         setPadding(0, dp(6), 0, dp(6))
         isClickable = true
         isFocusable = true
-        // A held delete's word plays the fade, so it opens the fade's editor.
-        setOnClickListener { if (event.haptic == Haptic.DeleteWord) editFade(event.haptic) else edit(event.haptic.family, event.haptic) }
+        setOnClickListener { edit(event.haptic.family, event.haptic) }
     }
 
     /** The editor with nothing picked: each family, to open its editor without waiting for it to play. */
     private fun showFamilies() {
         editing = null
-        fading = null
         editor.removeAllViews()
         editor.addView(text("Tap a haptic in the list, or a family here.", 14f, LabColours.DIM).apply { setPadding(0, 0, 0, dp(4)) })
         for (family in Family.entries) {
@@ -190,7 +179,6 @@ class HapticsLabActivity : Activity() {
     /** [family]'s editor: its bars, a slider for each pulse and gap, Play and Reset, and notes on it and on [haptic]. */
     private fun edit(family: Family, haptic: Haptic?) {
         editor.removeAllViews()
-        fading = null
         val bars = PatternBars(this)
         val plays = text("", 14f, LabColours.DIM)
         val sliders = family.pattern.indices.map { index ->
@@ -216,6 +204,17 @@ class HapticsLabActivity : Activity() {
             addView(button("All families", "Show all families") { showFamilies() },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginStart = dp(12) })
         })
+        // Hit is a held delete's: it can play a whole hold too, its flick, its words and its dots.
+        if (family == Family.Hit) {
+            editor.addView(text("A hold's words play it shorter as the hold speeds up, down to " +
+                "${HapticPalette.MESSAGE_PULSE_MILLIS} ms at the top pace. Every word plays.", 13f, LabColours.DIM)
+                .apply { setPadding(0, dp(8), 0, 0) })
+            editor.addView(button("Play a hold", "Play a held delete of ${HoldTicks.PLAY_WORDS} words and its dots") { lab.playHold() },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)).apply { topMargin = dp(8) })
+            editor.addView(text("It holds for the flick and ${HoldTicks.PLAY_WORDS} words, $REPEAT_SLOW_MILLIS ms apart, as " +
+                "a hold starts. Then it lifts and the dots land. ${HapticTimeline.planWords(lab.holdPlan())}", 13f, LabColours.DIM)
+                .apply { setPadding(0, dp(8), 0, 0) })
+        }
         editor.addView(text("Notes on ${family.label}", 14f, LabColours.CREAM).apply { setPadding(0, dp(12), 0, 0) })
         editor.addView(field("How does ${family.label} feel?", 1, lab.note(family)) { lab.note(family, it) })
         if (haptic != null) {
@@ -225,84 +224,6 @@ class HapticsLabActivity : Activity() {
         }
         drawEditor()
     }
-
-    /**
-     * The held delete fade's editor: a strip of a hold's first ticks, a slider for each of its four numbers, Play and Reset,
-     * and notes on it and on [haptic].
-     */
-    private fun editFade(haptic: Haptic?) {
-        editor.removeAllViews()
-        editing = null
-        val strip = HoldStrip(this)
-        val plays = text("", 14f, LabColours.DIM)
-        val plan = text("", 13f, LabColours.DIM)
-        val sliders = listOf(
-            text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.MILLIS) { millis -> tryFade { it.copy(start = millis, floor = minOf(it.floor, millis)) } },
-            text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.MILLIS) { millis -> tryFade { it.copy(floor = minOf(millis, it.start)) } },
-            text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.WORDS.longs()) { words -> tryFade { it.copy(words = words.toInt()) } },
-            text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.THIN_EVERY.longs()) { every -> tryFade { it.copy(thinEvery = every.toInt()) } },
-        )
-        fading = Fading(strip, plays, plan, sliders)
-        editor.addView(text(FADE, 18f, LabColours.CREAM, bold = true))
-        editor.addView(text("Each word of a held delete ticks a bit shorter, then only some tick. The Titan can't buzz softer, only shorter.", 14f, LabColours.DIM))
-        // The switch is with the other experiments, on the lab's page in Settings.
-        editor.addView(text("Switch it on or off in Experiments, on the Haptics lab page.", 13f, LabColours.DIM))
-        editor.addView(plays)
-        editor.addView(strip)
-        editor.addView(plan)
-        for ((label, bar) in sliders) {
-            editor.addView(label)
-            editor.addView(bar)
-        }
-        editor.addView(LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(button("Play", "Play a held delete of ${HoldTicks.PLAY_WORDS} words and its dots") { lab.previewFade() })
-            addView(button("Reset", "Reset $FADE") {
-                lab.tryFade(null)
-                drawFade()
-            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginStart = dp(12) })
-            addView(button("All families", "Show all families") { showFamilies() },
-                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginStart = dp(12) })
-        })
-        editor.addView(text("Play holds for the flick and ${HoldTicks.PLAY_WORDS} words, $REPEAT_SLOW_MILLIS ms apart, as a hold " +
-            "starts. Then it lifts and the dots land. Each shows on the timeline above as it plays.", 13f, LabColours.DIM)
-            .apply { setPadding(0, dp(8), 0, 0) })
-        editor.addView(text("Notes on $FADE", 14f, LabColours.CREAM).apply { setPadding(0, dp(12), 0, 0) })
-        editor.addView(field("How does the fade feel?", 1, lab.fadeNote()) { lab.fadeNote(it) })
-        if (haptic != null) {
-            editor.addView(text("Notes on ${name(haptic)}", 14f, LabColours.CREAM).apply { setPadding(0, dp(12), 0, 0) })
-            editor.addView(text(names[haptic]?.about ?: HapticTimeline.trigger(haptic), 13f, LabColours.DIM))
-            editor.addView(field("How does it feel here?", 1, lab.note(haptic)) { lab.note(haptic, it) })
-        }
-        drawFade()
-    }
-
-    /** Changes the fade in use with [change], and tries it. The next real held delete plays it. */
-    private fun tryFade(change: (HeldDeleteFade.Settings) -> HeldDeleteFade.Settings) {
-        lab.tryFade(change(lab.fade()))
-        drawFade()
-    }
-
-    /** Draws the fade's editor again with the settings in use now. */
-    private fun drawFade() {
-        val fading = fading ?: return
-        val fade = lab.fade()
-        val on = lab.fading()
-        fading.plays.text = lab.plays(fade, on) + if (on && fade != HeldDeleteFade.DEFAULT) "  (tried)" else ""
-        val plan = lab.holdPlan()
-        fading.strip.show(plan)
-        fading.plan.text = HapticTimeline.planWords(plan)
-        val values = listOf(fade.start, fade.floor, fade.words.toLong(), fade.thinEvery.toLong())
-        val labels = listOf("Start: ${fade.start} ms", "Floor: ${fade.floor} ms", "Words to fade: ${fade.words}",
-            if (fade.thinEvery == 1) "Thin every: 1, so all play" else "Thin every: ${fade.thinEvery}, so 1 in ${fade.thinEvery} plays")
-        for ((index, slider) in fading.sliders.withIndex()) {
-            val (label, bar) = slider
-            label.text = labels[index]
-            if (bar.progress != values[index].toInt()) bar.progress = values[index].toInt()
-        }
-    }
-
-    private fun IntRange.longs() = first.toLong()..last.toLong()
 
     /** Sets one pulse or gap of [family]'s pattern to [millis], and tries it. The next real action plays it. */
     private fun tryMillis(family: Family, index: Int, millis: Long) {
@@ -394,7 +315,7 @@ class HapticsLabActivity : Activity() {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(8), 0, 0)
         addView(keyLine("■", LabColours.ORANGE, "on"))
-        addView(keyLine("□", LabColours.ORANGE, "dropped or thinned, with the reason"))
+        addView(keyLine("□", LabColours.ORANGE, "dropped, with the reason"))
         addView(keyLine("●", LabColours.DOT, "a delete's dot landing, numbered for a hold"))
         addView(keyLine("○", LabColours.DOT, "a hold's dot skipped near a word's tick"))
     }
@@ -431,15 +352,9 @@ class HapticsLabActivity : Activity() {
 
     companion object {
         private const val LABELS = "labels"
-        private const val OPEN = "open"
-        private const val FADE = "Held delete fade"
 
-        /**
-         * The lab, with [labels]: Settings' names for the haptics, as a JSON list of { id, label, group, about }. [open] is an
-         * experiment whose editor it opens on, or empty.
-         */
-        fun intent(context: Context, labels: String, open: String = "") =
-            Intent(context, HapticsLabActivity::class.java).putExtra(LABELS, labels).putExtra(OPEN, open)
+        /** The lab, with [labels]: Settings' names for the haptics, as a JSON list of { id, label, group, about }. */
+        fun intent(context: Context, labels: String) = Intent(context, HapticsLabActivity::class.java).putExtra(LABELS, labels)
 
         private fun labels(json: String?): List<HapticsLab.Named> {
             val list = JSONArray(json ?: "[]")
@@ -625,100 +540,4 @@ internal class PatternBars(context: Context) : View(context) {
     }
 
     private fun x(millis: Long) = millis.coerceIn(0, spanMillis).toFloat() / spanMillis * width
-}
-
-/**
- * A whole held delete on one time line, from when the finger stopped: the pause, the flick that takes the first word, a bar for
- * each word as tall as its tick is long (to the sliders' 40 ms), the lift, and a round mark for each dot as it lands, in the dots'
- * colour. A thinned word is hollow, at the floor's height. A dot skipped near a word's tick is hollow, with its reason.
- */
-internal class HoldStrip(context: Context) : View(context) {
-    private var plan: HoldTicks.Plan? = null
-    private val density = resources.displayMetrics.density
-    private val stripTop = 16 * density
-    private val tall = 48 * density
-    private val dotsTop = stripTop + tall + 18 * density
-    private val radius = 4 * density
-    private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 1.5f * density
-    }
-    private val track = Paint().apply { color = LabColours.TRACK }
-    private val line = Paint().apply {
-        color = LabColours.DIM
-        strokeWidth = density
-    }
-    private val small = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10f, resources.displayMetrics)
-        color = LabColours.DIM
-        textAlign = Paint.Align.CENTER
-    }
-    private val skippedText = TextPaint(small).apply { color = LabColours.ORANGE }
-
-    fun show(plan: HoldTicks.Plan) {
-        this.plan = plan
-        invalidate()
-    }
-
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), (dotsTop + radius + 28 * density).toInt())
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        val plan = plan ?: return
-        val span = plan.endsAt + END_MARGIN_MILLIS
-        fun x(millis: Long) = millis.toFloat() / span * width
-        canvas.drawRect(0f, stripTop, width.toFloat(), stripTop + tall, track)
-        // Where the finger stopped, where the hold took its first word, and where it lifted.
-        for ((millis, words) in listOf(0L to "still", plan.pauseMillis to "hold", plan.pauseMillis + plan.liftAt to "lift")) {
-            val at = x(millis).coerceIn(density, width - density)
-            canvas.drawLine(at, stripTop - 2 * density, at, dotsTop + radius, line)
-            small.textAlign = if (millis == 0L) Paint.Align.LEFT else Paint.Align.CENTER
-            canvas.drawText(words, at, stripTop - 4 * density, small)
-        }
-        small.textAlign = Paint.Align.CENTER
-        var skippedRow = 0
-        for (tick in plan.ticks) {
-            val at = x(plan.fromStill(tick))
-            when (tick.kind) {
-                HoldTicks.Kind.Dot -> {
-                    if (tick.plays) {
-                        fill.color = LabColours.DOT
-                        canvas.drawCircle(at, dotsTop, radius, fill)
-                    } else {
-                        outline.color = LabColours.DOT
-                        canvas.drawCircle(at, dotsTop, radius - outline.strokeWidth / 2, outline)
-                        val row = skippedRow++ % 2
-                        canvas.drawText("${tick.number} skipped: ${tick.skipped}", at, dotsTop + (14 + row * 11) * density, skippedText)
-                    }
-                }
-                else -> {
-                    val height = minOf(tick.millis, HeldDeleteFade.MILLIS.last).toFloat() / HeldDeleteFade.MILLIS.last * tall
-                    val right = maxOf(x(plan.fromStill(tick) + tick.millis), at + 3 * density)
-                    if (tick.plays) {
-                        fill.color = LabColours.ORANGE
-                        canvas.drawRect(at, stripTop + tall - height, right, stripTop + tall, fill)
-                    } else {
-                        outline.color = LabColours.ORANGE
-                        val inset = outline.strokeWidth / 2
-                        canvas.drawRect(at + inset, stripTop + tall - height + inset, right - inset, stripTop + tall - inset, outline)
-                    }
-                    // The word's number under its bar, and F for the flick.
-                    val label = if (tick.kind == HoldTicks.Kind.Flick) "F" else "${tick.number}"
-                    canvas.drawText(label, (at + right) / 2, stripTop + tall + 11 * density, small)
-                }
-            }
-        }
-        val dots = plan.ticks.count { it.kind == HoldTicks.Kind.Dot }
-        if (dots > 0) {
-            small.textAlign = Paint.Align.RIGHT
-            canvas.drawText("$dots dots", width.toFloat(), dotsTop + 26 * density, small)
-            small.textAlign = Paint.Align.CENTER
-        }
-    }
-
-    private companion object {
-        const val END_MARGIN_MILLIS = 100L
-    }
 }

@@ -33,13 +33,14 @@ Patterns are on and off in ms, starting with on.
 | Family | Pattern | Plays for |
 |---|---|---|
 | **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, the marked button in the word menu or a panel |
-| **Crunch** | 9, 12, 9 | Keys crossed while a stroke is clearly a delete flick, and each word a long delete takes (fading, below) |
+| **Crunch** | 9, 12, 9 | Keys crossed while a stroke is clearly a delete flick |
 | **Boundary** | 30 | A stroke that crunched stops being a flick, the cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel, a long delete's finger going into the pause zone or reaching the top-speed line |
 | **Confirm** | 15, 40, 35 | Ctrl's copy, cut, paste, undo and select all (lab experiment, below), tap a word on the bar, the word menu opens, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
 | **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol, and with the lab experiment below Alt's symbol and a Sym panel symbol |
 | **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar |
 | **Release** | 30 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked, Back closing the word menu |
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
+| **Hit** | 50 | Each word a long delete takes after its flick, shorter as it speeds up (see A held delete's hit, below) |
 | **Gone** | 60 | The clipboard cleared |
 | **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
 | **No** | 25, 40, 25, 40, 25 | A word that can't be saved, I on a word that's already a favourite, taps on Space that find nothing to pick or steer, Ctrl + C with nothing selected, an action the guide blocks |
@@ -68,13 +69,13 @@ The word menu is a ladder, and its haptics are one system (owner, 2026-11-12). I
 
 Going up rises: each pattern ends on its strongest pulse, and Favourite's last hit is the strongest of all. Going down falls: each starts on its strongest pulse, and the further down a step goes, the harder it starts and the more it weighs in all (62, 75 and 90 ms of pulses). Every gap is 40 ms, so each pulse reads on its own. A word that is a dictionary word starts at Favourite, and Unfavourite takes it back there. The spent heart plays No, not nothing, so a press that does nothing still answers. tests/haptics checks the directions and that each step feels like no other family.
 
-Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single 30 ms pulse too, but it comes once, so it's a message.
+Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single 30 ms pulse too, but it comes once, so it's a message. Hit is as firm as a message, but it's texture for the gate too: a long delete's words can come every 80 ms, and the repeat rule would drop them.
 
 The owner's table had the delete flick at 50, 30, 20. Its gap is 35 instead, so it keeps rule 4.
 
 Wall is a dot hitting a wall with energy: a hit, then rebounds that die away, like a bouncing ball. The owner's start was 40 on, 30 off, 20 on, 20 off, 12 on. Its gaps are 35 instead, so it keeps rule 4, and the bounces die away by length. Hitting a wall feels the same in all three gestures, steering, selecting and a long delete, and by the same rule (`WallHits`): it plays the first time the gesture meets its limit, then nothing while the finger keeps pushing, and again only after it has moved away and come back. It used to be no, which read as an error. No is now only for nothing happening at all.
 
-A delete's wall is the same wall, played clean (owner, 2026-11-12): a flick with nothing to delete and a long delete that runs out play it alike. It waits until 100 ms after the last crunch or tick, cuts the dots' ticks still to come, and nothing light plays for 100 ms after it (`HapticGate.reserveWall`). A stroke with nothing before the cursor never crunches, and a long delete with nothing to delete never starts: no words on the bar, no dots, only the wall. After the wall the delete stays quiet while you hold, zone ticks too.
+A delete's wall is the same wall, played clean (owner, 2026-11-12): a flick with nothing to delete and a long delete that runs out play it alike. It waits until 100 ms after the last crunch, hit or tick, cuts the dots' ticks still to come, and nothing light plays for 100 ms after it (`HapticGate.reserveWall`). A stroke with nothing before the cursor never crunches, and a long delete with nothing to delete never starts: no words on the bar, no dots, only the wall. After the wall the delete stays quiet while you hold, zone ticks too.
 
 ### The delete flick and its dots
 
@@ -84,33 +85,31 @@ Then the dots go into the caret one after another, and every dot ticks as it lan
 
 A tick within 35 ms of the flick's tail is left out. Any key or touch cuts the dots at once, and the ticks still to come with them. A tick also only plays while that flick's dots are still on the bar. With animations off there are none. A long delete's lift turns its lines into dots too, which go in the same way and tick the same way, with the same switch. Its last word's tick or its no may have just played, so a dot tick within 35 ms of that is left out.
 
-### Held delete fade
+### A held delete's hit
 
-A held delete ticks once for each further word. On a long hold that turned into one constant buzz, so the ticks fade as more words go.
+Each word a held delete takes plays a hit: one firm pulse, the delete flick's first, 50 ms, so every word feels as strong as a quick flick (owner, 2026-11-12). Every word plays.
 
-The fade is on in every build (owner, 2026-11-12). Only TitanKeys Debug can turn it off, with its switch in the lab's Experiments, to feel a hold without it; then each word plays the plain crunch.
+It gets shorter as the hold speeds up, so the hits don't blur together at the top pace. A hold's words go from 350 ms apart at pace 0 (`REPEAT_SLOW_MILLIS` in DeleteSwipe.kt) to 80 ms apart at pace 1. The hit is:
 
-The Titan has no strength control, so the fade is by length:
+- **By pace.** 50 − (50 − 30) × pace, rounded: 50 ms at pace 0, 40 ms at pace 0.5, and 30 ms at pace 1.
+- **With its quiet.** Never longer than the time between words less 35 ms, so the gap rule holds.
+- **Firm.** Never under 30 ms, the shortest pulse that still reads as a message.
 
-- **Start.** The first word's tick plays the start length, 17 ms.
-- **Fade.** Each word after it is shorter, in even steps, until the floor, 9 ms. It gets there after 8 words, so word 9 plays 9 ms.
-- **Thin.** From there only every other tick plays.
+So at the top pace a hold plays 30 ms on and 50 ms off. Only the pace shortens it: how many words have gone doesn't.
 
-So a hold plays 17, 16, 15, 14, 13, 12, 11, 10, 9, then 9 on every other word. A new hold starts again at 17.
+The hit used to be a crunch that faded by length, 17 down to 9 ms over 8 words, then only every other word. The owner found it "quite bad and very light", so the held delete fade is gone, with its lab experiment and editor. An old stored fade setting does nothing.
 
-The floor is 9 ms, not lower: the phone's own vibration log shows that 8 ms buzzes barely register on this motor. A lower floor would fade to nothing.
+The gate treats the hit as texture, so it never blocks a message, and a wall's quiet silences it as it does every other light tick. `HoldHit` holds the rule, and it has no Android parts, so tests/haptics can run it.
 
-The ticks are still texture for the gate, so they never block a message. A thinned tick plays nothing, and the gate never hears of it. `HeldDeleteFade` holds the rule, and it has no Android parts, so tests/haptics can run it.
+### A hold and its dots together
 
-### The fade and the dots together
-
-A hold's ticks and its dots' ticks are one sequence (`HoldTicks`): the flick that takes the first word, each word's fading tick, then at the lift a tick as each dot lands. A word's tick and a dot's tick never play within 35 ms of each other. The word wins, as it's what the hold just did, and the dot's tick is skipped. A thinned word plays nothing, so a dot next to it still ticks. Every other dot ticks, and the dots keep their own 30 ms spacing. At normal animation speed the first dot lands about 640 ms after the lift, so a skip is rare: it guards a fast animation speed and a no just before the lift.
+A hold's ticks and its dots' ticks are one sequence (`HoldTicks`): the flick that takes the first word, each word's hit, then at the lift a tick as each dot lands. A word's hit and a dot's tick never play within 35 ms of each other. The word wins, as it's what the hold just did, and the dot's tick is skipped. Every other dot ticks, and the dots keep their own 30 ms spacing. At normal animation speed the first dot lands about 640 ms after the lift, so a skip is rare: it guards a fast animation speed and a no just before the lift.
 
 The lab times a hold from its start, when the first word goes. The pause before that is the hold's own, 400 ms (`deleteHoldPauseMillis` in DeleteSwipe.kt), so a change to it moves the lab's hold too.
 
 ### The crunch
 
-A stroke becomes a flick candidate once it is clearly a delete flick: 1.5 keys from where it started, inside the delete zone and no higher than the middle row, there within 60 ms, and passing every flick rule that can be checked so far (`FlickCrunch` in DeleteSwipe.kt). From then on the keys it crosses crunch instead of ticking. Before that they tick as a swipe. If it stops being a flick, by turning back, going too far or too slow, wandering or leaving the rows, one boundary tick plays, the break, and the rest of the stroke ticks as a swipe. The words a long delete takes crunch too.
+A stroke becomes a flick candidate once it is clearly a delete flick: 1.5 keys from where it started, inside the delete zone and no higher than the middle row, there within 60 ms, and passing every flick rule that can be checked so far (`FlickCrunch` in DeleteSwipe.kt). From then on the keys it crosses crunch instead of ticking. Before that they tick as a swipe. If it stops being a flick, by turning back, going too far or too slow, wandering or leaving the rows, one boundary tick plays, the break, and the rest of the stroke ticks as a swipe. The words a long delete takes don't crunch: each plays a hit.
 
 The numbers come from the owner's raw logs: of 1,226 real flicks that went 1.5 keys, 80% got there within 60 ms. Of 165 word swipes from the delete zone, 20 did, all from the edge by L and Backspace; they crunch briefly, then break. A word from P, in the top row, never crunches.
 
@@ -136,7 +135,7 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 - The flick's dots land in the caret: a light texture tick for every dot as it lands.
 - A long delete's lines turn into dots as you lift, and those tick the same way as each lands.
 - Keys crossed once the stroke is clearly a flick: crunch. If it stops being one: boundary, once, then swipe ticks (see The crunch).
-- Each further word while you hold: crunch, its pulses shorter as more words go, then only every other one plays (see Held delete fade).
+- Each further word while you hold: hit, as firm as the flick's first pulse, shorter as the delete speeds up. Every word plays (see A held delete's hit).
 - A flick with nothing at all to delete: wall, clean. A long delete with nothing to delete never starts; it plays the same wall.
 - A long delete takes the last word: wall, once, clean. The delete stays quiet after it while you hold.
 - A long delete's finger goes into the pause zone, or reaches the top-speed line: boundary, once each time (see A long delete's zones).
@@ -231,11 +230,11 @@ Haptics go with what you do too closely to judge one alone, so TitanKeys Debug's
 
 - A timeline shows the last 5 s, newest on the right. Each haptic is its pulses to scale, with its name, its family and what set it off. One the gate or a switch dropped is hollow, with the reason: busy, too soon, switched off, or all off.
 - A list under it has the last 15. Tap one to open its family's editor: a slider for each pulse (4 to 120 ms) and each gap (35 to 200 ms), a Play for that pattern alone, and Reset. The next real action plays the edited pattern.
-- **Held delete fade** is in Experiments on the lab's page in Settings, next to "Dots speed up when long". Its switch turns the fade off and on, so you can feel a hold with and without it back to back. "Tune the held delete fade" under it opens the lab's screen on the fade's editor, and so does a tap on a held delete's tick in the list. The editor has a slider for the start (4 to 40 ms), the floor (4 to 40 ms, never above the start), the words to fade (1 to 20) and how often a tick plays after that (1 in 1 to 1 in 4). A strip shows a whole hold to scale on one time line: the pause, the flick, a bar for each of 10 words, the lift, and a round mark in the dots' colour for each dot as it lands. A thinned word is hollow, and so is a dot skipped near a word, with its reason. Play plays that hold, 350 ms a word as a hold starts, then its dots at Android's animation speed, and each tick shows on the timeline as it plays. With animations off there are no dots, and the strip says so. The next real held delete plays the edits.
-- On the timeline, each held delete tick shows at the length it played, with its word: "Held delete word 5 · Texture 13 ms". A thinned one is hollow, with the reason "thinned". With the fade off, the label ends in "no fade".
+- A tap on a held delete's word in the list opens Hit's editor, like any other family's. Its slider sets the hit at the slowest pace; the pace shortens it from there. **Play a hold** plays a whole hold: the flick, 10 words 350 ms apart as a hold starts, then its dots at Android's animation speed, and each tick shows on the timeline as it plays. With animations off there are no dots, and the editor says so.
+- On the timeline, each held delete hit shows at the length it played, with its word: "Held delete word 5 · Hit 40 ms".
 - A delete's dots show as round marks in their own colour. A hold's dots have their number over them, and one skipped near a word's tick is hollow, with "skipped: near a word". In the list each is "Hold's dot 3 of 12".
-- Notes: one overall, one per family, one on the fade and one per haptic. They go in `comments.json` in the app's files, with each family's pattern in use, the fade's four numbers, and each haptic's family and pattern.
+- Notes: one overall, one per family and one per haptic. They go in `comments.json` in the app's files, with each family's pattern in use, and each haptic's family and pattern.
 
-A tried pattern or fade is kept in the `swipe_haptics` preferences, and only a package that ends in ".debug" reads it. Every other build plays the patterns above, with no fade.
+A tried pattern is kept in the `swipe_haptics` preferences, and only a package that ends in ".debug" reads it. Every other build plays the patterns above.
 
 The keyboard and Settings run in one process, so the feed is a plain object, `HapticFeed`: the keyboard's `Haptics` records each play there with its result, and the lab listens while it shows, and stops when it goes. The feed keeps the last 64, so the lab shows recent ones as it opens. Only a ".debug" package turns it on. In every other build it's off, and nothing is recorded.

@@ -340,7 +340,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     "null"
                 }
                 "labGraph" -> {
-                    lab().showGraph(data.getJSONArray("haptics").toString(), data.optString("open"))
+                    lab().showGraph(data.getJSONArray("haptics").toString())
                     "null"
                 }
                 "keyCalibration" -> {

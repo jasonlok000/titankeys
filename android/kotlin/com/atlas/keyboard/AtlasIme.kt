@@ -73,7 +73,7 @@ class AtlasIme : InputMethodService() {
     private lateinit var overlay: TouchpadOverlay
     private val contact = Contact()
     private val deleteHold = DeleteHold(contact)
-    /** The held delete's words, so its ticks fade as more go. */
+    /** The held delete's words, so the lab can number each one's hit. */
     private val heldWords = HeldDeleteCount()
     private val cursor = CursorMode()
     private val cursorGesture = CursorGesture()
@@ -420,7 +420,7 @@ class AtlasIme : InputMethodService() {
     /** Each word goes the way of a normal delete flick. [flick] is the first word's flick, and is null for the words after it. */
     private fun deleteHeldWord(flick: Contact.Outcome.Swipe?) {
         if (flick != null) {
-            // A new hold, so its ticks fade from the start again.
+            // A new hold, so its words count from 1 again.
             heldWords.reset()
             // A hold takes the bar from any dots still playing, and their ticks stop.
             haptics.cutDots()
@@ -452,7 +452,7 @@ class AtlasIme : InputMethodService() {
                 return@enqueue
             }
             deleteWall.left()
-            haptics.heldDeleteWord(word)
+            haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)
             // A dot for each character of the word, for the dots that play when the hold lifts, and the real words for the bar.
             val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
             before?.let { strip?.gesture?.deleteText(it) }

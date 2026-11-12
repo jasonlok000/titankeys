@@ -14,7 +14,7 @@ object HapticTimeline {
 
     /** What each family means, in the lab's words. */
     fun meaning(family: Family) = when (family) {
-        Family.Texture -> "One light tick. Swipe keys, cursor letters, words in a hold, marks."
+        Family.Texture -> "One light tick. Swipe keys, cursor letters, marks."
         Family.Boundary -> "One firmer tick. Spaces, a word grabbed, a new page or group."
         Family.Confirm -> "Short then long. Done: a word picked, a setting switched, pasted."
         Family.Change -> "Two quick ones. Something changed a word for you."
@@ -25,7 +25,8 @@ object HapticTimeline {
         Family.Back -> "Long then short. Undone, back as it was."
         Family.No -> "Three hard ones. Nothing happened."
         Family.Wall -> "A hit that bounces and settles. A gesture hit its end."
-        Family.Crunch -> "Two tiny ones as one grain. A flick crossing keys, a hold's words."
+        Family.Crunch -> "Two tiny ones as one grain. A flick crossing keys."
+        Family.Hit -> "The flick's first pulse, alone. Each word a hold takes, shorter as it speeds up."
         Family.Celebrate -> "A rising three. The guide's celebrations."
         Family.Saved -> "Short, short, long. The word menu saved a word."
         Family.Removed -> "Long, short, short. The word menu deleted a word."
@@ -99,22 +100,20 @@ object HapticTimeline {
 
     /**
      * The live timeline's top line for [event], with [name] its haptic's name: the name and family, or for a held delete its
-     * word and pulses, "Held delete word 5 · Crunch 6, 12, 6 ms", and "no fade" when the lab's fade switch was off.
+     * word and the hit it played, "Held delete word 5 · Hit 40 ms".
      */
     fun title(event: HapticEvent, name: String) = when {
-        event.word != null ->
-            "Held delete word ${event.word} · ${event.haptic.family.label} ${event.pattern.joinToString(", ")} ms" + if (event.fading) "" else " · no fade"
+        event.word != null -> "Held delete word ${event.word} · ${event.haptic.family.label} ${event.pattern.joinToString(", ")} ms"
         event.dot != null -> "Hold's dot ${event.dot} of ${event.dots} · ${event.haptic.family.label} ${event.pattern.first()} ms"
         else -> "$name · ${event.haptic.family.label}"
     }
 
     /**
-     * The line under it: what set it off, or why it didn't play. A thinned tick is the fade's plan, and a dot near a word's tick
-     * is the hold's rule ([HoldTicks]), so neither is "dropped".
+     * The line under it: what set it off, or why it didn't play. A dot near a word's hit is the hold's rule ([HoldTicks]), so
+     * it isn't "dropped".
      */
     fun outcome(event: HapticEvent) = when {
         event.result.played -> trigger(event.haptic)
-        event.result == HapticResult.Thinned -> event.result.words
         event.result == HapticResult.NearWord -> "skipped: ${event.result.words}"
         else -> "dropped: ${event.result.words}"
     }
@@ -130,7 +129,7 @@ object HapticTimeline {
     }
 
     /**
-     * The words under the fade's strip for [plan]: the pause, how many words and dots, and how many ticks the rule skipped.
+     * The words under the lab's Play a hold for [plan]: the pause, how many words and dots, and how many ticks the rule skipped.
      * "Still 400 ms, then the flick and 10 words, the lift, and 30 dots. 0 dots skipped near a word."
      */
     fun planWords(plan: HoldTicks.Plan): String {

@@ -12,6 +12,7 @@ import android.os.SystemClock
 import android.util.TypedValue
 import android.view.View
 import kotlin.math.PI
+import kotlin.math.ceil
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
@@ -69,7 +70,13 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     private val keys = Layout.rows.flatMap { row -> row.map { Key(it, Layout.isLetter(it)) } }
     private val byName = keys.associateBy { it.name }
+    /**
+     * Where the real keys are on this width, as calibrated: the boxes of [keys], and where a touchpad point is drawn. The view is
+     * as wide as the screen, so the keys line up with the real ones below it. See [heightFor].
+     */
+    private var geometry = KeyGeometry(0f)
     private val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = Typeface.create(Typeface.DEFAULT, 800, false)
         textAlign = Paint.Align.CENTER
@@ -139,7 +146,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     fun show(next: GuideCue) {
         cue = next
         cueStart = GuideMotion.now()
-        ghost = ghostFor(next).map(KeyCalibration.load(context)::point)
+        ghost = ghostFor(next)
         invalidate()
     }
 
@@ -173,7 +180,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     /** Adds to the live trail. [reset] starts a new path. */
     fun trace(points: List<FloatArray>, reset: Boolean, lifted: Boolean) {
         if (reset) trail.clear()
-        trail.addAll(points.map(KeyAlignment.current::point))
+        trail.addAll(points)
         for (point in points) hover.point(point[0], point[1])
         liftedAt = if (lifted) GuideMotion.now() else -1
         if (lifted) {
@@ -211,22 +218,20 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         return false
     }
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        val keyWidth = w / 10f
-        val rowHeight = h / 4f
-        var index = 0
-        for (row in 0..2) for (column in 0..9)
-            keys[index++].box.set(column * keyWidth, row * rowHeight, (column + 1) * keyWidth, (row + 1) * rowHeight)
-        var left = 0f
-        for (width in Layout.bottomWidths) {
-            keys[index++].box.set(left, 3 * rowHeight, left + width * keyWidth, 4 * rowHeight)
-            left += width * keyWidth
-        }
-        // The real keys sit below the screen. Key calibration in TitanKeys Debug lines the drawing up with them.
-        KeyCalibration.align(context, keys.map { it.box }, w.toFloat())
+    /** How tall the drawing is when it is [width] pixels wide: the real keyboard's four rows, scaled to the width. */
+    fun heightFor(width: Int): Int = ceil(KeyGeometry(width.toFloat(), KeyCalibration.load(context)).height).toInt()
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) = place(w)
+
+    /** Puts each key where the real one is, on [w] pixels, as Key calibration in TitanKeys Debug says. */
+    private fun place(w: Int) {
+        geometry = KeyCalibration.geometry(context, w.toFloat())
+        for ((key, box) in keys.zip(geometry.boxes)) key.box.set(box.left, box.top, box.right, box.bottom)
     }
 
     override fun onDraw(canvas: Canvas) {
+        // Key calibration can change while the drawing shows: it follows at once.
+        if (geometry.width != width.toFloat() || geometry.alignment != KeyAlignment.current) place(width)
         val now = GuideMotion.now()
         val elapsed = if (lastFrame == 0L) 0L else now - lastFrame
         lastFrame = now
@@ -247,6 +252,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         var moving = false
         val onOrange = tone == GuideTone.Orange
         val idleFill = GuideMotion.faded(if (onOrange) GuideColours.INK else GuideColours.CREAM, if (onOrange) KEY_FILL_ORANGE else KEY_FILL_INK)
+        val idleOutline = GuideMotion.faded(if (onOrange) GuideColours.INK else GuideColours.CREAM,
+            if (onOrange) KEY_OUTLINE_ORANGE else KEY_OUTLINE_INK)
         val idleLabel = if (onOrange) GuideColours.INK else GuideMotion.faded(GuideColours.CREAM, KEY_LABEL_INK)
         val litFill = if (onOrange) GuideColours.INK else GuideColours.ORANGE
         val litLabel = if (onOrange) GuideColours.ORANGE else GuideColours.INK
@@ -294,7 +301,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             if (t < 1f) moving = true
         }
 
-        val inset = dp(KEY_GAP)
+        // The boxes are the real keys, gaps and all, so a key is drawn right to its edges: the outline sits just inside them.
+        val stroke = dp(KEY_OUTLINE)
+        val inset = stroke / 2
         val pressed = 1f + bump * WAVE_SCALE - heat * PRESS_DEPTH
         val centreX = key.box.centerX()
         val centreY = key.box.centerY()
@@ -330,8 +339,13 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val emptyKey = false
         // Faded from the key's own fill, so an empty key is darker than the others, never brighter.
         val emptyFill = GuideMotion.faded(idleFill, (idleFill ushr 24) / 255f * EMPTY_KEY)
+        // An idle key is a thin outline over a very faint fill, as the real keys read from above; a lit key fills, and its
+        // outline goes into the fill.
         boxPaint.color = if (emptyKey) emptyFill else GuideMotion.blend(idleFill, litFill, heat.coerceIn(0f, 1f))
         canvas.drawRoundRect(key.box.left + inset, key.box.top + inset, key.box.right - inset, key.box.bottom - inset, radius, radius, boxPaint)
+        outlinePaint.color = GuideMotion.blend(idleOutline, litFill, heat.coerceIn(0f, 1f))
+        outlinePaint.strokeWidth = stroke
+        canvas.drawRoundRect(key.box.left + inset, key.box.top + inset, key.box.right - inset, key.box.bottom - inset, radius, radius, outlinePaint)
         val labelColour = GuideMotion.blend(idleLabel, litLabel, heat.coerceIn(0f, 1f))
         if (caption != null) {
             // The hint for this key: the letter moves up a little, and what it does now is written small under it.
@@ -343,7 +357,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             val room = key.box.width() * LABEL_ROOM
             if (labelPaint.measureText(caption) > room) labelPaint.textSize *= room / labelPaint.measureText(caption)
             labelPaint.color = labelColour
-            canvas.drawText(caption, key.box.centerX(), key.box.bottom - dp(KEY_GAP) - key.box.height() * CAPTION_BOTTOM, labelPaint)
+            canvas.drawText(caption, key.box.centerX(), key.box.bottom - key.box.height() * CAPTION_BOTTOM, labelPaint)
         } else drawLabel(canvas, key, label, labelColour)
         // Like the real keys, each letter has its Alt symbol printed small in its top left corner.
         altSymbols[key.name]?.takeIf { label == key.name && caption == null }?.let { symbol ->
@@ -390,7 +404,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         areaPath.rewind()
         areaPath.fillType = Path.FillType.EVEN_ODD
         areaPath.addRect(0f, 0f, width.toFloat(), height.toFloat(), Path.Direction.CW)
-        areaPath.addRoundRect(width * AREA_LEFT, height * AREA_TOP, width * AREA_RIGHT, height * AREA_BOTTOM,
+        val area = geometry.area(AREA_LEFT, AREA_TOP, AREA_RIGHT, AREA_BOTTOM)
+        areaPath.addRoundRect(area.left, area.top, area.right, area.bottom,
             Radii.px(resources, Radii.MEDIUM), Radii.px(resources, Radii.MEDIUM), Path.Direction.CW)
         canvas.drawPath(areaPath, areaPaint)
     }
@@ -499,7 +514,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         layer = canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), (alpha * 255).roundToInt())
         drawTrailPieces(canvas, dp(TRAIL_WIDTH))
         val last = trail[trail.size - 1]
-        canvas.drawCircle(last[0] * width, last[1] * height, dp(TRAIL_WIDTH) * .9f * thickness(last), dotPaint)
+        canvas.drawCircle(geometry.x(last[0]), geometry.y(last[1]), dp(TRAIL_WIDTH) * .9f * thickness(last), dotPaint)
         canvas.restoreToCount(layer)
         return moving
     }
@@ -509,14 +524,14 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      * touch was larger than usual for that spot, thinner where it was lighter. Round ends join the pieces seamlessly.
      */
     private fun drawTrailPieces(canvas: Canvas, width: Float) {
-        var startX = trail[0][0] * this.width
-        var startY = trail[0][1] * height
+        var startX = geometry.x(trail[0][0])
+        var startY = geometry.y(trail[0][1])
         for (i in 1..trail.size) {
             val corner = trail[i - 1]
-            val cx = corner[0] * this.width
-            val cy = corner[1] * height
+            val cx = geometry.x(corner[0])
+            val cy = geometry.y(corner[1])
             // Each piece runs from the middle before a point to the middle after it, curving through the point.
-            val (endX, endY) = if (i < trail.size) (cx + trail[i][0] * this.width) / 2 to (cy + trail[i][1] * height) / 2 else cx to cy
+            val (endX, endY) = if (i < trail.size) (cx + geometry.x(trail[i][0])) / 2 to (cy + geometry.y(trail[i][1])) / 2 else cx to cy
             path.rewind()
             path.moveTo(startX, startY)
             path.quadTo(cx, cy, endX, endY)
@@ -594,14 +609,14 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val limit = total * portion
         var walked = 0f
         path.rewind()
-        path.moveTo(points[0][0] * width, points[0][1] * height)
-        var end = floatArrayOf(points[0][0] * width, points[0][1] * height)
+        path.moveTo(geometry.x(points[0][0]), geometry.y(points[0][1]))
+        var end = floatArrayOf(geometry.x(points[0][0]), geometry.y(points[0][1]))
         for (i in 1 until points.size) {
             val step = distance(points[i - 1], points[i])
             val share = if (step <= 0f) 1f else ((limit - walked) / step).coerceIn(0f, 1f)
             end = floatArrayOf(
-                (points[i - 1][0] + (points[i][0] - points[i - 1][0]) * share) * width,
-                (points[i - 1][1] + (points[i][1] - points[i - 1][1]) * share) * height,
+                geometry.x(points[i - 1][0] + (points[i][0] - points[i - 1][0]) * share),
+                geometry.y(points[i - 1][1] + (points[i][1] - points[i - 1][1]) * share),
             )
             path.lineTo(end[0], end[1])
             walked += step
@@ -610,7 +625,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         return end
     }
 
-    private fun distance(a: FloatArray, b: FloatArray) = hypot((b[0] - a[0]) * width, (b[1] - a[1]) * height)
+    private fun distance(a: FloatArray, b: FloatArray) = hypot(geometry.x(b[0]) - geometry.x(a[0]), geometry.y(b[1]) - geometry.y(a[1]))
 
     /**
      * A soft patch over the part of the keys where the steer and select taps are easiest to land: from the top of the
@@ -620,8 +635,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         if (cue !is GuideCue.Taps) return
         val corner = Radii.px(resources, Radii.SMALL)
         zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE, ZONE_ALPHA)
-        canvas.drawRoundRect(width * CursorGesture.ZONE_LEFT, height * CursorGesture.ZONE_TOP, width * CursorGesture.ZONE_RIGHT,
-            height * ZONE_BOTTOM, corner, corner, zonePaint)
+        val zone = geometry.area(CursorGesture.ZONE_LEFT, CursorGesture.ZONE_TOP, CursorGesture.ZONE_RIGHT, ZONE_BOTTOM)
+        canvas.drawRoundRect(zone.left, zone.top, zone.right, zone.bottom, corner, corner, zonePaint)
     }
 
     /**
@@ -635,8 +650,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         deletePath.rewind()
         for ((left, top, right, bottom) in listOf(guideDeleteBox)) {
             val box = Path()
-            box.addRoundRect(width * left, height * maxOf(top, AREA_TOP), width * minOf(right, AREA_RIGHT), height * minOf(bottom, AREA_BOTTOM),
-                corner, corner, Path.Direction.CW)
+            val zone = geometry.area(left, maxOf(top, AREA_TOP), minOf(right, AREA_RIGHT), minOf(bottom, AREA_BOTTOM))
+            box.addRoundRect(zone.left, zone.top, zone.right, zone.bottom, corner, corner, Path.Direction.CW)
             deletePath.op(box, Path.Op.UNION)
         }
         canvas.drawPath(deletePath, zonePaint)
@@ -645,27 +660,24 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private val deletePath = Path()
 
     /**
-     * The held delete's zones, on its slide (owner, v5): back on Backspace pauses, and the line between F and G is top speed. They
-     * are where the hold really has them: [PAUSE_KEYS] key widths from where a flick on Backspace starts, and [REPEAT_LONG_KEYS].
+     * The held delete's zones, on its slide, on the Backspace row: back on Backspace pauses, and from between F and G leftwards is
+     * top speed, a lighter box. They are where the hold really has them: [PAUSE_KEYS] key widths from where a flick on Backspace
+     * starts, and [REPEAT_LONG_KEYS].
      */
     private fun drawHoldZones(canvas: Canvas) {
         if ((cue as? GuideCue.Flick)?.hold != true) return
         val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.CREAM
         val corner = Radii.px(resources, Radii.SMALL)
-        val top = height / 4f
-        val bottom = height / 2f
+        val fast = geometry.onRow(1, AREA_LEFT, HOLD_TOP_X)
+        zonePaint.color = GuideMotion.faded(colour, ZONE_ALPHA * FAST_ZONE)
+        canvas.drawRoundRect(fast.left, fast.top, fast.right, fast.bottom, corner, corner, zonePaint)
+        val pause = geometry.onRow(1, HOLD_PAUSE_X, AREA_RIGHT)
         zonePaint.color = GuideMotion.faded(colour, ZONE_ALPHA)
-        canvas.drawRoundRect(width * HOLD_PAUSE_X, top + dp(KEY_GAP), width * AREA_RIGHT, bottom - dp(KEY_GAP), corner, corner, zonePaint)
-        zonePaint.color = GuideMotion.faded(GuideColours.ORANGE, .9f)
-        val lineX = width * HOLD_TOP_X
-        canvas.drawRect(lineX - dp(1.5f), top - dp(2f), lineX + dp(1.5f), bottom + dp(2f), zonePaint)
+        canvas.drawRoundRect(pause.left, pause.top, pause.right, pause.bottom, corner, corner, zonePaint)
         altPaint.color = GuideMotion.faded(colour, .85f)
-        altPaint.textSize = min(width / 10f, height / 4f) * ZONE_LABEL
-        val pause = "pause"
-        canvas.drawText(pause, width * (HOLD_PAUSE_X + AREA_RIGHT) / 2 - altPaint.measureText(pause) / 2, bottom - dp(KEY_GAP) - dp(3f), altPaint)
-        altPaint.color = GuideMotion.faded(GuideColours.ORANGE, 1f)
-        val fast = "top speed"
-        canvas.drawText(fast, lineX - altPaint.measureText(fast) / 2, top - dp(4f), altPaint)
+        altPaint.textSize = min(geometry.key, geometry.keyHeight) * ZONE_LABEL
+        val word = "pause"
+        canvas.drawText(word, pause.centreX - altPaint.measureText(word) / 2, pause.bottom - dp(3f), altPaint)
     }
 
     /** The hold's finger is back in the pause zone: its trail dims, as the bar's glow fades there. */
@@ -674,8 +686,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private fun drawTaps(canvas: Canvas, cue: GuideCue.Taps, t: Float, colour: Int) {
         // Rings for each tap, one after the other, inside the zone where the taps count, then a sideways drag if there is one.
         val tapsEnd = if (cue.drag) .45f else .8f
-        val x = width * SPACE_CENTRE
-        val y = height * ZONE_TAP_ROW
+        val x = geometry.x(SPACE_CENTRE)
+        val y = geometry.y(ZONE_TAP_ROW)
         ringPaint.strokeWidth = dp(2.5f)
         for (tap in 0 until cue.count) {
             val start = tap * tapsEnd / cue.count
@@ -691,7 +703,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             // The finger stays down and slides sideways to the left: back over the words that the cursor moves through or
             // that the selection takes, as the field shows. Above Space only a sideways slide counts, so the ghost shows that.
             val travel = ((t - tapsEnd) / (1f - tapsEnd - .08f)).coerceIn(0f, 1f)
-            fingerX = x - (width * DRAG_REACH) * travel
+            fingerX = x - (x - geometry.x(SPACE_CENTRE - DRAG_REACH)) * travel
             // The drag is the part to copy, so it is as strong as the part of a word that the ghost has done.
             ghostPaint.color = colour
             ghostPaint.strokeWidth = dp(GHOST_DONE_WIDTH)
@@ -723,9 +735,12 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private companion object {
         // Keys. Sizes are in dp unless they say otherwise. Change these to adjust the look.
         const val FRAME_MILLIS = 16f
-        const val KEY_GAP = 2f
-        const val KEY_FILL_ORANGE = .13f
-        const val KEY_FILL_INK = .1f
+        /** A key's thin outline, and how strong it is, and the very faint fill inside it, on orange and on ink. */
+        const val KEY_OUTLINE = 1f
+        const val KEY_OUTLINE_ORANGE = .5f
+        const val KEY_OUTLINE_INK = .4f
+        const val KEY_FILL_ORANGE = .05f
+        const val KEY_FILL_INK = .04f
         const val KEY_LABEL_INK = .85f
         const val LABEL_LETTER = .52f
         const val LABEL_SMALL = .36f
@@ -796,6 +811,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val HOLD_PAUSE_X = .95f - PAUSE_KEYS / 10f
         const val HOLD_TOP_X = .95f - REPEAT_LONG_KEYS / 10f
         const val ZONE_LABEL = .24f
+        /** The top-speed box is lighter than the pause box: this much of its strength. */
+        const val FAST_ZONE = .5f
         /** How much the trail dims while the hold is paused. */
         const val PAUSED_TRAIL = .3f
 

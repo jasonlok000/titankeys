@@ -35,6 +35,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     private var glowHeight = 0f
     private var glowTall = 0f
     private var glowColour = 0
+    private var keyGeometry: KeyGeometry? = null
 
     fun draw(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, height: Int, look: Look) {
         val h = height.toFloat()
@@ -84,14 +85,16 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val count = display.pathSize
         if (count == 0) return
         val alpha = display.reveal
-        val across = right - left
         val faded = alpha < 1f
         if (faded) canvas.saveLayerAlpha(0f, 0f, right + left, h, (alpha.coerceIn(0f, 1f) * 255).toInt())
         stroke.color = look.accent
-        var x = left + across * display.pathX[0]
+        // Across, the path sits over the real keys, as Key calibration has them; the strip is as wide as the screen, and the
+        // sides are the same way in, so they add up to its width. It never goes past the sides, where the corners cut.
+        val keys = keysOn(right + left)
+        var x = keys.x(display.pathX[0]).coerceIn(left, right)
         var y = swipeY(display.pathY[0], h)
         for (index in 1 until count) {
-            val nextX = left + across * display.pathX[index]
+            val nextX = keys.x(display.pathX[index]).coerceIn(left, right)
             val nextY = swipeY(display.pathY[index], h)
             stroke.strokeWidth = dp(PATH_WIDTH) * (display.pathWidth[index - 1] + display.pathWidth[index]) / 2
             canvas.drawLine(x, y, nextX, nextY, stroke)
@@ -100,6 +103,13 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         }
         dot(canvas, x, y, dp(PATH_FINGER) * display.pathWidth[count - 1].coerceAtLeast(1f), look.accent)
         if (faded) canvas.restore()
+    }
+
+    /** The keys on a strip [width] wide, made again only when the width or the calibration changes, so a frame makes no garbage. */
+    private fun keysOn(width: Float): KeyGeometry {
+        val now = keyGeometry
+        if (now != null && now.width == width && now.alignment == KeyAlignment.current) return now
+        return KeyGeometry(width).also { keyGeometry = it }
     }
 
     /** A touchpad height, from the top row down to the bottom of the letter rows, as a height on the strip. */

@@ -1,6 +1,7 @@
 import { Row, Screen, Section, openURL } from "ink";
 import { arrowOutward, close } from "ink/icons";
 import { releaseNotes, releaseNotesURL } from "./release-notes";
+import { Note } from "./note";
 import { Topic } from "./topic";
 
 /** The current version's release notes. With `onClose` it opens by itself after an update; otherwise it has a back arrow. */
@@ -10,7 +11,7 @@ export function WhatsNew({ version, onClose }: { version: string; onClose?: () =
     {releaseNotes.sections.map(section => <Section key={section.title} title={section.title}>
       {section.notes.map(note => note.detail
         ? <Topic key={note.title} title={note.title}>{note.detail}</Topic>
-        : <Row key={note.title} title={note.title} titleMaxLines={3} />)}
+        : <Note key={note.title}>{`• ${note.title}`}</Note>)}
     </Section>)}
     <Row title="Full release notes" endIcon={arrowOutward} onPress={() => void openURL(releaseNotesURL(version))} />
   </Screen>;

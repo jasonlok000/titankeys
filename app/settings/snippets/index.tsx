@@ -1,4 +1,5 @@
 import { Field, Row, Screen, Section, navigate, useAction, useSnapshot } from "ink";
+import { KeyCapField, Note } from "../../../lib/note";
 import { add, close } from "ink/icons";
 import { type State, removeSnippet, state, transferSnippets } from "../../../lib/atlas";
 
@@ -21,12 +22,12 @@ export default function Snippets() {
         endAction={{ icon: close, onPress: () => remove.run(shortcut) }} />)}
     </Section>
     <Section title="Shortcuts">
-      <Field label="Start of each shortcut" href="/settings/snippets/start">{snippetStart}</Field>
+      <KeyCapField label="Start of each shortcut" value={snippetStart} onPress={() => navigate("/settings/snippets/start")} />
     </Section>
     <Section title="Backup">
       <Field label="Export snippets" onPress={() => void transfer.run("export")} />
       <Field label="Import snippets" onPress={() => void transfer.run("import")} />
-      {transfer.status === "error" && <Row title="That didn't work" subtitle={transfer.error.message} wrapSubtitle />}
+      {transfer.status === "error" && <Note>{`That didn't work. ${transfer.error.message}`}</Note>}
     </Section>
   </Screen>;
 }

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { Screen, Section, Stack, Text, replace, useRouteParams, useSnapshot } from "ink";
+import { Screen, Section, Stack, Text, useSnapshot } from "ink";
 import { markNerdSeen, state } from "../../lib/atlas";
 import { nerdSplash } from "../../lib/nerd";
-import { close } from "ink/icons";
 import { Topic } from "../../lib/topic";
 
 /**
@@ -10,9 +9,6 @@ import { Topic } from "../../lib/topic";
  * pointing here, so anything that it leaves out belongs here.
  */
 export default function BoringGuide() {
-  // Opened from the front page, the guide closes back to it, like Settings does.
-  const fromHome = useRouteParams().from === "home";
-  const closeAction = fromHome ? { icon: close, onPress: () => replace("/") } : undefined;
   // The first time only, briefly, like a loading screen: we know who reads the manual. It waits for the app's state, so it knows
   // whether it has shown before, and its time starts once it's on the screen.
   const result = useSnapshot(state);
@@ -28,7 +24,7 @@ export default function BoringGuide() {
     const timer = setTimeout(() => setPhase("done"), SPLASH_MILLIS);
     return () => clearTimeout(timer);
   }, [phase]);
-  if (phase === "waiting") return <Screen title="The boring guide" rightAction={closeAction} />;
+  if (phase === "waiting") return <Screen title="The boring guide" />;
   // A splash, big and centred, so the whole line fits: no page title to cut it short.
   if (phase === "splash") return <Screen centered theme="onboarding">
     <Stack align="center" gap={14}>
@@ -36,7 +32,7 @@ export default function BoringGuide() {
       <Text size={SPLASH_SMALL} align="center">{"It's fine. Somebody has to read the manual."}</Text>
     </Stack>
   </Screen>;
-  return <Screen title="The boring guide" subtitle="Every feature, every setting, in words. Enjoy, nerd." rightAction={closeAction}>
+  return <Screen title="The boring guide" subtitle="Every feature, every setting, in words. Enjoy, nerd.">
     <Section title="Start here">
       <Topic title="The fun guide">{"The fun guide teaches the main stuff right on the keys, a chapter at a time. Open it from Settings > Guide. This one is for everything else."}</Topic>
       <Topic title="The front page">{"Open TitanKeys and you land on a place to type and swipe whatever you like. The line above the field suggests words if you want something to follow. Type fast and it shows your words a minute, and the screen warms up to orange. Guide and Settings are at the top."}</Topic>
@@ -60,7 +56,7 @@ export default function BoringGuide() {
       <Topic title="Feel the keys">{"A little buzz for each key your swipe crosses, so you can swipe without looking. Pick what buzzes, or turn it all off, in Settings > Haptics."}</Topic>
       <Topic title="Where the touchpad reads">{"The touchpad reaches the middle of the outer keys on each side, and the middle of the top and bottom rows. Outside that, it can't read your finger well. The interactive guide dims the part it can't read."}</Topic>
       <Topic title="Turn off swipe typing">{"Turn off Swipe to type words in Settings or in the quick settings. The touchpad stops typing words. Light-touch keys and the Sym panel still work."}</Topic>
-      <Topic title="Scroll assistant outside text fields">{"That's the phone's Scroll assistant: outside text fields, the touchpad scrolls the app. Turn it off in Settings or the quick settings and the touchpad only works in text fields. The touchscreen doesn't change. With it off, the shortcuts on the letter keys and the phone's space bar shortcut stop working, and in some apps Back takes two presses: the first lets go of the touchpad, the second goes back."}</Topic>
+      <Topic title="Scroll assistant outside text fields">{"That's the phone's Scroll assistant: outside text fields, the touchpad scrolls the app. Turn it off in Settings or the quick settings and the touchpad only works in text fields. The touchscreen doesn't change. With it off, the shortcuts on the letter keys and the phone's shortcut on Space stop working, and in some apps Back takes two presses: the first lets go of the touchpad, the second goes back."}</Topic>
     </Section>
     <Section title="The bar">
       <Topic title="Word suggestions">{"The bar above the keys shows words and spelling fixes as you type. Touch one to type it. The best guess is always in the middle, and the three places never move. A long word shrinks to fit its place. If it still doesn't fit, it shows the part where it differs from the others, like …mendations."}</Topic>

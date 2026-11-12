@@ -1,5 +1,16 @@
-/** The colours drawn directly by screens. theme.ts sets the same values for everything else: cream on ink, with orange for what stands out. */
+/**
+ * The colours drawn directly by screens: pure black with orange accents. theme.ts sets the same values for everything
+ * else, and android/kotlin/com/atlas/keyboard/GuideColours mirrors them by hand for the native screens.
+ */
+/** The one accent: titles, section labels, values and what's on. */
 export const ORANGE = "#EF804E";
-export const INK = "#160A04";
+/** Every background. */
+export const BLACK = "#000000";
+/** Primary text. */
 export const CREAM = "#FFF1E6";
-export const MUTED = "#A2958C";
+/** Secondary text: cream at 60% over black, flattened. */
+export const MUTED = "#99918A";
+/** Hairlines and outlines: cream at about 15% over black, flattened. */
+export const DIVIDER = "#2A2623";
+/** Only text on orange buttons. Never a background. */
+export const INK = "#160A04";

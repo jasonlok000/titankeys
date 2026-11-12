@@ -1,9 +1,10 @@
-import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from "ink";
+import { Field, Screen, Section, Toggle, replace, setRouteParents, useAction, useSnapshot } from "ink";
 import { close } from "ink/icons";
 import { showKeyCalibration, state, update } from "../../lib/atlas";
 import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
+import { parentOf } from "../../lib/settings-tree";
 import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
 import { hapticsLabel } from "./haptics";
@@ -17,6 +18,10 @@ import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
 import { tapKeysLabel } from "./tap-keys";
 
+// Links into Settings land with their parent pages under them, so ← and Back go up and never to the front page.
+setRouteParents(parentOf);
+
+/** The top of Settings: × goes to the front page, and there is no ←. */
 export default function Settings() {
   const result = useSnapshot(state);
   const connected = useSnapshot(connectedState);

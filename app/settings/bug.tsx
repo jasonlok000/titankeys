@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Field, Screen, Section, Text, useSnapshot } from "ink";
+import { Field, Screen, Section, useSnapshot } from "ink";
 import { MUTED, ORANGE } from "../../lib/brand";
 import { bugState, deleteBug, shareBug, startBug, stopBug } from "../../lib/bug";
 import { bugText as text, duration } from "../../lib/bug-text";
 import { allowNotifications } from "../../lib/connected";
-import { SMALL, StatusLine } from "../../lib/contribute";
+import { StatusLine } from "../../lib/contribute";
+import { Note, Notes } from "../../lib/note";
 
 /** Record a bug (#64): record, stop, look at what's in it, then share it through Android's share sheet. */
 export default function RecordBug() {
@@ -43,10 +44,10 @@ export default function RecordBug() {
       <StatusLine label={text.keys} value={String(summary.keys)} colour={MUTED} />
     </Section>
     <Section title={text.typedTitle}>
-      <Text size={SMALL}>{summary.words.length ? summary.words.join(" ") : text.nothingTyped}</Text>
+      <Note>{summary.words.length ? summary.words.join(" ") : text.nothingTyped}</Note>
     </Section>
     <Section title={text.warningTitle}>
-      {text.warning.map(line => <Text key={line} size={SMALL}>{`• ${line}`}</Text>)}
+      <Notes lines={text.warning} />
     </Section>
     <Field label={text.share} onPress={() => void shareBug(text.shareSubject, text.shareText)}>{""}</Field>
     <Field label={text.again} onPress={() => void startBug()}>{""}</Field>
@@ -55,12 +56,12 @@ export default function RecordBug() {
 
   return <Screen title={text.title} subtitle={text.subtitle}>
     <Section title={text.howTitle}>
-      {text.how.map(line => <Text key={line} size={SMALL}>{`• ${line}`}</Text>)}
+      <Notes lines={text.how} />
     </Section>
     <Field label={text.record} onPress={() => void startBug()}>{""}</Field>
     {!state.notificationsAllowed && <>
-      <Text size={SMALL}>{text.notifications}</Text>
       <Field label={text.allow} onPress={() => void allowNotifications()}>{""}</Field>
+      <Note>{text.notifications}</Note>
     </>}
   </Screen>;
 }

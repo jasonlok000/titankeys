@@ -35,6 +35,14 @@ fun main() {
     theLabSaysWhatEachPlays()
     theGraphDrawsEachPatternToScale()
     theLiveTimelineHasWordsForEach()
+    aHeldDeleteFadesByLength()
+    theFloorIsNeverAboveTheStart()
+    thinningEveryOnePlaysThemAll()
+    aNewHoldStartsTheFadeAgain()
+    theFadeIsOnlyTriedInDebug()
+    theFadeNeverBlocksAMessage()
+    theTimelineShowsEachHeldWord()
+    theFadeSwitchIsDebugOnly()
     println("Haptic checks passed")
 }
 
@@ -550,4 +558,131 @@ private fun tapsThatFindNothingSayNo() {
     val gate = HapticGate { clock.now }
     check(gate.admit(Haptic.SpaceTap.family)) { "A counted tap ticks" }
     check(gate.check(Haptic.NothingToPick.family) == HapticResult.Played) { "and the no after it still plays" }
+}
+
+/** A held delete fades by length: 17 ms, a step shorter each word down to 9 ms at word 9, then every other one. */
+private fun aHeldDeleteFadesByLength() {
+    val fade = HeldDeleteFade.DEFAULT
+    check(fade == HeldDeleteFade.Settings(start = 17, floor = 9, words = 8, thinEvery = 2)) { "The defaults: $fade" }
+    check(fade.start == HapticPalette.TEXTURE_MILLIS) { "It starts at Texture's tick" }
+    val ticks = HeldDeleteFade.ticks(fade)
+    val expected = listOf<Long?>(17, 16, 15, 14, 13, 12, 11, 10, 9, null, 9, null, 9, null, 9, null)
+    check(ticks == expected) { "The first 16 ticks are $ticks" }
+    check(HeldDeleteFade.lengthFor(1, fade) == 17L) { "Word 1 plays the start" }
+    check(HeldDeleteFade.lengthFor(9, fade) == 9L) { "Word 9 is at the floor" }
+    check(HeldDeleteFade.lengthFor(100, fade) == null && HeldDeleteFade.lengthFor(101, fade) == 9L) { "Far into a hold it still thins" }
+    check(HeldDeleteFade.describe(fade) == "17 down to 9 ms over 8 words, then 1 in 2") { HeldDeleteFade.describe(fade) }
+    check(HeldDeleteFade.format(fade) == "17,9,8,2") { "Stored as four numbers" }
+}
+
+/** Every setting the sliders allow: the first tick is the start, none is above it or under the floor, and none gets longer. */
+private fun theFloorIsNeverAboveTheStart() {
+    check(HeldDeleteFade.Settings(10, 30, 8, 2).fitted().floor == 10L) { "A floor above the start comes down to it" }
+    check(HeldDeleteFade.lengthFor(1, HeldDeleteFade.Settings(10, 30, 8, 2)) == 10L) { "and nothing plays longer than the start" }
+    check(HeldDeleteFade.Settings(60, 1, 50, 9).fitted() == HeldDeleteFade.Settings(40, 4, 20, 4)) { "Each number keeps to its slider" }
+    for (start in HeldDeleteFade.MILLIS) for (floor in HeldDeleteFade.MILLIS) for (words in HeldDeleteFade.WORDS)
+        for (thinEvery in HeldDeleteFade.THIN_EVERY) {
+            val fade = HeldDeleteFade.Settings(start, floor, words, thinEvery)
+            val low = minOf(floor, start)
+            val ticks = (1..words + 2 * thinEvery + 1).map { HeldDeleteFade.lengthFor(it, fade) }
+            check(ticks.first() == start) { "$fade: the first tick is the start" }
+            check(ticks[words] == low) { "$fade: word ${words + 1} is at the floor" }
+            val played = ticks.filterNotNull()
+            check(played.all { it in low..start }) { "$fade: $ticks" }
+            check(played.zipWithNext().all { (a, b) -> b <= a }) { "$fade: no tick is longer than the one before: $ticks" }
+            check(ticks.take(words + 1).none { it == null }) { "$fade: nothing thins before the floor" }
+        }
+}
+
+/** Thinning every 1 plays every tick. */
+private fun thinningEveryOnePlaysThemAll() {
+    val fade = HeldDeleteFade.DEFAULT.copy(thinEvery = 1)
+    check((1..60).all { HeldDeleteFade.lengthFor(it, fade) != null }) { "Every tick plays" }
+    check(HeldDeleteFade.describe(fade).endsWith("then all")) { HeldDeleteFade.describe(fade) }
+    val third = HeldDeleteFade.DEFAULT.copy(thinEvery = 3)
+    check(HeldDeleteFade.ticks(third).drop(8) == listOf<Long?>(9, null, null, 9, null, null, 9, null)) { "1 in 3: ${HeldDeleteFade.ticks(third)}" }
+}
+
+/** A new hold, or one that ended or was cut, counts from word 1 again, so its first tick is the start. */
+private fun aNewHoldStartsTheFadeAgain() {
+    val count = HeldDeleteCount()
+    repeat(12) { count.next() }
+    check(count.word == 12) { "Twelve words went" }
+    check(HeldDeleteFade.lengthFor(count.word, HeldDeleteFade.DEFAULT) == null) { "Word 12 is thinned" }
+    count.reset()
+    val first = count.next()
+    check(first == 1 && HeldDeleteFade.lengthFor(first, HeldDeleteFade.DEFAULT) == 17L) { "The next hold starts at 17 ms" }
+}
+
+/** Only a debug build reads a fade tried in the lab, and only one the sliders allow. */
+private fun theFadeIsOnlyTriedInDebug() {
+    val tried = HeldDeleteFade.Settings(30, 12, 4, 3)
+    check(HeldDeleteFade.settings(debug = false, stored = "30,12,4,3") == HeldDeleteFade.DEFAULT) { "A build that isn't debug ignores it" }
+    check(HeldDeleteFade.settings(debug = true, stored = "30,12,4,3") == tried) { "The debug build plays it" }
+    check(HeldDeleteFade.settings(debug = true, stored = HeldDeleteFade.format(tried)) == tried) { "It's stored and read back" }
+    check(HeldDeleteFade.settings(debug = true, stored = null) == HeldDeleteFade.DEFAULT) { "With none tried, the defaults" }
+    check(HeldDeleteFade.settings(debug = true, stored = "50,12,4,3") == HeldDeleteFade.DEFAULT) { "A start over 40 ms is ignored" }
+    check(HeldDeleteFade.settings(debug = true, stored = "30,12,4,5") == HeldDeleteFade.DEFAULT) { "Thinning past 1 in 4 is ignored" }
+    check(HeldDeleteFade.settings(debug = true, stored = "30,12,4") == HeldDeleteFade.DEFAULT) { "Three numbers are ignored" }
+    check(HeldDeleteFade.settings(debug = true, stored = "x") == HeldDeleteFade.DEFAULT) { "Nonsense is ignored" }
+    check(HeldDeleteFade.settings(debug = true, stored = "10,30,8,2").floor == 10L) { "A stored floor above the start comes down to it" }
+    val source = File("android/kotlin/com/atlas/keyboard/Haptics.kt").readText()
+    check("\"debug_pattern_held_delete_fade\"" in source) { "Stored like the families' tried patterns" }
+}
+
+/** The fade's ticks are texture: whatever their length, they never block a message, and a thinned one never reaches the gate. */
+private fun theFadeNeverBlocksAMessage() {
+    check(Haptic.DeleteWord.family == Family.Texture) { "A held delete's word is still texture" }
+    check(!HapticResult.Thinned.played && HapticResult.Thinned.words == "thinned") { "A thinned tick doesn't play" }
+    for (fade in listOf(HeldDeleteFade.DEFAULT, HeldDeleteFade.Settings(40, 40, 1, 1), HeldDeleteFade.Settings(4, 4, 20, 4))) {
+        val clock = Clock()
+        val gate = HapticGate { clock.now }
+        for (word in 1..30) {
+            val millis = HeldDeleteFade.lengthFor(word, fade)
+            if (millis != null) check(gate.check(Family.Texture, millis) == HapticResult.Played) { "$fade: word $word ticks" }
+            clock.now += 5
+            // A message right on top of the tick still plays. The repeat rule is by family, so they take turns.
+            val message = if (word % 2 == 0) Family.No else Family.Change
+            check(gate.check(message) == HapticResult.Played) { "$fade: a message plays on top of word $word" }
+            clock.now += HapticGate.REPEAT_MILLIS
+        }
+    }
+}
+
+/** The live timeline shows each held delete tick with its word and the length it played, and a thinned one says so. */
+private fun theTimelineShowsEachHeldWord() {
+    val played = HapticEvent(1, Haptic.DeleteWord, listOf(13), HapticResult.Played, word = 5)
+    check(HapticTimeline.title(played, "Each word while you hold") == "Held delete word 5 · Texture 13 ms") { HapticTimeline.title(played, "") }
+    check(HapticTimeline.outcome(played) == HapticTimeline.trigger(Haptic.DeleteWord)) { "It says what set it off" }
+    val thinned = played.copy(pattern = listOf(9), result = HapticResult.Thinned, word = 10)
+    check(HapticTimeline.outcome(thinned) == "thinned") { "A thinned tick says why" }
+    check(HapticTimeline.buzzes(thinned.pattern, 0, dropped = true) == listOf(Buzz(0, 9, true))) { "and is hollow at the floor's length" }
+    val other = HapticEvent(1, Haptic.SwipeKey, Family.Texture.pattern, HapticResult.Busy)
+    check(HapticTimeline.title(other, "Swipe key") == "Swipe key · Texture") { "Every other haptic keeps its name" }
+    check(HapticTimeline.outcome(other) == "dropped: busy") { "and a dropped one its reason" }
+}
+
+/**
+ * The fade is a debug experiment for now. Debug fades while the lab's switch is on, and it is to start with. Off, and in every
+ * other build whatever is stored, each word plays plain Texture, 17 ms.
+ */
+private fun theFadeSwitchIsDebugOnly() {
+    val fade = HeldDeleteFade.DEFAULT
+    fun hold(fading: Boolean) = (1..16).map { HeldDeleteFade.lengthFor(it, fade, fading) }
+    check(HeldDeleteFade.fading(debug = true, stored = null)) { "Debug fades to start with" }
+    check(HeldDeleteFade.fading(debug = true, stored = true)) { "Debug with the switch on fades" }
+    check(!HeldDeleteFade.fading(debug = true, stored = false)) { "Debug with the switch off doesn't" }
+    check(!HeldDeleteFade.fading(debug = false, stored = true) && !HeldDeleteFade.fading(debug = false, stored = null)) {
+        "Release never fades, even with a stored on"
+    }
+    val on = hold(HeldDeleteFade.fading(debug = true, stored = true))
+    check(on == listOf<Long?>(17, 16, 15, 14, 13, 12, 11, 10, 9, null, 9, null, 9, null, 9, null)) { "Switch on: $on" }
+    check(HeldDeleteFade.ticks(fade, fading = true) == on) { "The lab's strip shows the same" }
+    val off = hold(HeldDeleteFade.fading(debug = true, stored = false))
+    check(off == List(16) { 17L }) { "Switch off: 17 every word, $off" }
+    val release = hold(HeldDeleteFade.fading(debug = false, stored = true))
+    check(release == List(16) { 17L }) { "Release: 17 every word, $release" }
+    check(HeldDeleteFade.ticks(fade, fading = false) == off) { "The strip with the fade off" }
+    val event = HapticEvent(1, Haptic.DeleteWord, listOf(17), HapticResult.Played, word = 12, fading = false)
+    check(HapticTimeline.title(event, "") == "Held delete word 12 · Texture 17 ms · no fade") { HapticTimeline.title(event, "") }
 }

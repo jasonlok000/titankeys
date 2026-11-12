@@ -57,8 +57,12 @@ class HapticsLabActivity : Activity() {
     private var names: Map<Haptic, HapticsLab.Named> = emptyMap()
     /** The editor's family, its bars and sliders, to draw again after a change. */
     private var editing: Editing? = null
+    /** The held delete fade's editor, its strip and sliders, to draw again after a change. */
+    private var fading: Fading? = null
 
     private class Editing(val family: Family, val bars: PatternBars, val plays: TextView, val sliders: List<Pair<TextView, SeekBar>>)
+
+    private class Fading(val strip: FadeStrip, val plays: TextView, val sliders: List<Pair<TextView, SeekBar>>)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,6 +98,8 @@ class HapticsLabActivity : Activity() {
             addView(content)
         })
         showFamilies()
+        // The Experiments on the lab's page open the screen on the fade's tuning.
+        if (intent.getStringExtra(OPEN) == HapticsLab.HELD_DELETE_FADE) editFade(null)
         practice.requestFocus()
     }
 
@@ -103,6 +109,8 @@ class HapticsLabActivity : Activity() {
         events.clear()
         events += HapticFeed.recent()
         shown()
+        // The fade may have been switched in Experiments while this screen was away.
+        drawFade()
         // The keyboard plays on the main thread, but a post keeps the screen's changes in order whatever thread it came from.
         HapticFeed.listen { event -> timeline.post { heard(event) } }
     }
@@ -134,8 +142,12 @@ class HapticsLabActivity : Activity() {
     /** One haptic in the list: when, what, its family and pattern, and whether it played. A tap opens its family's editor. */
     private fun row(event: HapticEvent) = TextView(this).apply {
         val seconds = String.format(Locale.ROOT, "%.2f s", (event.atMillis - opened) / 1000f)
-        val outcome = if (event.result.played) "played" else "dropped: ${event.result.words}"
-        val first = "$seconds  ${name(event.haptic)} · ${event.haptic.family.label}"
+        val outcome = when (event.result) {
+            HapticResult.Played -> "played"
+            HapticResult.Thinned -> "thinned"
+            else -> "dropped: ${event.result.words}"
+        }
+        val first = "$seconds  ${HapticTimeline.title(event, name(event.haptic))}"
         text = SpannableStringBuilder("$first\n${HapticPalette.describe(event.pattern)} · $outcome").apply {
             setSpan(ForegroundColorSpan(LabColours.CREAM), 0, first.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             if (!event.result.played) setSpan(ForegroundColorSpan(LabColours.ORANGE), length - outcome.length, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -147,12 +159,14 @@ class HapticsLabActivity : Activity() {
         setPadding(0, dp(6), 0, dp(6))
         isClickable = true
         isFocusable = true
-        setOnClickListener { edit(event.haptic.family, event.haptic) }
+        // A held delete's word plays the fade, so it opens the fade's editor.
+        setOnClickListener { if (event.haptic == Haptic.DeleteWord) editFade(event.haptic) else edit(event.haptic.family, event.haptic) }
     }
 
     /** The editor with nothing picked: each family, to open its editor without waiting for it to play. */
     private fun showFamilies() {
         editing = null
+        fading = null
         editor.removeAllViews()
         editor.addView(text("Tap a haptic in the list, or a family here.", 14f, LabColours.DIM).apply { setPadding(0, 0, 0, dp(4)) })
         for (family in Family.entries) {
@@ -173,6 +187,7 @@ class HapticsLabActivity : Activity() {
     /** [family]'s editor: its bars, a slider for each pulse and gap, Play and Reset, and notes on it and on [haptic]. */
     private fun edit(family: Family, haptic: Haptic?) {
         editor.removeAllViews()
+        fading = null
         val bars = PatternBars(this)
         val plays = text("", 14f, LabColours.DIM)
         val sliders = family.pattern.indices.map { index ->
@@ -207,6 +222,79 @@ class HapticsLabActivity : Activity() {
         }
         drawEditor()
     }
+
+    /**
+     * The held delete fade's editor: a strip of a hold's first ticks, a slider for each of its four numbers, Play and Reset,
+     * and notes on it and on [haptic].
+     */
+    private fun editFade(haptic: Haptic?) {
+        editor.removeAllViews()
+        editing = null
+        val strip = FadeStrip(this)
+        val plays = text("", 14f, LabColours.DIM)
+        val sliders = listOf(
+            text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.MILLIS) { millis -> tryFade { it.copy(start = millis, floor = minOf(it.floor, millis)) } },
+            text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.MILLIS) { millis -> tryFade { it.copy(floor = minOf(millis, it.start)) } },
+            text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.WORDS.longs()) { words -> tryFade { it.copy(words = words.toInt()) } },
+            text("", 14f, LabColours.CREAM) to slider(HeldDeleteFade.THIN_EVERY.longs()) { every -> tryFade { it.copy(thinEvery = every.toInt()) } },
+        )
+        fading = Fading(strip, plays, sliders)
+        editor.addView(text(FADE, 18f, LabColours.CREAM, bold = true))
+        editor.addView(text("Each word of a held delete ticks a bit shorter, then only some tick. The Titan can't buzz softer, only shorter.", 14f, LabColours.DIM))
+        // The switch is with the other experiments, on the lab's page in Settings.
+        editor.addView(text("Switch it on or off in Experiments, on the Haptics lab page.", 13f, LabColours.DIM))
+        editor.addView(plays)
+        editor.addView(strip)
+        for ((label, bar) in sliders) {
+            editor.addView(label)
+            editor.addView(bar)
+        }
+        editor.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(button("Play", "Play a held delete of ${HeldDeleteFade.PLAY_WORDS} words") { lab.previewFade() })
+            addView(button("Reset", "Reset $FADE") {
+                lab.tryFade(null)
+                drawFade()
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginStart = dp(12) })
+            addView(button("All families", "Show all families") { showFamilies() },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginStart = dp(12) })
+        })
+        editor.addView(text("Play holds for ${HeldDeleteFade.PLAY_WORDS} words, $REPEAT_SLOW_MILLIS ms apart, as a hold starts.", 13f, LabColours.DIM)
+            .apply { setPadding(0, dp(8), 0, 0) })
+        editor.addView(text("Notes on $FADE", 14f, LabColours.CREAM).apply { setPadding(0, dp(12), 0, 0) })
+        editor.addView(field("How does the fade feel?", 1, lab.fadeNote()) { lab.fadeNote(it) })
+        if (haptic != null) {
+            editor.addView(text("Notes on ${name(haptic)}", 14f, LabColours.CREAM).apply { setPadding(0, dp(12), 0, 0) })
+            editor.addView(text(names[haptic]?.about ?: HapticTimeline.trigger(haptic), 13f, LabColours.DIM))
+            editor.addView(field("How does it feel here?", 1, lab.note(haptic)) { lab.note(haptic, it) })
+        }
+        drawFade()
+    }
+
+    /** Changes the fade in use with [change], and tries it. The next real held delete plays it. */
+    private fun tryFade(change: (HeldDeleteFade.Settings) -> HeldDeleteFade.Settings) {
+        lab.tryFade(change(lab.fade()))
+        drawFade()
+    }
+
+    /** Draws the fade's editor again with the settings in use now. */
+    private fun drawFade() {
+        val fading = fading ?: return
+        val fade = lab.fade()
+        val on = lab.fading()
+        fading.plays.text = lab.plays(fade, on) + if (on && fade != HeldDeleteFade.DEFAULT) "  (tried)" else ""
+        fading.strip.show(HeldDeleteFade.ticks(fade, fading = on))
+        val values = listOf(fade.start, fade.floor, fade.words.toLong(), fade.thinEvery.toLong())
+        val labels = listOf("Start: ${fade.start} ms", "Floor: ${fade.floor} ms", "Words to fade: ${fade.words}",
+            if (fade.thinEvery == 1) "Thin every: 1, so all play" else "Thin every: ${fade.thinEvery}, so 1 in ${fade.thinEvery} plays")
+        for ((index, slider) in fading.sliders.withIndex()) {
+            val (label, bar) = slider
+            label.text = labels[index]
+            if (bar.progress != values[index].toInt()) bar.progress = values[index].toInt()
+        }
+    }
+
+    private fun IntRange.longs() = first.toLong()..last.toLong()
 
     /** Sets one pulse or gap of [family]'s pattern to [millis], and tries it. The next real action plays it. */
     private fun tryMillis(family: Family, index: Int, millis: Long) {
@@ -298,7 +386,7 @@ class HapticsLabActivity : Activity() {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(8), 0, 0)
         addView(keyLine("■", LabColours.ORANGE, "on"))
-        addView(keyLine("□", LabColours.ORANGE, "dropped, with the reason"))
+        addView(keyLine("□", LabColours.ORANGE, "dropped or thinned, with the reason"))
     }
 
     private fun keyLine(mark: String, colour: Int, words: String) = TextView(this).apply {
@@ -333,9 +421,15 @@ class HapticsLabActivity : Activity() {
 
     companion object {
         private const val LABELS = "labels"
+        private const val OPEN = "open"
+        private const val FADE = "Held delete fade"
 
-        /** The lab, with [labels]: Settings' names for the haptics, as a JSON list of { id, label, group, about }. */
-        fun intent(context: Context, labels: String) = Intent(context, HapticsLabActivity::class.java).putExtra(LABELS, labels)
+        /**
+         * The lab, with [labels]: Settings' names for the haptics, as a JSON list of { id, label, group, about }. [open] is an
+         * experiment whose editor it opens on, or empty.
+         */
+        fun intent(context: Context, labels: String, open: String = "") =
+            Intent(context, HapticsLabActivity::class.java).putExtra(LABELS, labels).putExtra(OPEN, open)
 
         private fun labels(json: String?): List<HapticsLab.Named> {
             val list = JSONArray(json ?: "[]")
@@ -413,8 +507,8 @@ internal class LiveTimeline(context: Context, private val name: (Haptic) -> Stri
             val lane = index % LANES
             val top = lane * laneHeight
             val at = x(event.atMillis, now)
-            val title = "${name(event.haptic)} · ${event.haptic.family.label}"
-            val words = if (dropped) "dropped: ${event.result.words}" else HapticTimeline.trigger(event.haptic)
+            val title = HapticTimeline.title(event, name(event.haptic))
+            val words = HapticTimeline.outcome(event)
             val wordsPaint = if (dropped) droppedText else wordsText
             val wide = maxOf(nameText.measureText(title), wordsPaint.measureText(words))
             val left = if (at + wide > width) maxOf(0f, at - wide) else at
@@ -490,4 +584,58 @@ internal class PatternBars(context: Context) : View(context) {
     }
 
     private fun x(millis: Long) = millis.coerceIn(0, spanMillis).toFloat() / spanMillis * width
+}
+
+/**
+ * The first ticks of a held delete, one bar each from left to right, as tall as it is long, to the sliders' 40 ms. A tick the
+ * fade thins out is hollow, at the floor's height.
+ */
+internal class FadeStrip(context: Context) : View(context) {
+    private var ticks: List<Long?> = emptyList()
+    private val density = resources.displayMetrics.density
+    private val stripTop = 16 * density
+    private val tall = 48 * density
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = LabColours.ORANGE }
+    private val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.5f * density
+        color = LabColours.ORANGE
+    }
+    private val track = Paint().apply { color = LabColours.TRACK }
+    private val small = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10f, resources.displayMetrics)
+        color = LabColours.DIM
+        textAlign = Paint.Align.CENTER
+    }
+
+    /** Shows [ticks], null where one is thinned. */
+    fun show(ticks: List<Long?>) {
+        this.ticks = ticks
+        invalidate()
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), (stripTop + tall + 16 * density).toInt())
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        val floor = ticks.filterNotNull().minOrNull() ?: return
+        canvas.drawRect(0f, stripTop, width.toFloat(), stripTop + tall, track)
+        val slot = width.toFloat() / ticks.size
+        for ((index, millis) in ticks.withIndex()) {
+            val left = index * slot + slot * .2f
+            val right = (index + 1) * slot - slot * .2f
+            val height = (millis ?: floor).toFloat() / HeldDeleteFade.MILLIS.last * tall
+            val center = (left + right) / 2
+            if (millis == null) {
+                val inset = outline.strokeWidth / 2
+                canvas.drawRect(left + inset, stripTop + tall - height + inset, right - inset, stripTop + tall - inset, outline)
+            } else {
+                canvas.drawRect(left, stripTop + tall - height, right, stripTop + tall, fill)
+                canvas.drawText("$millis", center, stripTop + tall - height - 3 * density, small)
+            }
+            // The word's number under its bar.
+            canvas.drawText("${index + 1}", center, stripTop + tall + 12 * density, small)
+        }
+    }
 }

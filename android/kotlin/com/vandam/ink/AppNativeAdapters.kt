@@ -339,7 +339,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     "null"
                 }
                 "labGraph" -> {
-                    lab().showGraph(data.getJSONArray("haptics").toString())
+                    lab().showGraph(data.getJSONArray("haptics").toString(), data.optString("open"))
                     "null"
                 }
                 "labExperiment" -> {

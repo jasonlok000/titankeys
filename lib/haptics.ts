@@ -11,7 +11,7 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
   { title: "Delete", haptics: [
     { id: "delete_flick", label: "Delete flick", about: "When you flick left to delete a word. The second pulse lands as the dots pop." },
     { id: "delete_dots_land", label: "Delete dots land", about: "When the dots of a flick, or of a long delete as you lift, go into the cursor. A light tick for every dot as it lands." },
-    { id: "delete_word", label: "Each word while you hold", about: "Each word that goes while you keep your finger down after a flick." },
+    { id: "delete_word", label: "Each word while you hold", about: "Each word that goes while you keep your finger down after a flick. In TitanKeys Debug, with the lab's fade on, the ticks get shorter as more go, then only every other one plays." },
     { id: "delete_nothing", label: "Nothing left to delete", about: "When you flick or hold to delete and there's nothing left." },
   ] },
   { title: "Space gestures", haptics: [

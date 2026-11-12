@@ -16,7 +16,9 @@ export default function HapticsLabPage() {
 
 function Lab({ lab }: { lab: HapticsLab }) {
   // The live timeline, the editors and the notes are in the lab's own screen, which writes the notes file.
-  const open = () => void showHapticsGraph(hapticGroups.flatMap(group => group.haptics.map(haptic => ({ ...haptic, group: group.title }))));
+  const haptics = hapticGroups.flatMap(group => group.haptics.map(haptic => ({ ...haptic, group: group.title })));
+  const open = () => void showHapticsGraph(haptics);
+  const fade = lab.heldDeleteFade;
   return <Screen title={title} subtitle={subtitle}>
     <Section title="Lab">
       <Field label="Open the lab" onPress={open}>Practice, live haptics, patterns and notes</Field>
@@ -24,6 +26,11 @@ function Lab({ lab }: { lab: HapticsLab }) {
     <Section title="Experiments">
       <Toggle label="Dots speed up when long" value={lab.experiments.dotsSpeedUp ?? false}
         onChange={on => void setLabExperiment("dotsSpeedUp", on)} />
+      <Toggle label="Held delete fade" value={lab.experiments.heldDeleteFade ?? false}
+        onChange={on => void setLabExperiment("heldDeleteFade", on)} />
+      <Field label="Tune the held delete fade" onPress={() => void showHapticsGraph(haptics, "heldDeleteFade")}>
+        {fade.on && fade.tried ? `${fade.plays} (tried)` : fade.plays}
+      </Field>
     </Section>
     <Section title="Patterns">
       {Object.entries(lab.families).map(([id, family]) =>

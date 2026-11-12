@@ -1563,10 +1563,14 @@ class AtlasIme : InputMethodService() {
         return true
     }
 
-    /** What a key belongs to, for the lock: Alt and Sym are symbols, Enter is its own, fn and Ctrl are shortcuts. Others are typing. */
+    /**
+     * What a key belongs to, for the lock: Alt and Sym are their own, Enter too, except on the open panel, where it turns the page as
+     * part of Sym. fn and Ctrl are shortcuts. Others are typing.
+     */
     private fun guideLesson(keyCode: Int): GuideLesson? = when (keyCode) {
-        KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT, KeyEvent.KEYCODE_SYM -> GuideLesson.Symbols
-        KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> GuideLesson.Enter
+        KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT -> GuideLesson.Alt
+        KeyEvent.KEYCODE_SYM -> GuideLesson.Sym
+        KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (panelOpen) GuideLesson.Sym else GuideLesson.Enter
         Modifiers.FN, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT -> GuideLesson.Ctrl
         else -> null
     }
@@ -2446,7 +2450,7 @@ class AtlasIme : InputMethodService() {
     /** Only a plain letter from the phone's own keyboard can become its symbol. With Shift, Alt, Sym or a shortcut key it stays a letter. */
     private fun canHold(event: KeyEvent): Boolean {
         // Every field that the keyboard types in has this, also password, number and exact typing fields.
-        if (!holdSymbols || !editing || !HoldEngine.isLetter(event.keyCode) || deadKeyPending || !guideAllows(GuideLesson.Symbols)) return false
+        if (!holdSymbols || !editing || !HoldEngine.isLetter(event.keyCode) || deadKeyPending || !guideAllows(GuideLesson.HoldSymbol)) return false
         if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
         // A Shift that came on by itself still lets the first letter of a sentence become its symbol.
         if (modifiers.shift != Modifiers.Level.Off && !modifiers.autoShifted || altOrPanel || !event.hasNoModifiers() || event.isCapsLockOn) return false

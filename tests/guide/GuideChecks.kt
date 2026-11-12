@@ -42,7 +42,7 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "steer" to listOf(CursorStarted(false), FieldChanged("on and on ", 9, 9), FieldChanged("on and on ", 4, 4)),
     "selectword" to listOf(FieldChanged("on and on ", 3, 6)),
     "selectmore" to listOf(CursorStarted(true), FieldChanged("on and on ", 0, 9)),
-    "alt" to listOf(altOn, FieldChanged("$", 1, 1)),
+    "alt" to listOf(altOn, FieldChanged(ALT_SYMBOL, 1, 1)),
     "holdsym" to listOf(HeldSymbol("@")),
     "symmain" to listOf(keys(Panel.Symbols), FieldChanged("x. &", 4, 4)),
     "symgroups" to listOf(PanelSwiped(0f, .4f, true), GroupPicked(2), FieldChanged("x. §", 4, 4)),
@@ -253,10 +253,10 @@ private fun oneInstructionAtATime() {
     val alt = GuideFlow({ GuideSettings() })
     alt.start("alt")
     same(alt.cue, GuideCue.Spot(listOf(Layout.ALT)), "Alt glows first")
-    same(alt.event(altOn), GuideVerdict.Stage(1), "Alt on, so the key with $ is next")
-    same(alt.instruction.contains("$"), true, "The next instruction names $")
-    same(alt.event(FieldChanged("x. #", 4, 4)).let { it is GuideVerdict.Hint && it.title!!.contains("not $") }, true, "Another symbol isn't $")
-    same(alt.event(FieldChanged("x. #$", 5, 5)), GuideVerdict.Done, "$ finishes it")
+    same(alt.event(altOn), GuideVerdict.Stage(1), "Alt on, so the key with * is next")
+    same(alt.instruction.contains(ALT_SYMBOL), true, "The next instruction names *")
+    same(alt.event(FieldChanged("x. #", 4, 4)).let { it is GuideVerdict.Hint && it.text.contains("not *") }, true, "Another symbol isn't *")
+    same(alt.event(FieldChanged("x. #*", 5, 5)), GuideVerdict.Done, "* finishes it")
 
     val groups = GuideFlow({ GuideSettings() })
     groups.start("symgroups")
@@ -267,7 +267,7 @@ private fun oneInstructionAtATime() {
     same(groups.stage, 2, "and a symbol is next")
     same(groups.event(FieldChanged("x. ¤", 4, 4)), GuideVerdict.Done, "Any symbol finishes it")
     same(groupsPraise(groups.counted), "Backspace and Enter turn pages too.", "It teaches the way that wasn't used")
-    same(groupsPraise(2 or 4), "Swiping left or right on the keys changes group too.", "or the other one")
+    same(groupsPraise(2 or 4), "Swiping sideways on the keys changes group too.", "or the other one")
 
     val clown = GuideFlow({ GuideSettings() })
     clown.start("clown")
@@ -337,11 +337,11 @@ private fun slideTexts() {
     same(line.length, STEER_LOOPS * (STEER_TEXT.length + 1) - 1, "The steering line repeats, joined by a space")
     // The symbols chapter: each sentence starts with its symbol, in the order of the slides.
     val symbols = GUIDE_STEPS.mapNotNull { it.symbol }
-    same(symbols, listOf("$", "@", "&", ANY_SYMBOL, CLOWN), "Each symbol slide waits for its own symbol")
+    same(symbols, listOf(ALT_SYMBOL, "@", "&", ANY_SYMBOL, CLOWN), "Each symbol slide waits for its own symbol")
     same(SYMBOL_PARTS.map { it.first }, symbols, "and the text box has them in that order")
     for (symbol in symbols) same(SYMBOLS_TEXT.contains(symbol + wordsAfter(symbol).trimEnd()), true, "$symbol starts its sentence")
-    same(endsWithSymbol("x. $", "$"), true, "$ is $")
-    same(endsWithSymbol("x. @ ", "$"), false, "@ is not $")
+    same(endsWithSymbol("x. *", "*"), true, "* is *")
+    same(endsWithSymbol("x. @ ", "*"), false, "@ is not *")
     same(endsWithSymbol("x. §", ANY_SYMBOL), true, "Any symbol counts on the groups slide")
     same(endsWithSymbol("x. a", ANY_SYMBOL) || endsWithSymbol("x.", ANY_SYMBOL) || endsWithSymbol("", ANY_SYMBOL), false,
         "A letter, a full stop or nothing is no symbol")
@@ -427,7 +427,7 @@ private fun stepsStartInTheRightMenu() {
         same(step.demo != null || step.bar != null, true, "${step.id} must show its gesture by itself when nobody acts")
     same(byId.getValue("clipboard").demo, GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""), "The clipboard slide lights Sym, then A")
     same(byId.getValue("holdsym").demo, GuideDemo.HoldLetter("@"), "The hold slide shows the key with @ held down")
-    same(byId.getValue("alt").demo, GuideDemo.AltLetter("$"), "The Alt slide shows Alt, then the key with $")
+    same(byId.getValue("alt").demo, GuideDemo.AltLetter(ALT_SYMBOL), "The Alt slide shows Alt, then the key with *")
     same(byId.getValue("paste").demo, GuideDemo.Insert(listOf(Layout.FN, "V", Layout.FN, "V"), ""), "The paste demo is only fn and V")
     same(byId.getValue("type").bar, GuideBar.Fix, "Autocorrect shows the fix swapping in on the bar")
     same(byId.getValue("menu").bar, GuideBar.Menu, "The word menu shows a ghost hold on the bar, and the menu opening")
@@ -449,10 +449,13 @@ private fun chapterOne() {
         setOf(GuideLesson.Flick)), "Delete unlocks the flick on its flick and hold slides; Backspace always works")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Steering }.map { it.lessons }, List(3) { setOf(GuideLesson.Cursor) },
         "Steering unlocks only the cursor gestures")
+    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Symbols }.map { it.lessons }, listOf(setOf(GuideLesson.Alt),
+        setOf(GuideLesson.HoldSymbol), setOf(GuideLesson.Sym), setOf(GuideLesson.Sym), setOf(GuideLesson.Sym)),
+        "Symbols unlocks Alt, then a held key, then Sym, one at a time")
     // The chapters in the new layout: every title and success line on one line, every instruction, praise and help too.
     for (step in GUIDE_STEPS.filter { it.chapter in NEW_LAYOUT }) {
         for (line in listOf(step.title, step.done)) same(line.length <= TITLE_MOST, true, "\"$line\" is one line")
-        for (line in step.stages.map { it.text } + step.praise + listOfNotNull(step.help))
+        for (line in step.stages.map { it.text } + step.praise + listOfNotNull(step.help, step.helpTitle))
             same(line.length <= LINE_MOST, true, "\"$line\" is one line")
     }
     for ((line, _) in DELETE_RESETS) same(line.length <= LINE_MOST, true, "The reset chip \"$line\" is one line")
@@ -472,11 +475,11 @@ private fun chapterOne() {
     GuideHooks.lessons = setOf(GuideLesson.Swipe)
     same(GuideHooks.allows(GuideLesson.Swipe) to GuideHooks.allows(GuideLesson.BarHold), true to false, "The lock lets through what's taught")
     GuideHooks.lessons = null
-    same(GuideHooks.allows(GuideLesson.Symbols), true, "With no lock, everything works")
+    same(GuideHooks.allows(GuideLesson.Sym), true, "With no lock, everything works")
 }
 
 /** The chapters rebuilt in the new layout so far. */
-private val NEW_LAYOUT = setOf(GuideChapter.Typing, GuideChapter.Delete, GuideChapter.Steering)
+private val NEW_LAYOUT = setOf(GuideChapter.Typing, GuideChapter.Delete, GuideChapter.Steering, GuideChapter.Symbols)
 private const val TITLE_MOST = 33
 private const val LINE_MOST = 50
 
@@ -555,9 +558,7 @@ private fun scenarios() {
     val holdsym = GuideFlow({ GuideSettings() })
     holdsym.start("holdsym")
     same(title(holdsym.event(HeldSymbol("#"))).startsWith("Not @"), true, "Another key held")
-    holdsym.event(altOn)
-    same(holdsym.event(FieldChanged("x. @", 4, 4)).let { it is GuideVerdict.Hint && it.passes && it.title == "Old habits." }, true,
-        "Alt and the key type @, and it counts")
+    same(holdsym.event(FieldChanged("x. @", 4, 4)), GuideVerdict.Done, "@ in the field counts, however it came")
 
     val symmain = GuideFlow({ GuideSettings() })
     symmain.start("symmain")

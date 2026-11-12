@@ -685,8 +685,13 @@ internal const val STEER_LOOPS = 9
  * [ANY_SYMBOL] stands for "any symbol you like", on the groups slide.
  */
 internal const val ANY_SYMBOL = "⬚"
+/**
+ * The Alt slide's symbol: one that the Titan 2 Elite's Alt layer really has (Alt and A). v3.1 had $, which isn't on it, so its
+ * sentence and success line are new.
+ */
+internal const val ALT_SYMBOL = "*"
 internal val SYMBOL_PARTS = listOf(
-    "$" to " is what this guide cost you, and somehow you're still behind. ",
+    ALT_SYMBOL to " is for the fine print you never read. ",
     "@" to " is for tagging someone who actually reads instructions. ",
     "&" to " is for when one insult isn't enough. ",
     ANY_SYMBOL to " is the weirdest thing you could find, and yes, we're judging it. ",
@@ -1029,109 +1034,108 @@ internal val GUIDE_STEPS = listOf(
         lessons = setOf(GuideLesson.Cursor),
         demo = GuideDemo.SelectLast,
     ),
-    // SYMBOLS AND EMOJI: one text box, and a field that starts empty and only grows.
+    // SYMBOLS AND EMOJI, in the new layout: the field starts empty and only grows, with the chapter's text in grey ahead of it,
+    // one line each for the title and the instruction, chips for real mistakes, and each slide locked to Alt, a held key or Sym.
     GuideStep(
         id = "alt", chapter = GuideChapter.Symbols,
-        title = "Symbols the way your grandparents typed them.",
+        // v3.1's "Symbols the way your grandparents typed them." is two lines.
+        title = "Symbols, the grandparent way.",
         stages = listOf(
             GuideStage("Hold Alt.", GuideCue.Spot(listOf(Layout.ALT))) { event ->
                 when {
-                    typedSymbol(event, "$") -> GuideVerdict.Finished
-                    event is HeldSymbol && event.symbol == "$" -> counts("Skipped a slide. Overachiever.", "It counts. Press Next.")
+                    typedSymbol(event, ALT_SYMBOL) -> GuideVerdict.Finished
                     event is ModifierState && event.alt != Level.Off && event.panel == Panel.Closed -> GuideVerdict.Done
-                    panel(event, Panel.Symbols) -> roast("That's Sym. Wrong key, right idea.", "Press Sym to close it, then hold Alt.")
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Keep holding Alt and press the key with $ in its corner.") { event ->
+            GuideStage("Keep holding Alt and press the $ALT_SYMBOL key.") { event ->
                 when {
-                    typedSymbol(event, "$") -> GuideVerdict.Done
+                    typedSymbol(event, ALT_SYMBOL) -> GuideVerdict.Done
                     event is Pushed && isLetter(event.code) -> {
                         armed = true
                         GuideVerdict.Wait
                     }
                     // Alt let go before any key: it waits for one key, which works too.
-                    event is Released && event.code in ALT_KEYS && !armed ->
-                        roast("Fine, that works too. Alt waits for one key.", "Press the key with $ in its corner.")
-                    otherSymbol(event, "$") -> roast("That's not $. Money's not your thing, huh.", "Hold Alt and press the key with $ in its corner.")
-                    event is ModifierState && event.alt == Level.Locked ->
-                        roast("Locked it. Commitment, finally.", "Press the key with $ in its corner. Press Alt again to let go.")
+                    event is Released && event.code in ALT_KEYS && !armed -> chip("Fine, that works too. Alt waits for one key.")
+                    otherSymbol(event, ALT_SYMBOL) -> chip("That's not $ALT_SYMBOL. Fine print's not your thing, huh.")
+                    event is ModifierState && event.alt == Level.Locked -> chip("Locked it. Commitment, finally.")
                     event is ModifierState && event.alt == Level.Off && event.panel == Panel.Closed ->
-                        roast("On, off. Very decisive.", "Hold Alt and press the key with $ in its corner.", stage = 0)
+                        GuideVerdict.Hint("On, off. Very decisive.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
-        done = "$0. About right for what you paid.",
-        praise = "Alt types the symbol in a key's corner. Press Alt once for one symbol, or hold it.",
+        done = "*Terms and conditions apply.",
+        praise = "Alt types corner symbols. Press once, or hold it.",
         text = SYMBOLS_TEXT,
-        symbol = "$",
+        symbol = ALT_SYMBOL,
         usesPanel = true,
         setup = Panel.Closed,
-        demo = GuideDemo.AltLetter("$"),
+        lessons = setOf(GuideLesson.Alt),
+        demo = GuideDemo.AltLetter(ALT_SYMBOL),
     ),
     GuideStep(
         id = "holdsym", chapter = GuideChapter.Symbols,
         title = "Do this one-handed.",
-        stages = listOf(GuideStage("Hold the key with @ in its corner until it turns into @.") { event ->
+        stages = listOf(GuideStage("Hold the @ key until it turns into @.") { event ->
             when {
                 event is HeldSymbol && event.symbol == "@" -> GuideVerdict.Done
-                event is HeldSymbol -> roast("Not @. Close. Not really.", "Hold the key with @ in its corner.")
-                event is ModifierState && event.alt != Level.Off -> {
-                    armed = true
-                    GuideVerdict.Wait
-                }
+                event is HeldSymbol -> chip("Not @. Close. Not really.")
                 // A letter let go before it turned into its symbol.
                 event is Pushed && isLetter(event.code) -> {
                     mark = event.code
                     GuideVerdict.Wait
                 }
-                event is Released && event.code == mark && !armed -> {
+                event is Released && event.code == mark -> {
                     mark = -1
-                    roast("Too quick. Hold it like a grudge.", "Hold the key with @ in its corner a bit longer.")
+                    chip("Too quick. Hold it like a grudge.")
                 }
-                typedSymbol(event, "@") && armed -> counts("Old habits.", "It counts. Next time, just hold the key.")
                 typedSymbol(event, "@") -> GuideVerdict.Done
                 else -> GuideVerdict.Wait
             }
         }),
-        done = "Look at you, holding things together.",
+        // v3.1's "Look at you, holding things together." is a little long for one line.
+        done = "Look at you, holding it together.",
         praise = "Any letter, held, types its corner symbol.",
         text = SYMBOLS_TEXT,
         symbol = "@",
         needs = GuideNeed.HoldSymbols,
         usesPanel = true,
         setup = Panel.Closed,
+        lessons = setOf(GuideLesson.HoldSymbol),
         demo = GuideDemo.HoldLetter("@"),
     ),
     GuideStep(
         id = "symmain", chapter = GuideChapter.Symbols,
-        title = "The key you thought was decoration.",
+        // v3.1's "The key you thought was decoration." is a little long for one line.
+        title = "The key you thought was decor.",
         stages = listOf(
             GuideStage("Press Sym.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
                 when {
                     panel(event, Panel.Symbols) -> GuideVerdict.Done
-                    panel(event, Panel.Emoji) -> roast("Emoji already? Patience.", "Press Sym to close them, then press it once.")
+                    panel(event, Panel.Emoji) -> chip("Emoji already? Patience. Sym again closes them.")
                     else -> GuideVerdict.Wait
                 }
             },
             GuideStage("Find & and press its key.", GuideCue.Free) { event ->
                 when {
                     typedSymbol(event, "&") -> GuideVerdict.Done
-                    otherSymbol(event, "&") -> roast("Not &. Read, then type.", "Press Sym and find &.", stage = 0)
-                    event is EmptyKey -> roast("That one's empty. Like this joke.", "Pick a key that shows a symbol.")
-                    panel(event, Panel.Emoji) -> roast("Emoji already? Patience.", "Press Sym to close them, then press it once.")
-                    panel(event, Panel.Closed) -> roast("Just looking? Window shopper.", "Press Sym again and find &.", stage = 0)
+                    otherSymbol(event, "&") -> GuideVerdict.Hint("Not &. Read, then type.", stage = 0)
+                    event is EmptyKey -> chip("That one's empty. Like this joke.")
+                    panel(event, Panel.Emoji) -> GuideVerdict.Hint("Emoji already? Patience. Sym again closes them.", stage = 0)
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Just looking? Window shopper.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
         done = "& that's how it's done.",
-        praise = "Sym opens every symbol. Press one and the panel closes by itself.",
+        // v3.1's "Sym opens every symbol. Press one and the panel closes by itself." is two lines.
+        praise = "Sym opens every symbol. One press, and it closes.",
         text = SYMBOLS_TEXT,
         symbol = "&",
         usesPanel = true,
         setup = Panel.Closed,
+        lessons = setOf(GuideLesson.Sym),
         demo = GuideDemo.Insert(listOf(Layout.SYM), ""),
     ),
     GuideStep(
@@ -1140,7 +1144,7 @@ internal val GUIDE_STEPS = listOf(
         // used holds what was used: 1 a page by swiping, 2 a page by Backspace or Enter, 4 a group by the bottom row, 8 a group
         // by swiping on the keys.
         stages = listOf(
-            GuideStage("Press Sym, then swipe up or down on the keys to turn the page.") { event ->
+            GuideStage("Press Sym, then swipe up or down to turn the page.") { event ->
                 when {
                     event is PanelSwiped && event.moved && abs(event.down) >= abs(event.across) -> {
                         used = used or 1
@@ -1154,11 +1158,11 @@ internal val GUIDE_STEPS = listOf(
                         used = used or if (event is GroupPicked) 4 else 8
                         GuideVerdict.Wait
                     }
-                    typedSymbol(event, ANY_SYMBOL) -> roast("That's the boring page. The weird ones are hiding.", "Turn a page and change group first.")
+                    typedSymbol(event, ANY_SYMBOL) -> chip("That's the boring page. The weird ones are hiding.")
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Now slide along the bottom row of keys to another group.") { event ->
+            GuideStage("Slide along the bottom row to another group.") { event ->
                 when {
                     event is GroupPicked -> {
                         used = used or 4
@@ -1166,23 +1170,25 @@ internal val GUIDE_STEPS = listOf(
                     }
                     otherGroup(event) -> {
                         used = used or 8
-                        roast("That works too. Show-off.", "It counts. Now pick a symbol.", stage = 2)
+                        GuideVerdict.Hint("That works too. Show-off.", stage = 2)
                     }
-                    panel(event, Panel.Closed) -> roast("Closed it. Bold.", "Press Sym, then swipe up or down.", stage = 0)
-                    typedSymbol(event, ANY_SYMBOL) -> roast("That's the boring page. The weird ones are hiding.", "Turn a page and change group first.")
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. Bold.", stage = 0)
+                    typedSymbol(event, ANY_SYMBOL) -> chip("That's the boring page. The weird ones are hiding.")
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Pick the weirdest symbol you can find and press its key.", GuideCue.Free) { event ->
+            GuideStage("Press the weirdest symbol you can find.", GuideCue.Free) { event ->
                 if (typedSymbol(event, ANY_SYMBOL)) GuideVerdict.Done else GuideVerdict.Wait
             },
         ),
-        done = "We saw that. We're only a little bit judging.",
+        // v3.1's "We saw that. We're only a little bit judging." is two lines.
+        done = "We saw that. Only judging a bit.",
         praise = "Backspace and Enter turn pages too.",
         text = SYMBOLS_TEXT,
         symbol = ANY_SYMBOL,
         usesPanel = true,
         setup = Panel.Closed,
+        lessons = setOf(GuideLesson.Sym),
         demo = GuideDemo.Insert(listOf("A", "S", "D", "F", "G", "H"), ""),
     ),
     GuideStep(
@@ -1192,29 +1198,29 @@ internal val GUIDE_STEPS = listOf(
             GuideStage("Press Sym twice for the emoji.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
                 when {
                     panel(event, Panel.Emoji) -> GuideVerdict.Done
-                    panel(event, Panel.Settings) -> roast("That's Alt. Wrong key, and the clown isn't in there.", "Press Sym to close it, then Sym twice.")
-                    otherSymbol(event, CLOWN) -> roast("That's a symbol, not a clown.", "Press Sym twice for the emoji.")
+                    otherSymbol(event, CLOWN) -> chip("That's a symbol, not a clown.")
                     else -> GuideVerdict.Wait
                 }
             },
             GuideStage("Find 🤡 and type it.", GuideCue.Free) { event ->
                 when {
                     event is FieldChanged && event.text.trimEnd().endsWith(CLOWN) -> GuideVerdict.Done
-                    otherSymbol(event, CLOWN) -> roast("That's not what we asked for. Reading is optional for you, huh.", "Find 🤡 and type it.")
-                    panel(event, Panel.Settings) -> roast("That's Alt. Wrong key, and the clown isn't in there.", "Press Sym to close it, then Sym twice.", stage = 0)
-                    panel(event, Panel.Closed) -> roast("Closed it? The clown's still in there. Waiting. Like a mirror.", "Press Sym twice and find 🤡.", stage = 0)
+                    otherSymbol(event, CLOWN) -> chip("Not what we asked for. Reading's optional, huh.")
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed? The clown's still in there. Like a mirror.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
         done = "Hey, that's you.",
-        praise = "Sym once is symbols, twice is emoji, three times closes.",
-        helpTitle = "It shouldn't be that hard. Unless you're a slow learner.",
+        // v3.1's "Sym once is symbols, twice is emoji, three times closes." is two lines.
+        praise = "Sym once: symbols. Twice: emoji. Three: closes.",
+        helpTitle = "Shouldn't be that hard. Unless you're slow.",
         help = "Find 🤡 in the emoji and type it.",
         text = SYMBOLS_TEXT,
         symbol = CLOWN,
         usesPanel = true,
         setup = Panel.Closed,
+        lessons = setOf(GuideLesson.Sym),
         rain = CLOWN,
         demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.SYM), ""),
     ),
@@ -1298,7 +1304,7 @@ internal val GUIDE_STEPS = listOf(
 /** What the symbols groups slide says once done: the way to turn pages or change group that wasn't used. See its [GuideMemory.count]. */
 internal fun groupsPraise(used: Int) = when {
     used and 2 == 0 -> "Backspace and Enter turn pages too."
-    used and 8 == 0 -> "Swiping left or right on the keys changes group too."
+    used and 8 == 0 -> "Swiping sideways on the keys changes group too."
     else -> "The bottom row works both ways."
 }
 

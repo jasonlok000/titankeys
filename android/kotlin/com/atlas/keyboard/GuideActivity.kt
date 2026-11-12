@@ -1381,7 +1381,7 @@ class GuideActivity : Activity() {
         // The chapter's text box shows on the slides that have one, and stays as it is from slide to slide.
         val typing = step.text.isNotEmpty()
         // The Typing chapter has no box: its text is the grey ghost in the field. The other chapters keep their box for now.
-        script.visibility = if (typing && step.chapter != GuideChapter.Typing) View.VISIBLE else View.GONE
+        script.visibility = if (typing && step.chapter != GuideChapter.Typing && step.chapter != GuideChapter.Symbols) View.VISIBLE else View.GONE
         if (typing && (!carry || passageSource != step.text)) startPassage(step.text)
         // A setting that the slide needs is off: the slide says so, over its own words.
         val missing = flow.missing
@@ -1465,7 +1465,12 @@ class GuideActivity : Activity() {
     private fun showGhost() {
         if (!::field.isInitialized) return
         // The field draws it itself, from the slide's first frame, demo or not. See [GuideField.ghost].
-        field.ghost = if (!playground && started && !settingUp && guideLooks == true && flow.step.chapter == GuideChapter.Typing) ghostText() else ""
+        field.ghost = when {
+            playground || !started || settingUp || guideLooks != true -> ""
+            flow.step.chapter == GuideChapter.Typing -> ghostText()
+            flow.step.chapter == GuideChapter.Symbols -> symbolGhost()
+            else -> ""
+        }
     }
 
     /** What the ghost says after the field's text: see [showGhost]. A slide with a [GuideStep.ghost] shows its words instead. */
@@ -1483,6 +1488,21 @@ class GuideActivity : Activity() {
         }
         for (more in 1..GHOST_WORDS) out.append(' ').append(shown(track.next + more))
         return out.toString()
+    }
+
+    /**
+     * The symbols chapter's ghost: the rest of its text after what the field has, with the symbol it waits for first. The field is
+     * only ever what the guide typed after each right symbol, so it's the start of the text; anything else typed, the ghost starts
+     * again from the slide's own symbol.
+     */
+    private fun symbolGhost(): String {
+        val text = field.text.toString()
+        val all = passage.text
+        if (all.startsWith(text)) return all.substring(text.length)
+        val part = SYMBOL_PARTS.firstOrNull { it.first == flow.step.symbol } ?: return ""
+        val from = all.indexOf(part.first + part.second.trimEnd())
+        if (from < 0) return ""
+        return (if (text.isEmpty() || text.endsWith(' ')) "" else " ") + all.substring(from)
     }
 
     /** What's left of [word] after the letters [typed], or null if they aren't its start. */

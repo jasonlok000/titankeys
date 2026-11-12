@@ -36,9 +36,9 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "swipe" to listOf(Recognised(listOf("this")), Recognised(listOf("keyboard")), Recognised(listOf("fixes"))),
     "strip" to listOf(Recognised(listOf("tp", "to")), Chosen("to")),
     "menu" to listOf(WordMenu("to"), MenuPicked("Close")),
-    "backspace" to listOf(Pushed(KEY_DEL)),
+    "backspace" to listOf(Pushed(KEY_DEL), FieldChanged(DELETE_TEXT + " ", 0, 0)),
     "flick" to listOf(DeletedWord(held = false)),
-    "hold" to listOf(DeleteHoldStarted, DeletedWord(held = true)),
+    "hold" to listOf(DeleteHoldStarted) + List(REGRETS_TO_PASS) { DeletedWord(held = true) },
     "steer" to listOf(CursorStarted(false), FieldChanged("on and on ", 9, 9), FieldChanged("on and on ", 4, 4)),
     "selectmore" to listOf(CursorStarted(true), FieldChanged("on and on ", 0, 9)),
     "alt" to listOf(altOn, FieldChanged(ALT_SYMBOL, 1, 1)),
@@ -47,7 +47,7 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "symgroups" to listOf(PanelSwiped(0f, .4f, true), GroupPicked(2), FieldChanged("x. §", 4, 4)),
     "clown" to listOf(keys(Panel.Emoji), FieldChanged("x. $CLOWN", 5, 5)),
     "paste" to listOf(FieldChanged("Paste over $PASTE_TEXT", 24, 24)),
-    "clipboard" to listOf(keys(Panel.Symbols), keys(Panel.Clipboard), FieldChanged("Paste. ${GUIDE_CLIPS.first()}", 40, 40)),
+    "clipboard" to listOf(keys(Panel.Symbols), keys(Panel.Clipboard), FieldChanged("Paste. $PRANK_PASTE", 26, 26)),
 )
 
 /** Slides that the guide no longer has: the boring guide explains them, or a new slide took over. */
@@ -158,6 +158,8 @@ fun main() {
     chapterOne()
     scenarios()
     theCursorHasToMove()
+    steeringToAWord()
+    grabbingABunch()
     settingsThatStepsNeed()
     goingBack()
     resuming()
@@ -260,12 +262,14 @@ private fun oneInstructionAtATime() {
     groups.start("symgroups")
     same(groups.step.setup, Panel.Closed, "The groups slide opens closed, and starts with Sym")
     same(groups.event(PanelSwiped(0f, .4f, true)), GuideVerdict.Stage(1), "A page turned, so a group is next")
-    same(groups.event(PanelSwiped(.4f, 0f, true)).let { it is GuideVerdict.Hint && it.stage == 2 }, true,
-        "A swipe sideways changes group too, and counts")
-    same(groups.stage, 2, "and a symbol is next")
+    same(groups.step.stages.size, 2, "Two steps: move on, then pick")
     same(groups.event(FieldChanged("x. ¤", 4, 4)), GuideVerdict.Done, "Any symbol finishes it")
-    same(groupsPraise(groups.counted), "Backspace and Enter turn pages too.", "It teaches the way that wasn't used")
-    same(groupsPraise(2 or 4), "Swiping sideways on the keys changes group too.", "or the other one")
+    same(groupsPraise(groups.counted), "Slide along the bottom row to change group.", "It teaches the way that wasn't used")
+    same(groupsPraise(4), "Backspace and Enter turn pages too.", "or the next one")
+    same(groupsPraise(2 or 4), "Swiping sideways on the keys changes group too.", "or the last one")
+    val sideways = GuideFlow({ GuideSettings() })
+    sideways.start("symgroups")
+    same(sideways.event(GroupPicked(2)), GuideVerdict.Stage(1), "A new group moves on too")
 
     val clown = GuideFlow({ GuideSettings() })
     clown.start("clown")
@@ -294,8 +298,10 @@ private fun oneInstructionAtATime() {
     same(clips.event(keys(Panel.Emoji)).let { it is GuideVerdict.Hint && it.stage == 1 }, true, "The emoji are fine: A works there too")
     same(clips.event(keys(Panel.Closed)), GuideVerdict.Stage(0), "Closed again, so Sym again")
     same(clips.event(keys(Panel.Clipboard)), GuideVerdict.Stage(2), "The clipboard, straight away, is fine too")
-    same(clips.event(FieldChanged("Paste. $PRANK_PASTE", 26, 26)).let { it is GuideVerdict.Hint && it.passes && it.title!!.startsWith("Gotcha") },
-        true, "The nice clip is a prank, and the slide owns up")
+    same((clips.event(FieldChanged("Paste. ${GUIDE_CLIPS.first()}", 40, 40)) as GuideVerdict.Hint).text, "That's not nice. Keep looking.",
+        "Any other clip isn't the nice one")
+    same(clips.event(FieldChanged("Paste. ${GUIDE_CLIPS.first()} $PRANK_PASTE", 60, 60)), GuideVerdict.Done, "The nice clip passes")
+    same(clips.step.done, "Gotcha. Swapped it on purpose.", "and the slide owns up to the prank")
 
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
@@ -328,7 +334,8 @@ private fun slideTexts() {
     same(texts(GuideChapter.Symbols), listOf(SYMBOLS_TEXT), "The symbols chapter has one text box")
     same(TYPING_TEXT.first().isUpperCase(), true, "The first text box starts with a capital")
     same(TYPING_TEXT.any { it.isDigit() }, false, "The typing text is easy to type")
-    for (step in GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }) same(step.seed, DELETE_TEXT, "${step.id} starts with the delete text")
+    for (step in GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete })
+        same(step.seed, if (step.id == "backspace") DELETE_STRAY_TEXT else DELETE_TEXT, "${step.id} starts with the delete text")
     for (step in GUIDE_STEPS.filter { it.chapter == GuideChapter.Clipboard }) same(step.seed, CLIP_TEXT, "${step.id} starts with its text")
     for (text in listOf(DELETE_TEXT, CLIP_TEXT, STEER_TEXT) + DELETE_RESETS.map { it.second } + STEER_RESET.second)
         same(text.endsWith("."), true, "\"${text.takeLast(20)}\" ends with a full stop")
@@ -468,6 +475,14 @@ private fun chapterOne() {
     same(GUIDE_STEPS.filter { it.chapter !in NEW_LAYOUT }.all { it.lessons == null }, true,
         "The chapters not in the new layout yet lock nothing")
     same(typing.map { it.sides }, listOf(false, true, true, true), "Only the first slide shows just the bar's middle word")
+    val stray = GuideFlow({ GuideSettings() })
+    stray.start("backspace")
+    val strayText = DELETE_STRAY_TEXT + " "
+    same(strayText.substring(strayCursor(strayText) - 4, strayCursor(strayText) + 1), "didd.", "The cursor starts right after the stray d")
+    same(strayTarget(strayText), (strayCursor(strayText) - 1)..(strayCursor(strayText) - 1), "and the orange mark is the d before it")
+    same(stray.event(FieldChanged(DELETE_TEXT + " ", 0, 0)), GuideVerdict.Done, "Taking out the stray d passes")
+    same(GUIDE_STEPS.first { it.id == "menu" }.stages[1].labels, mapOf("I" to "Save", "O" to "Forget", "P" to "Back"),
+        "The word menu's keys say their buttons on the drawing")
     val typos = TYPING_TYPOS.split(' ')
     val words = TYPING_TEXT.split(' ').take(typos.size)
     same(typos.size, 14, "The first sentence, word for word")
@@ -541,6 +556,7 @@ private fun scenarios() {
     flick.advance()
     same(flick.step.id, "steer", "and the hold slide is passed over")
     same(flick.back() && flick.step.id == "flick", true, "Back goes past it too")
+    same(lastWordTarget("It knows what you did. ", 23), 18..21, "The flick slide marks the last word, its full stop too")
     same(blockedChip(flick.step, GuideLesson.Backspace.name), "That's the last slide's trick. Flick it.", "Backspace on the flick slide")
     same(blockedChip(GUIDE_STEPS.first { it.id == "steer" }, GuideLesson.Typing.name), "Typing's done. Keep up.", "Letters on Steering")
     same(blockedChip(GUIDE_STEPS.first { it.id == "alt" }, GuideLesson.Typing.name), "Hold Alt while you press it.", "A plain letter on Alt's slide")
@@ -551,6 +567,25 @@ private fun scenarios() {
     val hold = GuideFlow({ GuideSettings() })
     hold.start("hold")
     same(title(hold.event(DeletedWord(held = false))).startsWith("That was one word"), true, "A flick that lifts")
+    val regret = GuideFlow({ GuideSettings() })
+    regret.start("hold")
+    same(regret.liveLine(), null, "Mass deletion shows its instruction until a word goes")
+    regret.event(DeleteHoldStarted)
+    regret.event(DeletedWord(held = false))
+    same(regret.liveLine(), "Regrets deleted: 1", "then the count")
+    same(title(regret.event(Moved(40f, lifted = true))).startsWith("Therapy's not over"), true, "A hold let go too soon")
+    regret.event(DeleteHoldStarted)
+    repeat(REGRETS_TO_PASS - 2) { same(regret.event(DeletedWord(held = true)), GuideVerdict.Wait, "Under eight, it waits") }
+    same(regret.event(DeletedWord(held = true)), GuideVerdict.Done, "The eighth word passes")
+    same(regretsFinal(12).length <= LINE_MOST, true, "The frozen count is one line")
+    val swipes = GuideFlow({ GuideSettings() })
+    swipes.start("swipe")
+    same(swipes.liveLine(), null, "The swipe slide shows its instruction until a swipe")
+    swipes.event(Recognised(listOf("this")))
+    same(swipes.liveLine(), "Slide over the next grey word. 2 to go.", "then counts down")
+    same(GUIDE_STEPS.first { it.id == "alt" }.stages[1].cue, GuideCue.Spot(listOf("A")), "Alt's slide lights A, where * is")
+    for (line in listOf(huntLine(999), huntPraise(999), HUNT_SLOW, HUNT_HINT)) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
+    same(HUNT_DRAIN_SECONDS < HUNT_HINT_SECONDS, true, "The slow chip comes as the bar runs out, and the hint after it")
 
     val steer = GuideFlow({ GuideSettings() })
     steer.start("steer")
@@ -619,6 +654,52 @@ private fun theCursorHasToMove() {
     far.event(CursorStarted(false))
     far.event(FieldChanged("on and on", 9, 9))
     same(far.event(FieldChanged("on and on", 2, 2)), GuideVerdict.Done, "A real steer finishes it as it goes")
+}
+
+private fun steeringToAWord() {
+    fun title(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.let { it.title ?: it.text }.orEmpty()
+    // A line of words, one character wide each, so a character's place is its index.
+    val text = "aa bb cc dd eee fff ggg hhh iii. jjj"
+    val word = steerTarget(text, 0 until text.length, 0f) { it.toFloat() }
+    same(word?.let { text.substring(it.first, it.last + 1) }, "eee", "Three words or more from the cursor's column, three letters or more")
+    same(steerTarget(text, 0 until text.length, 33f) { it.toFloat() }?.let { text.substring(it.first, it.last + 1) }, "ggg",
+        "counted either way from the column")
+    same(steerTarget("ab. cd ef gh iii.", 0 until 17, 0f) { it.toFloat() }, 13..15, "only its letters, not the full stop")
+
+    val steer = GuideFlow({ GuideSettings() })
+    steer.start("steer")
+    steer.seed("x".repeat(60), 10)
+    steer.aim(30..33)
+    steer.event(CursorStarted(false))
+    same(steer.instruction, "Slide the cursor into the orange word.", "With a word marked, the slide asks for it")
+    steer.event(FieldChanged("x".repeat(60), 20, 20))
+    same(title(steer.event(Moved(20f, lifted = true))).startsWith("Not there yet"), true, "Short of the word")
+    steer.event(CursorStarted(false))
+    steer.event(FieldChanged("x".repeat(60), 40, 40))
+    same(title(steer.event(Moved(20f, lifted = true))).startsWith("Past it"), true, "Past the word")
+    steer.event(CursorStarted(false))
+    steer.event(FieldChanged("x".repeat(60), 32, 32))
+    same(steer.event(Moved(20f, lifted = true)), GuideVerdict.Done, "In the word as the finger lifts passes")
+}
+
+private fun grabbingABunch() {
+    val text = "x " + GRAB_PHRASE + " and more words here"
+    val aim = grabTarget(text, 0)!!
+    same(text.substring(aim.first, aim.last + 1), GRAB_PHRASE, "The words to grab")
+    same(grabbed(text, aim, aim.first, aim.first + 5), GRAB_SHORT, "One word is short")
+    same(grabbed(text, aim, aim.first, aim.last + 1), GRAB_ALL, "All of them")
+    same(grabbed(text, aim, aim.first, aim.last + 10), GRAB_ALL, "and two more is still fine")
+    same(grabbed(text, aim, 0, text.length), GRAB_GREEDY, "but many more is greedy")
+    val grab = GuideFlow({ GuideSettings() })
+    grab.start("selectmore")
+    grab.aim(aim)
+    grab.event(CursorStarted(true))
+    grab.event(FieldChanged(text, aim.first, aim.first + 5))
+    same((grab.event(Moved(10f, lifted = true)) as GuideVerdict.Hint).text.startsWith("So close"), true, "Let go short")
+    grab.event(CursorStarted(true))
+    same((grab.event(FieldChanged(text, 0, text.length)) as GuideVerdict.Hint).text.startsWith("Too greedy"), true, "Greedy, as it grows")
+    grab.event(FieldChanged(text, aim.first, aim.last + 1))
+    same(grab.event(Moved(10f, lifted = true)), GuideVerdict.Done, "All of them as the finger lifts")
 }
 
 private fun settingsThatStepsNeed() {

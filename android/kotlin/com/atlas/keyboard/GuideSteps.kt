@@ -492,6 +492,10 @@ internal class GuideMemory {
     var panelOpen = false
     /** What the slide has seen used, across its stages, such as the ways the groups slide turned pages. */
     var used = 0
+    /** The text in the field that the slide marks in orange as the thing to aim at, if any. The screen sets it. */
+    var target: IntRange? = null
+    /** Where the cursor was before this event, or -1 until it is known. */
+    var cursor = -1
 
     /** The field's text is longer than when this stage began: something was typed or pasted. */
     fun grew(event: KeyboardEvent) = event is FieldChanged && stageLength >= 0 && event.text.length > stageLength
@@ -501,14 +505,23 @@ internal class GuideMemory {
  * One instruction of a slide. A slide teaches one thing at a time: it shows only the instruction that is needed now, and moves on,
  * or back, as the keyboard changes. [cue] replaces the slide's own ghost while this instruction shows.
  */
-internal class GuideStage(val text: String, val cue: GuideCue? = null, val check: GuideMemory.(KeyboardEvent) -> GuideVerdict)
+internal class GuideStage(
+    val text: String,
+    val cue: GuideCue? = null,
+    /** What the drawing of the keys shows on some keys while this instruction shows, in place of their letters; the rest dim. */
+    val labels: Map<String, String>? = null,
+    val check: GuideMemory.(KeyboardEvent) -> GuideVerdict,
+)
 
 /** The check of a slide made of [stages]: each stage's check runs while it shows, and Done moves to the next stage. */
 private fun staged(stages: List<GuideStage>): GuideMemory.(KeyboardEvent) -> GuideVerdict = check@{ event ->
     if (stages.isEmpty()) return@check GuideVerdict.Wait
     if (event is ModifierState) panelOpen = event.panel != Panel.Closed
     val verdict = stages[stage.coerceIn(0, stages.lastIndex)].check(this, event)
-    if (event is FieldChanged) length = event.text.length
+    if (event is FieldChanged) {
+        length = event.text.length
+        cursor = event.start
+    }
     fun move(to: Int): GuideVerdict {
         stage = to
         stageLength = length
@@ -596,6 +609,10 @@ internal class GuideStep(
      * the slide is done. [ANY_SYMBOL] takes any.
      */
     val symbol: String? = null,
+    /** Where the cursor starts in the field that the slide seeds, from its text, or null for the end. */
+    val cursorAt: ((String) -> Int)? = null,
+    /** A line that shows in place of the instruction while the slide is tried, when it says something, such as a count. */
+    val live: (GuideMemory.() -> String?)? = null,
     /** What the field's grey ghost shows ahead of the cursor in place of [text], word for word, such as a typo in every word. */
     val ghost: String = "",
     /** What this slide unlocks on the keyboard, in the guide's field only, besides letters, Backspace and Space. Null locks nothing. */
@@ -621,6 +638,8 @@ private const val KEY_ENTER = 66
 private val ALT_KEYS = setOf(57, 58)
 /** A steer that moves the cursor this far is no nudge. */
 private const val CURSOR_TRAVEL = 3
+/** The word menu's buttons, on the keys that pick them, as the drawing of the keys shows them while the menu is open. */
+internal val MENU_LABELS = mapOf("I" to "Save", "O" to "Forget", "P" to "Back")
 /** I, O, P, K and L: the keys that pick the word menu's buttons. */
 private val MENU_KEYS = setOf(37, 43, 44, 39, 40)
 /** Swiped words that pass the swipe slide. */
@@ -663,6 +682,110 @@ internal const val DELETE_TEXT = "Delete these words, because you clearly regret
     "autocorrects you never checked, the reply-all you sent to the whole office, and that message you typed at two in the " +
     "morning. Start with the last letter, then whole words, then everything you've ever typed. This sentence especially. It " +
     "knows what you did."
+/** The Backspace slide's word with its stray letter, and as it should be. The cursor sits right after the stray d. */
+internal const val STRAY = "didd."
+internal const val STRAY_FIXED = "did."
+internal val DELETE_STRAY_TEXT = DELETE_TEXT.substringBeforeLast(STRAY_FIXED) + STRAY + DELETE_TEXT.substringAfterLast(STRAY_FIXED)
+
+/** Where the cursor starts on the Backspace slide: right after the stray d, so one Backspace takes it. */
+internal fun strayCursor(text: String) = text.lastIndexOf(STRAY).let { if (it < 0) text.length else it + STRAY.length - 1 }
+
+/** The last word before [cursor], marks and all: the regret that the flick slide marks in orange to go. */
+internal fun lastWordTarget(text: String, cursor: Int): IntRange? {
+    val before = text.substring(0, cursor.coerceIn(0, text.length)).trimEnd()
+    if (before.isEmpty()) return null
+    return (before.lastIndexOf(' ') + 1) until before.length
+}
+
+/** Words that the mass deletion slide wants gone before it passes. */
+internal const val REGRETS_TO_PASS = 8
+
+/** The mass deletion slide's count, as it goes. */
+internal fun regretsLine(count: Int) = "Regrets deleted: $count"
+
+/** The count once the finger lifts after the slide passed: frozen on its last number, with the slide's praise. */
+internal fun regretsFinal(count: Int) = "$count regrets gone. " + GUIDE_STEPS.first { it.id == "hold" }.praise
+
+/** The steer slide's target is at least this many words from the cursor's column. */
+internal const val STEER_TARGET_WORDS = 3
+
+/**
+ * The steer slide's target: a word of three letters or more on the visible line that doesn't hold the cursor, [other], at least
+ * [STEER_TARGET_WORDS] words from the word in the cursor's column, the nearest such. [x] says where a character of [text] starts on
+ * its line, and [cursorX] where the cursor is. Only the word's letters are marked, not its marks.
+ */
+internal fun steerTarget(text: String, other: IntRange, cursorX: Float, x: (Int) -> Float): IntRange? {
+    val words = Regex("\\S+").findAll(text).map { it.range }.filter { it.first in other }.toList()
+    if (words.isEmpty()) return null
+    val column = words.indexOfLast { x(it.first) <= cursorX }.coerceAtLeast(0)
+    val letters = words.mapIndexedNotNull { index, word ->
+        val first = (word.first..word.last).firstOrNull { text[it].isLetter() } ?: return@mapIndexedNotNull null
+        val last = (word.first..word.last).last { text[it].isLetter() }
+        (index to (first..last)).takeIf { abs(index - column) >= STEER_TARGET_WORDS && last - first + 1 >= 3 }
+    }
+    return letters.minByOrNull { abs(it.first - column) }?.second
+}
+
+/** The steer slide, with a word marked: the cursor has to land in it, and the slide passes as the finger lifts there. */
+private fun GuideMemory.steerToward(aim: IntRange, event: KeyboardEvent): GuideVerdict = when {
+    // Where the cursor was as the slide began, to tell short of the word from past it.
+    event is FieldChanged -> {
+        if (mark < 0) mark = if (cursor >= 0) cursor else event.start
+        GuideVerdict.Wait
+    }
+    event is Moved && event.lifted -> when {
+        mark < 0 -> GuideVerdict.Hint("Held it, then chickened out. Hold, then slide.", stage = 0)
+        cursor in aim.first..aim.last + 1 -> GuideVerdict.Done
+        if (mark <= aim.first) cursor > aim.last + 1 else cursor < aim.first ->
+            GuideVerdict.Hint("Past it. Slide back a little.", stage = 0)
+        else -> GuideVerdict.Hint("Not there yet. Keep going.", stage = 0)
+    }
+    else -> GuideVerdict.Wait
+}
+
+/** The words that the Grab a bunch slide marks in orange to select. */
+internal const val GRAB_PHRASE = "every word you skipped"
+/** Words past the marked ones that a selection may take and still count. */
+internal const val GRAB_EXTRA = 2
+internal const val GRAB_SHORT = 0
+internal const val GRAB_ALL = 1
+internal const val GRAB_GREEDY = 2
+
+/** Where the Grab a bunch slide's words are in [text]: the copy from [from] on, or the last one before it. */
+internal fun grabTarget(text: String, from: Int): IntRange? {
+    val at = text.indexOf(GRAB_PHRASE, from).takeIf { it >= 0 } ?: text.lastIndexOf(GRAB_PHRASE, from).takeIf { it >= 0 } ?: return null
+    return at until at + GRAB_PHRASE.length
+}
+
+/** How a selection from [start] to [end] does on the marked words [aim]: short of them, all of them, or far too many. */
+internal fun grabbed(text: String, aim: IntRange, start: Int, end: Int): Int {
+    if (start > aim.first || end < aim.last + 1) return GRAB_SHORT
+    fun words(from: Int, to: Int) = if (to <= from) 0 else Regex("[A-Za-z']+").findAll(text.substring(from, to)).count()
+    return if (words(start, aim.first) + words(aim.last + 1, end) > GRAB_EXTRA) GRAB_GREEDY else GRAB_ALL
+}
+
+/** The clown hunt's instruction, its bar's time, and when its chip and its hint show, in seconds. */
+internal const val HUNT_LINE = "Find 🤡 and type it."
+internal const val HUNT_DRAIN_SECONDS = 20
+internal const val HUNT_HINT_SECONDS = 30
+internal const val HUNT_SLOW = "Shouldn't be that hard. Unless you're slow."
+internal const val HUNT_HINT = "Still looking? Smileys, right after 💩."
+
+/** The clown hunt's instruction once its bar has drained: the time, counting up. */
+internal fun huntLine(seconds: Int) = "$HUNT_LINE $seconds s"
+
+/** The clown slide's praise, with the time it took. */
+internal fun huntPraise(seconds: Int) = "Found in $seconds s. Sym three times closes."
+
+/** The swipe slide's instruction after a swipe: the same words, and how many are left. */
+internal fun swipesLeft(left: Int) = "Slide over the next grey word. $left to go."
+
+/** The key that types [ALT_SYMBOL] with Alt on the Titan 2 Elite: * is in A's corner. */
+internal const val ALT_SYMBOL_KEY = "A"
+
+/** The stray d, in orange, while it's there. */
+internal fun strayTarget(text: String) = text.lastIndexOf(STRAY).takeIf { it >= 0 }?.let { (it + STRAY.length - 2)..(it + STRAY.length - 2) }
+
 internal val DELETE_RESETS = listOf(
     "Deleted it all? Your regrets stay." to
         "Wow, you deleted everything. Here's more to regret. Try deleting just a little this time.",
@@ -818,6 +941,8 @@ internal val GUIDE_STEPS = listOf(
         }),
         done = "One swipe, one word. Look at you.",
         praise = "Swipe the next one, or press Next.",
+        // After the first swipe, the instruction counts down the swipes left (design v4).
+        live = { if (count in 1 until SWIPES_TO_PASS) swipesLeft(SWIPES_TO_PASS - count) else null },
         text = TYPING_TEXT,
         cue = GuideCue.NextWord,
         needs = GuideNeed.SwipeTyping,
@@ -868,7 +993,8 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Rest on I, O or P, then press it.") { event ->
+            // The keys that pick the menu's buttons say so on the drawing, so nobody has to remember which is which.
+            GuideStage("Pick one. Its key is lit below.", GuideCue.Spot(MENU_LABELS.keys.toList()), MENU_LABELS) { event ->
                 when {
                     // Save and Forget do nothing in the guide, and it says so. Any pick passes.
                     event is MenuPicked && (event.action == "Save" || event.action == "Forget") ->
@@ -891,13 +1017,15 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "backspace", chapter = GuideChapter.Delete,
         title = "The old way. Humour us.",
+        // The text ends with one stray letter, in orange, right before the cursor: Backspace has a job (design v4).
         stages = listOf(GuideStage("Press Backspace.", GuideCue.Spot(listOf(Layout.BACKSPACE))) { event ->
-            if (event is Pushed && event.code == KEY_DEL) GuideVerdict.Done else GuideVerdict.Wait
+            if (event is FieldChanged && STRAY !in event.text && STRAY_FIXED in event.text) GuideVerdict.Done else GuideVerdict.Wait
         }),
         done = "One letter. Thrilling.",
         // v3.1's "That's how everyone deletes. Next, a whole word at once." is two lines.
         praise = "That's how everyone deletes. Next, whole words.",
-        seed = DELETE_TEXT,
+        seed = DELETE_STRAY_TEXT,
+        cursorAt = ::strayCursor,
         lessons = setOf(GuideLesson.Backspace),
         demo = GuideDemo.DeleteLast,
     ),
@@ -905,6 +1033,7 @@ internal val GUIDE_STEPS = listOf(
         id = "flick", chapter = GuideChapter.Delete,
         // v3.1's "Delete a whole word. Your regrets are bigger than a letter." is two lines.
         title = "Your regrets come in whole words.",
+        // The last word is marked in orange: the regret to go (design v4).
         stages = listOf(GuideStage("Flick left from Backspace, and lift at once.") { event ->
             when {
                 // A hold is the next slide's lesson: it's done, so that slide is passed over, and this one still wants its flick.
@@ -932,20 +1061,33 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "hold", chapter = GuideChapter.Delete,
         title = "Mass deletion. Very therapeutic.",
+        // A count of regrets deleted takes the instruction's place from the first word, and the slide passes at eight (design v4).
         stages = listOf(GuideStage("Flick left from Backspace, then hold it down.") { event ->
             when {
                 event is DeleteHoldStarted -> {
                     mark = 1
                     GuideVerdict.Wait
                 }
-                event is DeletedWord && event.held -> GuideVerdict.Done
-                event is DeletedWord && mark == 1 -> GuideVerdict.Wait
-                event is DeletedWord -> chip("That was one word. Hold it down.")
+                event is DeletedWord -> {
+                    count++
+                    when {
+                        count >= REGRETS_TO_PASS -> GuideVerdict.Done
+                        mark != 1 -> chip("That was one word. Hold it down.")
+                        else -> GuideVerdict.Wait
+                    }
+                }
+                // A hold let go too soon.
+                event is Moved && event.lifted && mark == 1 && count in 1 until REGRETS_TO_PASS -> {
+                    mark = -1
+                    chip("Therapy's not over. Hold longer.")
+                }
                 else -> GuideVerdict.Wait
             }
         }),
         done = "Watch your regrets go.",
+        // After the count: see [regretsFinal].
         praise = "A longer flick deletes faster.",
+        live = { if (count > 0) regretsLine(count) else null },
         seed = DELETE_TEXT,
         cue = GuideCue.Flick(hold = true),
         needs = GuideNeed.SwipeTyping,
@@ -967,9 +1109,13 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Now slide left or right. The cursor follows.") { event ->
+            // The screen marks a word on the other line in orange, and the cursor has to land in it (design v4).
+            GuideStage("Slide the cursor into the orange word.") { event ->
+                val aim = target
                 when {
-                    // A real steer passes as it goes. A nudge passes too, with its own line, once the finger lifts.
+                    aim != null -> steerToward(aim, event)
+                    // Nothing marked, as before: a real steer passes as it goes. A nudge passes too, with its own line, once the
+                    // finger lifts.
                     event is FieldChanged -> when {
                         mark < 0 -> {
                             mark = event.start
@@ -1002,7 +1148,8 @@ internal val GUIDE_STEPS = listOf(
         // v3.1's "Grab a bunch. Feel powerful for a second." is two lines.
         title = "Grab a bunch. Feel powerful.",
         stages = listOf(
-            GuideStage("Tap Space three times. Hold the third tap.") { event ->
+            // The words to grab are marked in orange, and the cursor waits right before them (design v4).
+            GuideStage("Three taps on the orange words. Hold the third.") { event ->
                 when {
                     event is CursorStarted && event.words -> GuideVerdict.Done
                     event is CursorStarted -> chip("That's two. Count to three. We believe in you.")
@@ -1010,8 +1157,21 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Now slide left or right to select more.") { event ->
+            GuideStage("Slide to grab the rest.") { event ->
+                val aim = target
                 when {
+                    // The marked words, and a word or two more, pass as the finger lifts. Many more is greedy.
+                    aim != null && event is FieldChanged && event.end > event.start -> {
+                        val was = mark
+                        mark = grabbed(event.text, aim, event.start, event.end)
+                        if (mark == GRAB_GREEDY && was != GRAB_GREEDY) chip("Too greedy. Slide back to give some back.") else GuideVerdict.Wait
+                    }
+                    aim != null && event is Moved && event.lifted -> when (mark) {
+                        GRAB_ALL -> GuideVerdict.Done
+                        GRAB_GREEDY -> GuideVerdict.Hint("Too greedy. Slide back to give some back.", stage = 0)
+                        else -> GuideVerdict.Hint("So close. Then you just let go.", stage = 0)
+                    }
+                    // Nothing marked, as before: any selection passes.
                     event is FieldChanged && event.end > event.start -> GuideVerdict.Done
                     event is Moved && event.lifted -> GuideVerdict.Hint("So close. Then you just let go.", stage = 0)
                     else -> GuideVerdict.Wait
@@ -1041,7 +1201,8 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Keep holding Alt and press the $ALT_SYMBOL key.") { event ->
+            // The key with * in its corner lights on the drawing, and the other corners fade (design v4).
+            GuideStage("Keep holding Alt and press the $ALT_SYMBOL key.", GuideCue.Spot(listOf(ALT_SYMBOL_KEY))) { event ->
                 when {
                     typedSymbol(event, ALT_SYMBOL) -> GuideVerdict.Done
                     event is Pushed && isLetter(event.code) -> {
@@ -1147,31 +1308,21 @@ internal val GUIDE_STEPS = listOf(
                         used = used or 2
                         GuideVerdict.Done
                     }
+                    // Any way of moving on counts: a new group too. The bottom row is taught in the praise (design v4).
                     otherGroup(event) -> {
                         used = used or if (event is GroupPicked) 4 else 8
-                        GuideVerdict.Wait
-                    }
-                    typedSymbol(event, ANY_SYMBOL) -> chip("That's the boring page. The weird ones are hiding.")
-                    else -> GuideVerdict.Wait
-                }
-            },
-            GuideStage("Slide along the bottom row to another group.") { event ->
-                when {
-                    event is GroupPicked -> {
-                        used = used or 4
                         GuideVerdict.Done
                     }
-                    otherGroup(event) -> {
-                        used = used or 8
-                        GuideVerdict.Hint("That works too. Show-off.", stage = 2)
-                    }
-                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. Bold.", stage = 0)
                     typedSymbol(event, ANY_SYMBOL) -> chip("That's the boring page. The weird ones are hiding.")
                     else -> GuideVerdict.Wait
                 }
             },
             GuideStage("Press the weirdest symbol you can find.", GuideCue.Free) { event ->
-                if (typedSymbol(event, ANY_SYMBOL)) GuideVerdict.Done else GuideVerdict.Wait
+                when {
+                    typedSymbol(event, ANY_SYMBOL) -> GuideVerdict.Done
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. Bold.", stage = 0)
+                    else -> GuideVerdict.Wait
+                }
             },
         ),
         // v3.1's "We saw that. We're only a little bit judging." is two lines.
@@ -1195,7 +1346,9 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Find 🤡 and type it.", GuideCue.Free) { event ->
+            // A hunt: a bar drains for 20 s, silent, then a count-up, with a chip at 20 s and a hint at 30 s. It never fails. The
+            // screen keeps the time (design v4).
+            GuideStage(HUNT_LINE, GuideCue.Free) { event ->
                 when {
                     event is FieldChanged && event.text.trimEnd().endsWith(CLOWN) -> GuideVerdict.Done
                     otherSymbol(event, CLOWN) -> chip("Not what we asked for. Reading's optional, huh.")
@@ -1206,9 +1359,8 @@ internal val GUIDE_STEPS = listOf(
         ),
         done = "Hey, that's you.",
         // v3.1's "Sym once is symbols, twice is emoji, three times closes." is two lines.
+        // Once found, the praise is the time: see [huntPraise]. This shows if the hunt had no time.
         praise = "Sym once: symbols. Twice: emoji. Three: closes.",
-        helpTitle = "Shouldn't be that hard. Unless you're slow.",
-        help = "Find 🤡 in the emoji and type it.",
         text = SYMBOLS_TEXT,
         symbol = CLOWN,
         usesPanel = true,
@@ -1265,23 +1417,25 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Rest on a clip to read it. Press its key to paste.", GuideCue.Free) { event ->
+            // Reading the clips is the skill: only one is nice, and it's the prank (design v4).
+            GuideStage("Paste the one clip that's nice to you.", GuideCue.Free) { event ->
                 when {
-                    event is FieldChanged && event.text.contains(PRANK_PASTE) ->
-                        counts("Gotcha. Swapped it on purpose.", "It's a prank, not a bug. Chill.")
-                    grew(event) -> GuideVerdict.Done
+                    event is FieldChanged && event.text.contains(PRANK_PASTE) -> GuideVerdict.Done
+                    grew(event) -> chip("That's not nice. Keep looking.")
                     panel(event, Panel.Closed) -> GuideVerdict.Hint("Just looking? Window shopping our insults.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
-        done = "Pasted. Use it wisely. You won't.",
+        // The nice clip pastes the prank, and the slide owns up.
+        done = "Gotcha. Swapped it on purpose.",
         // v3.1's "Your clipboard keeps what you copy. Sym, then A, any time." is two lines.
         praise = "It keeps what you copy. Sym, then A, any time.",
         seed = CLIP_TEXT,
         usesPanel = true,
         setup = Panel.Closed,
         sandboxClips = GUIDE_CLIPS,
+        rain = "🤪",
         lessons = setOf(GuideLesson.Sym),
         demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""),
     ),
@@ -1298,6 +1452,7 @@ internal val GUIDE_STEPS = listOf(
 
 /** What the symbols groups slide says once done: the way to turn pages or change group that wasn't used. See its [GuideMemory.count]. */
 internal fun groupsPraise(used: Int) = when {
+    used and 4 == 0 -> "Slide along the bottom row to change group."
     used and 2 == 0 -> "Backspace and Enter turn pages too."
     used and 8 == 0 -> "Swiping sideways on the keys changes group too."
     else -> "The bottom row works both ways."
@@ -1397,6 +1552,8 @@ internal class GuideFlow(
     val stage get() = memory.stage
     val instruction get() = step.stages.getOrNull(memory.stage)?.text ?: step.body
     val cue get() = step.stages.getOrNull(memory.stage)?.cue ?: step.cue
+    /** What the drawing of the keys shows on its keys now, if anything. See [GuideStage.labels]. */
+    val labels get() = step.stages.getOrNull(memory.stage)?.labels
     /** What the slide counted, such as which ways the groups slide was used. */
     val counted get() = memory.used
 
@@ -1404,10 +1561,22 @@ internal class GuideFlow(
     val jumps get() = memory.jump
 
     /** Tells the step what the field holds as it starts, so that a stage can tell when something is typed or pasted. */
-    fun seed(text: String) {
+    fun seed(text: String, cursor: Int = -1) {
         memory.length = text.length
         memory.stageLength = text.length
+        memory.cursor = cursor
     }
+
+    /** Tells the step what the field marks in orange to aim at, or null for nothing. See [GuideMemory.target]. */
+    fun aim(range: IntRange?) {
+        memory.target = range
+    }
+
+    /** What the step has counted on this stage, such as words deleted. */
+    val tally get() = memory.count
+
+    /** The line that shows in place of the instruction now, if the step has one. See [GuideStep.live]. */
+    fun liveLine() = step.live?.invoke(memory)
 
     /**
      * What the step makes of [event], with [expected] the letters of the word that the text box has next. If it waits, a mistake

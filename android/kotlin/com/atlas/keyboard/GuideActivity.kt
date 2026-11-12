@@ -425,9 +425,47 @@ private class GuideField(context: Context) : EditText(context) {
     private var ghostLayout: StaticLayout? = null
     private var ghostKey = ""
 
+    /** The text that the slide marks in orange to aim at, by its characters, or null. See [GuideMemory.target]. */
+    var target: IntRange? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+    private val targetPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    /** A wash of orange behind the target, and an orange line under it, on each of its lines. */
+    private fun drawTarget(canvas: Canvas, own: android.text.Layout) {
+        val aim = target ?: return
+        val length = text.length
+        if (aim.isEmpty() || aim.first < 0 || aim.last >= length) return
+        val left = compoundPaddingLeft.toFloat()
+        val top = extendedPaddingTop.toFloat()
+        canvas.save()
+        canvas.clipRect(left + scrollX, top + scrollY, (width - compoundPaddingRight + scrollX).toFloat(),
+            (height - extendedPaddingBottom + scrollY).toFloat())
+        canvas.translate(left, top)
+        val underline = resources.displayMetrics.density * 2
+        for (line in own.getLineForOffset(aim.first)..own.getLineForOffset(aim.last)) {
+            val from = max(aim.first, own.getLineStart(line))
+            val to = min(aim.last + 1, own.getLineEnd(line))
+            if (to <= from) continue
+            val x1 = own.getPrimaryHorizontal(from)
+            val x2 = if (to >= own.getLineEnd(line)) own.getLineRight(line) else own.getPrimaryHorizontal(to)
+            val lineTop = own.getLineTop(line).toFloat()
+            val lineBottom = own.getLineBottom(line).toFloat()
+            targetPaint.color = GuideMotion.faded(GuideColours.ORANGE, GuideActivity.TARGET_WASH)
+            canvas.drawRoundRect(x1 - underline, lineTop, x2 + underline, lineBottom, underline * 2, underline * 2, targetPaint)
+            targetPaint.color = GuideColours.ORANGE
+            canvas.drawRect(x1, lineBottom - underline, x2, lineBottom, targetPaint)
+        }
+        canvas.restore()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val own = layout ?: return
+        drawTarget(canvas, own)
         if (ghost.isEmpty()) return
         val typed = text.toString()
         val key = "$typed\u0000$ghost\u0000${own.width}\u0000$ghostColour"
@@ -545,6 +583,33 @@ class GuideActivity : Activity() {
     private lateinit var phantom: TextView
     /** The instruction's line, with the chip that slides over it for a real mistake, and the room that is left above the keys. */
     private lateinit var instruction: FrameLayout
+    /** The clown hunt's bar under the instruction, draining for [HUNT_DRAIN_SECONDS]. */
+    private lateinit var huntBar: View
+    /** When the clown hunt began, or -1 with no hunt on. */
+    private var huntStart = -1L
+    /** What the clown hunt has said: 1 its chip, 2 its hint too. */
+    private var huntSaid = 0
+    /** Each second of the clown hunt: the count-up, and its chip and hint when their time comes. */
+    private val huntTick = object : Runnable {
+        override fun run() {
+            if (huntStart < 0 || passed || flow.step.id != "clown") return
+            val seconds = huntSeconds()
+            if (seconds >= HUNT_DRAIN_SECONDS) {
+                huntBar.visibility = View.GONE
+                if (flow.stage == 1) body.text = huntLine(seconds)
+            }
+            // Each once, even if a tick comes late.
+            if (seconds >= HUNT_DRAIN_SECONDS && huntSaid < 1) {
+                huntSaid = 1
+                showChip(HUNT_SLOW)
+            }
+            if (seconds >= HUNT_HINT_SECONDS && huntSaid < 2) {
+                huntSaid = 2
+                showChip(HUNT_HINT)
+            }
+            main.postDelayed(this, 1000L - (SystemClock.uptimeMillis() - huntStart) % 1000L)
+        }
+    }
     private lateinit var chip: TextView
     private lateinit var spacer: View
     /** The most room at the bottom that the keyboard took while the slides show, so the keys never jump. See the insets listener. */
@@ -592,6 +657,13 @@ class GuideActivity : Activity() {
     private var enteredChapter: GuideChapter? = null
     /** How many times the delete chapter's field was emptied, and the steering line's length as it was put in. */
     private var deleteResets = 0
+    /** The word that the steering slides mark, in the field's text: see [pickSteerAim]. It moves with the cursor's copy of the line. */
+    private var steerAim: IntRange? = null
+    /** The cursor is in the steer slide's word, as last heard, so entering it is felt once. */
+    private var inSteerAim = false
+    /** Words that went on the mass deletion slide, counted on after it passed, until the finger lifts and the count stops. */
+    private var regrets = 0
+    private var regretsFrozen = false
     private var steerLength = 0
     /** The guide is typing a symbol's sentence, letter by letter. */
     private var autoTyping = false
@@ -1044,6 +1116,12 @@ class GuideActivity : Activity() {
             addView(body, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             addView(chip, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT,
                 Gravity.START or Gravity.CENTER_VERTICAL))
+            huntBar = View(context).apply {
+                background = rounded(GuideColours.ORANGE, Radii.SMALL)
+                pivotX = 0f
+                visibility = View.GONE
+            }
+            addView(huntBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3), Gravity.BOTTOM))
         }
         spacer = View(this)
         column = LinearLayout(this).apply {
@@ -1363,6 +1441,9 @@ class GuideActivity : Activity() {
         hint.setOnClickListener(null)
         // A chapter with one text box carries its field on from slide to slide; any other slide starts a clean one.
         val carry = enteredChapter == step.chapter && step.carriesField
+        regrets = 0
+        regretsFrozen = false
+        stopHunt()
         if (enteredChapter != step.chapter) {
             deleteResets = 0
             if (step.chapter == GuideChapter.End) markAllFinished()
@@ -1388,7 +1469,7 @@ class GuideActivity : Activity() {
                 GuideChapter.Steering -> seedSteering(STEER_TEXT)
                 else -> {
                     field.setText(if (step.seed.isEmpty()) "" else step.seed + " ")
-                    field.setSelection(field.length())
+                    field.setSelection(step.cursorAt?.invoke(field.text.toString())?.coerceIn(0, field.length()) ?: field.length())
                 }
             }
             seeding = false
@@ -1399,7 +1480,8 @@ class GuideActivity : Activity() {
         GuideHooks.lessons = step.lessons
         GuideHooks.barSides(step.sides)
         setUpLesson(step)
-        flow.seed(field.text.toString())
+        flow.seed(field.text.toString(), field.selectionStart)
+        aim()
         // The chapter's text box shows on the slides that have one, and stays as it is from slide to slide.
         val typing = step.text.isNotEmpty()
         // The Typing chapter has no box: its text is the grey ghost in the field. The other chapters keep their box for now.
@@ -1492,6 +1574,7 @@ class GuideActivity : Activity() {
         // Once a slide is passed nothing glows any more, as Space did on the first slide.
         val shown = ghostCue(if (playground || passed) GuideCue.Free else flow.cue)
         if (shown != keys.cue) keys.show(shown)
+        keys.face = if (playground || passed) null else flow.labels
         showGhost()
     }
 
@@ -1750,7 +1833,8 @@ class GuideActivity : Activity() {
     /** Nobody acted for a while: the slide asks, with its own instruction, and asks again after [again] if it's not -1. */
     @Suppress("UNUSED_PARAMETER")
     private fun idle(title: String, again: Long) {
-        if (passed || busy || changing || playground || settingUp || idleChipShown) return
+        // The clown hunt keeps its own time and says its own things.
+        if (passed || busy || changing || playground || settingUp || idleChipShown || huntStart >= 0) return
         idleChipShown = true
         showChip(title)
     }
@@ -2319,7 +2403,30 @@ class GuideActivity : Activity() {
         if (!playground && ready && !changing && resetField()) return
         val start = min(field.selectionStart, field.selectionEnd).coerceAtLeast(0)
         val end = max(field.selectionStart, field.selectionEnd).coerceAtLeast(0)
+        if (!playground) aim()
+        // The cursor coming into the steer slide's word is felt, once each time.
+        val entered = steerAim?.let { start == end && start in it.first..it.last + 1 } == true
+        if (entered && !inSteerAim && flow.step.id == "steer" && !passed) haptics.play(Haptic.SelectionWord)
+        inSteerAim = entered
         handle(KeyboardEvent.FieldChanged(field.text.toString(), start, end))
+    }
+
+    /**
+     * Marks in orange what the slide aims at, in the field, and tells the slide (design v4): the stray letter on the Backspace slide,
+     * the last word on the flick slide, a word on the other line on the steer slide.
+     * Nothing on other slides, or once the guide's look is off.
+     */
+    private fun aim() {
+        if (!::field.isInitialized) return
+        val text = field.text.toString()
+        val range = if (playground || guideLooks != true) null else when (flow.step.id) {
+            "backspace" -> strayTarget(text)
+            "flick" -> if (passed) null else lastWordTarget(text, field.selectionStart)
+            "steer", "selectmore" -> steerAim
+            else -> null
+        }
+        field.target = range
+        flow.aim(range)
     }
 
     /**
@@ -2364,6 +2471,39 @@ class GuideActivity : Activity() {
         steerLength = text.length
         val middle = text.length / 2
         field.setSelection((text.indexOf(' ', middle) + 1).coerceIn(0, text.length))
+        steerAim = null
+        inSteerAim = false
+        if (flow.step.id == "steer") field.post { pickSteerAim() }
+        // Grab a bunch: its words are marked, and the cursor waits right before them, their line at the top of the field.
+        if (flow.step.id == "selectmore") grabTarget(text, middle)?.let { words ->
+            steerAim = words
+            field.setSelection(words.first)
+            field.post {
+                val own = field.layout ?: return@post
+                field.scrollTo(0, own.getLineTop(own.getLineForOffset(words.first)))
+                aim()
+            }
+        }
+    }
+
+    /**
+     * The steer slide's word, once the field has its lines: on the visible line that doesn't hold the cursor, a few words from its
+     * column, so both stay in the two lines (design v4). The field shows those two lines.
+     */
+    private fun pickSteerAim() {
+        if (flow.step.id != "steer" || playground) return
+        val own = field.layout ?: return
+        val cursor = field.selectionStart.coerceAtLeast(0)
+        val cursorLine = own.getLineForOffset(cursor)
+        val other = if (cursorLine + 1 < own.lineCount) cursorLine + 1 else cursorLine - 1
+        if (other < 0) return
+        val text = field.text.toString()
+        steerAim = steerTarget(text, own.getLineStart(other) until own.getLineEnd(other), own.getPrimaryHorizontal(cursor)) {
+            own.getPrimaryHorizontal(it)
+        }
+        field.scrollTo(0, own.getLineTop(min(cursorLine, other)))
+        inSteerAim = false
+        aim()
     }
 
     /** The cursor near either end of the steering line moves by a whole line, to the same place in a copy nearer the middle. */
@@ -2382,6 +2522,8 @@ class GuideActivity : Activity() {
             else -> return
         }
         if (start + shift < 0 || end + shift > length) return
+        // The marked word moves with the cursor, to the same word in its copy of the line.
+        steerAim = steerAim?.let { (it.first + shift)..(it.last + shift) }
         field.setSelection(start + shift, end + shift)
     }
 
@@ -2416,6 +2558,7 @@ class GuideActivity : Activity() {
             lastPoint = point
         }
         keys.trace(points, reset, lifted)
+        if (lifted) freezeRegrets()
         acted()
         if (!busy && ready) judge(KeyboardEvent.Moved(travel, lifted))
     }
@@ -2574,7 +2717,52 @@ class GuideActivity : Activity() {
             else -> Unit
         }
         if (!playground && ready && !changing && !settingUp) watch(event)
+        // Mass deletion, passed: the count goes on with every word, under the success line, until the finger lifts. Before the
+        // check, so the word that passes it isn't counted twice.
+        if (event is KeyboardEvent.DeletedWord && passed && !playground && flow.step.id == "hold" && !regretsFrozen && regrets > 0) {
+            regrets++
+            settledPraise = regretsLine(regrets)
+            body.text = settledPraise
+        }
         if (!busy && ready) judge(event)
+    }
+
+    /** The finger lifted on mass deletion, passed: the count stops on its last number. */
+    private fun freezeRegrets() {
+        if (!passed || playground || flow.step.id != "hold" || regretsFrozen || regrets < REGRETS_TO_PASS) return
+        regretsFrozen = true
+        settledPraise = regretsFinal(regrets)
+        body.text = settledPraise
+    }
+
+    /** Seconds since the clown hunt began. */
+    private fun huntSeconds() = ((SystemClock.uptimeMillis() - huntStart) / 1000L).toInt()
+
+    /** The clown hunt begins once the emoji are open: the bar drains, silent, and the time is kept. It never fails. */
+    private fun startHunt() {
+        if (huntStart >= 0 || passed || playground || flow.step.id != "clown" || flow.stage != 1) return
+        huntStart = SystemClock.uptimeMillis()
+        huntSaid = 0
+        huntBar.animate().cancel()
+        huntBar.scaleX = 1f
+        huntBar.visibility = View.VISIBLE
+        huntBar.animate().scaleX(0f).setDuration(HUNT_DRAIN_SECONDS * 1000L).setInterpolator(android.view.animation.LinearInterpolator()).start()
+        main.postDelayed(huntTick, 1000L)
+    }
+
+    private fun stopHunt() {
+        huntStart = -1L
+        main.removeCallbacks(huntTick)
+        if (!::huntBar.isInitialized) return
+        huntBar.animate().cancel()
+        huntBar.visibility = View.GONE
+    }
+
+    /** A line the slide shows in place of its instruction while it's tried, such as a count. See [GuideStep.live]. */
+    private fun showLive() {
+        if (passed || playground) return
+        val line = flow.liveLine() ?: return
+        if (body.text.toString() != line) body.text = line
     }
 
     /**
@@ -2652,6 +2840,7 @@ class GuideActivity : Activity() {
             }
             GuideVerdict.Wait -> Unit
         }
+        showLive()
         // A miss on the swipe slide: the right word, on the bar, wiggles to show where to tap.
         if (verdict is GuideVerdict.Hint && flow.step.id == "swipe" && event is KeyboardEvent.Recognised) pointAtRightWord()
     }
@@ -2755,6 +2944,7 @@ class GuideActivity : Activity() {
         idleShown = false
         // The instruction changes only here, when the slide moves to its next step.
         swapIn(body, flow.instruction, 0)
+        startHunt()
         showScript()
         // The swipe came out wrong on purpose: the right word, wherever it is on the bar, dances to show where to tap.
         if (flow.step.nearMiss && flow.stage > 0) pointAtRightWord() else GuideHooks.stripPointWord(null)
@@ -2788,7 +2978,18 @@ class GuideActivity : Activity() {
         val step = flow.step
         markPassed(step)
         showSuccess(reaction ?: step.done)
-        val said = praise ?: if (step.id == "symgroups") groupsPraise(flow.counted) else step.praise
+        val hunted = if (step.id == "clown" && huntStart >= 0) huntSeconds() else -1
+        stopHunt()
+        val said = praise ?: when (step.id) {
+            "symgroups" -> groupsPraise(flow.counted)
+            "clown" -> if (hunted >= 0) huntPraise(hunted) else step.praise
+            // The count carries on under the success line, until the finger lifts.
+            "hold" -> {
+                regrets = flow.tally
+                regretsLine(regrets)
+            }
+            else -> step.praise
+        }
         if (said.isNotEmpty()) body.text = said
         paintSegments(flow.stepIndex, advancing = true)
         settledPraise = said
@@ -3298,6 +3499,8 @@ class GuideActivity : Activity() {
         private const val NEXT_PULSE = 1.12f
         /** The field's fill on ink, and how grey the ghost is, as in the approved frame. */
         private const val FIELD_FILL = .08f
+        /** How strong the orange wash is behind what a slide aims at, in the field. */
+        const val TARGET_WASH = .35f
         private const val GHOST_ALPHA = .38f
         /** How many words the ghost shows after the one you're on: more than two lines hold. */
         private const val GHOST_WORDS = 24

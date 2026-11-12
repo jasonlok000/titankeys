@@ -30,7 +30,7 @@ import javax.imageio.ImageIO
  */
 
 /** One state of a slide, as the screen shows it. */
-private class Frame(
+private data class Frame(
     val name: String,
     val chapter: GuideChapter,
     val title: String,
@@ -42,13 +42,25 @@ private class Frame(
     val end: Int = start,
     val ghost: String = "",
     val panel: String? = null,
+    /** What the drawing of the keys shows on some keys, in place of their letters. See [GuideStage.labels]. */
+    val labels: Map<String, String>? = null,
+    /** What the field marks in orange to aim at. See [GuideMemory.target]. */
+    val target: IntRange? = null,
+    /** Keys that the slide lights on the drawing. See [GuideCue.Spot]. */
+    val spot: List<String> = emptyList(),
+    /** How much of the clown hunt's bar is left under the instruction, from 1 to 0, or null for no bar. */
+    val hunt: Float? = null,
+    /** The steer slide's word, found as the field wraps; [SteerAim.Entered] draws the cursor in it. */
+    val steer: SteerAim = SteerAim.None,
 )
+
+private enum class SteerAim { None, Start, Entered }
 
 /** A mistake for each slide, as the keyboard reports it, so a drawing shows the chip that it gets. */
 private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
     "type" to listOf(Pushed(62)),
-    "flick" to listOf(Pushed(67)),
-    "hold" to listOf(DeletedWord(held = false)),
+    "flick" to listOf(KeyboardEvent.DeleteHoldStarted),
+    "hold" to listOf(KeyboardEvent.DeleteHoldStarted, DeletedWord(held = true), KeyboardEvent.Moved(40f, lifted = true)),
     "steer" to listOf(DoubleTapped(2)),
     "selectmore" to listOf(CursorStarted(false)),
     "alt" to listOf(ModifierState(Level.Off, Level.Once, Panel.Closed, false), FieldChanged("#", 1, 1)),
@@ -57,7 +69,8 @@ private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
     "symgroups" to listOf(FieldChanged("&", 1, 1)),
     "clown" to listOf(ModifierState(Level.Off, Level.Off, Panel.Emoji, false), FieldChanged("😀", 2, 2)),
     "paste" to listOf(KeyboardEvent.Copied("x")),
-    "clipboard" to listOf(ModifierState(Level.Off, Level.Off, Panel.Symbols, false), ModifierState(Level.Off, Level.Off, Panel.Closed, false)),
+    "clipboard" to listOf(ModifierState(Level.Off, Level.Off, Panel.Symbols, false), ModifierState(Level.Off, Level.Off, Panel.Clipboard, false),
+        FieldChanged(CLIP_TEXT + " " + GUIDE_CLIPS.first() + " ", 0, 0)),
 )
 
 /** What the field holds on a slide, before anything is done: its text, the cursor or selection, and the ghost after it. */
@@ -66,11 +79,12 @@ private fun fieldFor(step: GuideStep): Frame {
         Frame("", step.chapter, "", "", field = text, start = start, end = end, ghost = ghost)
     return when (step.chapter) {
         GuideChapter.Typing -> at("", ghost = step.ghost.ifEmpty { TYPING_TEXT })
-        GuideChapter.Delete -> at(DELETE_TEXT + " ")
+        GuideChapter.Delete -> if (step.id == "backspace") (DELETE_STRAY_TEXT + " ").let { at(it, strayCursor(it)).copy(target = strayTarget(it)) }
+            else (DELETE_TEXT + " ").let { at(it).copy(target = if (step.id == "flick") lastWordTarget(it, it.length) else null) }
         GuideChapter.Steering -> {
             val text = looping(STEER_TEXT) + " "
             val cursor = text.indexOf(' ', text.length / 2) + 1
-            at(text, cursor)
+            if (step.id == "selectmore") grabTarget(text, text.length / 2)!!.let { at(text, it.first).copy(target = it) } else at(text, cursor)
         }
         GuideChapter.Symbols -> {
             val index = SYMBOL_PARTS.indexOfFirst { it.first == step.symbol }
@@ -93,7 +107,7 @@ private fun passedField(step: GuideStep, before: Frame): Frame {
         Frame("", step.chapter, "", "", field = text, start = start, end = end, ghost = ghost)
     return when (step.id) {
         "type" -> at("This keyboard fixes ", ghost = "your typos, so you can keep pretending you never make any.")
-        "backspace" -> at(DELETE_TEXT.dropLast(1) + " ")
+        "backspace" -> (DELETE_TEXT + " ").let { at(it, it.lastIndexOf(STRAY_FIXED) + STRAY_FIXED.length - 1) }
         "flick", "hold" -> at(DELETE_TEXT.substringBeforeLast(" It knows") + " ")
         "steer" -> at(before.field, before.start - 40)
         "selectmore" -> {
@@ -102,7 +116,7 @@ private fun passedField(step: GuideStep, before: Frame): Frame {
             at(before.field, from, to)
         }
         "paste" -> CLIP_TEXT.replace(PASTE_OVER, PASTE_TEXT).let { at(it + " ", CLIP_TEXT.indexOf(PASTE_OVER) + PASTE_TEXT.length) }
-        "clipboard" -> at(CLIP_TEXT + " " + GUIDE_CLIPS.first() + " ")
+        "clipboard" -> at(CLIP_TEXT + " " + PRANK_PASTE + " ")
         else -> if (step.chapter == GuideChapter.Symbols) {
             val index = SYMBOL_PARTS.indexOfFirst { it.first == step.symbol }
             val picked = if (step.symbol == ANY_SYMBOL) "※" else step.symbol!!
@@ -116,7 +130,7 @@ private fun framesFor(step: GuideStep): List<Frame> {
     val field = fieldFor(step)
     fun frame(name: String, title: String, line: String, chip: String? = null, passed: Boolean = false, from: Frame = field,
         panel: String? = null) = Frame("${step.id}-$name", step.chapter, title, line, chip, passed, from.field, from.start, from.end,
-        from.ghost, panel)
+        from.ghost, panel, target = from.target, steer = from.steer)
     val frames = ArrayList<Frame>()
     val first = step.stages.firstOrNull()?.text ?: step.body
     frames += frame("1-start", step.title, first)
@@ -124,18 +138,65 @@ private fun framesFor(step: GuideStep): List<Frame> {
     for ((index, stage) in step.stages.withIndex().drop(1)) {
         val panel = if (step.usesPanel && index > 0 && step.id != "alt") "Sym panel open" else null
         frames += frame("2-stage${index + 1}", step.title, stage.text, panel = panel)
+            .copy(labels = stage.labels, spot = (stage.cue as? GuideCue.Spot)?.keys.orEmpty())
     }
     // A real mistake: its chip over the instruction.
     MISTAKES[step.id]?.let { events ->
         val flow = GuideFlow({ GuideSettings(holdSymbols = true, fnAsCtrl = true) })
         flow.start(step.id)
-        flow.seed(field.field)
+        flow.seed(field.field, field.start)
+        flow.aim(field.target)
         var said: String? = null
         for (event in events) {
             val verdict = flow.event(event)
             if (verdict is GuideVerdict.Hint && !verdict.passes) said = verdict.title ?: verdict.text
         }
         if (said != null) frames += frame("3-chip", step.title, flow.instruction, chip = said)
+    }
+    // The swipe slide counts down the swipes left, after the first.
+    if (step.id == "swipe") frames += frame("2-count", step.title, swipesLeft(2))
+    // The steer slide: its word marked; the cursor in it as the finger slides; passed there.
+    if (step.id == "steer") {
+        frames.removeAll { it.name.endsWith("-2-stage2") }
+        frames.replaceAll { it.copy(steer = SteerAim.Start) }
+        frames += frame("2-stage2", step.title, step.stages[1].text).copy(steer = SteerAim.Start)
+        frames += frame("2-stage2-entered", step.title, step.stages[1].text).copy(steer = SteerAim.Entered)
+        frames += frame("4-passed", step.done, step.praise, passed = true).copy(steer = SteerAim.Entered)
+        return frames
+    }
+    // The clown hunt: the bar full, half gone, then the count-up with its chip at 20 s, the hint at 30 s, and found.
+    if (step.id == "clown") {
+        frames.removeAll { it.name.endsWith("-2-stage2") || it.name.endsWith("-4-passed") }
+        val open = "Emoji panel open"
+        frames += frame("2-stage2-hunt0s", step.title, HUNT_LINE, panel = open).copy(hunt = 1f)
+        frames += frame("2-stage2-hunt10s", step.title, HUNT_LINE, panel = open).copy(hunt = .5f)
+        frames += frame("2-stage2-hunt20s", step.title, huntLine(HUNT_DRAIN_SECONDS), chip = HUNT_SLOW, panel = open)
+        frames += frame("2-stage2-hunt25s", step.title, huntLine(25), panel = open)
+        frames += frame("2-stage2-hunt30s", step.title, huntLine(HUNT_HINT_SECONDS), chip = HUNT_HINT, panel = open)
+        frames += frame("4-passed", step.done, huntPraise(7), passed = true, from = passedField(step, field))
+        return frames
+    }
+    // Grab a bunch: one word picked, then more as the finger slides, then all of them.
+    if (step.id == "selectmore") {
+        val aim = field.target!!
+        val first = field.field.indexOf(' ', aim.first)
+        frames.removeAll { it.name.endsWith("-2-stage2") }
+        frames += frame("2-stage2", step.title, step.stages[1].text, from = field.copy(start = aim.first, end = first))
+        val more = field.field.indexOf(" skipped", aim.first)
+        frames += frame("2-stage2-grab", step.title, step.stages[1].text, from = field.copy(start = aim.first, end = more))
+        val greedy = field.copy(start = aim.first, end = field.field.indexOf(' ', aim.last + 30))
+        frames += frame("3-chip-greedy", step.title, step.stages[1].text, chip = "Too greedy. Slide back to give some back.", from = greedy)
+        frames += frame("4-passed", step.done, step.praise, passed = true, from = field.copy(start = aim.first, end = aim.last + 1))
+        return frames
+    }
+    // Mass deletion counts words in the instruction's place from the first one: one gone, then passed at eight, then frozen.
+    if (step.id == "hold") {
+        val one = field.copy(field = DELETE_TEXT.substringBeforeLast(" did.") + " ", start = DELETE_TEXT.substringBeforeLast(" did.").length + 1)
+        frames += frame("2-count1", step.title, regretsLine(1), from = one)
+        val eight = passedField(step, field)
+        frames += frame("4-passed", step.done, regretsLine(REGRETS_TO_PASS), passed = true, from = eight)
+        frames += frame("5-frozen", step.done, regretsFinal(11), passed = true, from = eight)
+        return frames
     }
     frames += frame("4-passed", step.done, step.praise, passed = true, from = passedField(step, field))
     return frames
@@ -267,6 +328,10 @@ private fun draw(frame: Frame, file: File) {
         g.drawString(shown, side, y + lineHeight / 2 + g.fontMetrics.ascent / 2 - dp(2))
         if (g.fontMetrics.stringWidth(frame.line) > inner) mark(g, "LINE TOO LONG", y)
     }
+    frame.hunt?.let { left ->
+        g.color = orange
+        g.fillRect(side, y + lineHeight - dp(3), Math.round(inner * left), dp(3))
+    }
     y += lineHeight + dp(10)
     // The field: exactly two lines, on ink, with what's typed in cream and the ghost after it in grey.
     val fieldFont = calibrated(g, Font.PLAIN, "Tihs keybaord fxies yuor typos, sp yuo cna kepe", 807)
@@ -283,7 +348,7 @@ private fun draw(frame: Frame, file: File) {
     g.color = rgb(Paint.CREAM, .35f)
     g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(12))
     g.drawString("(free room)", side, (y + keysTop) / 2)
-    drawKeys(g, keysTop, side, frame.panel)
+    drawKeys(g, keysTop, side, frame.panel, frame.labels, frame.spot)
     g.dispose()
     ImageIO.write(image, "png", file)
 }
@@ -334,8 +399,25 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
     val cursorLine = starts.indexOfLast { it <= frame.start.coerceAtMost(all.length) }.coerceAtLeast(0)
     val first = when {
         frame.ghost.isNotEmpty() || frame.field.isEmpty() -> cursorLine
+        // The steer slide shows the cursor's line and the one after it, where its word is.
+        frame.steer != SteerAim.None || frame.chapter == GuideChapter.Steering && frame.target != null -> cursorLine
         else -> (cursorLine - 1).coerceAtLeast(0)
     }.coerceAtMost((starts.size - 2).coerceAtLeast(0))
+    // The steer slide's word, found on the other line as the app finds it, and the cursor in it once entered.
+    var start = frame.start
+    var target = frame.target
+    if (frame.steer != SteerAim.None) {
+        val other = first + 1
+        val otherEnd = (starts.getOrNull(other + 1) ?: all.length) - 1
+        fun x(at: Int): Float {
+            val line = starts.indexOfLast { it <= at }
+            return g.fontMetrics.stringWidth(all.substring(starts[line], at)).toFloat()
+        }
+        target = steerTarget(all, starts[other]..otherEnd, x(frame.start)) { x(it) }
+        if (target == null) mark(g, "NO STEER TARGET", top)
+        if (frame.steer == SteerAim.Entered && target != null) start = target.first + 2
+    }
+    val shown = frame.copy(start = start, end = start, target = target)
     for (row in 0..1) {
         val index = first + row
         if (index >= starts.size) break
@@ -346,26 +428,33 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
         for (offset in from until to) {
             val char = all[offset].toString()
             val w = g.fontMetrics.stringWidth(char)
-            if (offset in frame.start until frame.end) {
+            val aim = shown.target
+            if (aim != null && offset in aim) {
+                g.color = rgb(Paint.ORANGE, .35f)
+                g.fillRect(x, top + row * line, w, line)
+                g.color = orange
+                g.fillRect(x, top + (row + 1) * line - dp(2), w, dp(2))
+            }
+            if (offset in shown.start until shown.end) {
                 g.color = rgb(Paint.ORANGE, .45f)
                 g.fillRect(x, top + row * line, w, line)
             }
             g.color = if (offset < frame.field.length) cream else rgb(Paint.CREAM, .38f)
             g.drawString(char, x, base)
-            if (offset == frame.start && frame.start == frame.end) {
+            if (offset == shown.start && shown.start == shown.end) {
                 g.color = orange
                 g.fillRect(x - dp(1), top + row * line + dp(2), dp(2), line - dp(4))
             }
             x += w
         }
-        if (frame.start == frame.end && frame.start == to && to == all.length) {
+        if (shown.start == shown.end && shown.start == to && to == all.length) {
             g.color = orange
             g.fillRect(x, top + row * line + dp(2), dp(2), line - dp(4))
         }
     }
 }
 
-private fun drawKeys(g: Graphics2D, top: Int, side: Int, panel: String?) {
+private fun drawKeys(g: Graphics2D, top: Int, side: Int, panel: String?, labels: Map<String, String>? = null, spot: List<String> = emptyList()) {
     val width = (WIDTH - 2 * side) / 10f
     val row = dp(50)
     g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(16))
@@ -373,11 +462,20 @@ private fun drawKeys(g: Graphics2D, top: Int, side: Int, panel: String?) {
         val y = top + index * row
         if (index < 3) for ((column, key) in keys.withIndex()) {
             val x = side + column * width
-            g.color = rgb(Paint.CREAM, .09f)
+            // With labels, a labelled key shows its label, lit, and a letter without one is an empty, faint key.
+            val labelled = labels?.get(key)
+            val faint = labels != null && labelled == null && Layout.isLetter(key)
+            g.color = if (labelled != null) orange else if (key in spot) rgb(Paint.ORANGE, .55f) else rgb(Paint.CREAM, if (faint) .04f else .09f)
             g.fill(RoundRectangle2D.Float(x + dp(2), y + dp(2).toFloat(), width - dp(4), row - dp(4).toFloat(), dp(8).toFloat(), dp(8).toFloat()))
-            g.color = rgb(Paint.CREAM, .6f)
-            val text = if (key.length == 1) key else key.take(3)
+            g.color = if (labelled != null) ink else rgb(Paint.CREAM, .6f)
+            val font = g.font
+            if (labelled != null) {
+                g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(11))
+                if (g.fontMetrics.stringWidth(labelled) > width - dp(6)) mark(g, "KEY LABEL TOO LONG", y)
+            }
+            val text = labelled ?: if (faint) "" else if (key.length == 1) key else key.take(3)
             g.drawString(text, x + width / 2 - g.fontMetrics.stringWidth(text) / 2, y + row / 2f + dp(6))
+            g.font = font
         }
     }
     if (panel != null) {

@@ -259,6 +259,30 @@ class Strip(
             render()
         }
 
+    // Everything that init can reach comes before it: Kotlin sets properties top to bottom, so one declared below init is still
+    // null, or 0, while init's render runs, and the keyboard crashed opening (2026-11-12). tools/checks/init-order.test.ts checks it.
+    private val measurePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+
+    /**
+     * The mark of an automatic capital: a shift arrow in the accent colour, where Shift's chip shows for one push, at the left of the
+     * bar and at the size the arrow has in that chip, without the chip's outline. It is drawn over the bar, so the words never move
+     * for it. If the left word reaches under it, it goes small into the top left corner for that bar instead.
+     */
+    private val capitalPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        style = android.graphics.Paint.Style.STROKE
+        strokeJoin = android.graphics.Paint.Join.ROUND
+        strokeCap = android.graphics.Paint.Cap.ROUND
+    }
+    private val capitalText = android.graphics.Paint()
+    private val capitalArrow = android.graphics.Path()
+    private val capitalBox = android.graphics.RectF()
+
+    /** When the first-time hint started, in uptime ms, or -1: see [MenuKeys.hint]. */
+    private var hintStart = -1L
+
+    /** How far in the menu's buttons are, from 0 as it opens to 1. */
+    private var menuShown = 1f
+
     // The word menu's state comes before init: init renders, and the menu's drawing reads these.
     private val pillLeft = Ease()
     private val pillRight = Ease()
@@ -424,8 +448,6 @@ class Strip(
     /** The words' size in pixels, at full size. */
     private fun wordPixels() = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, WORD_SIZE, resources.displayMetrics)
 
-    private val measurePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-
     /** How wide a word is at the words' full size. */
     private fun measureWord(text: String): Float {
         measurePaint.typeface = typeface
@@ -449,20 +471,6 @@ class Strip(
             field = value
             invalidate()
         }
-    /**
-     * The mark of an automatic capital: a shift arrow in the accent colour, where Shift's chip shows for one push, at the left of the
-     * bar and at the size the arrow has in that chip, without the chip's outline. It is drawn over the bar, so the words never move
-     * for it. If the left word reaches under it, it goes small into the top left corner for that bar instead.
-     */
-    private val capitalPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        style = android.graphics.Paint.Style.STROKE
-        strokeJoin = android.graphics.Paint.Join.ROUND
-        strokeCap = android.graphics.Paint.Cap.ROUND
-    }
-    private val capitalText = android.graphics.Paint()
-    private val capitalArrow = android.graphics.Path()
-    private val capitalBox = android.graphics.RectF()
-
     /** The height of Shift's chip: its text size and padding. The arrow's place is that tall. */
     private fun capitalHeight(): Float {
         capitalText.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CHIP_SIZE, resources.displayMetrics)
@@ -566,9 +574,6 @@ class Strip(
             invalidate()
         }
 
-    /** When the first-time hint started, in uptime ms, or -1: see [MenuKeys.hint]. */
-    private var hintStart = -1L
-
     /** The menu that just opened shows each button's pill once, slowly, one after another. See [MenuKeys.HINT_OPENS]. */
     fun playMenuHint() {
         hintStart = SystemClock.uptimeMillis()
@@ -655,8 +660,6 @@ class Strip(
         invalidate()
     }
 
-    /** How far in the menu's buttons are, from 0 as it opens to 1. */
-    private var menuShown = 1f
     private var menuIn: ValueAnimator? = null
 
     /** The menu's buttons, over I's, O's and P's columns. A word that no list can drop has no Forget. */

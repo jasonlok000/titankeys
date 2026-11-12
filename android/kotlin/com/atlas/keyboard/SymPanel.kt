@@ -186,6 +186,11 @@ class SymPanel(
         }
     }
     private val clipFields = List(ClipboardHistory.LIMIT) { ClipField(it) }
+    /**
+     * The clips that pulse softly, each with its animation: see [flash]. Before init, which renders, so it is never null there.
+     * See tools/checks/init-order.test.ts.
+     */
+    private val flashes = HashMap<android.view.View, android.animation.ObjectAnimator>()
 
     init {
         orientation = VERTICAL
@@ -590,8 +595,6 @@ class SymPanel(
         }
     }
 
-    /** Makes [view] pulse softly while [on], and stops it otherwise. */
-    private val flashes = HashMap<android.view.View, android.animation.ObjectAnimator>()
 
     private fun flash(view: android.view.View, on: Boolean) {
         val running = flashes[view]

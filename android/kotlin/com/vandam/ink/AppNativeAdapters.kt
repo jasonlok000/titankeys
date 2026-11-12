@@ -27,6 +27,7 @@ import com.atlas.keyboard.ExactTyping
 import com.atlas.keyboard.GuideActivity
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.HapticsLab
+import com.atlas.keyboard.KeyCalibrationActivity
 import com.atlas.keyboard.KeyCapture
 import com.atlas.keyboard.PhoneNameSource
 import com.atlas.keyboard.PhoneSetup
@@ -340,6 +341,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 }
                 "labGraph" -> {
                     lab().showGraph(data.getJSONArray("haptics").toString(), data.optString("open"))
+                    "null"
+                }
+                "keyCalibration" -> {
+                    check(HapticsLab.available(activity)) { "Key calibration is only in TitanKeys Debug" }
+                    activity.startActivity(KeyCalibrationActivity.intent(activity))
                     "null"
                 }
                 "labExperiment" -> {

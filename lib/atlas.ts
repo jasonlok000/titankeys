@@ -257,6 +257,9 @@ export async function transferLearning(mode: "import" | "export") {
 export const showHapticsGraph = (haptics: { id: string; label: string; group: string; about: string }[], open = "") =>
   atlas("labGraph", { haptics, open });
 
+/** Opens Key calibration, which lines the drawn keys up with the real keys below the screen. TitanKeys Debug only. */
+export const showKeyCalibration = () => atlas("keyCalibration");
+
 /** Turns one of the Haptics lab's experiments on or off, by its id. TitanKeys Debug only. */
 export async function setLabExperiment(id: string, on: boolean) {
   await atlas("labExperiment", { id, on });

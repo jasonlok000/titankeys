@@ -139,7 +139,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     fun show(next: GuideCue) {
         cue = next
         cueStart = GuideMotion.now()
-        ghost = ghostFor(next)
+        ghost = ghostFor(next).map(KeyCalibration.load(context)::point)
         invalidate()
     }
 
@@ -173,7 +173,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     /** Adds to the live trail. [reset] starts a new path. */
     fun trace(points: List<FloatArray>, reset: Boolean, lifted: Boolean) {
         if (reset) trail.clear()
-        trail.addAll(points)
+        trail.addAll(points.map(KeyAlignment.current::point))
         for (point in points) hover.point(point[0], point[1])
         liftedAt = if (lifted) GuideMotion.now() else -1
         if (lifted) {
@@ -222,6 +222,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             keys[index++].box.set(left, 3 * rowHeight, left + width * keyWidth, 4 * rowHeight)
             left += width * keyWidth
         }
+        // The real keys sit below the screen. Key calibration in TitanKeys Debug lines the drawing up with them.
+        KeyCalibration.align(context, keys.map { it.box }, w.toFloat())
     }
 
     override fun onDraw(canvas: Canvas) {

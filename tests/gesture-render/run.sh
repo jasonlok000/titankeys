@@ -23,6 +23,6 @@ javac -nowarn -d "$work/fake" tests/gesture-render/fake/android/graphics/*.java
   "$engine/Swipe.java" "$engine/Calibration.java" "$engine/TouchAlignment.java" "$engine/TypingSettings.java" "$keyboard/Look.kt" \
   "$keyboard/Contact.kt" "$keyboard/CursorGesture.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" \
   "$keyboard/WordSelection.kt" \
-  "$keyboard/CursorMode.kt" "$keyboard/GestureDisplay.kt" "$keyboard/GestureDrawing.kt" "$keyboard/TrailThickness.kt" \
+  "$keyboard/CursorMode.kt" "$keyboard/GestureDisplay.kt" "$keyboard/GestureDrawing.kt" "$keyboard/TrailThickness.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" \
   tests/gesture-render/GuideStandIns.kt tests/gesture-render/GestureRender.kt
 java -Djava.awt.headless=true -cp "$work/fake:$work/classes:$stdlib" com.atlas.keyboard.GestureRenderKt "$out"

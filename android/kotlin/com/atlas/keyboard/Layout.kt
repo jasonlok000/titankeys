@@ -47,8 +47,8 @@ object Layout {
     )
     val bottomWidths = floatArrayOf(1.2f, 1.2f, 1.2f, 2.8f, 1.2f, 1.2f, 1.2f)
     /**
-     * How far in from each side of the screen, in dp, the ten key columns sit: the guide draws its keys there, and the Sym panel
-     * puts each label in the same columns, so that a label sits centred over its key.
+     * How far in from each side of the screen, in dp, the guide's text and the word menu's word keep. It no longer places the
+     * keys: every drawing of them takes its columns from [KeyGeometry], which has the real keys span the screen.
      */
     const val KEY_SIDE_DP = 18
     /** Every letter key, from the top row down. */

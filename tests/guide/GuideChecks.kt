@@ -70,7 +70,7 @@ private fun theMenuKeys() {
     for ((column, key) in listOf(MenuKeys.SAVE to 'I', MenuKeys.FORGET to 'O', MenuKeys.BACK to 'P')) {
         val (left, right) = MenuKeys.slot(width, side, column)
         check(right - left > 80f) { "The button over $key has room: ${right - left} px" }
-        val keyCentre = side + (width - 2 * side) * Layout.KEY_X[key - 'A']
+        val keyCentre = KeyGeometry(width).x(Layout.KEY_X[key - 'A'])
         check(kotlin.math.abs((left + right) / 2 - keyCentre) < .5f) { "The button over $key is centred on its key: ${(left + right) / 2} vs $keyCentre" }
     }
     check(MenuKeys.wordRight(width, side, 21f) < MenuKeys.slot(width, side, MenuKeys.SAVE).first) { "The word ends left of Save" }

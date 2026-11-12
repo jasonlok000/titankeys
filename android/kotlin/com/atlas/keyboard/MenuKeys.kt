@@ -6,8 +6,8 @@ package com.atlas.keyboard
  * Back, and the top two rows sense them, so K and L work too, and Backspace works as P. The word itself sits over the columns
  * that pick nothing, just left of I's button.
  *
- * The columns are the Sym panel's: ten of them, [Layout.KEY_SIDE_DP] in from each side of the screen, so that a button sits centred
- * over its own key. [slot] and [wordRight] work them out in pixels, so they can be checked without a phone.
+ * The columns are the Sym panel's: ten of them over the real keys ([KeyGeometry]), so that a button sits centred over its own key.
+ * [slot] and [wordRight] work them out in pixels, so they can be checked without a phone.
  */
 object MenuKeys {
     /** The rows of letters that pick the menu's buttons: the top two. */
@@ -32,11 +32,13 @@ object MenuKeys {
         return -1
     }
 
-    /** The left and right of key [column], from 0, on a bar [width] pixels wide whose columns start [side] pixels in from each edge. */
-    fun slot(width: Float, side: Float, column: Int): Pair<Float, Float> {
-        val each = (width - 2 * side) / COLUMNS
-        return side + column * each to side + (column + 1) * each
-    }
+    /**
+     * The left and right of key [column], from 0, on a bar [width] pixels wide, as wide as the screen: the column over the real key,
+     * from the middle of the gap on its left to the middle of the gap on its right, as [KeyGeometry] and Key calibration have it.
+     * [side] no longer moves the columns, which follow the real keys; it stays so that the menu's callers don't change.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun slot(width: Float, side: Float, column: Int): Pair<Float, Float> = KeyAlignment.column(width, column)
 
     /** Where the word ends on the right, [gap] pixels left of Save's column. */
     fun wordRight(width: Float, side: Float, gap: Float) = slot(width, side, SAVE).first - gap

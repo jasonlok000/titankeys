@@ -200,7 +200,7 @@ class SymPanel(
         grid.orientation = VERTICAL
         // Each row keeps all ten columns, so that the letter keys stay above the physical letter keys.
         // On the clipboard page, two wide fields take the place of the letter keys of each row, one over each half.
-        for ((index, row) in Layout.rows.take(3).withIndex()) grid.addView(AlignedRow(index).apply {
+        for ((index, row) in Layout.rows.take(3).withIndex()) grid.addView(LinearLayout(context).apply {
             for ((column, key) in row.withIndex()) {
                 val half = ClipboardHistory.halfAt(index, column)
                 if (half != null && index * 2 + half < ClipboardHistory.PER_PAGE && ClipboardHistory.firstColumn(index, half) == column) {
@@ -212,9 +212,7 @@ class SymPanel(
                 addView(cells[key] ?: Space(context), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
             }
         }, LayoutParams(LayoutParams.MATCH_PARENT, dp(ROW_HEIGHT)))
-        // The ten columns sit where the keys are, as the guide draws them, so each label is centred over its own key. The panel's
-        // own padding is part of that.
-        grid.setPadding(dp(Layout.KEY_SIDE_DP - PANEL_SIDE_DP), 0, dp(Layout.KEY_SIDE_DP - PANEL_SIDE_DP), 0)
+        // The ten columns sit over the real keys, each from the middle of one gap to the middle of the next: see onMeasure.
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         band.addView(clipLine, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         addView(band, LayoutParams(LayoutParams.MATCH_PARENT, dp(BAND_HEIGHT)))
@@ -229,23 +227,18 @@ class SymPanel(
     }
 
     /**
-     * A row of keys, each moved over its real key below the screen as Key calibration in TitanKeys Debug says. A key that would
-     * then pass the edge of the row stays centred over its key, and its content shrinks to fit. With the defaults nothing moves.
+     * The ten columns of each row sit over the real keys below the screen, as [KeyGeometry] has them on this width and as Key
+     * calibration in TitanKeys Debug says: each column runs from the middle of the gap left of its key to the middle of the gap
+     * right of it, so a label is centred over its key. The grid's margins set where the rows start and end. At the defaults the
+     * keys span the whole screen, so the outer columns reach half a gap past it. The panel is as wide as the screen.
      */
-    private inner class AlignedRow(private val row: Int) : LinearLayout(context) {
-        override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-            super.onLayout(changed, l, t, r, b)
-            val alignment = KeyCalibration.load(context)
-            val across = width.toFloat()
-            if (across <= 0f) return
-            for (index in 0 until childCount) {
-                val child = getChildAt(index)
-                val span = alignment.span(child.left / across, child.right / across, row)
-                child.offsetLeftAndRight(Math.round(span.centre * across - (child.left + child.right) / 2f))
-                child.scaleX = span.fit
-                child.scaleY = span.fit
-            }
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val keys = KeyGeometry(MeasureSpec.getSize(widthMeasureSpec).toFloat(), KeyCalibration.load(context))
+        (grid.layoutParams as? LayoutParams)?.apply {
+            leftMargin = Math.round(keys.left - keys.gap / 2) - paddingLeft
+            rightMargin = Math.round(keys.width - keys.right - keys.gap / 2) - paddingRight
         }
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
     /** The symbol or emoji on a letter key, or null if the key is blank. */
@@ -520,13 +513,17 @@ class SymPanel(
         categories.setPadding(bandInset, 0, bandInset, 0)
         preview.setPadding(bandInset + dp(8), 0, bandInset + dp(8), 0)
         clipLine.setPadding(bandInset + dp(8), 0, bandInset + dp(8), 0)
+        val keys = KeyGeometry(resources.displayMetrics.widthPixels.toFloat(), KeyCalibration.load(context))
+        // Where the outer columns start and end, in from the screen's sides: see onMeasure.
+        val leftColumn = Math.round(keys.left - keys.gap / 2)
+        val rightColumn = Math.round(keys.width - keys.right - keys.gap / 2)
         for ((index, row) in Layout.rows.take(3).withIndex()) {
             val rowsBelow = 2 - index
             val above = navigationInset + dp(BAND_HEIGHT + rowsBelow * ROW_HEIGHT + ROW_CONTENT_ABOVE)
-            // The outer cells already sit in by the key columns' side, so only a corner deeper than that moves their content.
-            val inset = (corners.inset(above.toFloat()) - dp(Layout.KEY_SIDE_DP)).coerceAtLeast(0)
-            cells[row.first()]?.setPadding(inset, 0, 0, 0)
-            cells[row.last()]?.setPadding(0, 0, inset, 0)
+            // The outer cells already sit in as far as their columns do, so only a corner deeper than that moves their content.
+            val corner = corners.inset(above.toFloat())
+            cells[row.first()]?.setPadding((corner - leftColumn).coerceAtLeast(0), 0, 0, 0)
+            cells[row.last()]?.setPadding(0, 0, (corner - rightColumn).coerceAtLeast(0), 0)
         }
     }
 
@@ -637,7 +634,11 @@ class SymPanel(
         if (row < 0) return rounded(look.accent)
         val keys = Layout.rows[row]
         val bottom = navigationInset + dp(BAND_HEIGHT + (2 - row) * ROW_HEIGHT)
-        return clearOfCorners(rounded(look.accent), bottom, 0, first = key == keys.first(), last = key == keys.last(), sideGap = dp(4))
+        // An outer column starts where the keys do, half a gap out from them: past the screen's side at the defaults.
+        val geometry = KeyGeometry(resources.displayMetrics.widthPixels.toFloat(), KeyCalibration.load(context))
+        val first = key == keys.first()
+        val sideGap = Math.round(if (first) geometry.left - geometry.gap / 2 else geometry.width - geometry.right - geometry.gap / 2)
+        return clearOfCorners(rounded(look.accent), bottom, 0, first = first, last = key == keys.last(), sideGap = sideGap)
     }
 
     /**

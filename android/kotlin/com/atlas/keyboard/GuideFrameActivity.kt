@@ -84,16 +84,16 @@ class GuideFrameActivity : Activity() {
             root.post { column.requestLayout(); bar.requestLayout() }
             insets
         }
-        // The drawing of the keys gets the room that the guide gives it: as wide as the column, as tall as its shape allows, and
-        // never more than its share of the height. See GuideActivity.fitKeys.
+        // The drawing of the keys is as wide as the screen, past the column's sides, so each key sits over its real key, and as
+        // tall as the real keyboard is at that width.
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            val free = root.height - column.paddingTop - column.paddingBottom
-            val width = root.width - column.paddingLeft - column.paddingRight
-            if (free <= 0 || width <= 0) return@addOnLayoutChangeListener
-            val target = minOf(width * KEYS_ASPECT, free * KEYS_SHARE).toInt()
-            val params = keys.layoutParams
-            if (params.height != target) {
+            if (root.width <= 0) return@addOnLayoutChangeListener
+            val target = keys.heightFor(root.width)
+            val params = keys.layoutParams as LinearLayout.LayoutParams
+            if (params.height != target || params.leftMargin != -column.paddingLeft || params.rightMargin != -column.paddingRight) {
                 params.height = target
+                params.leftMargin = -column.paddingLeft
+                params.rightMargin = -column.paddingRight
                 root.post { keys.requestLayout() }
             }
         }
@@ -319,7 +319,6 @@ class GuideFrameActivity : Activity() {
         private const val INSTRUCTION_DP = 20
         /** Room the title keeps at its end, so it never touches the edge. */
         private const val TITLE_SLACK = 8
-        private const val KEYS_SHARE = .36f
         private const val SEGMENT_HEIGHT = 4
 
         private const val TITLE_LARGEST = 32f
@@ -331,7 +330,6 @@ class GuideFrameActivity : Activity() {
         private const val SEGMENT_OFF = .25f
         private const val AHEAD_ALPHA = .38f
         private const val FIELD_FILL = .08f
-        private const val KEYS_ASPECT = .31f
 
         private const val HINT_SLIDE = 60
         private const val HINT_DELAY_MILLIS = 400L

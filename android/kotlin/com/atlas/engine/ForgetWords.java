@@ -7,8 +7,8 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * What holding a word on the strip does to it. A word that TitanKeys learned from you leaves Saved words. Any other word is
- * blocked, so it is not suggested, swiped or used as a fix. Both can be undone in Settings.
+ * What holding a word on the strip does to it. A word that TitanKeys learned from you leaves Saved words, and any word that can be
+ * is blocked, so it is not suggested, swiped or used as a fix. Both can be undone in Settings, or with Save in the word menu.
  */
 public final class ForgetWords {
     public enum Kind { NONE, REMOVE, BLOCK }
@@ -23,6 +23,19 @@ public final class ForgetWords {
         if (word == null || word.trim().isEmpty()) return Kind.NONE;
         if (!builtIn && saved) return Kind.REMOVE;
         return BlockedWords.valid(word) ? Kind.BLOCK : saved ? Kind.REMOVE : Kind.NONE;
+    }
+
+    /** Whether Forget takes [word] out of Saved words: any saved word that can be forgotten, built in or not. */
+    public static boolean removes(String word, boolean builtIn, boolean saved) {
+        return saved && kind(word, builtIn, saved) != Kind.NONE;
+    }
+
+    /**
+     * Whether Forget blocks [word]: any word that can be blocked, saved or not, so it is gone for good and typing it again can't
+     * learn it back (owner, 2026-11-12). Save lets it back in.
+     */
+    public static boolean blocks(String word, boolean builtIn, boolean saved) {
+        return kind(word, builtIn, saved) != Kind.NONE && BlockedWords.valid(word);
     }
 
     /**

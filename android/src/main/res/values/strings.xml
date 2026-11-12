@@ -3,15 +3,17 @@
     <!-- The confirm on the suggestion strip after you hold a word to forget it. -->
     <string name="strip_forgot">Forgot “%1$s”</string>
     <string name="strip_undo">Undo</string>
-    <!-- The menu of a word held on the strip, or of the word selected in the field. -->
+    <!-- The menu of a word held on the strip, or of the word selected in the field. Hovering a button shows its name in a pill. -->
     <string name="strip_menu_word">“%1$s”</string>
     <string name="strip_save">Save</string>
     <!-- I on a saved word, or one the dictionary knows: put it first among similar words. -->
     <string name="strip_favourite">Favourite</string>
-    <!-- I on a favourite: it shows the word is one, and does nothing more. -->
-    <string name="strip_favourited">Favourite ✓</string>
-    <!-- O on a favourite. -->
+    <!-- I on a favourite, the top step: its pill says the word is one, and it does nothing more. -->
+    <string name="strip_favourited">Already a favourite</string>
+    <!-- O on a favourite: one step down, to saved. -->
     <string name="strip_unfavourite">Unfavourite</string>
+    <!-- O on a saved word: one step down, out of Saved words. -->
+    <string name="strip_unsave">Unsave</string>
     <string name="strip_forget">Forget</string>
     <!-- When exporting or importing words, the favourites from the word menu go with them. -->
     <string name="favourites_not_exported">The words are exported, but the favourites couldn\'t be added. Try again.</string>

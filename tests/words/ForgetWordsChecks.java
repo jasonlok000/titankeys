@@ -15,6 +15,17 @@ public final class ForgetWordsChecks {
         check(ForgetWords.kind("R2D2", false, false) == ForgetWords.Kind.NONE, "A word that no list can drop must be left alone");
         check(ForgetWords.kind(" ", true, true) == ForgetWords.Kind.NONE, "An empty place must forget nothing");
 
+        // Forget is for good (owner's "utun", 2026-11-12): a saved word leaves Saved words and is blocked too, so typing it can't
+        // learn it back, and the menu shows it as not saved. A word Blocked words can't hold still leaves Saved words.
+        check(ForgetWords.removes("utun", false, true) && ForgetWords.blocks("utun", false, true),
+                "A learned word must leave Saved words and be blocked");
+        check(ForgetWords.removes("the", true, true) && ForgetWords.blocks("the", true, true),
+                "A built-in word that is also saved must leave Saved words and be blocked");
+        check(!ForgetWords.removes("the", true, false) && ForgetWords.blocks("the", true, false), "A built-in word is only blocked");
+        check(ForgetWords.removes("R2D2", false, true) && !ForgetWords.blocks("R2D2", false, true),
+                "A saved word Blocked words can't hold must still leave Saved words");
+        check(!ForgetWords.removes("R2D2", false, false) && !ForgetWords.blocks("R2D2", false, false), "Nothing for a word no list holds");
+
         check(ForgetWords.fix("teh", "the"), "A word that does not continue the typed letters must count as a fix");
         check(!ForgetWords.fix("th", "the"), "A completion of the typed letters must not count as a fix");
         check(!ForgetWords.fix("Th", "THE"), "A completion in another case must not count as a fix");

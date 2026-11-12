@@ -536,16 +536,22 @@ public final class SwipeTyping {
     /** Whether autocorrect may change the letters [typed] to [fix]. Holding a fix on the strip refuses it. */
     public boolean fixAllowed(String typed, String fix) { return refusedFixes.allowed(typed, fix); }
 
+    /**
+     * Whether the base word list has [word], not only Saved words. The typed list can't tell: it was built with the saved words
+     * of the time in it, so a saved word looked built in, and Forget only blocked it (owner's "utun", 2026-11-12).
+     */
+    public boolean builtInWord(String word) { return baseFrequency(word) > 0; }
+
+    /** Whether Saved words has [word]: saved with the word menu or in Settings, or learned from your typing. */
+    public boolean savedWord(String word) { return Arrays.stream(wordView.words).anyMatch(word::equalsIgnoreCase); }
+
     /** What holding [word] on the strip would do to it. */
     public ForgetWords.Kind forgetKind(String word) {
-        TypedPredictions predictions = typedPredictions;
-        boolean builtIn = predictions != null && predictions.contains(word);
-        boolean saved = Arrays.stream(wordView.words).anyMatch(word::equalsIgnoreCase);
-        return ForgetWords.kind(word, builtIn, saved);
+        return ForgetWords.kind(word, builtInWord(word), savedWord(word));
     }
 
     /**
-     * Forgets a word that you held on the strip: it leaves Saved words with its learned pairs, or it is blocked. If it was a
+     * Forgets a word that you held on the strip: it leaves Saved words with its learned pairs, and it is blocked. If it was a
      * fix for the letters [typed], autocorrect also stops making that fix. [typed] is empty when no letters were typed.
      */
     public void forgetWord(String word, String typed, OperationCallback callback) {
@@ -556,13 +562,15 @@ public final class SwipeTyping {
                 if (saveRefusedFixes(replacement)) refusedFixes = replacement;
                 else failure = "Could not save the change to autocorrect.";
             }
-            ForgetWords.Kind kind = forgetKind(word);
+            // Forget is for good: the word leaves Saved words, and it is blocked too, so typing it again can't learn it back.
+            // Save lets it back in.
+            boolean builtIn = builtInWord(word), saved = savedWord(word);
             String result = null;
-            if (kind == ForgetWords.Kind.BLOCK) result = block(word, true);
-            else if (kind == ForgetWords.Kind.REMOVE) {
+            if (ForgetWords.removes(word, builtIn, saved)) {
                 result = remove(word);
                 publish();
             }
+            if (result == null && ForgetWords.blocks(word, builtIn, saved)) result = block(word, true);
             operationResult(callback, result != null ? result : failure);
         });
     }

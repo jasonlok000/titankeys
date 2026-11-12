@@ -30,7 +30,8 @@ object HapticTimeline {
         Family.Saved -> "Short, short, long. The word menu saved a word."
         Family.Removed -> "Long, short, short. The word menu deleted a word."
         Family.Favourite -> "Short, short, longer. The word menu made a word a favourite."
-        Family.Unfavourite -> "Light, firm, light. The word is no longer a favourite."
+        Family.Unfavourite -> "A light fall. The word is no longer a favourite."
+        Family.Unsaved -> "A medium fall. The word left Saved words."
     }
 
     /** What set off [haptic], in a few plain words, for the lab's live timeline. */
@@ -73,6 +74,8 @@ object HapticTimeline {
         Haptic.WordForgotten -> "Deleted the word"
         Haptic.WordFavourited -> "Favourited the word"
         Haptic.WordUnfavourited -> "Unfavourited the word"
+        Haptic.WordUnsaved -> "Unsaved the word"
+        Haptic.MenuSpent -> "Already a favourite"
         Haptic.ForgetUndone -> "You undid Forget"
         Haptic.WordNotSaved -> "The word couldn't be saved"
         Haptic.ClipOffer -> "You pasted the offered clip"

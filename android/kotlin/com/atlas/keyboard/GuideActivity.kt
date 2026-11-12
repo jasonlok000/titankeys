@@ -1209,10 +1209,7 @@ class GuideActivity : Activity() {
         offer.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
         offer.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
         again.setTextColor(strong)
-        for (button in listOf(boringButton, shareButton)) {
-            button.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
-            button.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
-        }
+        paintEndButtons()
         for (index in 0 until endButtons.childCount) (endButtons.getChildAt(index) as TextView).let { line ->
             if (line !== boringButton && line !== shareButton) line.setTextColor(GuideMotion.faded(strong, BODY_ALPHA))
         }
@@ -1444,6 +1441,21 @@ class GuideActivity : Activity() {
             overlay.sweep()
             main.postDelayed({ if (passed) applyTone(GuideTone.Orange) }, WIPE_MILLIS)
         }
+        if (step.chapter == GuideChapter.End) showEnd(step)
+    }
+
+    /**
+     * The end, however it's reached: the name, the line under it and the slogan, then the two big buttons. It wraps its words, as
+     * setup does, and locks nothing. The text box goes, so the name and the buttons have the room: its words wait in the field.
+     */
+    private fun showEnd(end: GuideStep) {
+        guideLook(false)
+        unlockKeyboard()
+        script.visibility = View.GONE
+        field.hint = end.text
+        title.text = end.title
+        body.text = end.body + "\n\n" + end.done
+        showEndChoices()
     }
 
     /**
@@ -3046,11 +3058,8 @@ class GuideActivity : Activity() {
         haptics.celebrate()
         for (sweep in 0 until FINALE_SWEEPS) overlay.sweep(delay = sweep * FINALE_STAGGER_MILLIS, thickness = BEAT_LINE + sweep * 2f)
         keys.celebrate()
-        // The text stays: it is what you typed through the whole guide.
+        // The text stays: it is what you typed through the whole guide. The end's own look comes with it. See [showEnd].
         enter(end)
-        // The end wraps its words, as setup does, and locks nothing.
-        guideLook(false)
-        unlockKeyboard()
         // The name and slogan wait for the halves to land.
         for (view in listOf(title, body, chapter)) {
             view.animate().cancel()
@@ -3058,8 +3067,6 @@ class GuideActivity : Activity() {
             view.translationX = 0f
         }
         title.post { landName(end.title) }
-        body.text = end.body + "\n\n" + end.done
-        showEndChoices()
     }
 
     /**
@@ -3070,12 +3077,34 @@ class GuideActivity : Activity() {
         next.visibility = View.VISIBLE
         next.text = END_NEXT
         offer.visibility = View.GONE
-        showHint(END_HINT)
+        // Next says it already ("Go type something"), and the screen is short: the buttons get the room, not a hint.
+        hideHint()
         endButtons.visibility = View.VISIBLE
         endButtons.alpha = 1f
         val asking = Contributions.unanswered(this)
-        shareButton.text = if (asking) SHARE_OFFER else if (Contributions.enabled(this)) SHARE_ON else SHARE_OFF
+        // A switch, off until the user agrees on the share policy page; never shown on before that.
+        shareButton.text = if (Contributions.enabled(this)) SHARE_ON else SHARE_OFF
         shareLine.text = if (asking) SHARE_PLAIN else SHARE_ANSWERED
+        paintEndButtons()
+    }
+
+    /** The boring guide is a filled button; sharing is a switch, filled only while it's on. */
+    private fun paintEndButtons() {
+        val onInk = tone == GuideTone.Ink
+        val strong = if (onInk) GuideColours.CREAM else GuideColours.INK
+        boringButton.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
+        boringButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
+        if (Contributions.enabled(this)) {
+            shareButton.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
+            shareButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
+        } else {
+            shareButton.setTextColor(strong)
+            shareButton.background = GradientDrawable().apply {
+                setColor(Color.TRANSPARENT)
+                setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(strong, NEXT_WAITING))
+                cornerRadius = Radii.px(resources, OFFER_RADIUS)
+            }
+        }
     }
 
     /** Flies the two halves of the name to where the title shows it, then shows the title in their place. */
@@ -3297,7 +3326,6 @@ class GuideActivity : Activity() {
         /** The share slide's offer (#34), while it is unanswered. It opens the full disclosure. */
         private const val SHARE_OFFER = "Share my swipes"
         /** The end's instruction. */
-        private const val END_HINT = "Press a big button, or go type something."
         /** The one boring thing at the end, in plain words: it is about consent, so no jokes here. */
         private const val SHARE_PLAIN = "If you agree, TitanKeys sends us examples of your swipes so we can make swiping better. " +
             "It's off until you agree, and you'll see exactly what's sent first."

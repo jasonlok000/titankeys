@@ -165,7 +165,7 @@ fun main() {
     theTrailFollowsTouchSize()
     demonstrationsTypePunctuation()
     // Drawings of the slides in the new layout, to look at without a phone. See SlideRenders.kt.
-    System.getenv("SLIDES_PNG")?.let { drawSlides(it, NEW_LAYOUT) }
+    System.getenv("SLIDES_PNG")?.let { drawSlides(it, NEW_LAYOUT + GuideChapter.End) }
     println("Guide checks passed")
 }
 

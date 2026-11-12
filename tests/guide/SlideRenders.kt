@@ -388,6 +388,114 @@ private fun drawKeys(g: Graphics2D, top: Int, side: Int, panel: String?) {
     }
 }
 
+/** The end's words that live in GuideActivity, which isn't compiled for these checks: the same text, copied. */
+private const val BORING_LINE = "Every feature in words. For nerds, and for people who skipped half of this. So, you."
+private const val SHARE_PLAIN = "If you agree, TitanKeys sends us examples of your swipes so we can make swiping better. It's off " +
+    "until you agree, and you'll see exactly what's sent first."
+private const val SHARE_ANSWERED = "Thanks. You can change this any time in Settings > Share swipes. Trust me bro."
+
+/** [text] wrapped at [width], line by line. */
+private fun wrap(g: Graphics2D, text: String, width: Int): List<String> {
+    val lines = ArrayList<String>()
+    for (paragraph in text.split("\n")) {
+        var line = ""
+        for (word in paragraph.split(' ')) {
+            val tried = if (line.isEmpty()) word else "$line $word"
+            if (g.fontMetrics.stringWidth(tried) <= width || line.isEmpty()) line = tried else {
+                lines += line
+                line = word
+            }
+        }
+        lines += line
+    }
+    return lines
+}
+
+/**
+ * The end, as it wraps: the name, the line under it and the slogan, the two big buttons with their lines, the field with the
+ * end's words waiting in it, and the keys. [answered] draws it after the share offer has an answer.
+ */
+private fun drawEnd(file: File, answered: Boolean) {
+    val end = GUIDE_STEPS.last()
+    val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB)
+    val g = image.createGraphics()
+    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+    g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+    g.color = ink
+    g.fillRect(0, 0, WIDTH, HEIGHT)
+    val side = dp(Layout.KEY_SIDE_DP)
+    val inner = WIDTH - 2 * side
+    var y = dp(40)
+    val bar = dp(32)
+    // The top bar at the end: the chapter's name, Again, Next as "Go type something", and ✕.
+    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(13))
+    g.color = rgb(Paint.CREAM, .7f)
+    g.drawString("Again", side, y + bar / 2 + dp(4))
+    val next = "Go type something"
+    val pillWidth = g.fontMetrics.stringWidth(next) + dp(20)
+    val pillX = WIDTH - side - dp(36) - pillWidth
+    g.color = orange
+    g.fill(RoundRectangle2D.Float(pillX.toFloat(), y + dp(3).toFloat(), pillWidth.toFloat(), bar - dp(6).toFloat(), bar.toFloat(), bar.toFloat()))
+    g.color = ink
+    g.drawString(next, pillX + dp(10), y + bar / 2 + dp(4))
+    y += bar + dp(10)
+    // The name: the logo, as it lands.
+    g.font = calibrated(g, Font.BOLD, "Type like a normal person.", 540).deriveFont(dp(40).toFloat())
+    g.color = cream
+    g.drawString(end.title, side, y + g.fontMetrics.ascent)
+    y += g.fontMetrics.height
+    // The line under it and the slogan, wrapped.
+    g.font = calibrated(g, Font.PLAIN, "Back for a refresher? Pick a chapter. No judgement. Some judgement.", 875)
+    g.color = rgb(Paint.CREAM, .82f)
+    for (line in wrap(g, end.body + "\n" + end.done, inner)) {
+        y += g.fontMetrics.height
+        g.drawString(line, side, y)
+    }
+    y += dp(14)
+    // The two big buttons, each with its line under it. Sharing is a switch, off until the user agrees.
+    fun button(text: String, filled: Boolean, under: String) {
+        g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(20))
+        val height = g.fontMetrics.height + dp(28)
+        val shape = RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), height.toFloat(), dp(24).toFloat(), dp(24).toFloat())
+        if (filled) {
+            g.color = orange
+            g.fill(shape)
+            g.color = ink
+        } else {
+            g.color = rgb(Paint.CREAM, .6f)
+            g.stroke = BasicStroke(dp(1).toFloat())
+            g.draw(shape)
+            g.color = cream
+        }
+        g.drawString(text, WIDTH / 2 - g.fontMetrics.stringWidth(text) / 2, y + height / 2 + g.fontMetrics.ascent / 2 - dp(2))
+        y += height + dp(4)
+        g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(13))
+        g.color = rgb(Paint.CREAM, .82f)
+        for (line in wrap(g, under, inner)) {
+            y += g.fontMetrics.height
+            g.drawString(line, WIDTH / 2 - g.fontMetrics.stringWidth(line) / 2, y)
+        }
+        y += dp(12)
+    }
+    button("The boring guide", true, BORING_LINE)
+    button("Share my swipes: off", false, if (answered) SHARE_ANSWERED else SHARE_PLAIN)
+    // The field, two lines, with the end's words waiting in it.
+    g.font = calibrated(g, Font.PLAIN, "Tihs keybaord fxies yuor typos, sp yuo cna kepe", 807)
+    val pad = dp(12)
+    val fieldHeight = 2 * g.fontMetrics.height + 2 * pad
+    g.color = cream
+    g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), fieldHeight.toFloat(), dp(12).toFloat(), dp(12).toFloat()))
+    g.color = rgb(Paint.INK, .45f)
+    for ((index, line) in wrap(g, END_TEXT, inner - 2 * pad).take(2).withIndex())
+        g.drawString(line, side + pad, y + pad + g.fontMetrics.ascent + index * g.fontMetrics.height)
+    y += fieldHeight
+    val keysTop = HEIGHT - dp(4 * 50 + 70)
+    if (y > keysTop) mark(g, "OVERLAPS THE KEYS BY ${y - keysTop} PX", keysTop)
+    drawKeys(g, keysTop, side, null)
+    g.dispose()
+    ImageIO.write(image, "png", file)
+}
+
 /** Draws every slide in [chapters], in each of its states, to PNGs in [folder]. */
 internal fun drawSlides(folder: String, chapters: Set<GuideChapter>) {
     val out = File(folder).apply { mkdirs() }
@@ -399,6 +507,11 @@ internal fun drawSlides(folder: String, chapters: Set<GuideChapter>) {
             draw(frame, File(out, "%02d-%s.png".format(index + 1, frame.name)))
             count++
         }
+    }
+    if (GuideChapter.End in chapters) for (answered in listOf(false, true)) {
+        drawing = "end-" + if (answered) "answered" else "asking"
+        drawEnd(File(out, "%02d-%s.png".format(GUIDE_STEPS.size, drawing)), answered)
+        count++
     }
     println("$count slide states drawn to $folder")
 }

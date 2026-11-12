@@ -279,8 +279,8 @@ test("the lab tries the mark at a triple press's moving end, and only the debug 
   expect(page).toContain('<Section title="Triple press selection end">');
   expect(page).toContain("onChange={id => void setLabSelectionEnd(id)}");
   const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
-  expect(haptics).toMatch(/fun selectionEnd\(context: Context\): SelectionEnd \{\s+if \(!debug\(context\)\) return SelectionEnd\.Handle/);
+  expect(haptics).toMatch(/fun selectionEndId\(context: Context\): String\? \{\s+if \(!debug\(context\)\) return null/);
   // Every selection a Space gesture makes takes the mark in use as it starts.
   const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
-  expect(ime.match(/GestureDisplay\.selectionEnd = Haptics\.selectionEnd\(this\)/g)?.length).toBe(3);
+  expect(ime.match(/GestureDisplay\.selectionEnd = SelectionEnd\.stored\(Haptics\.selectionEndId\(this\)\)/g)?.length).toBe(3);
 });

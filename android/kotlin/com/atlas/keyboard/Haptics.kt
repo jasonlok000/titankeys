@@ -909,20 +909,18 @@ class Haptics(private val context: Context) {
         }
 
         /**
-         * What marks the moving end of a triple press's selection: the one the Haptics lab tried, in TitanKeys Debug only, or
-         * else the handle. Every other build has the handle without looking.
+         * The id of the mark the Haptics lab tried at the moving end of a triple press's selection (see SelectionEnd), in
+         * TitanKeys Debug only, or null for the handle. Every other build returns null without looking.
          */
-        fun selectionEnd(context: Context): SelectionEnd {
-            if (!debug(context)) return SelectionEnd.Handle
-            return SelectionEnd.of(preferences(context).getString(SELECTION_END_KEY, null)) ?: SelectionEnd.Handle
+        fun selectionEndId(context: Context): String? {
+            if (!debug(context)) return null
+            return preferences(context).getString(SELECTION_END_KEY, null)
         }
 
-        /** Tries [end] at a selection's moving end, or puts the handle back with null. Debug build only. */
-        fun trySelectionEnd(context: Context, end: SelectionEnd?) {
+        /** Tries the mark [id] at a selection's moving end, or puts the handle back with null. Debug build only. */
+        fun trySelectionEnd(context: Context, id: String?) {
             check(debug(context)) { "Only TitanKeys Debug can try a selection's end" }
-            preferences(context).edit().apply {
-                if (end == null || end == SelectionEnd.Handle) remove(SELECTION_END_KEY) else putString(SELECTION_END_KEY, end.id)
-            }.commit()
+            preferences(context).edit().apply { if (id == null) remove(SELECTION_END_KEY) else putString(SELECTION_END_KEY, id) }.commit()
         }
 
         private const val SELECTION_END_KEY = "debug_selection_end"

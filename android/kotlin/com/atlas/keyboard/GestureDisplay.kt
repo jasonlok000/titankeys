@@ -1537,5 +1537,8 @@ enum class SelectionEnd(val id: String, val label: String) {
 
     companion object {
         fun of(id: String?) = entries.firstOrNull { it.id == id }
+
+        /** The mark stored under [id], or the handle where there is none, as every build but TitanKeys Debug has. */
+        fun stored(id: String?) = of(id) ?: Handle
     }
 }

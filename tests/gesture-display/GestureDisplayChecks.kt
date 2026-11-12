@@ -1759,7 +1759,7 @@ private fun theSelectionsEndMarkTurnsSmoothly() {
     repeat(3) { display.wordStep(-1) }
     display.cursorFrame(2f, -1, 3f, true, now)
     val leads = ArrayList<Float>()
-    repeat(20) {
+    repeat(50) {
         now += 16
         display.advance(now, 1f)
         leads += display.endLead

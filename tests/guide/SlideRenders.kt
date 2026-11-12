@@ -79,7 +79,7 @@ private fun fieldFor(step: GuideStep): Frame {
         GuideChapter.Steering -> {
             val text = looping(STEER_TEXT) + " "
             val cursor = text.indexOf(' ', text.length / 2) + 1
-            at(text, cursor)
+            if (step.id == "selectmore") grabTarget(text, text.length / 2)!!.let { at(text, it.first).copy(target = it) } else at(text, cursor)
         }
         GuideChapter.Symbols -> {
             val index = SYMBOL_PARTS.indexOfFirst { it.first == step.symbol }
@@ -154,6 +154,19 @@ private fun framesFor(step: GuideStep): List<Frame> {
         frames += frame("2-stage2", step.title, step.stages[1].text).copy(steer = SteerAim.Start)
         frames += frame("2-stage2-entered", step.title, step.stages[1].text).copy(steer = SteerAim.Entered)
         frames += frame("4-passed", step.done, step.praise, passed = true).copy(steer = SteerAim.Entered)
+        return frames
+    }
+    // Grab a bunch: one word picked, then more as the finger slides, then all of them.
+    if (step.id == "selectmore") {
+        val aim = field.target!!
+        val first = field.field.indexOf(' ', aim.first)
+        frames.removeAll { it.name.endsWith("-2-stage2") }
+        frames += frame("2-stage2", step.title, step.stages[1].text, from = field.copy(start = aim.first, end = first))
+        val more = field.field.indexOf(" skipped", aim.first)
+        frames += frame("2-stage2-grab", step.title, step.stages[1].text, from = field.copy(start = aim.first, end = more))
+        val greedy = field.copy(start = aim.first, end = field.field.indexOf(' ', aim.last + 30))
+        frames += frame("3-chip-greedy", step.title, step.stages[1].text, chip = "Too greedy. Slide back to give some back.", from = greedy)
+        frames += frame("4-passed", step.done, step.praise, passed = true, from = field.copy(start = aim.first, end = aim.last + 1))
         return frames
     }
     // Mass deletion counts words in the instruction's place from the first one: one gone, then passed at eight, then frozen.
@@ -363,7 +376,7 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
     val first = when {
         frame.ghost.isNotEmpty() || frame.field.isEmpty() -> cursorLine
         // The steer slide shows the cursor's line and the one after it, where its word is.
-        frame.steer != SteerAim.None -> cursorLine
+        frame.steer != SteerAim.None || frame.chapter == GuideChapter.Steering && frame.target != null -> cursorLine
         else -> (cursorLine - 1).coerceAtLeast(0)
     }.coerceAtMost((starts.size - 2).coerceAtLeast(0))
     // The steer slide's word, found on the other line as the app finds it, and the cursor in it once entered.

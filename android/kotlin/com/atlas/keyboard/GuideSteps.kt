@@ -743,6 +743,27 @@ private fun GuideMemory.steerToward(aim: IntRange, event: KeyboardEvent): GuideV
     else -> GuideVerdict.Wait
 }
 
+/** The words that the Grab a bunch slide marks in orange to select. */
+internal const val GRAB_PHRASE = "every word you skipped"
+/** Words past the marked ones that a selection may take and still count. */
+internal const val GRAB_EXTRA = 2
+internal const val GRAB_SHORT = 0
+internal const val GRAB_ALL = 1
+internal const val GRAB_GREEDY = 2
+
+/** Where the Grab a bunch slide's words are in [text]: the copy from [from] on, or the last one before it. */
+internal fun grabTarget(text: String, from: Int): IntRange? {
+    val at = text.indexOf(GRAB_PHRASE, from).takeIf { it >= 0 } ?: text.lastIndexOf(GRAB_PHRASE, from).takeIf { it >= 0 } ?: return null
+    return at until at + GRAB_PHRASE.length
+}
+
+/** How a selection from [start] to [end] does on the marked words [aim]: short of them, all of them, or far too many. */
+internal fun grabbed(text: String, aim: IntRange, start: Int, end: Int): Int {
+    if (start > aim.first || end < aim.last + 1) return GRAB_SHORT
+    fun words(from: Int, to: Int) = if (to <= from) 0 else Regex("[A-Za-z']+").findAll(text.substring(from, to)).count()
+    return if (words(start, aim.first) + words(aim.last + 1, end) > GRAB_EXTRA) GRAB_GREEDY else GRAB_ALL
+}
+
 /** The stray d, in orange, while it's there. */
 internal fun strayTarget(text: String) = text.lastIndexOf(STRAY).takeIf { it >= 0 }?.let { (it + STRAY.length - 2)..(it + STRAY.length - 2) }
 
@@ -1106,7 +1127,8 @@ internal val GUIDE_STEPS = listOf(
         // v3.1's "Grab a bunch. Feel powerful for a second." is two lines.
         title = "Grab a bunch. Feel powerful.",
         stages = listOf(
-            GuideStage("Tap Space three times. Hold the third tap.") { event ->
+            // The words to grab are marked in orange, and the cursor waits right before them (design v4).
+            GuideStage("Three taps on the orange words. Hold the third.") { event ->
                 when {
                     event is CursorStarted && event.words -> GuideVerdict.Done
                     event is CursorStarted -> chip("That's two. Count to three. We believe in you.")
@@ -1114,8 +1136,21 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Now slide left or right to select more.") { event ->
+            GuideStage("Slide to grab the rest.") { event ->
+                val aim = target
                 when {
+                    // The marked words, and a word or two more, pass as the finger lifts. Many more is greedy.
+                    aim != null && event is FieldChanged && event.end > event.start -> {
+                        val was = mark
+                        mark = grabbed(event.text, aim, event.start, event.end)
+                        if (mark == GRAB_GREEDY && was != GRAB_GREEDY) chip("Too greedy. Slide back to give some back.") else GuideVerdict.Wait
+                    }
+                    aim != null && event is Moved && event.lifted -> when (mark) {
+                        GRAB_ALL -> GuideVerdict.Done
+                        GRAB_GREEDY -> GuideVerdict.Hint("Too greedy. Slide back to give some back.", stage = 0)
+                        else -> GuideVerdict.Hint("So close. Then you just let go.", stage = 0)
+                    }
+                    // Nothing marked, as before: any selection passes.
                     event is FieldChanged && event.end > event.start -> GuideVerdict.Done
                     event is Moved && event.lifted -> GuideVerdict.Hint("So close. Then you just let go.", stage = 0)
                     else -> GuideVerdict.Wait

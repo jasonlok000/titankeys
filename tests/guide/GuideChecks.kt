@@ -159,6 +159,7 @@ fun main() {
     scenarios()
     theCursorHasToMove()
     steeringToAWord()
+    grabbingABunch()
     settingsThatStepsNeed()
     goingBack()
     resuming()
@@ -667,6 +668,26 @@ private fun steeringToAWord() {
     steer.event(CursorStarted(false))
     steer.event(FieldChanged("x".repeat(60), 32, 32))
     same(steer.event(Moved(20f, lifted = true)), GuideVerdict.Done, "In the word as the finger lifts passes")
+}
+
+private fun grabbingABunch() {
+    val text = "x " + GRAB_PHRASE + " and more words here"
+    val aim = grabTarget(text, 0)!!
+    same(text.substring(aim.first, aim.last + 1), GRAB_PHRASE, "The words to grab")
+    same(grabbed(text, aim, aim.first, aim.first + 5), GRAB_SHORT, "One word is short")
+    same(grabbed(text, aim, aim.first, aim.last + 1), GRAB_ALL, "All of them")
+    same(grabbed(text, aim, aim.first, aim.last + 10), GRAB_ALL, "and two more is still fine")
+    same(grabbed(text, aim, 0, text.length), GRAB_GREEDY, "but many more is greedy")
+    val grab = GuideFlow({ GuideSettings() })
+    grab.start("selectmore")
+    grab.aim(aim)
+    grab.event(CursorStarted(true))
+    grab.event(FieldChanged(text, aim.first, aim.first + 5))
+    same((grab.event(Moved(10f, lifted = true)) as GuideVerdict.Hint).text.startsWith("So close"), true, "Let go short")
+    grab.event(CursorStarted(true))
+    same((grab.event(FieldChanged(text, 0, text.length)) as GuideVerdict.Hint).text.startsWith("Too greedy"), true, "Greedy, as it grows")
+    grab.event(FieldChanged(text, aim.first, aim.last + 1))
+    same(grab.event(Moved(10f, lifted = true)), GuideVerdict.Done, "All of them as the finger lifts")
 }
 
 private fun settingsThatStepsNeed() {

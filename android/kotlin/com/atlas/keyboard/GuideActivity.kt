@@ -2387,7 +2387,7 @@ class GuideActivity : Activity() {
         val range = if (playground || guideLooks != true) null else when (flow.step.id) {
             "backspace" -> strayTarget(text)
             "flick" -> if (passed) null else lastWordTarget(text, field.selectionStart)
-            "steer" -> steerAim
+            "steer", "selectmore" -> steerAim
             else -> null
         }
         field.target = range
@@ -2439,6 +2439,16 @@ class GuideActivity : Activity() {
         steerAim = null
         inSteerAim = false
         if (flow.step.id == "steer") field.post { pickSteerAim() }
+        // Grab a bunch: its words are marked, and the cursor waits right before them, their line at the top of the field.
+        if (flow.step.id == "selectmore") grabTarget(text, middle)?.let { words ->
+            steerAim = words
+            field.setSelection(words.first)
+            field.post {
+                val own = field.layout ?: return@post
+                field.scrollTo(0, own.getLineTop(own.getLineForOffset(words.first)))
+                aim()
+            }
+        }
     }
 
     /**

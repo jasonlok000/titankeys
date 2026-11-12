@@ -76,6 +76,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      */
     private var geometry = KeyGeometry(0f)
     private val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = Typeface.create(Typeface.DEFAULT, 800, false)
         textAlign = Paint.Align.CENTER
@@ -251,6 +252,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         var moving = false
         val onOrange = tone == GuideTone.Orange
         val idleFill = GuideMotion.faded(if (onOrange) GuideColours.INK else GuideColours.CREAM, if (onOrange) KEY_FILL_ORANGE else KEY_FILL_INK)
+        val idleOutline = GuideMotion.faded(if (onOrange) GuideColours.INK else GuideColours.CREAM,
+            if (onOrange) KEY_OUTLINE_ORANGE else KEY_OUTLINE_INK)
         val idleLabel = if (onOrange) GuideColours.INK else GuideMotion.faded(GuideColours.CREAM, KEY_LABEL_INK)
         val litFill = if (onOrange) GuideColours.INK else GuideColours.ORANGE
         val litLabel = if (onOrange) GuideColours.ORANGE else GuideColours.INK
@@ -298,8 +301,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             if (t < 1f) moving = true
         }
 
-        // The boxes are the real keys, gaps and all, so a key is drawn right to its edges.
-        val inset = 0f
+        // The boxes are the real keys, gaps and all, so a key is drawn right to its edges: the outline sits just inside them.
+        val stroke = dp(KEY_OUTLINE)
+        val inset = stroke / 2
         val pressed = 1f + bump * WAVE_SCALE - heat * PRESS_DEPTH
         val centreX = key.box.centerX()
         val centreY = key.box.centerY()
@@ -335,8 +339,13 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val emptyKey = false
         // Faded from the key's own fill, so an empty key is darker than the others, never brighter.
         val emptyFill = GuideMotion.faded(idleFill, (idleFill ushr 24) / 255f * EMPTY_KEY)
+        // An idle key is a thin outline over a very faint fill, as the real keys read from above; a lit key fills, and its
+        // outline goes into the fill.
         boxPaint.color = if (emptyKey) emptyFill else GuideMotion.blend(idleFill, litFill, heat.coerceIn(0f, 1f))
         canvas.drawRoundRect(key.box.left + inset, key.box.top + inset, key.box.right - inset, key.box.bottom - inset, radius, radius, boxPaint)
+        outlinePaint.color = GuideMotion.blend(idleOutline, litFill, heat.coerceIn(0f, 1f))
+        outlinePaint.strokeWidth = stroke
+        canvas.drawRoundRect(key.box.left + inset, key.box.top + inset, key.box.right - inset, key.box.bottom - inset, radius, radius, outlinePaint)
         val labelColour = GuideMotion.blend(idleLabel, litLabel, heat.coerceIn(0f, 1f))
         if (caption != null) {
             // The hint for this key: the letter moves up a little, and what it does now is written small under it.
@@ -651,26 +660,24 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private val deletePath = Path()
 
     /**
-     * The held delete's zones, on its slide (owner, v5): back on Backspace pauses, and the line between F and G is top speed. They
-     * are where the hold really has them: [PAUSE_KEYS] key widths from where a flick on Backspace starts, and [REPEAT_LONG_KEYS].
+     * The held delete's zones, on its slide, on the Backspace row: back on Backspace pauses, and from between F and G leftwards is
+     * top speed, a lighter box. They are where the hold really has them: [PAUSE_KEYS] key widths from where a flick on Backspace
+     * starts, and [REPEAT_LONG_KEYS].
      */
     private fun drawHoldZones(canvas: Canvas) {
         if ((cue as? GuideCue.Flick)?.hold != true) return
         val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.CREAM
         val corner = Radii.px(resources, Radii.SMALL)
+        val fast = geometry.onRow(1, AREA_LEFT, HOLD_TOP_X)
+        zonePaint.color = GuideMotion.faded(colour, ZONE_ALPHA * FAST_ZONE)
+        canvas.drawRoundRect(fast.left, fast.top, fast.right, fast.bottom, corner, corner, zonePaint)
         val pause = geometry.onRow(1, HOLD_PAUSE_X, AREA_RIGHT)
         zonePaint.color = GuideMotion.faded(colour, ZONE_ALPHA)
         canvas.drawRoundRect(pause.left, pause.top, pause.right, pause.bottom, corner, corner, zonePaint)
-        zonePaint.color = GuideMotion.faded(GuideColours.ORANGE, .9f)
-        val lineX = geometry.x(HOLD_TOP_X)
-        canvas.drawRect(lineX - dp(1.5f), pause.top - dp(2f), lineX + dp(1.5f), pause.bottom + dp(2f), zonePaint)
         altPaint.color = GuideMotion.faded(colour, .85f)
         altPaint.textSize = min(geometry.key, geometry.keyHeight) * ZONE_LABEL
         val word = "pause"
         canvas.drawText(word, pause.centreX - altPaint.measureText(word) / 2, pause.bottom - dp(3f), altPaint)
-        altPaint.color = GuideMotion.faded(GuideColours.ORANGE, 1f)
-        val fast = "top speed"
-        canvas.drawText(fast, lineX - altPaint.measureText(fast) / 2, pause.top - dp(4f), altPaint)
     }
 
     /** The hold's finger is back in the pause zone: its trail dims, as the bar's glow fades there. */
@@ -728,8 +735,12 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private companion object {
         // Keys. Sizes are in dp unless they say otherwise. Change these to adjust the look.
         const val FRAME_MILLIS = 16f
-        const val KEY_FILL_ORANGE = .13f
-        const val KEY_FILL_INK = .1f
+        /** A key's thin outline, and how strong it is, and the very faint fill inside it, on orange and on ink. */
+        const val KEY_OUTLINE = 1f
+        const val KEY_OUTLINE_ORANGE = .5f
+        const val KEY_OUTLINE_INK = .4f
+        const val KEY_FILL_ORANGE = .05f
+        const val KEY_FILL_INK = .04f
         const val KEY_LABEL_INK = .85f
         const val LABEL_LETTER = .52f
         const val LABEL_SMALL = .36f
@@ -800,6 +811,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val HOLD_PAUSE_X = .95f - PAUSE_KEYS / 10f
         const val HOLD_TOP_X = .95f - REPEAT_LONG_KEYS / 10f
         const val ZONE_LABEL = .24f
+        /** The top-speed box is lighter than the pause box: this much of its strength. */
+        const val FAST_ZONE = .5f
         /** How much the trail dims while the hold is paused. */
         const val PAUSED_TRAIL = .3f
 

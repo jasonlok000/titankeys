@@ -659,7 +659,7 @@ private fun chapterOne() {
 /** The chapters rebuilt in the new layout so far. */
 private val NEW_LAYOUT = setOf(GuideChapter.Typing, GuideChapter.Delete, GuideChapter.Steering, GuideChapter.Symbols,
     GuideChapter.Clipboard)
-/** Titles have two lines' room now (v5.2), at the size of one before; the owner's "Find the weird one. It's further in." is the longest. */
+/** Titles shrink to fit their one line now (v5.2); the owner's "Find the weird one. It's further in." is the longest. */
 private const val TITLE_MOST = 38
 private const val LINE_MOST = 50
 

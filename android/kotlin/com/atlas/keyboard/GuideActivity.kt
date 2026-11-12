@@ -1347,8 +1347,8 @@ class GuideActivity : Activity() {
         if (guide) {
             val titlePx = min(sp(TITLE_SP), dp(TITLE_DP).toFloat())
             val bodyPx = min(sp(BODY_SP), dp(BODY_DP).toFloat())
-            // The room goes to the words, not the keys (owner, v5.2): the title and the instruction each have two lines' room at
-            // a bigger size, the same on every slide, and a long one shrinks to fit it rather than lose words.
+            // The room goes to the words, not the keys (owner, v5.2): the keys take only their real size, and the title and the
+            // instruction are bigger, one line each, the same on every slide; a long one shrinks to fit rather than lose words.
             title.isSingleLine = false
             title.maxLines = TITLE_LINES
             title.ellipsize = null
@@ -3847,12 +3847,12 @@ class GuideActivity : Activity() {
         private const val TITLE_SP = 36f
         private const val TITLE_DP = 40
         private const val TITLE_SMALLEST_SP = 24f
-        private const val TITLE_LINES = 2
+        private const val TITLE_LINES = 1
         private const val BODY_SP = 20f
         private const val BODY_DP = 24
         private const val BODY_SMALLEST_SP = 15f
-        private const val BODY_LINES = 2
-        private const val GAP = 18
+        private const val BODY_LINES = 1
+        private const val GAP = 14
         private const val CHIP_PAD = 3
         private const val CHIP_SCALE = .94f
         private const val CHIP_SLIDE = 40

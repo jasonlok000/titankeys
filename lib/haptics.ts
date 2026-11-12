@@ -36,9 +36,6 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "autocorrect_undone", label: "Backspace undoes a change", about: "When you press Backspace right after a change and get back what you typed." },
     { id: "held_symbol", label: "Held letter becomes its symbol", about: "When you hold a letter and it turns into its symbol." },
     { id: "expansion", label: "Emoji from :name:, or a snippet", about: "When a :name: turns into its emoji, or a snippet's shortcut into its text." },
-    { id: "alt_symbol", label: "Alt types a symbol", about: "When Alt with a letter types its symbol. Only with the Haptics lab's experiment Haptics for shortcuts on." },
-    { id: "panel_symbol", label: "Sym panel types a symbol", about: "When you type a symbol from the Sym panel. Only with Haptics for shortcuts on." },
-    { id: "ctrl_shortcut", label: "Ctrl shortcut", about: "Copy, cut, paste, undo or select all with Ctrl. Only with Haptics for shortcuts on." },
     { id: "copy_nothing", label: "Copy with nothing selected", about: "When you press Ctrl and C with nothing selected, so nothing is copied." },
   ] },
   { title: "Bar", haptics: [

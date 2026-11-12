@@ -350,10 +350,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     lab().tryFlickHold(if (data.isNull("millis")) null else data.getLong("millis"))
                     "null"
                 }
-                "labDeleteGlow" -> {
-                    lab().deleteGlow(data.getString("id"))
-                    "null"
-                }
                 "labPlayFlick" -> {
                     lab().playFlick()
                     "null"

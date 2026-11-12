@@ -17,7 +17,7 @@ test("only a debug package has the lab", () => {
 test("every lab operation refuses outside a debug package", () => {
   const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
   const operations = [...adapter.matchAll(/^\s+"(lab\w+)" -> \{?\s*(.*)$/gm)];
-  expect(operations.map(match => match[1]).sort()).toEqual(["labDeleteGlow", "labExperiment", "labFlickHold", "labGraph", "labPlayFlick"]);
+  expect(operations.map(match => match[1]).sort()).toEqual(["labExperiment", "labFlickHold", "labGraph", "labPlayFlick"]);
   for (const [line, , body] of operations) {
     const first = body || adapter.slice(adapter.indexOf(line) + line.length).trimStart().split("\n")[0];
     expect(first.startsWith("lab().")).toBe(true);
@@ -146,7 +146,7 @@ test("any key or touch cuts a flick's dots and the dot ticks still to come, at t
   expect(ime).toContain("if (strip?.gesture?.softDelete != true) interruptGesture()");
   expect(ime).toContain("if (!(outcome is Contact.Outcome.Swipe && outcome.deletesWord) && strip?.gesture?.softDelete == true) interruptGesture()");
   // A hold takes the bar from them, and their ticks stop with it.
-  expect(ime).toMatch(/haptics\.cutDots\(\)\s+deleteWall\.left\(\)\s+strip\?\.gesture\?\.let \{ gesture ->[^}]*gesture\.deleteHeld\(/);
+  expect(ime).toMatch(/haptics\.cutDots\(\)\s+\/\/ The contact was a delete[\s\S]{0,700}strip\?\.gesture\?\.deleteHeld\(/);
 });
 
 test("taps that find no word, and steering with no text, do nothing but play Nothing to pick", () => {
@@ -199,11 +199,11 @@ test("only a debug package reads or saves a tried held delete fade, and the lab 
   for (const key of ["start", "floor", "words", "thinEvery"]) expect(lab).toContain(`.put("${key}", fade.`);
 });
 
-test("the held delete fade is a debug experiment: release never fades, and the lab switches it", () => {
+test("the held delete fade is on in every build, and only the debug lab switches it off", () => {
   const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
-  expect(haptics).toContain("fun fading(debug: Boolean, stored: Boolean?) = debug && (stored ?: true)");
-  // Every other build never fades, before it looks at the stored switch.
-  expect(haptics).toMatch(/fun heldDeleteFading\(context: Context\): Boolean \{\s+if \(!debug\(context\)\) return false\n/);
+  expect(haptics).toContain("fun fading(debug: Boolean, stored: Boolean?) = !debug || (stored ?: true)");
+  // Every other build fades, before it looks at the stored switch.
+  expect(haptics).toMatch(/fun heldDeleteFading\(context: Context\): Boolean \{\s+if \(!debug\(context\)\) return true\n/);
   expect(haptics).toMatch(/fun fadeOn\(context: Context, on: Boolean\) \{\s+check\(debug\(context\)\)/);
   expect(haptics).toContain('private const val FADE_ON_KEY = "debug_held_delete_fade_on"');
   // Off, a held word plays the plain crunch, with no fade.
@@ -244,13 +244,21 @@ test("only a debug package reads or saves a tried flick dots wait, and the lab's
   // On the lab's main page, in Experiments, where the owner looks, with Play.
   const page = read("app/settings/haptics-lab.tsx");
   const experiments = page.slice(page.indexOf('<Section title="Experiments">'), page.indexOf('<Section title="Patterns">'));
-  expect(experiments).toContain('<Field label="Flick dots wait"');
-  expect(experiments).toContain(">Play</Button>");
+  // Its value can be typed, 0 to 600 ms, applied on Done, and Shorter, Longer, Play and Reset stay.
+  expect(experiments).toContain('<TextInput label="Flick dots wait"');
+  expect(experiments).toContain('inputMode="numeric" action="done"');
+  expect(experiments).toContain("onSubmit={applyDraft}");
+  // Shorter, Longer, Play and Reset are rows, so they read as things to tap, never one line of words.
+  for (const row of ['<Field label="Play the dots"', '<Field label="Shorter"', '<Field label="Longer"', '<Field label="Reset"']) expect(experiments).toContain(row);
+  expect(experiments).not.toContain('<Stack axis="horizontal"');
+
   expect(experiments).toContain('<Toggle label="Tick at delete zones"');
-  // The places a held delete's glow can go, as a list, with the right edge the default in every other build.
-  expect(page).toContain('<Section title="Delete glow">');
-  expect(haptics).toContain("fun deleteGlow(context: Context): String? = if (!debug(context)) null else");
-  expect(read("android/kotlin/com/atlas/keyboard/GestureDisplay.kt")).toContain("fun of(id: String?) = entries.firstOrNull { it.id == id } ?: RightEdge");
+  // One delete glow, along the bottom from the corner: no list of places any more, and no shortcuts experiment.
+  expect(page).not.toContain('<Section title="Delete glow">');
+  expect(haptics).not.toContain("fun deleteGlow(");
+  expect(read("android/kotlin/com/atlas/keyboard/GestureDisplay.kt")).not.toContain("enum class DeleteGlow");
+  expect(experiments).not.toContain("Haptics for shortcuts");
+  expect(haptics).not.toContain("fun shortcutHaptics(");
   expect(page).toContain("const WAIT_MAX = 600;");
 });
 
@@ -262,7 +270,7 @@ test("the held delete fade sits in Experiments, next to the dots speed-up, throu
   const page = read("app/settings/haptics-lab.tsx");
   const experiments = page.slice(page.indexOf('<Section title="Experiments">'), page.indexOf('<Section title="Patterns">'));
   expect(experiments).toContain('<Toggle label="Dots speed up when long"');
-  expect(experiments).toContain('<Toggle label="Held delete fade" value={lab.experiments.heldDeleteFade ?? false}');
+  expect(experiments).toContain('<Toggle label="Held delete fade" value={lab.experiments.heldDeleteFade ?? true}');
   expect(experiments).toContain('setLabExperiment("heldDeleteFade", on)');
   expect(experiments).toContain('showHapticsGraph(haptics, "heldDeleteFade")');
   // One place for experiments: the lab's screen has no switch of its own.
@@ -270,4 +278,14 @@ test("the held delete fade sits in Experiments, next to the dots speed-up, throu
   expect(screen).not.toContain("Switch(");
   expect(screen).not.toContain("lab.fadeOn(");
   expect(screen).toContain("if (intent.getStringExtra(OPEN) == HapticsLab.HELD_DELETE_FADE) editFade(null)");
+});
+
+test("the removed shortcuts experiment leaves nothing that reads its stored switch", () => {
+  // It was on on the owner's phone: with no code that reads it, the stored value can do nothing.
+  const sources = ["android", "app", "lib"].flatMap(dir =>
+    [...new Bun.Glob("**/*.{kt,java,ts,tsx}").scanSync(join(root, dir))].map(path => join(dir, path)));
+  for (const path of sources) {
+    const text = read(path);
+    expect(text.includes("debug_shortcut_haptics") || text.includes("shortcutHaptics")).toBe(false);
+  }
 });

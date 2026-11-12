@@ -42,8 +42,8 @@ Patterns are on and off in ms, starting with on.
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
 | **Gone** | 60 | The clipboard cleared |
 | **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
-| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, a flick with nothing to delete, taps on Space that find nothing to pick or steer, Ctrl + C with nothing selected |
-| **Wall** | 40, 35, 20, 35, 12 | Steering hits the start or end of the text, selecting reaches either end, a long delete takes the last word |
+| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, taps on Space that find nothing to pick or steer, Ctrl + C with nothing selected |
+| **Wall** | 40, 35, 20, 35, 12 | Steering hits the start or end of the text, selecting reaches either end, a delete with nothing left to delete, short or long |
 | **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations |
 | **Saved** | 20, 40, 20, 40, 50 | Save in the word menu, by I or the strip |
 | **Removed** | 50, 40, 20, 40, 20 | Forget in the word menu, by O or the strip |
@@ -62,6 +62,8 @@ The owner's table had the delete flick at 50, 30, 20. Its gap is 35 instead, so 
 
 Wall is a dot hitting a wall with energy: a hit, then rebounds that die away, like a bouncing ball. The owner's start was 40 on, 30 off, 20 on, 20 off, 12 on. Its gaps are 35 instead, so it keeps rule 4, and the bounces die away by length. Hitting a wall feels the same in all three gestures, steering, selecting and a long delete, and by the same rule (`WallHits`): it plays the first time the gesture meets its limit, then nothing while the finger keeps pushing, and again only after it has moved away and come back. It used to be no, which read as an error. No is now only for nothing happening at all.
 
+A delete's wall is the same wall, played clean (owner, 2026-11-12): a flick with nothing to delete and a long delete that runs out play it alike. It waits until 100 ms after the last crunch or tick, cuts the dots' ticks still to come, and nothing light plays for 100 ms after it (`HapticGate.reserveWall`). A stroke with nothing before the cursor never crunches, and a long delete with nothing to delete never starts: no words on the bar, no dots, only the wall. After the wall the delete stays quiet while you hold, zone ticks too.
+
 ### The delete flick and its dots
 
 A flick shows a dot for each letter that went. The dots pop in one after another over 120 ms, at Android's animation speed. The flick's first pulse plays at the flick, and its 20 ms tail plays as a second vibration once the last dot has popped in: at 85 ms for a word of one or two letters, and up to just under 120 ms for a long one. The gate takes both parts as one message. With animations off, or no dots on the bar, it plays as one waveform, 50, 35, 20.
@@ -74,7 +76,7 @@ A tick within 35 ms of the flick's tail is left out. Any key or touch cuts the d
 
 A held delete ticks once for each further word. On a long hold that turned into one constant buzz, so the ticks fade as more words go.
 
-The fade is a debug-only experiment for now. Only TitanKeys Debug fades, while its switch in the lab's Experiments is on, and it is to start with. With the switch off, and in every other build, each word plays the plain 17 ms texture tick, as before. Once the owner approves the fade, release gets it too.
+The fade is on in every build (owner, 2026-11-12). Only TitanKeys Debug can turn it off, with its switch in the lab's Experiments, to feel a hold without it; then each word plays the plain crunch.
 
 The Titan has no strength control, so the fade is by length:
 
@@ -102,9 +104,9 @@ The numbers come from the owner's raw logs: of 1,226 real flicks that went 1.5 k
 
 A crunch's gap is 12 ms, under rule 4 on purpose: its two pulses are one grain. The lab's editor keeps its gap between 4 and 30 ms.
 
-### Haptics for shortcuts
+### Shortcuts
 
-A lab experiment, off by default, for the owner to live with: should every way of doing something feel the same? With it on, Alt with a letter typing its symbol, and a symbol from the Sym panel, play change, as holding the letter does; Ctrl's copy, cut, paste, undo and select all play confirm. The gate's repeat rule keeps a fast run, such as a number typed with Alt, from piling up. Ctrl + C with nothing selected copies nothing, so it plays no, with the experiment on or off.
+Shortcuts stay quiet. The owner tried a confirm for Ctrl's copy, cut, paste, undo and select all, and change for Alt's and the Sym panel's symbols, and found it annoying (2026-11-12), so that experiment is gone. Ctrl + C with nothing selected copies nothing, so it plays no.
 
 ### A long delete's zones
 
@@ -122,9 +124,9 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 - The flick's dots land in the caret: a light texture tick for every dot as it lands.
 - A long delete's lines turn into dots as you lift, and those tick the same way as each lands.
 - Keys crossed once the stroke is clearly a flick: crunch. If it stops being one: boundary, once, then swipe ticks (see The crunch).
-- Each further word while you hold: crunch. In TitanKeys Debug, with the fade on, its pulses are shorter as more words go, then only every other one plays (see Held delete fade).
-- A flick with nothing at all to delete: no.
-- A long delete takes the last word: wall, once. The delete stays quiet after it while you hold.
+- Each further word while you hold: crunch, its pulses shorter as more words go, then only every other one plays (see Held delete fade).
+- A flick with nothing at all to delete: wall, clean. A long delete with nothing to delete never starts; it plays the same wall.
+- A long delete takes the last word: wall, once, clean. The delete stays quiet after it while you hold.
 - A long delete's finger goes into the pause zone, or reaches the top-speed line: boundary, once each time (see A long delete's zones).
 
 **Space gestures**
@@ -144,8 +146,7 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 - Backspace right after a change puts back what you typed: back.
 - A held letter becomes its symbol: change.
 - A :name: becomes its emoji, or a snippet its text: change.
-- Alt with a letter types its symbol, or the Sym panel types one: change, only with the lab's Haptics for shortcuts on.
-- Ctrl's copy, cut, paste, undo or select all: confirm, only with Haptics for shortcuts on. Ctrl + C with nothing selected: no, always.
+- Ctrl + C with nothing selected: no. Other shortcuts, and Alt's and the Sym panel's symbols, play nothing.
 
 **Bar**
 - Tap a word: confirm.
@@ -198,6 +199,7 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 2. **A message can't repeat.** A message of the same family doesn't play within 300 ms of the last one that played. The rule is by family, not by haptic: two of the same rhythm that close run together into one longer pattern, whichever haptics they came from.
 3. **Texture keeps its own pace.** Texture and boundaries aren't held to the repeat rule, and they never block a message.
 4. **Messages beat texture.** A message plays even right on top of a tick, and texture waits while a message plays.
+5. **A wall has room.** No texture plays for 100 ms after any wall. A delete's wall also waits until 100 ms after the last texture, and no texture plays while it waits.
 
 The rules live in `HapticGate`, which has no Android parts, so tests/haptics can run it.
 

@@ -14,13 +14,14 @@ private const val RIGHT_OF_SPACE = 7.5f
 fun main() {
     aFlicksWayInStretchesToFitItsDots()
     aHeldDeleteGlowFollowsItsPace()
+    aFlicksGlowFollowsTheFinger()
     aHoldDrawsTheRealWords()
     aHoldWithNoTextLeftDrawsNoPills()
     aPausedHoldFadesAndBlinks()
     aHoldsDotsSpeedUpAsFarAsItsWordsDid()
     aHeldTripleGlowsEveryTime()
     theTripleGlowFollowsTheHand()
-    aTriplePickShowsOnlyACaret()
+    aTriplePickShowsItsSelectionAtOnce()
     aTriplePickWaitsForTheLift()
     aHoldsDotsNeverLieOverTheWords()
     anyNumberOfWordsShowsItsDots()
@@ -1171,7 +1172,7 @@ private fun aHeldTripleGlowsEveryTime() {
     for (hold in listOf(200L, 900L, 2_500L)) {
         val display = GestureDisplay()
         display.spaceTapped(2, 900)
-        display.wordSelected(1_000, held = true, caret = true)
+        display.wordSelected(1_000, held = true)
         display.pickHeldGlow(1_000 + CursorGesture.REGISTER_MILLIS)
         display.run(1_000, 1_000 + hold)
         same(display.glowing, true, "Held $hold ms, the triple press still glows")
@@ -1188,7 +1189,7 @@ private fun aHeldTripleGlowsEveryTime() {
     same(early.glowing, true, "It glows before the pick shows too")
     // A slide makes it the select's glow, which goes with the select.
     val slide = GestureDisplay()
-    slide.wordSelected(1_000, held = true, caret = true)
+    slide.wordSelected(1_000, held = true)
     slide.pickHeldGlow(1_070)
     slide.run(1_000, 1_200)
     slide.drag(6f, 1, 3f, 1_216, 1_400, words = true)
@@ -1212,16 +1213,20 @@ private fun theTripleGlowFollowsTheHand() {
     isTrue(display.steerLean < -.5f, "and left: ${display.steerLean}")
 }
 
-/** A triple press's pick shows no box, only a caret after the word; a double tap's keeps its box. */
-private fun aTriplePickShowsOnlyACaret() {
+/**
+ * A triple press's pick shows its orange selection at once, as a drag does, with no wait for a slide; a slide from it carries on
+ * as the same selection, from the same word (owner, 2026-11-12).
+ */
+private fun aTriplePickShowsItsSelectionAtOnce() {
     val triple = GestureDisplay()
-    triple.wordSelected(1_000, held = true, caret = true)
-    same(triple.pickCaret, true, "A triple press shows only a caret")
-    val double = GestureDisplay()
-    double.wordSelected(1_000)
-    same(double.pickCaret, false, "A double tap keeps its box")
-    triple.drag(8f, 1, 3f, 1_100, 1_200, words = true)
-    same(triple.pickCaret, false, "A slide from the pick selects words, with their box")
+    triple.wordSelected(1_000, held = true)
+    triple.run(1_016, 1_400)
+    same(triple.scene, GestureDisplay.Scene.WordSelected, "The pick shows")
+    near(triple.spanStart, -.5f, "Its selection covers the word", .01f)
+    near(triple.spanEnd, .5f, "the whole word", .01f)
+    triple.drag(8f, 1, 3f, 1_400, 1_416, words = true)
+    same(triple.scene, GestureDisplay.Scene.WordDrag, "A slide selects on")
+    isTrue(triple.spanStart <= -.49f && triple.spanEnd >= .49f, "from the same word: ${triple.spanStart}..${triple.spanEnd}")
 }
 
 /**
@@ -1513,4 +1518,47 @@ private fun theCaretBlinksOnlyWhenSteeringPauses() {
     still.cursorFrame(5f, 0, 0f, false, 0L)
     still.advance(GestureDisplay.BLINK_MILLIS + 10, 0f)
     if (!still.caretShown) throw AssertionError("With animations off the caret stays on")
+}
+
+/**
+ * A clear delete flick shows the delete glow while the stroke goes on: along the bottom from the right corner to the finger,
+ * following it, and fading at the lift (owner, 2026-11-12). A hold takes it on from where it reached, and then it follows the pace.
+ */
+private fun aFlicksGlowFollowsTheFinger() {
+    val display = GestureDisplay()
+    display.flickGlow(.8f, 1_000)
+    same(display.glowDelete, true, "A flick's glow is the delete glow")
+    same(display.glowing, true, "and shows")
+    near(display.glowWidth, .2f, "It starts at the finger, not sweeping across", .001f)
+    display.run(1_000, 1_016)
+    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "at full strength at once: a flick is quick", .01f)
+    display.run(1_016, 1_600)
+    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "and stays so", .01f)
+    display.flickGlow(.5f, 1_600)
+    display.run(1_616, 1_632)
+    isTrue(display.glowWidth > .2f && display.glowWidth < .5f, "It follows the finger smoothly: ${display.glowWidth}")
+    display.run(1_648, 1_900)
+    near(display.glowWidth, .5f, "and reaches it", .005f)
+    // A swipe path that the stroke cancels leaves the glow with the stroke.
+    display.swipePoint(.5f, .4f, 0, 1_900)
+    display.swipeCancelled()
+    same(display.glowing, true, "The glow stays with its stroke")
+    // At the lift it stays where it reached and fades.
+    display.flickGlowEnded(1_900)
+    near(display.glowWidth, .5f, "It fades where it was", .005f)
+    display.run(1_916, 1_916 + GestureDisplay.GLOW_FADE.toLong() + 100)
+    same(display.glowing, false, "then goes")
+    // A flick that becomes a hold: the glow carries on, and then follows the pace.
+    val held = GestureDisplay()
+    held.flickGlow(.6f, 2_000)
+    held.run(2_016, 2_600)
+    val alpha = held.glowAlpha
+    held.deleteHeld(350, 2_600, pace = 0f)
+    same(held.glowDelete, true, "The hold keeps the delete glow")
+    near(held.glowAlpha, alpha, "with no jump", .01f)
+    held.run(2_616, 3_200)
+    near(held.glowWidth, GestureDisplay.DELETE_REACH_LEAST, "then reaches as far as its pace", .005f)
+    // A hold with nothing deleted: no flick glow can start over it.
+    held.flickGlow(.1f, 3_200)
+    near(held.glowWidth, GestureDisplay.DELETE_REACH_LEAST, "A hold's glow is the pace's", .005f)
 }

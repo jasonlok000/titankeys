@@ -118,12 +118,10 @@ export type HapticsLab = {
   haptics: Record<string, { family: string; pattern: number[]; plays: string }>;
   /**
    * The lab's experiments, on or off, by id: dotsSpeedUp, "Dots speed up when long", heldDeleteFade, "Held delete fade",
-   * deleteZoneTicks, "Tick at delete zones", and shortcutHaptics, "Haptics for shortcuts".
+   * and deleteZoneTicks, "Tick at delete zones".
    */
   experiments: Record<string, boolean>;
   /** Where a held delete's glow goes, by id, and the places it can go, from the list "Delete glow". */
-  deleteGlow: string;
-  deleteGlows: { id: string; label: string }[];
   /** How long a single flick's dots sit on the bar before they go into the caret, in ms, and its default. */
   flickHoldMillis: number;
   flickHoldDefault: number;
@@ -266,12 +264,6 @@ export async function setLabExperiment(id: string, on: boolean) {
 /** Tries how long a single flick's dots sit on the bar, in ms, or puts the default back with null. TitanKeys Debug only. */
 export async function setLabFlickHold(millis: number | null) {
   await atlas("labFlickHold", { millis });
-  await state.refresh();
-}
-
-/** Puts a held delete's glow in the place with [id], from the lab's list "Delete glow". TitanKeys Debug only. */
-export async function setLabDeleteGlow(id: string) {
-  await atlas("labDeleteGlow", { id });
   await state.refresh();
 }
 

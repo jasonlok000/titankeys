@@ -44,7 +44,7 @@ fun main() {
     theFadeIsOnlyTriedInDebug()
     theFadeNeverBlocksAMessage()
     theTimelineShowsEachHeldWord()
-    theFadeSwitchIsDebugOnly()
+    theFadeIsOnInEveryBuild()
     aHoldAndItsDotsAreOneSequence()
     aDotNearAWordIsSkipped()
     theHoldFollowsItsPause()
@@ -53,7 +53,8 @@ fun main() {
     aWallBouncesAndSettles()
     allThreeGesturesHitAWallTheSameWay()
     aFlicksDotsWaitAsTheLabTries()
-    shortcutsFeelLikeTheirTwins()
+    shortcutsStayQuietButACopyOfNothing()
+    aDeleteWallIsTheSameAndClean()
     aFlickCrunches()
     println("Haptic checks passed")
 }
@@ -72,7 +73,7 @@ private val table = mapOf(
     Haptic.DeleteWord to Family.Crunch,
     Haptic.DeleteCrunch to Family.Crunch,
     Haptic.DeleteBreak to Family.Boundary,
-    Haptic.DeleteNothing to Family.No,
+    Haptic.DeleteNothing to Family.Wall,
     Haptic.DeleteRanOut to Family.Wall,
     Haptic.DeleteZone to Family.Boundary,
     Haptic.SpaceTap to Family.Texture,
@@ -90,9 +91,6 @@ private val table = mapOf(
     Haptic.AutocorrectUndone to Family.Back,
     Haptic.HeldSymbol to Family.Change,
     Haptic.Expansion to Family.Change,
-    Haptic.AltSymbol to Family.Change,
-    Haptic.PanelSymbol to Family.Change,
-    Haptic.CtrlShortcut to Family.Confirm,
     Haptic.CopyNothing to Family.No,
     Haptic.BarWord to Family.Confirm,
     Haptic.MenuOpen to Family.Confirm,
@@ -623,11 +621,11 @@ private fun aHoldsDotsTickAtTheLift() {
     check(DotTicks.times(lands, -20) == lands) { "At normal speed the dots land long after it" }
 }
 
-/** Taps that find no word, or steering with no text, play Nothing to pick: the same no as nothing left to delete, never a lock. */
+/** Taps that find no word, or steering with no text, play Nothing to pick: no, as a word that can't be saved does, never a lock. */
 private fun tapsThatFindNothingSayNo() {
     check(Haptic.NothingToPick.id == "nothing_to_pick") { "Its own switch" }
     check(Haptic.NothingToPick.group == HapticGroup.Space) { "in the Space gestures group" }
-    check(Haptic.NothingToPick.family == Haptic.DeleteNothing.family) { "The same no as nothing left to delete" }
+    check(Haptic.NothingToPick.family == Family.No && Haptic.WordNotSaved.family == Family.No) { "The same no as a failed save" }
     check(Haptic.NothingToPick.family.pattern == listOf(25L, 40L, 25L, 40L, 25L)) { "25, 40, 25, 40, 25" }
     check(HapticTimeline.trigger(Haptic.NothingToPick) == "Taps found no word") { "The lab's trigger text" }
     check(Haptic.of("two_taps_above") == null) { "Two taps above Space is now part of Nothing to pick" }
@@ -748,25 +746,25 @@ private fun theTimelineShowsEachHeldWord() {
 }
 
 /**
- * The fade is a debug experiment for now. Debug fades while the lab's switch is on, and it is to start with. Off, and in every
- * other build whatever is stored, each word plays plain Texture, 17 ms.
+ * The fade is on in every build (owner, 2026-11-12). Only TitanKeys Debug can turn it off, with the lab's switch, to feel a hold
+ * without it; every other build fades whatever is stored.
  */
-private fun theFadeSwitchIsDebugOnly() {
+private fun theFadeIsOnInEveryBuild() {
     val fade = HeldDeleteFade.DEFAULT
     fun hold(fading: Boolean) = (1..16).map { HeldDeleteFade.lengthFor(it, fade, fading) }
     check(HeldDeleteFade.fading(debug = true, stored = null)) { "Debug fades to start with" }
     check(HeldDeleteFade.fading(debug = true, stored = true)) { "Debug with the switch on fades" }
     check(!HeldDeleteFade.fading(debug = true, stored = false)) { "Debug with the switch off doesn't" }
-    check(!HeldDeleteFade.fading(debug = false, stored = true) && !HeldDeleteFade.fading(debug = false, stored = null)) {
-        "Release never fades, even with a stored on"
+    check(HeldDeleteFade.fading(debug = false, stored = null) && HeldDeleteFade.fading(debug = false, stored = false)) {
+        "Release always fades, even with a stored off"
     }
     val on = hold(HeldDeleteFade.fading(debug = true, stored = true))
     check(on == listOf<Long?>(17, 16, 15, 14, 13, 12, 11, 10, 9, null, 9, null, 9, null, 9, null)) { "Switch on: $on" }
     check(HeldDeleteFade.ticks(fade, fading = true) == on) { "The lab's strip shows the same" }
     val off = hold(HeldDeleteFade.fading(debug = true, stored = false))
     check(off == List(16) { 17L }) { "Switch off: 17 every word, $off" }
-    val release = hold(HeldDeleteFade.fading(debug = false, stored = true))
-    check(release == List(16) { 17L }) { "Release: 17 every word, $release" }
+    val release = hold(HeldDeleteFade.fading(debug = false, stored = false))
+    check(release == on) { "Release fades as debug does: $release" }
     check(HeldDeleteFade.ticks(fade, fading = false) == off) { "The strip with the fade off" }
     val event = HapticEvent(1, Haptic.DeleteWord, listOf(17), HapticResult.Played, word = 12, fading = false)
     check(HapticTimeline.title(event, "") == "Held delete word 12 · Crunch 17 ms · no fade") { HapticTimeline.title(event, "") }
@@ -905,13 +903,14 @@ private fun aWallBouncesAndSettles() {
     check(HapticPalette.millis(Family.Wall.pattern) <= HapticTimeline.SPAN_MILLIS) { "It fits the lab's graph" }
     check(!Family.Wall.texture) { "It is a message" }
     check(HapticPalette.fits(Family.Wall, Family.Wall.pattern)) { "The lab's editor can edit it" }
-    // The three walls, and only they, play it.
-    check(Haptic.entries.filter { it.family == Family.Wall }.toSet() == setOf(Haptic.CursorEnd, Haptic.SelectionEnd, Haptic.DeleteRanOut)) {
-        "Steering, selecting and a held delete hit the wall"
+    // The walls, and only they, play it: steering, selecting, and a delete with nothing to delete, short or held.
+    check(Haptic.entries.filter { it.family == Family.Wall }.toSet() ==
+        setOf(Haptic.CursorEnd, Haptic.SelectionEnd, Haptic.DeleteRanOut, Haptic.DeleteNothing)) {
+        "Steering, selecting, a flick with nothing to delete and a held delete hit the wall"
     }
     // No is only for nothing happening at all.
-    check(Haptic.entries.filter { it.family == Family.No }.toSet() == setOf(Haptic.DeleteNothing, Haptic.NothingToPick, Haptic.WordNotSaved, Haptic.CopyNothing)) {
-        "No stays for a flick or taps with nothing to work on, and a failed save"
+    check(Haptic.entries.filter { it.family == Family.No }.toSet() == setOf(Haptic.NothingToPick, Haptic.WordNotSaved, Haptic.CopyNothing)) {
+        "No stays for taps with nothing to work on, a failed save and a copy of nothing"
     }
     check(HapticTimeline.meaning(Family.Wall).isNotEmpty()) { "The lab says what it means" }
     for (haptic in listOf(Haptic.SelectionEnd, Haptic.DeleteRanOut, Haptic.DeleteZone)) check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic" }
@@ -966,29 +965,54 @@ private fun aFlicksDotsWaitAsTheLabTries() {
 }
 
 /**
- * The lab's experiment "Haptics for shortcuts", off by default: Alt's symbol and the Sym panel feel like holding a letter for its
- * symbol, and Ctrl's copy, cut, paste, undo and select all confirm. Ctrl + C with nothing selected plays no either way.
+ * Shortcuts stay quiet: the owner tried a confirm for Ctrl's copy, cut, paste, undo and select all, and change for Alt's and the
+ * Sym panel's symbols, and found it annoying (2026-11-12). Only Ctrl + C with nothing selected plays: a no, as it copies nothing.
  */
-private fun shortcutsFeelLikeTheirTwins() {
-    check(Haptic.AltSymbol.family == Haptic.HeldSymbol.family && Haptic.PanelSymbol.family == Haptic.HeldSymbol.family) {
-        "Alt and the Sym panel feel like a held letter"
+private fun shortcutsStayQuietButACopyOfNothing() {
+    for (letter in "XVZAY") check(ShortcutFeel.of(letter, true) == null && ShortcutFeel.of(letter, false) == null) { "Ctrl + $letter is quiet" }
+    check(ShortcutFeel.of('C', true) == null) { "Copy with something selected is quiet" }
+    check(ShortcutFeel.of('C', false) == Haptic.CopyNothing) { "Copy with nothing selected says no" }
+    check(ShortcutFeel.of('C', null) == null) { "A field that hasn't said what is selected gets no no" }
+    check(Haptic.of("alt_symbol") == null && Haptic.of("panel_symbol") == null && Haptic.of("ctrl_shortcut") == null) { "Their haptics are gone" }
+    check(HapticTimeline.trigger(Haptic.CopyNothing).isNotEmpty()) { "The lab has words for the no" }
+}
+
+/**
+ * A delete's wall: a flick with nothing to delete and a held delete that runs out play the same wall as steering's end. It is
+ * played clean: it waits until 100 ms after the last crunch or tick, nothing light plays while it plays or for 100 ms after, and
+ * then texture goes on (owner, 2026-11-12).
+ */
+private fun aDeleteWallIsTheSameAndClean() {
+    check(Haptic.DeleteNothing.family == Haptic.DeleteRanOut.family && Haptic.DeleteRanOut.family == Haptic.CursorEnd.family) {
+        "A short and a long delete hit the same wall as steering"
     }
-    for (letter in "CXVZA") check(ShortcutFeel.of(letter, true, on = true) == Haptic.CtrlShortcut) { "Ctrl + $letter confirms" }
-    for (letter in "CXVZA") check(ShortcutFeel.of(letter, true, on = false) == null) { "Off, Ctrl + $letter plays nothing" }
-    check(ShortcutFeel.of('Y', true, on = true) == null && ShortcutFeel.of('B', true, on = true) == null) { "Other shortcuts play nothing" }
-    check(ShortcutFeel.of('C', false, on = false) == Haptic.CopyNothing) { "Copy with nothing selected says no, with it off" }
-    check(ShortcutFeel.of('C', false, on = true) == Haptic.CopyNothing) { "and with it on" }
-    check(ShortcutFeel.of('C', null, on = false) == null) { "A field that hasn't said what is selected gets no no" }
-    // A number typed fast with Alt: the gate keeps the 300 ms repeat rule, so changes never pile up.
-    var now = 1_000L
-    val gate = HapticGate { now }
-    check(gate.admit(Family.Change)) { "The first symbol plays" }
-    now += 120
-    check(!gate.admit(Family.Change)) { "One 120 ms later doesn't" }
-    now += 300
-    check(gate.admit(Family.Change)) { "One after 300 ms plays again" }
-    for (haptic in listOf(Haptic.AltSymbol, Haptic.PanelSymbol, Haptic.CtrlShortcut, Haptic.CopyNothing))
-        check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic has words in the lab" }
+    check(HapticGate.WALL_CLEAR_MILLIS == 100L) { "100 ms of quiet each side" }
+    val clock = Clock(1_000)
+    val gate = HapticGate { clock.now }
+    val crunch = millis(Family.Crunch)
+    val wall = millis(Family.Wall)
+    check(gate.check(Family.Crunch) == HapticResult.Played) { "A crunch plays" }
+    clock.now += 10
+    val wait = gate.reserveWall(wall)
+    check(wait == crunch + 100 - 10) { "The wall waits until 100 ms after the crunch ends: $wait" }
+    clock.now += 40
+    check(gate.check(Family.Crunch) == HapticResult.Busy) { "No crunch while it waits" }
+    check(gate.check(Family.Boundary) == HapticResult.Busy && gate.check(Family.Texture) == HapticResult.Busy) { "No zone tick or dot's tick either" }
+    clock.now = 1_000 + crunch + 100
+    check(gate.check(Family.Wall) == HapticResult.Played) { "Then the wall plays" }
+    clock.now += wall + 99
+    check(gate.check(Family.Texture) == HapticResult.Busy) { "Nothing light until 100 ms after it" }
+    clock.now += 1
+    check(gate.check(Family.Texture) == HapticResult.Played) { "then texture goes on" }
+    // With nothing before it, it plays at once.
+    val fresh = HapticGate { 5_000L }
+    check(fresh.reserveWall(wall) == 0L) { "No wait with nothing before it" }
+    // A steering wall through the gate keeps its quiet after too.
+    val steer = Clock(10_000)
+    val steering = HapticGate { steer.now }
+    check(steering.check(Family.Wall) == HapticResult.Played) { "Steering's wall plays" }
+    steer.now += wall + 50
+    check(steering.check(Family.Texture) == HapticResult.Busy) { "and nothing light right after" }
 }
 
 /**

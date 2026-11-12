@@ -9,6 +9,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.Settings
 import kotlin.math.hypot
+import kotlin.math.max
 
 /**
  * The pattern families. Each meaning has one rhythm, the same everywhere, and every family is our own waveform: the phone's
@@ -90,7 +91,7 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     /** A stroke that crunched stopped being a flick: one firm tick, and swiping's ticks from there. */
     DeleteBreak("delete_break", HapticGroup.Delete, Family.Boundary),
     /** A flick with nothing at all to delete: nothing happened. */
-    DeleteNothing("delete_nothing", HapticGroup.Delete, Family.No),
+    DeleteNothing("delete_nothing", HapticGroup.Delete, Family.Wall),
     /** A held delete took the last word: it hit the start of the text. It plays once, and the hold stays quiet after it. */
     DeleteRanOut("delete_ran_out", HapticGroup.Delete, Family.Wall),
     /**
@@ -127,15 +128,6 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     HeldSymbol("held_symbol", HapticGroup.Changes, Family.Change),
     /** A :name: became its emoji, or a snippet's shortcut its text. */
     Expansion("expansion", HapticGroup.Changes, Family.Change),
-    /**
-     * Alt with a letter typed its symbol: the same feel as holding the letter for it. Only with the Haptics lab's experiment
-     * "Haptics for shortcuts" on.
-     */
-    AltSymbol("alt_symbol", HapticGroup.Changes, Family.Change),
-    /** A symbol typed from the Sym panel: the same feel again. Only with "Haptics for shortcuts" on. */
-    PanelSymbol("panel_symbol", HapticGroup.Changes, Family.Change),
-    /** Ctrl with C, X, V, Z or A: copy, cut, paste, undo or select all. Only with "Haptics for shortcuts" on. */
-    CtrlShortcut("ctrl_shortcut", HapticGroup.Changes, Family.Confirm),
     /** Ctrl + C with nothing selected copies nothing: it says so, always. */
     CopyNothing("copy_nothing", HapticGroup.Changes, Family.No),
 
@@ -313,10 +305,10 @@ object HeldDeleteFade {
     fun ticks(settings: Settings, count: Int = STRIP_TICKS, fading: Boolean = true) = (1..count).map { lengthFor(it, settings, fading) }
 
     /**
-     * Whether a held delete fades. It's an experiment the owner hasn't approved yet, so only a [debug] build fades, while its
-     * lab switch is on, and it is to start with. Every other build plays plain texture on every word, whatever is [stored].
+     * Whether a held delete fades. It is on in every build (owner, 2026-11-12). Only a [debug] build can turn it off, with the
+     * lab's switch; every other build fades whatever is [stored].
      */
-    fun fading(debug: Boolean, stored: Boolean?) = debug && (stored ?: true)
+    fun fading(debug: Boolean, stored: Boolean?) = !debug || (stored ?: true)
 
     /** "17 down to 9 ms over 8 words, then 1 in 2". */
     fun describe(settings: Settings): String {
@@ -527,19 +519,40 @@ class HapticGate(private val clock: () -> Long) {
     private var busyUntil = Long.MIN_VALUE / 2
     private var quietUntil = Long.MIN_VALUE / 2
     private val lastAt = HashMap<Family, Long>()
+    /** When the last texture that played ends, and until when no texture plays, around a wall. */
+    private var textureUntil = Long.MIN_VALUE / 2
+    private var textureQuietUntil = Long.MIN_VALUE / 2
 
     /** Whether [family], lasting [millis], plays now, or why not. A message that plays is the busy one from now on. */
     fun check(family: Family, millis: Long = HapticPalette.millis(family.pattern)): HapticResult {
         val now = clock()
         if (now < busyUntil) return HapticResult.Busy
-        if (family.texture) return HapticResult.Played
+        if (family.texture) {
+            // Around a wall, nothing light plays: see [reserveWall].
+            if (now < textureQuietUntil) return HapticResult.Busy
+            textureUntil = max(textureUntil, now + millis)
+            return HapticResult.Played
+        }
         if (now < quietUntil) return HapticResult.Busy
         val last = lastAt[family]
         if (last != null && now - last < REPEAT_MILLIS) return HapticResult.TooSoon
         lastAt[family] = now
         busyUntil = now + millis
         quietUntil = busyUntil + HapticPalette.MIN_GAP_MILLIS
+        if (family == Family.Wall) textureQuietUntil = max(textureQuietUntil, busyUntil + WALL_CLEAR_MILLIS)
         return HapticResult.Played
+    }
+
+    /**
+     * A delete's wall, lasting [millis], is about to play: how long it waits first, so it starts [WALL_CLEAR_MILLIS] after the
+     * last texture ended. From now until that long after it ends, no texture plays: no crunch, zone tick or dot's tick, so the
+     * wall is felt clean, as Space's is (owner, 2026-11-12).
+     */
+    fun reserveWall(millis: Long): Long {
+        val now = clock()
+        val wait = max(0L, textureUntil + WALL_CLEAR_MILLIS - now)
+        textureQuietUntil = max(textureQuietUntil, now + wait + millis + WALL_CLEAR_MILLIS)
+        return wait
     }
 
     /** Whether [family], lasting [millis], plays now. */
@@ -547,6 +560,8 @@ class HapticGate(private val clock: () -> Long) {
 
     companion object {
         const val REPEAT_MILLIS = 300L
+        /** A delete's wall has this long of quiet before it and after it. */
+        const val WALL_CLEAR_MILLIS = 100L
     }
 }
 
@@ -592,20 +607,14 @@ object HapticFeed {
     const val KEEP = 64
 }
 
-/** What a Ctrl shortcut plays, for the Haptics lab's experiment "Haptics for shortcuts" (owner, 2026-11-12). */
+/**
+ * What a Ctrl shortcut plays. Only Ctrl + C with nothing selected plays anything: it copies nothing, so it says no. The other
+ * shortcuts stay quiet: the owner tried a confirm on each, and on Alt's and the Sym panel's symbols, and found it annoying
+ * (2026-11-12).
+ */
 object ShortcutFeel {
-    /** The Ctrl shortcuts that confirm with the experiment on: copy, cut, paste, undo and select all. */
-    val CONFIRMED = setOf('C', 'X', 'V', 'Z', 'A')
-
-    /**
-     * The haptic for Ctrl with [letter], or null. Ctrl + C with nothing [selected] copies nothing, and plays no whether or not the
-     * experiment is [on]; [selected] is null when the field hasn't said. The others play confirm only while it is on.
-     */
-    fun of(letter: Char?, selected: Boolean?, on: Boolean): Haptic? = when {
-        letter == 'C' && selected == false -> Haptic.CopyNothing
-        on && letter in CONFIRMED -> Haptic.CtrlShortcut
-        else -> null
-    }
+    /** The haptic for Ctrl with [letter], or null. [selected] is null when the field hasn't said what is selected. */
+    fun of(letter: Char?, selected: Boolean?): Haptic? = if (letter == 'C' && selected == false) Haptic.CopyNothing else null
 }
 
 /**
@@ -614,6 +623,9 @@ object ShortcutFeel {
  */
 class WallHits {
     private var hit = false
+
+    /** True from the hit until the gesture moves away: a held delete that ran out stays quiet, zone ticks too, until then. */
+    val atWall get() = hit
 
     /** The gesture met its limit: true the first time, false while it stays there. */
     fun reached(): Boolean {
@@ -822,6 +834,31 @@ class Haptics(private val context: Context) {
     /** Any key or touch cuts the dots at once, and with them the ticks still to come. */
     fun cutDots() = dotTicks.cut()
 
+    private var pendingWall: Runnable? = null
+
+    /**
+     * A delete's wall: a flick with nothing to delete, or a held delete that ran out. The same Wall as steering's, played clean:
+     * the dots' ticks still to come are cut, it waits until [HapticGate.WALL_CLEAR_MILLIS] after the last texture, and nothing
+     * light plays until that long after it. See [HapticGate.reserveWall].
+     */
+    fun wall(haptic: Haptic) {
+        check(haptic.family == Family.Wall) { "$haptic is no wall" }
+        if (switches.stops(haptic) != null) {
+            attempt(haptic)
+            return
+        }
+        val pattern = pattern(context, haptic.family)
+        dotTicks.cut()
+        val wait = gate.reserveWall(HapticPalette.millis(pattern))
+        pendingWall?.let(main::removeCallbacks)
+        pendingWall = null
+        if (wait <= 0L) attempt(haptic, pattern)
+        else pendingWall = Runnable {
+            pendingWall = null
+            attempt(haptic, pattern)
+        }.also { main.postDelayed(it, wait) }
+    }
+
     private fun flickNow(pattern: List<Long>, tailAt: Long?): Boolean {
         val head = pattern[0]
         if (tailAt == null || tailAt == head + pattern[1]) return play(Haptic.DeleteFlick)
@@ -920,33 +957,6 @@ class Haptics(private val context: Context) {
         private const val ZONE_TICKS = "debug_delete_zone_ticks"
 
         /**
-         * The Haptics lab's experiment "Haptics for shortcuts": Alt with a letter, the Sym panel and Ctrl's shortcuts play what
-         * their touch or held twin does. Off by default (owner, 2026-11-12), and only TitanKeys Debug can turn it on.
-         */
-        fun shortcutHaptics(context: Context) = debug(context) && preferences(context).getBoolean(SHORTCUT_HAPTICS, false)
-
-        fun tryShortcutHaptics(context: Context, on: Boolean) {
-            check(debug(context)) { "Only TitanKeys Debug has the lab's experiments" }
-            preferences(context).edit().putBoolean(SHORTCUT_HAPTICS, on).apply()
-        }
-
-        private const val SHORTCUT_HAPTICS = "debug_shortcut_haptics"
-
-        /**
-         * The Haptics lab's list "Delete glow": where a held delete's glow goes. Only TitanKeys Debug reads it, and every other
-         * build has the right edge, the default.
-         */
-        fun deleteGlow(context: Context): String? = if (!debug(context)) null else preferences(context).getString(DELETE_GLOW, null)
-
-        /** Stores the place by its id, as [GestureDisplay.DeleteGlow] names it; the keyboard reads it as each hold starts. */
-        fun tryDeleteGlow(context: Context, id: String) {
-            check(debug(context)) { "Only TitanKeys Debug has the lab's experiments" }
-            preferences(context).edit().putString(DELETE_GLOW, id).apply()
-        }
-
-        private const val DELETE_GLOW = "debug_delete_glow"
-
-        /**
          * How long a single flick's dots sit on the bar, as the Haptics lab tried it, in ms, or null for the default. Only
          * TitanKeys Debug looks: every other build returns null without looking. The keyboard hands it to the bar.
          */
@@ -986,9 +996,12 @@ class Haptics(private val context: Context) {
             }.apply()
         }
 
-        /** Whether a held delete fades. Only the debug build fades, while the lab's switch is on. Every other build never does. */
+        /**
+         * Whether a held delete fades. Every build fades, at the defaults (owner, 2026-11-12); only the debug build can turn it
+         * off, with the lab's switch.
+         */
         fun heldDeleteFading(context: Context): Boolean {
-            if (!debug(context)) return false
+            if (!debug(context)) return true
             val preferences = preferences(context)
             return HeldDeleteFade.fading(true, if (preferences.contains(FADE_ON_KEY)) preferences.getBoolean(FADE_ON_KEY, true) else null)
         }

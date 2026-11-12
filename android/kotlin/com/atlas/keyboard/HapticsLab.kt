@@ -60,12 +60,6 @@ class HapticsLab(private val context: Context) {
         later()
     }
 
-    /** Puts a held delete's glow in the place with [id]. The next held delete shows it there. */
-    fun deleteGlow(id: String) {
-        val place = GestureDisplay.DeleteGlow.entries.firstOrNull { it.id == id } ?: throw IllegalArgumentException("No delete glow called $id")
-        Haptics.tryDeleteGlow(context, place.id)
-    }
-
     /** How long a single flick's dots sit on the bar before they go into the caret, in ms. */
     fun flickHold(): Long {
         GestureDisplay.triedFlickHold = Haptics.readFlickHold(context)?.toFloat()
@@ -121,19 +115,13 @@ class HapticsLab(private val context: Context) {
     fun state(): JSONObject = JSONObject().put("families", families()).put("heldDeleteFade", heldDeleteFade()).put("haptics", haptics())
         .put("flickHoldMillis", flickHold()).put("flickHoldDefault", GestureDisplay.FLICK_HOLD.toLong())
         .put("experiments", JSONObject().put(DOTS_SPEED_UP, Haptics.dotsSpeedUp(context)).put(HELD_DELETE_FADE, fading())
-            .put(ZONE_TICKS, Haptics.zoneTicks(context))
-            .put(SHORTCUT_HAPTICS, Haptics.shortcutHaptics(context)))
-        .put("deleteGlow", GestureDisplay.DeleteGlow.of(Haptics.deleteGlow(context)).id)
-        .put("deleteGlows", JSONArray().apply {
-            for (place in GestureDisplay.DeleteGlow.entries) put(JSONObject().put("id", place.id).put("label", place.label))
-        })
+            .put(ZONE_TICKS, Haptics.zoneTicks(context)))
 
     /** Turns one of the lab's experiments on or off, by its id. */
     fun experiment(id: String, on: Boolean) = when (id) {
         DOTS_SPEED_UP -> Haptics.tryDotsSpeedUp(context, on)
         HELD_DELETE_FADE -> fadeOn(on)
         ZONE_TICKS -> Haptics.tryZoneTicks(context, on)
-        SHORTCUT_HAPTICS -> Haptics.tryShortcutHaptics(context, on)
         else -> throw IllegalArgumentException("No experiment called $id")
     }
 
@@ -252,8 +240,6 @@ class HapticsLab(private val context: Context) {
         const val HELD_DELETE_FADE = "heldDeleteFade"
         /** The id of the experiment "Tick at delete zones". */
         const val ZONE_TICKS = "deleteZoneTicks"
-        /** The id of the experiment "Haptics for shortcuts". */
-        const val SHORTCUT_HAPTICS = "shortcutHaptics"
         /** Play's flick takes a word of this many letters. */
         private const val PLAY_LETTERS = 5
 

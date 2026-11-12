@@ -27,31 +27,36 @@ test("a held triple press glows every time, not only when it slides", () => {
   expect(body("lift")).toContain("strip?.gesture?.pickLifted(SystemClock.uptimeMillis())");
 });
 
-test("a triple press's pick shows only a caret, and a double tap's keeps its box", () => {
-  expect(body("selectWord")).toContain("wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown, caret = inFront)");
+test("a triple press's pick shows its selection at once, as a drag does", () => {
+  expect(body("selectWord")).toContain("wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown)");
 });
 
-test("a held delete tells the bar its real words, how fast it goes, when it pauses, and where its glow goes", () => {
+test("a held delete tells the bar its real words, how fast it goes and when it pauses, and starts only with something to delete", () => {
   const held = body("deleteHeldWord");
-  expect(held).toContain("gesture.deleteGlowPlace = GestureDisplay.DeleteGlow.of(Haptics.deleteGlow(this))");
-  expect(held).toContain("gesture.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), deleteHold.pace,");
+  expect(held).toContain("strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), deleteHold.pace, before)");
+  // With nothing to delete no hold starts: no words, no dots, only the wall the flick plays.
+  const start = held.indexOf("if (before?.isEmpty() != true) {");
+  expect(start).toBeGreaterThan(-1);
+  expect(held.indexOf("deleteHeld(", start)).toBeGreaterThan(start);
+  expect(held).toContain("if (deleteWall.reached()) haptics.wall(Haptic.DeleteRanOut)");
   // Each word's real text goes to the bar before it goes, and with nothing left the bar gets none.
   expect(held).toContain("before?.let { strip?.gesture?.deleteText(it) }");
   expect(held).toContain('strip?.gesture?.deleteText("")');
   expect(ime).toContain("strip?.gesture?.deletePaused(deleteHold.paused)");
   expect(ime).toContain("deleteHeld(deleteHold.repeatMillis, finger.time, deleteHold.pace)");
-  // A glow under the finger follows it.
-  expect(ime).toContain("strip?.gesture?.fingerAt(finger.x)");
+  // A clear flick's glow follows the finger, and fades at the lift or as the stroke stops being a flick.
+  expect(ime).toContain("if (flickCrunch.crunching) samples.lastOrNull { it.valid }?.let { strip?.gesture?.flickGlow(it.x, it.time) }");
+  expect(body("lift")).toContain("strip?.gesture?.flickGlowEnded(SystemClock.uptimeMillis())");
 });
 
 test("a held delete ticks once at each zone, while the lab's experiment is on", () => {
-  expect(ime).toContain("if (deleteHold.crossed() != null && Haptics.zoneTicks(this)) haptics.play(Haptic.DeleteZone)");
+  expect(ime).toContain("if (deleteHold.crossed() != null && Haptics.zoneTicks(this) && !deleteWall.atWall) haptics.play(Haptic.DeleteZone)");
 });
 
 test("all three gestures hit their walls by the same rule, and only nothing at all plays no", () => {
   // Steering, through CursorSteps; selecting and a held delete through their own WallHits.
   expect(ime).toContain("if (selectionWall.reached()) haptics.play(Haptic.SelectionEnd)");
-  expect(ime).toContain("if (deleteWall.reached()) haptics.play(Haptic.DeleteRanOut)");
+  expect(ime).toContain("if (deleteWall.reached()) haptics.wall(Haptic.DeleteRanOut)");
   const extend = body("extendWords");
   expect(extend.indexOf("selectionWall.left()")).toBeGreaterThan(extend.indexOf("selectionWall.reached()"));
   expect(body("startWordDrag")).toContain("selectionWall.left()");
@@ -71,4 +76,21 @@ test("a double space with text selected puts the cursor back, then steers", () =
   // Each Space select keeps where the cursor was.
   expect(body("pickOnLand")).toContain("rememberCursor()");
   expect(body("startWordDrag")).toContain("rememberCursor()");
+});
+
+test("a delete's wall is the same for a flick and a hold, played clean, once per stroke", () => {
+  expect(ime).toContain("if (nothingLeft && deleteWall.reached()) haptics.wall(Haptic.DeleteNothing)");
+  expect(ime).not.toContain("haptics.play(Haptic.DeleteNothing)");
+  expect(ime).not.toContain("haptics.play(Haptic.DeleteRanOut)");
+  // A stroke with nothing to delete never crunches, so nothing comes before its wall.
+  expect(ime).toContain("&& somethingToDelete(first))");
+});
+
+test("a double space with text selected steers, never says no", () => {
+  expect(body("nothingHere")).toContain("if (!words && lastSelectionStart >= 0 && lastSelectionStart != lastSelectionEnd) return false");
+  expect(body("registerGesture")).toContain("if (!words && collapseSelection()) enqueue { readCursorText() }");
+  // Putting the cursor back never hides or shows the keyboard's window, nor does the bar's update that follows it.
+  for (const name of ["collapseSelection", "showSelectedWord"])
+    for (const call of ["requestHideSelf", "hideWindow", "requestShowSelf", "showWindow", "updateInputViewShown", "setCandidatesViewShown"])
+      expect(body(name)).not.toContain(call);
 });

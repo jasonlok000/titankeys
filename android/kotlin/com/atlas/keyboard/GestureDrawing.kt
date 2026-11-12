@@ -35,15 +35,6 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     private var glowHeight = 0f
     private var glowTall = 0f
     private var glowColour = 0
-    /** A held delete's glow along the bar's right edge: the underglow turned on its side, fading in from the edge. */
-    private val edgeGlow = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var edgeAt = Float.NaN
-    private var edgeColour = 0
-    private var edgeTall = 0f
-    /** A held delete's glow along the top, fading down from it. */
-    private val top = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var topColour = 0
-    private var topTall = 0f
 
     fun draw(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, height: Int, look: Look) {
         val h = height.toFloat()
@@ -175,53 +166,17 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
 
     /**
-     * A held delete's glow: the steering underglow, as soft and in the same orange, rooted where Backspace is or under the finger,
-     * in the place the Haptics lab picks ([GestureDisplay.DeleteGlow]). It gets stronger with the pace, up to what steering's
-     * leaning side reaches, and stops changing at the top-speed line. In the pause zone it fades out: see [GestureDisplay.glowDelete].
+     * A delete's glow: the steering underglow, as soft and in the same orange, along the bottom from the right corner, where
+     * Backspace is, leftwards as far as [GestureDisplay.glowWidth]: full at the corner, soft where it ends. A single flick's
+     * reaches to the finger and follows it. A hold's reaches further and gets stronger with the pace, up to what steering's
+     * leaning side reaches, and stops changing at the top-speed line; in the pause zone it fades out. See [GestureDisplay.glowDelete].
      */
     private fun deleteGlow(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
         val strength = display.glowAlpha.coerceIn(0f, 1f)
         if (strength <= 0f) return
-        val level = softCap(UNDERGLOW * (1f + DELETE_BOOST * display.shownPace))
+        val alpha = strength * softCap(UNDERGLOW * (1f + DELETE_BOOST * display.shownPace))
         val tall = dp(GLOW_HEIGHT)
-        when (display.deleteGlowPlace) {
-            GestureDisplay.DeleteGlow.RightEdge -> edgeBand(canvas, left, right, h, look, tall, strength * level)
-            GestureDisplay.DeleteGlow.RightEdgeThick ->
-                edgeBand(canvas, left, right, h, look, tall * THICKER, strength * softCap(level * THICKER_LEVEL))
-            GestureDisplay.DeleteGlow.Bottom -> cornerRun(canvas, display, left, right, h, look, tall, strength * level, bottom = true)
-            GestureDisplay.DeleteGlow.Top -> cornerRun(canvas, display, left, right, h, look, tall, strength * level, bottom = false)
-            GestureDisplay.DeleteGlow.Corner -> {
-                edgeBand(canvas, left, right, h, look, tall, strength * level)
-                cornerRun(canvas, display, left, right, h, look, tall, strength * level, bottom = true)
-            }
-            GestureDisplay.DeleteGlow.Finger -> underFinger(canvas, display, left, right, h, look, tall, strength)
-        }
-    }
-
-    /** Along the right edge of the bar, top to bottom, [tall] thick, with the soft ends of a wide underglow. */
-    private fun edgeBand(canvas: Canvas, left: Float, right: Float, h: Float, look: Look, tall: Float, alpha: Float) {
-        val edge = right + left
-        if (edgeAt != edge || edgeColour != look.accent || edgeTall != tall) {
-            // Made again only when the strip, the colour or the thickness changes, so a frame makes no garbage.
-            edgeAt = edge
-            edgeColour = look.accent
-            edgeTall = tall
-            edgeGlow.shader = LinearGradient(edge, 0f, edge - tall, 0f, look.accent, GuideMotion.faded(look.accent, 0f), Shader.TileMode.CLAMP)
-        }
-        val slice = max(1f, floor(dp(GLOW_SLICE)))
-        var y = 0f
-        while (y < h) {
-            val v = ((y + slice / 2) / h * 2 - 1).coerceIn(-1f, 1f)
-            edgeGlow.alpha = (alpha * glowShape(v, 1f) * 255).toInt()
-            if (edgeGlow.alpha > 0) canvas.drawRect(edge - tall, y, edge, min(y + slice, h), edgeGlow)
-            y += slice
-        }
-    }
-
-    /** Along the [bottom] or the top from the right corner leftwards, as far as the pace: full at the corner, soft where it ends. */
-    private fun cornerRun(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look, tall: Float,
-                          alpha: Float, bottom: Boolean) {
-        val paint = if (bottom) underGlow(h, look, tall) else topGlow(look, tall)
+        val paint = underGlow(h, look, tall)
         val span = (right - left) * display.glowWidth
         if (span < 1f) return
         val from = right - span
@@ -231,32 +186,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             val t = ((x + slice / 2 - from) / span).coerceIn(0f, 1f)
             val shape = (t / DELETE_SOFT).coerceAtMost(1f).let { it * it * (3 - 2 * it) }
             paint.alpha = (alpha * shape * 255).toInt()
-            if (paint.alpha > 0) canvas.drawRect(x, if (bottom) h - tall else 0f, min(x + slice, right), if (bottom) h else tall, paint)
-            x += slice
-        }
-    }
-
-    /**
-     * Along the bottom under the finger, as wide as [FINGER_SPAN] of the bar, leaning left as steering leans towards its side:
-     * the left half brightens with the pace, from steering's lean at rest to its full lean at the top-speed line.
-     */
-    private fun underFinger(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look, tall: Float, strength: Float) {
-        val paint = underGlow(h, look, tall)
-        val across = right - left
-        val half = across * FINGER_SPAN / 2
-        val centre = (left + across * display.glowCentre).coerceIn(left + half, right - half)
-        val lean = GestureDisplay.LEAN_BASE + (1f - GestureDisplay.LEAN_BASE) * display.shownPace
-        val slice = max(1f, floor(dp(GLOW_SLICE)))
-        var x = floor(centre - half)
-        val end = ceil(centre + half)
-        while (x < end) {
-            val u = ((x + slice / 2 - centre) / half).coerceIn(-1f, 1f)
-            val shape = glowShape(u, 0f)
-            if (shape > 0f) {
-                val toward = max(0f, -u)
-                paint.alpha = (strength * softCap(UNDERGLOW * shape * (1f + SIDE_BOOST * lean * toward * toward)) * 255).toInt()
-                if (paint.alpha > 0) canvas.drawRect(x, h - tall, x + slice, h, paint)
-            }
+            if (paint.alpha > 0) canvas.drawRect(x, h - tall, min(x + slice, right), h, paint)
             x += slice
         }
     }
@@ -270,16 +200,6 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             glow.shader = LinearGradient(0f, h, 0f, h - tall, look.accent, GuideMotion.faded(look.accent, 0f), Shader.TileMode.CLAMP)
         }
         return glow
-    }
-
-    /** The same, fading down from the top. */
-    private fun topGlow(look: Look, tall: Float): Paint {
-        if (topColour != look.accent || topTall != tall) {
-            topColour = look.accent
-            topTall = tall
-            top.shader = LinearGradient(0f, 0f, 0f, tall, look.accent, GuideMotion.faded(look.accent, 0f), Shader.TileMode.CLAMP)
-        }
-        return top
     }
 
     /** [level], kept under 1 without a corner: as it is up to [CAP_FROM], then easing towards 1. */
@@ -299,23 +219,23 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
 
     /**
-     * Steering: the real text as a line of dots through the middle that moves past the caret, and the caret in a filled accent pill
-     * as tall as select's, in the dark colour, the other way round from select's dark word in its pill. The dots part round the
-     * pill with a small gap, so a letter the cursor passes hops to the other side. Which way it leans shows in the underglow, see
-     * [glow].
+     * Steering: the real text as a line of dots through the middle that moves past the caret, and the caret: a thin solid orange
+     * line, as every gesture's is, with no box round it (owner, 2026-11-12). It blinks only once steering pauses, see
+     * [GestureDisplay.caretShown]. The dots part
+     * round it with a small gap, so a letter the cursor passes hops to the other side. Which way it leans shows in the underglow,
+     * see [glow].
      *
      * The caret is a text cursor: thin, as tall as the strip's words, and always between the letters that the real cursor is
-     * between. A step moves it there at once, as the text cursor moves, and the line then glides it back to the middle. It blinks
-     * only when steering pauses, see [GestureDisplay.caretShown].
+     * between. A step moves it there at once, as the text cursor moves, and the line then glides it back to the middle.
      */
     private fun cursor(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, mid: Float, look: Look) {
         val alpha = display.reveal
         val line = mid
         val caret = (left + right) / 2
         val pitch = dp(LETTER_PITCH)
-        val pill = dp(STEER_PILL / 2)
-        // How far each side's dots move out, so the nearest letter sits a small gap from the pill.
-        val part = pill + dp(PILL_GAP) + dp(LETTER_DOT) - pitch / 2
+        val clear = dp(STEER_CLEAR)
+        // How far each side's dots move out, so the nearest letter sits a small gap from the caret.
+        val part = clear + dp(PILL_GAP) + dp(LETTER_DOT) - pitch / 2
         val text = display.line
         // Where the real cursor is: ahead of the middle by the steps the line has still to glide.
         var at = caret
@@ -323,7 +243,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             val cursor = display.caretAt + display.stepped
             at = caret + (display.stepped - display.shownStep) * pitch
             // The real text: a dot for each character, a gap for each space, and nothing past either end of the text. The letters
-            // part round the cursor, not the middle, so the pill always sits between the two letters it is between.
+            // part round the cursor, not the middle, so the caret always sits between the two letters it is between.
             for (index in text.indices) {
                 if (text[index].isWhitespace()) continue
                 val d = (index - display.caretAt - display.shownStep + .5f) * pitch
@@ -343,9 +263,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
                 letterDot(canvas, x, caret, left, right, line, look, alpha)
             }
         }
-        rounded(canvas, at - pill, line - dp(SELECTION_HEIGHT / 2), at + pill, line + dp(SELECTION_HEIGHT / 2), radius,
-            GuideMotion.faded(look.accent, alpha))
-        if (display.caretShown) bar(canvas, at, line, dp(STEER_CARET_HEIGHT), GuideMotion.faded(look.onAccent, alpha), dp(STEER_CARET))
+        if (display.caretShown) bar(canvas, at, line, dp(STEER_CARET_HEIGHT), GuideMotion.faded(look.accent, alpha), dp(STEER_CARET))
     }
 
     /**
@@ -358,20 +276,15 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         dot(canvas, x, line, dp(LETTER_DOT), GuideMotion.faded(look.ink, strength * alpha))
     }
 
-    /** A row of words, with the selection over them. A word drag shows it growing and shrinking by whole words. */
+    /**
+     * A row of words, with the selection over them in its orange box. A word drag shows it growing and shrinking by whole words.
+     * A triple press's pick shows the same from the moment it picks, so the pick and the drag after it are one selection
+     * (owner, 2026-11-12). The end that moves has the thin solid caret every gesture has.
+     */
     private fun words(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, mid: Float, look: Look) {
         val slot = (right - left) / GestureDisplay.VISIBLE_WORDS
         val centre = (left + right) / 2
         val alpha = display.reveal
-        if (display.pickCaret) {
-            // A triple press's pick: no box, only the row with the picked word a little stronger, and a thin solid caret after it.
-            wordRow(canvas, display, slot, centre, mid, selected = false, GuideMotion.faded(look.ink, WORD * alpha))
-            val x = centre - display.camera * slot
-            val half = slot * display.wordWidth(0) / 2
-            word(canvas, x - half, x + half, mid, GuideMotion.faded(look.ink, PICKED * alpha))
-            bar(canvas, x + half + dp(CARET_GAP), mid, dp(STEER_CARET_HEIGHT), GuideMotion.faded(look.accent, alpha), dp(STEER_CARET))
-            return
-        }
         // The selection goes over the words that are not in it, so a word that it reaches goes under it.
         wordRow(canvas, display, slot, centre, mid, selected = false, GuideMotion.faded(look.ink, WORD * alpha))
         var start = centre + (display.spanStart - display.camera) * slot
@@ -382,8 +295,8 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         rounded(canvas, start, mid - dp(SELECTION_HEIGHT / 2), end, mid + dp(SELECTION_HEIGHT / 2), radius,
             GuideMotion.faded(look.accent, alpha))
         wordRow(canvas, display, slot, centre, mid, selected = true, GuideMotion.faded(look.onAccent, SELECTED * alpha))
-        // The end that moves has the caret on it.
-        bar(canvas, if (display.leadingRight) end + dp(CARET_GAP) else start - dp(CARET_GAP), mid, dp(CARET_HEIGHT), GuideMotion.faded(look.accent, alpha))
+        bar(canvas, if (display.leadingRight) end + dp(CARET_GAP) else start - dp(CARET_GAP), mid, dp(STEER_CARET_HEIGHT),
+            GuideMotion.faded(look.accent, alpha), dp(STEER_CARET))
     }
 
     private fun wordRow(canvas: Canvas, display: GestureDisplay, slot: Float, centre: Float, mid: Float, selected: Boolean, colour: Int) {
@@ -621,11 +534,6 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
          */
         const val DELETE_BOOST = 1.5f
         const val DELETE_SOFT = .45f
-        /** The thicker right edge is this much thicker, and this much stronger. */
-        const val THICKER = 1.5f
-        const val THICKER_LEVEL = 1.25f
-        /** A held delete's glow under the finger is this much of the bar wide. */
-        const val FINGER_SPAN = .6f
         /** A triple press's picked word, with no box round it, and a hold's word about to go, are this strong. */
         const val PICKED = .75f
         const val PULSE = .25f
@@ -637,7 +545,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val LETTER_NEAR = .75f
         const val LETTER_ENDS = 4f
         /** Steering's pill: as tall and as round as select's, and narrow, with its dark caret inside. */
-        const val STEER_PILL = 38f
+        const val STEER_CLEAR = 3f
         /** Its caret is a text cursor: thin, and as tall as the strip's words, which are 17 sp. */
         const val STEER_CARET = 2f
         const val STEER_CARET_HEIGHT = 17f

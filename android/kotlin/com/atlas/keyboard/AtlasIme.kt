@@ -402,30 +402,30 @@ class AtlasIme : InputMethodService() {
             heldWords.reset()
             // A hold takes the bar from any dots still playing, and their ticks stop.
             haptics.cutDots()
-            deleteWall.left()
-            strip?.gesture?.let { gesture ->
-                // Where its glow goes, as the Haptics lab's switch has it in TitanKeys Debug.
-                gesture.deleteGlowPlace = GestureDisplay.DeleteGlow.of(Haptics.deleteGlow(this))
-                gesture.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), deleteHold.pace,
-                    currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0), flick.points.lastOrNull { it.valid }?.x)
-            }
-            // The dots at the lift keep clear of this hold's ticks.
-            haptics.holdStarted()
             // The contact was a delete and not part of a word, as it would be at a lift.
             pieces.clear()
             lastTouch = null
             Trace.touch(emptyList(), true)
-            // The guide wants to know that this delete stays down, before its first word goes.
-            KeyboardEvents.publish { KeyboardEvent.DeleteHoldStarted }
-            enqueue { outcome(flick) }
+            enqueue {
+                // With nothing to delete, no hold starts: no words on the bar, no dots, only the flick's wall (owner, 2026-11-12).
+                val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
+                if (before?.isEmpty() != true) {
+                    strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), deleteHold.pace, before)
+                    // The dots at the lift keep clear of this hold's ticks.
+                    haptics.holdStarted()
+                    // The guide wants to know that this delete stays down, before its first word goes.
+                    KeyboardEvents.publish { KeyboardEvent.DeleteHoldStarted }
+                }
+                outcome(flick)
+            }
             return
         }
         val word = heldWords.next()
         enqueue {
-            // At the start of the text the hold hits a wall: it plays once, and the hold stays quiet while the finger stays, with
-            // no words left on the bar, only the caret.
+            // At the start of the text the hold hits a wall: the same wall as a flick with nothing to delete, played clean, once,
+            // and the hold stays quiet while the finger stays, with no words left on the bar, only the caret.
             if (currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true) {
-                if (deleteWall.reached()) haptics.play(Haptic.DeleteRanOut)
+                if (deleteWall.reached()) haptics.wall(Haptic.DeleteRanOut)
                 strip?.gesture?.deleteText("")
                 return@enqueue
             }
@@ -546,6 +546,9 @@ class AtlasIme : InputMethodService() {
     private fun nothingHere(words: Boolean): Boolean {
         if (field.exact || pendingInput.isNotEmpty() || composer.hasPendingInput) return false
         val connection = currentInputConnection ?: return false
+        // With text selected, a double space puts the cursor back and steers from there, even when the selection is all the
+        // text: that is steering starting, never a no (owner, 2026-11-12).
+        if (!words && lastSelectionStart >= 0 && lastSelectionStart != lastSelectionEnd) return false
         if (!words) {
             val before = connection.getTextBeforeCursor(1, 0) ?: return false
             val after = connection.getTextAfterCursor(1, 0) ?: return false
@@ -1954,8 +1957,11 @@ class AtlasIme : InputMethodService() {
             MotionEvent.ACTION_DOWN -> {
                 val first = samples.firstOrNull() ?: Sample(Float.NaN, Float.NaN, event.eventTime)
                 haptics.begin(samples.firstOrNull())
-                // Only where a delete flick would count can the stroke crunch.
-                flickCrunch.begin(!altOrPanel && field.words && pieces.canDelete(first.time) && guideAllows(GuideLesson.Flick))
+                // Each stroke hits its own wall.
+                deleteWall.left()
+                // Only where a delete flick would count, and with something to delete, can the stroke crunch and glow.
+                flickCrunch.begin(!altOrPanel && field.words && pieces.canDelete(first.time) && guideAllows(GuideLesson.Flick)
+                    && somethingToDelete(first))
                 endDeleteHold()
                 contact.down(first)
                 if (cursor.resume(first, composer.liftOffMillis.toLong())) {
@@ -2012,14 +2018,12 @@ class AtlasIme : InputMethodService() {
                 if (contact.deleting) {
                     strip?.gesture?.swipeCancelled()
                     samples.lastOrNull { it.valid }?.let { finger ->
-                        // A glow under the finger follows it.
-                        strip?.gesture?.fingerAt(finger.x)
                         val next = deleteHold.follow(finger)
                         // Back near where the flick started, the hold pauses: its words on the bar stand still, its glow fades out
                         // and its caret blinks.
                         strip?.gesture?.deletePaused(deleteHold.paused)
-                        // Going into the pause zone, or reaching the top-speed line, ticks once.
-                        if (deleteHold.crossed() != null && Haptics.zoneTicks(this)) haptics.play(Haptic.DeleteZone)
+                        // Going into the pause zone, or reaching the top-speed line, ticks once. After the wall, nothing does.
+                        if (deleteHold.crossed() != null && Haptics.zoneTicks(this) && !deleteWall.atWall) haptics.play(Haptic.DeleteZone)
                         next?.let {
                             nextDeleteHoldStep(it)
                             if (strip?.gesture?.scene == GestureDisplay.Scene.DeleteHold) {
@@ -2042,8 +2046,13 @@ class AtlasIme : InputMethodService() {
                 if (contact.swipes && !altOrPanel && guideAllows(GuideLesson.Swipe) && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) {
                     // Clearly a delete flick, the keys it crosses crunch; once it stops being one, a break, then swiping's ticks.
-                    if (flickCrunch.move(contact.points)) haptics.play(Haptic.DeleteBreak)
+                    if (flickCrunch.move(contact.points)) {
+                        haptics.play(Haptic.DeleteBreak)
+                        strip?.gesture?.flickGlowEnded(SystemClock.uptimeMillis())
+                    }
                     haptics.move(samples, flickCrunch.crunching)
+                    // While it is clearly a flick, the delete glow reaches from the corner to the finger and follows it.
+                    if (flickCrunch.crunching) samples.lastOrNull { it.valid }?.let { strip?.gesture?.flickGlow(it.x, it.time) }
                 }
                 Trace.touch(contact.points, false)
                 // A guide slide that doesn't teach swiping shows no word growing on the bar either.
@@ -2113,6 +2122,8 @@ class AtlasIme : InputMethodService() {
     /** A finger lifted, or the system cancelled the gesture, which counts as a lift but never as a tap of a double tap. */
     private fun lift(event: MotionEvent, samples: List<Sample>, cancelled: Boolean) {
         endDeleteHold()
+        // A flick's glow fades at the lift; a hold's already does, with its dots.
+        strip?.gesture?.flickGlowEnded(SystemClock.uptimeMillis())
         tripleDown = false
         strip?.gesture?.pickLifted(SystemClock.uptimeMillis())
         val doubleTapped = if (cancelled) {
@@ -2302,7 +2313,7 @@ class AtlasIme : InputMethodService() {
             return@changeSelection null
         }
         strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
-        strip?.gesture?.wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown, caret = inFront)
+        strip?.gesture?.wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown)
         word
     }
 
@@ -2339,15 +2350,21 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    /**
-     * What a Ctrl shortcut plays, as [ShortcutFeel] has it: Ctrl + C with nothing selected plays no, always, as it copies nothing;
-     * with the lab's "Haptics for shortcuts" on, copy, cut, paste, undo and select all confirm. A key held down plays once.
-     */
+    /** What a Ctrl shortcut plays, as [ShortcutFeel] has it: only Ctrl + C with nothing selected, a no. A key held down plays once. */
     private fun shortcutFeel(event: KeyEvent) {
         if (!event.isCtrlPressed || event.isMetaPressed || event.repeatCount > 0) return
         val letter = if (event.keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) 'A' + (event.keyCode - KeyEvent.KEYCODE_A) else null
         val selected = if (lastSelectionStart < 0 || lastSelectionEnd < 0) null else lastSelectionStart != lastSelectionEnd
-        ShortcutFeel.of(letter, selected, Haptics.shortcutHaptics(this))?.let(haptics::play)
+        ShortcutFeel.of(letter, selected)?.let(haptics::play)
+    }
+
+    /**
+     * Whether a stroke from [first] may have something to delete: always, unless it starts where a delete flick does and the
+     * field has nothing before the cursor. Typing still on its way, or a field that doesn't answer, counts as something.
+     */
+    private fun somethingToDelete(first: Sample): Boolean {
+        if (!startsDeleteFlick(first.x, first.y) || pendingInput.isNotEmpty() || composer.hasPendingInput) return true
+        return currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() != true
     }
 
     /** Keeps where the cursor is, when nothing is selected, so a double space after a select can put it back there. */
@@ -2405,8 +2422,6 @@ class AtlasIme : InputMethodService() {
 
     /** Types a symbol or emoji from the panel, then goes back to normal typing. */
     private fun typePanelItem(item: String) {
-        // With the lab's "Haptics for shortcuts" on, a symbol from the Sym panel feels like holding a letter for it.
-        if (modifiers.panel == Modifiers.Panel.Symbols && Haptics.shortcutHaptics(this)) haptics.play(Haptic.PanelSymbol)
         if (field.exact) commitExact(item) else composer.symbol(item)
         if (modifiers.panel == Modifiers.Panel.Emoji) emoji?.use(item)?.let { recents ->
             getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
@@ -2613,7 +2628,8 @@ class AtlasIme : InputMethodService() {
                 if (outcome.deletesWord) {
                     val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
                     val nothingLeft = before?.isEmpty() == true
-                    if (nothingLeft) haptics.play(Haptic.DeleteNothing)
+                    // Nothing to delete: the wall, as a hold that runs out plays it, once for the stroke, and played clean.
+                    if (nothingLeft && deleteWall.reached()) haptics.wall(Haptic.DeleteNothing)
                     // A hold's first word: the bar's words are the real ones before it goes.
                     if (before != null) strip?.gesture?.deleteText(before)
                     composer.backspace(true)
@@ -2947,9 +2963,6 @@ class AtlasIme : InputMethodService() {
                     return true
                 }
                 val text = String(Character.toChars(typed))
-                // With the lab's "Haptics for shortcuts" on, Alt's symbol feels like holding the letter for it.
-                val alt = event.isAltPressed || modifiers.alt != Modifiers.Level.Off
-                if (alt && !Character.isLetter(typed) && Haptics.shortcutHaptics(this)) haptics.play(Haptic.AltSymbol)
                 modifiers.consume()
                 // Controlled insertion avoids unacknowledged app key updates overtaking later input.
                 composer.type(text)

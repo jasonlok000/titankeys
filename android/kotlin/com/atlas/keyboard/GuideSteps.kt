@@ -492,6 +492,10 @@ internal class GuideMemory {
     var panelOpen = false
     /** What the slide has seen used, across its stages, such as the ways the groups slide turned pages. */
     var used = 0
+    /** The text in the field that the slide marks in orange as the thing to aim at, if any. The screen sets it. */
+    var target: IntRange? = null
+    /** Where the cursor was before this event, or -1 until it is known. */
+    var cursor = -1
 
     /** The field's text is longer than when this stage began: something was typed or pasted. */
     fun grew(event: KeyboardEvent) = event is FieldChanged && stageLength >= 0 && event.text.length > stageLength
@@ -514,7 +518,10 @@ private fun staged(stages: List<GuideStage>): GuideMemory.(KeyboardEvent) -> Gui
     if (stages.isEmpty()) return@check GuideVerdict.Wait
     if (event is ModifierState) panelOpen = event.panel != Panel.Closed
     val verdict = stages[stage.coerceIn(0, stages.lastIndex)].check(this, event)
-    if (event is FieldChanged) length = event.text.length
+    if (event is FieldChanged) {
+        length = event.text.length
+        cursor = event.start
+    }
     fun move(to: Int): GuideVerdict {
         stage = to
         stageLength = length
@@ -602,6 +609,10 @@ internal class GuideStep(
      * the slide is done. [ANY_SYMBOL] takes any.
      */
     val symbol: String? = null,
+    /** Where the cursor starts in the field that the slide seeds, from its text, or null for the end. */
+    val cursorAt: ((String) -> Int)? = null,
+    /** A line that shows in place of the instruction while the slide is tried, when it says something, such as a count. */
+    val live: (GuideMemory.() -> String?)? = null,
     /** What the field's grey ghost shows ahead of the cursor in place of [text], word for word, such as a typo in every word. */
     val ghost: String = "",
     /** What this slide unlocks on the keyboard, in the guide's field only, besides letters, Backspace and Space. Null locks nothing. */
@@ -671,6 +682,17 @@ internal const val DELETE_TEXT = "Delete these words, because you clearly regret
     "autocorrects you never checked, the reply-all you sent to the whole office, and that message you typed at two in the " +
     "morning. Start with the last letter, then whole words, then everything you've ever typed. This sentence especially. It " +
     "knows what you did."
+/** The Backspace slide's word with its stray letter, and as it should be. The cursor sits right after the stray d. */
+internal const val STRAY = "didd."
+internal const val STRAY_FIXED = "did."
+internal val DELETE_STRAY_TEXT = DELETE_TEXT.substringBeforeLast(STRAY_FIXED) + STRAY + DELETE_TEXT.substringAfterLast(STRAY_FIXED)
+
+/** Where the cursor starts on the Backspace slide: right after the stray d, so one Backspace takes it. */
+internal fun strayCursor(text: String) = text.lastIndexOf(STRAY).let { if (it < 0) text.length else it + STRAY.length - 1 }
+
+/** The stray d, in orange, while it's there. */
+internal fun strayTarget(text: String) = text.lastIndexOf(STRAY).takeIf { it >= 0 }?.let { (it + STRAY.length - 2)..(it + STRAY.length - 2) }
+
 internal val DELETE_RESETS = listOf(
     "Deleted it all? Your regrets stay." to
         "Wow, you deleted everything. Here's more to regret. Try deleting just a little this time.",
@@ -900,13 +922,15 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "backspace", chapter = GuideChapter.Delete,
         title = "The old way. Humour us.",
+        // The text ends with one stray letter, in orange, right before the cursor: Backspace has a job (design v4).
         stages = listOf(GuideStage("Press Backspace.", GuideCue.Spot(listOf(Layout.BACKSPACE))) { event ->
-            if (event is Pushed && event.code == KEY_DEL) GuideVerdict.Done else GuideVerdict.Wait
+            if (event is FieldChanged && STRAY !in event.text && STRAY_FIXED in event.text) GuideVerdict.Done else GuideVerdict.Wait
         }),
         done = "One letter. Thrilling.",
         // v3.1's "That's how everyone deletes. Next, a whole word at once." is two lines.
         praise = "That's how everyone deletes. Next, whole words.",
-        seed = DELETE_TEXT,
+        seed = DELETE_STRAY_TEXT,
+        cursorAt = ::strayCursor,
         lessons = setOf(GuideLesson.Backspace),
         demo = GuideDemo.DeleteLast,
     ),
@@ -1415,10 +1439,22 @@ internal class GuideFlow(
     val jumps get() = memory.jump
 
     /** Tells the step what the field holds as it starts, so that a stage can tell when something is typed or pasted. */
-    fun seed(text: String) {
+    fun seed(text: String, cursor: Int = -1) {
         memory.length = text.length
         memory.stageLength = text.length
+        memory.cursor = cursor
     }
+
+    /** Tells the step what the field marks in orange to aim at, or null for nothing. See [GuideMemory.target]. */
+    fun aim(range: IntRange?) {
+        memory.target = range
+    }
+
+    /** What the step has counted on this stage, such as words deleted. */
+    val tally get() = memory.count
+
+    /** The line that shows in place of the instruction now, if the step has one. See [GuideStep.live]. */
+    fun liveLine() = step.live?.invoke(memory)
 
     /**
      * What the step makes of [event], with [expected] the letters of the word that the text box has next. If it waits, a mistake

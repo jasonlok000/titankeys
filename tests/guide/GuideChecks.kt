@@ -36,7 +36,7 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "swipe" to listOf(Recognised(listOf("this")), Recognised(listOf("keyboard")), Recognised(listOf("fixes"))),
     "strip" to listOf(Recognised(listOf("tp", "to")), Chosen("to")),
     "menu" to listOf(WordMenu("to"), MenuPicked("Close")),
-    "backspace" to listOf(Pushed(KEY_DEL)),
+    "backspace" to listOf(Pushed(KEY_DEL), FieldChanged(DELETE_TEXT + " ", 0, 0)),
     "flick" to listOf(DeletedWord(held = false)),
     "hold" to listOf(DeleteHoldStarted, DeletedWord(held = true)),
     "steer" to listOf(CursorStarted(false), FieldChanged("on and on ", 9, 9), FieldChanged("on and on ", 4, 4)),
@@ -328,7 +328,8 @@ private fun slideTexts() {
     same(texts(GuideChapter.Symbols), listOf(SYMBOLS_TEXT), "The symbols chapter has one text box")
     same(TYPING_TEXT.first().isUpperCase(), true, "The first text box starts with a capital")
     same(TYPING_TEXT.any { it.isDigit() }, false, "The typing text is easy to type")
-    for (step in GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }) same(step.seed, DELETE_TEXT, "${step.id} starts with the delete text")
+    for (step in GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete })
+        same(step.seed, if (step.id == "backspace") DELETE_STRAY_TEXT else DELETE_TEXT, "${step.id} starts with the delete text")
     for (step in GUIDE_STEPS.filter { it.chapter == GuideChapter.Clipboard }) same(step.seed, CLIP_TEXT, "${step.id} starts with its text")
     for (text in listOf(DELETE_TEXT, CLIP_TEXT, STEER_TEXT) + DELETE_RESETS.map { it.second } + STEER_RESET.second)
         same(text.endsWith("."), true, "\"${text.takeLast(20)}\" ends with a full stop")
@@ -468,6 +469,12 @@ private fun chapterOne() {
     same(GUIDE_STEPS.filter { it.chapter !in NEW_LAYOUT }.all { it.lessons == null }, true,
         "The chapters not in the new layout yet lock nothing")
     same(typing.map { it.sides }, listOf(false, true, true, true), "Only the first slide shows just the bar's middle word")
+    val stray = GuideFlow({ GuideSettings() })
+    stray.start("backspace")
+    val strayText = DELETE_STRAY_TEXT + " "
+    same(strayText.substring(strayCursor(strayText) - 4, strayCursor(strayText) + 1), "didd.", "The cursor starts right after the stray d")
+    same(strayTarget(strayText), (strayCursor(strayText) - 1)..(strayCursor(strayText) - 1), "and the orange mark is the d before it")
+    same(stray.event(FieldChanged(DELETE_TEXT + " ", 0, 0)), GuideVerdict.Done, "Taking out the stray d passes")
     same(GUIDE_STEPS.first { it.id == "menu" }.stages[1].labels, mapOf("I" to "Save", "O" to "Forget", "P" to "Back"),
         "The word menu's keys say their buttons on the drawing")
     val typos = TYPING_TYPOS.split(' ')

@@ -425,9 +425,47 @@ private class GuideField(context: Context) : EditText(context) {
     private var ghostLayout: StaticLayout? = null
     private var ghostKey = ""
 
+    /** The text that the slide marks in orange to aim at, by its characters, or null. See [GuideMemory.target]. */
+    var target: IntRange? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+    private val targetPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    /** A wash of orange behind the target, and an orange line under it, on each of its lines. */
+    private fun drawTarget(canvas: Canvas, own: android.text.Layout) {
+        val aim = target ?: return
+        val length = text.length
+        if (aim.isEmpty() || aim.first < 0 || aim.last >= length) return
+        val left = compoundPaddingLeft.toFloat()
+        val top = extendedPaddingTop.toFloat()
+        canvas.save()
+        canvas.clipRect(left + scrollX, top + scrollY, (width - compoundPaddingRight + scrollX).toFloat(),
+            (height - extendedPaddingBottom + scrollY).toFloat())
+        canvas.translate(left, top)
+        val underline = resources.displayMetrics.density * 2
+        for (line in own.getLineForOffset(aim.first)..own.getLineForOffset(aim.last)) {
+            val from = max(aim.first, own.getLineStart(line))
+            val to = min(aim.last + 1, own.getLineEnd(line))
+            if (to <= from) continue
+            val x1 = own.getPrimaryHorizontal(from)
+            val x2 = if (to >= own.getLineEnd(line)) own.getLineRight(line) else own.getPrimaryHorizontal(to)
+            val lineTop = own.getLineTop(line).toFloat()
+            val lineBottom = own.getLineBottom(line).toFloat()
+            targetPaint.color = GuideMotion.faded(GuideColours.ORANGE, GuideActivity.TARGET_WASH)
+            canvas.drawRoundRect(x1 - underline, lineTop, x2 + underline, lineBottom, underline * 2, underline * 2, targetPaint)
+            targetPaint.color = GuideColours.ORANGE
+            canvas.drawRect(x1, lineBottom - underline, x2, lineBottom, targetPaint)
+        }
+        canvas.restore()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val own = layout ?: return
+        drawTarget(canvas, own)
         if (ghost.isEmpty()) return
         val typed = text.toString()
         val key = "$typed\u0000$ghost\u0000${own.width}\u0000$ghostColour"
@@ -1388,7 +1426,7 @@ class GuideActivity : Activity() {
                 GuideChapter.Steering -> seedSteering(STEER_TEXT)
                 else -> {
                     field.setText(if (step.seed.isEmpty()) "" else step.seed + " ")
-                    field.setSelection(field.length())
+                    field.setSelection(step.cursorAt?.invoke(field.text.toString())?.coerceIn(0, field.length()) ?: field.length())
                 }
             }
             seeding = false
@@ -1399,7 +1437,8 @@ class GuideActivity : Activity() {
         GuideHooks.lessons = step.lessons
         GuideHooks.barSides(step.sides)
         setUpLesson(step)
-        flow.seed(field.text.toString())
+        flow.seed(field.text.toString(), field.selectionStart)
+        aim()
         // The chapter's text box shows on the slides that have one, and stays as it is from slide to slide.
         val typing = step.text.isNotEmpty()
         // The Typing chapter has no box: its text is the grey ghost in the field. The other chapters keep their box for now.
@@ -2320,7 +2359,23 @@ class GuideActivity : Activity() {
         if (!playground && ready && !changing && resetField()) return
         val start = min(field.selectionStart, field.selectionEnd).coerceAtLeast(0)
         val end = max(field.selectionStart, field.selectionEnd).coerceAtLeast(0)
+        if (!playground) aim()
         handle(KeyboardEvent.FieldChanged(field.text.toString(), start, end))
+    }
+
+    /**
+     * Marks in orange what the slide aims at, in the field, and tells the slide (design v4): the stray letter on the Backspace slide.
+     * Nothing on other slides, or once the guide's look is off.
+     */
+    private fun aim() {
+        if (!::field.isInitialized) return
+        val text = field.text.toString()
+        val range = if (playground || guideLooks != true) null else when (flow.step.id) {
+            "backspace" -> strayTarget(text)
+            else -> null
+        }
+        field.target = range
+        flow.aim(range)
     }
 
     /**
@@ -3299,6 +3354,8 @@ class GuideActivity : Activity() {
         private const val NEXT_PULSE = 1.12f
         /** The field's fill on ink, and how grey the ghost is, as in the approved frame. */
         private const val FIELD_FILL = .08f
+        /** How strong the orange wash is behind what a slide aims at, in the field. */
+        const val TARGET_WASH = .35f
         private const val GHOST_ALPHA = .38f
         /** How many words the ghost shows after the one you're on: more than two lines hold. */
         private const val GHOST_WORDS = 24

@@ -30,7 +30,7 @@ import javax.imageio.ImageIO
  */
 
 /** One state of a slide, as the screen shows it. */
-private class Frame(
+private data class Frame(
     val name: String,
     val chapter: GuideChapter,
     val title: String,
@@ -44,6 +44,8 @@ private class Frame(
     val panel: String? = null,
     /** What the drawing of the keys shows on some keys, in place of their letters. See [GuideStage.labels]. */
     val labels: Map<String, String>? = null,
+    /** What the field marks in orange to aim at. See [GuideMemory.target]. */
+    val target: IntRange? = null,
 )
 
 /** A mistake for each slide, as the keyboard reports it, so a drawing shows the chip that it gets. */
@@ -68,7 +70,8 @@ private fun fieldFor(step: GuideStep): Frame {
         Frame("", step.chapter, "", "", field = text, start = start, end = end, ghost = ghost)
     return when (step.chapter) {
         GuideChapter.Typing -> at("", ghost = step.ghost.ifEmpty { TYPING_TEXT })
-        GuideChapter.Delete -> at(DELETE_TEXT + " ")
+        GuideChapter.Delete -> if (step.id == "backspace") (DELETE_STRAY_TEXT + " ").let { at(it, strayCursor(it)).copy(target = strayTarget(it)) }
+            else at(DELETE_TEXT + " ")
         GuideChapter.Steering -> {
             val text = looping(STEER_TEXT) + " "
             val cursor = text.indexOf(' ', text.length / 2) + 1
@@ -95,7 +98,7 @@ private fun passedField(step: GuideStep, before: Frame): Frame {
         Frame("", step.chapter, "", "", field = text, start = start, end = end, ghost = ghost)
     return when (step.id) {
         "type" -> at("This keyboard fixes ", ghost = "your typos, so you can keep pretending you never make any.")
-        "backspace" -> at(DELETE_TEXT.dropLast(1) + " ")
+        "backspace" -> (DELETE_TEXT + " ").let { at(it, it.lastIndexOf(STRAY_FIXED) + STRAY_FIXED.length - 1) }
         "flick", "hold" -> at(DELETE_TEXT.substringBeforeLast(" It knows") + " ")
         "steer" -> at(before.field, before.start - 40)
         "selectmore" -> {
@@ -118,23 +121,21 @@ private fun framesFor(step: GuideStep): List<Frame> {
     val field = fieldFor(step)
     fun frame(name: String, title: String, line: String, chip: String? = null, passed: Boolean = false, from: Frame = field,
         panel: String? = null) = Frame("${step.id}-$name", step.chapter, title, line, chip, passed, from.field, from.start, from.end,
-        from.ghost, panel)
+        from.ghost, panel, target = from.target)
     val frames = ArrayList<Frame>()
     val first = step.stages.firstOrNull()?.text ?: step.body
     frames += frame("1-start", step.title, first)
     // Each later instruction, as the slide moves on to it.
     for ((index, stage) in step.stages.withIndex().drop(1)) {
         val panel = if (step.usesPanel && index > 0 && step.id != "alt") "Sym panel open" else null
-        frames += frame("2-stage${index + 1}", step.title, stage.text, panel = panel).let {
-            if (stage.labels == null) it else Frame(it.name, it.chapter, it.title, it.line, it.chip, it.passed, it.field, it.start, it.end,
-                it.ghost, it.panel, stage.labels)
-        }
+        frames += frame("2-stage${index + 1}", step.title, stage.text, panel = panel).copy(labels = stage.labels)
     }
     // A real mistake: its chip over the instruction.
     MISTAKES[step.id]?.let { events ->
         val flow = GuideFlow({ GuideSettings(holdSymbols = true, fnAsCtrl = true) })
         flow.start(step.id)
-        flow.seed(field.field)
+        flow.seed(field.field, field.start)
+        flow.aim(field.target)
         var said: String? = null
         for (event in events) {
             val verdict = flow.event(event)
@@ -351,6 +352,13 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
         for (offset in from until to) {
             val char = all[offset].toString()
             val w = g.fontMetrics.stringWidth(char)
+            val aim = frame.target
+            if (aim != null && offset in aim) {
+                g.color = rgb(Paint.ORANGE, .35f)
+                g.fillRect(x, top + row * line, w, line)
+                g.color = orange
+                g.fillRect(x, top + (row + 1) * line - dp(2), w, dp(2))
+            }
             if (offset in frame.start until frame.end) {
                 g.color = rgb(Paint.ORANGE, .45f)
                 g.fillRect(x, top + row * line, w, line)

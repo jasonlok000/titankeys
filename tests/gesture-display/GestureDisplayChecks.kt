@@ -13,6 +13,7 @@ private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
     aFlicksWayInStretchesToFitItsDots()
+    aTriplePickWaitsForTheLift()
     aHoldsWordsFadeInBehindItsDots()
     anyNumberOfWordsShowsItsDots()
     quickFlicksMakeOneStream()
@@ -996,6 +997,39 @@ private fun theHeldGlowGoesWithTheDisplay() {
     off.cursorFrame(5f, 0, 0f, false, 100L)
     off.allowed = false
     same(off.glowing, false, "Where the strip does not show, the held glow goes too")
+}
+
+/**
+ * A triple tap's third touch picks the word as it lands. While it stays down the mark stays over the word, however long, and the
+ * selected text waits under it; after the lift the mark goes at its usual pace. A quick lift keeps the usual timing.
+ */
+private fun aTriplePickWaitsForTheLift() {
+    val display = GestureDisplay()
+    display.wordSelected(1_000, held = true)
+    display.run(1_000, 3_000)
+    same(display.scene, Scene.WordSelected, "Two seconds down, the mark still shows")
+    same(display.reveal, 1f, "and covers the selected text")
+    isTrue(display.spanEnd - display.spanStart > .99f, "fully grown over the word")
+    display.pickLifted()
+    display.run(3_016, 3_016 + GestureDisplay.PICK_OUT.toLong() / 2)
+    isTrue(display.reveal > 0f && display.reveal < 1f, "After the lift it fades: ${display.reveal}")
+    display.run(3_016 + GestureDisplay.PICK_OUT.toLong() / 2 + 16, 3_016 + GestureDisplay.PICK_OUT.toLong() + 32)
+    same(display.scene, Scene.None, "and the selected text shows")
+
+    val quick = GestureDisplay()
+    quick.wordSelected(1_000, held = true)
+    quick.run(1_000, 1_100)
+    quick.pickLifted()
+    quick.run(1_116, 1_000 + (GestureDisplay.PICK_IN + GestureDisplay.PICK_HOLD).toLong() - 16)
+    same(quick.reveal, 1f, "A quick lift still holds the mark its usual time")
+    quick.run(1_000 + (GestureDisplay.PICK_IN + GestureDisplay.PICK_HOLD).toLong(), 1_000 + GestureDisplay.PICK_MILLIS.toLong() + 20)
+    same(quick.scene, Scene.None, "then goes as before")
+
+    val cut = GestureDisplay()
+    cut.wordSelected(1_000, held = true)
+    cut.run(1_000, 1_600)
+    cut.interrupt()
+    same(cut.scene, Scene.None, "A key or a touch still ends it at once")
 }
 
 /**

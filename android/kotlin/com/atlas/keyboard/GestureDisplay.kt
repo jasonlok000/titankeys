@@ -170,6 +170,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private var deleteMillis = 200L
     private var flourishAt = 0L
     private var revealedAtStart = 0f
+    /** True while the touch that picked a word is still down: see [wordSelected]. */
+    private var pickHeld = false
 
     private val live get() = !leaving && (scene == Scene.Cursor || scene == Scene.WordDrag || scene == Scene.DeleteHold)
     private val flourishing get() = scene == Scene.DeleteFlick || scene == Scene.WordSelected
@@ -571,8 +573,21 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         return true
     }
 
-    /** A double tap selected the word at the cursor. */
-    fun wordSelected(now: Long) = startFlourish(Scene.WordSelected, now)
+    /**
+     * A double tap, or the third touch of a triple, selected the word at the cursor. While that touch is [held] down, the mark
+     * stays over the word and the selected text waits under it; it goes only after [pickLifted], at its usual pace.
+     */
+    fun wordSelected(now: Long, held: Boolean = false) {
+        startFlourish(Scene.WordSelected, now)
+        if (scene == Scene.WordSelected) pickHeld = held
+    }
+
+    /** The touch that picked a word lifted: its mark goes as usual, and the selected text shows. */
+    fun pickLifted() {
+        if (!pickHeld) return
+        pickHeld = false
+        changed()
+    }
 
     /**
      * The word swipe reached touchpad point [x], [y]. The first point of a swipe starts the mini path, also while the last one
@@ -723,6 +738,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         val motion = scale > 0f
         if (flourishing) {
             if (scene == Scene.DeleteFlick && motion && dots > 0) plan(scale)
+            // A pick whose touch is still down stays at the end of its hold, so the mark keeps showing until the lift.
+            if (scene == Scene.WordSelected && pickHeld) {
+                val stay = if (motion) (PICK_IN + PICK_HOLD) * scale else STILL_MILLIS / 2
+                if (now - flourishAt > stay) flourishAt = now - stay.toLong()
+            }
             val length = if (!motion) STILL_MILLIS else when (scene) {
                 Scene.DeleteFlick -> if (dots > 0) (doneAt + FLICK_BACK * scale) / scale else FLICK_MILLIS
                 Scene.WordSelected -> PICK_MILLIS
@@ -843,6 +863,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     private fun startFlourish(next: Scene, now: Long) {
         if (!allowed || live) return
+        pickHeld = false
         resetPieces()
         scene = next
         leaving = false
@@ -873,6 +894,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         scene = Scene.None
         if (glowHeld) endGlow()
         fromHold = false
+        pickHeld = false
         solid = 0f
         batches = 0
         dots = 0

@@ -72,6 +72,8 @@ class AtlasIme : InputMethodService() {
     private val cursorGesture = CursorGesture()
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
     private var cursorPath = ArrayList<Sample>()
+    /** The third touch of a triple tap is still down: its pick's mark stays on the bar until it lifts. See [pickOnLand]. */
+    private var tripleDown = false
     /** The touch of a Space gesture registered before any slide, so the strip shows it and its feel has played. */
     private var gestureRegistered = false
     /** This touch's Space gesture found nothing to work on, played its no, and does nothing more. See [nothingToPick]. */
@@ -493,6 +495,8 @@ class AtlasIme : InputMethodService() {
     private fun pickOnLand() {
         Recording.sink?.gesture("triple", SystemClock.uptimeMillis(), "")
         gestureRegistered = true
+        // The bar keeps the pick's mark while this touch stays down, and shows the selected text after the lift.
+        tripleDown = true
         main.removeCallbacks(confirmDoubleTap)
         finishHeldTaps(type = false)
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped(3) }
@@ -2013,6 +2017,8 @@ class AtlasIme : InputMethodService() {
     /** A finger lifted, or the system cancelled the gesture, which counts as a lift but never as a tap of a double tap. */
     private fun lift(event: MotionEvent, samples: List<Sample>, cancelled: Boolean) {
         endDeleteHold()
+        tripleDown = false
+        strip?.gesture?.pickLifted()
         val doubleTapped = if (cancelled) {
             cursorGesture.cancel(event.eventTime)
             false
@@ -2200,7 +2206,7 @@ class AtlasIme : InputMethodService() {
             return@changeSelection null
         }
         strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
-        strip?.gesture?.wordSelected(SystemClock.uptimeMillis())
+        strip?.gesture?.wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown)
         word
     }
 

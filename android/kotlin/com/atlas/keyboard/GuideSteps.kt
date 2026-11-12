@@ -697,6 +697,15 @@ internal fun lastWordTarget(text: String, cursor: Int): IntRange? {
     return (before.lastIndexOf(' ') + 1) until before.length
 }
 
+/** Words that the mass deletion slide wants gone before it passes. */
+internal const val REGRETS_TO_PASS = 8
+
+/** The mass deletion slide's count, as it goes. */
+internal fun regretsLine(count: Int) = "Regrets deleted: $count"
+
+/** The count once the finger lifts after the slide passed: frozen on its last number, with the slide's praise. */
+internal fun regretsFinal(count: Int) = "$count regrets gone. " + GUIDE_STEPS.first { it.id == "hold" }.praise
+
 /** The stray d, in orange, while it's there. */
 internal fun strayTarget(text: String) = text.lastIndexOf(STRAY).takeIf { it >= 0 }?.let { (it + STRAY.length - 2)..(it + STRAY.length - 2) }
 
@@ -973,20 +982,33 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "hold", chapter = GuideChapter.Delete,
         title = "Mass deletion. Very therapeutic.",
+        // A count of regrets deleted takes the instruction's place from the first word, and the slide passes at eight (design v4).
         stages = listOf(GuideStage("Flick left from Backspace, then hold it down.") { event ->
             when {
                 event is DeleteHoldStarted -> {
                     mark = 1
                     GuideVerdict.Wait
                 }
-                event is DeletedWord && event.held -> GuideVerdict.Done
-                event is DeletedWord && mark == 1 -> GuideVerdict.Wait
-                event is DeletedWord -> chip("That was one word. Hold it down.")
+                event is DeletedWord -> {
+                    count++
+                    when {
+                        count >= REGRETS_TO_PASS -> GuideVerdict.Done
+                        mark != 1 -> chip("That was one word. Hold it down.")
+                        else -> GuideVerdict.Wait
+                    }
+                }
+                // A hold let go too soon.
+                event is Moved && event.lifted && mark == 1 && count in 1 until REGRETS_TO_PASS -> {
+                    mark = -1
+                    chip("Therapy's not over. Hold longer.")
+                }
                 else -> GuideVerdict.Wait
             }
         }),
         done = "Watch your regrets go.",
+        // After the count: see [regretsFinal].
         praise = "A longer flick deletes faster.",
+        live = { if (count > 0) regretsLine(count) else null },
         seed = DELETE_TEXT,
         cue = GuideCue.Flick(hold = true),
         needs = GuideNeed.SwipeTyping,

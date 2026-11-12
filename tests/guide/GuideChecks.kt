@@ -38,7 +38,7 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "menu" to listOf(WordMenu("to"), MenuPicked("Close")),
     "backspace" to listOf(Pushed(KEY_DEL), FieldChanged(DELETE_TEXT + " ", 0, 0)),
     "flick" to listOf(DeletedWord(held = false)),
-    "hold" to listOf(DeleteHoldStarted, DeletedWord(held = true)),
+    "hold" to listOf(DeleteHoldStarted) + List(REGRETS_TO_PASS) { DeletedWord(held = true) },
     "steer" to listOf(CursorStarted(false), FieldChanged("on and on ", 9, 9), FieldChanged("on and on ", 4, 4)),
     "selectmore" to listOf(CursorStarted(true), FieldChanged("on and on ", 0, 9)),
     "alt" to listOf(altOn, FieldChanged(ALT_SYMBOL, 1, 1)),
@@ -561,6 +561,17 @@ private fun scenarios() {
     val hold = GuideFlow({ GuideSettings() })
     hold.start("hold")
     same(title(hold.event(DeletedWord(held = false))).startsWith("That was one word"), true, "A flick that lifts")
+    val regret = GuideFlow({ GuideSettings() })
+    regret.start("hold")
+    same(regret.liveLine(), null, "Mass deletion shows its instruction until a word goes")
+    regret.event(DeleteHoldStarted)
+    regret.event(DeletedWord(held = false))
+    same(regret.liveLine(), "Regrets deleted: 1", "then the count")
+    same(title(regret.event(Moved(40f, lifted = true))).startsWith("Therapy's not over"), true, "A hold let go too soon")
+    regret.event(DeleteHoldStarted)
+    repeat(REGRETS_TO_PASS - 2) { same(regret.event(DeletedWord(held = true)), GuideVerdict.Wait, "Under eight, it waits") }
+    same(regret.event(DeletedWord(held = true)), GuideVerdict.Done, "The eighth word passes")
+    same(regretsFinal(12).length <= LINE_MOST, true, "The frozen count is one line")
 
     val steer = GuideFlow({ GuideSettings() })
     steer.start("steer")

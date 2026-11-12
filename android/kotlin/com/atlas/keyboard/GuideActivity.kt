@@ -630,6 +630,9 @@ class GuideActivity : Activity() {
     private var enteredChapter: GuideChapter? = null
     /** How many times the delete chapter's field was emptied, and the steering line's length as it was put in. */
     private var deleteResets = 0
+    /** Words that went on the mass deletion slide, counted on after it passed, until the finger lifts and the count stops. */
+    private var regrets = 0
+    private var regretsFrozen = false
     private var steerLength = 0
     /** The guide is typing a symbol's sentence, letter by letter. */
     private var autoTyping = false
@@ -1401,6 +1404,8 @@ class GuideActivity : Activity() {
         hint.setOnClickListener(null)
         // A chapter with one text box carries its field on from slide to slide; any other slide starts a clean one.
         val carry = enteredChapter == step.chapter && step.carriesField
+        regrets = 0
+        regretsFrozen = false
         if (enteredChapter != step.chapter) {
             deleteResets = 0
             if (step.chapter == GuideChapter.End) markAllFinished()
@@ -2474,6 +2479,7 @@ class GuideActivity : Activity() {
             lastPoint = point
         }
         keys.trace(points, reset, lifted)
+        if (lifted) freezeRegrets()
         acted()
         if (!busy && ready) judge(KeyboardEvent.Moved(travel, lifted))
     }
@@ -2632,7 +2638,29 @@ class GuideActivity : Activity() {
             else -> Unit
         }
         if (!playground && ready && !changing && !settingUp) watch(event)
+        // Mass deletion, passed: the count goes on with every word, under the success line, until the finger lifts. Before the
+        // check, so the word that passes it isn't counted twice.
+        if (event is KeyboardEvent.DeletedWord && passed && !playground && flow.step.id == "hold" && !regretsFrozen && regrets > 0) {
+            regrets++
+            settledPraise = regretsLine(regrets)
+            body.text = settledPraise
+        }
         if (!busy && ready) judge(event)
+    }
+
+    /** The finger lifted on mass deletion, passed: the count stops on its last number. */
+    private fun freezeRegrets() {
+        if (!passed || playground || flow.step.id != "hold" || regretsFrozen || regrets < REGRETS_TO_PASS) return
+        regretsFrozen = true
+        settledPraise = regretsFinal(regrets)
+        body.text = settledPraise
+    }
+
+    /** A line the slide shows in place of its instruction while it's tried, such as a count. See [GuideStep.live]. */
+    private fun showLive() {
+        if (passed || playground) return
+        val line = flow.liveLine() ?: return
+        if (body.text.toString() != line) body.text = line
     }
 
     /**
@@ -2710,6 +2738,7 @@ class GuideActivity : Activity() {
             }
             GuideVerdict.Wait -> Unit
         }
+        showLive()
         // A miss on the swipe slide: the right word, on the bar, wiggles to show where to tap.
         if (verdict is GuideVerdict.Hint && flow.step.id == "swipe" && event is KeyboardEvent.Recognised) pointAtRightWord()
     }
@@ -2846,7 +2875,15 @@ class GuideActivity : Activity() {
         val step = flow.step
         markPassed(step)
         showSuccess(reaction ?: step.done)
-        val said = praise ?: if (step.id == "symgroups") groupsPraise(flow.counted) else step.praise
+        val said = praise ?: when (step.id) {
+            "symgroups" -> groupsPraise(flow.counted)
+            // The count carries on under the success line, until the finger lifts.
+            "hold" -> {
+                regrets = flow.tally
+                regretsLine(regrets)
+            }
+            else -> step.praise
+        }
         if (said.isNotEmpty()) body.text = said
         paintSegments(flow.stepIndex, advancing = true)
         settledPraise = said

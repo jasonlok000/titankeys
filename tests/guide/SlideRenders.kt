@@ -52,7 +52,7 @@ private data class Frame(
 private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
     "type" to listOf(Pushed(62)),
     "flick" to listOf(KeyboardEvent.DeleteHoldStarted),
-    "hold" to listOf(DeletedWord(held = false)),
+    "hold" to listOf(KeyboardEvent.DeleteHoldStarted, DeletedWord(held = true), KeyboardEvent.Moved(40f, lifted = true)),
     "steer" to listOf(DoubleTapped(2)),
     "selectmore" to listOf(CursorStarted(false)),
     "alt" to listOf(ModifierState(Level.Off, Level.Once, Panel.Closed, false), FieldChanged("#", 1, 1)),
@@ -142,6 +142,15 @@ private fun framesFor(step: GuideStep): List<Frame> {
             if (verdict is GuideVerdict.Hint && !verdict.passes) said = verdict.title ?: verdict.text
         }
         if (said != null) frames += frame("3-chip", step.title, flow.instruction, chip = said)
+    }
+    // Mass deletion counts words in the instruction's place from the first one: one gone, then passed at eight, then frozen.
+    if (step.id == "hold") {
+        val one = field.copy(field = DELETE_TEXT.substringBeforeLast(" did.") + " ", start = DELETE_TEXT.substringBeforeLast(" did.").length + 1)
+        frames += frame("2-count1", step.title, regretsLine(1), from = one)
+        val eight = passedField(step, field)
+        frames += frame("4-passed", step.done, regretsLine(REGRETS_TO_PASS), passed = true, from = eight)
+        frames += frame("5-frozen", step.done, regretsFinal(11), passed = true, from = eight)
+        return frames
     }
     frames += frame("4-passed", step.done, step.praise, passed = true, from = passedField(step, field))
     return frames

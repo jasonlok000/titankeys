@@ -114,8 +114,10 @@ internal object GuideFinale {
             val rest = 1f - part(at, lightEnd(lines), FADE)
             val head = line.take(1)
             // The rest of the line, after its first letter.
-            // The rest keeps the room of its first letter lit, from the start, so the letter never runs into it as it lights.
-            if (rest > 0f) pieces += Text(line.drop(1), side + measure.width(head, lineSize * LIT_GROWTH, true), y, lineSize, INK,
+            // At rest the line reads as plain text; as its first letter lights and grows, the rest eases right to make room.
+            val headWidth = measure.width(head, lineSize, false) +
+                (measure.width(head, lineSize * LIT_GROWTH, true) - measure.width(head, lineSize, false)) * lit
+            if (rest > 0f) pieces += Text(line.drop(1), side + headWidth, y, lineSize, INK,
                 landing * rest * (1f - .45f * lit), false)
             // The first letter: lights up, then slides to its place in the phrase.
             val gather = easeInOut(part(at, gatherStart(lines), GATHER))
@@ -126,7 +128,7 @@ internal object GuideFinale {
             val size = lineSize * (1f + (LIT_GROWTH - 1f) * lit) + (phraseSize - lineSize * LIT_GROWTH) * gather
             val colour = if (lit > 0f) CREAM else INK
             val alpha = landing * (1f - phraseOut)
-            if (alpha > 0f) pieces += Text(head, x, baseline - phraseOut * height * .08f, size, colour, alpha, lit > 0f || gather > 0f)
+            if (alpha > 0f) pieces += Text(head, x, baseline - phraseOut * height * .08f, size, colour, alpha, lit > .5f || gather > 0f)
         }
         // The logo: the mark, then "TK", which grows into the name, then what it's built for.
         val markIn = ease(part(at, markStart(lines), MARK_IN))

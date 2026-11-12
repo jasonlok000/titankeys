@@ -128,8 +128,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     /** True while anything here needs drawing: a scene, or the Space glow, which leaves the words as they are. */
     val busy get() = scene != Scene.None || glowing
 
-    /** True while the Space glow shows, from taps or as part of a steer or select. */
-    val glowing get() = glowTaps > 0 || glowHeld
+    /** True while the Space glow shows, from taps, as part of a steer, select or held delete, or as it fades after one. */
+    val glowing get() = glowTaps > 0 || glowHeld || glowFading
 
     /**
      * A word swipe's path so far, in touchpad space: x from 0 to 1 across, y from 0 at the top row to [Layout]'s bottom row. Only the
@@ -144,8 +144,21 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private val thickness = TrailThickness()
     /** When a lifted swipe's path starts to fade: it waits through the time a slip may still carry the swipe on. */
     private var swipeFadeAt = 0L
-    /** True while the glow is part of a steer or select, which it grows into and goes with. */
+    /** True while the glow is part of a steer, select or held delete, which it grows into and goes with. */
     private var glowHeld = false
+    /** True while a held delete's glow fades after its lift. */
+    private var glowFading = false
+    /** The width and strength a held glow grows to: the whole strip for a steer or select, the finger's own for a held delete. */
+    private var heldWidth = GLOW_HELD_WIDTH
+    private var heldAlpha = GLOW_HELD_ALPHA
+    /**
+     * Where the glow's middle is, from 0 to 1 across the strip: the middle for Space, under the finger for a held delete,
+     * following it smoothly.
+     */
+    var glowCentre = .5f
+        private set
+    private var centreTarget = .5f
+    private var glowFrame = 0L
 
     /** The Space glow under the middle word: its width, from 0 to 1 of the strip, and its strength, from 0 to 1. */
     var glowWidth = 0f
@@ -333,10 +346,27 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         changed()
     }
 
-    /** The finger stayed on a delete flick, and more words will go, one each [repeatMillis]. */
-    fun deleteHeld(repeatMillis: Long, now: Long) {
+    /**
+     * The finger stayed on a delete flick, and more words will go, one each [repeatMillis]. [x] is where the finger is, from 0 to
+     * 1 across the touchpad: a glow grows under it, as the Space glow does for a steer, and follows it.
+     */
+    fun deleteHeld(repeatMillis: Long, now: Long, x: Float? = null) {
         if (!begin(Scene.DeleteHold, now)) return
         deleteMillis = repeatMillis
+        if (x != null) {
+            if (!glowHeld) {
+                holdGlow(now, GLOW_FINGER_WIDTH, GLOW_FINGER_ALPHA)
+                glowCentre = x.coerceIn(0f, 1f)
+            }
+            centreTarget = x.coerceIn(0f, 1f)
+        }
+        changed()
+    }
+
+    /** The finger of a held delete moved to [x], from 0 to 1 across the touchpad: its glow follows. */
+    fun fingerAt(x: Float) {
+        if (scene != Scene.DeleteHold || !glowHeld) return
+        centreTarget = x.coerceIn(0f, 1f)
         changed()
     }
 
@@ -557,6 +587,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             return false
         }
         setGroups(held)
+        if (glowHeld) fadeGlow(now)
         val from = shownDeleted
         val beat = flow
         resetPieces()
@@ -659,6 +690,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      */
     fun spaceTapped(taps: Int, now: Long) {
         if (!allowed || taps !in 1..3) return
+        if (glowFading) endGlow()
         glowFromWidth = glowWidth
         glowFromAlpha = glowAlpha
         glowTaps = taps
@@ -668,13 +700,16 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     /** A key press: the glow goes at once, since those taps did not make a gesture. */
     fun glowOff() {
-        if (glowTaps == 0) return
+        if (glowTaps == 0 && !glowFading) return
         endGlow()
         changed()
     }
 
     private fun endGlow() {
         glowHeld = false
+        glowFading = false
+        glowCentre = .5f
+        centreTarget = .5f
         glowTaps = 0
         glowWidth = 0f
         glowBase = 0f
@@ -684,8 +719,17 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     /** Moves the glow on to [now]. True while it still shows. */
     private fun advanceGlow(now: Long, scale: Float): Boolean {
         if (glowHeld) return advanceHeldGlow(now, scale)
-        if (glowTaps == 0) return false
         val motion = scale > 0f
+        if (glowFading) {
+            val t = if (motion) (now - glowAt) / (GLOW_FADE * scale) else 1f
+            if (t >= 1f) {
+                endGlow()
+                return false
+            }
+            glowBase = glowFromAlpha * (1f - easeOut(t))
+            return true
+        }
+        if (glowTaps == 0) return false
         val elapsed = (now - glowAt) / if (motion) scale else 1f
         if (elapsed >= GLOW_GROW + GLOW_FADE) {
             endGlow()
@@ -712,21 +756,37 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * A tap's glow carries on into the steer or select that a held touch after it starts: from where it is, it grows to the full
      * width and stays as part of that display, and it goes with it. So there is no gap or jump between the taps and the hold.
      */
-    private fun holdGlow(now: Long) {
-        glowFromWidth = glowWidth
-        glowFromAlpha = glowAlpha
+    private fun holdGlow(now: Long, width: Float = GLOW_HELD_WIDTH, alpha: Float = GLOW_HELD_ALPHA) {
+        glowFromWidth = if (glowFading) 0f else glowWidth
+        glowFromAlpha = if (glowFading) 0f else glowAlpha
+        glowFading = false
         glowHeld = true
         glowTaps = 0
         glowPulse = 0f
         glowAt = now
+        glowFrame = now
+        heldWidth = width
+        heldAlpha = alpha
+        glowCentre = .5f
+        centreTarget = .5f
     }
 
     private fun advanceHeldGlow(now: Long, scale: Float): Boolean {
         val motion = scale > 0f
         val grow = if (motion) easeOut(((now - glowAt) / (GLOW_HOLD_GROW * scale)).coerceIn(0f, 1f)) else 1f
-        glowWidth = glowFromWidth + (GLOW_HELD_WIDTH - glowFromWidth) * grow
-        glowBase = (glowFromAlpha + (GLOW_HELD_ALPHA - glowFromAlpha) * grow)
-        return motion && grow < 1f
+        glowWidth = glowFromWidth + (heldWidth - glowFromWidth) * grow
+        glowBase = (glowFromAlpha + (heldAlpha - glowFromAlpha) * grow)
+        glowCentre = ease(glowCentre, centreTarget, max(0L, now - glowFrame).toFloat(), EASE_MILLIS, motion)
+        glowFrame = now
+        return motion && (grow < 1f || abs(glowCentre - centreTarget) > .001f)
+    }
+
+    /** A held delete lifted: its glow stays where it is and fades over [GLOW_FADE]. */
+    private fun fadeGlow(now: Long) {
+        glowHeld = false
+        glowFading = true
+        glowFromAlpha = glowBase
+        glowAt = now
     }
 
     /** Moves the picture on to [now]. [scale] is Android's animator duration scale, and 0 means no motion. True asks for another frame. */
@@ -1064,6 +1124,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         const val GLOW_HOLD_GROW = 120f
         const val GLOW_HELD_WIDTH = 1f
         const val GLOW_HELD_ALPHA = .8f
+        /** A held delete's glow under the finger: as wide and as strong as two Space taps'. */
+        const val GLOW_FINGER_WIDTH = .39f
+        const val GLOW_FINGER_ALPHA = .55f
         /**
          * The Space glow grows to each tap's size quickly, then fades over [GLOW_FADE] unless another tap comes. Its width and
          * strength for one, two and three taps, as in the owner's mockup; the third pulses for [GLOW_PULSE].

@@ -13,6 +13,7 @@ private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
     aFlicksWayInStretchesToFitItsDots()
+    aHeldDeleteGlowsUnderTheFinger()
     aTriplePickWaitsForTheLift()
     aHoldsWordsFadeInBehindItsDots()
     anyNumberOfWordsShowsItsDots()
@@ -997,6 +998,45 @@ private fun theHeldGlowGoesWithTheDisplay() {
     off.cursorFrame(5f, 0, 0f, false, 100L)
     off.allowed = false
     same(off.glowing, false, "Where the strip does not show, the held glow goes too")
+}
+
+/**
+ * A long held delete grows a glow under the finger, as two Space taps do, and it follows the finger smoothly. At the lift it
+ * stays where it was and fades; a key ends it at once.
+ */
+private fun aHeldDeleteGlowsUnderTheFinger() {
+    val display = GestureDisplay()
+    display.deleteHeld(200, 1_000, x = .8f)
+    same(display.glowing, true, "A held delete glows")
+    display.run(1_000, 1_000 + GestureDisplay.GLOW_HOLD_GROW.toLong() + 16)
+    near(display.glowWidth, GestureDisplay.GLOW_FINGER_WIDTH, "as wide as two taps' glow")
+    near(display.glowAlpha, GestureDisplay.GLOW_FINGER_ALPHA, "and as strong")
+    near(display.glowCentre, .8f, "under the finger")
+    display.fingerAt(.6f)
+    display.run(1_152, 1_168)
+    isTrue(display.glowCentre < .8f && display.glowCentre > .6f, "It follows the finger smoothly: ${display.glowCentre}")
+    display.run(1_184, 1_500)
+    near(display.glowCentre, .6f, "and gets there", .005f)
+    display.wordDeleted(1_500, 4)
+    display.deleteEnded(1_516)
+    same(display.glowing, true, "At the lift it stays")
+    near(display.glowCentre, .6f, "where it was", .005f)
+    display.run(1_516, 1_516 + GestureDisplay.GLOW_FADE.toLong() / 2)
+    isTrue(display.glowAlpha > 0f && display.glowAlpha < GestureDisplay.GLOW_FINGER_ALPHA, "and fades: ${display.glowAlpha}")
+    display.run(1_516 + GestureDisplay.GLOW_FADE.toLong() / 2 + 16, 1_516 + GestureDisplay.GLOW_FADE.toLong() + 32)
+    same(display.glowing, false, "then it is gone")
+    // The Space glow is still under the middle word.
+    val space = GestureDisplay()
+    space.spaceTapped(2, 1_000)
+    space.run(1_000, 1_100)
+    near(space.glowCentre, .5f, "Space taps glow under the middle word")
+    // A key ends a held delete's fading glow at once.
+    val key = GestureDisplay()
+    key.deleteHeld(200, 1_000, x = .9f)
+    key.wordDeleted(1_100, 3)
+    key.deleteEnded(1_200)
+    key.glowOff()
+    same(key.glowing, false, "A key ends it at once")
 }
 
 /**

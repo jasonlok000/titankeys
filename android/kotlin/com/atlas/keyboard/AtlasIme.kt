@@ -390,7 +390,7 @@ class AtlasIme : InputMethodService() {
             heldWords.reset()
             // A hold takes the bar from any dots still playing, and their ticks stop.
             haptics.cutDots()
-            strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis())
+            strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), flick.points.lastOrNull { it.valid }?.x)
             // The dots at the lift keep clear of this hold's ticks.
             haptics.holdStarted()
             // The contact was a delete and not part of a word, as it would be at a lift.
@@ -1930,6 +1930,8 @@ class AtlasIme : InputMethodService() {
                 if (contact.deleting) {
                     strip?.gesture?.swipeCancelled()
                     samples.lastOrNull { it.valid }?.let { finger ->
+                        // The glow under the finger follows it.
+                        strip?.gesture?.fingerAt(finger.x)
                         deleteHold.follow(finger)?.let {
                             nextDeleteHoldStep(it)
                             if (strip?.gesture?.scene == GestureDisplay.Scene.DeleteHold) strip?.gesture?.deleteHeld(deleteHold.repeatMillis, finger.time)

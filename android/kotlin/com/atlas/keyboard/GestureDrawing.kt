@@ -107,11 +107,13 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
 
     /**
-     * The Space glow: soft orange rising from the strip's bottom edge under the middle word, as wide and as strong as the taps so far
-     * make it, with a thin line along the bottom on the third tap.
+     * The Space glow: soft orange rising from the strip's bottom edge under the middle word, or under the finger of a held delete,
+     * as wide and as strong as the taps so far make it, with a thin line along the bottom on the third tap. It is one glow with
+     * no edges: thin upright slices, each fading upwards, whose strength follows one smooth curve across, so no oval or step shows.
      */
     private fun glow(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
-        if (display.glowAlpha <= 0f) return
+        val strength = display.glowAlpha.coerceIn(0f, 1f)
+        if (strength <= 0f) return
         val tall = dp(GLOW_HEIGHT)
         if (glowHeight != h || glowColour != look.accent) {
             // Made again only when the strip or the colour changes, so a frame makes no garbage.
@@ -119,31 +121,58 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             glowColour = look.accent
             glow.shader = LinearGradient(0f, h, 0f, h - tall, look.accent, GuideMotion.faded(look.accent, 0f), Shader.TileMode.CLAMP)
         }
-        val centre = (left + right) / 2
-        val half = (right - left) * display.glowWidth / 2
-        // While steering, the glow is a soft underglow across the whole strip, brighter on the side you steer towards.
+        val across = right - left
+        val half = across * display.glowWidth / 2
+        if (half < 1f) return
+        // Under the middle for Space, under the finger for a held delete, and always whole on the strip.
+        val reach = min(half, across / 2)
+        val centre = (left + across * display.glowCentre).coerceIn(left + reach, right - reach)
+        // While steering, the glow is a soft underglow across the whole strip, brighter on the side you steer towards: at a full
+        // lean that side comes to about 2.5 times the other, see [UNDERGLOW] and [SIDE_BOOST].
         val steering = display.scene == GestureDisplay.Scene.Cursor
         val base = if (steering) UNDERGLOW else 1f
-        glow.alpha = (display.glowAlpha.coerceIn(0f, 1f) * base * 255).toInt()
-        box.set(centre - half, h - tall, centre + half, h + tall)
-        canvas.drawOval(box, glow)
-        val lean = display.steerLean
-        if (steering && lean != 0f) {
-            // Layers that each reach a little further in from the side's edge, so it brightens smoothly towards the edge, with no
-            // edge of its own that could read as a slider.
-            // At a full lean the side comes to about 2.5 times the other side, see [UNDERGLOW] and [SIDE_LAYER].
-            glow.alpha = (display.glowAlpha.coerceIn(0f, 1f) * abs(lean).coerceAtMost(1f) * SIDE_LAYER * 255).toInt()
-            val far = centre + if (lean < 0) -half else half
-            for (layer in 1..SIDE_LAYERS) {
-                val near = far + (centre - far) * layer / SIDE_LAYERS
-                box.set(max(min(near, far) - half * SIDE_SPILL, centre - half), h - tall, min(max(near, far) + half * SIDE_SPILL, centre + half), h + tall)
-                canvas.drawOval(box, glow)
+        val lean = if (steering) display.steerLean.coerceIn(-1f, 1f) else 0f
+        // A small glow is a soft hump; as it grows to the whole strip it flattens, with soft ends.
+        val wide = ((display.glowWidth - WIDE_FROM) / (1f - WIDE_FROM)).coerceIn(0f, 1f)
+        val pulse = if (display.glowPulse > 0f) PULSE * display.glowPulse * strength / GestureDisplay.GLOW_ALPHAS[3] else 0f
+        val slice = max(1f, floor(dp(GLOW_SLICE)))
+        var x = floor(centre - half)
+        val end = ceil(centre + half)
+        while (x < end) {
+            val u = ((x + slice / 2 - centre) / half).coerceIn(-1f, 1f)
+            val shape = glowShape(u, wide)
+            if (shape > 0f) {
+                var level = base * shape
+                if (lean != 0f) {
+                    // Only the half it leans to brightens, rising smoothly from nothing in the middle.
+                    val toward = max(0f, if (lean < 0) -u else u)
+                    level *= 1f + SIDE_BOOST * abs(lean) * toward * toward
+                }
+                glow.alpha = (strength * (if (lean != 0f) softCap(level) else level.coerceAtMost(1f)) * 255).toInt()
+                if (glow.alpha > 0) canvas.drawRect(x, h - tall, x + slice, h, glow)
+                if (pulse > 0f) {
+                    fill.color = GuideMotion.faded(look.accent, pulse * shape)
+                    canvas.drawRect(x, h - dp(PULSE_HEIGHT), x + slice, h, fill)
+                }
             }
+            x += slice
         }
-        if (display.glowPulse > 0f) {
-            fill.color = GuideMotion.faded(look.accent, PULSE * display.glowPulse * display.glowAlpha / GestureDisplay.GLOW_ALPHAS[3])
-            canvas.drawRect(centre - half, h - dp(PULSE_HEIGHT), centre + half, h, fill)
-        }
+    }
+
+    /** [level], kept under 1 without a corner: as it is up to [CAP_FROM], then easing towards 1. */
+    private fun softCap(level: Float) =
+        if (level <= CAP_FROM) level else CAP_FROM + (1f - CAP_FROM) * (1f - kotlin.math.exp(-(level - CAP_FROM) / (1f - CAP_FROM)))
+
+    /**
+     * How strong the glow is at [u], from -1 at its left end to 1 at its right: a smooth hump for a small glow, flat with soft
+     * ends for a [wide] one, and 0 at both ends, so it has no edge.
+     */
+    private fun glowShape(u: Float, wide: Float): Float {
+        val inside = 1f - abs(u)
+        if (inside <= 0f) return 0f
+        val hump = 1f - u * u
+        val soft = (inside / WIDE_SOFT).coerceAtMost(1f).let { it * it * (3 - 2 * it) }
+        return hump + (soft - hump) * wide
     }
 
     /**
@@ -366,7 +395,8 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         var pulse = 0f
         for (i in 0 until count) {
             // Each word before this dot's word leaves one gap; the row's place next to the caret moves on as the queue does.
-            val place = display.dotPlace(i) - display.shownBase
+            // A dot that set off before the row slid past it keeps the place next to the caret, so none starts past the caret.
+            val place = max(0f, display.dotPlace(i) - display.shownBase)
             val popped = display.dotPopped(i)
             // Each dot has its own part of the way out; it lands in the caret at 1.
             val travel = display.dotTravel(i)
@@ -452,11 +482,20 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val PILL_GAP = 6.5f
         /** While steering the underglow lies across the strip this strong, and the side it leans to grows from this far out. */
         const val UNDERGLOW = .4f
-        /** The side it leans to brightens in this many soft layers, each a little past its edge so none shows. */
-        const val SIDE_LAYERS = 6
-        const val SIDE_SPILL = .08f
-        /** Each layer is this strong at a full lean, so the edge itself comes to nearly full strength. */
-        const val SIDE_LAYER = .45f
+        /**
+         * At a full lean the half it leans to brightens, from nothing in the middle to this much stronger again at its edge, so
+         * a quarter of the way in from each side it is about 2.5 times the other. The far half stays as it is.
+         */
+        const val SIDE_BOOST = 8f
+        /** The glow's strength rises as it is up to this, then eases towards full, so a bright part has no hard top. */
+        const val CAP_FROM = .8f
+        /**
+         * The glow is drawn in upright slices this wide, each its own strength, too thin to see as steps. A glow of [WIDE_FROM]
+         * of the strip or less is a hump; at the whole strip it is flat with soft ends [WIDE_SOFT] of its half-width long.
+         */
+        const val GLOW_SLICE = 1f
+        const val WIDE_FROM = .71f
+        const val WIDE_SOFT = .25f
         const val CARET_WIDTH = 2.5f
         const val CARET_HEIGHT = 24f
         const val CARET_GAP = 4f

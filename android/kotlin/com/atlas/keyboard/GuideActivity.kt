@@ -703,6 +703,7 @@ class GuideActivity : Activity() {
     }
     private lateinit var chip: TextView
     private lateinit var spacer: View
+    private lateinit var lowerSpacer: View
     /** The most room at the bottom that the keyboard took while the slides show, so the keys never jump. See the insets listener. */
     private var steadyBottom = 0
     /** The end's two big buttons, in the middle, each with its line under it. */
@@ -1083,7 +1084,7 @@ class GuideActivity : Activity() {
                 cornerRadius = Radii.px(resources, FIELD_RADIUS)
             }
             setPadding(dp(14), dp(10), dp(14), dp(10))
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(18f), dp(24).toFloat()))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(FIELD_SP), dp(FIELD_DP).toFloat()))
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_ENTER_ACTION
             minLines = 1
@@ -1243,6 +1244,7 @@ class GuideActivity : Activity() {
             addView(huntBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3), Gravity.BOTTOM))
         }
         spacer = View(this)
+        lowerSpacer = View(this)
         column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -1254,11 +1256,11 @@ class GuideActivity : Activity() {
                 addView(field, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 addView(phantom, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
-            // The room between the field and the keys stays free, on the slides.
+            // The room left between the field and the keys splits evenly above and below Next's place, so the field, Next and
+            // the keys are one column with even gaps (owner, v5).
             addView(spacer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0))
-            addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(8)
-            })
+            addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(lowerSpacer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0))
             addView(keys, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0).apply { topMargin = dp(8) })
             addView(endButtons, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
         }
@@ -1325,15 +1327,17 @@ class GuideActivity : Activity() {
             instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 lineHeight(MEDIUM, bodyPx) + 2 * dp(CHIP_PAD)).apply { topMargin = dp(GAP) }
             spacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+            lowerSpacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
             // The field on ink, as the approved frame has it: what's typed in cream, exactly two lines.
             field.setTextColor(GuideColours.CREAM)
             field.setHintTextColor(GuideMotion.faded(GuideColours.CREAM, .45f))
             field.background = rounded(fieldFill(), FIELD_RADIUS)
             field.hint = null
             field.ghostColour = ghostGrey()
+            // Three lines on every slide (v5): the slide's line and room to play, a writing area, not a strip.
             for (view in listOf<TextView>(field, phantom)) {
-                view.minLines = 2
-                view.maxLines = 2
+                view.minLines = FIELD_LINES
+                view.maxLines = FIELD_LINES
                 view.gravity = Gravity.TOP or Gravity.START
             }
         } else {
@@ -1350,6 +1354,7 @@ class GuideActivity : Activity() {
             body.setAutoSizeTextTypeUniformWithConfiguration(BODY_SMALLEST, BODY_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
             instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, BODY_SHARE).apply { topMargin = dp(4) }
             spacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0)
+            lowerSpacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0)
             field.setTextColor(GuideColours.INK)
             field.setHintTextColor(GuideMotion.faded(GuideColours.INK, .45f))
             field.background = rounded(GuideColours.CREAM, FIELD_RADIUS)
@@ -1391,7 +1396,7 @@ class GuideActivity : Activity() {
         typeface = MEDIUM
         gravity = Gravity.CENTER
         maxLines = 4
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(13f), dp(17).toFloat()))
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(19).toFloat()))
     }
 
     private fun topAction(text: String, press: () -> Unit) = TextView(this).apply {
@@ -1562,9 +1567,9 @@ class GuideActivity : Activity() {
     }
 
     private fun enter(step: GuideStep) {
-        showBigNext(false)
         fixChapterWidth()
         guideLook(true)
+        showBigNext(false)
         hideChip(now = true)
         idleChipShown = false
         lockChips.clear()
@@ -3201,7 +3206,7 @@ class GuideActivity : Activity() {
         nextBig.scaleX = 1f
         nextBig.scaleY = 1f
         if (!show || flow.step.chapter == GuideChapter.End) {
-            nextBig.visibility = View.GONE
+            nextBig.visibility = if (flow.step.chapter == GuideChapter.End || guideLooks != true) View.GONE else View.INVISIBLE
             next.visibility = if (flow.step.chapter == GuideChapter.End) next.visibility else View.VISIBLE
             return
         }
@@ -3747,9 +3752,8 @@ class GuideActivity : Activity() {
         private const val SHARE_OFFER = "Share my swipes"
         /** The end's instruction. */
         /** The one boring thing at the end, in plain words: it is about consent, so no jokes here. */
-        private const val SHARE_PLAIN = "If you agree, TitanKeys sends us examples of your swipes so we can make swiping better. " +
-            "It's off until you agree, and you'll see exactly what's sent first. Trust me bro. You can change this any time in " +
-            "Settings > Share swipes"
+        private const val SHARE_PLAIN = "Off until you agree. Then we get examples of your swipes to make swiping better.\n" +
+            SHARE_ANSWERED
         private const val END_NEXT = "Go type something"
         /** How many things the paste lesson rains down. */
         private const val RAIN_PIECES = 26
@@ -3796,8 +3800,12 @@ class GuideActivity : Activity() {
         /** Below this much height the screen is too short for the drawing of the keys. */
         private const val COMPACT_HEIGHT = 240
         /** The drawing's height against its width, and against the room there is. */
-        private const val KEYS_ASPECT = .34f
-        private const val KEYS_SHARE = .42f
+        private const val KEYS_ASPECT = .44f
+        private const val KEYS_SHARE = .5f
+        /** The field on the slides: three lines, at this size. */
+        private const val FIELD_LINES = 3
+        private const val FIELD_SP = 21f
+        private const val FIELD_DP = 27
         /** A bottom inset this much over the keyboard's own is an open panel's, in dp. */
         private const val PANEL_EXTRA = 80
 

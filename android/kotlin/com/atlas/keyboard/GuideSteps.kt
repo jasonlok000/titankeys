@@ -730,8 +730,8 @@ internal const val GRAB_LINE = "Hold the third tap to grab my whole heart"
 
 /** Slides 10 to 14: each line is in the field, with a gap where the slide's symbol goes. The cursor waits in the gap. */
 internal const val ALT_SYMBOL = "*"
-internal const val ALT_LINE = "Even the fine print is Alt and A*"
-internal const val HOLD_SYMBOL_LINE = "Make symbols by holding keys: me@titan"
+internal const val ALT_LINE = "Even fine print is easy: Alt and A*"
+internal const val HOLD_SYMBOL_LINE = "Make symbols by holding keys, like me@titan"
 internal const val SYM_LINE = "All symbols are in Sym, terms & conditions apply"
 internal const val SECTION = "§"
 internal const val GROUPS_LINE = "Need weird ones? Swipe up in Sym. See § 4.2"
@@ -761,17 +761,17 @@ internal fun wrongInGap(text: String, line: String, symbol: String): Boolean {
 }
 
 /** Slide 15's line, with the words the paste goes over selected, and what the paste puts there. */
-internal const val PASTE_LINE = "As fn and V proves, I can't type this myself"
+internal const val PASTE_LINE = "All my typing is fn and V, since I can't type a thing myself"
 internal const val PASTE_OVER = "type everything myself"
-internal const val PASTE_SEED = "As fn and V proves, I $PASTE_OVER"
-internal const val PASTE_TEXT = "can't type this myself"
+internal const val PASTE_SEED = "All my typing is fn and V, since I $PASTE_OVER"
+internal const val PASTE_TEXT = "can't type a thing myself"
 
 /** A key under each of the clipboard page's five clip fields, newest first: see ClipboardHistory.slot. */
 internal val CLIP_FIELD_KEYS = listOf("R", "I", "F", "K", "C")
 
 /** Slide 16's line: the clip that's nice to you pastes the end of it. */
-internal const val CLIP_LEAD = "Look in Sym, then A, for what I copied: "
-internal const val PRANK_PASTE = "my whole personality"
+internal const val CLIP_LEAD = "Lost a copy? It's in Sym, then A. "
+internal const val PRANK_PASTE = "So is my whole personality"
 internal const val CLIP_LINE = CLIP_LEAD + PRANK_PASTE
 
 /** The clipboard lesson's clips, newest first: a thread of digs, and one nice one, which isn't what it pastes. */
@@ -822,7 +822,7 @@ internal class Hunt(val mock: String, val hint: String, val skip: String)
 internal val SECTION_HUNT = Hunt(
     "It's in every contract you never read.",
     "It's not on the first page. Swipe up.",
-    "Common, page two. Or skip it. It's ok.",
+    "Come on, page two. Or skip it. It's ok.",
 )
 internal val CLOWN_HUNT = Hunt(
     "You see it in the mirror every day. Come on.",

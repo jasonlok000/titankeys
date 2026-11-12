@@ -358,28 +358,33 @@ private fun draw(frame: Frame, file: File) {
         g.fillRect(side, y + lineHeight - dp(3), Math.round(inner * left), dp(3))
     }
     y += lineHeight + dp(18)
-    // The field: exactly two lines, on ink, with what's typed in cream and the ghost after it in grey.
-    val fieldFont = calibrated(g, Font.PLAIN, "Tihs keybaord fxies yuor typos, sp yuo cna kepe", 807)
+    // The field: three lines, on ink, with what's typed in cream and the ghost after it in grey.
+    val fieldFont = calibrated(g, Font.PLAIN, "Tihs keybaord fxies yuor typos, sp yuo cna kepe", 807 * 21 / 18)
     g.font = fieldFont
     val pad = dp(12)
     val fieldLine = g.fontMetrics.height
-    val fieldHeight = 2 * fieldLine + 2 * pad
+    val fieldHeight = FIELD_LINES * fieldLine + 2 * pad
     g.color = blend(Paint.INK, Paint.CREAM, .08f)
     g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), fieldHeight.toFloat(), dp(12).toFloat(), dp(12).toFloat()))
     drawField(g, frame, side + pad, y + pad, inner - 2 * pad, fieldLine)
     y += fieldHeight
-    // The keys at the bottom; the real panel, when open, is below them on the phone.
-    val keysTop = HEIGHT - dp(4 * 57 + 60)
+    // The keys at the bottom, above the keyboard's own bar; Next's place, kept on every slide, halfway between.
+    val keysTop = HEIGHT - BAR_ROOM - 4 * keyRow()
+    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(20))
+    val nextHeight = g.fontMetrics.height + dp(24)
+    val gap = (keysTop - y - nextHeight) / 2
+    if (gap < dp(8)) mark(g, "NO ROOM BETWEEN FIELD AND KEYS", keysTop)
     frame.panel?.let { panel ->
-        g.color = rgb(Paint.CREAM, .45f)
-        g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(12))
-        g.drawString("($panel is open below the drawing)", side, keysTop - dp(84))
+        // Only a note on the drawing, for review: the phone shows the real panel below the keys, never these words.
+        g.color = Color(0x66, 0xCC, 0xFF)
+        g.font = Font(Font.SANS_SERIF, Font.ITALIC, dp(11))
+        g.drawString("render note: $panel is open below the keys", side, HEIGHT - dp(12))
     }
     if (frame.passed) {
-        // The calm done state: Next, big, full width, orange, above the keys.
+        // The calm done state: Next, big, full width, orange, in its place.
         g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(20))
-        val height = g.fontMetrics.height + dp(24)
-        val top = keysTop - dp(8) - height
+        val height = nextHeight
+        val top = y + gap
         g.color = orange
         g.fill(RoundRectangle2D.Float(side.toFloat(), top.toFloat(), inner.toFloat(), height.toFloat(), dp(24).toFloat(), dp(24).toFloat()))
         g.color = ink
@@ -442,7 +447,7 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
         frame.ghost.isNotEmpty() || frame.field.isEmpty() -> cursorLine
         frame.steer != SteerAim.None || frame.chapter == GuideChapter.Steering && frame.target != null -> cursorLine
         else -> (cursorLine - 1).coerceAtLeast(0)
-    }.coerceAtMost((starts.size - 2).coerceAtLeast(0))
+    }.coerceAtMost((starts.size - FIELD_LINES).coerceAtLeast(0))
     var start = frame.start
     var target = frame.target
     if (frame.steer != SteerAim.None) {
@@ -458,7 +463,7 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
     }
     val shown = frame.copy(start = if (frame.passed && frame.steer == SteerAim.None) frame.start else start,
         end = if (frame.passed && frame.steer == SteerAim.None) frame.end else start, target = if (frame.passed) null else target)
-    for (row in 0..1) {
+    for (row in 0 until FIELD_LINES) {
         val index = first + row
         if (index >= starts.size) break
         val from = starts[index]
@@ -506,9 +511,15 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
 }
 
 /** The drawing of the keys: the real layout only, lit for a spot, steady for a held key, with a hint under a letter. */
+/** The drawing's row height: its height is .44 of its width on the slides, as GuideActivity's KEYS_ASPECT. */
+private fun keyRow() = Math.round((WIDTH - 2 * dp(Layout.KEY_SIDE_DP)) * .44f / 4)
+private const val FIELD_LINES = 3
+/** Room at the bottom for the keyboard's own bar, under the drawing. */
+private val BAR_ROOM = dp(60)
+
 private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
     val width = (WIDTH - 2 * side) / 10f
-    val row = dp(57)
+    val row = keyRow()
     for ((index, keys) in Layout.rows.withIndex()) {
         val y = top + index * row
         if (index < 3) for ((column, key) in keys.withIndex()) {
@@ -523,10 +534,10 @@ private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
             }
             g.fill(RoundRectangle2D.Float(x + dp(2), y + dp(2).toFloat(), width - dp(4), row - dp(4).toFloat(), dp(8).toFloat(), dp(8).toFloat()))
             g.color = if (lit || held) ink else rgb(Paint.CREAM, .6f)
-            g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(16))
+            g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(19))
             val text = if (key.length == 1) key else key.take(3)
             val lift = if (hint != null) dp(7) else 0
-            g.drawString(text, x + width / 2 - g.fontMetrics.stringWidth(text) / 2, y + row / 2f + dp(6) - lift)
+            g.drawString(text, x + width / 2 - g.fontMetrics.stringWidth(text) / 2, y + row / 2f + dp(7) - lift)
             if (hint != null) {
                 g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(10))
                 if (g.fontMetrics.stringWidth(hint) > width - dp(6)) mark(g, "KEY HINT TOO LONG", y)
@@ -555,8 +566,8 @@ private const val PAUSE_KEYS_COPY = .8f
 private const val REPEAT_LONG_KEYS_COPY = 5.5f
 
 /** The end's words that live in GuideActivity, which isn't compiled for these checks: the same text, copied. */
-private const val SHARE_PLAIN = "If you agree, TitanKeys sends us examples of your swipes so we can make swiping better. It's off " +
-    "until you agree, and you'll see exactly what's sent first. Trust me bro. You can change this any time in Settings > Share swipes"
+private const val SHARE_PLAIN = "Off until you agree. Then we get examples of your swipes to make swiping better.\n" +
+    "Trust me bro. You can change this any time in Settings > Share swipes"
 private const val SHARE_ANSWERED = "Trust me bro. You can change this any time in Settings > Share swipes"
 
 /** [text] wrapped at [width], line by line. */
@@ -643,8 +654,9 @@ private fun drawEnd(file: File, answered: Boolean) {
     val goHeight = g.fontMetrics.height + dp(28)
     g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(20))
     val shareHeight = g.fontMetrics.height + dp(28)
-    g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(13))
+    g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(15))
     val under = wrap(g, if (answered) SHARE_ANSWERED else SHARE_PLAIN, inner)
+    if (under.size > 2) mark(g, "SHARE TEXT OVER TWO LINES", HEIGHT - dp(60))
     val underHeight = under.size * g.fontMetrics.height
     val again = g.fontMetrics.height + dp(14)
     var y = HEIGHT - dp(16) - again - underHeight - dp(4) - shareHeight - dp(12) - goHeight
@@ -662,7 +674,7 @@ private fun drawEnd(file: File, answered: Boolean) {
     val share = "Share my swipes: off"
     g.drawString(share, WIDTH / 2 - g.fontMetrics.stringWidth(share) / 2, y + shareHeight / 2 + g.fontMetrics.ascent / 2 - dp(2))
     y += shareHeight + dp(4)
-    g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(13))
+    g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(15))
     g.color = rgb(Paint.INK, .86f)
     for (line in under) {
         y += g.fontMetrics.height

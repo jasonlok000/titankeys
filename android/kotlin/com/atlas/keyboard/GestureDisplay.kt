@@ -101,6 +101,14 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         private set
     var shownStep = 0f
         private set
+    /**
+     * Whether steering's caret shows now. Like a text cursor it stays on while the cursor moves, and blinks, on and off for
+     * [BLINK_MILLIS] each, once steering pauses.
+     */
+    var caretShown = true
+        private set
+    /** When steering last moved, or -1 before its first frame. The blink counts from here. */
+    private var movedAt = -1L
     /** Whether more text may lie past each end of [line], so that the cursor going there reads it again. */
     private var moreBefore = false
     private var moreAfter = false
@@ -731,6 +739,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 intensity = ease(intensity, speedTarget, elapsed, EASE_MILLIS, motion)
                 steerLean = ease(steerLean, leaning * (LEAN_BASE + (1f - LEAN_BASE) * intensity), elapsed, LEAN_MILLIS, motion)
                 shownStep = ease(shownStep, stepped.toFloat(), elapsed, STEP_MILLIS, motion)
+                if (leaning != 0 || abs(stepped - shownStep) > STEP_SETTLED || movedAt < 0) movedAt = now
+                // With motion off the caret stays on, as nothing else moves either.
+                caretShown = !motion || (now - movedAt) / BLINK_MILLIS % 2 == 0L
                 if (motion) {
                     val next = flow + leaning * flowRate(intensity) * seconds
                     letters = (letters + floor(next).toInt()).mod(PATTERN_LETTERS)
@@ -871,6 +882,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         speedTarget = 0f
         intensity = 0f
         steerLean = 0f
+        caretShown = true
+        movedAt = -1L
         flow = 0f
         letters = 0
         wordsLeft = 0
@@ -915,6 +928,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         /** The underglow's side follows the lean a little slower than the speed, so a flick across Space doesn't flash. */
         private const val LEAN_MILLIS = 110f
         private const val STEP_MILLIS = 60f
+        /** The text closer than this to where the cursor is has settled, so steering has paused. */
+        private const val STEP_SETTLED = .02f
+        /** Steering's caret blinks as Android's text cursor does: this long on, then this long off. */
+        const val BLINK_MILLIS = 530L
         /** A frame that comes late must not make the text jump. */
         private const val MAX_FRAME_MILLIS = 48f
         /** Letters a second past the caret: enough to read one way at low speed, and still clearly one way at top speed. */

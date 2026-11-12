@@ -146,6 +146,10 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
      * as tall as select's, in the dark colour, the other way round from select's dark word in its pill. The dots part round the
      * pill with a small gap, so a letter the cursor passes hops to the other side. Which way it leans shows in the underglow, see
      * [glow].
+     *
+     * The caret is a text cursor: thin, as tall as the strip's words, and always between the letters that the real cursor is
+     * between. A step moves it there at once, as the text cursor moves, and the line then glides it back to the middle. It blinks
+     * only when steering pauses, see [GestureDisplay.caretShown].
      */
     private fun cursor(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, mid: Float, look: Look) {
         val alpha = display.reveal
@@ -156,12 +160,17 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         // How far each side's dots move out, so the nearest letter sits a small gap from the pill.
         val part = pill + dp(PILL_GAP) + dp(LETTER_DOT) - pitch / 2
         val text = display.line
+        // Where the real cursor is: ahead of the middle by the steps the line has still to glide.
+        var at = caret
         if (text != null) {
-            // The real text: a dot for each character, a gap for each space, and nothing past either end of the text.
+            val cursor = display.caretAt + display.stepped
+            at = caret + (display.stepped - display.shownStep) * pitch
+            // The real text: a dot for each character, a gap for each space, and nothing past either end of the text. The letters
+            // part round the cursor, not the middle, so the pill always sits between the two letters it is between.
             for (index in text.indices) {
                 if (text[index].isWhitespace()) continue
                 val d = (index - display.caretAt - display.shownStep + .5f) * pitch
-                val x = caret + d + if (d < 0) -part else part
+                val x = caret + d + if (index < cursor) -part else part
                 if (x < left || x > right) continue
                 letterDot(canvas, x, caret, left, right, line, look, alpha)
             }
@@ -177,9 +186,9 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
                 letterDot(canvas, x, caret, left, right, line, look, alpha)
             }
         }
-        rounded(canvas, caret - pill, line - dp(SELECTION_HEIGHT / 2), caret + pill, line + dp(SELECTION_HEIGHT / 2), radius,
+        rounded(canvas, at - pill, line - dp(SELECTION_HEIGHT / 2), at + pill, line + dp(SELECTION_HEIGHT / 2), radius,
             GuideMotion.faded(look.accent, alpha))
-        bar(canvas, caret, line, dp(STEER_CARET_HEIGHT), GuideMotion.faded(look.onAccent, SELECTED * alpha), dp(STEER_CARET))
+        if (display.caretShown) bar(canvas, at, line, dp(STEER_CARET_HEIGHT), GuideMotion.faded(look.onAccent, alpha), dp(STEER_CARET))
     }
 
     /**
@@ -438,8 +447,9 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val LETTER_ENDS = 4f
         /** Steering's pill: as tall and as round as select's, and narrow, with its dark caret inside. */
         const val STEER_PILL = 38f
-        const val STEER_CARET = 3f
-        const val STEER_CARET_HEIGHT = 14f
+        /** Its caret is a text cursor: thin, and as tall as the strip's words, which are 17 sp. */
+        const val STEER_CARET = 2f
+        const val STEER_CARET_HEIGHT = 17f
         /** The gap between the pill and the nearest letter on each side. */
         const val PILL_GAP = 6.5f
         /** While steering the underglow lies across the strip this strong, and the side it leans to grows from this far out. */

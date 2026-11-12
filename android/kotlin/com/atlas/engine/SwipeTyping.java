@@ -55,6 +55,9 @@ public final class SwipeTyping {
     private boolean configuredLearning;
     private volatile Words wordView = new Words(new String[0], new String[0], new String[0]);
     private volatile java.util.Set<String> activeWords = java.util.Set.of();
+    /** Words you saved, and words learned from your typing, normalised: see [addedWord] and [learnedWord]. */
+    private volatile java.util.Set<String> addedEntries = java.util.Set.of();
+    private volatile java.util.Set<String> learnedEntries = java.util.Set.of();
     /** Saved words whose spelling has capitals, such as "Lok", by their lowercase form. Read while typing. */
     private volatile Map<String, String> savedCapitals = Map.of();
     /** Names on this phone (see {@link PhoneNames}), by their lowercase form. Never learned, saved or logged. */
@@ -542,8 +545,20 @@ public final class SwipeTyping {
      */
     public boolean builtInWord(String word) { return baseFrequency(word) > 0; }
 
-    /** Whether Saved words has [word]: saved with the word menu or in Settings, or learned from your typing. */
-    public boolean savedWord(String word) { return Arrays.stream(wordView.words).anyMatch(word::equalsIgnoreCase); }
+    /**
+     * Whether you saved [word] with Save, in the word menu or Settings (owner, 2026-11-12). A word learned from your typing is not
+     * saved: see [learnedWord].
+     */
+    public boolean addedWord(String word) { return addedEntries.contains(SwipeWords.normalise(word)); }
+
+    /** Whether the keyboard learned [word] from your typing, without your saving it. Forget takes it out. */
+    public boolean learnedWord(String word) { return learnedEntries.contains(SwipeWords.normalise(word)); }
+
+    /**
+     * Whether your words hold [word] at all: saved, or learned from your typing, even one still gathering evidence. Forget takes
+     * any of them out.
+     */
+    public boolean savedWord(String word) { return addedWord(word) || learnedWord(word); }
 
     /** What holding [word] on the strip would do to it. */
     public ForgetWords.Kind forgetKind(String word) {
@@ -792,6 +807,8 @@ public final class SwipeTyping {
         int day = today();
         wordView = new Words(dictionary.spellings(day), dictionary.descriptions(day), dictionary.swipeStatuses(day));
         activeWords = dictionary.activeWords(day);
+        addedEntries = dictionary.addedWords();
+        learnedEntries = dictionary.learnedWords();
         Map<String, String> capitals = new HashMap<>();
         if (wordsAvailable) for (LanguageHabits.Entry entry : dictionary.active(day))
             if (!entry.spelling.equals(entry.spelling.toLowerCase(Locale.ROOT)) && entry.spelling.equalsIgnoreCase(entry.word))

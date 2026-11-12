@@ -39,15 +39,15 @@ class Strip(
     sealed interface Notice {
         val word: String
         /**
-         * The menu of a held word, at [step]: see [MenuKeys.Step]. [forget] is false for a word that no list can drop, and
-         * [builtIn] is true for one the dictionary has, where Unfavourite goes back to. Its I and O buttons are [first] and
-         * [second], and P is Back.
+         * The menu of a held word, at [step]: see [MenuKeys.Step]. [forget] is true for a word the keyboard learned from your
+         * typing, which O can forget while it isn't saved. Its I and O buttons are [first] and [second], and P is Back.
          */
         data class Menu(
             override val word: String,
             val forget: Boolean,
             val step: MenuKeys.Step = MenuKeys.Step.New,
-            val builtIn: Boolean = false,
+            /** Where the word stands without its favourite, where Unfavourite takes it: see [MenuKeys.base]. */
+            val base: MenuKeys.Step = MenuKeys.Step.New,
         ) : Notice {
             val first get() = MenuKeys.first(step).action
             val second get() = MenuKeys.second(step, forget)?.action
@@ -277,9 +277,6 @@ class Strip(
     private val capitalArrow = android.graphics.Path()
     private val capitalBox = android.graphics.RectF()
 
-    /** When the first-time hint started, in uptime ms, or -1: see [MenuKeys.hint]. */
-    private var hintStart = -1L
-
     /** How far in the menu's buttons are, from 0 as it opens to 1. */
     private var menuShown = 1f
 
@@ -287,13 +284,18 @@ class Strip(
     private val pillLeft = Ease()
     private val pillRight = Ease()
     private val pillOpen = Ease()
-    private val wordEase = Ease()
     /** The column whose pill shows or is shrinking away, and the action it shows. */
     private var pillShown = -1
     private var pillAction: Action? = null
-    /** The badge after the word, and when it last changed, for its pop. */
-    private var menuBadge: MenuKeys.Mark? = null
-    private var badgeChanged = 0L
+    /** The hovered button's action changed under the finger: the pill takes its new size at once. */
+    private var pillSnap = false
+    /** Where the word's centre is, set once as the menu opens: it never moves. NaN until then. */
+    private var menuWordCentre = Float.NaN
+    /** The step the menu shows, and the animation that its last change plays, from when. See [MenuKeys.motion]. */
+    private var shownStep: MenuKeys.Step? = null
+    private var menuMotion: MenuKeys.Motion? = null
+    private var motionStart = 0L
+    private val crackPath = android.graphics.Path()
 
     init {
         // The modifiers come first, so that their chips sit at the start of the words.
@@ -563,22 +565,15 @@ class Strip(
 
     /**
      * The column of the word menu's button that a resting finger hovers, or -1: see [MenuKeys.hovered]. Its pill shows the action
-     * that the button does now, so after a press it shows the next step's. A hover ends the first-time hint.
+     * that the button does now, so after a press it shows the next step's, in place.
      */
     var menuMark = -1
         set(value) {
             if (field == value) return
             field = value
-            if (value >= 0) hintStart = -1L
             render()
             invalidate()
         }
-
-    /** The menu that just opened shows each button's pill once, slowly, one after another. See [MenuKeys.HINT_OPENS]. */
-    fun playMenuHint() {
-        hintStart = SystemClock.uptimeMillis()
-        invalidate()
-    }
 
     /** The buttons that a notice shows, from the left. */
     fun noticeActions(shown: Notice?): List<Action> = when (shown) {
@@ -651,10 +646,17 @@ class Strip(
             }
         }
         if (menu == null) {
-            hintStart = -1L
             pillShown = -1
-            menuBadge = null
-            wordEase.jump(Float.NaN)
+            menuWordCentre = Float.NaN
+            shownStep = null
+            menuMotion = null
+        } else if (shownMenu != menu.word || shownStep != menu.step) {
+            // A new menu, or a new step: its animation plays once, unless motion is off. A new word gets a new place.
+            val opened = shownMenu != menu.word
+            if (opened) menuWordCentre = Float.NaN
+            menuMotion = MenuKeys.motion(if (opened) null else shownStep, menu.step)?.takeIf { GuideMotion.enabled }
+            motionStart = SystemClock.uptimeMillis()
+            shownStep = menu.step
         }
         shownMenu = menu?.word
         invalidate()
@@ -705,10 +707,11 @@ class Strip(
     }
 
     /**
-     * The word's menu, drawn on the bar (the owner's design D, 2026-11-12). The word sits centred in the room left of the buttons,
-     * with its step's badge after it: a bookmark on a saved word, a heart on a favourite. An icon sits over each button's key. A
-     * finger hovering a button stretches its orange tile left into a pill that holds the action's name and covers the buttons to
-     * its left, and the word slides to stay centred in the room left of the pill. Nothing comes near the screen's rounded corners.
+     * The word's menu, drawn on the bar (the owner's design, 2026-11-12). The word sits centred in the room left of the buttons,
+     * placed once as the menu opens: it never moves. An icon sits over each button's key. A finger hovering I's or O's button
+     * stretches its orange tile left into a pill that holds the action's name; the pill covers the buttons to its left, and slides
+     * over the end of a long word, which fades under its leading edge. Back has no pill. A change of step plays a little
+     * animation past the word, see [MenuMotion], and the buttons show the step. Nothing comes near the screen's rounded corners.
      */
     private fun drawMenu(canvas: Canvas) {
         val menu = notice as? Notice.Menu ?: return
@@ -719,18 +722,15 @@ class Strip(
         val keySide = dp(Layout.KEY_SIDE_DP).toFloat()
         val icon = dp(MENU_ICON_DP)
         val slots = menuSlots(menu)
-        // What the pill shows: the hovered button, or the hint's while it plays.
         var more = false
-        val hint = if (hintStart < 0) -1 else {
-            val elapsed = now - hintStart
-            val present = slots.withIndex().filter { it.value != null }.map { MenuKeys.SAVE + it.index }
-            if (elapsed > MenuKeys.hintMillis(present.size)) hintStart = -1L else more = true
-            MenuKeys.hint(elapsed, present)
-        }
-        val hovered = (if (menuMark >= 0) menuMark else hint).takeIf { slots.getOrNull(it - MenuKeys.SAVE) != null } ?: -1
+        // The pill shows the action that the hovered button does now. After a press under a finger that stays, it shows the
+        // next step's action in place, at once: no shrinking and growing again.
+        val hovered = menuMark.takeIf { MenuKeys.pills(it, menu.step, menu.forget) } ?: -1
         if (hovered >= 0) {
+            val action = slots[hovered - MenuKeys.SAVE]
+            if (hovered == pillShown && action != pillAction) pillSnap = true
             pillShown = hovered
-            pillAction = slots[hovered - MenuKeys.SAVE]
+            pillAction = action
         }
         val open = pillOpen.at(if (hovered >= 0) 1f else 0f, now, glide)
         if (open <= 0f) pillShown = -1
@@ -738,24 +738,26 @@ class Strip(
         pillText.isFakeBoldText = true
         pillText.textSize = wordPixels() * MENU_PILL_TEXT
         val pillHeight = dp(MENU_PILL_DP).toFloat()
-        var freeRight = MenuKeys.wordRight(width.toFloat(), keySide, dp(MENU_WORD_GAP).toFloat())
         var pill: Pair<Float, Float>? = null
         val action = pillAction.takeIf { pillShown >= 0 }
         if (action != null) {
             val name = context.getString(label(action))
             val (left, right) = MenuKeys.pill(width.toFloat(), keySide, pillShown, pillText.measureText(name), icon.toFloat(),
                 dp(MENU_PILL_LEFT).toFloat(), dp(MENU_PILL_GAP).toFloat(), dp(MENU_PILL_RIGHT).toFloat())
+            if (pillSnap) {
+                pillLeft.jump(left)
+                pillRight.jump(right)
+                pillSnap = false
+            }
             // The pill grows out of its icon's own tile, and shrinks back into it.
             val shownRight = pillRight.at(right, now, glide)
             val tile = shownRight - icon - 2f * dp(MENU_PILL_RIGHT)
-            val shownLeft = tile + (pillLeft.at(left, now, glide) - tile) * open
-            pill = shownLeft to shownRight
-            freeRight = minOf(freeRight, shownLeft - dp(MENU_WORD_GAP))
+            pill = tile + (pillLeft.at(left, now, glide) - tile) * open to shownRight
         } else {
             pillLeft.jump(Float.NaN)
             pillRight.jump(Float.NaN)
         }
-        // The word and its badge, centred in the room left of the buttons or of the pill. A long word loses its middle.
+        // The word, placed once in the room left of the buttons. A long word loses its middle to fit that room.
         menuWordText.typeface = typeface
         menuWordText.textSize = wordPixels()
         menuWordText.color = look.ink
@@ -763,38 +765,34 @@ class Strip(
         val baseline = height / 2 - (menuWordText.ascent() + menuWordText.descent()) / 2
         val wordFoot = navigationInset + height - (baseline + menuWordText.descent())
         val wordLeft = maxOf(side.toFloat(), keySide, corners.inset(wordFoot).toFloat() + dp(MENU_CORNER_GAP))
-        val mark = MenuKeys.mark(menu.step)
-        if (mark != menuBadge) {
-            badgeChanged = now
-            menuBadge = mark
-        }
-        val badge = if (mark == null) 0f else dp(MENU_BADGE_DP).toFloat() + dp(MENU_BADGE_GAP)
-        val room = (freeRight - wordLeft - badge).coerceAtLeast(0f)
-        val text = context.getString(R.string.strip_menu_word,
-            MenuKeys.shorten(menu.word) { menuWordText.measureText(context.getString(R.string.strip_menu_word, it)) <= room })
-        val block = menuWordText.measureText(text) + badge
-        val textLeft = wordEase.at(MenuKeys.wordCentre(wordLeft, freeRight), now, glide) - block / 2
+        val wordRight = MenuKeys.wordRight(width.toFloat(), keySide, dp(MENU_WORD_GAP).toFloat())
+        if (menuWordCentre.isNaN()) menuWordCentre = MenuKeys.wordCentre(wordLeft, wordRight)
+        val text = MenuKeys.shorten(menu.word) { menuWordText.measureText(it) <= (wordRight - wordLeft).coerceAtLeast(0f) }
+        val textWidth = menuWordText.measureText(text)
+        val textLeft = menuWordCentre - textWidth / 2
         canvas.drawText(text, textLeft, baseline, menuWordText)
-        if (mark != null) {
-            // The badge pops as it changes: a quick swell and back.
-            val since = now - badgeChanged
-            val pop = if (GuideMotion.enabled && since < MENU_BADGE_POP_MILLIS) {
-                more = true
-                1f + MENU_BADGE_POP * kotlin.math.sin(Math.PI * since / MENU_BADGE_POP_MILLIS).toFloat()
-            } else 1f
-            val size = dp(MENU_BADGE_DP) * pop
-            val x = textLeft + block - dp(MENU_BADGE_DP) / 2f
-            val y = baseline + menuWordText.ascent() * MENU_BADGE_HEIGHT
-            context.getDrawable(if (mark == MenuKeys.Mark.Heart) R.drawable.menu_favourited else R.drawable.menu_mark_saved)?.mutate()?.let {
-                it.setTint(if (mark == MenuKeys.Mark.Heart) look.accent else look.muted)
-                it.setBounds(Math.round(x - size / 2), Math.round(y - size / 2), Math.round(x + size / 2), Math.round(y + size / 2))
-                it.draw(canvas)
-            }
+        // The step's animation, just past the word's end.
+        val playing = menuMotion
+        if (playing != null) {
+            val density = resources.displayMetrics.density
+            val sprites = MenuMotion.frame(playing, now - motionStart, (textLeft + textWidth) / density + MENU_MOTION_GAP,
+                (baseline + menuWordText.ascent() * .5f) / density)
+            if (sprites.isEmpty()) menuMotion = null else more = true
+            for (sprite in sprites) drawSprite(canvas, sprite, density)
         }
-        // The pill, under its icon, with the action's name. The spent heart's is dimmer.
+        // The pill, under its icon, with the action's name. It covers what it slides over: a long word's end fades under it.
         val spent = action == Action.Favourited
         if (pill != null && action != null) {
             menuBox.set(pill.first, (height - pillHeight) / 2, pill.second, (height + pillHeight) / 2)
+            if (textLeft + textWidth > pill.first - dp(MENU_PILL_FADE)) {
+                val fade = dp(MENU_PILL_FADE).toFloat()
+                menuPaint.shader = android.graphics.LinearGradient(pill.first - fade, 0f, pill.first + pillHeight / 2, 0f,
+                    look.paper and 0x00FFFFFF, look.paper, android.graphics.Shader.TileMode.CLAMP)
+                canvas.drawRect(pill.first - fade, 0f, pill.first + pillHeight / 2, height, menuPaint)
+                menuPaint.shader = null
+                menuPaint.color = look.paper
+                canvas.drawRoundRect(menuBox, pillHeight / 2, pillHeight / 2, menuPaint)
+            }
             menuPaint.color = GuideMotion.faded(look.accent, (if (spent) MENU_SPENT_PILL_ALPHA else MENU_PILL_ALPHA) * open)
             canvas.drawRoundRect(menuBox, pillHeight / 2, pillHeight / 2, menuPaint)
             canvas.save()
@@ -834,8 +832,43 @@ class Strip(
                 drawable.draw(canvas)
             }
         }
-        if (more || pillOpen.moving(now, glide) || pillLeft.moving(now, glide) || pillRight.moving(now, glide) || wordEase.moving(now, glide))
-            postInvalidateOnAnimation()
+        if (more || pillOpen.moving(now, glide) || pillLeft.moving(now, glide) || pillRight.moving(now, glide)) postInvalidateOnAnimation()
+    }
+
+    /**
+     * One shape of a step's animation: a heart in the accent colour, or a bookmark in the text's. A half is the shape cut along
+     * the broken heart's crack, the same zigzag as Unfavourite's and Unsave's icons.
+     */
+    private fun drawSprite(canvas: Canvas, sprite: MenuMotion.Sprite, density: Float) {
+        val heart = sprite.shape == MenuMotion.Shape.Heart || sprite.shape == MenuMotion.Shape.HeartLeft || sprite.shape == MenuMotion.Shape.HeartRight
+        val drawable = context.getDrawable(if (heart) R.drawable.menu_favourited else R.drawable.menu_mark_saved)?.mutate() ?: return
+        drawable.setTint(if (heart) look.accent else look.ink)
+        drawable.alpha = (sprite.alpha * 255).toInt().coerceIn(0, 255)
+        val size = sprite.size * density
+        val x = sprite.x * density
+        val y = sprite.y * density
+        canvas.save()
+        canvas.rotate(sprite.turn, x, y)
+        val left = x - size / 2
+        val top = y - size / 2
+        drawable.setBounds(Math.round(left), Math.round(top), Math.round(left + size), Math.round(top + size))
+        val half = when (sprite.shape) {
+            MenuMotion.Shape.HeartLeft, MenuMotion.Shape.BookmarkLeft -> CRACK_LEFT
+            MenuMotion.Shape.HeartRight, MenuMotion.Shape.BookmarkRight -> CRACK_RIGHT
+            else -> null
+        }
+        if (half != null) {
+            crackPath.reset()
+            half.forEachIndexed { index, (px, py) ->
+                val cx = left + px / 24f * size
+                val cy = top + py / 24f * size
+                if (index == 0) crackPath.moveTo(cx, cy) else crackPath.lineTo(cx, cy)
+            }
+            crackPath.close()
+            canvas.clipPath(crackPath)
+        }
+        drawable.draw(canvas)
+        canvas.restore()
     }
 
     /** The menu's button under a touch at [x], or null. */
@@ -1168,15 +1201,14 @@ class Strip(
         private const val MENU_SPENT_ALPHA = .6f
         private const val MENU_SPENT_ICON_ALPHA = .35f
         private const val MENU_GLIDE_MILLIS = 140L
-        /**
-         * The badge after the word: its size and its gap from the word in dp, how high its centre sits as a part of the letters'
-         * height, and its pop as it changes, how much bigger at most and for how long.
-         */
-        private const val MENU_BADGE_DP = 14
-        private const val MENU_BADGE_GAP = 8
-        private const val MENU_BADGE_HEIGHT = .55f
-        private const val MENU_BADGE_POP = .35f
-        private const val MENU_BADGE_POP_MILLIS = 260L
+        /** How far the pill's leading edge fades a long word that it slides over, in dp. */
+        private const val MENU_PILL_FADE = 20
+        /** How far past the word's end a step's animation plays, in dp. */
+        private const val MENU_MOTION_GAP = 10f
+        /** The broken heart's crack, in its icon's 24 by 24 units: each half of a broken heart or bookmark is cut along it. */
+        private val CRACK = listOf(12.3f to 0f, 12.3f to 6.6f, 10.4f to 10.4f, 13.6f to 12.6f, 11.6f to 17.4f, 11.6f to 24f)
+        private val CRACK_LEFT = listOf(0f to 0f) + CRACK + listOf(0f to 24f)
+        private val CRACK_RIGHT = listOf(24f to 0f) + CRACK + listOf(24f to 24f)
         /** How far the menu keeps from a rounded corner, in dp. */
         private const val MENU_CORNER_GAP = 4
         private const val MENU_LABEL_GAP = 2

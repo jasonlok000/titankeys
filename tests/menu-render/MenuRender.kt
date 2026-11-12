@@ -13,10 +13,10 @@ import java.io.File
 import javax.imageio.ImageIO
 
 /**
- * Draws the word menu in every state of its ladder, with and without a hover, a long word, and the first-time hint's frames, to
- * look at without the phone. The real [MenuKeys] picks the buttons, places them over their keys, sizes the hovered pill and
- * shortens the word, and the icons are the app's own vector drawables. The sizes are Strip's, at the density of the owner's
- * screenshots. Each sheet is a PNG in the folder given, dark and light.
+ * Draws the word menu in every state of its ladder, with and without a hover, long words under a pill, and frames of each step's
+ * animation, to look at without the phone. The real [MenuKeys] picks the buttons, places them over their keys, sizes the hovered
+ * pill and shortens the word, the real [MenuMotion] draws the animations, and the icons are the app's own vector drawables. The
+ * sizes are Strip's, at the density of the owner's screenshots. Each sheet is a PNG in the folder given, dark and light.
  */
 fun main(args: Array<String>) {
     val folder = File(args.getOrElse(0) { "menu-render" }).apply { mkdirs() }
@@ -24,37 +24,46 @@ fun main(args: Array<String>) {
     val strings = File(args.getOrElse(2) { "android/src/main/res/values/strings.xml" }).readText()
     val font = File(args.getOrElse(3) { "android/src/main/res/font/inter_regular.otf" })
     val base = runCatching { Font.createFont(Font.TRUETYPE_FONT, font) }.getOrElse { Font(Font.SANS_SERIF, Font.PLAIN, 1) }
-    val new = MenuKeys.Step.New
-    val saved = MenuKeys.Step.Saved
-    val favourite = MenuKeys.Step.Favourite
-    val builtIn = MenuKeys.Step.BuiltIn
+    fun state(saved: Boolean = false, builtIn: Boolean = false, favourite: Boolean = false, learned: Boolean = false) =
+        MenuKeys.state(saved, builtIn, favourite, false, learned, false)
     val (i, o, p) = Triple(MenuKeys.SAVE, MenuKeys.FORGET, MenuKeys.BACK)
+    val long = "supercalifragilisticexpialidocious"
+    val longer = "pneumonoultramicroscopicsilicovolcanoconiosis"
     val states = listOf(
-        Row("1-not-saved", "Not saved, nothing hovered", "Titankeys", new),
-        Row("2-not-saved-hover-i", "Not saved, hovering I (or K)", "Titankeys", new, i),
-        Row("3-not-saved-hover-o", "Not saved, hovering O (or L): the pill covers I", "Titankeys", new, o),
-        Row("4-not-saved-hover-p", "Not saved, hovering P (or Backspace)", "Titankeys", new, p),
-        Row("5-saved", "Saved, after Save: the bookmark badge, the menu stays open", "Titankeys", saved),
-        Row("6-saved-hover-i", "Saved, hovering I: after the press it says the next step", "Titankeys", saved, i),
-        Row("7-saved-hover-o", "Saved, hovering O: one step down", "Titankeys", saved, o),
-        Row("8-favourite", "Favourite: the heart badge, I spent", "Titankeys", favourite),
-        Row("9-favourite-hover-i", "Favourite, hovering I: the top step, spent and dimmer", "Titankeys", favourite, i),
-        Row("10-favourite-hover-o", "Favourite, hovering O: one step down", "Titankeys", favourite, o),
-        Row("11-built-in", "A word the dictionary knows, nothing hovered", "hello", builtIn),
-        Row("12-built-in-hover-o", "Dictionary word, hovering O", "hello", builtIn, o),
-        Row("13-long-word", "Long word, hovering O: shortened in the middle to fit", "supercalifragilisticexpialidocious", saved, o),
-        Row("14-long-word-rest", "Long word, nothing hovered", "supercalifragilisticexpialidocious", saved),
-        Row("15-long-word-spent", "Longer favourite, hovering I: the longest pill, so the word loses its middle", "pneumonoultramicroscopicsilicovolcanoconiosis", favourite, i),
+        Row("1-not-saved", "Not saved, never learned: I saves, O has nothing", "Titankeys", state()),
+        Row("2-not-saved-hover-i", "Not saved, hovering I (or K)", "Titankeys", state(), i),
+        Row("3-learned", "Learned from typing, not saved: O forgets it", "Titankeys", state(learned = true)),
+        Row("4-learned-hover-o", "Learned, hovering O (or L): the pill covers I", "Titankeys", state(learned = true), o),
+        Row("5-hover-p", "Hovering P (or Backspace): Back has no pill, just its arrow", "Titankeys", state(learned = true), p),
+        Row("6-saved", "Saved: I favourites, O unsaves", "Titankeys", state(saved = true)),
+        Row("7-saved-hover-i", "Saved, hovering I", "Titankeys", state(saved = true), i),
+        Row("8-saved-hover-o", "Saved, hovering O: Unsave, the broken bookmark", "Titankeys", state(saved = true), o),
+        Row("9-favourite", "Favourite: I spent", "Titankeys", state(saved = true, favourite = true)),
+        Row("10-favourite-hover-i", "Favourite, hovering I: spent and dimmer", "Titankeys", state(saved = true, favourite = true), i),
+        Row("11-favourite-hover-o", "Favourite, hovering O: one step down", "Titankeys", state(saved = true, favourite = true), o),
+        Row("12-built-in", "A dictionary word: Favourite, and nothing on O", "hello", state(builtIn = true)),
+        Row("13-built-in-hover-i", "Dictionary word, hovering I", "hello", state(builtIn = true), i),
+        Row("14-long-word", "Long word, nothing hovered: placed once, never moves", long, state(saved = true)),
+        Row("15-long-word-hover-o", "Long word, hovering O: the pill slides over its end, which fades", long, state(saved = true), o),
+        Row("16-longer-hover-i", "Longest pill over a longer word", longer, state(saved = true, favourite = true), i),
     )
-    // The hint's frames, the first 3 times the menu opens, at times along its run.
-    val slots = listOf(i, o, p)
-    val each = MenuKeys.HINT_SHOW_MILLIS + MenuKeys.HINT_REST_MILLIS
-    val hint = listOf(0L, 700L, MenuKeys.HINT_SHOW_MILLIS + 100, each + 700, 2 * each + 700, MenuKeys.hintMillis(3) + 100).map { millis ->
-        Row("hint-${millis}ms", "First-time hint at ${"%.1f".format(millis / 1000f)} s", "Titankeys", new, MenuKeys.hint(millis, slots))
+    // Frames of each step's animation, past the word.
+    val motions = MenuKeys.Motion.entries.flatMap { motion ->
+        val total = MenuMotion.millis(motion)
+        val after = when (motion) {
+            MenuKeys.Motion.BookmarkDrop, MenuKeys.Motion.BookmarkFlick -> state(saved = true)
+            MenuKeys.Motion.HeartBurst, MenuKeys.Motion.HeartDrift -> state(saved = true, favourite = true)
+            MenuKeys.Motion.HeartCrack -> state(saved = true)
+            MenuKeys.Motion.BookmarkTear -> state()
+        }
+        listOf(0f, .2f, .4f, .6f, .8f).map { part ->
+            val millis = (total * part).toLong()
+            Row("$motion-${millis}ms", "$motion at $millis of $total ms", "Titankeys", after, motion = motion to millis)
+        }
     }
     for (dark in listOf(true, false)) {
         val suffix = if (dark) "" else "-light"
-        for ((sheet, rows) in listOf("menu-all" to states, "menu-hint" to hint)) {
+        for ((sheet, rows) in listOf("menu-all" to states, "menu-motion" to motions)) {
             val image = BufferedImage(WIDTH, rows.size * (ROW + CAPTION), BufferedImage.TYPE_INT_RGB)
             for ((index, row) in rows.withIndex()) {
                 val single = draw(row, dark, base, strings, drawables)
@@ -67,7 +76,8 @@ fun main(args: Array<String>) {
     println("Drawn to $folder")
 }
 
-private class Row(val name: String, val caption: String, val word: String, val step: MenuKeys.Step, val hover: Int = -1)
+private class Row(val name: String, val caption: String, val word: String, val state: MenuKeys.State, val hover: Int = -1,
+                  val motion: Pair<MenuKeys.Motion, Long>? = null)
 
 private fun draw(row: Row, dark: Boolean, base: Font, strings: String, drawables: File): BufferedImage {
     val image = BufferedImage(WIDTH, ROW + CAPTION, BufferedImage.TYPE_INT_RGB)
@@ -88,49 +98,51 @@ private fun draw(row: Row, dark: Boolean, base: Font, strings: String, drawables
     g.translate(0, CAPTION)
     val side = Layout.KEY_SIDE_DP * DENSITY
     val icon = 22 * DENSITY
-    val slots = listOf(MenuKeys.first(row.step), MenuKeys.second(row.step, forget = true), null)
+    val step = row.state.step
+    val slots = listOf(MenuKeys.first(step), MenuKeys.second(step, row.state.forget), null)
     fun buttonAt(column: Int) = slots[column - MenuKeys.SAVE]
-    val hovered = row.hover
-    val word = base.deriveFont(17 * DENSITY)
-    val bold = base.deriveFont(Font.BOLD, 17 * DENSITY * .88f)
-    // The hovered pill: the button's name in it, then its icon. The spent heart's is dimmer.
-    var freeRight = MenuKeys.wordRight(WIDTH.toFloat(), side, 8 * DENSITY)
+    val hovered = row.hover.takeIf { MenuKeys.pills(it, step, row.state.forget) } ?: -1
+    // The word, placed once in the room left of the buttons, shortened in the middle to fit it. No quotes.
+    g.font = base.deriveFont(17 * DENSITY)
+    val wordLeft = side
+    val wordRight = MenuKeys.wordRight(WIDTH.toFloat(), side, 8 * DENSITY)
+    val shown = MenuKeys.shorten(row.word) { g.fontMetrics.stringWidth(it) <= wordRight - wordLeft }
+    val textWidth = g.fontMetrics.stringWidth(shown)
+    val left = MenuKeys.wordCentre(wordLeft, wordRight) - textWidth / 2
+    val baseline = ROW / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f
+    g.color = ink
+    g.drawString(shown, left, baseline)
+    // A step's animation, past the word's end.
+    row.motion?.let { (motion, millis) ->
+        for (sprite in MenuMotion.frame(motion, millis, (left + textWidth) / DENSITY + 10f, (baseline - g.fontMetrics.ascent * .5f) / DENSITY))
+            drawSprite(g, drawables, sprite, if (sprite.shape.name.startsWith("Heart")) Color(ORANGE) else ink, paper)
+    }
+    // The hovered pill: the button's name in it, then its icon. It covers what it slides over; a long word fades under its edge.
     var pill: Pair<Float, Float>? = null
     val spent = hovered == MenuKeys.SAVE && buttonAt(hovered) == MenuKeys.Button.Favourited
     if (hovered >= 0) {
         val name = name(strings, buttonAt(hovered))
-        g.font = bold
+        g.font = base.deriveFont(Font.BOLD, 17 * DENSITY * .88f)
         pill = MenuKeys.pill(WIDTH.toFloat(), side, hovered, g.fontMetrics.stringWidth(name).toFloat(), icon, 18 * DENSITY,
             12 * DENSITY, 11 * DENSITY)
-        freeRight = pill.first - 8 * DENSITY
         val height = 42 * DENSITY
+        val shape = RoundRectangle2D.Float(pill.first, (ROW - height) / 2, pill.second - pill.first, height, height, height)
+        if (left + textWidth > pill.first - 20 * DENSITY) {
+            val fade = 20 * DENSITY
+            g.paint = java.awt.GradientPaint(pill.first - fade, 0f, Color(paper.red, paper.green, paper.blue, 0), pill.first + height / 2, 0f, paper)
+            g.fill(java.awt.geom.Rectangle2D.Float(pill.first - fade, 0f, fade + height / 2, ROW.toFloat()))
+            g.color = paper
+            g.fill(shape)
+        }
         g.color = faded(ORANGE, if (spent) .12f else .24f, paper)
-        g.fill(RoundRectangle2D.Float(pill.first, (ROW - height) / 2, pill.second - pill.first, height, height, height))
+        g.fill(shape)
         g.color = faded(ORANGE, if (spent) .6f else 1f, paper)
         g.drawString(name, pill.first + 18 * DENSITY, ROW / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
-    }
-    // The word and its badge, centred in the room left of the buttons or of the pill, shortened in the middle to fit.
-    g.font = word
-    val mark = MenuKeys.mark(row.step)
-    val badge = if (mark == null) 0f else (14 + 8) * DENSITY
-    val wordLeft = side
-    val room = freeRight - wordLeft - badge
-    val shown = "“" + MenuKeys.shorten(row.word) { g.fontMetrics.stringWidth("“$it”") <= room } + "”"
-    val block = g.fontMetrics.stringWidth(shown) + badge
-    val left = MenuKeys.wordCentre(wordLeft, freeRight) - block / 2
-    val baseline = ROW / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f
-    g.color = ink
-    g.drawString(shown, left, baseline)
-    if (mark != null) {
-        val size = 14 * DENSITY
-        val x = left + block - size / 2
-        val y = baseline - g.fontMetrics.ascent * .55f
-        drawVector(g, File(drawables, (if (mark == MenuKeys.Mark.Heart) "menu_favourited" else "menu_mark_saved") + ".xml").readText(),
-            x - size / 2, y - size / 2, size, if (mark == MenuKeys.Mark.Heart) Color(ORANGE) else muted)
     }
     // The icons over their keys. The pill covers the ones to its left; the others go grey while it shows.
     for ((index, button) in slots.withIndex()) {
         val column = MenuKeys.SAVE + index
+        if (index == 1 && button == null) continue
         val (l, r) = MenuKeys.slot(WIDTH.toFloat(), side, column)
         val centre = (l + r) / 2
         val inPill = column == hovered
@@ -145,6 +157,38 @@ private fun draw(row: Row, dark: Boolean, base: Font, strings: String, drawables
     }
     g.dispose()
     return image
+}
+
+/** One shape of an animation, as Strip.drawSprite draws it: a half is cut along the broken heart's crack. */
+private fun drawSprite(g: Graphics2D, drawables: File, sprite: MenuMotion.Sprite, colour: Color, paper: Color) {
+    val heart = sprite.shape.name.startsWith("Heart")
+    val size = sprite.size * DENSITY
+    val x = sprite.x * DENSITY
+    val y = sprite.y * DENSITY
+    val saved = g.transform
+    val clip = g.clip
+    g.rotate(Math.toRadians(sprite.turn.toDouble()), x.toDouble(), y.toDouble())
+    val left = x - size / 2
+    val top = y - size / 2
+    val crack = listOf(12.3f to 0f, 12.3f to 6.6f, 10.4f to 10.4f, 13.6f to 12.6f, 11.6f to 17.4f, 11.6f to 24f)
+    val half = when {
+        sprite.shape.name.endsWith("Left") -> listOf(0f to 0f) + crack + listOf(0f to 24f)
+        sprite.shape.name.endsWith("Right") -> listOf(24f to 0f) + crack + listOf(24f to 24f)
+        else -> null
+    }
+    if (half != null) {
+        val path = Path2D.Float()
+        half.forEachIndexed { index, (px, py) ->
+            if (index == 0) path.moveTo(left + px / 24f * size, top + py / 24f * size) else path.lineTo(left + px / 24f * size, top + py / 24f * size)
+        }
+        path.closePath()
+        g.clip(path)
+    }
+    fun mix(a: Int, b: Int) = (a * sprite.alpha + b * (1 - sprite.alpha)).toInt().coerceIn(0, 255)
+    drawVector(g, File(drawables, (if (heart) "menu_favourited" else "menu_mark_saved") + ".xml").readText(), left, top, size,
+        Color(mix(colour.red, paper.red), mix(colour.green, paper.green), mix(colour.blue, paper.blue)))
+    g.clip = clip
+    g.transform = saved
 }
 
 /** The drawable of each button, as Strip.icon has it: run.sh checks that it still does. Null is Back. */

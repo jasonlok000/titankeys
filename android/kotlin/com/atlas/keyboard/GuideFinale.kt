@@ -33,10 +33,10 @@ internal object GuideFinale {
 
     // The parts, in ms. These are safe to change.
     /** Each line of the summary comes in this long after the one before, and takes [LINE_IN] to land. */
-    const val LINE_GAP = 150L
+    const val LINE_GAP = 220L
     const val LINE_IN = 260L
     /** The beat between the summary landing and the first letter lighting. */
-    const val READ_BEAT = 700L
+    const val READ_BEAT = 1600L
     /** Each first letter lights this long after the one before, and takes [LIGHT_IN] to light. */
     const val LIGHT_GAP = 140L
     const val LIGHT_IN = 220L

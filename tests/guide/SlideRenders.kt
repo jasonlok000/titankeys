@@ -107,14 +107,8 @@ private fun fieldFor(step: GuideStep): Frame = when (step.id) {
     "backspace" -> at(step, "$BACKSPACE_SEED ", BACKSPACE_SEED.length).copy(target = BACKSPACE_SEED.length - 1..BACKSPACE_SEED.length - 1)
     "flick" -> at(step, "$FLICK_SEED ", flickCursor(FLICK_SEED)).copy(target = flickTarget(FLICK_SEED))
     "hold" -> at(step, "$HOLD_SEED ", holdCursor(HOLD_SEED)).copy(target = holdTarget(HOLD_SEED, holdCursor(HOLD_SEED)), zones = true)
-    "steer" -> {
-        val text = looping(step.seed) + " "
-        at(step, text, text.indexOf(' ', text.length / 2) + 1).copy(underline = true)
-    }
-    "selectmore" -> {
-        val text = looping(step.seed) + " "
-        grabTarget(text, text.length / 2)!!.let { at(step, text, it.first).copy(target = it) }
-    }
+    "steer" -> steeringText(step).let { text -> at(step, text, text.length - 1).copy(underline = true) }
+    "selectmore" -> steeringText(step).let { text -> grabTarget(text, 0)!!.let { at(step, text, it.first).copy(target = it) } }
     "paste" -> PASTE_SEED.indexOf(PASTE_OVER).let { at(step, "$PASTE_SEED ", it, it + PASTE_OVER.length) }
     "clipboard" -> at(step, "${CLIP_LEAD.trimEnd()} ")
     else -> if (step.symbol != null) {
@@ -122,6 +116,10 @@ private fun fieldFor(step: GuideStep): Frame = when (step.id) {
         at(step, seed, gapCursor(step.line, step.symbol)).copy(gap = gapCursor(step.line, step.symbol))
     } else at(step, END_TEXT)
 }
+
+/** The steering slides' field, as GuideActivity seeds it: the last few lines finished so far, then the slide's own. */
+private fun steeringText(step: GuideStep) =
+    (GUIDE_STEPS.takeWhile { it.id != step.id }.map { it.line }.filter { it.isNotEmpty() }.takeLast(4) + step.seed).joinToString("\n") + " "
 
 /** The field once the slide is passed: its line, finished. */
 private fun passedField(step: GuideStep, before: Frame): Frame = when (step.id) {
@@ -435,23 +433,29 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
         starts += at
         var end = at
         var lastBreak = -1
+        var newline = false
         while (end < all.length && g.fontMetrics.stringWidth(all.substring(at, end + 1)) <= width) {
+            if (all[end] == '\n') {
+                newline = true
+                break
+            }
             if (all[end] == ' ') lastBreak = end + 1
             end++
         }
-        at = if (end >= all.length) all.length else if (lastBreak > at) lastBreak else end
+        at = if (newline) end + 1 else if (end >= all.length) all.length else if (lastBreak > at) lastBreak else end
     }
     if (starts.isEmpty()) starts += 0
     val cursorLine = starts.indexOfLast { it <= frame.start.coerceAtMost(all.length) }.coerceAtLeast(0)
     val first = when {
         frame.ghost.isNotEmpty() || frame.field.isEmpty() -> cursorLine
-        frame.steer != SteerAim.None || frame.chapter == GuideChapter.Steering && frame.target != null -> cursorLine
+        // The steering slides show the cursor's line last, with the lines finished before it above.
+        frame.chapter == GuideChapter.Steering -> cursorLine - (FIELD_LINES - 1)
         else -> (cursorLine - 1).coerceAtLeast(0)
-    }.coerceAtMost((starts.size - FIELD_LINES).coerceAtLeast(0))
+    }.coerceAtMost((starts.size - FIELD_LINES).coerceAtLeast(0)).coerceAtLeast(0)
     var start = frame.start
     var target = frame.target
     if (frame.steer != SteerAim.None) {
-        val other = first + 1
+        val other = (cursorLine - 1).coerceAtLeast(0)
         val otherEnd = (starts.getOrNull(other + 1) ?: all.length) - 1
         fun x(at: Int): Float {
             val line = starts.indexOfLast { it <= at }
@@ -480,7 +484,7 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
                 g.fillRect(x + dp(2), top + (row + 1) * line - dp(3), wide, dp(2))
             }
             if (offset >= to) break
-            val char = all[offset].toString()
+            val char = all[offset].toString().replace("\n", "")
             val w = g.fontMetrics.stringWidth(char)
             val aim = shown.target
             if (aim != null && offset in aim) {

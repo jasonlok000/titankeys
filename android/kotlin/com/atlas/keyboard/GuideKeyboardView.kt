@@ -370,8 +370,10 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val elapsed = now - cueStart
         if (elapsed < 0 || elapsed >= round * spot.rounds) return 0f
         val local = (elapsed % round - at * SPOT_STEP_MILLIS).toFloat() / SPOT_STEP_MILLIS
-        if (local < 0f || local >= 1f) return 0f
-        return sin(local * PI).toFloat()
+        if (local < 0f) return 0f
+        // Past its turn, in this round, a key stays softly lit: the hint reads in order, from the first key, in any frame.
+        if (local >= 1f) return if (elapsed % round < spot.keys.size * SPOT_STEP_MILLIS) SPOT_DONE else 0f
+        return max(SPOT_DONE, sin(local * PI).toFloat()).takeIf { local > .5f } ?: sin(local * PI).toFloat()
     }
 
     /** The spot's rounds aren't over yet, so the drawing keeps going. */
@@ -742,6 +744,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val HOVER_FADE_MILLIS = 100f
         /** A spotted key's turn to light, the rest after each round, and how many rounds, before the spot goes quiet. */
         const val SPOT_STEP_MILLIS = 700L
+        /** How lit a spotted key stays once its turn in the round is over. */
+        const val SPOT_DONE = .35f
         const val SPOT_REST_MILLIS = 900L
         /** How lit a held modifier stays, steady. */
         const val HELD_HEAT = .85f

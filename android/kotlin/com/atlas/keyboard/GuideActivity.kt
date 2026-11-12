@@ -906,7 +906,9 @@ class GuideActivity : Activity() {
         // The playground is free typing, so there the strip keeps to your own words.
         // Only where there's text to type along to: elsewhere the bar keeps to your own words.
         if (!playground) GuideHooks.script = { before ->
-            if (!hasText()) "" else GuideScript.letters(passage.wordAt(passage.track(typedSince(before)).next))
+            // Past the end of the slide's line there's nothing more to type along to: room to play, with no word forced.
+            val next = passage.track(typedSince(before)).next
+            if (!hasText() || next >= flow.step.text.split(' ').count { it.isNotEmpty() }) "" else GuideScript.letters(passage.wordAt(next))
         }
         contentResolver.registerContentObserver(Settings.Secure.getUriFor(Settings.Secure.DEFAULT_INPUT_METHOD), false, keyboardChanges)
         clipboard.addPrimaryClipChangedListener(clipChanged)
@@ -1368,6 +1370,9 @@ class GuideActivity : Activity() {
         }
     }
 
+    /** The end of the guide is on the screen: no drawn keys there, only the finale and its buttons (owner, v5). */
+    private fun atEnd() = !playground && ::finaleView.isInitialized && finaleView.visibility == View.VISIBLE
+
     /** The field's own colour on the slides, for a word in a demo to fade into. */
     private fun fieldFill() = if (guideLooks == true) GuideMotion.blend(GuideColours.INK, GuideColours.CREAM, FIELD_FILL) else GuideColours.CREAM
 
@@ -1422,7 +1427,7 @@ class GuideActivity : Activity() {
         val params = keys.layoutParams
         if (params.height == target) return
         params.height = target
-        keys.visibility = if (target == 0) View.GONE else View.VISIBLE
+        keys.visibility = if (target == 0 || atEnd()) View.GONE else View.VISIBLE
         root.post { keys.requestLayout() }
     }
 
@@ -1759,7 +1764,7 @@ class GuideActivity : Activity() {
             if (text.isNotEmpty() && !text.last().isWhitespace()) out.append(' ')
             out.append(shown(track.next))
         }
-        val left = passage.words.size - 1 - track.next
+        val left = step.text.split(' ').count { it.isNotEmpty() } - 1 - track.next
         if (left < 0) return ""
         for (more in 1..minOf(GHOST_WORDS, left)) out.append(' ').append(shown(track.next + more))
         return out.toString()
@@ -2646,11 +2651,15 @@ class GuideActivity : Activity() {
 
     /** Puts [line] in the field again and again, with the cursor in the middle after a space. */
     private fun seedSteering(line: String) {
-        val text = looping(line) + " "
+        // The lines finished so far, then the slide's own: text to steer through that reads as the user's own, and never the
+        // same line again and again (owner, v5).
+        val before = GUIDE_STEPS.takeWhile { it.id != flow.step.id }.map { it.line }.filter { it.isNotEmpty() }.takeLast(STEER_LINES_BEFORE)
+        val text = (before + line).joinToString("\n") + " "
         field.setText(text)
         steerLength = text.length
         val middle = text.length / 2
-        field.setSelection((text.indexOf(' ', middle) + 1).coerceIn(0, text.length))
+        // The cursor starts at the end of the slide's line; the word to steer to is on a line above.
+        field.setSelection(text.length - 1)
         steerAim = null
         inSteerAim = false
         if (flow.step.id == "steer") field.post { pickSteerAim() }
@@ -2688,6 +2697,8 @@ class GuideActivity : Activity() {
 
     /** The cursor near either end of the steering line moves by a whole line, to the same place in a copy nearer the middle. */
     private fun recentre() {
+        // The steering text no longer loops (v5), so there's no copy to move to.
+        if (!flow.step.seed.isEmpty()) return
         val start = field.selectionStart
         val end = field.selectionEnd
         if (start < 0 || end < 0) return
@@ -2882,7 +2893,7 @@ class GuideActivity : Activity() {
                 panelOpen = event.panel != Modifiers.Panel.Closed
                 // The real panel shows the keys right above the finger, so the drawing of them steps aside while it's open,
                 // instead of drawing the panel a second time.
-                if (keys.layoutParams.height > 0) keys.visibility = View.VISIBLE
+                if (keys.layoutParams.height > 0 && !atEnd()) keys.visibility = View.VISIBLE
                 // The panel's room is the keyboard's only while it's open: closed, the slide gets it back (owner, v5: slide 12).
                 root.requestApplyInsets()
                 altOn = event.alt != Modifiers.Level.Off
@@ -3804,6 +3815,8 @@ class GuideActivity : Activity() {
         private const val KEYS_SHARE = .5f
         /** The field on the slides: three lines, at this size. */
         private const val FIELD_LINES = 3
+        /** How many of the lines finished so far the steering slides put above their own. */
+        private const val STEER_LINES_BEFORE = 4
         private const val FIELD_SP = 21f
         private const val FIELD_DP = 27
         /** A bottom inset this much over the keyboard's own is an open panel's, in dp. */

@@ -46,6 +46,8 @@ private data class Frame(
     val labels: Map<String, String>? = null,
     /** What the field marks in orange to aim at. See [GuideMemory.target]. */
     val target: IntRange? = null,
+    /** How much of the clown hunt's bar is left under the instruction, from 1 to 0, or null for no bar. */
+    val hunt: Float? = null,
     /** The steer slide's word, found as the field wraps; [SteerAim.Entered] draws the cursor in it. */
     val steer: SteerAim = SteerAim.None,
 )
@@ -154,6 +156,18 @@ private fun framesFor(step: GuideStep): List<Frame> {
         frames += frame("2-stage2", step.title, step.stages[1].text).copy(steer = SteerAim.Start)
         frames += frame("2-stage2-entered", step.title, step.stages[1].text).copy(steer = SteerAim.Entered)
         frames += frame("4-passed", step.done, step.praise, passed = true).copy(steer = SteerAim.Entered)
+        return frames
+    }
+    // The clown hunt: the bar full, half gone, then the count-up with its chip at 20 s, the hint at 30 s, and found.
+    if (step.id == "clown") {
+        frames.removeAll { it.name.endsWith("-2-stage2") || it.name.endsWith("-4-passed") }
+        val open = "Emoji panel open"
+        frames += frame("2-stage2-hunt0s", step.title, HUNT_LINE, panel = open).copy(hunt = 1f)
+        frames += frame("2-stage2-hunt10s", step.title, HUNT_LINE, panel = open).copy(hunt = .5f)
+        frames += frame("2-stage2-hunt20s", step.title, huntLine(HUNT_DRAIN_SECONDS), chip = HUNT_SLOW, panel = open)
+        frames += frame("2-stage2-hunt25s", step.title, huntLine(25), panel = open)
+        frames += frame("2-stage2-hunt30s", step.title, huntLine(HUNT_HINT_SECONDS), chip = HUNT_HINT, panel = open)
+        frames += frame("4-passed", step.done, huntPraise(7), passed = true, from = passedField(step, field))
         return frames
     }
     // Grab a bunch: one word picked, then more as the finger slides, then all of them.
@@ -307,6 +321,10 @@ private fun draw(frame: Frame, file: File) {
         val shown = fit(g, frame.line, inner)
         g.drawString(shown, side, y + lineHeight / 2 + g.fontMetrics.ascent / 2 - dp(2))
         if (g.fontMetrics.stringWidth(frame.line) > inner) mark(g, "LINE TOO LONG", y)
+    }
+    frame.hunt?.let { left ->
+        g.color = orange
+        g.fillRect(side, y + lineHeight - dp(3), Math.round(inner * left), dp(3))
     }
     y += lineHeight + dp(10)
     // The field: exactly two lines, on ink, with what's typed in cream and the ghost after it in grey.

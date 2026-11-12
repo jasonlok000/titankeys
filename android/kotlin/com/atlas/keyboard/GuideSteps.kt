@@ -764,6 +764,19 @@ internal fun grabbed(text: String, aim: IntRange, start: Int, end: Int): Int {
     return if (words(start, aim.first) + words(aim.last + 1, end) > GRAB_EXTRA) GRAB_GREEDY else GRAB_ALL
 }
 
+/** The clown hunt's instruction, its bar's time, and when its chip and its hint show, in seconds. */
+internal const val HUNT_LINE = "Find 🤡 and type it."
+internal const val HUNT_DRAIN_SECONDS = 20
+internal const val HUNT_HINT_SECONDS = 30
+internal const val HUNT_SLOW = "Shouldn't be that hard. Unless you're slow."
+internal const val HUNT_HINT = "Still looking? Smileys, right after 💩."
+
+/** The clown hunt's instruction once its bar has drained: the time, counting up. */
+internal fun huntLine(seconds: Int) = "$HUNT_LINE $seconds s"
+
+/** The clown slide's praise, with the time it took. */
+internal fun huntPraise(seconds: Int) = "Found in $seconds s. Sym three times closes."
+
 /** The stray d, in orange, while it's there. */
 internal fun strayTarget(text: String) = text.lastIndexOf(STRAY).takeIf { it >= 0 }?.let { (it + STRAY.length - 2)..(it + STRAY.length - 2) }
 
@@ -1324,7 +1337,9 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Find 🤡 and type it.", GuideCue.Free) { event ->
+            // A hunt: a bar drains for 20 s, silent, then a count-up, with a chip at 20 s and a hint at 30 s. It never fails. The
+            // screen keeps the time (design v4).
+            GuideStage(HUNT_LINE, GuideCue.Free) { event ->
                 when {
                     event is FieldChanged && event.text.trimEnd().endsWith(CLOWN) -> GuideVerdict.Done
                     otherSymbol(event, CLOWN) -> chip("Not what we asked for. Reading's optional, huh.")
@@ -1335,9 +1350,8 @@ internal val GUIDE_STEPS = listOf(
         ),
         done = "Hey, that's you.",
         // v3.1's "Sym once is symbols, twice is emoji, three times closes." is two lines.
+        // Once found, the praise is the time: see [huntPraise]. This shows if the hunt had no time.
         praise = "Sym once: symbols. Twice: emoji. Three: closes.",
-        helpTitle = "Shouldn't be that hard. Unless you're slow.",
-        help = "Find 🤡 in the emoji and type it.",
         text = SYMBOLS_TEXT,
         symbol = CLOWN,
         usesPanel = true,

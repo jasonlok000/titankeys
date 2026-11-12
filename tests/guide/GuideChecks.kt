@@ -576,6 +576,8 @@ private fun scenarios() {
     repeat(REGRETS_TO_PASS - 2) { same(regret.event(DeletedWord(held = true)), GuideVerdict.Wait, "Under eight, it waits") }
     same(regret.event(DeletedWord(held = true)), GuideVerdict.Done, "The eighth word passes")
     same(regretsFinal(12).length <= LINE_MOST, true, "The frozen count is one line")
+    for (line in listOf(huntLine(999), huntPraise(999), HUNT_SLOW, HUNT_HINT)) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
+    same(HUNT_DRAIN_SECONDS < HUNT_HINT_SECONDS, true, "The slow chip comes as the bar runs out, and the hint after it")
 
     val steer = GuideFlow({ GuideSettings() })
     steer.start("steer")

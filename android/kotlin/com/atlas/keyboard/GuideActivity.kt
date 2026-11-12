@@ -583,6 +583,33 @@ class GuideActivity : Activity() {
     private lateinit var phantom: TextView
     /** The instruction's line, with the chip that slides over it for a real mistake, and the room that is left above the keys. */
     private lateinit var instruction: FrameLayout
+    /** The clown hunt's bar under the instruction, draining for [HUNT_DRAIN_SECONDS]. */
+    private lateinit var huntBar: View
+    /** When the clown hunt began, or -1 with no hunt on. */
+    private var huntStart = -1L
+    /** What the clown hunt has said: 1 its chip, 2 its hint too. */
+    private var huntSaid = 0
+    /** Each second of the clown hunt: the count-up, and its chip and hint when their time comes. */
+    private val huntTick = object : Runnable {
+        override fun run() {
+            if (huntStart < 0 || passed || flow.step.id != "clown") return
+            val seconds = huntSeconds()
+            if (seconds >= HUNT_DRAIN_SECONDS) {
+                huntBar.visibility = View.GONE
+                if (flow.stage == 1) body.text = huntLine(seconds)
+            }
+            // Each once, even if a tick comes late.
+            if (seconds >= HUNT_DRAIN_SECONDS && huntSaid < 1) {
+                huntSaid = 1
+                showChip(HUNT_SLOW)
+            }
+            if (seconds >= HUNT_HINT_SECONDS && huntSaid < 2) {
+                huntSaid = 2
+                showChip(HUNT_HINT)
+            }
+            main.postDelayed(this, 1000L - (SystemClock.uptimeMillis() - huntStart) % 1000L)
+        }
+    }
     private lateinit var chip: TextView
     private lateinit var spacer: View
     /** The most room at the bottom that the keyboard took while the slides show, so the keys never jump. See the insets listener. */
@@ -1089,6 +1116,12 @@ class GuideActivity : Activity() {
             addView(body, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             addView(chip, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT,
                 Gravity.START or Gravity.CENTER_VERTICAL))
+            huntBar = View(context).apply {
+                background = rounded(GuideColours.ORANGE, Radii.SMALL)
+                pivotX = 0f
+                visibility = View.GONE
+            }
+            addView(huntBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3), Gravity.BOTTOM))
         }
         spacer = View(this)
         column = LinearLayout(this).apply {
@@ -1410,6 +1443,7 @@ class GuideActivity : Activity() {
         val carry = enteredChapter == step.chapter && step.carriesField
         regrets = 0
         regretsFrozen = false
+        stopHunt()
         if (enteredChapter != step.chapter) {
             deleteResets = 0
             if (step.chapter == GuideChapter.End) markAllFinished()
@@ -1799,7 +1833,8 @@ class GuideActivity : Activity() {
     /** Nobody acted for a while: the slide asks, with its own instruction, and asks again after [again] if it's not -1. */
     @Suppress("UNUSED_PARAMETER")
     private fun idle(title: String, again: Long) {
-        if (passed || busy || changing || playground || settingUp || idleChipShown) return
+        // The clown hunt keeps its own time and says its own things.
+        if (passed || busy || changing || playground || settingUp || idleChipShown || huntStart >= 0) return
         idleChipShown = true
         showChip(title)
     }
@@ -2700,6 +2735,29 @@ class GuideActivity : Activity() {
         body.text = settledPraise
     }
 
+    /** Seconds since the clown hunt began. */
+    private fun huntSeconds() = ((SystemClock.uptimeMillis() - huntStart) / 1000L).toInt()
+
+    /** The clown hunt begins once the emoji are open: the bar drains, silent, and the time is kept. It never fails. */
+    private fun startHunt() {
+        if (huntStart >= 0 || passed || playground || flow.step.id != "clown" || flow.stage != 1) return
+        huntStart = SystemClock.uptimeMillis()
+        huntSaid = 0
+        huntBar.animate().cancel()
+        huntBar.scaleX = 1f
+        huntBar.visibility = View.VISIBLE
+        huntBar.animate().scaleX(0f).setDuration(HUNT_DRAIN_SECONDS * 1000L).setInterpolator(android.view.animation.LinearInterpolator()).start()
+        main.postDelayed(huntTick, 1000L)
+    }
+
+    private fun stopHunt() {
+        huntStart = -1L
+        main.removeCallbacks(huntTick)
+        if (!::huntBar.isInitialized) return
+        huntBar.animate().cancel()
+        huntBar.visibility = View.GONE
+    }
+
     /** A line the slide shows in place of its instruction while it's tried, such as a count. See [GuideStep.live]. */
     private fun showLive() {
         if (passed || playground) return
@@ -2886,6 +2944,7 @@ class GuideActivity : Activity() {
         idleShown = false
         // The instruction changes only here, when the slide moves to its next step.
         swapIn(body, flow.instruction, 0)
+        startHunt()
         showScript()
         // The swipe came out wrong on purpose: the right word, wherever it is on the bar, dances to show where to tap.
         if (flow.step.nearMiss && flow.stage > 0) pointAtRightWord() else GuideHooks.stripPointWord(null)
@@ -2919,8 +2978,11 @@ class GuideActivity : Activity() {
         val step = flow.step
         markPassed(step)
         showSuccess(reaction ?: step.done)
+        val hunted = if (step.id == "clown" && huntStart >= 0) huntSeconds() else -1
+        stopHunt()
         val said = praise ?: when (step.id) {
             "symgroups" -> groupsPraise(flow.counted)
+            "clown" -> if (hunted >= 0) huntPraise(hunted) else step.praise
             // The count carries on under the success line, until the finger lifts.
             "hold" -> {
                 regrets = flow.tally

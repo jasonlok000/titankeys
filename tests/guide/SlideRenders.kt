@@ -46,6 +46,8 @@ private data class Frame(
     val labels: Map<String, String>? = null,
     /** What the field marks in orange to aim at. See [GuideMemory.target]. */
     val target: IntRange? = null,
+    /** Keys that the slide lights on the drawing. See [GuideCue.Spot]. */
+    val spot: List<String> = emptyList(),
     /** How much of the clown hunt's bar is left under the instruction, from 1 to 0, or null for no bar. */
     val hunt: Float? = null,
     /** The steer slide's word, found as the field wraps; [SteerAim.Entered] draws the cursor in it. */
@@ -135,7 +137,8 @@ private fun framesFor(step: GuideStep): List<Frame> {
     // Each later instruction, as the slide moves on to it.
     for ((index, stage) in step.stages.withIndex().drop(1)) {
         val panel = if (step.usesPanel && index > 0 && step.id != "alt") "Sym panel open" else null
-        frames += frame("2-stage${index + 1}", step.title, stage.text, panel = panel).copy(labels = stage.labels)
+        frames += frame("2-stage${index + 1}", step.title, stage.text, panel = panel)
+            .copy(labels = stage.labels, spot = (stage.cue as? GuideCue.Spot)?.keys.orEmpty())
     }
     // A real mistake: its chip over the instruction.
     MISTAKES[step.id]?.let { events ->
@@ -150,6 +153,8 @@ private fun framesFor(step: GuideStep): List<Frame> {
         }
         if (said != null) frames += frame("3-chip", step.title, flow.instruction, chip = said)
     }
+    // The swipe slide counts down the swipes left, after the first.
+    if (step.id == "swipe") frames += frame("2-count", step.title, swipesLeft(2))
     // The steer slide: its word marked; the cursor in it as the finger slides; passed there.
     if (step.id == "steer") {
         frames.removeAll { it.name.endsWith("-2-stage2") }
@@ -343,7 +348,7 @@ private fun draw(frame: Frame, file: File) {
     g.color = rgb(Paint.CREAM, .35f)
     g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(12))
     g.drawString("(free room)", side, (y + keysTop) / 2)
-    drawKeys(g, keysTop, side, frame.panel, frame.labels)
+    drawKeys(g, keysTop, side, frame.panel, frame.labels, frame.spot)
     g.dispose()
     ImageIO.write(image, "png", file)
 }
@@ -449,7 +454,7 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
     }
 }
 
-private fun drawKeys(g: Graphics2D, top: Int, side: Int, panel: String?, labels: Map<String, String>? = null) {
+private fun drawKeys(g: Graphics2D, top: Int, side: Int, panel: String?, labels: Map<String, String>? = null, spot: List<String> = emptyList()) {
     val width = (WIDTH - 2 * side) / 10f
     val row = dp(50)
     g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(16))
@@ -460,7 +465,7 @@ private fun drawKeys(g: Graphics2D, top: Int, side: Int, panel: String?, labels:
             // With labels, a labelled key shows its label, lit, and a letter without one is an empty, faint key.
             val labelled = labels?.get(key)
             val faint = labels != null && labelled == null && Layout.isLetter(key)
-            g.color = if (labelled != null) orange else rgb(Paint.CREAM, if (faint) .04f else .09f)
+            g.color = if (labelled != null) orange else if (key in spot) rgb(Paint.ORANGE, .55f) else rgb(Paint.CREAM, if (faint) .04f else .09f)
             g.fill(RoundRectangle2D.Float(x + dp(2), y + dp(2).toFloat(), width - dp(4), row - dp(4).toFloat(), dp(8).toFloat(), dp(8).toFloat()))
             g.color = if (labelled != null) ink else rgb(Paint.CREAM, .6f)
             val font = g.font

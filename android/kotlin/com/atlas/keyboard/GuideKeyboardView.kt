@@ -332,7 +332,10 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         drawLabel(canvas, key, label, labelColour)
         // Like the real keys, each letter has its Alt symbol printed small in its top left corner.
         altSymbols[key.name]?.takeIf { label == key.name && face == null }?.let { symbol ->
-            altPaint.color = GuideMotion.faded(labelColour, ALT_ALPHA)
+            // A slide that spots letter keys, as Alt's does with A for its *, fades the other corners, so the one to find stands out.
+            val spotted = (cue as? GuideCue.Spot)?.keys?.takeIf { keys -> keys.all(Layout::isLetter) }
+            val alpha = if (spotted != null && key.name !in spotted) ALT_ALPHA * ALT_FADED else ALT_ALPHA
+            altPaint.color = GuideMotion.faded(labelColour, alpha)
             altPaint.textSize = min(key.box.width(), key.box.height()) * ALT_SIZE
             canvas.drawText(symbol, key.box.left + inset + key.box.width() * ALT_INSET, key.box.top + inset - altPaint.ascent() + key.box.height() * ALT_INSET / 2, altPaint)
         }
@@ -686,6 +689,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val APPEAR_MILLIS = 280L
         const val APPEAR_SPREAD_MILLIS = 340f
         const val FLIP_MILLIS = 1500L
+        /** How much the corner symbols fade, beside a spotted letter key's. */
+        const val ALT_FADED = .35f
         /** The part of the time that one turn of the key takes. */
         const val FLIP_TURN = .12f
 

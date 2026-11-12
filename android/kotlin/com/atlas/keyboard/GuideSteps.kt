@@ -777,6 +777,12 @@ internal fun huntLine(seconds: Int) = "$HUNT_LINE $seconds s"
 /** The clown slide's praise, with the time it took. */
 internal fun huntPraise(seconds: Int) = "Found in $seconds s. Sym three times closes."
 
+/** The swipe slide's instruction after a swipe: the same words, and how many are left. */
+internal fun swipesLeft(left: Int) = "Slide over the next grey word. $left to go."
+
+/** The key that types [ALT_SYMBOL] with Alt on the Titan 2 Elite: * is in A's corner. */
+internal const val ALT_SYMBOL_KEY = "A"
+
 /** The stray d, in orange, while it's there. */
 internal fun strayTarget(text: String) = text.lastIndexOf(STRAY).takeIf { it >= 0 }?.let { (it + STRAY.length - 2)..(it + STRAY.length - 2) }
 
@@ -935,6 +941,8 @@ internal val GUIDE_STEPS = listOf(
         }),
         done = "One swipe, one word. Look at you.",
         praise = "Swipe the next one, or press Next.",
+        // After the first swipe, the instruction counts down the swipes left (design v4).
+        live = { if (count in 1 until SWIPES_TO_PASS) swipesLeft(SWIPES_TO_PASS - count) else null },
         text = TYPING_TEXT,
         cue = GuideCue.NextWord,
         needs = GuideNeed.SwipeTyping,
@@ -1193,7 +1201,8 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Keep holding Alt and press the $ALT_SYMBOL key.") { event ->
+            // The key with * in its corner lights on the drawing, and the other corners fade (design v4).
+            GuideStage("Keep holding Alt and press the $ALT_SYMBOL key.", GuideCue.Spot(listOf(ALT_SYMBOL_KEY))) { event ->
                 when {
                     typedSymbol(event, ALT_SYMBOL) -> GuideVerdict.Done
                     event is Pushed && isLetter(event.code) -> {

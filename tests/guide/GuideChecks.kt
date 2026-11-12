@@ -578,6 +578,12 @@ private fun scenarios() {
     repeat(REGRETS_TO_PASS - 2) { same(regret.event(DeletedWord(held = true)), GuideVerdict.Wait, "Under eight, it waits") }
     same(regret.event(DeletedWord(held = true)), GuideVerdict.Done, "The eighth word passes")
     same(regretsFinal(12).length <= LINE_MOST, true, "The frozen count is one line")
+    val swipes = GuideFlow({ GuideSettings() })
+    swipes.start("swipe")
+    same(swipes.liveLine(), null, "The swipe slide shows its instruction until a swipe")
+    swipes.event(Recognised(listOf("this")))
+    same(swipes.liveLine(), "Slide over the next grey word. 2 to go.", "then counts down")
+    same(GUIDE_STEPS.first { it.id == "alt" }.stages[1].cue, GuideCue.Spot(listOf("A")), "Alt's slide lights A, where * is")
     for (line in listOf(huntLine(999), huntPraise(999), HUNT_SLOW, HUNT_HINT)) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
     same(HUNT_DRAIN_SECONDS < HUNT_HINT_SECONDS, true, "The slow chip comes as the bar runs out, and the hint after it")
 

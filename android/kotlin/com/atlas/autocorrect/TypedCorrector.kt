@@ -509,11 +509,19 @@ class TypedCorrector(
 
     companion object {
         private const val MAX_CANDIDATES = 64
+        /** "I" and its contractions. They need no word data, so they get their capital even before it loads. */
+        private val CAPITAL_I = mapOf("i" to "I", "i'm" to "I'm", "i've" to "I've", "i'll" to "I'll", "i'd" to "I'd")
         /** Words that are always written with a capital, however they are typed. */
-        private val ALWAYS_CAPITAL = mapOf("i" to "I", "i'm" to "I'm", "i've" to "I've", "i'll" to "I'll", "i'd" to "I'd",
+        private val ALWAYS_CAPITAL = CAPITAL_I + mapOf(
             // Titles that are never ordinary words. Acronyms such as OK, PC and CD stay as typed: lowercase is common in chat.
             // "mr" can be a slip for "me": the typo check runs first, and only a "mr" it leaves becomes "Mr".
             "mr" to "Mr", "mrs" to "Mrs", "dr" to "Dr", "jr" to "Jr", "phd" to "PhD")
+
+        /** "i" as "I", and "i'm" as "I'm", with the apostrophe as typed. Null for every other word, and for one already right. */
+        fun capitalI(word: String): String? {
+            val fixed = CAPITAL_I[word.replace('’', '\'')] ?: return null
+            return (if ('’' in word) fixed.replace('\'', '’') else fixed).takeIf { it != word }
+        }
         /** How common a name must be to take its capitals by itself: "England" (141) and "iPhone" (100) are, "Cali" (78) is not. */
         private const val COMMON_NAME_FREQUENCY = 95
         private val SENTENCE_END_MARKS = setOf('.', '!', '?')

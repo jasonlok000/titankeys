@@ -280,6 +280,8 @@ private fun oneInstructionAtATime() {
     paste.start("paste")
     same(paste.step.clip, PASTE_TEXT, "The paste lesson puts something stupid on the clipboard")
     same(paste.step.preselect, true, "and starts with a word selected, so the paste goes in its place")
+    same(CLIP_TEXT.startsWith("Paste over $PASTE_OVER"), true, "the word that its first sentence points at")
+    same(GUIDE_CLIPS.size <= 5, true, "Every clip, the prank too, fits on the clipboard's first page")
     same(paste.step.done, "Yes, we know.", "with a line that says so")
     same((paste.event(FieldChanged("Paste over", 10, 10)) as GuideVerdict.Hint).text, "Lost the selection. Classic. Paste anyway.",
         "The selected word lost, so the paste goes where the cursor is")

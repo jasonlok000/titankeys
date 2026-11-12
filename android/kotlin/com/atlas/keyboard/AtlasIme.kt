@@ -1372,7 +1372,7 @@ class AtlasIme : InputMethodService() {
             ClipboardHistory()
         }
         // Earlier guides pinned their clips in the user's clipboard. They go, now that the guide has its own.
-        if (clipHistory.removeTexts(GUIDE_CLIPS.toSet() + PASTE_TEXT)) saveClips()
+        if (clipHistory.removeTexts(OLD_GUIDE_CLIPS)) saveClips()
         expireClips()
     }
 

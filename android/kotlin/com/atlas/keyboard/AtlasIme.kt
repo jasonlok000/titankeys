@@ -1622,12 +1622,11 @@ class AtlasIme : InputMethodService() {
         val pending = pendingWords[key]
         val state = MenuKeys.state(
             saved = pending ?: typing.addedWord(word),
-            builtIn = typing.builtInWord(word),
             favourite = FavouriteWords.get(this).contains(word),
             blocked = key in forgetting || pending == null && !typing.wordAllowed(word),
             learned = pending == null && key !in forgetting && typing.learnedWord(word),
             oneLetter = ForgetWords.oneLetter(word))
-        return Strip.Notice.Menu(word, state.forget, state.step, state.base)
+        return Strip.Notice.Menu(word, state.learned, state.step)
     }
 
     /** Words that Forget is still taking out of the lists, in lowercase: the menu shows them as forgotten already. */
@@ -1648,8 +1647,8 @@ class AtlasIme : InputMethodService() {
     private fun menuPressed(held: HeldWord, button: MenuKeys.Button) {
         val menu = strip?.notice as? Strip.Notice.Menu ?: return
         if (menuWord !== held) return
-        val next = MenuKeys.press(MenuKeys.State(menu.step, menu.base, menu.forget), button) ?: return
-        strip?.notice = menu.copy(step = next.step, base = next.base, forget = next.forget)
+        val next = MenuKeys.press(MenuKeys.State(menu.step, menu.forget), button) ?: return
+        strip?.notice = menu.copy(step = next.step, forget = next.learned)
     }
 
     private fun closeMenu() {
@@ -1755,7 +1754,7 @@ class AtlasIme : InputMethodService() {
         if (inGuide && held != null && action in MENU_CHOICES) {
             when (action) {
                 Strip.Action.Save -> {
-                    haptics.play(Haptic.WordSaved)
+                    menuHaptic(Haptic.WordSaved, MenuKeys.Motion.Save)
                     menuPressed(held, MenuKeys.Button.Save)
                 }
                 Strip.Action.Favourite -> {
@@ -1763,11 +1762,11 @@ class AtlasIme : InputMethodService() {
                     menuPressed(held, MenuKeys.Button.Favourite)
                 }
                 Strip.Action.Unfavourite -> {
-                    haptics.play(Haptic.WordUnfavourited)
+                    menuHaptic(Haptic.WordUnfavourited, MenuKeys.Motion.Unfavourite)
                     menuPressed(held, MenuKeys.Button.Unfavourite)
                 }
                 Strip.Action.Unsave -> {
-                    haptics.play(Haptic.WordUnsaved)
+                    menuHaptic(Haptic.WordUnsaved, MenuKeys.Motion.Unsave)
                     menuPressed(held, MenuKeys.Button.Unsave)
                 }
                 // O forgets, for show: on a saved word that's its step down, Unsave, and in the guide it forgets as well, since the
@@ -1822,7 +1821,7 @@ class AtlasIme : InputMethodService() {
         }
         // Saved plays at the press, as Forget's Removed does. The save itself runs in the background, and a save that fails
         // plays no after it.
-        haptics.play(Haptic.WordSaved)
+        menuHaptic(Haptic.WordSaved, MenuKeys.Motion.Save)
         forgetting -= key
         pendingWords[key] = true
         if (!typing.wordAllowed(held.word)) typing.setWordBlocked(held.word, false) { add() } else add()
@@ -1836,7 +1835,7 @@ class AtlasIme : InputMethodService() {
      */
     private fun unsaveWord(held: HeldWord) {
         val key = held.word.lowercase()
-        haptics.play(Haptic.WordUnsaved)
+        menuHaptic(Haptic.WordUnsaved, MenuKeys.Motion.Unsave)
         pendingWords[key] = false
         SwipeTyping.get(this).removeWord(held.word) { error ->
             if (error != null) {
@@ -1870,16 +1869,33 @@ class AtlasIme : InputMethodService() {
     }
 
     /**
-     * The word is no longer a favourite: one step down, back where it was before, see [MenuKeys.base]: saved, a dictionary word,
-     * or not saved, as an imported favourite may be. The menu stays open.
+     * The word is no longer a favourite: one step down, always to saved (owner, 2026-11-12), dictionary words too. A favourite that
+     * was never saved, as an imported one can be, is saved now, so the menu tells the truth. The menu stays open.
      */
     private fun unfavouriteWord(held: HeldWord) {
         if (!FavouriteWords.get(this).remove(held.word)) {
             haptics.play(Haptic.WordNotSaved)
             return
         }
-        haptics.play(Haptic.WordUnfavourited)
+        menuHaptic(Haptic.WordUnfavourited, MenuKeys.Motion.Unfavourite)
+        val key = held.word.lowercase()
+        val typing = SwipeTyping.get(this)
+        if (!(pendingWords[key] ?: typing.addedWord(held.word))) {
+            pendingWords[key] = true
+            typing.addWord(held.word) { error ->
+                if (error != null) Log.w("Atlas", "Could not save an unfavourited word: $error") else settled(held.word, true)
+            }
+        }
         menuPressed(held, MenuKeys.Button.Unfavourite)
+    }
+
+    /**
+     * Plays a word menu [haptic] when its animation peaks, so what you feel lands with what you see: Save's ribbon landing, the
+     * heart cracking, the ribbon tearing. With motion off there is no animation to wait for, and it plays at once.
+     */
+    private fun menuHaptic(haptic: Haptic, motion: MenuKeys.Motion) {
+        val peak = MenuMotion.peak(motion)
+        if (peak <= 0L || !GuideMotion.enabled) haptics.play(haptic) else main.postDelayed({ haptics.play(haptic) }, peak)
     }
 
     /** The guide's Forget: the real one's notice and haptic, then the bar as it was. Nothing is forgotten or hidden. */

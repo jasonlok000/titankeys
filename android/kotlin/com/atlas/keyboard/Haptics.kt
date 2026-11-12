@@ -102,8 +102,11 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     DeleteCrunch("delete_crunch", HapticGroup.Delete, Family.Crunch),
     /** A stroke that crunched stopped being a flick: one firm tick, and swiping's ticks from there. */
     DeleteBreak("delete_break", HapticGroup.Delete, Family.Boundary),
-    /** A flick with nothing at all to delete: nothing happened. */
-    DeleteNothing("delete_nothing", HapticGroup.Delete, Family.Wall),
+    /**
+     * A flick with nothing at all to delete, or a hold with nothing to delete, which never starts: nothing happened, so a no
+     * (owner, 2026-11-12). A wall is only for a gesture that did something and then ran out, as [DeleteRanOut].
+     */
+    DeleteNothing("delete_nothing", HapticGroup.Delete, Family.No),
     /** A held delete took the last word: it hit the start of the text. It plays once, and the hold stays quiet after it. */
     DeleteRanOut("delete_ran_out", HapticGroup.Delete, Family.Wall),
     /**
@@ -180,13 +183,19 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     PanelMark("panel_mark", HapticGroup.Panels, Family.Texture),
     PanelPage("panel_page", HapticGroup.Panels, Family.Boundary),
     PanelGroup("panel_group", HapticGroup.Panels, Family.Boundary),
-    QuickSetting("quick_setting", HapticGroup.Panels, Family.Confirm),
+    /** A switch on the quick settings page turned on: it locks in. Its id is the old "Quick setting switched", so its switch stays. */
+    QuickSettingOn("quick_setting", HapticGroup.Panels, Family.Lock),
+    /** A switch on the quick settings page turned off: it lets go. */
+    QuickSettingOff("quick_setting_off", HapticGroup.Panels, Family.Release),
     ClipPasted("clip_pasted", HapticGroup.Panels, Family.Confirm),
     ClipPinned("clip_pinned", HapticGroup.Panels, Family.Lock),
     ClipUnpinned("clip_unpinned", HapticGroup.Panels, Family.Release),
     ClipboardCleared("clipboard_cleared", HapticGroup.Panels, Family.Gone),
 
-    BugRecording("bug_recording", HapticGroup.Other, Family.Confirm),
+    /** Record a bug started: it locks in. Its id is the old "Record a bug starts or stops", so its switch stays. */
+    BugRecordingStarted("bug_recording", HapticGroup.Other, Family.Lock),
+    /** Record a bug stopped: it lets go. */
+    BugRecordingStopped("bug_recording_stopped", HapticGroup.Other, Family.Release),
     GuideCelebration("guide_celebration", HapticGroup.Other, Family.Celebrate),
     /** Next pressed in the guide. */
     GuideNext("guide_next", HapticGroup.Other, Family.Confirm),
@@ -203,6 +212,19 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
 
         /** What a short tap on an exact typing chip plays: Release when it unlocks a locked chip, and Confirm otherwise. */
         fun chipTapped(wasLocked: Boolean) = if (wasLocked) ExactUnlock else ExactChip
+
+        /** What a quick setting plays as it switches: Lock on, Release off (owner, 2026-11-12). */
+        fun quickSetting(on: Boolean) = if (on) QuickSettingOn else QuickSettingOff
+
+        /** What Record a bug plays: Lock as it starts, Release as it stops (owner, 2026-11-12). */
+        fun bugRecording(started: Boolean) = if (started) BugRecordingStarted else BugRecordingStopped
+
+        /**
+         * What a delete with nothing before the cursor plays: a no when the gesture found nothing at all ([tookAny] false: a
+         * flick, or a hold that never started), and a wall when it took words and then ran out. The same rule as every gesture:
+         * nothing found is a no, a gesture that ran out is a wall (owner, 2026-11-12).
+         */
+        fun deleteFoundNothing(tookAny: Boolean) = if (tookAny) DeleteRanOut else DeleteNothing
 
         /** What a double or triple tap plays: Lock when it picked a word, and Nothing to pick when there was none. */
         fun picked(found: Boolean) = if (found) WordPicked else NothingToPick
@@ -644,11 +666,21 @@ class Haptics(private val context: Context) {
     fun attempt(haptic: Haptic) = attempt(haptic, pattern(context, haptic.family))
 
     /**
+     * A key on exact typing's bar: Confirm, as before, or with the Haptics lab's experiment "Exact-typing keys feel like a key"
+     * on, in TitanKeys Debug, a texture tick, as a key press feels. It keeps its own switch either way.
+     */
+    fun exactKey(): Boolean {
+        if (!exactKeysTexture(context)) return play(Haptic.ExactKey)
+        return attempt(Haptic.ExactKey, pattern(context, Family.Texture), family = Family.Texture).played
+    }
+
+    /**
      * Plays [pattern] for [haptic] through its switches and the gate. [word] is the held delete's word, and [dot] a hold's dot of
      * [dots], for the lab.
      */
-    private fun attempt(haptic: Haptic, pattern: List<Long>, word: Int? = null, dot: Int? = null, dots: Int? = null): HapticResult {
-        val result = switches.stops(haptic) ?: gate.check(haptic.family, HapticPalette.millis(pattern))
+    private fun attempt(haptic: Haptic, pattern: List<Long>, word: Int? = null, dot: Int? = null, dots: Int? = null,
+                        family: Family = haptic.family): HapticResult {
+        val result = switches.stops(haptic) ?: gate.check(family, HapticPalette.millis(pattern))
         if (result.played) {
             vibrate(pattern)
             lastPlayedAt = SystemClock.uptimeMillis()
@@ -890,6 +922,20 @@ class Haptics(private val context: Context) {
         }
 
         private const val ZONE_TICKS = "debug_delete_zone_ticks"
+
+        /**
+         * The Haptics lab's experiment "Exact-typing keys feel like a key": exact typing's bar keys play a texture tick instead
+         * of Confirm, for the owner to try (2026-11-12). Off by default. Only TitanKeys Debug reads the lab's switch, and every
+         * other build has it off without looking.
+         */
+        fun exactKeysTexture(context: Context) = debug(context) && preferences(context).getBoolean(EXACT_KEYS_TEXTURE, false)
+
+        fun tryExactKeysTexture(context: Context, on: Boolean) {
+            check(debug(context)) { "Only TitanKeys Debug has the lab's experiments" }
+            preferences(context).edit().putBoolean(EXACT_KEYS_TEXTURE, on).apply()
+        }
+
+        private const val EXACT_KEYS_TEXTURE = "debug_exact_keys_texture"
 
         /**
          * How long a single flick's dots sit on the bar, as the Haptics lab tried it, in ms, or null for the default. Only

@@ -35,16 +35,16 @@ Patterns are on and off in ms, starting with on.
 | **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, the marked button in the word menu or a panel |
 | **Crunch** | 9, 12, 9 | Keys crossed while a stroke is clearly a delete flick |
 | **Boundary** | 30 | A stroke that crunched stops being a flick, the cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel, a long delete's finger going into the pause zone or reaching the top-speed line |
-| **Confirm** | 15, 40, 35 | Ctrl's copy, cut, paste, undo and select all (lab experiment, below), tap a word on the bar, the word menu opens, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
-| **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol, and with the lab experiment below Alt's symbol and a Sym panel symbol |
-| **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar |
-| **Release** | 30 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked, Back closing the word menu |
+| **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, steering starts, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
+| **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol |
+| **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar, a quick setting switched on, Record a bug starts |
+| **Release** | 30 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked, Back closing the word menu, a quick setting switched off, Record a bug stops |
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
 | **Hit** | 50 | Each word a long delete takes after its flick, shorter as it speeds up (see A held delete's hit, below) |
 | **Gone** | 60 | The clipboard cleared |
 | **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
-| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, I on a word that's already a favourite, taps on Space that find nothing to pick or steer, Ctrl + C with nothing selected, an action the guide blocks |
-| **Wall** | 40, 35, 20, 35, 12 | Steering hits the start or end of the text, selecting reaches either end, a delete with nothing left to delete, short or long |
+| **No** | 25, 40, 25, 40, 25 | A gesture that finds nothing at all: taps on Space or a steer with no text, a flick or a long delete with nothing to delete. Also a word that can't be saved, I on a word that's already a favourite, Ctrl + C with nothing selected, an action the guide blocks |
+| **Wall** | 40, 35, 20, 35, 12 | A gesture that did something and then ran out: steering hits the start or end of the text, selecting reaches either end, a long delete takes the last word |
 | **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations |
 | **Saved** | 20, 40, 20, 40, 50 | Save in the word menu, by I or the strip |
 | **Removed** | 50, 40, 20, 40, 20 | Forget in the word menu, by O or the strip |
@@ -73,9 +73,11 @@ Boundary is texture for the gate: it comes in the same fast runs as the letters,
 
 The owner's table had the delete flick at 50, 30, 20. Its gap is 35 instead, so it keeps rule 4.
 
-Wall is a dot hitting a wall with energy: a hit, then rebounds that die away, like a bouncing ball. The owner's start was 40 on, 30 off, 20 on, 20 off, 12 on. Its gaps are 35 instead, so it keeps rule 4, and the bounces die away by length. Hitting a wall feels the same in all three gestures, steering, selecting and a long delete, and by the same rule (`WallHits`): it plays the first time the gesture meets its limit, then nothing while the finger keeps pushing, and again only after it has moved away and come back. It used to be no, which read as an error. No is now only for nothing happening at all.
+Wall is a dot hitting a wall with energy: a hit, then rebounds that die away, like a bouncing ball. The owner's start was 40 on, 30 off, 20 on, 20 off, 12 on. Its gaps are 35 instead, so it keeps rule 4, and the bounces die away by length. Hitting a wall feels the same in all three gestures, steering, selecting and a long delete, and by the same rule (`WallHits`): it plays the first time the gesture meets its limit, then nothing while the finger keeps pushing, and again only after it has moved away and come back. It used to be no, which read as an error.
 
-A delete's wall is the same wall, played clean (owner, 2026-11-12): a flick with nothing to delete and a long delete that runs out play it alike. It waits until 100 ms after the last crunch, hit or tick, cuts the dots' ticks still to come, and nothing light plays for 100 ms after it (`HapticGate.reserveWall`). A stroke with nothing before the cursor never crunches, and a long delete with nothing to delete never starts: no words on the bar, no dots, only the wall. After the wall the delete stays quiet while you hold, zone ticks too.
+One rule tells the two apart in every gesture (owner, 2026-11-12): **no** when a gesture finds nothing at all, and **wall** only when it moved or did something and then ran out. So a flick with nothing to delete says no, and so does a long delete with nothing to delete, which never starts; a long delete that took the last word hits the wall. Taps on Space or a steer in a field with no text say no; steering or selecting into an end of the text hits the wall.
+
+A long delete's wall is the same wall, played clean (owner, 2026-11-12). It waits until 100 ms after the last crunch, hit or tick, cuts the dots' ticks still to come, and nothing light plays for 100 ms after it (`HapticGate.reserveWall`). After the wall the delete stays quiet while you hold, zone ticks too. A stroke with nothing before the cursor never crunches, and a long delete with nothing to delete never starts: no words on the bar, no dots, only a no, once for the stroke.
 
 ### The delete flick and its dots
 
@@ -136,7 +138,7 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 - A long delete's lines turn into dots as you lift, and those tick the same way as each lands.
 - Keys crossed once the stroke is clearly a flick: crunch. If it stops being one: boundary, once, then swipe ticks (see The crunch).
 - Each further word while you hold: hit, as firm as the flick's first pulse, shorter as the delete speeds up. Every word plays (see A held delete's hit).
-- A flick with nothing at all to delete: wall, clean. A long delete with nothing to delete never starts; it plays the same wall.
+- A flick with nothing at all to delete: no. A long delete with nothing to delete never starts; it plays the same no, once.
 - A long delete takes the last word: wall, once, clean. The delete stays quiet after it while you hold.
 - A long delete's finger goes into the pause zone, or reaches the top-speed line: boundary, once each time (see A long delete's zones).
 
@@ -169,7 +171,7 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 - Undo after Forget: back.
 - Save goes wrong: no.
 - Paste the offered clip: confirm.
-- Exact typing's bar: a key is confirm. A tap on a Shift, Alt or Ctrl chip is confirm, a long press that locks one is lock, and a tap that unlocks a locked one is release.
+- Exact typing's bar: a key is confirm. A tap on a Shift, Alt or Ctrl chip is confirm, a long press that locks one is lock, and a tap that unlocks a locked one is release. The Haptics lab's experiment "Exact-typing keys feel like a key (texture)", off by default, tries a texture tick for the keys instead, in TitanKeys Debug only.
 
 **Shift and Alt**
 - Locked: lock.
@@ -179,13 +181,13 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 **Sym, emoji, quick settings and clipboard**
 - The mark moves to another key: texture.
 - A new page: boundary. A new group: boundary.
-- A quick setting switched: confirm.
+- A quick setting switched on: lock. Switched off: release.
 - Paste a clip: confirm.
 - Pin a clip: lock. Unpin it: release.
 - Clear the clipboard: gone.
 
 **Other**
-- Record a bug starts or stops: confirm.
+- Record a bug starts: lock. It stops: release.
 - The guide's celebrations: celebrate.
 
 ## What plays nothing, and why

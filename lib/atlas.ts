@@ -116,7 +116,8 @@ export type HapticsLab = {
   families: Record<string, { name: string; pattern: number[]; plays: string; tried: boolean }>;
   haptics: Record<string, { family: string; pattern: number[]; plays: string }>;
   /**
-   * The lab's experiments, on or off, by id: dotsSpeedUp, "Dots speed up when long", and deleteZoneTicks, "Tick at delete zones".
+   * The lab's experiments, on or off, by id: dotsSpeedUp, "Dots speed up when long", deleteZoneTicks, "Tick at delete zones",
+   * and exactKeysTexture, "Exact-typing keys feel like a key (texture)".
    */
   experiments: Record<string, boolean>;
   /** How long a single flick's dots sit on the bar before they go into the caret, in ms, and its default. */

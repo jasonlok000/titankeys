@@ -284,3 +284,24 @@ test("the lab tries the mark at a triple press's moving end, and only the debug 
   const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
   expect(ime.match(/GestureDisplay\.selectionEnd = SelectionEnd\.stored\(Haptics\.selectionEndId\(this\)\)/g)?.length).toBe(3);
 });
+
+test("the lab can try exact typing's keys as texture, off by default, and only the debug build reads it", () => {
+  const page = read("app/settings/haptics-lab.tsx");
+  expect(page).toContain('<Toggle label="Exact-typing keys feel like a key (texture)" value={lab.experiments.exactKeysTexture ?? false}');
+  const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
+  expect(haptics).toContain("fun exactKeysTexture(context: Context) = debug(context) && preferences(context).getBoolean(EXACT_KEYS_TEXTURE, false)");
+  expect(read("android/kotlin/com/atlas/keyboard/HapticsLab.kt")).toContain("EXACT_KEYS_TEXTURE -> Haptics.tryExactKeysTexture(context, on)");
+  // The bar's keys go through it.
+  expect(read("android/kotlin/com/atlas/keyboard/AtlasIme.kt")).toContain("haptics.exactKey()");
+});
+
+test("a delete with nothing says no once, a hold that ran out hits the wall, and switches lock on and release off", () => {
+  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  expect(ime).toContain("if (nothingLeft && deleteWall.reached()) haptics.play(Haptic.deleteFoundNothing(tookAny = false))");
+  expect(ime).toContain("if (deleteWall.reached()) haptics.wall(Haptic.deleteFoundNothing(tookAny = true))");
+  expect(ime).toContain("haptics.play(Haptic.quickSetting(on = quickSettingOn(item)))");
+  const adapter = read("android/kotlin/com/vandam/ink/ConnectedAdapter.kt");
+  expect(adapter).toContain("haptics.play(Haptic.bugRecording(started = true))");
+  expect(adapter).toContain("haptics.play(Haptic.bugRecording(started = false))");
+  expect(read("android/kotlin/com/atlas/keyboard/BugRecording.kt")).toContain("Haptics(context).play(Haptic.bugRecording(started = false))");
+});

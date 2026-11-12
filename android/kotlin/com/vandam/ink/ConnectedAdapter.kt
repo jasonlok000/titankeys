@@ -63,13 +63,13 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
                 "bugState" -> bugState().toString()
                 "bugStart" -> {
                     BugRecording.start(activity)
-                    // A click as it starts or stops, since a button on the screen has no click of its own.
-                    haptics.play(Haptic.BugRecording)
+                    // A lock as it starts and a release as it stops, since a button on the screen has no click of its own.
+                    haptics.play(Haptic.bugRecording(started = true))
                     "null"
                 }
                 "bugStop" -> {
                     BugRecording.stop(activity)
-                    haptics.play(Haptic.BugRecording)
+                    haptics.play(Haptic.bugRecording(started = false))
                     "null"
                 }
                 "bugDelete" -> {

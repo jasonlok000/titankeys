@@ -448,7 +448,7 @@ class AtlasIme : InputMethodService() {
             // At the start of the text the hold hits a wall: the same wall as a flick with nothing to delete, played clean, once,
             // and the hold stays quiet while the finger stays, with no words left on the bar, only the caret.
             if (currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true) {
-                if (deleteWall.reached()) haptics.wall(Haptic.DeleteRanOut)
+                if (deleteWall.reached()) haptics.wall(Haptic.deleteFoundNothing(tookAny = true))
                 strip?.gesture?.deleteText("")
                 return@enqueue
             }
@@ -2669,7 +2669,7 @@ class AtlasIme : InputMethodService() {
                 panel?.render()
                 KeyboardEvents.publish { KeyboardEvent.QuickSettingUsed(item, quickSettingOn(item)) }
                 // Opening Settings, the keyboard list or the clipboard opens something you see, so only a switch plays.
-                haptics.play(Haptic.QuickSetting)
+                haptics.play(Haptic.quickSetting(on = quickSettingOn(item)))
             }
         }
     }
@@ -2814,8 +2814,9 @@ class AtlasIme : InputMethodService() {
                 if (outcome.deletesWord) {
                     val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
                     val nothingLeft = before?.isEmpty() == true
-                    // Nothing to delete: the wall, as a hold that runs out plays it, once for the stroke, and played clean.
-                    if (nothingLeft && deleteWall.reached()) haptics.wall(Haptic.DeleteNothing)
+                    // Nothing to delete: nothing happened, so a no, once for the stroke. A hold with nothing to delete never starts,
+                    // and plays just this; its steps after stay quiet, as the stroke has had its say (see [deleteWall]).
+                    if (nothingLeft && deleteWall.reached()) haptics.play(Haptic.deleteFoundNothing(tookAny = false))
                     // A hold's first word: the bar's words are the real ones before it goes.
                     if (before != null) strip?.gesture?.deleteText(before)
                     composer.backspace(true)
@@ -3367,7 +3368,7 @@ class AtlasIme : InputMethodService() {
         val like = KeyEvent(time, time, KeyEvent.ACTION_DOWN, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
             KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD)
         val meta = KeyEvent.normalizeMetaState(ExactTyping.meta(modifiers.metaState, modifiers.ctrlHeld, sticky.meta))
-        haptics.play(Haptic.ExactKey)
+        haptics.exactKey()
         sendExact(like, ExactTyping.plan(code, 0, meta) { 0 }.events)
         sticky.used()
         modifiers.consume()

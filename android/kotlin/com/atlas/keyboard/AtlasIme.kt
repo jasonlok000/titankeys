@@ -1750,10 +1750,10 @@ class AtlasIme : InputMethodService() {
                     haptics.play(Haptic.WordUnfavourited)
                     menuAt(held, MenuKeys.Step.Saved)
                 }
-                Strip.Action.Forget -> {
-                    haptics.play(Haptic.WordForgotten)
-                    closeMenu()
-                }
+                // O forgets, for show: on a saved word that's its step down, Unsave, and in the guide it forgets as well, since the
+                // slide teaches Save, then Forget (owner, v5.2: O didn't forget). It shows Forget's own notice, with its haptic,
+                // for as long as the real Undo would, and nothing is forgotten.
+                Strip.Action.Forget, Strip.Action.Unsave -> showGuideForget(held)
                 else -> Unit
             }
             return
@@ -1766,7 +1766,11 @@ class AtlasIme : InputMethodService() {
                 if (held != null) haptics.play(Haptic.MenuClosed)
                 closeMenu()
             }
-            Strip.Action.Undo -> undoForget()
+            // The guide's Forget forgot nothing, so its Undo only takes the notice away, with the real Undo's haptic.
+            Strip.Action.Undo -> if (inGuide && pendingForget == null && strip?.notice is Strip.Notice.Forgot) {
+                haptics.play(Haptic.ForgetUndone)
+                strip?.notice = null
+            } else undoForget()
             Strip.Action.Save -> if (held != null) saveWord(held)
             Strip.Action.Favourite -> if (held != null) favouriteWord(held)
             // I on a favourite, the top step, is spent: it says no, and does nothing.
@@ -1841,6 +1845,16 @@ class AtlasIme : InputMethodService() {
         haptics.play(Haptic.WordUnfavourited)
         val builtIn = (strip?.notice as? Strip.Notice.Menu)?.builtIn == true
         menuAt(held, MenuKeys.after(MenuKeys.Step.Favourite, MenuKeys.Button.Unfavourite, builtIn) ?: return)
+    }
+
+    /** The guide's Forget: the real one's notice and haptic, then the bar as it was. Nothing is forgotten or hidden. */
+    private fun showGuideForget(held: HeldWord) {
+        haptics.play(Haptic.WordForgotten)
+        menuWord = null
+        strip?.menuMark = -1
+        strip?.notice = Strip.Notice.Forgot(held.word)
+        main.postDelayed({ if ((strip?.notice as? Strip.Notice.Forgot)?.word == held.word && pendingForget == null) strip?.notice = null },
+            FORGET_UNDO_MILLIS)
     }
 
     /** Forget leaves the word off the bar at once, and the engine forgets it once the Undo has had its time. */
@@ -2038,6 +2052,8 @@ class AtlasIme : InputMethodService() {
                 stopCursor()
                 contact.cancelActive()
             }
+            // The guide's drawing of the keys still shows the finger, as it hovers the menu's buttons (owner, v5.2: every swipe).
+            if (inGuide) traceMenuFinger(event, samples)
             return
         }
         when (event.actionMasked) {
@@ -2103,6 +2119,8 @@ class AtlasIme : InputMethodService() {
                 contact.move(samples)
                 // A held delete flick waits for the finger to lift, and goes faster the further the finger is from where it started.
                 if (contact.deleting) {
+                    // The guide's drawing of the keys follows a held delete too (owner, v5.2: some slides showed no trail).
+                    Trace.touch(contact.points, false)
                     strip?.gesture?.swipeCancelled()
                     samples.lastOrNull { it.valid }?.let { finger ->
                         val next = deleteHold.follow(finger)
@@ -2261,7 +2279,19 @@ class AtlasIme : InputMethodService() {
             main.postAtTime(settle, pending.deadline)
         }
         settleHeldTaps()
-        Trace.touch(if (points.size <= Swipe.MAX_POINTS && samples.all { it.valid }) points else emptyList(), true)
+        // A lift whose last samples were off the touchpad still ends the trail the guide drew, and doesn't wipe it: the guide shows
+        // every swipe (owner, v5.2). Trace itself leaves out the points the touchpad didn't read.
+        Trace.touch(if (points.size <= Swipe.MAX_POINTS && (inGuide || samples.all { it.valid })) points else emptyList(), true)
+    }
+
+    /** The finger's path while the word menu is open, for the guide's drawing only: nothing else reads it. */
+    private val menuFinger = ArrayList<Sample>()
+
+    private fun traceMenuFinger(event: MotionEvent, samples: List<Sample>) {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) menuFinger.clear()
+        menuFinger.addAll(samples.filter { it.valid }.take((Swipe.MAX_POINTS - menuFinger.size).coerceAtLeast(0)))
+        val lifted = event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL
+        Trace.touch(menuFinger, lifted)
     }
 
     /**

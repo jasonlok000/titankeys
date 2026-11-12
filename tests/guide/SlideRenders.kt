@@ -71,7 +71,6 @@ private enum class SteerAim { None, Start, Entered }
 /** A mistake for each slide, as the keyboard reports it, so a drawing shows the chip that it gets. */
 private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
     "type" to listOf(Pushed(29), Fixed("Space", "Space")),
-    "strip" to listOf(Fixed("Ohtr", "Other")),
     "swipe" to listOf(Pushed(29), Pushed(62)),
     "menu" to listOf(KeyboardEvent.Chosen("bar")),
     "hold" to listOf(KeyboardEvent.DeleteHoldStarted, DeletedWord(held = true), KeyboardEvent.Moved(40f, lifted = true)),
@@ -89,7 +88,7 @@ private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
 
 /** What each slide's lock blocks, for its blocked frame: the thing most likely tried by chance there. */
 private val BLOCKED: Map<String, GuideLesson> = mapOf(
-    "type" to GuideLesson.BarTap, "strip" to GuideLesson.Swipe, "swipe" to GuideLesson.BarHold, "menu" to GuideLesson.Swipe,
+    "type" to GuideLesson.BarTap, "swipe" to GuideLesson.BarHold, "menu" to GuideLesson.Swipe,
     "backspace" to GuideLesson.Flick, "flick" to GuideLesson.DeleteHold, "hold" to GuideLesson.Backspace, "steer" to GuideLesson.Typing,
     "selectmore" to GuideLesson.Typing, "alt" to GuideLesson.Typing, "holdsym" to GuideLesson.Typing, "symmain" to GuideLesson.Alt,
     "symgroups" to GuideLesson.Typing, "clown" to GuideLesson.Typing, "paste" to GuideLesson.Typing, "clipboard" to GuideLesson.Ctrl,
@@ -101,7 +100,6 @@ private fun at(step: GuideStep, text: String, start: Int = text.length, end: Int
 /** What the field holds on a slide, before anything is done: its text, the cursor or selection, the ghost, and what it marks. */
 private fun fieldFor(step: GuideStep): Frame = when (step.id) {
     "type" -> at(step, "", ghost = TYPE_TYPOS)
-    "strip" -> at(step, "", ghost = BAR_LINE)
     "swipe" -> at(step, SWIPE_LEAD.trimEnd(), ghost = " " + SWIPE_LINE.removePrefix(SWIPE_LEAD))
     "menu" -> at(step, "$MENU_LINE ")
     "backspace" -> at(step, "$BACKSPACE_SEED ", BACKSPACE_SEED.length).copy(target = BACKSPACE_SEED.length - 1..BACKSPACE_SEED.length - 1)
@@ -123,7 +121,7 @@ private fun steeringText(step: GuideStep) =
 
 /** The field once the slide is passed: its line, finished. */
 private fun passedField(step: GuideStep, before: Frame): Frame = when (step.id) {
-    "type", "strip", "swipe", "menu", "backspace", "clipboard" -> at(step, step.line + " ")
+    "type", "swipe", "menu", "backspace", "clipboard" -> at(step, step.line + " ")
     "flick" -> at(step, "$FLICK_LINE ", FLICK_LINE.length - " word".length)
     "hold" -> at(step, "$HOLD_LINE ", "Delete ".length)
     "steer" -> before.copy(start = before.start - 40, end = before.start - 40)
@@ -200,7 +198,7 @@ private fun framesFor(step: GuideStep): List<Frame> {
     val passed = passedField(step, field)
     val praise = when (step.id) {
         "hold" -> regretsLine(REGRETS_TO_PASS)
-        "clown" -> huntPraise(37)
+        "clown" -> CLOWN_HUNT.slow(37)
         "symgroups" -> groupsPraise(1)
         else -> step.praise
     }

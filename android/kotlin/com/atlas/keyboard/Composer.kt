@@ -1704,6 +1704,8 @@ class Composer(
         val at = guessed.indexOfFirst { sameLetters(it, wanted) }
         val right = guessed.getOrNull(at) ?: wanted
         val others = guessed.filterIndexed { index, _ -> index != at }
+        // A slide where nothing can go wrong: whatever was swiped, however badly, becomes the word the line has next (owner, v5.2).
+        if (forceFix()) return listOf(right) + others
         nearMiss(right)?.let { slip ->
             // The right word takes a random place after the wrong one, so it has to be looked for. The guide points at it.
             val rest = others.drop(1)

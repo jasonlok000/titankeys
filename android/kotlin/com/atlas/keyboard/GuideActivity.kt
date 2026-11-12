@@ -305,48 +305,57 @@ internal class GuideOverlay(context: Context) : View(context) {
 }
 
 /** A real text field that says when its selection changes. */
-/** One chapter in the bar at the top: a rounded line that fills from the left as far as [paint] says. */
+/**
+ * One chapter in the bar at the top: a tick for each of its slides, side by side (owner, v5.2), so you see where you are inside the
+ * chapter. A passed slide's tick is filled, the slide you're on is half lit, and the rest wait, faint.
+ */
 private class GuideSegment(context: Context) : View(context) {
     private val pen = Paint(Paint.ANTI_ALIAS_FLAG)
     private var on = 0
     private var off = 0
-    private var fill = 0f
-    /** How strong the glow round the filled part is, from 0 to 1, as the segment steps forward on a pass. */
+    private var passed = BooleanArray(0)
+    private var current = -1
+    /** The tick that a pass fills now, and how far, from 0 to 1, with a small glow that comes and goes. */
+    private var filling = -1
+    private var fill = 1f
     private var glow = 0f
     private var stepping: ValueAnimator? = null
     private val line = context.resources.displayMetrics.density * LINE_DP
     private val reach = context.resources.displayMetrics.density * GLOW_DP
+    private val gap = context.resources.displayMetrics.density * TICK_GAP_DP
 
-    fun paint(on: Int, off: Int, fill: Float) {
+    /** The chapter's [passed] slides, in order, with [current] the one on the screen, or -1 for another chapter's. */
+    fun paint(on: Int, off: Int, passed: BooleanArray, current: Int) {
         this.on = on
         this.off = off
-        if (stepping?.isRunning != true) this.fill = fill.coerceIn(0f, 1f)
+        this.passed = passed
+        this.current = current
         invalidate()
     }
 
-    /** Fills on to [to], with a small glow that comes and goes: the chapter moving on a step as a slide is passed. */
-    fun advance(to: Float) {
+    /** Fills tick [tick], with a small glow that comes and goes: the slide just passed. */
+    fun advance(tick: Int) {
         stepping?.cancel()
-        val from = fill
-        val target = to.coerceIn(0f, 1f)
-        if (!GuideMotion.enabled) {
-            fill = target
+        if (!GuideMotion.enabled || tick !in passed.indices) {
+            filling = -1
             invalidate()
             return
         }
+        filling = tick
         stepping = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = STEP_MILLIS
             interpolator = android.view.animation.DecelerateInterpolator()
             addUpdateListener {
                 val t = it.animatedFraction
-                fill = from + (target - from) * t
+                fill = t
                 // Up quickly, then away.
                 glow = if (t < .3f) t / .3f else 1f - (t - .3f) / .7f
                 invalidate()
             }
             addListener(object : android.animation.AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: android.animation.Animator) {
-                    fill = target
+                    filling = -1
+                    fill = 1f
                     glow = 0f
                     invalidate()
                 }
@@ -356,20 +365,26 @@ private class GuideSegment(context: Context) : View(context) {
     }
 
     override fun onDraw(canvas: Canvas) {
+        val count = passed.size
+        if (count == 0) return
         val top = (height - line) / 2
         val radius = line / 2
-        val filled = maxOf(line, width * fill)
-        if (glow > 0f && fill > 0f) {
-            pen.color = GuideMotion.faded(on, GLOW_ALPHA * glow)
-            val spread = reach * glow
-            canvas.drawRoundRect(0f, top - spread, minOf(width.toFloat(), filled + spread), top + line + spread, radius + spread,
-                radius + spread, pen)
+        val each = (width - gap * (count - 1)) / count
+        for (tick in 0 until count) {
+            val left = tick * (each + gap)
+            val right = left + each
+            pen.color = if (tick == current && !passed[tick]) GuideMotion.faded(on, CURRENT_ALPHA) else off
+            canvas.drawRoundRect(left, top, right, top + line, radius, radius, pen)
+            if (!passed[tick]) continue
+            val filled = if (tick == filling) left + maxOf(line, each * fill) else right
+            if (tick == filling && glow > 0f) {
+                pen.color = GuideMotion.faded(on, GLOW_ALPHA * glow)
+                val spread = reach * glow
+                canvas.drawRoundRect(left - spread, top - spread, filled + spread, top + line + spread, radius + spread, radius + spread, pen)
+            }
+            pen.color = on
+            canvas.drawRoundRect(left, top, filled, top + line, radius, radius, pen)
         }
-        pen.color = off
-        canvas.drawRoundRect(0f, top, width.toFloat(), top + line, radius, radius, pen)
-        if (fill <= 0f) return
-        pen.color = on
-        canvas.drawRoundRect(0f, top, filled, top + line, radius, radius, pen)
     }
 
     private companion object {
@@ -377,6 +392,10 @@ private class GuideSegment(context: Context) : View(context) {
         const val GLOW_DP = 4f
         const val GLOW_ALPHA = .35f
         const val STEP_MILLIS = 600L
+        /** The room between two ticks of a chapter. Chapters are further apart. */
+        const val TICK_GAP_DP = 2f
+        /** How lit the slide you're on is, before it's passed. */
+        const val CURRENT_ALPHA = .55f
     }
 }
 
@@ -984,6 +1003,11 @@ class GuideActivity : Activity() {
     @Deprecated("Back reaches an activity here, because the app does not opt in to predictive back")
     override fun onBackPressed() {
         // Back goes to the step before, like the Back button. From the first step or the ending it leaves the guide.
+        // With the leaving pop-up open, Back closes it: you stay.
+        if (leavePopup != null) {
+            closeLeavePopup()
+            return
+        }
         if (changing) return
         // The playground is the front page, so Back leaves the app, as it does from any app's front page.
         if (playground && !settingUp) {
@@ -1058,7 +1082,7 @@ class GuideActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             includeFontPadding = false
             visibility = View.GONE
-            setPadding(dp(12), 0, dp(12), 0)
+            setPadding(dp(12), dp(6), dp(12), dp(6))
             setTextColor(GuideColours.INK)
             background = rounded(GuideColours.CREAM, Radii.LARGE)
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
@@ -1145,9 +1169,11 @@ class GuideActivity : Activity() {
                 true
             }
         }
-        // Each segment's view is taller than its line, so the glow as it steps forward has room.
-        for (chapter in flow.barChapters) segments.addView(GuideSegment(this),
-            LinearLayout.LayoutParams(0, dp(SEGMENT_HEIGHT + 2 * SEGMENT_GLOW), 1f).apply { marginEnd = dp(3) })
+        // Each segment's view is taller than its line, so the glow as it steps forward has room. Each is as wide as its slides.
+        for ((index, chapter) in flow.barChapters.withIndex()) segments.addView(GuideSegment(this),
+            LinearLayout.LayoutParams(0, dp(SEGMENT_HEIGHT + 2 * SEGMENT_GLOW), flow.idsOf(chapter).size.coerceAtLeast(1).toFloat()).apply {
+                if (index < flow.barChapters.lastIndex) marginEnd = dp(CHAPTER_GAP)
+            })
         again = topAction("Start again") { startAgain() }.apply { visibility = View.GONE }
         guideAction = topAction("Guide") {
             if (playground) leavePlayground(PLAYGROUND_GUIDE) else {
@@ -1156,10 +1182,11 @@ class GuideActivity : Activity() {
             }
         }.apply { visibility = View.GONE }
         settingsAction = topAction("Settings") { leavePlayground(PLAYGROUND_SETTINGS) }.apply { visibility = View.GONE }
+        // ✕ on the right, big enough to hit at once (owner, v5.2).
         close = ImageView(this).apply {
             setImageResource(R.drawable.panel_close)
             contentDescription = "Close"
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setPadding(dp(9), dp(9), dp(9), dp(9))
             setOnClickListener { confirmLeave() }
         }
         boringButton = bigButton(END_NEXT) {
@@ -1168,10 +1195,10 @@ class GuideActivity : Activity() {
             startActivity(Connected.pageIntent(this, "/"))
             finish()
         }.apply { setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(24f), dp(32).toFloat())) }
-        againLink = underLine().apply {
-            text = AGAIN_LINK
-            setPadding(0, dp(10), 0, dp(4))
-            setOnClickListener { startAgain() }
+        // A real button, outlined, not fine print (owner, v5.2).
+        againLink = bigButton(AGAIN_LINK) { startAgain() }.apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(17f), dp(22).toFloat()))
+            setPadding(dp(16), dp(11), dp(16), dp(11))
         }
         finaleView = GuideFinaleView(this).apply {
             visibility = View.GONE
@@ -1194,7 +1221,9 @@ class GuideActivity : Activity() {
                 topMargin = dp(12)
             })
             addView(shareLine, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
-            addView(againLink, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(againLink, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(12)
+            })
         }
         roastView = TextView(this).apply {
             typeface = HEAVY
@@ -1207,36 +1236,44 @@ class GuideActivity : Activity() {
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             setOnClickListener { endRoast() }
         }
-        // One line on top: the chapters, the chapter's name, Skip or Next, and ✕. Back is the phone's Back.
-        val topBar = LinearLayout(this).apply {
+        // On top, the chapters across the whole width, a tick for each slide (owner, v5.2); under them, the chapter's name on the
+        // left, and Skip or Next and ✕ on the right. Back is the phone's Back.
+        val actionsRow = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             minimumHeight = dp(TOP_ACTION)
-            addView(segments, LinearLayout.LayoutParams(0, dp(TOP_ACTION), 1f))
-            addView(chapter, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                marginStart = dp(10)
-            })
+            addView(chapter, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(again, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(guideAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(settingsAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(next, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 marginStart = dp(10)
             })
-            addView(close, LinearLayout.LayoutParams(dp(TOP_ACTION), dp(TOP_ACTION)).apply { marginStart = dp(4) })
+            addView(close, LinearLayout.LayoutParams(dp(CLOSE_SIZE), dp(CLOSE_SIZE)).apply { marginStart = dp(4) })
+        }
+        val topBar = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(segments, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(SEGMENT_HEIGHT + 2 * SEGMENT_GLOW)))
+            addView(actionsRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         // The offer to turn on a setting, if a step needs one, sits above the keys.
+        // Next once a slide is passed: a normal button, not a huge one (owner, v5.2), on the right where a thumb reaches it.
         nextBig = bigButton("Next") { nextPressed() }.apply {
             visibility = View.GONE
             setTextColor(GuideColours.INK)
             background = rounded(GuideColours.ORANGE, OFFER_RADIUS)
+            setPadding(dp(NEXT_PAD_SIDE), dp(NEXT_PAD_TOP), dp(NEXT_PAD_SIDE), dp(NEXT_PAD_TOP))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(NEXT_SP), dp(NEXT_DP).toFloat()))
         }
         val actions = LinearLayout(this).apply {
-            gravity = Gravity.CENTER
-            addView(offer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(nextBig, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            gravity = Gravity.CENTER_VERTICAL or Gravity.END
+            addView(offer, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(nextBig, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = dp(12)
+            })
         }
         instruction = FrameLayout(this).apply {
             addView(body, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-            addView(chip, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT,
+            addView(chip, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.START or Gravity.CENTER_VERTICAL))
             huntBar = View(context).apply {
                 background = rounded(GuideColours.ORANGE, Radii.SMALL)
@@ -1310,24 +1347,24 @@ class GuideActivity : Activity() {
         if (guide) {
             val titlePx = min(sp(TITLE_SP), dp(TITLE_DP).toFloat())
             val bodyPx = min(sp(BODY_SP), dp(BODY_DP).toFloat())
-            title.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
-            title.isSingleLine = true
-            title.maxLines = 1
-            title.ellipsize = TextUtils.TruncateAt.END
-            title.setTextSize(TypedValue.COMPLEX_UNIT_PX, titlePx)
+            // The room goes to the words, not the keys (owner, v5.2): the title and the instruction each have two lines' room at
+            // a bigger size, the same on every slide, and a long one shrinks to fit it rather than lose words.
+            title.isSingleLine = false
+            title.maxLines = TITLE_LINES
+            title.ellipsize = null
             title.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-            title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, lineHeight(HEAVY, titlePx)).apply {
+            title.setAutoSizeTextTypeUniformWithConfiguration(sizeIn(TITLE_SMALLEST_SP, titlePx), titlePx.toInt(), 1, TypedValue.COMPLEX_UNIT_PX)
+            title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, TITLE_LINES * lineHeight(HEAVY, titlePx)).apply {
                 topMargin = dp(GAP)
             }
-            body.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
-            body.isSingleLine = true
-            body.maxLines = 1
-            body.ellipsize = TextUtils.TruncateAt.END
-            body.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodyPx)
+            body.isSingleLine = false
+            body.maxLines = BODY_LINES
+            body.ellipsize = null
             body.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            body.setAutoSizeTextTypeUniformWithConfiguration(sizeIn(BODY_SMALLEST_SP, bodyPx), bodyPx.toInt(), 1, TypedValue.COMPLEX_UNIT_PX)
             chip.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodyPx * CHIP_SCALE)
             instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                lineHeight(MEDIUM, bodyPx) + 2 * dp(CHIP_PAD)).apply { topMargin = dp(GAP) }
+                BODY_LINES * lineHeight(MEDIUM, bodyPx) + 2 * dp(CHIP_PAD)).apply { topMargin = dp(GAP) }
             spacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
             lowerSpacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
             // The field on ink, as the approved frame has it: what's typed in cream, exactly two lines.
@@ -1370,6 +1407,21 @@ class GuideActivity : Activity() {
         }
     }
 
+    /** When the word menu was last seen open, or -1 while it's closed. See [menuSettled]. */
+    private var menuOpenSince = -1L
+    private val menuHint = Runnable { if (!passed && !playground) showScript() }
+
+    /** The word menu has been open for [MENU_SETTLE_MILLIS], so its buttons are in place under the hint. */
+    private fun menuSettled(): Boolean {
+        if (GuideHooks.menuOpen?.invoke() != true) {
+            menuOpenSince = -1L
+            return false
+        }
+        val now = GuideMotion.now()
+        if (menuOpenSince < 0) menuOpenSince = now
+        return now - menuOpenSince >= MENU_SETTLE_MILLIS
+    }
+
     /** The end of the guide is on the screen: no drawn keys there, only the finale and its buttons (owner, v5). */
     private fun atEnd() = !playground && ::finaleView.isInitialized && finaleView.visibility == View.VISIBLE
 
@@ -1378,6 +1430,9 @@ class GuideActivity : Activity() {
 
     /** The grey of what isn't typed yet: the ghost ahead of the cursor, and a demo's words. */
     private fun ghostGrey() = if (guideLooks == true) GuideMotion.faded(GuideColours.CREAM, GHOST_ALPHA) else GuideMotion.faded(GuideColours.INK, PHANTOM_ALPHA)
+
+    /** [sp] in pixels, never more than [most]: the smallest size a title or instruction shrinks to. */
+    private fun sizeIn(sp: Float, most: Float) = min(sp(sp), most).toInt().coerceAtLeast(1)
 
     /** The height of one line of [face] at [px], from its font's top to its bottom, so nothing is cut. */
     private fun lineHeight(face: Typeface, px: Float): Int {
@@ -1416,18 +1471,21 @@ class GuideActivity : Activity() {
     }
 
     /**
-     * Gives the drawing of the keys what room there is. With the Sym panel open the screen is short, so the keys go away.
-     * The panel shows the same keys, right above your finger.
+     * The drawing of the keys is exactly the real keyboard's size: the whole screen's width, past the column's sides, and the
+     * height that the keys' own proportions give it (owner, v5.2). The rest of the room goes to the words. With the screen too
+     * short, as with a panel open, the keys go away: the panel shows the same keys, right above your finger.
      */
     private fun fitKeys() {
         val free = root.height - column.paddingTop - column.paddingBottom
         if (root.width == 0 || free <= 0) return
         val compact = free < dp(COMPACT_HEIGHT)
-        val target = if (compact) 0 else min((root.width - column.paddingLeft - column.paddingRight) * KEYS_ASPECT, free * KEYS_SHARE).toInt()
-        val params = keys.layoutParams
-        if (params.height == target) return
+        val target = if (compact) 0 else keys.heightFor(root.width)
+        val params = keys.layoutParams as LinearLayout.LayoutParams
+        if (params.height == target && params.leftMargin == -column.paddingLeft && params.rightMargin == -column.paddingRight) return
         params.height = target
-        keys.visibility = if (target == 0 || atEnd()) View.GONE else View.VISIBLE
+        params.leftMargin = -column.paddingLeft
+        params.rightMargin = -column.paddingRight
+        keys.visibility = if (target == 0 || atEnd() || panelOpen) View.GONE else View.VISIBLE
         root.post { keys.requestLayout() }
     }
 
@@ -1448,7 +1506,7 @@ class GuideActivity : Activity() {
         again.setTextColor(strong)
         paintEndButtons()
         for (index in 0 until endButtons.childCount) (endButtons.getChildAt(index) as TextView).let { line ->
-            if (line !== boringButton && line !== shareButton) line.setTextColor(GuideMotion.faded(strong, BODY_ALPHA))
+            if (line !== boringButton && line !== shareButton && line !== againLink) line.setTextColor(GuideMotion.faded(strong, BODY_ALPHA))
         }
         roastView.setTextColor(strong)
         guideAction.setTextColor(strong)
@@ -1500,20 +1558,23 @@ class GuideActivity : Activity() {
     @Suppress("UNUSED_PARAMETER")
     private fun paintSegments(done: Int, advancing: Boolean = false) {
         val strong = if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK
-        val current = flow.barChapters.indexOf(flow.step.chapter).let { if (it < 0) flow.barChapters.size else it }
-        // The chapter you're in fills with the slides passed in it: all of them, and it's full.
-        val ids = flow.idsOf(flow.step.chapter)
-        val passedHere = passedIds()
-        val within = ids.count { it in passedHere }.toFloat() / ids.size.coerceAtLeast(1)
-        for (index in 0 until segments.childCount) {
-            val segment = segments.getChildAt(index) as GuideSegment
-            val fill = when {
-                index < current -> 1f
-                index == current -> within
-                else -> 0f
+        val passed = passedIds()
+        // Each chapter is as wide as its slides, so every tick in the bar is the same size (owner, v5.2).
+        for ((index, chapter) in flow.barChapters.withIndex()) {
+            val segment = segments.getChildAt(index) as? GuideSegment ?: continue
+            val ids = flow.idsOf(chapter)
+            val params = segment.layoutParams as LinearLayout.LayoutParams
+            val weight = ids.size.coerceAtLeast(1).toFloat()
+            if (params.weight != weight) {
+                params.weight = weight
+                segment.layoutParams = params
             }
-            segment.paint(on = strong, off = GuideMotion.faded(strong, SEGMENT_OFF), fill = fill)
-            if (advancing && index == current) segment.advance(fill)
+            val here = ids.indexOf(flow.step.id)
+            // A chapter before this one counts as done, as Next can skip a slide.
+            val before = flow.barChapters.indexOf(flow.step.chapter).let { it < 0 || index < it }
+            val ticks = BooleanArray(ids.size) { before || ids[it] in passed }
+            segment.paint(on = strong, off = GuideMotion.faded(strong, SEGMENT_OFF), passed = ticks, current = here)
+            if (advancing && here >= 0) segment.advance(here)
         }
     }
 
@@ -1548,19 +1609,6 @@ class GuideActivity : Activity() {
         }, INTRO_MILLIS)
     }
 
-    /**
-     * The chapter's name next to the bars takes the room of the longest name, always, so the bars keep their size from slide to
-     * slide (owner, v5: they changed size between chapters).
-     */
-    private fun fixChapterWidth() {
-        val widest = GuideChapter.entries.filter { it != GuideChapter.End }.maxOf { chapter.paint.measureText(it.label.uppercase()) }
-        val wide = kotlin.math.ceil(widest).toInt() + chapter.paddingLeft + chapter.paddingRight + dp(2)
-        val params = chapter.layoutParams ?: return
-        if (params.width == wide) return
-        params.width = wide
-        chapter.layoutParams = params
-    }
-
     private fun reveal(step: GuideStep) {
         if (playground) {
             showPlayground()
@@ -1572,7 +1620,6 @@ class GuideActivity : Activity() {
     }
 
     private fun enter(step: GuideStep) {
-        fixChapterWidth()
         guideLook(true)
         showBigNext(false)
         hideChip(now = true)
@@ -1710,16 +1757,22 @@ class GuideActivity : Activity() {
         unlockKeyboard()
         keyboardShown(false)
         // Nothing of the slides stays: the finale has the screen, and the buttons wait at the bottom until it's done.
-        for (view in listOf<View>(script, title, instruction, hint, field, phantom, keys, segments, chapter, again, offer)) view.visibility = View.GONE
+        for (view in listOf<View>(script, title, instruction, hint, field, phantom, keys, segments, again, offer)) view.visibility = View.GONE
+        // The chapter's name keeps its room, empty, so ✕ stays in the top right corner (owner, v5.2: it moved to the left).
+        chapter.visibility = View.INVISIBLE
         next.visibility = View.INVISIBLE
-        endButtons.visibility = View.GONE
+        // The buttons keep their room, unseen, while the finale plays, so it's drawn between the top bar and them and nothing
+        // overlaps, whatever the screen's size (owner, v5.2: the end didn't fit).
+        fillEndChoices()
+        endButtons.visibility = View.INVISIBLE
         spacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
         title.text = end.title
         finaleView.lines = SUMMARY_LINES
         finaleView.visibility = View.VISIBLE
-        finaleView.post {
-            // From under the top bar to where the buttons will be: about the top two thirds of the screen.
-            finaleView.box = (column.paddingTop + dp(TOP_ACTION + 16)).toFloat() to root.height * FINALE_SHARE
+        root.post {
+            val top = (column.paddingTop + dp(TOP_ACTION + 16)).toFloat()
+            val bottom = if (endButtons.height > 0) endButtons.top - dp(FINALE_ROOM).toFloat() else root.height * FINALE_SHARE
+            finaleView.box = top to maxOf(top + dp(160), bottom)
             finaleView.play()
         }
     }
@@ -1731,9 +1784,15 @@ class GuideActivity : Activity() {
     private fun showScript() {
         showPassage()
         // Once a slide is passed nothing glows any more, as Space did on the first slide.
-        val shown = ghostCue(if (playground || passed) GuideCue.Free else flow.cue)
+        // The word menu's key hints wait until the menu is open and its buttons are in: never a blink before (owner, v5.2).
+        val menuWaits = flow.step.bar == GuideBar.Menu && flow.stage > 0 && !menuSettled()
+        val shown = ghostCue(if (playground || passed || menuWaits) GuideCue.Free else flow.cue)
         if (shown != keys.cue) keys.show(shown)
-        keys.face = if (playground || passed) null else flow.labels
+        keys.face = if (playground || passed || menuWaits) null else flow.labels
+        if (menuWaits && menuOpenSince >= 0) {
+            main.removeCallbacks(menuHint)
+            main.postDelayed(menuHint, MENU_SETTLE_MILLIS)
+        }
         showGhost()
     }
 
@@ -2891,9 +2950,9 @@ class GuideActivity : Activity() {
             is KeyboardEvent.HeldSymbol -> lastKey?.let { keys.flip(it, event.symbol) }
             is KeyboardEvent.ModifierState -> {
                 panelOpen = event.panel != Modifiers.Panel.Closed
-                // The real panel shows the keys right above the finger, so the drawing of them steps aside while it's open,
-                // instead of drawing the panel a second time.
-                if (keys.layoutParams.height > 0 && !atEnd()) keys.visibility = View.VISIBLE
+                // The drawing of the keys never covers the real keyboard or its panels (owner, v5.2): it hides while a panel
+                // (Sym, emoji or clipboard) is open, and comes back as it closes. The panel shows the same keys itself.
+                keys.visibility = if (keys.layoutParams.height > 0 && !atEnd() && !panelOpen) View.VISIBLE else View.GONE
                 // The panel's room is the keyboard's only while it's open: closed, the slide gets it back (owner, v5: slide 12).
                 root.requestApplyInsets()
                 altOn = event.alt != Modifiers.Level.Off
@@ -2976,6 +3035,21 @@ class GuideActivity : Activity() {
             flow.seed(field.text.toString(), field.selectionStart)
             haptics.play(Haptic.GuideBlocked)
             showChip(RUDE_CLIP, force = true)
+        }
+        // A wrong symbol in a symbol slide's gap is taken back out at once, so the right one passes on its own (owner, v5.2). The
+        // slide's check says so with its chip.
+        val symbol = step.symbol
+        if (event is KeyboardEvent.FieldChanged && symbol != null && !passed && step.line.isNotEmpty() &&
+            onlyWrongInGap(event.text, step.line, symbol)) {
+            main.post {
+                if (passed || flow.step !== step || !onlyWrongInGap(field.text.toString(), step.line, symbol)) return@post
+                seeding = true
+                field.setText(gapSeed(step.line, symbol))
+                field.setSelection(gapCursor(step.line, symbol).coerceAtMost(field.length()))
+                seeding = false
+                flow.seed(field.text.toString(), field.selectionStart)
+                haptics.play(Haptic.GuideBlocked)
+            }
         }
         if (event is KeyboardEvent.Pushed && event.code == KeyEvent.KEYCODE_V && step.id == "paste" && !passed) {
             val before = field.text.toString()
@@ -3139,17 +3213,31 @@ class GuideActivity : Activity() {
         showSuccess(reaction ?: step.done)
         val hunted = if (step.hunt != null && huntStart >= 0) huntSeconds() else -1
         stopHunt()
-        val said = praise ?: when (step.id) {
-            "symgroups" -> groupsPraise(flow.counted)
-            "clown" -> if (hunted >= 0) huntPraise(hunted) else step.praise
+        // A hunt's roast goes by how long it took (owner, v5.2): a quick find gets a chip, a slow one its line under the success,
+        // where it has room.
+        val hunt = step.hunt
+        val quick = hunt != null && hunted >= 0 && huntFast(hunted)
+        val said = praise ?: when {
+            hunt != null && hunted >= 0 && !quick -> hunt.slow(hunted)
+            step.id == "symgroups" -> groupsPraise(flow.counted)
             // The count carries on under the success line, until the finger lifts.
-            "hold" -> {
+            step.id == "hold" -> {
                 regrets = flow.tally
                 regretsLine(regrets)
             }
             else -> step.praise
         }
         if (said.isNotEmpty()) body.text = said
+        if (quick) showChip(hunt!!.fast, force = true)
+        // A symbol slide passed with a wrong one still in its gap reads as its line, clean (owner, v5.2).
+        val symbol = step.symbol
+        if (symbol != null && step.line.isNotEmpty() && field.text.toString().trim() != step.line &&
+            symbolInGap(field.text.toString(), step.line, symbol)) {
+            seeding = true
+            field.setText(step.line + " ")
+            field.setSelection(field.length())
+            seeding = false
+        }
         paintSegments(flow.stepIndex, advancing = true)
         settledPraise = said
         step.rain?.let { effects.burst(it, RAIN_PIECES) }
@@ -3466,15 +3554,80 @@ class GuideActivity : Activity() {
             leave()
             return
         }
-        android.app.AlertDialog.Builder(this)
-            .setTitle(LEAVE_TITLE)
-            .setMessage(LEAVE_BODY)
-            .setPositiveButton(LEAVE_YES) { _, _ ->
+        showLeavePopup()
+    }
+
+    /** The leaving pop-up while it's open. */
+    private var leavePopup: View? = null
+
+    /**
+     * "Leaving already?" in the guide's own look, not Android's dialog (owner, v5.2): a cream card over the dimmed slide, its title
+     * heavy, Stay filled in orange and leaving outlined. A touch outside it, or Back, stays.
+     */
+    private fun showLeavePopup() {
+        if (leavePopup != null) return
+        haptics.play(Haptic.GuideHint)
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(GuideColours.CREAM, Radii.LARGE)
+            setPadding(dp(24), dp(24), dp(24), dp(20))
+            isClickable = true
+            elevation = dp(8).toFloat()
+            addView(TextView(context).apply {
+                text = LEAVE_TITLE
+                typeface = HEAVY
+                includeFontPadding = false
+                letterSpacing = -.02f
+                setTextColor(GuideColours.INK)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(28f), dp(34).toFloat()))
+            })
+            addView(TextView(context).apply {
+                text = LEAVE_BODY
+                typeface = MEDIUM
+                setTextColor(GuideMotion.faded(GuideColours.INK, BODY_ALPHA))
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(17f), dp(22).toFloat()))
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
+            addView(bigButton(LEAVE_NO) { closeLeavePopup() }.apply {
+                setTextColor(GuideColours.INK)
+                background = rounded(GuideColours.ORANGE, OFFER_RADIUS)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(20) })
+            addView(bigButton(LEAVE_YES) {
                 preferences.edit().putBoolean(LEFT_EARLY, true).apply()
+                closeLeavePopup()
                 leave()
-            }
-            .setNegativeButton(LEAVE_NO, null)
-            .show()
+            }.apply {
+                setTextColor(GuideColours.INK)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(16f), dp(21).toFloat()))
+                background = GradientDrawable().apply {
+                    setColor(Color.TRANSPARENT)
+                    setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(GuideColours.INK, NEXT_WAITING))
+                    cornerRadius = Radii.px(resources, OFFER_RADIUS)
+                }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
+        }
+        val scrim = FrameLayout(this).apply {
+            setBackgroundColor(GuideMotion.faded(GuideColours.INK, LEAVE_SCRIM))
+            isClickable = true
+            setOnClickListener { closeLeavePopup() }
+            addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER).apply {
+                leftMargin = dp(GUTTER + 8)
+                rightMargin = dp(GUTTER + 8)
+            })
+        }
+        leavePopup = scrim
+        root.addView(scrim, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        scrim.alpha = 0f
+        scrim.animate().alpha(1f).setDuration(FADE_MILLIS * 2).start()
+        card.scaleX = LEAVE_POP
+        card.scaleY = LEAVE_POP
+        card.animate().scaleX(1f).scaleY(1f).setDuration(ENTER_MILLIS).setInterpolator(android.view.animation.OvershootInterpolator()).start()
+    }
+
+    private fun closeLeavePopup() {
+        val popup = leavePopup ?: return
+        leavePopup = null
+        popup.animate().cancel()
+        root.removeView(popup)
     }
 
     /**
@@ -3504,6 +3657,11 @@ class GuideActivity : Activity() {
             endButtons.translationY = dp(16).toFloat()
             endButtons.animate().alpha(1f).translationY(0f).setDuration(ENTER_MILLIS).start()
         }
+        fillEndChoices()
+    }
+
+    /** The end's words: the share switch, and under it the explanation until it's answered, then the owner's line alone. */
+    private fun fillEndChoices() {
         val asking = Contributions.unanswered(this)
         // A switch, off until the user agrees on the share policy page; never shown on before that.
         shareButton.text = if (Contributions.enabled(this)) SHARE_ON else SHARE_OFF
@@ -3517,6 +3675,12 @@ class GuideActivity : Activity() {
         val strong = if (onInk) GuideColours.CREAM else GuideColours.INK
         boringButton.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
         boringButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
+        againLink.setTextColor(strong)
+        againLink.background = GradientDrawable().apply {
+            setColor(Color.TRANSPARENT)
+            setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(strong, NEXT_WAITING))
+            cornerRadius = Radii.px(resources, OFFER_RADIUS)
+        }
         if (Contributions.enabled(this)) {
             shareButton.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
             shareButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
@@ -3649,6 +3813,9 @@ class GuideActivity : Activity() {
         private const val LEAVE_BODY = "You haven't finished the guide. Leave anyway?"
         private const val LEAVE_YES = "I already know everything"
         private const val LEAVE_NO = "Stay"
+        /** The leaving pop-up's dimming, and how small its card starts before it pops in. */
+        private const val LEAVE_SCRIM = .62f
+        private const val LEAVE_POP = .92f
         private const val COME_BACK_TITLE = "Oh, look who's back. Didn't know everything after all?"
         private const val COME_BACK_BODY = "Pick up where you left off."
         private const val FIX_UNDONE_TITLE = "You wanted the typo back? Rebel."
@@ -3677,10 +3844,14 @@ class GuideActivity : Activity() {
         private const val RUDE_CLIP = "That one's rude. Took it back. Find the nice one."
         // The slides' look, in the new layout: one size for every title, one for the instruction, and the chip's timing.
         // Bigger in v5: the room above the keys goes to what's there, not to more things (owner).
-        private const val TITLE_SP = 32f
-        private const val TITLE_DP = 34
-        private const val BODY_SP = 18f
-        private const val BODY_DP = 22
+        private const val TITLE_SP = 36f
+        private const val TITLE_DP = 40
+        private const val TITLE_SMALLEST_SP = 24f
+        private const val TITLE_LINES = 2
+        private const val BODY_SP = 20f
+        private const val BODY_DP = 24
+        private const val BODY_SMALLEST_SP = 15f
+        private const val BODY_LINES = 2
         private const val GAP = 18
         private const val CHIP_PAD = 3
         private const val CHIP_SCALE = .94f
@@ -3736,10 +3907,13 @@ class GuideActivity : Activity() {
         private const val SHARE_ON = "Share my swipes: on"
         private const val SHARE_OFF = "Share my swipes: off"
         /** The owner's words (v5). */
-        private const val SHARE_ANSWERED = "Trust me bro. You can change this any time in Settings > Share swipes"
+        /** The share line is the owner's words alone; how to change it later is in the explanation (owner, v5.2). */
+        private const val SHARE_ANSWERED = "Trust me bro."
         private const val AGAIN_LINK = "Start the guide again"
         /** The finale's part of the end screen, from the top: the buttons have the rest. */
         private const val FINALE_SHARE = .68f
+        /** The room between the finale and the end's buttons. */
+        private const val FINALE_ROOM = 20
 
         // Setup, in ms. These are safe to change.
         private const val SETUP_REQUEST = 7
@@ -3763,8 +3937,8 @@ class GuideActivity : Activity() {
         private const val SHARE_OFFER = "Share my swipes"
         /** The end's instruction. */
         /** The one boring thing at the end, in plain words: it is about consent, so no jokes here. */
-        private const val SHARE_PLAIN = "Off until you agree. Then we get examples of your swipes to make swiping better.\n" +
-            SHARE_ANSWERED
+        private const val SHARE_PLAIN = "Off until you agree. Then we get examples of your swipes to make swiping better. Change it " +
+            "any time in Settings > Share swipes.\n" + SHARE_ANSWERED
         private const val END_NEXT = "Go type something"
         /** How many things the paste lesson rains down. */
         private const val RAIN_PIECES = 26
@@ -3808,17 +3982,25 @@ class GuideActivity : Activity() {
         private const val SEGMENT_HEIGHT = 4
         private const val SEGMENT_OFF = .25f
         private const val SEGMENT_GLOW = 4
+        /** The room between two chapters in the bar: wider than between two slides' ticks. */
+        private const val CHAPTER_GAP = 6
+        /** ✕, in the top right corner. */
+        private const val CLOSE_SIZE = 44
+        /** Next, once a slide is passed: a normal button. */
+        private const val NEXT_SP = 17f
+        private const val NEXT_DP = 22
+        private const val NEXT_PAD_SIDE = 28
+        private const val NEXT_PAD_TOP = 10
         /** Below this much height the screen is too short for the drawing of the keys. */
         private const val COMPACT_HEIGHT = 240
-        /** The drawing's height against its width, and against the room there is. */
-        private const val KEYS_ASPECT = .44f
-        private const val KEYS_SHARE = .5f
+        /** How long the word menu is open before its key hints show: its buttons have moved in by then. */
+        private const val MENU_SETTLE_MILLIS = 450L
         /** The field on the slides: three lines, at this size. */
         private const val FIELD_LINES = 3
         /** How many of the lines finished so far the steering slides put above their own. */
         private const val STEER_LINES_BEFORE = 4
-        private const val FIELD_SP = 21f
-        private const val FIELD_DP = 27
+        private const val FIELD_SP = 23f
+        private const val FIELD_DP = 29
         /** A bottom inset this much over the keyboard's own is an open panel's, in dp. */
         private const val PANEL_EXTRA = 80
 

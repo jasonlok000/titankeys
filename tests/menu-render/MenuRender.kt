@@ -67,9 +67,15 @@ fun main(args: Array<String>) {
             Row("$motion-${millis}ms", "$motion at $millis of $total ms", "Titankeys", to, motion = motion to millis, from = from)
         }
     }
+    // The ambient status at rest: a favourite's faint hearts, then a saved word's swaying ribbon.
+    val ambient = listOf(0L, 400L, 800L, 1200L, 2500L + 400L, 2500L + 800L).map { millis ->
+        Row("ambient-favourite-${millis}ms", "Ambient, favourite, at $millis ms", "Titankeys", state(saved = true, favourite = true), ambient = millis)
+    } + listOf(0L, 150L, 300L, 450L, 600L, 2000L).map { millis ->
+        Row("ambient-saved-${millis}ms", "Ambient, saved, at $millis ms", "Titankeys", state(saved = true), ambient = millis)
+    }
     for (dark in listOf(true, false)) {
         val suffix = if (dark) "" else "-light"
-        for ((sheet, rows) in listOf("menu-all" to states, "menu-motion" to motions)) {
+        for ((sheet, rows) in listOf("menu-all" to states, "menu-motion" to motions, "menu-ambient" to ambient)) {
             val image = BufferedImage(WIDTH, rows.size * (ROW + CAPTION), BufferedImage.TYPE_INT_RGB)
             for ((index, row) in rows.withIndex()) {
                 val single = draw(row, dark, regular, medium, strings, drawables)
@@ -84,7 +90,7 @@ fun main(args: Array<String>) {
 
 private class Row(val name: String, val caption: String, val word: String, val state: MenuKeys.State, val hover: Int = -1,
                   val motion: Pair<MenuKeys.Motion, Long>? = null, val from: MenuKeys.State? = null,
-                  val alignment: KeyAlignment = KeyAlignment.DEFAULT)
+                  val alignment: KeyAlignment = KeyAlignment.DEFAULT, val ambient: Long? = null)
 
 private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: String, drawables: File): BufferedImage {
     val image = BufferedImage(WIDTH, ROW + CAPTION, BufferedImage.TYPE_INT_RGB)
@@ -135,6 +141,10 @@ private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: 
     g.drawString(shown, left, baseline)
     g.transform = saved
     frame?.sprites?.filterNot { it.behind }?.forEach { drawSprite(g, drawables, it, orange, paper) }
+    row.ambient?.let { millis ->
+        val box = MenuMotion.Word(left / DENSITY, (left + textWidth) / DENSITY, middle / DENSITY, MenuMotion.Word.seed(row.word))
+        MenuMotion.ambient(step, millis, box, false).forEach { drawSprite(g, drawables, it, orange, paper) }
+    }
     // The hovered pill: its name in Ink's medium weight, kept by its icon. It covers what it slides over.
     var pill: Pair<Float, Float>? = null
     val spent = hovered == MenuKeys.SAVE && buttonAt(hovered) == MenuKeys.Button.Favourited

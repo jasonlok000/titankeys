@@ -290,7 +290,26 @@ private fun theMenuMotion() {
     val draining = MenuMotion.icon(full, heart, MenuMotion.ICON_MILLIS / 3).first { it.button == full }
     check(draining.orange in .1f..0.9f) { "The orange drains: $draining" }
     check(MenuMotion.ICON_MILLIS in 200L..350L) { "Icon changes take 200 to 350 ms" }
+    // The ambient status, at rest: a faint heart now and then from alternating sides of a favourite, a faint ribbon swaying now
+    // and then by a saved word, nothing by a word that isn't saved; still where motion is off.
+    same(MenuMotion.ambient(MenuKeys.Step.New, 500, word, false), emptyList<MenuMotion.Sprite>(), "Nothing by a word that isn't saved")
+    val sides = (0 until 4).map { cycle ->
+        val heart = MenuMotion.ambient(MenuKeys.Step.Favourite, cycle * MenuMotion.AMBIENT_HEART_EVERY + 400, word, false).single()
+        check(heart.alpha <= MenuMotion.AMBIENT_ALPHA + .001f && heart.shape == MenuMotion.Shape.Heart) { "A faint heart: $heart" }
+        heart.x > word.centre
+    }
+    same(sides, listOf(sides[0], !sides[0], sides[0], !sides[0]), "The hearts come from alternating sides")
+    same(MenuMotion.ambient(MenuKeys.Step.Favourite, MenuMotion.AMBIENT_HEART_MILLIS + 100, word, false), emptyList<MenuMotion.Sprite>(),
+        "and rest between")
+    check(MenuMotion.AMBIENT_HEART_EVERY in 2000L..3000L && MenuMotion.AMBIENT_SWAY_EVERY in 3500L..4500L) { "Every 2.5 s and every 4 s" }
+    val ribbon = MenuMotion.ambient(MenuKeys.Step.Saved, 300, word, false).single()
+    check(ribbon.shape == MenuMotion.Shape.Ribbon && ribbon.x < word.left && ribbon.turn != 0f && ribbon.alpha <= .36f) { "The ribbon sways: $ribbon" }
+    same(MenuMotion.ambient(MenuKeys.Step.Saved, 2000, word, false).single().turn, 0f, "and rests between sways")
+    same(MenuMotion.ambient(MenuKeys.Step.Saved, 300, word, true).single().turn, 0f, "With motion off the ribbon sits still")
+    same(MenuMotion.ambient(MenuKeys.Step.Favourite, 300, word, true).size, 1, "and a faint heart sits still by a favourite")
+    same(MenuMotion.ambientWait(MenuKeys.Step.Saved, 2000, false), MenuMotion.AMBIENT_SWAY_EVERY - 2000, "It redraws only when it moves")
     val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    check("if (pillShown >= 0) ambientStart = -1L" in strip) { "The ambient status waits while a button is hovered" }
     check("MenuKeys.motion(if (opened) null else shownStep, menu.step)?.takeIf { GuideMotion.enabled }" in strip) { "Motion off, no animations" }
     check("drawable.setTint(look.accent)" in strip.substringAfter("private fun drawSprite(")) { "Every particle is orange" }
 }

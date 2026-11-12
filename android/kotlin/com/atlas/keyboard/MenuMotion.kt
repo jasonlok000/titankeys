@@ -164,6 +164,55 @@ object MenuMotion {
         return Frame(hearts)
     }
 
+    // The ambient status (owner, 2026-11-12): while the menu rests on a favourite, a faint heart drifts up now and then from
+    // alternating sides of the word; on a saved word a faint ribbon rests at its left edge and sways now and then; on a word that
+    // isn't saved, nothing. Quiet on purpose: faint, slow, and still where motion is off.
+
+    /** How often a favourite's heart drifts up, how long each drift takes, how often the saved ribbon sways, and for how long. */
+    const val AMBIENT_HEART_EVERY = 2500L
+    const val AMBIENT_HEART_MILLIS = 1600L
+    const val AMBIENT_SWAY_EVERY = 4000L
+    const val AMBIENT_SWAY_MILLIS = 900L
+    /** How strongly the ambient marks show: faint. */
+    const val AMBIENT_ALPHA = .35f
+
+    /**
+     * The ambient marks at [elapsed] ms since the menu came to rest at [step] over [word]. With motion off ([still]) they sit
+     * still: a faint heart by a favourite, the faint ribbon by a saved word.
+     */
+    fun ambient(step: MenuKeys.Step, elapsed: Long, word: Word, still: Boolean): List<Sprite> = when (step) {
+        MenuKeys.Step.New -> emptyList()
+        MenuKeys.Step.Saved -> {
+            val into = elapsed % AMBIENT_SWAY_EVERY
+            val sway = if (still || into >= AMBIENT_SWAY_MILLIS) 0f else {
+                val p = into.toFloat() / AMBIENT_SWAY_MILLIS
+                8f * sin(2 * PI.toFloat() * p) * (1f - p)
+            }
+            listOf(Sprite(Shape.Ribbon, word.left - RIBBON_OFF, word.middle - 4f, RIBBON, sway, AMBIENT_ALPHA))
+        }
+        MenuKeys.Step.Favourite -> {
+            if (still) listOf(Sprite(Shape.Heart, word.right + 7f, word.middle - 6f, 8f, 0f, AMBIENT_ALPHA))
+            else {
+                val cycle = elapsed / AMBIENT_HEART_EVERY
+                val into = elapsed % AMBIENT_HEART_EVERY
+                if (into >= AMBIENT_HEART_MILLIS) emptyList() else {
+                    val p = into.toFloat() / AMBIENT_HEART_MILLIS
+                    val right = (cycle + word.seed).mod(2L) == 0L
+                    val x = (if (right) word.right + 7f else word.left - 7f) + (if (right) 1f else -1f) * 2f * p
+                    listOf(Sprite(Shape.Heart, x, word.middle - 2f - 12f * p, 8f, 0f, AMBIENT_ALPHA * (p / .2f).coerceAtMost(1f) * fade(p, .5f))
+                        .let { it.copy(y = it.y.coerceIn(it.size / 2, BAR - it.size / 2)) })
+                }
+            }
+        }
+    }
+
+    /** How long until the ambient marks next move, in ms: 0 while they move, so the bar redraws only then. */
+    fun ambientWait(step: MenuKeys.Step, elapsed: Long, still: Boolean): Long = when {
+        still || step == MenuKeys.Step.New -> Long.MAX_VALUE
+        step == MenuKeys.Step.Saved -> (elapsed % AMBIENT_SWAY_EVERY).let { if (it < AMBIENT_SWAY_MILLIS) 0L else AMBIENT_SWAY_EVERY - it }
+        else -> (elapsed % AMBIENT_HEART_EVERY).let { if (it < AMBIENT_HEART_MILLIS) 0L else AMBIENT_HEART_EVERY - it }
+    }
+
     /** One layer of a button's icon while it changes: which icon, how strongly and how big, how far down, how orange (0 is the
      * text's colour, 1 the accent), and how much of a filling heart is filled, from the bottom. */
     data class Layer(val button: MenuKeys.Button?, val alpha: Float, val scale: Float = 1f, val drop: Float = 0f, val orange: Float,

@@ -310,6 +310,8 @@ class Strip(
     private var dustStart = -1L
     private var dustWord: String? = null
     private var motionStart = 0L
+    /** When the menu came to rest at its step, for the ambient marks, or -1 while it hasn't: see [MenuMotion.ambient]. */
+    private var ambientStart = -1L
     private val crackPath = android.graphics.Path()
 
     init {
@@ -684,6 +686,7 @@ class Strip(
             menuMotion = MenuKeys.motion(if (opened) null else shownStep, menu.step)?.takeIf { GuideMotion.enabled }
             val now = SystemClock.uptimeMillis()
             motionStart = now
+            ambientStart = -1L
             shownStep = menu.step
             val buttons = arrayOf(MenuKeys.first(menu.step), MenuKeys.second(menu.step, menu.forget))
             for (index in 0..1) {
@@ -835,6 +838,19 @@ class Strip(
         canvas.drawText(text, textLeft, baseline, menuWordText)
         canvas.restore()
         frame?.sprites?.filterNot { it.behind }?.forEach { drawSprite(canvas, it, density) }
+        // At rest, the ambient status: a faint heart now and then by a favourite, a faint ribbon by a saved word. It waits while a
+        // button is hovered, and starts over after.
+        var ambientWait = Long.MAX_VALUE
+        if (menuMotion == null) {
+            if (pillShown >= 0) ambientStart = -1L
+            else {
+                if (ambientStart < 0) ambientStart = now
+                val still = !GuideMotion.enabled
+                val box = wordBox(text, textLeft, textWidth, baseline, density)
+                for (sprite in MenuMotion.ambient(menu.step, now - ambientStart, box, still)) drawSprite(canvas, sprite, density)
+                ambientWait = MenuMotion.ambientWait(menu.step, now - ambientStart, still)
+            }
+        }
         // The pill, under its icon, with the action's name. It covers what it slides over: a long word's end fades under it.
         val spent = action == Action.Favourited
         if (pill != null && action != null) {
@@ -893,7 +909,9 @@ class Strip(
                     (alpha * layer.alpha).toInt(), tint, layer.fill)
             }
         }
-        if (more || pillOpen.moving(now, glide) || pillLeft.moving(now, glide) || pillRight.moving(now, glide)) postInvalidateOnAnimation()
+        if (more || ambientWait == 0L || pillOpen.moving(now, glide) || pillLeft.moving(now, glide) || pillRight.moving(now, glide))
+            postInvalidateOnAnimation()
+        else if (ambientWait != Long.MAX_VALUE) postInvalidateDelayed(ambientWait)
     }
 
     /** [word] on the bar, as [MenuMotion] places its particles: its ends and the middle of its letters, in dp, and its seed. */

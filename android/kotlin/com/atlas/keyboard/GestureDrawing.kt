@@ -33,12 +33,85 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
     private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
     private var glowHeight = 0f
+    private var glowTall = 0f
     private var glowColour = 0
+    /** A held delete's glow, in two halves that each fade away from the middle of the bar. */
+    private val rootTop = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val rootBottom = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var rootHeight = 0f
+    private var rootColour = 0
 
     fun draw(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, height: Int, look: Look) {
         val h = height.toFloat()
         if (display.scene != GestureDisplay.Scene.None) scene(canvas, display, left, right, h, look)
-        if (display.glowing) glow(canvas, display, left, right, h, look)
+        if (display.zonesShown) zones(canvas, display, left, right, h, look)
+        if (display.glowing) {
+            if (display.glowRooted) rootedGlow(canvas, display, left, right, h, look) else glow(canvas, display, left, right, h, look)
+        }
+    }
+
+    /**
+     * A held delete's zones, faint and only while it deletes, as steering shows its middle: a thin dashed line at the top-speed
+     * line, past which the words go no faster, and a soft patch over the pause zone by where the flick started, a little
+     * stronger while the finger rests in it. They are in the ink colour, so they never read as part of the orange.
+     */
+    private fun zones(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
+        val alpha = display.reveal
+        if (alpha <= 0f) return
+        val across = right - left
+        val inset = dp(ZONE_INSET)
+        val from = left + across * display.pauseFrom
+        val to = min(right + left, left + across * display.pauseTo)
+        if (to > from) rounded(canvas, from, inset, to, h - inset, dp(ZONE_RADIUS),
+            GuideMotion.faded(look.ink, (if (display.deletePaused) PAUSE_RESTING else PAUSE_PATCH) * alpha))
+        val line = left + across * display.topSpeedAt
+        if (line < left) return
+        val half = dp(ZONE_LINE) / 2
+        fill.color = GuideMotion.faded(look.ink, TOP_LINE * alpha)
+        var y = inset
+        while (y < h - inset) {
+            canvas.drawRect(line - half, y, line + half, min(y + dp(DASH), h - inset), fill)
+            y += dp(DASH) + dp(DASH_GAP)
+        }
+    }
+
+    /**
+     * A held delete's glow: rooted on the bar's right edge and reaching left to the finger, but no further than the top-speed
+     * line. It is brightest at the root and fades softly towards the finger, and up and down from the middle of the bar, so it
+     * has no edge but the bar's own.
+     */
+    private fun rootedGlow(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
+        val strength = display.glowAlpha.coerceIn(0f, 1f) * ROOTED
+        if (strength <= 0f) return
+        if (rootHeight != h || rootColour != look.accent) {
+            // Made again only when the strip or the colour changes, so a frame makes no garbage.
+            rootHeight = h
+            rootColour = look.accent
+            val clear = GuideMotion.faded(look.accent, 0f)
+            rootTop.shader = LinearGradient(0f, 0f, 0f, h / 2, clear, look.accent, Shader.TileMode.CLAMP)
+            rootBottom.shader = LinearGradient(0f, h / 2, 0f, h, look.accent, clear, Shader.TileMode.CLAMP)
+        }
+        val end = right + left
+        val reach = (left + (right - left) * display.glowReach).coerceIn(0f, end)
+        val span = end - reach
+        if (span < 1f) return
+        val soft = dp(ROOT_SOFT)
+        val slice = max(1f, floor(dp(GLOW_SLICE)))
+        var x = floor(reach)
+        while (x < end) {
+            val inside = x + slice / 2 - reach
+            val u = (inside / span).coerceIn(0f, 1f)
+            val fadeIn = (inside / soft).coerceIn(0f, 1f).let { it * it * (3 - 2 * it) }
+            val level = (ROOT_FAR + (1f - ROOT_FAR) * u * u) * fadeIn
+            val a = (strength * level * 255).toInt()
+            if (a > 0) {
+                rootTop.alpha = a
+                rootBottom.alpha = a
+                canvas.drawRect(x, 0f, x + slice, h / 2, rootTop)
+                canvas.drawRect(x, h / 2, x + slice, h, rootBottom)
+            }
+            x += slice
+        }
     }
 
     private fun scene(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
@@ -114,10 +187,12 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     private fun glow(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, h: Float, look: Look) {
         val strength = display.glowAlpha.coerceIn(0f, 1f)
         if (strength <= 0f) return
-        val tall = dp(GLOW_HEIGHT)
-        if (glowHeight != h || glowColour != look.accent) {
-            // Made again only when the strip or the colour changes, so a frame makes no garbage.
+        // A triple press's glow, held or selecting, is a little thicker than steering's.
+        val tall = dp(GLOW_HEIGHT) * if (display.glowThick) THICK else 1f
+        if (glowHeight != h || glowColour != look.accent || glowTall != tall) {
+            // Made again only when the strip, the colour or the thickness changes, so a frame makes no garbage.
             glowHeight = h
+            glowTall = tall
             glowColour = look.accent
             glow.shader = LinearGradient(0f, h, 0f, h - tall, look.accent, GuideMotion.faded(look.accent, 0f), Shader.TileMode.CLAMP)
         }
@@ -128,8 +203,9 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val reach = min(half, across / 2)
         val centre = (left + across * display.glowCentre).coerceIn(left + reach, right - reach)
         // While steering, the glow is a soft underglow across the whole strip, brighter on the side you steer towards: at a full
-        // lean that side comes to about 2.5 times the other, see [UNDERGLOW] and [SIDE_BOOST].
-        val steering = display.scene == GestureDisplay.Scene.Cursor
+        // lean that side comes to about 2.5 times the other, see [UNDERGLOW] and [SIDE_BOOST]. A held triple press and its select
+        // have the same look and follow the hand the same way.
+        val steering = display.scene == GestureDisplay.Scene.Cursor || display.glowThick
         val base = if (steering) UNDERGLOW else 1f
         val lean = if (steering) display.steerLean.coerceIn(-1f, 1f) else 0f
         // A small glow is a soft hump; as it grows to the whole strip it flattens, with soft ends.
@@ -240,6 +316,15 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val slot = (right - left) / GestureDisplay.VISIBLE_WORDS
         val centre = (left + right) / 2
         val alpha = display.reveal
+        if (display.pickCaret) {
+            // A triple press's pick: no box, only the row with the picked word a little stronger, and a thin solid caret after it.
+            wordRow(canvas, display, slot, centre, mid, selected = false, GuideMotion.faded(look.ink, WORD * alpha))
+            val x = centre - display.camera * slot
+            val half = slot * display.wordWidth(0) / 2
+            word(canvas, x - half, x + half, mid, GuideMotion.faded(look.ink, PICKED * alpha))
+            bar(canvas, x + half + dp(CARET_GAP), mid, dp(STEER_CARET_HEIGHT), GuideMotion.faded(look.accent, alpha), dp(STEER_CARET))
+            return
+        }
         // The selection goes over the words that are not in it, so a word that it reaches goes under it.
         wordRow(canvas, display, slot, centre, mid, selected = false, GuideMotion.faded(look.ink, WORD * alpha))
         var start = centre + (display.spanStart - display.camera) * slot
@@ -475,6 +560,29 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val PATH_WIDTH = 1.6f
         const val PATH_FINGER = 2.8f
         const val GLOW_HEIGHT = 10f
+        /** A triple press's glow is this much thicker than steering's. */
+        const val THICK = 1.3f
+        /**
+         * A held delete's glow: this strong at its root on the right edge, [ROOT_FAR] of that at the finger's end, where it fades in
+         * over [ROOT_SOFT] so it has no edge.
+         */
+        const val ROOTED = .75f
+        const val ROOT_FAR = .3f
+        const val ROOT_SOFT = 24f
+        /**
+         * A held delete's zones, faint: the pause patch, stronger while the finger rests in it, and the top-speed line, a dashed
+         * line [ZONE_LINE] wide, [ZONE_INSET] in from the top and bottom of the bar.
+         */
+        const val PAUSE_PATCH = .05f
+        const val PAUSE_RESTING = .1f
+        const val TOP_LINE = .3f
+        const val ZONE_LINE = 1f
+        const val ZONE_INSET = 6f
+        const val ZONE_RADIUS = 8f
+        const val DASH = 3f
+        const val DASH_GAP = 3f
+        /** A triple press's picked word, with no box round it, is this strong. */
+        const val PICKED = .75f
         const val PULSE = .25f
         const val PULSE_HEIGHT = 1f
         const val SIDE = 10f

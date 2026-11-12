@@ -356,20 +356,72 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     /**
      * The finger stayed on a delete flick, and more words will go, one each [repeatMillis]. [x] is where the finger is, from 0 to
-     * 1 across the touchpad: a glow grows under it, as the Space glow does for a steer, and follows it.
+     * 1 across the touchpad: a glow rooted on the bar's right edge reaches left to it, and follows it. [origin] is where the flick
+     * started, which the zones are drawn from, and [pace] how fast the hold goes, from 0 at the slowest to 1 at the top-speed line.
      */
-    fun deleteHeld(repeatMillis: Long, now: Long, x: Float? = null) {
+    fun deleteHeld(repeatMillis: Long, now: Long, x: Float? = null, origin: Float? = null, pace: Float = 1f) {
         if (!begin(Scene.DeleteHold, now)) return
         deleteMillis = repeatMillis
+        topPace = max(topPace, pace.coerceIn(0f, 1f))
+        if (origin != null) deleteOrigin = origin.coerceIn(0f, 1f)
         if (x != null) {
             if (!glowHeld) {
                 holdGlow(now, GLOW_FINGER_WIDTH, GLOW_FINGER_ALPHA)
+                glowRooted = true
                 glowCentre = x.coerceIn(0f, 1f)
             }
             centreTarget = x.coerceIn(0f, 1f)
         }
         changed()
     }
+
+    /** The held delete's finger went into the pause zone, or out of it: while it is in, the hold's lines stand still. */
+    fun deletePaused(paused: Boolean) {
+        if (scene != Scene.DeleteHold || deletePaused == paused) return
+        deletePaused = paused
+        changed()
+    }
+
+    /**
+     * Where a held delete's flick started, from 0 to 1 across the touchpad, or NaN with none. The bar marks its zones from here
+     * while the hold deletes: the top-speed line at [topSpeedAt], and the pause zone from [pauseFrom] to [pauseTo].
+     */
+    var deleteOrigin = Float.NaN
+        private set
+    /** True while the held delete's finger rests in the pause zone and no words go. */
+    var deletePaused = false
+        private set
+    val topSpeedAt get() = deleteOrigin - REPEAT_LONG_KEYS / COLUMNS
+    val pauseFrom get() = deleteOrigin - PAUSE_KEYS / COLUMNS
+    val pauseTo get() = deleteOrigin + PAUSE_KEYS / COLUMNS
+    /** True while the zones show: only while a hold deletes, with its start known. */
+    val zonesShown get() = scene == Scene.DeleteHold && !leaving && !deleteOrigin.isNaN()
+
+    /**
+     * True when the glow is a held delete's: rooted on the bar's right edge, it reaches left to the finger, [glowCentre], and
+     * stops growing at the top-speed line, so [glowReach] is where its left end is.
+     */
+    var glowRooted = false
+        private set
+    val glowReach get() = when {
+        glowFading && !fadeReach.isNaN() -> fadeReach
+        deleteOrigin.isNaN() -> glowCentre
+        else -> max(glowCentre, topSpeedAt)
+    }
+    /** Where a lifted hold's glow reached, which it keeps as it fades. */
+    private var fadeReach = Float.NaN
+
+    /**
+     * True while the glow is a triple press's that stays down: the same glow as steering's, a little thicker, held until the
+     * lift or until a slide makes it a select's.
+     */
+    var pickGlow = false
+        private set
+    /** True when the glow is a triple press's, held or selecting: it is drawn a little thicker than steering's. */
+    val glowThick get() = pickGlow || glowHeld && scene == Scene.WordDrag
+    /** The fastest a hold has gone, and the pace its dots at the lift speed up to: see [plan]. */
+    private var topPace = 0f
+    private var dotPace = 1f
 
     /** The finger of a held delete moved to [x], from 0 to 1 across the touchpad: its glow follows. */
     fun fingerAt(x: Float) {
@@ -393,6 +445,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             }
             setGroups(listOf(letters))
             startFlourish(Scene.DeleteFlick, now)
+            dotPace = 1f
             fromHold = false
             dotsInMillis = FLICK_IN
             startStream()
@@ -479,11 +532,14 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             val from = batchFrom[b]
             val count = batchCount[b]
             val base = dotStepMillis(count, scale)
+            // A lifted hold's dots speed up only as far as its words did: to the fastest gap once the finger reached the
+            // top-speed line, not at all if it stayed at the slowest. Flicks that join go as fast as they can.
+            val fastest = if (b == 0 && fromHold) base + (DOT_FASTEST_GAP - base) * dotPace else DOT_FASTEST_GAP
             val inMillis = if (b == 0) dotsInMillis else FLICK_IN
             val earliest = batchAt[b] + (inMillis + FLICK_HOLD + DOT_TRAVEL) * scale
             for (j in 0 until count) {
                 val index = from + j
-                interval = if (speedUp) max(DOT_FASTEST_GAP, base * DOT_SPEED_UP.pow(max(0, index - DOT_SPEED_FROM))) else base
+                interval = if (speedUp) max(min(fastest, base), base * DOT_SPEED_UP.pow(max(0, index - DOT_SPEED_FROM))) else base
                 last = when {
                     // The first batch keeps exact steps, so its dots land just where they always did.
                     !speedUp && b == 0 -> earliest + j * base
@@ -595,7 +651,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             return false
         }
         setGroups(held)
-        if (glowHeld) fadeGlow(now)
+        dotPace = topPace
+        if (glowHeld) {
+            fadeReach = glowReach
+            fadeGlow(now)
+        }
         val from = shownDeleted
         val beat = flow
         resetPieces()
@@ -616,15 +676,39 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * A double tap, or the third touch of a triple, selected the word at the cursor. While that touch is [held] down, the mark
      * stays over the word and the selected text waits under it; it goes only after [pickLifted], at its usual pace.
      */
-    fun wordSelected(now: Long, held: Boolean = false) {
+    fun wordSelected(now: Long, held: Boolean = false, caret: Boolean = false) {
         startFlourish(Scene.WordSelected, now)
-        if (scene == Scene.WordSelected) pickHeld = held
+        if (scene != Scene.WordSelected) return
+        pickHeld = held
+        pickCaret = caret
     }
 
-    /** The touch that picked a word lifted: its mark goes as usual, and the selected text shows. */
-    fun pickLifted() {
+    /**
+     * True when a picked word shows as a triple press's does: no box, only a thin solid caret after the word (owner, 2026-11-12).
+     * A double tap's pick keeps its box.
+     */
+    var pickCaret = false
+        private set
+
+    /** The touch that picked a word lifted: its mark goes as usual, and the selected text shows. A held pick's glow fades. */
+    fun pickLifted(now: Long = lastFrame) {
+        if (pickGlow && glowHeld) {
+            fadeGlow(now)
+            changed()
+        }
         if (!pickHeld) return
         pickHeld = false
+        changed()
+    }
+
+    /**
+     * The third press of a triple stayed down long enough to count as held, before any slide: the glow grows to the whole bar as
+     * steering's does, and stays until the lift, every time, whether or not the finger then slides to take more words.
+     */
+    fun pickHeldGlow(now: Long) {
+        if (!allowed || glowHeld) return
+        holdGlow(now)
+        pickGlow = true
         changed()
     }
 
@@ -708,7 +792,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     /** A key press: the glow goes at once, since those taps did not make a gesture. */
     fun glowOff() {
-        if (glowTaps == 0 && !glowFading) return
+        if (glowTaps == 0 && !glowFading && !pickGlow) return
         endGlow()
         changed()
     }
@@ -716,6 +800,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private fun endGlow() {
         glowHeld = false
         glowFading = false
+        glowRooted = false
+        pickGlow = false
+        fadeReach = Float.NaN
         glowCentre = .5f
         centreTarget = .5f
         glowTaps = 0
@@ -775,6 +862,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         glowFrame = now
         heldWidth = width
         heldAlpha = alpha
+        glowRooted = false
+        pickGlow = false
         glowCentre = .5f
         centreTarget = .5f
     }
@@ -789,8 +878,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         return motion && (grow < 1f || abs(glowCentre - centreTarget) > .001f)
     }
 
-    /** A held delete lifted: its glow stays where it is and fades over [GLOW_FADE]. */
+    /** A held delete or a held pick lifted: its glow stays where it is and fades over [GLOW_FADE]. */
     private fun fadeGlow(now: Long) {
+        pickGlow = false
         glowHeld = false
         glowFading = true
         glowFromAlpha = glowBase
@@ -855,6 +945,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             }
             Scene.WordDrag -> {
                 intensity = ease(intensity, speedTarget, elapsed, EASE_MILLIS, motion)
+                // The glow follows the hand as steering's does.
+                steerLean = ease(steerLean, leaning * (LEAN_BASE + (1f - LEAN_BASE) * intensity), elapsed, LEAN_MILLIS, motion)
                 shownLeft = ease(shownLeft, wordsLeft.toFloat(), elapsed, STEP_MILLIS, motion)
                 shownRight = ease(shownRight, wordsRight.toFloat(), elapsed, STEP_MILLIS, motion)
                 leadingRight = !(wordsLeft > 0 || (wordsRight == 0 && leaning < 0))
@@ -865,7 +957,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             }
             Scene.DeleteHold -> {
                 shownDeleted = ease(shownDeleted, deleted.toFloat(), elapsed, min(deleteMillis * DELETE_EASE, MAX_DELETE_EASE_MILLIS), motion)
-                if (motion) flow = (flow + min(FLOW_FASTEST, 1000f / deleteMillis) * seconds).mod(1f)
+                if (motion && !deletePaused) flow = (flow + min(FLOW_FASTEST, 1000f / deleteMillis) * seconds).mod(1f)
             }
             Scene.DeleteFlick -> {
                 // The text is already gone; only the picture moves. The dots come in, stay a while, and go into the caret.
@@ -917,10 +1009,13 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         if (!allowed) return false
         if (scene != next) {
             resetPieces()
+            // A slide from a triple press's pick selects words, which show with their box again.
+            pickCaret = false
             scene = next
             lastFrame = now
             if (next == Scene.Cursor || next == Scene.WordDrag) {
-                if (!glowHeld) holdGlow(now)
+                // A held pick's glow carries on as the select's.
+                if (!glowHeld) holdGlow(now) else pickGlow = false
             } else if (glowHeld) endGlow()
         }
         leaving = false
@@ -935,6 +1030,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private fun startFlourish(next: Scene, now: Long) {
         if (!allowed || live) return
         pickHeld = false
+        pickCaret = false
         resetPieces()
         scene = next
         leaving = false
@@ -966,6 +1062,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         if (glowHeld) endGlow()
         fromHold = false
         pickHeld = false
+        pickCaret = false
         solid = 0f
         batches = 0
         dots = 0
@@ -1006,6 +1103,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         deleted = 0
         shownDeleted = 0f
         held.clear()
+        deleteOrigin = Float.NaN
+        deletePaused = false
+        topPace = 0f
         flourish = 0f
         bandStart = .5f
         bandEnd = .5f

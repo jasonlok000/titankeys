@@ -95,8 +95,21 @@ internal const val REPEAT_SLOW_MILLIS = 350L
 private const val REPEAT_FAST_MILLIS = 80L
 /** A flick of this many key widths or fewer is short. Between short and long, the wait follows a straight line. */
 private const val REPEAT_SHORT_KEYS = 2f
-/** A flick of this many key widths or more is long: the longest that still counts as a flick, [MAX_PATH_KEYS]. */
-private const val REPEAT_LONG_KEYS = 5.5f
+/**
+ * A flick of this many key widths or more is long: the longest that still counts as a flick, [MAX_PATH_KEYS]. It is the top-speed
+ * line of a held delete: past it the words go no faster, and the bar's glow and dots stop growing with it. Started on Backspace it
+ * lies about between F and G.
+ */
+internal const val REPEAT_LONG_KEYS = 5.5f
+/**
+ * While a hold deletes, a finger back within this many key widths of where the flick started pauses it: no words go until it
+ * slides out again, by [PAUSE_LEAVE_KEYS] more, so a finger resting on the edge does not stutter. A flick travels a whole key at
+ * least ([MIN_TRAVEL]), so it never ends inside, and the pause only counts once the hold has started.
+ */
+internal const val PAUSE_KEYS = .8f
+private const val PAUSE_LEAVE_KEYS = .1f
+/** While the finger rests in the pause zone, the timer looks again this often. */
+private const val PAUSE_LOOK_MILLIS = 100L
 /** While an earlier edit is still going through, the next word looks again after this time. */
 private const val BUSY_MILLIS = 20L
 
@@ -130,7 +143,7 @@ internal val deleteSwipeTuning: Map<String, Any> get() = mapOf(
     "minTravel" to MIN_TRAVEL, "turnBack" to TURN_BACK, "deleteRectangle" to DELETE_RECTANGLE,
     "deleteHoldMillis" to deleteHoldPauseMillis(), "deleteHoldKeys" to HOLD_KEYS, "deleteRepeatSlowMillis" to REPEAT_SLOW_MILLIS,
     "deleteRepeatFastMillis" to REPEAT_FAST_MILLIS, "deleteRepeatShortKeys" to REPEAT_SHORT_KEYS,
-    "deleteRepeatLongKeys" to REPEAT_LONG_KEYS, "deleteMaxPathKeys" to MAX_PATH_KEYS, "deleteMaxMillis" to MAX_FLICK_MILLIS,
+    "deleteRepeatLongKeys" to REPEAT_LONG_KEYS, "deletePauseKeys" to PAUSE_KEYS, "deleteMaxPathKeys" to MAX_PATH_KEYS, "deleteMaxMillis" to MAX_FLICK_MILLIS,
 )
 
 /** How long the stroke took to arrive where it ends: a finger that then rests there, for a hold, does not make it slower. */
@@ -157,6 +170,17 @@ internal class DeleteHold(private val contact: Contact) {
     private var origin: Sample? = null
     /** When the last word went. */
     private var lastAt = 0L
+    /** True while the hold's finger is back in the pause zone near where the flick started: see [PAUSE_KEYS]. */
+    var paused = false
+        private set
+    /**
+     * How fast the hold goes, from 0 at the slowest to 1 at the top-speed line, and the fastest it has gone: the dots at the lift
+     * speed up as far as the words did.
+     */
+    var pace = 0f
+        private set
+    var topPace = 0f
+        private set
     /** The wait between words. It is set while the flick is read, because a contact that deletes keeps no points. */
     var repeatMillis = REPEAT_SLOW_MILLIS
         private set
@@ -176,7 +200,7 @@ internal class DeleteHold(private val contact: Contact) {
         val held = still?.takeIf { hypot((last.x - it.x) * 10, (last.y - it.y) * 4) <= HOLD_KEYS } ?: last
         still = held
         origin = points.first()
-        repeatMillis = repeatMillis(keysFrom(points.first(), held))
+        setPace(keysFrom(points.first(), held))
         return held.time + deleteHoldPauseMillis()
     }
 
@@ -187,9 +211,29 @@ internal class DeleteHold(private val contact: Contact) {
     fun follow(finger: Sample): Long? {
         if (!contact.deleting || !started || !finger.valid) return null
         val from = origin ?: return null
-        repeatMillis = repeatMillis(keysFrom(from, finger))
+        val keys = keysFrom(from, finger)
+        if (paused) {
+            if (keys <= PAUSE_KEYS + PAUSE_LEAVE_KEYS) return null
+            // Out again: the next word waits its whole step from here, at the speed for this distance.
+            paused = false
+            setPace(keys)
+            lastAt = finger.time
+            nextAt = lastAt + repeatMillis
+            return nextAt
+        }
+        if (keys < PAUSE_KEYS) {
+            paused = true
+            return null
+        }
+        setPace(keys)
         nextAt = lastAt + repeatMillis
         return nextAt
+    }
+
+    private fun setPace(keys: Float) {
+        pace = ((keys - REPEAT_SHORT_KEYS) / (REPEAT_LONG_KEYS - REPEAT_SHORT_KEYS)).coerceIn(0f, 1f)
+        topPace = max(topPace, pace)
+        repeatMillis = (REPEAT_SLOW_MILLIS + (REPEAT_FAST_MILLIS - REPEAT_SLOW_MILLIS) * pace).roundToLong()
     }
 
     private fun keysFrom(from: Sample, to: Sample) = hypot((to.x - from.x) * 10, (to.y - from.y) * 4)
@@ -207,6 +251,8 @@ internal class DeleteHold(private val contact: Contact) {
             if (!free) return now + BUSY_MILLIS
             delete(contact.holdDelete(now) ?: return null)
         } else {
+            // In the pause zone nothing goes; the timer only looks again, and the finger sliding out sets the next word.
+            if (paused) return now + PAUSE_LOOK_MILLIS
             if (now < nextAt) return nextAt
             if (!free) return now + BUSY_MILLIS
             delete(null)
@@ -217,17 +263,17 @@ internal class DeleteHold(private val contact: Contact) {
         return nextAt
     }
 
-    /** A finger further from the start waits less between words. */
-    private fun repeatMillis(flickKeys: Float): Long {
-        val longer = ((flickKeys - REPEAT_SHORT_KEYS) / (REPEAT_LONG_KEYS - REPEAT_SHORT_KEYS)).coerceIn(0f, 1f)
-        return (REPEAT_SLOW_MILLIS + (REPEAT_FAST_MILLIS - REPEAT_SLOW_MILLIS) * longer).roundToLong()
-    }
-
     fun reset() {
         still = null
         started = false
         nextAt = 0
         lastAt = 0
         origin = null
+        paused = false
+        pace = 0f
+        topPace = 0f
     }
+
+    /** Where the flick started, from 0 to 1 across the touchpad, or null with no hold: the bar draws its zones from here. */
+    val originX get() = origin?.x
 }

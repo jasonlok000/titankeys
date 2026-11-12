@@ -390,7 +390,8 @@ class AtlasIme : InputMethodService() {
             heldWords.reset()
             // A hold takes the bar from any dots still playing, and their ticks stop.
             haptics.cutDots()
-            strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), flick.points.lastOrNull { it.valid }?.x)
+            strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), flick.points.lastOrNull { it.valid }?.x,
+                deleteHold.originX, deleteHold.pace)
             // The dots at the lift keep clear of this hold's ticks.
             haptics.holdStarted()
             // The contact was a delete and not part of a word, as it would be at a lift.
@@ -455,6 +456,9 @@ class AtlasIme : InputMethodService() {
      */
     private fun registerGesture(now: Long) {
         val taps = cursorGesture.held(now)
+        // A triple press registered as it landed, in [pickOnLand]; once it has stayed down this long it glows as held, every time,
+        // whether or not a slide follows (owner, 2026-11-12).
+        if (taps >= 3 && tripleDown && !gestureEmpty) strip?.gesture?.pickHeldGlow(now)
         if (taps == 0 || gestureRegistered || gestureEmpty) return
         val words = taps >= 3
         // Selecting was decided as the touch landed, in [pickOnLand]. Steering with no text at all does nothing but say no.
@@ -1932,9 +1936,14 @@ class AtlasIme : InputMethodService() {
                     samples.lastOrNull { it.valid }?.let { finger ->
                         // The glow under the finger follows it.
                         strip?.gesture?.fingerAt(finger.x)
-                        deleteHold.follow(finger)?.let {
+                        val next = deleteHold.follow(finger)
+                        // Back near where the flick started, the hold pauses, and its lines on the bar stand still.
+                        strip?.gesture?.deletePaused(deleteHold.paused)
+                        next?.let {
                             nextDeleteHoldStep(it)
-                            if (strip?.gesture?.scene == GestureDisplay.Scene.DeleteHold) strip?.gesture?.deleteHeld(deleteHold.repeatMillis, finger.time)
+                            if (strip?.gesture?.scene == GestureDisplay.Scene.DeleteHold) {
+                                strip?.gesture?.deleteHeld(deleteHold.repeatMillis, finger.time, pace = deleteHold.pace)
+                            }
                         }
                     }
                     return
@@ -2020,7 +2029,7 @@ class AtlasIme : InputMethodService() {
     private fun lift(event: MotionEvent, samples: List<Sample>, cancelled: Boolean) {
         endDeleteHold()
         tripleDown = false
-        strip?.gesture?.pickLifted()
+        strip?.gesture?.pickLifted(SystemClock.uptimeMillis())
         val doubleTapped = if (cancelled) {
             cursorGesture.cancel(event.eventTime)
             false
@@ -2208,7 +2217,7 @@ class AtlasIme : InputMethodService() {
             return@changeSelection null
         }
         strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
-        strip?.gesture?.wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown)
+        strip?.gesture?.wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown, caret = inFront)
         word
     }
 

@@ -14,6 +14,13 @@ private const val RIGHT_OF_SPACE = 7.5f
 fun main() {
     aFlicksWayInStretchesToFitItsDots()
     aHeldDeleteGlowsUnderTheFinger()
+    aHeldDeleteGlowIsRootedOnTheRightAndStopsAtTheLine()
+    aHeldDeleteShowsItsZonesOnlyWhileItDeletes()
+    aPausedHoldStandsStill()
+    aHoldsDotsSpeedUpAsFarAsItsWordsDid()
+    aHeldTripleGlowsEveryTime()
+    theTripleGlowFollowsTheHand()
+    aTriplePickShowsOnlyACaret()
     aTriplePickWaitsForTheLift()
     aHoldsWordsFadeInBehindItsDots()
     anyNumberOfWordsShowsItsDots()
@@ -1038,6 +1045,154 @@ private fun aHeldDeleteGlowsUnderTheFinger() {
     key.deleteEnded(1_200)
     key.glowOff()
     same(key.glowing, false, "A key ends it at once")
+}
+
+/**
+ * A held delete's glow is rooted on the bar's right edge and reaches left to the finger; past the top-speed line, five and a half
+ * keys from where the flick started, it stops growing, and as the hold lifts it keeps its reach while it fades.
+ */
+private fun aHeldDeleteGlowIsRootedOnTheRightAndStopsAtTheLine() {
+    val display = GestureDisplay()
+    display.deleteHeld(200, 1_000, x = .8f, origin = .95f, pace = 0f)
+    same(display.glowRooted, true, "A held delete's glow is rooted on the right")
+    display.run(1_000, 1_200)
+    near(display.glowReach, .8f, "It reaches to the finger", .005f)
+    near(display.topSpeedAt, .95f - REPEAT_LONG_KEYS / 10, "The top-speed line is five and a half keys from the start")
+    display.fingerAt(.5f)
+    display.run(1_216, 1_500)
+    near(display.glowReach, .5f, "Before the line it follows the finger", .005f)
+    display.fingerAt(.1f)
+    display.run(1_516, 1_800)
+    near(display.glowReach, display.topSpeedAt, "Past the line it stops there", .001f)
+    display.wordDeleted(1_800, 4)
+    display.deleteEnded(1_816)
+    display.run(1_816, 1_816 + GestureDisplay.GLOW_FADE.toLong() / 2)
+    near(display.glowReach, .95f - REPEAT_LONG_KEYS / 10, "As it fades it keeps its reach", .001f)
+    // Space taps keep their own glow.
+    val space = GestureDisplay()
+    space.spaceTapped(2, 1_000)
+    space.run(1_000, 1_050)
+    same(space.glowRooted, false, "Taps glow as before")
+}
+
+/** The zones show only while a hold deletes: not for a flick, and not once the hold lifts. */
+private fun aHeldDeleteShowsItsZonesOnlyWhileItDeletes() {
+    val display = GestureDisplay()
+    display.deleteHeld(200, 1_000, x = .8f, origin = .95f)
+    display.run(1_000, 1_100)
+    same(display.zonesShown, true, "A hold shows its zones")
+    near(display.pauseFrom, .95f - PAUSE_KEYS / 10, "The pause zone runs from .8 of a key left of the start")
+    near(display.pauseTo, .95f + PAUSE_KEYS / 10, "to .8 of a key right of it")
+    display.wordDeleted(1_100, 3)
+    display.deleteEnded(1_200)
+    same(display.zonesShown, false, "Once it lifts they go")
+    val flick = GestureDisplay()
+    flick.wordDeleted(1_000, 5)
+    same(flick.zonesShown, false, "A flick shows none")
+    val unknown = GestureDisplay()
+    unknown.deleteHeld(200, 1_000)
+    same(unknown.zonesShown, false, "With no start known, none show")
+}
+
+/** In the pause zone the hold's lines stand still, and they move again as it leaves. */
+private fun aPausedHoldStandsStill() {
+    val display = GestureDisplay()
+    display.deleteHeld(200, 1_000, x = .8f, origin = .95f)
+    display.run(1_000, 1_100)
+    display.deletePaused(true)
+    same(display.deletePaused, true, "The display knows the hold is paused")
+    val flow = display.flow
+    display.run(1_116, 1_600)
+    same(display.flow, flow, "Paused, its lines stand still")
+    display.deletePaused(false)
+    display.run(1_616, 1_700)
+    isTrue(display.flow != flow, "Out of the pause they move again")
+}
+
+/** When each dot of a lifted hold of [words] words of five letters lands, for a hold whose fastest pace was [pace]. */
+private fun holdDots(pace: Float, words: Int = 20): List<Float> {
+    val display = GestureDisplay()
+    display.speedUp = true
+    display.deleteHeld(200, 1_000, x = .5f, origin = .95f, pace = pace)
+    repeat(words) { display.wordDeleted(1_100L + it, 5) }
+    display.deleteEnded(1_200)
+    return (0 until display.dots).map { display.dotLandsAt(it) }
+}
+
+/**
+ * A lifted hold's dots speed up only as far as its words did: not at all if the finger stayed at the slowest, to the fastest gap
+ * once it reached the top-speed line, and between for a finger between. So dots, words and glow top out together.
+ */
+private fun aHoldsDotsSpeedUpAsFarAsItsWordsDid() {
+    val slow = holdDots(0f).zipWithNext { a, b -> b - a }
+    val middle = holdDots(.5f).zipWithNext { a, b -> b - a }
+    val top = holdDots(1f).zipWithNext { a, b -> b - a }
+    near(slow.minOrNull()!!, slow.maxOrNull()!!, "At the slowest the dots keep an even pace: $slow", .5f)
+    near(top.minOrNull()!!, GestureDisplay.DOT_FASTEST_GAP, "At the top-speed line they reach the fastest gap", .5f)
+    isTrue(middle.minOrNull()!! > top.minOrNull()!! + 1f && middle.minOrNull()!! < slow.minOrNull()!! - 1f,
+        "Between, they top out between: ${middle.minOrNull()}")
+    isTrue(holdDots(1f).last() < holdDots(.5f).last() && holdDots(.5f).last() < holdDots(0f).last(), "and a faster hold's dots end sooner")
+}
+
+/**
+ * Two taps then a held third press glow every time, however steady the finger: the glow grows over the whole bar, a little
+ * thicker than steering's, stays as long as the finger does, and fades at the lift. A slide carries it on as the select's.
+ */
+private fun aHeldTripleGlowsEveryTime() {
+    for (hold in listOf(200L, 900L, 2_500L)) {
+        val display = GestureDisplay()
+        display.spaceTapped(2, 900)
+        display.wordSelected(1_000, held = true, caret = true)
+        display.pickHeldGlow(1_000 + CursorGesture.REGISTER_MILLIS)
+        display.run(1_000, 1_000 + hold)
+        same(display.glowing, true, "Held $hold ms, the triple press still glows")
+        same(display.glowThick, true, "a little thicker than steering's")
+        near(display.glowWidth, GestureDisplay.GLOW_HELD_WIDTH, "over the whole bar")
+        display.pickLifted(1_000 + hold)
+        display.run(1_000 + hold + 16, 1_000 + hold + GestureDisplay.GLOW_FADE.toLong() + 48)
+        same(display.glowing, false, "After the lift it fades and goes")
+    }
+    // With no pick yet, as when typing still goes through, it still glows.
+    val early = GestureDisplay()
+    early.pickHeldGlow(1_000)
+    early.run(1_000, 1_500)
+    same(early.glowing, true, "It glows before the pick shows too")
+    // A slide makes it the select's glow, which goes with the select.
+    val slide = GestureDisplay()
+    slide.wordSelected(1_000, held = true, caret = true)
+    slide.pickHeldGlow(1_070)
+    slide.run(1_000, 1_200)
+    slide.drag(6f, 1, 3f, 1_216, 1_400, words = true)
+    same(slide.glowing, true, "A slide keeps the glow")
+    same(slide.glowThick, true, "still thicker")
+    near(slide.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "with no dip")
+    // Nothing to pick puts it out.
+    val nothing = GestureDisplay()
+    nothing.pickHeldGlow(1_000)
+    nothing.glowOff()
+    same(nothing.glowing, false, "With nothing to pick it goes at once")
+}
+
+/** The triple press's select glow leans with the hand, as steering's does. */
+private fun theTripleGlowFollowsTheHand() {
+    val display = GestureDisplay()
+    display.pickHeldGlow(1_000)
+    display.drag(8f, 1, 4f, 1_000, 1_600, words = true)
+    isTrue(display.steerLean > .5f, "Leaning right, the select's glow leans right: ${display.steerLean}")
+    display.drag(2f, -1, 4f, 1_616, 2_200, words = true)
+    isTrue(display.steerLean < -.5f, "and left: ${display.steerLean}")
+}
+
+/** A triple press's pick shows no box, only a caret after the word; a double tap's keeps its box. */
+private fun aTriplePickShowsOnlyACaret() {
+    val triple = GestureDisplay()
+    triple.wordSelected(1_000, held = true, caret = true)
+    same(triple.pickCaret, true, "A triple press shows only a caret")
+    val double = GestureDisplay()
+    double.wordSelected(1_000)
+    same(double.pickCaret, false, "A double tap keeps its box")
+    triple.drag(8f, 1, 3f, 1_100, 1_200, words = true)
+    same(triple.pickCaret, false, "A slide from the pick selects words, with their box")
 }
 
 /**

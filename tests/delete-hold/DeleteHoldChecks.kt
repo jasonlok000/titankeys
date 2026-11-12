@@ -21,6 +21,9 @@ fun main() {
     aMiddleFlickWaitsBetween()
     theWaitIsTheSameForEveryWordOfAHold()
     theWaitCountsToWhereTheFingerStopped()
+    backAtTheStartTheHoldPauses()
+    aFlickNeverEndsInThePauseZone()
+    thePaceTopsOutAtTheTopSpeedLine()
     moreLengthDoesNotPassTheLimits()
     theFirstWordIsTheFlickItself()
     liftingStopsAtOnceWithNoExtraWord()
@@ -102,6 +105,10 @@ private fun theGuideZoneIsWhereFlicksStart() {
 
 private fun same(actual: Any?, expected: Any?, message: String) {
     if (actual != expected) throw AssertionError("$message\n  expected: $expected\n  actual:   $actual")
+}
+
+private fun isTrue(value: Boolean, message: String) {
+    if (!value) throw AssertionError(message)
 }
 
 private fun at(x: Float, y: Float, time: Long) = Sample(x, y, time)
@@ -249,6 +256,73 @@ private fun theWaitCountsToWhereTheFingerStopped() {
     }
     same(waits.zipWithNext().all { (a, b) -> b < a && a - b < 60 }, true, "Each step further makes it a little faster: $waits")
     same(waits.first() to waits.last(), slowMillis to fastMillis, "The whole range: slowest at two keys, fastest at five and a half: $waits")
+}
+
+/**
+ * While a hold deletes, a finger back within .8 of a key of where the flick started pauses it: no words go while it rests there.
+ * Sliding out again, past a small margin, carries on at the speed for that distance, a whole wait after it left.
+ */
+private fun backAtTheStartTheHoldPauses() {
+    val rig = Rig()
+    val started = 1_000L + 60 + holdMillis
+    rig.flick(1_000, SHORT_STOP)
+    rig.runTo(started)
+    same(rig.words.size, 1, "The hold has started")
+    // Back to half a key from the start, on Backspace.
+    rig.move(at(.9f, .35f, started + 10))
+    same(rig.hold.paused, true, "Half a key from the start, the hold pauses")
+    rig.runTo(started + 3_000)
+    same(rig.words.size, 1, "No words go while the finger rests in the pause zone")
+    // A shake on the edge does not leave it.
+    rig.move(at(.95f - (PAUSE_KEYS + .05f) / 10, .35f, started + 3_010))
+    same(rig.hold.paused, true, "A finger just past the edge stays paused, so it does not stutter")
+    rig.runTo(started + 3_500)
+    same(rig.words.size, 1, "and still no words go")
+    // Out again, to a short flick's distance: the slow wait, counted from leaving.
+    rig.move(at(SHORT_STOP, .35f, started + 4_000))
+    same(rig.hold.paused, false, "Sliding out ends the pause")
+    rig.runTo(started + 4_000 + slowMillis - 1)
+    same(rig.words.size, 1, "The next word waits its whole step after leaving")
+    rig.runTo(started + 4_000 + slowMillis * 3)
+    same(rig.words.drop(1).zipWithNext { a, b -> b - a }.toSet(), setOf(slowMillis), "then words go at the speed for that distance")
+    same(rig.words[1], started + 4_000 + slowMillis, "the first one a whole wait after leaving")
+    // Further out goes faster, as before.
+    rig.move(at(LONG_STOP, .35f, started + 6_000))
+    val before = rig.words.size
+    rig.runTo(started + 7_000)
+    same(rig.words.drop(before - 1).zipWithNext { a, b -> b - a }.toSet(), setOf(fastMillis), "and further left is the fastest again")
+}
+
+/** A flick travels a whole key at least, so even the shortest one, resting where it ends, deletes on and never pauses. */
+private fun aFlickNeverEndsInThePauseZone() {
+    isTrue(PAUSE_KEYS < (deleteSwipeTuning["minTravel"] as Float) * 10, "The pause zone is narrower than the shortest flick")
+    val rig = Rig()
+    // The shortest flick, from Backspace a whole key and a little more.
+    rig.flick(1_000, .84f)
+    rig.runTo(1_000 + 60 + holdMillis + 2_000)
+    same(rig.hold.paused, false, "Resting where it ends, the shortest flick is not paused")
+    isTrue(rig.words.size > 3, "and it deletes on: ${rig.words.size}")
+    // Before the hold starts, nothing pauses: a finger that comes back is no hold at all, or a fresh wait.
+    val early = Rig()
+    early.flick(1_000, SHORT_STOP)
+    same(early.hold.paused, false, "Nothing is paused before the hold starts")
+}
+
+/** The pace is 0 at two keys and 1 at the top-speed line, five and a half keys; past it, it stays 1. The fastest is kept. */
+private fun thePaceTopsOutAtTheTopSpeedLine() {
+    val rig = Rig()
+    val started = 1_000L + 60 + holdMillis
+    rig.flick(1_000, SHORT_STOP)
+    rig.runTo(started)
+    same(rig.hold.pace, 0f, "Two keys or less is the slowest")
+    rig.move(at(.95f - REPEAT_LONG_KEYS / 10, .35f, started + 10))
+    same(rig.hold.pace, 1f, "At the top-speed line it is the fastest")
+    rig.move(at(.1f, .35f, started + 20))
+    same(rig.hold.pace, 1f, "and further on it stays there")
+    same(rig.hold.repeatMillis, fastMillis, "as the words do")
+    rig.move(at(MIDDLE_STOP, .35f, started + 30))
+    isTrue(rig.hold.pace > 0f && rig.hold.pace < 1f, "Back in the ramp it is between: ${rig.hold.pace}")
+    same(rig.hold.topPace, 1f, "The fastest it went is kept, for the dots at the lift")
 }
 
 private fun moreLengthDoesNotPassTheLimits() {

@@ -103,14 +103,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     var shownStep = 0f
         private set
     /**
-     * Whether the caret shows now. Every gesture's caret blinks only when paused (owner, 2026-11-12): steering's is solid while
-     * the finger moves and blinks, on and off for [BLINK_MILLIS] each, once steering pauses; a held delete's is solid while it
-     * deletes and blinks while the finger rests in the pause zone.
+     * Whether the caret shows now. Only a held delete's caret blinks, on and off for [BLINK_MILLIS] each, while the finger rests
+     * in the pause zone. Steering's never blinks, even when it pauses (owner, 2026-11-12).
      */
     var caretShown = true
         private set
-    /** When steering last moved, or -1 before its first frame. The blink counts from here. */
-    private var movedAt = -1L
     /** Whether more text may lie past each end of [line], so that the cursor going there reads it again. */
     private var moreBefore = false
     private var moreAfter = false
@@ -399,21 +396,58 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             // too soon for it to grow in.
             glowWidth = reach
             glowBase = heldAlpha
+            flickGlowAt = now
+            flickFramed = false
         }
         flickReach = reach
         deletePace = FLICK_GLOW_PACE
         changed()
     }
 
-    /** The flick lifted, or stopped being a flick: its glow stays where it reached and fades, as a hold's does at its lift. */
+    /** The stroke stopped being a flick, or a hold lifted: the glow stays where it reached and fades. */
     fun flickGlowEnded(now: Long) {
         if (!glowHeld || !glowDelete) return
         fadeGlow(now)
         changed()
     }
 
+    /**
+     * A delete flick lifted with its finger at [x]. Every flick shows its glow (owner, 2026-11-12): a very fast one can be over
+     * before its glow had a frame, or before it was clearly a flick at all, so its glow then plays after the lift, from the
+     * corner to where the finger lifted. It stays at full strength until it has shown for [FLICK_GLOW_SEEN] in all, then fades
+     * as any flick's does. A hold's glow just fades, as it always did.
+     */
+    fun flickLifted(x: Float, now: Long) {
+        if (!allowed) return
+        val reach = (1f - x).coerceIn(0f, 1f)
+        val flickShowing = glowHeld && glowDelete && !flickReach.isNaN()
+        if (glowHeld && glowDelete && !flickShowing) return flickGlowEnded(now)
+        if (!flickShowing) {
+            // Never clearly a flick while it went: the glow starts now, as a flick's would have.
+            holdGlow(now)
+            glowDelete = true
+            deletePace = FLICK_GLOW_PACE
+            shownPace = FLICK_GLOW_PACE
+            glowBase = heldAlpha
+            glowWidth = reach
+            flickGlowAt = now
+        } else if (!flickFramed) {
+            // Its glow never drew: it shows where the finger lifted, not where the stroke was first seen.
+            shownPace = FLICK_GLOW_PACE
+            glowBase = heldAlpha
+            glowWidth = reach
+        }
+        fadeGlow(now)
+        // A fading glow counts its fade from [glowAt], so one set later holds it at full until then.
+        glowAt = max(now, flickGlowAt + FLICK_GLOW_SEEN)
+        changed()
+    }
+
     /** How far a flick's glow reaches from the right, as a share of the bar, or NaN once a hold follows the pace instead. */
     private var flickReach = Float.NaN
+    /** When the flick's glow came on, and whether it has had a frame since. */
+    private var flickGlowAt = 0L
+    private var flickFramed = false
     /** True while a hold's glow eases from where its flick's reached to where its pace has it. */
     private var reachEasing = false
 
@@ -902,7 +936,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         if (glowHeld) return advanceHeldGlow(now, scale)
         val motion = scale > 0f
         if (glowFading) {
-            val t = if (motion) (now - glowAt) / (GLOW_FADE * scale) else 1f
+            // A late flick glow's fade starts after the lift, and until then it holds at full.
+            val t = if (motion) ((now - glowAt) / (GLOW_FADE * scale)).coerceAtLeast(0f) else 1f
             if (t >= 1f) {
                 endGlow()
                 return false
@@ -980,6 +1015,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         // A flick's reaches to the finger and follows it closely; a hold's reach follows its pace, and the change from one to
         // the other eases, so the glow never jumps as a flick becomes a hold.
         val flick = !flickReach.isNaN()
+        if (flick) flickFramed = true
         val reach = if (flick) flickReach else DELETE_REACH_LEAST + (DELETE_REACH_MOST - DELETE_REACH_LEAST) * shownPace
         if (flick || reachEasing) {
             glowWidth = ease(glowWidth, reach, elapsed, if (flick) EASE_MILLIS else DELETE_GLOW_MILLIS, motion)
@@ -1044,9 +1080,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 intensity = ease(intensity, speedTarget, elapsed, EASE_MILLIS, motion)
                 steerLean = ease(steerLean, leaning * (LEAN_BASE + (1f - LEAN_BASE) * intensity), elapsed, LEAN_MILLIS, motion)
                 shownStep = ease(shownStep, stepped.toFloat(), elapsed, STEP_MILLIS, motion)
-                if (leaning != 0 || abs(stepped - shownStep) > STEP_SETTLED || movedAt < 0) movedAt = now
-                // With motion off the caret stays on, as nothing else moves either.
-                caretShown = !motion || (now - movedAt) / BLINK_MILLIS % 2 == 0L
+                // Steering's caret never blinks.
+                caretShown = true
                 if (motion) {
                     val next = flow + leaning * flowRate(intensity) * seconds
                     letters = (letters + floor(next).toInt()).mod(PATTERN_LETTERS)
@@ -1068,7 +1103,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             Scene.DeleteHold -> {
                 shownDeleted = ease(shownDeleted, deleted.toFloat(), elapsed, min(deleteMillis * DELETE_EASE, MAX_DELETE_EASE_MILLIS), motion)
                 if (motion && !deletePaused) flow = (flow + min(FLOW_FASTEST, 1000f / deleteMillis) * seconds).mod(1f)
-                // In the pause zone the caret blinks, as steering's does when it pauses. With motion off it stays on.
+                // In the pause zone the caret blinks; it is the only caret that does. With motion off it stays on.
                 if (deletePaused && pausedAt < 0) pausedAt = now
                 caretShown = !motion || !deletePaused || (now - pausedAt) / BLINK_MILLIS % 2 == 0L
             }
@@ -1201,7 +1236,6 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         intensity = 0f
         steerLean = 0f
         caretShown = true
-        movedAt = -1L
         flow = 0f
         letters = 0
         wordsLeft = 0
@@ -1257,9 +1291,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         /** The underglow's side follows the lean a little slower than the speed, so a flick across Space doesn't flash. */
         private const val LEAN_MILLIS = 110f
         private const val STEP_MILLIS = 60f
-        /** The text closer than this to where the cursor is has settled, so steering has paused. */
-        private const val STEP_SETTLED = .02f
-        /** A paused caret blinks as Android's text cursor does: this long on, then this long off. */
+        /** A held delete's paused caret blinks as Android's text cursor does: this long on, then this long off. */
         const val BLINK_MILLIS = 530L
         /** A frame that comes late must not make the text jump. */
         private const val MAX_FRAME_MILLIS = 48f
@@ -1387,6 +1419,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         const val DELETE_GLOW_FADE = 140f
         /** How strong a single flick's glow is, as a hold's pace: about a hold's 4 keys out. */
         const val FLICK_GLOW_PACE = .6f
+        /** Every flick's glow shows at full strength for at least this long, even one that lifted before it drew, then fades. */
+        const val FLICK_GLOW_SEEN = 120L
         /** How far a held delete's glow along the bottom reaches left from the corner, from the slowest to the top-speed line. */
         const val DELETE_REACH_LEAST = .2f
         const val DELETE_REACH_MOST = .65f

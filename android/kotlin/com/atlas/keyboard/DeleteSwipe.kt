@@ -148,10 +148,23 @@ internal class FlickCrunch {
     var state = State.Waiting
         private set
     val crunching get() = state == State.Crunching
+    /** Whether a delete flick counts for this stroke, as [begin] was told: only then does it glow, even at its lift. */
+    var allowed = false
+        private set
 
     /** A new stroke. [allowed] is false where a delete flick would not count now, so it never crunches. */
     fun begin(allowed: Boolean = true) {
+        this.allowed = allowed
         state = if (allowed) State.Waiting else State.Plain
+    }
+
+    /**
+     * The stroke lifted, with [points] all of its valid ones: true when it was a delete flick that counts, so its glow shows,
+     * even one too fast to have crunched or drawn its glow while it went.
+     */
+    fun lifted(points: List<Sample>): Boolean {
+        val first = points.firstOrNull() ?: return false
+        return allowed && state != State.Broken && startsDeleteFlick(first.x, first.y) && isDeleteWordSwipe(points)
     }
 
     /** The stroke so far, [points], all of its valid ones. True when it has just stopped being a flick: the break. */
@@ -175,6 +188,22 @@ internal class FlickCrunch {
         }
         return false
     }
+}
+
+/**
+ * How many characters a word delete takes from the end of [before], the text before the cursor, with [after] the text after it,
+ * or null where the field doesn't say: the spaces before the cursor, then the word before them. When that would leave two
+ * spaces, as deleting "two" from "one two| three" would, the space before the word goes too, so "one| three" is left
+ * (owner, 2026-11-12). Only a plain space goes, and only between two words: never at the start of the text, nor at its end,
+ * nor before punctuation, a line break or anything else that isn't a space. A flick and each word of a hold delete this way.
+ */
+internal fun wordDeleteLength(before: String, after: String?): Int {
+    var start = before.length
+    while (start > 0 && Character.isWhitespace(before.codePointBefore(start))) start -= Character.charCount(before.codePointBefore(start))
+    while (start > 0 && !Character.isWhitespace(before.codePointBefore(start))) start -= Character.charCount(before.codePointBefore(start))
+    val tookWord = start < before.length && !Character.isWhitespace(before.codePointBefore(before.length))
+    if (tookWord && start > 0 && before[start - 1] == ' ' && after?.startsWith(' ') == true) start--
+    return before.length - start
 }
 
 /** The numbers above, for the raw input log. */

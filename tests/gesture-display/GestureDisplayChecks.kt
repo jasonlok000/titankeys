@@ -15,6 +15,7 @@ fun main() {
     aFlicksWayInStretchesToFitItsDots()
     aHeldDeleteGlowFollowsItsPace()
     aFlicksGlowFollowsTheFinger()
+    everyFlickShowsItsGlow()
     aHoldDrawsTheRealWords()
     aHoldWithNoTextLeftDrawsNoPills()
     aPausedHoldFadesAndBlinks()
@@ -87,7 +88,7 @@ fun main() {
     theGlowCarriesIntoASelect()
     theHeldGlowGoesWithTheDisplay()
     theUnderglowLeansWithTheSteering()
-    theCaretBlinksOnlyWhenSteeringPauses()
+    steeringsCaretNeverBlinks()
     println("Gesture display checks passed")
 }
 
@@ -1549,41 +1550,36 @@ private fun theUnderglowLeansWithTheSteering() {
     near(still.steerLean, 0f, "and none once steering is gone")
 }
 
-/** Steering's caret stays on while the cursor moves, and blinks as a text cursor does, 530 ms on and 530 ms off, once it pauses. */
-private fun theCaretBlinksOnlyWhenSteeringPauses() {
+/** Steering's caret never blinks, not even when steering pauses (owner, 2026-11-12). Only a held delete's pause zone blinks. */
+private fun steeringsCaretNeverBlinks() {
     val display = GestureDisplay()
     display.spaceTapped(1, 0L)
     display.cursorFrame(5f, 0, 0f, false, 100L)
     display.cursorText("The quick", " brown fox")
-    display.advance(100L, 1f)
-    // Resting on Space from the start: on first, then off, then on again.
-    if (!display.caretShown) throw AssertionError("The caret shows as steering starts")
-    display.advance(100L + GestureDisplay.BLINK_MILLIS - 10, 1f)
-    if (!display.caretShown) throw AssertionError("It stays on for the first ${GestureDisplay.BLINK_MILLIS} ms")
-    display.advance(100L + GestureDisplay.BLINK_MILLIS + 10, 1f)
-    if (display.caretShown) throw AssertionError("Then it goes off")
-    display.advance(100L + 2 * GestureDisplay.BLINK_MILLIS + 10, 1f)
-    if (!display.caretShown) throw AssertionError("And comes on again")
-    // Steering: on every frame, however long.
-    var now = 1200L
-    while (now < 3000L) {
+    // Resting on Space from the start, for many blinks' time.
+    var now = 100L
+    while (now < 100L + 6 * GestureDisplay.BLINK_MILLIS) {
+        display.advance(now, 1f)
+        if (!display.caretShown) throw AssertionError("The caret stays on while steering rests, at $now ms")
+        now += 16
+    }
+    // Steering, then pausing again for a long while.
+    val moving = now + 1800L
+    while (now < moving) {
         now += 16
         display.cursorFrame(8.5f, 1, CursorMode.SLOWEST_PER_SECOND * 4, false, now)
         if (now % 160L == 0L) display.cursorStepped(1)
         display.advance(now, 1f)
         if (!display.caretShown) throw AssertionError("The caret stays on while steering, at $now ms")
     }
-    // Back on Space: on until the text settles and a blink's time passes, then off.
     display.cursorFrame(5f, 0, 0f, false, now)
-    display.advance(now + 16, 1f)
-    if (!display.caretShown) throw AssertionError("It is on when steering pauses")
-    display.advance(now + GestureDisplay.BLINK_MILLIS + 200, 1f)
-    if (display.caretShown) throw AssertionError("Paused, it blinks off")
-    // Moving again turns it straight back on.
-    display.cursorFrame(1.5f, -1, CursorMode.SLOWEST_PER_SECOND * 4, false, now + GestureDisplay.BLINK_MILLIS + 216)
-    display.advance(now + GestureDisplay.BLINK_MILLIS + 216, 1f)
-    if (!display.caretShown) throw AssertionError("Steering again shows it at once")
-    // With animations off nothing moves, so it stays on.
+    val paused = now + 6 * GestureDisplay.BLINK_MILLIS
+    while (now < paused) {
+        now += 16
+        display.advance(now, 1f)
+        if (!display.caretShown) throw AssertionError("Paused, steering's caret still never blinks, at $now ms")
+    }
+    // With animations off it stays on too.
     val still = GestureDisplay()
     still.cursorFrame(5f, 0, 0f, false, 0L)
     still.advance(GestureDisplay.BLINK_MILLIS + 10, 0f)
@@ -1631,4 +1627,57 @@ private fun aFlicksGlowFollowsTheFinger() {
     // A hold with nothing deleted: no flick glow can start over it.
     held.flickGlow(.1f, 3_200)
     near(held.glowWidth, GestureDisplay.DELETE_REACH_LEAST, "A hold's glow is the pace's", .005f)
+}
+
+/**
+ * Every delete flick shows its glow (owner, 2026-11-12). One so fast that it lifted before its glow had a frame, or before it was
+ * clear while it went, plays the glow after the lift: from the corner to where the finger lifted, at full strength for
+ * [GestureDisplay.FLICK_GLOW_SEEN], then fading.
+ */
+private fun everyFlickShowsItsGlow() {
+    // Never clear while it went: no glow before the lift, then one at the lift.
+    val unseen = GestureDisplay()
+    same(unseen.glowing, false, "Nothing glows while the stroke wasn't clear")
+    unseen.flickLifted(.6f, 1_000)
+    same(unseen.glowDelete, true, "At the lift the delete glow shows")
+    near(unseen.glowWidth, .4f, "from the corner to where the finger lifted", .001f)
+    unseen.run(1_000, 1_000 + GestureDisplay.FLICK_GLOW_SEEN - 10)
+    near(unseen.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "at full strength for a moment", .001f)
+    unseen.run(1_000 + GestureDisplay.FLICK_GLOW_SEEN, 1_000 + GestureDisplay.FLICK_GLOW_SEEN + 100)
+    isTrue(unseen.glowAlpha < GestureDisplay.GLOW_HELD_ALPHA && unseen.glowing, "then it fades: ${unseen.glowAlpha}")
+    unseen.run(1_300, 1_000 + GestureDisplay.FLICK_GLOW_SEEN + GestureDisplay.GLOW_FADE.toLong() + 50)
+    same(unseen.glowing, false, "and goes")
+    // Its glow started but lifted before a frame: it shows where the finger lifted, for the same moment.
+    val early = GestureDisplay()
+    early.flickGlow(.8f, 2_000)
+    early.flickLifted(.55f, 2_010)
+    near(early.glowWidth, .45f, "Where the finger lifted, not where the stroke was first clear", .001f)
+    early.run(2_010, 2_000 + GestureDisplay.FLICK_GLOW_SEEN - 10)
+    near(early.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "It stays at full until it has shown long enough", .001f)
+    // A flick whose glow showed all along fades at once at its lift, as before.
+    val seen = GestureDisplay()
+    seen.flickGlow(.7f, 3_000)
+    seen.run(3_000, 3_200)
+    seen.flickLifted(.5f, 3_200)
+    seen.run(3_216, 3_232)
+    isTrue(seen.glowAlpha < GestureDisplay.GLOW_HELD_ALPHA, "A glow that showed long enough fades at the lift: ${seen.glowAlpha}")
+    // The flick's dots don't put out the late glow.
+    val dots = GestureDisplay()
+    dots.flickLifted(.6f, 4_000)
+    dots.wordDeleted(4_020, 4)
+    same(dots.scene, Scene.DeleteFlick, "The dots play")
+    dots.run(4_020, 4_000 + GestureDisplay.FLICK_GLOW_SEEN - 10)
+    near(dots.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "with the late glow still at full", .001f)
+    // A hold's glow just fades at its lift.
+    val hold = GestureDisplay()
+    hold.deleteHeld(350, 5_000, pace = 0f)
+    hold.run(5_000, 5_400)
+    hold.flickLifted(.5f, 5_400)
+    hold.run(5_416, 5_416 + GestureDisplay.GLOW_FADE.toLong() + 50)
+    same(hold.glowing, false, "A hold's glow fades at its lift, with no late glow")
+    // With animations off nothing glows on after the lift.
+    val still = GestureDisplay()
+    still.flickLifted(.6f, 6_000)
+    still.advance(6_016, 0f)
+    same(still.glowing, false, "With animations off the late glow doesn't hang on")
 }

@@ -2208,9 +2208,12 @@ class AtlasIme : InputMethodService() {
 
     /** A finger lifted, or the system cancelled the gesture, which counts as a lift but never as a tap of a double tap. */
     private fun lift(event: MotionEvent, samples: List<Sample>, cancelled: Boolean) {
+        // Every delete flick shows its glow, even one that lifted before it drew; a hold's glow fades with its dots.
+        val stroke = (contact.points + samples).filter { it.valid }
+        val flicked = !cancelled && !contact.deleting && flickCrunch.lifted(stroke)
         endDeleteHold()
-        // A flick's glow fades at the lift; a hold's already does, with its dots.
-        strip?.gesture?.flickGlowEnded(SystemClock.uptimeMillis())
+        if (flicked) strip?.gesture?.flickLifted(stroke.last().x, SystemClock.uptimeMillis())
+        else strip?.gesture?.flickGlowEnded(SystemClock.uptimeMillis())
         tripleDown = false
         strip?.gesture?.pickLifted(SystemClock.uptimeMillis())
         val doubleTapped = if (cancelled) {

@@ -21,10 +21,12 @@ object HapticTimeline {
         Family.Lock -> "Two equal ones. It stays: selecting, Shift lock, a pin."
         Family.Release -> "One pulse. It doesn't stay any more."
         Family.GoneFlick -> "Long then short. The tail lands as the dots pop."
-        Family.Gone -> "One long pulse. A word forgotten, the clipboard cleared."
+        Family.Gone -> "One long pulse. The clipboard cleared."
         Family.Back -> "Long then short. Undone, back as it was."
         Family.No -> "Three hard ones. Nothing happened."
         Family.Celebrate -> "A rising three. The guide's celebrations."
+        Family.Saved -> "Short, short, long. The word menu saved a word."
+        Family.Removed -> "Long, short, short. The word menu deleted a word."
     }
 
     /** What set off [haptic], in a few plain words, for the lab's live timeline. */
@@ -54,8 +56,8 @@ object HapticTimeline {
         Haptic.MenuOpen -> "The word menu opened"
         Haptic.MenuMark -> "The menu mark moved"
         Haptic.MenuClosed -> "Back closed the word menu"
-        Haptic.WordSaved -> "You saved a word"
-        Haptic.WordForgotten -> "You forgot a word"
+        Haptic.WordSaved -> "Saved the word"
+        Haptic.WordForgotten -> "Deleted the word"
         Haptic.ForgetUndone -> "You undid Forget"
         Haptic.WordNotSaved -> "The word couldn't be saved"
         Haptic.ClipOffer -> "You pasted the offered clip"

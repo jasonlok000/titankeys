@@ -35,6 +35,10 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
     Back("back", "Back", listOf(35, 40, 15)),
     /** Three quick hard pulses: no, nothing happened. */
     No("no", "No", listOf(25, 40, 25, 40, 25)),
+    /** Short, short, long: two light taps settle into a firm one. The word menu kept the word. */
+    Saved("saved", "Saved", listOf(20, 40, 20, 40, 50)),
+    /** Long, short, short: a firm hit that trails off, Saved's mirror. The word menu took the word away. */
+    Removed("removed", "Removed", listOf(50, 40, 20, 40, 20)),
     /** A rising run of three: the guide's celebrations. */
     Celebrate("celebrate", "Celebrate", listOf(15, 40, 22, 40, 35));
 
@@ -99,8 +103,10 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     MenuMark("menu_mark", HapticGroup.Bar, Family.Texture),
     /** Back closed the word menu, by P or the strip, with nothing picked. */
     MenuClosed("menu_closed", HapticGroup.Bar, Family.Release),
-    WordSaved("word_saved", HapticGroup.Bar, Family.Confirm),
-    WordForgotten("word_forgotten", HapticGroup.Bar, Family.Gone),
+    /** Save in the word menu, by I or the strip. It has its own family, so it never feels like the menu opening. */
+    WordSaved("word_saved", HapticGroup.Bar, Family.Saved),
+    /** Forget in the word menu, by O or the strip. */
+    WordForgotten("word_forgotten", HapticGroup.Bar, Family.Removed),
     /** Undo right after Forget: the word is back. */
     ForgetUndone("forget_undone", HapticGroup.Bar, Family.Back),
     /** Save went wrong and the word isn't saved. */

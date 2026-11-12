@@ -13,6 +13,8 @@
    - One long pulse means gone.
    - Three quick hard pulses mean no.
    - A rising run of three means celebrate.
+   - Short, short, long means saved: two light taps settle into a firm one.
+   - Long, short, short means removed: a firm hit that trails off.
 3. **Strength is length only.** More important or more destructive means longer.
 4. **Gaps.** At least 35 ms between pulses, so each one reads on its own.
 5. **No prebaked effects at all.** Everything is our own waveform, `VibrationEffect.createWaveform` with timings. The Titan has no strength control, so every pulse is at the default strength. A single pulse may be a one-shot.
@@ -31,17 +33,21 @@ Patterns are on and off in ms, starting with on.
 |---|---|---|
 | **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, words in a held delete (fading, below), the marked button in the word menu or a panel |
 | **Boundary** | 30 | The cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel |
-| **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, Save, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
+| **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
 | **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol |
 | **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar |
 | **Release** | 30 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked, Back closing the word menu |
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
-| **Gone** | 60 | Forget, the clipboard cleared |
+| **Gone** | 60 | The clipboard cleared |
 | **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
 | **No** | 25, 40, 25, 40, 25 | A word that can't be saved, nothing left to delete (flick and hold), the cursor hitting the start or end of the text, taps on Space that find nothing to pick or steer |
 | **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations |
+| **Saved** | 20, 40, 20, 40, 50 | Save in the word menu, by I or the strip |
+| **Removed** | 50, 40, 20, 40, 20 | Forget in the word menu, by O or the strip |
 
 The rising and falling patterns use a short first or last pulse on purpose: the short pulse is what makes the rise or the fall. So Confirm's 15 ms and Change's 20 ms are under rule 1's "about 25". The table wins over that guide.
+
+Saved and Removed are the word menu's own, so Save and Forget feel different from each other and from everything else. Saved rises at the end, so it isn't No's three equal pulses or Celebrate's steady rise, and it has three pulses, not Confirm's two. Removed is its mirror, so it isn't Gone's one pulse or the two of Gone flick and Back. Save used to play Confirm, the same as the menu opening, so it felt like nothing new, and the repeat rule dropped it when you saved within 300 ms of the menu opening. Each message family has its own pattern, and tests/haptics checks it.
 
 Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single 30 ms pulse too, but it comes once, so it's a message.
 
@@ -109,8 +115,8 @@ The ticks are still texture for the gate, so they never block a message. A thinn
 - The word menu opens: confirm.
 - The marked menu button changes: texture.
 - Back closes the word menu: release. Typing or leaving the field closes it with nothing.
-- Save: confirm.
-- Forget: gone.
+- Save, by I or the strip: saved. It plays as you press, and a save that fails plays no after it.
+- Forget, by O or the strip: removed.
 - Undo after Forget: back.
 - Save goes wrong: no.
 - Paste the offered clip: confirm.
@@ -145,6 +151,7 @@ The ticks are still texture for the gate, so they never block a message. A thinn
 - **The touchpad's scroll, cursor and Back.** The screen moves.
 - **The first press of Clear, and Pin mode.** Key presses, and the page shows them.
 - **A key that picks a button in the word menu.** A key press. What the button does plays its own haptic.
+- **Save and Forget in the guide.** They're only for show there: nothing is saved or forgotten, and the guide says so.
 - **A new step in the guide, and setup changes there.** You're looking at the guide.
 - **Speed effects and idle games.** They're for your eyes.
 

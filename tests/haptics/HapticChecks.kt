@@ -14,6 +14,8 @@ fun main() {
     textureIsOneShortTick()
     messagesAreRhythmsOrLongPulses()
     theRhythmsMeanTheSameEverywhere()
+    everyFamilyHasItsOwnPattern()
+    theWordMenuHasItsOwnFeels()
     aMessageCantRepeat()
     textureKeepsItsOwnPace()
     messagesBeatTexture()
@@ -77,8 +79,8 @@ private val table = mapOf(
     Haptic.MenuOpen to Family.Confirm,
     Haptic.MenuMark to Family.Texture,
     Haptic.MenuClosed to Family.Release,
-    Haptic.WordSaved to Family.Confirm,
-    Haptic.WordForgotten to Family.Gone,
+    Haptic.WordSaved to Family.Saved,
+    Haptic.WordForgotten to Family.Removed,
     Haptic.ForgetUndone to Family.Back,
     Haptic.WordNotSaved to Family.No,
     Haptic.ClipOffer to Family.Confirm,
@@ -114,6 +116,8 @@ private val patterns = mapOf(
     Family.Back to listOf(35L, 40L, 15L),
     Family.No to listOf(25L, 40L, 25L, 40L, 25L),
     Family.Celebrate to listOf(15L, 40L, 22L, 40L, 35L),
+    Family.Saved to listOf(20L, 40L, 20L, 40L, 50L),
+    Family.Removed to listOf(50L, 40L, 20L, 40L, 20L),
 )
 
 private fun eachHapticPlaysItsFamily() {
@@ -126,7 +130,7 @@ private fun eachHapticPlaysItsFamily() {
 }
 
 private fun eachFamilyPlaysItsPattern() {
-    check(patterns.keys == Family.entries.toSet()) { "Eleven families: ${Family.entries}" }
+    check(patterns.keys == Family.entries.toSet()) { "Thirteen families: ${Family.entries}" }
     for ((family, pattern) in patterns) check(family.pattern == pattern) { "$family plays ${family.pattern}, not $pattern" }
     // And so each haptic plays its family's pattern exactly.
     for ((haptic, family) in table) check(HapticPalette.pattern(haptic.family, false, null) == patterns.getValue(family)) {
@@ -185,6 +189,37 @@ private fun theRhythmsMeanTheSameEverywhere() {
     // Every pattern feels different from every other.
     check(Family.entries.map { it.pattern }.toSet().size == Family.entries.size - 1) { "Only Boundary and Release share a pattern" }
     check(Family.Boundary.pattern == Family.Release.pattern) { "A release is a single firm pulse, like a boundary, as the table has it" }
+    // Saved rises at the end and Removed falls from the start, each over three pulses.
+    check(pulses(Family.Saved).let { it.size == 3 && it[0] == it[1] && it[1] < it[2] }) { "Saved is short, short, long" }
+    check(pulses(Family.Removed) == pulses(Family.Saved).reversed()) { "Removed is Saved's mirror: long, short, short" }
+}
+
+/**
+ * Every family has its own pattern, so no two meanings feel the same. Release shares Boundary's single pulse on purpose, but
+ * Boundary is texture, so among messages each pattern, and each list of pulses without its gaps, is its own.
+ */
+private fun everyFamilyHasItsOwnPattern() {
+    val messages = Family.entries.filter { !it.texture }
+    check(messages.map { it.pattern }.toSet().size == messages.size) { "Each message has its own pattern: ${messages.map { it.pattern }}" }
+    check(messages.map { HapticPalette.pulses(it.pattern) }.toSet().size == messages.size) { "Each message has its own pulses" }
+    for (family in listOf(Family.Saved, Family.Removed)) for (other in Family.entries.filter { it != family })
+        check(HapticPalette.pulses(family.pattern) != HapticPalette.pulses(other.pattern)) { "$family feels different from $other" }
+}
+
+/** The word menu's Save and Forget each have a family of their own, used by nothing else. */
+private fun theWordMenuHasItsOwnFeels() {
+    check(Haptic.WordSaved.family == Family.Saved && Haptic.WordForgotten.family == Family.Removed) { "Save is Saved, Forget is Removed" }
+    check(Haptic.entries.filter { it.family == Family.Saved } == listOf(Haptic.WordSaved)) { "Only Save plays Saved" }
+    check(Haptic.entries.filter { it.family == Family.Removed } == listOf(Haptic.WordForgotten)) { "Only Forget plays Removed" }
+    check(Haptic.MenuOpen.family != Haptic.WordSaved.family) { "Save never shares the menu opening's family, so the repeat rule can't drop it" }
+    check(Haptic.WordNotSaved.family == Family.No && Haptic.ForgetUndone.family == Family.Back) { "A failed save is no, and Undo is back" }
+    for (family in listOf(Family.Saved, Family.Removed)) check(HapticPalette.gaps(family.pattern).all { it == 40L }) { "$family's gaps are 40 ms" }
+    // Opened, then saved straight away: Save still plays.
+    val clock = Clock()
+    val gate = HapticGate { clock.now }
+    check(gate.admit(Haptic.MenuOpen.family)) { "The menu opens" }
+    clock.now += millis(Haptic.MenuOpen.family) + HapticPalette.MIN_GAP_MILLIS
+    check(gate.admit(Haptic.WordSaved.family)) { "Save right after the menu opens plays" }
 }
 
 /** A clock the checks move by hand. */

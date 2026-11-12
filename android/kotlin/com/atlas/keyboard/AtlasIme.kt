@@ -1644,6 +1644,8 @@ class AtlasIme : InputMethodService() {
                 }
             }
         }
+        // Saved plays at the press, as Forget's Removed does. The save itself runs in the background, and a save that fails
+        // plays no after it.
         haptics.play(Haptic.WordSaved)
         if (!typing.wordAllowed(held.word)) typing.setWordBlocked(held.word, false) { add() } else add()
         composer.unhide(held.word)

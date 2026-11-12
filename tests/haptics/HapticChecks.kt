@@ -463,9 +463,12 @@ private fun theOwnersFourAdditions() {
         check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic has a trigger" }
 }
 
-/** A flick's dots, as the bar shows them for a word of [letters] at animation speed [scale], and when each lands. */
+/**
+ * A flick's dots, as the bar shows them for a word of [letters] at animation speed [scale], and when each lands. With the
+ * speed-up off, the plain rule: the gesture display checks the speed-up.
+ */
 private fun landings(letters: Int, scale: Float = 1f): List<Long> {
-    val display = GestureDisplay()
+    val display = GestureDisplay().apply { speedUp = false }
     display.wordDeleted(1000, letters)
     return display.dotLandings(scale)
 }
@@ -550,7 +553,7 @@ private fun aCutDropsTheTicksToCome() {
 
 /** A long delete's lines turn into dots at the lift, which tick as each lands, the same way a flick's do. */
 private fun aHoldsDotsTickAtTheLift() {
-    val held = GestureDisplay()
+    val held = GestureDisplay().apply { speedUp = false }
     held.deleteHeld(200, 1000)
     held.wordDeleted(1100, 4)
     held.wordDeleted(1300, 3)

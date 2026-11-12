@@ -215,6 +215,27 @@ test("the held delete fade is a debug experiment: release never fades, and the l
   expect(read("android/kotlin/com/atlas/keyboard/HapticTimeline.kt")).toContain('" · no fade"');
 });
 
+test("only a debug package reads or saves a tried hold pause, and the lab's screen tries it live", () => {
+  const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
+  // Every other build returns before it looks at the stored pause, so the one pause function keeps its default.
+  expect(haptics).toMatch(/fun readHoldPause\(context: Context\) \{\s+if \(!debug\(context\)\) return\n/);
+  expect(haptics).toMatch(/fun tryHoldPause\(context: Context, millis: Long\?\) \{\s+check\(debug\(context\)\)/);
+  expect(haptics.match(/getLong\(HOLD_PAUSE_KEY/g)?.length).toBe(1);
+  const users = [...new Bun.Glob("**/*.{kt,java}").scanSync(join(root, "android"))].filter(path =>
+    read(join("android", path)).includes("Haptics.tryHoldPause"));
+  expect(users.map(path => path.replaceAll("\\", "/"))).toEqual(["kotlin/com/atlas/keyboard/HapticsLab.kt"]);
+  // A quarter of the 400 ms it was, in the one pause function, and each hold reads the pause in use as it starts.
+  const swipe = read("android/kotlin/com/atlas/keyboard/DeleteSwipe.kt");
+  expect(swipe).toContain("private const val HOLD_MILLIS = 100L");
+  expect(swipe).toContain("internal fun deleteHoldPauseMillis() = triedHoldPauseMillis ?: HOLD_MILLIS");
+  expect(swipe.match(/triedHoldPauseMillis = /g)).toBeNull();
+  expect(haptics.match(/triedHoldPauseMillis = /g)?.length).toBe(1);
+  expect(read("android/kotlin/com/atlas/keyboard/AtlasIme.kt")).toMatch(/Haptics\.readHoldPause\(this\)\s+val at = deleteHold\.moved\(/);
+  const screen = read("android/kotlin/com/atlas/keyboard/HapticsLabActivity.kt");
+  expect(screen).toContain("bar = slider(HOLD_PAUSE_RANGE) { millis ->");
+  expect(screen).toContain("lab.tryHoldPause(null)");
+});
+
 test("the held delete fade sits in Experiments, next to the dots speed-up, through the same operation", () => {
   const lab = read("android/kotlin/com/atlas/keyboard/HapticsLab.kt");
   expect(lab).toContain('const val HELD_DELETE_FADE = "heldDeleteFade"');

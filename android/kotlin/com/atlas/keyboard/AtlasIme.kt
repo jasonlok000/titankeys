@@ -368,6 +368,8 @@ class AtlasIme : InputMethodService() {
     /** The finger moved, so the wait for a hold starts again, or ends if the finger is no longer on a delete flick. */
     private fun followDeleteHold() {
         val start = contact.points.firstOrNull()
+        // The pause before a hold starts, which the Haptics lab can try live in TitanKeys Debug.
+        Haptics.readHoldPause(this)
         val at = deleteHold.moved(!altOrPanel && start != null && pieces.canDelete(start.time) && guideAllows(GuideLesson.Flick))
         if (at != null) nextDeleteHoldStep(at) else main.removeCallbacks(stepDeleteHold)
     }

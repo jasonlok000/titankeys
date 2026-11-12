@@ -785,6 +785,26 @@ class Haptics(private val context: Context) {
         private const val DOTS_SPEED_UP = "debug_dots_speed_up"
 
         /**
+         * In TitanKeys Debug, puts the pause before a held delete that the Haptics lab's slider tried into
+         * [deleteHoldPauseMillis], or the default when none is tried. Every other build never looks, and keeps the default.
+         */
+        fun readHoldPause(context: Context) {
+            if (!debug(context)) return
+            triedHoldPauseMillis = preferences(context).getLong(HOLD_PAUSE_KEY, -1L).takeIf { it >= 0 }?.coerceIn(HOLD_PAUSE_RANGE)
+        }
+
+        /** Tries [millis] as the pause before a held delete, or puts the default back with null. Debug build only. */
+        fun tryHoldPause(context: Context, millis: Long?) {
+            check(debug(context)) { "Only TitanKeys Debug can try a hold pause" }
+            preferences(context).edit().apply {
+                if (millis == null) remove(HOLD_PAUSE_KEY) else putLong(HOLD_PAUSE_KEY, millis.coerceIn(HOLD_PAUSE_RANGE))
+            }.commit()
+            readHoldPause(context)
+        }
+
+        private const val HOLD_PAUSE_KEY = "debug_delete_hold_pause"
+
+        /**
          * How a held delete fades now. Only the debug build reads settings tried in the Haptics lab. Every other build plays
          * the defaults, without even looking.
          */

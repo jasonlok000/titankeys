@@ -100,6 +100,8 @@ private val table = mapOf(
     Haptic.MenuClosed to Family.Release,
     Haptic.WordSaved to Family.Saved,
     Haptic.WordForgotten to Family.Removed,
+    Haptic.WordFavourited to Family.Favourite,
+    Haptic.WordUnfavourited to Family.Unfavourite,
     Haptic.ForgetUndone to Family.Back,
     Haptic.WordNotSaved to Family.No,
     Haptic.ClipOffer to Family.Confirm,
@@ -139,6 +141,8 @@ private val patterns = mapOf(
     Family.Celebrate to listOf(15L, 40L, 22L, 40L, 35L),
     Family.Saved to listOf(20L, 40L, 20L, 40L, 50L),
     Family.Removed to listOf(50L, 40L, 20L, 40L, 20L),
+    Family.Favourite to listOf(20L, 40L, 20L, 40L, 80L),
+    Family.Unfavourite to listOf(20L, 40L, 60L, 40L, 20L),
 )
 
 private fun eachHapticPlaysItsFamily() {
@@ -226,7 +230,7 @@ private fun everyFamilyHasItsOwnPattern() {
     val messages = Family.entries.filter { !it.texture }
     check(messages.map { it.pattern }.toSet().size == messages.size) { "Each message has its own pattern: ${messages.map { it.pattern }}" }
     check(messages.map { HapticPalette.pulses(it.pattern) }.toSet().size == messages.size) { "Each message has its own pulses" }
-    for (family in listOf(Family.Saved, Family.Removed)) for (other in Family.entries.filter { it != family })
+    for (family in listOf(Family.Saved, Family.Removed, Family.Favourite, Family.Unfavourite)) for (other in Family.entries.filter { it != family })
         check(HapticPalette.pulses(family.pattern) != HapticPalette.pulses(other.pattern)) { "$family feels different from $other" }
 }
 
@@ -237,7 +241,24 @@ private fun theWordMenuHasItsOwnFeels() {
     check(Haptic.entries.filter { it.family == Family.Removed } == listOf(Haptic.WordForgotten)) { "Only Forget plays Removed" }
     check(Haptic.MenuOpen.family != Haptic.WordSaved.family) { "Save never shares the menu opening's family, so the repeat rule can't drop it" }
     check(Haptic.WordNotSaved.family == Family.No && Haptic.ForgetUndone.family == Family.Back) { "A failed save is no, and Undo is back" }
-    for (family in listOf(Family.Saved, Family.Removed)) check(HapticPalette.gaps(family.pattern).all { it == 40L }) { "$family's gaps are 40 ms" }
+    for (family in listOf(Family.Saved, Family.Removed, Family.Favourite, Family.Unfavourite))
+        check(HapticPalette.gaps(family.pattern).all { it == 40L }) { "$family's gaps are 40 ms" }
+    // Favourite is Saved with a stronger last hit; Unfavourite is never Removed's fall.
+    check(Haptic.WordFavourited.family == Family.Favourite && Haptic.WordUnfavourited.family == Family.Unfavourite) { "Favourite and Unfavourite have their own" }
+    check(Haptic.entries.filter { it.family == Family.Favourite } == listOf(Haptic.WordFavourited)) { "Only Favourite plays Favourite" }
+    check(Haptic.entries.filter { it.family == Family.Unfavourite } == listOf(Haptic.WordUnfavourited)) { "Only Unfavourite plays Unfavourite" }
+    val saved = HapticPalette.pulses(Family.Saved.pattern)
+    val favourite = HapticPalette.pulses(Family.Favourite.pattern)
+    check(favourite.dropLast(1) == saved.dropLast(1) && favourite.last() > saved.last()) { "Favourite is Saved ending stronger: $favourite" }
+    val removed = HapticPalette.pulses(Family.Removed.pattern)
+    val unfavourite = HapticPalette.pulses(Family.Unfavourite.pattern)
+    check(unfavourite.first() < unfavourite[1] && removed.first() > removed[1]) { "Unfavourite rises first, Removed falls: $unfavourite, $removed" }
+    // Saved, then Favourite straight after, as I pressed twice: both play.
+    val pressed = Clock()
+    val twice = HapticGate { pressed.now }
+    check(twice.admit(Haptic.WordSaved.family)) { "Save plays" }
+    pressed.now += millis(Haptic.WordSaved.family) + HapticPalette.MIN_GAP_MILLIS
+    check(twice.admit(Haptic.WordFavourited.family)) { "Favourite right after Save plays" }
     // Opened, then saved straight away: Save still plays.
     val clock = Clock()
     val gate = HapticGate { clock.now }

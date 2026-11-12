@@ -16,7 +16,7 @@ keyboard=$root/com/atlas/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$android:$ort" -d "$work" \
   "$root/com/atlas/autocorrect" "$keyboard/Composer.kt" "$keyboard/Expansions.kt" "$keyboard/Layout.kt" "$keyboard/Field.kt" "$keyboard/EnterKey.kt" \
   "$keyboard/RawLogLine.kt" "$keyboard/Recording.kt" "$keyboard/KeyboardEvents.kt" "$keyboard/Modifiers.kt" "$keyboard/QuickSetting.kt" "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/Touchpad.kt" \
-  "$keyboard/Haptics.kt" \
+  "$keyboard/Haptics.kt" "$keyboard/Favourites.kt" \
   tests/autocorrect/AutocorrectChecks.kt tests/autocorrect/PhoneWords.java $(find "$engine" "$root/org" -name '*.java')
 javac --release 17 -nowarn -cp "$work:$stdlib:$android:$ort" -d "$work" tests/autocorrect/PhoneWords.java \
   $(find "$engine" "$root/org" -name '*.java')

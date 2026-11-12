@@ -314,6 +314,16 @@ class Modifiers {
             }
         }
 
+        /**
+         * Whether a key held with Ctrl or Meta keeps acting while it is held. Moving and deleting do, as the keys do by themselves,
+         * but a shortcut such as Ctrl + V acts once for each press: holding it pasted over and over (owner, 2026-11-12).
+         */
+        fun shortcutRepeats(code: Int) = code in REPEATING_SHORTCUTS
+
+        private val REPEATING_SHORTCUTS = setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MOVE_HOME, KeyEvent.KEYCODE_MOVE_END, KeyEvent.KEYCODE_PAGE_UP,
+            KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_FORWARD_DEL)
+
         /** The meta state of a key pushed while Ctrl is held. Ctrl takes the place of fn, so the key acts as a held shortcut does. */
         fun withCtrl(meta: Int) = meta and KeyEvent.META_FUNCTION_ON.inv() or KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON
 
@@ -329,5 +339,15 @@ class Modifiers {
 
         /** Dropped typing must not take a Shift, Alt or Sym press with it, or their state would no longer match the keys. */
         fun survivesDiscard(code: Int, down: Boolean) = !down || isModifier(code)
+
+        /**
+         * Whether a key press that typing dropped uses up the Shift or Alt it came with, as if it had been typed: a typing key's
+         * first press. Its repeats, and keys such as Ctrl that are not typing, leave them as they are.
+         */
+        fun dropUsesModifiers(code: Int, repeat: Int) = repeat == 0 && !isModifier(code) && code !in OTHER_MODIFIERS
+
+        private val OTHER_MODIFIERS = setOf(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT, KeyEvent.KEYCODE_META_LEFT,
+            KeyEvent.KEYCODE_META_RIGHT, KeyEvent.KEYCODE_FUNCTION, KeyEvent.KEYCODE_CAPS_LOCK, KeyEvent.KEYCODE_NUM_LOCK,
+            KeyEvent.KEYCODE_SCROLL_LOCK)
     }
 }

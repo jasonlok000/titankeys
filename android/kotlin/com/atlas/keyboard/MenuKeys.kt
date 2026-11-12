@@ -9,7 +9,7 @@ package com.atlas.keyboard
  * The columns are the Sym panel's: ten of them, [Layout.KEY_SIDE_DP] in from each side of the screen, so that a button sits centred
  * over its own key. [slot] and [wordRight] work them out in pixels, so they can be checked without a phone.
  */
-internal object MenuKeys {
+object MenuKeys {
     /** The rows of letters that pick the menu's buttons: the top two. */
     const val ROWS = 2
     /** The columns of the buttons: I, O and P on the top row. */
@@ -40,4 +40,38 @@ internal object MenuKeys {
 
     /** Where the word ends on the right, [gap] pixels left of Save's column. */
     fun wordRight(width: Float, side: Float, gap: Float) = slot(width, side, SAVE).first - gap
+
+    /**
+     * Where a word stands, which sets what I and O do (owner, 2026-11-12). Save adds it to the dictionary, and Favourite puts it
+     * first among similar words: see [Favourites].
+     */
+    enum class Step { New, Saved, Favourite }
+
+    /** What I and O can do. [Favourited] is I on a favourite: it shows that the word is one, and does nothing more. */
+    enum class Button { Save, Favourite, Favourited, Unfavourite, Forget }
+
+    /** A favourite, then a word that is saved or that the dictionary already knows, then any other word. */
+    fun step(known: Boolean, favourite: Boolean) = when {
+        favourite -> Step.Favourite
+        known -> Step.Saved
+        else -> Step.New
+    }
+
+    /** I's button: Save, then Favourite, then Favourite with its tick. */
+    fun first(step: Step) = when (step) {
+        Step.New -> Button.Save
+        Step.Saved -> Button.Favourite
+        Step.Favourite -> Button.Favourited
+    }
+
+    /** O's button: Unfavourite on a favourite, and otherwise Forget, or nothing for a word that no list can drop ([forget]). */
+    fun second(step: Step, forget: Boolean) = if (step == Step.Favourite) Button.Unfavourite else Button.Forget.takeIf { forget }
+
+    /** Where the word stands once [button] is picked at [step]. The menu stays open on it, except after Forget: null. */
+    fun after(step: Step, button: Button): Step? = when (button) {
+        Button.Save, Button.Unfavourite -> Step.Saved
+        Button.Favourite -> Step.Favourite
+        Button.Favourited -> step
+        Button.Forget -> null
+    }
 }

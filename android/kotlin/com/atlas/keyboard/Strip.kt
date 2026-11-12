@@ -33,15 +33,20 @@ class Strip(
     private val woke: () -> Unit = {},
 ) : LinearLayout(context) {
     /** What the buttons in the place of the words do. */
-    enum class Action { Save, Forget, Close, Undo, OpenSelected }
+    enum class Action { Save, Favourite, Favourited, Unfavourite, Forget, Close, Undo, OpenSelected }
 
     /** A short line in the place of the words: a word's menu, or what just happened to a word. */
     sealed interface Notice {
         val word: String
-        /** The menu of a held word. [forget] is false for a word that no list can drop. */
-        data class Menu(override val word: String, val forget: Boolean) : Notice
+        /**
+         * The menu of a held word, at [step]: see [MenuKeys.Step]. [forget] is false for a word that no list can drop. Its I and O
+         * buttons are [first] and [second], and P is Back.
+         */
+        data class Menu(override val word: String, val forget: Boolean, val step: MenuKeys.Step = MenuKeys.Step.New) : Notice {
+            val first get() = MenuKeys.first(step).action
+            val second get() = MenuKeys.second(step, forget)?.action
+        }
         data class Forgot(override val word: String) : Notice
-        data class Saved(override val word: String) : Notice
         /** A second of fun when the keyboard has had to hide and show itself for Microsoft Teams. It has no buttons. */
         object TeamsEgg : Notice {
             override val word = ""
@@ -543,13 +548,16 @@ class Strip(
 
     /** The buttons that a notice shows, from the left. */
     fun noticeActions(shown: Notice?): List<Action> = when (shown) {
-        is Notice.Menu -> listOfNotNull(Action.Save, Action.Forget.takeIf { shown.forget }, Action.Close)
+        is Notice.Menu -> listOfNotNull(shown.first, shown.second, Action.Close)
         is Notice.Forgot -> listOf(Action.Undo)
-        is Notice.Saved, Notice.TeamsEgg, null -> emptyList()
+        Notice.TeamsEgg, null -> emptyList()
     }
 
     private fun label(action: Action) = when (action) {
         Action.Save -> R.string.strip_save
+        Action.Favourite -> R.string.strip_favourite
+        Action.Favourited -> R.string.strip_favourited
+        Action.Unfavourite -> R.string.strip_unfavourite
         Action.Forget -> R.string.strip_forget
         Action.Close -> R.string.strip_back
         Action.Undo -> R.string.strip_undo
@@ -574,7 +582,6 @@ class Strip(
         noticeLabel.text = when (shown) {
             is Notice.Menu -> ""
             is Notice.Forgot -> context.getString(R.string.strip_forgot, shown.word)
-            is Notice.Saved -> context.getString(R.string.strip_saved, shown.word)
             Notice.TeamsEgg -> context.getString(R.string.strip_teams_egg)
             null -> ""
         }
@@ -616,8 +623,8 @@ class Strip(
     private var menuShown = 1f
     private var menuIn: ValueAnimator? = null
 
-    /** The menu's buttons, over Save's, Forget's and Back's columns. A word that no list can drop has no Forget. */
-    private fun menuSlots(menu: Notice.Menu): List<Action?> = listOf(Action.Save, Action.Forget.takeIf { menu.forget }, Action.Close)
+    /** The menu's buttons, over I's, O's and P's columns. A word that no list can drop has no Forget. */
+    private fun menuSlots(menu: Notice.Menu): List<Action?> = listOf(menu.first, menu.second, Action.Close)
 
     /** The left and right of a key column on this bar, in its own pixels: the Sym panel's columns. See [MenuKeys.slot]. */
     private fun menuColumn(column: Int) = MenuKeys.slot(width.toFloat(), dp(Layout.KEY_SIDE_DP).toFloat(), column)
@@ -718,6 +725,9 @@ class Strip(
 
     private fun icon(action: Action) = when (action) {
         Action.Save -> R.drawable.menu_save
+        Action.Favourite -> R.drawable.menu_favourite
+        Action.Favourited -> R.drawable.menu_favourited
+        Action.Unfavourite -> R.drawable.menu_unfavourite
         Action.Forget -> R.drawable.menu_forget
         else -> R.drawable.panel_back
     }
@@ -1018,3 +1028,13 @@ class Strip(
         private const val HINT_LARGEST = 17f
     }
 }
+
+/** The strip's action for a button of the word menu. */
+internal val MenuKeys.Button.action: Strip.Action
+    get() = when (this) {
+        MenuKeys.Button.Save -> Strip.Action.Save
+        MenuKeys.Button.Favourite -> Strip.Action.Favourite
+        MenuKeys.Button.Favourited -> Strip.Action.Favourited
+        MenuKeys.Button.Unfavourite -> Strip.Action.Unfavourite
+        MenuKeys.Button.Forget -> Strip.Action.Forget
+    }

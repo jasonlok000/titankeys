@@ -48,6 +48,8 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "menu_closed", label: "Word menu closed", about: "When you press Back and the word menu closes without a pick." },
     { id: "word_saved", label: "Save", about: "When you save a word from the word menu, with I or the Save button. Two light taps settle into a firm one: kept." },
     { id: "word_forgotten", label: "Forget", about: "When you delete a word from the word menu, with O or the Forget button. A firm hit that trails off: gone." },
+    { id: "word_favourited", label: "Favourite", about: "When you make a saved word a favourite, with I or the Favourite button. Save's taps, ending on a stronger hit." },
+    { id: "word_unfavourited", label: "Unfavourite", about: "When a word stops being a favourite, with O or the Unfavourite button. Light, firm, light: it settles back." },
     { id: "forget_undone", label: "Undo after Forget", about: "When you press Undo right after Forget and the word is back." },
     { id: "word_not_saved", label: "A word that can't be saved", about: "When Save goes wrong and the word isn't saved." },
     { id: "clip_offer", label: "Paste the offered clip", about: "When you paste the clip the bar offers after you copy something." },

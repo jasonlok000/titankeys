@@ -10,7 +10,11 @@ import android.os.ResultReceiver
 import android.view.Gravity
 import android.widget.TextView
 import com.atlas.engine.SwipeTyping
+import com.atlas.keyboard.FavouriteWords
+import com.atlas.keyboard.R
 import com.atlas.keyboard.Snippets
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Owns the Android file picker's result and keeps its document grant alive during the transfer. It moves the learned words,
@@ -60,8 +64,45 @@ class LearningTransferActivity : Activity() {
             return
         }
         val typing = SwipeTyping.get(this)
-        if (exporting) typing.exportConfig(uri) { complete(it == null, it) }
-        else typing.importConfig(uri) { complete(it == null, it) }
+        if (exporting) typing.exportConfig(uri) { error ->
+            if (error != null) complete(false, error) else Thread { addFavourites(uri) }.start()
+        } else Thread {
+            val favourites = readFavourites(uri)
+            runOnUiThread {
+                typing.importConfig(uri) { error ->
+                    if (error == null && !FavouriteWords.get(this).merge(favourites)) complete(false, getString(R.string.favourites_not_imported))
+                    else complete(error == null, error)
+                }
+            }
+        }.start()
+    }
+
+    /**
+     * The favourites go in the words file, beside the words that the engine wrote. The engine's import skips them, and
+     * [readFavourites] reads them back.
+     */
+    private fun addFavourites(uri: android.net.Uri) {
+        val error = try {
+            val file = contentResolver.openInputStream(uri)?.use { JSONObject(it.readBytes().decodeToString()) }
+                ?: throw java.io.IOException("Could not open the export file")
+            file.put(FavouriteWords.EXPORT_KEY, JSONArray(FavouriteWords.get(this).all().sorted()))
+            contentResolver.openOutputStream(uri, "wt")?.use { it.write(file.toString().toByteArray()) }
+                ?: throw java.io.IOException("Could not open the export file")
+            null
+        } catch (error: Exception) {
+            android.util.Log.w("Atlas", "Could not export the favourites", error)
+            getString(R.string.favourites_not_exported)
+        }
+        runOnUiThread { complete(error == null, error) }
+    }
+
+    /** The favourites in a words file, or none: a file from before favourites, or one that can't be read, has none. */
+    private fun readFavourites(uri: android.net.Uri): List<String> = try {
+        val file = contentResolver.openInputStream(uri)?.use { JSONObject(it.readBytes().decodeToString()) }
+        val list = file?.optJSONArray(FavouriteWords.EXPORT_KEY)
+        if (list == null) emptyList() else (0 until list.length()).mapNotNull { list.optString(it).takeIf(String::isNotBlank) }
+    } catch (error: Exception) {
+        emptyList()
     }
 
     /** Snippets are small, but a file provider can still be slow, so this runs away from the main thread. */

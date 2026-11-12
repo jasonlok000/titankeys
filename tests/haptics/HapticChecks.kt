@@ -37,14 +37,15 @@ fun main() {
     theLabSaysWhatEachPlays()
     theGraphDrawsEachPatternToScale()
     theLiveTimelineHasWordsForEach()
-    aHeldDeleteFadesByLength()
-    theFloorIsNeverAboveTheStart()
-    thinningEveryOnePlaysThemAll()
-    aNewHoldStartsTheFadeAgain()
-    theFadeIsOnlyTriedInDebug()
-    theFadeNeverBlocksAMessage()
+    aHeldWordHitsLikeAFlick()
+    theHitShortensAsTheHoldSpeedsUp()
+    theHitKeepsItsQuietAndItsFloor()
+    everyHeldWordPlays()
+    aHitEvery80MsPassesTheGate()
+    theWallsQuietSilencesTheHit()
+    theFadeIsGone()
+    aNewHoldCountsFromOneAgain()
     theTimelineShowsEachHeldWord()
-    theFadeIsOnInEveryBuild()
     aHoldAndItsDotsAreOneSequence()
     aDotNearAWordIsSkipped()
     theHoldFollowsItsPause()
@@ -70,7 +71,7 @@ private val table = mapOf(
     Haptic.TapKey to Family.Texture,
     Haptic.DeleteFlick to Family.GoneFlick,
     Haptic.DeleteDotsLand to Family.Texture,
-    Haptic.DeleteWord to Family.Crunch,
+    Haptic.DeleteWord to Family.Hit,
     Haptic.DeleteCrunch to Family.Crunch,
     Haptic.DeleteBreak to Family.Boundary,
     Haptic.DeleteNothing to Family.Wall,
@@ -141,6 +142,8 @@ private val patterns = mapOf(
     Family.No to listOf(25L, 40L, 25L, 40L, 25L),
     Family.Wall to listOf(40L, 35L, 20L, 35L, 12L),
     Family.Crunch to listOf(9L, 12L, 9L),
+    // The delete flick's first pulse, alone.
+    Family.Hit to listOf(50L),
     Family.Celebrate to listOf(15L, 40L, 22L, 40L, 35L),
     Family.Saved to listOf(20L, 40L, 20L, 40L, 50L),
     Family.Removed to listOf(50L, 40L, 20L, 40L, 20L),
@@ -159,7 +162,7 @@ private fun eachHapticPlaysItsFamily() {
 }
 
 private fun eachFamilyPlaysItsPattern() {
-    check(patterns.keys == Family.entries.toSet()) { "Sixteen families: ${Family.entries}" }
+    check(patterns.keys == Family.entries.toSet()) { "The table misses ${Family.entries - patterns.keys}" }
     for ((family, pattern) in patterns) check(family.pattern == pattern) { "$family plays ${family.pattern}, not $pattern" }
     // And so each haptic plays its family's pattern exactly.
     for ((haptic, family) in table) check(HapticPalette.pattern(haptic.family, false, null) == patterns.getValue(family)) {
@@ -670,138 +673,137 @@ private fun tapsThatFindNothingSayNo() {
     check(gate.check(Haptic.NothingToPick.family) == HapticResult.Played) { "and the no after it still plays" }
 }
 
-/** A held delete fades by length: 17 ms, a step shorter each word down to 9 ms at word 9, then every other one. */
-private fun aHeldDeleteFadesByLength() {
-    val fade = HeldDeleteFade.DEFAULT
-    check(fade == HeldDeleteFade.Settings(start = 17, floor = 9, words = 8, thinEvery = 2)) { "The defaults: $fade" }
-    check(fade.start == HapticPalette.TEXTURE_MILLIS) { "It starts at Texture's tick" }
-    val ticks = HeldDeleteFade.ticks(fade)
-    val expected = listOf<Long?>(17, 16, 15, 14, 13, 12, 11, 10, 9, null, 9, null, 9, null, 9, null)
-    check(ticks == expected) { "The first 16 ticks are $ticks" }
-    check(HeldDeleteFade.lengthFor(1, fade) == 17L) { "Word 1 plays the start" }
-    check(HeldDeleteFade.lengthFor(9, fade) == 9L) { "Word 9 is at the floor" }
-    check(HeldDeleteFade.lengthFor(100, fade) == null && HeldDeleteFade.lengthFor(101, fade) == 9L) { "Far into a hold it still thins" }
-    check(HeldDeleteFade.describe(fade) == "17 down to 9 ms over 8 words, then 1 in 2") { HeldDeleteFade.describe(fade) }
-    check(HeldDeleteFade.describe(fade).replace(' ', ' ') == "17 down to 9 ms over 8 words, then 1 in 2") { "It reads the same" }
-    check(HeldDeleteFade.format(fade) == "17,9,8,2") { "Stored as four numbers" }
+/** A hold's repeat at [pace], as DeleteSwipe.kt works it out: 350 ms a word at pace 0, down to 80 at pace 1. */
+private fun repeatAt(pace: Float): Long {
+    val slow = deleteSwipeTuning.getValue("deleteRepeatSlowMillis") as Long
+    val fast = deleteSwipeTuning.getValue("deleteRepeatFastMillis") as Long
+    return Math.round(slow + (fast - slow) * pace.toDouble())
 }
 
-/** Every setting the sliders allow: the first tick is the start, none is above it or under the floor, and none gets longer. */
-private fun theFloorIsNeverAboveTheStart() {
-    check(HeldDeleteFade.Settings(10, 30, 8, 2).fitted().floor == 10L) { "A floor above the start comes down to it" }
-    check(HeldDeleteFade.lengthFor(1, HeldDeleteFade.Settings(10, 30, 8, 2)) == 10L) { "and nothing plays longer than the start" }
-    check(HeldDeleteFade.Settings(60, 1, 50, 9).fitted() == HeldDeleteFade.Settings(40, 4, 20, 4)) { "Each number keeps to its slider" }
-    for (start in HeldDeleteFade.MILLIS) for (floor in HeldDeleteFade.MILLIS) for (words in HeldDeleteFade.WORDS)
-        for (thinEvery in HeldDeleteFade.THIN_EVERY) {
-            val fade = HeldDeleteFade.Settings(start, floor, words, thinEvery)
-            val low = minOf(floor, start)
-            val ticks = (1..words + 2 * thinEvery + 1).map { HeldDeleteFade.lengthFor(it, fade) }
-            check(ticks.first() == start) { "$fade: the first tick is the start" }
-            check(ticks[words] == low) { "$fade: word ${words + 1} is at the floor" }
-            val played = ticks.filterNotNull()
-            check(played.all { it in low..start }) { "$fade: $ticks" }
-            check(played.zipWithNext().all { (a, b) -> b <= a }) { "$fade: no tick is longer than the one before: $ticks" }
-            check(ticks.take(words + 1).none { it == null }) { "$fade: nothing thins before the floor" }
-        }
+private val hit = Family.Hit.pattern.single()
+
+/**
+ * Each word a held delete takes is a hit as firm as a flick's (owner, 2026-11-12): one pulse, the delete flick's first. The crunch
+ * stays only for the keys a flick crosses.
+ */
+private fun aHeldWordHitsLikeAFlick() {
+    check(Family.Hit.pattern == listOf(Family.GoneFlick.pattern.first())) { "Hit is the flick's first pulse, alone: ${Family.Hit.pattern}" }
+    check(hit == 50L) { "50 ms" }
+    check(Haptic.DeleteWord.family == Family.Hit) { "A held word hits" }
+    check(Haptic.entries.filter { it.family == Family.Crunch } == listOf(Haptic.DeleteCrunch)) { "Only a flick's crossed keys crunch" }
+    check(HoldHit.millis(hit, 0f, repeatAt(0f)) == hit) { "At pace 0 it's the whole hit" }
+    check(repeatAt(0f) == REPEAT_SLOW_MILLIS && repeatAt(1f) == 80L) { "350 ms a word down to 80" }
+    check(Family.Hit.texture) { "Texture, with its own pace, as the words come fast" }
+    check(HapticPalette.fits(Family.Hit, Family.Hit.pattern)) { "The lab's editor can edit it" }
+    check(HapticTimeline.meaning(Family.Hit).isNotEmpty()) { "The lab says what it means" }
+    check(HoldHit.describe(hit) == "50 ms, down to 30 as the hold speeds up") { HoldHit.describe(hit) }
 }
 
-/** Thinning every 1 plays every tick. */
-private fun thinningEveryOnePlaysThemAll() {
-    val fade = HeldDeleteFade.DEFAULT.copy(thinEvery = 1)
-    check((1..60).all { HeldDeleteFade.lengthFor(it, fade) != null }) { "Every tick plays" }
-    check(HeldDeleteFade.describe(fade).endsWith("then all")) { HeldDeleteFade.describe(fade) }
-    val third = HeldDeleteFade.DEFAULT.copy(thinEvery = 3)
-    check(HeldDeleteFade.ticks(third).drop(8) == listOf<Long?>(9, null, null, 9, null, null, 9, null)) { "1 in 3: ${HeldDeleteFade.ticks(third)}" }
+/** The hit gets shorter as the hold's pace speeds up, so hits don't blur at the top pace: 50, 40 at half, 30 at the top. */
+private fun theHitShortensAsTheHoldSpeedsUp() {
+    check(HoldHit.millis(hit, .5f, repeatAt(.5f)) == 40L) { "Half pace: ${HoldHit.millis(hit, .5f, repeatAt(.5f))}" }
+    check(HoldHit.millis(hit, 1f, repeatAt(1f)) == HapticPalette.MESSAGE_PULSE_MILLIS) { "The top pace: 30 ms" }
+    check(repeatAt(1f) - HoldHit.millis(hit, 1f, repeatAt(1f)) == 50L) { "30 on, 50 off at the top pace" }
+    val paces = (0..20).map { it / 20f }
+    val lengths = paces.map { HoldHit.millis(hit, it, repeatAt(it)) }
+    check(lengths.zipWithNext().all { (a, b) -> b <= a }) { "Never longer as the pace goes up: $lengths" }
+    check(lengths.first() > lengths.last()) { "and shorter at the top: $lengths" }
+    check(HoldHit.millis(hit, -1f, 350) == hit && HoldHit.millis(hit, 2f, 80) == 30L) { "A pace outside 0 to 1 is held to it" }
 }
 
-/** A new hold, or one that ended or was cut, counts from word 1 again, so its first tick is the start. */
-private fun aNewHoldStartsTheFadeAgain() {
-    val count = HeldDeleteCount()
-    repeat(12) { count.next() }
-    check(count.word == 12) { "Twelve words went" }
-    check(HeldDeleteFade.lengthFor(count.word, HeldDeleteFade.DEFAULT) == null) { "Word 12 is thinned" }
-    count.reset()
-    val first = count.next()
-    check(first == 1 && HeldDeleteFade.lengthFor(first, HeldDeleteFade.DEFAULT) == 17L) { "The next hold starts at 17 ms" }
-}
-
-/** Only a debug build reads a fade tried in the lab, and only one the sliders allow. */
-private fun theFadeIsOnlyTriedInDebug() {
-    val tried = HeldDeleteFade.Settings(30, 12, 4, 3)
-    check(HeldDeleteFade.settings(debug = false, stored = "30,12,4,3") == HeldDeleteFade.DEFAULT) { "A build that isn't debug ignores it" }
-    check(HeldDeleteFade.settings(debug = true, stored = "30,12,4,3") == tried) { "The debug build plays it" }
-    check(HeldDeleteFade.settings(debug = true, stored = HeldDeleteFade.format(tried)) == tried) { "It's stored and read back" }
-    check(HeldDeleteFade.settings(debug = true, stored = null) == HeldDeleteFade.DEFAULT) { "With none tried, the defaults" }
-    check(HeldDeleteFade.settings(debug = true, stored = "50,12,4,3") == HeldDeleteFade.DEFAULT) { "A start over 40 ms is ignored" }
-    check(HeldDeleteFade.settings(debug = true, stored = "30,12,4,5") == HeldDeleteFade.DEFAULT) { "Thinning past 1 in 4 is ignored" }
-    check(HeldDeleteFade.settings(debug = true, stored = "30,12,4") == HeldDeleteFade.DEFAULT) { "Three numbers are ignored" }
-    check(HeldDeleteFade.settings(debug = true, stored = "x") == HeldDeleteFade.DEFAULT) { "Nonsense is ignored" }
-    check(HeldDeleteFade.settings(debug = true, stored = "10,30,8,2").floor == 10L) { "A stored floor above the start comes down to it" }
-    val source = File("android/kotlin/com/atlas/keyboard/Haptics.kt").readText()
-    check("\"debug_pattern_held_delete_fade\"" in source) { "Stored like the families' tried patterns" }
-}
-
-/** The fade's ticks are texture: whatever their length, they never block a message, and a thinned one never reaches the gate. */
-private fun theFadeNeverBlocksAMessage() {
-    check(Haptic.DeleteWord.family.texture) { "A held delete's word, a crunch, is still texture" }
-    check(!HapticResult.Thinned.played && HapticResult.Thinned.words == "thinned") { "A thinned tick doesn't play" }
-    for (fade in listOf(HeldDeleteFade.DEFAULT, HeldDeleteFade.Settings(40, 40, 1, 1), HeldDeleteFade.Settings(4, 4, 20, 4))) {
-        val clock = Clock()
-        val gate = HapticGate { clock.now }
-        for (word in 1..30) {
-            val millis = HeldDeleteFade.lengthFor(word, fade)
-            if (millis != null) check(gate.check(Family.Texture, millis) == HapticResult.Played) { "$fade: word $word ticks" }
-            clock.now += 5
-            // A message right on top of the tick still plays. The repeat rule is by family, so they take turns.
-            val message = if (word % 2 == 0) Family.No else Family.Change
-            check(gate.check(message) == HapticResult.Played) { "$fade: a message plays on top of word $word" }
-            clock.now += HapticGate.REPEAT_MILLIS
+/** For every hit the lab's slider allows, every pace and repeat: 35 ms of quiet before the next word, and never under 30 ms. */
+private fun theHitKeepsItsQuietAndItsFloor() {
+    for (pulse in HapticPalette.PULSE_MILLIS) for (step in 0..20) {
+        val pace = step / 20f
+        for (repeat in listOf(repeatAt(pace), 65L, 80L, 100L, 150L, 350L)) {
+            val millis = HoldHit.millis(pulse, pace, repeat)
+            check(millis >= HapticPalette.MESSAGE_PULSE_MILLIS) { "$pulse ms at $pace, $repeat ms a word: $millis is under 30" }
+            check(millis <= repeat - HapticPalette.MIN_GAP_MILLIS) { "$pulse ms at $pace, $repeat ms a word: $millis leaves no 35 ms" }
+            check(millis <= maxOf(pulse, HapticPalette.MESSAGE_PULSE_MILLIS)) { "$pulse ms at $pace: $millis is longer than the hit" }
         }
     }
 }
 
-/** The live timeline shows each held delete tick with its word and the length it played, and a thinned one says so. */
+/** Every word of a hold plays: nothing thins them, and how many have gone never shortens them. Only the pace does. */
+private fun everyHeldWordPlays() {
+    val count = HeldDeleteCount()
+    for (pace in listOf(0f, .5f, 1f)) {
+        val lengths = (1..60).map { count.next(); HoldHit.millis(hit, pace, repeatAt(pace)) }
+        check(lengths.toSet().size == 1) { "At pace $pace every word is the same: $lengths" }
+    }
+    check(HapticResult.entries.none { it.name == "Thinned" }) { "Nothing is thinned any more" }
+}
+
+/** A hit every 80 ms at the top pace, or every 350 ms, plays every time: it's texture, so the 300 ms repeat rule never drops it. */
+private fun aHitEvery80MsPassesTheGate() {
+    for (pace in listOf(0f, .5f, 1f)) {
+        val clock = Clock()
+        val gate = HapticGate { clock.now }
+        val repeat = repeatAt(pace)
+        for (word in 1..40) {
+            check(gate.check(Family.Hit, HoldHit.millis(hit, pace, repeat)) == HapticResult.Played) { "Pace $pace: word $word plays" }
+            clock.now += repeat
+        }
+    }
+    // A message still plays right on top of a hit.
+    val clock = Clock()
+    val gate = HapticGate { clock.now }
+    check(gate.admit(Family.Hit, 30)) { "A hit" }
+    clock.now += 5
+    check(gate.check(Family.Change) == HapticResult.Played) { "and a message on top of it" }
+}
+
+/** A wall's quiet silences the hit too, so the wall at the start of the text is felt clean. */
+private fun theWallsQuietSilencesTheHit() {
+    val clock = Clock(1_000)
+    val gate = HapticGate { clock.now }
+    check(gate.check(Family.Hit, 30) == HapticResult.Played) { "A hit plays" }
+    val wall = millis(Family.Wall)
+    val wait = gate.reserveWall(wall)
+    check(wait == 30 + HapticGate.WALL_CLEAR_MILLIS) { "The wall waits until 100 ms after the hit ends: $wait" }
+    clock.now += 80
+    check(gate.check(Family.Hit, 30) == HapticResult.Busy) { "No hit while the wall waits" }
+    clock.now = 1_000 + wait
+    check(gate.check(Family.Wall) == HapticResult.Played) { "The wall plays" }
+    clock.now += wall + HapticGate.WALL_CLEAR_MILLIS - 1
+    check(gate.check(Family.Hit, 30) == HapticResult.Busy) { "No hit until 100 ms after it" }
+    clock.now += 1
+    check(gate.check(Family.Hit, 30) == HapticResult.Played) { "then hits go on" }
+}
+
+/** The held delete fade is retired: nothing reads its settings, so an old stored one does nothing. */
+private fun theFadeIsGone() {
+    for (name in listOf("Haptics.kt", "HapticsLab.kt", "HapticsLabActivity.kt", "HapticTimeline.kt", "AtlasIme.kt")) {
+        val source = File("android/kotlin/com/atlas/keyboard/$name").readText()
+        for (word in listOf("debug_pattern_held_delete_fade", "debug_held_delete_fade_on", "heldDeleteFading", "fun fadeOn("))
+            check(word !in source) { "$name still has $word" }
+    }
+    val ime = File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    check("haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)" in ime) { "A held word hits at the hold's own pace" }
+}
+
+/** A new hold, or one that ended or was cut, counts from word 1 again, for the lab's numbers. */
+private fun aNewHoldCountsFromOneAgain() {
+    val count = HeldDeleteCount()
+    repeat(12) { count.next() }
+    check(count.word == 12) { "Twelve words went" }
+    count.reset()
+    check(count.next() == 1) { "The next hold starts at word 1" }
+}
+
+/** The live timeline shows each held delete hit with its word and the length it played. */
 private fun theTimelineShowsEachHeldWord() {
-    val played = HapticEvent(1, Haptic.DeleteWord, listOf(13), HapticResult.Played, word = 5)
-    check(HapticTimeline.title(played, "Each word while you hold") == "Held delete word 5 · Crunch 13 ms") { HapticTimeline.title(played, "") }
+    val played = HapticEvent(1, Haptic.DeleteWord, listOf(40), HapticResult.Played, word = 5)
+    check(HapticTimeline.title(played, "Each word while you hold") == "Held delete word 5 · Hit 40 ms") { HapticTimeline.title(played, "") }
     check(HapticTimeline.outcome(played) == HapticTimeline.trigger(Haptic.DeleteWord)) { "It says what set it off" }
-    val thinned = played.copy(pattern = listOf(9), result = HapticResult.Thinned, word = 10)
-    check(HapticTimeline.outcome(thinned) == "thinned") { "A thinned tick says why" }
-    check(HapticTimeline.buzzes(thinned.pattern, 0, dropped = true) == listOf(Buzz(0, 9, true))) { "and is hollow at the floor's length" }
     val other = HapticEvent(1, Haptic.SwipeKey, Family.Texture.pattern, HapticResult.Busy)
     check(HapticTimeline.title(other, "Swipe key") == "Swipe key · Texture") { "Every other haptic keeps its name" }
     check(HapticTimeline.outcome(other) == "dropped: busy") { "and a dropped one its reason" }
 }
 
-/**
- * The fade is on in every build (owner, 2026-11-12). Only TitanKeys Debug can turn it off, with the lab's switch, to feel a hold
- * without it; every other build fades whatever is stored.
- */
-private fun theFadeIsOnInEveryBuild() {
-    val fade = HeldDeleteFade.DEFAULT
-    fun hold(fading: Boolean) = (1..16).map { HeldDeleteFade.lengthFor(it, fade, fading) }
-    check(HeldDeleteFade.fading(debug = true, stored = null)) { "Debug fades to start with" }
-    check(HeldDeleteFade.fading(debug = true, stored = true)) { "Debug with the switch on fades" }
-    check(!HeldDeleteFade.fading(debug = true, stored = false)) { "Debug with the switch off doesn't" }
-    check(HeldDeleteFade.fading(debug = false, stored = null) && HeldDeleteFade.fading(debug = false, stored = false)) {
-        "Release always fades, even with a stored off"
-    }
-    val on = hold(HeldDeleteFade.fading(debug = true, stored = true))
-    check(on == listOf<Long?>(17, 16, 15, 14, 13, 12, 11, 10, 9, null, 9, null, 9, null, 9, null)) { "Switch on: $on" }
-    check(HeldDeleteFade.ticks(fade, fading = true) == on) { "The lab's strip shows the same" }
-    val off = hold(HeldDeleteFade.fading(debug = true, stored = false))
-    check(off == List(16) { 17L }) { "Switch off: 17 every word, $off" }
-    val release = hold(HeldDeleteFade.fading(debug = false, stored = false))
-    check(release == on) { "Release fades as debug does: $release" }
-    check(HeldDeleteFade.ticks(fade, fading = false) == off) { "The strip with the fade off" }
-    val event = HapticEvent(1, Haptic.DeleteWord, listOf(17), HapticResult.Played, word = 12, fading = false)
-    check(HapticTimeline.title(event, "") == "Held delete word 12 · Crunch 17 ms · no fade") { HapticTimeline.title(event, "") }
-}
-
 /** The lab's hold: the flick and 10 words 350 ms apart, a lift, and the dots of their letters at normal speed. */
-private fun playPlan(pause: Long = deleteHoldPauseMillis(), fade: HeldDeleteFade.Settings = HeldDeleteFade.DEFAULT, scale: Float = 1f,
-                     speedUp: Boolean = false, repeat: Long = REPEAT_SLOW_MILLIS) =
-    HoldTicks.plan(HoldTicks.PLAY_WORDS, pause, repeat, HoldTicks.PLAY_LIFT_MILLIS, fade, true, HapticPalette.TEXTURE_MILLIS,
+private fun playPlan(pause: Long = deleteHoldPauseMillis(), scale: Float = 1f, speedUp: Boolean = false, pace: Float = 0f) =
+    HoldTicks.plan(HoldTicks.PLAY_WORDS, pause, repeatAt(pace), pace, HoldTicks.PLAY_LIFT_MILLIS, hit, HapticPalette.TEXTURE_MILLIS,
         HapticPalette.millis(Family.GoneFlick.pattern), GestureDisplay.holdLandings(HoldTicks.playLetters(), scale, speedUp))
 
 /** No two ticks of a word and a dot within 35 ms, and the dots no closer than their own 30 ms. */
@@ -817,22 +819,21 @@ private fun checkApart(ticks: List<HoldTicks.Tick>, what: String) {
 }
 
 /**
- * A hold of 10 words and the dots at its lift make one list: the flick, the fade's ticks just as the fade plans them, and a tick
- * for every dot. Nothing within 35 ms of anything else of the other kind.
+ * A hold of 10 words and the dots at its lift make one list: the flick, a hit for every word at its pace, and a tick for every
+ * dot. Nothing within 35 ms of anything else of the other kind.
  */
 private fun aHoldAndItsDotsAreOneSequence() {
-    for (scale in listOf(1f, .5f, .25f)) for (speedUp in listOf(false, true)) for (repeat in listOf(REPEAT_SLOW_MILLIS, 80L)) {
-        val plan = playPlan(scale = scale, speedUp = speedUp, repeat = repeat)
+    for (scale in listOf(1f, .5f, .25f)) for (speedUp in listOf(false, true)) for (pace in listOf(0f, 1f)) {
+        val plan = playPlan(scale = scale, speedUp = speedUp, pace = pace)
+        val repeat = repeatAt(pace)
         val what = "scale $scale, speed-up $speedUp, $repeat ms a word"
         checkApart(plan.ticks, what)
         val flick = plan.ticks.first()
         check(flick.kind == HoldTicks.Kind.Flick && flick.at == 0L && flick.plays) { "$what: the hold starts with its flick at 0" }
-        // The fade's sequence is whole: every word in order, at its length, thinned where the fade thins.
+        // Every word in order plays its hit, at the length its pace gives.
         val words = plan.ticks.filter { it.kind == HoldTicks.Kind.Word }
         check(words.map { it.number } == (1..HoldTicks.PLAY_WORDS).toList()) { "$what: every word: ${words.map { it.number }}" }
-        check(words.map { if (it.plays) it.millis else null } == HeldDeleteFade.ticks(HeldDeleteFade.DEFAULT, HoldTicks.PLAY_WORDS)) {
-            "$what: the fade as planned: $words"
-        }
+        check(words.all { it.plays && it.millis == HoldHit.millis(hit, pace, repeat) }) { "$what: every word hits: $words" }
         check(words.all { it.at == it.number * repeat }) { "$what: a word every $repeat ms from the hold's start" }
         // Every dot is there, after the lift, and each one not near a word ticks.
         val landings = GestureDisplay.holdLandings(HoldTicks.playLetters(), scale, speedUp)
@@ -845,19 +846,18 @@ private fun aHoldAndItsDotsAreOneSequence() {
     }
 }
 
-/** The rule: a dot within 35 ms of a word's tick is skipped, the word plays, and every other dot still ticks. */
+/** The rule: a dot within 35 ms of a word's hit is skipped, the word plays, and every other dot still ticks. */
 private fun aDotNearAWordIsSkipped() {
-    val words = listOf(HoldTicks.Tick(0, HoldTicks.Kind.Flick, 0, 105), HoldTicks.Tick(350, HoldTicks.Kind.Word, 1, 17),
-        HoldTicks.Tick(700, HoldTicks.Kind.Word, 2, 16), HoldTicks.Tick(1050, HoldTicks.Kind.Word, 3, 9, HoldTicks.THINNED))
+    val words = listOf(HoldTicks.Tick(0, HoldTicks.Kind.Flick, 0, 105), HoldTicks.Tick(350, HoldTicks.Kind.Word, 1, 50),
+        HoldTicks.Tick(700, HoldTicks.Kind.Word, 2, 50))
     val merged = HoldTicks.merge(words, listOf(640, 670, 700, 735, 765, 1040, 1070))
     checkApart(merged, "made up")
     val dots = merged.filter { it.kind == HoldTicks.Kind.Dot }
     check(dots.filter { !it.plays }.map { it.at } == listOf(670L, 700L)) { "The two dots within 35 ms of word 2 are skipped: $dots" }
     check(dots.filter { !it.plays }.all { it.skipped == HoldTicks.NEAR_WORD }) { "with the reason" }
     check(dots.filter { it.plays }.map { it.at } == listOf(640L, 735L, 765L, 1040L, 1070L)) { "The rest tick, 35 ms or more from it: $dots" }
-    check(merged.filter { it.kind != HoldTicks.Kind.Dot } == words) { "The words are untouched: the fade's sequence stays whole" }
+    check(merged.filter { it.kind != HoldTicks.Kind.Dot } == words) { "The words are untouched: every hit plays" }
     check(dots.map { it.number } == (1..7).toList()) { "Each dot keeps its number" }
-    // A thinned word plays nothing, so the dots next to it at 1040 and 1070 tick.
     check(merged.map { it.at } == merged.map { it.at }.sorted()) { "One list in time order" }
     check(merged.indexOfFirst { it.at == 700L && it.kind == HoldTicks.Kind.Word } < merged.indexOfFirst { it.at == 700L && it.kind == HoldTicks.Kind.Dot }) {
         "At the same time, the word comes first"
@@ -1045,8 +1045,8 @@ private fun aDeleteWallIsTheSameAndClean() {
 }
 
 /**
- * A crunch: two tiny pulses close together, felt as one gritty tick, for keys a clear flick crosses and each word a hold takes.
- * It is texture, so it keeps its own pace, and the lab's editor can change it within its grain's range.
+ * A crunch: two tiny pulses close together, felt as one gritty tick, for keys a clear flick crosses. It is texture, so it keeps its
+ * own pace, and the lab's editor can change it within its grain's range.
  */
 private fun aFlickCrunches() {
     val pulses = HapticPalette.pulses(Family.Crunch.pattern)
@@ -1058,11 +1058,9 @@ private fun aFlickCrunches() {
         "Its gap stays a grain's"
     }
     check(Family.entries.filter { it != Family.Crunch }.none { it.pattern == Family.Crunch.pattern }) { "A pattern of its own" }
-    check(Haptic.DeleteWord.family == Family.Crunch && Haptic.DeleteCrunch.family == Family.Crunch) { "A flick's keys and a hold's words crunch" }
+    check(Haptic.DeleteCrunch.family == Family.Crunch) { "A flick's keys crunch" }
+    check(Haptic.DeleteWord.family != Family.Crunch) { "A hold's words don't" }
     check(Haptic.DeleteBreak.family == Family.Boundary) { "The break is one firm tick" }
-    // The fade shortens a held word's crunch with it.
-    check(HeldDeleteFade.crunch(Family.Crunch.pattern, 17, 17) == Family.Crunch.pattern) { "At the start, the crunch itself" }
-    check(HeldDeleteFade.crunch(Family.Crunch.pattern, 9, 17) == listOf(6L, 12L, 6L)) { HeldDeleteFade.crunch(Family.Crunch.pattern, 9, 17).toString() }
     for (haptic in listOf(Haptic.DeleteCrunch, Haptic.DeleteBreak)) check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic" }
     check(HapticTimeline.meaning(Family.Crunch).isNotEmpty()) { "The lab says what a crunch means" }
 }

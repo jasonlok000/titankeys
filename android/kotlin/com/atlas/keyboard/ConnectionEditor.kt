@@ -143,8 +143,7 @@ class ConnectionEditor(
         if (before.isEmpty()) return 0
         var start = before.length
         if (word) {
-            while (start > 0 && Character.isWhitespace(before.codePointBefore(start))) start -= Character.charCount(before.codePointBefore(start))
-            while (start > 0 && !Character.isWhitespace(before.codePointBefore(start))) start -= Character.charCount(before.codePointBefore(start))
+            start -= wordDeleteLength(before, connection.getTextAfterCursor(1, 0)?.toString())
         } else {
             val characters = BreakIterator.getCharacterInstance(Locale.UK)
             characters.setText(before)

@@ -110,21 +110,21 @@ export type State = {
 
 /**
  * Each pattern family's pattern in use, on and off in ms starting with on, by its id in Haptics.kt, and whether it is one tried
- * in the lab. The held delete fade's switch and four numbers in use, lengths in ms. Each haptic's family and what it plays, by its id.
+ * in the lab. Each haptic's family and what it plays, by its id.
  */
 export type HapticsLab = {
   families: Record<string, { name: string; pattern: number[]; plays: string; tried: boolean }>;
-  heldDeleteFade: { name: string; on: boolean; start: number; floor: number; words: number; thinEvery: number; plays: string; tried: boolean };
   haptics: Record<string, { family: string; pattern: number[]; plays: string }>;
   /**
-   * The lab's experiments, on or off, by id: dotsSpeedUp, "Dots speed up when long", heldDeleteFade, "Held delete fade",
-   * and deleteZoneTicks, "Tick at delete zones".
+   * The lab's experiments, on or off, by id: dotsSpeedUp, "Dots speed up when long", and deleteZoneTicks, "Tick at delete zones".
    */
   experiments: Record<string, boolean>;
-  /** Where a held delete's glow goes, by id, and the places it can go, from the list "Delete glow". */
   /** How long a single flick's dots sit on the bar before they go into the caret, in ms, and its default. */
   flickHoldMillis: number;
   flickHoldDefault: number;
+  /** What marks the moving end of a triple press's selection, by id, and the marks it can try. */
+  selectionEnd: string;
+  selectionEnds: { id: string; label: string }[];
 };
 
 export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
@@ -252,8 +252,8 @@ export async function transferLearning(mode: "import" | "export") {
  * Opens the lab's screen: a practice field, the haptics the keyboard really plays as you type, and an editor and notes for each
  * family. It shows the haptics with these names, groups and words on where each plays. TitanKeys Debug only.
  */
-export const showHapticsGraph = (haptics: { id: string; label: string; group: string; about: string }[], open = "") =>
-  atlas("labGraph", { haptics, open });
+export const showHapticsGraph = (haptics: { id: string; label: string; group: string; about: string }[]) =>
+  atlas("labGraph", { haptics });
 
 /** Opens Key calibration, which lines the drawn keys up with the real keys below the screen. TitanKeys Debug only. */
 export const showKeyCalibration = () => atlas("keyCalibration");
@@ -261,6 +261,12 @@ export const showKeyCalibration = () => atlas("keyCalibration");
 /** Turns one of the Haptics lab's experiments on or off, by its id. TitanKeys Debug only. */
 export async function setLabExperiment(id: string, on: boolean) {
   await atlas("labExperiment", { id, on });
+  await state.refresh();
+}
+
+/** Tries the mark at a triple press's moving end, by id, or puts the handle back with null. TitanKeys Debug only. */
+export async function setLabSelectionEnd(id: string | null) {
+  await atlas("labSelectionEnd", { id });
   await state.refresh();
 }
 

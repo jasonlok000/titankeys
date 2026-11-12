@@ -73,7 +73,7 @@ class AtlasIme : InputMethodService() {
     private lateinit var overlay: TouchpadOverlay
     private val contact = Contact()
     private val deleteHold = DeleteHold(contact)
-    /** The held delete's words, so its ticks fade as more go. */
+    /** The held delete's words, so the lab can number each one's hit. */
     private val heldWords = HeldDeleteCount()
     private val cursor = CursorMode()
     private val cursorGesture = CursorGesture()
@@ -345,11 +345,20 @@ class AtlasIme : InputMethodService() {
             return@Runnable
         }
         rememberCursor()
+        GestureDisplay.selectionEnd = SelectionEnd.stored(Haptics.selectionEndId(this))
         // A terminal or a remote view has no text to select here.
         if (field.exact) haptics.play(Haptic.WordPicked) else enqueue { selectWord() }
     }
 
     private val checkHeldTaps = Runnable { settleHeldTaps() }
+
+    /**
+     * Three taps picked the word as the third landed; once no fourth touch follows, the taps are over: none of them types, and
+     * the next touch is a first tap again.
+     */
+    private val confirmTriple = Runnable {
+        if (cursorGesture.confirmTriple()) finishHeldTaps(type = false)
+    }
 
     /** Two taps above Space pick nothing; the guide says so, once no third tap follows. Only in its own field. */
     private val confirmTwoAbove = Runnable {
@@ -412,7 +421,7 @@ class AtlasIme : InputMethodService() {
     /** Each word goes the way of a normal delete flick. [flick] is the first word's flick, and is null for the words after it. */
     private fun deleteHeldWord(flick: Contact.Outcome.Swipe?) {
         if (flick != null) {
-            // A new hold, so its ticks fade from the start again.
+            // A new hold, so its words count from 1 again.
             heldWords.reset()
             // A hold takes the bar from any dots still playing, and their ticks stop.
             haptics.cutDots()
@@ -444,7 +453,7 @@ class AtlasIme : InputMethodService() {
                 return@enqueue
             }
             deleteWall.left()
-            haptics.heldDeleteWord(word)
+            haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)
             // A dot for each character of the word, for the dots that play when the hold lifts, and the real words for the bar.
             val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
             before?.let { strip?.gesture?.deleteText(it) }
@@ -534,6 +543,8 @@ class AtlasIme : InputMethodService() {
      */
     private fun pickOnLand() {
         Recording.sink?.gesture("triple", SystemClock.uptimeMillis(), "")
+        // The mark at the selection's moving end, as the Haptics lab tried it in TitanKeys Debug.
+        GestureDisplay.selectionEnd = SelectionEnd.stored(Haptics.selectionEndId(this))
         gestureRegistered = true
         rememberCursor()
         // The bar keeps the pick's mark while this touch stays down, and shows the selected text after the lift.
@@ -600,8 +611,12 @@ class AtlasIme : InputMethodService() {
         main.postDelayed(checkHeldTaps, CursorGesture.CONFIRM_MILLIS)
     }
 
+    /** Types the held taps once they can't be a gesture any more, or looks again soon, so a held tap never waits for the next touch. */
     private fun settleHeldTaps() {
-        if (heldTaps.isNotEmpty() && !cursorGesture.deciding(SystemClock.uptimeMillis())) finishHeldTaps(type = true)
+        if (heldTaps.isEmpty()) return
+        if (!cursorGesture.deciding(SystemClock.uptimeMillis())) return finishHeldTaps(type = true)
+        main.removeCallbacks(checkHeldTaps)
+        main.postDelayed(checkHeldTaps, HELD_TAP_LOOK_MILLIS)
     }
 
     private fun finishHeldTaps(type: Boolean) {
@@ -2232,7 +2247,7 @@ class AtlasIme : InputMethodService() {
         val first = points.firstOrNull()
         val far = swipeCarried && gesture.swiping || travel != null && travel >= Contact.SWIPE_KEYS
         if (inGuide || !contact.swipes || altOrPanel || travel == null || !far || first == null
-            || startsDeleteFlick(first.x, first.y) && isDeleteWordSwipe(points)) {
+            || startsDeleteFlick(first.x, first.y) && (isDeleteWordSwipe(points) || flickCrunch.mayBeFlick)) {
             gesture.swipeCancelled()
             swipeShown = 0
             return
@@ -2262,9 +2277,12 @@ class AtlasIme : InputMethodService() {
 
     /** A finger lifted, or the system cancelled the gesture, which counts as a lift but never as a tap of a double tap. */
     private fun lift(event: MotionEvent, samples: List<Sample>, cancelled: Boolean) {
+        // Every delete flick shows its glow, even one that lifted before it drew; a hold's glow fades with its dots.
+        val stroke = (contact.points + samples).filter { it.valid }
+        val flicked = !cancelled && !contact.deleting && flickCrunch.lifted(stroke)
         endDeleteHold()
-        // A flick's glow fades at the lift; a hold's already does, with its dots.
-        strip?.gesture?.flickGlowEnded(SystemClock.uptimeMillis())
+        if (flicked) strip?.gesture?.flickLifted(stroke.last().x, SystemClock.uptimeMillis())
+        else strip?.gesture?.flickGlowEnded(SystemClock.uptimeMillis())
         tripleDown = false
         strip?.gesture?.pickLifted(SystemClock.uptimeMillis())
         val doubleTapped = if (cancelled) {
@@ -2291,6 +2309,7 @@ class AtlasIme : InputMethodService() {
         val points = contact.points
         if (doubleTapped) main.postAtTime(confirmDoubleTap, event.eventTime + CursorGesture.CONFIRM_MILLIS)
         else if (inGuide && cursorGesture.twoAbove) main.postAtTime(confirmTwoAbove, event.eventTime + CursorGesture.CONFIRM_MILLIS)
+        else if (cursorGesture.tripled) main.postAtTime(confirmTriple, event.eventTime + CursorGesture.CONFIRM_MILLIS)
         contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
             lastTouch = pending.points
             if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
@@ -2411,6 +2430,7 @@ class AtlasIme : InputMethodService() {
         Recording.sink?.gesture("cancel", SystemClock.uptimeMillis(), "")
         stopCursor()
         main.removeCallbacks(confirmDoubleTap)
+        main.removeCallbacks(confirmTriple)
         main.removeCallbacks(registerGestureLater)
         cursorGesture.cancel(SystemClock.uptimeMillis())
         settleHeldTaps()
@@ -2465,20 +2485,21 @@ class AtlasIme : InputMethodService() {
             nothing()
             return@changeSelection null
         }
-        strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
+        showWordText(text, start, end, word)
         strip?.gesture?.wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown)
         word
     }
 
     /** Selects the word at the cursor, the part that a word drag keeps selected. Between words the drag starts from the cursor. */
     private fun startWordDrag() {
+        GestureDisplay.selectionEnd = SelectionEnd.stored(Haptics.selectionEndId(this))
         wordAnchor = null
         selectionWall.left()
         rememberCursor()
         changeSelection { text, start, end, offset ->
             val word = WordSelection.at(text, start, end) ?: (start to end)
             wordAnchor = offset + word.first to offset + word.second
-            strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
+            showWordText(text, start, end, word)
             word
         }
     }
@@ -2498,9 +2519,21 @@ class AtlasIme : InputMethodService() {
             val moved = if (range.second != end) text.subSequence(minOf(end, range.second), maxOf(end, range.second))
                 else text.subSequence(minOf(start, range.first), maxOf(start, range.first))
             haptics.play(Haptic.SelectionWord)
+            // The words around the anchor are read again from here, so on long text the pills never run out.
+            showWordText(text, start, end, anchor.first - offset to anchor.second - offset)
             strip?.gesture?.wordStep(direction)
             range
         }
+    }
+
+    /**
+     * Shows the words around [anchor] on the bar, from [text], the text read around the selection from [start] to [end]. Where
+     * that text is cut off at its reach, more lies beyond it.
+     */
+    private fun showWordText(text: CharSequence, start: Int, end: Int, anchor: Pair<Int, Int>) {
+        if (anchor.first !in 0..text.length || anchor.second !in anchor.first..text.length) return
+        strip?.gesture?.wordText(text.subSequence(0, anchor.first), anchor.second - anchor.first,
+            text.subSequence(anchor.second, text.length), moreBefore = start >= WORD_REACH, moreAfter = text.length - end >= WORD_REACH)
     }
 
     /** What a Ctrl shortcut plays, as [ShortcutFeel] has it: only Ctrl + C with nothing selected, a no. A key held down plays once. */
@@ -2796,9 +2829,9 @@ class AtlasIme : InputMethodService() {
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
                         val dotsAt = gesture?.dotsAt
-                        // A flick while dots still play adds its dots to theirs, and its ticks to theirs.
+                        // A flick while dots still play adds its dots to theirs, and the whole queue's ticks go again with its wait.
                         haptics.flick(gesture?.dotsPoppedMillis(scale), gesture?.dotLandings(scale).orEmpty(),
-                            { dotsAt != null && strip?.gesture?.dotsAt == dotsAt }, chained = gesture?.chained == true)
+                            { dotsAt != null && strip?.gesture?.dotsAt == dotsAt })
                     }
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return
@@ -3426,6 +3459,8 @@ class AtlasIme : InputMethodService() {
     }
 
     companion object {
+        /** While taps may still be a gesture, a held tap looks again this often, so it types as soon as they can't be one. */
+        private const val HELD_TAP_LOOK_MILLIS = 30L
         /** How long with no input before the idle scene starts on the bar. */
         private const val IDLE_BAR_MILLIS = 3 * 60 * 1000L
         /** The debug build starts the idle scene at once on this broadcast, from adb. */

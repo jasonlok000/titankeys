@@ -15,6 +15,9 @@ fun main() {
     aFlicksWayInStretchesToFitItsDots()
     aHeldDeleteGlowFollowsItsPace()
     aFlicksGlowFollowsTheFinger()
+    everyFlickShowsItsGlow()
+    aWordDragOnLongTextNeverRunsOutOfPills()
+    theSelectionsEndMarkTurnsSmoothly()
     aHoldDrawsTheRealWords()
     aHoldWithNoTextLeftDrawsNoPills()
     aPausedHoldFadesAndBlinks()
@@ -26,6 +29,7 @@ fun main() {
     aHoldsDotsNeverLieOverTheWords()
     anyNumberOfWordsShowsItsDots()
     quickFlicksMakeOneStream()
+    aJoinStartsTheWaitAgain()
     longDotsSpeedUpWhenTried()
     aPickedWordHoldsABeat()
     realTextFollowsTheCursor()
@@ -86,7 +90,7 @@ fun main() {
     theGlowCarriesIntoASelect()
     theHeldGlowGoesWithTheDisplay()
     theUnderglowLeansWithTheSteering()
-    theCaretBlinksOnlyWhenSteeringPauses()
+    steeringsCaretNeverBlinks()
     println("Gesture display checks passed")
 }
 
@@ -1326,6 +1330,74 @@ private fun anyNumberOfWordsShowsItsDots() {
     landsAll(flicks, now)
 }
 
+/** Each dot's landing, in real ms after the stream started. */
+private fun lands(display: GestureDisplay) = (0 until display.dots).map { display.dotLandsAt(it) }
+
+/** What a join waits before its first dot lands, in ms: the new dots pop in, wait, then travel into the caret. */
+private val joinWait get() = GestureDisplay.FLICK_IN + GestureDisplay.flickHoldMillis() + GestureDisplay.DOT_TRAVEL
+
+/** The dots land one after another, in order. (Their ticks keep 30 ms apart: see [GestureDisplay.dotLandings].) */
+private fun inOrder(lands: List<Float>, what: String) =
+    isTrue(lands.zipWithNext().all { (a, b) -> b > a }, "$what: every dot lands after the one before: $lands")
+
+/**
+ * A delete that joins starts the dots' wait again for the whole queue (owner, 2026-11-12): every dot not yet on its way holds
+ * still, and from the join they wait the flick's wait, then all drain in order. A dot already on its way still lands.
+ */
+private fun aJoinStartsTheWaitAgain() {
+    // A flick again at 300 ms: the first dot hasn't left yet, so everything waits the full wait from 300 ms.
+    val early = GestureDisplay()
+    early.wordDeleted(1_000, 5)
+    early.run(1_000, 1_284)
+    early.wordDeleted(1_300, 4)
+    val after = lands(early)
+    same(after.size, 9, "The four join the five")
+    near(after.first(), 300f + joinWait, "The first dot lands a whole wait after the join", 1f)
+    inOrder(after, "A join at 300 ms")
+
+    // A flick again at 540 ms, into a long word's dots: one has landed, some are on their way, and the rest hold and go again
+    // from the join's wait. (At 600 ms every dot of a 12-letter word has already set off with the 200 ms wait.)
+    val late = GestureDisplay()
+    late.wordDeleted(1_000, 12)
+    val before = lands(late)
+    late.run(1_000, 1_524)
+    late.wordDeleted(1_540, 4)
+    val now = lands(late)
+    val going = before.indices.filter { before[it] - GestureDisplay.DOT_TRAVEL <= 540f }
+    val waiting = before.indices.filter { before[it] - GestureDisplay.DOT_TRAVEL > 540f }
+    isTrue(before.first() < 540f, "One dot has already landed: $before")
+    isTrue(going.isNotEmpty() && waiting.isNotEmpty(), "At 540 ms some dots have set off and some haven't: $before")
+    for (index in going) near(now[index], before[index], "Dot $index, already on its way, lands as it was going to", .5f)
+    isTrue(waiting.all { now[it] >= 540f + joinWait - .5f }, "The dots still waiting go again from the join's wait: $now")
+    near(now[waiting.first()], 540f + joinWait, "The first held dot lands a whole wait after the join", 1f)
+    inOrder(now, "A join at 540 ms")
+    same(now.size, 16, "The new four go last")
+
+    // Three quick flicks: each join starts the wait again, so the whole queue waits from the last.
+    val three = GestureDisplay()
+    three.wordDeleted(1_000, 4)
+    three.run(1_000, 1_134)
+    three.wordDeleted(1_150, 3)
+    three.run(1_150, 1_284)
+    three.wordDeleted(1_300, 5)
+    val all = lands(three)
+    same(all.size, 12, "Three flicks' dots in one queue")
+    near(all.first(), 300f + joinWait, "Everything waits from the third flick", 1f)
+    inOrder(all, "Three quick flicks")
+    val ticks = three.dotLandings(1f)
+    isTrue(ticks.isNotEmpty() && ticks.first() >= (joinWait - 1).toLong(), "The whole queue's ticks go again from the last join: $ticks")
+    isTrue(ticks.zipWithNext().all { (a, b) -> b - a >= 30 }, "Its ticks keep 30 ms apart: $ticks")
+    // Every dot lands, in order, before the words come back.
+    var at = 1_300L
+    val landed = BooleanArray(12)
+    while (three.scene == Scene.DeleteFlick && at < 5_000) {
+        three.advance(at, 1f)
+        if (three.scene == Scene.DeleteFlick) for (index in 0 until 12) if (three.dotTravel(index) >= 1f) landed[index] = true
+        at += 16
+    }
+    isTrue(landed.all { it }, "Every one of the twelve lands: ${landed.toList()}")
+}
+
 /**
  * Deletes that come while the dots still play don't start them over or cut them: their dots join the end of the queue, and the
  * stream goes on, every dot landing and ticking 30 ms or more after the one before.
@@ -1343,14 +1415,15 @@ private fun quickFlicksMakeOneStream() {
     same(display.dots, 9, "Its four dots join the five")
     same(display.groups.toList(), listOf(5, 4), "Each word keeps its own group, with a gap between")
     val second = display.dotLandings(1f).map { 1_256 + it }
-    same(second.size, 4, "A tick for each new dot")
+    isTrue(second.size >= 4, "A tick for each dot still to land, the new ones too: $second")
+    isTrue(second.first() > first.first(), "The join holds the dots back: $first, then $second")
     display.run(1_256, 1_500)
     display.wordDeleted(1_512, 7)
     same(display.dots, 16, "A third flick grows the queue again")
-    val third = display.dotLandings(1f).map { 1_512 + it }
-    val all = first + second + third
+    val all = display.dotLandings(1f).map { 1_512 + it }
+    isTrue(all.size >= 7, "Every dot still to land ticks: $all")
     isTrue(all.zipWithNext().all { (a, b) -> b - a >= 30 }, "Every dot lands 30 ms or more after the one before: $all")
-    isTrue(second.first() > first.last() && third.first() > second.last(), "The new dots land after the ones already queued")
+    isTrue(all.first() > 1_512, "Nothing lands before the join")
     // Every dot lands, in order, before the words come back.
     val landed = BooleanArray(16)
     var now = 1_512L
@@ -1479,41 +1552,36 @@ private fun theUnderglowLeansWithTheSteering() {
     near(still.steerLean, 0f, "and none once steering is gone")
 }
 
-/** Steering's caret stays on while the cursor moves, and blinks as a text cursor does, 530 ms on and 530 ms off, once it pauses. */
-private fun theCaretBlinksOnlyWhenSteeringPauses() {
+/** Steering's caret never blinks, not even when steering pauses (owner, 2026-11-12). Only a held delete's pause zone blinks. */
+private fun steeringsCaretNeverBlinks() {
     val display = GestureDisplay()
     display.spaceTapped(1, 0L)
     display.cursorFrame(5f, 0, 0f, false, 100L)
     display.cursorText("The quick", " brown fox")
-    display.advance(100L, 1f)
-    // Resting on Space from the start: on first, then off, then on again.
-    if (!display.caretShown) throw AssertionError("The caret shows as steering starts")
-    display.advance(100L + GestureDisplay.BLINK_MILLIS - 10, 1f)
-    if (!display.caretShown) throw AssertionError("It stays on for the first ${GestureDisplay.BLINK_MILLIS} ms")
-    display.advance(100L + GestureDisplay.BLINK_MILLIS + 10, 1f)
-    if (display.caretShown) throw AssertionError("Then it goes off")
-    display.advance(100L + 2 * GestureDisplay.BLINK_MILLIS + 10, 1f)
-    if (!display.caretShown) throw AssertionError("And comes on again")
-    // Steering: on every frame, however long.
-    var now = 1200L
-    while (now < 3000L) {
+    // Resting on Space from the start, for many blinks' time.
+    var now = 100L
+    while (now < 100L + 6 * GestureDisplay.BLINK_MILLIS) {
+        display.advance(now, 1f)
+        if (!display.caretShown) throw AssertionError("The caret stays on while steering rests, at $now ms")
+        now += 16
+    }
+    // Steering, then pausing again for a long while.
+    val moving = now + 1800L
+    while (now < moving) {
         now += 16
         display.cursorFrame(8.5f, 1, CursorMode.SLOWEST_PER_SECOND * 4, false, now)
         if (now % 160L == 0L) display.cursorStepped(1)
         display.advance(now, 1f)
         if (!display.caretShown) throw AssertionError("The caret stays on while steering, at $now ms")
     }
-    // Back on Space: on until the text settles and a blink's time passes, then off.
     display.cursorFrame(5f, 0, 0f, false, now)
-    display.advance(now + 16, 1f)
-    if (!display.caretShown) throw AssertionError("It is on when steering pauses")
-    display.advance(now + GestureDisplay.BLINK_MILLIS + 200, 1f)
-    if (display.caretShown) throw AssertionError("Paused, it blinks off")
-    // Moving again turns it straight back on.
-    display.cursorFrame(1.5f, -1, CursorMode.SLOWEST_PER_SECOND * 4, false, now + GestureDisplay.BLINK_MILLIS + 216)
-    display.advance(now + GestureDisplay.BLINK_MILLIS + 216, 1f)
-    if (!display.caretShown) throw AssertionError("Steering again shows it at once")
-    // With animations off nothing moves, so it stays on.
+    val paused = now + 6 * GestureDisplay.BLINK_MILLIS
+    while (now < paused) {
+        now += 16
+        display.advance(now, 1f)
+        if (!display.caretShown) throw AssertionError("Paused, steering's caret still never blinks, at $now ms")
+    }
+    // With animations off it stays on too.
     val still = GestureDisplay()
     still.cursorFrame(5f, 0, 0f, false, 0L)
     still.advance(GestureDisplay.BLINK_MILLIS + 10, 0f)
@@ -1561,4 +1629,149 @@ private fun aFlicksGlowFollowsTheFinger() {
     // A hold with nothing deleted: no flick glow can start over it.
     held.flickGlow(.1f, 3_200)
     near(held.glowWidth, GestureDisplay.DELETE_REACH_LEAST, "A hold's glow is the pace's", .005f)
+}
+
+/**
+ * Every delete flick shows its glow (owner, 2026-11-12). One so fast that it lifted before its glow had a frame, or before it was
+ * clear while it went, plays the glow after the lift: from the corner to where the finger lifted, at full strength for
+ * [GestureDisplay.FLICK_GLOW_SEEN], then fading.
+ */
+private fun everyFlickShowsItsGlow() {
+    // Never clear while it went: no glow before the lift, then one at the lift.
+    val unseen = GestureDisplay()
+    same(unseen.glowing, false, "Nothing glows while the stroke wasn't clear")
+    unseen.flickLifted(.6f, 1_000)
+    same(unseen.glowDelete, true, "At the lift the delete glow shows")
+    near(unseen.glowWidth, .4f, "from the corner to where the finger lifted", .001f)
+    unseen.run(1_000, 1_000 + GestureDisplay.FLICK_GLOW_SEEN - 10)
+    near(unseen.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "at full strength for a moment", .001f)
+    unseen.run(1_000 + GestureDisplay.FLICK_GLOW_SEEN, 1_000 + GestureDisplay.FLICK_GLOW_SEEN + 100)
+    isTrue(unseen.glowAlpha < GestureDisplay.GLOW_HELD_ALPHA && unseen.glowing, "then it fades: ${unseen.glowAlpha}")
+    unseen.run(1_300, 1_000 + GestureDisplay.FLICK_GLOW_SEEN + GestureDisplay.GLOW_FADE.toLong() + 50)
+    same(unseen.glowing, false, "and goes")
+    // Its glow started but lifted before a frame: it shows where the finger lifted, for the same moment.
+    val early = GestureDisplay()
+    early.flickGlow(.8f, 2_000)
+    early.flickLifted(.55f, 2_010)
+    near(early.glowWidth, .45f, "Where the finger lifted, not where the stroke was first clear", .001f)
+    early.run(2_010, 2_000 + GestureDisplay.FLICK_GLOW_SEEN - 10)
+    near(early.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "It stays at full until it has shown long enough", .001f)
+    // A flick whose glow showed all along fades at once at its lift, as before.
+    val seen = GestureDisplay()
+    seen.flickGlow(.7f, 3_000)
+    seen.run(3_000, 3_200)
+    seen.flickLifted(.5f, 3_200)
+    seen.run(3_216, 3_232)
+    isTrue(seen.glowAlpha < GestureDisplay.GLOW_HELD_ALPHA, "A glow that showed long enough fades at the lift: ${seen.glowAlpha}")
+    // The flick's dots don't put out the late glow.
+    val dots = GestureDisplay()
+    dots.flickLifted(.6f, 4_000)
+    dots.wordDeleted(4_020, 4)
+    same(dots.scene, Scene.DeleteFlick, "The dots play")
+    dots.run(4_020, 4_000 + GestureDisplay.FLICK_GLOW_SEEN - 10)
+    near(dots.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "with the late glow still at full", .001f)
+    // A hold's glow just fades at its lift.
+    val hold = GestureDisplay()
+    hold.deleteHeld(350, 5_000, pace = 0f)
+    hold.run(5_000, 5_400)
+    hold.flickLifted(.5f, 5_400)
+    hold.run(5_416, 5_416 + GestureDisplay.GLOW_FADE.toLong() + 50)
+    same(hold.glowing, false, "A hold's glow fades at its lift, with no late glow")
+    // With animations off nothing glows on after the lift.
+    val still = GestureDisplay()
+    still.flickLifted(.6f, 6_000)
+    still.advance(6_016, 0f)
+    same(still.glowing, false, "With animations off the late glow doesn't hang on")
+}
+
+/**
+ * A word drag on long text: the keyboard reads only 64 characters each side of the selection, so it reads the words again at
+ * each step. Every selected word then has its pill, as long as the real word, however far the selection goes (owner,
+ * 2026-11-12: triple space on long text ran out of blocks). Past what was read the bar draws made-up words, never nothing.
+ */
+private fun aWordDragOnLongTextNeverRunsOutOfPills() {
+    val words = listOf("alpha", "be", "certainly", "do", "everyone's", "far", "go", "harbour", "in", "jumping", "kept", "lo", "well-known",
+        "mountains", "no", "of", "pancakes", "quietly", "r2d2", "sun", "to", "umbrella", "very", "wonderful")
+    val text = (words + words + words).joinToString(" ")
+    val reach = 64
+    fun read(display: GestureDisplay, start: Int, end: Int, anchor: Pair<Int, Int>) {
+        val from = maxOf(0, start - reach)
+        val to = minOf(text.length, end + reach)
+        val window = text.substring(from, to)
+        display.wordText(window.substring(0, anchor.first - from), anchor.second - anchor.first, window.substring(anchor.second - from),
+            moreBefore = start - from >= reach, moreAfter = to - end >= reach)
+    }
+    for (direction in listOf(1, -1)) {
+        val display = GestureDisplay()
+        display.cursorFrame(ON_SPACE, 0, 0f, true, 1_000)
+        val middle = text.indexOf("harbour", text.length / 3)
+        val anchor = middle to middle + "harbour".length
+        var start = anchor.first
+        var end = anchor.second
+        read(display, start, end, anchor)
+        var steps = 0
+        while (true) {
+            val (newStart, newEnd) = WordSelection.extend(text, start, end, anchor.first, anchor.second, direction)
+            if (newStart == start && newEnd == end) break
+            start = newStart
+            end = newEnd
+            read(display, start, end, anchor)
+            display.wordStep(direction)
+            steps++
+            // Every word the selection holds has its pill, as wide as the real word.
+            val selected = WordSelection.lengths(if (direction > 0) text.substring(anchor.second, end) else text.substring(start, anchor.first))
+            same(selected.size, if (direction > 0) display.wordsRight else display.wordsLeft, "Step $steps: a pill for each step")
+            for (k in 1..selected.size) {
+                val index = if (direction > 0) k else -k
+                val letters = if (direction > 0) selected[k - 1] else selected[selected.size - k]
+                near(display.wordWidth(index), GestureDisplay.widthFor(letters), "Step $steps: word $index is drawn as long as it is", .001f)
+            }
+            // The next words, past what was read, are still drawn.
+            isTrue(display.wordWidth(if (direction > 0) selected.size + 1 else -selected.size - 1) > 0f || (if (direction > 0) end >= text.length - 1 else start <= 1),
+                "Step $steps: the words past the selection never run out before the text does")
+        }
+        isTrue(steps > 20, "The drag went a long way: $steps steps")
+    }
+    // A hyphen, a full stop between letters and an apostrophe: the pills split where the selection's steps do.
+    same(WordSelection.lengths("well-known co-op e.g. it's fine").toList(), listOf(4, 5, 2, 2, 1, 1, 4, 4), "Pills split as the selection steps")
+    // Text cut off at the reach: the cut word is no pill.
+    same(WordSelection.lengths("own words here", cutStart = true).toList(), listOf(5, 4), "A word cut at the start is left out")
+    same(WordSelection.lengths("own words he", cutEnd = true).toList(), listOf(3, 5), "and one cut at the end")
+}
+
+/**
+ * A triple press's selection keeps its solid box, and its moving end has a mark: a handle by default, or a chevron or the thin
+ * caret, as the Haptics lab tries (owner, 2026-11-12). When the drag turns, the mark goes from one end to the other smoothly,
+ * never in one frame.
+ */
+private fun theSelectionsEndMarkTurnsSmoothly() {
+    same(GestureDisplay.selectionEnd, SelectionEnd.Handle, "A handle by default")
+    same(SelectionEnd.of("chevron"), SelectionEnd.Chevron, "The lab's ids")
+    same(SelectionEnd.of("caret"), SelectionEnd.Caret, "with the old caret to compare")
+    same(SelectionEnd.of("nothing"), null, "and nothing else")
+    val display = GestureDisplay()
+    display.cursorFrame(8f, 1, 3f, true, 1_000)
+    display.wordStep(1)
+    display.wordStep(1)
+    var now = display.run(1_000, 1_300)
+    near(display.endLead, 1f, "Growing right, the mark is at the right end", .01f)
+    // Turning back gives the words back, then grows to the left.
+    repeat(3) { display.wordStep(-1) }
+    display.cursorFrame(2f, -1, 3f, true, now)
+    val leads = ArrayList<Float>()
+    repeat(50) {
+        now += 16
+        display.advance(now, 1f)
+        leads += display.endLead
+    }
+    same(display.leadingRight, false, "Now it grows to the left")
+    near(leads.last(), -1f, "and the mark ends at the left end", .02f)
+    isTrue(leads.any { it > -.9f && it < .9f }, "It goes there over several frames, not in one: $leads")
+    isTrue(leads.zipWithNext().all { (a, b) -> b <= a + .0001f }, "steadily: $leads")
+    // With animations off it is simply at the new end.
+    val still = GestureDisplay()
+    still.cursorFrame(2f, -1, 3f, true, 1_000)
+    still.wordStep(-1)
+    still.advance(1_016, 0f)
+    near(still.endLead, -1f, "With animations off it is at once at the end that moves", .001f)
 }

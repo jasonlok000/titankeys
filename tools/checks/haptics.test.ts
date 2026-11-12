@@ -25,8 +25,10 @@ test("the lab says where each haptic plays", () => {
   }
 });
 
-test("the lab says a held delete's ticks fade", () => {
+test("the lab says a held delete's words hit like a flick, shorter as it speeds up", () => {
   const about = hapticGroups.flatMap(group => group.haptics).find(({ id }) => id === "delete_word")?.about ?? "";
-  expect(about).toContain("shorter as more go");
-  expect(about).toContain("every other one");
+  expect(about).toContain("a firm hit, like the flick's");
+  expect(about).toContain("shorter as the delete speeds up");
+  expect(about).not.toContain("fade");
+  expect(about).not.toContain("every other one");
 });

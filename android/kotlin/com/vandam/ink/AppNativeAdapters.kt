@@ -340,7 +340,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     "null"
                 }
                 "labGraph" -> {
-                    lab().showGraph(data.getJSONArray("haptics").toString(), data.optString("open"))
+                    lab().showGraph(data.getJSONArray("haptics").toString())
                     "null"
                 }
                 "keyCalibration" -> {
@@ -354,6 +354,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 }
                 "labFlickHold" -> {
                     lab().tryFlickHold(if (data.isNull("millis")) null else data.getLong("millis"))
+                    "null"
+                }
+                "labSelectionEnd" -> {
+                    lab().trySelectionEnd(if (data.isNull("id")) null else data.getString("id"))
                     "null"
                 }
                 "labPlayFlick" -> {

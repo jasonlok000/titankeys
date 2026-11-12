@@ -31,6 +31,7 @@ fun main() {
     theFirstWordIsTheFlickItself()
     liftingStopsAtOnceWithNoExtraWord()
     liftingBetweenWordsAddsNothing()
+    aBusyHoldAddsNothingAfterTheLift()
     aKeyPressStopsAHold()
     aKeyPressBeforeTheHoldStopsIt()
     aFieldStartCancelsAHold()
@@ -45,6 +46,9 @@ fun main() {
     aStrokeJustAfterASwipeCannotDelete()
     theGuideZoneIsWhereFlicksStart()
     aWordSwipeIsNotAFlick()
+    aWordDeleteLeavesNoTwoSpaces()
+    everyFlickGlowsAtItsLift()
+    aFlickNeverShowsAsASwipeFirst()
     println("Delete hold checks passed")
 }
 
@@ -599,4 +603,100 @@ private fun aClearFlickCrunchesAndAWordDoesNot() {
     same(crunch(stroke(.95f, .35f, .65f, 100), allowed = false).first.toSet(), setOf(FlickCrunch.State.Plain), "Not allowed: plain")
     // Outside the delete zone, plain at once.
     same(crunch(stroke(.5f, .35f, .2f, 100)).first.first(), FlickCrunch.State.Plain, "From the middle of the keys: plain")
+}
+
+/** The text a word delete leaves, as [wordDeleteLength] has it, with the cursor at "|". */
+private fun deleted(text: String): String {
+    val cursor = text.indexOf('|')
+    val before = text.substring(0, cursor)
+    val after = text.substring(cursor + 1)
+    return before.dropLast(wordDeleteLength(before, after)) + "|" + after
+}
+
+/**
+ * A flick, and each word of a hold, takes the word before the cursor; when that would leave two spaces, the space before the
+ * word goes too (owner, 2026-11-12). Nowhere else does a space go.
+ */
+private fun aWordDeleteLeavesNoTwoSpaces() {
+    same(deleted("one two| three"), "one| three", "Mid-text: one space is left, not two")
+    same(deleted("one two three| four"), "one two| four", "Further along too")
+    // Each word of a hold, one after another.
+    same(deleted(deleted("one two three| four")), "one| four", "A hold's second word, the same")
+    same(deleted("one two|"), "one |", "At the end of the text the space before stays, for the next word")
+    same(deleted("two| three"), "| three", "At the start of the text there is no space before to take")
+    same(deleted("one two|, three"), "one |, three", "Before punctuation nothing more goes")
+    same(deleted("one two|. Three"), "one |. Three", "Nor before a full stop")
+    same(deleted("one\ntwo| three"), "one\n| three", "A line break is no space, and stays")
+    same(deleted("one two |three"), "one |three", "From after a space: the word and its space, no more")
+    same(deleted("one  two| three"), "one | three", "Only one space more goes")
+    same(deleted("one two|"), "one |", "Nothing after the cursor, nothing more")
+    same(wordDeleteLength("one two", null), 3, "A field that doesn't give the text after: the word alone")
+    same(deleted("|three"), "|three", "Nothing before the cursor, nothing goes")
+}
+
+/**
+ * Every delete flick shows its glow at the lift (owner, 2026-11-12), even one so fast that it never got clear while it went:
+ * [FlickCrunch.lifted] says so. A stroke that broke, a word, or a flick that doesn't count shows none.
+ */
+private fun everyFlickGlowsAtItsLift() {
+    // The points of the lift itself come with the lift, so the stroke never moves on them: [moved] of them come before it.
+    fun lifted(points: List<Sample>, allowed: Boolean = true, moved: Int = points.size): Boolean {
+        val crunch = FlickCrunch()
+        crunch.begin(allowed)
+        for (index in 0 until moved) crunch.move(points.subList(0, index + 1))
+        return crunch.lifted(points)
+    }
+    // Over in 30 ms: by its last move it has gone only one key, too little to be clear, and the rest comes with the lift.
+    val fast = listOf(at(.95f, .35f, 1_000), at(.85f, .35f, 1_015), at(.65f, .35f, 1_030))
+    same(crunch(fast.take(2)).first.last(), FlickCrunch.State.Waiting, "A flick this fast never got clear while it went")
+    same(lifted(fast, moved = 2), true, "but its glow shows at the lift")
+    same(lifted(stroke(.95f, .35f, .65f, 100)), true, "A usual flick glows at its lift too")
+    same(lifted(fast, allowed = false, moved = 2), false, "Where a flick doesn't count, no glow")
+    same(lifted(stroke(.95f, .35f, .2f, 250)), false, "A stroke that went too far and broke: no glow")
+    same(lifted(stroke(.85f, .4f, .2f, 650)), false, "A word: no glow")
+    same(lifted(stroke(.5f, .35f, .2f, 100)), false, "From the middle of the keys: no glow")
+}
+
+/**
+ * A held delete never runs on after the lift (owner, 2026-11-12: the guide's hold took a word 1.1 s after it). Only one edit is
+ * on its way at a time, so a word waiting for a busy edit when the finger lifts never goes, however long the edit takes.
+ */
+private fun aBusyHoldAddsNothingAfterTheLift() {
+    val rig = Rig()
+    rig.flick(1_000)
+    val first = rig.next!!
+    rig.runTo(first)
+    val deleted = rig.words.size
+    val due = rig.next!!
+    // The next word is due, but the last edit is still going through, so it waits.
+    rig.next = rig.hold.step(due, false) { rig.words += due }
+    same(rig.words.size, deleted, "A busy edit holds the next word")
+    same(rig.contact.up(emptyList(), due + 10), null, "The finger lifts")
+    // The edit ends long after the lift; the timer looks again, and finds the hold over.
+    for (late in listOf(due + 30, due + 400, due + 1_100)) {
+        same(rig.hold.step(late, true) { rig.words += late }, null, "At ${late - due} ms after the lift the hold is over")
+    }
+    same(rig.words.size, deleted, "No word goes after the lift")
+}
+
+/**
+ * A stroke that becomes a flick never draws a swipe's trail first (owner, 2026-11-12: some fast flicks showed a trail for a
+ * frame or two). The trail waits while [FlickCrunch.mayBeFlick]; a word from the delete zone shows it once it is clearly no flick.
+ */
+private fun aFlickNeverShowsAsASwipeFirst() {
+    fun mayBe(points: List<Sample>, allowed: Boolean = true): List<Boolean> {
+        val crunch = FlickCrunch()
+        crunch.begin(allowed)
+        return points.indices.map { crunch.move(points.subList(0, it + 1)); crunch.mayBeFlick }
+    }
+    val flick = mayBe(stroke(.95f, .35f, .65f, 100))
+    isTrue(flick.all { it }, "A flick may be one at every point, so its trail never shows: $flick")
+    val fast = mayBe(listOf(at(.95f, .35f, 1_000), at(.85f, .35f, 1_015), at(.65f, .35f, 1_030)))
+    isTrue(fast.all { it }, "A very fast one too: $fast")
+    val word = mayBe(stroke(.85f, .4f, .2f, 650))
+    isTrue(word.first() && !word.last(), "A word from L holds its trail only until it is clearly no flick: $word")
+    isTrue(mayBe(stroke(.5f, .35f, .2f, 300)).none { it }, "A word from the middle of the keys shows its trail at once")
+    isTrue(mayBe(stroke(.95f, .35f, .65f, 100), allowed = false).none { it }, "Where a flick doesn't count, the trail shows at once")
+    val far = mayBe(stroke(.95f, .35f, .2f, 250))
+    isTrue(!far.last(), "A stroke that broke off being a flick shows its trail")
 }

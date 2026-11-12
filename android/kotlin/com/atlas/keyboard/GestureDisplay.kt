@@ -85,6 +85,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     /** Whether the right end of [spanStart] to [spanEnd] is the one that moves. */
     var leadingRight = true
         private set
+    /**
+     * Which end of the selection its end mark shows at: 1 at the right, -1 at the left. It follows [leadingRight] smoothly, so
+     * when the drag turns, the mark fades from one end into the other instead of jumping. See [selectionEnd].
+     */
+    var endLead = 1f
+        private set
     /** The word at the middle of the strip, in the same units as [spanStart]. */
     var camera = 0f
         private set
@@ -103,14 +109,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     var shownStep = 0f
         private set
     /**
-     * Whether the caret shows now. Every gesture's caret blinks only when paused (owner, 2026-11-12): steering's is solid while
-     * the finger moves and blinks, on and off for [BLINK_MILLIS] each, once steering pauses; a held delete's is solid while it
-     * deletes and blinks while the finger rests in the pause zone.
+     * Whether the caret shows now. Only a held delete's caret blinks, on and off for [BLINK_MILLIS] each, while the finger rests
+     * in the pause zone. Steering's never blinks, even when it pauses (owner, 2026-11-12).
      */
     var caretShown = true
         private set
-    /** When steering last moved, or -1 before its first frame. The blink counts from here. */
-    private var movedAt = -1L
     /** Whether more text may lie past each end of [line], so that the cursor going there reads it again. */
     private var moreBefore = false
     private var moreAfter = false
@@ -247,6 +250,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private var dotLand = FloatArray(64)
     private var dotPopAt = FloatArray(64)
     private var dotPlace = IntArray(64)
+    /** How long after the dot before it each dot lands, as [plan] works it out, so a join can lay the queue again with the same steps. */
+    private var dotStep = FloatArray(64)
     /** One step after the last dot lands: then the words come back. */
     private var doneAt = 0f
     private var planned = Float.NaN
@@ -324,13 +329,24 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         return moreBefore && caretAt + stepped < REREAD_MARGIN || moreAfter && text.length - caretAt - stepped < REREAD_MARGIN
     }
 
-    /** The words around a word drag or a picked word: [before] it, the word itself of [letters], and [after] it. */
-    fun wordText(before: CharSequence, letters: Int, after: CharSequence) {
+    /**
+     * The words around a word drag or a picked word: [before] it, the word itself of [letters], and [after] it, as the selection
+     * counts words ([WordSelection.lengths]), so each step takes one pill. [moreBefore] and [moreAfter] say the text was cut off
+     * there: the cut word is left out, and past the known words the bar draws made-up ones instead of running out. A word drag
+     * reads them again at each step, so on long text its pills go on as far as the selection does.
+     */
+    fun wordText(before: CharSequence, letters: Int, after: CharSequence, moreBefore: Boolean = false, moreAfter: Boolean = false) {
         anchorLetters = letters
-        leftWords = wordLengths(before).reversedArray()
-        rightWords = wordLengths(after)
+        leftWords = WordSelection.lengths(before, cutStart = moreBefore).reversedArray()
+        rightWords = WordSelection.lengths(after, cutEnd = moreAfter)
+        wordsMoreBefore = moreBefore
+        wordsMoreAfter = moreAfter
         changed()
     }
+
+    /** Whether the text read for a word drag was cut off before or after it, so more words lie past the known ones. */
+    private var wordsMoreBefore = false
+    private var wordsMoreAfter = false
 
     /**
      * How much of a word's place the word at [index] fills, in a word drag: 0 is the first word, below 0 the words before it.
@@ -339,10 +355,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      */
     fun wordWidth(index: Int): Float {
         val first = anchorLetters ?: return MADE_UP_WIDTHS[index.mod(MADE_UP_WIDTHS.size)]
+        val madeUp = MADE_UP_WIDTHS[index.mod(MADE_UP_WIDTHS.size)]
         val letters = when {
             index == 0 -> first
-            index < 0 -> leftWords.getOrNull(-index - 1) ?: return 0f
-            else -> rightWords.getOrNull(index - 1) ?: return 0f
+            index < 0 -> leftWords.getOrNull(-index - 1) ?: return if (wordsMoreBefore) madeUp else 0f
+            else -> rightWords.getOrNull(index - 1) ?: return if (wordsMoreAfter) madeUp else 0f
         }
         return widthFor(letters)
     }
@@ -397,21 +414,58 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             // too soon for it to grow in.
             glowWidth = reach
             glowBase = heldAlpha
+            flickGlowAt = now
+            flickFramed = false
         }
         flickReach = reach
         deletePace = FLICK_GLOW_PACE
         changed()
     }
 
-    /** The flick lifted, or stopped being a flick: its glow stays where it reached and fades, as a hold's does at its lift. */
+    /** The stroke stopped being a flick, or a hold lifted: the glow stays where it reached and fades. */
     fun flickGlowEnded(now: Long) {
         if (!glowHeld || !glowDelete) return
         fadeGlow(now)
         changed()
     }
 
+    /**
+     * A delete flick lifted with its finger at [x]. Every flick shows its glow (owner, 2026-11-12): a very fast one can be over
+     * before its glow had a frame, or before it was clearly a flick at all, so its glow then plays after the lift, from the
+     * corner to where the finger lifted. It stays at full strength until it has shown for [FLICK_GLOW_SEEN] in all, then fades
+     * as any flick's does. A hold's glow just fades, as it always did.
+     */
+    fun flickLifted(x: Float, now: Long) {
+        if (!allowed) return
+        val reach = (1f - x).coerceIn(0f, 1f)
+        val flickShowing = glowHeld && glowDelete && !flickReach.isNaN()
+        if (glowHeld && glowDelete && !flickShowing) return flickGlowEnded(now)
+        if (!flickShowing) {
+            // Never clearly a flick while it went: the glow starts now, as a flick's would have.
+            holdGlow(now)
+            glowDelete = true
+            deletePace = FLICK_GLOW_PACE
+            shownPace = FLICK_GLOW_PACE
+            glowBase = heldAlpha
+            glowWidth = reach
+            flickGlowAt = now
+        } else if (!flickFramed) {
+            // Its glow never drew: it shows where the finger lifted, not where the stroke was first seen.
+            shownPace = FLICK_GLOW_PACE
+            glowBase = heldAlpha
+            glowWidth = reach
+        }
+        fadeGlow(now)
+        // A fading glow counts its fade from [glowAt], so one set later holds it at full until then.
+        glowAt = max(now, flickGlowAt + FLICK_GLOW_SEEN)
+        changed()
+    }
+
     /** How far a flick's glow reaches from the right, as a share of the bar, or NaN once a hold follows the pace instead. */
     private var flickReach = Float.NaN
+    /** When the flick's glow came on, and whether it has had a frame since. */
+    private var flickGlowAt = 0L
+    private var flickFramed = false
     /** True while a hold's glow eases from where its flick's reached to where its pace has it. */
     private var reachEasing = false
 
@@ -539,6 +593,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             dotLand = dotLand.copyOf(size)
             dotPopAt = dotPopAt.copyOf(size)
             dotPlace = dotPlace.copyOf(size)
+            dotStep = dotStep.copyOf(size)
         }
         if (batches > batchFrom.size) {
             val size = max(batches, batchFrom.size * 2)
@@ -586,7 +641,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         changed()
     }
 
-    /** Works out when each dot pops in and lands, in real ms after the stream started, at animator [scale]. */
+    /**
+     * Works out when each dot pops in and lands, in real ms after the stream started, at animator [scale]. A delete that joins
+     * starts the wait again for the whole queue (owner, 2026-11-12): every dot that hasn't set off for the caret by then holds
+     * still, and from the join they all wait the flick's wait, then go in order at the usual pace and speed-up, the new ones last.
+     * A dot already on its way still lands as it was going to.
+     */
     private fun plan(scale: Float) {
         if (planned == scale || scale <= 0f) return
         planned = scale
@@ -602,6 +662,18 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             val inMillis = if (b == 0) dotsInMillis else FLICK_IN
             val wait = if (b == 0 && fromHold) FLICK_HOLD else flickHoldMillis()
             val earliest = batchAt[b] + (inMillis + wait + DOT_TRAVEL) * scale
+            if (b > 0) {
+                // A join: the first dot not yet on its way, and every one after it, go again from the join's wait.
+                var held = 0
+                while (held < from && dotLand[held] - DOT_TRAVEL * scale <= batchAt[b]) held++
+                // The first held one waits for the join's wait, and for the dot ahead of it; the rest keep their steps behind it.
+                for (index in held until from) dotLand[index] = when {
+                    index > held -> dotLand[index - 1] + dotStep[index]
+                    index == 0 -> earliest
+                    else -> max(earliest, dotLand[index - 1] + dotStep[index])
+                }
+                if (held < from) last = dotLand[from - 1]
+            }
             for (j in 0 until count) {
                 val index = from + j
                 interval = if (speedUp) max(min(fastest, base), base * DOT_SPEED_UP.pow(max(0, index - DOT_SPEED_FROM))) else base
@@ -613,6 +685,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                     else -> last + interval
                 }
                 dotLand[index] = last
+                dotStep[index] = interval
                 dotPopAt[index] = if (b == 0 && fromHold) Float.NEGATIVE_INFINITY
                     else batchAt[b] + j.toFloat() / count * POP_SPREAD * FLICK_IN * scale
             }
@@ -659,18 +732,21 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     fun dotLandings(scale: Float): List<Long> {
         if (scene != Scene.DeleteFlick || dots == 0 || scale <= 0f || batches == 0) return emptyList()
         plan(scale)
-        // The latest delete's dots, in ms after it came. A dot that lands within 30 ms of the last tick lands without one, so
-        // the ticks stay apart when the dots speed up; a whole stream is counted, so a new batch keeps clear of the last.
-        val from = batchFrom[batches - 1]
+        // Every dot still to land after the latest delete came, in ms after it came: a join lays the whole queue again, so its
+        // ticks all go again too. A dot that lands within 30 ms of the last tick lands without one, so the ticks stay apart when
+        // the dots speed up; a whole stream is counted, so the ticks keep clear of the ones already played.
         val at = batchAt[batches - 1]
         val ticks = ArrayList<Long>()
         var lastTick = Float.NEGATIVE_INFINITY
-        val first = (dotLand[from] - at).roundToLong()
+        // Each counted from the first to come, so their steps round as the dots' own steps do.
+        var first = Float.NaN
         for (index in 0 until dots) {
             val land = dotLand[index]
             if (land - lastTick < DOT_LAND_GAP - .5f) continue
             lastTick = land
-            if (index >= from) ticks += first + (land - dotLand[from]).roundToLong()
+            if (land <= at) continue
+            if (first.isNaN()) first = land
+            ticks += (first - at).roundToLong() + (land - first).roundToLong()
         }
         return ticks
     }
@@ -878,7 +954,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         if (glowHeld) return advanceHeldGlow(now, scale)
         val motion = scale > 0f
         if (glowFading) {
-            val t = if (motion) (now - glowAt) / (GLOW_FADE * scale) else 1f
+            // A late flick glow's fade starts after the lift, and until then it holds at full.
+            val t = if (motion) ((now - glowAt) / (GLOW_FADE * scale)).coerceAtLeast(0f) else 1f
             if (t >= 1f) {
                 endGlow()
                 return false
@@ -956,6 +1033,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         // A flick's reaches to the finger and follows it closely; a hold's reach follows its pace, and the change from one to
         // the other eases, so the glow never jumps as a flick becomes a hold.
         val flick = !flickReach.isNaN()
+        if (flick) flickFramed = true
         val reach = if (flick) flickReach else DELETE_REACH_LEAST + (DELETE_REACH_MOST - DELETE_REACH_LEAST) * shownPace
         if (flick || reachEasing) {
             glowWidth = ease(glowWidth, reach, elapsed, if (flick) EASE_MILLIS else DELETE_GLOW_MILLIS, motion)
@@ -1020,9 +1098,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 intensity = ease(intensity, speedTarget, elapsed, EASE_MILLIS, motion)
                 steerLean = ease(steerLean, leaning * (LEAN_BASE + (1f - LEAN_BASE) * intensity), elapsed, LEAN_MILLIS, motion)
                 shownStep = ease(shownStep, stepped.toFloat(), elapsed, STEP_MILLIS, motion)
-                if (leaning != 0 || abs(stepped - shownStep) > STEP_SETTLED || movedAt < 0) movedAt = now
-                // With motion off the caret stays on, as nothing else moves either.
-                caretShown = !motion || (now - movedAt) / BLINK_MILLIS % 2 == 0L
+                // Steering's caret never blinks.
+                caretShown = true
                 if (motion) {
                     val next = flow + leaning * flowRate(intensity) * seconds
                     letters = (letters + floor(next).toInt()).mod(PATTERN_LETTERS)
@@ -1036,6 +1113,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 shownLeft = ease(shownLeft, wordsLeft.toFloat(), elapsed, STEP_MILLIS, motion)
                 shownRight = ease(shownRight, wordsRight.toFloat(), elapsed, STEP_MILLIS, motion)
                 leadingRight = !(wordsLeft > 0 || (wordsRight == 0 && leaning < 0))
+                endLead = ease(endLead, if (leadingRight) 1f else -1f, elapsed, END_FLIP_MILLIS, motion)
                 val pull = leaning * intensity * WORD_PULL
                 spanStart = -.5f - shownLeft + if (leadingRight) 0f else pull
                 spanEnd = .5f + shownRight + if (leadingRight) pull else 0f
@@ -1044,7 +1122,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             Scene.DeleteHold -> {
                 shownDeleted = ease(shownDeleted, deleted.toFloat(), elapsed, min(deleteMillis * DELETE_EASE, MAX_DELETE_EASE_MILLIS), motion)
                 if (motion && !deletePaused) flow = (flow + min(FLOW_FASTEST, 1000f / deleteMillis) * seconds).mod(1f)
-                // In the pause zone the caret blinks, as steering's does when it pauses. With motion off it stays on.
+                // In the pause zone the caret blinks; it is the only caret that does. With motion off it stays on.
                 if (deletePaused && pausedAt < 0) pausedAt = now
                 caretShown = !motion || !deletePaused || (now - pausedAt) / BLINK_MILLIS % 2 == 0L
             }
@@ -1080,6 +1158,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 spanStart = -.5f * grow
                 spanEnd = .5f * grow
                 leadingRight = true
+                endLead = 1f
             }
             Scene.Swipe, Scene.None -> Unit
         }
@@ -1168,6 +1247,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         anchorLetters = null
         leftWords = IntArray(0)
         rightWords = IntArray(0)
+        wordsMoreBefore = false
+        wordsMoreAfter = false
     }
 
     private fun resetPieces() {
@@ -1177,7 +1258,6 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         intensity = 0f
         steerLean = 0f
         caretShown = true
-        movedAt = -1L
         flow = 0f
         letters = 0
         wordsLeft = 0
@@ -1187,6 +1267,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         spanStart = -.5f
         spanEnd = .5f
         leadingRight = true
+        endLead = 1f
         camera = 0f
         deleted = 0
         shownDeleted = 0f
@@ -1233,9 +1314,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         /** The underglow's side follows the lean a little slower than the speed, so a flick across Space doesn't flash. */
         private const val LEAN_MILLIS = 110f
         private const val STEP_MILLIS = 60f
-        /** The text closer than this to where the cursor is has settled, so steering has paused. */
-        private const val STEP_SETTLED = .02f
-        /** A paused caret blinks as Android's text cursor does: this long on, then this long off. */
+        /** A held delete's paused caret blinks as Android's text cursor does: this long on, then this long off. */
         const val BLINK_MILLIS = 530L
         /** A frame that comes late must not make the text jump. */
         private const val MAX_FRAME_MILLIS = 48f
@@ -1260,6 +1339,15 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
          */
         @Volatile
         var triedFlickHold: Float? = null
+
+        /**
+         * What marks the moving end of a triple press's selection, the end that grows (owner, 2026-11-12): the solid orange
+         * box stays, and the thin caret there gives way to something taller and more directional. The Haptics lab in
+         * TitanKeys Debug tries each; the keyboard hands its choice here.
+         */
+        var selectionEnd = SelectionEnd.Handle
+        /** A selection's end mark fades from one end to the other over about this long when the drag turns. */
+        const val END_FLIP_MILLIS = 120f
         /**
          * How long a single flick's dots sit on the bar before they go into the caret. A lifted hold's dots wait [FLICK_HOLD]: the
          * lab's slider tries a flick's.
@@ -1363,6 +1451,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         const val DELETE_GLOW_FADE = 140f
         /** How strong a single flick's glow is, as a hold's pace: about a hold's 4 keys out. */
         const val FLICK_GLOW_PACE = .6f
+        /** Every flick's glow shows at full strength for at least this long, even one that lifted before it drew, then fades. */
+        const val FLICK_GLOW_SEEN = 120L
         /** How far a held delete's glow along the bottom reaches left from the corner, from the slowest to the top-speed line. */
         const val DELETE_REACH_LEAST = .2f
         const val DELETE_REACH_MOST = .65f
@@ -1433,5 +1523,22 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             if (letters <= 0f) return 0f
             return (ln(letters / CursorMode.SLOWEST_PER_SECOND) / ln(CursorMode.FASTEST_PER_SECOND / CursorMode.SLOWEST_PER_SECOND)).coerceIn(0f, 1f)
         }
+    }
+}
+
+/** The marks a selection's moving end can have. [id] is stored by the Haptics lab, so it never changes. */
+enum class SelectionEnd(val id: String, val label: String) {
+    /** A selection handle: a line taller than the selection, with a round knob below it, as text selection has. */
+    Handle("handle", "Handle"),
+    /** A small chevron just outside the end, pointing the way the selection grows. */
+    Chevron("chevron", "Chevron"),
+    /** The thin solid caret every gesture had before, for comparison. */
+    Caret("caret", "Thin caret");
+
+    companion object {
+        fun of(id: String?) = entries.firstOrNull { it.id == id }
+
+        /** The mark stored under [id], or the handle where there is none, as every build but TitanKeys Debug has. */
+        fun stored(id: String?) = of(id) ?: Handle
     }
 }

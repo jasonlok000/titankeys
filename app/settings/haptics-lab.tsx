@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Field, Screen, Section, TextInput, Toggle, useSnapshot } from "ink";
-import { type HapticsLab, playLabFlick, setLabExperiment, setLabFlickHold, showHapticsGraph, state } from "../../lib/atlas";
+import { Field, Screen, Section, SettingsChoices, TextInput, Toggle, useSnapshot } from "ink";
+import { type HapticsLab, playLabFlick, setLabExperiment, setLabFlickHold, setLabSelectionEnd, showHapticsGraph, state } from "../../lib/atlas";
 import { hapticGroups } from "../../lib/haptics";
 
 const title = "Haptics lab";
@@ -22,7 +22,6 @@ function Lab({ lab }: { lab: HapticsLab }) {
   // The live timeline, the editors and the notes are in the lab's own screen, which writes the notes file.
   const haptics = hapticGroups.flatMap(group => group.haptics.map(haptic => ({ ...haptic, group: group.title })));
   const open = () => void showHapticsGraph(haptics);
-  const fade = lab.heldDeleteFade;
   const wait = lab.flickHoldMillis;
   // The number being typed into the wait's field, until Done applies it; null shows the wait in use.
   const [draft, setDraft] = useState<string | null>(null);
@@ -45,11 +44,6 @@ function Lab({ lab }: { lab: HapticsLab }) {
     <Section title="Experiments">
       <Toggle label="Dots speed up when long" value={lab.experiments.dotsSpeedUp ?? true}
         onChange={on => void setLabExperiment("dotsSpeedUp", on)} />
-      <Toggle label="Held delete fade" value={lab.experiments.heldDeleteFade ?? true}
-        onChange={on => void setLabExperiment("heldDeleteFade", on)} />
-      <Field label="Tune the held delete fade" onPress={() => void showHapticsGraph(haptics, "heldDeleteFade")}>
-        {fade.on && fade.tried ? `${fade.plays} (tried)` : fade.plays}
-      </Field>
       <TextInput label="Flick dots wait" value={draft ?? String(wait)} onChange={setDraft} onSubmit={applyDraft}
         inputMode="numeric" action="done" suffix="ms" invalid={draft !== null && typed === null}
         error={draft !== null && typed === null ? `A whole number from 0 to ${WAIT_MAX}` : undefined}
@@ -61,6 +55,11 @@ function Lab({ lab }: { lab: HapticsLab }) {
       <Field label="Reset" disabled={wait === lab.flickHoldDefault} onPress={() => void tryWait(null)}>{`${lab.flickHoldDefault} ms`}</Field>
       <Toggle label="Tick at delete zones" value={lab.experiments.deleteZoneTicks ?? true}
         onChange={on => void setLabExperiment("deleteZoneTicks", on)} />
+    </Section>
+    {/* What marks the end of the selection that grows as you slide after a triple press. The next selection shows it. */}
+    <Section title="Triple press selection end">
+      <SettingsChoices value={lab.selectionEnd} options={lab.selectionEnds.map(end => ({ value: end.id, label: end.label }))}
+        onChange={id => void setLabSelectionEnd(id)} />
     </Section>
     <Section title="Patterns">
       {Object.entries(lab.families).map(([id, family]) =>

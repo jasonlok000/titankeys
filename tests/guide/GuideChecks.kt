@@ -47,7 +47,7 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "symgroups" to listOf(PanelSwiped(0f, .4f, true), GroupPicked(2), FieldChanged("x. §", 4, 4)),
     "clown" to listOf(keys(Panel.Emoji), FieldChanged("x. $CLOWN", 5, 5)),
     "paste" to listOf(FieldChanged("Paste over $PASTE_TEXT", 24, 24)),
-    "clipboard" to listOf(keys(Panel.Symbols), keys(Panel.Clipboard), FieldChanged("Paste. ${GUIDE_CLIPS.first()}", 40, 40)),
+    "clipboard" to listOf(keys(Panel.Symbols), keys(Panel.Clipboard), FieldChanged("Paste. $PRANK_PASTE", 26, 26)),
 )
 
 /** Slides that the guide no longer has: the boring guide explains them, or a new slide took over. */
@@ -298,8 +298,10 @@ private fun oneInstructionAtATime() {
     same(clips.event(keys(Panel.Emoji)).let { it is GuideVerdict.Hint && it.stage == 1 }, true, "The emoji are fine: A works there too")
     same(clips.event(keys(Panel.Closed)), GuideVerdict.Stage(0), "Closed again, so Sym again")
     same(clips.event(keys(Panel.Clipboard)), GuideVerdict.Stage(2), "The clipboard, straight away, is fine too")
-    same(clips.event(FieldChanged("Paste. $PRANK_PASTE", 26, 26)).let { it is GuideVerdict.Hint && it.passes && it.title!!.startsWith("Gotcha") },
-        true, "The nice clip is a prank, and the slide owns up")
+    same((clips.event(FieldChanged("Paste. ${GUIDE_CLIPS.first()}", 40, 40)) as GuideVerdict.Hint).text, "That's not nice. Keep looking.",
+        "Any other clip isn't the nice one")
+    same(clips.event(FieldChanged("Paste. ${GUIDE_CLIPS.first()} $PRANK_PASTE", 60, 60)), GuideVerdict.Done, "The nice clip passes")
+    same(clips.step.done, "Gotcha. Swapped it on purpose.", "and the slide owns up to the prank")
 
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")

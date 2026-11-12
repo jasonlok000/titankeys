@@ -67,7 +67,8 @@ private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
     "symgroups" to listOf(FieldChanged("&", 1, 1)),
     "clown" to listOf(ModifierState(Level.Off, Level.Off, Panel.Emoji, false), FieldChanged("😀", 2, 2)),
     "paste" to listOf(KeyboardEvent.Copied("x")),
-    "clipboard" to listOf(ModifierState(Level.Off, Level.Off, Panel.Symbols, false), ModifierState(Level.Off, Level.Off, Panel.Closed, false)),
+    "clipboard" to listOf(ModifierState(Level.Off, Level.Off, Panel.Symbols, false), ModifierState(Level.Off, Level.Off, Panel.Clipboard, false),
+        FieldChanged(CLIP_TEXT + " " + GUIDE_CLIPS.first() + " ", 0, 0)),
 )
 
 /** What the field holds on a slide, before anything is done: its text, the cursor or selection, and the ghost after it. */
@@ -113,7 +114,7 @@ private fun passedField(step: GuideStep, before: Frame): Frame {
             at(before.field, from, to)
         }
         "paste" -> CLIP_TEXT.replace(PASTE_OVER, PASTE_TEXT).let { at(it + " ", CLIP_TEXT.indexOf(PASTE_OVER) + PASTE_TEXT.length) }
-        "clipboard" -> at(CLIP_TEXT + " " + GUIDE_CLIPS.first() + " ")
+        "clipboard" -> at(CLIP_TEXT + " " + PRANK_PASTE + " ")
         else -> if (step.chapter == GuideChapter.Symbols) {
             val index = SYMBOL_PARTS.indexOfFirst { it.first == step.symbol }
             val picked = if (step.symbol == ANY_SYMBOL) "※" else step.symbol!!

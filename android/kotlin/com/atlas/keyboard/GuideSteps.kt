@@ -1408,23 +1408,25 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Rest on a clip to read it. Press its key to paste.", GuideCue.Free) { event ->
+            // Reading the clips is the skill: only one is nice, and it's the prank (design v4).
+            GuideStage("Paste the one clip that's nice to you.", GuideCue.Free) { event ->
                 when {
-                    event is FieldChanged && event.text.contains(PRANK_PASTE) ->
-                        counts("Gotcha. Swapped it on purpose.", "It's a prank, not a bug. Chill.")
-                    grew(event) -> GuideVerdict.Done
+                    event is FieldChanged && event.text.contains(PRANK_PASTE) -> GuideVerdict.Done
+                    grew(event) -> chip("That's not nice. Keep looking.")
                     panel(event, Panel.Closed) -> GuideVerdict.Hint("Just looking? Window shopping our insults.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
-        done = "Pasted. Use it wisely. You won't.",
+        // The nice clip pastes the prank, and the slide owns up.
+        done = "Gotcha. Swapped it on purpose.",
         // v3.1's "Your clipboard keeps what you copy. Sym, then A, any time." is two lines.
         praise = "It keeps what you copy. Sym, then A, any time.",
         seed = CLIP_TEXT,
         usesPanel = true,
         setup = Panel.Closed,
         sandboxClips = GUIDE_CLIPS,
+        rain = "🤪",
         lessons = setOf(GuideLesson.Sym),
         demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""),
     ),

@@ -85,6 +85,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     /** Whether the right end of [spanStart] to [spanEnd] is the one that moves. */
     var leadingRight = true
         private set
+    /**
+     * Which end of the selection its end mark shows at: 1 at the right, -1 at the left. It follows [leadingRight] smoothly, so
+     * when the drag turns, the mark fades from one end into the other instead of jumping. See [selectionEnd].
+     */
+    var endLead = 1f
+        private set
     /** The word at the middle of the strip, in the same units as [spanStart]. */
     var camera = 0f
         private set
@@ -1107,6 +1113,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 shownLeft = ease(shownLeft, wordsLeft.toFloat(), elapsed, STEP_MILLIS, motion)
                 shownRight = ease(shownRight, wordsRight.toFloat(), elapsed, STEP_MILLIS, motion)
                 leadingRight = !(wordsLeft > 0 || (wordsRight == 0 && leaning < 0))
+                endLead = ease(endLead, if (leadingRight) 1f else -1f, elapsed, END_FLIP_MILLIS, motion)
                 val pull = leaning * intensity * WORD_PULL
                 spanStart = -.5f - shownLeft + if (leadingRight) 0f else pull
                 spanEnd = .5f + shownRight + if (leadingRight) pull else 0f
@@ -1151,6 +1158,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 spanStart = -.5f * grow
                 spanEnd = .5f * grow
                 leadingRight = true
+                endLead = 1f
             }
             Scene.Swipe, Scene.None -> Unit
         }
@@ -1259,6 +1267,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         spanStart = -.5f
         spanEnd = .5f
         leadingRight = true
+        endLead = 1f
         camera = 0f
         deleted = 0
         shownDeleted = 0f
@@ -1330,6 +1339,15 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
          */
         @Volatile
         var triedFlickHold: Float? = null
+
+        /**
+         * What marks the moving end of a triple press's selection, the end that grows (owner, 2026-11-12): the solid orange
+         * box stays, and the thin caret there gives way to something taller and more directional. The Haptics lab in
+         * TitanKeys Debug tries each; the keyboard hands its choice here.
+         */
+        var selectionEnd = SelectionEnd.Handle
+        /** A selection's end mark fades from one end to the other over about this long when the drag turns. */
+        const val END_FLIP_MILLIS = 120f
         /**
          * How long a single flick's dots sit on the bar before they go into the caret. A lifted hold's dots wait [FLICK_HOLD]: the
          * lab's slider tries a flick's.
@@ -1505,5 +1523,19 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             if (letters <= 0f) return 0f
             return (ln(letters / CursorMode.SLOWEST_PER_SECOND) / ln(CursorMode.FASTEST_PER_SECOND / CursorMode.SLOWEST_PER_SECOND)).coerceIn(0f, 1f)
         }
+    }
+}
+
+/** The marks a selection's moving end can have. [id] is stored by the Haptics lab, so it never changes. */
+enum class SelectionEnd(val id: String, val label: String) {
+    /** A selection handle: a line taller than the selection, with a round knob below it, as text selection has. */
+    Handle("handle", "Handle"),
+    /** A small chevron just outside the end, pointing the way the selection grows. */
+    Chevron("chevron", "Chevron"),
+    /** The thin solid caret every gesture had before, for comparison. */
+    Caret("caret", "Thin caret");
+
+    companion object {
+        fun of(id: String?) = entries.firstOrNull { it.id == id }
     }
 }

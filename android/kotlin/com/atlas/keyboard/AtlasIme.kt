@@ -345,6 +345,7 @@ class AtlasIme : InputMethodService() {
             return@Runnable
         }
         rememberCursor()
+        GestureDisplay.selectionEnd = Haptics.selectionEnd(this)
         // A terminal or a remote view has no text to select here.
         if (field.exact) haptics.play(Haptic.WordPicked) else enqueue { selectWord() }
     }
@@ -542,6 +543,8 @@ class AtlasIme : InputMethodService() {
      */
     private fun pickOnLand() {
         Recording.sink?.gesture("triple", SystemClock.uptimeMillis(), "")
+        // The mark at the selection's moving end, as the Haptics lab tried it in TitanKeys Debug.
+        GestureDisplay.selectionEnd = Haptics.selectionEnd(this)
         gestureRegistered = true
         rememberCursor()
         // The bar keeps the pick's mark while this touch stays down, and shows the selected text after the lift.
@@ -2423,6 +2426,7 @@ class AtlasIme : InputMethodService() {
 
     /** Selects the word at the cursor, the part that a word drag keeps selected. Between words the drag starts from the cursor. */
     private fun startWordDrag() {
+        GestureDisplay.selectionEnd = Haptics.selectionEnd(this)
         wordAnchor = null
         selectionWall.left()
         rememberCursor()

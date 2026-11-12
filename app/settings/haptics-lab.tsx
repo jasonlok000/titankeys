@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Field, Screen, Section, TextInput, Toggle, useSnapshot } from "ink";
-import { type HapticsLab, playLabFlick, setLabExperiment, setLabFlickHold, showHapticsGraph, state } from "../../lib/atlas";
+import { Field, Screen, Section, SettingsChoices, TextInput, Toggle, useSnapshot } from "ink";
+import { type HapticsLab, playLabFlick, setLabExperiment, setLabFlickHold, setLabSelectionEnd, showHapticsGraph, state } from "../../lib/atlas";
 import { hapticGroups } from "../../lib/haptics";
 
 const title = "Haptics lab";
@@ -55,6 +55,11 @@ function Lab({ lab }: { lab: HapticsLab }) {
       <Field label="Reset" disabled={wait === lab.flickHoldDefault} onPress={() => void tryWait(null)}>{`${lab.flickHoldDefault} ms`}</Field>
       <Toggle label="Tick at delete zones" value={lab.experiments.deleteZoneTicks ?? true}
         onChange={on => void setLabExperiment("deleteZoneTicks", on)} />
+    </Section>
+    {/* What marks the end of the selection that grows as you slide after a triple press. The next selection shows it. */}
+    <Section title="Triple press selection end">
+      <SettingsChoices value={lab.selectionEnd} options={lab.selectionEnds.map(end => ({ value: end.id, label: end.label }))}
+        onChange={id => void setLabSelectionEnd(id)} />
     </Section>
     <Section title="Patterns">
       {Object.entries(lab.families).map(([id, family]) =>

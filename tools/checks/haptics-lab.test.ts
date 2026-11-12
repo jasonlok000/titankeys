@@ -17,7 +17,7 @@ test("only a debug package has the lab", () => {
 test("every lab operation refuses outside a debug package", () => {
   const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
   const operations = [...adapter.matchAll(/^\s+"(lab\w+)" -> \{?\s*(.*)$/gm)];
-  expect(operations.map(match => match[1]).sort()).toEqual(["labExperiment", "labFlickHold", "labGraph", "labPlayFlick"]);
+  expect(operations.map(match => match[1]).sort()).toEqual(["labExperiment", "labFlickHold", "labGraph", "labPlayFlick", "labSelectionEnd"]);
   for (const [line, , body] of operations) {
     const first = body || adapter.slice(adapter.indexOf(line) + line.length).trimStart().split("\n")[0];
     expect(first.startsWith("lab().")).toBe(true);
@@ -272,4 +272,15 @@ test("the removed shortcuts experiment leaves nothing that reads its stored swit
     const text = read(path);
     expect(text.includes("debug_shortcut_haptics") || text.includes("shortcutHaptics")).toBe(false);
   }
+});
+
+test("the lab tries the mark at a triple press's moving end, and only the debug build reads it", () => {
+  const page = read("app/settings/haptics-lab.tsx");
+  expect(page).toContain('<Section title="Triple press selection end">');
+  expect(page).toContain("onChange={id => void setLabSelectionEnd(id)}");
+  const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
+  expect(haptics).toMatch(/fun selectionEnd\(context: Context\): SelectionEnd \{\s+if \(!debug\(context\)\) return SelectionEnd\.Handle/);
+  // Every selection a Space gesture makes takes the mark in use as it starts.
+  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  expect(ime.match(/GestureDisplay\.selectionEnd = Haptics\.selectionEnd\(this\)/g)?.length).toBe(3);
 });

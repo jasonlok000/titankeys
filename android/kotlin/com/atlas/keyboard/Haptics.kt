@@ -908,6 +908,25 @@ class Haptics(private val context: Context) {
             }.commit()
         }
 
+        /**
+         * What marks the moving end of a triple press's selection: the one the Haptics lab tried, in TitanKeys Debug only, or
+         * else the handle. Every other build has the handle without looking.
+         */
+        fun selectionEnd(context: Context): SelectionEnd {
+            if (!debug(context)) return SelectionEnd.Handle
+            return SelectionEnd.of(preferences(context).getString(SELECTION_END_KEY, null)) ?: SelectionEnd.Handle
+        }
+
+        /** Tries [end] at a selection's moving end, or puts the handle back with null. Debug build only. */
+        fun trySelectionEnd(context: Context, end: SelectionEnd?) {
+            check(debug(context)) { "Only TitanKeys Debug can try a selection's end" }
+            preferences(context).edit().apply {
+                if (end == null || end == SelectionEnd.Handle) remove(SELECTION_END_KEY) else putString(SELECTION_END_KEY, end.id)
+            }.commit()
+        }
+
+        private const val SELECTION_END_KEY = "debug_selection_end"
+
         /** The waits that the Haptics lab can try for a single flick's dots, in ms. */
         val FLICK_HOLD_RANGE = 0L..600L
 

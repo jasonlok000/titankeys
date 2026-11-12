@@ -119,10 +119,12 @@ export type HapticsLab = {
    * The lab's experiments, on or off, by id: dotsSpeedUp, "Dots speed up when long", and deleteZoneTicks, "Tick at delete zones".
    */
   experiments: Record<string, boolean>;
-  /** Where a held delete's glow goes, by id, and the places it can go, from the list "Delete glow". */
   /** How long a single flick's dots sit on the bar before they go into the caret, in ms, and its default. */
   flickHoldMillis: number;
   flickHoldDefault: number;
+  /** What marks the moving end of a triple press's selection, by id, and the marks it can try. */
+  selectionEnd: string;
+  selectionEnds: { id: string; label: string }[];
 };
 
 export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
@@ -259,6 +261,12 @@ export const showKeyCalibration = () => atlas("keyCalibration");
 /** Turns one of the Haptics lab's experiments on or off, by its id. TitanKeys Debug only. */
 export async function setLabExperiment(id: string, on: boolean) {
   await atlas("labExperiment", { id, on });
+  await state.refresh();
+}
+
+/** Tries the mark at a triple press's moving end, by id, or puts the handle back with null. TitanKeys Debug only. */
+export async function setLabSelectionEnd(id: string | null) {
+  await atlas("labSelectionEnd", { id });
   await state.refresh();
 }
 

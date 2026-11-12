@@ -279,7 +279,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     /**
      * A row of words, with the selection over them in its orange box. A word drag shows it growing and shrinking by whole words.
      * A triple press's pick shows the same from the moment it picks, so the pick and the drag after it are one selection
-     * (owner, 2026-11-12). The end that moves has the thin solid caret every gesture has.
+     * (owner, 2026-11-12). The end that moves has its end mark: see [selectionEnd].
      */
     private fun words(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, mid: Float, look: Look) {
         val slot = (right - left) / GestureDisplay.VISIBLE_WORDS
@@ -295,8 +295,39 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         rounded(canvas, start, mid - dp(SELECTION_HEIGHT / 2), end, mid + dp(SELECTION_HEIGHT / 2), radius,
             GuideMotion.faded(look.accent, alpha))
         wordRow(canvas, display, slot, centre, mid, selected = true, GuideMotion.faded(look.onAccent, SELECTED * alpha))
-        bar(canvas, if (display.leadingRight) end + dp(CARET_GAP) else start - dp(CARET_GAP), mid, dp(STEER_CARET_HEIGHT),
-            GuideMotion.faded(look.accent, alpha), dp(STEER_CARET))
+        // The mark fades from one end into the other as the drag turns, so it never jumps.
+        val right = (display.endLead + 1f) / 2f
+        selectionEnd(canvas, end, mid, 1, right * alpha, look)
+        selectionEnd(canvas, start, mid, -1, (1f - right) * alpha, look)
+    }
+
+    /**
+     * The mark at the moving end of a selection, just outside its [edge] on [side], 1 for the right and -1 for the left, as
+     * [GestureDisplay.selectionEnd] has it: a handle, a chevron pointing the way it grows, or the thin caret.
+     */
+    private fun selectionEnd(canvas: Canvas, edge: Float, mid: Float, side: Int, alpha: Float, look: Look) {
+        if (alpha <= .01f) return
+        val colour = GuideMotion.faded(look.accent, alpha)
+        when (GestureDisplay.selectionEnd) {
+            SelectionEnd.Caret -> bar(canvas, edge + side * dp(CARET_GAP), mid, dp(STEER_CARET_HEIGHT), colour, dp(STEER_CARET))
+            SelectionEnd.Handle -> {
+                val x = edge + side * dp(CARET_GAP)
+                val half = dp(HANDLE_HEIGHT) / 2
+                val width = dp(HANDLE_WIDTH)
+                rounded(canvas, x - width / 2, mid - half, x + width / 2, mid + half, width / 2, colour)
+                dot(canvas, x, mid + half + dp(HANDLE_KNOB) * .6f, dp(HANDLE_KNOB), colour)
+            }
+            SelectionEnd.Chevron -> {
+                val x = edge + side * dp(CHEVRON_GAP)
+                val half = dp(CHEVRON_HEIGHT) / 2
+                val tip = x + side * dp(CHEVRON_DEPTH)
+                stroke.shader = null
+                stroke.color = colour
+                stroke.strokeWidth = dp(CHEVRON_STROKE)
+                canvas.drawLine(x, mid - half, tip, mid, stroke)
+                canvas.drawLine(tip, mid, x, mid + half, stroke)
+            }
+        }
     }
 
     private fun wordRow(canvas: Canvas, display: GestureDisplay, slot: Float, centre: Float, mid: Float, selected: Boolean, colour: Int) {
@@ -586,5 +617,14 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val WORD_GAP = 8f
         const val SELECTION_HEIGHT = 26f
         const val SELECTION_PAD = 5f
+        /** A selection handle: taller than the selection, a little wider than the caret, with its knob below. */
+        const val HANDLE_HEIGHT = 34f
+        const val HANDLE_WIDTH = 2.5f
+        const val HANDLE_KNOB = 4.5f
+        /** A selection's chevron: how tall, how far its point reaches out, how thick, and its gap from the selection. */
+        const val CHEVRON_HEIGHT = 14f
+        const val CHEVRON_DEPTH = 6f
+        const val CHEVRON_STROKE = 2.5f
+        const val CHEVRON_GAP = 5f
     }
 }

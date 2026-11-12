@@ -48,6 +48,12 @@ class HapticsLab(private val context: Context) {
         return GestureDisplay.flickHoldMillis().toLong()
     }
 
+    /** Tries [id] as the mark at a triple press's moving end, or puts the handle back with null. The next selection shows it. */
+    fun trySelectionEnd(id: String?) {
+        Haptics.trySelectionEnd(context, SelectionEnd.of(id))
+        GestureDisplay.selectionEnd = Haptics.selectionEnd(context)
+    }
+
     /** Tries [millis] as that wait, or puts the default back with null. The next real flick's dots wait that long. */
     fun tryFlickHold(millis: Long?) {
         Haptics.tryFlickHold(context, millis)
@@ -93,6 +99,8 @@ class HapticsLab(private val context: Context) {
     /** Each family's pattern in use now, each haptic's family and what it plays, and the experiments. */
     fun state(): JSONObject = JSONObject().put("families", families()).put("haptics", haptics())
         .put("flickHoldMillis", flickHold()).put("flickHoldDefault", GestureDisplay.FLICK_HOLD.toLong())
+        .put("selectionEnd", Haptics.selectionEnd(context).id)
+        .put("selectionEnds", JSONArray().apply { for (end in SelectionEnd.entries) put(JSONObject().put("id", end.id).put("label", end.label)) })
         .put("experiments", JSONObject().put(DOTS_SPEED_UP, Haptics.dotsSpeedUp(context)).put(ZONE_TICKS, Haptics.zoneTicks(context)))
 
     /** Turns one of the lab's experiments on or off, by its id. */

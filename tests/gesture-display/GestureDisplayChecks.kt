@@ -17,6 +17,7 @@ fun main() {
     aFlicksGlowFollowsTheFinger()
     everyFlickShowsItsGlow()
     aWordDragOnLongTextNeverRunsOutOfPills()
+    theSelectionsEndMarkTurnsSmoothly()
     aHoldDrawsTheRealWords()
     aHoldWithNoTextLeftDrawsNoPills()
     aPausedHoldFadesAndBlinks()
@@ -1736,4 +1737,41 @@ private fun aWordDragOnLongTextNeverRunsOutOfPills() {
     // Text cut off at the reach: the cut word is no pill.
     same(WordSelection.lengths("own words here", cutStart = true).toList(), listOf(5, 4), "A word cut at the start is left out")
     same(WordSelection.lengths("own words he", cutEnd = true).toList(), listOf(3, 5), "and one cut at the end")
+}
+
+/**
+ * A triple press's selection keeps its solid box, and its moving end has a mark: a handle by default, or a chevron or the thin
+ * caret, as the Haptics lab tries (owner, 2026-11-12). When the drag turns, the mark goes from one end to the other smoothly,
+ * never in one frame.
+ */
+private fun theSelectionsEndMarkTurnsSmoothly() {
+    same(GestureDisplay.selectionEnd, SelectionEnd.Handle, "A handle by default")
+    same(SelectionEnd.of("chevron"), SelectionEnd.Chevron, "The lab's ids")
+    same(SelectionEnd.of("caret"), SelectionEnd.Caret, "with the old caret to compare")
+    same(SelectionEnd.of("nothing"), null, "and nothing else")
+    val display = GestureDisplay()
+    display.cursorFrame(8f, 1, 3f, true, 1_000)
+    display.wordStep(1)
+    display.wordStep(1)
+    var now = display.run(1_000, 1_300)
+    near(display.endLead, 1f, "Growing right, the mark is at the right end", .01f)
+    // Turning back gives the words back, then grows to the left.
+    repeat(3) { display.wordStep(-1) }
+    display.cursorFrame(2f, -1, 3f, true, now)
+    val leads = ArrayList<Float>()
+    repeat(20) {
+        now += 16
+        display.advance(now, 1f)
+        leads += display.endLead
+    }
+    same(display.leadingRight, false, "Now it grows to the left")
+    near(leads.last(), -1f, "and the mark ends at the left end", .02f)
+    isTrue(leads.any { it > -.9f && it < .9f }, "It goes there over several frames, not in one: $leads")
+    isTrue(leads.zipWithNext().all { (a, b) -> b <= a + .0001f }, "steadily: $leads")
+    // With animations off it is simply at the new end.
+    val still = GestureDisplay()
+    still.cursorFrame(2f, -1, 3f, true, 1_000)
+    still.wordStep(-1)
+    still.advance(1_016, 0f)
+    near(still.endLead, -1f, "With animations off it is at once at the end that moves", .001f)
 }

@@ -7,6 +7,7 @@ import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 /**
@@ -179,7 +180,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      */
     val softDelete get() = scene == Scene.DeleteFlick
 
-    /** How many dots a single flick shows: the characters it deleted, not counting spaces, at most [MAX_DOTS]. */
+    /** How many dots show: a dot for each character deleted, not counting spaces, with each word cut to fit: see [setGroups]. */
     var dots = 0
         private set
     /**
@@ -212,14 +213,16 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * The dots are one stream: each delete that comes while they play adds its dots after the ones still to land, as a queue,
      * and nothing starts over. A batch is one delete's dots: its first dot, how many, and when it came, in real ms after the
      * stream started. Each dot's times are worked out for an animator scale ([planned]), in real ms after the stream started.
+     * The arrays grow as deletes join, so however many words go, each one gets its dots; they never shrink, so a frame makes no
+     * garbage.
      */
-    private val batchFrom = IntArray(MAX_BATCHES)
-    private val batchCount = IntArray(MAX_BATCHES)
-    private val batchAt = FloatArray(MAX_BATCHES)
+    private var batchFrom = IntArray(16)
+    private var batchCount = IntArray(16)
+    private var batchAt = FloatArray(16)
     private var batches = 0
-    private val dotLand = FloatArray(MAX_STREAM)
-    private val dotPopAt = FloatArray(MAX_STREAM)
-    private val dotPlace = IntArray(MAX_STREAM)
+    private var dotLand = FloatArray(64)
+    private var dotPopAt = FloatArray(64)
+    private var dotPlace = IntArray(64)
     /** One step after the last dot lands: then the words come back. */
     private var doneAt = 0f
     private var planned = Float.NaN
@@ -338,7 +341,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         } else {
             if (!allowed || live) return
             // Dots still playing take the new ones at the end of their queue, and go on.
-            if (scene == Scene.DeleteFlick && dots > 0 && !still && batches < MAX_BATCHES && now - flourishAt < doneAt) {
+            if (scene == Scene.DeleteFlick && dots > 0 && !still && now - flourishAt < doneAt) {
                 chain(letters, (now - flourishAt).toFloat())
                 return
             }
@@ -352,6 +355,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     /** The first batch of a stream: the dots that [setGroups] put in place. */
     private fun startStream() {
+        room(dots, 1)
         batches = 1
         batchFrom[0] = 0
         batchCount[0] = dots
@@ -361,8 +365,24 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         chained = false
         baseTarget = 0f
         shownBase = 0f
-        unitsTarget = places().toFloat()
+        unitsTarget = min(places().toFloat(), MAX_ROW)
         shownUnits = unitsTarget
+    }
+
+    /** Makes room for [dots] dots and [batches] deletes. */
+    private fun room(dots: Int, batches: Int) {
+        if (dots > dotLand.size) {
+            val size = max(dots, dotLand.size * 2)
+            dotLand = dotLand.copyOf(size)
+            dotPopAt = dotPopAt.copyOf(size)
+            dotPlace = dotPlace.copyOf(size)
+        }
+        if (batches > batchFrom.size) {
+            val size = max(batches, batchFrom.size * 2)
+            batchFrom = batchFrom.copyOf(size)
+            batchCount = batchCount.copyOf(size)
+            batchAt = batchAt.copyOf(size)
+        }
     }
 
     /** Each dot's place in the row from [from] on: one after another, with a gap where each space was. */
@@ -383,9 +403,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     /** A delete of [letters] [at] real ms into a stream that still plays: its dots go at the end of the queue. */
     private fun chain(letters: Int, at: Float) {
-        val room = MAX_STREAM - dots
-        if (room <= 0) return
-        val count = min(letters.coerceIn(1, MAX_DOTS), room)
+        val count = letters.coerceIn(1, MAX_DOTS)
+        room(dots + count, batches + 1)
         val from = dots
         groups += count
         dots += count
@@ -400,7 +419,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         var next = 0
         while (next < from && dotLand[next] <= at) next++
         baseTarget = dotPlace[next].toFloat()
-        unitsTarget = (places() - baseTarget).coerceAtLeast(1f)
+        unitsTarget = (places() - baseTarget).coerceIn(1f, MAX_ROW)
         changed()
     }
 
@@ -498,17 +517,17 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     /** When the dots that show now started, an uptime, or null when none show. Tells one flick's or hold's dots from the next. */
     val dotsAt get() = if (scene == Scene.DeleteFlick) flourishAt else null
 
-    /** The dots for words of [letters], nearest the caret first, cut at [MAX_DOTS] in all. */
+    /**
+     * The dots for words of [letters], nearest the caret first: a dot for each character while they come to [MAX_DOTS] or fewer.
+     * Past that each word shrinks to its share of [MAX_DOTS], and keeps one dot at least, so every word that went shows: a long
+     * hold's row is longer than the bar, and slides along as its dots land.
+     */
     private fun setGroups(letters: List<Int>) {
-        val out = ArrayList<Int>()
-        var room = MAX_DOTS
-        for (count in letters) {
-            if (room <= 0) break
-            val take = min(count.coerceAtLeast(1), room)
-            out += take
-            room -= take
+        val total = letters.sumOf { it.coerceAtLeast(1) }
+        groups = IntArray(letters.size) { index ->
+            val count = letters[index].coerceAtLeast(1)
+            if (total <= MAX_DOTS) count else (count * MAX_DOTS.toFloat() / total).roundToInt().coerceIn(1, MAX_DOTS)
         }
-        groups = out.toIntArray()
         dots = groups.sum()
     }
 
@@ -761,13 +780,13 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                     val from = dotLand[0] - DOT_TRAVEL * scale
                     ((streamAt - from) / (doneAt - from)).coerceIn(0f, 1f)
                 } else 0f
-                // A stream that deletes joined moves along like a queue: as each dot lands, the ones behind it close up towards the
-                // caret, so the newest never wait far off. A single delete's row stays put, as it always has.
-                if (batches > 1 && motion && !planned.isNaN()) {
+                // A stream that deletes joined, or a row too long for the bar, moves along like a queue: as each dot lands, the ones
+                // behind it close up towards the caret, so the newest never wait far off. A single delete's row stays put.
+                if ((batches > 1 || places() > MAX_ROW) && motion && !planned.isNaN()) {
                     var next = 0
                     while (next < dots - 1 && dotLand[next] - DOT_TRAVEL * scale <= streamAt) next++
                     baseTarget = max(baseTarget, dotPlace[next].toFloat())
-                    unitsTarget = (places() - baseTarget).coerceAtLeast(1f)
+                    unitsTarget = (places() - baseTarget).coerceIn(1f, MAX_ROW)
                 }
                 shownBase = ease(shownBase, baseTarget, elapsed, SLIDE_MILLIS, motion)
                 shownUnits = ease(shownUnits, unitsTarget, elapsed, SLIDE_MILLIS, motion)
@@ -960,9 +979,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         const val DOT_SPEED_FROM = 3
         const val DOT_SPEED_UP = .92f
         const val DOT_FASTEST_GAP = 10f
-        /** The most deletes one stream of dots takes, and the most dots it holds. */
-        const val MAX_BATCHES = 64
-        const val MAX_STREAM = 256
+        /**
+         * The most places, dots and word gaps, that the row fits on the bar at once. A longer row keeps the dots their size and
+         * slides along as they land, the rest waiting past the far end.
+         */
+        const val MAX_ROW = 60f
         /** The row slides along this smoothly when a delete joins the queue. */
         private const val SLIDE_MILLIS = 90f
 
@@ -1020,7 +1041,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         const val GLOW_PULSE = 120f
         val GLOW_WIDTHS = floatArrayOf(0f, .17f, .39f, .71f)
         val GLOW_ALPHAS = floatArrayOf(0f, .35f, .55f, .8f)
-        /** The most dots the bar shows, for a long word or a long hold; the spacing shrinks to fit them. */
+        /**
+         * The most dots for one word, and about the most for a hold: a hold of more letters than this gives each word its share,
+         * one dot at least. The spacing shrinks to fit them.
+         */
         const val MAX_DOTS = 30
 
         /** The characters of the last word in [before], not counting spaces: what a delete flick takes. "don't" gives 5. */

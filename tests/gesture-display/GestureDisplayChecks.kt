@@ -13,6 +13,7 @@ private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
     aFlicksWayInStretchesToFitItsDots()
+    anyNumberOfWordsShowsItsDots()
     quickFlicksMakeOneStream()
     longDotsSpeedUpWhenTried()
     aPickedWordHoldsABeat()
@@ -398,9 +399,8 @@ private fun theHoldEndsHideIt() {
     long.deleteHeld(200, 1_000)
     repeat(8) { long.wordDeleted(1_000L + it * 200, 7) }
     long.deleteEnded(2_700)
-    same(long.dots, GestureDisplay.MAX_DOTS, "A long hold shows about 30 dots at most")
-    same(GestureDisplay.MAX_DOTS, 30, "The most dots is 30")
-    same(long.groups.toList(), listOf(7, 7, 7, 7, 2), "The nearest words show first, and the last one is cut")
+    same(GestureDisplay.MAX_DOTS, 30, "About 30 dots")
+    same(long.groups.toList(), List(8) { 4 }, "Every word shows, each with its share of about 30 dots")
 
     val cut = GestureDisplay()
     cut.deleteHeld(200, 1_000)
@@ -993,6 +993,46 @@ private fun theHeldGlowGoesWithTheDisplay() {
     off.cursorFrame(5f, 0, 0f, false, 100L)
     off.allowed = false
     same(off.glowing, false, "Where the strip does not show, the held glow goes too")
+}
+
+/**
+ * However many words go, the dots play: a hold of eighty words, and a hundred quick flicks one after another, show a dot for
+ * every word, and every dot lands before the words come back. A row longer than the bar keeps its dots their size and slides
+ * along as they land.
+ */
+private fun anyNumberOfWordsShowsItsDots() {
+    fun landsAll(display: GestureDisplay, from: Long): Long {
+        val landed = BooleanArray(display.dots)
+        var now = from
+        while (display.scene != Scene.None && now < from + 30_000) {
+            display.advance(now, 1f)
+            isTrue(display.shownUnits <= GestureDisplay.MAX_ROW + .01f, "The row never squeezes past the bar's room: ${display.shownUnits}")
+            if (display.scene == Scene.DeleteFlick) for (index in landed.indices) if (display.dotTravel(index) >= 1f) landed[index] = true
+            now += 16
+        }
+        isTrue(landed.all { it }, "Every dot lands: ${landed.count { it }} of ${landed.size}")
+        return now
+    }
+    val hold = GestureDisplay()
+    hold.deleteHeld(80, 1_000)
+    repeat(80) { hold.wordDeleted(1_000L + it * 80, 5 + it % 4) }
+    isTrue(hold.deleteEnded(7_500), "A hold of eighty words turns into dots")
+    same(hold.groups.size, 80, "Each of the eighty words keeps its own group")
+    isTrue(hold.groups.all { it >= 1 }, "with a dot at least")
+    landsAll(hold, 7_500)
+
+    val flicks = GestureDisplay()
+    var now = 1_000L
+    var shown = 0
+    repeat(100) {
+        flicks.wordDeleted(now, 7)
+        isTrue(flicks.dots > shown, "Flick ${it + 1} adds its dots: ${flicks.dots}")
+        shown = flicks.dots
+        same(flicks.chained, it > 0, "Every flick after the first joins the one stream")
+        flicks.run(now, now + 184)
+        now += 200
+    }
+    landsAll(flicks, now)
 }
 
 /**

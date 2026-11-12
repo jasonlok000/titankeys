@@ -375,9 +375,12 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             // A back-in ease: a small step back, then quickly into the caret.
             val along = u * u * ((BACK + 1) * u - BACK)
             val home = stop - step / 2 - place * step
+            // A row longer than the bar waits past its far end, and each dot fades in there as the row slides along.
+            val edge = ((home - left) / step + 1f).coerceIn(0f, 1f)
+            if (edge <= 0f) continue
             val x = home + (caret - home) * along
             val swell = 1f + DOT_SWELL * sin(u * PI.toFloat())
-            val size = popped * (1f + .25f * (1f - popped)) * swell * (1f - u * u)
+            val size = popped * (1f + .25f * (1f - popped)) * swell * (1f - u * u) * edge
             if (size <= 0f) continue
             dot(canvas, x, mid, dp(DOT_RADIUS) * size, GuideMotion.faded(look.accent, alpha))
         }

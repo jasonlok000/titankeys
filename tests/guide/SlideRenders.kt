@@ -50,7 +50,6 @@ private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
     "flick" to listOf(Pushed(67)),
     "hold" to listOf(DeletedWord(held = false)),
     "steer" to listOf(DoubleTapped(2)),
-    "selectword" to listOf(TwoTapsAbove),
     "selectmore" to listOf(CursorStarted(false)),
     "alt" to listOf(ModifierState(Level.Off, Level.Once, Panel.Closed, false), FieldChanged("#", 1, 1)),
     "holdsym" to listOf(HeldSymbol("#")),
@@ -97,7 +96,7 @@ private fun passedField(step: GuideStep, before: Frame): Frame {
         "backspace" -> at(DELETE_TEXT.dropLast(1) + " ")
         "flick", "hold" -> at(DELETE_TEXT.substringBeforeLast(" It knows") + " ")
         "steer" -> at(before.field, before.start - 40)
-        "selectword", "selectmore" -> {
+        "selectmore" -> {
             val from = before.start
             val to = before.field.indexOf(' ', from + if (step.id == "selectmore") 20 else 1)
             at(before.field, from, to)

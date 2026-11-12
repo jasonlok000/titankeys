@@ -299,6 +299,12 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             else -> faced[key.name] ?: key.name
         }
         var flip = 1f
+        // A flip that has run its time is over before this frame draws: its last frame would squash the key to a line and ask for
+        // no frame after it, so where nothing else moves (a passed slide), the key stayed a line (owner, 2026-11-11: P went).
+        if (key.flipStart >= 0 && GuideMotion.progress(key.flipStart, FLIP_MILLIS) >= 1f) {
+            key.flipStart = -1
+            key.symbol = null
+        }
         if (key.flipStart >= 0) {
             val t = GuideMotion.progress(key.flipStart, FLIP_MILLIS)
             // The key turns over to show the symbol on its back, stays there, and turns back.

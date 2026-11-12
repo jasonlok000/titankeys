@@ -40,7 +40,6 @@ private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "flick" to listOf(DeletedWord(held = false)),
     "hold" to listOf(DeleteHoldStarted, DeletedWord(held = true)),
     "steer" to listOf(CursorStarted(false), FieldChanged("on and on ", 9, 9), FieldChanged("on and on ", 4, 4)),
-    "selectword" to listOf(FieldChanged("on and on ", 3, 6)),
     "selectmore" to listOf(CursorStarted(true), FieldChanged("on and on ", 0, 9)),
     "alt" to listOf(altOn, FieldChanged(ALT_SYMBOL, 1, 1)),
     "holdsym" to listOf(HeldSymbol("@")),
@@ -232,13 +231,12 @@ private fun oneStepForEachIdea() {
     fun chapter(name: GuideChapter) = GUIDE_STEPS.filter { it.chapter == name }.map { it.id }
     same(chapter(GuideChapter.Typing), listOf("type", "swipe", "strip", "menu"), "Typing: the keys, swiping, fixing a swipe, the word menu")
     same(chapter(GuideChapter.Delete), listOf("backspace", "flick", "hold"), "Delete: Backspace, a flick, the hold")
-    same(chapter(GuideChapter.Steering), listOf("steer", "selectword", "selectmore"), "Steering: the cursor, a word, more words")
+    same(chapter(GuideChapter.Steering), listOf("steer", "selectmore"), "Steering: the cursor, then more words")
     same(chapter(GuideChapter.Symbols), listOf("alt", "holdsym", "symmain", "symgroups", "clown"), "Symbols and emoji, then the clown")
     same(chapter(GuideChapter.Clipboard), listOf("paste", "clipboard"), "Copy and paste: pasting, then the clipboard")
     same(GuideChapter.Symbols.label, "Symbols and emoji", "The symbols chapter has the clown too")
     val byId = GUIDE_STEPS.associateBy { it.id }
     same(byId.getValue("steer").cue, GuideCue.Taps(2, drag = true), "Steering is two taps and a slide")
-    same(byId.getValue("selectword").cue, GuideCue.Taps(3, drag = false), "Picking a word is three taps that lift")
     same(byId.getValue("selectmore").cue, GuideCue.Taps(3, drag = true), "Selecting more is three taps and a slide")
     same(GUIDE_STEPS.filter { it.nearMiss }.map { it.id }, listOf("strip"), "Only the strip step asks for a near miss")
     same(GuideHooks.takeNearMiss(GuideHooks.FIELD), false, "Nothing is asked for until the step asks")
@@ -379,7 +377,7 @@ private fun theChapterBar() {
     same(flow.stepInChapter to flow.stepsInChapter, 0 to 4, "The first slide of the four in Typing")
     flow.start("strip")
     same(flow.stepInChapter, 2, "The third slide of Typing")
-    flow.start("selectword")
+    flow.start("selectmore")
     same(flow.step.chapter to flow.stepInChapter, GuideChapter.Steering to 1, "The second of Steering")
     same(flow.idsOf(GuideChapter.Clipboard), listOf("paste", "clipboard"), "A chapter's slides, to jump to")
 }
@@ -445,12 +443,14 @@ private fun chapterOne() {
         for (line in step.stages.map { it.text } + step.praise) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
     }
     same(typing.last().done, "OK, you're not that dumb.", "The chapter's roast is its last success line")
-    same(typing.map { it.lessons }, listOf(emptySet(), setOf(GuideLesson.Swipe, GuideLesson.BarTap),
-        setOf(GuideLesson.Swipe, GuideLesson.BarTap), setOf(GuideLesson.Swipe, GuideLesson.BarTap, GuideLesson.BarHold)),
+    val keys = setOf(GuideLesson.Typing, GuideLesson.Backspace)
+    same(typing.map { it.lessons }, listOf(keys, setOf(GuideLesson.Swipe, GuideLesson.BarTap) + keys,
+        setOf(GuideLesson.Swipe, GuideLesson.BarTap) + keys, setOf(GuideLesson.Swipe, GuideLesson.BarTap, GuideLesson.BarHold) + keys),
         "Each slide unlocks what it teaches, and keeps what was taught")
-    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }.map { it.lessons }, listOf(emptySet(), setOf(GuideLesson.Flick),
-        setOf(GuideLesson.Flick)), "Delete unlocks the flick on its flick and hold slides; Backspace always works")
-    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Steering }.map { it.lessons }, List(3) { setOf(GuideLesson.Cursor) },
+    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }.map { it.lessons }, listOf(setOf(GuideLesson.Backspace),
+        setOf(GuideLesson.Flick), setOf(GuideLesson.Flick)), "Delete unlocks Backspace, then only the flick")
+    same(GUIDE_STEPS.count { it.lessons?.contains(GuideLesson.Typing) == true }, 4, "Only Typing's slides let letters through")
+    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Steering }.map { it.lessons }, List(2) { setOf(GuideLesson.Cursor) },
         "Steering unlocks only the cursor gestures")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Symbols }.map { it.lessons }, listOf(setOf(GuideLesson.Alt),
         setOf(GuideLesson.HoldSymbol), setOf(GuideLesson.Sym), setOf(GuideLesson.Sym), setOf(GuideLesson.Sym)),
@@ -512,6 +512,7 @@ private fun scenarios() {
     same(title(type.event(Pushed(62))).startsWith("Nothing to fix"), true, "Space with nothing typed")
     type.event(Pushed(KEY_A))
     same(title(type.event(Fixed("the", "the"))).startsWith("Perfect spelling"), true, "A word typed right")
+    same(title(type.event(Fixed("Thss", "Thss"))).startsWith("Even we couldn't"), true, "A typo that slipped through is never perfect")
     same(title(type.event(Fixed("i", "I"))).startsWith("That's just a capital"), true, "Only a capital changed")
     same(type.event(Recognised(listOf("this"))), GuideVerdict.Wait, "A swipe on the typing slide: the keyboard's lock stops it, not the slide")
     same(type.event(Fixed("teh", "the")), GuideVerdict.Done, "A real fix finishes it")
@@ -540,7 +541,12 @@ private fun scenarios() {
     flick.advance()
     same(flick.step.id, "steer", "and the hold slide is passed over")
     same(flick.back() && flick.step.id == "flick", true, "Back goes past it too")
-    same(title(flick.event(Pushed(KEY_DEL))).startsWith("That's the last slide"), true, "Backspace on the flick slide")
+    same(blockedChip(flick.step, GuideLesson.Backspace.name), "That's the last slide's trick. Flick it.", "Backspace on the flick slide")
+    same(blockedChip(GUIDE_STEPS.first { it.id == "steer" }, GuideLesson.Typing.name), "Typing's done. Keep up.", "Letters on Steering")
+    same(blockedChip(GUIDE_STEPS.first { it.id == "alt" }, GuideLesson.Typing.name), "Hold Alt while you press it.", "A plain letter on Alt's slide")
+    for (step in GUIDE_STEPS) for (lesson in GuideLesson.entries) blockedChip(step, lesson.name)?.let {
+        same(it.length <= LINE_MOST, true, "The lock's chip \"$it\" is one line")
+    }
 
     val hold = GuideFlow({ GuideSettings() })
     hold.start("hold")
@@ -571,12 +577,6 @@ private fun scenarios() {
     same(title(symmain.event(keys(Panel.Emoji))).startsWith("Emoji already"), true, "Too far")
     same(symmain.event(keys(Panel.Symbols)), GuideVerdict.Stage(1), "Sym once, then &")
     same(title(symmain.event(keys(Panel.Closed))).startsWith("Just looking"), true, "Closed without typing")
-
-    val word = GuideFlow({ GuideSettings() })
-    word.start("selectword")
-    same(title(word.event(TwoTapsAbove)).startsWith("Two taps up there"), true, "Two taps above Space pick nothing")
-    same(word.event(DoubleTapped(3)), GuideVerdict.Wait, "Three taps wait for the word to be picked")
-    same(word.event(DoubleTapped(2)).let { it is GuideVerdict.Hint && it.passes }, true, "Two taps on Space pick a word too, and count")
 
     val altLetGo = GuideFlow({ GuideSettings() })
     altLetGo.start("alt")
@@ -619,12 +619,6 @@ private fun theCursorHasToMove() {
     far.event(CursorStarted(false))
     far.event(FieldChanged("on and on", 9, 9))
     same(far.event(FieldChanged("on and on", 2, 2)), GuideVerdict.Done, "A real steer finishes it as it goes")
-
-    val select = GuideFlow({ GuideSettings() })
-    select.start("selectword")
-    same(select.event(FieldChanged("on and on", 7, 7)), GuideVerdict.Wait, "A cursor alone is no selection")
-    same(select.event(CursorStarted(false)) is GuideVerdict.Hint, true, "A held tap is steering, not picking, and the slide says so")
-    same(select.event(FieldChanged("on and on", 3, 6)), GuideVerdict.Done, "A picked word finishes it")
 }
 
 private fun settingsThatStepsNeed() {

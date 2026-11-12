@@ -547,6 +547,8 @@ class GuideActivity : Activity() {
     private lateinit var instruction: FrameLayout
     private lateinit var chip: TextView
     private lateinit var spacer: View
+    /** The most room at the bottom that the keyboard took while the slides show, so the keys never jump. See the insets listener. */
+    private var steadyBottom = 0
     /** The end's two big buttons, in the middle, each with its line under it. */
     private lateinit var endButtons: LinearLayout
     private lateinit var boringButton: TextView
@@ -619,7 +621,8 @@ class GuideActivity : Activity() {
     private val idleOnce = Runnable { idle(IDLE_TITLE, -1) }
     /** The idle chip has shown on this slide, and the lock's chip too: each shows once a slide. */
     private var idleChipShown = false
-    private var lockChipShown = false
+    /** The lock's chips shown on this slide, so each shows once. */
+    private val lockChips = HashSet<String>()
     /** The chip on the screen, since when, and the one that waits for it to end. */
     private var chipAt = 0L
     private var pendingChip: String? = null
@@ -1072,7 +1075,10 @@ class GuideActivity : Activity() {
             // The content nearest the screen's rounded corners, such as Back and Next at the bottom and the chapter at the top,
             // keeps clear of them. The camera hole is in the status bar, which bars.top already leaves out.
             val top = bars.top + dp(4)
-            val bottom = bars.bottom + dp(8)
+            // On the slides the keys stay where they are: the keyboard's bar hides for a moment as a slide changes, and the room it
+            // gives back would drop the keys by its height (owner, 2026-11-11). They keep the most room the keyboard took.
+            if (guideLooks == true) steadyBottom = maxOf(steadyBottom, bars.bottom) else steadyBottom = 0
+            val bottom = maxOf(bars.bottom, steadyBottom) + dp(8)
             val corners = Corners.of(insets, display)
             val corner = maxOf(corners.inset(bottom.toFloat()), corners.topInset(top.toFloat()))
             column.setPadding(maxOf(dp(GUTTER) + bars.left, corner), top, maxOf(dp(GUTTER) + bars.right, corner), bottom)
@@ -1344,7 +1350,7 @@ class GuideActivity : Activity() {
         guideLook(true)
         hideChip(now = true)
         idleChipShown = false
-        lockChipShown = false
+        lockChips.clear()
         lastPoint = null
         travel = 0f
         helpShown = false
@@ -2580,9 +2586,10 @@ class GuideActivity : Activity() {
         // Something the slide doesn't teach yet did nothing at all: the chip says so once a slide, or for the bar on the first slide.
         if (event is KeyboardEvent.Blocked && !passed) {
             if (event.lesson == GuideLesson.BarTap.name && step.id == "type") showChip(PICK_IT_YOURSELF)
-            else if (!lockChipShown) {
-                lockChipShown = true
-                showChip(THATS_LATER)
+            else {
+                val chip = blockedChip(step, event.lesson) ?: THATS_LATER
+                // Each chip once a slide: a held key or a second try doesn't say it again.
+                if (lockChips.add(chip)) showChip(chip)
             }
         }
         if (event is KeyboardEvent.Pushed && event.code == KeyEvent.KEYCODE_V && step.id == "paste" && !passed) {

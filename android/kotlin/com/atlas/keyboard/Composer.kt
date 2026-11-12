@@ -1442,8 +1442,23 @@ class Composer(
 
     private fun findFix(word: String, anchor: Snapshot): TypedCorrector.Fix? {
         val before = anchor.before ?: return null
+        guideFix(word, before)?.let { return it }
         val fix = corrector()?.check(word, before.dropLast(word.length), endedWord?.word) ?: return null
         return fix.takeIf { before.endsWith(it.typed) && it.word.split(' ').all(words::allowed) && words.fixAllowed(it.typed, it.word) }
+    }
+
+    /**
+     * In the guide's typing text, a typo close to the word that the text has next always becomes that word: its first lesson is that
+     * Space fixes typos, so it never misses one (owner, 2026-11-11). Close is up to half the word's letters wrong. Only in the
+     * guide's field, where [intended] knows the word.
+     */
+    private fun guideFix(word: String, before: String): TypedCorrector.Fix? {
+        if (word.isEmpty() || !before.endsWith(word) || !word.all(Char::isLetter)) return null
+        val wanted = intended(before.dropLast(word.length)) ?: return null
+        if (word.equals(wanted, ignoreCase = true)) return null
+        if (TypedCorrector.editDistance(word, wanted) > maxOf(1, wanted.length / 2)) return null
+        val fixed = if (word.first().isUpperCase()) wanted.replaceFirstChar(Char::uppercaseChar) else wanted
+        return TypedCorrector.Fix(word, fixed)
     }
 
     /**

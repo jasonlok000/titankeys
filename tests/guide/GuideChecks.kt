@@ -362,6 +362,7 @@ fun main() {
     demonstrationsTypePunctuation()
     // Drawings of the slides in the new layout, to look at without a phone. See SlideRenders.kt.
     System.getenv("SLIDES_PNG")?.let { drawSlides(it, NEW_LAYOUT + GuideChapter.End) }
+    System.getenv("FRONT_PNG")?.let { drawFrontPage(it) }
     println("Guide checks passed")
 }
 

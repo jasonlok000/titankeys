@@ -243,6 +243,8 @@ class Composer(
      * for, or null. See [GuideHooks].
      */
     var nearMiss: (String) -> String? = { null }
+    /** In the guide's first slide, any typed word becomes the guide's word, however far off it is. */
+    var forceFix: () -> Boolean = { false }
     /**
      * The interactive guide's word for a word that starts after this text, or null outside the guide. A word that comes out
      * different gets the guide's word on the strip, so that one touch puts it right. See [GuideHooks].
@@ -1491,8 +1493,15 @@ class Composer(
     private fun guideFix(word: String, before: String): TypedCorrector.Fix? {
         if (word.isEmpty() || !before.endsWith(word) || !word.all(Char::isLetter)) return null
         val wanted = intended(before.dropLast(word.length)) ?: return null
-        if (word.equals(wanted, ignoreCase = true)) return null
-        if (TypedCorrector.editDistance(word, wanted) > maxOf(1, wanted.length / 2)) return null
+        if (word.equals(wanted, ignoreCase = true)) {
+            // The slide about the bar: a word typed right comes out wrong, on purpose, and the right one waits on the bar, where
+            // the guide points at it (owner, v5). The typed word is unknown, so the bar offers words for it: see [predict].
+            val slip = nearMiss(word) ?: return null
+            guidePlaced(GUIDE_PLACE, wanted)
+            return TypedCorrector.Fix(word, slip)
+        }
+        // The first slide: whatever was typed becomes the word, however far off (owner, v5).
+        if (!forceFix() && TypedCorrector.editDistance(word, wanted) > maxOf(1, wanted.length / 2)) return null
         val fixed = if (word.first().isUpperCase()) wanted.replaceFirstChar(Char::uppercaseChar) else wanted
         return TypedCorrector.Fix(word, fixed)
     }

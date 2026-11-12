@@ -171,7 +171,13 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     ClipboardCleared("clipboard_cleared", HapticGroup.Panels, Family.Gone),
 
     BugRecording("bug_recording", HapticGroup.Other, Family.Confirm),
-    GuideCelebration("guide_celebration", HapticGroup.Other, Family.Celebrate);
+    GuideCelebration("guide_celebration", HapticGroup.Other, Family.Celebrate),
+    /** Next pressed in the guide. */
+    GuideNext("guide_next", HapticGroup.Other, Family.Confirm),
+    /** The guide's slide blocked something, and says so. */
+    GuideBlocked("guide_blocked", HapticGroup.Other, Family.No),
+    /** The guide showed a hint or a scenario chip. */
+    GuideHint("guide_hint", HapticGroup.Other, Family.Change);
 
     /** Its switch in the "swipe_haptics" preferences. */
     val key get() = "haptic_$id"

@@ -89,6 +89,9 @@ object HapticTimeline {
         Haptic.ClipboardCleared -> "You cleared the clipboard"
         Haptic.BugRecording -> "Record a bug started or stopped"
         Haptic.GuideCelebration -> "The guide celebrated"
+        Haptic.GuideNext -> "Next in the guide"
+        Haptic.GuideBlocked -> "The guide blocked that"
+        Haptic.GuideHint -> "The guide gave a hint"
     }
 
     /**

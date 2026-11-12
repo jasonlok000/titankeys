@@ -385,11 +385,25 @@ class AtlasIme : InputMethodService() {
     private fun followDeleteHold() {
         val start = contact.points.firstOrNull()
         val at = deleteHold.moved(!altOrPanel && start != null && pieces.canDelete(start.time) && guideAllows(GuideLesson.Flick))
-        if (at != null) nextDeleteHoldStep(at) else main.removeCallbacks(stepDeleteHold)
+        main.removeCallbacks(blockDeleteHold)
+        when {
+            at == null -> main.removeCallbacks(stepDeleteHold)
+            // A guide slide that teaches the flick but not the hold: the hold never starts, and the guide says it's blocked. The
+            // flick still deletes its one word at the lift.
+            !guideAllows(GuideLesson.DeleteHold) && !contact.deleting -> {
+                main.removeCallbacks(stepDeleteHold)
+                main.postAtTime(blockDeleteHold, at)
+            }
+            else -> nextDeleteHoldStep(at)
+        }
     }
+
+    /** A held delete that the guide's slide blocks: said once each time the finger stays. */
+    private val blockDeleteHold = Runnable { guideBlocked(GuideLesson.DeleteHold) }
 
     private fun endDeleteHold() {
         main.removeCallbacks(stepDeleteHold)
+        main.removeCallbacks(blockDeleteHold)
         deleteHold.reset()
         heldWords.reset()
         deleteDots()
@@ -669,6 +683,7 @@ class AtlasIme : InputMethodService() {
         composer.onExpanded = { haptics.play(Haptic.Expansion) }
         composer.nearMiss = { right -> GuideScript.slip(right).takeIf { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) } }
         composer.intended = { before -> GuideHooks.intended(currentInputEditorInfo?.privateImeOptions, before) }
+        composer.forceFix = { GuideHooks.forceFix && currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) == true }
         composer.guidePlaced = { place, word ->
             GuideHooks.rightPlace = place
             GuideHooks.rightWord = word
@@ -680,6 +695,9 @@ class AtlasIme : InputMethodService() {
             haptics.play(Haptic.AutocorrectUndone)
             KeyboardEvents.publish { KeyboardEvent.Restored }
         }
+        // The guide asks whether the word menu is open, so its demos keep off it, and closes it as a slide changes.
+        GuideHooks.menuOpen = { inGuide && menuOpen }
+        GuideHooks.menuCloses = { main.post { if (inGuide) closeMenu() } }
         // The guide asks whether the bar has words to hold, for its word menu slide. Only in its own field.
         GuideHooks.barCount = { if (inGuide) barWords.size else -1 }
         // The interactive guide acts out a gesture on this bar, only in its own field. See [Strip.playDemo].
@@ -1052,8 +1070,8 @@ class AtlasIme : InputMethodService() {
             }
             main.post {
                 emoji = EmojiPages(groups, recents).also { panel?.emoji = it }
-                // The guide shows some recent emoji, if you have none yet, so that Recent has something to show. Only there.
-                guideEmoji = EmojiPages(groups, recents.filter { it.isNotEmpty() }.ifEmpty { GUIDE_RECENT_EMOJI })
+                // The guide's Recent is its own, cheeky and never with the clown in it, so the clown has to be found (owner, v5).
+                guideEmoji = EmojiPages(groups, GUIDE_RECENT_EMOJI)
                 showGuideExtras()
             }
         }.start()
@@ -1578,7 +1596,7 @@ class AtlasIme : InputMethodService() {
         strip?.menuMark = -1
         haptics.play(Haptic.MenuOpen)
         // The guide's menu is only for show, and its keys say Save and Forget, so it always starts there.
-        strip?.notice = Strip.Notice.Menu(held.word, canForget(held), if (inGuide) MenuKeys.Step.New else wordStep(held.word))
+        strip?.notice = Strip.Notice.Menu(held.word, inGuide || canForget(held), if (inGuide) MenuKeys.Step.New else wordStep(held.word))
         KeyboardEvents.publish { KeyboardEvent.WordMenu(held.word) }
     }
 
@@ -1691,13 +1709,33 @@ class AtlasIme : InputMethodService() {
     private fun stripAction(action: Strip.Action) {
         val held = menuWord
         if (held != null && action != Strip.Action.OpenSelected) KeyboardEvents.publish { KeyboardEvent.MenuPicked(action.name) }
-        // In the guide, the menu's choices are only for show: nothing is saved or forgotten, and the guide says so.
+        // In the guide, the menu climbs its ladder as it really does, with its haptics, but nothing is saved, made a favourite or
+        // forgotten: the guide's words are only for show (owner, v5, with D's ladder).
         if (inGuide && held != null && action in MENU_CHOICES) {
-            closeMenu()
+            when (action) {
+                Strip.Action.Save -> {
+                    haptics.play(Haptic.WordSaved)
+                    menuAt(held, MenuKeys.Step.Saved)
+                }
+                Strip.Action.Favourite -> {
+                    haptics.play(Haptic.WordFavourited)
+                    menuAt(held, MenuKeys.Step.Favourite)
+                }
+                Strip.Action.Unfavourite -> {
+                    haptics.play(Haptic.WordUnfavourited)
+                    menuAt(held, MenuKeys.Step.Saved)
+                }
+                Strip.Action.Forget -> {
+                    haptics.play(Haptic.WordForgotten)
+                    closeMenu()
+                }
+                else -> Unit
+            }
             return
         }
         when (action) {
-            Strip.Action.OpenSelected -> selectedWord?.let { openMenu(HeldWord(it, "")) }
+            // A selected word's menu is the same lesson as holding a bar word: a slide that doesn't teach it blocks it, and says so.
+            Strip.Action.OpenSelected -> if (!guideBlocked(GuideLesson.BarHold)) selectedWord?.let { openMenu(HeldWord(it, "")) }
             Strip.Action.Close -> {
                 // Back closed the menu by hand. It closing for any other reason, such as typing, plays nothing.
                 if (held != null) haptics.play(Haptic.MenuClosed)
@@ -3282,7 +3320,7 @@ class AtlasIme : InputMethodService() {
         private const val EMOJI_PREFERENCES = "emoji"
         private const val RECENT_EMOJI = "recent"
         /** The guide's recent emoji when you have none yet. No clown: the guide has you find that one. */
-        private val GUIDE_RECENT_EMOJI = listOf("😂", "🙄", "😭", "👍", "🔥", "💀", "🥲", "😎", "🫠", "👀", "🤌", "❤️")
+        private val GUIDE_RECENT_EMOJI = listOf("🍑", "🍆", "🤏", "💦", "😏", "🥵", "🫦", "👀", "💅", "🙈", "🔥", "🫠")
         /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
         private const val STALE_HIDE_MILLIS = 500L
         /** How long Android has to show the strip before the keyboard shows its window itself. */

@@ -72,5 +72,8 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
   { title: "Other", haptics: [
     { id: "bug_recording", label: "Record a bug starts or stops", about: "When Record a bug starts, and when it stops." },
     { id: "guide_celebration", label: "Guide celebrations", about: "When you finish a part of the guide." },
+    { id: "guide_next", label: "Guide Next", about: "When you press Next in the guide." },
+    { id: "guide_blocked", label: "Guide blocks", about: "When the guide blocks something a slide doesn't teach yet." },
+    { id: "guide_hint", label: "Guide hints", about: "When the guide shows a hint." },
   ] },
 ];

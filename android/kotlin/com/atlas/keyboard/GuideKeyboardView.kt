@@ -139,7 +139,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     fun show(next: GuideCue) {
         cue = next
         cueStart = GuideMotion.now()
-        ghost = ghostFor(next)
+        ghost = ghostFor(next).map(KeyCalibration.load(context)::point)
         invalidate()
     }
 
@@ -173,7 +173,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     /** Adds to the live trail. [reset] starts a new path. */
     fun trace(points: List<FloatArray>, reset: Boolean, lifted: Boolean) {
         if (reset) trail.clear()
-        trail.addAll(points)
+        trail.addAll(points.map(KeyAlignment.current::point))
         for (point in points) hover.point(point[0], point[1])
         liftedAt = if (lifted) GuideMotion.now() else -1
         if (lifted) {
@@ -222,6 +222,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             keys[index++].box.set(left, 3 * rowHeight, left + width * keyWidth, 4 * rowHeight)
             left += width * keyWidth
         }
+        // The real keys sit below the screen. Key calibration in TitanKeys Debug lines the drawing up with them.
+        KeyCalibration.align(context, keys.map { it.box }, w.toFloat())
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -235,6 +237,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         drawTouchArea(canvas)
         drawTapZone(canvas)
         drawDeleteZone(canvas)
+        drawHoldZones(canvas)
         drawGhost(canvas, now)
         moving = drawTrail(canvas, now) || moving
         if (moving) postInvalidateOnAnimation() else lastFrame = 0
@@ -263,9 +266,14 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         }
         heat = max(heat, key.glow)
         val spot = cue as? GuideCue.Spot
-        if (spot != null && key.name in spot.keys && GuideMotion.enabled) {
-            val at = spot.keys.indexOf(key.name)
-            heat = max(heat, .5f + .5f * sin(((now - cueStart + at * 240) / SPOT_PULSE_MILLIS) * 2 * PI).toFloat())
+        if (spot != null) {
+            // A held modifier stays lit, steady, as a held key does: never flashing (owner, v5).
+            if (key.name in spot.held) heat = max(heat, HELD_HEAT)
+            val light = spotLight(spot, key.name, now)
+            if (light > 0f) {
+                heat = max(heat, light)
+                moving = true
+            } else if (spotRunning(spot, now)) moving = true
         }
         // The wave moves over the keys from the left and from the top.
         var bump = 0f
@@ -293,11 +301,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         canvas.save()
         canvas.scale(pressed * appear, pressed * appear, centreX, centreY)
         val faced = face
-        var label = when {
-            faced == null -> key.name
-            key.letter -> faced[key.name].orEmpty()
-            else -> faced[key.name] ?: key.name
-        }
+        var label = key.name
+        val caption = faced?.get(key.name)
         var flip = 1f
         // A flip that has run its time is over before this frame draws: its last frame would squash the key to a line and ask for
         // no frame after it, so where nothing else moves (a passed slide), the key stayed a line (owner, 2026-11-11: P went).
@@ -322,16 +327,26 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             } else moving = true
         }
         val radius = min(Radii.px(resources, Radii.SMALL), min(key.box.width(), key.box.height()) / 2)
-        // A key that the open panel leaves empty is drawn faint, as an empty key, not as a blank button that might do something.
-        val emptyKey = faced != null && label.isEmpty()
+        val emptyKey = false
         // Faded from the key's own fill, so an empty key is darker than the others, never brighter.
         val emptyFill = GuideMotion.faded(idleFill, (idleFill ushr 24) / 255f * EMPTY_KEY)
         boxPaint.color = if (emptyKey) emptyFill else GuideMotion.blend(idleFill, litFill, heat.coerceIn(0f, 1f))
         canvas.drawRoundRect(key.box.left + inset, key.box.top + inset, key.box.right - inset, key.box.bottom - inset, radius, radius, boxPaint)
         val labelColour = GuideMotion.blend(idleLabel, litLabel, heat.coerceIn(0f, 1f))
-        drawLabel(canvas, key, label, labelColour)
+        if (caption != null) {
+            // The hint for this key: the letter moves up a little, and what it does now is written small under it.
+            canvas.save()
+            canvas.translate(0f, -key.box.height() * CAPTION_LIFT)
+            drawLabel(canvas, key, label, labelColour)
+            canvas.restore()
+            labelPaint.textSize = min(key.box.width(), key.box.height()) * CAPTION_SIZE
+            val room = key.box.width() * LABEL_ROOM
+            if (labelPaint.measureText(caption) > room) labelPaint.textSize *= room / labelPaint.measureText(caption)
+            labelPaint.color = labelColour
+            canvas.drawText(caption, key.box.centerX(), key.box.bottom - dp(KEY_GAP) - key.box.height() * CAPTION_BOTTOM, labelPaint)
+        } else drawLabel(canvas, key, label, labelColour)
         // Like the real keys, each letter has its Alt symbol printed small in its top left corner.
-        altSymbols[key.name]?.takeIf { label == key.name && face == null }?.let { symbol ->
+        altSymbols[key.name]?.takeIf { label == key.name && caption == null }?.let { symbol ->
             // A slide that spots letter keys, as Alt's does with A for its *, fades the other corners, so the one to find stands out.
             val spotted = (cue as? GuideCue.Spot)?.keys?.takeIf { keys -> keys.all(Layout::isLetter) }
             val alpha = if (spotted != null && key.name !in spotted) ALT_ALPHA * ALT_FADED else ALT_ALPHA
@@ -342,6 +357,28 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         canvas.restore()
         return moving
     }
+
+    /**
+     * How lit [name] is by [spot] at [now]: the keys light one after the other, each for [SPOT_STEP_MILLIS], easing in and out,
+     * then a pause, for the spot's rounds, and then they stop (owner, v5: Space blinked forever, and the menu's keys flashed).
+     */
+    private fun spotLight(spot: GuideCue.Spot, name: String, now: Long): Float {
+        val at = spot.keys.indexOf(name)
+        if (at < 0) return 0f
+        if (!GuideMotion.enabled) return 1f
+        val round = spot.keys.size * SPOT_STEP_MILLIS + SPOT_REST_MILLIS
+        val elapsed = now - cueStart
+        if (elapsed < 0 || elapsed >= round * spot.rounds) return 0f
+        val local = (elapsed % round - at * SPOT_STEP_MILLIS).toFloat() / SPOT_STEP_MILLIS
+        if (local < 0f) return 0f
+        // Past its turn, in this round, a key stays softly lit: the hint reads in order, from the first key, in any frame.
+        if (local >= 1f) return if (elapsed % round < spot.keys.size * SPOT_STEP_MILLIS) SPOT_DONE else 0f
+        return max(SPOT_DONE, sin(local * PI).toFloat()).takeIf { local > .5f } ?: sin(local * PI).toFloat()
+    }
+
+    /** The spot's rounds aren't over yet, so the drawing keeps going. */
+    private fun spotRunning(spot: GuideCue.Spot, now: Long) =
+        GuideMotion.enabled && spot.keys.isNotEmpty() && now - cueStart < (spot.keys.size * SPOT_STEP_MILLIS + SPOT_REST_MILLIS) * spot.rounds
 
     /**
      * The part of the keys that the touchpad feels stays bright, and the rest is dimmed: its sensor stops at the middle of the outer
@@ -453,6 +490,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         }
         // Each pass is drawn whole and then faded, so where its pieces overlap it does not darken.
         trailPaint.color = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE
+        if (inPauseZone()) alpha *= PAUSED_TRAIL
         var layer = canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), (TRAIL_SHADE * alpha * 255).roundToInt())
         drawTrailPieces(canvas, dp(TRAIL_WIDTH) * TRAIL_UNDER)
         canvas.restoreToCount(layer)
@@ -606,6 +644,33 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     private val deletePath = Path()
 
+    /**
+     * The held delete's zones, on its slide (owner, v5): back on Backspace pauses, and the line between F and G is top speed. They
+     * are where the hold really has them: [PAUSE_KEYS] key widths from where a flick on Backspace starts, and [REPEAT_LONG_KEYS].
+     */
+    private fun drawHoldZones(canvas: Canvas) {
+        if ((cue as? GuideCue.Flick)?.hold != true) return
+        val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.CREAM
+        val corner = Radii.px(resources, Radii.SMALL)
+        val top = height / 4f
+        val bottom = height / 2f
+        zonePaint.color = GuideMotion.faded(colour, ZONE_ALPHA)
+        canvas.drawRoundRect(width * HOLD_PAUSE_X, top + dp(KEY_GAP), width * AREA_RIGHT, bottom - dp(KEY_GAP), corner, corner, zonePaint)
+        zonePaint.color = GuideMotion.faded(GuideColours.ORANGE, .9f)
+        val lineX = width * HOLD_TOP_X
+        canvas.drawRect(lineX - dp(1.5f), top - dp(2f), lineX + dp(1.5f), bottom + dp(2f), zonePaint)
+        altPaint.color = GuideMotion.faded(colour, .85f)
+        altPaint.textSize = min(width / 10f, height / 4f) * ZONE_LABEL
+        val pause = "pause"
+        canvas.drawText(pause, width * (HOLD_PAUSE_X + AREA_RIGHT) / 2 - altPaint.measureText(pause) / 2, bottom - dp(KEY_GAP) - dp(3f), altPaint)
+        altPaint.color = GuideMotion.faded(GuideColours.ORANGE, 1f)
+        val fast = "top speed"
+        canvas.drawText(fast, lineX - altPaint.measureText(fast) / 2, top - dp(4f), altPaint)
+    }
+
+    /** The hold's finger is back in the pause zone: its trail dims, as the bar's glow fades there. */
+    private fun inPauseZone() = (cue as? GuideCue.Flick)?.hold == true && trail.isNotEmpty() && liftedAt < 0 && trail.last()[0] >= HOLD_PAUSE_X
+
     private fun drawTaps(canvas: Canvas, cue: GuideCue.Taps, t: Float, colour: Int) {
         // Rings for each tap, one after the other, inside the zone where the taps count, then a sideways drag if there is one.
         val tapsEnd = if (cue.drag) .45f else .8f
@@ -677,7 +742,17 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val HEAT_FADE_PER_FRAME = .055f
         /** How long the light under a finger takes to come on, and to go once the finger has left. */
         const val HOVER_FADE_MILLIS = 100f
-        const val SPOT_PULSE_MILLIS = 900f
+        /** A spotted key's turn to light, the rest after each round, and how many rounds, before the spot goes quiet. */
+        const val SPOT_STEP_MILLIS = 700L
+        /** How lit a spotted key stays once its turn in the round is over. */
+        const val SPOT_DONE = .35f
+        const val SPOT_REST_MILLIS = 900L
+        /** How lit a held modifier stays, steady. */
+        const val HELD_HEAT = .85f
+        /** A hint on a key: how much its letter moves up, the hint's size, and how far from the key's bottom. */
+        const val CAPTION_LIFT = .14f
+        const val CAPTION_SIZE = .24f
+        const val CAPTION_BOTTOM = .12f
         /** A flick's ghost snaps to its end in this part of the demo, then lifts and fades in this part. */
         const val FLICK_SNAP = .25f
         const val FLICK_FADE = .2f
@@ -716,6 +791,13 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         /** Where the ghost taps: just above the line between V and B and Space. */
         const val ZONE_TAP_ROW = .72f
         const val ZONE_ALPHA = .2f
+        /** The held delete's zones as parts of the drawing's width: a flick from Backspace's middle (.95) back [PAUSE_KEYS] keys
+         *  pauses, and [REPEAT_LONG_KEYS] keys out is top speed, between F and G. */
+        const val HOLD_PAUSE_X = .95f - PAUSE_KEYS / 10f
+        const val HOLD_TOP_X = .95f - REPEAT_LONG_KEYS / 10f
+        const val ZONE_LABEL = .24f
+        /** How much the trail dims while the hold is paused. */
+        const val PAUSED_TRAIL = .3f
 
         // The box round the part of the keys that the touchpad feels, as parts of the drawing's width and height.
         const val AREA_LEFT = .05f

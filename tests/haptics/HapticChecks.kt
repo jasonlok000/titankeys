@@ -119,6 +119,9 @@ private val table = mapOf(
     Haptic.ClipboardCleared to Family.Gone,
     Haptic.BugRecording to Family.Confirm,
     Haptic.GuideCelebration to Family.Celebrate,
+    Haptic.GuideNext to Family.Confirm,
+    Haptic.GuideBlocked to Family.No,
+    Haptic.GuideHint to Family.Change,
 )
 
 /** The rulebook's patterns: on and off in ms, starting with on. */
@@ -908,9 +911,10 @@ private fun aWallBouncesAndSettles() {
         setOf(Haptic.CursorEnd, Haptic.SelectionEnd, Haptic.DeleteRanOut, Haptic.DeleteNothing)) {
         "Steering, selecting, a flick with nothing to delete and a held delete hit the wall"
     }
-    // No is only for nothing happening at all.
-    check(Haptic.entries.filter { it.family == Family.No }.toSet() == setOf(Haptic.NothingToPick, Haptic.WordNotSaved, Haptic.CopyNothing)) {
-        "No stays for taps with nothing to work on, a failed save and a copy of nothing"
+    // No is only for nothing happening at all, as when the guide blocks something (v5). A flick with nothing to delete is a wall.
+    check(Haptic.entries.filter { it.family == Family.No }.toSet() == setOf(Haptic.NothingToPick, Haptic.WordNotSaved, Haptic.CopyNothing,
+            Haptic.GuideBlocked)) {
+        "No stays for taps with nothing to work on, a failed save, a copy of nothing and the guide's blocks"
     }
     check(HapticTimeline.meaning(Family.Wall).isNotEmpty()) { "The lab says what it means" }
     for (haptic in listOf(Haptic.SelectionEnd, Haptic.DeleteRanOut, Haptic.DeleteZone)) check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic" }

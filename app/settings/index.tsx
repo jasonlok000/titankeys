@@ -1,6 +1,6 @@
 import { Field, Screen, Section, Toggle, replace, useAction, useSnapshot } from "ink";
 import { close } from "ink/icons";
-import { state, update } from "../../lib/atlas";
+import { showKeyCalibration, state, update } from "../../lib/atlas";
 import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
@@ -62,6 +62,8 @@ export default function Settings() {
       <Field label="Haptics" href="/settings/haptics">{hapticsLabel(settings)}</Field>
       {/* The Haptics lab is only in TitanKeys Debug. Other builds get null for it, so the row never shows there. */}
       {settings.hapticsLab && <Field label="Haptics lab" href="/settings/haptics-lab" />}
+      {/* Key calibration is debug only too, so it shows with the Haptics lab. */}
+      {settings.hapticsLab && <Field label="Key calibration" onPress={() => void showKeyCalibration()} />}
       <Toggle label="Scroll assistant outside text fields" value={!settings.touchpadOnlyInFields}
         onChange={scroll => save.run({ touchpadOnlyInFields: !scroll })} />
     </Section>

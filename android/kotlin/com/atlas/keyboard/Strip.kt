@@ -734,11 +734,10 @@ class Strip(
 
     /** The words are covered while a gesture shows, so a touch must not choose one that nobody can see. */
     override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
-        // A touch on a demonstration only ends it, so that it never presses a button that the demonstration drew.
-        if (demo != null) {
-            stopDemo()
-            return true
-        }
+        // A touch on a demonstration ends it, and the bar's real words come back under the finger, so the touch goes on to them:
+        // the guide's first hold on a word must open its menu, not only stop the demo (owner, v5: the first hold was blocked).
+        // The buttons that the demonstration drew are gone by then, so none of them is pressed.
+        if (demo != null) stopDemo()
         // A touch on the idle game only sends the letters home: nothing is picked.
         if (idle != null) {
             woke()
@@ -865,6 +864,8 @@ class Strip(
 
     /** Plays [next] from its start, in place of whatever demonstration was playing. */
     internal fun playDemo(next: GuideHooks.StripDemo) {
+        // Never over a selected word or an open menu: the demo would take their place (owner, v5).
+        if (notice is Notice.Menu || selected != null) return
         if (!isShown || !showSuggestions || modifiers?.replacesWords == true || idle != null) return
         stopDemo()
         demo = next

@@ -32,22 +32,22 @@ private const val KEY_DEL = 67
 
 /** The real things a person does, in the order of the guide. Each slide teaches one instruction at a time. */
 private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
-    "type" to listOf(Pushed(KEY_A), Fixed("teh", "the")),
-    "swipe" to listOf(Recognised(listOf("this")), Recognised(listOf("keyboard")), Recognised(listOf("fixes"))),
-    "strip" to listOf(Recognised(listOf("tp", "to")), Chosen("to")),
-    "menu" to listOf(WordMenu("to"), MenuPicked("Close")),
-    "backspace" to listOf(Pushed(KEY_DEL), FieldChanged(DELETE_TEXT + " ", 0, 0)),
+    "type" to listOf(Fixed("Sapce", "Space"), FieldChanged("$TYPE_LINE ", 21, 21)),
+    "strip" to listOf(Fixed("Other", GuideScript.slip("Other")), Chosen("Other"), FieldChanged("$BAR_LINE ", 30, 30)),
+    "swipe" to listOf(Recognised(listOf("swipe")), Recognised(listOf("whole")), Recognised(listOf("words"))),
+    "menu" to listOf(WordMenu("bar"), MenuPicked("Save"), MenuPicked("Forget")),
+    "backspace" to listOf(Pushed(KEY_DEL), FieldChanged("$BACKSPACE_LINE ", 0, 0)),
     "flick" to listOf(DeletedWord(held = false)),
     "hold" to listOf(DeleteHoldStarted) + List(REGRETS_TO_PASS) { DeletedWord(held = true) },
     "steer" to listOf(CursorStarted(false), FieldChanged("on and on ", 9, 9), FieldChanged("on and on ", 4, 4)),
     "selectmore" to listOf(CursorStarted(true), FieldChanged("on and on ", 0, 9)),
-    "alt" to listOf(altOn, FieldChanged(ALT_SYMBOL, 1, 1)),
-    "holdsym" to listOf(HeldSymbol("@")),
-    "symmain" to listOf(keys(Panel.Symbols), FieldChanged("x. &", 4, 4)),
-    "symgroups" to listOf(PanelSwiped(0f, .4f, true), GroupPicked(2), FieldChanged("x. §", 4, 4)),
-    "clown" to listOf(keys(Panel.Emoji), FieldChanged("x. $CLOWN", 5, 5)),
-    "paste" to listOf(FieldChanged("Paste over $PASTE_TEXT", 24, 24)),
-    "clipboard" to listOf(keys(Panel.Symbols), keys(Panel.Clipboard), FieldChanged("Paste. $PRANK_PASTE", 26, 26)),
+    "alt" to listOf(altOn, FieldChanged(ALT_LINE, 1, 1)),
+    "holdsym" to listOf(FieldChanged(HOLD_SYMBOL_LINE, 4, 4)),
+    "symmain" to listOf(keys(Panel.Symbols), FieldChanged(SYM_LINE, 4, 4)),
+    "symgroups" to listOf(PanelSwiped(0f, .4f, true), FieldChanged(GROUPS_LINE, 4, 4)),
+    "clown" to listOf(keys(Panel.Emoji), FieldChanged(CLOWN_LINE, 5, 5)),
+    "paste" to listOf(FieldChanged(PASTE_LINE, 24, 24)),
+    "clipboard" to listOf(keys(Panel.Symbols), keys(Panel.Clipboard), FieldChanged(CLIP_LINE, 26, 26)),
 )
 
 /** Slides that the guide no longer has: the boring guide explains them, or a new slide took over. */
@@ -177,6 +177,7 @@ fun main() {
     oneStepForEachIdea()
     oneInstructionAtATime()
     theScriptedMiss()
+    theFinale()
     theShareSlide()
     theChapterBar()
     slideTexts()
@@ -258,10 +259,9 @@ private fun theStepsHaveOkayWords() {
     }
 }
 
-/** The chapters, from the owner's text (v3.1). */
 private fun oneStepForEachIdea() {
     fun chapter(name: GuideChapter) = GUIDE_STEPS.filter { it.chapter == name }.map { it.id }
-    same(chapter(GuideChapter.Typing), listOf("type", "swipe", "strip", "menu"), "Typing: the keys, swiping, fixing a swipe, the word menu")
+    same(chapter(GuideChapter.Typing), listOf("type", "strip", "swipe", "menu"), "Typing: the keys, the bar, swiping, the word menu (v5)")
     same(chapter(GuideChapter.Delete), listOf("backspace", "flick", "hold"), "Delete: Backspace, a flick, the hold")
     same(chapter(GuideChapter.Steering), listOf("steer", "selectmore"), "Steering: the cursor, then more words")
     same(chapter(GuideChapter.Symbols), listOf("alt", "holdsym", "symmain", "symgroups", "clown"), "Symbols and emoji, then the clown")
@@ -270,141 +270,171 @@ private fun oneStepForEachIdea() {
     val byId = GUIDE_STEPS.associateBy { it.id }
     same(byId.getValue("steer").cue, GuideCue.Taps(2, drag = true), "Steering is two taps and a slide")
     same(byId.getValue("selectmore").cue, GuideCue.Taps(3, drag = true), "Selecting more is three taps and a slide")
-    same(GUIDE_STEPS.filter { it.nearMiss }.map { it.id }, listOf("strip"), "Only the strip step asks for a near miss")
+    same(GUIDE_STEPS.filter { it.nearMiss }.map { it.id }, listOf("strip"), "Only the bar slide asks for a near miss")
+    same(GUIDE_STEPS.filter { it.forceFix }.map { it.id }, listOf("type"), "Only the first slide fixes any word at all")
+    same(byId.getValue("strip").lessons.orEmpty().contains(GuideLesson.Swipe), false, "The bar slide comes before swiping, so it's typed")
     same(GuideHooks.takeNearMiss(GuideHooks.FIELD), false, "Nothing is asked for until the step asks")
     GuideHooks.nearMiss = true
     same(GuideHooks.takeNearMiss("some.other.app"), false, "No other field ever gets a near miss")
     same(GuideHooks.takeNearMiss(GuideHooks.FIELD), true, "The guide's field gets one near miss")
-    same(GuideHooks.takeNearMiss(GuideHooks.FIELD), false, "One swipe uses it up")
+    same(GuideHooks.takeNearMiss(GuideHooks.FIELD), false, "One word uses it up")
 }
 
 /** A slide shows only the instruction that is needed now, and follows the keyboard forwards and back. */
 private fun oneInstructionAtATime() {
     val alt = GuideFlow({ GuideSettings() })
     alt.start("alt")
-    same(alt.cue, GuideCue.Spot(listOf(Layout.ALT)), "Alt glows first")
-    same(alt.event(altOn), GuideVerdict.Stage(1), "Alt on, so the key with * is next")
-    same(alt.instruction.contains(ALT_SYMBOL), true, "The next instruction names *")
-    same(alt.event(FieldChanged("x. #", 4, 4)).let { it is GuideVerdict.Hint && it.text.contains("not *") }, true, "Another symbol isn't *")
-    same(alt.event(FieldChanged("x. #*", 5, 5)), GuideVerdict.Done, "* finishes it")
+    same(alt.cue, GuideCue.Spot(emptyList(), held = listOf(Layout.ALT)), "Alt shows held, steady, never flashing")
+    same(alt.event(altOn), GuideVerdict.Stage(1), "Alt on, so A is next")
+    same(alt.cue, GuideCue.Spot(listOf("A"), held = listOf(Layout.ALT)), "A lights, and Alt stays held")
+    val gapped = gapSeed(ALT_LINE, ALT_SYMBOL)
+    same(alt.event(FieldChanged("$gapped#", 4, 4)).let { it is GuideVerdict.Hint && it.text.contains("not *") }, true, "Another symbol isn't *")
+    same(alt.event(FieldChanged(ALT_LINE, 5, 5)), GuideVerdict.Done, "* in its gap finishes it")
 
     val groups = GuideFlow({ GuideSettings() })
     groups.start("symgroups")
     same(groups.step.setup, Panel.Closed, "The groups slide opens closed, and starts with Sym")
-    same(groups.event(PanelSwiped(0f, .4f, true)), GuideVerdict.Stage(1), "A page turned, so a group is next")
-    same(groups.step.stages.size, 2, "Two steps: move on, then pick")
-    same(groups.event(FieldChanged("x. ¤", 4, 4)), GuideVerdict.Done, "Any symbol finishes it")
-    same(groupsPraise(groups.counted), "Slide along the bottom row to change group.", "It teaches the way that wasn't used")
-    same(groupsPraise(4), "Backspace and Enter turn pages too.", "or the next one")
-    same(groupsPraise(2 or 4), "Swiping sideways on the keys changes group too.", "or the last one")
+    same(groups.event(PanelSwiped(0f, .4f, true)), GuideVerdict.Stage(1), "A page turned, so finding § is next")
+    same(groups.step.stages.size, 2, "Two steps: turn a page, then find §")
+    same(groups.event(FieldChanged(GROUPS_LINE.replace(SECTION, "¤"), 4, 4)).let { it is GuideVerdict.Hint && !it.passes }, true,
+        "Another symbol isn't §")
+    same(groups.event(FieldChanged(GROUPS_LINE, 4, 4)), GuideVerdict.Done, "§ finishes it")
     val sideways = GuideFlow({ GuideSettings() })
     sideways.start("symgroups")
-    same(sideways.event(GroupPicked(2)), GuideVerdict.Stage(1), "A new group moves on too")
+    same(sideways.event(GroupPicked(2)).let { it is GuideVerdict.Hint && it.text == "Yeah, that works too." && it.stage == 1 }, true,
+        "The bottom row works too, and the slide says so")
+    same(groupsPraise(4).startsWith("The bottom row works too"), true, "and its praise owns it")
 
     val clown = GuideFlow({ GuideSettings() })
     clown.start("clown")
     same(clown.event(keys(Panel.Emoji)), GuideVerdict.Stage(1), "Sym twice is the emoji, so the clown is next")
-    same(clown.event(FieldChanged("Hi 😀", 5, 5)) is GuideVerdict.Hint, true, "Any emoji isn't the clown, and the slide says so")
-    same(clown.event(FieldChanged("Hi 😀$CLOWN", 7, 7)), GuideVerdict.Done, "The clown finishes it")
+    same(clown.event(FieldChanged(gapSeed(CLOWN_LINE, CLOWN) + "😀", 5, 5)) is GuideVerdict.Hint, true, "Any emoji isn't the clown")
+    same(clown.event(FieldChanged(CLOWN_LINE, 7, 7)), GuideVerdict.Done, "The clown finishes it")
     same(clown.step.done to clown.step.rain, "Hey, that's you." to CLOWN, "and it's you, raining down")
+    for (hunt in listOf(SECTION_HUNT, CLOWN_HUNT)) for (line in listOf(hunt.mock, hunt.hint, hunt.skip))
+        same(line.length <= LINE_MOST, true, "The hunt's \"$line\" is one line")
+    same(CLOWN_HUNT.skip.contains("skip") && SECTION_HUNT.skip.contains("skip"), true, "Each hunt says it's ok to skip, at the end")
+    same(HUNT_DRAIN_SECONDS < HUNT_HINT_SECONDS && HUNT_HINT_SECONDS < HUNT_SKIP_SECONDS, true, "Mockery, then a hint, then leave to skip")
 
     val paste = GuideFlow({ GuideSettings() })
     paste.start("paste")
-    same(paste.step.clip, PASTE_TEXT, "The paste lesson puts something stupid on the clipboard")
-    same(paste.step.preselect, true, "and starts with a word selected, so the paste goes in its place")
-    same(CLIP_TEXT.startsWith("Paste over $PASTE_OVER"), true, "the word that its first sentence points at")
+    same(paste.step.clip, PASTE_TEXT, "The paste lesson puts the roast on the clipboard")
+    same(paste.step.preselect, true, "and starts with words selected, so the paste goes in their place")
+    same(PASTE_SEED.replace(PASTE_OVER, PASTE_TEXT), PASTE_LINE, "and the paste makes the line")
+    same(paste.cue, GuideCue.Spot(listOf("V"), held = listOf(Layout.FN)), "fn shows held, steady; V lights")
     same(GUIDE_CLIPS.size <= 5, true, "Every clip, the prank too, fits on the clipboard's first page")
-    same(paste.step.done, "Yes, we know.", "with a line that says so")
-    same((paste.event(FieldChanged("Paste over", 10, 10)) as GuideVerdict.Hint).text, "Lost the selection. Classic. Paste anyway.",
-        "The selected word lost, so the paste goes where the cursor is")
-    same(paste.event(FieldChanged("Paste ove", 9, 9)), GuideVerdict.Wait, "It says so once")
-    same(paste.event(FieldChanged("Paste $PASTE_TEXT", 19, 19)), GuideVerdict.Done, "The paste finishes it")
+    same((paste.event(FieldChanged("As fn", 5, 5)) as GuideVerdict.Hint).text, "Lost the selection. Classic. Paste anyway.",
+        "The selection lost, so the paste goes where the cursor is")
+    same(paste.event(FieldChanged("As f", 4, 4)), GuideVerdict.Wait, "It says so once")
+    same(paste.event(FieldChanged(PASTE_LINE, 19, 19)), GuideVerdict.Done, "The paste finishes it")
 
     val clips = GuideFlow({ GuideSettings() })
     clips.start("clipboard")
-    clips.seed("Paste. ")
+    clips.seed(CLIP_LEAD)
     same(clips.step.sandboxClips, GUIDE_CLIPS, "The clipboard lesson shows only its own clips")
     same(GUIDE_STEPS.count { it.sandboxClips.isNotEmpty() }, 1, "and no other slide has a sandbox")
     same(clips.event(keys(Panel.Emoji)).let { it is GuideVerdict.Hint && it.stage == 1 }, true, "The emoji are fine: A works there too")
     same(clips.event(keys(Panel.Closed)), GuideVerdict.Stage(0), "Closed again, so Sym again")
     same(clips.event(keys(Panel.Clipboard)), GuideVerdict.Stage(2), "The clipboard, straight away, is fine too")
-    same((clips.event(FieldChanged("Paste. ${GUIDE_CLIPS.first()}", 40, 40)) as GuideVerdict.Hint).text, "That's not nice. Keep looking.",
-        "Any other clip isn't the nice one")
-    same(clips.event(FieldChanged("Paste. ${GUIDE_CLIPS.first()} $PRANK_PASTE", 60, 60)), GuideVerdict.Done, "The nice clip passes")
+    same(clips.event(FieldChanged(CLIP_LEAD + GUIDE_CLIPS.first(), 40, 40)), GuideVerdict.Wait, "A rude clip: the screen takes it back")
+    same(clips.event(FieldChanged(CLIP_LINE, 60, 60)), GuideVerdict.Done, "The nice clip passes")
     same(clips.step.done, "Gotcha. Swapped it on purpose.", "and the slide owns up to the prank")
+    same(GuideHooks.swapClip(PRANK_CLIP), PRANK_PASTE, "The nice clip pastes the prank in the guide")
+    same(GuideHooks.swapClip(GUIDE_CLIPS.first()), GUIDE_CLIPS.first(), "Every other clip pastes as it is")
+    same(OLD_GUIDE_CLIPS.containsAll(GUIDE_CLIPS), true, "The guide clears its own clips from the clipboard")
 
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
     same(menu.event(MenuPicked("Save")), GuideVerdict.Wait, "A pick before the menu opens means nothing")
-    same(menu.event(WordMenu("to")), GuideVerdict.Stage(1), "The menu opens, so picking is next")
-    same(menu.event(Pushed(KEY_Q)).let { it is GuideVerdict.Hint && it.text.startsWith("Wrong key") }, true, "Q picks nothing, and the slide says so")
-    same(menu.event(MenuPicked("Save")).let { it is GuideVerdict.Hint && it.passes && it.title == null && it.text == "Relax. Nothing was saved." },
-        true, "Save counts, with its chip and the slide's own success line")
+    same(menu.event(WordMenu("to")), GuideVerdict.Stage(1), "The menu opens, so Save is next")
+    same(menu.labels to menu.cue, MENU_SAVE to GuideCue.Spot(listOf("I")), "Only I is hinted: Save")
+    same(menu.event(MenuPicked("Save")), GuideVerdict.Stage(2), "Saved, so Forget is next")
+    same(menu.labels to menu.cue, MENU_FORGET to GuideCue.Spot(listOf("O")), "then only O: Forget")
+    same(menu.event(MenuPicked("Favourite")) is GuideVerdict.Hint, true, "I again makes a favourite, and the slide says so")
+    same(menu.event(MenuPicked("Unfavourite")) is GuideVerdict.Hint, true, "O takes the favourite back first")
+    same(menu.event(MenuPicked("Forget")), GuideVerdict.Done, "Forget finishes it")
 }
 
-/** On the slide about the bar the swipe always comes out wrong, so there is always a word to fix with one tap. */
+/** On the bar slide, the first word typed right comes out wrong on purpose, and the right one waits on the bar. */
 private fun theScriptedMiss() {
     val flow = GuideFlow({ GuideSettings() })
     flow.start("strip")
-    same(flow.event(Recognised(listOf("tp"))), GuideVerdict.Stage(1), "Whatever was swiped, the slide says to tap the right word")
+    same(flow.event(Fixed("Ohtr", "Other")).let { it is GuideVerdict.Hint && !it.passes }, true, "A typo fixed isn't careful, and the slide says so")
+    same(flow.event(Fixed("Other", GuideScript.slip("Other"))), GuideVerdict.Stage(1), "The miss on purpose: tap the right word")
     same(flow.instruction.contains("dancing"), true, "The instruction points at the dancing word")
-    same(flow.cue, GuideCue.Free, "The ghost stops swiping once there is a word to fix")
-    val wrong = flow.event(Chosen("top"), "to")
-    same(wrong is GuideVerdict.Hint && wrong.stage == 0 && flow.stage == 0, true, "A wrong word on the bar goes back to the start")
-    flow.event(Recognised(listOf("tp")), "to")
-    same(flow.event(Chosen("to"), "to"), GuideVerdict.Done, "The right word on the bar finishes it")
-    same(GuideHooks.swapClip(PRANK_CLIP), PRANK_PASTE, "The nice clip pastes the prank in the guide")
-    same(GuideHooks.swapClip(GUIDE_CLIPS.first()), GUIDE_CLIPS.first(), "Every other clip pastes as it is")
+    same(flow.lessons, setOf(GuideLesson.BarTap), "Only the bar works while it waits for the tap")
+    same(flow.event(Chosen("Other")), GuideVerdict.Stage(2), "The tap fixes it, and the line is next")
+    same(flow.lessons, flow.step.lessons, "Typing works again")
+    same(flow.event(FieldChanged("$BAR_LINE ", 30, 30)), GuideVerdict.Done, "The line typed through finishes it")
 }
 
-/** Each chapter has one text box, the same on each of its slides. */
+/** Each slide has its own line (v5): one real takeaway, and the first letters of them all spell the prank. */
 private fun slideTexts() {
-    fun texts(chapter: GuideChapter) = GUIDE_STEPS.filter { it.chapter == chapter }.map { it.text }.distinct()
-    same(texts(GuideChapter.Typing), listOf(TYPING_TEXT), "The typing chapter has one text box")
-    same(texts(GuideChapter.Symbols), listOf(SYMBOLS_TEXT), "The symbols chapter has one text box")
-    same(TYPING_TEXT.first().isUpperCase(), true, "The first text box starts with a capital")
-    same(TYPING_TEXT.any { it.isDigit() }, false, "The typing text is easy to type")
-    for (step in GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete })
-        same(step.seed, if (step.id == "backspace") DELETE_STRAY_TEXT else DELETE_TEXT, "${step.id} starts with the delete text")
-    for (step in GUIDE_STEPS.filter { it.chapter == GuideChapter.Clipboard }) same(step.seed, CLIP_TEXT, "${step.id} starts with its text")
-    for (text in listOf(DELETE_TEXT, CLIP_TEXT, STEER_TEXT) + DELETE_RESETS.map { it.second } + STEER_RESET.second)
-        same(text.endsWith("."), true, "\"${text.takeLast(20)}\" ends with a full stop")
-    same(DELETE_RESETS.size, 2, "Two resets for the delete chapter, the second longer and ruder")
-    same(DELETE_RESETS[1].second.length > DELETE_RESETS[0].second.length, true, "The second reset is longer")
-    val line = looping(STEER_TEXT)
-    same(line.length, STEER_LOOPS * (STEER_TEXT.length + 1) - 1, "The steering line repeats, joined by a space")
-    // The symbols chapter: each sentence starts with its symbol, in the order of the slides.
-    val symbols = GUIDE_STEPS.mapNotNull { it.symbol }
-    same(symbols, listOf(ALT_SYMBOL, "@", "&", ANY_SYMBOL, CLOWN), "Each symbol slide waits for its own symbol")
-    same(SYMBOL_PARTS.map { it.first }, symbols, "and the text box has them in that order")
-    for (symbol in symbols) same(SYMBOLS_TEXT.contains(symbol + wordsAfter(symbol).trimEnd()), true, "$symbol starts its sentence")
-    same(endsWithSymbol("x. *", "*"), true, "* is *")
-    same(endsWithSymbol("x. @ ", "*"), false, "@ is not *")
-    same(endsWithSymbol("x. §", ANY_SYMBOL), true, "Any symbol counts on the groups slide")
-    same(endsWithSymbol("x. a", ANY_SYMBOL) || endsWithSymbol("x.", ANY_SYMBOL) || endsWithSymbol("", ANY_SYMBOL), false,
-        "A letter, a full stop or nothing is no symbol")
-    same(endsWithSymbol("x. $CLOWN", ANY_SYMBOL), true, "An emoji counts as a symbol")
+    val lines = SUMMARY_LINES
+    same(lines.size, GUIDE_STEPS.size - 1, "Every slide has its line")
+    same(GuideFinale.initials(lines), ACROSTIC.replace(" ", ""), "Their first letters spell \"$ACROSTIC\"")
+    for (line in lines) {
+        same(line.endsWith("."), false, "\"$line\" is a line the user finishes, not a sentence of ours")
+        same(line.length <= 62, true, "\"$line\" fits the summary")
+    }
+    same(GUIDE_STEPS.first { it.id == "type" }.ghost.split(' ').size, TYPE_LINE.split(' ').size, "A typo for every word of slide one")
+    for ((typo, word) in TYPE_TYPOS.split(' ').zip(TYPE_LINE.split(' '))) same(typo != word && typo.length == word.length, true,
+        "\"$typo\" is a typo of \"$word\"")
+    // The symbol slides: each line with its gap, the cursor in it, and filling it is the only way through.
+    for (step in GUIDE_STEPS.filter { it.chapter == GuideChapter.Symbols }) {
+        val symbol = step.symbol!!
+        same(step.seed, gapSeed(step.line, symbol), "${step.id} starts with its line, gapped")
+        same(step.cursorAt!!(step.seed), gapCursor(step.line, symbol), "and the cursor in the gap")
+        same(filledGap(gapped(step.line, symbol).let { (a, b) -> a + symbol + b }, step.line), true, "${step.id}'s symbol fills it")
+        same(wrongInGap(gapped(step.line, symbol).let { (a, b) -> a + "#" + b }, step.line, symbol), true, "Another symbol is wrong")
+    }
+    same(GUIDE_STEPS.mapNotNull { it.symbol }, listOf(ALT_SYMBOL, "@", "&", SECTION, CLOWN), "Each symbol slide waits for its own symbol")
+    same(gapSeed(SYM_LINE, "&").contains("terms  conditions"), true, "A gap between words keeps both spaces")
+    same(BACKSPACE_SEED.dropLast(1), BACKSPACE_LINE, "One e too many, at the end")
+    same(flickTarget(FLICK_SEED)?.let { FLICK_SEED.substring(it.first, it.last + 1) }, FLICK_WORD, "The flick slide marks its stupid word")
+    same(FLICK_SEED.replace(" $FLICK_WORD", ""), FLICK_LINE, "and flicking it away makes the line")
+    same(flickCursor(FLICK_SEED), FLICK_SEED.indexOf(FLICK_WORD) + FLICK_WORD.length, "The cursor waits right after it")
+    val held = HOLD_SEED.replace(HOLD_REGRETS, "")
+    same(held, HOLD_LINE, "Deleting the regrets makes the hold slide's line")
+    same(HOLD_REGRETS.split(' ').count { it.isNotEmpty() } >= REGRETS_TO_PASS, true, "There are enough regrets to pass")
+    same(holdTarget(HOLD_SEED, holdCursor(HOLD_SEED))?.let { HOLD_SEED.substring(it.first, it.last + 1) }, HOLD_REGRETS.trimEnd(),
+        "The regrets are marked, up to the cursor")
+    same(GRAB_LINE.contains(GRAB_PHRASE), true, "The grab slide's line has the words to grab")
+    same(lineTyped("Space fixes my typos ", TYPE_LINE) && !lineTyped("Space fixes my typ", TYPE_LINE), true, "A line counts once typed through")
+    same(DELETE_RESETS.size, 2, "Two resets for the delete chapter")
     for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.End }) {
         // Once done, the line under the title reacts to what you did. It never gives the next instruction.
         same(step.praise.isNotBlank(), true, "${step.id} says something about what you just did")
         same(step.stages.none { it.text == step.praise }, true, "${step.id}'s praise is no instruction")
     }
-    // The text box carries straight on from its start: no dot, no line break.
     val race = Passage("one two three")
-    same(race.text.startsWith("one two three one two three"), true, "The text box carries on with no mark between rounds")
-    same(race.text.contains('\n') || race.text.contains('·'), false, "No line breaks and no dots")
     same(race.wordAt(race.track("one two three one ").next), "two", "Typing carries on into the next round")
     val passage = Passage("Nothing to unlearn: type with two hands or one")
     same(passage.wordAt(passage.track("Nothing to unlearn type with t two ").next), "hands", "A wrong word is skipped, matching by what's typed")
     same(passage.track("nothing TO").typed, "to", "Capitals don't matter, and the word being typed is followed")
-    same(passage.track("Nothing zebra ").next, 1, "Any other word is ignored")
-    val symbolsBox = Passage(SYMBOLS_TEXT)
-    same(symbolsBox.wordAt(symbolsBox.track("").next), "is", "A symbol in the text box has no letters to type, so it's passed by itself")
     val fast = PlaygroundText.make(kotlin.random.Random(7))
     same(fast.any { it.isUpperCase() || it.isDigit() || it in ".,:;!?" }, false, "The playground's text is all plain, fast words")
-    val words = fast.split(' ')
-    val slip = words.windowed(3).indexOfFirst { it.joinToString(" ") == PlaygroundText.SLIP }
-    same(slip >= PlaygroundText.SLIP_FIRST, true, "The slip only comes once you're going")
+    same(fast.contains("titankeys"), true, "The playground's text is about TitanKeys (v5)")
+}
+
+/** The finale: the summary lands, the letters light and gather into the phrase, then the logo grows from TK. */
+private fun theFinale() {
+    val lines = SUMMARY_LINES
+    val measure = GuideFinale.Measure { text, size, _ -> text.length * size * .55f }
+    fun texts(at: Long) = GuideFinale.frame(at, lines, 1076f, 120f, 760f, measure).filterIsInstance<GuideFinale.Text>()
+    same(texts(GuideFinale.LINE_IN / 2).size, 2, "At the start, only the first line is coming in")
+    val stacked = texts(GuideFinale.summaryEnd(lines))
+    same(stacked.count { it.alpha >= .99f }, lines.size * 2, "Then every line, whole")
+    val gathered = texts(GuideFinale.gatherStart(lines) + GuideFinale.GATHER + 10)
+    same(gathered.map { it.text }.joinToString(""), ACROSTIC.replace(" ", ""), "Then only the first letters, which spell the phrase")
+    same(gathered.zipWithNext().all { (a, b) -> a.x < b.x }, true, "in order, left to right")
+    same(gathered.map { Math.round(it.y) }.distinct().size, 1, "on one line")
+    val logo = GuideFinale.frame(GuideFinale.total(lines), lines, 1076f, 120f, 760f, measure)
+    same(logo.any { it is GuideFinale.Mark }, true, "The logo's mark comes back")
+    val name = logo.filterIsInstance<GuideFinale.Text>().filter { it.text != GuideFinale.BUILT_FOR }.sortedBy { it.x }.joinToString("") { it.text }
+    same(name, GuideFinale.NAME, "TK grows into TitanKeys")
+    same(logo.filterIsInstance<GuideFinale.Text>().any { it.text == GuideFinale.BUILT_FOR }, true, "and says what it's built for")
+    same(GuideFinale.beats(lines).size, 2, "Two beats to feel: the phrase locking, the name grown")
 }
 
 /** The bar at the top shows chapters, and how far into this one you are. */
@@ -412,11 +442,10 @@ private fun theChapterBar() {
     val flow = GuideFlow({ GuideSettings() })
     same(flow.barChapters, GuideChapter.entries.dropLast(1), "Every chapter but the end")
     same(flow.stepInChapter to flow.stepsInChapter, 0 to 4, "The first slide of the four in Typing")
-    flow.start("strip")
+    flow.start("swipe")
     same(flow.stepInChapter, 2, "The third slide of Typing")
     flow.start("selectmore")
     same(flow.step.chapter to flow.stepInChapter, GuideChapter.Steering to 1, "The second of Steering")
-    same(flow.idsOf(GuideChapter.Clipboard), listOf("paste", "clipboard"), "A chapter's slides, to jump to")
 }
 
 /** The passage above the field, as a typing race shows it. */
@@ -471,22 +500,19 @@ private fun stepsStartInTheRightMenu() {
     same(byId.getValue("menu").bar, GuideBar.Menu, "The word menu shows a ghost hold on the bar, and the menu opening")
 }
 
-/** Chapter one, the reference slice: one-line titles, a typo in every grey word, and each slide unlocks only what it teaches. */
+/** Every slide: one-line words, and each slide unlocks only what it teaches. */
 private fun chapterOne() {
-    val typing = GUIDE_STEPS.filter { it.chapter == GuideChapter.Typing }
-    for (step in typing) {
-        // One line at one size: these fit the phone's width with the check after them.
+    for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.End }) {
         for (line in listOf(step.title, step.done)) same(line.length <= TITLE_MOST, true, "\"$line\" is one line")
-        for (line in step.stages.map { it.text } + step.praise) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
+        for (line in step.stages.map { it.text } + step.praise + listOfNotNull(step.help, step.helpTitle))
+            same(line.length <= LINE_MOST, true, "\"$line\" is one line")
     }
-    same(typing.last().done, "OK, you're not that dumb.", "The chapter's roast is its last success line")
     val keys = setOf(GuideLesson.Typing, GuideLesson.Backspace)
-    same(typing.map { it.lessons }, listOf(keys, setOf(GuideLesson.Swipe, GuideLesson.BarTap) + keys,
-        setOf(GuideLesson.Swipe, GuideLesson.BarTap) + keys, setOf(GuideLesson.Swipe, GuideLesson.BarTap, GuideLesson.BarHold) + keys),
-        "Each slide unlocks what it teaches, and keeps what was taught")
+    val typing = GUIDE_STEPS.filter { it.chapter == GuideChapter.Typing }
+    same(typing.map { it.lessons }, listOf(keys, setOf(GuideLesson.BarTap) + keys, setOf(GuideLesson.Swipe, GuideLesson.BarTap) + keys,
+        setOf(GuideLesson.BarHold) + keys), "Each slide unlocks what it teaches")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }.map { it.lessons }, listOf(setOf(GuideLesson.Backspace),
-        setOf(GuideLesson.Flick), setOf(GuideLesson.Flick)), "Delete unlocks Backspace, then only the flick")
-    same(GUIDE_STEPS.count { it.lessons?.contains(GuideLesson.Typing) == true }, 4, "Only Typing's slides let letters through")
+        setOf(GuideLesson.Flick), setOf(GuideLesson.Flick, GuideLesson.DeleteHold)), "Delete unlocks Backspace, the flick, then its hold")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Steering }.map { it.lessons }, List(2) { setOf(GuideLesson.Cursor) },
         "Steering unlocks only the cursor gestures")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Symbols }.map { it.lessons }, listOf(setOf(GuideLesson.Alt),
@@ -494,38 +520,20 @@ private fun chapterOne() {
         "Symbols unlocks Alt, then a held key, then Sym, one at a time")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Clipboard }.map { it.lessons }, listOf(setOf(GuideLesson.Ctrl), setOf(GuideLesson.Sym)),
         "Copy and paste unlocks fn for the paste, then Sym for the clipboard")
-    // The chapters in the new layout: every title and success line on one line, every instruction, praise and help too.
-    for (step in GUIDE_STEPS.filter { it.chapter in NEW_LAYOUT }) {
-        for (line in listOf(step.title, step.done)) same(line.length <= TITLE_MOST, true, "\"$line\" is one line")
-        for (line in step.stages.map { it.text } + step.praise + listOfNotNull(step.help, step.helpTitle))
-            same(line.length <= LINE_MOST, true, "\"$line\" is one line")
-    }
-    for ((line, _) in DELETE_RESETS) same(line.length <= LINE_MOST, true, "The reset chip \"$line\" is one line")
-    same(STEER_RESET.first.length <= LINE_MOST, true, "The steering reset chip is one line")
-    same(GUIDE_STEPS.filter { it.chapter !in NEW_LAYOUT }.all { it.lessons == null }, true,
-        "The chapters not in the new layout yet lock nothing")
+    for (line in DELETE_RESETS) same(line.length <= LINE_MOST, true, "The reset chip \"$line\" is one line")
+    same(STEER_RESET.length <= LINE_MOST, true, "The steering reset chip is one line")
     same(typing.map { it.sides }, listOf(false, true, true, true), "Only the first slide shows just the bar's middle word")
-    val stray = GuideFlow({ GuideSettings() })
-    stray.start("backspace")
-    val strayText = DELETE_STRAY_TEXT + " "
-    same(strayText.substring(strayCursor(strayText) - 4, strayCursor(strayText) + 1), "didd.", "The cursor starts right after the stray d")
-    same(strayTarget(strayText), (strayCursor(strayText) - 1)..(strayCursor(strayText) - 1), "and the orange mark is the d before it")
-    same(stray.event(FieldChanged(DELETE_TEXT + " ", 0, 0)), GuideVerdict.Done, "Taking out the stray d passes")
-    same(GUIDE_STEPS.first { it.id == "menu" }.stages[1].labels, mapOf("I" to "Save", "O" to "Forget", "P" to "Back"),
-        "The word menu's keys say their buttons on the drawing")
-    val typos = TYPING_TYPOS.split(' ')
-    val words = TYPING_TEXT.split(' ').take(typos.size)
-    same(typos.size, 14, "The first sentence, word for word")
-    for ((typo, word) in typos.zip(words)) {
-        // Only "typos" stays right: no typo of it is fixed.
-        same(typo == word, word == "typos,", "\"$typo\" has a typo of \"$word\"")
-        same(typo.takeLastWhile { !it.isLetter() }, word.takeLastWhile { !it.isLetter() }, "\"$typo\" keeps \"$word\"'s marks")
-    }
-    same(GUIDE_STEPS.first { it.id == "type" }.ghost, TYPING_TYPOS, "The first slide's ghost has the typos")
+    same(GUIDE_STEPS.first { it.id == "type" }.cue, GuideCue.Spell, "The first slide spells the next word's keys, then Space")
     GuideHooks.lessons = setOf(GuideLesson.Swipe)
     same(GuideHooks.allows(GuideLesson.Swipe) to GuideHooks.allows(GuideLesson.BarHold), true to false, "The lock lets through what's taught")
     GuideHooks.lessons = null
     same(GuideHooks.allows(GuideLesson.Sym), true, "With no lock, everything works")
+    // Nothing is blocked silently: every lesson that a slide can block has its own words, on one line (owner, v5).
+    for (step in GUIDE_STEPS) for (lesson in GuideLesson.entries) {
+        val said = blockedChip(step, lesson.name)
+        same(said.contains("blocked", ignoreCase = true) || said.startsWith("Blocked"), true, "\"$said\" says it's blocked")
+        same(said.length <= LINE_MOST, true, "The lock's chip \"$said\" is one line")
+    }
 }
 
 /** The chapters rebuilt in the new layout so far. */
@@ -537,85 +545,59 @@ private const val LINE_MOST = 50
 private fun wrongEventsDoNotFinish() {
     val flow = GuideFlow({ GuideSettings() })
     same(flow.step.id, "type", "The guide starts with typing")
-    same(flow.event(FieldChanged("key ", 4, 4)), GuideVerdict.Wait, "A word that no key typed does not finish typing")
+    same(flow.event(FieldChanged("key ", 4, 4)), GuideVerdict.Wait, "A word that isn't the line does not finish typing")
     same(flow.event(Pushed(KEY_A)), GuideVerdict.Wait, "A letter is the start")
-    flow.advance()
-    same(flow.step.id, "swipe", "Next is the swipe")
+    flow.start("swipe")
     same(finishes(flow.event(Chosen("faster"))), false, "Touching a word must not finish the swipe")
     same(finishes(flow.event(FieldChanged("faster", 6, 6))), false, "Typing must not finish the swipe")
-    same(flow.event(Pushed(62)), GuideVerdict.Wait, "Space is not a letter, so it says nothing")
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
     same(menu.event(Chosen("to")) is GuideVerdict.Hint, true, "A touch on a word is not a hold, and the slide says so")
 }
 
-/** The owner's scenarios: what happens says so, in the slide's place, and some of it counts. */
+/** The owner's scenarios: what happens says so, in a chip, and some of it counts. */
 private fun scenarios() {
-    // What a scenario says: its title, or the chip's text when it has no title.
     fun title(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.let { it.title ?: it.text }.orEmpty()
     val type = GuideFlow({ GuideSettings() })
-    same(title(type.event(Pushed(62))).startsWith("Nothing to fix"), true, "Space with nothing typed")
+    same(title(type.event(Pushed(62))).startsWith("Letters first"), true, "Space with nothing typed")
     type.event(Pushed(KEY_A))
-    same(title(type.event(Fixed("the", "the"))).startsWith("Perfect spelling"), true, "A word typed right")
-    same(title(type.event(Fixed("Thss", "Thss"))).startsWith("Even we couldn't"), true, "A typo that slipped through is never perfect")
-    same(title(type.event(Fixed("i", "I"))).startsWith("That's just a capital"), true, "Only a capital changed")
-    same(type.event(Recognised(listOf("this"))), GuideVerdict.Wait, "A swipe on the typing slide: the keyboard's lock stops it, not the slide")
-    same(type.event(Fixed("teh", "the")), GuideVerdict.Done, "A real fix finishes it")
+    same(title(type.event(Fixed("Space", "Space"))).startsWith("Make a typo, bro"), true, "A word typed right")
+    same(type.event(Fixed("Sapce", "Space")), GuideVerdict.Wait, "A real fix counts, and the line goes on")
+    same(type.event(FieldChanged("$TYPE_LINE ", 21, 21)), GuideVerdict.Done, "The line typed through finishes it")
+    val perfect = GuideFlow({ GuideSettings() })
+    perfect.start("type")
+    same(perfect.event(FieldChanged("$TYPE_LINE ", 21, 21)).let { it is GuideVerdict.Hint && it.passes }, true,
+        "No typo at all still passes, and the slide says so")
 
     val swipe = GuideFlow({ GuideSettings() })
     swipe.start("swipe")
     swipe.event(Pushed(KEY_A))
     same(title(swipe.event(Pushed(62))), "That's typing. Swipe this one.", "A word typed key by key on the swipe slide")
     same(title(swipe.event(Recognised(listOf("tp")), "to")), "Close. Tap the right one on the bar.", "A missed swipe points at the bar")
-    same(swipe.event(Chosen("to"), "to"), GuideVerdict.Done, "The right word on the bar finishes it")
-    same(swipe.jumps, true, "and does the next slide too")
-    swipe.advance()
-    same(swipe.step.id, "strip", "which opens next, done")
-    same(title(swipe.event(Tapped("A"))), "That's a tap. Swipe the word.", "A tap, with tap keys on")
-
-    val backspace = GuideFlow({ GuideSettings() })
-    backspace.start("backspace")
-    same(backspace.event(DeletedWord(held = false)), GuideVerdict.Wait, "A flick on the Backspace slide: the lock stops it, not the slide")
+    same(swipe.event(Chosen("to"), "to"), GuideVerdict.Wait, "The right word on the bar counts as that swipe")
+    same(swipe.liveLine(), swipesLeft(2), "and the count goes down")
+    same(title(swipe.event(Tapped("A"))), "That's a tap. Slide, don't lift.", "A tap, with tap keys on")
 
     val flick = GuideFlow({ GuideSettings() })
     flick.start("flick")
-    same(title(flick.event(DeleteHoldStarted)).startsWith("Straight to the hold"), true, "A hold says it skips that lesson")
-    same(flick.event(DeletedWord(held = false)), GuideVerdict.Wait, "The hold's first word isn't the flick")
-    same(flick.event(DeletedWord(held = true)), GuideVerdict.Wait, "nor are its others")
+    same(flick.event(DeletedWord(held = true)), GuideVerdict.Wait, "A held word isn't the flick")
     same(flick.event(DeletedWord(held = false)), GuideVerdict.Done, "One quick flick finishes it")
-    flick.advance()
-    same(flick.step.id, "steer", "and the hold slide is passed over")
-    same(flick.back() && flick.step.id == "flick", true, "Back goes past it too")
-    same(lastWordTarget("It knows what you did. ", 23), 18..21, "The flick slide marks the last word, its full stop too")
-    same(blockedChip(flick.step, GuideLesson.Backspace.name), "That's the last slide's trick. Flick it.", "Backspace on the flick slide")
-    same(blockedChip(GUIDE_STEPS.first { it.id == "steer" }, GuideLesson.Typing.name), "Typing's done. Keep up.", "Letters on Steering")
-    same(blockedChip(GUIDE_STEPS.first { it.id == "alt" }, GuideLesson.Typing.name), "Hold Alt while you press it.", "A plain letter on Alt's slide")
-    for (step in GUIDE_STEPS) for (lesson in GuideLesson.entries) blockedChip(step, lesson.name)?.let {
-        same(it.length <= LINE_MOST, true, "The lock's chip \"$it\" is one line")
-    }
+    same(blockedChip(flick.step, GuideLesson.DeleteHold.name), "Held delete is blocked here. Flick and lift.", "The hold, blocked")
+    same(blockedChip(flick.step, GuideLesson.Backspace.name), "Backspace is blocked. Flick it.", "Backspace on the flick slide")
+    same(blockedChip(GUIDE_STEPS.first { it.id == "steer" }, GuideLesson.Typing.name), "Typing's blocked here. Typing's done. Keep up.",
+        "Letters on Steering")
 
-    val hold = GuideFlow({ GuideSettings() })
-    hold.start("hold")
-    same(title(hold.event(DeletedWord(held = false))).startsWith("That was one word"), true, "A flick that lifts")
     val regret = GuideFlow({ GuideSettings() })
     regret.start("hold")
-    same(regret.liveLine(), null, "Mass deletion shows its instruction until a word goes")
-    regret.event(DeleteHoldStarted)
-    regret.event(DeletedWord(held = false))
+    same(title(regret.event(DeletedWord(held = false))).startsWith("That was one word"), true, "A flick that lifts")
     same(regret.liveLine(), "Regrets deleted: 1", "then the count")
+    regret.event(DeleteHoldStarted)
+    regret.event(DeletedWord(held = true))
     same(title(regret.event(Moved(40f, lifted = true))).startsWith("Therapy's not over"), true, "A hold let go too soon")
     regret.event(DeleteHoldStarted)
-    repeat(REGRETS_TO_PASS - 2) { same(regret.event(DeletedWord(held = true)), GuideVerdict.Wait, "Under eight, it waits") }
+    repeat(REGRETS_TO_PASS - 3) { same(regret.event(DeletedWord(held = true)), GuideVerdict.Wait, "Under eight, it waits") }
     same(regret.event(DeletedWord(held = true)), GuideVerdict.Done, "The eighth word passes")
     same(regretsFinal(12).length <= LINE_MOST, true, "The frozen count is one line")
-    val swipes = GuideFlow({ GuideSettings() })
-    swipes.start("swipe")
-    same(swipes.liveLine(), null, "The swipe slide shows its instruction until a swipe")
-    swipes.event(Recognised(listOf("this")))
-    same(swipes.liveLine(), "Slide over the next grey word. 2 to go.", "then counts down")
-    same(GUIDE_STEPS.first { it.id == "alt" }.stages[1].cue, GuideCue.Spot(listOf("A")), "Alt's slide lights A, where * is")
-    for (line in listOf(huntLine(999), huntPraise(999), HUNT_SLOW, HUNT_HINT)) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
-    same(HUNT_DRAIN_SECONDS < HUNT_HINT_SECONDS, true, "The slow chip comes as the bar runs out, and the hint after it")
 
     val steer = GuideFlow({ GuideSettings() })
     steer.start("steer")
@@ -624,8 +606,6 @@ private fun scenarios() {
     same(title(steer.event(CursorStarted(true))).startsWith("One tap too many"), true, "Three taps")
     same(steer.event(CursorStarted(false)), GuideVerdict.Stage(1), "Two taps, the second held")
     same(steer.event(Moved(0f, lifted = true)).let { it is GuideVerdict.Hint && it.stage == 0 }, true, "Held, then let go")
-    val typed = steer.event(Pushed(KEY_A))
-    same(title(typed) to (typed as GuideVerdict.Hint).text, "Typing's done. Keep up." to steer.instruction, "Typing on a slide that isn't about it")
 
     val more = GuideFlow({ GuideSettings() })
     more.start("selectmore")
@@ -635,7 +615,7 @@ private fun scenarios() {
     val holdsym = GuideFlow({ GuideSettings() })
     holdsym.start("holdsym")
     same(title(holdsym.event(HeldSymbol("#"))).startsWith("Not @"), true, "Another key held")
-    same(holdsym.event(FieldChanged("x. @", 4, 4)), GuideVerdict.Done, "@ in the field counts, however it came")
+    same(holdsym.event(FieldChanged(HOLD_SYMBOL_LINE, 4, 4)), GuideVerdict.Done, "@ in the gap counts")
 
     val symmain = GuideFlow({ GuideSettings() })
     symmain.start("symmain")
@@ -647,11 +627,6 @@ private fun scenarios() {
     altLetGo.start("alt")
     altLetGo.event(altOn)
     same(title(altLetGo.event(Released(57))).startsWith("Fine, that works too"), true, "Alt let go before a key waits for one key")
-    val altHeld = GuideFlow({ GuideSettings() })
-    altHeld.start("alt")
-    altHeld.event(altOn)
-    altHeld.event(Pushed(KEY_A))
-    same(altHeld.event(Released(57)), GuideVerdict.Wait, "Alt let go after a key is a hold")
 
     val quick = GuideFlow({ GuideSettings() })
     quick.start("holdsym")
@@ -671,19 +646,12 @@ private fun scenarios() {
 }
 
 private fun theCursorHasToMove() {
-    val flow = GuideFlow({ GuideSettings() })
-    flow.start("steer")
-    same(flow.event(FieldChanged("on and on", 4, 4)), GuideVerdict.Wait, "A cursor change before the drag starts means nothing")
-    same(flow.event(CursorStarted(false)), GuideVerdict.Stage(1), "The taps start the cursor, so sliding is next")
-    same(flow.event(FieldChanged("on and on", 4, 4)), GuideVerdict.Wait, "The first change sets the mark")
-    same(flow.event(FieldChanged("on and on", 3, 3)), GuideVerdict.Wait, "A nudge waits for the lift")
-    same(flow.event(Moved(0f, lifted = true)).let { it is GuideVerdict.Hint && it.passes && it.title!!.startsWith("A nudge") }, true,
-        "A nudge counts, with its own line")
     val far = GuideFlow({ GuideSettings() })
     far.start("steer")
-    far.event(CursorStarted(false))
+    same(far.event(FieldChanged("on and on", 4, 4)), GuideVerdict.Wait, "A cursor change before the drag starts means nothing")
+    same(far.event(CursorStarted(false)), GuideVerdict.Stage(1), "The taps start the cursor, so sliding is next")
     far.event(FieldChanged("on and on", 9, 9))
-    same(far.event(FieldChanged("on and on", 2, 2)), GuideVerdict.Done, "A real steer finishes it as it goes")
+    same(far.event(FieldChanged("on and on", 2, 2)), GuideVerdict.Done, "With nothing marked, a real steer finishes it as it goes")
 }
 
 private fun steeringToAWord() {
@@ -701,7 +669,7 @@ private fun steeringToAWord() {
     steer.seed("x".repeat(60), 10)
     steer.aim(30..33)
     steer.event(CursorStarted(false))
-    same(steer.instruction, "Slide the cursor into the orange word.", "With a word marked, the slide asks for it")
+    same(steer.instruction, "Now slide. Lift when the cursor's in it.", "With a word marked, the slide asks for it")
     steer.event(FieldChanged("x".repeat(60), 20, 20))
     same(title(steer.event(Moved(20f, lifted = true))).startsWith("Not there yet"), true, "Short of the word")
     steer.event(CursorStarted(false))
@@ -727,7 +695,7 @@ private fun grabbingABunch() {
     grab.event(FieldChanged(text, aim.first, aim.first + 5))
     same((grab.event(Moved(10f, lifted = true)) as GuideVerdict.Hint).text.startsWith("So close"), true, "Let go short")
     grab.event(CursorStarted(true))
-    same((grab.event(FieldChanged(text, 0, text.length)) as GuideVerdict.Hint).text.startsWith("Too greedy"), true, "Greedy, as it grows")
+    same((grab.event(FieldChanged(text, 0, text.length)) as GuideVerdict.Hint).text.startsWith("Easy. Just my heart"), true, "Greedy, as it grows")
     grab.event(FieldChanged(text, aim.first, aim.last + 1))
     same(grab.event(Moved(10f, lifted = true)), GuideVerdict.Done, "All of them as the finger lifts")
 }
@@ -756,7 +724,7 @@ private fun goingBack() {
     same(flow.back(), false, "Back from the first step does nothing")
     flow.start("swipe")
     same(flow.back(), true, "Back goes to the step before")
-    same(flow.step.id, "type", "The step before swiping is typing")
+    same(flow.step.id, "strip", "The step before swiping is the bar")
     flow.start("end")
     same(flow.back(), true, "Back from the end goes to the last chapter")
     same(flow.step.id, "clipboard", "The clipboard")

@@ -10,7 +10,7 @@ package com.atlas.keyboard
  * What a guide slide can teach, for its lock. [Typing] is a plain key that types: a letter, a digit, punctuation or Space.
  * [Backspace] is the key itself; the flick is [Flick].
  */
-internal enum class GuideLesson { Swipe, BarTap, BarHold, Flick, Cursor, Alt, Sym, HoldSymbol, Enter, Ctrl, Typing, Backspace }
+internal enum class GuideLesson { Swipe, BarTap, BarHold, Flick, Cursor, Alt, Sym, HoldSymbol, Enter, Ctrl, Typing, Backspace, DeleteHold }
 
 internal object GuideHooks {
     /** A short scene on the keyboard's own bar, for the guide. It types nothing, and any input on the keyboard ends it. */
@@ -28,6 +28,12 @@ internal object GuideHooks {
      * this on purpose, for the step that teaches the strip. One swipe uses it up.
      */
     @Volatile var nearMiss = false
+
+    /**
+     * Any word typed becomes the word that the guide's line has next, however far off it is, so the first slide has no way to fail
+     * (owner, v5). Only in the guide's field.
+     */
+    @Volatile var forceFix = false
 
     /**
      * The keyboard listens here, so that the guide can put it in the right menu when a step starts: the Sym panel open for a step
@@ -95,6 +101,16 @@ internal object GuideHooks {
 
     fun stripPointWord(word: String?) {
         stripPointWords?.invoke(word)
+    }
+
+    /** The word menu is open on the bar, in the guide's field. The keyboard sets it. A demo never plays over it (v5). */
+    @Volatile var menuOpen: (() -> Boolean)? = null
+
+    /** The keyboard listens here, so the guide closes the word menu as a slide changes. Only in the guide's field. */
+    @Volatile var menuCloses: (() -> Unit)? = null
+
+    fun closeMenu() {
+        menuCloses?.invoke()
     }
 
     /** How many words the bar shows now, or -1 outside the guide's field. The keyboard sets it. */

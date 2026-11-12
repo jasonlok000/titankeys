@@ -195,7 +195,7 @@ class SymPanel(
         grid.orientation = VERTICAL
         // Each row keeps all ten columns, so that the letter keys stay above the physical letter keys.
         // On the clipboard page, two wide fields take the place of the letter keys of each row, one over each half.
-        for ((index, row) in Layout.rows.take(3).withIndex()) grid.addView(LinearLayout(context).apply {
+        for ((index, row) in Layout.rows.take(3).withIndex()) grid.addView(AlignedRow(index).apply {
             for ((column, key) in row.withIndex()) {
                 val half = ClipboardHistory.halfAt(index, column)
                 if (half != null && index * 2 + half < ClipboardHistory.PER_PAGE && ClipboardHistory.firstColumn(index, half) == column) {
@@ -221,6 +221,26 @@ class SymPanel(
             insets
         }
         render()
+    }
+
+    /**
+     * A row of keys, each moved over its real key below the screen as Key calibration in TitanKeys Debug says. A key that would
+     * then pass the edge of the row stays centred over its key, and its content shrinks to fit. With the defaults nothing moves.
+     */
+    private inner class AlignedRow(private val row: Int) : LinearLayout(context) {
+        override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+            super.onLayout(changed, l, t, r, b)
+            val alignment = KeyCalibration.load(context)
+            val across = width.toFloat()
+            if (across <= 0f) return
+            for (index in 0 until childCount) {
+                val child = getChildAt(index)
+                val span = alignment.span(child.left / across, child.right / across, row)
+                child.offsetLeftAndRight(Math.round(span.centre * across - (child.left + child.right) / 2f))
+                child.scaleX = span.fit
+                child.scaleY = span.fit
+            }
+        }
     }
 
     /** The symbol or emoji on a letter key, or null if the key is blank. */

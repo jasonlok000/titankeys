@@ -48,30 +48,38 @@ object MenuKeys {
      */
     fun hovered(key: String) = if (key == Layout.BACKSPACE) BACK else button(key)
 
+
     /**
-     * Where a word stands, which sets what I and O do (owner, 2026-11-12). It is a ladder: I always moves the word one step up and
-     * O one step down, never two. Save adds it to Saved words, and Favourite puts it first among similar words: see [Favourites].
-     * A word the dictionary knows is [BuiltIn]: it can't be saved or unsaved, so its first step up is Favourite.
+     * Where a word stands, which sets what I and O do (owner, 2026-11-12). It is a ladder: I moves the word one step up and O one
+     * step down, never two.
+     * - [New]: not saved. It may be a word the keyboard learned from your typing, which isn't saved: only Save saves a word.
+     * - [Saved]: you pressed Save on it.
+     * - [BuiltIn]: the dictionary has it, so Save means nothing for it, and its first step up is Favourite.
+     * - [Favourite]: first among similar words, see [Favourites].
      */
     enum class Step { New, Saved, BuiltIn, Favourite }
 
     /**
      * What I and O can do. [Favourited] is I on a favourite: the top of the ladder, a spent heart that does nothing. [Unsave] takes
-     * a saved word back out of Saved words.
+     * a saved word back out, and [Forget] removes what the keyboard learned from your typing, such as a typo it picked up.
      */
     enum class Button { Save, Favourite, Favourited, Unfavourite, Unsave, Forget }
 
     /**
-     * A favourite, then a word the dictionary has, then a saved word, then any other word. A [blocked] word, one you forgot, is
-     * never suggested, so it is back at the bottom whatever the lists say: I saves it, which lets it back in.
+     * Where a word stands without its favourite: a dictionary word, then a saved one, then any other. A [blocked] word, one you
+     * forgot or blocked in Settings, is never suggested, so it is not saved, whatever the lists still say: Save lets it back in. A
+     * dictionary word stays one, blocked or not.
      */
-    fun step(saved: Boolean, builtIn: Boolean, favourite: Boolean, blocked: Boolean = false) = when {
-        blocked -> Step.New
-        favourite -> Step.Favourite
+    fun base(saved: Boolean, builtIn: Boolean, blocked: Boolean = false) = when {
         builtIn -> Step.BuiltIn
+        blocked -> Step.New
         saved -> Step.Saved
         else -> Step.New
     }
+
+    /** Where a word stands: a favourite, or its [base]. A blocked word lost its favourite when it was forgotten. */
+    fun step(saved: Boolean, builtIn: Boolean, favourite: Boolean, blocked: Boolean = false) =
+        if (favourite && !(blocked && !builtIn)) Step.Favourite else base(saved, builtIn, blocked)
 
     /** I's button, one step up: Save, then Favourite, then the spent heart. */
     fun first(step: Step) = when (step) {
@@ -81,26 +89,53 @@ object MenuKeys {
     }
 
     /**
-     * O's button, one step down: Unfavourite on a favourite, Unsave on a saved word, and Forget at the bottom, or nothing there for
-     * a word that no list can drop ([forget]).
+     * O's button, one step down: Unfavourite on a favourite, Unsave on a saved word, and at the bottom Forget, only for a word the
+     * keyboard [learned] from your typing. A word it never learned, and a dictionary word, have nothing on O.
      */
-    fun second(step: Step, forget: Boolean) = when (step) {
+    fun second(step: Step, learned: Boolean) = when (step) {
         Step.Favourite -> Button.Unfavourite
         Step.Saved -> Button.Unsave
-        Step.New, Step.BuiltIn -> Button.Forget.takeIf { forget }
+        Step.New -> Button.Forget.takeIf { learned }
+        Step.BuiltIn -> null
     }
 
     /**
-     * Where the word stands once [button] is picked at [step], one step from where it was. A favourite goes back to where it came
-     * from: [builtIn] for a word the dictionary has, or saved. The menu stays open on it, except after Forget: null.
+     * Where the word stands once [button] is picked at [step], one step from where it was. Unfavourite goes back to the word's
+     * [base], where it was before it was a favourite; Unsave to not saved, and nothing learned is left to forget. The menu stays
+     * open on it, except after Forget: null, and the bar says "Forgot" with its Undo.
      */
-    fun after(step: Step, button: Button, builtIn: Boolean): Step? = when (button) {
+    fun after(step: Step, button: Button, base: Step): Step? = when (button) {
         Button.Save -> Step.Saved
         Button.Favourite -> Step.Favourite
         Button.Favourited -> step
-        Button.Unfavourite -> if (builtIn) Step.BuiltIn else Step.Saved
+        Button.Unfavourite -> base
         Button.Unsave -> Step.New
         Button.Forget -> null
+    }
+
+    /**
+     * What the menu shows for a word: its [step], where Unfavourite takes it back to ([base]), and whether O can [forget] it at
+     * the bottom.
+     */
+    data class State(val step: Step, val base: Step, val forget: Boolean)
+
+    /**
+     * The menu for a word as it opens (owner, 2026-11-12): [saved] only if you pressed Save on it; [learned] if the keyboard
+     * picked it up from your typing; [builtIn] if the dictionary has it; [blocked] if you forgot it or blocked it. Only a learned
+     * word can be forgotten, and never a dictionary word or a single letter.
+     */
+    fun state(saved: Boolean, builtIn: Boolean, favourite: Boolean, blocked: Boolean, learned: Boolean, oneLetter: Boolean) =
+        State(step(saved, builtIn, favourite, blocked), base(saved, builtIn, blocked), learned && !builtIn && !oneLetter)
+
+    /**
+     * The menu after [button] is pressed at [state], or null when it closes, after Forget. Save leaves nothing to forget, as the
+     * word is saved, and Unsave takes what was learned of it too.
+     */
+    fun press(state: State, button: Button): State? = when (button) {
+        Button.Save -> State(Step.Saved, Step.Saved, false)
+        Button.Unsave -> State(Step.New, Step.New, false)
+        Button.Forget -> null
+        else -> after(state.step, button, state.base)?.let { state.copy(step = it) }
     }
 
     /** How far [button] moves a word: up 1 or 2, down 1, 2 or 3 (Forget, the heaviest), or 0 for the spent heart. See [Haptics]. */
@@ -113,44 +148,45 @@ object MenuKeys {
         Button.Forget -> -3
     }
 
-    /** The small mark by the word that shows its step: a heart on a favourite, a bookmark on a saved word, and none otherwise. */
-    enum class Mark { Heart, Bookmark }
-
-    fun mark(step: Step) = when (step) {
-        Step.Favourite -> Mark.Heart
-        Step.Saved -> Mark.Bookmark
-        Step.New, Step.BuiltIn -> null
+    /**
+     * Whether a finger hovering [column] shows a pill: I's and O's buttons do, where they have one. Back has none, no name and
+     * no highlight: just its arrow, which works on a press (owner, 2026-11-12).
+     */
+    fun pills(column: Int, step: Step, learned: Boolean) = when (column) {
+        SAVE -> true
+        FORGET -> second(step, learned) != null
+        else -> false
     }
 
-    // The first-time hint: the first few times the menu opens, each button's pill shows once, slowly, I's, then O's, then P's, and
-    // then the menu settles (owner, 2026-11-12). After that the pills show only while a finger hovers a button.
+    /**
+     * The little animations that take the badge's place (owner, 2026-11-12): each change of step plays one over the word, and the
+     * buttons show the step afterwards. Nothing stays on the bar. See [MenuMotion].
+     */
+    enum class Motion { BookmarkDrop, HeartBurst, HeartCrack, BookmarkTear, BookmarkFlick, HeartDrift }
 
-    /** How many times the menu opens with its hint. */
-    const val HINT_OPENS = 3
-    /** How long each pill stays, and the rest after it before the next, in ms. The pill grows and shrinks as a hover's does. */
-    const val HINT_SHOW_MILLIS = 1400L
-    const val HINT_REST_MILLIS = 350L
-    private const val HINT_EACH_MILLIS = HINT_SHOW_MILLIS + HINT_REST_MILLIS
-
-    /** Whether the menu opens with its hint, when it has opened with it [shown] times before. */
-    fun hints(shown: Int) = shown < HINT_OPENS
-
-    /** How long the whole hint takes for [slots] buttons, in ms. */
-    fun hintMillis(slots: Int) = slots * HINT_EACH_MILLIS
-
-    /** The column whose pill the hint shows at [elapsed] ms, over the buttons' [slots] in order, or -1 between pills and after. */
-    fun hint(elapsed: Long, slots: List<Int>): Int {
-        if (elapsed < 0) return -1
-        val index = (elapsed / HINT_EACH_MILLIS).toInt()
-        if (index >= slots.size) return -1
-        return if (elapsed - index * HINT_EACH_MILLIS < HINT_SHOW_MILLIS) slots[index] else -1
+    /**
+     * What plays as the word goes from [from] to [to], or as the menu opens on it when [from] is null: a quick, subtle replay for a
+     * saved word or a favourite, and nothing for the others.
+     */
+    fun motion(from: Step?, to: Step): Motion? = when {
+        from == null -> when (to) {
+            Step.Saved -> Motion.BookmarkFlick
+            Step.Favourite -> Motion.HeartDrift
+            else -> null
+        }
+        from == to -> null
+        to == Step.Favourite -> Motion.HeartBurst
+        from == Step.Favourite -> Motion.HeartCrack
+        to == Step.Saved -> Motion.BookmarkDrop
+        from == Step.Saved -> Motion.BookmarkTear
+        else -> null
     }
 
     /**
      * The hovered button's pill: it grows left from its key's column to hold the action's name, and covers the buttons to its
-     * left. The word slides to stay centred in the room left of it. In pixels on a bar [width] wide with [side] at each edge:
-     * [label] is the name's width and [icon] the icon's; [padLeft] and [padRight] are the room at the pill's ends, and [gap] is
-     * between the name and the icon. Returns its left and right.
+     * left, and the end of a long word, which fades under its leading edge. In pixels on a bar [width] wide with [side] at each
+     * edge: [label] is the name's width and [icon] the icon's; [padLeft] and [padRight] are the room at the pill's ends, and [gap]
+     * is between the name and the icon. Returns its left and right.
      */
     fun pill(width: Float, side: Float, column: Int, label: Float, icon: Float, padLeft: Float, gap: Float, padRight: Float): Pair<Float, Float> {
         val (left, right) = slot(width, side, column)
@@ -158,7 +194,10 @@ object MenuKeys {
         return end - padRight - icon - gap - label - padLeft to end
     }
 
-    /** Where the word is centred: in the room from [left] to [right], the space left of the buttons or of a hovered pill. */
+    /**
+     * Where the word is centred: in the room from [left] to [right], left of the buttons. It is placed once, as the menu opens,
+     * and never moves for a pill or an animation (owner, 2026-11-12).
+     */
     fun wordCentre(left: Float, right: Float) = (left + right) / 2
 
     /**

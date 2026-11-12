@@ -163,6 +163,10 @@ final class LanguageHabits {
     }
     List<Entry> entries() { return new ArrayList<>(words.values()); }
     List<Entry> active(int day) { ArrayList<Entry> result = new ArrayList<>(); for (Entry entry : words.values()) if (entry.active(day) && SuggestionPolicy.allowed(entry.word)) result.add(entry); return result; }
+    /** The words you saved with Save, in Settings or the word menu: not the ones learned from your typing. */
+    java.util.Set<String> addedWords() { java.util.Set<String> result = new java.util.HashSet<>(); for (Entry entry : words.values()) if (entry.added) result.add(entry.word); return result; }
+    /** The words learned from your typing, which you never saved: a picked-up typo is one, until Forget takes it out. */
+    java.util.Set<String> learnedWords() { java.util.Set<String> result = new java.util.HashSet<>(); for (Entry entry : words.values()) if (!entry.added) result.add(entry.word); return result; }
     java.util.Set<String> activeWords(int day) { java.util.Set<String> result = new java.util.HashSet<>(); for (Entry entry : active(day)) result.add(entry.word); return result; }
     String restoreCase(String word, int day) {
         Entry entry = words.get(SwipeWords.normalise(word));

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Draws the word menu at each step of its ladder, hovered and not, a long word, and the first-time hint, to PNGs, with the real
+# Draws the word menu at each step of its ladder, hovered and not, long words, and frames of each animation, to PNGs, with the real
 # MenuKeys and the app's own icons, to look at without the phone. Usage: bash tests/menu-render/run.sh [folder]. Not a check.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -16,5 +16,5 @@ for line in "Action.Save -> R.drawable.menu_save" "Action.Favourite -> R.drawabl
   grep -qF "$line" "$keyboard/Strip.kt" || { echo "Strip.kt's icons changed: $line"; exit 1; }
 done
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}/platforms/android-36/android.jar" -d "$work" \
-  "$keyboard/MenuKeys.kt" "$keyboard/Layout.kt" tests/menu-render/MenuRender.kt
+  "$keyboard/MenuKeys.kt" "$keyboard/MenuMotion.kt" "$keyboard/Layout.kt" tests/menu-render/MenuRender.kt
 java -Djava.awt.headless=true -cp "$work:$stdlib" com.atlas.keyboard.MenuRenderKt "$out" android/src/main/res/drawable android/src/main/res/values/strings.xml

@@ -9,7 +9,7 @@ package com.atlas.keyboard
  * The columns are the Sym panel's: ten of them, [Layout.KEY_SIDE_DP] in from each side of the screen, so that a button sits centred
  * over its own key. [slot] and [wordRight] work them out in pixels, so they can be checked without a phone.
  */
-internal object MenuKeys {
+object MenuKeys {
     /** The rows of letters that pick the menu's buttons: the top two. */
     const val ROWS = 2
     /** The columns of the buttons: I, O and P on the top row. */

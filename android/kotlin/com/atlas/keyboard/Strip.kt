@@ -42,7 +42,7 @@ class Strip(
          * The menu of a held word, at [step]: see [MenuKeys.Step]. [forget] is false for a word that no list can drop. Its I and O
          * buttons are [first] and [second], and P is Back.
          */
-        internal data class Menu(override val word: String, val forget: Boolean, val step: MenuKeys.Step = MenuKeys.Step.New) : Notice {
+        data class Menu(override val word: String, val forget: Boolean, val step: MenuKeys.Step = MenuKeys.Step.New) : Notice {
             val first get() = MenuKeys.first(step).action
             val second get() = MenuKeys.second(step, forget)?.action
         }

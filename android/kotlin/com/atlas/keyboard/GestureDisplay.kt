@@ -970,6 +970,19 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         fun dotStepMillis(dots: Int, scale: Float) = max(FLICK_OUT * DOT_STAGGER * scale / dots, DOT_LAND_GAP)
 
         /**
+         * When a lifted hold's dots land, in ms after the lift, for a hold whose words had [letters] each, as the bar plans them.
+         * The haptics lab's simulated hold ticks on these.
+         */
+        fun holdLandings(letters: List<Int>, scale: Float = 1f, speedUp: Boolean = false): List<Long> {
+            val display = GestureDisplay()
+            display.speedUp = speedUp
+            display.deleteHeld(0, 1)
+            for (count in letters) display.wordDeleted(1, count)
+            if (!display.deleteEnded(1)) return emptyList()
+            return display.dotLandings(scale)
+        }
+
+        /**
          * How long [dots] take to go into the caret, in real ms at animator [scale]: the last one's step plus its own way. That's
          * max(450 × scale, 202.5 × scale + 30 × dots), so the owner's 450 ms stays for up to eight dots.
          */

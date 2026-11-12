@@ -83,14 +83,46 @@ object HapticTimeline {
      * The live timeline's top line for [event], with [name] its haptic's name: the name and family, or for a held delete its
      * word and length, "Held delete word 5 · Texture 13 ms", and "no fade" when the lab's fade switch was off.
      */
-    fun title(event: HapticEvent, name: String) = if (event.word == null) "$name · ${event.haptic.family.label}"
-        else "Held delete word ${event.word} · ${event.haptic.family.label} ${event.pattern.first()} ms" + if (event.fading) "" else " · no fade"
+    fun title(event: HapticEvent, name: String) = when {
+        event.word != null ->
+            "Held delete word ${event.word} · ${event.haptic.family.label} ${event.pattern.first()} ms" + if (event.fading) "" else " · no fade"
+        event.dot != null -> "Hold's dot ${event.dot} of ${event.dots} · ${event.haptic.family.label} ${event.pattern.first()} ms"
+        else -> "$name · ${event.haptic.family.label}"
+    }
 
-    /** The line under it: what set it off, or why it didn't play. A thinned tick is the fade's plan, so it isn't "dropped". */
+    /**
+     * The line under it: what set it off, or why it didn't play. A thinned tick is the fade's plan, and a dot near a word's tick
+     * is the hold's rule ([HoldTicks]), so neither is "dropped".
+     */
     fun outcome(event: HapticEvent) = when {
         event.result.played -> trigger(event.haptic)
         event.result == HapticResult.Thinned -> event.result.words
+        event.result == HapticResult.NearWord -> "skipped: ${event.result.words}"
         else -> "dropped: ${event.result.words}"
+    }
+
+    /** A delete's dots landing, which the lab draws in their own colour, as dots. */
+    fun isDot(haptic: Haptic) = haptic == Haptic.DeleteDotsLand
+
+    /** The short label on a hold's dot [number], for the row of dots on the timeline: "3", "3 skipped: near a word" or "3 dropped: busy". */
+    fun dotLabel(number: Int, result: HapticResult) = when (result) {
+        HapticResult.Played -> "$number"
+        HapticResult.NearWord -> "$number skipped: ${HoldTicks.NEAR_WORD}"
+        else -> "$number dropped: ${result.words}"
+    }
+
+    /**
+     * The words under the fade's strip for [plan]: the pause, how many words and dots, and how many ticks the rule skipped.
+     * "Still 400 ms, then the flick and 10 words, the lift, and 30 dots. 0 dots skipped near a word."
+     */
+    fun planWords(plan: HoldTicks.Plan): String {
+        val words = plan.ticks.count { it.kind == HoldTicks.Kind.Word }
+        val dots = plan.ticks.filter { it.kind == HoldTicks.Kind.Dot }
+        val skipped = dots.count { !it.plays }
+        val after = if (dots.isEmpty()) "no dots: animations are off, so they don't tick"
+            else "${dots.size} dots from ${dots.first().at - plan.liftAt} ms after it"
+        return "Still ${plan.pauseMillis} ms, then the flick and $words words, the lift, and $after. " +
+            "$skipped ${if (skipped == 1) "dot" else "dots"} skipped near a word."
     }
 
     /** The live timeline shows the last 5 s, and the list under it the last 15 haptics. */

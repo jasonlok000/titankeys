@@ -68,6 +68,12 @@ internal const val GUIDE_FLICK_END_X = .62f
 
 /** A finger that stays this long after a delete flick starts deleting more words. Real flicks lift long before this. */
 private const val HOLD_MILLIS = 400L
+
+/**
+ * How long the finger stays still after a delete flick before the hold takes its first word. The hold and the haptics lab's
+ * simulated hold both read it here, so a change to the pause moves both.
+ */
+internal fun deleteHoldPauseMillis() = HOLD_MILLIS
 /** The finger counts as staying while it is this close to where it stopped, in key widths. */
 private const val HOLD_KEYS = .25f
 /** The wait between words after a short flick, close to how quickly a person flicks again by hand. */
@@ -109,7 +115,7 @@ internal val deleteSwipeTuning: Map<String, Any> get() = mapOf(
     "innerEdge" to INNER_EDGE, "middleRowTop" to MIDDLE_ROW_TOP, "innerStartBottom" to INNER_START_BOTTOM,
     "innerEndBottom" to INNER_END_BOTTOM, "innerTilt" to INNER_TILT, "innerWander" to INNER_WANDER,
     "minTravel" to MIN_TRAVEL, "turnBack" to TURN_BACK, "deleteRectangle" to DELETE_RECTANGLE,
-    "deleteHoldMillis" to HOLD_MILLIS, "deleteHoldKeys" to HOLD_KEYS, "deleteRepeatSlowMillis" to REPEAT_SLOW_MILLIS,
+    "deleteHoldMillis" to deleteHoldPauseMillis(), "deleteHoldKeys" to HOLD_KEYS, "deleteRepeatSlowMillis" to REPEAT_SLOW_MILLIS,
     "deleteRepeatFastMillis" to REPEAT_FAST_MILLIS, "deleteRepeatShortKeys" to REPEAT_SHORT_KEYS,
     "deleteRepeatLongKeys" to REPEAT_LONG_KEYS, "deleteMaxPathKeys" to MAX_PATH_KEYS, "deleteMaxMillis" to MAX_FLICK_MILLIS,
 )
@@ -158,7 +164,7 @@ internal class DeleteHold(private val contact: Contact) {
         still = held
         origin = points.first()
         repeatMillis = repeatMillis(keysFrom(points.first(), held))
-        return held.time + HOLD_MILLIS
+        return held.time + deleteHoldPauseMillis()
     }
 
     /**
@@ -183,7 +189,7 @@ internal class DeleteHold(private val contact: Contact) {
     fun step(now: Long, free: Boolean, delete: (Contact.Outcome.Swipe?) -> Unit): Long? {
         if (!contact.deleting) {
             if (started) return null
-            val at = (still ?: return null).time + HOLD_MILLIS
+            val at = (still ?: return null).time + deleteHoldPauseMillis()
             if (now < at) return at
             if (!free) return now + BUSY_MILLIS
             delete(contact.holdDelete(now) ?: return null)

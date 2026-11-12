@@ -468,6 +468,8 @@ private fun chapterOne() {
     same(GUIDE_STEPS.filter { it.chapter !in NEW_LAYOUT }.all { it.lessons == null }, true,
         "The chapters not in the new layout yet lock nothing")
     same(typing.map { it.sides }, listOf(false, true, true, true), "Only the first slide shows just the bar's middle word")
+    same(GUIDE_STEPS.first { it.id == "menu" }.stages[1].labels, mapOf("I" to "Save", "O" to "Forget", "P" to "Back"),
+        "The word menu's keys say their buttons on the drawing")
     val typos = TYPING_TYPOS.split(' ')
     val words = TYPING_TEXT.split(' ').take(typos.size)
     same(typos.size, 14, "The first sentence, word for word")

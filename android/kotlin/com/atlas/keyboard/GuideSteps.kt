@@ -501,7 +501,13 @@ internal class GuideMemory {
  * One instruction of a slide. A slide teaches one thing at a time: it shows only the instruction that is needed now, and moves on,
  * or back, as the keyboard changes. [cue] replaces the slide's own ghost while this instruction shows.
  */
-internal class GuideStage(val text: String, val cue: GuideCue? = null, val check: GuideMemory.(KeyboardEvent) -> GuideVerdict)
+internal class GuideStage(
+    val text: String,
+    val cue: GuideCue? = null,
+    /** What the drawing of the keys shows on some keys while this instruction shows, in place of their letters; the rest dim. */
+    val labels: Map<String, String>? = null,
+    val check: GuideMemory.(KeyboardEvent) -> GuideVerdict,
+)
 
 /** The check of a slide made of [stages]: each stage's check runs while it shows, and Done moves to the next stage. */
 private fun staged(stages: List<GuideStage>): GuideMemory.(KeyboardEvent) -> GuideVerdict = check@{ event ->
@@ -621,6 +627,8 @@ private const val KEY_ENTER = 66
 private val ALT_KEYS = setOf(57, 58)
 /** A steer that moves the cursor this far is no nudge. */
 private const val CURSOR_TRAVEL = 3
+/** The word menu's buttons, on the keys that pick them, as the drawing of the keys shows them while the menu is open. */
+internal val MENU_LABELS = mapOf("I" to "Save", "O" to "Forget", "P" to "Back")
 /** I, O, P, K and L: the keys that pick the word menu's buttons. */
 private val MENU_KEYS = setOf(37, 43, 44, 39, 40)
 /** Swiped words that pass the swipe slide. */
@@ -868,7 +876,8 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Rest on I, O or P, then press it.") { event ->
+            // The keys that pick the menu's buttons say so on the drawing, so nobody has to remember which is which.
+            GuideStage("Pick one. Its key is lit below.", GuideCue.Spot(MENU_LABELS.keys.toList()), MENU_LABELS) { event ->
                 when {
                     // Save and Forget do nothing in the guide, and it says so. Any pick passes.
                     event is MenuPicked && (event.action == "Save" || event.action == "Forget") ->
@@ -1397,6 +1406,8 @@ internal class GuideFlow(
     val stage get() = memory.stage
     val instruction get() = step.stages.getOrNull(memory.stage)?.text ?: step.body
     val cue get() = step.stages.getOrNull(memory.stage)?.cue ?: step.cue
+    /** What the drawing of the keys shows on its keys now, if anything. See [GuideStage.labels]. */
+    val labels get() = step.stages.getOrNull(memory.stage)?.labels
     /** What the slide counted, such as which ways the groups slide was used. */
     val counted get() = memory.used
 

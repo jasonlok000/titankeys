@@ -42,6 +42,8 @@ private class Frame(
     val end: Int = start,
     val ghost: String = "",
     val panel: String? = null,
+    /** What the drawing of the keys shows on some keys, in place of their letters. See [GuideStage.labels]. */
+    val labels: Map<String, String>? = null,
 )
 
 /** A mistake for each slide, as the keyboard reports it, so a drawing shows the chip that it gets. */
@@ -123,7 +125,10 @@ private fun framesFor(step: GuideStep): List<Frame> {
     // Each later instruction, as the slide moves on to it.
     for ((index, stage) in step.stages.withIndex().drop(1)) {
         val panel = if (step.usesPanel && index > 0 && step.id != "alt") "Sym panel open" else null
-        frames += frame("2-stage${index + 1}", step.title, stage.text, panel = panel)
+        frames += frame("2-stage${index + 1}", step.title, stage.text, panel = panel).let {
+            if (stage.labels == null) it else Frame(it.name, it.chapter, it.title, it.line, it.chip, it.passed, it.field, it.start, it.end,
+                it.ghost, it.panel, stage.labels)
+        }
     }
     // A real mistake: its chip over the instruction.
     MISTAKES[step.id]?.let { events ->
@@ -283,7 +288,7 @@ private fun draw(frame: Frame, file: File) {
     g.color = rgb(Paint.CREAM, .35f)
     g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(12))
     g.drawString("(free room)", side, (y + keysTop) / 2)
-    drawKeys(g, keysTop, side, frame.panel)
+    drawKeys(g, keysTop, side, frame.panel, frame.labels)
     g.dispose()
     ImageIO.write(image, "png", file)
 }
@@ -365,7 +370,7 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
     }
 }
 
-private fun drawKeys(g: Graphics2D, top: Int, side: Int, panel: String?) {
+private fun drawKeys(g: Graphics2D, top: Int, side: Int, panel: String?, labels: Map<String, String>? = null) {
     val width = (WIDTH - 2 * side) / 10f
     val row = dp(50)
     g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(16))
@@ -373,11 +378,20 @@ private fun drawKeys(g: Graphics2D, top: Int, side: Int, panel: String?) {
         val y = top + index * row
         if (index < 3) for ((column, key) in keys.withIndex()) {
             val x = side + column * width
-            g.color = rgb(Paint.CREAM, .09f)
+            // With labels, a labelled key shows its label, lit, and a letter without one is an empty, faint key.
+            val labelled = labels?.get(key)
+            val faint = labels != null && labelled == null && Layout.isLetter(key)
+            g.color = if (labelled != null) orange else rgb(Paint.CREAM, if (faint) .04f else .09f)
             g.fill(RoundRectangle2D.Float(x + dp(2), y + dp(2).toFloat(), width - dp(4), row - dp(4).toFloat(), dp(8).toFloat(), dp(8).toFloat()))
-            g.color = rgb(Paint.CREAM, .6f)
-            val text = if (key.length == 1) key else key.take(3)
+            g.color = if (labelled != null) ink else rgb(Paint.CREAM, .6f)
+            val font = g.font
+            if (labelled != null) {
+                g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(11))
+                if (g.fontMetrics.stringWidth(labelled) > width - dp(6)) mark(g, "KEY LABEL TOO LONG", y)
+            }
+            val text = labelled ?: if (faint) "" else if (key.length == 1) key else key.take(3)
             g.drawString(text, x + width / 2 - g.fontMetrics.stringWidth(text) / 2, y + row / 2f + dp(6))
+            g.font = font
         }
     }
     if (panel != null) {

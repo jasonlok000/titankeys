@@ -1492,6 +1492,7 @@ class GuideActivity : Activity() {
         // Once a slide is passed nothing glows any more, as Space did on the first slide.
         val shown = ghostCue(if (playground || passed) GuideCue.Free else flow.cue)
         if (shown != keys.cue) keys.show(shown)
+        keys.face = if (playground || passed) null else flow.labels
         showGhost()
     }
 

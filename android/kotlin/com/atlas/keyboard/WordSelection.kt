@@ -39,6 +39,12 @@ object WordSelection {
     fun anyToSteer(before: CharSequence, after: CharSequence) = before.isNotEmpty() || after.isNotEmpty()
 
     /**
+     * Where a double space puts the cursor when text from [start] to [end] is selected: back where it was before the select,
+     * [before], when that is known and inside the selection, or else at the selection's end.
+     */
+    fun collapseTo(start: Int, end: Int, before: Int?) = before?.takeIf { it in start..end } ?: end
+
+    /**
      * The selection after one word of a word drag towards [direction], -1 or 1. It grows by a word. If it has already
      * grown the other way past the [anchorStart] to [anchorEnd] that the drag began with, it gives back a word instead.
      */

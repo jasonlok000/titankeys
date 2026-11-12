@@ -17,7 +17,7 @@ test("only a debug package has the lab", () => {
 test("every lab operation refuses outside a debug package", () => {
   const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
   const operations = [...adapter.matchAll(/^\s+"(lab\w+)" -> \{?\s*(.*)$/gm)];
-  expect(operations.map(match => match[1]).sort()).toEqual(["labExperiment", "labGraph"]);
+  expect(operations.map(match => match[1]).sort()).toEqual(["labDeleteGlow", "labExperiment", "labFlickHold", "labGraph", "labPlayFlick"]);
   for (const [line, , body] of operations) {
     const first = body || adapter.slice(adapter.indexOf(line) + line.length).trimStart().split("\n")[0];
     expect(first.startsWith("lab().")).toBe(true);
@@ -146,7 +146,7 @@ test("any key or touch cuts a flick's dots and the dot ticks still to come, at t
   expect(ime).toContain("if (strip?.gesture?.softDelete != true) interruptGesture()");
   expect(ime).toContain("if (!(outcome is Contact.Outcome.Swipe && outcome.deletesWord) && strip?.gesture?.softDelete == true) interruptGesture()");
   // A hold takes the bar from them, and their ticks stop with it.
-  expect(ime).toMatch(/haptics\.cutDots\(\)\s+strip\?\.gesture\?\.deleteHeld\(/);
+  expect(ime).toMatch(/haptics\.cutDots\(\)\s+deleteWall\.left\(\)\s+strip\?\.gesture\?\.let \{ gesture ->[^}]*gesture\.deleteHeld\(/);
 });
 
 test("taps that find no word, and steering with no text, do nothing but play Nothing to pick", () => {
@@ -215,25 +215,39 @@ test("the held delete fade is a debug experiment: release never fades, and the l
   expect(read("android/kotlin/com/atlas/keyboard/HapticTimeline.kt")).toContain('" · no fade"');
 });
 
-test("only a debug package reads or saves a tried hold pause, and the lab's screen tries it live", () => {
-  const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
-  // Every other build returns before it looks at the stored pause, so the one pause function keeps its default.
-  expect(haptics).toMatch(/fun readHoldPause\(context: Context\) \{\s+if \(!debug\(context\)\) return\n/);
-  expect(haptics).toMatch(/fun tryHoldPause\(context: Context, millis: Long\?\) \{\s+check\(debug\(context\)\)/);
-  expect(haptics.match(/getLong\(HOLD_PAUSE_KEY/g)?.length).toBe(1);
-  const users = [...new Bun.Glob("**/*.{kt,java}").scanSync(join(root, "android"))].filter(path =>
-    read(join("android", path)).includes("Haptics.tryHoldPause"));
-  expect(users.map(path => path.replaceAll("\\", "/"))).toEqual(["kotlin/com/atlas/keyboard/HapticsLab.kt"]);
-  // A quarter of the 400 ms it was, in the one pause function, and each hold reads the pause in use as it starts.
+test("a held delete waits 400 ms, with no slider for it", () => {
+  // The owner tried 100 ms and went back to 400 (2026-11-12): it is simply the pause, in every build.
   const swipe = read("android/kotlin/com/atlas/keyboard/DeleteSwipe.kt");
-  expect(swipe).toContain("private const val HOLD_MILLIS = 100L");
-  expect(swipe).toContain("internal fun deleteHoldPauseMillis() = triedHoldPauseMillis ?: HOLD_MILLIS");
-  expect(swipe.match(/triedHoldPauseMillis = /g)).toBeNull();
-  expect(haptics.match(/triedHoldPauseMillis = /g)?.length).toBe(1);
-  expect(read("android/kotlin/com/atlas/keyboard/AtlasIme.kt")).toMatch(/Haptics\.readHoldPause\(this\)\s+val at = deleteHold\.moved\(/);
-  const screen = read("android/kotlin/com/atlas/keyboard/HapticsLabActivity.kt");
-  expect(screen).toContain("bar = slider(HOLD_PAUSE_RANGE) { millis ->");
-  expect(screen).toContain("lab.tryHoldPause(null)");
+  expect(swipe).toContain("private const val HOLD_MILLIS = 400L");
+  expect(swipe).toContain("internal fun deleteHoldPauseMillis() = HOLD_MILLIS");
+  for (const path of ["android/kotlin/com/atlas/keyboard/Haptics.kt", "android/kotlin/com/atlas/keyboard/HapticsLab.kt",
+    "android/kotlin/com/atlas/keyboard/HapticsLabActivity.kt", "android/kotlin/com/atlas/keyboard/AtlasIme.kt",
+    "android/src/main/res/values/strings.xml", "lib/atlas.ts"]) expect(read(path)).not.toMatch(/readHoldPause|tryHoldPause|HOLD_PAUSE|hold_pause|holdPause/);
+});
+
+test("only a debug package reads or saves a tried flick dots wait, and the lab's page tries and plays it", () => {
+  const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
+  // Every other build returns before it looks at the stored wait, so the bar keeps its default.
+  expect(haptics).toMatch(/fun readFlickHold\(context: Context\) \{\s+if \(!debug\(context\)\) return\n/);
+  expect(haptics).toMatch(/fun tryFlickHold\(context: Context, millis: Long\?\) \{\s+check\(debug\(context\)\)/);
+  expect(haptics.match(/getLong\(FLICK_HOLD_KEY/g)?.length).toBe(1);
+  expect(haptics.match(/GestureDisplay\.triedFlickHold = /g)?.length).toBe(1);
+  const display = read("android/kotlin/com/atlas/keyboard/GestureDisplay.kt");
+  expect(display).toContain("fun flickHoldMillis() = triedFlickHold ?: FLICK_HOLD");
+  expect(display).toContain("val FLICK_HOLD_RANGE = 0L..600L");
+  // Only a single flick's dots wait the tried time; a lifted hold's keep the default.
+  expect(display).toContain("val wait = if (b == 0 && fromHold) FLICK_HOLD else flickHoldMillis()");
+  expect(read("android/kotlin/com/atlas/keyboard/AtlasIme.kt")).toMatch(/Haptics\.readFlickHold\(this\)/);
+  // On the lab's main page, in Experiments, where the owner looks, with Play.
+  const page = read("app/settings/haptics-lab.tsx");
+  const experiments = page.slice(page.indexOf('<Section title="Experiments">'), page.indexOf('<Section title="Patterns">'));
+  expect(experiments).toContain('<Field label="Flick dots wait"');
+  expect(experiments).toContain(">Play</Button>");
+  expect(experiments).toContain('<Toggle label="Tick at delete zones"');
+  // The places a held delete's glow can go, as a list, with the right edge the default in every other build.
+  expect(page).toContain('<Section title="Delete glow">');
+  expect(haptics).toMatch(/if \(!debug\(context\)\) GestureDisplay\.DeleteGlow\.RightEdge/);
+  expect(page).toContain("const WAIT_MAX = 600;");
 });
 
 test("the held delete fade sits in Experiments, next to the dots speed-up, through the same operation", () => {

@@ -35,6 +35,11 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
     Back("back", "Back", listOf(35, 40, 15)),
     /** Three quick hard pulses: no, nothing happened. */
     No("no", "No", listOf(25, 40, 25, 40, 25)),
+    /**
+     * A hit that bounces and settles, each pulse shorter: a gesture hit a wall, the end of what it can do (owner, 2026-11-12).
+     * The owner's start was 40, 30, 20, 20, 12; the gaps are 35 so each bounce still reads on its own.
+     */
+    Wall("wall", "Wall", listOf(40, 35, 20, 35, 12)),
     /** Short, short, long: two light taps settle into a firm one. The word menu kept the word. */
     Saved("saved", "Saved", listOf(20, 40, 20, 40, 50)),
     /** Long, short, short: a firm hit that trails off, Saved's mirror. The word menu took the word away. */
@@ -70,7 +75,15 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     /** A flick's dots, or a hold's at its lift, going into the caret: a light tick as each one lands. */
     DeleteDotsLand("delete_dots_land", HapticGroup.Delete, Family.Texture),
     DeleteWord("delete_word", HapticGroup.Delete, Family.Texture),
+    /** A flick with nothing at all to delete: nothing happened. */
     DeleteNothing("delete_nothing", HapticGroup.Delete, Family.No),
+    /** A held delete took the last word: it hit the start of the text. It plays once, and the hold stays quiet after it. */
+    DeleteRanOut("delete_ran_out", HapticGroup.Delete, Family.Wall),
+    /**
+     * A held delete's finger went into the pause zone, or reached the top-speed line: one firm tick, once each time it gets
+     * there. The Haptics lab's experiment "Tick at delete zones" turns it off.
+     */
+    DeleteZone("delete_zone", HapticGroup.Delete, Family.Boundary),
 
     /** A Space tap that the gesture code counted, so each tap of a double or triple tap is felt as it lands. */
     SpaceTap("space_tap", HapticGroup.Space, Family.Texture),
@@ -88,7 +101,10 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     CursorLetter("cursor_letter", HapticGroup.Space, Family.Texture),
     CursorSpace("cursor_space", HapticGroup.Space, Family.Boundary),
     SelectionWord("selection_word", HapticGroup.Space, Family.Boundary),
-    CursorEnd("cursor_end", HapticGroup.Space, Family.No),
+    /** Steering hit the start or end of the text. Once each time it gets there, as [CursorSteps] has it. */
+    CursorEnd("cursor_end", HapticGroup.Space, Family.Wall),
+    /** Selecting reached the start or end of the text. Once each time it gets there, as [WallHits] has it. */
+    SelectionEnd("selection_end", HapticGroup.Space, Family.Wall),
 
     /** Autocorrect changed a word, or shorthand was spelled out, which goes the same way. */
     Autocorrect("autocorrect", HapticGroup.Changes, Family.Change),
@@ -534,9 +550,29 @@ object HapticFeed {
 }
 
 /**
+ * The rule for hitting a wall, the same in all three gestures: the first time a gesture meets its limit it plays [Haptic]s of
+ * the Wall family, and while the finger keeps pushing it stays quiet. Only after it has moved away does the next hit play again.
+ */
+class WallHits {
+    private var hit = false
+
+    /** The gesture met its limit: true the first time, false while it stays there. */
+    fun reached(): Boolean {
+        if (hit) return false
+        hit = true
+        return true
+    }
+
+    /** The gesture moved away from its limit, so the next time it gets there plays again. */
+    fun left() {
+        hit = false
+    }
+}
+
+/**
  * What the cursor plays as it steps while steering. A space or a line end is a boundary between words, and every other
  * character is texture. Punctuation gets no tick of its own: it almost always sits next to a space, whose tick already marks
- * the end of the word. At the start or end of the text the cursor can't move, so it plays no, once each time it gets there.
+ * the end of the word. At the start or end of the text the cursor can't move, so it hits a wall, once each time it gets there.
  */
 class CursorSteps {
     private var atEnd = false
@@ -699,6 +735,24 @@ class Haptics(private val context: Context) {
         }
     }
 
+    /**
+     * Plays a flick as [flick] would, its tail at [poppedMillis] and a tick at each of [landings], with no switch or gate, for the
+     * lab's Play. Each shows on the lab's live timeline as it comes. A new Play drops the ticks of the last one still to come.
+     */
+    fun previewFlick(poppedMillis: Long?, landings: List<Long>) {
+        val pattern = pattern(context, Family.GoneFlick)
+        val head = pattern[0]
+        val tailAt = poppedMillis?.coerceIn(head + pattern[1], head + HapticPalette.GAP_MILLIS.last) ?: (head + pattern[1])
+        val played = listOf(head, tailAt - head) + pattern.drop(2)
+        vibrate(played)
+        report(Haptic.DeleteFlick, played, HapticResult.Played)
+        val texture = pattern(context, Family.Texture)
+        previewTicks.schedule(DotTicks.times(landings, tailAt)) {
+            vibrate(texture)
+            report(Haptic.DeleteDotsLand, texture, HapticResult.Played)
+        }
+    }
+
     /** Any key or touch cuts the dots at once, and with them the ticks still to come. */
     fun cutDots() = dotTicks.cut()
 
@@ -785,24 +839,54 @@ class Haptics(private val context: Context) {
         private const val DOTS_SPEED_UP = "debug_dots_speed_up"
 
         /**
-         * In TitanKeys Debug, puts the pause before a held delete that the Haptics lab's slider tried into
-         * [deleteHoldPauseMillis], or the default when none is tried. Every other build never looks, and keeps the default.
+         * The Haptics lab's experiment "Tick at delete zones": a held delete ticks once as its finger goes into the pause zone,
+         * and once as it reaches the top-speed line. On by default (owner, 2026-11-12). Only TitanKeys Debug reads the lab's
+         * switch, and every other build has it on without looking.
          */
-        fun readHoldPause(context: Context) {
+        fun zoneTicks(context: Context) = !debug(context) || preferences(context).getBoolean(ZONE_TICKS, true)
+
+        fun tryZoneTicks(context: Context, on: Boolean) {
+            check(debug(context)) { "Only TitanKeys Debug has the lab's experiments" }
+            preferences(context).edit().putBoolean(ZONE_TICKS, on).apply()
+        }
+
+        private const val ZONE_TICKS = "debug_delete_zone_ticks"
+
+        /**
+         * The Haptics lab's list "Delete glow": where a held delete's glow goes. Only TitanKeys Debug reads it, and every other
+         * build has the right edge, the default.
+         */
+        fun deleteGlow(context: Context): GestureDisplay.DeleteGlow =
+            if (!debug(context)) GestureDisplay.DeleteGlow.RightEdge
+            else GestureDisplay.DeleteGlow.of(preferences(context).getString(DELETE_GLOW, null))
+
+        fun tryDeleteGlow(context: Context, place: GestureDisplay.DeleteGlow) {
+            check(debug(context)) { "Only TitanKeys Debug has the lab's experiments" }
+            preferences(context).edit().putString(DELETE_GLOW, place.id).apply()
+        }
+
+        private const val DELETE_GLOW = "debug_delete_glow"
+
+        /**
+         * In TitanKeys Debug, puts how long a single flick's dots sit on the bar, as the Haptics lab tried it, into
+         * [GestureDisplay.triedFlickHold], or the default when none is tried. Every other build never looks, and keeps the default.
+         */
+        fun readFlickHold(context: Context) {
             if (!debug(context)) return
-            triedHoldPauseMillis = preferences(context).getLong(HOLD_PAUSE_KEY, -1L).takeIf { it >= 0 }?.coerceIn(HOLD_PAUSE_RANGE)
+            GestureDisplay.triedFlickHold = preferences(context).getLong(FLICK_HOLD_KEY, -1L).takeIf { it >= 0 }
+                ?.coerceIn(GestureDisplay.FLICK_HOLD_RANGE)?.toFloat()
         }
 
-        /** Tries [millis] as the pause before a held delete, or puts the default back with null. Debug build only. */
-        fun tryHoldPause(context: Context, millis: Long?) {
-            check(debug(context)) { "Only TitanKeys Debug can try a hold pause" }
+        /** Tries [millis] as how long a flick's dots sit on the bar, or puts the default back with null. Debug build only. */
+        fun tryFlickHold(context: Context, millis: Long?) {
+            check(debug(context)) { "Only TitanKeys Debug can try how long the dots wait" }
             preferences(context).edit().apply {
-                if (millis == null) remove(HOLD_PAUSE_KEY) else putLong(HOLD_PAUSE_KEY, millis.coerceIn(HOLD_PAUSE_RANGE))
+                if (millis == null) remove(FLICK_HOLD_KEY) else putLong(FLICK_HOLD_KEY, millis.coerceIn(GestureDisplay.FLICK_HOLD_RANGE))
             }.commit()
-            readHoldPause(context)
+            readFlickHold(context)
         }
 
-        private const val HOLD_PAUSE_KEY = "debug_delete_hold_pause"
+        private const val FLICK_HOLD_KEY = "debug_flick_dots_wait"
 
         /**
          * How a held delete fades now. Only the debug build reads settings tried in the Haptics lab. Every other build plays

@@ -49,6 +49,10 @@ fun main() {
     aDotNearAWordIsSkipped()
     theHoldFollowsItsPause()
     theLabShowsTheDotsOfAHold()
+    theHoldPausesFor400()
+    aWallBouncesAndSettles()
+    allThreeGesturesHitAWallTheSameWay()
+    aFlicksDotsWaitAsTheLabTries()
     println("Haptic checks passed")
 }
 
@@ -65,6 +69,8 @@ private val table = mapOf(
     Haptic.DeleteDotsLand to Family.Texture,
     Haptic.DeleteWord to Family.Texture,
     Haptic.DeleteNothing to Family.No,
+    Haptic.DeleteRanOut to Family.Wall,
+    Haptic.DeleteZone to Family.Boundary,
     Haptic.SpaceTap to Family.Texture,
     Haptic.Steer to Family.Confirm,
     Haptic.SteerResumed to Family.Texture,
@@ -74,7 +80,8 @@ private val table = mapOf(
     Haptic.CursorLetter to Family.Texture,
     Haptic.CursorSpace to Family.Boundary,
     Haptic.SelectionWord to Family.Boundary,
-    Haptic.CursorEnd to Family.No,
+    Haptic.CursorEnd to Family.Wall,
+    Haptic.SelectionEnd to Family.Wall,
     Haptic.Autocorrect to Family.Change,
     Haptic.AutocorrectUndone to Family.Back,
     Haptic.HeldSymbol to Family.Change,
@@ -119,6 +126,7 @@ private val patterns = mapOf(
     Family.Gone to listOf(60L),
     Family.Back to listOf(35L, 40L, 15L),
     Family.No to listOf(25L, 40L, 25L, 40L, 25L),
+    Family.Wall to listOf(40L, 35L, 20L, 35L, 12L),
     Family.Celebrate to listOf(15L, 40L, 22L, 40L, 35L),
     Family.Saved to listOf(20L, 40L, 20L, 40L, 50L),
     Family.Removed to listOf(50L, 40L, 20L, 40L, 20L),
@@ -134,7 +142,7 @@ private fun eachHapticPlaysItsFamily() {
 }
 
 private fun eachFamilyPlaysItsPattern() {
-    check(patterns.keys == Family.entries.toSet()) { "Thirteen families: ${Family.entries}" }
+    check(patterns.keys == Family.entries.toSet()) { "Fourteen families: ${Family.entries}" }
     for ((family, pattern) in patterns) check(family.pattern == pattern) { "$family plays ${family.pattern}, not $pattern" }
     // And so each haptic plays its family's pattern exactly.
     for ((haptic, family) in table) check(HapticPalette.pattern(haptic.family, false, null) == patterns.getValue(family)) {
@@ -353,7 +361,7 @@ private fun steeringFeelsSpacesAndLetters() {
 private fun theEndsOfTheTextPlayOncePerHit() {
     val steps = CursorSteps()
     check(steps.step('a') == Haptic.CursorLetter) { "A letter on the way" }
-    check(steps.step(null) == Haptic.CursorEnd) { "The end of the text is no" }
+    check(steps.step(null) == Haptic.CursorEnd) { "The end of the text is a wall" }
     check(steps.step(null) == null) { "Pushing on at the end plays nothing more" }
     check(steps.step(null) == null) { "Still nothing" }
     check(steps.step('b') == Haptic.CursorLetter) { "Moving away is a letter again" }
@@ -457,7 +465,7 @@ private fun theOwnersFourAdditions() {
     val gate = HapticGate { clock.now }
     check(gate.admit(Haptic.SteerResumed.family)) { "The tick on landing again" }
     check(gate.admit(Haptic.CursorLetter.family)) { "The next letter still ticks" }
-    check(gate.check(Haptic.CursorEnd.family) == HapticResult.Played) { "And an end still plays its no" }
+    check(gate.check(Haptic.CursorEnd.family) == HapticResult.Played) { "And an end still plays its wall" }
     // Its plain words for the lab.
     for (haptic in listOf(Haptic.SteerResumed, Haptic.NothingToPick, Haptic.ExactChip, Haptic.ExactUnlock))
         check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic has a trigger" }
@@ -842,4 +850,83 @@ private fun theLabShowsTheDotsOfAHold() {
     check("fun previewHold(plan: HoldTicks.Plan)" in source) { "Play takes the whole hold" }
     val lab = File("android/kotlin/com/atlas/keyboard/HapticsLab.kt").readText()
     check("deleteHoldPauseMillis()" in lab && "GestureDisplay.holdLandings(" in lab) { "The lab's hold uses the real pause and the bar's own dots" }
+}
+
+/** The owner tried a 100 ms pause before a held delete and went back to 400 (2026-11-12), with no slider for it. */
+private fun theHoldPausesFor400() {
+    check(deleteHoldPauseMillis() == 400L) { "A held delete waits 400 ms: ${deleteHoldPauseMillis()}" }
+    check(deleteSwipeTuning["deleteHoldMillis"] == 400L) { "The raw log has the same pause" }
+}
+
+/**
+ * Wall: a dot hitting a wall with energy, a hit and rebounds that die away (owner, 2026-11-12). Three pulses, each shorter, with
+ * gaps no shorter than rule 4's 35 ms, and a feel of its own.
+ */
+private fun aWallBouncesAndSettles() {
+    val pulses = HapticPalette.pulses(Family.Wall.pattern)
+    check(pulses.size == 3 && pulses.zipWithNext().all { (a, b) -> a > b }) { "Each bounce is shorter: $pulses" }
+    check(pulses.first() >= HapticPalette.MESSAGE_PULSE_MILLIS) { "The hit is a firm one" }
+    check(HapticPalette.gaps(Family.Wall.pattern).all { it >= HapticPalette.MIN_GAP_MILLIS }) { "Every gap reads apart" }
+    check(pulses != HapticPalette.pulses(Family.No.pattern)) { "A wall is not no's three equal pulses" }
+    check(HapticPalette.millis(Family.Wall.pattern) <= HapticTimeline.SPAN_MILLIS) { "It fits the lab's graph" }
+    check(!Family.Wall.texture) { "It is a message" }
+    check(HapticPalette.fits(Family.Wall, Family.Wall.pattern)) { "The lab's editor can edit it" }
+    // The three walls, and only they, play it.
+    check(Haptic.entries.filter { it.family == Family.Wall }.toSet() == setOf(Haptic.CursorEnd, Haptic.SelectionEnd, Haptic.DeleteRanOut)) {
+        "Steering, selecting and a held delete hit the wall"
+    }
+    // No is only for nothing happening at all.
+    check(Haptic.entries.filter { it.family == Family.No }.toSet() == setOf(Haptic.DeleteNothing, Haptic.NothingToPick, Haptic.WordNotSaved)) {
+        "No stays for a flick or taps with nothing to work on, and a failed save"
+    }
+    check(HapticTimeline.meaning(Family.Wall).isNotEmpty()) { "The lab says what it means" }
+    for (haptic in listOf(Haptic.SelectionEnd, Haptic.DeleteRanOut, Haptic.DeleteZone)) check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic" }
+}
+
+/**
+ * The same rule in all three gestures: the first time a gesture meets its limit it plays the wall, then nothing while the finger
+ * keeps pushing, and again only after it has moved away. Steering keeps it in [CursorSteps]; selecting and a held delete in
+ * [WallHits].
+ */
+private fun allThreeGesturesHitAWallTheSameWay() {
+    val wall = WallHits()
+    check(wall.reached()) { "The first hit plays" }
+    check(!wall.reached() && !wall.reached()) { "Pushing on plays nothing more" }
+    wall.left()
+    check(wall.reached()) { "After moving away, the next hit plays again" }
+    check(!wall.reached()) { "Then quiet again" }
+    // Steering, the same way, through its steps.
+    val steps = CursorSteps()
+    val heard = listOf<Char?>(null, null, null, 'a', null, null).map { steps.step(it) == Haptic.CursorEnd }
+    check(heard == listOf(true, false, false, false, true, false)) { "Steering: once per hit, $heard" }
+    // Selecting and a held delete reach their limits through their own haptics, both walls.
+    check(Haptic.SelectionEnd.family == Haptic.CursorEnd.family && Haptic.DeleteRanOut.family == Haptic.CursorEnd.family) {
+        "All three feel the same"
+    }
+    // The ticks while pushing are silent too: a wall in a run of them leaves the next hit to play only after a move.
+    val gate = HapticGate { 1_000L }
+    check(gate.check(Family.Wall) == HapticResult.Played) { "A wall plays through the gate" }
+}
+
+/** The lab's flick dots wait: only a single flick's dots wait the tried time, and its Play times the flick as the bar does. */
+private fun aFlicksDotsWaitAsTheLabTries() {
+    try {
+        val (popped, before) = GestureDisplay.flickTimes(5)
+        check(popped != null && before.size == 5) { "A five-letter flick pops its dots and lands five: $popped, $before" }
+        GestureDisplay.triedFlickHold = 500f
+        val (_, later) = GestureDisplay.flickTimes(5)
+        check(later.zip(before).all { (a, b) -> a - b == 300L }) { "Waiting 300 ms longer lands every dot 300 ms later: $before, $later" }
+        GestureDisplay.triedFlickHold = 0f
+        val (_, sooner) = GestureDisplay.flickTimes(5)
+        check(sooner.zip(before).all { (a, b) -> b - a == 200L }) { "No wait lands every dot 200 ms sooner: $before, $sooner" }
+        // A lifted hold's dots keep the default wait whatever the lab tries.
+        GestureDisplay.triedFlickHold = null
+        val hold = GestureDisplay.holdLandings(listOf(3, 4))
+        GestureDisplay.triedFlickHold = 600f
+        check(GestureDisplay.holdLandings(listOf(3, 4)) == hold) { "A hold's dots wait as before" }
+    } finally {
+        GestureDisplay.triedFlickHold = null
+    }
+    check(GestureDisplay.FLICK_HOLD == 200f && GestureDisplay.flickHoldMillis() == 200f) { "The default is 200 ms" }
+    check(GestureDisplay.FLICK_HOLD_RANGE == 0L..600L) { "The lab tries 0 to 600 ms" }
 }

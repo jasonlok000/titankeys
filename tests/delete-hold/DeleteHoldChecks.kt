@@ -24,6 +24,8 @@ fun main() {
     backAtTheStartTheHoldPauses()
     aFlickNeverEndsInThePauseZone()
     thePaceTopsOutAtTheTopSpeedLine()
+    eachZoneTicksOncePerCrossing()
+    theHoldWaits400()
     moreLengthDoesNotPassTheLimits()
     theFirstWordIsTheFlickItself()
     liftingStopsAtOnceWithNoExtraWord()
@@ -501,4 +503,46 @@ private fun aStrokeJustAfterASwipeCannotDelete() {
     pieces.settle(settlement, contact.settle(settlement, settlement.deadline))
     same(pieces.canDelete(1_300), false, "A stroke just after a swipe is the rest of that swipe")
     same(pieces.canDelete(1_500), true, "A stroke well after a swipe can delete")
+}
+
+/**
+ * Going into the pause zone, and reaching the top-speed line, each tick once per crossing: nothing more while the finger stays,
+ * and again only after it has left and come back. A flick that already ends past the line starts there with no tick.
+ */
+private fun eachZoneTicksOncePerCrossing() {
+    val rig = Rig()
+    val started = 1_000L + 60 + holdMillis
+    rig.flick(1_000, SHORT_STOP)
+    rig.runTo(started)
+    same(rig.hold.crossed(), null, "No zone yet")
+    rig.move(at(.95f - 5.6f / 10, .35f, started + 10))
+    same(rig.hold.crossed(), DeleteHold.Zone.TopSpeed, "Reaching the top-speed line ticks")
+    rig.move(at(.95f - 6.5f / 10, .35f, started + 20))
+    same(rig.hold.crossed(), null, "Past it, nothing more")
+    rig.move(at(.95f - 5.4f / 10, .35f, started + 30))
+    same(rig.hold.crossed(), null, "Just back inside, on the line's edge, nothing")
+    rig.move(at(.95f - 5.6f / 10, .35f, started + 40))
+    same(rig.hold.crossed(), null, "so a finger resting on the line ticks once")
+    rig.move(at(.95f - 4f / 10, .35f, started + 50))
+    rig.move(at(.95f - 6f / 10, .35f, started + 60))
+    same(rig.hold.crossed(), DeleteHold.Zone.TopSpeed, "Back inside and out again ticks again")
+    rig.move(at(.9f, .35f, started + 70))
+    same(rig.hold.crossed(), DeleteHold.Zone.Pause, "Going into the pause zone ticks")
+    rig.move(at(.92f, .35f, started + 80))
+    same(rig.hold.crossed(), null, "Resting there, nothing more")
+    rig.move(at(.7f, .35f, started + 90))
+    same(rig.hold.crossed(), null, "Leaving it is quiet")
+    rig.move(at(.9f, .35f, started + 100))
+    same(rig.hold.crossed(), DeleteHold.Zone.Pause, "Coming back ticks again")
+    // A flick that ends past the line starts there, with no tick.
+    val far = Rig()
+    far.flick(1_000, .95f - 6f / 10)
+    far.runTo(started)
+    far.move(at(.95f - 6.2f / 10, .35f, started + 10))
+    same(far.hold.crossed(), null, "A hold that starts past the line has not reached it")
+}
+
+/** The owner tried 100 ms and went back to 400 (2026-11-12). */
+private fun theHoldWaits400() {
+    same(holdMillis, 400L, "A finger waits 400 ms after a flick before the hold starts")
 }

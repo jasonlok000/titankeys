@@ -78,9 +78,4 @@
     <string name="back_disclosure_no">If you say no: TitanKeys still types and swipes. Back may take two presses, and those keys work as they would without TitanKeys. You can turn it on later in Settings &gt; Setup.</string>
     <string name="back_disclosure_decline">No thanks</string>
     <string name="back_disclosure_agree">Agree</string>
-    <!-- TitanKeys Debug's Haptics lab: the pause before a held delete starts, with a slider to try it live. -->
-    <string name="lab_hold_pause_title">Held delete pause</string>
-    <string name="lab_hold_pause_about">How long the finger stays at the end of a delete flick before the hold starts deleting words and ticking. The next held delete waits this long.</string>
-    <string name="lab_hold_pause_value">Pause: %1$d ms</string>
-    <string name="lab_hold_pause_reset">Reset to the default</string>
 </resources>

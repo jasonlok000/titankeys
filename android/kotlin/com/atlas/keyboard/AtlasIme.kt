@@ -59,6 +59,11 @@ class AtlasIme : InputMethodService() {
     private lateinit var haptics: Haptics
     /** The cursor plays gone once each time it reaches an end of the text. */
     private val cursorSteps = CursorSteps()
+    /** Selecting and a held delete hit their walls by the same rule as steering's ends: see [WallHits]. */
+    private val selectionWall = WallHits()
+    private val deleteWall = WallHits()
+    /** Where the cursor was before a Space gesture selected words, so a double space can put it back, or null. */
+    private var cursorBeforeSelect: Int? = null
     private lateinit var composer: Composer
     private lateinit var autocorrect: AutocorrectLoader
     private lateinit var phoneNames: PhoneNameSource
@@ -89,6 +94,7 @@ class AtlasIme : InputMethodService() {
     private var wordAnchor: Pair<Int, Int>? = null
     /** The selection start the app last reported, for apps that don't say where their text sits. */
     private var lastSelectionStart = -1
+    private var lastSelectionEnd = -1
     private val modifiers = Modifiers()
     private var strip: Strip? = null
     /** The words the composer last put on the bar, for a strip that is made after that. */
@@ -331,6 +337,12 @@ class AtlasIme : InputMethodService() {
         Recording.sink?.gesture("double", SystemClock.uptimeMillis(), "")
         finishHeldTaps(type = false)
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped(2) }
+        // With text selected, a double space puts the cursor back, as steering would start from there.
+        if (collapseSelection()) {
+            haptics.play(Haptic.Steer)
+            return@Runnable
+        }
+        rememberCursor()
         // A terminal or a remote view has no text to select here.
         if (field.exact) haptics.play(Haptic.WordPicked) else enqueue { selectWord() }
     }
@@ -370,8 +382,6 @@ class AtlasIme : InputMethodService() {
     /** The finger moved, so the wait for a hold starts again, or ends if the finger is no longer on a delete flick. */
     private fun followDeleteHold() {
         val start = contact.points.firstOrNull()
-        // The pause before a hold starts, which the Haptics lab can try live in TitanKeys Debug.
-        Haptics.readHoldPause(this)
         val at = deleteHold.moved(!altOrPanel && start != null && pieces.canDelete(start.time) && guideAllows(GuideLesson.Flick))
         if (at != null) nextDeleteHoldStep(at) else main.removeCallbacks(stepDeleteHold)
     }
@@ -390,8 +400,13 @@ class AtlasIme : InputMethodService() {
             heldWords.reset()
             // A hold takes the bar from any dots still playing, and their ticks stop.
             haptics.cutDots()
-            strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), flick.points.lastOrNull { it.valid }?.x,
-                deleteHold.originX, deleteHold.pace)
+            deleteWall.left()
+            strip?.gesture?.let { gesture ->
+                // Where its glow goes, as the Haptics lab's switch has it in TitanKeys Debug.
+                gesture.deleteGlowPlace = Haptics.deleteGlow(this)
+                gesture.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), deleteHold.pace,
+                    currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0), flick.points.lastOrNull { it.valid }?.x)
+            }
             // The dots at the lift keep clear of this hold's ticks.
             haptics.holdStarted()
             // The contact was a delete and not part of a word, as it would be at a lift.
@@ -405,15 +420,18 @@ class AtlasIme : InputMethodService() {
         }
         val word = heldWords.next()
         enqueue {
-            // At the start of the text nothing is left to delete, so the hold ends with a no.
+            // At the start of the text the hold hits a wall: it plays once, and the hold stays quiet while the finger stays, with
+            // no words left on the bar, only the caret.
             if (currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true) {
-                contact.cancelActive()
-                haptics.play(Haptic.DeleteNothing)
+                if (deleteWall.reached()) haptics.play(Haptic.DeleteRanOut)
+                strip?.gesture?.deleteText("")
                 return@enqueue
             }
+            deleteWall.left()
             haptics.heldDeleteWord(word)
-            // A dot for each character of the word, for the dots that play when the hold lifts.
+            // A dot for each character of the word, for the dots that play when the hold lifts, and the real words for the bar.
             val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
+            before?.let { strip?.gesture?.deleteText(it) }
             composer.backspace(true)
             strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
             KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
@@ -469,7 +487,9 @@ class AtlasIme : InputMethodService() {
         gestureRegistered = true
         Recording.sink?.gesture("registered", now, "taps=$taps")
         haptics.play(Haptic.registered(words, nothing = false))
-        if (words) readWordsAroundCursor() else readCursorText()
+        // With text selected, steering starts from where the cursor was before the select, or the selection's end.
+        if (!words && collapseSelection()) enqueue { readCursorText() }
+        else if (words) readWordsAroundCursor() else readCursorText()
         strip?.gesture?.cursorFrame((gestureLanded?.x ?: .5f) * 10, 0, 0f, words, now)
     }
 
@@ -499,6 +519,7 @@ class AtlasIme : InputMethodService() {
     private fun pickOnLand() {
         Recording.sink?.gesture("triple", SystemClock.uptimeMillis(), "")
         gestureRegistered = true
+        rememberCursor()
         // The bar keeps the pick's mark while this touch stays down, and shows the selected text after the lift.
         tripleDown = true
         main.removeCallbacks(confirmDoubleTap)
@@ -1794,6 +1815,7 @@ class AtlasIme : InputMethodService() {
         inputLog()?.selection(newStart, newEnd, composingStart, composingEnd,
             currentInputConnection?.getTextBeforeCursor(RawLog.BEFORE_LENGTH, 0))
         lastSelectionStart = newStart
+        lastSelectionEnd = newEnd
         if (inLauncher && (newStart > 0) != launcherFieldHasText) {
             launcherFieldHasText = newStart > 0
             strip?.showSuggestions = showSuggestions()
@@ -1934,15 +1956,18 @@ class AtlasIme : InputMethodService() {
                 if (contact.deleting) {
                     strip?.gesture?.swipeCancelled()
                     samples.lastOrNull { it.valid }?.let { finger ->
-                        // The glow under the finger follows it.
+                        // A glow under the finger follows it.
                         strip?.gesture?.fingerAt(finger.x)
                         val next = deleteHold.follow(finger)
-                        // Back near where the flick started, the hold pauses, and its lines on the bar stand still.
+                        // Back near where the flick started, the hold pauses: its words on the bar stand still, its glow fades out
+                        // and its caret blinks.
                         strip?.gesture?.deletePaused(deleteHold.paused)
+                        // Going into the pause zone, or reaching the top-speed line, ticks once.
+                        if (deleteHold.crossed() != null && Haptics.zoneTicks(this)) haptics.play(Haptic.DeleteZone)
                         next?.let {
                             nextDeleteHoldStep(it)
                             if (strip?.gesture?.scene == GestureDisplay.Scene.DeleteHold) {
-                                strip?.gesture?.deleteHeld(deleteHold.repeatMillis, finger.time, pace = deleteHold.pace)
+                                strip?.gesture?.deleteHeld(deleteHold.repeatMillis, finger.time, deleteHold.pace)
                             }
                         }
                     }
@@ -2224,6 +2249,8 @@ class AtlasIme : InputMethodService() {
     /** Selects the word at the cursor, the part that a word drag keeps selected. Between words the drag starts from the cursor. */
     private fun startWordDrag() {
         wordAnchor = null
+        selectionWall.left()
+        rememberCursor()
         changeSelection { text, start, end, offset ->
             val word = WordSelection.at(text, start, end) ?: (start to end)
             wordAnchor = offset + word.first to offset + word.second
@@ -2237,7 +2264,12 @@ class AtlasIme : InputMethodService() {
         changeSelection { text, start, end, offset ->
             val anchor = wordAnchor ?: return@changeSelection null
             val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction)
-            if (range == start to end) return@changeSelection null
+            if (range == start to end) {
+                // Nothing more that way: the selection reached an end of the text. It plays once, until it moves away.
+                if (selectionWall.reached()) haptics.play(Haptic.SelectionEnd)
+                return@changeSelection null
+            }
+            selectionWall.left()
             // The word that this step took or gave back.
             val moved = if (range.second != end) text.subSequence(minOf(end, range.second), maxOf(end, range.second))
                 else text.subSequence(minOf(start, range.first), maxOf(start, range.first))
@@ -2245,6 +2277,31 @@ class AtlasIme : InputMethodService() {
             strip?.gesture?.wordStep(direction)
             range
         }
+    }
+
+    /** Keeps where the cursor is, when nothing is selected, so a double space after a select can put it back there. */
+    private fun rememberCursor() {
+        if (lastSelectionStart >= 0 && lastSelectionStart == lastSelectionEnd) cursorBeforeSelect = lastSelectionStart
+    }
+
+    /**
+     * With text selected, puts the cursor back where it was before a Space gesture selected it, if that is known and still in the
+     * selection, or else at the selection's end, in order with the rest of the typing. False with nothing selected.
+     */
+    private fun collapseSelection(): Boolean {
+        val start = minOf(lastSelectionStart, lastSelectionEnd)
+        val end = maxOf(lastSelectionStart, lastSelectionEnd)
+        if (field.exact || start < 0 || start == end) return false
+        val at = WordSelection.collapseTo(start, end, cursorBeforeSelect)
+        cursorBeforeSelect = null
+        enqueue {
+            composer.command(destructive = false, fieldLocal = true) {
+                val connection = currentInputConnection ?: return@command false
+                connection.finishComposingText()
+                connection.setSelection(at, at)
+            }
+        }
+        return true
     }
 
     /**
@@ -2481,11 +2538,15 @@ class AtlasIme : InputMethodService() {
                     val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
                     val nothingLeft = before?.isEmpty() == true
                     if (nothingLeft) haptics.play(Haptic.DeleteNothing)
+                    // A hold's first word: the bar's words are the real ones before it goes.
+                    if (before != null) strip?.gesture?.deleteText(before)
                     composer.backspace(true)
                     if (!nothingLeft) {
                         // A dot for each character of the word that went, not counting spaces. The haptic's tail lands as they pop.
                         val gesture = strip?.gesture
                         gesture?.speedUp = Haptics.dotsSpeedUp(this)
+                        // How long the dots wait on the bar, which the Haptics lab can try live in TitanKeys Debug.
+                        Haptics.readFlickHold(this)
                         gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.

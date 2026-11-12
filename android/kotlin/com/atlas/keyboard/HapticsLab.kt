@@ -60,16 +60,33 @@ class HapticsLab(private val context: Context) {
         later()
     }
 
-    /** How long a delete flick's finger stays before a held delete starts, in ms. */
-    fun holdPause(): Long {
-        Haptics.readHoldPause(context)
-        return deleteHoldPauseMillis()
+    /** Puts a held delete's glow in the place with [id]. The next held delete shows it there. */
+    fun deleteGlow(id: String) {
+        val place = GestureDisplay.DeleteGlow.entries.firstOrNull { it.id == id } ?: throw IllegalArgumentException("No delete glow called $id")
+        Haptics.tryDeleteGlow(context, place)
     }
 
-    /** Tries [millis] as that pause, or puts the default back with null. The next real held delete waits that long. */
-    fun tryHoldPause(millis: Long?) {
-        Haptics.tryHoldPause(context, millis)
+    /** How long a single flick's dots sit on the bar before they go into the caret, in ms. */
+    fun flickHold(): Long {
+        Haptics.readFlickHold(context)
+        return GestureDisplay.flickHoldMillis().toLong()
+    }
+
+    /** Tries [millis] as that wait, or puts the default back with null. The next real flick's dots wait that long. */
+    fun tryFlickHold(millis: Long?) {
+        Haptics.tryFlickHold(context, millis)
         later()
+    }
+
+    /**
+     * Plays a flick of a five-letter word as it plays now, with no switch or gate: the flick, its tail as the dots pop, and a tick
+     * as each dot lands, after the wait in use. So the wait can be felt without flicking.
+     */
+    fun playFlick() {
+        Haptics.readFlickHold(context)
+        val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
+        val (popped, landings) = GestureDisplay.flickTimes(PLAY_LETTERS, if (scale > 0f) scale else 1f, Haptics.dotsSpeedUp(context))
+        haptics.previewFlick(popped, landings)
     }
 
     /** Plays a held delete as it plays now, its dots and all, as [holdPlan] has it, with no switch or gate. */
@@ -102,13 +119,19 @@ class HapticsLab(private val context: Context) {
 
     /** Each family's pattern in use now, the held delete fade, each haptic's family and what it plays, and the experiments. */
     fun state(): JSONObject = JSONObject().put("families", families()).put("heldDeleteFade", heldDeleteFade()).put("haptics", haptics())
-        .put("holdPauseMillis", holdPause())
-        .put("experiments", JSONObject().put(DOTS_SPEED_UP, Haptics.dotsSpeedUp(context)).put(HELD_DELETE_FADE, fading()))
+        .put("flickHoldMillis", flickHold()).put("flickHoldDefault", GestureDisplay.FLICK_HOLD.toLong())
+        .put("experiments", JSONObject().put(DOTS_SPEED_UP, Haptics.dotsSpeedUp(context)).put(HELD_DELETE_FADE, fading())
+            .put(ZONE_TICKS, Haptics.zoneTicks(context)))
+        .put("deleteGlow", Haptics.deleteGlow(context).id)
+        .put("deleteGlows", JSONArray().apply {
+            for (place in GestureDisplay.DeleteGlow.entries) put(JSONObject().put("id", place.id).put("label", place.label))
+        })
 
     /** Turns one of the lab's experiments on or off, by its id. */
     fun experiment(id: String, on: Boolean) = when (id) {
         DOTS_SPEED_UP -> Haptics.tryDotsSpeedUp(context, on)
         HELD_DELETE_FADE -> fadeOn(on)
+        ZONE_TICKS -> Haptics.tryZoneTicks(context, on)
         else -> throw IllegalArgumentException("No experiment called $id")
     }
 
@@ -208,7 +231,7 @@ class HapticsLab(private val context: Context) {
         }
         val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
         val text = JSONObject().put("savedAt", Instant.now().toString()).put("version", version).put("general", notes.general)
-            .put("families", families).put("heldDeleteFade", heldDeleteFade().put("comment", notes.fade)).put("holdPauseMillis", holdPause())
+            .put("families", families).put("heldDeleteFade", heldDeleteFade().put("comment", notes.fade)).put("flickHoldMillis", flickHold())
             .put("haptics", list).toString(2)
         val file = file()
         val written = File(file.parentFile, "${file.name}.new")
@@ -225,6 +248,10 @@ class HapticsLab(private val context: Context) {
         const val DOTS_SPEED_UP = "dotsSpeedUp"
         /** The id of the experiment "Held delete fade". Its tuning is in the lab's screen, which [showGraph] can open on it. */
         const val HELD_DELETE_FADE = "heldDeleteFade"
+        /** The id of the experiment "Tick at delete zones". */
+        const val ZONE_TICKS = "deleteZoneTicks"
+        /** Play's flick takes a word of this many letters. */
+        private const val PLAY_LETTERS = 5
 
         private const val WRITE_DELAY_MILLIS = 800L
     }

@@ -13,10 +13,10 @@ private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
     aFlicksWayInStretchesToFitItsDots()
-    aHeldDeleteGlowsUnderTheFinger()
-    aHeldDeleteGlowIsRootedOnTheRightAndStopsAtTheLine()
-    aHeldDeleteShowsItsZonesOnlyWhileItDeletes()
-    aPausedHoldStandsStill()
+    aHeldDeleteGlowFollowsItsPace()
+    aHoldDrawsTheRealWords()
+    aHoldWithNoTextLeftDrawsNoPills()
+    aPausedHoldFadesAndBlinks()
     aHoldsDotsSpeedUpAsFarAsItsWordsDid()
     aHeldTripleGlowsEveryTime()
     theTripleGlowFollowsTheHand()
@@ -1009,111 +1009,140 @@ private fun theHeldGlowGoesWithTheDisplay() {
 }
 
 /**
- * A long held delete grows a glow under the finger, as two Space taps do, and it follows the finger smoothly. At the lift it
- * stays where it was and fades; a key ends it at once.
+ * A held delete's glow is the underglow rooted where Backspace is. It grows in as the hold starts, gets stronger as the pace
+ * speeds up and stops changing at the top-speed line, and along the bottom it reaches further left with the pace. At the lift it
+ * stays where it was and fades; a key ends it at once. Space taps keep their own glow.
  */
-private fun aHeldDeleteGlowsUnderTheFinger() {
+private fun aHeldDeleteGlowFollowsItsPace() {
     val display = GestureDisplay()
-    display.deleteHeld(200, 1_000, x = .8f)
-    same(display.glowing, true, "A held delete glows")
-    display.run(1_000, 1_000 + GestureDisplay.GLOW_HOLD_GROW.toLong() + 16)
-    near(display.glowWidth, GestureDisplay.GLOW_FINGER_WIDTH, "as wide as two taps' glow")
-    near(display.glowAlpha, GestureDisplay.GLOW_FINGER_ALPHA, "and as strong")
-    near(display.glowCentre, .8f, "under the finger")
-    display.fingerAt(.6f)
-    display.run(1_152, 1_168)
-    isTrue(display.glowCentre < .8f && display.glowCentre > .6f, "It follows the finger smoothly: ${display.glowCentre}")
-    display.run(1_184, 1_500)
-    near(display.glowCentre, .6f, "and gets there", .005f)
-    display.wordDeleted(1_500, 4)
-    display.deleteEnded(1_516)
+    display.deleteHeld(350, 1_000, pace = 0f)
+    same(display.glowDelete, true, "A held delete's glow is its own")
+    same(display.glowing, true, "and shows")
+    display.run(1_000, 1_400)
+    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "It grows to the held glow's strength", .01f)
+    near(display.shownPace, 0f, "At the slowest it is at its weakest")
+    near(display.glowWidth, GestureDisplay.DELETE_REACH_LEAST, "and along the bottom at its shortest")
+    display.deleteHeld(200, 1_400, pace = .5f)
+    display.run(1_416, 1_432)
+    isTrue(display.shownPace > 0f && display.shownPace < .5f, "It follows the pace smoothly: ${display.shownPace}")
+    display.run(1_448, 1_900)
+    near(display.shownPace, .5f, "and gets there", .005f)
+    display.deleteHeld(80, 1_900, pace = 1f)
+    display.run(1_916, 2_400)
+    near(display.shownPace, 1f, "At the top-speed line it is at its strongest", .005f)
+    near(display.glowWidth, GestureDisplay.DELETE_REACH_MOST, "and reaches furthest", .005f)
+    // Past the line the pace is still 1, so nothing changes.
+    display.deleteHeld(80, 2_400, pace = 1.4f)
+    display.run(2_416, 2_600)
+    near(display.shownPace, 1f, "Past the line it stops changing")
+    display.wordDeleted(2_600, 4)
+    display.deleteEnded(2_616)
     same(display.glowing, true, "At the lift it stays")
-    near(display.glowCentre, .6f, "where it was", .005f)
-    display.run(1_516, 1_516 + GestureDisplay.GLOW_FADE.toLong() / 2)
-    isTrue(display.glowAlpha > 0f && display.glowAlpha < GestureDisplay.GLOW_FINGER_ALPHA, "and fades: ${display.glowAlpha}")
-    display.run(1_516 + GestureDisplay.GLOW_FADE.toLong() / 2 + 16, 1_516 + GestureDisplay.GLOW_FADE.toLong() + 32)
+    display.run(2_616, 2_616 + GestureDisplay.GLOW_FADE.toLong() / 2)
+    isTrue(display.glowAlpha > 0f && display.glowAlpha < GestureDisplay.GLOW_HELD_ALPHA, "and fades: ${display.glowAlpha}")
+    same(display.glowDelete, true, "as the hold's glow")
+    display.run(2_616 + GestureDisplay.GLOW_FADE.toLong() / 2 + 16, 2_616 + GestureDisplay.GLOW_FADE.toLong() + 32)
     same(display.glowing, false, "then it is gone")
     // The Space glow is still under the middle word.
     val space = GestureDisplay()
     space.spaceTapped(2, 1_000)
     space.run(1_000, 1_100)
     near(space.glowCentre, .5f, "Space taps glow under the middle word")
+    same(space.glowDelete, false, "with their own glow")
     // A key ends a held delete's fading glow at once.
     val key = GestureDisplay()
-    key.deleteHeld(200, 1_000, x = .9f)
+    key.deleteHeld(200, 1_000)
     key.wordDeleted(1_100, 3)
     key.deleteEnded(1_200)
     key.glowOff()
     same(key.glowing, false, "A key ends it at once")
+    same(key.glowDelete, false, "and it is no longer the hold's")
 }
 
 /**
- * A held delete's glow is rooted on the bar's right edge and reaches left to the finger; past the top-speed line, five and a half
- * keys from where the flick started, it stops growing, and as the hold lifts it keeps its reach while it fades.
+ * In the pause zone the hold shows its zone by what it does: its words stand still, its glow fades out, and its caret blinks as
+ * steering's does when it pauses. Out of it they move again, the glow comes back and the caret stays on.
  */
-private fun aHeldDeleteGlowIsRootedOnTheRightAndStopsAtTheLine() {
+private fun aPausedHoldFadesAndBlinks() {
     val display = GestureDisplay()
-    display.deleteHeld(200, 1_000, x = .8f, origin = .95f, pace = 0f)
-    same(display.glowRooted, true, "A held delete's glow is rooted on the right")
-    display.run(1_000, 1_200)
-    near(display.glowReach, .8f, "It reaches to the finger", .005f)
-    near(display.topSpeedAt, .95f - REPEAT_LONG_KEYS / 10, "The top-speed line is five and a half keys from the start")
-    display.fingerAt(.5f)
-    display.run(1_216, 1_500)
-    near(display.glowReach, .5f, "Before the line it follows the finger", .005f)
-    display.fingerAt(.1f)
-    display.run(1_516, 1_800)
-    near(display.glowReach, display.topSpeedAt, "Past the line it stops there", .001f)
-    display.wordDeleted(1_800, 4)
-    display.deleteEnded(1_816)
-    display.run(1_816, 1_816 + GestureDisplay.GLOW_FADE.toLong() / 2)
-    near(display.glowReach, .95f - REPEAT_LONG_KEYS / 10, "As it fades it keeps its reach", .001f)
-    // Space taps keep their own glow.
-    val space = GestureDisplay()
-    space.spaceTapped(2, 1_000)
-    space.run(1_000, 1_050)
-    same(space.glowRooted, false, "Taps glow as before")
-}
-
-/** The zones show only while a hold deletes: not for a flick, and not once the hold lifts. */
-private fun aHeldDeleteShowsItsZonesOnlyWhileItDeletes() {
-    val display = GestureDisplay()
-    display.deleteHeld(200, 1_000, x = .8f, origin = .95f)
-    display.run(1_000, 1_100)
-    same(display.zonesShown, true, "A hold shows its zones")
-    near(display.pauseFrom, .95f - PAUSE_KEYS / 10, "The pause zone runs from .8 of a key left of the start")
-    near(display.pauseTo, .95f + PAUSE_KEYS / 10, "to .8 of a key right of it")
-    display.wordDeleted(1_100, 3)
-    display.deleteEnded(1_200)
-    same(display.zonesShown, false, "Once it lifts they go")
-    val flick = GestureDisplay()
-    flick.wordDeleted(1_000, 5)
-    same(flick.zonesShown, false, "A flick shows none")
-    val unknown = GestureDisplay()
-    unknown.deleteHeld(200, 1_000)
-    same(unknown.zonesShown, false, "With no start known, none show")
-}
-
-/** In the pause zone the hold's lines stand still, and they move again as it leaves. */
-private fun aPausedHoldStandsStill() {
-    val display = GestureDisplay()
-    display.deleteHeld(200, 1_000, x = .8f, origin = .95f)
-    display.run(1_000, 1_100)
+    display.deleteHeld(200, 1_000, pace = .5f)
+    display.run(1_000, 1_300)
     display.deletePaused(true)
     same(display.deletePaused, true, "The display knows the hold is paused")
     val flow = display.flow
-    display.run(1_116, 1_600)
-    same(display.flow, flow, "Paused, its lines stand still")
+    display.run(1_316, 1_332)
+    same(display.caretShown, true, "The caret shows as the pause starts")
+    display.run(1_348, 1_316 + GestureDisplay.BLINK_MILLIS + 16)
+    same(display.caretShown, false, "then blinks off")
+    display.run(1_316 + GestureDisplay.BLINK_MILLIS + 32, 1_316 + 2 * GestureDisplay.BLINK_MILLIS + 16)
+    same(display.caretShown, true, "and on again")
+    same(display.flow, flow, "Paused, its words stand still")
+    near(display.glowAlpha, 0f, "and its glow has faded out", .01f)
     display.deletePaused(false)
-    display.run(1_616, 1_700)
-    isTrue(display.flow != flow, "Out of the pause they move again")
+    display.run(2_400, 2_800)
+    same(display.caretShown, true, "Out of the pause the caret stays on")
+    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "the glow comes back: ${display.glowAlpha}", .02f)
+    isTrue(display.flow != flow, "and the words move again")
+}
+
+/**
+ * A hold draws the real words before the cursor: one pill for each, as long as the word, nearest the caret first, from the text
+ * read as each word is about to go. A lifted hold's lines keep their lengths as they turn into dots.
+ */
+private fun aHoldDrawsTheRealWords() {
+    val display = GestureDisplay()
+    display.deleteHeld(200, 1_000, before = "The quick brown fox")
+    near(display.holdWordWidth(0), GestureDisplay.widthFor(3), "The nearest pill is fox's")
+    near(display.holdWordWidth(1), GestureDisplay.widthFor(5), "then brown's")
+    near(display.holdWordWidth(2), GestureDisplay.widthFor(5), "then quick's")
+    near(display.holdWordWidth(3), GestureDisplay.widthFor(3), "then The's")
+    same(display.holdWordWidth(4), 0f, "and nothing past the start of the text")
+    same(display.holdNext, 0, "fox is about to go")
+    display.wordDeleted(1_100, 3)
+    display.deleteText("The quick brown ")
+    same(display.holdNext, 1, "then brown")
+    near(display.holdWordWidth(0), GestureDisplay.widthFor(3), "fox keeps its length as it goes into the caret")
+    near(display.holdWordWidth(1), GestureDisplay.widthFor(5), "brown is next")
+    near(display.holdWordWidth(3), GestureDisplay.widthFor(3), "The is still last")
+    same(display.holdWordWidth(4), 0f, "and nothing past it")
+    display.wordDeleted(1_200, 5)
+    display.deleteEnded(1_300)
+    near(display.holdWordWidth(1), GestureDisplay.widthFor(5), "A lifted hold's lines keep their lengths")
+    same(display.holdNext, 2, "and which was about to go")
+    // A text cut off at the reach starts in the middle of a word: that one is not drawn, and past it the words are made up.
+    val long = GestureDisplay()
+    val words = (1..20).joinToString(" ") { "word" }
+    long.deleteHeld(200, 1_000, before = words)
+    val known = (words.length - words.indexOf(' ', words.length - GestureDisplay.LINE_REACH)) / 5
+    isTrue(long.holdWordWidth(known + 2) > 0f, "Past the text read, more words show")
+    // A field that gives no text keeps the made-up row.
+    val unknown = GestureDisplay()
+    unknown.deleteHeld(200, 1_000)
+    isTrue((0..6).all { unknown.holdWordWidth(it) > 0f }, "With no text known, a made-up row shows")
+}
+
+/** With no real text left before the cursor a hold draws no pills at all, only its caret. */
+private fun aHoldWithNoTextLeftDrawsNoPills() {
+    val empty = GestureDisplay()
+    empty.deleteHeld(200, 1_000, before = "")
+    isTrue((-1..10).all { empty.holdWordWidth(it) == 0f }, "Nothing before the cursor: no pills")
+    // Running out: the last word goes, then the text before the cursor is empty.
+    val last = GestureDisplay()
+    last.deleteHeld(200, 1_000, before = "Hello")
+    last.wordDeleted(1_100, 5)
+    last.deleteText("")
+    same(last.holdWordWidth(1), 0f, "After the last word, no pills")
+    isTrue((2..10).all { last.holdWordWidth(it) == 0f }, "none at all")
+    near(last.holdWordWidth(0), GestureDisplay.widthFor(5), "Only the word that went, still going into the caret")
+    last.run(1_100, 1_400)
+    same(last.caretShown, true, "The caret still shows")
 }
 
 /** When each dot of a lifted hold of [words] words of five letters lands, for a hold whose fastest pace was [pace]. */
 private fun holdDots(pace: Float, words: Int = 20): List<Float> {
     val display = GestureDisplay()
     display.speedUp = true
-    display.deleteHeld(200, 1_000, x = .5f, origin = .95f, pace = pace)
+    display.deleteHeld(200, 1_000, pace = pace)
     repeat(words) { display.wordDeleted(1_100L + it, 5) }
     display.deleteEnded(1_200)
     return (0 until display.dots).map { display.dotLandsAt(it) }

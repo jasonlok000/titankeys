@@ -346,6 +346,18 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     lab().experiment(data.getString("id"), data.getBoolean("on"))
                     "null"
                 }
+                "labFlickHold" -> {
+                    lab().tryFlickHold(if (data.isNull("millis")) null else data.getLong("millis"))
+                    "null"
+                }
+                "labDeleteGlow" -> {
+                    lab().deleteGlow(data.getString("id"))
+                    "null"
+                }
+                "labPlayFlick" -> {
+                    lab().playFlick()
+                    "null"
+                }
                 else -> throw IllegalArgumentException("Unknown Atlas operation: $operation")
             }
             if (result != null) complete(NativeResult.Success(result))

@@ -116,10 +116,17 @@ export type HapticsLab = {
   families: Record<string, { name: string; pattern: number[]; plays: string; tried: boolean }>;
   heldDeleteFade: { name: string; on: boolean; start: number; floor: number; words: number; thinEvery: number; plays: string; tried: boolean };
   haptics: Record<string, { family: string; pattern: number[]; plays: string }>;
-  /** The lab's experiments, on or off, by id: dotsSpeedUp, "Dots speed up when long", and heldDeleteFade, "Held delete fade". */
+  /**
+   * The lab's experiments, on or off, by id: dotsSpeedUp, "Dots speed up when long", heldDeleteFade, "Held delete fade",
+   * and deleteZoneTicks, "Tick at delete zones".
+   */
   experiments: Record<string, boolean>;
-  /** How long a delete flick's finger stays before the hold starts, in ms. The lab's own screen has its slider. */
-  holdPauseMillis: number;
+  /** Where a held delete's glow goes, by id, and the places it can go, from the list "Delete glow". */
+  deleteGlow: string;
+  deleteGlows: { id: string; label: string }[];
+  /** How long a single flick's dots sit on the bar before they go into the caret, in ms, and its default. */
+  flickHoldMillis: number;
+  flickHoldDefault: number;
 };
 
 export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
@@ -255,6 +262,21 @@ export async function setLabExperiment(id: string, on: boolean) {
   await atlas("labExperiment", { id, on });
   await state.refresh();
 }
+
+/** Tries how long a single flick's dots sit on the bar, in ms, or puts the default back with null. TitanKeys Debug only. */
+export async function setLabFlickHold(millis: number | null) {
+  await atlas("labFlickHold", { millis });
+  await state.refresh();
+}
+
+/** Puts a held delete's glow in the place with [id], from the lab's list "Delete glow". TitanKeys Debug only. */
+export async function setLabDeleteGlow(id: string) {
+  await atlas("labDeleteGlow", { id });
+  await state.refresh();
+}
+
+/** Plays a flick's dots as they play now, so the wait can be felt without flicking. TitanKeys Debug only. */
+export const playLabFlick = () => atlas("labPlayFlick");
 
 /** Opens the file picker. Returns false if the picker was cancelled. */
 export async function exportRawLog() {

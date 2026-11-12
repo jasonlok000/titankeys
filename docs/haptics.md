@@ -11,7 +11,8 @@
    - Two equal firm pulses mean lock: it stays.
    - Two quick light pulses mean changed.
    - One long pulse means gone.
-   - Three quick hard pulses mean no.
+   - Three quick hard pulses mean no: nothing happened at all.
+   - A hit that bounces and settles, each pulse shorter, means a wall: the gesture reached the end of what it can do.
    - A rising run of three means celebrate.
    - Short, short, long means saved: two light taps settle into a firm one.
    - Long, short, short means removed: a firm hit that trails off.
@@ -32,7 +33,7 @@ Patterns are on and off in ms, starting with on.
 | Family | Pattern | Plays for |
 |---|---|---|
 | **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, words in a held delete (fading, below), the marked button in the word menu or a panel |
-| **Boundary** | 30 | The cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel |
+| **Boundary** | 30 | The cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel, a long delete's finger going into the pause zone or reaching the top-speed line |
 | **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, a quick setting switched, steering starts, Record a bug starts or stops, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
 | **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol |
 | **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar |
@@ -40,7 +41,8 @@ Patterns are on and off in ms, starting with on.
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
 | **Gone** | 60 | The clipboard cleared |
 | **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
-| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, nothing left to delete (flick and hold), the cursor hitting the start or end of the text, taps on Space that find nothing to pick or steer |
+| **No** | 25, 40, 25, 40, 25 | A word that can't be saved, a flick with nothing to delete, taps on Space that find nothing to pick or steer |
+| **Wall** | 40, 35, 20, 35, 12 | Steering hits the start or end of the text, selecting reaches either end, a long delete takes the last word |
 | **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations |
 | **Saved** | 20, 40, 20, 40, 50 | Save in the word menu, by I or the strip |
 | **Removed** | 50, 40, 20, 40, 20 | Forget in the word menu, by O or the strip |
@@ -52,6 +54,8 @@ Saved and Removed are the word menu's own, so Save and Forget feel different fro
 Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single 30 ms pulse too, but it comes once, so it's a message.
 
 The owner's table had the delete flick at 50, 30, 20. Its gap is 35 instead, so it keeps rule 4.
+
+Wall is a dot hitting a wall with energy: a hit, then rebounds that die away, like a bouncing ball. The owner's start was 40 on, 30 off, 20 on, 20 off, 12 on. Its gaps are 35 instead, so it keeps rule 4, and the bounces die away by length. Hitting a wall feels the same in all three gestures, steering, selecting and a long delete, and by the same rule (`WallHits`): it plays the first time the gesture meets its limit, then nothing while the finger keeps pushing, and again only after it has moved away and come back. It used to be no, which read as an error. No is now only for nothing happening at all.
 
 ### The delete flick and its dots
 
@@ -83,7 +87,11 @@ The ticks are still texture for the gate, so they never block a message. A thinn
 
 A hold's ticks and its dots' ticks are one sequence (`HoldTicks`): the flick that takes the first word, each word's fading tick, then at the lift a tick as each dot lands. A word's tick and a dot's tick never play within 35 ms of each other. The word wins, as it's what the hold just did, and the dot's tick is skipped. A thinned word plays nothing, so a dot next to it still ticks. Every other dot ticks, and the dots keep their own 30 ms spacing. At normal animation speed the first dot lands about 640 ms after the lift, so a skip is rare: it guards a fast animation speed and a no just before the lift.
 
-The lab times a hold from its start, when the first word goes. The pause before that is the hold's own (`deleteHoldPauseMillis` in DeleteSwipe.kt), so a change to it moves the lab's hold too.
+The lab times a hold from its start, when the first word goes. The pause before that is the hold's own, 400 ms (`deleteHoldPauseMillis` in DeleteSwipe.kt), so a change to it moves the lab's hold too.
+
+### A long delete's zones
+
+Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 keys out is its top-speed line, past which it goes no faster. The finger going into the pause zone plays one boundary tick, and so does reaching the top-speed line. Each plays once per crossing and nothing more while the finger stays. The lab's experiment "Tick at delete zones" turns them off; it is on to start with.
 
 ## What plays what
 
@@ -97,18 +105,21 @@ The lab times a hold from its start, when the first word goes. The pause before 
 - The flick's dots land in the caret: a light texture tick for every dot as it lands.
 - A long delete's lines turn into dots as you lift, and those tick the same way as each lands.
 - Each further word while you hold: texture. In TitanKeys Debug, with the fade on, it's shorter as more words go, then only every other one (see Held delete fade).
-- Nothing left to delete: no. This goes for the flick and the hold.
+- A flick with nothing at all to delete: no.
+- A long delete takes the last word: wall, once. The delete stays quiet after it while you hold.
+- A long delete's finger goes into the pause zone, or reaches the top-speed line: boundary, once each time (see A long delete's zones).
 
 **Space gestures**
 - Each Space tap that counts toward a gesture: texture, so you feel tap 1 and tap 2 land. It's texture, so it never holds up the confirm or lock that follows.
-- Steering starts: confirm.
+- Steering starts: confirm. A double space with text selected puts the cursor back where it was before the select, or at the selection's end, plays confirm, and steers from there.
 - Selecting starts (tap, tap, then hold): lock.
 - A double or triple tap picks a word: lock, as the word is now selected.
 - Nothing to pick: a double or triple tap with no word to take (an empty field, between spaces, only marks), or a steer with no text at all. Nothing happens, no selection and no lock, only a no, once. Two taps above Space play it too, but only in the guide's practice field, which teaches it. Everywhere else they stay quiet.
 - Your finger slips off while steering and lands again in time: texture, once, so you know you're still steering and not typing.
 - The cursor passes a letter: texture. It passes a space or a line end: boundary. So you can count words without looking. Punctuation has no tick of its own, as it almost always sits next to a space.
 - The selection grows or shrinks by a word: boundary.
-- The cursor hits the start or end of the text: no, once each time it gets there. It plays again once the cursor has moved away and comes back.
+- The selection reaches the start or end of the text: wall, once each time it gets there.
+- The cursor hits the start or end of the text: wall, once each time it gets there. It plays again once the cursor has moved away and comes back.
 
 **Changes**
 - Autocorrect on Space: change. Shorthand spelled out goes through autocorrect, so it plays change too.

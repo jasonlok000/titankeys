@@ -67,26 +67,16 @@ internal val GUIDE_FLICK_START = floatArrayOf((RIGHT_EDGE + .95f) / 2, (MIDDLE_R
 internal const val GUIDE_FLICK_END_X = .62f
 
 /**
- * A finger that stays this long after a delete flick starts deleting more words: a quarter of the 400 ms it was, as a test
- * (owner, 2026-11-11).
+ * A finger that stays this long after a delete flick starts deleting more words. The owner tried 100 ms and went back to 400
+ * (2026-11-12).
  */
-private const val HOLD_MILLIS = 100L
-
-/** The pauses that TitanKeys Debug's Haptics lab can try with its slider. */
-internal val HOLD_PAUSE_RANGE = 25L..400L
-
-/**
- * A pause tried in TitanKeys Debug's Haptics lab, or null for [HOLD_MILLIS]. Only [Haptics.readHoldPause] sets it, and only in
- * the debug build, so every other build always has [HOLD_MILLIS].
- */
-@Volatile
-internal var triedHoldPauseMillis: Long? = null
+private const val HOLD_MILLIS = 400L
 
 /**
  * How long the finger stays still after a delete flick before the hold takes its first word. The hold and the haptics lab's
  * simulated hold both read it here, so a change to the pause moves both.
  */
-internal fun deleteHoldPauseMillis() = triedHoldPauseMillis ?: HOLD_MILLIS
+internal fun deleteHoldPauseMillis() = HOLD_MILLIS
 /** The finger counts as staying while it is this close to where it stopped, in key widths. */
 private const val HOLD_KEYS = .25f
 /** The wait between words after a short flick, close to how quickly a person flicks again by hand. */
@@ -108,6 +98,8 @@ internal const val REPEAT_LONG_KEYS = 5.5f
  */
 internal const val PAUSE_KEYS = .8f
 private const val PAUSE_LEAVE_KEYS = .1f
+/** The top-speed line counts as left again only this far back inside it, so a finger resting on the line ticks once. */
+private const val TOP_LEAVE_KEYS = .2f
 /** While the finger rests in the pause zone, the timer looks again this often. */
 private const val PAUSE_LOOK_MILLIS = 100L
 /** While an earlier edit is still going through, the next word looks again after this time. */
@@ -181,6 +173,19 @@ internal class DeleteHold(private val contact: Contact) {
         private set
     var topPace = 0f
         private set
+    /** True while the finger is at or past the top-speed line, so reaching it ticks once per crossing. */
+    private var atTop = false
+    /**
+     * The zone the finger just went into, once, for its tick: [Zone.Pause] or [Zone.TopSpeed]. [follow] sets it and [crossed]
+     * hands it over, so a finger that stays in a zone ticks no more.
+     */
+    private var entered: Zone? = null
+
+    /** The zones of a held delete that tick as the finger goes into them. */
+    enum class Zone { Pause, TopSpeed }
+
+    /** The zone the finger went into on the last [follow], once, or null. */
+    fun crossed(): Zone? = entered.also { entered = null }
     /** The wait between words. It is set while the flick is read, because a contact that deletes keeps no points. */
     var repeatMillis = REPEAT_SLOW_MILLIS
         private set
@@ -201,6 +206,8 @@ internal class DeleteHold(private val contact: Contact) {
         still = held
         origin = points.first()
         setPace(keysFrom(points.first(), held))
+        // A flick that already ends past the top-speed line starts there, with no tick: only reaching the line ticks.
+        atTop = keysFrom(points.first(), held) >= REPEAT_LONG_KEYS
         return held.time + deleteHoldPauseMillis()
     }
 
@@ -217,17 +224,29 @@ internal class DeleteHold(private val contact: Contact) {
             // Out again: the next word waits its whole step from here, at the speed for this distance.
             paused = false
             setPace(keys)
+            reachTop(keys)
             lastAt = finger.time
             nextAt = lastAt + repeatMillis
             return nextAt
         }
         if (keys < PAUSE_KEYS) {
             paused = true
+            atTop = false
+            entered = Zone.Pause
             return null
         }
         setPace(keys)
+        reachTop(keys)
         nextAt = lastAt + repeatMillis
         return nextAt
+    }
+
+    /** The finger reached the top-speed line: it ticks once, and again only after it has come back inside it. */
+    private fun reachTop(keys: Float) {
+        if (!atTop && keys >= REPEAT_LONG_KEYS) {
+            atTop = true
+            entered = Zone.TopSpeed
+        } else if (atTop && keys < REPEAT_LONG_KEYS - TOP_LEAVE_KEYS) atTop = false
     }
 
     private fun setPace(keys: Float) {
@@ -272,8 +291,7 @@ internal class DeleteHold(private val contact: Contact) {
         paused = false
         pace = 0f
         topPace = 0f
+        atTop = false
+        entered = null
     }
-
-    /** Where the flick started, from 0 to 1 across the touchpad, or null with no hold: the bar draws its zones from here. */
-    val originX get() = origin?.x
 }

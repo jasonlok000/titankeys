@@ -14,6 +14,7 @@ private const val GAP_MILLIS = 80L
 
 fun main() {
     twoQuickTapsSelect()
+    aDoubleSpaceCollapsesASelection()
     tapsWithNoWordPickNothing()
     steeringNeedsSomeText()
     worksAnywhereOnTheRow()
@@ -1171,4 +1172,16 @@ private fun steeringNeedsSomeText() {
     same(WordSelection.anyToSteer("", ""), false, "An empty field has nothing to steer through")
     same(WordSelection.anyToSteer(" ", ""), true, "A space is text to steer through")
     same(WordSelection.anyToSteer("", "."), true, "and so is a mark after the cursor")
+}
+
+/**
+ * A double space with text selected puts the cursor back where it was before the select, when that is known and inside the
+ * selection, or else at the selection's end; then steering goes on from there.
+ */
+private fun aDoubleSpaceCollapsesASelection() {
+    same(WordSelection.collapseTo(4, 15, 9), 9, "Back where the cursor was before the select")
+    same(WordSelection.collapseTo(4, 15, 4), 4, "Its start counts as inside")
+    same(WordSelection.collapseTo(4, 15, 15), 15, "and its end")
+    same(WordSelection.collapseTo(4, 15, null), 15, "Not known: the selection's end")
+    same(WordSelection.collapseTo(4, 15, 30), 15, "Outside the selection, as after another select: its end")
 }

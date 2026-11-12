@@ -92,7 +92,6 @@ class HapticsLabActivity : Activity() {
             addView(card("Last 5 seconds", timeline, key()))
             addView(card("Last ${HapticTimeline.RECENT}", list))
             addView(card("Patterns", editor))
-            addView(card(getString(R.string.lab_hold_pause_title), holdPause()))
             addView(card("Overall", field("How do they feel together?", 2, lab.general()) { lab.general(it) }))
         }
         setContentView(ScrollView(this).apply {
@@ -327,34 +326,6 @@ class HapticsLabActivity : Activity() {
             label.text = "$kind: ${pattern[index]} ms"
             if (bar.progress != pattern[index].toInt()) bar.progress = pattern[index].toInt()
         }
-    }
-
-    /**
-     * The pause before a held delete starts deleting and ticking, with a slider that tries each value as it moves, and Reset.
-     * The next held delete in any field waits that long.
-     */
-    private fun holdPause() = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        val label = text("", 14f, LabColours.CREAM)
-        lateinit var bar: SeekBar
-        fun show() {
-            val millis = lab.holdPause()
-            label.text = getString(R.string.lab_hold_pause_value, millis)
-            if (bar.progress != millis.toInt()) bar.progress = millis.toInt()
-        }
-        bar = slider(HOLD_PAUSE_RANGE) { millis ->
-            lab.tryHoldPause(millis)
-            show()
-        }
-        addView(text(getString(R.string.lab_hold_pause_about), 14f, LabColours.DIM))
-        addView(label)
-        addView(bar)
-        val reset = getString(R.string.lab_hold_pause_reset)
-        addView(button(reset, reset) {
-            lab.tryHoldPause(null)
-            show()
-        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)))
-        show()
     }
 
     /** A slider over [range] that tries each value as it moves. */

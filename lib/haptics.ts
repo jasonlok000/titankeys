@@ -12,7 +12,9 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "delete_flick", label: "Delete flick", about: "When you flick left to delete a word. The second pulse lands as the dots pop." },
     { id: "delete_dots_land", label: "Delete dots land", about: "When the dots of a flick, or of a long delete as you lift, go into the cursor. A light tick for every dot as it lands." },
     { id: "delete_word", label: "Each word while you hold", about: "Each word that goes while you keep your finger down after a flick. In TitanKeys Debug, with the lab's fade on, the ticks get shorter as more go, then only every other one plays." },
-    { id: "delete_nothing", label: "Nothing left to delete", about: "When you flick or hold to delete and there's nothing left." },
+    { id: "delete_nothing", label: "Nothing left to delete", about: "When you flick to delete and there's nothing there at all." },
+    { id: "delete_ran_out", label: "Long delete reaches the start", about: "When a long delete takes the last word. It plays once, and the delete stays quiet after it." },
+    { id: "delete_zone", label: "Long delete zones", about: "When your finger goes back near where the flick started, where the delete pauses, or reaches the line where it goes no faster." },
   ] },
   { title: "Space gestures", haptics: [
     { id: "space_tap", label: "Each counted Space tap", about: "Each tap on Space that counts toward a double or triple tap, so you feel it land." },
@@ -24,7 +26,8 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "cursor_letter", label: "Cursor passes a letter", about: "Each letter the cursor passes while you steer." },
     { id: "cursor_space", label: "Cursor passes a space", about: "Each space or line end the cursor passes while you steer, so you can count words." },
     { id: "selection_word", label: "Selection grows or shrinks a word", about: "When the selection grabs one more word, or lets one go." },
-    { id: "cursor_end", label: "Cursor hits the start or end", about: "When the cursor hits the start or end of the text and can't go further." },
+    { id: "cursor_end", label: "Cursor hits the start or end", about: "When the cursor hits the start or end of the text and can't go further. Once each time it gets there." },
+    { id: "selection_end", label: "Selection hits the start or end", about: "When the selection reaches the start or end of the text. Once each time it gets there." },
   ] },
   { title: "Changes", haptics: [
     { id: "autocorrect", label: "Autocorrect or shorthand on Space", about: "When autocorrect changes a word as you press Space, or shorthand gets spelled out." },

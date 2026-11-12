@@ -240,8 +240,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     var chained = false
         private set
 
-    /** The experiment "Dots speed up when long", from the Haptics lab: after the first few, each dot lands a little sooner. */
-    var speedUp = false
+    /** The experiment "Dots speed up when long", from the Haptics lab, on by default: after the first few, each dot lands a little sooner. */
+    var speedUp = true
         set(value) {
             if (field != value) planned = Float.NaN
             field = value

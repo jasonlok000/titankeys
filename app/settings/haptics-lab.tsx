@@ -24,7 +24,7 @@ function Lab({ lab }: { lab: HapticsLab }) {
       <Field label="Open the lab" onPress={open}>Practice, live haptics, patterns and notes</Field>
     </Section>
     <Section title="Experiments">
-      <Toggle label="Dots speed up when long" value={lab.experiments.dotsSpeedUp ?? false}
+      <Toggle label="Dots speed up when long" value={lab.experiments.dotsSpeedUp ?? true}
         onChange={on => void setLabExperiment("dotsSpeedUp", on)} />
       <Toggle label="Held delete fade" value={lab.experiments.heldDeleteFade ?? false}
         onChange={on => void setLabExperiment("heldDeleteFade", on)} />

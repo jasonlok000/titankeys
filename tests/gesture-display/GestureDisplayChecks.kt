@@ -1092,6 +1092,7 @@ private fun quickFlicksMakeOneStream() {
  */
 private fun longDotsSpeedUpWhenTried() {
     val plain = GestureDisplay()
+    plain.speedUp = false
     plain.wordDeleted(1_000, 30)
     val plainSpan = plain.dotLandsAt(29) - plain.dotLandsAt(0)
     val fast = GestureDisplay()
@@ -1113,8 +1114,8 @@ private fun longDotsSpeedUpWhenTried() {
     few.speedUp = true
     few.wordDeleted(1_000, 4)
     same(few.dotLandings(1f).size, 4, "Four dots, four ticks")
-    // Off, as by default, nothing changes.
-    same(GestureDisplay().speedUp, false, "The experiment is off by default")
+    // On by default; off, the dots keep their even spacing.
+    same(GestureDisplay().speedUp, true, "The experiment is on by default")
     isTrue((1 until 30).all { kotlin.math.abs(plain.dotLandsAt(it) - plain.dotLandsAt(it - 1) - 30f) < .01f }, "Off, thirty dots land 30 ms apart")
 }
 
@@ -1124,7 +1125,7 @@ private fun longDotsSpeedUpWhenTried() {
  */
 private fun aFlicksWayInStretchesToFitItsDots() {
     for ((letters, out) in listOf(1 to 450f, 8 to 450f, 30 to 202.5f + 30 * 30)) {
-        val display = GestureDisplay()
+        val display = GestureDisplay().apply { speedUp = false }
         display.wordDeleted(1_000, letters)
         val landings = display.dotLandings(1f)
         same(landings.size, letters, "$letters dots land one by one")
@@ -1139,14 +1140,14 @@ private fun aFlicksWayInStretchesToFitItsDots() {
         same(display.scene, Scene.DeleteFlick, "$letters dots: the words come back only after")
     }
     // Thirty dots land over about 900 ms, then the words come back.
-    val thirty = GestureDisplay()
+    val thirty = GestureDisplay().apply { speedUp = false }
     thirty.wordDeleted(1_000, 30)
     val landings = thirty.dotLandings(1f)
     isTrue(landings.last() - landings.first() == 29L * 30, "Thirty dots land 30 ms apart: ${landings.first()} to ${landings.last()}")
     thirty.run(1_000, 1_000 + (GestureDisplay.FLICK_IN + GestureDisplay.FLICK_HOLD + GestureDisplay.outMillis(30, 1f) + GestureDisplay.FLICK_BACK).toLong() + 20)
     same(thirty.scene, Scene.None, "and it's over once the words are back")
     // Faster animations shrink the way in, but never below 30 ms a dot.
-    val fast = GestureDisplay()
+    val fast = GestureDisplay().apply { speedUp = false }
     fast.wordDeleted(1_000, 10)
     val quick = fast.dotLandings(.25f)
     isTrue(quick.zipWithNext().all { (a, b) -> b - a >= 30 }, "At a quarter speed the dots still land 30 ms apart: $quick")

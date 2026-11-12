@@ -772,9 +772,10 @@ class Haptics(private val context: Context) {
 
         /**
          * The Haptics lab's experiment "Dots speed up when long": after the first few, each of a delete's dots lands a little
-         * sooner, and ticks keep 30 ms apart. Off unless tried in the lab, and only TitanKeys Debug reads it.
+         * sooner, and ticks keep 30 ms apart. On by default (owner, 2026-11-11). Only TitanKeys Debug reads the lab's switch, and
+         * every other build has it on without looking.
          */
-        fun dotsSpeedUp(context: Context) = debug(context) && preferences(context).getBoolean(DOTS_SPEED_UP, false)
+        fun dotsSpeedUp(context: Context) = !debug(context) || preferences(context).getBoolean(DOTS_SPEED_UP, true)
 
         fun tryDotsSpeedUp(context: Context, on: Boolean) {
             check(debug(context)) { "Only TitanKeys Debug has the lab's experiments" }

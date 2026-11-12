@@ -463,9 +463,12 @@ private fun theOwnersFourAdditions() {
         check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic has a trigger" }
 }
 
-/** A flick's dots, as the bar shows them for a word of [letters] at animation speed [scale], and when each lands. */
+/**
+ * A flick's dots, as the bar shows them for a word of [letters] at animation speed [scale], and when each lands. With the
+ * speed-up off, the plain rule: the gesture display checks the speed-up.
+ */
 private fun landings(letters: Int, scale: Float = 1f): List<Long> {
-    val display = GestureDisplay()
+    val display = GestureDisplay().apply { speedUp = false }
     display.wordDeleted(1000, letters)
     return display.dotLandings(scale)
 }
@@ -550,7 +553,7 @@ private fun aCutDropsTheTicksToCome() {
 
 /** A long delete's lines turn into dots at the lift, which tick as each lands, the same way a flick's do. */
 private fun aHoldsDotsTickAtTheLift() {
-    val held = GestureDisplay()
+    val held = GestureDisplay().apply { speedUp = false }
     held.deleteHeld(200, 1000)
     held.wordDeleted(1100, 4)
     held.wordDeleted(1300, 3)
@@ -767,7 +770,8 @@ private fun aHoldAndItsDotsAreOneSequence() {
         val landings = GestureDisplay.holdLandings(HoldTicks.playLetters(), scale, speedUp)
         val dots = plan.ticks.filter { it.kind == HoldTicks.Kind.Dot }
         check(dots.size == landings.size && dots.map { it.at } == landings.map { plan.liftAt + it }) { "$what: a tick per dot: $dots" }
-        check(dots.size == GestureDisplay.MAX_DOTS || speedUp) { "$what: the 11 words' 41 letters fill the 30 dots: ${dots.size}" }
+        // Each word gets its share of about 30 dots, one at least, so all 11 words show.
+        check(dots.size in GestureDisplay.MAX_DOTS - 2..GestureDisplay.MAX_DOTS + 2 || speedUp) { "$what: the 11 words' 41 letters share about 30 dots: ${dots.size}" }
         check(dots.all { it.at > plan.liftAt }) { "$what: the dots land after the lift" }
         check(dots.all { it.plays }) { "$what: none is near a word, as they land after the lift: $dots" }
     }
@@ -824,7 +828,8 @@ private fun theHoldFollowsItsPause() {
 private fun theLabShowsTheDotsOfAHold() {
     val plan = playPlan()
     val words = HapticTimeline.planWords(plan)
-    check(words.startsWith("Still ${deleteHoldPauseMillis()} ms, then the flick and 10 words, the lift, and 30 dots from ")) { words }
+    val dots = plan.ticks.count { it.kind == HoldTicks.Kind.Dot }
+    check(words.startsWith("Still ${deleteHoldPauseMillis()} ms, then the flick and 10 words, the lift, and $dots dots from ")) { words }
     check(words.endsWith("0 dots skipped near a word.")) { words }
     val still = playPlan(scale = 0f)
     check(still.ticks.none { it.kind == HoldTicks.Kind.Dot }) { "With animations off a hold has no dots" }

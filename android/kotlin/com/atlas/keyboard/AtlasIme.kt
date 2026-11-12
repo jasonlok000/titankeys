@@ -72,6 +72,8 @@ class AtlasIme : InputMethodService() {
     private val cursorGesture = CursorGesture()
     /** The finger's path through cursor mode, drawn on the home screen's keyboard like a swipe. */
     private var cursorPath = ArrayList<Sample>()
+    /** The third touch of a triple tap is still down: its pick's mark stays on the bar until it lifts. See [pickOnLand]. */
+    private var tripleDown = false
     /** The touch of a Space gesture registered before any slide, so the strip shows it and its feel has played. */
     private var gestureRegistered = false
     /** This touch's Space gesture found nothing to work on, played its no, and does nothing more. See [nothingToPick]. */
@@ -368,6 +370,8 @@ class AtlasIme : InputMethodService() {
     /** The finger moved, so the wait for a hold starts again, or ends if the finger is no longer on a delete flick. */
     private fun followDeleteHold() {
         val start = contact.points.firstOrNull()
+        // The pause before a hold starts, which the Haptics lab can try live in TitanKeys Debug.
+        Haptics.readHoldPause(this)
         val at = deleteHold.moved(!altOrPanel && start != null && pieces.canDelete(start.time) && guideAllows(GuideLesson.Flick))
         if (at != null) nextDeleteHoldStep(at) else main.removeCallbacks(stepDeleteHold)
     }
@@ -386,7 +390,7 @@ class AtlasIme : InputMethodService() {
             heldWords.reset()
             // A hold takes the bar from any dots still playing, and their ticks stop.
             haptics.cutDots()
-            strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis())
+            strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), flick.points.lastOrNull { it.valid }?.x)
             // The dots at the lift keep clear of this hold's ticks.
             haptics.holdStarted()
             // The contact was a delete and not part of a word, as it would be at a lift.
@@ -491,6 +495,8 @@ class AtlasIme : InputMethodService() {
     private fun pickOnLand() {
         Recording.sink?.gesture("triple", SystemClock.uptimeMillis(), "")
         gestureRegistered = true
+        // The bar keeps the pick's mark while this touch stays down, and shows the selected text after the lift.
+        tripleDown = true
         main.removeCallbacks(confirmDoubleTap)
         finishHeldTaps(type = false)
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped(3) }
@@ -1924,6 +1930,8 @@ class AtlasIme : InputMethodService() {
                 if (contact.deleting) {
                     strip?.gesture?.swipeCancelled()
                     samples.lastOrNull { it.valid }?.let { finger ->
+                        // The glow under the finger follows it.
+                        strip?.gesture?.fingerAt(finger.x)
                         deleteHold.follow(finger)?.let {
                             nextDeleteHoldStep(it)
                             if (strip?.gesture?.scene == GestureDisplay.Scene.DeleteHold) strip?.gesture?.deleteHeld(deleteHold.repeatMillis, finger.time)
@@ -2011,6 +2019,8 @@ class AtlasIme : InputMethodService() {
     /** A finger lifted, or the system cancelled the gesture, which counts as a lift but never as a tap of a double tap. */
     private fun lift(event: MotionEvent, samples: List<Sample>, cancelled: Boolean) {
         endDeleteHold()
+        tripleDown = false
+        strip?.gesture?.pickLifted()
         val doubleTapped = if (cancelled) {
             cursorGesture.cancel(event.eventTime)
             false
@@ -2198,7 +2208,7 @@ class AtlasIme : InputMethodService() {
             return@changeSelection null
         }
         strip?.gesture?.wordText(text.subSequence(0, word.first), word.second - word.first, text.subSequence(word.second, text.length))
-        strip?.gesture?.wordSelected(SystemClock.uptimeMillis())
+        strip?.gesture?.wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown)
         word
     }
 

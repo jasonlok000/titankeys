@@ -60,6 +60,18 @@ class HapticsLab(private val context: Context) {
         later()
     }
 
+    /** How long a delete flick's finger stays before a held delete starts, in ms. */
+    fun holdPause(): Long {
+        Haptics.readHoldPause(context)
+        return deleteHoldPauseMillis()
+    }
+
+    /** Tries [millis] as that pause, or puts the default back with null. The next real held delete waits that long. */
+    fun tryHoldPause(millis: Long?) {
+        Haptics.tryHoldPause(context, millis)
+        later()
+    }
+
     /** Plays a held delete as it plays now, its dots and all, as [holdPlan] has it, with no switch or gate. */
     fun previewFade() = haptics.previewHold(holdPlan())
 
@@ -90,6 +102,7 @@ class HapticsLab(private val context: Context) {
 
     /** Each family's pattern in use now, the held delete fade, each haptic's family and what it plays, and the experiments. */
     fun state(): JSONObject = JSONObject().put("families", families()).put("heldDeleteFade", heldDeleteFade()).put("haptics", haptics())
+        .put("holdPauseMillis", holdPause())
         .put("experiments", JSONObject().put(DOTS_SPEED_UP, Haptics.dotsSpeedUp(context)).put(HELD_DELETE_FADE, fading()))
 
     /** Turns one of the lab's experiments on or off, by its id. */
@@ -195,7 +208,8 @@ class HapticsLab(private val context: Context) {
         }
         val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
         val text = JSONObject().put("savedAt", Instant.now().toString()).put("version", version).put("general", notes.general)
-            .put("families", families).put("heldDeleteFade", heldDeleteFade().put("comment", notes.fade)).put("haptics", list).toString(2)
+            .put("families", families).put("heldDeleteFade", heldDeleteFade().put("comment", notes.fade)).put("holdPauseMillis", holdPause())
+            .put("haptics", list).toString(2)
         val file = file()
         val written = File(file.parentFile, "${file.name}.new")
         written.writeText(text)

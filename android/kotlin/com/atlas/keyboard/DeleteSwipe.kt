@@ -66,14 +66,27 @@ internal val GUIDE_FLICK_START = floatArrayOf((RIGHT_EDGE + .95f) / 2, (MIDDLE_R
 /** Where it ends: about four keys to the left, like a real flick. */
 internal const val GUIDE_FLICK_END_X = .62f
 
-/** A finger that stays this long after a delete flick starts deleting more words. Real flicks lift long before this. */
-private const val HOLD_MILLIS = 400L
+/**
+ * A finger that stays this long after a delete flick starts deleting more words: a quarter of the 400 ms it was, as a test
+ * (owner, 2026-11-11).
+ */
+private const val HOLD_MILLIS = 100L
+
+/** The pauses that TitanKeys Debug's Haptics lab can try with its slider. */
+internal val HOLD_PAUSE_RANGE = 25L..400L
+
+/**
+ * A pause tried in TitanKeys Debug's Haptics lab, or null for [HOLD_MILLIS]. Only [Haptics.readHoldPause] sets it, and only in
+ * the debug build, so every other build always has [HOLD_MILLIS].
+ */
+@Volatile
+internal var triedHoldPauseMillis: Long? = null
 
 /**
  * How long the finger stays still after a delete flick before the hold takes its first word. The hold and the haptics lab's
  * simulated hold both read it here, so a change to the pause moves both.
  */
-internal fun deleteHoldPauseMillis() = HOLD_MILLIS
+internal fun deleteHoldPauseMillis() = triedHoldPauseMillis ?: HOLD_MILLIS
 /** The finger counts as staying while it is this close to where it stopped, in key widths. */
 private const val HOLD_KEYS = .25f
 /** The wait between words after a short flick, close to how quickly a person flicks again by hand. */

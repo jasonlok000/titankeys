@@ -118,6 +118,8 @@ export type HapticsLab = {
   haptics: Record<string, { family: string; pattern: number[]; plays: string }>;
   /** The lab's experiments, on or off, by id: dotsSpeedUp, "Dots speed up when long", and heldDeleteFade, "Held delete fade". */
   experiments: Record<string, boolean>;
+  /** How long a delete flick's finger stays before the hold starts, in ms. The lab's own screen has its slider. */
+  holdPauseMillis: number;
 };
 
 export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;

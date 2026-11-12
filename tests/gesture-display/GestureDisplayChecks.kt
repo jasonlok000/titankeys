@@ -13,6 +13,10 @@ private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
     aFlicksWayInStretchesToFitItsDots()
+    aHeldDeleteGlowsUnderTheFinger()
+    aTriplePickWaitsForTheLift()
+    aHoldsWordsFadeInBehindItsDots()
+    anyNumberOfWordsShowsItsDots()
     quickFlicksMakeOneStream()
     longDotsSpeedUpWhenTried()
     aPickedWordHoldsABeat()
@@ -399,9 +403,8 @@ private fun theHoldEndsHideIt() {
     long.deleteHeld(200, 1_000)
     repeat(8) { long.wordDeleted(1_000L + it * 200, 7) }
     long.deleteEnded(2_700)
-    same(long.dots, GestureDisplay.MAX_DOTS, "A long hold shows about 30 dots at most")
-    same(GestureDisplay.MAX_DOTS, 30, "The most dots is 30")
-    same(long.groups.toList(), listOf(7, 7, 7, 7, 2), "The nearest words show first, and the last one is cut")
+    same(GestureDisplay.MAX_DOTS, 30, "About 30 dots")
+    same(long.groups.toList(), List(8) { 4 }, "Every word shows, each with its share of about 30 dots")
 
     val cut = GestureDisplay()
     cut.deleteHeld(200, 1_000)
@@ -428,7 +431,9 @@ private fun aFlickHasABriefFlourish() {
     same(display.softDelete, true, "A single flick shows only its dots and the caret")
     same(display.dots, 5, "\"don't\" took five characters, so it shows five dots")
     display.run(1_000, 1_064)
-    same(display.reveal, 1f, "The cover is in at once, so the old words never show through")
+    isTrue(display.reveal > .5f && display.reveal < 1f, "The words fade out, easing out, over about 150 ms: ${display.reveal}")
+    display.run(1_080, 1_160)
+    same(display.reveal, 1f, "and then they stay faded")
     same(display.groups.toList(), listOf(5), "One word, one group")
     display.run(1_080, 1_310)
     same(display.dotsIn, 1f, "The dots are all in after 120 ms")
@@ -438,9 +443,9 @@ private fun aFlickHasABriefFlourish() {
     isTrue(display.dotsOut > 0f && display.dotsOut < 1f, "Then they go into the caret, over about 450 ms")
     same(display.reveal, 1f, "The words stay covered while the dots go")
     display.run(1_776, 1_910)
-    isTrue(display.reveal < 1f && display.reveal > 0f, "Then the words fade back in, over about 150 ms")
-    display.run(1_926, 1_940)
-    same(display.scene, Scene.None, "It is over by about 0.92 s, and it is only a picture, so typing never waits for it")
+    isTrue(display.reveal < 1f && display.reveal > 0f, "Then the words fade back in, over about 200 ms")
+    display.run(1_926, 1_990)
+    same(display.scene, Scene.None, "It is over by about 0.97 s, and it is only a picture, so typing never waits for it")
 }
 
 private fun aFlickCountsTheCharactersItDeleted() {
@@ -997,6 +1002,140 @@ private fun theHeldGlowGoesWithTheDisplay() {
 }
 
 /**
+ * A long held delete grows a glow under the finger, as two Space taps do, and it follows the finger smoothly. At the lift it
+ * stays where it was and fades; a key ends it at once.
+ */
+private fun aHeldDeleteGlowsUnderTheFinger() {
+    val display = GestureDisplay()
+    display.deleteHeld(200, 1_000, x = .8f)
+    same(display.glowing, true, "A held delete glows")
+    display.run(1_000, 1_000 + GestureDisplay.GLOW_HOLD_GROW.toLong() + 16)
+    near(display.glowWidth, GestureDisplay.GLOW_FINGER_WIDTH, "as wide as two taps' glow")
+    near(display.glowAlpha, GestureDisplay.GLOW_FINGER_ALPHA, "and as strong")
+    near(display.glowCentre, .8f, "under the finger")
+    display.fingerAt(.6f)
+    display.run(1_152, 1_168)
+    isTrue(display.glowCentre < .8f && display.glowCentre > .6f, "It follows the finger smoothly: ${display.glowCentre}")
+    display.run(1_184, 1_500)
+    near(display.glowCentre, .6f, "and gets there", .005f)
+    display.wordDeleted(1_500, 4)
+    display.deleteEnded(1_516)
+    same(display.glowing, true, "At the lift it stays")
+    near(display.glowCentre, .6f, "where it was", .005f)
+    display.run(1_516, 1_516 + GestureDisplay.GLOW_FADE.toLong() / 2)
+    isTrue(display.glowAlpha > 0f && display.glowAlpha < GestureDisplay.GLOW_FINGER_ALPHA, "and fades: ${display.glowAlpha}")
+    display.run(1_516 + GestureDisplay.GLOW_FADE.toLong() / 2 + 16, 1_516 + GestureDisplay.GLOW_FADE.toLong() + 32)
+    same(display.glowing, false, "then it is gone")
+    // The Space glow is still under the middle word.
+    val space = GestureDisplay()
+    space.spaceTapped(2, 1_000)
+    space.run(1_000, 1_100)
+    near(space.glowCentre, .5f, "Space taps glow under the middle word")
+    // A key ends a held delete's fading glow at once.
+    val key = GestureDisplay()
+    key.deleteHeld(200, 1_000, x = .9f)
+    key.wordDeleted(1_100, 3)
+    key.deleteEnded(1_200)
+    key.glowOff()
+    same(key.glowing, false, "A key ends it at once")
+}
+
+/**
+ * A triple tap's third touch picks the word as it lands. While it stays down the mark stays over the word, however long, and the
+ * selected text waits under it; after the lift the mark goes at its usual pace. A quick lift keeps the usual timing.
+ */
+private fun aTriplePickWaitsForTheLift() {
+    val display = GestureDisplay()
+    display.wordSelected(1_000, held = true)
+    display.run(1_000, 3_000)
+    same(display.scene, Scene.WordSelected, "Two seconds down, the mark still shows")
+    same(display.reveal, 1f, "and covers the selected text")
+    isTrue(display.spanEnd - display.spanStart > .99f, "fully grown over the word")
+    display.pickLifted()
+    display.run(3_016, 3_016 + GestureDisplay.PICK_OUT.toLong() / 2)
+    isTrue(display.reveal > 0f && display.reveal < 1f, "After the lift it fades: ${display.reveal}")
+    display.run(3_016 + GestureDisplay.PICK_OUT.toLong() / 2 + 16, 3_016 + GestureDisplay.PICK_OUT.toLong() + 32)
+    same(display.scene, Scene.None, "and the selected text shows")
+
+    val quick = GestureDisplay()
+    quick.wordSelected(1_000, held = true)
+    quick.run(1_000, 1_100)
+    quick.pickLifted()
+    quick.run(1_116, 1_000 + (GestureDisplay.PICK_IN + GestureDisplay.PICK_HOLD).toLong() - 16)
+    same(quick.reveal, 1f, "A quick lift still holds the mark its usual time")
+    quick.run(1_000 + (GestureDisplay.PICK_IN + GestureDisplay.PICK_HOLD).toLong(), 1_000 + GestureDisplay.PICK_MILLIS.toLong() + 20)
+    same(quick.scene, Scene.None, "then goes as before")
+
+    val cut = GestureDisplay()
+    cut.wordSelected(1_000, held = true)
+    cut.run(1_000, 1_600)
+    cut.interrupt()
+    same(cut.scene, Scene.None, "A key or a touch still ends it at once")
+}
+
+/**
+ * A hold covers the words fully; at the lift they come out from under it to the dots' faded look over about 150 ms, easing out,
+ * so they never switch on at once.
+ */
+private fun aHoldsWordsFadeInBehindItsDots() {
+    val display = GestureDisplay()
+    display.deleteHeld(200, 1_000)
+    display.wordDeleted(1_000, 4)
+    display.run(1_000, 1_200)
+    display.deleteEnded(1_216)
+    display.run(1_216, 1_216)
+    same(display.solid, 1f, "At the lift the words are still fully covered")
+    display.run(1_232, 1_280)
+    isTrue(display.solid > 0f && display.solid < .5f, "then they come out quickly at first: ${display.solid}")
+    display.run(1_296, 1_376)
+    same(display.solid, 0f, "and by about 150 ms they show faded behind the dots")
+    val flick = GestureDisplay()
+    flick.wordDeleted(1_000, 4)
+    flick.run(1_000, 1_100)
+    same(flick.solid, 0f, "A flick's words were never fully covered")
+}
+
+/**
+ * However many words go, the dots play: a hold of eighty words, and a hundred quick flicks one after another, show a dot for
+ * every word, and every dot lands before the words come back. A row longer than the bar keeps its dots their size and slides
+ * along as they land.
+ */
+private fun anyNumberOfWordsShowsItsDots() {
+    fun landsAll(display: GestureDisplay, from: Long): Long {
+        val landed = BooleanArray(display.dots)
+        var now = from
+        while (display.scene != Scene.None && now < from + 30_000) {
+            display.advance(now, 1f)
+            isTrue(display.shownUnits <= GestureDisplay.MAX_ROW + .01f, "The row never squeezes past the bar's room: ${display.shownUnits}")
+            if (display.scene == Scene.DeleteFlick) for (index in landed.indices) if (display.dotTravel(index) >= 1f) landed[index] = true
+            now += 16
+        }
+        isTrue(landed.all { it }, "Every dot lands: ${landed.count { it }} of ${landed.size}")
+        return now
+    }
+    val hold = GestureDisplay()
+    hold.deleteHeld(80, 1_000)
+    repeat(80) { hold.wordDeleted(1_000L + it * 80, 5 + it % 4) }
+    isTrue(hold.deleteEnded(7_500), "A hold of eighty words turns into dots")
+    same(hold.groups.size, 80, "Each of the eighty words keeps its own group")
+    isTrue(hold.groups.all { it >= 1 }, "with a dot at least")
+    landsAll(hold, 7_500)
+
+    val flicks = GestureDisplay()
+    var now = 1_000L
+    var shown = 0
+    repeat(100) {
+        flicks.wordDeleted(now, 7)
+        isTrue(flicks.dots > shown, "Flick ${it + 1} adds its dots: ${flicks.dots}")
+        shown = flicks.dots
+        same(flicks.chained, it > 0, "Every flick after the first joins the one stream")
+        flicks.run(now, now + 184)
+        now += 200
+    }
+    landsAll(flicks, now)
+}
+
+/**
  * Deletes that come while the dots still play don't start them over or cut them: their dots join the end of the queue, and the
  * stream goes on, every dot landing and ticking 30 ms or more after the one before.
  */
@@ -1053,6 +1192,7 @@ private fun quickFlicksMakeOneStream() {
  */
 private fun longDotsSpeedUpWhenTried() {
     val plain = GestureDisplay()
+    plain.speedUp = false
     plain.wordDeleted(1_000, 30)
     val plainSpan = plain.dotLandsAt(29) - plain.dotLandsAt(0)
     val fast = GestureDisplay()
@@ -1074,8 +1214,8 @@ private fun longDotsSpeedUpWhenTried() {
     few.speedUp = true
     few.wordDeleted(1_000, 4)
     same(few.dotLandings(1f).size, 4, "Four dots, four ticks")
-    // Off, as by default, nothing changes.
-    same(GestureDisplay().speedUp, false, "The experiment is off by default")
+    // On by default; off, the dots keep their even spacing.
+    same(GestureDisplay().speedUp, true, "The experiment is on by default")
     isTrue((1 until 30).all { kotlin.math.abs(plain.dotLandsAt(it) - plain.dotLandsAt(it - 1) - 30f) < .01f }, "Off, thirty dots land 30 ms apart")
 }
 
@@ -1085,7 +1225,7 @@ private fun longDotsSpeedUpWhenTried() {
  */
 private fun aFlicksWayInStretchesToFitItsDots() {
     for ((letters, out) in listOf(1 to 450f, 8 to 450f, 30 to 202.5f + 30 * 30)) {
-        val display = GestureDisplay()
+        val display = GestureDisplay().apply { speedUp = false }
         display.wordDeleted(1_000, letters)
         val landings = display.dotLandings(1f)
         same(landings.size, letters, "$letters dots land one by one")
@@ -1100,14 +1240,14 @@ private fun aFlicksWayInStretchesToFitItsDots() {
         same(display.scene, Scene.DeleteFlick, "$letters dots: the words come back only after")
     }
     // Thirty dots land over about 900 ms, then the words come back.
-    val thirty = GestureDisplay()
+    val thirty = GestureDisplay().apply { speedUp = false }
     thirty.wordDeleted(1_000, 30)
     val landings = thirty.dotLandings(1f)
     isTrue(landings.last() - landings.first() == 29L * 30, "Thirty dots land 30 ms apart: ${landings.first()} to ${landings.last()}")
     thirty.run(1_000, 1_000 + (GestureDisplay.FLICK_IN + GestureDisplay.FLICK_HOLD + GestureDisplay.outMillis(30, 1f) + GestureDisplay.FLICK_BACK).toLong() + 20)
     same(thirty.scene, Scene.None, "and it's over once the words are back")
     // Faster animations shrink the way in, but never below 30 ms a dot.
-    val fast = GestureDisplay()
+    val fast = GestureDisplay().apply { speedUp = false }
     fast.wordDeleted(1_000, 10)
     val quick = fast.dotLandings(.25f)
     isTrue(quick.zipWithNext().all { (a, b) -> b - a >= 30 }, "At a quarter speed the dots still land 30 ms apart: $quick")

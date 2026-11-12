@@ -772,9 +772,10 @@ class Haptics(private val context: Context) {
 
         /**
          * The Haptics lab's experiment "Dots speed up when long": after the first few, each of a delete's dots lands a little
-         * sooner, and ticks keep 30 ms apart. Off unless tried in the lab, and only TitanKeys Debug reads it.
+         * sooner, and ticks keep 30 ms apart. On by default (owner, 2026-11-11). Only TitanKeys Debug reads the lab's switch, and
+         * every other build has it on without looking.
          */
-        fun dotsSpeedUp(context: Context) = debug(context) && preferences(context).getBoolean(DOTS_SPEED_UP, false)
+        fun dotsSpeedUp(context: Context) = !debug(context) || preferences(context).getBoolean(DOTS_SPEED_UP, true)
 
         fun tryDotsSpeedUp(context: Context, on: Boolean) {
             check(debug(context)) { "Only TitanKeys Debug has the lab's experiments" }
@@ -782,6 +783,26 @@ class Haptics(private val context: Context) {
         }
 
         private const val DOTS_SPEED_UP = "debug_dots_speed_up"
+
+        /**
+         * In TitanKeys Debug, puts the pause before a held delete that the Haptics lab's slider tried into
+         * [deleteHoldPauseMillis], or the default when none is tried. Every other build never looks, and keeps the default.
+         */
+        fun readHoldPause(context: Context) {
+            if (!debug(context)) return
+            triedHoldPauseMillis = preferences(context).getLong(HOLD_PAUSE_KEY, -1L).takeIf { it >= 0 }?.coerceIn(HOLD_PAUSE_RANGE)
+        }
+
+        /** Tries [millis] as the pause before a held delete, or puts the default back with null. Debug build only. */
+        fun tryHoldPause(context: Context, millis: Long?) {
+            check(debug(context)) { "Only TitanKeys Debug can try a hold pause" }
+            preferences(context).edit().apply {
+                if (millis == null) remove(HOLD_PAUSE_KEY) else putLong(HOLD_PAUSE_KEY, millis.coerceIn(HOLD_PAUSE_RANGE))
+            }.commit()
+            readHoldPause(context)
+        }
+
+        private const val HOLD_PAUSE_KEY = "debug_delete_hold_pause"
 
         /**
          * How a held delete fades now. Only the debug build reads settings tried in the Haptics lab. Every other build plays

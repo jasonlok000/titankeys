@@ -339,12 +339,12 @@ private fun aFingerThatKeepsMovingWaits() {
     rig.move(at(SHORT_STOP - .05f, .35f, 1_100))
     same(rig.words.size, 0, "A finger that keeps moving must not repeat")
     same(rig.next, 1_100 + holdMillis, "The wait must count from the last move")
-    // Slow travel on and on is not a flick any more, but a word: no hold.
+    // Slow travel on and on is not a flick any more, but a word: no hold. Each move comes before the pause is over.
     var x = SHORT_STOP - .05f
     var time = 1_100L
-    repeat(5) {
-        x -= .05f
-        time += 300
+    repeat(12) {
+        x -= .03f
+        time += holdMillis - 10
         rig.runTo(time - 1)
         rig.move(at(x, .35f, time))
     }

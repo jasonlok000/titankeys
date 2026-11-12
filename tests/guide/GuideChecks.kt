@@ -164,6 +164,8 @@ fun main() {
     resuming()
     theTrailFollowsTouchSize()
     demonstrationsTypePunctuation()
+    // Drawings of the slides in the new layout, to look at without a phone. See SlideRenders.kt.
+    System.getenv("SLIDES_PNG")?.let { drawSlides(it, NEW_LAYOUT) }
     println("Guide checks passed")
 }
 
@@ -445,13 +447,17 @@ private fun chapterOne() {
         "Each slide unlocks what it teaches, and keeps what was taught")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }.map { it.lessons }, listOf(emptySet(), setOf(GuideLesson.Flick),
         setOf(GuideLesson.Flick)), "Delete unlocks the flick on its flick and hold slides; Backspace always works")
-    // The chapters in the new layout: every title and success line on one line, every instruction and praise too.
-    for (step in GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }) {
+    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Steering }.map { it.lessons }, List(3) { setOf(GuideLesson.Cursor) },
+        "Steering unlocks only the cursor gestures")
+    // The chapters in the new layout: every title and success line on one line, every instruction, praise and help too.
+    for (step in GUIDE_STEPS.filter { it.chapter in NEW_LAYOUT }) {
         for (line in listOf(step.title, step.done)) same(line.length <= TITLE_MOST, true, "\"$line\" is one line")
-        for (line in step.stages.map { it.text } + step.praise) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
+        for (line in step.stages.map { it.text } + step.praise + listOfNotNull(step.help))
+            same(line.length <= LINE_MOST, true, "\"$line\" is one line")
     }
     for ((line, _) in DELETE_RESETS) same(line.length <= LINE_MOST, true, "The reset chip \"$line\" is one line")
-    same(GUIDE_STEPS.filter { it.chapter !in setOf(GuideChapter.Typing, GuideChapter.Delete) }.all { it.lessons == null }, true,
+    same(STEER_RESET.first.length <= LINE_MOST, true, "The steering reset chip is one line")
+    same(GUIDE_STEPS.filter { it.chapter !in NEW_LAYOUT }.all { it.lessons == null }, true,
         "The chapters not in the new layout yet lock nothing")
     same(typing.map { it.sides }, listOf(false, true, true, true), "Only the first slide shows just the bar's middle word")
     val typos = TYPING_TYPOS.split(' ')
@@ -469,6 +475,8 @@ private fun chapterOne() {
     same(GuideHooks.allows(GuideLesson.Symbols), true, "With no lock, everything works")
 }
 
+/** The chapters rebuilt in the new layout so far. */
+private val NEW_LAYOUT = setOf(GuideChapter.Typing, GuideChapter.Delete, GuideChapter.Steering)
 private const val TITLE_MOST = 33
 private const val LINE_MOST = 50
 
@@ -597,7 +605,7 @@ private fun theCursorHasToMove() {
     same(flow.event(CursorStarted(false)), GuideVerdict.Stage(1), "The taps start the cursor, so sliding is next")
     same(flow.event(FieldChanged("on and on", 4, 4)), GuideVerdict.Wait, "The first change sets the mark")
     same(flow.event(FieldChanged("on and on", 3, 3)), GuideVerdict.Wait, "A nudge waits for the lift")
-    same(flow.event(Moved(0f, lifted = true)).let { it is GuideVerdict.Hint && it.passes && it.title!!.startsWith("That's a nudge") }, true,
+    same(flow.event(Moved(0f, lifted = true)).let { it is GuideVerdict.Hint && it.passes && it.title!!.startsWith("A nudge") }, true,
         "A nudge counts, with its own line")
     val far = GuideFlow({ GuideSettings() })
     far.start("steer")

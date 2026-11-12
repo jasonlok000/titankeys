@@ -935,18 +935,18 @@ internal val GUIDE_STEPS = listOf(
         lessons = setOf(GuideLesson.Flick),
         demo = GuideDemo.DeleteLast,
     ),
-    // STEERING: a line that loops forever, with the cursor in the middle.
+    // STEERING, in the new layout: a line that loops forever, with the cursor in the middle. One-line titles, chips for real
+    // mistakes, and each slide locked to the cursor gestures. Letters, Backspace and Space still work.
     GuideStep(
         id = "steer", chapter = GuideChapter.Steering,
-        title = "Your finger is not a mouse. Today it is.",
+        // v3.1's "Your finger is not a mouse. Today it is." is two lines.
+        title = "Your finger's a mouse today.",
         stages = listOf(
-            GuideStage("Tap twice, quickly, on Space or just above it. Keep your finger down on the second tap.") { event ->
+            GuideStage("Tap Space twice, and hold the second tap.") { event ->
                 when {
                     event is CursorStarted && !event.words -> GuideVerdict.Done
-                    event is CursorStarted -> roast("One tap too many. Counting is hard.", "Two taps, the second one held.")
-                    event is DoubleTapped || event is TwoTapsAbove ->
-                        roast("You lifted. Read the instructions, genius.", "Tap twice and keep your finger down on the second tap.")
-                    event is Recognised && event.words.isNotEmpty() -> roast("That typed a word. Not the plan.", "Quick, light taps on Space or just above it.")
+                    event is CursorStarted -> chip("One tap too many. Two taps, the second held.")
+                    event is DoubleTapped || event is TwoTapsAbove -> chip("You lifted. Keep the second tap down.")
                     else -> GuideVerdict.Wait
                 }
             },
@@ -965,66 +965,68 @@ internal val GUIDE_STEPS = listOf(
                         }
                     }
                     event is Moved && event.lifted && used == 1 ->
-                        counts("That's a nudge, not a steer, but ok.", "Slide further from the middle next time.")
-                    event is Moved && event.lifted -> roast("Held it, then chickened out.", "Tap twice again, keep it down, then slide.", stage = 0)
+                        counts("A nudge, not a steer. But ok.", "Slide further from the middle next time.")
+                    event is Moved && event.lifted -> GuideVerdict.Hint("Held it, then chickened out. Hold, then slide.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
         done = "Cursor moved. No screen harmed.",
-        praise = "The further you slide from the middle, the faster it goes.",
-        help = "Tap lightly in the shaded patch, and keep your second touch down while you slide.",
+        // v3.1's "The further you slide from the middle, the faster it goes." is two lines.
+        praise = "Slide further out and it goes faster.",
+        help = "Tap in the shaded patch. Hold the second tap.",
         cue = GuideCue.Taps(2, drag = true),
         needs = GuideNeed.CursorControl,
+        lessons = setOf(GuideLesson.Cursor),
         demo = GuideDemo.MoveCursor,
     ),
     GuideStep(
         id = "selectword", chapter = GuideChapter.Steering,
         title = "Pick a word. Any word.",
-        stages = listOf(GuideStage("Tap three times, quickly, on Space or just above it, and lift each time.") { event ->
+        stages = listOf(GuideStage("Tap Space three times, lifting each time.") { event ->
             when {
                 // Two taps on Space pick the word at the cursor, which counts.
-                event is DoubleTapped && event.taps == 2 -> counts("Fine, that works too. Overachiever.", "It counts. Press Next.")
-                event is TwoTapsAbove -> roast("Two taps up there do nothing. On purpose.", "Tap three times, lifting each time.")
+                event is DoubleTapped && event.taps == 2 -> counts("That works too. Overachiever.", "It counts. Press Next.")
+                event is TwoTapsAbove -> chip("Two taps up there do nothing. Tap three times.")
                 event is FieldChanged && event.end > event.start -> GuideVerdict.Done
-                event is CursorStarted -> roast("That's steering, or selecting. The keyboard is confused, and so are we.",
-                    "Three quick taps, lifting each time.")
-                event is Recognised && event.words.isNotEmpty() -> roast("That typed a word.", "Quick, light taps, lifting each time.")
+                event is CursorStarted -> chip("Keyboard's confused, and so are we. Lift each tap.")
                 else -> GuideVerdict.Wait
             }
         }),
         done = "Picked. Like a pro.",
-        praise = "Three quick taps pick the word in front of the cursor. Two taps on Space do it too.",
+        praise = "Three taps pick the next word. So do two on Space.",
         cue = GuideCue.Taps(3, drag = false),
         needs = GuideNeed.CursorControl,
+        lessons = setOf(GuideLesson.Cursor),
         demo = GuideDemo.SelectLast,
     ),
     GuideStep(
         id = "selectmore", chapter = GuideChapter.Steering,
-        title = "Grab a bunch. Feel powerful for a second.",
+        // v3.1's "Grab a bunch. Feel powerful for a second." is two lines.
+        title = "Grab a bunch. Feel powerful.",
         stages = listOf(
-            GuideStage("Tap three times on Space or just above it. Keep your finger down on the third tap.") { event ->
+            GuideStage("Tap Space three times. Hold the third tap.") { event ->
                 when {
                     event is CursorStarted && event.words -> GuideVerdict.Done
-                    event is CursorStarted -> roast("That's two. Count to three. We believe in you.", "Three taps, the third held.")
-                    event is FieldChanged && event.end > event.start ->
-                        roast("One word. We asked for a bunch.", "Keep the third tap down, then slide.")
+                    event is CursorStarted -> chip("That's two. Count to three. We believe in you.")
+                    event is FieldChanged && event.end > event.start -> chip("One word. We asked for a bunch.")
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Selecting is on. Now slide left or right to select more words.") { event ->
+            GuideStage("Now slide left or right to select more.") { event ->
                 when {
                     event is FieldChanged && event.end > event.start -> GuideVerdict.Done
-                    event is Moved && event.lifted -> roast("So close. Then you just let go.", "Three taps again, the last one held, then slide.", stage = 0)
+                    event is Moved && event.lifted -> GuideVerdict.Hint("So close. Then you just let go.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
         done = "Selected. Screen untouched.",
         praise = "Slide back the other way to give words back.",
-        help = "Three taps, the third one held, then slide left or right. Lean back the other way to give words back.",
+        help = "Three taps, the third held, then slide.",
         cue = GuideCue.Taps(3, drag = true),
         needs = GuideNeed.CursorControl,
+        lessons = setOf(GuideLesson.Cursor),
         demo = GuideDemo.SelectLast,
     ),
     // SYMBOLS AND EMOJI: one text box, and a field that starts empty and only grows.

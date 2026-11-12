@@ -3168,7 +3168,7 @@ class GuideActivity : Activity() {
         private const val FN_OFF_BODY = "Paste needs it. Turn it on?"
         private const val DECLINE_OFF = "☐  I'd rather not paste. That's on me, and I accept the consequences."
         private const val DECLINE_ON = "☑  I'd rather not paste. That's on me, and I accept the consequences."
-        private const val SCREEN_TOUCHED = "The screen? Really? Why did you even buy this phone?"
+        private const val SCREEN_TOUCHED = "The screen? Really? Why'd you buy this phone?"
         private const val LEAVE_TITLE = "Leaving already?"
         private const val LEAVE_BODY = "You haven't finished the guide. Leave anyway?"
         private const val LEAVE_YES = "I already know everything"
@@ -3181,7 +3181,7 @@ class GuideActivity : Activity() {
         private const val NOTHING_PASTED_BODY = "fn isn't Ctrl yet. Press the button below to turn it on."
         private const val EMPTY_BAR_TITLE = "Nothing to judge. Rare for you."
         private const val EMPTY_BAR_BODY = "Type a letter so the bar fills up."
-        private const val TOO_LATE_TITLE = "Still got that open? The last slide's over, let it go."
+        private const val TOO_LATE_TITLE = "Still open? The last slide's over. Let it go."
         private const val TOO_LATE_PANEL = "Press Sym to close it."
         private const val TOO_LATE_ALT = "Press Alt to turn it off."
         /** How long the too-late line shows while the panel closes by itself. */

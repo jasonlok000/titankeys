@@ -1,0 +1,404 @@
+package com.atlas.keyboard
+
+import com.atlas.keyboard.KeyboardEvent.CursorStarted
+import com.atlas.keyboard.KeyboardEvent.DeletedWord
+import com.atlas.keyboard.KeyboardEvent.DoubleTapped
+import com.atlas.keyboard.KeyboardEvent.EmptyKey
+import com.atlas.keyboard.KeyboardEvent.FieldChanged
+import com.atlas.keyboard.KeyboardEvent.HeldSymbol
+import com.atlas.keyboard.KeyboardEvent.ModifierState
+import com.atlas.keyboard.KeyboardEvent.Pushed
+import com.atlas.keyboard.KeyboardEvent.Released
+import com.atlas.keyboard.KeyboardEvent.TwoTapsAbove
+import com.atlas.keyboard.Modifiers.Level
+import com.atlas.keyboard.Modifiers.Panel
+import java.awt.BasicStroke
+import java.awt.Color
+import java.awt.Font
+import java.awt.Graphics2D
+import java.awt.RenderingHints
+import java.awt.geom.RoundRectangle2D
+import java.awt.image.BufferedImage
+import java.io.File
+import javax.imageio.ImageIO
+
+/*
+ * Desktop drawings of the guide's slides, to look at without a phone: each slide at its start, with a chip for a real mistake or
+ * its next instruction, and passed. They follow the slide's real words, chips and field, from the guide's own steps, laid out as
+ * the guide lays them out (one top bar, a one-line title, a one-line instruction or chip, a two-line field with its ghost), at the
+ * Titan 2 Elite's size. The fonts are the desktop's, not the phone's, so widths are close, not exact. Set SLIDES_PNG to a folder.
+ */
+
+/** One state of a slide, as the screen shows it. */
+private class Frame(
+    val name: String,
+    val chapter: GuideChapter,
+    val title: String,
+    val line: String,
+    val chip: String? = null,
+    val passed: Boolean = false,
+    val field: String = "",
+    val start: Int = field.length,
+    val end: Int = start,
+    val ghost: String = "",
+    val panel: String? = null,
+)
+
+/** A mistake for each slide, as the keyboard reports it, so a drawing shows the chip that it gets. */
+private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
+    "type" to listOf(Pushed(62)),
+    "flick" to listOf(Pushed(67)),
+    "hold" to listOf(DeletedWord(held = false)),
+    "steer" to listOf(DoubleTapped(2)),
+    "selectword" to listOf(TwoTapsAbove),
+    "selectmore" to listOf(CursorStarted(false)),
+    "alt" to listOf(ModifierState(Level.Off, Level.Once, Panel.Closed, false), FieldChanged("#", 1, 1)),
+    "holdsym" to listOf(HeldSymbol("#")),
+    "symmain" to listOf(ModifierState(Level.Off, Level.Off, Panel.Symbols, false), EmptyKey),
+    "symgroups" to listOf(FieldChanged("&", 1, 1)),
+    "clown" to listOf(ModifierState(Level.Off, Level.Off, Panel.Emoji, false), FieldChanged("😀", 2, 2)),
+    "paste" to listOf(KeyboardEvent.Copied("x")),
+    "clipboard" to listOf(ModifierState(Level.Off, Level.Off, Panel.Symbols, false), ModifierState(Level.Off, Level.Off, Panel.Closed, false)),
+)
+
+/** What the field holds on a slide, before anything is done: its text, the cursor or selection, and the ghost after it. */
+private fun fieldFor(step: GuideStep): Frame {
+    fun at(text: String, start: Int = text.length, end: Int = start, ghost: String = "") =
+        Frame("", step.chapter, "", "", field = text, start = start, end = end, ghost = ghost)
+    return when (step.chapter) {
+        GuideChapter.Typing -> at("", ghost = step.ghost.ifEmpty { TYPING_TEXT })
+        GuideChapter.Delete -> at(DELETE_TEXT + " ")
+        GuideChapter.Steering -> {
+            val text = looping(STEER_TEXT) + " "
+            val cursor = text.indexOf(' ', text.length / 2) + 1
+            at(text, cursor)
+        }
+        GuideChapter.Symbols -> {
+            val index = SYMBOL_PARTS.indexOfFirst { it.first == step.symbol }
+            val typed = SYMBOL_PARTS.take(index).joinToString("") { it.first + it.second }
+            at(typed, ghost = SYMBOL_PARTS.drop(index).joinToString("") { it.first + it.second }.trimEnd())
+        }
+        GuideChapter.Clipboard -> {
+            val text = CLIP_TEXT + " "
+            val end = CLIP_TEXT.length
+            at(text, if (step.preselect) CLIP_TEXT.lastIndexOf(' ') + 1 else end, end)
+        }
+        GuideChapter.End -> at(END_TEXT)
+    }
+}
+
+/** The field once the slide is passed. */
+private fun passedField(step: GuideStep, before: Frame): Frame {
+    fun at(text: String, start: Int = text.length, end: Int = start, ghost: String = "") =
+        Frame("", step.chapter, "", "", field = text, start = start, end = end, ghost = ghost)
+    return when (step.id) {
+        "type" -> at("This keyboard fixes ", ghost = "your typos, so you can keep pretending you never make any.")
+        "backspace" -> at(DELETE_TEXT.dropLast(1) + " ")
+        "flick", "hold" -> at(DELETE_TEXT.substringBeforeLast(" It knows") + " ")
+        "steer" -> at(before.field, before.start - 40)
+        "selectword", "selectmore" -> {
+            val from = before.start
+            val to = before.field.indexOf(' ', from + if (step.id == "selectmore") 20 else 1)
+            at(before.field, from, to)
+        }
+        "paste" -> at(CLIP_TEXT.substringBeforeLast(' ') + " " + PASTE_TEXT + " ")
+        "clipboard" -> at(CLIP_TEXT + " " + GUIDE_CLIPS.first() + " ")
+        else -> if (step.chapter == GuideChapter.Symbols) {
+            val index = SYMBOL_PARTS.indexOfFirst { it.first == step.symbol }
+            val picked = if (step.symbol == ANY_SYMBOL) "※" else step.symbol!!
+            val typed = SYMBOL_PARTS.take(index).joinToString("") { it.first + it.second } + picked + SYMBOL_PARTS[index].second
+            at(typed, ghost = SYMBOL_PARTS.drop(index + 1).joinToString("") { it.first + it.second }.trimEnd())
+        } else before
+    }
+}
+
+private fun framesFor(step: GuideStep): List<Frame> {
+    val field = fieldFor(step)
+    fun frame(name: String, title: String, line: String, chip: String? = null, passed: Boolean = false, from: Frame = field,
+        panel: String? = null) = Frame("${step.id}-$name", step.chapter, title, line, chip, passed, from.field, from.start, from.end,
+        from.ghost, panel)
+    val frames = ArrayList<Frame>()
+    val first = step.stages.firstOrNull()?.text ?: step.body
+    frames += frame("1-start", step.title, first)
+    // Each later instruction, as the slide moves on to it.
+    for ((index, stage) in step.stages.withIndex().drop(1)) {
+        val panel = if (step.usesPanel && index > 0 && step.id != "alt") "Sym panel open" else null
+        frames += frame("2-stage${index + 1}", step.title, stage.text, panel = panel)
+    }
+    // A real mistake: its chip over the instruction.
+    MISTAKES[step.id]?.let { events ->
+        val flow = GuideFlow({ GuideSettings(holdSymbols = true, fnAsCtrl = true) })
+        flow.start(step.id)
+        flow.seed(field.field)
+        var said: String? = null
+        for (event in events) {
+            val verdict = flow.event(event)
+            if (verdict is GuideVerdict.Hint && !verdict.passes) said = verdict.title ?: verdict.text
+        }
+        if (said != null) frames += frame("3-chip", step.title, flow.instruction, chip = said)
+    }
+    frames += frame("4-passed", step.done, step.praise, passed = true, from = passedField(step, field))
+    return frames
+}
+
+/** The guide's colours, as GuideColours has them (it isn't compiled for these checks). */
+private object Paint {
+    const val ORANGE = 0xFFEF804E.toInt()
+    const val INK = 0xFF160A04.toInt()
+    const val CREAM = 0xFFFFF1E6.toInt()
+}
+
+/** The size of the owner's phone screenshots (UAT c1-01.png), whose 18 dp gutter is 28 px. */
+private const val WIDTH = 1076
+private const val HEIGHT = 1200
+private const val DP = 1.56f
+
+/**
+ * A font sized so that [sample] is [pixels] wide, as measured on the phone's own screenshot: the desktop's fonts are wider than
+ * the phone's, so sizes are set by width, which is what a one-line check needs.
+ */
+private fun calibrated(g: Graphics2D, style: Int, sample: String, pixels: Int): Font {
+    var size = 10f
+    while (g.getFontMetrics(Font(Font.SANS_SERIF, style, 1).deriveFont(size + .5f)).stringWidth(sample) <= pixels) size += .5f
+    return Font(Font.SANS_SERIF, style, 1).deriveFont(size)
+}
+private fun dp(value: Number) = Math.round(value.toFloat() * DP)
+
+private fun rgb(argb: Int, alpha: Float = 1f) = Color((argb shr 16) and 0xFF, (argb shr 8) and 0xFF, argb and 0xFF, (alpha * 255).toInt())
+private val ink = rgb(Paint.INK)
+private val cream = rgb(Paint.CREAM)
+private val orange = rgb(Paint.ORANGE)
+
+private fun draw(frame: Frame, file: File) {
+    val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB)
+    val g = image.createGraphics()
+    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+    g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+    g.color = ink
+    g.fillRect(0, 0, WIDTH, HEIGHT)
+    val side = dp(Layout.KEY_SIDE_DP)
+    val inner = WIDTH - 2 * side
+    var y = dp(40)
+    // The top bar: the chapters' segments, the chapter's name, Skip or Next, and ✕.
+    val bar = dp(32)
+    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(13))
+    val label = frame.chapter.label.uppercase()
+    val pillText = if (frame.passed) "Next" else "Skip"
+    val pillWidth = g.fontMetrics.stringWidth(pillText) + dp(20)
+    val closeWidth = dp(32)
+    val labelWidth = g.fontMetrics.stringWidth(label)
+    val segmentsEnd = WIDTH - side - closeWidth - dp(4) - pillWidth - dp(10) - labelWidth - dp(10)
+    val chapters = GuideChapter.entries.filter { it != GuideChapter.End }
+    val segment = (segmentsEnd - side) / chapters.size
+    val current = chapters.indexOf(frame.chapter)
+    for ((index, _) in chapters.withIndex()) {
+        val x = side + index * segment
+        g.color = rgb(Paint.CREAM, .25f)
+        g.fill(RoundRectangle2D.Float(x.toFloat(), y + bar / 2f - dp(2), segment - dp(3f).toFloat(), dp(4).toFloat(), dp(4).toFloat(), dp(4).toFloat()))
+        val fill = when {
+            index < current -> 1f
+            index == current -> if (frame.passed) .6f else .4f
+            else -> 0f
+        }
+        if (fill > 0f) {
+            g.color = cream
+            g.fill(RoundRectangle2D.Float(x.toFloat(), y + bar / 2f - dp(2), (segment - dp(3)) * fill, dp(4).toFloat(), dp(4).toFloat(), dp(4).toFloat()))
+        }
+    }
+    g.color = rgb(Paint.CREAM, .7f)
+    var x = segmentsEnd + dp(10)
+    g.drawString(label, x, y + bar / 2 + g.fontMetrics.ascent / 2 - dp(1))
+    x += labelWidth + dp(10)
+    val pill = RoundRectangle2D.Float(x.toFloat(), y + dp(3).toFloat(), pillWidth.toFloat(), bar - dp(6).toFloat(), bar.toFloat(), bar.toFloat())
+    if (frame.passed) {
+        g.color = orange
+        g.fill(pill)
+        g.color = ink
+    } else {
+        g.color = rgb(Paint.CREAM, .6f)
+        g.stroke = BasicStroke(dp(1).toFloat())
+        g.draw(pill)
+    }
+    g.drawString(pillText, x + dp(10), y + bar / 2 + g.fontMetrics.ascent / 2 - dp(1))
+    x += pillWidth + dp(4)
+    g.color = cream
+    g.stroke = BasicStroke(dp(1.6f).toFloat())
+    val c = dp(6)
+    g.drawLine(x + bar / 2 - c, y + bar / 2 - c, x + bar / 2 + c, y + bar / 2 + c)
+    g.drawLine(x + bar / 2 + c, y + bar / 2 - c, x + bar / 2 - c, y + bar / 2 + c)
+    y += bar + dp(10)
+    // The title: one line at one size, with the orange check once passed.
+    val titleFont = calibrated(g, Font.BOLD, "Type like a normal person.", 540)
+    g.font = titleFont
+    val titleLine = dp(36)
+    g.color = cream
+    val titleShown = fit(g, frame.title, inner)
+    g.drawString(titleShown, side, y + titleLine - dp(9))
+    if (frame.passed) {
+        val at = side + g.fontMetrics.stringWidth(titleShown + " ")
+        val size = titleFont.size2D * .5f
+        val base = (y + titleLine - dp(9)).toFloat()
+        g.color = orange
+        g.stroke = BasicStroke(dp(2.8f).toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+        g.draw(java.awt.geom.Path2D.Float().apply {
+            moveTo(at.toFloat(), base - size * .45f)
+            lineTo(at + size * .36f, base - size * .08f)
+            lineTo(at + size, base - size * .86f)
+        })
+    }
+    if (g.fontMetrics.stringWidth(frame.title) + (if (frame.passed) dp(20) else 0) > inner) mark(g, "TITLE TOO LONG", y)
+    y += titleLine + dp(10)
+    // The instruction, or a chip over it.
+    val bodyFont = calibrated(g, Font.PLAIN, "Back for a refresher? Pick a chapter. No judgement. Some judgement.", 875)
+    val lineHeight = dp(22) + 2 * dp(3)
+    g.font = bodyFont
+    if (frame.chip != null) {
+        g.font = calibrated(g, Font.PLAIN, "Oh, look who's back. Didn't know everything after all?", 672)
+        val shown = fit(g, frame.chip, inner - dp(24))
+        val width = g.fontMetrics.stringWidth(shown) + dp(24)
+        g.color = cream
+        g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), width.toFloat(), lineHeight.toFloat(), lineHeight.toFloat(), lineHeight.toFloat()))
+        g.color = ink
+        g.drawString(shown, side + dp(12), y + lineHeight / 2 + g.fontMetrics.ascent / 2 - dp(2))
+        if (g.fontMetrics.stringWidth(frame.chip) + dp(24) > inner) mark(g, "CHIP TOO LONG", y)
+    } else {
+        g.color = rgb(Paint.CREAM, .82f)
+        val shown = fit(g, frame.line, inner)
+        g.drawString(shown, side, y + lineHeight / 2 + g.fontMetrics.ascent / 2 - dp(2))
+        if (g.fontMetrics.stringWidth(frame.line) > inner) mark(g, "LINE TOO LONG", y)
+    }
+    y += lineHeight + dp(10)
+    // The field: exactly two lines, on ink, with what's typed in cream and the ghost after it in grey.
+    val fieldFont = calibrated(g, Font.PLAIN, "Tihs keybaord fxies yuor typos, sp yuo cna kepe", 807)
+    g.font = fieldFont
+    val pad = dp(12)
+    val fieldLine = g.fontMetrics.height
+    val fieldHeight = 2 * fieldLine + 2 * pad
+    g.color = blend(Paint.INK, Paint.CREAM, .08f)
+    g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), fieldHeight.toFloat(), dp(12).toFloat(), dp(12).toFloat()))
+    drawField(g, frame, side + pad, y + pad, inner - 2 * pad, fieldLine)
+    y += fieldHeight
+    // The keys, or the panel, at the bottom.
+    val keysTop = HEIGHT - dp(4 * 50 + 70)
+    g.color = rgb(Paint.CREAM, .35f)
+    g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(12))
+    g.drawString("(free room)", side, (y + keysTop) / 2)
+    drawKeys(g, keysTop, side, frame.panel)
+    g.dispose()
+    ImageIO.write(image, "png", file)
+}
+
+private fun blend(from: Int, to: Int, amount: Float): Color {
+    val a = rgb(from)
+    val b = rgb(to)
+    fun mix(x: Int, y: Int) = Math.round(x + (y - x) * amount)
+    return Color(mix(a.red, b.red), mix(a.green, b.green), mix(a.blue, b.blue))
+}
+
+private var drawing = ""
+
+private fun mark(g: Graphics2D, what: String, y: Int) {
+    println("  $drawing: $what")
+    val font = g.font
+    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(10))
+    g.color = Color.RED
+    g.drawString(what, WIDTH - dp(120), y)
+    g.font = font
+}
+
+/** [text] cut with an ellipsis to fit [width], as a one-line TextView ends it. */
+private fun fit(g: Graphics2D, text: String, width: Int): String {
+    if (g.fontMetrics.stringWidth(text) <= width) return text
+    var end = text.length
+    while (end > 0 && g.fontMetrics.stringWidth(text.substring(0, end) + "…") > width) end--
+    return text.substring(0, end) + "…"
+}
+
+/** The field's text and ghost, wrapped at [width], showing the two lines with the cursor, the selection in orange. */
+private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: Int, line: Int) {
+    val all = frame.field + frame.ghost
+    // Wrap at spaces.
+    val starts = ArrayList<Int>()
+    var at = 0
+    while (at < all.length) {
+        starts += at
+        var end = at
+        var lastBreak = -1
+        while (end < all.length && g.fontMetrics.stringWidth(all.substring(at, end + 1)) <= width) {
+            if (all[end] == ' ') lastBreak = end + 1
+            end++
+        }
+        at = if (end >= all.length) all.length else if (lastBreak > at) lastBreak else end
+    }
+    if (starts.isEmpty()) starts += 0
+    val cursorLine = starts.indexOfLast { it <= frame.start.coerceAtMost(all.length) }.coerceAtLeast(0)
+    val first = when {
+        frame.ghost.isNotEmpty() || frame.field.isEmpty() -> cursorLine
+        else -> (cursorLine - 1).coerceAtLeast(0)
+    }.coerceAtMost((starts.size - 2).coerceAtLeast(0))
+    for (row in 0..1) {
+        val index = first + row
+        if (index >= starts.size) break
+        val from = starts[index]
+        val to = starts.getOrNull(index + 1) ?: all.length
+        val base = top + row * line + g.fontMetrics.ascent
+        var x = left
+        for (offset in from until to) {
+            val char = all[offset].toString()
+            val w = g.fontMetrics.stringWidth(char)
+            if (offset in frame.start until frame.end) {
+                g.color = rgb(Paint.ORANGE, .45f)
+                g.fillRect(x, top + row * line, w, line)
+            }
+            g.color = if (offset < frame.field.length) cream else rgb(Paint.CREAM, .38f)
+            g.drawString(char, x, base)
+            if (offset == frame.start && frame.start == frame.end) {
+                g.color = orange
+                g.fillRect(x - dp(1), top + row * line + dp(2), dp(2), line - dp(4))
+            }
+            x += w
+        }
+        if (frame.start == frame.end && frame.start == to && to == all.length) {
+            g.color = orange
+            g.fillRect(x, top + row * line + dp(2), dp(2), line - dp(4))
+        }
+    }
+}
+
+private fun drawKeys(g: Graphics2D, top: Int, side: Int, panel: String?) {
+    val width = (WIDTH - 2 * side) / 10f
+    val row = dp(50)
+    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(16))
+    for ((index, keys) in Layout.rows.withIndex()) {
+        val y = top + index * row
+        if (index < 3) for ((column, key) in keys.withIndex()) {
+            val x = side + column * width
+            g.color = rgb(Paint.CREAM, .09f)
+            g.fill(RoundRectangle2D.Float(x + dp(2), y + dp(2).toFloat(), width - dp(4), row - dp(4).toFloat(), dp(8).toFloat(), dp(8).toFloat()))
+            g.color = rgb(Paint.CREAM, .6f)
+            val text = if (key.length == 1) key else key.take(3)
+            g.drawString(text, x + width / 2 - g.fontMetrics.stringWidth(text) / 2, y + row / 2f + dp(6))
+        }
+    }
+    if (panel != null) {
+        g.color = Color(0, 0, 0, 170)
+        g.fillRect(0, top, WIDTH, 3 * row)
+        g.color = orange
+        g.drawString(panel, WIDTH / 2 - g.fontMetrics.stringWidth(panel) / 2, top + 3 * row / 2)
+    }
+}
+
+/** Draws every slide in [chapters], in each of its states, to PNGs in [folder]. */
+internal fun drawSlides(folder: String, chapters: Set<GuideChapter>) {
+    val out = File(folder).apply { mkdirs() }
+    var count = 0
+    for ((index, step) in GUIDE_STEPS.withIndex()) {
+        if (step.chapter !in chapters || step.chapter == GuideChapter.End) continue
+        for (frame in framesFor(step)) {
+            drawing = frame.name
+            draw(frame, File(out, "%02d-%s.png".format(index + 1, frame.name)))
+            count++
+        }
+    }
+    println("$count slide states drawn to $folder")
+}

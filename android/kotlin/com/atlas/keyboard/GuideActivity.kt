@@ -1965,7 +1965,7 @@ class GuideActivity : Activity() {
 
     /**
      * What a lesson needs before it starts: something on the clipboard to paste, a word already selected so that the paste goes in
-     * its place, and clips pinned in the keyboard's clipboard so that it has something to show.
+     * its place, and the guide's own clips in the keyboard's clipboard, in place of the user's, so that it has something to show.
      */
     private fun setUpLesson(step: GuideStep) {
         step.clip?.let { text ->
@@ -1978,7 +1978,8 @@ class GuideActivity : Activity() {
             val start = text.substring(0, end).lastIndexOf(' ') + 1
             if (end > start) field.setSelection(start, end)
         }
-        if (step.pinnedClips.isNotEmpty()) GuideHooks.seedClips(step.pinnedClips)
+        // The clipboard shows the slide's own clips, or the user's again once a slide has none.
+        GuideHooks.seedClips(step.sandboxClips)
     }
 
     /** The letter key for [key]: itself, or for a symbol, the key that types it with Alt on this phone. */

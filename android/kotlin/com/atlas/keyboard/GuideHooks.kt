@@ -112,6 +112,7 @@ internal object GuideHooks {
     /** The keyboard listens here, so that the clipboard lesson has clips to show: it pins these, newest first, once. */
     @Volatile var clipSeeds: ((List<String>) -> Unit)? = null
 
+    /** The keyboard's clipboard shows only [clips] in the guide's field, never saved; empty shows the user's own again. */
     fun seedClips(clips: List<String>) {
         clipSeeds?.invoke(clips)
     }

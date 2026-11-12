@@ -281,7 +281,7 @@ private fun oneInstructionAtATime() {
     same(paste.step.clip, PASTE_TEXT, "The paste lesson puts something stupid on the clipboard")
     same(paste.step.preselect, true, "and starts with a word selected, so the paste goes in its place")
     same(paste.step.done, "Yes, we know.", "with a line that says so")
-    same((paste.event(FieldChanged("Paste over", 10, 10)) as GuideVerdict.Hint).title, "Lost the selection. Classic.",
+    same((paste.event(FieldChanged("Paste over", 10, 10)) as GuideVerdict.Hint).text, "Lost the selection. Classic. Paste anyway.",
         "The selected word lost, so the paste goes where the cursor is")
     same(paste.event(FieldChanged("Paste ove", 9, 9)), GuideVerdict.Wait, "It says so once")
     same(paste.event(FieldChanged("Paste $PASTE_TEXT", 19, 19)), GuideVerdict.Done, "The paste finishes it")
@@ -289,7 +289,8 @@ private fun oneInstructionAtATime() {
     val clips = GuideFlow({ GuideSettings() })
     clips.start("clipboard")
     clips.seed("Paste. ")
-    same(clips.step.pinnedClips, GUIDE_CLIPS, "The clipboard lesson pins its clips")
+    same(clips.step.sandboxClips, GUIDE_CLIPS, "The clipboard lesson shows only its own clips")
+    same(GUIDE_STEPS.count { it.sandboxClips.isNotEmpty() }, 1, "and no other slide has a sandbox")
     same(clips.event(keys(Panel.Emoji)).let { it is GuideVerdict.Hint && it.stage == 1 }, true, "The emoji are fine: A works there too")
     same(clips.event(keys(Panel.Closed)), GuideVerdict.Stage(0), "Closed again, so Sym again")
     same(clips.event(keys(Panel.Clipboard)), GuideVerdict.Stage(2), "The clipboard, straight away, is fine too")
@@ -452,6 +453,8 @@ private fun chapterOne() {
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Symbols }.map { it.lessons }, listOf(setOf(GuideLesson.Alt),
         setOf(GuideLesson.HoldSymbol), setOf(GuideLesson.Sym), setOf(GuideLesson.Sym), setOf(GuideLesson.Sym)),
         "Symbols unlocks Alt, then a held key, then Sym, one at a time")
+    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Clipboard }.map { it.lessons }, listOf(setOf(GuideLesson.Ctrl), setOf(GuideLesson.Sym)),
+        "Copy and paste unlocks fn for the paste, then Sym for the clipboard")
     // The chapters in the new layout: every title and success line on one line, every instruction, praise and help too.
     for (step in GUIDE_STEPS.filter { it.chapter in NEW_LAYOUT }) {
         for (line in listOf(step.title, step.done)) same(line.length <= TITLE_MOST, true, "\"$line\" is one line")
@@ -479,7 +482,8 @@ private fun chapterOne() {
 }
 
 /** The chapters rebuilt in the new layout so far. */
-private val NEW_LAYOUT = setOf(GuideChapter.Typing, GuideChapter.Delete, GuideChapter.Steering, GuideChapter.Symbols)
+private val NEW_LAYOUT = setOf(GuideChapter.Typing, GuideChapter.Delete, GuideChapter.Steering, GuideChapter.Symbols,
+    GuideChapter.Clipboard)
 private const val TITLE_MOST = 33
 private const val LINE_MOST = 50
 

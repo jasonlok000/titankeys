@@ -576,8 +576,11 @@ internal class GuideStep(
     val clip: String? = null,
     /** The slide starts with a word selected, so that what you paste goes in its place, if nothing is selected yet. */
     val preselect: Boolean = false,
-    /** Clips that the slide pins in the keyboard's clipboard as it opens, so that it has something to show. */
-    val pinnedClips: List<String> = emptyList(),
+    /**
+     * The clips that the keyboard's clipboard shows while this slide is open, in place of the user's own: a sandbox, never saved,
+     * never pinned, gone when the slide is. Empty shows the user's own.
+     */
+    val sandboxClips: List<String> = emptyList(),
     /** What the slide rains down once it is done, if anything. */
     val rain: String? = null,
     /**
@@ -1224,21 +1227,20 @@ internal val GUIDE_STEPS = listOf(
         rain = CLOWN,
         demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.SYM), ""),
     ),
-    // COPY AND PASTE: the field starts with the text box, its last word selected.
+    // COPY AND PASTE, in the new layout: the field starts with the text box, its last word selected. One-line titles, chips for
+    // real mistakes, the paste slide locked to fn and the clipboard slide to Sym. The clipboard shows only the guide's own clips.
     GuideStep(
         id = "paste", chapter = GuideChapter.Clipboard,
         title = "Something's on your clipboard.",
         stages = listOf(GuideStage("Hold fn and press V.", GuideCue.Spot(listOf(Layout.FN, "V"))) { event ->
             when {
                 event is FieldChanged && event.text.contains(PASTE_TEXT) -> GuideVerdict.Done
-                event is KeyboardEvent.Copied && event.text != PASTE_TEXT ->
-                    roast("That's copy. V for paste. Nobody knows why it's V.", "Hold fn and press V.")
-                grew(event) && (event as FieldChanged).text.length - stageLength > 2 ->
-                    roast("That's not ours. Ours is better.", "Hold fn and press V.")
+                event is KeyboardEvent.Copied && event.text != PASTE_TEXT -> chip("That's copy. V for paste. Nobody knows why it's V.")
+                grew(event) && (event as FieldChanged).text.length - stageLength > 2 -> chip("That's not ours. Ours is better.")
                 // The slide starts with a word selected: a cursor alone means it's gone.
                 event is FieldChanged && event.start == event.end && mark != 1 -> {
                     mark = 1
-                    roast("Lost the selection. Classic.", "Paste anyway. It goes where the cursor is.")
+                    chip("Lost the selection. Classic. Paste anyway.")
                 }
                 else -> GuideVerdict.Wait
             }
@@ -1250,16 +1252,18 @@ internal val GUIDE_STEPS = listOf(
         clip = PASTE_TEXT,
         preselect = true,
         rain = "🤪",
+        lessons = setOf(GuideLesson.Ctrl),
         demo = GuideDemo.Insert(listOf(Layout.FN, "V", Layout.FN, "V"), ""),
     ),
     GuideStep(
         id = "clipboard", chapter = GuideChapter.Clipboard,
-        title = "Your clipboard. We left some favourites in there.",
+        // v3.1's "Your clipboard. We left some favourites in there." is two lines.
+        title = "We left you some favourites.",
         stages = listOf(
             GuideStage("Press Sym.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
                 when {
                     panel(event, Panel.Symbols) -> GuideVerdict.Done
-                    panel(event, Panel.Emoji) -> roast("Emoji? Sure, A works from there too.", "Press A.", stage = 1)
+                    panel(event, Panel.Emoji) -> GuideVerdict.Hint("Emoji? Sure, A works from there too.", stage = 1)
                     panel(event, Panel.Clipboard) -> GuideVerdict.Stage(2)
                     else -> GuideVerdict.Wait
                 }
@@ -1267,27 +1271,28 @@ internal val GUIDE_STEPS = listOf(
             GuideStage("Press A.", GuideCue.Spot(listOf(Layout.CLIPBOARD_KEY))) { event ->
                 when {
                     panel(event, Panel.Clipboard) -> GuideVerdict.Done
-                    panel(event, Panel.Settings) -> roast("Wrong key. Again.", "Press Alt to go back, then A.")
                     panel(event, Panel.Closed) -> GuideVerdict.Stage(0)
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Rest a finger on a clip to read it, then press its key to paste it.", GuideCue.Free) { event ->
+            GuideStage("Rest on a clip to read it. Press its key to paste.", GuideCue.Free) { event ->
                 when {
                     event is FieldChanged && event.text.contains(PRANK_PASTE) ->
-                        counts("Gotcha. We swapped that one on purpose.", "It's a prank, not a bug. Chill.")
+                        counts("Gotcha. Swapped it on purpose.", "It's a prank, not a bug. Chill.")
                     grew(event) -> GuideVerdict.Done
-                    panel(event, Panel.Closed) -> roast("Just looking? Window shopping our insults.", "Press Sym, then A, and paste one.", stage = 0)
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Just looking? Window shopping our insults.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
         done = "Pasted. Use it wisely. You won't.",
-        praise = "Your clipboard keeps what you copy. Sym, then A, any time.",
+        // v3.1's "Your clipboard keeps what you copy. Sym, then A, any time." is two lines.
+        praise = "It keeps what you copy. Sym, then A, any time.",
         seed = CLIP_TEXT,
         usesPanel = true,
         setup = Panel.Closed,
-        pinnedClips = GUIDE_CLIPS,
+        sandboxClips = GUIDE_CLIPS,
+        lessons = setOf(GuideLesson.Sym),
         demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""),
     ),
     GuideStep(

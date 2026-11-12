@@ -641,19 +641,19 @@ class AtlasIme : InputMethodService() {
                 else if (editing && currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) == true) strip?.playDemo(demo)
             }
         }
-        // The guide's clipboard lesson pins a few clips, so that the clipboard has something to show. Only in its own field.
+        // The guide's clipboard lesson shows its own clips, in a sandbox: the user's clips don't show, and nothing is saved or
+        // pinned. Only in its own field. Empty ends the sandbox.
         GuideHooks.clipSeeds = { clips ->
             main.post {
-                if (!editing || currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) != true) return@post
-                val now = System.currentTimeMillis()
-                // The newest of them flashes, to show where to look.
-                guideFlashClip = clips.firstOrNull()
-                for (text in clips.reversed()) {
-                    if (clipHistory.clips.any { it.text == text }) continue
-                    if (!clipHistory.add(text, now)) continue
-                    clipHistory.togglePin(0)
+                if (clips.isEmpty()) {
+                    guideClips = null
+                    guideFlashClip = null
+                } else {
+                    val now = System.currentTimeMillis()
+                    guideClips = ClipboardHistory().apply { for (text in clips.reversed()) add(text, now) }
+                    // The newest of them flashes, to show where to look.
+                    guideFlashClip = clips.firstOrNull()
                 }
-                saveClips()
                 showClips()
             }
         }
@@ -1326,6 +1326,11 @@ class AtlasIme : InputMethodService() {
 
     private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
     private var clipHistory = ClipboardHistory()
+    /** The guide's own clips, shown in its field in place of the user's while its clipboard slide is open. See [GuideHooks.seedClips]. */
+    private var guideClips: ClipboardHistory? = null
+    private val sandboxed get() = inGuide && guideClips != null
+    /** The clips that the clipboard page shows: the guide's own in its sandbox, or the user's. */
+    private val shownClips get() = guideClips?.takeIf { inGuide } ?: clipHistory
     private val clipFile by lazy { AtomicFile(java.io.File(noBackupFilesDir, CLIP_FILE)) }
     /** The guide's clip that flashes on the clipboard page until a clip is pasted. */
     private var guideFlashClip: String? = null
@@ -1347,6 +1352,12 @@ class AtlasIme : InputMethodService() {
         if (editing && field.secret) return
         if (clip.itemCount == 0) return
         val text = clip.getItemAt(0).text?.toString() ?: return
+        // What the guide copies stays in the guide: its own clip to paste is never kept in the user's clipboard.
+        if (inGuide) {
+            guideClips?.add(text, System.currentTimeMillis())
+            showClips()
+            return
+        }
         expireClips()
         if (!clipHistory.add(text, System.currentTimeMillis())) return
         saveClips()
@@ -1360,6 +1371,8 @@ class AtlasIme : InputMethodService() {
         } catch (error: java.io.IOException) {
             ClipboardHistory()
         }
+        // Earlier guides pinned their clips in the user's clipboard. They go, now that the guide has its own.
+        if (clipHistory.removeTexts(GUIDE_CLIPS.toSet() + PASTE_TEXT)) saveClips()
         expireClips()
     }
 
@@ -1387,7 +1400,8 @@ class AtlasIme : InputMethodService() {
     private fun showClips() {
         panel?.clipPinning = clipPinning
         panel?.clipClearing = clipClearing
-        panel?.clips = clipHistory.clips.toList()
+        panel?.clipSandbox = sandboxed
+        panel?.clips = shownClips.clips.toList()
         panel?.flashClip = guideFlashClip.takeIf { inGuide }
         panel?.render()
     }
@@ -1430,7 +1444,8 @@ class AtlasIme : InputMethodService() {
     private fun clipKey(key: String) {
         when (key) {
             Layout.BACKSPACE -> {
-                if (clipHistory.clips.none { !it.pinned }) return
+                // The guide's clips can't be cleared or pinned: they're its own, and it has no Pin.
+                if (sandboxed || clipHistory.clips.none { !it.pinned }) return
                 clipPinning = false
                 if (clipClearing) {
                     clipClearing = false
@@ -1444,7 +1459,7 @@ class AtlasIme : InputMethodService() {
                 return
             }
             Layout.ENTER -> {
-                if (clipHistory.clips.isEmpty()) return
+                if (sandboxed || clipHistory.clips.isEmpty()) return
                 clipClearing = false
                 clipPinning = !clipPinning
                 showClips()
@@ -1452,7 +1467,7 @@ class AtlasIme : InputMethodService() {
             }
             else -> {
                 val index = panel?.clipIndex(key) ?: return
-                val clip = clipHistory.clips.getOrNull(index) ?: return
+                val clip = shownClips.clips.getOrNull(index) ?: return
                 clipClearing = false
                 if (clipPinning) pin(index) else {
                     haptics.play(Haptic.ClipPasted)
@@ -1480,6 +1495,7 @@ class AtlasIme : InputMethodService() {
 
     /** A touch held on a clip pins or unpins it, without the Pin key. */
     private fun holdClip(key: String) {
+        if (sandboxed) return
         pin(panel?.clipIndex(key) ?: return)
         showClips()
     }

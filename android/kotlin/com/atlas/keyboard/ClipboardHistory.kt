@@ -26,6 +26,9 @@ class ClipboardHistory(clips: List<Clip> = emptyList()) {
         return true
     }
 
+    /** Takes out every clip with one of [texts], pinned or not. Returns true if any went. */
+    fun removeTexts(texts: Set<String>) = items.removeAll { it.text in texts }
+
     /** Takes out the clips that are older than [KEEP_MILLIS] and not pinned. Returns true if any went. */
     fun expire(now: Long) = items.removeAll { !it.pinned && now - it.time !in 0..KEEP_MILLIS }
 

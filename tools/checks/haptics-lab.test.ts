@@ -277,7 +277,7 @@ test("the removed shortcuts experiment leaves nothing that reads its stored swit
 test("the lab tries the mark at a triple press's moving end, and only the debug build reads it", () => {
   const page = read("app/settings/haptics-lab.tsx");
   expect(page).toContain('<Section title="Triple press selection end">');
-  expect(page).toContain("onChange={id => void setLabSelectionEnd(id)}");
+  expect(page).toContain("void setLabSelectionEnd(id);");
   const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
   expect(haptics).toMatch(/fun selectionEndId\(context: Context\): String\? \{\s+if \(!debug\(context\)\) return null/);
   // Every selection a Space gesture makes takes the mark in use as it starts.

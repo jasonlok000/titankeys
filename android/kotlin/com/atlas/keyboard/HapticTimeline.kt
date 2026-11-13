@@ -98,6 +98,12 @@ object HapticTimeline {
         Haptic.GuideNext -> "Next in the guide"
         Haptic.GuideBlocked -> "The guide blocked that"
         Haptic.GuideHint -> "The guide gave a hint"
+        Haptic.AppSwitchOn -> "A switch turned on"
+        Haptic.AppSwitchOff -> "A switch turned off"
+        Haptic.AppStep -> "A step"
+        Haptic.AppPicked -> "An option picked"
+        Haptic.AppDeleted -> "A delete confirmed"
+        Haptic.AppRefused -> "The app said no"
     }
 
     /**

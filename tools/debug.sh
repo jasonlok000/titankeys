@@ -25,6 +25,8 @@ edit() { local file=$1; shift; sed "$@" "$file" > "$file.tmp"; mv "$file.tmp" "$
 
 edit ink.toml -e 's/^name = .*/name = "TitanKeys Debug"/' -e 's/^package = .*/package = "com.titankeys.debug"/'
 edit android/src/main/AndroidManifest.xml 's/android:label="TitanKeys"/android:label="TitanKeys Debug"/'
+# The guide's still frames open from adb, so only this build exports them.
+edit android/src/main/AndroidManifest.xml '/android:name="com.atlas.keyboard.GuideFrameActivity"/{n;s/android:exported="false"/android:exported="true"/;}'
 cp "$recorder"/*.kt "$keyboard/"
 awk 'FNR == NR { entry = entry $0 ORS; next } /<\/application>/ { printf "%s", entry } { print }' \
   "$recorder/manifest.xml" android/src/main/AndroidManifest.xml > android/src/main/AndroidManifest.xml.tmp

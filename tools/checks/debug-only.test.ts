@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // The raw typing log holds what was typed, so the receiver that copies it for adb exists only in TitanKeys Debug: its code is in
@@ -34,4 +34,132 @@ test("the panel check for screenshots is only in the Debug build's package", () 
   expect(ime.match(/(?<!un)registerReceiver\(panelTrigger/g)?.length).toBe(1);
   expect(ime).toContain('PANEL_ACTION = "com.titankeys.debug.PANEL"');
   expect(read("android/src/main/AndroidManifest.xml")).not.toContain("com.titankeys.debug.PANEL");
+});
+
+// The release audit (docs/release-audit-2.1.md): every dev-only feature that reaches the release build is gated, and the release
+// manifest has exactly the components it should.
+
+const manifest = () => read("android/src/main/AndroidManifest.xml");
+const DEBUG = 'packageName.endsWith(".debug")';
+
+/** Each component the manifest declares: its tag, name and exported flag. */
+function components(xml: string) {
+  return [...xml.matchAll(/<(activity|service|receiver|provider)\s([\s\S]*?)(?:\/>|>)/g)].map(([, tag, attributes]) => ({
+    tag,
+    name: attributes.match(/android:name="([^"]+)"/)?.[1],
+    exported: attributes.match(/android:exported="(true|false)"/)?.[1],
+  }));
+}
+
+test("the release manifest has exactly the expected components", () => {
+  // Ink adds two more when it builds: its MainActivity, exported as the launcher, and com.vandam.ink.InkLightSdkReceiver, the
+  // Light Phone SDK's marker. See the audit.
+  expect(components(manifest())).toEqual([
+    { tag: "activity", name: "com.vandam.ink.LearningTransferActivity", exported: "false" },
+    { tag: "activity", name: "com.vandam.ink.ContactsPermissionActivity", exported: "false" },
+    { tag: "activity", name: "com.atlas.keyboard.ShareDisclosureActivity", exported: "false" },
+    { tag: "activity", name: "com.atlas.keyboard.BackDisclosureActivity", exported: "false" },
+    { tag: "activity", name: "com.vandam.ink.RawLogExportActivity", exported: "false" },
+    { tag: "activity", name: "com.atlas.keyboard.HapticsLabActivity", exported: "false" },
+    { tag: "activity", name: "com.atlas.keyboard.KeyCalibrationActivity", exported: "false" },
+    { tag: "activity", name: "com.atlas.keyboard.GuideFrameActivity", exported: "false" },
+    { tag: "activity", name: "com.atlas.keyboard.FreshStartActivity", exported: "false" },
+    { tag: "activity", name: "com.atlas.keyboard.GuideActivity", exported: "false" },
+    { tag: "service", name: "com.atlas.keyboard.AtlasIme", exported: "true" },
+    { tag: "service", name: "com.atlas.keyboard.BackService", exported: "true" },
+    { tag: "service", name: "com.atlas.connected.ConnectedJob", exported: "false" },
+    { tag: "receiver", name: "com.atlas.connected.NewsReceiver", exported: "false" },
+    { tag: "receiver", name: "com.atlas.keyboard.BugStopReceiver", exported: "false" },
+    { tag: "provider", name: "com.atlas.keyboard.BugRecordingProvider", exported: "false" },
+  ]);
+  // The two exported services answer only the system: binding them needs its own permission.
+  expect(manifest()).toMatch(/AtlasIme"[\s\S]*?android:permission="android\.permission\.BIND_INPUT_METHOD"/);
+  expect(manifest()).toMatch(/BackService"[\s\S]*?android:permission="android\.permission\.BIND_ACCESSIBILITY_SERVICE"/);
+  // And the permissions, no more.
+  expect([...manifest().matchAll(/<uses-permission android:name="([^"]+)"/g)].map(match => match[1])).toEqual([
+    "android.permission.VIBRATE",
+    "android.permission.SYSTEM_ALERT_WINDOW",
+    "android.permission.INTERNET",
+    "android.permission.ACCESS_NETWORK_STATE",
+    "android.permission.POST_NOTIFICATIONS",
+    "android.permission.READ_CONTACTS",
+  ]);
+  expect(manifest()).not.toContain("android:debuggable");
+  expect(manifest()).not.toContain("android:testOnly");
+});
+
+test("the guide's still frames are exported only in TitanKeys Debug, for adb", () => {
+  expect(read("tools/debug.sh")).toContain(
+    `'/android:name="com.atlas.keyboard.GuideFrameActivity"/{n;s/android:exported="false"/android:exported="true"/;}'`);
+  expect(read("android/kotlin/com/atlas/keyboard/GuideFrameActivity.kt")).toMatch(/if \(!HapticsLab\.available\(this\)\) \{\s+finish\(\)/);
+});
+
+test("the Haptics lab and Key calibration close at once, and refuse every call, outside TitanKeys Debug", () => {
+  expect(read("android/kotlin/com/atlas/keyboard/HapticsLab.kt")).toContain(`fun available(context: Context) = context.${DEBUG}`);
+  for (const screen of ["HapticsLabActivity", "KeyCalibrationActivity"])
+    expect(read(`android/kotlin/com/atlas/keyboard/${screen}.kt`)).toMatch(/if \(!HapticsLab\.available\(this\)\) \{\s+finish\(\)/);
+  const adapters = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
+  expect(adapters).toContain('check(HapticsLab.available(activity)) { "Key calibration is only in TitanKeys Debug" }');
+  expect(adapters).toContain('check(HapticsLab.available(activity)) { "The Haptics lab is only in TitanKeys Debug" }');
+  // Every lab call goes through lab(), which refuses.
+  for (const call of ["labGraph", "labExperiment", "labFlickHold", "labSelectionEnd", "labPlayFlick"]) {
+    const start = adapters.indexOf(`"${call}" -> {`);
+    expect(start).toBeGreaterThan(0);
+    expect(adapters.slice(start, adapters.indexOf("\n                }", start))).toContain("lab()");
+  }
+  // Settings shows neither row without the lab's state, which other builds send as null.
+  expect(adapters).toContain('.put("hapticsLab", if (HapticsLab.available(activity)) hapticsLab.value.state() else JSONObject.NULL)');
+  const settings = read("app/settings/index.tsx");
+  expect(settings).toContain('{settings.hapticsLab && <Field label="Key calibration"');
+  expect(settings).toContain('{settings.hapticsLab && <Field label="Haptics lab"');
+  // Patterns tried in the lab play only in Debug: a release plays the rulebook's.
+  expect(read("android/kotlin/com/atlas/keyboard/Haptics.kt")).toContain(`private fun debug(context: Context) = context.${DEBUG}`);
+});
+
+test("the full typing log, its export and its screen are only in TitanKeys Debug", () => {
+  const gate = read("android/kotlin/com/atlas/keyboard/RawLogGate.kt");
+  expect(gate).toContain("fun allows(packageName: String): Boolean = packageName.endsWith(DEBUG_SUFFIX)");
+  expect(gate).toContain('const val DEBUG_SUFFIX = ".debug"');
+  expect(read("android/kotlin/com/atlas/keyboard/RawLog.kt")).toContain("fun on(context: Context) = available(context) && TypingSettings.rawLog(context)");
+  expect(read("android/kotlin/com/vandam/ink/RawLogExportActivity.kt")).toContain("if (!RawLog.available(this)) {");
+  expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt")).toContain('check(RawLog.available(activity)) { "The typing log is only in TitanKeys Debug" }');
+  expect(read("app/settings/index.tsx")).toContain('{settings.rawLogAvailable && <Field label="Typing log"');
+});
+
+test("Record a bug ships, but nothing outside TitanKeys can reach it", () => {
+  const xml = manifest();
+  expect(xml).toMatch(/BugStopReceiver"\s+android:exported="false"/);
+  expect(xml).toMatch(/BugRecordingProvider"\s+android:authorities="\$\{applicationId\}\.bugrecording"\s+android:exported="false"/);
+  expect(read("android/kotlin/com/atlas/keyboard/BugRecording.kt")).toContain("It never holds the text around the cursor");
+});
+
+test("the adb broadcasts, the idle bar's and the panel check's, are registered only in TitanKeys Debug", () => {
+  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  const gate = ime.indexOf("if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) {");
+  expect(gate).toBeGreaterThan(0);
+  const block = ime.slice(gate, ime.indexOf("\n        }\n", gate));
+  expect(block).toContain("registerReceiver(idleBarTrigger, IntentFilter(IDLE_BAR_ACTION), RECEIVER_EXPORTED)");
+  expect(block).toContain("registerReceiver(panelTrigger, IntentFilter(PANEL_ACTION), RECEIVER_EXPORTED)");
+  expect(ime.match(/(?<!un)registerReceiver\(idleBarTrigger/g)?.length).toBe(1);
+  expect(ime).toContain('DEBUG_PACKAGE_SUFFIX = ".debug"');
+  // Every other receiver it registers is for the system's own broadcasts, and not exported.
+  for (const match of ime.matchAll(/(?<!un)registerReceiver\((\w+), [^\n]*\)/g))
+    if (!["idleBarTrigger", "panelTrigger"].includes(match[1])) expect(match[0]).toContain("RECEIVER_NOT_EXPORTED");
+  // None of the debug build's own code is in the main source.
+  for (const file of ["RawLogPull", "RecorderActivity", "RecorderWords", "ReplayRunner", "SpaceGestureActivity", "TouchSizeActivity", "ConnectedReset"])
+    expect(existsSync(join(root, `android/kotlin/com/atlas/keyboard/${file}.kt`))).toBe(false);
+});
+
+test("no log line can print what was typed", () => {
+  // Exact typing's lines hold key codes and states only, and only Debug writes them.
+  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  expect(ime).toContain('private val exactLogging by lazy { packageName.endsWith(".debug") }');
+  expect(ime).toContain('if (exactLogging) Log.i("AtlasExact", line)');
+  // No log line anywhere puts the field's text, a typed word, a suggestion or a clip into the log.
+  const sources = (dir: string): string[] => readdirSync(join(root, dir), { withFileTypes: true }).flatMap(entry =>
+    entry.isDirectory() ? sources(`${dir}/${entry.name}`) : /\.(kt|java)$/.test(entry.name) ? [`${dir}/${entry.name}`] : []);
+  const typed = /\$\{?(text|typed|word|before|after|composing|committed|suggestion|candidate|clip)\b|\$\{held\.word\}|\+ (text|typed|word|before|after|composing|suggestion)\b/;
+  const leaks = sources("android/kotlin").flatMap(file => read(file).split("\n")
+    .filter(line => /\bLog\.[dviwe]\(/.test(line) && typed.test(line)).map(line => `${file}: ${line.trim()}`));
+  expect(leaks).toEqual([]);
 });

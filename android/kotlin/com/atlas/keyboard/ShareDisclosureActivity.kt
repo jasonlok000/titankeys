@@ -153,7 +153,7 @@ class ShareDisclosureActivity : Activity() {
         const val RESULT_DECLINED = RESULT_FIRST_USER
 
         /** The owner's words, not the policy's: the guide's own, so the policy check leaves them out. */
-        const val TRUST = "Trust me bro."
+        const val TRUST = "TL;DR Trust me bro."
 
         // The type scale (design v2 §1).
         private const val TITLE_TYPE = 24f

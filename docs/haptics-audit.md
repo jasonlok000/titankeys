@@ -95,7 +95,7 @@ Haptics went with it.
 |---|---|---|
 | **Before you share** (the guide's full disclosure): Turn on Share swipes | Lock | Nothing |
 | **Before you share:** Not now | Press | Nothing |
-| **Before you share:** "Trust me bro." | Nothing: a line of text, not a button | Nothing |
+| **Before you share:** "TL;DR Trust me bro." | Nothing: a line of text, not a button | Nothing |
 | **Let TitanKeys handle Back?:** Agree, No thanks | Press | Nothing |
 | **Key calibration** (TitanKeys Debug): its buttons | Press | Nothing |
 | **Haptics lab** (TitanKeys Debug): a haptic in the list, a family, All families, Reset | Press | Nothing |

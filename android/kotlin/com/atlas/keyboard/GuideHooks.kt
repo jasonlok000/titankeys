@@ -7,10 +7,13 @@ package com.atlas.keyboard
 /** What the guide's slides teach, one by one. A slide that locks the keyboard lets only these through, besides letters. */
 /** What a guide slide can unlock: Alt, Sym and a held key for its symbol are each their own, so a slide teaches only one. */
 /**
- * What a guide slide can teach, for its lock. [Typing] is a plain key that types: a letter, a digit, punctuation or Space.
- * [Backspace] is the key itself; the flick is [Flick].
+ * What a guide slide can teach, for its lock. [Typing] is a plain key that types: a letter, a digit or punctuation. [Space] is a
+ * space that would type, from the key or a light tap; the quick taps that steer are [Cursor], so a slide can lock the one and teach
+ * the other (owner, 2026-11-13: a lone Space typed into the steering lines). [Backspace] is the key itself; the flick is [Flick].
  */
-internal enum class GuideLesson { Swipe, BarTap, BarHold, Flick, Cursor, Alt, Sym, HoldSymbol, Enter, Ctrl, Typing, Backspace, DeleteHold }
+internal enum class GuideLesson {
+    Swipe, BarTap, BarHold, Flick, Cursor, Alt, Sym, HoldSymbol, Enter, Ctrl, Typing, Space, Backspace, DeleteHold
+}
 
 internal object GuideHooks {
     /** A short scene on the keyboard's own bar, for the guide. It types nothing, and any input on the keyboard ends it. */

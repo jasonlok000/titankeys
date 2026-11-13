@@ -477,6 +477,7 @@ fun main() {
     everyPassShowsNext()
     theOwnersInfinityJoke()
     theRightClipPulses()
+    runThroughFixes()
     theCursorHasToMove()
     steeringToAWord()
     grabbingABunch()
@@ -838,8 +839,9 @@ private fun chapterOne() {
     }
     val keys = setOf(GuideLesson.Typing, GuideLesson.Backspace)
     val typing = GUIDE_STEPS.filter { it.chapter == GuideChapter.Typing }
-    same(typing.map { it.lessons }, listOf(keys, setOf(GuideLesson.Swipe) + keys, setOf(GuideLesson.BarHold) + keys),
-        "Each slide unlocks what it teaches; none teaches picking from the bar (v5.2)")
+    // Swiping types its own spaces, so its slide locks a lone Space (owner, 2026-11-13).
+    same(typing.map { it.lessons }, listOf(keys + GuideLesson.Space, setOf(GuideLesson.Swipe) + keys,
+        setOf(GuideLesson.BarHold, GuideLesson.Space) + keys), "Each slide unlocks what it teaches; none teaches picking from the bar (v5.2)")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }.map { it.lessons }, listOf(setOf(GuideLesson.Backspace),
         setOf(GuideLesson.Flick), setOf(GuideLesson.Flick, GuideLesson.DeleteHold)), "Delete unlocks Backspace, the flick, then its hold")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Steering }.map { it.lessons }, List(2) { setOf(GuideLesson.Cursor) },
@@ -1398,4 +1400,79 @@ private fun theRightClipPulses() {
     same(keyboard.contains("if (clip.text == guideFlashClip) guideFlashClip = null"), true, "until it's the one pasted")
     val panel = java.io.File("android/kotlin/com/atlas/keyboard/SymPanel.kt").readText()
     same(panel.contains("View.ALPHA"), false, "A pulse in orange, not a blink of the whole field")
+}
+
+/** The build #2 run-through's guide fixes (owner, 2026-11-13). */
+private fun runThroughFixes() {
+    fun step(id: String) = GUIDE_STEPS.first { it.id == id }
+    val keyboard = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+
+    // A tap on a bar word on the menu slide gets that slide's words, not the other slides' "Do it with the keys".
+    same(blockedChip(step("menu"), GuideLesson.BarTap.name), "Taps are blocked here. Hold, don't tap.", "A bar tap on the menu slide")
+    same(blockedChip(step("steer"), GuideLesson.BarTap.name), "The bar's blocked here. Do it with the keys.", "A bar tap elsewhere")
+    same(blockedChip(step("type"), GuideLesson.BarTap.name), "The bar's blocked here. Type it, typo and all.", "A bar tap on the first slide")
+
+    // The first help comes 3 s after a slide is reached by Next, Skip or Back, all of which arrive through enter(), then every 6 s.
+    val moveOn = guide.substring(guide.indexOf("private fun moveOn("), guide.indexOf("/** What happens after a chapter's roast"))
+    same(moveOn.contains("enter(coming)"), true, "Next, Skip and Back all arrive through enter()")
+    same(guide.contains("moveOn(forward = false)"), true, "Back too")
+    val enter = guide.substring(guide.indexOf("private fun enter(step: GuideStep)"), guide.indexOf("private fun showEnd("))
+    same(enter.contains("fingerDown = false"), true, "A finger from the slide before never holds back this slide's help")
+    same(enter.contains("main.postDelayed(showHelp, if (step.helpTitle != null) HELP_TITLE_AFTER_MILLIS else HELP_AFTER_MILLIS)"), true,
+        "Each slide starts its help's wait")
+    same(guide.contains("private const val HELP_AFTER_MILLIS = 3000L") && guide.contains("private const val HELP_REPEAT_MILLIS = 6000L"),
+        true, "3 s, then every 6 s")
+    same(guide.contains("if (event !is KeyboardEvent.FieldChanged) waitForHelp()"), true,
+        "The keyboard settling the field doesn't put the help off")
+    same(step("menu").helpTitle, null, "The menu slide's help is the 3 s kind")
+
+    // A lone Space that would type is blocked where the slide has no typing, with the slide's own words.
+    for (id in listOf("swipe", "steer", "selectmore")) same(step(id).lessons.orEmpty().contains(GuideLesson.Space), false, "$id locks a lone Space")
+    for (id in listOf("type", "menu")) same(step(id).lessons.orEmpty().contains(GuideLesson.Space), true, "$id types spaces")
+    for (id in listOf("steer", "selectmore")) {
+        same(step(id).lessons.orEmpty().contains(GuideLesson.Cursor), true, "$id still teaches the steering taps")
+        same(blockedChip(step(id), GuideLesson.Space.name), "Typed spaces are blocked. Taps on Space steer.", "Space on $id")
+    }
+    same(blockedChip(step("swipe"), GuideLesson.Space.name), "Spaces are blocked here. Swipes space themselves.", "Space on swipe")
+    same(keyboard.contains("keyCode == KeyEvent.KEYCODE_SPACE -> GuideLesson.Space"), true, "A pressed Space is its own lesson")
+    same(keyboard.contains("keyCode == KeyEvent.KEYCODE_SPACE && GuideHooks.allows(GuideLesson.Cursor)"), false,
+        "and never slips through as the cursor's")
+    same(keyboard.contains("if (key == \" \" && guideBlocked(GuideLesson.Space)) return"), true, "A light tap that types a space is locked too")
+    // A key press ends the touchpad's taps, so a press is never part of a steer: refusing it leaves the taps that steer alone.
+    val gesture = java.io.File("android/kotlin/com/atlas/keyboard/CursorGesture.kt").readText()
+    same(gesture.contains("/** A key press or something else interrupted the touchpad at [time]. */"), true, "A press ends the taps")
+
+    // Space on the Alt slide says what fits Space, not the letters' Alt line.
+    same(blockedChip(step("alt"), GuideLesson.Space.name), "Spaces are blocked here. Just the symbol.", "Space on the Alt slide")
+    same(blockedChip(step("alt"), GuideLesson.Typing.name), "Blocked. Hold Alt while you press it.", "A letter there keeps its line")
+    same(blockedChip(step("paste"), GuideLesson.Space.name), "Spaces are blocked here. Just paste.", "Space on the paste slide")
+    for (lesson in GuideLesson.entries) for (slide in GUIDE_STEPS) {
+        val said = blockedChip(slide, lesson.name)
+        same(lesson == GuideLesson.Typing || !said.startsWith("Blocked. Hold Alt"), true, "${slide.id}: only letters get the Alt line")
+    }
+
+    // One Backspace takes the e: the cursor starts after it, before the field's trailing space.
+    val backspace = step("backspace")
+    val seeded = backspace.seed + " "
+    same(backspace.cursorAt!!(seeded), BACKSPACE_SEED.length, "The cursor starts right after the extra e")
+    val deleted = seeded.removeRange(BACKSPACE_SEED.length - 1, BACKSPACE_SEED.length)
+    val flow = GuideFlow({ GuideSettings() })
+    flow.start("backspace")
+    same(flow.event(FieldChanged(deleted, BACKSPACE_LINE.length, BACKSPACE_LINE.length)), GuideVerdict.Done, "One Backspace passes")
+
+    // The ∞ slide never names the symbol: the title, its steps, its chips and its hunt.
+    val groups = step("symgroups")
+    for (line in listOf(groups.title, groups.done, groups.praise) + groups.stages.map { it.text }) {
+        same(line.contains(WEIRD), false, "\"$line\" doesn't name it")
+    }
+    same(groups.stages[1].text, "Find it and press its key. It's further in.", "The hunt's instruction")
+    for (line in listOf(WEIRD_HUNT.fast, WEIRD_HUNT.slow(HUNT_DRAIN_SECONDS))) same(line.contains(WEIRD), false, "\"$line\" doesn't name it")
+    val steps = java.io.File("android/kotlin/com/atlas/keyboard/GuideSteps.kt").readText()
+    val block = steps.substring(steps.indexOf("id = \"symgroups\""), steps.indexOf("id = \"clown\""))
+    val literals = Regex("\"([^\"\\n]*)\"").findAll(block).map { it.groupValues[1] }.toList()
+    same(literals.none { WEIRD in it }, true, "No line on the slide says the symbol")
+    // The owner's two lines, exactly.
+    same(WEIRD_HUNT.fast, "Quick. Just like you in bed.", "The fast line")
+    same(WEIRD_HUNT.slow(40), "That took forever. Still shorter than you claim to last.", "The slow line")
 }

@@ -22,6 +22,7 @@ screen behaviour that only the phone shows, and the phone pass covers it.
 | A held delete the slide doesn't teach | Its glow shows. It's refused when the hold would start: the chip ("Held delete is blocked here", or the flick's if flicks are locked too) and a no. Nothing deletes, and the lift adds nothing more. New. |
 | Double or triple Space where Space gestures aren't taught yet | The taps glow and tick as they count. Then it's refused as it would act: a double tap once it's settled, a third tap as it lands, a held tap as it registers, and a slide as it starts. The chip "Space taps are blocked here. That's later." and a no. Nothing steers, selects or types. New. |
 | Two taps above Space where Space gestures aren't taught | The same chip and a no. New. |
+| A lone Space that would type, pressed or tapped, where the slide has no typing | Nothing types. The slide's own chip and a no: "Swipes space themselves" on Swipe, "Taps on Space steer" on Steering, "Typing's done" on Delete, "Just the symbol" on Symbols, "Just paste" on Copy and paste. A tap waits until it can't be a steer's tap, so the two quick taps that start a steer still work: a press ends the touchpad's taps and was never part of one. (Owner, 2026-11-13: Space typed into the steering lines.) Checked. |
 | Holding a bar word where the menu isn't taught | No menu. The chip "Holding bar words is blocked here. That's later." and a no. |
 | Holding a letter where holding isn't taught | The letter stays as typed and its repeats type nothing. The chip "Holding for symbols is blocked here. That's later." and a no, once for the hold. New. |
 | Swiping where swiping isn't taught | The trail shows on the drawing, but nothing types and no word grows on the bar. At the lift, the slide's own swipe chip and a no. |
@@ -47,12 +48,15 @@ be over, if anything stopped it.
 
 ## Hints and their timing
 
-Each timer counts from the last input, and any input restarts it. None shows while a finger is on the touchpad, a key is held,
-or the word menu is open. Each waits and looks again 0.7 s later.
+Each timer counts from the last input, and any input restarts it. The field changing doesn't count as input by itself: it's
+the keyboard settling the field, or it follows an input that counts already. None shows while a finger is on the touchpad, a key
+is held, or the word menu is open. Each waits and looks again 0.7 s later. A finger the touchpad last saw on the slide before
+doesn't count: every slide starts with no finger down until the touchpad says so again (owner, 2026-11-13: the help came late
+after a Skip).
 
 | What | When | Slides |
 |---|---|---|
-| The slide's help, how to start its gesture | First after **3 s**, then again every **6 s** while the slide still waits for that first step. Each time the chip comes back in and the slide's demonstration plays again, so it's never a silent text swap. Never on a later step. (Owner, 2026-11-13: "sooner and more frequent".) | menu ("Hold, don't tap. Keep your finger on a bar word."), steer, selectmore |
+| The slide's help, how to start its gesture | First after **3 s** however the slide was reached (Next, Skip or Back), then again every **6 s** while the slide still waits for that first step. Each time the chip comes back in and the slide's demonstration plays again, so it's never a silent text swap. Never on a later step. (Owner, 2026-11-13: "sooner and more frequent".) | menu ("Hold, don't tap. Keep your finger on a bar word."), steer, selectmore |
 | The demonstration (the ghost finger, the bar's hold) | After 5 s with no input, and 1 s later if a finger is down or the menu is open | Every slide with one |
 | A chip | Shows for 3 s, and another waits until it's gone | All |
 | The idle chips | After 20 s with no input: "Still there?". After 20 s more: "The keys won't press themselves. We checked." Once a slide. | All |
@@ -84,7 +88,7 @@ docs/owner-decisions-2.1.md wins over this list wherever they differ.
 | What the user does | What happens |
 |---|---|
 | A tap | "That's a tap. Slide, don't lift." Checked. |
-| The word typed key by key | "That's typing. Swipe this one." Checked. |
+| The word typed key by key | Letters type. The Space after them is blocked: "Spaces are blocked here. Swipes space themselves." Checked. |
 | A swipe that misreads, or a typo in a swipe | It becomes the line's word (forceFix), and it counts. Checked. |
 | A swipe that starts on Backspace, read as a flick | It glows, then "Flicks are blocked here. That's later." and a no. Nothing deletes. New. |
 | Stopping before three swipes | The instruction counts the swipes left. |
@@ -92,7 +96,7 @@ docs/owner-decisions-2.1.md wins over this list wherever they differ.
 ### menu: Save a word. Then unsave it.
 | What the user does | What happens |
 |---|---|
-| A tap on a bar word | "That typed it. Hold it, don't tap." |
+| A tap on a bar word | Nothing types. "Taps are blocked here. Hold, don't tap." and a no, never the other slides' "Do it with the keys". (Owner, 2026-11-13.) Checked. |
 | P closes the menu | "Closed it. Hold the word again." It goes back to the hold. |
 | I twice makes it a favourite | "A favourite. Fancy. O steps it back down." |
 | The bar runs empty | "Nothing to judge. Rare for you." and "Type a letter so the bar fills up." |
@@ -111,6 +115,7 @@ The delete slides start with their line in the field and the cursor where the de
 |---|---|
 | A flick | It glows, then "Flicks are blocked here. Backspace this one." and a no. New. |
 | Letters | "Typing's blocked here. Typing's done. Keep up." and a no. |
+| One Backspace | Takes the e. The cursor starts right after it, before the field's trailing space, so the first press never takes the space instead (owner, 2026-11-13). Checked. |
 | The cursor moved with the screen | It goes back to the end. New. |
 
 ### flick: Flick away the stupid word.
@@ -159,6 +164,7 @@ Each slide's line has a gap, with the cursor in it. A wrong symbol in the gap is
 | What the user does | What happens |
 |---|---|
 | A letter without Alt | "Blocked. Hold Alt while you press it." |
+| Space | "Spaces are blocked here. Just the symbol." Not the letters' Alt line. Checked. |
 | Alt let go before the key | "Fine, that works too. Alt waits for one key." Checked. |
 | Alt locked | "Locked it. Commitment, finally." |
 | Alt on, then off | "On, off. Very decisive." and back to the start. |
@@ -181,13 +187,16 @@ Each slide's line has a gap, with the cursor in it. A wrong symbol in the gap is
 | Closed without typing | "Just looking? Window shopper." and back to Sym. Checked. |
 
 ### symgroups: Add how long you last in bed.
+
+Nothing on the slide names the symbol (owner): the title, "Find it and press its key. It's further in." and every chip. Checked.
+
 | What the user does | What happens |
 |---|---|
 | ∞ found fast, under 20 s, or straight from the first step before the hunt started | The chip "Quick. Just like you in bed." The owner's line, exactly, and nothing else takes its place. Checked. |
 | ∞ found slowly | The description under the success line: "That took forever. Still shorter than you claim to last." The owner's line, exactly, in place of the slide's praise. Checked. |
-| The wrong squiggle | It's taken back: "Wrong squiggle. Took it back. ∞ never ends." |
+| The wrong squiggle | It's taken back: "Wrong squiggle. Took it back. Think forever." |
 | A group from the bottom row, or a sideways swipe | "Yeah, that works too." |
-| Closed | "Closed it. The ∞ is still in there." |
+| Closed | "Closed it. Forever's still in there." |
 
 ### clown: Sign it with 🤡. Find yourself.
 | What the user does | What happens |

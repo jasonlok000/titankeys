@@ -1854,9 +1854,9 @@ class AtlasIme : InputMethodService() {
 
     /**
      * What a key belongs to, for the lock. Alt and Sym are their own, and Enter too. On the open panel every key is part of Sym. fn
-     * and Ctrl are shortcuts, and so is a key pressed with them. A key pressed with Alt on is Alt's. Space is the cursor's where the
-     * slide teaches it, since its taps start the cursor. A letter is a held symbol where the slide teaches holding. Anything else
-     * that types is typing. Other keys, like volume, aren't locked.
+     * and Ctrl are shortcuts, and so is a key pressed with them. A key pressed with Alt on is Alt's. Space is its own,
+     * [GuideLesson.Space], even where the slide teaches steering: the taps that steer are touches, which a press ends. A letter is a
+     * held symbol where the slide teaches holding. Anything else that types is typing. Other keys, like volume, aren't locked.
      */
     private fun guideLesson(event: KeyEvent): GuideLesson? {
         val keyCode = event.keyCode
@@ -1872,7 +1872,8 @@ class AtlasIme : InputMethodService() {
             !event.isPrintingKey && keyCode != KeyEvent.KEYCODE_SPACE -> null
             modifiers.ctrlHeld || event.isCtrlPressed -> GuideLesson.Ctrl
             modifiers.alt != Modifiers.Level.Off || event.isAltPressed -> GuideLesson.Alt
-            keyCode == KeyEvent.KEYCODE_SPACE && GuideHooks.allows(GuideLesson.Cursor) -> GuideLesson.Cursor
+            // A pressed Space types, here as anywhere: a key press ends the touchpad's taps, so it is never part of a steer.
+            keyCode == KeyEvent.KEYCODE_SPACE -> GuideLesson.Space
             HoldEngine.isLetter(keyCode) && GuideHooks.allows(GuideLesson.HoldSymbol) -> GuideLesson.HoldSymbol
             else -> GuideLesson.Typing
         }
@@ -3010,6 +3011,8 @@ class AtlasIme : InputMethodService() {
                 if (!isTapKey(outcome.key) || !field.words) return
                 showStripAfterBack()
                 val key = if (outcome.key == Layout.SPACE) " " else outcome.key
+                // A light tap on Space that types, once it can't be a steer's tap any more: a slide that locks spaces says so.
+                if (key == " " && guideBlocked(GuideLesson.Space)) return
                 // A touch that typed a key: a step, as light as a tap keyboard's, since the touchpad has no click of its own.
                 haptics.play(Haptic.TapKey)
                 if (key == " ") {

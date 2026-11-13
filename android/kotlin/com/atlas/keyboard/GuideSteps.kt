@@ -1171,7 +1171,7 @@ internal val GUIDE_STEPS = listOf(
         text = TYPE_LINE,
         ghost = TYPE_TYPOS,
         cue = GuideCue.Spell,
-        lessons = setOf(GuideLesson.Typing, GuideLesson.Backspace),
+        lessons = setOf(GuideLesson.Typing, GuideLesson.Space, GuideLesson.Backspace),
         forceFix = true,
         sides = false,
         demo = GuideDemo.TypeSlip,
@@ -1252,7 +1252,7 @@ internal val GUIDE_STEPS = listOf(
         line = MENU_LINE,
         seed = MENU_LINE,
         help = "Hold, don't tap. Keep your finger on a bar word.",
-        lessons = setOf(GuideLesson.BarHold, GuideLesson.Typing, GuideLesson.Backspace),
+        lessons = setOf(GuideLesson.BarHold, GuideLesson.Typing, GuideLesson.Space, GuideLesson.Backspace),
         bar = GuideBar.Menu,
     ),
     // DELETE: each slide starts with its line in the field and the cursor where the deleting is; the thing to delete in orange.
@@ -1266,6 +1266,9 @@ internal val GUIDE_STEPS = listOf(
         praise = "That's how everyone deletes. Next, whole words.",
         line = BACKSPACE_LINE,
         seed = BACKSPACE_SEED,
+        // Right after the extra e, before the field's trailing space: one Backspace takes the e (owner's "Press Backspace once"),
+        // never the space first.
+        cursorAt = { it.trimEnd().length },
         lessons = setOf(GuideLesson.Backspace),
         demo = GuideDemo.DeleteLast,
     ),
@@ -1564,19 +1567,20 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Find ∞ and press its key.", GuideCue.Free) { event ->
+            // Never names the symbol (owner, 2026-11-12): the joke is working out what lasts that long.
+            GuideStage("Find it and press its key. It's further in.", GuideCue.Free) { event ->
                 when {
                     event is FieldChanged && symbolInGap(event.text, GROUPS_LINE, WEIRD) -> GuideVerdict.Done
                     otherSymbol(event, GROUPS_LINE, WEIRD) -> {
                         mark = 1
-                        chip("Wrong squiggle. Took it back. ∞ never ends.")
+                        chip("Wrong squiggle. Took it back. Think forever.")
                     }
                     otherGroup(event) && used and 4 == 0 -> {
                         used = used or 4
                         chip("Yeah, that works too.")
                     }
                     panel(event, Panel.Closed) && mark == 1 -> GuideVerdict.Stage(0)
-                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. The ∞ is still in there.", stage = 0)
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. Forever's still in there.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
@@ -1737,6 +1741,15 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
             GuideLesson.BarTap in open -> "Typing's blocked. Tap the dancing word first."
             else -> "Typing's blocked on this slide."
         }
+        // A space that would type, from the key or a light tap, on a slide with no typing (owner, 2026-11-13).
+        GuideLesson.Space.name -> when {
+            GuideLesson.Cursor in open -> "Typed spaces are blocked. Taps on Space steer."
+            step.chapter in NOT_TYPING -> "Spaces are blocked here. Typing's done. Keep up."
+            GuideLesson.Swipe in open -> "Spaces are blocked here. Swipes space themselves."
+            step.chapter == GuideChapter.Symbols -> "Spaces are blocked here. Just the symbol."
+            step.chapter == GuideChapter.Clipboard -> "Spaces are blocked here. Just paste."
+            else -> "Spaces are blocked on this slide."
+        }
         GuideLesson.Backspace.name -> if (GuideLesson.Flick in open) "Backspace is blocked. Flick it." else
             "Backspace is blocked here. Nothing to delete."
         // Each fits its own slide (owner, v5.3: the typing slide's line showed on the delete slides).
@@ -1747,8 +1760,12 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
             GuideChapter.Steering -> "Swiping's blocked here. Taps on Space steer."
             else -> "Swiping's blocked on this slide. Not this way."
         }
-        GuideLesson.BarTap.name -> if (step.id == "type") "The bar's blocked here. Type it, typo and all." else
-            "The bar's blocked here. Do it with the keys."
+        GuideLesson.BarTap.name -> when {
+            step.id == "type" -> "The bar's blocked here. Type it, typo and all."
+            // The menu slide wants the bar word held: a tap gets its own words (owner, 2026-11-13).
+            GuideLesson.BarHold in open -> "Taps are blocked here. Hold, don't tap."
+            else -> "The bar's blocked here. Do it with the keys."
+        }
         GuideLesson.BarHold.name -> "Holding bar words is blocked here. That's later."
         GuideLesson.Flick.name -> when {
             step.id == "backspace" -> "Flicks are blocked here. Backspace this one."

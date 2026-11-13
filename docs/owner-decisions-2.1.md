@@ -145,7 +145,12 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - The real keys, 1:1 (owner, tuned on the quick page, 2026-11-12): **square**, with **no gap between keys** in a row and **10.5 px between rows**. At 1:1 the four rows are about 461 px tall, nearly half the screen.
 - Key calibration is for the overlays tied to keys: the Sym and emoji panels, the clipboard, the word menu buttons, and the guide's hints and trail. It has two sliders, Q's left edge and P's right edge, over the three letter rows. The defaults come from the phone's real geometry, and the owner fine-tunes it on the phone. (Owner, 2026-11-12)
 ### Open
-- How to size the guide's keyboard, since 1:1 is too big. The options are the same width but shorter, which keeps every key over its real key, or the same shape but smaller. The Orchestrator recommends same width, shorter. Both are on the quick page with a size slider.
+- The guide's keyboard: **same width, 60% of the real height**, with the bars below counted in the overall height. Same shape but smaller was rejected. (Owner, 2026-11-12)
+- Waiting for one batch after the owner reviews the current build (owner: "let's do the whole app thing in one batch after my review"):
+  - the guide keyboard at 60%, with no gap between keys and 10.5 px between rows;
+  - the guide crash with the phone's font size at its largest (2.0): the fix is ready on claude/guide-font-crash;
+  - the app's scaling at large font sizes ("pretty awful");
+  - on the playground, when the screen is fully orange, the words can't be read.
 - Built so far: the calibration as the default, and in-app calibration centred. This is look-only; the touchpad code is unchanged.
 
 ## Launch

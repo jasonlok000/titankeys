@@ -205,6 +205,18 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Forget keeps the menu open** (owner, 2026-11-13, 08:55): "instead of showing the undo when forgetting a word, keep it on the bar
+  and just show a new status." (Owner) There's no Undo notice. The word stays in the menu at Not saved, and I (Save) brings it back.
+  Sent to W.
+- **Ladder review (08:55):** the Orchestrator wrote the ladder out against build #4's code. There are five differences:
+  - Forget on words that are only candidates;
+  - Forget closing with Undo;
+  - a dictionary word's O as Forget with Undo;
+  - the hover resetting;
+  - hearts then glitter on open.
+
+  W is fixing all of them. Open: whether a dictionary word's O says Unsave, as the Orchestrator recommends so every word reads the
+  same, or Forget.
 - **Key calibration refined: 108 px a key and gap, centred** (owner, 2026-11-13, 08:38, on full-height lines in quarter-pixel
   steps). It replaces 107.5. (Owner) The outer keys now reach 2 px past each screen edge: the real keyboard is a touch wider than
   the screen. The drawings follow the calibration exactly, including the 2 px past each edge. The row gap keeps the hardware's ratio.

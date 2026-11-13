@@ -22,12 +22,15 @@ import android.provider.Settings
 import android.util.AtomicFile
 import android.util.Log
 import android.view.Display
+import android.view.Gravity
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.KeyCharacterMap
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import android.view.Window
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.CursorAnchorInfo
@@ -35,6 +38,7 @@ import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.SurroundingText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import com.atlas.connected.Connected
 import com.atlas.connected.TouchSizes
@@ -1137,7 +1141,7 @@ class AtlasIme : InputMethodService() {
         exactBar = exact
         words.showSuggestions = showSuggestions()
         showModifiers()
-        return LinearLayout(this).apply {
+        val keyboard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(keys)
             addView(exact)
@@ -1145,6 +1149,63 @@ class AtlasIme : InputMethodService() {
             inputRoot = this
             roundTopCorners(this)
         }
+        // The keyboard sits on the bottom of a window as tall as the screen. See [fillScreen].
+        return FrameLayout(this).apply {
+            addView(keyboard, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
+        }
+    }
+
+    /**
+     * The keyboard's window is as tall as the screen and never changes size; the keyboard is drawn on its bottom edge. When the
+     * window itself grew and shrank with the Sym panel, Android moved it a frame after the keyboard had drawn at its new height,
+     * so for one frame the bar floated about 200 px up with nothing under it as the panel closed, and dropped below the screen
+     * as it opened (owner, 2026-11-12). Now the panel and the bar change in one drawing, and [onComputeInsets] tells the app and
+     * the touch screen where the keyboard is: the app gets only the keyboard's height, and touches above it reach the app.
+     */
+    private fun fillScreen() {
+        val window = window.window ?: return
+        if (window.attributes.height != ViewGroup.LayoutParams.MATCH_PARENT)
+            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        // Android's own frames around the keyboard wrap it; they must fill the window too, so it can sit on the bottom.
+        val area = window.findViewById<View>(android.R.id.inputArea) ?: return
+        fillHeight(area)
+        fillHeight(area.parent as? View)
+        fillHeight(inputRoot?.parent as? View)
+    }
+
+    private fun fillHeight(view: View?) {
+        val params = view?.layoutParams ?: return
+        if (params.height == ViewGroup.LayoutParams.MATCH_PARENT) return
+        params.height = ViewGroup.LayoutParams.MATCH_PARENT
+        view.layoutParams = params
+    }
+
+    override fun onConfigureWindow(win: Window, isFullscreen: Boolean, isCandidatesOnly: Boolean) {
+        super.onConfigureWindow(win, isFullscreen, isCandidatesOnly)
+        fillScreen()
+    }
+
+    override fun setInputView(view: View) {
+        super.setInputView(view)
+        fillScreen()
+    }
+
+    private val keyboardAt = IntArray(2)
+
+    /** Only the keyboard counts, not the empty window above it: see [fillScreen]. */
+    override fun onComputeInsets(outInsets: Insets) {
+        super.onComputeInsets(outInsets)
+        val keyboard = inputRoot ?: return
+        val decor = window.window?.decorView ?: return
+        if (!isInputViewShown || !keyboard.isAttachedToWindow) return
+        val top = if (keyboard.isShown && keyboard.height > 0) {
+            keyboard.getLocationInWindow(keyboardAt)
+            keyboardAt[1]
+        } else decor.height
+        outInsets.contentTopInsets = top
+        outInsets.visibleTopInsets = top
+        outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_REGION
+        outInsets.touchableRegion.set(0, top, decor.width, decor.height)
     }
 
     /**

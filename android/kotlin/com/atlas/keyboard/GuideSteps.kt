@@ -966,7 +966,7 @@ internal val CLIP_FIELD_KEYS = listOf("R", "I", "F", "K", "C")
 internal const val CLIP_LEAD = "What you copy is in Sym, then A. "
 // The nice clip pastes itself and one more word: the bait and switch lands at once (owner, 2026-11-13: the old "So is my whole
 // personality" didn't land).
-internal const val PRANK_PASTE = "Honestly, you're doing great. Kidding."
+internal const val PRANK_PASTE = "You're doing great. Kidding"
 internal const val CLIP_LINE = CLIP_LEAD + PRANK_PASTE
 
 /** The clipboard lesson's clips, newest first: a thread of digs, and one nice one, which isn't what it pastes. */
@@ -976,7 +976,7 @@ internal val GUIDE_CLIPS = listOf(
     "Circling back: still can't read?",
     "Reminder: read the manual.",
     "Looping in your last brain cell.",
-    "Honestly, you're doing great.",
+    "You're doing great.",
 )
 internal val PRANK_CLIP = GUIDE_CLIPS.last()
 /** Every clip that a guide ever put in the user's clipboard, this one's and older ones', to clear from it. */

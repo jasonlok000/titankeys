@@ -1122,12 +1122,7 @@ class GuideActivity : Activity() {
         if (settingUp) return
         // The finale and the end have no field: the keyboard stays down, also back from the share screen, so its bar never shows
         // there and nothing jumps when it goes (Master, 2026-11-13: the bar showed, and the buttons dropped 88 px as it hid).
-        if (atEnd()) {
-            keyboardShown(false)
-            return
-        }
-        field.requestFocus()
-        input.showSoftInput(field, InputMethodManager.SHOW_IMPLICIT)
+        keyboardShown(keyboardHere())
     }
 
     @Deprecated("Back reaches an activity here, because the app does not opt in to predictive back")
@@ -2981,9 +2976,15 @@ class GuideActivity : Activity() {
     }
 
     /** The keyboard stays up for the story and the playground, and stays down during setup. */
-    private fun keyboardShown(shown: Boolean) {
+    private fun keyboardShown(want: Boolean) {
+        val shown = want && keyboardHere()
         val state = if (shown) WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE else WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
         window.setSoftInputMode(state or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        // Down, the field can't take focus. Cleared, focus otherwise goes straight back to the field, the first thing that takes it,
+        // and the keyboard starts on it again, and since nothing was typed there yet, it takes the hide for a stale one and shows
+        // its bar anyway (build #9: the bar on the end after skipping the clipboard slide).
+        field.isFocusable = shown
+        field.isFocusableInTouchMode = shown
         if (shown) {
             field.requestFocus()
             input.showSoftInput(field, InputMethodManager.SHOW_IMPLICIT)
@@ -2992,6 +2993,9 @@ class GuideActivity : Activity() {
             input.hideSoftInputFromWindow(field.windowToken, 0)
         }
     }
+
+    /** The finale and the end have no field and no keyboard ([GuideStep.keyboard]); the playground always has them. */
+    private fun keyboardHere() = playground || (!atEnd() && flow.step.keyboard)
 
     /** The playground: the name, a line to follow if you like, the field and the keys. Nothing is checked, and nothing waits. */
     private fun showPlayground() {

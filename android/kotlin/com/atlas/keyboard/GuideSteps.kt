@@ -834,6 +834,12 @@ internal class GuideStep(
 ) {
     /** Each slide has its own line and its own field (v5): nothing carries on from the slide before. */
     val carriesField get() = false
+
+    /**
+     * The slide has the field and the keyboard. The finale and the end have neither, however they're reached (Next, Skip, Back
+     * from the share screen, coming back to the app): the field can't even take focus there, or the keyboard shows its bar again.
+     */
+    val keyboard get() = chapter != GuideChapter.End
 }
 
 /** From android.view.KeyEvent, so that the steps can be tested without Android. */

@@ -110,9 +110,9 @@ export default function BoringGuide() {
     </Section>
     <Section title="Problems">
       <Topic title="Check the setup">{"Something fucked up? Nine times out of ten it's Setup. Settings > Setup, make every step say Done."}</Topic>
-      <Topic title="Sym doesn't open the panel">{"In the phone's Settings, open Shortcut keys and set Sym key to Programmable key."}</Topic>
-      <Topic title="fn doesn't work as Ctrl">{"In the phone's Settings, open Shortcut keys and set fn key to Programmable key."}</Topic>
-      <Topic title="Swiping doesn't work in an app">{"Open Scroll assistant and find the app. It should say Sliding Mode 1."}</Topic>
+      <Topic title="Sym doesn't open the panel">{"Settings > Setup checks it. Set Sym to Programmable key opens the phone's Shortcut keys: set Sym key to Programmable key there."}</Topic>
+      <Topic title="fn doesn't work as Ctrl">{"Settings > Setup checks it. Set fn to Programmable key opens the phone's Shortcut keys: set fn key to Programmable key there."}</Topic>
+      <Topic title="Swiping doesn't work in an app">{"Settings > Setup lists the apps that aren't on Sliding Mode 1. Open Scroll assistant, find the app and pick Sliding Mode 1."}</Topic>
       <Topic title="Back takes two presses">{"Turn TitanKeys on in Accessibility. Settings > Setup has the step."}</Topic>
     </Section>
   </Screen>;

@@ -142,8 +142,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - Calibrate by the **gaps between keys**, with every key the same width. Only the gaps are drawn, as bands that line up with the real gaps below the screen. Sliders for key width, gap width and shift, each with fine −/+ steps. This replaces the two-edge version, which was too hard to judge by eye. (Owner, 2026-11-12)
 - The lines are **one pixel**, at the **centre** of each gap, with one at each outer edge. There are two sliders, Spacing (key plus gap) and Shift. This replaces the bands and the separate key and gap sliders. (Owner, 2026-11-12)
 - Calibrated by the owner on a quick page served to the phone (2026-11-12): a key and a gap every 107.5 px on the 1076 px screen, centred. This is now the default for everyone, and values stored against the old default are dropped.
-- The keys are **square** and the rows are evenly spaced, a key and a gap apart. So the guide's keyboard is drawn at its real size, 406 px tall instead of 474. This is look-only; the touchpad code is unchanged. (Owner, 2026-11-12)
+- The real keys, 1:1 (owner, tuned on the quick page, 2026-11-12): **square**, with **no gap between keys** in a row and **10.5 px between rows**. At 1:1 the four rows are about 461 px tall, nearly half the screen.
 - Key calibration is for the overlays tied to keys: the Sym and emoji panels, the clipboard, the word menu buttons, and the guide's hints and trail. It has two sliders, Q's left edge and P's right edge, over the three letter rows. The defaults come from the phone's real geometry, and the owner fine-tunes it on the phone. (Owner, 2026-11-12)
+### Open
+- How to size the guide's keyboard, since 1:1 is too big. The options are the same width but shorter, which keeps every key over its real key, or the same shape but smaller. The Orchestrator recommends same width, shorter. Both are on the quick page with a size slider.
+- Built so far: the calibration as the default, and in-app calibration centred. This is look-only; the touchpad code is unchanged.
 
 ## Launch
 

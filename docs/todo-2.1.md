@@ -96,7 +96,9 @@ all of them are unapproved.
   - A's own calls: the decorations live mostly in the band between the field and the keys; the typewriter e sits in that band,
     not behind the title; the starfield keeps four-point sparkles; the e is cream, all others orange at 7–12%.
 - C (now): wiring the decorations into the v2 guide, with live keep-outs; then check them in the renders.
-- A (now): the flick glow ramp.
+- A: **the flick glow ramp is done and merged** (66a6d7f). No glow at reach .05; a smoothstep up to full at the top-speed line (.6, from
+  REPEAT_LONG_KEYS); a late glow uses the ramp at the lift; a hold takes over with no jump. Checks are in gesture-display and delete-hold.
+  A's call: the ramp follows the glow's shown reach, so strength and reach move together.
 - F: **text audit done and merged** (86a0412). The table for the owner is text-audit-2.1.md in the notes folder.
   - The owner's lines are kept; three were touched lightly ("Both. Eh." exact, the plagiarist and clown roasts tightened).
   - Still to apply after C's wiring merges: two GuideActivity strings, GOING_BACK → "Missed something? Go on then." and

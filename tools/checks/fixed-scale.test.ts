@@ -92,7 +92,9 @@ test("the bar keeps Normal's height at every size, and the menu's pill stays ins
 test("Bar text size starts from the phone's text size until you pick one, and a reset goes back to it", () => {
   const kotlin = read("android/kotlin/com/atlas/keyboard/FixedScale.kt");
   expect(kotlin).toContain("const val BIGGER_FROM = 1.15f");
-  expect(kotlin).toContain("const val BIGGEST_ABOVE = 1.5f");
+  // Big text starts at Bigger, never Biggest, which is only ever picked (owner, 2026-11-13).
+  expect(kotlin).toContain("fun forFontScale(fontScale: Float): Size = if (fontScale < BIGGER_FROM) Size.Normal else Size.Bigger");
+  expect(kotlin).not.toContain("BIGGEST_ABOVE");
   expect(kotlin).toContain("fun size(context: Context): Size = picked(context) ?: forFontScale(phoneFontScale())");
   expect(kotlin).toContain("private fun phoneFontScale(): Float = Resources.getSystem().configuration.fontScale");
   expect(kotlin).toContain("preferences(context).edit().remove(SIZE).remove(OLD_SIZE).apply()");

@@ -40,16 +40,14 @@ object FixedScale {
         }
     }
 
-    /** The phone's text size up to which the bar starts at Normal, and above which at Biggest. Between, Bigger. */
+    /** The phone's text size from which the bar starts at Bigger instead of Normal. */
     const val BIGGER_FROM = 1.15f
-    const val BIGGEST_ABOVE = 1.5f
 
-    /** The size the bar starts at, before you pick one, for the phone's own text size (owner, 2026-11-13). */
-    fun forFontScale(fontScale: Float): Size = when {
-        fontScale < BIGGER_FROM -> Size.Normal
-        fontScale <= BIGGEST_ABOVE -> Size.Bigger
-        else -> Size.Biggest
-    }
+    /**
+     * The size the bar starts at, before you pick one, for the phone's own text size: big text starts at Bigger, never Biggest,
+     * which is only ever picked (owner, 2026-11-13: "if it detects the size being big, it'll select big, not biggest").
+     */
+    fun forFontScale(fontScale: Float): Size = if (fontScale < BIGGER_FROM) Size.Normal else Size.Bigger
 
     /** The pick is stored under a new name: the old Size grew every window, so a pick of it doesn't carry over. */
     private const val SIZE = "bar_text_size"

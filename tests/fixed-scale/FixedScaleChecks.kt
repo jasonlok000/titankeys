@@ -43,10 +43,10 @@ fun main() {
     // At the phone's default settings nothing moves: FixedScale's sizes are the ones TitanKeys was designed at.
     check(pixels(250, 1f, fixed = false) == reference, "At font size 1.0 and 250 dpi, FixedScale changes nothing")
 
-    // Before you pick one, Bar text size follows the phone's text size (owner, 2026-11-13): under 1.15 Normal, up to 1.5 Bigger,
-    // above 1.5 Biggest. The owner's phone is at 2.0, so it lands on Biggest by itself.
+    // Before you pick one, Bar text size follows the phone's text size (owner, 2026-11-13): under 1.15 Normal, from 1.15 Bigger,
+    // and never Biggest, which is only ever picked. The owner's phone is at 2.0, so it lands on Bigger by itself.
     val starts = mapOf(.85f to "Normal", 1f to "Normal", 1.1f to "Normal", 1.149f to "Normal", 1.15f to "Bigger", 1.3f to "Bigger",
-        1.5f to "Bigger", 1.51f to "Biggest", 1.8f to "Biggest", 2f to "Biggest")
+        1.5f to "Bigger", 1.51f to "Bigger", 1.8f to "Bigger", 2f to "Bigger")
     for ((fontScale, name) in starts) {
         check(FixedScale.forFontScale(fontScale).name == name, "At the phone's text size $fontScale the bar starts at $name: got ${FixedScale.forFontScale(fontScale)}")
     }

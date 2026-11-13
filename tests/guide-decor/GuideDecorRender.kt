@@ -62,7 +62,8 @@ fun main(args: Array<String>) {
             val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
             val shapes = decor.draw(Canvas(image), slide, t, screen.area, screen.keepOut, onOrange, DP)
             check(shapes <= GuideDecor.MAX_SHAPES) { "$slide draws $shapes shapes at $t ms" }
-            val level = if (onOrange) GuideDecor.INK_LEVEL else look.level
+            // The grass sets its own three strengths, the front layer strongest (owner, 2026-11-13).
+            val level = if (slide == GuideDecor.FINALE) GuideDecor.GRASS_STRONGEST else if (onOrange) GuideDecor.INK_LEVEL else look.level
             var strongest = 0
             for (y in 0 until HEIGHT) for (x in 0 until WIDTH) {
                 val a = image.getRGB(x, y) ushr 24
@@ -210,7 +211,7 @@ private fun frame(decor: GuideDecor, slide: String, screen: Screen, t: Long, bol
     val layer = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
     decor.draw(Canvas(layer), slide, t, screen.area, screen.keepOut, onOrange, DP)
     if (bright) {
-        val boost = .55f / (if (onOrange) GuideDecor.INK_LEVEL else GuideDecor.LOOKS.getValue(slide).level)
+        val boost = if (slide == GuideDecor.FINALE) 1f else .55f / (if (onOrange) GuideDecor.INK_LEVEL else GuideDecor.LOOKS.getValue(slide).level)
         for (y in 0 until HEIGHT) for (x in 0 until WIDTH) {
             val p = layer.getRGB(x, y)
             val a = ((p ushr 24) * boost).roundToInt().coerceAtMost(255)

@@ -98,7 +98,8 @@ class GuideDecor(private val font: Typeface? = null) {
     fun draw(canvas: Canvas, slide: String, millis: Long, area: RectF, keepOut: List<RectF>, onOrange: Boolean, dp: Float,
              fade: Float = 1f): Int {
         val look = LOOKS[slide] ?: return 0
-        val level = if (onOrange) INK_LEVEL else look.level
+        // The grass sets its own three strengths (owner, 2026-11-13), so its layer is at full strength.
+        val level = if (slide == FINALE) 1f else if (onOrange) INK_LEVEL else look.level
         val alpha = (level * fade.coerceIn(0f, 1f) * 255).roundToInt()
         if (alpha <= 0 || area.width() <= 0f || area.height() <= 0f) return 0
         this.canvas = canvas
@@ -787,65 +788,87 @@ class GuideDecor(private val font: Typeface? = null) {
 
     // The end and setup
 
-    /** Grass: as the finale plays, grass grows up from the bottom edge, its blades swaying, and three small flowers open. */
+    /**
+     * Grass (owner, 2026-11-13, from their picture, "match it to our minimal style"): a dense band of pointed blades along the
+     * screen's bottom edge, in three overlapping layers for depth, back to front at [GRASS_TONES]: flat shapes, no outlines, the
+     * ink's three strengths on the orange. It grows up from the edge as the finale plays, each blade in its own time, sways gently
+     * on a slow wind, and three small flowers open in it. Never taller than the room under the keep-outs, the end's buttons above all.
+     */
     private fun grass(t: Float) {
-        val growth = sine(t / GRASS_GROW)
-        if (growth <= 0f) return
-        // The grass stands on the end's buttons, the widest thing at the bottom, as on the ground: from the screen's bottom edge it
-        // would grow behind them and never show. With nothing there, it grows from the bottom edge.
-        val floor = floorLike()?.let { it.top - CLEAR_DP * dp }?.takeIf { it > area.centerY() }
-        val bottom = (floor ?: area.bottom) + 2f * dp
-        // As tall as the room under whatever is above it allows, the finale's words most of all: it never grows into them.
+        val bottom = area.bottom
         val ceiling = keepOut.filter { it.bottom < bottom - 1f && it.width() > area.width() * .4f }.maxOfOrNull { it.bottom + CLEAR_DP * dp }
-        val grow = growth * ((if (ceiling == null) 1f else ((bottom - ceiling) / (GRASS_TALLEST * dp)).coerceIn(0f, 1f)))
-        if (grow <= 0f) return
-        val tufts = 9
-        val wind = TAU * ((t - GRASS_SETTLED).coerceAtLeast(0f) / GRASS_LOOP)
-        for (i in 0 until tufts) {
-            val x = area.left + area.width() * (i + .5f + (hash(100, i) - .5f) * .5f) / tufts
+        val room = (if (ceiling == null) 1f else (bottom - ceiling) / (GRASS_TALLEST * dp)).coerceIn(0f, 1f)
+        if (room <= 0f) return
+        // One slow wind across the band, from the start, so the loop folds back without a jump.
+        val wind = TAU * t / GRASS_LOOP
+        val blade = BLADE_DP * dp * room
+        fun sway(x: Float, h: Float, layer: Int) = (1.5f * dp + h * .07f) * sin(wind - (x - area.left) / area.width() * 1.6f * TAU + layer * .9f)
+        for (layer in 0..2) {
+            if (layer == 2) flowers(t, bottom, blade, ::sway)
+            val pitch = GRASS_PITCH[layer] * dp
+            val (low, high) = GRASS_HEIGHTS[layer]
             path.reset()
-            for (j in 0 until 8) {
-                val h = (34f + 70f * hash(101, i * 8 + j).pow(1.4f)) * grow * dp
-                val bx = x + (j - 3.5f) * 5f * dp + (hash(103, i * 8 + j) - .5f) * 6f * dp
-                val lean = (j - 3.5f) * .1f + (hash(102, i * 8 + j) - .5f) * .35f
-                val sway = (6f * dp + h * .1f) * sin(wind - (bx - area.left) / area.width() * 2.4f * PI.toFloat()) * (h / (60f * dp))
-                val tx = bx + lean * h + sway
-                val ty = bottom - h
-                val mx = bx + lean * h * .35f + sway * .35f
-                val my = bottom - h * .55f
-                val w = 2.4f * dp
-                path.moveTo(bx - w, bottom)
-                path.quadTo(mx - w * .5f, my, tx, ty)
-                path.quadTo(mx + w * .5f, my, bx + w, bottom)
+            var drawn = false
+            var i = 0
+            while (true) {
+                val x = area.left + (i - .5f + (hash(110 + layer, i) - .5f) * .6f) * pitch
+                if (x > area.right + pitch) break
+                val grown = smooth((t - hash(120 + layer, i) * GRASS_STAGGER - layer * 180f) / GRASS_GROW)
+                val h = blade * (low + (high - low) * hash(130 + layer, i).pow(1.3f)) * grown
+                i++
+                if (h < .5f * dp) continue
+                val w = (2.8f + 2.6f * hash(140 + layer, i)) * dp
+                val lean = (hash(150 + layer, i) - .5f) * .55f
+                val tipX = x + lean * h + sway(x, h, layer)
+                val tipY = bottom - h
+                val bend = x + lean * h * .3f + sway(x, h, layer) * .3f
+                path.moveTo(x - w, bottom + 2f * dp)
+                path.quadTo(bend - w * .8f, bottom - h * .42f, tipX, tipY)
+                path.quadTo(bend + w * .8f, bottom - h * .42f, x + w, bottom + 2f * dp)
                 path.close()
+                drawn = true
             }
-            fill(.85f)
-            canvas.drawPath(path, paint)
+            if (!drawn) continue
+            flat(GRASS_TONES[layer])
             shapes++
         }
+    }
+
+    /**
+     * Fills [path] at [tone] as a flat shape: what's under it goes first, so where layers overlap the one in front shows its own tone,
+     * as in the owner's picture, instead of the inks adding up.
+     */
+    private fun flat(tone: Float) {
+        eraser.alpha = 255
+        canvas.drawPath(path, eraser)
+        fill(tone)
+        canvas.drawPath(path, paint)
+    }
+
+    /** Three small flowers in the grass, behind its front blades: a stem, then five round petals that open, and their middle. */
+    private fun flowers(t: Float, bottom: Float, blade: Float, sway: (Float, Float, Int) -> Float) {
         for (f in 0..2) {
-            val i = intArrayOf(1, 4, 7)[f]
-            val x = area.left + area.width() * (i + .5f + (hash(100, i) - .5f) * .5f) / tufts + 7f * dp
-            val h = (92f + 18f * f) * grow * dp
-            val sway = 7f * dp * sin(wind - (x - area.left) / area.width() * 2.4f * PI.toFloat())
-            val open = smooth((t - GRASS_GROW * .9f - f * 450f) / 1100f)
-            val hx = x + sway
+            val open = smooth((t - GRASS_GROW * .75f - f * 450f) / 1100f)
+            val stand = smooth((t - GRASS_GROW * .35f - f * 300f) / GRASS_GROW)
+            if (stand <= 0f) continue
+            val x = area.left + area.width() * (FLOWERS[f] + (hash(160, f) - .5f) * .06f)
+            val h = blade * (.95f + .07f * f) * stand
+            val hx = x + sway(x, h, 1)
             val hy = bottom - h
             path.reset()
-            path.moveTo(x, bottom)
-            path.quadTo(x + sway * .2f, bottom - h * .5f, hx, hy)
-            stroke(1f, 1.5f * dp)
-            canvas.drawPath(path, paint)
+            path.moveTo(x - .9f * dp, bottom + 2f * dp)
+            path.quadTo(x + (hx - x) * .4f - .7f * dp, bottom - h * .5f, hx, hy)
+            path.quadTo(x + (hx - x) * .4f + .7f * dp, bottom - h * .5f, x + .9f * dp, bottom + 2f * dp)
+            path.close()
+            if (open > 0f) for (k in 0 until 5) {
+                val a = TAU * k / 5 + f
+                path.addCircle(hx + cos(a) * 4.6f * dp * open, hy + sin(a) * 4.6f * dp * open, 3.6f * dp * open, Path.Direction.CW)
+            }
+            flat(GRASS_TONES[1])
             if (open > 0f) {
                 path.reset()
-                for (k in 0 until 5) {
-                    val a = TAU * k / 5 + f
-                    path.addCircle(hx + cos(a) * 7f * dp * open, hy + sin(a) * 7f * dp * open, 4.8f * dp * open, Path.Direction.CW)
-                }
-                stroke(1f, 1.3f * dp)
-                canvas.drawPath(path, paint)
-                fill(1f)
-                canvas.drawCircle(hx, hy, 3.2f * dp * open, paint)
+                path.addCircle(hx, hy, 2.6f * dp * open, Path.Direction.CW)
+                flat(GRASS_TONES[2])
             }
             shapes++
         }
@@ -1086,6 +1109,8 @@ class GuideDecor(private val font: Typeface? = null) {
         const val CREAM = 0xFFFFF1E6.toInt()
         const val INK = 0xFF160A04.toInt()
         const val INK_LEVEL = .08f
+        /** The grass's front layer, its strongest ink (owner, 2026-11-13): the finale's only shapes stronger than [INK_LEVEL]. */
+        const val GRASS_STRONGEST = .45f
 
         private const val TAU = (2 * PI).toFloat()
 
@@ -1158,10 +1183,23 @@ class GuideDecor(private val font: Typeface? = null) {
         private const val CLIPS_LOOP = 20000f
         private const val CLIP_LENGTH = 44f
         private const val GRASS_GROW = 2600f
-        /** The tallest the grass grows, a flower's head and petals included, in dp. */
-        private const val GRASS_TALLEST = 124f
+        /** How much later than the first a blade may start to grow, so the band comes up unevenly, as grass does. */
+        private const val GRASS_STAGGER = 700f
+        /** The tallest the grass grows, a flower's head and petals included, in dp: it fits the end's grass room, 96 dp, less [CLEAR_DP]. */
+        private const val GRASS_TALLEST = 88f
+        /**
+         * The longest blade, in dp; the flowers stand a little over it. Both stay under the soft edge round what's above (the
+         * finale's words end [CLEAR_DP] + [FEATHER_DP] higher), so no tip fades.
+         */
+        private const val BLADE_DP = 62f
         private const val GRASS_SETTLED = 4500f
         private const val GRASS_LOOP = 8000f
+        /** The three layers, back to front: the ink's strength on the orange, the blades' spacing in dp, and their heights as parts of [BLADE_DP]. */
+        private val GRASS_TONES = floatArrayOf(.18f, .30f, GRASS_STRONGEST)
+        private val GRASS_PITCH = floatArrayOf(7f, 8f, 9f)
+        private val GRASS_HEIGHTS = arrayOf(.55f to 1f, .38f to .78f, .22f to .52f)
+        /** Where the flowers stand, across the screen. */
+        private val FLOWERS = floatArrayOf(.18f, .56f, .84f)
         private const val GEAR_LOOP = 20000f
         private const val GEAR_MODULE = 7f
         private const val BIG_TEETH = 14

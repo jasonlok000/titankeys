@@ -205,6 +205,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Decor review goes through the Orchestrator** (owner, 2026-11-13, 10:45): "for the decor do the mockups and then you review it for
+  me." (Owner) V sends its preview page and screencaps to the Orchestrator, who approves them before anything is built.
+- **Bar words, bottom aligned?** (owner, 10:45). The Orchestrator's answer: at equal sizes they already share one baseline. Only a
+  word that StripFit shrinks sat higher, because it was centred on its own small letters. D will put every word on the full-size
+  words' baseline. (Orchestrator)
 - **The paste slide turns wholesome** (owner, 2026-11-13, 10:40): "I am doing great, lets make this wholesome instead so its not what
   the user thought... from I am doing great to I hope you are doing great, genuinely." (Owner)
   - The nice clip "I'm doing great." pastes "I hope you're doing great, genuinely".

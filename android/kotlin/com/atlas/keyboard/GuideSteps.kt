@@ -904,7 +904,7 @@ internal const val SYM_LINE = "Sym has the rest, terms & conditions apply"
 internal const val WEIRD = "∞"
 // The owner's joke (2026-11-13): how long you last in bed, and the answer is the one that never ends. The line sets it up, so the
 // gap after "in bed:" says what goes there without naming it. It starts with S for the finale's GO TOUCH GRASS NOW.
-internal const val GROUPS_LINE = "Seriously, how long I last in bed: ∞"
+internal const val GROUPS_LINE = "Seriously, how long I last in bed with your mother: ∞"
 internal const val CLOWN = "🤡"
 internal const val CLOWN_LINE = "Need emoji? Press Sym twice. Signed, 🤡"
 
@@ -963,18 +963,20 @@ internal const val PASTE_TEXT = "can't type a thing myself"
 internal val CLIP_FIELD_KEYS = listOf("R", "I", "F", "K", "C")
 
 /** Slide 15's line: the clip that's nice to you pastes the end of it. */
-internal const val CLIP_LEAD = "What you copy is in Sym, then A. "
-internal const val PRANK_PASTE = "So is my whole personality"
+internal const val CLIP_LEAD = "Wanna paste? Sym, then A. "
+// After a thread of digs you expect one more roast, and the nice clip pastes something kind, and means it (owner, 2026-11-13: "make
+// this wholesome instead so its not what the user thought").
+internal const val PRANK_PASTE = "I hope you're doing great, genuinely"
 internal const val CLIP_LINE = CLIP_LEAD + PRANK_PASTE
 
 /** The clipboard lesson's clips, newest first: a thread of digs, and one nice one, which isn't what it pastes. */
-// Each fits its field on one line, so no dig ends in "…" (owner, 2026-11-13: the personality one didn't end).
+// Each fits its field on one line, so no dig ends in "…". The Next-is-not-a-personality one didn't land (owner, 2026-11-13).
 internal val GUIDE_CLIPS = listOf(
     "Per my last message: just read.",
     "Circling back: still can't read?",
     "Reminder: read the manual.",
-    "Next is not a personality.",
-    "Honestly, you're doing great.",
+    "Looping in your last brain cell.",
+    "I'm doing great.",
 )
 internal val PRANK_CLIP = GUIDE_CLIPS.last()
 /** Every clip that a guide ever put in the user's clipboard, this one's and older ones', to clear from it. */
@@ -984,6 +986,7 @@ internal val OLD_GUIDE_CLIPS = GUIDE_CLIPS.toSet() + PASTE_TEXT + setOf(
     "Per my last four messages, please stop.", "Honestly, you're doing great.",
     "Per my last message, the grey words were the instructions.", "Circling back, since reading isn't your thing.",
     "Friendly reminder: nobody believes you read the manual.", "As discussed, Next is not a personality.",
+    "Next is not a personality.", "You're doing great.",
 )
 
 /** The words that the steer slide aims at are at least this many words from the cursor's column. */
@@ -1698,15 +1701,15 @@ internal val GUIDE_STEPS = listOf(
                 }
             },
         ),
-        // The nice clip pastes the prank, and the slide owns up.
-        done = "Gotcha. Swapped it on purpose.",
+        // The nice clip pastes something kind instead of the roast you expected.
+        done = "Didn't see that coming, did you?",
         praise = "It keeps what you copy. Sym, then A, any time.",
         line = CLIP_LINE,
         seed = CLIP_LEAD.trimEnd(),
         usesPanel = true,
         setup = Panel.Closed,
         sandboxClips = GUIDE_CLIPS,
-        rain = "🤪",
+        rain = "🫶",
         lessons = setOf(GuideLesson.Sym),
         demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""),
     ),

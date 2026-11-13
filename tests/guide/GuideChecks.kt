@@ -612,7 +612,7 @@ private fun oneInstructionAtATime() {
     same(groups.event(PanelSwiped(0f, .4f, true)), GuideVerdict.Stage(1), "A page turned, so finding ∞ is next")
     same(groups.step.stages.size, 2, "Two steps: turn a page, then find ∞")
     same(groups.step.title.contains(WEIRD), false, "The title doesn't name the weird one")
-    same(GROUPS_LINE.startsWith("S") && GROUPS_LINE.endsWith("how long I last in bed: ∞"), true, "Its line sets up the joke, and starts with S for the finale")
+    same(GROUPS_LINE.startsWith("S") && GROUPS_LINE.endsWith("how long I last in bed with your mother: ∞"), true, "Its line sets up the joke, and starts with S for the finale")
     same(groups.event(FieldChanged(GROUPS_LINE.replace(WEIRD, "¤"), 4, 4)).let { it is GuideVerdict.Hint && !it.passes }, true,
         "Another symbol isn't ∞")
     same(groups.event(keys(Panel.Closed)), GuideVerdict.Stage(0), "A wrong one closed the panel: Sym again, the chip stays")
@@ -661,7 +661,7 @@ private fun oneInstructionAtATime() {
     same(clips.event(keys(Panel.Clipboard)), GuideVerdict.Stage(2), "The clipboard, straight away, is fine too")
     same(clips.event(FieldChanged(CLIP_LEAD + GUIDE_CLIPS.first(), 40, 40)), GuideVerdict.Wait, "A rude clip: the screen takes it back")
     same(clips.event(FieldChanged(CLIP_LINE, 60, 60)), GuideVerdict.Done, "The nice clip passes")
-    same(clips.step.done, "Gotcha. Swapped it on purpose.", "and the slide owns up to the prank")
+    same(clips.step.done, "Didn't see that coming, did you?", "and the slide owns up to the kind surprise")
     same(GuideHooks.swapClip(PRANK_CLIP), PRANK_PASTE, "The nice clip pastes the prank in the guide")
     same(GuideHooks.swapClip(GUIDE_CLIPS.first()), GUIDE_CLIPS.first(), "Every other clip pastes as it is")
     same(OLD_GUIDE_CLIPS.containsAll(GUIDE_CLIPS), true, "The guide clears its own clips from the clipboard")

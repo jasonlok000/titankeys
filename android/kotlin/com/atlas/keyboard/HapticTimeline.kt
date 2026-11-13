@@ -104,6 +104,11 @@ object HapticTimeline {
         Haptic.AppPicked -> "An option picked"
         Haptic.AppDeleted -> "A delete confirmed"
         Haptic.AppRefused -> "The app said no"
+        Haptic.PlaygroundConfetti -> "Playground confetti"
+        Haptic.PlaygroundRain -> "Playground rain"
+        Haptic.PlaygroundShake -> "Playground shake"
+        Haptic.PlaygroundLightning -> "Playground lightning"
+        Haptic.PlaygroundSprout -> "Playground plant"
     }
 
     /**

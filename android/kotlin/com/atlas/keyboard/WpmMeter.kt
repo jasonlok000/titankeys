@@ -216,3 +216,58 @@ internal data class WpmEffects(
         }
     }
 }
+
+/**
+ * The playground's five big moments, the only ones that play a haptic (owner, 2026-11-13: "Add the haptics"). Never a step,
+ * never a comment: only these. [haptic] is the id of what each plays, in Haptics.kt.
+ */
+internal enum class PlaygroundMoment(val haptic: String) {
+    /** 40 words a minute: the first confetti pops. */
+    Confetti("playground_confetti"),
+    /** 100: the confetti turns into rain. */
+    Rain("playground_rain"),
+    /** 150: the screen starts to shake. */
+    Shake("playground_shake"),
+    /** 180 and up: each lightning flash. Not once a burst like the others: it plays with every flash. */
+    Lightning("playground_lightning"),
+    /** The top: everything stops and the plant grows. */
+    Sprout("playground_sprout"),
+}
+
+/**
+ * Which of the playground's moments a burst has reached. Each plays once, the first time the show reaches it, and again only after
+ * the playground has calmed down, five quiet seconds with the number back to nothing ([calm]), and the burst reaches it anew. Each
+ * flash of lightning plays as it comes ([flash]). It needs no Android, so the checks can run it.
+ */
+internal class PlaygroundMoments {
+    private val reached = HashSet<PlaygroundMoment>()
+
+    /**
+     * The show now is [effects]: the moment to play, or null. Moments reached at once, as a jump in speed can, all count as reached,
+     * and only the highest plays, so two never run into each other.
+     */
+    fun reach(effects: WpmEffects): PlaygroundMoment? {
+        val now = buildList {
+            if (effects.pop > 0) add(PlaygroundMoment.Confetti)
+            if (effects.rain > 0f) add(PlaygroundMoment.Rain)
+            if (effects.shake) add(PlaygroundMoment.Shake)
+            if (effects.sprout) add(PlaygroundMoment.Sprout)
+        }
+        return now.filter { reached.add(it) }.lastOrNull()
+    }
+
+    /** A lightning flash came: it plays, with every flash, while the storm lasts. */
+    fun flash(effects: WpmEffects) = if (effects.lightning && !effects.sprout) PlaygroundMoment.Lightning else null
+
+    /** The playground calmed down: every moment can play again. */
+    fun calm() = reached.clear()
+
+    companion object {
+        /** The shake's short rumble: texture ticks this far apart, so each gap keeps rule 4's 35 ms after a 17 ms tick. */
+        const val RUMBLE_GAP_MILLIS = 55L
+        const val RUMBLE_TICKS = 7
+
+        /** When each of the rumble's ticks plays, from its start: about 350 ms in all, never over 400. */
+        fun rumble() = List(RUMBLE_TICKS) { it * RUMBLE_GAP_MILLIS }
+    }
+}

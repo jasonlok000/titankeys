@@ -71,16 +71,20 @@ fun main() {
     same(StripFit.fit(listOf("Hello"), 300f, 5f, measure).single(), StripFit.Slot("Hello", 1f, 300f), "A short clip stays whole")
     same(StripFit.fit(emptyList(), 300f, 5f, measure), emptyList<StripFit.Slot>(), "No words, no places")
 
-    // The bar's side words are a step smaller than the middle one (owner, 2026-11-13): each place fits its word at its own size.
-    val sizes = listOf(.9f, 1f, .9f)
-    val stepped = StripFit.fit(listOf("abcdefghi", "abcdefghi", "abcdefghi"), 300f, 5f, measure, lend = false, sizes = sizes)
-    same(stepped.map { it.scale }, listOf(1f, 1f, 1f), "A word that fits at its own size keeps it")
-    val tight = StripFit.fit(listOf("abcdefghij", "abcdefghij", "abcdefghij"), 300f, 5f, measure, lend = false, sizes = sizes)
-    check(tight[0].scale == 1f && tight[1].scale < 1f, "A side word that fits at its smaller size keeps it, where the middle one shrinks: $tight")
-    for ((index, slot) in tight.withIndex()) check(measure(slot.text) * sizes[index] * slot.scale <= slot.width - 10f + .01f,
-        "Every word fits its place at its own size: $slot")
-    val cutSide = StripFit.fit(listOf("internationalization", "a", "b"), 300f, 5f, measure, lend = false, sizes = sizes)
-    check(measure(cutSide[0].text) * sizes[0] * cutSide[0].scale <= cutSide[0].width - 10f + .01f, "A cut side word fits at its own size: ${cutSide[0]}")
+    // All three words are one size (owner, 2026-11-13: "I want it consistent"): a long one shrinks only in its own place.
+    val even = StripFit.fit(listOf("a", "internationalization", "of"), 300f, 5f, measure, lend = false)
+    check(even[0].scale == 1f && even[2].scale == 1f && even[1].scale < 1f, "Only the long word shrinks: $even")
+
+    // The words sit truly in the middle of the bar: the middle of Inter's small letters on its centre line, not the font's box.
+    val size = 31.25f
+    val ascent = -size * 1984 / 2048
+    val descent = size * 494 / 2048
+    check(kotlin.math.abs(StripFit.baseline(44f, size) - size * StripFit.X_HEIGHT / 2 - 44f) < .001f, "The baseline puts the letters' middle on the line")
+    val lift = StripFit.lift(ascent, descent, size)
+    // A view that centres its box from ascent to descent, with the lift under it, puts that same baseline on its centre line.
+    val boxBaseline = (88f - lift - (descent - ascent)) / 2 - ascent
+    check(kotlin.math.abs(boxBaseline - StripFit.baseline(44f, size)) < .001f, "The lift puts a centred view's letters on the line: $lift")
+    check(lift in 5f..6.5f, "Inter's box sits its letters about 3 px low at 20 dp, so the lift is about 6 px: $lift")
 
     // Settings > Size at Biggest: the bar's places are as wide as ever, but every letter is bigger. The three places stay even,
     // and long words shrink or lose a part to fit, as at Normal.

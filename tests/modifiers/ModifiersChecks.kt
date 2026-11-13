@@ -241,7 +241,7 @@ private fun tappedOrAutomaticShiftLeavesBackspacePlain() {
     Keyboard().run {
         same(backspace(ctrl = true), true, "Ctrl + Backspace must still delete a word")
         press(ALT)
-        same(backspace(), true, "Alt, then Backspace must still delete a word")
+        same(backspace(), false, "Alt, then Backspace is Android's own Alt + Backspace, not a TitanKeys word delete")
         same(modifiers.alt, Level.Off, "Alt + Backspace must use Alt up")
     }
 }

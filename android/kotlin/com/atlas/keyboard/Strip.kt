@@ -65,6 +65,8 @@ class Strip(
     /** Ink's font, as everywhere in TitanKeys (owner, 2026-11-12), and its medium weight for the word menu's pills. */
     private val typeface = resources.getFont(R.font.inter_regular)
     private val boldTypeface = resources.getFont(R.font.inter_medium)
+    /** The best word's weight, in the middle: the same size as the others, and bold. */
+    private val bestTypeface = resources.getFont(R.font.inter_bold)
     private val wordViews = WORD_ORDER.map { index -> item({ choose(index) }, { hold(index) }) }
     /** The word that the field has selected, alone in the middle. A touch or a hold opens its menu. */
     private val selectedView = item({ act(Action.OpenSelected) }, { act(Action.OpenSelected); true })
@@ -430,8 +432,7 @@ class Strip(
         // so that the text always fits its view and Android never cuts it with an "…" of its own.
         val shown = WORD_ORDER.map { (demoWords ?: words).getOrElse(it) { "" } }
         val room = (width - paddingLeft - paddingRight).toFloat()
-        val sizes = WORD_ORDER.map { wordSize(it) / WORD_SIZE }
-        val fits = if (room > 0) StripFit.fit(shown, room, wordRoomPadding(), ::measureWord, lend = false, sizes = sizes) else null
+        val fits = if (room > 0) StripFit.fit(shown, room, wordRoomPadding(), ::measureWord, lend = false) else null
         for ((slot, view) in wordViews.withIndex()) {
             val index = WORD_ORDER[slot]
             // While the idle scene plays, it draws the letters itself, and the words keep their places underneath.
@@ -439,10 +440,11 @@ class Strip(
                 (if (idle != null || !sides && index != 0) INVISIBLE else VISIBLE) else GONE
             val fit = fits?.get(slot)
             view.text = fit?.text ?: shown[slot]
-            // The middle word is the strongest: bigger, and in Ink's medium weight. The side words are a step down (owner,
-            // 2026-11-13: "text size should convey hierarchy").
-            view.typeface = if (index == 0) boldTypeface else typeface
-            view.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * sizes[slot] * (fit?.scale ?: 1f))
+            // All three words are one size, and the best one in the middle is bold (owner, 2026-11-13: "I want it consistent but
+            // bolded is a nice touch"). A long word only shrinks in its own place.
+            view.typeface = if (index == 0) bestTypeface else typeface
+            view.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (fit?.scale ?: 1f))
+            centreLetters(view)
             view.isEnabled = index < words.size && demo == null
             view.setTextColor(look.ink)
         }
@@ -488,19 +490,28 @@ class Strip(
         val selectedFit = if (room > 0 && !chosen.isNullOrEmpty()) StripFit.fit(listOf(chosen), room, wordRoomPadding(), ::measureWord).single() else null
         selectedView.text = selectedFit?.text ?: chosen.orEmpty()
         selectedView.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (selectedFit?.scale ?: 1f))
+        centreLetters(selectedView)
         selectedView.setTextColor(look.ink)
     }
 
     /** The words' size in pixels, at full size. */
     private fun wordPixels() = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, WORD_SIZE, resources.displayMetrics)
 
-    /** The size of word [index], 0 for the best one in the middle, in sp. */
-    private fun wordSize(index: Int) = if (index == 0) WORD_SIZE else SIDE_WORD_SIZE
+    /**
+     * Sets [view]'s one line truly in the middle of the bar: its small letters, not the font's box, on the centre line, so that
+     * words of any weight and size share one line. Keeps its padding at the sides.
+     */
+    private fun centreLetters(view: TextView) {
+        view.includeFontPadding = false
+        val paint = view.paint
+        val lift = Math.round(StripFit.lift(paint.ascent(), paint.descent(), paint.textSize))
+        if (view.paddingTop != 0 || view.paddingBottom != lift) view.setPadding(view.paddingLeft, 0, view.paddingRight, lift)
+    }
 
     /** How wide a word is at the words' full size. */
     private fun measureWord(text: String): Float {
         // In the middle word's weight, the widest of the three, so a fitted word never runs over.
-        measurePaint.typeface = boldTypeface
+        measurePaint.typeface = bestTypeface
         measurePaint.textSize = wordPixels()
         return measurePaint.measureText(text)
     }
@@ -685,6 +696,7 @@ class Strip(
         noticeLabel.contentDescription = if (menu == null) null else
             context.getString(R.string.strip_menu_word, menu.word) + ": " + menuSlots(menu).filterNotNull().joinToString(", ") { context.getString(label(it)) }
         noticeLabel.setTextColor(look.ink)
+        centreLetters(noticeLabel)
         val actions = if (menu != null) emptyList() else noticeActions(shown)
         for ((index, button) in noticeButtons.withIndex()) {
             val action = actions.getOrNull(index)
@@ -697,6 +709,7 @@ class Strip(
             button.setTextColor(if (action == Action.Close) look.muted else look.accent)
             button.text = context.getString(label(action))
             button.setPadding(dp(14), 0, dp(14), 0)
+            centreLetters(button)
             button.setOnClickListener { act(action) }
         }
         // As the menu opens its buttons move in from the right, to their keys.
@@ -861,7 +874,7 @@ class Strip(
         menuWordText.textSize = wordPixels()
         menuWordText.color = look.ink
         menuWordText.textAlign = android.graphics.Paint.Align.LEFT
-        val baseline = height / 2 - (menuWordText.ascent() + menuWordText.descent()) / 2
+        val baseline = StripFit.baseline(height / 2f, menuWordText.textSize)
         val wordFoot = navigationInset + height - (baseline + menuWordText.descent())
         val wordLeft = maxOf(side.toFloat(), keySide, corners.inset(wordFoot).toFloat() + dp(MENU_CORNER_GAP))
         val wordRight = MenuKeys.wordRight(width.toFloat(), dp(MENU_WORD_GAP).toFloat())
@@ -926,7 +939,7 @@ class Strip(
             val name = context.getString(label(action))
             canvas.drawText(name, MenuKeys.pillLabel(pill.second, pillText.measureText(name), icon.toFloat(), dp(MENU_PILL_GAP).toFloat(),
                 dp(MENU_PILL_RIGHT).toFloat()),
-                height / 2 - (pillText.ascent() + pillText.descent()) / 2, pillText)
+                StripFit.baseline(height / 2f, pillText.textSize), pillText)
             canvas.restore()
         }
         val slide = (1f - menuShown) * dp(MENU_SLIDE_DP)
@@ -1384,12 +1397,11 @@ class Strip(
         private const val POINT_DP = 3
         private const val POINT_MILLIS = 650L
         /**
-         * The words' size, in sp, which is dp at TitanKeys' fixed scale: the middle word's, the best one, and the side words', a
-         * step down, so the sizes show which word is best and every one reads on a 9 cm screen (owner, 2026-11-13: "a bit too
-         * small"). The room on each side of a word.
+         * The words' size, in sp, which is dp at TitanKeys' fixed scale, the same for all three, so every one reads on a 9 cm
+         * screen (owner, 2026-11-13: "a bit too small", then "I want it consistent"). The best word is told by its weight. The
+         * room on each side of a word.
          */
         private const val WORD_SIZE = 20f
-        private const val SIDE_WORD_SIZE = 18f
         private const val WORD_PADDING = 6
         /** A little room, in dp, that a fitted word keeps on each side, so that Android never has to cut it. */
         private const val WORD_SLACK = 2

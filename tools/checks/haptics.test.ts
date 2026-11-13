@@ -7,7 +7,10 @@ const root = new URL("../../", import.meta.url);
 test("the Haptics page lists every haptic in Haptics.kt", async () => {
   const source = await Bun.file(new URL("android/kotlin/com/atlas/keyboard/Haptics.kt", root)).text();
   const body = source.slice(source.indexOf("enum class Haptic("), source.indexOf("/** Its switch in"));
-  const native = [...body.matchAll(/^\s+\w+\("(\w+)", HapticGroup\.(\w+), Family\.\w+\)/gm)].map(match => ({ id: match[1], group: match[2] }));
+  // Haptics that share a switch, as the playground's moments do, show as that one switch.
+  const all = [...body.matchAll(/^\s+\w+\("(\w+)", HapticGroup\.(\w+), Family\.\w+(?:, "(\w+)")?\)/gm)]
+    .map(match => ({ id: match[3] ?? match[1], group: match[2] }));
+  const native = all.filter((haptic, index) => all.findIndex(other => other.id === haptic.id) === index);
   expect(native.length).toBeGreaterThan(30);
   const page = hapticGroups.flatMap(group => group.haptics.map(({ id }) => id));
   expect(page).toEqual(native.map(({ id }) => id));

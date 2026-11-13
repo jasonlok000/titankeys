@@ -11,6 +11,9 @@ import java.awt.geom.RoundRectangle2D
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 
 /**
  * Draws the word menu in every state of its ladder, with and without a hover, on the default keys and on a moved calibration,
@@ -27,6 +30,8 @@ fun main(args: Array<String>) {
     fun font(name: String) = runCatching { Font.createFont(Font.TRUETYPE_FONT, File(fonts, name)) }.getOrElse { Font(Font.SANS_SERIF, Font.PLAIN, 1) }
     val regular = font("inter_regular.otf")
     val medium = font("inter_medium.otf")
+    val bold = font("inter_bold.otf")
+    MEDIUM_FONT = medium
     fun state(saved: Boolean = false, favourite: Boolean = false, learned: Boolean = false, builtIn: Boolean = false,
               oneLetter: Boolean = false) = MenuKeys.state(saved, favourite, false, learned, oneLetter, builtIn)
     val (i, o, p) = Triple(MenuKeys.SAVE, MenuKeys.FORGET, MenuKeys.BACK)
@@ -87,7 +92,9 @@ fun main(args: Array<String>) {
             ImageIO.write(image, "png", File(folder, "$sheet$suffix.png"))
         }
     }
-    barSheet(folder, regular, medium, drawables)
+    // The best word in each weight the owner could have, to pick the one that reads as bold without looking heavy.
+    barSheet(folder, regular, medium, "Medium", -668 to 2272, drawables)
+    barSheet(folder, regular, bold, "Bold", -685 to 2279, drawables)
     println("Drawn to $folder")
 }
 
@@ -125,7 +132,8 @@ private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: 
     val textWidth = g.fontMetrics.stringWidth(shown)
     val centre = MenuKeys.wordCentre(wordLeft, wordRight)
     val left = centre - textWidth / 2
-    val baseline = ROW / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f
+    // As Strip has it: the middle of the small letters on the bar's centre line.
+    val baseline = StripFit.baseline(ROW / 2f, 20 * DENSITY)
     val middle = baseline - (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f
     val frame = row.motion?.let { (motion, millis) ->
         MenuMotion.frame(motion, millis, MenuMotion.Word(left / DENSITY, (left + textWidth) / DENSITY, middle / DENSITY, MenuMotion.Word.seed(row.word)))
@@ -170,7 +178,7 @@ private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: 
         g.fill(shape)
         g.color = faded(ORANGE, if (spent) .6f else 1f, paper)
         g.drawString(name, MenuKeys.pillLabel(pill.second, label, icon, 12 * DENSITY, 11 * DENSITY),
-            ROW / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+            StripFit.baseline(ROW / 2f, 20 * DENSITY * .88f))
     }
     // The icons over their keys: white at rest, the filled heart orange, orange in a pill, grey beside one. While the word's
     // step changes they morph from the last step's icons.
@@ -393,46 +401,85 @@ private const val CAPTION = 44
 private const val ORANGE = 0xEF804E
 
 /**
- * The bar's own texts, at TitanKeys' fixed scale (owner, 2026-11-13: "the suggestion bar text a bit too small"): the three words
- * before and after, long words fitted by the real [StripFit], the clip offer and its hint, the modifier bar's chip and hint, the
- * automatic capital's arrow beside a short and a long left word, the Forget notice, and the panel's labels. Sizes are Strip's
- * and SymPanel's, in dp, at 1.5625 px to a dp.
+ * The bar's own texts, at TitanKeys' fixed scale: the three words, all 20 dp with the best one in the middle in [best]'s weight
+ * (owner, 2026-11-13: "I want it consistent but bolded is a nice touch"), long words fitted by the real [StripFit], the clip
+ * offer and its hint, the modifier bar's chip and hint, the automatic capital's arrow, the Forget notice, and the panel's labels.
+ * Each word is placed where Android puts it in Strip's 56 dp view, and the middle of its small letters is measured against the
+ * bar's centre line, which the short marks at each side show: it must be within 1 px. Sizes in dp, at 1.5625 px to a dp.
  */
-private fun barSheet(folder: File, regular: Font, medium: Font, drawables: File) {
+private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, bestBox: Pair<Int, Int>, drawables: File) {
     // The text grows with Settings > Size (MENU_SIZE), and the bar keeps Normal's height (Strip.BAR_DP).
     val scale = 1.5625f * DENSITY / 1.55f
     val width = 1076
-    val bar = (56 * 1.5625f).toInt()
+    val bar = Math.round(56 * 1.5625f)
     val caption = 44
     val side = 8 * scale
     val pad = (6 + 2) * scale
+    val regularBox = -660 to 2269
     data class BarRow(val caption: String, val draw: (Graphics2D, Color, Color, Color) -> Unit)
-    fun words(g: Graphics2D, ink: Color, shown: List<String>, sizes: List<Float>, weights: List<Font>) {
+    val measured = ArrayList<Float>()
+    /**
+     * Where Android puts the baseline of one line of Inter at [size] px, gravity centred in a view [height] px tall: with
+     * [fontPadding], centring the font's whole box from its lowest to its highest point ([box], in its 2048 units), as the words
+     * were; without, centring ascent to descent with Strip's [StripFit.lift] under it, as they are now.
+     */
+    fun baseline(size: Float, fontPadding: Boolean, box: Pair<Int, Int>): Float {
+        val ascent = -size * 1984 / 2048f
+        val descent = size * 494 / 2048f
+        val top = if (fontPadding) -size * box.second / 2048f else ascent
+        val bottom = if (fontPadding) -size * box.first / 2048f else descent
+        val lift = if (fontPadding) 0 else Math.round(StripFit.lift(ascent, descent, size))
+        val textTop = floor(top).toInt()
+        val textHeight = ceil(bottom).toInt() - textTop
+        return ((bar - lift - textHeight) shr 1) - textTop.toFloat()
+    }
+    /** How far the middle of the small letters sits below the bar's centre line, in px. */
+    fun off(baseline: Float, size: Float) = baseline - size * StripFit.X_HEIGHT / 2 - bar / 2f
+    fun words(g: Graphics2D, ink: Color, shown: List<String>, sizes: List<Float>, fonts: List<Pair<Font, Pair<Int, Int>>>,
+              fontPadding: Boolean): List<Float> {
         val room = width - 2 * side
         val fits = StripFit.fit(shown, room, pad, { text ->
-            g.font = medium.deriveFont(20 * scale); g.fontMetrics.stringWidth(text).toFloat()
-        }, lend = false, sizes = sizes.map { it / 20f })
+            g.font = best.deriveFont(20 * scale); g.fontMetrics.stringWidth(text).toFloat()
+        }, lend = false)
         var left = side
+        val offs = ArrayList<Float>()
         for ((index, slot) in fits.withIndex()) {
-            g.font = weights[index].deriveFont(sizes[index] * scale * slot.scale)
+            val size = sizes[index] * scale * slot.scale
+            g.font = fonts[index].first.deriveFont(size)
             g.color = ink
             val textWidth = g.fontMetrics.stringWidth(slot.text)
-            g.drawString(slot.text, left + slot.width / 2 - textWidth / 2, bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+            val line = baseline(size, fontPadding, fonts[index].second)
+            if (slot.text.isNotEmpty()) offs += off(line, size)
+            g.drawString(slot.text, left + slot.width / 2 - textWidth / 2, line)
             left += slot.width
         }
+        return offs
     }
-    fun ladder(g: Graphics2D, ink: Color, shown: List<String>) = words(g, ink, shown, listOf(18f, 20f, 18f), listOf(regular, medium, regular))
+    fun ladder(g: Graphics2D, ink: Color, shown: List<String>): List<Float> {
+        val offs = words(g, ink, shown, listOf(20f, 20f, 20f), listOf(regular to regularBox, best to bestBox, regular to regularBox), false)
+        measured += offs
+        return offs
+    }
+    fun said(offs: List<Float>) = offs.joinToString(", ") { "%+.1f".format(it) } + " px"
     val orange = Color(ORANGE)
+    val captions = ArrayList<String>()
     val rows = listOf(
-        BarRow("Before: 17 dp, all three the same") { g, ink, _, _ ->
-            words(g, ink, listOf("I'm", "the", "you"), listOf(17f, 17f, 17f), listOf(regular, regular, regular))
+        BarRow("Before: 20 Medium, sides 18, each box centred. Letters below the centre: ") { g, ink, _, _ ->
+            val offs = words(g, ink, listOf("going", "good", "gonna"), listOf(18f, 20f, 18f),
+                listOf(regular to regularBox, MEDIUM_FONT!! to (-668 to 2272), regular to regularBox), true)
+            captions += said(offs)
         },
-        BarRow("Now: the best word 20 dp in Inter Medium, the others 18 dp") { g, ink, _, _ -> ladder(g, ink, listOf("I'm", "the", "you")) },
-        BarRow("Long words fit in their own places: they shrink, then lose what they share") { g, ink, _, _ ->
-            ladder(g, ink, listOf("recommendations", "recommend", "recommended"))
+        BarRow("Now: all 20 dp, the best in $bestName. Letters off the centre: ") { g, ink, _, _ ->
+            captions += said(ladder(g, ink, listOf("going", "good", "gonna")))
         },
-        BarRow("A very long best word") { g, ink, _, _ -> ladder(g, ink, listOf("a", "internationalization", "of")) },
-        BarRow("The clip offer, at the best word's size, and its hint at 13 dp, both shrunk alike if the bar is too short") { g, ink, muted, _ ->
+        BarRow("Now: ") { g, ink, _, _ -> captions += said(ladder(g, ink, listOf("I'm", "the", "you"))) },
+        BarRow("Now: ") { g, ink, _, _ -> captions += said(ladder(g, ink, listOf("thanks", "Thanks", "thank"))) },
+        BarRow("Long words shrink in their own places, then lose what they share: ") { g, ink, _, _ ->
+            captions += said(ladder(g, ink, listOf("recommendations", "recommend", "recommended")))
+        },
+        BarRow("A very long best word: ") { g, ink, _, _ -> captions += said(ladder(g, ink, listOf("a", "internationalization", "of"))) },
+        BarRow("The clip offer, at the words' size, and its hint at 13 dp, both shrunk alike if the bar is too short") { g, ink, muted, _ ->
+            captions += ""
             // As Strip's fitClipLines: the clip's line with Android's font padding, the hint's without, shrunk to fit the bar.
             val clipFont = regular.deriveFont(20 * scale)
             val hintFont = regular.deriveFont(13 * scale)
@@ -456,6 +503,7 @@ private fun barSheet(folder: File, regular: Font, medium: Font, drawables: File)
             g.drawString(hint, width / 2f - g.fontMetrics.stringWidth(hint) / 2, top + clipLine * fit + g.fontMetrics.ascent)
         },
         BarRow("Ctrl held: its chip at 14 dp, and what each key does at 18 dp") { g, ink, _, _ ->
+            captions += ""
             g.font = regular.deriveFont(14 * scale)
             val chip = "Ctrl"
             val chipWidth = g.fontMetrics.stringWidth(chip) + 16 * scale
@@ -473,38 +521,26 @@ private fun barSheet(folder: File, regular: Font, medium: Font, drawables: File)
             g.drawString(hint, x + chipWidth + 6 * scale + (room - g.fontMetrics.stringWidth(hint)) / 2, bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
         },
         BarRow("A sentence starts: Shift's arrow at the left, clear of the left word") { g, ink, _, _ ->
+            captions += ""
             ladder(g, ink, listOf("The", "I", "This"))
             capitalArrow(g, side, bar, scale, small = false)
         },
-        BarRow("Long left words: the arrow stays unless the word reaches under it, as Strip decides") { g, ink, _, _ ->
+        BarRow("A left word long enough to reach under it: the arrow goes small into the corner") { g, ink, _, _ ->
+            captions += ""
             ladder(g, ink, listOf("Unfortunately", "I", "This"))
-            capitalArrow(g, side, bar, scale, small = reachesArrow(g, regular, "Unfortunately", side, width, scale))
+            capitalArrow(g, side, bar, scale, small = true)
         },
-        BarRow("A left word that does reach under it: the arrow goes small into the corner") { g, ink, _, _ ->
-            val word = "Incomprehensibilities"
-            ladder(g, ink, listOf(word, "I", "This"))
-            capitalArrow(g, side, bar, scale, small = reachesArrow(g, regular, word, side, width, scale))
-        },
-        BarRow("Forget's notice and its Undo at 18 dp") { g, ink, _, _ ->
-            g.font = regular.deriveFont(18 * scale)
+        BarRow("Forget's notice and its Undo at 18 dp, centred the same way: ") { g, ink, _, _ ->
+            val size = 18 * scale
+            g.font = regular.deriveFont(size)
             g.color = ink
-            g.drawString("Forgot “utun”", side + 8 * scale, bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+            val line = baseline(size, false, regularBox)
+            g.drawString("Forgot “utun”", side + 8 * scale, line)
             g.color = orange
             val undo = "Undo"
-            g.drawString(undo, width - side - 14 * scale - g.fontMetrics.stringWidth(undo), bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
-        },
-        BarRow("The quick settings page: key labels at 16 dp, at least 13, and the setting's name at 18") { g, ink, muted, _ ->
-            val each = (width - 2 * side) / 10f
-            g.font = regular.deriveFont(16 * scale)
-            for ((index, label) in listOf("", "", "", "", "", "Fix", "Swipe", "Caps", "Dot", "1/3").withIndex()) {
-                if (label.isEmpty()) continue
-                g.color = if (label == "1/3") muted else ink
-                g.drawString(label, side + each * index + each / 2 - g.fontMetrics.stringWidth(label) / 2, bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
-            }
-            g.font = regular.deriveFont(18 * scale)
-            g.color = ink
-            val name = "Fix typos as you type"
-            g.drawString(name, side + each * 2.5f - g.fontMetrics.stringWidth(name) / 2, bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+            g.drawString(undo, width - side - 14 * scale - g.fontMetrics.stringWidth(undo), line)
+            measured += off(line, size)
+            captions += said(listOf(off(line, size)))
         },
     )
     for (dark in listOf(true, false)) {
@@ -516,39 +552,35 @@ private fun barSheet(folder: File, regular: Font, medium: Font, drawables: File)
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
         g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
+        captions.clear()
         for ((index, row) in rows.withIndex()) {
             val top = index * (bar + caption)
-            g.color = if (dark) Color(0x22, 0x22, 0x22) else Color(0xEE, 0xEE, 0xEE)
-            g.fillRect(0, top, width, caption)
-            g.color = Color.GRAY
-            g.font = regular.deriveFont(22f)
-            g.drawString(row.caption, 24, top + caption - 14)
             g.color = paper
             g.fillRect(0, top + caption, width, bar)
             val saved = g.transform
             g.translate(0, top + caption)
             row.draw(g, ink, muted, paper)
+            // The bar's centre line, as short marks at each side, to judge the letters against.
+            g.color = orange
+            g.fillRect(0, bar / 2, (side / 2).toInt(), 1)
+            g.fillRect(width - (side / 2).toInt(), bar / 2, (side / 2).toInt(), 1)
             g.transform = saved
+            g.color = if (dark) Color(0x22, 0x22, 0x22) else Color(0xEE, 0xEE, 0xEE)
+            g.fillRect(0, top, width, caption)
+            g.color = Color.GRAY
+            g.font = regular.deriveFont(22f)
+            g.drawString(row.caption + captions[index], 24, top + caption - 14)
         }
         g.dispose()
-        ImageIO.write(image, "png", File(folder, "bar-text${if (dark) "" else "-light"}.png"))
+        ImageIO.write(image, "png", File(folder, "bar-even-${bestName.lowercase()}${if (dark) "" else "-light"}.png"))
     }
+    val worst = measured.maxOf { abs(it) }
+    println("Bar words in $bestName: letters at most ${"%.2f".format(worst)} px off the bar's centre line")
+    check(worst <= 1f) { "The bar's words must sit within 1 px of its centre line, not $worst" }
 }
 
-/**
- * Whether the left [word], centred in its place at 18 dp, starts under the arrow's place, as Strip's placeCapital decides. A word too
- * long for its place shrinks first, so this takes the fitted size.
- */
-private fun reachesArrow(g: Graphics2D, regular: Font, word: String, side: Float, width: Int, scale: Float): Boolean {
-    val place = (width - 2 * side) / 3
-    g.font = regular.deriveFont(18 * scale)
-    val natural = g.fontMetrics.stringWidth(word).toFloat()
-    val room = place - 2 * (6 + 2) * scale
-    val shown = minOf(natural, room)
-    val textLeft = side + place / 2 - shown / 2
-    val arrowRight = side + ((14 * 1.21f + 6) * scale - 8 * scale + 10 * scale)
-    return textLeft < arrowRight + 2 * scale
-}
+/** Inter Medium, for the "before" row. */
+private var MEDIUM_FONT: Font? = null
 
 /** Shift's arrow as Strip draws it for an automatic capital: at the left, the chip's size at 14 dp, or small in the corner. */
 private fun capitalArrow(g: Graphics2D, side: Float, bar: Int, scale: Float, small: Boolean) {

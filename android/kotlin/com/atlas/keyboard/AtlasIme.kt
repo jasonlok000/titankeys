@@ -3335,8 +3335,12 @@ class AtlasIme : InputMethodService() {
         }
         when (event.keyCode) {
             KeyEvent.KEYCODE_DEL -> {
-                // Ctrl, Alt or a held Shift with Backspace deletes the previous word, and holding it goes on by word.
-                composer.backspace(modifiers.backspaceDeletesWord(event.isCtrlPressed))
+                // Ctrl or a held Shift with Backspace deletes the previous word, and holding it goes on by word. Alt + Backspace is
+                // Android's own combination, so it goes to the app as it is: a standard field deletes the line. TitanKeys adds no word
+                // delete of its own to it (owner, 2026-11-13).
+                val altBackspace = modifiers.alt != Modifiers.Level.Off || event.isAltPressed
+                if (altBackspace && !modifiers.backspaceDeletesWord(event.isCtrlPressed)) command(event)
+                else composer.backspace(modifiers.backspaceDeletesWord(event.isCtrlPressed))
                 modifiers.afterBackspace()
             }
             KeyEvent.KEYCODE_SPACE -> { composer.space(event.repeatCount > 0, event.eventTime); modifiers.useHeld() }

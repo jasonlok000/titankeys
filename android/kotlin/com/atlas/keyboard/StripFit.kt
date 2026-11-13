@@ -18,16 +18,31 @@ internal object StripFit {
     const val MIN_SCALE = .7f
     const val ELLIPSIS = "…"
 
+    /** Inter's x-height, the height of its small letters, as a part of its size: 1118 of its 2048 units, in every weight. */
+    const val X_HEIGHT = 1118f / 2048f
+
+    /**
+     * Where a line of Inter at [size] pixels has its baseline so that its small letters sit in the middle of a bar whose centre
+     * line is at [centre]: the middle of the x-height on it. Centring the font's box instead sets the letters about 3 px low, as
+     * Inter's box reaches far above its capitals for accents.
+     */
+    fun baseline(centre: Float, size: Float) = centre + size * X_HEIGHT / 2
+
+    /**
+     * How much more room a one-line text view needs under its text than over it, in pixels, so that centring its box from [ascent]
+     * (negative) to [descent] puts its small letters on the view's centre line: the box's middle is that far above the letters'.
+     */
+    fun lift(ascent: Float, descent: Float, size: Float) = -(ascent + descent) - size * X_HEIGHT
+
     /**
      * Lays out [words], left to right, across [total], with [padding] on each side of each word. With [lend], a word that does not
      * fit takes room from the others, and an empty word lends its place. Without, every place is the same width.
      */
     fun fit(words: List<String>, total: Float, padding: Float, measure: (String) -> Float, minScale: Float = MIN_SCALE,
-            lend: Boolean = true, sizes: List<Float> = List(words.size) { 1f }): List<Slot> {
+            lend: Boolean = true): List<Slot> {
         if (words.isEmpty()) return emptyList()
         val share = total / words.size
-        // Each place's own size, as a part of the full size that [measure] measures at: the bar's side words are smaller.
-        val natural = words.mapIndexed { index, word -> if (word.isEmpty()) 0f else measure(word) * sizes[index] }
+        val natural = words.map { if (it.isEmpty()) 0f else measure(it) }
         val full = natural.map { it + 2 * padding }
         val smallest = natural.map { it * minScale + 2 * padding }
         // Words that fit at full size can lend what they do not use. Words that do not fit even when small want more room.
@@ -55,7 +70,7 @@ internal object StripFit {
             when {
                 word.isEmpty() || natural[index] <= room -> Slot(word, 1f, widths[index])
                 natural[index] * minScale <= room -> Slot(word, room / natural[index], widths[index])
-                else -> Slot(cut(word, words.filterIndexed { other, _ -> other != index }, room / minScale / sizes[index], measure), minScale,
+                else -> Slot(cut(word, words.filterIndexed { other, _ -> other != index }, room / minScale, measure), minScale,
                     widths[index])
             }
         }

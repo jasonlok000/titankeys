@@ -205,6 +205,73 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Ladder review, round 2** (owner, 2026-11-13, 09:05). (Owner)
+  - Not saved shows as dotted outline letters.
+  - The book effect is OK, but the book icon looked bad, and mixing a ribbon icon with a book effect is inconsistent: one metaphor.
+  - One-letter words don't open the menu at all.
+  - Refine the animations.
+  - The mockup must use what would ship: the final icons and animation.
+
+  The Orchestrator's v3 page (cal-tool/ladder.html) uses:
+  - the app's own heart, filled heart, broken heart and Back drawables;
+  - a new open book for Save and the same book with a zigzag tear for Unsave, on the same 24 grid and 2-unit line as the heart;
+  - Material's block and its ring for Block and Unblock;
+  - particles drawn from the same paths, and the text in the app's Inter;
+  - Save filling the dotted letters solid as the book claps shut, and Unsave tearing a page and draining the letters back to dots.
+- **Forget keeps the menu open** (owner, 2026-11-13, 08:55): "instead of showing the undo when forgetting a word, keep it on the bar
+  and just show a new status." (Owner) There's no Undo notice. The word stays in the menu at Not saved, and I (Save) brings it back.
+  Sent to W.
+- **Ladder review (08:55):** the Orchestrator wrote the ladder out against build #4's code. There are five differences:
+  - Forget on words that are only candidates;
+  - Forget closing with Undo;
+  - a dictionary word's O as Forget with Undo;
+  - the hover resetting;
+  - hearts then glitter on open.
+
+  W is fixing all of them. Open: whether a dictionary word's O says Unsave, as the Orchestrator recommends so every word reads the
+  same, or Forget.
+- **Key calibration refined: 108 px a key and gap, centred** (owner, 2026-11-13, 08:38, on full-height lines in quarter-pixel
+  steps). It replaces 107.5. (Owner) The outer keys now reach 2 px past each screen edge: the real keyboard is a touch wider than
+  the screen. The drawings follow the calibration exactly, including the 2 px past each edge. The row gap keeps the hardware's ratio.
+  (Orchestrator)
+- **Word menu, still wrong on build #4** (owner, 2026-11-13, 08:20):
+  - Forget showed on a gibberish word typed once. Cause: D's menuFor counts any word "still gathering evidence" as learned.
+    The owner's meaning is a word TitanKeys knows, i.e. would suggest.
+  - The hover still resets after a press ("said multiple times"). D reported it done, but nobody checked it with a hand on the
+    touchpad. The fix should follow the quick settings' hover fix.
+  - The owner's call: "If it's worker then use a new worker dedicated to this." (Owner) W was started for it, with checks for the
+    whole ladder.
+- **The boring guide notes that Space gestures land best a bit higher** (owner, 2026-11-13, 08:15): "its better to type above space
+  bar because of the touch zone." (Owner) It's a new topic, "Space gestures: tap a bit higher", at the top of Cursor and picking
+  text. It says to tap the top half of Space or the keys right above it, from C to N, because the touch zone stops around the middle
+  of Space. That's true to the code: CursorGesture.inZone takes Space's width on its row and the row above.
+- **Bar words: one size, the middle bold** (owner, 2026-11-13, 08:15): "I want it consistent but bolded is a nice touch." All three
+  are 20 dp on one shared baseline, truly centred on the bar's height, and the middle is in a bolder weight. (Owner) This replaces
+  D's 20/18 split. D picks Medium or Bold for the middle from renders, as the Orchestrator's call.
+- **Size setting: the bar keeps its height** (owner, 08:15): "the bigger everything means the bigger elements, bar size stays the
+  same." Only what's inside the bar grows. (Owner)
+- **No TitanKeys Alt + Backspace** (owner, 2026-11-13, 08:15): "I didn't want Alt backspace to work unless it's a native key
+  combination, and I'm intending it to be hold shift then backspace." (Owner)
+  - Android's own Alt + Backspace deletes the line in a standard field. So TitanKeys now sends Alt + Backspace to the app as it is,
+    with no word delete of its own. (Orchestrator)
+  - A held Shift + Backspace deletes a word (TitanKeys'). Ctrl or fn + Backspace deletes a word, as Android does natively.
+- **Playground haptics: yes** (owner, 2026-11-13, 08:05: "Add the haptics"). (Owner) The design, the Orchestrator's and approved:
+  - only five big moments, each once until the playground calms down: 40 wpm Celebrate, 100 the rain No, 150 the shake one
+    short rumble, 180+ each lightning flash a firm hit, the plant at the top the swell;
+  - nothing per step or per comment;
+  - its own "Playground effects" switch in Settings > Haptics.
+- **A size setting that makes everything bigger, the bar included** (owner, 08:05): "Right now it's smaller which should be fine for
+  most ppl but usually I like bigger and it was bigger for me." (Owner) The Orchestrator's design, unapproved:
+  - Settings > Look and feel > Size: Normal 1.0 (the default), Bigger 1.2, Biggest 1.4;
+  - it grows FixedScale's unit, so text and the bar's height grow;
+  - anything calibrated to the physical keys keeps its place.
+- **The boring guide's Scroll assistant text** (owner, 08:05): it should say the phone hijacks the touchpad with its Scroll
+  assistant, the creator doesn't like it, and TitanKeys can block it. The old text was confusing. (Owner) Rewritten by the
+  Orchestrator.
+- **Say we use a local LLM** where it helps, with "that data doesn't go online and is never used for training" (owner, 08:05). (Owner)
+  - The Orchestrator's topic "The local LLM" sits in the boring guide's Typing section and names DistilGPT-2, which runs on the phone.
+  - To stay true to the privacy policy, it says what you type never goes online and never trains any model. The one exception is
+    Share swipes, which is off until you agree and sends swipe examples to train the swipe models.
 - **The front page's text is one giant paragraph (owner, 2026-11-13, 07:50):** "I would want to join them without adding a new line
   even though they're two different lines. So it's one giant paragraph not multiple." (Owner) It replaces the v5.3 rule "starts at
   the sentence you're in". The reference is a two-line window on one continuous paragraph, scrolling a line at a time, with no break

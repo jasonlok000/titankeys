@@ -92,7 +92,8 @@ enum class HapticGroup { Swipe, Delete, Space, Changes, Bar, Modifiers, Panels, 
  * Every action that plays a haptic, each with its own switch in Settings > Haptics. [id] is stored, so it never changes.
  * The labels are on the settings page, lib/haptics.ts.
  */
-enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
+/** [switch] is the id of the switch it plays under: its own, or one it shares, as the playground's five moments share theirs. */
+enum class Haptic(val id: String, val group: HapticGroup, val family: Family, val switch: String = id) {
     SwipeStart("swipe_start", HapticGroup.Swipe, Family.Texture),
     SwipeKey("swipe_key", HapticGroup.Swipe, Family.Texture),
     /** A light touch on the touchpad typed a key, which a key press would have clicked. It can come fast, so it's texture. */
@@ -222,10 +223,23 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     /** A confirmed delete, such as Remove all learned words: gone. */
     AppDeleted("app_deleted", HapticGroup.App, Family.Gone),
     /** The app refused what you asked, such as a shortcut it can't take: no. */
-    AppRefused("app_refused", HapticGroup.App, Family.No);
+    AppRefused("app_refused", HapticGroup.App, Family.No),
 
-    /** Its switch in the "swipe_haptics" preferences. */
-    val key get() = "haptic_$id"
+    // The playground's five big moments as you speed up (owner, 2026-11-13: "Add the haptics"), never a step or a comment. Each
+    // plays once a burst, as [PlaygroundMoments] has it, and all five share one switch, Playground effects.
+    /** 40 words a minute: the first confetti pops from the number. The guide's celebration. */
+    PlaygroundConfetti("playground_confetti", HapticGroup.App, Family.Celebrate, "playground_effects"),
+    /** 100: the confetti turns into rain. A no, as the joke. */
+    PlaygroundRain("playground_rain", HapticGroup.App, Family.No, "playground_effects"),
+    /** 150: the screen starts to shake. One short run of texture ticks as it starts, never a continuous rumble. */
+    PlaygroundShake("playground_shake", HapticGroup.App, Family.Texture, "playground_effects"),
+    /** 180 and up: each lightning flash, a firm hit like each word a held delete takes. */
+    PlaygroundLightning("playground_lightning", HapticGroup.App, Family.Hit, "playground_effects"),
+    /** The top: everything stops and the plant grows. The quiet swell. */
+    PlaygroundSprout("playground_sprout", HapticGroup.App, Family.Change, "playground_effects");
+
+    /** Its switch in the "swipe_haptics" preferences: its own, or the one it shares. */
+    val key get() = "haptic_$switch"
 
     companion object {
         fun of(id: String) = entries.firstOrNull { it.id == id }
@@ -1006,11 +1020,12 @@ class Haptics(private val context: Context) {
         /** Each haptic's own switch, by its id. */
         fun toggles(context: Context): Map<String, Boolean> {
             val switches = switches(context)
-            return Haptic.entries.associate { it.id to switches.on(it) }
+            // One entry for each switch: haptics that share one, as the playground's moments do, show as that switch.
+            return Haptic.entries.associate { it.switch to switches.on(it) }
         }
 
         fun toggle(context: Context, id: String, on: Boolean) {
-            val haptic = Haptic.of(id) ?: return
+            val haptic = Haptic.entries.firstOrNull { it.switch == id } ?: return
             preferences(context).edit().putBoolean(haptic.key, on).apply()
         }
     }

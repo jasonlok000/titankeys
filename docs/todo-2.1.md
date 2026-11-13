@@ -164,6 +164,55 @@ all of them are unapproved.
       It's dimmed to half, with a wider gap.
 - **Front page title and one-paragraph text: done and merged** (e7acb0d, df8a6ce; merge fc2c23c). Renders checked: the title is on one line, ink on orange, and the text scrolls as one paragraph. Build #4 started.
 - **Build #4: 91b08c1c** (test-2.1h at bcaf215), all checks passed. Installed at 08:00 with no crash. This is the candidate for the owner's review.
+- **Owner's notes on build #4 (08:05), in progress:**
+  - **A** (claude/playground-haptics): **done and merged** (4dc5e00, merge c5b67c3). The five moments:
+    - Celebrate at 40;
+    - No at 100;
+    - a run of 7 Texture ticks over about 350 ms at 150;
+    - Hit on each lightning flash;
+    - Change (the swell) at the plant.
+
+    Each plays once until calm, and a jump plays only the highest. The "Playground effects" switch sits in Settings > Haptics. The feel and the hit landing on the flash still need the phone.
+  - **F** (claude/size-setting): Settings > Look and feel > Size, with Normal, Bigger and Biggest, making everything bigger,
+    the bar included.
+  - **Orchestrator, done** (05fce6c): the boring guide's Scroll assistant rewritten (the phone hijacks the touchpad, the creator
+    hates it, TitanKeys can block it), plus a new topic, "The local LLM". The boring guide checks pass.
+  - **Orchestrator, done:** TitanKeys' Alt + Backspace word delete is gone. Alt + Backspace now goes to the app as Android's own
+    combination. The boring guide's Delete a word is fixed. The modifiers and text checks pass.
+  - **D** (claude/bar-even): **done and merged** (e56f3cc, merge 3baeb3e). All three words are 20 dp, with the best in Inter Bold
+    and Medium dropped. Font padding is off and the words are lifted by Inter's x-height, so the letters sit −0.5 px from the bar's
+    centre, against +3.3 px before. The render checked out.
+  - **Fine calibration: done** (db4889b). The owner set 108 px, centred, and KeyAlignment and its checks follow. To re-measure the Sym
+    panel over the lines on build #5: on build #4 the symbols leaned 0–3 px left (about 1 px on average) on both sides, which is
+    glyph shape and rounding, not spacing.
+  - Before: the grid is right, but "maybe the calibration guide a bit off". The owner is refining it on
+    cal-tool/fine.html (full-height lines, quarter-pixel steps). When the owner is done, the saved values go into KeyAlignment's
+    defaults, with a shift if there is one.
+  - F's brief corrected: Size keeps the bar's height and grows only what's inside.
+  - **Orchestrator, done:** the boring guide's new topic, "Space gestures: tap a bit higher".
+  - **W, a new dedicated worker** (2.1 W: word menu ladder and hover fix, local_7148acab): Forget only on really learned words, not
+    candidates; hover kept after a press, as in the quick settings; a check for the whole ladder.
+  - **Release notes** (3122c02): Alt + Backspace (2.0 deleted a word, and now Android deletes the line), one-size bar words, and
+    playground haptics. Size gets its line once F's branch merges.
+  - **Owner's bug (08:50):** opening the menu on a selected word plays the heart burst, then the glitter. Sent to W: nothing bursts
+    on open.
+  - **Under discussion (08:50):** the owner finds Save's glitter generic, and Save could become another word if that's easier to
+    animate. The Orchestrator proposed "Add" and "Remove" with a book: the word drops into a book that claps shut, and on Remove a
+    page tears out. Waiting on the owner.
+  - **Ladder review page (09:00):** cal-tool/ladder.html is open on the phone. It shows four rungs (Blocked, Not saved, Saved,
+    Favourite), with learned words counting as Saved, Unsave for every word and a Block step. It has bar mockups for each status
+    and its hover, plus Play mockups for each step's effect: Save as a book, Unsave as a torn page, Block as a ring and slash.
+    W ships the hover and open-burst fixes first, and holds the state changes until the owner confirms.
+  - Owner's report: on the home screen the keyboard is cut off by the bar. It isn't on screen now, so the owner's screenshot is
+    needed.
+  - F's Size setting is pushed (4af0690, verify passed). F kept the guide and front page at Normal. Review before merging.
+  - **The plan from 08:45:**
+    1. F's Size setting (its verify is running) and W's word menu fix land, and get reviewed and merged.
+    2. Build #5 and install.
+    3. The Orchestrator's phone checks, done without hands: run1, the Sym panel over the lines at 108, the share screen, the paste
+       selection, the front page, and Size at Biggest.
+    4. The owner's hands-on review: the word menu's hover and ladder, how the haptics feel, swipe, flick, steer, and the clown hunt.
+    5. Release: the owner removes the Sym $%= maps from Key Mapper, does the signed release build and publishes. The release notes get a line for Size and one for the playground haptics.
 - **Asked the owner (07:58): haptics for the playground's effects?** Today they're silent. The Orchestrator's proposal is five big moments
   and nothing per step:
   - 40 wpm, the first confetti: Celebrate;
@@ -172,7 +221,7 @@ all of them are unapproved.
   - 180, each lightning flash: a firm hit;
   - the plant at the top: the swell.
 
-  Each would have its own switch. Waiting for the owner's answer.
+  Each would have its own switch. Owner said yes (08:05).
 - **Front page text as one paragraph (owner, 07:50):** C drops the sentence anchoring and the next-line dimming (9b56000). The reference becomes a two-line window that scrolls through one continuous paragraph. Same branch as the title.
 - **Front page title (owner, 07:45):** a guide-style title and description. C adds it on claude/playground-next-line, after the
   next-line dimming (9b56000, render checked). Both go into build #4.

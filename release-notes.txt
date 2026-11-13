@@ -5,28 +5,35 @@
 - Type along: Each step has its own text to type in a box. Words you get right go grey, and missed ones get skipped, so you never get stuck.
 - Mean on purpose: It's way more sarcastic now. You'll paste something you won't like, and you'll have to find a clown.
 - Two guides: The fun one on the keys, and the boring one with every detail. Pick your poison in Settings > Guide.
+- New look: Pure black, Inter everywhere, and orange only where it means do this now. Each slide gets its own little decoration, just for looks.
 - Playground: Type fast and it comments. Type really fast and it rains shit. Five quiet seconds and it all calms down.
+- Something to type: The front page has a new text to type along to, about an hour of it. It roasts you the whole way.
 
 ## Typing
-- Middle means Space: The middle word on the bar is always exactly what Space will type. Tap it or push Space, same thing.
+- Middle means Space: The middle word on the bar is always exactly what Space will type. Tap it or press Space, same thing.
 - Missing apostrophes: dont, whats, cant and todays get theirs. Plurals stay plurals.
 - Its or it's: its, lets, your and friends wait for the next two words, then get an apostrophe only if it clearly fits. It never takes one out.
 - Pick your fixes: Settings > What gets fixed has a switch for every kind of fix. All on to start.
 - Your shorthand stays: shd, sth, idk, cuz and friends never get "fixed". Want them spelled out instead? Turn on Spell out shorthand in Settings, switch off the ones you hate, and add your own.
 - Fewer dumb fixes: Typos like defalt, receieve and bckspace get fixed now.
-- Capital at the start: Shift turns on by itself at the start of a sentence. Push Shift once if you want lowercase.
+- Capital at the start: Shift turns on by itself at the start of a sentence. Press Shift once if you want lowercase.
 - Long words fit: Long suggestions fit in their spot, and the three spots never move.
+- Canadian spelling: Settings > English spelling has Canadian now. Colour and realize. Both. Eh.
+- Two new shortcuts: Shift + Backspace deletes a word, and Alt + Sym switches to your next keyboard. They're built in, so Key Mapper can sit this one out.
+- Same size at any setting: TitanKeys ignores the phone's font size and display size, so a huge font doesn't blow it up anymore.
 - Snippets start with /: Alt+G or hold G, so no more digging for ; on the Sym panel. Already have snippets with ;? You keep it. Pick another in Settings > Snippets.
 
 ## Touchpad
-- Steer and select: Taps for steering and selecting count anywhere on the C V B N row. A triple tap with no slide selects the word.
+- Steer and select: Taps for steering and selecting count on Space itself, not the keys next to it. The first tap counts sooner, at 150 ms, so fewer steers get missed. A triple tap with no slide selects the word.
 - You see it right away: The bar shows the gesture as soon as your tap counts, and the dots follow your real text.
-- Delete: A single flick lifts the word off and dissolves it. Hold to keep deleting, like before.
-- Word menu by keys: Hold a word on the bar for its menu, then pick with a finger on the top rows. It doesn't time out.
+- Delete: A single flick lifts the word off and dissolves it. Keep holding and it eats a word at a time, each with a firm hit. Slide further out to go faster, or back onto Backspace to pause.
+- Word menu: Hold a word on the bar, then I moves it up and O moves it down: save, favourite, and back again. Learned a word you hate? O forgets it. Hearts burst for a favourite, bookmarks for a save. It doesn't time out.
+- Scroll assistant: It starts out matching the phone's own Scroll assistant. Change it and it stays your way.
 
 ## Haptics
 - One feel, one meaning: Moving, a step, done, locked, gone and "nope" each feel different, so you can tell what happened without looking.
 - Your switches: Settings > Haptics has one switch for all of it and one for every single haptic.
+- Quiet swell: When something changes by itself, like autocorrect, a snippet or a held symbol, you get a soft swell. Just a nod. Nothing to do.
 - Quiet when it should be: Key presses never buzz, and a fast run of buzzes doesn't turn into a rattle.
 
 ## Bar and panels

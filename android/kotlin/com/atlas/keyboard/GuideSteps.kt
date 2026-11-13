@@ -38,9 +38,9 @@ internal enum class GuideChapter(val label: String, val roast: String? = null) {
     Delete("Delete", "Fine, you're not useless. You delete stuff almost as fast as you screw it up."),
     Steering("Steering", "Wow, you moved a cursor. The bar was on the floor and you still needed a run-up."),
     Symbols("Symbols and emoji",
-        "Holy shit, you found the clown. Took you long enough, considering you see it in the mirror every day."),
+        "Holy shit, you found the clown. Took you long enough, and you see it in the mirror every day."),
     Clipboard("Copy and paste",
-        "You can copy and paste now. Congrats, you've unlocked the skills of every plagiarist who ever failed a class."),
+        "You can copy and paste now. Congrats, that's every skill of every plagiarist who ever failed a class."),
     /** The name, the two big buttons, and the one boring thing: the offer to share swipes, until it has an answer. */
     End("Built for Titan 2 Elite"),
 }
@@ -421,7 +421,7 @@ internal object PlaygroundText {
         "go outside after this line you absolute keyboard goblin",
         "just kidding nobody goes outside keep typing",
         "titankeys does not judge you but it does keep a list",
-        "real keys for real people and a pocket that will never close again",
+        "your pocket stopped closing the day you bought this thing",
         "your phone weighs more than your opinions and both are pretty dense",
         "every time you swipe a word a touchscreen user loses their job",
         "the guide called you dumb and honestly the guide was right",
@@ -429,19 +429,19 @@ internal object PlaygroundText {
         "titankeys learned more words from you this week than you learned all year",
         "if typing was a sport you would still be on the bench eating chips",
         "your messages are long because your keyboard finally lets you be annoying",
-        "somebody out there is typing on glass and getting every word wrong and you are smiling",
+        "right now someone is typing on glass and every word is wrong and you feel great about it",
         "this is the only workout your thumbs will get today",
-        "you did not choose the titan life the titan life chose you and it regrets nothing",
+        "you paid money for a phone this thick and you would do it again",
         "go ahead and make a typo titankeys is right there waiting to clean up after you again",
-        "your autocorrect has seen you at your worst and still shows up every morning",
+        "autocorrect has seen how you really spell and it needs a minute",
         "the best thing about this keyboard is that nobody can see you type this badly",
         "one day your grandchildren will ask what a real keyboard was and you will cry",
-        "you type like a raccoon that found a laptop in a dumpster and honestly respect",
+        "you type like a raccoon that found a laptop in a dumpster",
         "your group chat muted you and you still typed a whole paragraph",
         "typing this slow should be illegal but we are not the police",
         "keep going you are almost as fast as a kid with a touchscreen",
         "that was a joke you are nowhere close",
-        "your thumbs called and they want a raise",
+        "your thumbs want a raise and you are not even paying them",
         "titankeys is the only thing in your life that fixes your mistakes without a lecture",
         "you hold your phone like it owes you rent",
         "this phone survived a drop that would kill a normal phone and also your dignity",
@@ -456,25 +456,25 @@ internal object PlaygroundText {
         "type the next word and try not to think about how much this phone cost",
         "people stare at your phone on the train and you pretend you do not love it",
         "your phone has more buttons than your microwave and you use all of them",
-        "this keyboard runs on your tears and a tiny bit of electricity",
+        "this keyboard has no idea what you are typing and it is better that way",
         "tell your friends about titankeys or keep it a secret like everything else you do",
-        "no cloud no tracking no nonsense just you and your terrible typing",
+        "nothing you type here leaves the phone so your spelling stays a secret",
         "if your thumbs had a dating profile it would say good with their hands",
-        "you could be doing anything right now and you chose this and that is beautiful",
+        "you could be doing anything right now and you picked this",
         "the faster you type the less time you have to regret what you said",
         "this sentence is long on purpose to see if you give up and you probably will",
         "you did not give up which is more than we can say for your diet",
         "the keyboard is square the phone is square and so are you",
-        "your hands are cold your phone is warm and your messages are lukewarm at best",
-        "every word you swipe is a tiny victory against the touchscreen empire",
-        "typing on glass is like dancing on ice in socks and you are wearing boots",
+        "your phone is warm from all this typing and your messages are still cold",
+        "every word you swipe is one less tap on glass",
+        "typing on glass is like dancing on ice in socks",
         "your thumbs move like they are late for something and they are",
         "the backspace key is your most loyal friend and it never asks how you are",
         "nobody needs to know you practiced this for an hour",
         "you said one more line an hour ago and here we are",
         "this text is longer than your attention span so we will see who wins",
         "type like nobody is watching because honestly nobody is",
-        "your phone is thick your keyboard is real and your excuses are thin",
+        "your phone is thick and your excuses are thin",
         "titankeys fixed that word before you even noticed and it will never let you forget it",
         "your typing speed is impressive for someone using their thumbs and a lot of hope",
         "somewhere a teacher is proud of you and it is not your typing teacher",
@@ -485,12 +485,12 @@ internal object PlaygroundText {
         "sit up straight you look like a shrimp holding a brick",
         "you type with the energy of someone who just found out about coffee",
         "your typos have typos and titankeys has seen them all",
-        "one swipe one word one less reason to touch the screen",
+        "swipe the word and leave the screen alone",
         "every time you touch the screen a small part of titankeys dies inside",
         "do not touch the screen we talked about this",
         "your fingers know this keyboard better than you know your own family",
-        "the guide was short this text is long and your patience is somewhere in between",
-        "congrats on owning a phone that can stop a bullet and still send memes",
+        "the guide was short and this text is not so get comfortable",
+        "congrats on owning a phone you could use as a doorstop",
         "this keyboard has more personality than most people you know including you",
         "you thought this would be a quick test and now you live here",
         "the only thing faster than your typing is how fast you change your mind",
@@ -498,14 +498,14 @@ internal object PlaygroundText {
         "do not laugh at the next one it is not that funny",
         "your boss thinks you are working and technically you are practicing",
         "you are the main character and this is the boring montage",
-        "type until your thumbs ache and then type a little more because you are a legend",
+        "type until your thumbs ache and then keep going because nobody is coming to save you",
         "the titan is heavy because it carries the weight of your bad decisions",
         "a real keyboard in your pocket and still you text like a caveman",
         "titankeys suggests words because you clearly need suggestions",
         "your vocabulary is small but your thumbs are mighty",
         "if you get this whole line right you can call yourself a typing god for ten seconds",
         "time is up and you are back to being a regular person",
-        "the world is full of touchscreens and you chose violence",
+        "everyone else pokes glass and you click real keys like a person from the past",
         "your phone is the last of its kind like a dinosaur that sends emails",
         "nothing says i peaked in high school like loving real keyboards",
         "but you are right and everyone else is wrong and that feels great",
@@ -531,11 +531,11 @@ internal object PlaygroundText {
         "the keyboard does not care about your feelings it cares about your spelling",
         "your thumbs deserve a vacation and you deserve a better phone case",
         "just kidding your phone case is perfect just like you",
-        "that was sarcasm in case your keyboard did not catch it",
+        "your case makes the phone even thicker and you said that was the point",
         "you have been typing for so long your phone is starting to sweat",
         "the battery is dying and so is your social life but at least you are fast now",
         "the only thing smaller than these keys is the number of people who understand you",
-        "but titankeys understands you and that has to count for something",
+        "titankeys does not get you either but at least it fixes your spelling",
         "type with one hand and pretend the other one is doing something important",
         "everyone has a talent and yours is typing nonsense at high speed",
         "you are not addicted to this keyboard you can stop any time you want",
@@ -549,17 +549,17 @@ internal object PlaygroundText {
         "this line is here to make sure you are still awake",
         "you blinked and missed the last word so go back",
         "never mind keep going there is no going back in life or in this text",
-        "type it type it right type it fast and then go drink some water",
-        "hydration is important and so is a keyboard that does not hate you",
+        "go drink some water after this line you look like a raisin",
+        "the water can wait one more line",
         "titankeys was built by someone with too much free time and you are welcome",
-        "if you find a bug in this keyboard it was a feature all along",
+        "found a bug report it in settings and stop yelling at your phone",
         "you are typing faster than your internet and that is not a compliment to your internet",
         "the people next door can hear you clicking and they have opinions",
         "click louder and let them know you have a real keyboard",
         "when the zombies come you will survive because your phone doubles as a brick",
         "you could stop now but then you would have to talk to people",
         "keep typing because nobody bothers you while you look this busy",
-        "the end of this text is far away like your dreams but closer than your goals",
+        "the end of this text is far away and so is your bedtime",
         "and when you reach the end it starts again because you never learn",
     )
 
@@ -1100,7 +1100,7 @@ private fun GuideMemory.steerToward(aim: IntRange, event: KeyboardEvent): GuideV
 /** What the field gets back on a delete slide that was emptied: its own seed, and a line about it. */
 internal val DELETE_RESETS = listOf(
     "Deleted it all? Your regrets stay.",
-    "Twice? Now you're deleting our hope.",
+    "Twice? It keeps coming back. Like your ex.",
 )
 internal const val STEER_RESET = "The delete lesson is over, man."
 
@@ -1512,7 +1512,7 @@ internal val GUIDE_STEPS = listOf(
                         mark = 1
                         chip("Not &. Took it back. Read, then type.")
                     }
-                    event is EmptyKey -> chip("That one's empty. Like this joke.")
+                    event is EmptyKey -> chip("That key's empty. Pick one with a symbol on it.")
                     panel(event, Panel.Emoji) -> GuideVerdict.Hint("Emoji already? Patience. Sym again closes them.", stage = 0)
                     // A symbol typed closes the panel: after a wrong one, that's no window shopping, so the chip stays.
                     panel(event, Panel.Closed) && mark == 1 -> GuideVerdict.Stage(0)
@@ -1603,7 +1603,7 @@ internal val GUIDE_STEPS = listOf(
                 when {
                     event is FieldChanged && symbolInGap(event.text, CLOWN_LINE, CLOWN) -> GuideVerdict.Done
                     otherSymbol(event, CLOWN_LINE, CLOWN) -> GuideVerdict.Hint("Not you. The other clown. The one that's also you.", stage = 1)
-                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed? The clown's still in there. Like a mirror.", stage = 0)
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed? Your face is still in there.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
@@ -1773,7 +1773,7 @@ internal fun commonMistake(step: GuideStep, event: KeyboardEvent, instruction: S
     step.chapter in NOT_TYPING && (event is Pushed && isLetter(event.code) || event is Recognised && event.words.isNotEmpty()) ->
         GuideVerdict.Hint(instruction, "Typing's done. Keep up.")
     event is CursorStarted && step.cue !is GuideCue.Taps ->
-        GuideVerdict.Hint("That's the cursor. Quick taps just above the middle of Space start it. Lift your finger to stop.")
+        GuideVerdict.Hint("That's the cursor. Two quick taps on Space start it. Lift your finger to stop.")
     event is HeldSymbol && step.chapter != GuideChapter.Symbols -> GuideVerdict.Hint("Holding a key types its symbol. Press quickly for letters.")
     else -> null
 }

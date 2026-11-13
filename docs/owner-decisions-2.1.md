@@ -206,6 +206,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 ## Process
 
 - **"me @ your mom" is out:** "is bad let's skip it." Any @ line gets something better, or no joke at all. The slide may use another symbol if the line lands better (owner, 23:50). (Owner, 23:45)
+- **Typing 3/3 (the save slide):** "the tap hint still needs to be sooner and more frequent." (Owner, 01:25) The Orchestrator's call (unapproved): first hint after 3 s, repeated every 6 s while waiting, each repeat visible, never over an open menu. A does it, and checks the other slides' timings too.
 - **Reviews must not violate the owner's decisions** (owner, 01:20): "check aesthetically and readability but also you should not violate my decisions." Where design-v2 or any Orchestrator or worker call conflicts with this log, the owner's decision wins, unless a later owner message replaced it. Conflicts found so far and sent back to C:
   - the front page text box's orange accent;
   - the TOUCHPAD corner brackets on the drawing;

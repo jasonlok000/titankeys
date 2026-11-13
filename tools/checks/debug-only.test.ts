@@ -52,8 +52,8 @@ function components(xml: string) {
 }
 
 test("the release manifest has exactly the expected components", () => {
-  // Ink adds two more when it builds: its MainActivity, exported as the launcher, and com.vandam.ink.InkLightSdkReceiver, the
-  // Light Phone SDK's marker. See the audit.
+  // Ink adds one more when it builds: its MainActivity, exported as the launcher. Its com.vandam.ink.InkLightSdkReceiver, the
+  // Light Phone SDK's marker, is taken out by tools/ink/titankeys.patch. See the audit and its re-audit.
   expect(components(manifest())).toEqual([
     { tag: "activity", name: "com.vandam.ink.LearningTransferActivity", exported: "false" },
     { tag: "activity", name: "com.vandam.ink.ContactsPermissionActivity", exported: "false" },

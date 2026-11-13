@@ -47,8 +47,8 @@ fun main() {
 }
 
 /**
- * At 1076 px with the defaults, the keys are the owner's calibration and shape: a column every 107.5 px, centred, square keys with
- * no gap between keys, and 10.5 px between rows (owner, 2026-11-12).
+ * At 1076 px with the defaults, the keys are the owner's calibration and shape: a column every 108 px, centred, square keys with
+ * no gap between keys, and rows apart by the hardware's ratio, 10.5 px for a 107.5 px column (owner, 2026-11-12 and 2026-11-13).
  */
 private fun measuredDefaults() {
     check(KeyAlignment.current == KeyAlignment.DEFAULT) { "nothing is calibrated until someone calibrates" }
@@ -56,14 +56,15 @@ private fun measuredDefaults() {
     val keys = KeyGeometry(1076f, KeyAlignment.DEFAULT)
     val q = keys.boxes.first { it.name == "Q" }
     val p = keys.boxes.first { it.name == "P" }
-    near(keys.pitch, 107.5f, "the owner's spacing")
+    near(keys.pitch, 108f, "the owner's spacing")
     near(q.left, 1076f - p.right, "as far in from each side")
-    check(q.left > 0f && p.right < 1076f) { "the keys stop short of the screen's edges" }
+    // The real keyboard is a touch wider than the screen: the outer keys reach 2 px past each edge (owner's calibration, 2026-11-13).
+    near(q.left, -2f, "Q reaches 2 px past the left edge")
     near(keys.gap, 0f, "no gap between keys")
-    near(keys.key, 107.5f, "a key takes its whole column")
+    near(keys.key, 108f, "a key takes its whole column")
     near(keys.keyHeight, keys.key, "the keys are square")
-    near(keys.rowPitch - keys.keyHeight, 10.5f, "10.5 px between rows")
-    near(keys.right - keys.left, 1075f, "ten columns")
+    near(keys.rowPitch - keys.keyHeight, 108f * 10.5f / 107.5f, "the hardware's row gap, at this spacing")
+    near(keys.right - keys.left, 1080f, "ten columns")
     // The spacing grows from the centre, and the shift moves the centre.
     val wider = KeyAlignment.DEFAULT.spaced(KeyAlignment.DEFAULT.key + KeyAlignment.DEFAULT.gap + .01f)
     near(wider.centre, .5f, "spacing keeps the row centred")
@@ -132,14 +133,14 @@ private fun drawnAtSixty() {
     val drawn = KeyGeometry(1076f, KeyAlignment.DEFAULT, KeyGeometry.DRAWN)
     near(drawn.height, real.height * .6f, "the whole drawing")
     near(drawn.keyHeight, real.keyHeight * .6f, "a key")
-    near(drawn.rowPitch - drawn.keyHeight, 10.5f * .6f, "between rows")
+    near(drawn.rowPitch - drawn.keyHeight, (real.rowPitch - real.keyHeight) * .6f, "between rows")
     near(KeyGeometry.heightFor(1076f, KeyAlignment.DEFAULT, KeyGeometry.DRAWN), drawn.height, "heightFor at 60%")
     for ((index, box) in drawn.boxes.withIndex()) {
         near(box.left, real.boxes[index].left, "${box.name} keeps its left")
         near(box.right, real.boxes[index].right, "${box.name} keeps its right")
     }
-    // Edge to edge: the drawn keys fill the screen's width, half a pixel in from each side at 1076 px.
-    check(drawn.left >= 0f && drawn.left < 1f && drawn.right <= 1076f && drawn.right > 1075f) { "edge to edge: ${drawn.left} to ${drawn.right}" }
+    // Edge to edge, on the calibration: at 108 px the outer keys reach 2 px past each side, as the real ones do (owner, 2026-11-13).
+    check(drawn.left > -3f && drawn.left <= 0f && drawn.right >= 1076f && drawn.right < 1079f) { "edge to edge: ${drawn.left} to ${drawn.right}" }
 }
 
 /** The touchpad's column and row middles land on the keys' middles, and the mapping goes both ways. */

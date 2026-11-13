@@ -8,8 +8,9 @@ import kotlin.math.roundToInt
  * left + c × (key + gap) (owner, 2026-11-12: the keyboard is calibrated by its gaps, which are what the eye can judge). Every
  * drawing of the keys is built from these three by [KeyGeometry], so a drawn key sits right over its real key.
  *
- * The defaults are the owner's calibration on the phone (2026-11-12): a key and a gap every 107.5 px on its 1076 px wide screen,
- * centred, with Unihertz's own proportions of keys 84 wide and gaps of 24. So the keys stop a little short of both screen edges.
+ * The defaults are the owner's calibration on the phone (2026-11-12, refined 2026-11-13 with full-height lines): a key and a gap
+ * every 108 px on its 1076 px wide screen, centred, with Unihertz's own proportions of keys 84 wide and gaps of 24. So the real
+ * keyboard is a touch wider than the screen: the outer keys reach 2 px past each edge.
  * The Key calibration screen in TitanKeys Debug sets the three ([KeyCalibration]).
  */
 class KeyAlignment(val left: Float, val key: Float, val gap: Float) {
@@ -36,8 +37,8 @@ class KeyAlignment(val left: Float, val key: Float, val gap: Float) {
     override fun hashCode() = (left.hashCode() * 31 + key.hashCode()) * 31 + gap.hashCode()
 
     companion object {
-        /** A key and a gap, as a part of the width: 107.5 px on the phone's 1076 px wide screen. */
-        const val DEFAULT_PITCH = 107.5f / 1076f
+        /** A key and a gap, as a part of the width: 108 px on the phone's 1076 px wide screen (owner, 2026-11-13). */
+        const val DEFAULT_PITCH = 108f / 1076f
         /** Ten keys and the nine gaps between them, centred on the screen. */
         private const val DEFAULT_SPAN = KeyGeometry.COLUMNS * DEFAULT_PITCH - DEFAULT_PITCH * KeyGeometry.GAP / (KeyGeometry.KEY + KeyGeometry.GAP)
         const val DEFAULT_LEFT = (1f - DEFAULT_SPAN) / 2

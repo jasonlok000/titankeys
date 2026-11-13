@@ -6,7 +6,7 @@ package com.atlas.keyboard
  *
  * The shape is the Titan 2 Elite's, as the owner tuned it on the phone (2026-11-12): **square keys with no gap between keys** in a
  * row, so each key takes its whole column, and 10.5 px between rows on the 1076 px wide screen. Each column is a key and a gap of
- * [alignment] (the calibration: 107.5 px, centred), from the middle of the gap left of the key to the middle of the gap right of
+ * [alignment] (the calibration: 108 px, centred), from the middle of the gap left of the key to the middle of the gap right of
  * it, so every column, and the middle of every key, is where the calibration puts it. The heights scale with a column, so a
  * calibrated keyboard is the real one, scaled. [scale] squashes the heights only, as the guide's drawing does ([DRAWN]).
  *
@@ -96,7 +96,7 @@ class KeyGeometry(val width: Float, val alignment: KeyAlignment = KeyAlignment.c
         const val SPAN = COLUMNS * KEY + (COLUMNS - 1) * GAP
         /**
          * A key's height and a row's, as parts of a column (owner, 2026-11-12): the keys are square, and the rows are 10.5 px apart
-         * when a column is 107.5 px, as on the phone.
+         * when a column is 107.5 px. It's the hardware's own ratio, so it holds at any calibrated spacing.
          */
         const val KEY_HEIGHT = 1f
         const val ROW = 1f + 10.5f / 107.5f

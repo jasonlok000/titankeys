@@ -918,19 +918,39 @@ class GuideDecor(private val font: Typeface? = null) {
      * with a fading trail.
      */
     private fun bigTop(t: Float) {
-        val top = upper()?.get(0) ?: area.top
+        valance(t)
+        juggling(t)
+    }
+
+    /**
+     * The valance hangs from the band right under the top bar, whichever band is tallest, and stays out of the title's keep-out
+     * and its soft edge, so the two never meet (Master, 2026-11-13: on the phone the title-to-field band was the taller one, the
+     * valance hung under the title, and its stripes' flat top and the title's box showed as a hard black box). A shallow band
+     * makes it shallower; with no room at all it's left out rather than run into the title.
+     */
+    private fun valance(t: Float) {
+        val band = underBar() ?: return
+        val top = band[0]
+        val clear = CLEAR_DP * dp
+        val bulb = 3.4f * dp
+        // The band ends at the title's margin; its soft edge reaches [FEATHER_DP] further up.
+        val limit = band[1] - FEATHER_DP * dp
+        // Its lowest point: the trim at the deepest scallop's middle, at the most of its ripple, with a lit bulb on it.
+        val fit = min((limit - top - bulb) / (VALANCE_DROP + 1.1f * VALANCE_DEPTH) / dp, 1f)
+        if (fit < .4f) return
         val n = 14
         val wide = area.width() / n
-        val depth = 12f * dp
-        val drop = 10f * dp
+        val depth = VALANCE_DEPTH * dp * fit
+        val drop = VALANCE_DROP * dp * fit
         fun dip(k: Int) = depth * (1f + .1f * sin(TAU * t / 5000f - k * .8f))
         for (even in booleanArrayOf(true, false)) {
             path.reset()
             var k = if (even) 0 else 1
             while (k < n) {
                 val x0 = area.left + k * wide
-                path.moveTo(x0, top - 40f * dp)
-                path.lineTo(x0 + wide, top - 40f * dp)
+                // The stripes start inside the top bar's margin, where everything is taken away, so they have no top edge to see.
+                path.moveTo(x0, top - clear)
+                path.lineTo(x0 + wide, top - clear)
                 path.lineTo(x0 + wide, top + drop)
                 path.quadTo(x0 + wide / 2, top + drop + 2 * dip(k), x0, top + drop)
                 path.close()
@@ -962,7 +982,10 @@ class GuideDecor(private val font: Typeface? = null) {
             canvas.drawPath(path, paint)
             shapes++
         }
-        // The juggling.
+    }
+
+    /** Three two-tone balls juggled in the band under the field, on their faintly drawn arcs, each with a fading trail. */
+    private fun juggling(t: Float) {
         val g = lower()
         val r = 14f * dp
         val hx = area.left + area.width() * .7f
@@ -1324,6 +1347,17 @@ class GuideDecor(private val font: Typeface? = null) {
         return if (best < 0) null else floatArrayOf(all[best * 2], all[best * 2 + 1])
     }
 
+    /** The first open band from the top in the upper half, over 24 dp: the one right under the top bar, above the title. */
+    private fun underBar(): FloatArray? {
+        val mid = area.top + area.height() * .45f
+        val all = gaps()
+        for (i in 0 until all.size / 2) {
+            if ((all[i * 2] + all[i * 2 + 1]) / 2 > mid) break
+            if (all[i * 2 + 1] - all[i * 2] > 24f * dp) return floatArrayOf(all[i * 2], all[i * 2 + 1])
+        }
+        return null
+    }
+
     private fun remember(key: Long, value: FloatArray) {
         if (spotCache.size > 64) spotCache.remove(spotCache.keys.first())
         spotCache[key] = value
@@ -1550,6 +1584,9 @@ class GuideDecor(private val font: Typeface? = null) {
         private const val FOREVER_LOOP = 10000f
         /** The chase lights' step: 48 to the circus's 20 s loop, a multiple of 3, so the loop comes round exactly. */
         private const val CHASE_STEP = 20000f / 48
+        /** The valance at full size, in dp: the stripes' drop below the hang line, and how far each scallop dips below that. */
+        private const val VALANCE_DROP = 10f
+        private const val VALANCE_DEPTH = 12f
         private const val JUGGLE_LOOP = 5000f
         private const val NOTE_LOOP = 20000f
         private const val NOTE_FLAP = 5000f

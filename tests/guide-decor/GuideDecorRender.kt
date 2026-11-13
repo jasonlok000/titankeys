@@ -21,9 +21,10 @@ import kotlin.math.roundToInt
  * - at most 12 shapes at once, and no layer stronger than its level (the accent or cream at 30–50%, ink 8% on the pass screen, the
  *   grass's ink at up to 60% on the end's accent);
  * - the same moment draws the same picture, every loop comes round exactly, and the picture moves;
- * - a frame takes GuideDecor under 2 ms on this computer.
+ * - a frame takes GuideDecor under 2 ms on this computer;
+ * - on the phone's own clown layout, the valance hangs under the top bar and never meets the title's keep-out or its soft edge.
  * Usage: GuideDecorRenderKt <out folder> <font folder>. It writes sheet.png (as faint as on the phone), sheet-bright.png (the
- * same, brightened to judge the drawing), and one PNG for each slide.
+ * same, brightened to judge the drawing), one PNG for each slide, and clown-phone.png for the phone's clown layout.
  */
 fun main(args: Array<String>) {
     // ACCENT=off draws everything as with Settings > Orange accents off: Accent's cream in place of orange.
@@ -118,6 +119,30 @@ fun main(args: Array<String>) {
         brightRows += slide to bright3
         ImageIO.write(strip(bright3), "png", File(out, "$slide.png"))
     }
+    // The clown on the phone's own layout (build #8's pass, 2026-11-13), where the band from the title to the field is taller than
+    // the one under the top bar: the valance hung under the title there, and showed as a hard black box round it. It hangs under
+    // the top bar, and never meets the title's keep-out or its soft edge.
+    val phone = phoneClown()
+    val title = phone.keepOut[1]
+    val reach = CLEAR + GuideDecor.FEATHER_DP * DP
+    var hung = 0
+    for (k in 0 until 48) {
+        val t = GuideDecor.LOOKS.getValue("clown").loop * k / 48
+        val image = render(decor, "clown", phone, t)
+        var met = false
+        for (y in 0 until HEIGHT) for (x in 0 until WIDTH) {
+            if (image.getRGB(x, y) ushr 24 == 0) continue
+            if (y < title.top) hung++
+            if (!met && x >= title.left - reach && x < title.right + reach && y >= title.top - reach && y < title.bottom + reach) {
+                met = true
+                check(false) { "On the phone's layout, the clown draws at $x, $y at $t ms, on the title's keep-out or its soft edge" }
+            }
+        }
+    }
+    check(hung > 0) { "On the phone's layout, the clown's valance shows under the top bar" }
+    ImageIO.write(strip(listOf(3_000L, 9_000L, 15_000L).map { frame(decor, "clown", phone, it, bold, medium, true) }), "png",
+        File(out, "clown-phone.png"))
+
     // The pass screen: three slides on orange.
     val orange = listOf("type", "alt", "clipboard").map { slide ->
         val screen = screenFor(slide)
@@ -195,6 +220,22 @@ private fun screenFor(slide: String): Screen {
                 listOf(Triple("TYPING", label, 12), Triple(titleText, title, 30), Triple(instructionText, instruction, 16)), listOf(controls, field, keys))
         }
     }
+}
+
+/**
+ * The clown slide as build #8 lays it out on the phone, measured from the pass's screencap: under the 124 px status bar, the top
+ * bar across the screen, the title's words, the instruction's, the field and the keys.
+ */
+private fun phoneClown(): Screen {
+    val area = RectF(0f, 124f, W, 1110f)
+    val label = RectF(38f, 150f, 360f, 170f)
+    val title = RectF(38f, 295f, 960f, 368f)
+    val instruction = RectF(38f, 396f, 460f, 455f)
+    val field = RectF(38f, 498f, 1038f, 648f)
+    val keys = RectF(0f, 832f, W, 1136f)
+    return Screen(area, listOf(RectF(0f, 124f, W, 199f), title, instruction, field, keys),
+        listOf(Triple("SYMBOLS AND EMOJI · 5/5", label, 12), Triple(TITLES.getValue("clown"), title, 30),
+            Triple("Press Sym twice for the emoji.", instruction, 16)), listOf(field, keys))
 }
 
 private fun render(decor: GuideDecor, slide: String, screen: Screen, t: Long): BufferedImage {

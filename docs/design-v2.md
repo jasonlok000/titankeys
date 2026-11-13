@@ -112,22 +112,43 @@ are already settled are marked (Owner).
   its top is reported to apps (content insets and touch region). Before, the window grew and shrank with the panel, and for
   one frame the bar floated about 200 px up while Android caught up. Taps above the keyboard still reach the app.
 
-## 7. Effects on top of the guide (after the redesign lands)
+## 7. Slide decorations (after the redesign lands)
 
-The owner asked for fun effects that aren't generic (23:20). The Orchestrator's picks, not approved by the owner:
-1. The keys spell words like a dot-matrix sign: NOPE after a wrong move, LOL at a typo, YAWN when idle.
-2. Progress as backlight: each passed slide lights one more key outline for good, and the keyboard glows by the end.
-3. Letters fly from each pressed key into the field at the caret. A swipe's letters gather along the trail and fly up as the word.
-4. A flick-deleted word shatters into letter shards that bounce off the keycaps with physics.
-5. Titles slam in like a rubber stamp, with a tiny jolt and ink specks.
-6. Typo crime scene: the wrong word gets a chalk outline and tape, and the fixed word drops into it.
-7. A streak flame grows on the caret with words typed right in a row, and a typo puffs it into smoke.
-8. Chapter finishes:
-   - Typing: a stadium wave across the keys.
-   - Delete: a DELETED stamp crumbles.
-   - Steering: the caret runs a victory lap.
-   - Symbols: honk squashes, and red noses rain when the clown is found.
-   - Clipboard: the paste slaps in like a sticky note.
-9. The finale grows grass up through the keyboard.
-Left out: a split-flap chapter flip (slows changes down), an impatient keyboard (could nag), and speed lines (clash with the warm-up).
-Every effect is off when Android's animations are off, never delays typing or a lesson, uses only orange and ink, and follows the haptics rulebook.
+The owner's direction (23:25): "it should be sth that decorate the slides. not sth that changes the meaning or gives any meaning",
+"design the effects of each of the slides individually", and "go touch grass now is good". The earlier picks (keys spelling
+NOPE, progress backlight, streak flame and so on) are dropped, because they carried meaning. The Orchestrator designed each slide's
+decoration below. None of it is approved by the owner.
+
+**Rules for every decoration:**
+- It's pure decoration. It never reacts to typing, a mistake, a hint or a pass, and never tells you anything. It only follows the slide's theme.
+- **Where:** a layer behind the title, instruction and field, above the black. It lives in the empty space. It's never drawn
+  inside the field, over the keyboard drawing, or on the bar, and it keeps 8 dp clear of text.
+- **How faint:** orange at 6–12% opacity, or cream at 5%. On the orange pass screen it turns ink at 8% and keeps moving.
+- **Motion:** slow loops of 6–20 s, eased, with at most 12 shapes at once. Drawn at up to 30 fps, and stopped when the screen is off.
+  - With Android's animations off, it shows as a still picture.
+  - It fades in 600 ms after the slide settles. Between slides it crossfades over 400 ms. The keyboard never moves for it.
+- Shapes are drawn with paths and Inter glyphs, never emoji images, so they stay crisp at the fixed scale.
+
+**Each slide:**
+
+| Chapter | Slide | Decoration |
+|---|---|---|
+| Typing | Make a typo. We'll fix it. | **Red pen.** Faint proofreader's marks draw themselves stroke by stroke in the empty space: a squiggly underline, a caret ^, a circled letter, a scribbled "sp?". Each one lingers, fades, and the next appears somewhere else. |
+| Typing | Swipe it. One hand, no questions. | **Air swipes.** Three long soft S-curves sweep across the background, one at a time, each drawn with a tapering tail like a swipe trail, then fading. |
+| Typing | Save a word. Then unsave it. | **Starfield.** Four-point sparkles, Save's own shape, twinkle at scattered spots, and a few drift slowly up. |
+| Delete | Delete the extra e. The old way. | **Typewriter e.** A huge faint serif "e", like old metal type, sits off-centre behind the title. Every few seconds a strip of correction tape glides across part of it. |
+| Delete | Flick away the stupid word. | **Paper balls.** Now and then a crumpled paper ball arcs across the background from right to left, as if tossed at a bin off screen. |
+| Delete | Hold the flick. Delete in bulk. | **Shredder belt.** Rows of faint letter tiles slide left behind the content and dissolve at the left edge, endlessly. |
+| Steering | Steer to the underlined word. | **Night drive.** Faint dashed lane lines stream towards you from a vanishing point behind the title. |
+| Steering | Grab my whole heart. Three taps. | **Heartbeat.** An ECG line traces across the background on a loop, flat, beat, beat, flat, and small outline hearts pulse on the beats. |
+| Symbols | Add the *, the traditional way. | **Asterisk snow.** Asterisks of different sizes fall slowly, turning like snowflakes. |
+| Symbols | Add the ?. Hold V for it. | **Buoys.** Big faint question marks bob and tilt, as if puzzled. |
+| Symbols | Add the &. It's behind Sym. | **Peekaboo.** Ampersands peek out from behind the screen's edges and the title, then slide back out of sight. |
+| Symbols | Find the weird one. It's further in. | **Forever.** A glowing dot runs endlessly along a big faint ∞ behind the content, leaving a fading trail. |
+| Symbols | Sign it with 🤡. Find yourself. | **Big top.** Faint circus-tent rays turn slowly from the top centre, and a few juggling balls arc across. |
+| Copy and paste | Paste over the orange words. | **Sticky notes.** Three or four faint sticky notes are pinned at angles in the margins, swaying as if in a breeze. Now and then one flaps a corner. |
+| Copy and paste | Paste the one nice clip. | **Zero-g clips.** Outline paper clips float, turning slowly, as if in zero gravity. |
+| End | GO TOUCH GRASS NOW (the finale) | **Grass (owner likes it).** As the finale plays, grass grows up from the bottom edge, its blades swaying, and two or three small flowers open. |
+| Setup | The phone's settings | **Gears.** Faint gear outlines turn slowly in two corners. |
+
+The playground keeps its own effects (warm-up, comments, rain) and gets no decoration.

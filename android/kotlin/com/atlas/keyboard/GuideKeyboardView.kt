@@ -209,18 +209,16 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     /**
      * The playground's way to show the touch zone (owner): corner brackets at its real corners with a small "TOUCH ZONE" label,
-     * and no line across the keys and no dimming. The label sits in room above the keys, which this adds to the drawing's height.
+     * and no line across the keys and no dimming. The label sits just above the drawing, in the room the guide always keeps over
+     * the keys, and adds nothing to the drawing's height: 24 dp more cost the playground's keys their bottom row, which then sat on
+     * the keyboard's bar (owner, 2026-11-13: "the keyboard is cutoff by the bar").
      */
     var zoneMarks = false
         set(value) {
             if (field == value) return
             field = value
-            requestLayout()
             invalidate()
         }
-
-    /** The room above the keys for the touch zone's label, while [zoneMarks] shows. */
-    private val topRoom get() = if (zoneMarks) dp(ZONE_LABEL_ROOM) else 0f
     /** Where a bracket's arms reach, and a label's measured glyph, reused each frame. */
     private val reach = RectF()
     private val textBounds = Rect()
@@ -323,7 +321,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      * [KeyGeometry.DRAWN] of their real height (owner, 2026-11-12: same width, 60% height).
      */
     fun heightFor(width: Int): Int = KeyGeometry(width.toFloat(), KeyCalibration.load(context), KeyGeometry.DRAWN).let {
-        ceil((if (lettersOnly) it.letterHeight else it.height) + topRoom).toInt()
+        ceil(if (lettersOnly) it.letterHeight else it.height).toInt()
     }
 
     /**
@@ -355,7 +353,6 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         var moving = cue != GuideCue.Free && GuideMotion.enabled && isShown
         hovered = if (pressedAt >= 0 && now - pressedAt < PRESS_QUIET_MILLIS) null else hover.current(now)
         canvas.save()
-        canvas.translate(0f, topRoom)
         for (key in keys) if (!lettersOnly || key.box.top < geometry.letterHeight) moving = drawKey(canvas, key, now, frameCount) || moving
         if (zoneMarks) drawZoneMarks(canvas) else drawTouchArea(canvas)
         drawTapZone(canvas)
@@ -1113,7 +1110,6 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val BRACKET_SHOWN = 20f
         const val ZONE_NAME = "TOUCH ZONE"
         const val ZONE_LABEL_SIZE = 14f
-        const val ZONE_LABEL_ROOM = 24f
         const val ZONE_LABEL_GAP = 6f
     }
 }

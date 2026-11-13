@@ -72,9 +72,14 @@ internal object V2 {
         return image to g
     }
 
-    /** The status bar's room at the top, and the keyboard's own bar's at the bottom, which the phone draws. */
-    val STATUS = dp(26)
-    val BAR = dp(40)
+    /**
+     * The status bar's room at the top, and the keyboard's own bar's at the bottom, as the phone has them. The status bar's icons sit
+     * 62 px down in a screenshot of the guide on the phone (2026-11-12), so it is about 124 px; the bar is 90 px, as the owner's
+     * screenshot of build #5 has it (1110 to 1200). They were 26 dp and 40 dp, 41 and 63 px, which hid that the front page had no
+     * room for its keys' bottom row.
+     */
+    const val STATUS = 124
+    const val BAR = 90
     const val SIDE = 24
     const val TOP_BAR = 48
     const val HEADER = 56
@@ -305,6 +310,26 @@ private fun wrapped(g: Graphics2D, text: String, width: Int): List<String> {
 
 private var frontProblems = 0
 
+/**
+ * The front page's block, as GuideActivity lays it out (owner): the title, one line of Display; 12 dp; the description or the
+ * comment, one line of Body; 24 dp; the line to type along to, two lines of Body; 24 dp; the text box, three lines of Field with
+ * 16 dp padding. No row of actions: the playground has none.
+ */
+internal fun frontBlock(g: Graphics2D): Int {
+    val fieldLine = V2.lineHeight(g, V2.field())
+    val bodyLine = V2.lineHeight(g, V2.body())
+    return V2.lineHeight(g, V2.display()) + V2.dp(12) + bodyLine + V2.dp(24) + 2 * bodyLine + V2.dp(24) + 3 * fieldLine + 2 * V2.dp(16)
+}
+
+/**
+ * What room the front page has to spare, in px, with all four rows of its keys on the phone: the header, 24 dp, the block, 24 dp
+ * (where the touch zone's label sits), the keys, and the keyboard's bar. Under nothing, GuideActivity drops the keys' bottom row.
+ */
+internal fun frontPageSlack(): Int {
+    val (_, g) = V2.image()
+    return V2.keysTop - V2.dp(24) - (V2.STATUS + V2.dp(V2.HEADER)) - frontBlock(g) - V2.dp(24)
+}
+
 private fun problem(what: String) {
     println("  front page: $what")
     frontProblems++
@@ -378,8 +403,8 @@ private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment
     val fieldLine = V2.lineHeight(g, V2.field())
     val pad = V2.dp(16)
     val boxHeight = 3 * fieldLine + 2 * pad
-    val blockHeight = titleLine + V2.dp(12) + bodyLine + V2.dp(24) + 2 * bodyLine + V2.dp(24) + boxHeight
-    // The playground's keys keep room above them for the touch zone's label.
+    val blockHeight = frontBlock(g)
+    // The touch zone's label sits in the 24 dp kept over the keys: it adds no room of its own.
     val keysTop = V2.keysTop
     val room = keysTop - V2.dp(24) - headerBottom
     if (room < blockHeight + 2 * V2.dp(24)) problem("NO ROOM: the block needs ${blockHeight + 2 * V2.dp(24)} px, has $room")
@@ -440,7 +465,11 @@ private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment
     g.color = if (ink) V2.INK else V2.ORANGE
     g.fillRect(caretX, y + pad + caretLine * fieldLine + V2.dp(2), V2.dp(2), fieldLine - V2.dp(4))
 
-    V2.keys(g, keysTop, onOrange = ink, shade = warmth, marks = true)
+    // As GuideActivity's fitKeys: with no room for all four rows, the bottom row goes and the letters sit on the bar.
+    val fits = room >= blockHeight + 2 * V2.dp(24)
+    g.clip = java.awt.Rectangle(0, 0, V2.W, V2.H - V2.BAR)
+    V2.keys(g, if (fits) keysTop else V2.H - V2.BAR - Math.ceil(V2.KEYS.letterHeight.toDouble()).toInt(), onOrange = ink, shade = warmth, marks = true)
+    g.clip = null
     V2.note(g, "render note: the keyboard's own bar is here", side, V2.H - V2.BAR / 2)
     g.dispose()
     ImageIO.write(image, "png", file)

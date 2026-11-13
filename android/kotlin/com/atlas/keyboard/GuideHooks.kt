@@ -125,6 +125,17 @@ internal object GuideHooks {
         barWordRequests?.invoke(word)
     }
 
+    /**
+     * The keyboard listens here, so the bar underlines the word at [barLit]'s place in the accent, and keeps it under that word's
+     * menu through every step (see [Strip.lit]): the word menu slide's TitanKeys, the whole slide (owner, 2026-11-13: "keep it
+     * highlighted"). Null clears it. Only in the guide's field: anywhere else the bar is never lit.
+     */
+    @Volatile var barLitRequests: ((Int?) -> Unit)? = null
+
+    fun barLit(index: Int?) {
+        barLitRequests?.invoke(index)
+    }
+
     /** The keyboard listens here, so the guide points at a word by itself, wherever it sits on the bar. */
     @Volatile var stripPointWords: ((String?) -> Unit)? = null
 

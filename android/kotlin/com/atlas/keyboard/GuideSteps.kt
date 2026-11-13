@@ -818,7 +818,7 @@ internal class GuideStep(
     /** The bar shows its side words. False shows only the middle one. */
     val sides: Boolean = true,
     /**
-     * The only word on the bar, in its middle place, pointed at until its menu opens, or null for the bar's own words. A hold on it
+     * The only word on the bar, in its middle place, underlined the whole slide, or null for the bar's own words. A hold on it
      * opens its show-only menu. See [GuideHooks.barWord].
      */
     val barWord: String? = null,
@@ -1095,6 +1095,13 @@ internal const val MENU_NOT_BOX = "Not the box. Hold TitanKeys on the bar."
 internal const val MENU_MIDDLE = "The one in the middle. TitanKeys."
 internal const val MENU_MISSED = "I or O. Nothing else does anything here."
 
+/**
+ * Where [step]'s bar is lit: its own word's place, the middle (0), the whole slide, with its menu open and after the pass, or null
+ * on a slide with no word of its own. It replaces the wiggle, which the line made redundant (owner, 2026-11-13: "keep it
+ * highlighted the whole time"). See [GuideHooks.barLit].
+ */
+internal fun litPlace(step: GuideStep): Int? = if (step.barWord != null) 0 else null
+
 /** The word menu slide's marked word in its line: TitanKeys, wherever [text] has it, or null. */
 internal fun menuTarget(text: String): IntRange? = text.indexOf(MENU_WORD).takeIf { it >= 0 }?.let { it until it + MENU_WORD.length }
 
@@ -1345,7 +1352,7 @@ internal val GUIDE_STEPS = listOf(
         help = "Hold, don't tap. Keep your finger on TitanKeys.",
         // Only the hold: typing, swiping, Space taps and Backspace are blocked, and say so. With the menu open, its keys work.
         lessons = setOf(GuideLesson.BarHold),
-        // Only TitanKeys on the bar, in the middle, pointed at the whole slide; the side places are empty.
+        // Only TitanKeys on the bar, in the middle, underlined the whole slide; the side places are empty.
         barWord = MENU_WORD,
         bar = GuideBar.Menu,
     ),

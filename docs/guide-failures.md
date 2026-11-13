@@ -95,8 +95,8 @@ docs/owner-decisions-2.1.md wins over this list wherever they differ.
 
 ### menu: Make TitanKeys your favourite.
 The ladder, on one word (owner, 2026-11-13). The line is "TitanKeys belongs in your favourites", with TitanKeys marked in the
-box. The bar shows only TitanKeys, in the middle with its side places empty, and it wiggles the whole slide. Nothing typed, selected
-or moved changes the bar. Its show-only menu opens at not saved; I saves it, and I again makes it a favourite, which passes.
+box. The bar shows only TitanKeys, in the middle with its side places empty, underlined in the accent the whole slide, its menu
+open and after the pass too. Nothing typed, selected or moved changes the bar. Its show-only menu opens at not saved; I saves it, and I again makes it a favourite, which passes.
 Nothing is saved anywhere. Only the hold is unlocked; with the menu open, its keys work. Every chip below is 50 characters or less.
 
 | What the user does | What happens |

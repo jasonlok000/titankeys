@@ -212,9 +212,9 @@ private fun rgb(argb: Long) = Color(argb.toInt(), true)
 private fun faded(argb: Long, alpha: Float) = Color(((argb and 0xFFFFFF) or ((alpha * 255).toLong() shl 24)).toInt(), true)
 
 /**
- * The calibration screen as KeyCalibrationActivity lays it out (owner, 2026-11-12): the words, three sliders with − and +, Reset to
- * measured, and at the very bottom only the gaps, as orange bands that rise from the screen's bottom edge, with the outer edges and
- * the columns' letters. The desktop's fonts are close, not exact.
+ * The calibration screen as KeyCalibrationActivity lays it out (owner, 2026-11-12): the words, two sliders (spacing and shift)
+ * with − and +, Reset to measured, and at the very bottom one-pixel orange lines at each gap's centre and at the outer edges, rising
+ * from the screen's bottom edge, with the columns' letters. The desktop's fonts are close, not exact.
  */
 private fun drawCalibration(alignment: KeyAlignment, file: File) {
     val keys = KeyGeometry(WIDTH.toFloat(), alignment)
@@ -234,21 +234,20 @@ private fun drawCalibration(alignment: KeyAlignment, file: File) {
     g.drawString("Key calibration", pad, y)
     g.color = rgb(0xFF99918A)
     g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(15).toInt())
-    for (line in listOf("Make the orange bands at the bottom carry on the", "dark gaps between the real keys below. Set the gap's",
-        "width first, then the key's, then shift the row. Every", "key is the same width. It saves as you go.")) {
+    for (line in listOf("Put each thin orange line at the bottom in the middle", "of a dark gap between the real keys below. Set the",
+        "spacing first, then shift the row. Every key is the", "same width. It saves as you go.")) {
         y += dp(22)
         g.drawString(line, pad, y)
     }
     y += dp(16)
     val sliderHeight = dp(84)
     g.color = rgb(0xFF141312)
-    g.fill(RoundRectangle2D.Float(pad, y, WIDTH - 2 * pad, 3 * sliderHeight + dp(20), dp(24), dp(24)))
+    g.fill(RoundRectangle2D.Float(pad, y, WIDTH - 2 * pad, 2 * sliderHeight + dp(20), dp(24), dp(24)))
     y += dp(12)
     val wide = WIDTH.toFloat()
     val measured = KeyAlignment.DEFAULT
     val sliders = listOf(
-        Triple("Gap width", alignment.gap * wide to measured.gap * wide, KeyAlignment.GAP_REACH),
-        Triple("Key width", alignment.key * wide to measured.key * wide, KeyAlignment.KEY_REACH),
+        Triple("Spacing", (alignment.key + alignment.gap) * wide to (measured.key + measured.gap) * wide, KeyAlignment.KEY_REACH),
         Triple("Shift", alignment.left * wide to measured.left * wide, KeyAlignment.SHIFT_REACH),
     )
     for ((name, values, reach) in sliders) {
@@ -287,16 +286,15 @@ private fun drawCalibration(alignment: KeyAlignment, file: File) {
     g.fill(RoundRectangle2D.Float(pad, y, resetWidth, dp(48), dp(48), dp(48)))
     g.color = rgb(0xFF160A04)
     g.drawString(reset, pad + dp(20), y + dp(30))
-    // The bands, at the very bottom, as KeyGrid draws them: the gaps bright, the outside of the edges dimmed, the edges, the letters.
+    // The lines, at the very bottom, as KeyGrid draws them: the outside of the edges dimmed, then one pixel at each gap's centre
+    // and at each outer edge, snapped to whole pixels, then the letters.
     val top = height - bands
-    g.color = rgb(0xFFEF804E)
-    for (column in 0 until 9) g.fill(Rectangle2D.Float(keys.keyLeft(column) + keys.key, top, keys.gap, bands))
     g.color = rgb(0x33EF804E)
     g.fill(Rectangle2D.Float(0f, top, keys.left, bands))
     g.fill(Rectangle2D.Float(keys.right, top, WIDTH - keys.right, bands))
     g.color = rgb(0xFFEF804E)
-    g.fill(Rectangle2D.Float(keys.left - dp(2), top, dp(2), bands))
-    g.fill(Rectangle2D.Float(keys.right, top, dp(2), bands))
+    val lines = (0 until 9).map { keys.keyLeft(it) + keys.key + keys.gap / 2 } + listOf(keys.left, keys.right)
+    for (x in lines) g.fillRect(Math.round(x - 0.5f), top.toInt(), 1, bands.toInt())
     g.color = rgb(0x80FFF1E6)
     g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(12).toInt())
     for ((column, name) in Layout.rows[0].withIndex()) {

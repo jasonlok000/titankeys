@@ -40,10 +40,10 @@ private object CalibrationColours {
 
 /**
  * Key calibration, in TitanKeys Debug only. The real keys sit just below the screen, and the guide, the Sym panel, the word menu
- * and the swipe's path line up with them. This screen draws only the gaps between the key columns, as orange bands that rise from
- * the screen's bottom edge, so they read as the real dark gaps between the keys below carrying on up the screen (owner,
- * 2026-11-12: the two edges were too hard to judge). Three sliders set a key's width, a gap's width and the shift of the whole
- * row, every key the same width; each has − and + for half a pixel. Every change is saved at once ([KeyCalibration]), and every
+ * and the swipe's path line up with them. This screen draws only the gaps between the key columns, as one-pixel orange lines at
+ * each gap's centre that rise from the screen's bottom edge, to set in the middle of the real dark gaps between the keys below
+ * (owner, 2026-11-12: the two edges, then wide bands, were too hard to judge). Two sliders set the spacing from one line to the next
+ * (a key and a gap, every key the same width) and the shift of the whole row; each has − and + for half a pixel. Every change is saved at once ([KeyCalibration]), and every
  * drawing follows it ([KeyGeometry]).
  */
 class KeyCalibrationActivity : Activity() {
@@ -70,17 +70,16 @@ class KeyCalibrationActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
             addView(text("Key calibration", 24f, CalibrationColours.CREAM, bold = true))
-            addView(text("Make the orange bands at the bottom carry on the dark gaps between the real keys below. Set the gap's " +
-                "width first, then the key's, then shift the row. Every key is the same width. It saves as you go.", 15f,
+            addView(text("Put each thin orange line at the bottom in the middle of a dark gap between the real keys below. Set the " +
+                "spacing first, then shift the row. Every key is the same width. It saves as you go.", 15f,
                 CalibrationColours.DIM))
             val wide = resources.displayMetrics.widthPixels.toFloat()
             val measured = KeyAlignment.DEFAULT
             addView(card(
-                slider("Gap width", measured.gap * wide, KeyAlignment.GAP_REACH, { it.gap * wide }) { a, px ->
-                    KeyAlignment(a.left, a.key, px / wide)
-                },
-                slider("Key width", measured.key * wide, KeyAlignment.KEY_REACH, { it.key * wide }) { a, px ->
-                    KeyAlignment(a.left, px / wide, a.gap)
+                // The lines sit at the gaps' centres, so only the spacing from one line to the next shows: a key and a gap together.
+                // The gap keeps its measured width, and the key takes the rest.
+                slider("Spacing", (measured.key + measured.gap) * wide, KeyAlignment.KEY_REACH, { (it.key + it.gap) * wide }) { a, px ->
+                    KeyAlignment(a.left, px / wide - a.gap, a.gap)
                 },
                 slider("Shift", measured.left * wide, KeyAlignment.SHIFT_REACH, { it.left * wide }) { a, px ->
                     KeyAlignment(px / wide, a.key, a.gap)
@@ -229,7 +228,7 @@ class KeyCalibrationActivity : Activity() {
 }
 
 /**
- * The gaps between the ten key columns of [KeyGeometry], and the keyboard's two outer edges, as thin orange bands that rise a short
+ * The gaps between the ten key columns of [KeyGeometry], and the keyboard's two outer edges, as one-pixel orange lines that rise a short
  * way from the screen's bottom edge, so each reads as a real gap between the keys below carrying on up the screen (owner,
  * 2026-11-12). No key is drawn whole: the boxes were what made it hard to judge. Each column's letter sits faintly between its
  * bands, for the top row.
@@ -242,6 +241,8 @@ internal class KeyGrid(context: Context) : View(context) {
         }
     private val density = resources.displayMetrics.density
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    /** The one-pixel lines, drawn without smoothing so each stays exactly one pixel wide. */
+    private val line = Paint()
     private val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = GuideFonts.medium(context)
         textAlign = Paint.Align.CENTER
@@ -253,19 +254,19 @@ internal class KeyGrid(context: Context) : View(context) {
 
     override fun onDraw(canvas: Canvas) {
         val keys = KeyGeometry(width.toFloat(), alignment)
-        // The gaps: bright, and as wide as the gaps themselves, from the very bottom edge up.
-        fill.color = CalibrationColours.ORANGE
-        for (column in 0 until KeyGeometry.COLUMNS - 1) {
-            val left = keys.keyLeft(column) + keys.key
-            canvas.drawRect(left, 0f, left + keys.gap, height.toFloat(), fill)
-        }
-        // The outer edges, Q's left and P's right: a thin line each, with the screen outside them dimmed a little.
+        // The screen outside the keys, dimmed a little.
         fill.color = CalibrationColours.OUTSIDE
         canvas.drawRect(0f, 0f, keys.left, height.toFloat(), fill)
         canvas.drawRect(keys.right, 0f, width.toFloat(), height.toFloat(), fill)
-        fill.color = CalibrationColours.ORANGE
-        canvas.drawRect(keys.left - EDGE * density, 0f, keys.left, height.toFloat(), fill)
-        canvas.drawRect(keys.right, 0f, keys.right + EDGE * density, height.toFloat(), fill)
+        // Each gap is one line, one pixel wide, at the gap's centre (owner, 2026-11-12), so it lines up with the middle of the dark
+        // gap between the real keys below. Lines snap to whole pixels, so none blurs across two.
+        line.color = CalibrationColours.ORANGE
+        for (column in 0 until KeyGeometry.COLUMNS - 1) {
+            pixelLine(canvas, keys.keyLeft(column) + keys.key + keys.gap / 2)
+        }
+        // The outer edges, Q's left and P's right, one pixel each too.
+        pixelLine(canvas, keys.left)
+        pixelLine(canvas, keys.right)
         // The letters, faint, between their bands.
         label.color = CalibrationColours.LABEL
         label.textSize = LABEL * density
@@ -276,11 +277,15 @@ internal class KeyGrid(context: Context) : View(context) {
         }
     }
 
+    /** A line one pixel wide, on the whole pixel whose centre is nearest [x]. */
+    private fun pixelLine(canvas: Canvas, x: Float) {
+        val pixel = Math.round(x - 0.5f).toFloat()
+        canvas.drawRect(pixel, 0f, pixel + 1f, height.toFloat(), line)
+    }
+
     private companion object {
-        /** How far the bands rise from the screen's bottom edge, in dp: a short way, like the real gaps. */
+        /** How far the lines rise from the screen's bottom edge, in dp: a short way, like the real gaps. */
         const val BANDS = 72f
-        /** The outer edges' lines, in dp, outside the keys. */
-        const val EDGE = 2f
         /** The letters' size and how far from the bands' top, in dp. */
         const val LABEL = 12f
         const val LABEL_TOP = 6f

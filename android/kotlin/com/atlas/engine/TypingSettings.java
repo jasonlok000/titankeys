@@ -394,13 +394,11 @@ public final class TypingSettings {
     }
 
     public static EnglishSpelling.Variant spelling(Context context) {
-        return "american".equals(preferences(context).getString("spelling", "american"))
-                ? EnglishSpelling.Variant.AMERICAN : EnglishSpelling.Variant.BRITISH;
+        return EnglishSpelling.Variant.of(preferences(context).getString("spelling", "american"));
     }
 
     public static void spelling(Context context, EnglishSpelling.Variant variant) {
-        preferences(context).edit().putString("spelling",
-                variant == EnglishSpelling.Variant.AMERICAN ? "american" : "british").apply();
+        preferences(context).edit().putString("spelling", variant.value()).apply();
     }
 
     private TypingSettings() {}

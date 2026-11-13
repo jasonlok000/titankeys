@@ -53,7 +53,11 @@ public final class PhoneWords {
     public void forEachWord(ObjIntConsumer<String> action) { predictions.forEachWord(action); }
 
     public static String spelled(String word, boolean american) {
-        return EnglishSpelling.convert(word, american ? EnglishSpelling.Variant.AMERICAN : EnglishSpelling.Variant.BRITISH);
+        return spelled(word, american ? EnglishSpelling.Variant.AMERICAN : EnglishSpelling.Variant.BRITISH);
+    }
+
+    public static String spelled(String word, EnglishSpelling.Variant variant) {
+        return EnglishSpelling.convert(word, variant);
     }
 
     /** The user's own words, kept the way the phone keeps them. */

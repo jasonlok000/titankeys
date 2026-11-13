@@ -56,7 +56,7 @@ export default function BoringGuide() {
       <Topic title="Shift and Alt">{"Press once for the next letter only. To cancel, press again after a pause. Want two quick presses to lock them? Turn on Press twice to lock Shift and Alt in Settings. When Shift is locked, the bar says Caps."}</Topic>
       <Topic title="Hold a letter for its symbol">{"Hold a letter and it turns into the symbol printed in its corner. Pick how long you hold in Settings > Hold a letter for its symbol, or turn it off there."}</Topic>
       <Topic title="Type with a light touch">{"Some keys type when you barely touch them, so you don't have to press them down. Pick which ones in Settings > Type with a light touch. Press a letter or Space there to add it."}</Topic>
-      <Topic title="English spelling">{"Colour or color? Pick British or American spelling for suggestions and typo fixes in Settings > English spelling."}</Topic>
+      <Topic title="English spelling">{"Colour or color? Pick British, American or Canadian spelling for suggestions and typo fixes in Settings > English spelling."}</Topic>
       <Topic title="Password, email and number fields">{"These fields get no suggestions and no fixes, and swipes don't type there. The touchpad still moves the cursor, and the bar still shows Shift, Alt and Ctrl."}</Topic>
     </Section>
     <Section title="Swiping">

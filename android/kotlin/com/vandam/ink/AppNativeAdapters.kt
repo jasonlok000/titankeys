@@ -457,7 +457,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("haptics", Haptics.enabled(activity))
             .put("hapticToggles", JSONObject(Haptics.toggles(activity)))
             .put("hapticsLab", if (HapticsLab.available(activity)) hapticsLab.value.state() else JSONObject.NULL)
-            .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
+            .put("spelling", TypingSettings.spelling(activity).value())
             .put("rawLogAvailable", RawLog.available(activity))
             .put("rawLog", RawLog.on(activity))
             .put("build", AppBuild.kind(activity))
@@ -597,8 +597,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "hapticToggles" -> (value as JSONObject).let { toggles ->
                 for (id in toggles.keys()) Haptics.toggle(activity, id, toggles.getBoolean(id))
             }
-            "spelling" -> TypingSettings.spelling(activity,
-                if (value == "american") EnglishSpelling.Variant.AMERICAN else EnglishSpelling.Variant.BRITISH)
+            "spelling" -> TypingSettings.spelling(activity, EnglishSpelling.Variant.of(value as String))
             "rawLog" -> RawLog.enabled(activity, value as Boolean)
             else -> throw IllegalArgumentException("Unknown setting: $key")
         }

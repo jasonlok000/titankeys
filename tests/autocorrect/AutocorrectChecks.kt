@@ -2,6 +2,7 @@ package com.atlas.autocorrect
 
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
+import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.PhoneWords
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
@@ -1032,6 +1033,12 @@ private fun composerFlow(world: Realistic) {
         same(inAmerican("orginize ").text, "organize ", "A fix follows the American setting")
         same(inAmerican("recogize ").text, "recognize ", "A known misspelling stays American on the American setting")
         same(inAmerican("travling ").text, "traveling ", "A scored fix follows the American setting")
+        val canadian = world.autocorrect(Lists(world.words, spelling = { PhoneWords.spelled(it, EnglishSpelling.Variant.CANADIAN) }))
+        fun inCanadian(text: String) = Typist(world, canadian).type(text)
+        same(inCanadian("orginize ").text, "organize ", "A known misspelling gets American -ize on the Canadian setting")
+        same(inCanadian("recogize ").text, "recognize ", "A fix gets American -ize on the Canadian setting")
+        same(inCanadian("Recogize ").text, "Recognize ", "A Canadian fix keeps the capital")
+        same(inCanadian("travling ").text, "travelling ", "A scored fix keeps the British double l on the Canadian setting")
         same(typed("recogize ").words.typed.toList(), listOf("recognise"), "The word learned is the one written")
         // Spelling a fix the user's way can give back what was typed. That is no fix.
         val circular = world.autocorrect(Lists(world.words, spelling = { if (it == "the") "teh" else if (it == "some") "dome" else it }))

@@ -1,7 +1,7 @@
 import { resource } from "ink";
 import { callNative, onNativeMessage } from "ink/native";
 
-export type Spelling = "british" | "american";
+export type Spelling = "british" | "american" | "canadian";
 /** How many spaces go in after a full stop, a question mark or an exclamation mark. */
 export type SentenceSpaces = "one" | "two" | "none";
 export type EnterKey = "send" | "newline" | "app";

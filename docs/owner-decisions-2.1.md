@@ -204,7 +204,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
-- **"me @ your mom" is out:** "is bad let's skip it." Any @ line gets something better, or no joke at all. (Owner, 23:45)
+- **"me @ your mom" is out:** "is bad let's skip it." Any @ line gets something better, or no joke at all. The slide may use another symbol if the line lands better (owner, 23:50). (Owner, 23:45)
 - **Text review (owner, 23:40):** "review also the text to make sure it's good and not cringey and not ai sounding but maintain my tone. leave the ones that I chose at least consistent to my idea." (Owner)
 - **Slide effects are decoration only** (owner, 23:25): "it should be sth that decorate the slides. not sth that changes the meaning or gives any meaning." Each slide gets its own (design-v2 §7). GO TOUCH GRASS NOW is good. (Owner)
 - **The Orchestrator decides everything for 2.1 (owner, 23:15):** "You can change the decisions that you made yourself. If anything fails, or looks ugly, or whatever, you can change your mind. otherwise make all decisions. I want this to be ready for a 2.1 release, with as much things fixed and polished and refined as possible. And then tmr morning I just review and if no comments good to go. so it shd be 10/10. review the work yourself. make the micro decisions if needed." The owner saw the list of 28 decisions in design-v2.md and the chat, and raised no objection. (Owner)

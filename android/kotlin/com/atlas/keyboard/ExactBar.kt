@@ -103,6 +103,8 @@ internal class ExactBar(
 
     private fun label(text: String) = TextView(context).apply {
         this.text = text
+        // Ink's font, as everywhere on the bar (owner, 2026-11-12).
+        typeface = context.resources.getFont(R.font.inter_regular)
         textSize = TEXT_SIZE
         gravity = Gravity.CENTER
         maxLines = 1

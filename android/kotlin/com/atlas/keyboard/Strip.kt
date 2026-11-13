@@ -46,8 +46,6 @@ class Strip(
             override val word: String,
             val forget: Boolean,
             val step: MenuKeys.Step = MenuKeys.Step.New,
-            /** Where the word stands without its favourite, where Unfavourite takes it: see [MenuKeys.base]. */
-            val base: MenuKeys.Step = MenuKeys.Step.New,
         ) : Notice {
             val first get() = MenuKeys.first(step).action
             val second get() = MenuKeys.second(step, forget)?.action
@@ -59,7 +57,9 @@ class Strip(
         }
     }
 
+    /** Ink's font, as everywhere in TitanKeys (owner, 2026-11-12), and its medium weight for the word menu's pills. */
     private val typeface = resources.getFont(R.font.inter_regular)
+    private val boldTypeface = resources.getFont(R.font.inter_medium)
     private val wordViews = WORD_ORDER.map { index -> item({ choose(index) }, { hold(index) }) }
     /** The word that the field has selected, alone in the middle. A touch or a hold opens its menu. */
     private val selectedView = item({ act(Action.OpenSelected) }, { act(Action.OpenSelected); true })
@@ -310,7 +310,24 @@ class Strip(
     /** The step the menu shows, and the animation that its last change plays, from when. See [MenuKeys.motion]. */
     private var shownStep: MenuKeys.Step? = null
     private var menuMotion: MenuKeys.Motion? = null
+    /**
+     * I's and O's icons, and the icons they are changing from, since when: no icon snaps to another, see [MenuMotion.icon]. Each
+     * as the menu's buttons, not the strip's actions.
+     */
+    private val slotIcons = arrayOfNulls<MenuKeys.Button>(2)
+    private val slotFrom = arrayOfNulls<MenuKeys.Button>(2)
+    private val slotChanged = LongArray(2)
+    /** The word as the menu last drew it, for Forget's dust: its text, left, baseline and width, in pixels. */
+    private var drawnWord: String? = null
+    private var drawnLeft = 0f
+    private var drawnBaseline = 0f
+    private var drawnWidth = 0f
+    /** Forget's dust, from when, over the word that was drawn: see [drawDust]. */
+    private var dustStart = -1L
+    private var dustWord: String? = null
     private var motionStart = 0L
+    /** When the menu came to rest at its step, for the ambient marks, or -1 while it hasn't: see [MenuMotion.ambient]. */
+    private var ambientStart = -1L
     private val crackPath = android.graphics.Path()
 
     init {
@@ -569,6 +586,7 @@ class Strip(
         super.dispatchDraw(canvas)
         drawMenuWord(canvas)
         drawMenu(canvas)
+        drawDust(canvas)
         drawAutoCapital(canvas)
         idle?.let { drawIdle(canvas, it) }
         drawDemoFinger(canvas)
@@ -662,17 +680,46 @@ class Strip(
             }
         }
         if (menu == null) {
+            // Forget closes the menu on its notice: the word dissolves into dust first, and the notice fades in after it.
+            if (shown is Notice.Forgot && shownMenu == shown.word && drawnWord != null && GuideMotion.enabled) {
+                dustStart = SystemClock.uptimeMillis()
+                dustWord = drawnWord
+                noticeLabel.alpha = 0f
+                noticeLabel.animate().alpha(1f).setStartDelay(MenuMotion.millis(MenuKeys.Motion.Forget) / 2)
+                    .setDuration(MENU_GLIDE_MILLIS * 2).start()
+            }
             pillShown = -1
             menuWordCentre = Float.NaN
             shownStep = null
             menuMotion = null
+            drawnWord = null
+            slotIcons.fill(null)
         } else if (shownMenu != menu.word || shownStep != menu.step) {
-            // A new menu, or a new step: its animation plays once, unless motion is off. A new word gets a new place.
+            // A new menu, or a new step: its animation plays once, unless motion is off. A new word gets a new place, and its
+            // icons come as they are; a new step changes them gently.
             val opened = shownMenu != menu.word
             if (opened) menuWordCentre = Float.NaN
             menuMotion = MenuKeys.motion(if (opened) null else shownStep, menu.step)?.takeIf { GuideMotion.enabled }
-            motionStart = SystemClock.uptimeMillis()
+            val now = SystemClock.uptimeMillis()
+            motionStart = now
+            ambientStart = -1L
             shownStep = menu.step
+            val buttons = arrayOf(MenuKeys.first(menu.step), MenuKeys.second(menu.step, menu.forget))
+            for (index in 0..1) {
+                if (!opened && slotIcons[index] != buttons[index]) {
+                    slotFrom[index] = slotIcons[index]
+                    slotChanged[index] = now
+                } else if (opened) slotChanged[index] = 0L
+                slotIcons[index] = buttons[index]
+            }
+        } else {
+            // The same step: only O's Forget can come or go, as Save and Unsave change what is left to forget.
+            val second = MenuKeys.second(menu.step, menu.forget)
+            if (slotIcons[1] != second) {
+                slotFrom[1] = slotIcons[1]
+                slotChanged[1] = SystemClock.uptimeMillis()
+                slotIcons[1] = second
+            }
         }
         shownMenu = menu?.word
         invalidate()
@@ -684,7 +731,7 @@ class Strip(
     private fun menuSlots(menu: Notice.Menu): List<Action?> = listOf(menu.first, menu.second, Action.Close)
 
     /** The left and right of a key column on this bar, in its own pixels: the Sym panel's columns. See [MenuKeys.slot]. */
-    private fun menuColumn(column: Int) = MenuKeys.slot(width.toFloat(), dp(Layout.KEY_SIDE_DP).toFloat(), column)
+    private fun menuColumn(column: Int) = MenuKeys.slot(width.toFloat(), column)
 
     private val menuPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
     private val menuWordText = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG)
@@ -735,7 +782,8 @@ class Strip(
         val now = SystemClock.uptimeMillis()
         val glide = if (GuideMotion.enabled) MENU_GLIDE_MILLIS else 0L
         val height = dp(56).toFloat()
-        val keySide = dp(Layout.KEY_SIDE_DP).toFloat()
+        // The real keys' left edge, as calibrated: the word keeps over the keys, as the buttons do.
+        val keySide = MenuKeys.slot(width.toFloat(), 0).first
         val icon = dp(MENU_ICON_DP)
         val slots = menuSlots(menu)
         var more = false
@@ -750,15 +798,15 @@ class Strip(
         }
         val open = pillOpen.at(if (hovered >= 0) 1f else 0f, now, glide)
         if (open <= 0f) pillShown = -1
-        pillText.typeface = typeface
-        pillText.isFakeBoldText = true
+        // Ink's font, in its own medium weight, as Ink's headings use it: no faked bold.
+        pillText.typeface = boldTypeface
         pillText.textSize = wordPixels() * MENU_PILL_TEXT
         val pillHeight = dp(MENU_PILL_DP).toFloat()
         var pill: Pair<Float, Float>? = null
         val action = pillAction.takeIf { pillShown >= 0 }
         if (action != null) {
             val name = context.getString(label(action))
-            val (left, right) = MenuKeys.pill(width.toFloat(), keySide, pillShown, pillText.measureText(name), icon.toFloat(),
+            val (left, right) = MenuKeys.pill(width.toFloat(), pillShown, pillText.measureText(name), icon.toFloat(),
                 dp(MENU_PILL_LEFT).toFloat(), dp(MENU_PILL_GAP).toFloat(), dp(MENU_PILL_RIGHT).toFloat())
             if (pillSnap) {
                 pillLeft.jump(left)
@@ -773,7 +821,8 @@ class Strip(
             pillLeft.jump(Float.NaN)
             pillRight.jump(Float.NaN)
         }
-        // The word, placed once in the room left of the buttons. A long word loses its middle to fit that room.
+        // The word, placed once in the room left of the buttons. A long word loses its middle to fit that room. It is always the
+        // text's colour; an animation may only pop it a little or shake it, and Forget dissolves it.
         menuWordText.typeface = typeface
         menuWordText.textSize = wordPixels()
         menuWordText.color = look.ink
@@ -781,20 +830,42 @@ class Strip(
         val baseline = height / 2 - (menuWordText.ascent() + menuWordText.descent()) / 2
         val wordFoot = navigationInset + height - (baseline + menuWordText.descent())
         val wordLeft = maxOf(side.toFloat(), keySide, corners.inset(wordFoot).toFloat() + dp(MENU_CORNER_GAP))
-        val wordRight = MenuKeys.wordRight(width.toFloat(), keySide, dp(MENU_WORD_GAP).toFloat())
+        val wordRight = MenuKeys.wordRight(width.toFloat(), dp(MENU_WORD_GAP).toFloat())
         if (menuWordCentre.isNaN()) menuWordCentre = MenuKeys.wordCentre(wordLeft, wordRight)
         val text = MenuKeys.shorten(menu.word) { menuWordText.measureText(it) <= (wordRight - wordLeft).coerceAtLeast(0f) }
         val textWidth = menuWordText.measureText(text)
         val textLeft = menuWordCentre - textWidth / 2
-        canvas.drawText(text, textLeft, baseline, menuWordText)
-        // The step's animation, just past the word's end.
+        drawnWord = text
+        drawnLeft = textLeft
+        drawnBaseline = baseline
+        drawnWidth = textWidth
+        val density = resources.displayMetrics.density
         val playing = menuMotion
-        if (playing != null) {
-            val density = resources.displayMetrics.density
-            val sprites = MenuMotion.frame(playing, now - motionStart, (textLeft + textWidth) / density + MENU_MOTION_GAP,
-                (baseline + menuWordText.ascent() * .5f) / density)
-            if (sprites.isEmpty()) menuMotion = null else more = true
-            for (sprite in sprites) drawSprite(canvas, sprite, density)
+        val frame = if (playing == null) null else MenuMotion.frame(playing, now - motionStart, wordBox(text, textLeft, textWidth, baseline, density))
+        if (frame != null && frame.sprites.isEmpty() && now - motionStart >= MenuMotion.millis(playing!!)) menuMotion = null
+        else if (frame != null) more = true
+        // Hearts burst from behind the word: they draw first.
+        frame?.sprites?.filter { it.behind }?.forEach { drawSprite(canvas, it, density) }
+        canvas.save()
+        if (frame != null) {
+            canvas.translate(frame.wordShift * density, 0f)
+            canvas.scale(frame.wordScale, frame.wordScale, menuWordCentre, baseline + (menuWordText.ascent() + menuWordText.descent()) / 2)
+        }
+        canvas.drawText(text, textLeft, baseline, menuWordText)
+        canvas.restore()
+        frame?.sprites?.filterNot { it.behind }?.forEach { drawSprite(canvas, it, density) }
+        // At rest, the ambient status: a faint heart now and then by a favourite, a faint ribbon by a saved word. It waits while a
+        // button is hovered, and starts over after.
+        var ambientWait = Long.MAX_VALUE
+        if (menuMotion == null) {
+            if (pillShown >= 0) ambientStart = -1L
+            else {
+                if (ambientStart < 0) ambientStart = now
+                val still = !GuideMotion.enabled
+                val box = wordBox(text, textLeft, textWidth, baseline, density)
+                for (sprite in MenuMotion.ambient(menu.step, now - ambientStart, box, still)) drawSprite(canvas, sprite, density)
+                ambientWait = MenuMotion.ambientWait(menu.step, now - ambientStart, still)
+            }
         }
         // The pill, under its icon, with the action's name. It covers what it slides over: a long word's end fades under it.
         val spent = action == Action.Favourited
@@ -814,7 +885,10 @@ class Strip(
             canvas.save()
             canvas.clipRect(menuBox)
             pillText.color = GuideMotion.faded(look.accent, (if (spent) MENU_SPENT_ALPHA else 1f) * open)
-            canvas.drawText(context.getString(label(action)), pill.first + dp(MENU_PILL_LEFT),
+            // The name keeps its place by the icon, and the growing pill uncovers it: it never slides into the icon.
+            val name = context.getString(label(action))
+            canvas.drawText(name, MenuKeys.pillLabel(pill.second, pillText.measureText(name), icon.toFloat(), dp(MENU_PILL_GAP).toFloat(),
+                dp(MENU_PILL_RIGHT).toFloat()),
                 height / 2 - (pillText.ascent() + pillText.descent()) / 2, pillText)
             canvas.restore()
         }
@@ -833,44 +907,87 @@ class Strip(
             val inPill = pill != null && column == pillShown
             // The pill covers the buttons to its left while it shows.
             if (pill != null && !inPill && centre in pill.first..pill.second) continue
-            val tint = when {
-                inPill -> GuideMotion.faded(look.accent, if (spent) MENU_SPENT_ALPHA else 1f)
-                slotAction == Action.Favourited -> GuideMotion.faded(look.accent, MENU_SPENT_ICON_ALPHA)
-                pill != null -> look.muted
-                else -> look.ink
-            }
-            context.getDrawable(icon(slotAction))?.mutate()?.let { drawable ->
-                drawable.setTint(tint)
-                drawable.alpha = alpha
-                val x = Math.round(centre - icon / 2f)
-                val y = Math.round(top)
-                drawable.setBounds(x, y, x + icon, y + icon)
-                drawable.draw(canvas)
+            // Orange means on or touched, as Settings' switches (owner, 2026-11-12): a hovered button inside its pill, and the
+            // filled heart of a favourite. Every other icon is the text's colour, and grey beside a pill. No icon snaps to another:
+            // it morphs, see [MenuMotion.icon].
+            val layers = if (index < 2 && slotChanged[index] > 0L) {
+                val elapsed = now - slotChanged[index]
+                if (elapsed < MenuMotion.ICON_MILLIS) more = true else slotChanged[index] = 0L
+                MenuMotion.icon(slotFrom[index], slotIcons[index], elapsed, GuideMotion.enabled)
+            } else null
+            if (layers == null) drawIcon(canvas, icon(slotAction), centre, top, icon, 1f, 0f, alpha,
+                if (inPill || slotAction == Action.Favourited) look.accent else if (pill != null) look.muted else look.ink, 1f)
+            else for (layer in layers) {
+                val button = layer.button ?: continue
+                val rest = if (pill != null && !inPill) look.muted else look.ink
+                val tint = if (inPill) look.accent else blend(rest, look.accent, layer.orange)
+                drawIcon(canvas, icon(button.action), centre, top + layer.drop * density, icon, layer.scale, 0f,
+                    (alpha * layer.alpha).toInt(), tint, layer.fill)
             }
         }
-        if (more || pillOpen.moving(now, glide) || pillLeft.moving(now, glide) || pillRight.moving(now, glide)) postInvalidateOnAnimation()
+        if (more || ambientWait == 0L || pillOpen.moving(now, glide) || pillLeft.moving(now, glide) || pillRight.moving(now, glide))
+            postInvalidateOnAnimation()
+        else if (ambientWait != Long.MAX_VALUE) postInvalidateDelayed(ambientWait)
+    }
+
+    /** [word] on the bar, as [MenuMotion] places its particles: its ends and the middle of its letters, in dp, and its seed. */
+    private fun wordBox(word: String, left: Float, width: Float, baseline: Float, density: Float) = MenuMotion.Word(
+        left / density, (left + width) / density, (baseline + (menuWordText.ascent() + menuWordText.descent()) / 2) / density,
+        MenuMotion.Word.seed(word))
+
+    /** One of a button's icons at [centre], scaled, [fill]ed from the bottom when less than 1, as [MenuMotion.icon] has it. */
+    private fun drawIcon(canvas: Canvas, id: Int, centre: Float, top: Float, size: Int, scale: Float, turn: Float, alpha: Int,
+                         tint: Int, fill: Float) {
+        val drawable = context.getDrawable(id)?.mutate() ?: return
+        drawable.setTint(tint)
+        drawable.alpha = alpha.coerceIn(0, 255)
+        val x = Math.round(centre - size / 2f)
+        val y = Math.round(top)
+        drawable.setBounds(x, y, x + size, y + size)
+        canvas.save()
+        canvas.scale(scale, scale, centre, top + size / 2f)
+        if (turn != 0f) canvas.rotate(turn, centre, top + size / 2f)
+        if (fill < 1f) canvas.clipRect(x.toFloat(), y + size * (1f - fill), (x + size).toFloat(), (y + size).toFloat())
+        drawable.draw(canvas)
+        canvas.restore()
+    }
+
+    /** [from] turned towards [to] by [part], from 0 to 1, channel by channel. */
+    private fun blend(from: Int, to: Int, part: Float): Int {
+        val p = part.coerceIn(0f, 1f)
+        fun mix(shift: Int) = (((from shr shift) and 0xFF) * (1 - p) + ((to shr shift) and 0xFF) * p).toInt() shl shift
+        return mix(24) or mix(16) or mix(8) or mix(0)
     }
 
     /**
-     * One shape of a step's animation: a heart in the accent colour, or a bookmark in the text's. A half is the shape cut along
-     * the broken heart's crack, the same zigzag as Unfavourite's and Unsave's icons.
+     * One particle of an animation, always orange (owner, 2026-11-12): a heart, a bookmark ribbon, or a speck of dust. A half is
+     * the shape cut along the broken heart's crack, the same zigzag as Unfavourite's and Unsave's icons.
      */
     private fun drawSprite(canvas: Canvas, sprite: MenuMotion.Sprite, density: Float) {
-        val heart = sprite.shape == MenuMotion.Shape.Heart || sprite.shape == MenuMotion.Shape.HeartLeft || sprite.shape == MenuMotion.Shape.HeartRight
-        val drawable = context.getDrawable(if (heart) R.drawable.menu_favourited else R.drawable.menu_mark_saved)?.mutate() ?: return
-        drawable.setTint(if (heart) look.accent else look.ink)
-        drawable.alpha = (sprite.alpha * 255).toInt().coerceIn(0, 255)
         val size = sprite.size * density
         val x = sprite.x * density
         val y = sprite.y * density
+        val alpha = (sprite.alpha * 255).toInt().coerceIn(0, 255)
+        if (sprite.shape == MenuMotion.Shape.Dust) {
+            menuPaint.shader = null
+            menuPaint.color = look.accent
+            menuPaint.alpha = alpha
+            canvas.drawCircle(x, y, size / 2, menuPaint)
+            menuPaint.alpha = 255
+            return
+        }
+        val heart = sprite.shape == MenuMotion.Shape.Heart || sprite.shape == MenuMotion.Shape.HeartLeft || sprite.shape == MenuMotion.Shape.HeartRight
+        val drawable = context.getDrawable(if (heart) R.drawable.menu_favourited else R.drawable.menu_mark_saved)?.mutate() ?: return
+        drawable.setTint(look.accent)
+        drawable.alpha = alpha
         canvas.save()
         canvas.rotate(sprite.turn, x, y)
         val left = x - size / 2
         val top = y - size / 2
         drawable.setBounds(Math.round(left), Math.round(top), Math.round(left + size), Math.round(top + size))
         val half = when (sprite.shape) {
-            MenuMotion.Shape.HeartLeft, MenuMotion.Shape.BookmarkLeft -> CRACK_LEFT
-            MenuMotion.Shape.HeartRight, MenuMotion.Shape.BookmarkRight -> CRACK_RIGHT
+            MenuMotion.Shape.HeartLeft, MenuMotion.Shape.RibbonLeft -> CRACK_LEFT
+            MenuMotion.Shape.HeartRight, MenuMotion.Shape.RibbonRight -> CRACK_RIGHT
             else -> null
         }
         if (half != null) {
@@ -885,6 +1002,24 @@ class Strip(
         }
         drawable.draw(canvas)
         canvas.restore()
+    }
+
+    /** Forget's dust: the forgotten word fades as it dissolves into orange specks, under the notice fading in. */
+    private fun drawDust(canvas: Canvas) {
+        val word = dustWord ?: return
+        val elapsed = SystemClock.uptimeMillis() - dustStart
+        if (elapsed >= MenuMotion.millis(MenuKeys.Motion.Forget)) {
+            dustWord = null
+            return
+        }
+        val density = resources.displayMetrics.density
+        val frame = MenuMotion.frame(MenuKeys.Motion.Forget, elapsed, wordBox(word, drawnLeft, drawnWidth, drawnBaseline, density))
+        menuWordText.color = look.ink
+        menuWordText.alpha = (frame.wordAlpha * 255).toInt()
+        canvas.drawText(word, drawnLeft, drawnBaseline, menuWordText)
+        menuWordText.alpha = 255
+        for (sprite in frame.sprites) drawSprite(canvas, sprite, density)
+        postInvalidateOnAnimation()
     }
 
     /** The menu's button under a touch at [x], or null. */
@@ -1215,12 +1350,9 @@ class Strip(
         private const val MENU_PILL_ALPHA = .24f
         private const val MENU_SPENT_PILL_ALPHA = .12f
         private const val MENU_SPENT_ALPHA = .6f
-        private const val MENU_SPENT_ICON_ALPHA = .35f
         private const val MENU_GLIDE_MILLIS = 140L
         /** How far the pill's leading edge fades a long word that it slides over, in dp. */
         private const val MENU_PILL_FADE = 20
-        /** How far past the word's end a step's animation plays, in dp. */
-        private const val MENU_MOTION_GAP = 10f
         /** The broken heart's crack, in its icon's 24 by 24 units: each half of a broken heart or bookmark is cut along it. */
         private val CRACK = listOf(12.3f to 0f, 12.3f to 6.6f, 10.4f to 10.4f, 13.6f to 12.6f, 11.6f to 17.4f, 11.6f to 24f)
         private val CRACK_LEFT = listOf(0f to 0f) + CRACK + listOf(0f to 24f)

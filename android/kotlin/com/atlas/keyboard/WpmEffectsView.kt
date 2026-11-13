@@ -49,6 +49,9 @@ internal class WpmEffectsView(context: Context) : View(context) {
     /** Told each frame how far to tip the number, in degrees, and how far to shake the screen, in pixels. */
     var shaking: ((wobble: Float, dx: Float, dy: Float) -> Unit)? = null
 
+    /** Told as each lightning flash comes, so the playground can play its hit with it. */
+    var flashed: (() -> Unit)? = null
+
     private enum class Kind { Spark, Confetti, Fall, Sweat }
 
     private class Bit(
@@ -219,6 +222,7 @@ internal class WpmEffectsView(context: Context) : View(context) {
         if (effects.lightning && now >= nextFlash) {
             flash = 1f
             nextFlash = now + random.nextLong(FLASH_GAP_MIN, FLASH_GAP_MAX)
+            flashed?.invoke()
         }
     }
 

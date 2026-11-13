@@ -18,7 +18,8 @@ import kotlin.math.roundToInt
  * Draws every slide's decoration with the real GuideDecor on a 1076×1200 frame (the Titan 2 Elite's), behind a stand-in of the
  * slide's content, and checks §7's rules on it:
  * - nothing is drawn inside a keep-out rect or within 8 dp of one, or outside the area;
- * - at most 12 shapes at once, and no layer stronger than its level (orange 14–24%, cream 10–14%, ink 8% on the pass screen);
+ * - at most 12 shapes at once, and no layer stronger than its level (the accent or cream at 30–50%, ink 8% on the pass screen, the
+ *   grass's ink at up to 60% on the end's accent);
  * - the same moment draws the same picture, every loop comes round exactly, and the picture moves;
  * - a frame takes GuideDecor under 2 ms on this computer.
  * Usage: GuideDecorRenderKt <out folder> <font folder>. It writes sheet.png (as faint as on the phone), sheet-bright.png (the
@@ -42,9 +43,9 @@ fun main(args: Array<String>) {
 
     // The rules for every look.
     for ((slide, look) in GuideDecor.LOOKS) {
-        check(look.accent && look.level in .1399f..0.2401f || !look.accent && look.level in .0999f..0.1401f) {
-            "$slide is the accent at 14-24% or cream at 10-14%"
-        }
+        // Round 2, reviewed on the phone (2026-11-13): the accent at 36–46%, the typewriter's cream layer at 40%, the grass's ink up to 60%.
+        if (slide == GuideDecor.FINALE) check(look.accent && look.level in .4999f..0.6001f) { "The grass's front tone is ink at 50-60%" }
+        else check(look.level in .2999f..0.5001f) { "$slide is the accent or cream at 30-50%" }
         check(look.loop in 6_000L..20_000L) { "$slide loops in 6 to 20 s" }
     }
     check(GuideDecor.INK_LEVEL == .08f) { "Ink at 8% on the pass screen" }
@@ -64,7 +65,8 @@ fun main(args: Array<String>) {
             val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
             val shapes = decor.draw(Canvas(image), slide, t, screen.area, screen.keepOut, onOrange, DP)
             check(shapes <= GuideDecor.MAX_SHAPES) { "$slide draws $shapes shapes at $t ms" }
-            val level = if (onOrange) GuideDecor.INK_LEVEL else look.level
+            // The grass is always on the end's accent at its own strengths; the slides turn ink at 8% on the pass screen.
+            val level = if (onOrange && slide != GuideDecor.FINALE) GuideDecor.INK_LEVEL else look.level
             var strongest = 0
             for (y in 0 until HEIGHT) for (x in 0 until WIDTH) {
                 val a = image.getRGB(x, y) ushr 24
@@ -212,7 +214,7 @@ private fun frame(decor: GuideDecor, slide: String, screen: Screen, t: Long, bol
     val layer = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
     decor.draw(Canvas(layer), slide, t, screen.area, screen.keepOut, onOrange, DP)
     if (bright) {
-        val boost = .55f / (if (onOrange) GuideDecor.INK_LEVEL else GuideDecor.LOOKS.getValue(slide).level)
+        val boost = .55f / (if (onOrange && slide != GuideDecor.FINALE) GuideDecor.INK_LEVEL else GuideDecor.LOOKS.getValue(slide).level)
         for (y in 0 until HEIGHT) for (x in 0 until WIDTH) {
             val p = layer.getRGB(x, y)
             val a = ((p ushr 24) * boost).roundToInt().coerceAtMost(255)

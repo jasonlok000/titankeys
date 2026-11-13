@@ -256,6 +256,13 @@ all of them are unapproved.
     - By design: the Saved word's faint book over the front page's drawn keys.
     - For the owner's hands: the touchpad (swipe, held flick and PAUSE height, steer, select), the real Sym key and held
       letters, haptic feel, pasting on the guide's slides, and Next on a really passed slide.
+  - **Merged for build #11 (A):** the menu slide on TitanKeys (8db62f7: "TitanKeys belongs in your favourites", marked in the
+    box, only the hold unlocked, a chip for every off-track move, lock chips all say "blocked") and the held flick's trail (8f31e44:
+    HoldTrail keeps the flick's points and the hold's, so the guide's drawing shows the whole path and fades it at the lift). Guide
+    and delete-hold checks pass on the merge. Open: the passed render drops TitanKeys' underline in the box (asked A); the bar's
+    mark through the open menu waits on W's Strip.lit hook.
+  - **W, accents off:** Favourite takes Accent's raised cream #E3D5CB in the dark look (warm(orange) matched Not saved's grey). The
+    light look's value must sit as far from Saved's ink as cream does from white; W sends a four-status render. (Orchestrator)
   - **The ∞ slide names ∞ (4c6fd0e), for build #11:** "Answer honestly." over "So how long do I last in bed with your mother? ∞";
     the hunt "Find ∞ and press its key. It's further in."; done "Sure you do."; the ∞ decoration kept. Guide checks pass.
   - **Owner's report (14:55):** the held flick shows no finger trail on the guide's "Hold the flick" slide. Sent to A, after the

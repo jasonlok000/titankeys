@@ -33,8 +33,8 @@ internal object GuideColours {
 }
 
 /**
- * Ink's font, Inter, for everything the guide and its screens draw (owner, v5.3: no Roboto). The app ships Inter Regular and
- * Medium; the titles are Medium made bold, as there's no Bold file. Loaded once, from any context.
+ * Ink's font, Inter, for everything the guide and its screens draw (owner, v5.3: no Roboto): Regular, Medium, and the real Bold
+ * for titles and bold text, from the official Inter 4.1 release (OFL). Loaded once, from any context.
  */
 internal object GuideFonts {
     @Volatile private var regular: android.graphics.Typeface? = null
@@ -46,7 +46,8 @@ internal object GuideFonts {
         val res = context.applicationContext.resources
         regular = runCatching { res.getFont(R.font.inter_regular) }.getOrNull()
         medium = runCatching { res.getFont(R.font.inter_medium) }.getOrNull()
-        heavy = android.graphics.Typeface.create(medium ?: android.graphics.Typeface.DEFAULT, 700, false)
+        heavy = runCatching { res.getFont(R.font.inter_bold) }.getOrNull()
+            ?: android.graphics.Typeface.create(medium ?: android.graphics.Typeface.DEFAULT, 700, false)
     }
 
     fun regular(context: Context) = load(context).let { regular ?: android.graphics.Typeface.DEFAULT }

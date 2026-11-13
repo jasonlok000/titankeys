@@ -32,9 +32,10 @@ private const val H = 1200
 private const val D = 1.56f
 private fun px(dp: Number) = Math.round(dp.toFloat() * D)
 
-/** Ink's font, from the repository: Inter Regular, and Medium, which the titles embolden. Falls back to the desktop's sans. */
+/** Ink's font, from the repository: Inter Regular, Medium and Bold, as the phone has them. Falls back to the desktop's sans. */
 private val INTER: Font by lazy { load("assets/fonts/Inter-Regular.otf") }
 private val INTER_MEDIUM: Font by lazy { load("assets/fonts/Inter-Medium.otf") }
+private val INTER_BOLD: Font by lazy { load("android/src/main/res/font/inter_bold.otf") }
 
 private fun load(path: String): Font = try {
     File(path).inputStream().use { Font.createFont(Font.TRUETYPE_FONT, it) }
@@ -45,8 +46,8 @@ private fun load(path: String): Font = try {
 
 private fun regular(sp: Number) = INTER.deriveFont(sp.toFloat() * D)
 private fun medium(sp: Number) = INTER_MEDIUM.deriveFont(sp.toFloat() * D)
-/** The titles: Inter Medium, emboldened, as Android does for a weight the font file doesn't have. */
-private fun heavy(sp: Number) = INTER_MEDIUM.deriveFont(Font.BOLD, sp.toFloat() * D)
+/** The titles: Inter Bold. */
+private fun heavy(sp: Number) = INTER_BOLD.deriveFont(sp.toFloat() * D)
 
 private fun alpha(colour: Color, amount: Float) = Color(colour.red, colour.green, colour.blue, Math.round(amount.coerceIn(0f, 1f) * 255))
 

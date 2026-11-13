@@ -142,7 +142,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - Calibrate by the **gaps between keys**, with every key the same width. Only the gaps are drawn, as bands that line up with the real gaps below the screen. Sliders for key width, gap width and shift, each with fine −/+ steps. This replaces the two-edge version, which was too hard to judge by eye. (Owner, 2026-11-12)
 - The lines are **one pixel**, at the **centre** of each gap, with one at each outer edge. There are two sliders, Spacing (key plus gap) and Shift. This replaces the bands and the separate key and gap sliders. (Owner, 2026-11-12)
 - Calibrated by the owner on a quick page served to the phone (2026-11-12): a key and a gap every 107.5 px on the 1076 px screen, centred. This is now the default for everyone, and values stored against the old default are dropped.
-- The keys are **square**, and there's basically no gap between rows, so the rows touch. The guide's keyboard is drawn at its real size, 334 px tall instead of 474. This is look-only; the touchpad code is unchanged. (Owner, 2026-11-12, checked on the quick page)
+- The keys are **square** and the rows are evenly spaced, a key and a gap apart. So the guide's keyboard is drawn at its real size, 406 px tall instead of 474. This is look-only; the touchpad code is unchanged. (Owner, 2026-11-12)
 - Key calibration is for the overlays tied to keys: the Sym and emoji panels, the clipboard, the word menu buttons, and the guide's hints and trail. It has two sliders, Q's left edge and P's right edge, over the three letter rows. The defaults come from the phone's real geometry, and the owner fine-tunes it on the phone. (Owner, 2026-11-12)
 
 ## Launch

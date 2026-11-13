@@ -613,6 +613,10 @@ private fun theFinale() {
     same(texts(GuideFinale.LINE_IN / 2).size, 2, "At the start, only the first line is coming in")
     val stacked = texts(GuideFinale.summaryEnd(lines))
     same(stacked.count { it.alpha >= .99f }, lines.size * 2, "Then every line, whole")
+    // No keyboard and no bar on the finale and the end, however they're reached (build #9: its bar came back after a Skip); every
+    // slide before has them.
+    same(GUIDE_STEPS.filter { !it.keyboard }.map { it.chapter }.distinct(), listOf(GuideChapter.End), "Only the end goes without the keyboard")
+    same(GUIDE_STEPS.last().keyboard, false, "and the end, where the guide finishes, has none")
     val gathered = texts(GuideFinale.gatherStart(lines) + GuideFinale.GATHER + 10)
     same(gathered.map { it.text }.joinToString(""), ACROSTIC.replace(" ", ""), "Then only the first letters, which spell the phrase")
     // The phrase is the finale's headline (owner, 2026-11-13: it was a bit small): two balanced lines, read in order.

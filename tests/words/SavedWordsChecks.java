@@ -54,8 +54,19 @@ public final class SavedWordsChecks {
 
         words.typed("Zorbly", day, true);
         check(words.spellings(day).length == 0, "A new word typed once must not show in the list");
+        // The word menu's Forget is only for a learned word, one TitanKeys suggests (owner, 2026-11-13). A word typed once is
+        // still gathering evidence: Forget would still take it out, but it isn't learned.
+        check(words.typedWords().contains("zorbly"), "A word typed once is in the list, gathering evidence");
+        check(!words.learnedWords(day).contains("zorbly"), "A word typed once isn't learned");
         words.typed("Zorbly", day, true);
         check(Arrays.equals(words.spellings(day), new String[] { "Zorbly" }), "A word typed 2 times must show in the list");
+        check(words.learnedWords(day).contains("zorbly"), "A word typed 2 times is learned");
+        check(!words.learnedWords(day + 30).contains("zorbly"), "A learned word that faded isn't learned any more");
+        LanguageHabits savedLater = new LanguageHabits();
+        savedLater.typed("Zorbly", day, true);
+        savedLater.add("Zorbly", day);
+        check(!savedLater.learnedWords(day).contains("zorbly") && savedLater.addedWords().contains("zorbly"),
+                "A candidate you saved is saved, not learned");
         check(words.active(day + 29).size() == 1, "A learned word must stay active for a month");
         check(words.active(day + 30).isEmpty() && words.spellings(day + 30).length == 0,
                 "A learned word that is not used for a month must fade");

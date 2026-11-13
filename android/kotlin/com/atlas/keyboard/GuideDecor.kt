@@ -9,6 +9,8 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.asin
+import kotlin.math.atan
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.floor
@@ -20,31 +22,38 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
- * The guide's slide decorations (docs/design-v2.md §7): a faint picture behind each slide that only follows its theme. It never
- * reacts to typing, a mistake, a hint or a pass, and never tells you anything.
+ * The guide's slide decorations (docs/design-v2.md §7): a picture behind each slide that only follows its theme. It never reacts
+ * to typing, a mistake, a hint or a pass, and never tells you anything.
  *
  * A pure renderer. What it draws depends only on its arguments: the slide's id, how long the slide has shown ([draw]'s millis),
  * the area, the keep-out rects, the pass tone and the dp. Each slide has its own seeded randomness, and every loop is a pure
- * function of millis, so any frame can be drawn again, in any order. What it keeps between calls (paths, the free spots it found
- * for an area) is only a cache that it rebuilds when anything changes.
+ * function of millis, so any frame can be drawn again, in any order. What it keeps between calls (paths, the free spots and open
+ * bands it found for an area) is only a cache that it rebuilds when anything changes.
  *
- * The rules, from §7:
- * - Orange at 14–24% or cream at 10–14%, the whole picture laid down as one layer so overlaps never add up; ink at 8% on the orange
- *   pass screen ([draw]'s onOrange).
+ * The rules, from §7, as reviewed on the phone (round 2, 2026-11-13; at 6–12% they vanished, the owner: "too subtle"):
+ * - The accent at 36–46%, the typewriter's layer at 40% (its e cream at about 20%), and the grass in ink at 24, 40 and 60% on the
+ *   end's accent. Each picture is laid down as one layer, so overlaps never add up. Ink at 8% on the pass screen ([draw]'s
+ *   onOrange). With Orange accents off, the accent is cream at the orange's lightness ([accentColour]), so nothing turns brighter.
  * - At most [MAX_SHAPES] shapes at once, slow loops of 6–20 s ([loopMillis]).
- * - Nothing inside a keep-out rect or within [CLEAR_DP] of one: the rects are cut out of the clip, so a shape that passes behind
- *   the title, the instruction, the field or the keyboard drawing simply goes out of sight there.
+ * - Nothing inside a keep-out rect or within [CLEAR_DP] of one, then a soft edge of [FEATHER_DP]: a shape that passes behind the
+ *   title, the instruction, the field or the keyboard drawing goes out of sight there.
  * - Paths and Inter glyphs only, no emoji images.
+ *
+ * Most pictures live in the open bands across the screen ([gaps]): the one between the field and the keys ([lower]) and the one
+ * between the top bar and the title ([upper]).
  *
  * Slide ids are GuideSteps' ids (type, swipe, menu, backspace, flick, hold, steer, selectmore, alt, holdsym, symmain, symgroups,
  * clown, paste, clipboard), plus [FINALE] for the end's grass and [SETUP] for slide zero. Any other id draws nothing.
  *
- * [GuideDecorView] hosts it with the timing, fades and frame rate. How the guide adds it is in that view's KDoc.
+ * [GuideDecorView] hosts it with the timing, fades and frame rate. How the guide adds it is in that view's KDoc. The designs were
+ * drawn and reviewed in a phone preview first, whose renderer is a line-for-line copy of this file in JavaScript.
  */
 class GuideDecor(private val font: Typeface? = null) {
-    /** Takes the decoration away where it would sit round a keep-out (featherOut). */
+    /** Takes away what's under a shape: the soft keep-outs, cut-outs, and flat layers that never add up. */
     private val eraser = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF000000.toInt()
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
         setXfermode(PorterDuffXfermode(PorterDuff.Mode.DST_OUT))
     }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -79,15 +88,18 @@ class GuideDecor(private val font: Typeface? = null) {
         arcTo(-3f, l - 17.5f, 8f, l - 6.5f, 0f, 180f, false)
         lineTo(-3f, 10f)
     }
-    private val gears = HashMap<Int, Path>()
+    private val gearLines = HashMap<Int, Path>()
+    private val gearBodies = HashMap<Int, Path>()
     private val spotCache = LinkedHashMap<Long, FloatArray>()
     private val polyline = FloatArray(800)
+    private val pen = FloatArray(2)
 
     private lateinit var canvas: Canvas
     private val area = RectF()
     private var keepOut: List<RectF> = emptyList()
     private var dp = 1f
     private var colour = 0
+    private var accent = 0
     private var shapes = 0
 
     /**
@@ -98,7 +110,8 @@ class GuideDecor(private val font: Typeface? = null) {
     fun draw(canvas: Canvas, slide: String, millis: Long, area: RectF, keepOut: List<RectF>, onOrange: Boolean, dp: Float,
              fade: Float = 1f): Int {
         val look = LOOKS[slide] ?: return 0
-        val level = if (onOrange) INK_LEVEL else look.level
+        // The grass is always on the end's accent, in ink at its own strengths; the slides turn ink at 8% on the pass screen.
+        val level = if (slide == FINALE || !onOrange) look.level else INK_LEVEL
         val alpha = (level * fade.coerceIn(0f, 1f) * 255).roundToInt()
         if (alpha <= 0 || area.width() <= 0f || area.height() <= 0f) return 0
         this.canvas = canvas
@@ -106,6 +119,7 @@ class GuideDecor(private val font: Typeface? = null) {
         this.keepOut = keepOut
         this.dp = dp
         colour = if (onOrange) INK else look.colour
+        accent = if (onOrange) INK else accentColour()
         shapes = 0
         canvas.save()
         canvas.clipRect(area.left, area.top, area.right, area.bottom)
@@ -138,102 +152,158 @@ class GuideDecor(private val font: Typeface? = null) {
 
     // Typing
 
-    /** Red pen: proofreader's marks draw themselves stroke by stroke, linger, fade, and the next starts somewhere else. */
+    /** Red pen: proofreader's marks draw themselves behind a fountain pen's nib, linger, fade, and the next starts somewhere else. */
     private fun redPen(t: Float) {
-        val spots = spots(1, 34f, MARKS.size)
+        val spots = spots(1, 42f, MARKS.size)
         val first = floor(t / MARK_EVERY).toInt()
         for (n in first - 2..first) {
             val age = t - n * MARK_EVERY
             if (age < 0f || age >= MARK_LIFE) continue
             val kind = Math.floorMod(n, MARKS.size)
+            if (spots.size < kind * 2 + 2) continue
             val reveal = sine(age / MARK_DRAW)
             val fadeOut = 1f - smooth((age - MARK_LINGER) / (MARK_LIFE - MARK_LINGER))
-            val x = spots[kind * 2]
-            val y = spots[kind * 2 + 1]
+            val k = 2.25f * dp
+            // Each mark stays on the screen by its own half width.
+            val reach = MARK_HALF[kind] * k + 10f * dp
+            val x = min(area.right - reach, max(area.left + reach, spots[kind * 2]))
             canvas.save()
-            canvas.translate(x, y)
+            canvas.translate(x, spots[kind * 2 + 1])
             canvas.rotate((hash(11, kind) - .5f) * 14f)
-            canvas.scale(1.25f * dp, 1.25f * dp)
-            stroke(fadeOut, 1.8f)
-            strokes(MARKS[kind], reveal)
+            canvas.scale(k, k)
+            stroke(fadeOut, 1.5f)
+            val drawn = strokes(MARKS[kind], reveal)
             // The circled letter: the letter is already there; the pen draws round it.
             if (kind == 2) {
-                fill(fadeOut * .8f)
+                fill(fadeOut * .85f)
                 paint.textSize = 19f
                 canvas.drawText("a", 0f, 6.5f, paint)
             }
+            val nib = 1f - smooth((age - MARK_DRAW) / 500f)
+            if (drawn && nib > 0f) nib(pen[0], pen[1], fadeOut * nib)
             canvas.restore()
             shapes++
         }
     }
 
-    /** Air swipes: one long soft S-curve at a time sweeps across with a tapering tail, like a swipe's trail, then runs off. */
+    /** A fountain pen's nib with its tip on ([x], [y]), held as a right hand holds it, in the mark's units. */
+    private fun nib(x: Float, y: Float, a: Float) {
+        canvas.save()
+        canvas.translate(x, y)
+        canvas.rotate(32f)
+        path.reset()
+        path.moveTo(0f, 0f)
+        path.lineTo(-3.4f, -7f)
+        path.quadTo(-4.4f, -12f, -3.2f, -15f)
+        path.lineTo(3.2f, -15f)
+        path.quadTo(4.4f, -12f, 3.4f, -7f)
+        path.close()
+        fill(a)
+        canvas.drawPath(path, paint)
+        path.reset()
+        path.moveTo(-4.4f, -16.5f)
+        path.lineTo(4.4f, -16.5f)
+        path.lineTo(4.8f, -30f)
+        path.quadTo(0f, -33f, -4.8f, -30f)
+        path.close()
+        fill(a * .55f)
+        canvas.drawPath(path, paint)
+        // Its slit and breather hole, cut out.
+        path.reset()
+        path.moveTo(0f, -1.6f)
+        path.lineTo(0f, -8.4f)
+        erase(1f, .9f)
+        path.reset()
+        path.addCircle(0f, -9.6f, 1.3f, Path.Direction.CW)
+        erase()
+        canvas.restore()
+    }
+
+    /** Air swipes: one long soft S-curve at a time sweeps across with a tapering tail and a glow, like a swipe's trail, then runs off. */
     private fun airSwipes(t: Float) {
         val slot = floor(t / SWIPE_EVERY).toInt()
         val c = SWIPES[Math.floorMod(slot, SWIPES.size)]
         val u = (t - slot * SWIPE_EVERY) / SWIPE_SWEEP
-        val mid = band(6, 100f)
-        val (top, bottom) = open(mid)
-        val swing = max((bottom - top) * .42f, 36f * dp)
         if (u >= 1f) return
+        val g = lower()
+        val mid = (g[0] + g[1]) / 2
+        val swing = max((g[1] - g[0]) * .4f, 36f * dp)
         val head = sine(u) * (1f + SWIPE_TAIL)
         val tail = head - SWIPE_TAIL
         val from = max(tail, 0f)
         val to = min(head, 1f)
         if (to <= from) return
         val w = area.width()
-        val n = 56
-        // Points along the curve, then the outline: out along one side, back along the other. The curve's y runs from -1 to 1
-        // across the open band.
+        val n = 64
         for (i in 0..n) {
             val s = from + (to - from) * i / n
             polyline[i * 2] = area.left + bezier(c[0], c[2], c[4], c[6], s) * w
             polyline[i * 2 + 1] = mid + bezier(c[1], c[3], c[5], c[7], s) * swing
         }
-        path.reset()
-        for (side in 0..1) {
-            for (k in 0..n) {
-                val i = if (side == 0) k else n - k
-                val s = from + (to - from) * i / n
-                val along = ((s - tail) / SWIPE_TAIL).coerceIn(0f, 1f)
-                val half = (.35f + 4.4f * along.pow(1.6f)) * dp
-                val a = max(i - 1, 0)
-                val b = min(i + 1, n)
-                val dx = polyline[b * 2] - polyline[a * 2]
-                val dy = polyline[b * 2 + 1] - polyline[a * 2 + 1]
-                val len = max(hypot(dx, dy), .001f)
-                val sign = if (side == 0) 1f else -1f
-                val px = polyline[i * 2] - dy / len * half * sign
-                val py = polyline[i * 2 + 1] + dx / len * half * sign
-                if (k == 0 && side == 0) path.moveTo(px, py) else path.lineTo(px, py)
+        // The glow, then the trail itself: out along one side of the curve and back along the other, widening to the head.
+        for ((grow, a) in GLOW) {
+            path.reset()
+            for (side in 0..1) {
+                for (k in 0..n) {
+                    val i = if (side == 0) k else n - k
+                    val s = from + (to - from) * i / n
+                    val along = ((s - tail) / SWIPE_TAIL).coerceIn(0f, 1f)
+                    val half = (.4f + 5.6f * along.pow(1.6f)) * dp * grow
+                    val pa = max(i - 1, 0)
+                    val pb = min(i + 1, n)
+                    val dx = polyline[pb * 2] - polyline[pa * 2]
+                    val dy = polyline[pb * 2 + 1] - polyline[pa * 2 + 1]
+                    val len = max(hypot(dx, dy), .001f)
+                    val sign = if (side == 0) 1f else -1f
+                    val px = polyline[i * 2] - dy / len * half * sign
+                    val py = polyline[i * 2 + 1] + dx / len * half * sign
+                    if (k == 0 && side == 0) path.moveTo(px, py) else path.lineTo(px, py)
+                }
             }
+            path.close()
+            if (head <= 1f) path.addCircle(polyline[n * 2], polyline[n * 2 + 1], 6.4f * dp * (if (grow == 1f) 1f else 2.1f), Path.Direction.CW)
+            fill(a)
+            canvas.drawPath(path, paint)
         }
-        path.close()
-        fill(1f)
-        canvas.drawPath(path, paint)
-        shapes++
-        // The rounded head, while it is still on the curve.
-        if (head <= 1f) {
-            canvas.drawCircle(polyline[n * 2], polyline[n * 2 + 1], 4.75f * dp, paint)
-            shapes++
-        }
+        shapes += if (head <= 1f) 3 else 2
     }
 
-    /** Starfield: four-point sparkles twinkle at scattered spots, and a few drift slowly up. */
+    /** Starfield: four-point sparkles twinkle in the open space, and now and then a shooting star crosses a band. */
     private fun starfield(t: Float) {
-        val fixed = spots(3, 16f, 8)
+        val fixed = spots(3, 18f, 8)
         for (i in 0 until fixed.size / 2) {
             val period = if (i % 2 == 0) 6000f else 12000f
             val pulse = (.5f + .5f * sin(TAU * (t / period + hash(31, i)))).pow(2f)
-            val r = (10f + 11f * hash(32, i)) * (.45f + .55f * pulse)
-            star(fixed[i * 2], fixed[i * 2 + 1], r, 12f * sin(TAU * (t / 12000f + hash(33, i))), .4f + .6f * pulse)
+            val r = (12f + 16f * hash(32, i)) * (.5f + .5f * pulse)
+            star(fixed[i * 2], fixed[i * 2 + 1], r, 15f * sin(TAU * (t / 12000f + hash(33, i))), .3f + .7f * pulse)
         }
-        val rising = spots(4, 22f, 3)
-        for (i in 0 until rising.size / 2) {
-            val u = frac(t / 12000f + i / 3f)
-            val x = rising[i * 2] + 9f * dp * sin(TAU * u + i)
-            val y = rising[i * 2 + 1] + (50f - 120f * u) * dp
-            star(x, y, (7f + 4f * hash(34, i)), u * 90f, sin(PI.toFloat() * u))
+        val bands = arrayOf(upper(), lower())
+        for (k in 0..1) {
+            val u = (t - k * 6000f - 1800f) / SHOOT
+            val g = bands[k]
+            if (u < 0f || u >= 1f || g == null) continue
+            val x0 = area.left + area.width() * (if (k == 0) .1f else .5f)
+            val x1 = x0 + area.width() * .38f
+            val y0 = g[0] + (g[1] - g[0]) * .3f
+            val y1 = g[0] + (g[1] - g[0]) * .7f
+            val p = 1f - (1f - u).pow(2f)
+            val hx = x0 + (x1 - x0) * p
+            val hy = y0 + (y1 - y0) * p
+            val len = hypot(x1 - x0, y1 - y0)
+            val ux = (x1 - x0) / len
+            val uy = (y1 - y0) / len
+            val tailLength = 150f * dp * (1f - .6f * u) * smooth(u / .15f)
+            val w = 3.2f * dp
+            path.reset()
+            path.moveTo(hx - ux * tailLength, hy - uy * tailLength)
+            path.lineTo(hx - uy * w, hy + ux * w)
+            path.lineTo(hx + uy * w, hy - ux * w)
+            path.close()
+            val fade = 1f - smooth((u - .7f) / .3f)
+            fill(.7f * fade)
+            canvas.drawPath(path, paint)
+            shapes++
+            star(hx, hy, 11f, u * 120f, fade)
         }
     }
 
@@ -250,83 +320,112 @@ class GuideDecor(private val font: Typeface? = null) {
 
     // Delete
 
-    /** Typewriter e: a huge e like old metal type, and every few seconds a strip of correction tape glides across part of it. */
+    /** Typewriter e: a huge cream e with a letterpress shadow, and every few seconds a strip of correction tape rolls over it. */
     private fun typewriter(t: Float) {
-        val (top, bottom) = open(band(5, 100f))
-        // Inter's e is about .56 of its size tall, and its shoulder sits 5 dp lower: it fills the open band and stays in it. It
-        // used to be at least 110 dp, which, in the guide's real layout, ran into the field above it (v2 wiring).
-        val size = min((bottom - top - 5f * dp) / .56f * .9f, 220f * dp).coerceAtLeast(40f * dp)
-        val spot = floatArrayOf(area.left + area.width() * .7f, (top + bottom) / 2 - 2.5f * dp)
-        val cx = spot[0]
-        val baseline = spot[1] + .27f * size
+        val g = lower()
+        val size = max(min((g[1] - g[0] - 5f * dp) / .56f * .94f, 240f * dp), 40f * dp)
+        val cx = area.left + area.width() * .66f
+        val cy = (g[0] + g[1]) / 2 - 2.5f * dp
+        val baseline = cy + .27f * size
         val u = t / TYPEWRITER_LOOP
-        val roll = sine(u / .2f)
-        val peel = smooth((u - .66f) / .17f)
+        val roll = sine((u - .15f) / .18f)
+        val peel = smooth((u - .55f) / .15f)
         val tape = roll * (1f - peel)
-        val tapeLeft = cx - .4f * size
-        val tapeRight = tapeLeft + .8f * size * roll
-        val tapeTop = spot[1] - .03f * size
-        val tapeBottom = tapeTop + .14f * size
         paint.textSize = size
-        canvas.save()
-        if (tape > .01f) {
-            canvas.rotate(-4f, cx, spot[1])
-            canvas.clipOutRect(tapeLeft, tapeTop, tapeRight, tapeBottom)
-            canvas.rotate(4f, cx, spot[1])
-        }
-        // The type's shoulder: its outline set off a little, then the face itself.
-        stroke(.55f, 2.4f * dp)
-        canvas.drawText("e", cx + 5f * dp, baseline + 5f * dp, paint)
-        shapes++
-        fill(1f)
+        // The type's shoulder: its outline set off a little, then the face.
+        stroke(.36f, 2.6f * dp)
+        canvas.drawText("e", cx + 6f * dp, baseline + 6f * dp, paint)
+        fill(.5f)
         canvas.drawText("e", cx, baseline, paint)
-        shapes++
+        shapes += 2
+        if (tape <= .01f) return
+        val left = cx - .46f * size
+        val right = left + .92f * size * roll
+        val tapeTop = cy - .05f * size
+        val tapeBottom = tapeTop + .17f * size
+        canvas.save()
+        canvas.translate(0f, -peel * .12f * size)
+        canvas.rotate(-4f - 6f * peel, cx, cy)
+        path.reset()
+        path.moveTo(left, tapeTop)
+        path.lineTo(right, tapeTop)
+        // The tape's torn end, while it rolls out.
+        val teeth = 6
+        for (k in 1..teeth) path.lineTo(right + if (k % 2 == 1) -4f * dp * roll else 0f, tapeTop + (tapeBottom - tapeTop) * k / teeth)
+        path.lineTo(left, tapeBottom)
+        path.close()
+        erase(tape)
+        fill(tape, accent)
+        canvas.drawPath(path, paint)
+        // Its sheen.
+        path.reset()
+        path.moveTo(left + 8f * dp, tapeTop + 4f * dp)
+        path.lineTo(max(left + 8f * dp, right - 14f * dp), tapeTop + 4f * dp)
+        erase(.35f * tape, 2f * dp)
         canvas.restore()
-        if (tape > .01f) {
-            canvas.save()
-            canvas.rotate(-4f, cx, spot[1])
-            path.reset()
-            path.moveTo(tapeLeft, tapeTop)
-            path.lineTo(tapeRight, tapeTop)
-            // The tape's torn end, while it rolls out.
-            val teeth = 5
-            for (k in 1..teeth) {
-                val y = tapeTop + (tapeBottom - tapeTop) * k / teeth
-                path.lineTo(tapeRight + if (k % 2 == 1) -3.5f * dp * roll else 0f, y)
-            }
-            path.lineTo(tapeLeft, tapeBottom)
-            path.close()
-            fill(.8f * tape)
-            canvas.drawPath(path, paint)
-            canvas.restore()
-            shapes++
-        }
+        shapes++
     }
 
-    /** Paper balls: now and then a crumpled ball arcs across from right to left, as if tossed at a bin off screen. */
+    /** Paper balls: now and then a crumpled ball arcs in from the right and drops into a wire bin on the left, which wobbles. */
     private fun paperBalls(t: Float) {
+        val g = lower()
+        val floor = g[1] - 12f * dp
+        val binWide = 60f * dp
+        val binTall = 70f * dp
+        val binX = area.left + 74f * dp
+        val binTop = floor - binTall
+        var wobble = 0f
         for (i in 0..1) {
-            val u = (t - i * BALL_LOOP / 2) / BALL_FLIGHT
-            if (u < 0f || u >= 1f) continue
-            val mid = band(7, 100f)
-            val (top, bottom) = open(mid)
-            val room = (bottom - top) / dp
-            val startY = mid + (if (i == 0) -.1f else .15f) * room * dp
-            val x = area.right + 30f * dp - (area.width() + 60f * dp) * u
-            val y = startY - 4f * (if (i == 0) .45f else .3f) * room * dp * u * (1f - u) + .3f * room * dp * u * u
-            val r = (if (i == 0) 20f else 16f) * dp
-            // Two soft speed lines behind it.
-            stroke(.6f * (1f - u * .6f), 1.6f * dp)
-            for (k in 0..1) {
-                val ly = y + (k * 2 - 1) * r * .45f
-                canvas.drawLine(x + r * 1.5f, ly, x + r * (2.6f + k * .5f), ly + r * .25f, paint)
+            val since = wrap(t - (i * BALL_LOOP / 2 + BALL_FLIGHT), BALL_LOOP)
+            wobble += (if (i == 0) 7f else -5f) * exp(-since / 420f) * sin(TAU * since / 520f)
+        }
+        for (i in 0..1) {
+            val at = t - i * BALL_LOOP / 2
+            val u = at / BALL_FLIGHT
+            if (u < 0f || at >= BALL_FLIGHT + BALL_DROP) continue
+            val r = (if (i == 0) 24f else 19f) * dp
+            val x0 = area.right + r + 6f * dp
+            val y0 = g[0] + (g[1] - g[0]) * (if (i == 0) .5f else .62f)
+            val x1 = binX
+            val y1 = binTop - r * .1f
+            val peak = g[0] + r + 6f * dp
+            val controlY = 2 * peak - (y0 + y1) / 2
+            val controlX = x0 + (x1 - x0) * .45f
+            val x: Float
+            val y: Float
+            var alpha = 1f
+            if (u < 1f) {
+                val q = 1f - u
+                x = q * q * x0 + 2 * q * u * controlX + u * u * x1
+                y = q * q * y0 + 2 * q * u * controlY + u * u * y1
+                // Two speed lines behind it, along its flight.
+                val vx = 2 * q * (controlX - x0) + 2 * u * (x1 - controlX)
+                val vy = 2 * q * (controlY - y0) + 2 * u * (y1 - controlY)
+                val len = max(hypot(vx, vy), .001f)
+                val ux = vx / len
+                val uy = vy / len
+                path.reset()
+                for (k in 0..1) {
+                    val off = (k * 2 - 1) * r * .42f
+                    val sx = x - ux * r * 1.5f - uy * off
+                    val sy = y - uy * r * 1.5f + ux * off
+                    path.moveTo(sx, sy)
+                    path.lineTo(sx - ux * r * (1.1f + k * .4f), sy - uy * r * (1.1f + k * .4f))
+                }
+                stroke(.55f * (1f - u * .5f), 2.4f * dp)
+                canvas.drawPath(path, paint)
+                shapes++
+            } else {
+                val d = (at - BALL_FLIGHT) / BALL_DROP
+                x = x1
+                y = y1 + d * d * binTall * .7f
+                alpha = 1f - smooth(d)
             }
-            shapes++
             canvas.save()
             canvas.translate(x, y)
-            canvas.rotate(-560f * u + i * 70f)
+            canvas.rotate(-520f * min(u, 1.2f) + i * 70f)
             crumple(r, i)
-            fill(.3f)
+            fill(.42f * alpha)
             canvas.drawPath(path, paint)
             crumple(r, i)
             // Creases across the ball.
@@ -337,11 +436,37 @@ class GuideDecor(private val font: Typeface? = null) {
                 path.lineTo(cos(a + .9f) * r * .2f, sin(a + .9f) * r * .2f)
                 path.lineTo(cos(b) * r * .7f, sin(b) * r * .7f)
             }
-            stroke(1f, 1.6f * dp)
+            stroke(alpha, 2.2f * dp)
             canvas.drawPath(path, paint)
             canvas.restore()
             shapes++
         }
+        // The bin: wire sides and a rim, standing on the floor of the open band.
+        canvas.save()
+        canvas.rotate(wobble, binX, floor)
+        val bottomWide = binWide * .78f
+        path.reset()
+        path.moveTo(binX - binWide / 2, binTop)
+        path.lineTo(binX - bottomWide / 2, floor)
+        path.lineTo(binX + bottomWide / 2, floor)
+        path.lineTo(binX + binWide / 2, binTop)
+        path.close()
+        fill(.16f)
+        canvas.drawPath(path, paint)
+        stroke(1f, 2.6f * dp)
+        canvas.drawPath(path, paint)
+        path.reset()
+        for (k in 1..4) {
+            val s = k / 5f
+            path.moveTo(binX - binWide / 2 + binWide * s, binTop + 5f * dp)
+            path.lineTo(binX - bottomWide / 2 + bottomWide * s, floor)
+        }
+        stroke(.55f, 1.8f * dp)
+        canvas.drawPath(path, paint)
+        stroke(1f, 4.2f * dp)
+        canvas.drawLine(binX - binWide / 2 - 4f * dp, binTop, binX + binWide / 2 + 4f * dp, binTop, paint)
+        canvas.restore()
+        shapes++
     }
 
     private fun crumple(r: Float, i: Int) {
@@ -355,136 +480,224 @@ class GuideDecor(private val font: Typeface? = null) {
         path.close()
     }
 
-    /** Shredder belt: letter tiles slide left on a belt and shred into strips at the left edge, endlessly. */
+    /** Shredder: letter tiles ride a belt into a shredder on the left, and come out underneath as strips that fall away. */
     private fun shredder(t: Float) {
-        val y = band(1, 56f)
-        val tile = 34f * dp
+        val g = lower()
+        val tile = 40f * dp
+        val y = (g[0] + g[1]) / 2 - 10f * dp
         val pitch = SHRED_PITCH * dp
-        val mouth = area.left + 72f * dp
+        val mouth = area.left + 86f * dp
         val shift = t / SHRED_STEP * pitch
-        // The belt's two rails and the shredder's mouth.
-        stroke(.5f, 1.3f * dp)
-        canvas.drawLine(mouth, y - tile / 2 - 6f * dp, area.right, y - tile / 2 - 6f * dp, paint)
-        canvas.drawLine(mouth, y + tile / 2 + 6f * dp, area.right, y + tile / 2 + 6f * dp, paint)
+        // The belt's two rails.
+        path.reset()
+        for (rail in floatArrayOf(y - tile / 2 - 7f * dp, y + tile / 2 + 7f * dp)) {
+            path.moveTo(mouth, rail)
+            path.lineTo(area.right, rail)
+        }
+        stroke(.55f, 2f * dp)
+        canvas.drawPath(path, paint)
         shapes++
-        stroke(.8f, 1.6f * dp)
-        canvas.drawLine(mouth, y - tile / 2 - 12f * dp, mouth, y + tile / 2 + 12f * dp, paint)
-        shapes++
+        val boxTop = y - tile / 2 - 24f * dp
+        val boxBottom = y + tile / 2 + 18f * dp
         val firstSlot = floor((shift - (area.width() + 2 * pitch)) / pitch).toInt()
+        var shredding = 0
         for (slot in firstSlot..firstSlot + 12) {
             val x = area.right + pitch + slot * pitch - shift
-            if (x > area.right + tile || x < area.left - 3 * tile) continue
-            val letter = SHRED_LETTERS[Math.floorMod(slot, SHRED_LETTERS.length)].toString()
-            val u = ((mouth - x) / (110f * dp)).coerceIn(0f, 1f)
-            if (u >= 1f) continue
-            if (u <= 0f) {
-                tile(x, y, tile, letter, 1f)
-            } else {
-                for (k in 0 until SHRED_STRIPS) {
-                    val w = tile / SHRED_STRIPS
-                    canvas.save()
-                    canvas.translate(-u * (SHRED_STRIPS - k) * 2f * dp, u.pow(1.6f) * (12f + 16f * hash(50, k + slot)) * dp)
-                    canvas.rotate(u * (hash(51, k + slot) - .5f) * 30f, x + k * w + w / 2, y)
-                    canvas.clipRect(x + k * w, y - tile, x + (k + 1) * w, y + tile)
-                    tile(x, y, tile, letter, (1f - u).pow(1.3f))
-                    canvas.restore()
-                }
+            if (x > area.right + tile) continue
+            if (mouth - x >= tile) {
+                if ((mouth - x - tile) / (pitch * 1.2f) < 1f) shredding = shredding or (1 shl (slot - firstSlot))
+                continue
             }
+            tile(x, y, tile, SHRED_LETTERS[Math.floorMod(slot, SHRED_LETTERS.length)].toString())
             shapes++
         }
+        // The machine, over the tiles going in.
+        path.reset()
+        roundRect(area.left - 20f * dp, boxTop, mouth + 4f * dp, boxBottom, 10f * dp)
+        erase()
+        fill(.2f)
+        canvas.drawPath(path, paint)
+        stroke(1f, 2.6f * dp)
+        canvas.drawPath(path, paint)
+        // Its mouth, with teeth.
+        val teeth = 6
+        val mouthTop = y - tile / 2 - 4f * dp
+        val mouthBottom = y + tile / 2 + 4f * dp
+        path.reset()
+        path.moveTo(mouth + 4f * dp, mouthTop)
+        for (k in 1..teeth * 2) path.lineTo(mouth + 4f * dp + (if (k % 2 == 1) 5f * dp else 0f), mouthTop + (mouthBottom - mouthTop) * k / (teeth * 2))
+        canvas.drawPath(path, paint)
+        // Its light, which blinks as a tile goes in.
+        fill(.35f + .65f * bump(wrap(t, SHRED_STEP) / 500f))
+        canvas.drawCircle(mouth - 18f * dp, boxTop + 12f * dp, 3.6f * dp, paint)
+        shapes++
+        // The strips, out of the bottom.
+        if (shredding == 0) return
+        paint.strokeCap = Paint.Cap.BUTT
+        for (n in 0..12) {
+            if (shredding and (1 shl n) == 0) continue
+            val slot = firstSlot + n
+            val x = area.right + pitch + slot * pitch - shift
+            val u = (mouth - x - tile) / (pitch * 1.2f)
+            path.reset()
+            for (k in 0 until SHRED_STRIPS) {
+                val sx = mouth - 22f * dp - tile + (k + .5f) * tile / SHRED_STRIPS * 1.05f + (hash(51, k + slot) - .5f) * 6f * dp
+                val sy = boxBottom + 2f * dp + u * (26f + 18f * hash(50, k + slot)) * dp
+                val length = tile * (.5f + .4f * hash(52, k + slot)) * (1f - .3f * u)
+                path.moveTo(sx, sy)
+                path.lineTo(sx + (hash(53, k + slot) - .5f) * 8f * dp, sy + length)
+            }
+            stroke(.85f * (1f - u).pow(1.2f), max(tile / SHRED_STRIPS - 2.4f * dp, 2f * dp))
+            canvas.drawPath(path, paint)
+            shapes++
+        }
+        paint.strokeCap = Paint.Cap.ROUND
     }
 
-    private fun tile(x: Float, y: Float, size: Float, letter: String, alpha: Float) {
-        val r = 7f * dp
+    private fun tile(x: Float, y: Float, size: Float, letter: String) {
         path.reset()
-        path.moveTo(x + r, y - size / 2)
-        path.lineTo(x + size - r, y - size / 2)
-        path.quadTo(x + size, y - size / 2, x + size, y - size / 2 + r)
-        path.lineTo(x + size, y + size / 2 - r)
-        path.quadTo(x + size, y + size / 2, x + size - r, y + size / 2)
-        path.lineTo(x + r, y + size / 2)
-        path.quadTo(x, y + size / 2, x, y + size / 2 - r)
-        path.lineTo(x, y - size / 2 + r)
-        path.quadTo(x, y - size / 2, x + r, y - size / 2)
-        path.close()
-        stroke(alpha, 1.6f * dp)
+        roundRect(x, y - size / 2, x + size, y + size / 2, 7f * dp)
+        fill(.16f)
         canvas.drawPath(path, paint)
-        fill(alpha)
-        paint.textSize = 19f * dp
-        canvas.drawText(letter, x + size / 2, y + 7f * dp, paint)
+        stroke(1f, 2.2f * dp)
+        canvas.drawPath(path, paint)
+        fill(1f)
+        paint.textSize = 22f * dp
+        canvas.drawText(letter, x + size / 2, y + 8f * dp, paint)
     }
 
     // Steering
 
-    /** Night drive: dashed lane lines stream towards you from a vanishing point behind the title, between the road's edges. */
+    /**
+     * Night drive: a road winds away to the horizon in the open band, bending one way and then the other, its centre dashes and
+     * roadside posts streaming towards you, under a moon.
+     */
     private fun nightDrive(t: Float) {
+        val g = lower()
         val vx = area.centerX()
-        val vy = area.top + area.height() * .2f
-        val bottom = area.bottom + area.height() * .15f
-        val ends = floatArrayOf(-.95f, -.32f, .32f, .95f)
-        // The road's edges, faint and solid.
-        stroke(.35f, 1.4f * dp)
-        for (e in intArrayOf(0, 3)) canvas.drawLine(vx, vy, vx + ends[e] * area.width(), bottom, paint)
-        shapes += 2
-        val k = 6f
-        fun along(z: Float) = (1f / (1f + k * z) - 1f / (1f + k)) / (1f - 1f / (1f + k))
-        for (line in 1..2) {
-            val ex = vx + ends[line] * area.width()
-            for (d in 0 until DASHES) {
-                val z = 1f - frac(d.toFloat() / DASHES + t / DRIVE_LOOP)
-                val s0 = along(z)
-                val s1 = along(max(z - .07f, 0f))
-                val fadeIn = smooth(s0 / .12f)
-                if (fadeIn <= 0f) continue
-                val w0 = (.5f + 5f * s0) * dp
-                val w1 = (.5f + 5f * s1) * dp
-                val x0 = vx + (ex - vx) * s0
-                val y0 = vy + (bottom - vy) * s0
-                val x1 = vx + (ex - vx) * s1
-                val y1 = vy + (bottom - vy) * s1
-                path.reset()
-                path.moveTo(x0 - w0, y0)
-                path.lineTo(x0 + w0, y0)
-                path.lineTo(x1 + w1, y1)
-                path.lineTo(x1 - w1, y1)
-                path.close()
-                fill(fadeIn)
-                canvas.drawPath(path, paint)
-                shapes++
-            }
+        val vy = g[0] + 4f * dp
+        val bottom = g[1] + (g[1] - vy) * .5f
+        val half = .5f * area.width()
+        val bend = .2f * area.width() * sin(TAU * t / DRIVE_LOOP)
+        // Along the road, s runs from the horizon (0) to under the car (1).
+        fun centre(s: Float) = vx + bend * (1f - s) * (1f - s)
+        fun y(s: Float) = vy + (bottom - vy) * s
+        val n = 24
+        path.reset()
+        for (i in 0..n) {
+            val s = i / n.toFloat()
+            if (i == 0) path.moveTo(centre(s) - half * s - 2f * dp, y(s)) else path.lineTo(centre(s) - half * s - 2f * dp, y(s))
         }
+        for (i in n downTo 0) {
+            val s = i / n.toFloat()
+            path.lineTo(centre(s) + half * s + 2f * dp, y(s))
+        }
+        path.close()
+        fill(.13f)
+        canvas.drawPath(path, paint)
+        path.reset()
+        for (side in intArrayOf(-1, 1)) for (i in 0..n) {
+            val s = i / n.toFloat()
+            val x = centre(s) + side * (half * s + 2f * dp)
+            if (i == 0) path.moveTo(x, y(s)) else path.lineTo(x, y(s))
+        }
+        stroke(.85f, 2.6f * dp)
+        canvas.drawPath(path, paint)
+        stroke(.45f, 1.8f * dp)
+        canvas.drawLine(area.left, vy, area.right, vy, paint)
+        shapes += 2
+        for (d in 0 until DASHES) {
+            val z = 1f - frac(d.toFloat() / DASHES + t / DASH_LOOP)
+            val s0 = along(z)
+            val s1 = along(max(z - .07f, 0f))
+            val fadeIn = smooth(s0 / .1f)
+            if (fadeIn <= 0f) continue
+            val w0 = (.6f + 7f * s0) * dp
+            val w1 = (.6f + 7f * s1) * dp
+            path.reset()
+            path.moveTo(centre(s0) - w0, y(s0))
+            path.lineTo(centre(s0) + w0, y(s0))
+            path.lineTo(centre(s1) + w1, y(s1))
+            path.lineTo(centre(s1) - w1, y(s1))
+            path.close()
+            fill(fadeIn)
+            canvas.drawPath(path, paint)
+            shapes++
+        }
+        // Roadside posts, two a side, each with its reflector.
+        for (p in 0 until 4) {
+            val side = if (p % 2 == 0) -1f else 1f
+            val z = 1f - frac((p / 2) / 2f + (if (side > 0f) .25f else 0f) + t / DASH_LOOP)
+            val s = along(z)
+            val fadeIn = smooth(s / .1f)
+            if (fadeIn <= 0f) continue
+            val px = centre(s) + side * half * s * 1.18f
+            val py = y(s)
+            val tall = (4f + 60f * s) * dp
+            val wide = (.8f + 4.4f * s) * dp
+            path.reset()
+            roundRect(px - wide, py - tall, px + wide, py, min(wide, 2f * dp))
+            fill(.7f * fadeIn)
+            canvas.drawPath(path, paint)
+            fill(fadeIn)
+            canvas.drawRect(px - wide, py - tall, px + wide, py - tall * .78f, paint)
+            shapes++
+        }
+        // The moon, in the band above the title.
+        val up = upper() ?: return
+        val r = min(20f * dp, (up[1] - up[0]) / 2 - 2f * dp)
+        if (r <= 6f * dp) return
+        val mx = area.left + area.width() * .8f
+        val my = (up[0] + up[1]) / 2
+        fill(.95f)
+        canvas.drawCircle(mx, my, r, paint)
+        path.reset()
+        path.addCircle(mx + r * .42f, my - r * .22f, r * .86f, Path.Direction.CW)
+        erase()
+        shapes++
     }
 
-    /** Heartbeat: an ECG line traces across, flat, beat, beat, flat, and small outline hearts pulse on the beats. */
+    /** Where a point [z] of the way back to the horizon appears on the road: perspective, with far things bunched up. */
+    private fun along(z: Float): Float {
+        val k = 6f
+        return (1f / (1f + k * z) - 1f / (1f + k)) / (1f - 1f / (1f + k))
+    }
+
+    /** Heartbeat: a bold ECG line traces across, flat, beat, beat, flat, and filled hearts pulse on the beats. */
     private fun heartbeat(t: Float) {
-        val y = band(2, 90f)
+        val g = lower()
+        val y = (g[0] + g[1]) / 2 + 16f * dp
+        val scale = min((y - g[0] - 10f * dp) / 34f, 2.4f * dp)
         val sweep = 4200f
         val head = area.left + area.width() * (t / sweep)
-        val trail = area.width() * .6f
-        val step = 2f * dp
+        val trail = area.width() * .62f
         val from = max(area.left, head - trail)
         val to = min(area.right, head)
         if (to > from) {
-            val chunks = 12
+            val chunks = 14
+            val step = 2f * dp
+            paint.strokeCap = Paint.Cap.BUTT
             for (c in 0 until chunks) {
                 val a = from + (to - from) * c / chunks
                 val b = from + (to - from) * (c + 1) / chunks
                 path.reset()
                 var x = a
-                path.moveTo(x, y - ecg((x - area.left) / dp) * ECG_SCALE * dp)
+                path.moveTo(x, y - ecg((x - area.left) / dp) * scale)
                 while (x < b) {
                     x = min(x + step, b)
-                    path.lineTo(x, y - ecg((x - area.left) / dp) * ECG_SCALE * dp)
+                    path.lineTo(x, y - ecg((x - area.left) / dp) * scale)
                 }
-                stroke(((b - (head - trail)) / trail).coerceIn(0f, 1f).pow(1.4f), 2.2f * dp)
-                paint.strokeCap = Paint.Cap.BUTT
+                stroke(((b - (head - trail)) / trail).coerceIn(0f, 1f).pow(1.3f), 3.2f * dp)
                 canvas.drawPath(path, paint)
-                paint.strokeCap = Paint.Cap.ROUND
             }
+            paint.strokeCap = Paint.Cap.ROUND
             shapes++
             if (head <= area.right) {
+                val hy = y - ecg((head - area.left) / dp) * scale
+                fill(.22f)
+                canvas.drawCircle(head, hy, 11f * dp, paint)
                 fill(1f)
-                canvas.drawCircle(head, y - ecg((head - area.left) / dp) * ECG_SCALE * dp, 3.2f * dp, paint)
+                canvas.drawCircle(head, hy, 4.6f * dp, paint)
                 shapes++
             }
         }
@@ -492,12 +705,13 @@ class GuideDecor(private val font: Typeface? = null) {
             val peakX = area.left + (BEATS[b] * area.width() / dp + 24f) * dp
             val at = (peakX - area.left) / area.width() * sweep
             val since = t - at
-            val pulse = if (since < 0f) exp(-(since / 90f).pow(2f)) else exp(-since / 420f)
-            val size = 21f * (1f + .35f * pulse) * dp
+            val pulse = if (since < 0f) exp(-(since / 90f).pow(2f)) else exp(-since / 520f)
+            val size = 30f * (1f + .3f * pulse) * dp
             canvas.save()
-            canvas.translate(peakX + 30f * dp, y - 24f * dp)
+            canvas.translate(peakX + 36f * dp, y - 30f * scale)
+            canvas.rotate(if (b == 0) -10f else 8f)
             canvas.scale(size, size)
-            stroke(.45f + .55f * pulse, 1.6f * dp / size)
+            fill(.3f + .7f * pulse)
             canvas.drawPath(unitHeart, paint)
             canvas.restore()
             shapes++
@@ -527,101 +741,129 @@ class GuideDecor(private val font: Typeface? = null) {
 
     // Symbols
 
-    /** Asterisk snow: asterisks of different sizes fall slowly, turning like snowflakes. */
+    /** Asterisk snow: bold asterisks of many sizes fall slowly, swaying and turning like snowflakes. */
     private fun asteriskSnow(t: Float) {
-        val n = 11
+        val n = 12
         for (i in 0 until n) {
-            val period = SNOW_LOOP / (1 + i % 3)
+            val period = SNOW_LOOP / (1 + i % 2)
             val u = frac(t / period + hash(60, i))
-            val r = (8f + 12f * hash(61, i)) * dp
-            val x = area.left + area.width() * (i + .2f + .6f * hash(62, i)) / n + 10f * dp * sin(TAU * (2f * u + hash(63, i)))
-            val y = area.top - 20f * dp + (area.height() + 40f * dp) * u
-            val turn = 60f * u * (if (i % 2 == 0) 1f else -1f) + 30f * hash(64, i)
-            stroke(.55f + .45f * hash(65, i), r * .26f)
+            val r = (12f + 20f * hash(61, i)) * dp
+            val x = area.left + area.width() * (i + .2f + .6f * hash(62, i)) / n + 14f * dp * sin(TAU * (2f * u + hash(63, i)))
+            val y = area.top - 30f * dp + (area.height() + 60f * dp) * u
+            val turn = 90f * u * (if (i % 2 == 0) 1f else -1f) + 30f * hash(64, i)
+            stroke(.55f + .45f * hash(65, i), max(r * .22f, 2.6f * dp))
             canvas.save()
             canvas.translate(x, y)
             canvas.rotate(turn)
+            path.reset()
             for (k in 0..2) {
                 val a = PI.toFloat() * k / 3f
-                canvas.drawLine(-cos(a) * r, -sin(a) * r, cos(a) * r, sin(a) * r, paint)
+                path.moveTo(-cos(a) * r, -sin(a) * r)
+                path.lineTo(cos(a) * r, sin(a) * r)
             }
+            canvas.drawPath(path, paint)
             canvas.restore()
             shapes++
         }
     }
 
-    /** Buoys: big question marks bob and tilt on a little swell, as if puzzled. */
+    /** Buoys: big question marks bob and tilt on a rolling sea along the open band. */
     private fun buoys(t: Float) {
-        val spots = spots(10, 40f, 3)
-        for (i in 0 until spots.size / 2) {
-            val period = BUOY_LOOP / (2 + i % 2)
-            val phase = hash(70, i)
-            val size = floatArrayOf(84f, 66f, 100f)[i] * dp
-            val cx = spots[i * 2]
-            val cy = spots[i * 2 + 1] + 5f * dp * sin(TAU * (t / period + phase))
+        val g = lower()
+        val sea = g[1] - 26f * dp
+        val wavelength = 150f * dp
+        val amplitude = 5f * dp
+        val period = 5000f
+        fun wave(x: Float, lag: Float) = sea + amplitude * sin(TAU * ((x - area.left) / wavelength - t / period + lag))
+        for (i in 0..2) {
+            val size = BUOY_SIZES[i] * dp
+            val x = area.left + area.width() * BUOY_AT[i]
+            val y = wave(x, 0f) + 3f * dp * sin(TAU * (t / (BUOY_LOOP / (2 + i % 2)) + hash(70, i)))
+            val slope = amplitude * TAU / wavelength * cos(TAU * ((x - area.left) / wavelength - t / period))
+            val tilt = atan(slope) * 180f / PI.toFloat() * 2.2f + 6f * sin(TAU * (t / (BUOY_LOOP / 4) + hash(71, i)))
             canvas.save()
-            canvas.rotate(10f * sin(TAU * (t / period + phase + .2f)), cx, cy + size * .3f)
+            canvas.rotate(tilt, x, y)
             fill(1f)
             paint.textSize = size
-            canvas.drawText("?", cx, cy + size * .36f, paint)
+            canvas.drawText("?", x, y + size * .04f, paint)
             canvas.restore()
             shapes++
-            // The swell under it.
-            val wy = spots[i * 2 + 1] + size * .5f
+        }
+        // The sea: under the front wave everything goes, then the water and its two crests.
+        val step = 4f * dp
+        path.reset()
+        var x = area.left
+        path.moveTo(x, wave(x, 0f) + 2f * dp)
+        while (x <= area.right) {
+            x += step
+            path.lineTo(x, wave(x, 0f) + 2f * dp)
+        }
+        path.lineTo(x, area.bottom)
+        path.lineTo(area.left, area.bottom)
+        path.close()
+        erase()
+        fill(.16f)
+        canvas.drawPath(path, paint)
+        shapes++
+        for (crest in 0..1) {
+            val lag = if (crest == 0) .35f else 0f
+            val drop = if (crest == 0) 12f * dp else 0f
             path.reset()
-            for (k in 0..12) {
-                val x = cx - size * .32f + size * .64f * k / 12
-                val yy = wy + 2.2f * dp * sin(TAU * (k / 6f - t / period))
-                if (k == 0) path.moveTo(x, yy) else path.lineTo(x, yy)
+            x = area.left
+            path.moveTo(x, wave(x, lag) + drop)
+            while (x <= area.right) {
+                x += step
+                path.lineTo(x, wave(x, lag) + drop)
             }
-            stroke(.6f, 1.6f * dp)
+            stroke(if (crest == 0) .45f else 1f, (if (crest == 0) 2f else 2.8f) * dp)
             canvas.drawPath(path, paint)
             shapes++
         }
     }
 
-    /** Peekaboo: ampersands peek out from the screen's edges and from behind the title and the keys, then slide back. */
+    /** Peekaboo: big ampersands peek out from the screen's edges and from behind the title and the keys, look about, and duck back. */
     private fun peekaboo(t: Float) {
-        val size = 66f * dp
-        val reach = .68f * size
+        val size = 96f * dp
+        val reach = .62f * size
+        val g = lower()
         for (i in 0 until 4) {
             val u = frac(t / PEEK_LOOP - i / 4f) * PEEK_LOOP
             if (u > 4600f) continue
             val out = when {
-                u < 1000f -> backOut(u / 1000f)
-                u < 3600f -> 1f
-                else -> 1f - sine((u - 3600f) / 1000f)
+                u < 900f -> backOut(u / 900f)
+                u < 3700f -> 1f
+                else -> 1f - sine((u - 3700f) / 900f)
             }
-            val wobble = if (u in 1000f..3600f) 4f * sin(TAU * (u - 1000f) / 2600f) else 0f
-            var x: Float
-            var y: Float
-            var tilt: Float
+            val look = if (u in 900f..3700f) 7f * sin(TAU * (u - 900f) / 2800f) else 0f
+            val x: Float
+            val y: Float
+            val tilt: Float
             when (i) {
-                0 -> { // the right edge
-                    x = area.right + size * .45f - reach * out
-                    y = band(8, 90f) - 14f * dp
+                0 -> { // the right edge, clear of Skip
+                    x = area.right + size * .42f - reach * out
+                    y = (g[0] + g[1]) / 2 + 14f * dp
                     tilt = -16f
                 }
                 1 -> { // from behind the end of the title
                     val r = titleLike()
-                    x = (r?.right ?: area.centerX()) + CLEAR_DP * dp - size * .45f + (reach + 4f * dp) * out
-                    y = (r?.centerY() ?: area.top + area.height() * .25f)
+                    x = (r?.right ?: area.centerX()) + CLEAR_DP * dp - size * .42f + (reach + 6f * dp) * out
+                    y = r?.centerY() ?: (area.top + area.height() * .25f)
                     tilt = 14f
                 }
                 2 -> { // the left edge
-                    x = area.left - size * .45f + reach * out
-                    y = band(8, 90f) + 10f * dp
+                    x = area.left - size * .42f + reach * out
+                    y = (g[0] + g[1]) / 2 + 6f * dp
                     tilt = 16f
                 }
                 else -> { // over the top of the keys
                     val r = floorLike()
-                    x = area.left + area.width() * .7f
-                    y = (r?.top ?: area.bottom) - CLEAR_DP * dp + size * .45f - (reach + 4f * dp) * out
-                    tilt = -8f
+                    x = area.left + area.width() * .36f
+                    y = (r?.top ?: area.bottom) - CLEAR_DP * dp + size * .5f - (reach + 6f * dp) * out
+                    tilt = -6f
                 }
             }
             canvas.save()
-            canvas.rotate(tilt + wobble, x, y)
+            canvas.rotate(tilt + look, x, y)
             fill(1f)
             paint.textSize = size
             canvas.drawText("&", x, y + size * .36f, paint)
@@ -630,11 +872,11 @@ class GuideDecor(private val font: Typeface? = null) {
         }
     }
 
-    /** Forever: a dot runs endlessly along a big faint ∞, leaving a fading trail. */
+    /** Forever: a glowing dot runs endlessly along a big ∞, leaving a fading trail. */
     private fun forever(t: Float) {
-        val cy = band(3, 80f)
-        val (top, bottom) = open(cy)
-        val a = min(area.width() * .4f, (bottom - top) * 1.3f)
+        val g = lower()
+        val cy = (g[0] + g[1]) / 2
+        val a = min(area.width() * .4f, (g[1] - g[0]) * 1.3f)
         val cx = area.centerX()
         fun x(s: Float) = cx + a * cos(s) / (1f + sin(s) * sin(s))
         fun y(s: Float) = cy + a * sin(s) * cos(s) / (1f + sin(s) * sin(s))
@@ -644,12 +886,12 @@ class GuideDecor(private val font: Typeface? = null) {
             if (k == 0) path.moveTo(x(s), y(s)) else path.lineTo(x(s), y(s))
         }
         path.close()
-        stroke(.4f, 2.5f * dp)
+        stroke(.45f, 3.2f * dp)
         canvas.drawPath(path, paint)
         shapes++
         val head = TAU * t / FOREVER_LOOP
-        val chunks = 16
-        val length = PI.toFloat() * .9f
+        val chunks = 18
+        val length = PI.toFloat() * 1.05f
         for (c in 0 until chunks) {
             path.reset()
             val s0 = head - length + length * c / chunks
@@ -659,126 +901,185 @@ class GuideDecor(private val font: Typeface? = null) {
                 if (k == 0) path.moveTo(x(s), y(s)) else path.lineTo(x(s), y(s))
             }
             val along = (c + 1f) / chunks
-            stroke(along.pow(1.5f), (1f + 3f * along) * dp)
+            stroke(along.pow(1.5f), (1.4f + 4.6f * along) * dp)
             canvas.drawPath(path, paint)
         }
         shapes++
-        fill(.25f)
-        canvas.drawCircle(x(head), y(head), 10f * dp, paint)
+        fill(.22f)
+        canvas.drawCircle(x(head), y(head), 15f * dp, paint)
         fill(1f)
-        canvas.drawCircle(x(head), y(head), 4.5f * dp, paint)
+        canvas.drawCircle(x(head), y(head), 6.5f * dp, paint)
         shapes += 2
     }
 
-    /** Big top: circus-tent rays turn slowly from the top centre under a scalloped edge, and three balls are juggled. */
+    /**
+     * Big top: a light striped circus valance under the top bar, rippling, with chase lights along its edge (Master: half as deep,
+     * about 30%, so it's no second header); and three two-tone balls juggled in the open band on their faintly drawn arcs, each
+     * with a fading trail.
+     */
     private fun bigTop(t: Float) {
-        val cx = area.centerX()
-        val cy = area.top - 24f * dp
-        val sector = 140f / 16f
-        val turn = t / TENT_LOOP * 2f * sector
-        val reach = hypot(area.width(), area.height()) * 1.2f
-        for (k in -1..8) {
-            val start = 20f + turn + (k * 2 - 1) * sector
-            val mid = start + sector / 2
-            val fade = 1f - smooth((abs(mid - 90f) - 38f) / 28f)
-            if (fade <= 0f) continue
+        val top = upper()?.get(0) ?: area.top
+        val n = 14
+        val wide = area.width() / n
+        val depth = 12f * dp
+        val drop = 10f * dp
+        fun dip(k: Int) = depth * (1f + .1f * sin(TAU * t / 5000f - k * .8f))
+        for (even in booleanArrayOf(true, false)) {
             path.reset()
-            path.moveTo(cx, cy)
-            val a0 = start * PI.toFloat() / 180f
-            val a1 = (start + sector) * PI.toFloat() / 180f
-            path.lineTo(cx + cos(a0) * reach, cy + sin(a0) * reach)
-            path.lineTo(cx + cos(a1) * reach, cy + sin(a1) * reach)
-            path.close()
-            fill(.42f * fade)
+            var k = if (even) 0 else 1
+            while (k < n) {
+                val x0 = area.left + k * wide
+                path.moveTo(x0, top - 40f * dp)
+                path.lineTo(x0 + wide, top - 40f * dp)
+                path.lineTo(x0 + wide, top + drop)
+                path.quadTo(x0 + wide / 2, top + drop + 2 * dip(k), x0, top + drop)
+                path.close()
+                k += 2
+            }
+            fill(if (even) .75f else .32f)
             canvas.drawPath(path, paint)
             shapes++
         }
-        // The tent's scalloped edge.
         path.reset()
-        val scallops = 9
-        val sw = area.width() / scallops
-        path.moveTo(area.left, area.top)
-        for (k in 0 until scallops) {
-            val x0 = area.left + k * sw
-            path.quadTo(x0 + sw / 2, area.top + 22f * dp, x0 + sw, area.top)
+        for (k in 0 until n) {
+            val x0 = area.left + k * wide
+            path.moveTo(x0, top + drop)
+            path.quadTo(x0 + wide / 2, top + drop + 2 * dip(k), x0 + wide, top + drop)
         }
-        path.close()
-        fill(.9f)
+        stroke(.75f, 1.8f * dp)
         canvas.drawPath(path, paint)
         shapes++
-        val hands = spots(13, 48f, 1)
+        // Chase lights along the trim: a bulb at each scallop's lowest point and each join, lit in turn.
+        val chase = floor(t / CHASE_STEP).toInt()
+        for (lit in booleanArrayOf(false, true)) {
+            path.reset()
+            for (k in 0..2 * n) {
+                if ((Math.floorMod(k - chase, 3) == 0) != lit) continue
+                val y = top + drop + if (k % 2 == 1) dip((k - 1) / 2) else 0f
+                path.addCircle(area.left + k * wide / 2, y, (if (lit) 3.4f else 2.6f) * dp, Path.Direction.CW)
+            }
+            fill(if (lit) .7f else .3f)
+            canvas.drawPath(path, paint)
+            shapes++
+        }
+        // The juggling.
+        val g = lower()
+        val r = 14f * dp
+        val hx = area.left + area.width() * .7f
+        val hy = g[1] - r - 10f * dp
+        val spread = 48f * dp
+        val high = max(min((g[1] - g[0]) - 2 * r - 34f * dp, 96f * dp), 20f * dp)
+        fun ballX(leftToRight: Boolean, q: Float) = hx + (if (leftToRight) -spread else spread) * (1f - 2f * q)
+        fun ballY(leftToRight: Boolean, q: Float) = hy - 4f * (if (leftToRight) high else high * .7f) * q * (1f - q)
+        path.reset()
+        for (leftToRight in booleanArrayOf(true, false)) for (k in 0..24) {
+            val q = k / 24f
+            if (k == 0) path.moveTo(ballX(leftToRight, q), ballY(leftToRight, q)) else path.lineTo(ballX(leftToRight, q), ballY(leftToRight, q))
+        }
+        stroke(.16f, 2f * dp)
+        canvas.drawPath(path, paint)
+        shapes++
+        val band = asin(.3f) * 180f / PI.toFloat()
+        val chord = r * cos(asin(.3f))
         for (b in 0..2) {
             val p = frac(t / JUGGLE_LOOP + b / 3f)
             val leftToRight = p < .5f
             val q = if (leftToRight) p * 2f else (p - .5f) * 2f
-            val from = if (leftToRight) -30f else 30f
-            val x = hands[0] + (from + (-from * 2f) * q) * dp
-            val y = hands[1] + (30f - 4f * (if (leftToRight) 74f else 54f) * q * (1f - q)) * dp
-            fill(.95f)
-            canvas.drawCircle(x, y, 6.5f * dp, paint)
+            // The trail: three fading copies behind it, along its arc.
+            for (k in 3 downTo 1) {
+                val back = max(q - k * .075f, 0f)
+                fill(.26f - .07f * k)
+                canvas.drawCircle(ballX(leftToRight, back), ballY(leftToRight, back), r * (1f - .2f * k), paint)
+            }
+            canvas.save()
+            canvas.translate(ballX(leftToRight, q), ballY(leftToRight, q))
+            canvas.rotate(360f * (p * 1.5f + b / 3f))
+            path.reset()
+            path.addCircle(0f, 0f, r, Path.Direction.CW)
+            erase()
+            fill(.5f)
+            canvas.drawPath(path, paint)
+            // Its band, the second tone, between two chords.
+            path.reset()
+            path.moveTo(-chord, -r * .3f)
+            path.lineTo(chord, -r * .3f)
+            path.arcTo(-r, -r, r, r, -band, 2 * band, false)
+            path.lineTo(-chord, r * .3f)
+            path.arcTo(-r, -r, r, r, 180f - band, 2 * band, false)
+            path.close()
+            fill(1f)
+            canvas.drawPath(path, paint)
+            canvas.restore()
             shapes++
         }
     }
 
     // Copy and paste
 
-    /** Sticky notes: notes pinned at angles sway as if in a breeze, and now and then one flaps a corner. */
+    /** Sticky notes: notes with scribbles, pinned at angles, sway as if in a breeze, and now and then one flaps a corner. */
     private fun stickyNotes(t: Float) {
-        val spots = spots(14, 40f, 4)
+        val spots = spots(14, 42f, 4)
         val flapping = Math.floorMod(floor(t / NOTE_FLAP).toInt(), 4)
-        val flapU = (t % NOTE_FLAP) / NOTE_FLAP
+        val flapU = wrap(t, NOTE_FLAP) / NOTE_FLAP
         for (i in 0 until spots.size / 2) {
             val period = NOTE_LOOP / (2 + i % 2)
-            val base = (hash(80, i) - .5f) * 22f
-            val sway = base + 2.6f * sin(TAU * (t / period + hash(81, i)))
-            val corner = 5f + if (i == flapping) 14f * bump(flapU / .55f) else 0f
-            val x = spots[i * 2]
-            val y = spots[i * 2 + 1] - 28f * dp
+            val sway = (hash(80, i) - .5f) * 22f + 3.2f * sin(TAU * (t / period + hash(81, i)))
+            val corner = 7f + if (i == flapping) 16f * bump(flapU / .55f) else 0f
             canvas.save()
-            canvas.translate(x, y)
+            canvas.translate(spots[i * 2], spots[i * 2 + 1] - 32f * dp)
             canvas.rotate(sway)
             canvas.scale(dp, dp)
             path.reset()
-            path.moveTo(-28f, 4f)
-            path.lineTo(28f, 4f)
-            path.lineTo(28f, 60f - corner)
-            path.lineTo(28f - corner, 60f)
-            path.lineTo(-28f, 60f)
+            path.moveTo(-32f, 4f)
+            path.lineTo(32f, 4f)
+            path.lineTo(32f, 68f - corner)
+            path.lineTo(32f - corner, 68f)
+            path.lineTo(-32f, 68f)
             path.close()
-            fill(.45f)
+            fill(.5f)
             canvas.drawPath(path, paint)
             // The corner, folded over.
             path.reset()
-            path.moveTo(28f, 60f - corner)
-            path.lineTo(28f - corner, 60f)
-            path.lineTo(28f - corner * 1.05f, 60f - corner * 1.05f)
+            path.moveTo(32f, 68f - corner)
+            path.lineTo(32f - corner, 68f)
+            path.lineTo(32f - corner * 1.05f, 68f - corner * 1.05f)
             path.close()
-            fill(.9f)
+            fill(.95f)
             canvas.drawPath(path, paint)
-            stroke(.85f, 1.5f)
-            canvas.drawLine(-18f, 26f, 12f, 26f, paint)
-            canvas.drawLine(-18f, 36f, 4f, 36f, paint)
+            // The scribbles, as cut-outs.
+            path.reset()
+            for (line in 0..2) {
+                val y = 26f + 11f * line
+                val w = NOTE_LINES[line]
+                path.moveTo(-21f, y)
+                var x = -21f
+                while (x <= -21f + w) {
+                    path.lineTo(x, y + 1.6f * sin(x * .5f + i))
+                    x += 3f
+                }
+            }
+            erase(.8f, 3f)
             fill(1f)
-            canvas.drawCircle(0f, 6f, 4f, paint)
+            canvas.drawCircle(0f, 7f, 5f, paint)
             canvas.restore()
             shapes++
         }
     }
 
-    /** Zero-g clips: outline paper clips float, turning slowly, as if in zero gravity. */
+    /** Zero-g clips: bold paper clips float, drifting and turning slowly, as if in zero gravity. */
     private fun zeroG(t: Float) {
-        val spots = spots(15, 32f, 5)
+        val spots = spots(15, 34f, 5)
         for (i in 0 until spots.size / 2) {
             val x = spots[i * 2] + 24f * dp * sin(TAU * (t / CLIPS_LOOP + hash(90, i)))
-            val y = spots[i * 2 + 1] + 16f * dp * sin(TAU * (2f * t / CLIPS_LOOP + hash(91, i)))
+            val y = spots[i * 2 + 1] + 14f * dp * sin(TAU * (2f * t / CLIPS_LOOP + hash(91, i)))
             val turn = 360f * (t / CLIPS_LOOP) * (if (i % 2 == 0) 1f else -1f) + 360f * hash(92, i)
             canvas.save()
             canvas.translate(x, y)
             canvas.rotate(turn)
-            val scale = (1f + .45f * hash(93, i)) * dp
+            val scale = (1.25f + .45f * hash(93, i)) * dp
             canvas.scale(scale, scale)
             canvas.translate(0f, -CLIP_LENGTH / 2)
-            stroke(1f, 2.3f)
+            stroke(1f, 2.4f)
             canvas.drawPath(clip, paint)
             canvas.restore()
             shapes++
@@ -787,76 +1088,101 @@ class GuideDecor(private val font: Typeface? = null) {
 
     // The end and setup
 
-    /** Grass: as the finale plays, grass grows up from the bottom edge, its blades swaying, and three small flowers open. */
+    /**
+     * Grass (owner, 2026-11-13, from their picture, "match it to our minimal style"; Master: a real band, about 150 dp): a dense band
+     * of pointed blades along the screen's bottom edge, in three overlapping layers for depth, back to front at [GRASS_TONES] of the
+     * layer's strength: flat shapes, no outlines, the ink's three strengths on the accent. It grows up from the edge as the finale
+     * plays, each blade in its own time, sways gently on a slow wind, and three small flowers open on tall stems. Never taller than the
+     * room under the keep-outs, the end's words and buttons above all: in a smaller room, the whole band scales down to fit.
+     */
     private fun grass(t: Float) {
-        val growth = sine(t / GRASS_GROW)
-        if (growth <= 0f) return
-        // The grass stands on the end's buttons, the widest thing at the bottom, as on the ground: from the screen's bottom edge it
-        // would grow behind them and never show. With nothing there, it grows from the bottom edge.
-        val floor = floorLike()?.let { it.top - CLEAR_DP * dp }?.takeIf { it > area.centerY() }
-        val bottom = (floor ?: area.bottom) + 2f * dp
-        // As tall as the room under whatever is above it allows, the finale's words most of all: it never grows into them.
+        val bottom = area.bottom
         val ceiling = keepOut.filter { it.bottom < bottom - 1f && it.width() > area.width() * .4f }.maxOfOrNull { it.bottom + CLEAR_DP * dp }
-        val grow = growth * ((if (ceiling == null) 1f else ((bottom - ceiling) / (GRASS_TALLEST * dp)).coerceIn(0f, 1f)))
-        if (grow <= 0f) return
-        val tufts = 9
-        val wind = TAU * ((t - GRASS_SETTLED).coerceAtLeast(0f) / GRASS_LOOP)
-        for (i in 0 until tufts) {
-            val x = area.left + area.width() * (i + .5f + (hash(100, i) - .5f) * .5f) / tufts
+        val room = (if (ceiling == null) 1f else (bottom - ceiling) / (GRASS_TALLEST * dp)).coerceIn(0f, 1f)
+        if (room <= 0f) return
+        // One slow wind across the band, from the start, so the loop folds back without a jump.
+        val wind = TAU * t / GRASS_LOOP
+        val blade = BLADE_DP * dp * room
+        for (layer in 0..2) {
+            if (layer == 2) flowers(t, bottom, blade, wind)
+            val pitch = GRASS_PITCH[layer] * dp
+            val low = GRASS_HEIGHTS[layer * 2]
+            val high = GRASS_HEIGHTS[layer * 2 + 1]
             path.reset()
-            for (j in 0 until 8) {
-                val h = (34f + 70f * hash(101, i * 8 + j).pow(1.4f)) * grow * dp
-                val bx = x + (j - 3.5f) * 5f * dp + (hash(103, i * 8 + j) - .5f) * 6f * dp
-                val lean = (j - 3.5f) * .1f + (hash(102, i * 8 + j) - .5f) * .35f
-                val sway = (6f * dp + h * .1f) * sin(wind - (bx - area.left) / area.width() * 2.4f * PI.toFloat()) * (h / (60f * dp))
-                val tx = bx + lean * h + sway
-                val ty = bottom - h
-                val mx = bx + lean * h * .35f + sway * .35f
-                val my = bottom - h * .55f
-                val w = 2.4f * dp
-                path.moveTo(bx - w, bottom)
-                path.quadTo(mx - w * .5f, my, tx, ty)
-                path.quadTo(mx + w * .5f, my, bx + w, bottom)
+            var drawn = false
+            var i = 0
+            while (true) {
+                val x = area.left + (i - .5f + (hash(110 + layer, i) - .5f) * .6f) * pitch
+                if (x > area.right + pitch) break
+                val grown = smooth((t - hash(120 + layer, i) * GRASS_STAGGER - layer * 180f) / GRASS_GROW)
+                val h = blade * (low + (high - low) * hash(130 + layer, i).pow(1.3f)) * grown
+                i++
+                if (h < .5f * dp) continue
+                val w = (2.8f + 2.6f * hash(140 + layer, i)) * dp
+                val lean = (hash(150 + layer, i) - .5f) * .55f
+                val sway = sway(x, h, layer, wind)
+                val bend = x + lean * h * .3f + sway * .3f
+                path.moveTo(x - w, bottom + 2f * dp)
+                path.quadTo(bend - w * .8f, bottom - h * .42f, x + lean * h + sway, bottom - h)
+                path.quadTo(bend + w * .8f, bottom - h * .42f, x + w, bottom + 2f * dp)
                 path.close()
+                drawn = true
             }
-            fill(.85f)
-            canvas.drawPath(path, paint)
+            if (!drawn) continue
+            flat(GRASS_TONES[layer])
             shapes++
         }
+    }
+
+    private fun sway(x: Float, h: Float, layer: Int, wind: Float) =
+        (2f * dp + h * .09f) * sin(wind - (x - area.left) / area.width() * 1.6f * TAU + layer * .9f)
+
+    /**
+     * Fills [path] at [tone] as a flat shape: what's under it goes first, so where layers overlap the one in front shows its own tone,
+     * as in the owner's picture, instead of the inks adding up.
+     */
+    private fun flat(tone: Float) {
+        erase()
+        fill(tone)
+        canvas.drawPath(path, paint)
+    }
+
+    /** Three small flowers in the grass, behind its front blades: a tall stem, then five round petals that open, and their middle. */
+    private fun flowers(t: Float, bottom: Float, blade: Float, wind: Float) {
         for (f in 0..2) {
-            val i = intArrayOf(1, 4, 7)[f]
-            val x = area.left + area.width() * (i + .5f + (hash(100, i) - .5f) * .5f) / tufts + 7f * dp
-            val h = (92f + 18f * f) * grow * dp
-            val sway = 7f * dp * sin(wind - (x - area.left) / area.width() * 2.4f * PI.toFloat())
-            val open = smooth((t - GRASS_GROW * .9f - f * 450f) / 1100f)
-            val hx = x + sway
+            val open = smooth((t - GRASS_GROW * .75f - f * 450f) / 1100f)
+            val stand = smooth((t - GRASS_GROW * .35f - f * 300f) / GRASS_GROW)
+            if (stand <= 0f) continue
+            val x = area.left + area.width() * (FLOWERS[f] + (hash(160, f) - .5f) * .06f)
+            val h = blade * (1f + .03f * f) * stand
+            val hx = x + sway(x, h, 1, wind)
             val hy = bottom - h
+            val petal = 5.4f * dp
             path.reset()
-            path.moveTo(x, bottom)
-            path.quadTo(x + sway * .2f, bottom - h * .5f, hx, hy)
-            stroke(1f, 1.5f * dp)
-            canvas.drawPath(path, paint)
+            path.moveTo(x - dp, bottom + 2f * dp)
+            path.quadTo(x + (hx - x) * .4f - .8f * dp, bottom - h * .5f, hx, hy)
+            path.quadTo(x + (hx - x) * .4f + .8f * dp, bottom - h * .5f, x + dp, bottom + 2f * dp)
+            path.close()
+            if (open > 0f) for (k in 0 until 5) {
+                val a = TAU * k / 5 + f
+                path.addCircle(hx + cos(a) * petal * open, hy + sin(a) * petal * open, petal * .78f * open, Path.Direction.CW)
+            }
+            flat(GRASS_TONES[1])
             if (open > 0f) {
                 path.reset()
-                for (k in 0 until 5) {
-                    val a = TAU * k / 5 + f
-                    path.addCircle(hx + cos(a) * 7f * dp * open, hy + sin(a) * 7f * dp * open, 4.8f * dp * open, Path.Direction.CW)
-                }
-                stroke(1f, 1.3f * dp)
-                canvas.drawPath(path, paint)
-                fill(1f)
-                canvas.drawCircle(hx, hy, 3.2f * dp * open, paint)
+                path.addCircle(hx, hy, petal * .56f * open, Path.Direction.CW)
+                flat(GRASS_TONES[2])
             }
             shapes++
         }
     }
 
-    /** Gears: faint gear outlines turn slowly in two corners, each a big one meshed with a small one. */
+    /** Gears: gears turn slowly in two corners, each a big one meshed with a small one. */
     private fun gearsIn(t: Float) {
         val turn = 360f * (t / GEAR_LOOP) * 2f / BIG_TEETH
         val corners = arrayOf(
-            floatArrayOf(area.right - 26f * dp, area.top + 40f * dp, 135f),
-            floatArrayOf(area.left + 26f * dp, area.bottom - 40f * dp, -45f),
+            floatArrayOf(area.right - 30f * dp, area.top + 56f * dp, 135f),
+            floatArrayOf(area.left + 30f * dp, area.bottom - 56f * dp, -45f),
         )
         for ((n, corner) in corners.withIndex()) {
             val r1 = BIG_TEETH * GEAR_MODULE / 2 * dp
@@ -871,19 +1197,27 @@ class GuideDecor(private val font: Typeface? = null) {
     }
 
     private fun gear(x: Float, y: Float, teeth: Int, degrees: Float) {
-        val shape = gears.getOrPut(teeth) { gearPath(teeth) }
+        val body = gearBodies.getOrPut(teeth) { gearPath(teeth, false) }
+        val lines = gearLines.getOrPut(teeth) { gearPath(teeth, true) }
         canvas.save()
         canvas.translate(x, y)
         canvas.rotate(degrees)
         canvas.scale(dp, dp)
-        stroke(1f, 1.8f)
-        canvas.drawPath(shape, paint)
+        // A faint body with its ring open, then the outline, the ring and the hub.
+        fill(.14f)
+        canvas.drawPath(body, paint)
+        eraser.style = Paint.Style.FILL
+        eraser.alpha = 255
+        canvas.drawCircle(0f, 0f, teeth * GEAR_MODULE / 2 - 1.75f * GEAR_MODULE, eraser)
+        canvas.drawCircle(0f, 0f, teeth * GEAR_MODULE / 2 * .25f, paint)
+        stroke(1f, 2.4f)
+        canvas.drawPath(lines, paint)
         canvas.restore()
         shapes++
     }
 
-    /** A gear's outline in dp with its first tooth on angle 0, with its hub and a ring. */
-    private fun gearPath(teeth: Int): Path {
+    /** A gear's outline in dp with its first tooth on angle 0; with its hub and ring when [rings]. */
+    private fun gearPath(teeth: Int, rings: Boolean): Path {
         val r = teeth * GEAR_MODULE / 2
         val tip = r + .55f * GEAR_MODULE
         val root = r - .65f * GEAR_MODULE
@@ -899,8 +1233,10 @@ class GuideDecor(private val font: Typeface? = null) {
             }
         }
         shape.close()
-        shape.addCircle(0f, 0f, r * .25f, Path.Direction.CW)
-        shape.addCircle(0f, 0f, root - GEAR_MODULE * 1.1f, Path.Direction.CW)
+        if (rings) {
+            shape.addCircle(0f, 0f, r * .25f, Path.Direction.CW)
+            shape.addCircle(0f, 0f, root - GEAR_MODULE * 1.1f, Path.Direction.CW)
+        }
         return shape
     }
 
@@ -916,8 +1252,8 @@ class GuideDecor(private val font: Typeface? = null) {
         spotCache[key]?.let { return it }
         val radius = radiusDp * dp
         val step = max(radius * .5f, 6f * dp)
-        val xs = ((area.width()) / step).toInt()
-        val ys = ((area.height()) / step).toInt()
+        val xs = (area.width() / step).toInt()
+        val ys = (area.height() / step).toInt()
         val candidates = ArrayList<FloatArray>()
         for (j in 0..ys) for (i in 0..xs) {
             val x = area.left + (i + .5f) * area.width() / (xs + 1)
@@ -937,47 +1273,55 @@ class GuideDecor(private val font: Typeface? = null) {
         return result
     }
 
-    /** The middle of the widest-open band across [area] that is [heightDp] tall, by how much of its width is clear. */
-    private fun band(seed: Int, heightDp: Float): Float {
-        val key = geometryKey(-seed * 104729L - heightDp.toBits())
-        spotCache[key]?.let { return it[0] }
-        val half = heightDp * dp / 2
-        var best = area.centerY()
-        var bestOpen = -1f
-        var y = area.top + half
-        while (y <= area.bottom - half) {
-            var blocked = 0f
-            val clear = CLEAR_DP * dp
-            val spans = keepOut.filter { it.top - clear < y + half && it.bottom + clear > y - half }
-                .map { floatArrayOf(max(it.left - clear, area.left), min(it.right + clear, area.right)) }.sortedBy { it[0] }
-            var end = area.left
-            for (s in spans) {
-                if (s[1] <= end) continue
-                blocked += s[1] - max(s[0], end)
-                end = s[1]
+    /** The open bands across [area] between the wide keep-out rects, with their margins, top to bottom: top, bottom, top, bottom… */
+    private fun gaps(): FloatArray {
+        val key = geometryKey(-7L)
+        spotCache[key]?.let { return it }
+        val clear = CLEAR_DP * dp
+        val bands = ArrayList<Float>()
+        var y = area.top
+        for (r in keepOut.filter { it.width() > area.width() * .4f }.sortedBy { it.top }) {
+            if (r.top - clear > y + 1f) {
+                bands += y
+                bands += r.top - clear
             }
-            val open = area.width() - blocked - abs(y - area.centerY()) * .01f
-            if (open > bestOpen) {
-                bestOpen = open
-                best = y
-            }
-            y += 4f * dp
+            y = max(y, r.bottom + clear)
         }
-        remember(key, floatArrayOf(best))
-        return best
+        if (area.bottom > y + 1f) {
+            bands += y
+            bands += area.bottom
+        }
+        val result = bands.toFloatArray()
+        remember(key, result)
+        return result
     }
 
-    /** The top and bottom of the open space around [y]: up to the wide keep-out rects above and below it, with their margins. */
-    private fun open(y: Float): Pair<Float, Float> {
-        val clear = CLEAR_DP * dp
-        var top = area.top
-        var bottom = area.bottom
-        for (r in keepOut) {
-            if (r.width() < area.width() * .4f) continue
-            if (r.bottom + clear <= y) top = max(top, r.bottom + clear)
-            if (r.top - clear >= y) bottom = min(bottom, r.top - clear)
+    /** The tallest open band in the lower half: between the field and the keys, on a slide. */
+    private fun lower(): FloatArray {
+        val mid = area.top + area.height() * .45f
+        val all = gaps()
+        var best = -1
+        for (pass in 0..1) {
+            for (i in 0 until all.size / 2) {
+                if (pass == 0 && (all[i * 2] + all[i * 2 + 1]) / 2 <= mid) continue
+                if (best < 0 || all[i * 2 + 1] - all[i * 2] > all[best * 2 + 1] - all[best * 2]) best = i
+            }
+            if (best >= 0) break
         }
-        return top to bottom
+        return if (best < 0) floatArrayOf(area.top, area.bottom) else floatArrayOf(all[best * 2], all[best * 2 + 1])
+    }
+
+    /** The tallest open band in the upper half, over 24 dp: between the top bar and the title, on a slide. */
+    private fun upper(): FloatArray? {
+        val mid = area.top + area.height() * .45f
+        val all = gaps()
+        var best = -1
+        for (i in 0 until all.size / 2) {
+            val h = all[i * 2 + 1] - all[i * 2]
+            if ((all[i * 2] + all[i * 2 + 1]) / 2 > mid || h <= 24f * dp) continue
+            if (best < 0 || h > all[best * 2 + 1] - all[best * 2]) best = i
+        }
+        return if (best < 0) null else floatArrayOf(all[best * 2], all[best * 2 + 1])
     }
 
     private fun remember(key: Long, value: FloatArray) {
@@ -1019,6 +1363,7 @@ class GuideDecor(private val font: Typeface? = null) {
     private fun featherOut() {
         val clear = CLEAR_DP * dp
         val step = FEATHER_DP * dp / FEATHER_STEPS
+        eraser.style = Paint.Style.FILL
         for (r in keepOut) {
             eraser.alpha = 255
             canvas.drawRect(r.left - clear, r.top - clear, r.right + clear, r.bottom + clear, eraser)
@@ -1037,37 +1382,72 @@ class GuideDecor(private val font: Typeface? = null) {
 
     // Drawing
 
-    private fun strokes(mark: Array<FloatArray>, fraction: Float) {
+    /** Draws [fraction] of [mark]'s strokes, and leaves where the pen is in [pen]. False while nothing is drawn yet. */
+    private fun strokes(mark: Array<FloatArray>, fraction: Float): Boolean {
         var left = fraction * mark.sumOf { length(it).toDouble() }.toFloat()
+        var drawn = false
         path.reset()
         for (s in mark) {
             if (left <= 0f) break
             path.moveTo(s[0], s[1])
+            pen[0] = s[0]
+            pen[1] = s[1]
+            drawn = true
             var i = 2
             while (i < s.size && left > 0f) {
                 val dx = s[i] - s[i - 2]
                 val dy = s[i + 1] - s[i - 1]
                 val len = hypot(dx, dy)
-                if (len <= left) path.lineTo(s[i], s[i + 1]) else path.lineTo(s[i - 2] + dx * left / len, s[i - 1] + dy * left / len)
+                if (len <= left) {
+                    pen[0] = s[i]
+                    pen[1] = s[i + 1]
+                } else {
+                    pen[0] = s[i - 2] + dx * left / len
+                    pen[1] = s[i - 1] + dy * left / len
+                }
+                path.lineTo(pen[0], pen[1])
                 left -= len
                 i += 2
             }
         }
         canvas.drawPath(path, paint)
+        return drawn
     }
 
-    private fun stroke(alpha: Float, width: Float) {
+    /** Adds a rounded rect to [path], with quadratic corners. */
+    private fun roundRect(left: Float, top: Float, right: Float, bottom: Float, r: Float) {
+        path.moveTo(left + r, top)
+        path.lineTo(right - r, top)
+        path.quadTo(right, top, right, top + r)
+        path.lineTo(right, bottom - r)
+        path.quadTo(right, bottom, right - r, bottom)
+        path.lineTo(left + r, bottom)
+        path.quadTo(left, bottom, left, bottom - r)
+        path.lineTo(left, top + r)
+        path.quadTo(left, top, left + r, top)
+        path.close()
+    }
+
+    /** Takes away what's under [path] by [alpha]: filled, or along it at [width] when that's more than 0. */
+    private fun erase(alpha: Float = 1f, width: Float = 0f) {
+        eraser.style = if (width > 0f) Paint.Style.STROKE else Paint.Style.FILL
+        eraser.strokeWidth = width
+        eraser.alpha = (alpha.coerceIn(0f, 1f) * 255).roundToInt()
+        canvas.drawPath(path, eraser)
+    }
+
+    private fun stroke(alpha: Float, width: Float, colour: Int = this.colour) {
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = width
-        tone(alpha)
+        tone(alpha, colour)
     }
 
-    private fun fill(alpha: Float) {
+    private fun fill(alpha: Float, colour: Int = this.colour) {
         paint.style = Paint.Style.FILL
-        tone(alpha)
+        tone(alpha, colour)
     }
 
-    private fun tone(alpha: Float) {
+    private fun tone(alpha: Float, colour: Int) {
         paint.color = colour and 0x00FFFFFF or ((alpha.coerceIn(0f, 1f) * 255).roundToInt() shl 24)
     }
 
@@ -1089,32 +1469,37 @@ class GuideDecor(private val font: Typeface? = null) {
         private const val TAU = (2 * PI).toFloat()
 
         /**
-         * Each slide's colour and how strong its whole layer is: the accent at 14–24% or cream at 10–14% (§7), tuned per slide so each
-         * reads at a glance on the phone, still behind everything (owner, 2026-11-13: at 6–12% it mostly vanished). The accent is orange,
-         * or cream with Orange accents off ([Accent]).
+         * The accent as the decorations draw it: orange, or with Orange accents off, cream at the orange's lightness, so a slide's
+         * decoration keeps its strength instead of turning 2.6 times brighter.
+         */
+        fun accentColour(): Int = Accent.warm(Accent.of(true))
+
+        /**
+         * Each slide's colour and how strong its whole layer is: the accent at 36–46%, or cream for the typewriter's e, its layer at
+         * 40% (round 2, reviewed on the phone, 2026-11-13). The finale's level is its grass's front tone, in ink.
          */
         class Look(val accent: Boolean, val level: Float, val loop: Long, val still: Long) {
-            val colour: Int get() = if (accent) Accent.colour else CREAM
+            val colour: Int get() = if (accent) accentColour() else CREAM
         }
 
         val LOOKS = mapOf(
-            "type" to Look(true, .24f, 18_000, 4_400),
-            "swipe" to Look(true, .2f, 19_500, 1_500),
-            "menu" to Look(true, .2f, 12_000, 2_000),
-            "backspace" to Look(false, .12f, 7_000, 3_000),
-            "flick" to Look(true, .24f, 6_000, 900),
-            "hold" to Look(true, .22f, 16_000, 900),
-            "steer" to Look(true, .24f, 6_000, 1_000),
-            "selectmore" to Look(true, .2f, 6_000, 2_700),
-            "alt" to Look(true, .2f, 20_000, 3_000),
-            "holdsym" to Look(true, .18f, 20_000, 1_000),
-            "symmain" to Look(true, .24f, 10_000, 2_000),
-            "symgroups" to Look(true, .18f, 10_000, 3_000),
-            "clown" to Look(true, .16f, 20_000, 2_000),
-            "paste" to Look(true, .18f, 20_000, 2_500),
-            "clipboard" to Look(true, .18f, 20_000, 3_000),
-            FINALE to Look(true, .2f, 8_000, 6_000),
-            SETUP to Look(true, .16f, 20_000, 0),
+            "type" to Look(true, .45f, 18_000, 4_400),
+            "swipe" to Look(true, .42f, 12_000, 1_500),
+            "menu" to Look(true, .46f, 12_000, 2_000),
+            "backspace" to Look(false, .4f, 7_000, 2_400),
+            "flick" to Look(true, .45f, 6_000, 1_100),
+            "hold" to Look(true, .36f, 16_000, 900),
+            "steer" to Look(true, .4f, 12_000, 2_000),
+            "selectmore" to Look(true, .44f, 6_000, 2_700),
+            "alt" to Look(true, .44f, 20_000, 3_000),
+            "holdsym" to Look(true, .4f, 20_000, 1_000),
+            "symmain" to Look(true, .36f, 10_000, 2_000),
+            "symgroups" to Look(true, .44f, 10_000, 3_000),
+            "clown" to Look(true, .4f, 20_000, 2_000),
+            "paste" to Look(true, .38f, 20_000, 2_500),
+            "clipboard" to Look(true, .44f, 20_000, 3_000),
+            FINALE to Look(true, .6f, 8_000, 6_000),
+            SETUP to Look(true, .4f, 20_000, 0),
         )
 
         /** How long [slide]'s picture takes to come round again: after the grass has grown, for the finale. 0 for no slide. */
@@ -1138,37 +1523,59 @@ class GuideDecor(private val font: Typeface? = null) {
         private const val MARK_DRAW = 1400f
         private const val MARK_LINGER = 4800f
         private const val MARK_LIFE = 6400f
-        private const val SWIPE_EVERY = 6500f
-        private const val SWIPE_SWEEP = 3400f
-        private const val SWIPE_TAIL = .5f
+        private const val SWIPE_EVERY = 4000f
+        private const val SWIPE_SWEEP = 2900f
+        private const val SWIPE_TAIL = .55f
+        /** The swipe's glow and its trail: how much wider each is, and how strong. */
+        private val GLOW = listOf(2.6f to .2f, 1f to 1f)
+        private const val SHOOT = 1300f
         private const val TYPEWRITER_LOOP = 7000f
         private const val BALL_LOOP = 6000f
-        private const val BALL_FLIGHT = 2000f
+        private const val BALL_FLIGHT = 1500f
+        private const val BALL_DROP = 380f
         private const val SHRED_STEP = 2000f
-        private const val SHRED_PITCH = 86f
+        private const val SHRED_PITCH = 92f
         private const val SHRED_STRIPS = 5
         private const val SHRED_LETTERS = "TKAWSLOE"
-        private const val DRIVE_LOOP = 6000f
+        /** The road bends one way and back over this; its dashes and posts come round every [DASH_LOOP]. */
+        private const val DRIVE_LOOP = 12000f
+        private const val DASH_LOOP = 4000f
         private const val DASHES = 5
-        private val BEATS = floatArrayOf(.3f, .5f)
-        private const val ECG_SCALE = 1.3f
+        private val BEATS = floatArrayOf(.28f, .56f)
         private const val SNOW_LOOP = 20000f
         private const val BUOY_LOOP = 20000f
+        private val BUOY_SIZES = floatArrayOf(86f, 66f, 100f)
+        private val BUOY_AT = floatArrayOf(.2f, .5f, .8f)
         private const val PEEK_LOOP = 10000f
         private const val FOREVER_LOOP = 10000f
-        private const val TENT_LOOP = 20000f
+        /** The chase lights' step: 48 to the circus's 20 s loop, a multiple of 3, so the loop comes round exactly. */
+        private const val CHASE_STEP = 20000f / 48
         private const val JUGGLE_LOOP = 5000f
         private const val NOTE_LOOP = 20000f
         private const val NOTE_FLAP = 5000f
+        private val NOTE_LINES = floatArrayOf(38f, 30f, 20f)
         private const val CLIPS_LOOP = 20000f
         private const val CLIP_LENGTH = 44f
         private const val GRASS_GROW = 2600f
-        /** The tallest the grass grows, a flower's head and petals included, in dp. */
-        private const val GRASS_TALLEST = 124f
+        /** How much later than the first a blade may start to grow, so the band comes up unevenly, as grass does. */
+        private const val GRASS_STAGGER = 700f
+        /**
+         * The tallest the grass grows, a flower's head and petals included, in dp: the end's grass room (GuideFinale.GRASS_DP, 150 dp).
+         * Where the room is smaller, the whole band scales down to fit it.
+         */
+        private const val GRASS_TALLEST = 150f
+        /** The longest blade, in dp; the flowers stand a little over it. */
+        private const val BLADE_DP = 136f
         private const val GRASS_SETTLED = 4500f
         private const val GRASS_LOOP = 8000f
+        /** The three layers, back to front: their tone as part of the layer's strength, their spacing in dp, their heights in [BLADE_DP]. */
+        private val GRASS_TONES = floatArrayOf(.4f, .667f, 1f)
+        private val GRASS_PITCH = floatArrayOf(6f, 7f, 8f)
+        private val GRASS_HEIGHTS = floatArrayOf(.6f, 1f, .42f, .68f, .2f, .42f)
+        /** Where the flowers stand, across the screen. */
+        private val FLOWERS = floatArrayOf(.18f, .56f, .84f)
         private const val GEAR_LOOP = 20000f
-        private const val GEAR_MODULE = 7f
+        private const val GEAR_MODULE = 8.5f
         private const val BIG_TEETH = 14
         private const val SMALL_TEETH = 9
 
@@ -1179,7 +1586,7 @@ class GuideDecor(private val font: Typeface? = null) {
             floatArrayOf(-.1f, .7f, .32f, -3f, .68f, 3f, 1.1f, -.6f),
         )
 
-        /** The proofreader's marks in dp, each a list of strokes as x, y pairs. */
+        /** The proofreader's marks in units, each a list of strokes as x, y pairs. */
         private val MARKS: Array<Array<FloatArray>> = arrayOf(
             arrayOf(FloatArray(86) { i -> val x = -42f + i / 2 * 2f; if (i % 2 == 0) x else 4.5f * sin(x / 42f * PI.toFloat() * 3.5f) }),
             arrayOf(floatArrayOf(-12f, 10f, -1f, -10f, 1f, -10.5f, 12f, 10f)),
@@ -1204,6 +1611,9 @@ class GuideDecor(private val font: Typeface? = null) {
                 FloatArray(36) { i -> val x = -34f + i / 2 * 4f; if (i % 2 == 0) x else 6.5f + .8f * sin(x / 8f + 1f) },
             ),
         )
+
+        /** How far each mark reaches either side of its middle, in units. */
+        private val MARK_HALF = FloatArray(MARKS.size) { k -> MARKS[k].maxOf { s -> (s.indices step 2).maxOf { abs(s[it]) } } }
 
         /** A smooth curve through [points] (Catmull-Rom), scaled by [scale], as x, y pairs. */
         private fun smoothPoints(points: FloatArray, scale: Float): FloatArray {
@@ -1258,6 +1668,8 @@ class GuideDecor(private val font: Typeface? = null) {
         }
 
         private fun frac(x: Float) = x - floor(x)
+        /** [x] folded into 0 until [n], for times. */
+        private fun wrap(x: Float, n: Float) = x - floor(x / n) * n
         private fun smooth(x: Float): Float = x.coerceIn(0f, 1f).let { it * it * (3 - 2 * it) }
         private fun sine(x: Float): Float = (1f - cos(PI.toFloat() * x.coerceIn(0f, 1f))) / 2f
         private fun bump(x: Float): Float = if (x <= 0f || x >= 1f) 0f else sin(PI.toFloat() * x)
@@ -1265,6 +1677,5 @@ class GuideDecor(private val font: Typeface? = null) {
             val u = x.coerceIn(0f, 1f) - 1f
             return 1f + u * u * (2.2f * u + 1.2f)
         }
-
     }
 }

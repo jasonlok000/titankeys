@@ -12,22 +12,22 @@ package com.atlas.keyboard
 object MenuKeys {
     /** The rows of letters that pick the menu's buttons: the top two. */
     const val ROWS = 2
-    /** The columns of the buttons: I, O and P on the top row. */
-    const val SAVE = 7
-    const val FORGET = 8
+    /** The columns of the buttons: I for a step up, O for a step down, and P for Back, on the top row. */
+    const val UP = 7
+    const val DOWN = 8
     const val BACK = 9
     /** The columns the word takes, left of the buttons, and the ones past them that have nothing over them: none. */
-    const val WORD_COLUMNS = SAVE
+    const val WORD_COLUMNS = UP
     const val AFTER_COLUMNS = 0
     /** The ten key columns. */
     const val COLUMNS = 10
 
-    /** Which button [key] picks: [SAVE], [FORGET] or [BACK], or -1 for a key that picks none. */
+    /** Which button [key] picks: [UP], [DOWN] or [BACK], or -1 for a key that picks none. */
     fun button(key: String): Int {
         if (!Layout.isLetter(key)) return -1
         for (row in 0 until ROWS) {
             val column = Layout.rows[row].indexOf(key)
-            if (column in SAVE..BACK) return column
+            if (column in UP..BACK) return column
         }
         return -1
     }
@@ -40,8 +40,8 @@ object MenuKeys {
     fun slot(width: Float, column: Int, alignment: KeyAlignment = KeyAlignment.current): Pair<Float, Float> =
         KeyGeometry(width, alignment).cell(column)
 
-    /** Where the word ends on the right, [gap] pixels left of Save's column. */
-    fun wordRight(width: Float, gap: Float, alignment: KeyAlignment = KeyAlignment.current) = slot(width, SAVE, alignment).first - gap
+    /** Where the word ends on the right, [gap] pixels left of I's column. */
+    fun wordRight(width: Float, gap: Float, alignment: KeyAlignment = KeyAlignment.current) = slot(width, UP, alignment).first - gap
 
     /**
      * The button that a finger resting on [key] hovers: the button's own key, or the one below it, so K and L hover I's and O's,
@@ -50,132 +50,95 @@ object MenuKeys {
      */
     fun hovered(key: String) = if (key == Layout.BACKSPACE) BACK else button(key)
 
+    /**
+     * Where a word stands: one ladder of four rungs for every word (owner, 2026-11-13). I moves it one rung up and O one rung down,
+     * never two, and the menu always stays open.
+     * - [Blocked]: on Blocked words, so it's never suggested, learned or fixed into.
+     * - [New], not saved: TitanKeys doesn't know it. A word typed once, a learned word that faded, a dictionary word you took out,
+     *   and anything never seen.
+     * - [Saved]: TitanKeys knows it. A dictionary word, a word it learned from your typing (typed twice, and still in use), and a
+     *   word you saved.
+     * - [Favourite]: first among similar words.
+     */
+    enum class Step { Blocked, New, Saved, Favourite }
 
     /**
-     * Where a word stands: one simple ladder for every word (owner, 2026-11-12), dictionary words and single letters too.
-     * NOT SAVED → SAVED ("remembered") → FAVOURITE. I moves the word one step up and O one step down, never two.
+     * What I and O can do. [Favourited] is I on a favourite: the top of the ladder, a spent heart that says no. [Unsave] takes a
+     * word out of what TitanKeys knows without blocking it; [Block] puts it on Blocked words, and [Unblock] takes it off.
      */
-    enum class Step { New, Saved, Favourite }
+    enum class Button { Save, Unsave, Favourite, Favourited, Unfavourite, Block, Unblock }
+
+    /** What I and O show at a [Step], and where each press takes the word: null for a button with nothing. */
+    data class Choices(val i: Button?, val iNext: Step?, val o: Button?, val oNext: Step?)
 
     /**
-     * What I and O can do. [Favourited] is I on a favourite: the top of the ladder, a spent heart that says no. [Unsave] takes your
-     * save away, and nothing else: a dictionary word stays in the dictionary and is never blocked. [Forget] removes what the
-     * keyboard learned from your typing, such as a typo it picked up.
+     * Where a word stands as the menu opens, from what the word lists say of it: [blocked] wins, then a [favourite]; then saved, a
+     * word you [saved], one TitanKeys [learned] from your typing and still uses, or one the dictionary has ([builtIn]) unless you
+     * took it out of the dictionary ([unsaved]); and not saved for anything else.
      */
-    enum class Button { Save, Favourite, Favourited, Unfavourite, Unsave, Forget }
+    fun step(blocked: Boolean, favourite: Boolean, saved: Boolean, learned: Boolean, builtIn: Boolean, unsaved: Boolean): Step = when {
+        blocked -> Step.Blocked
+        favourite -> Step.Favourite
+        saved || learned || builtIn && !unsaved -> Step.Saved
+        else -> Step.New
+    }
 
     /**
-     * Where a word stands for the menu: its [step]; whether the keyboard [learned] it from your typing, which O can forget at the
-     * bottom; whether the dictionary has it ([builtIn]), so it counts as saved and O takes it out of the dictionary; whether the
-     * word store can hold it at all ([savable]: symbols and emoji can't be saved); and whether it is a single letter, which is
-     * never forgotten.
+     * Whether [word] has a ladder, so its menu opens: 2 to 24 letters, with apostrophes, as the word lists hold them. One-letter
+     * words, symbols, emoji and numbers open no menu at all (owner, 2026-11-13).
      */
-    data class State(val step: Step, val learned: Boolean, val builtIn: Boolean = false, val savable: Boolean = true,
-                     val oneLetter: Boolean = false)
-
-    /** What I and O show at a [State], and where each press takes the word: null for a button with nothing, or after Forget. */
-    data class Choices(val i: Button?, val iNext: State?, val o: Button?, val oNext: State?)
-
-    /**
-     * Where a word stands as the menu opens (owner, 2026-11-12): a favourite; then saved, a word you saved or one the dictionary
-     * has ("saving is adding to the dictionary, so a dictionary word is saved"); then not saved. A [blocked] word, one you forgot,
-     * is not saved and no favourite, whatever the lists still say. Only a learned word that isn't in the dictionary can be
-     * forgotten at the bottom, and never a single letter.
-     */
-    fun state(saved: Boolean, favourite: Boolean, blocked: Boolean, learned: Boolean, oneLetter: Boolean,
-              builtIn: Boolean = false, savable: Boolean = true) = State(
-        when {
-            blocked -> Step.New
-            favourite -> Step.Favourite
-            saved || builtIn -> Step.Saved
-            else -> Step.New
-        },
-        learned && !oneLetter && !blocked && !builtIn, builtIn, savable, oneLetter)
-
-    /**
-     * Whether the word store can hold [word]: 2 to 24 letters, with apostrophes. Anything else, symbols, emoji, numbers, can't be
-     * saved, so its menu has no Save (owner, 2026-11-12: Save failed silently for them).
-     */
-    fun savable(word: String): Boolean {
+    fun opens(word: String): Boolean {
         val letters = word.count(Char::isLetter)
         return letters in 2..24 && word.all { it.isLetter() || it == '\'' || it == '’' }
     }
 
     /**
      * The ladder itself, the only place it lives: the keyboard, the guide and the checks all use it.
-     * - NOT SAVED: I is Save, to SAVED, for a word the store can hold. O is Forget, only for a word the keyboard learned, and
-     *   closes the menu.
-     * - SAVED: I is Favourite, to FAVOURITE. O is Unsave, to NOT SAVED, with nothing learned left to forget; for a dictionary
-     *   word O is Forget, which takes it out of the dictionary with an Undo and closes the menu, except for a single letter.
-     * - FAVOURITE: I is spent and stays. O is Unfavourite, to SAVED, always.
+     * - FAVOURITE: I is the spent heart, which stays. O is Unfavourite, to SAVED.
+     * - SAVED: I is Favourite, to FAVOURITE. O is Unsave, to NOT SAVED, for every kind of word.
+     * - NOT SAVED: I is Save, to SAVED. O is Block, to BLOCKED.
+     * - BLOCKED: I is Unblock, to NOT SAVED. O has nothing.
      */
-    fun choices(state: State): Choices = when (state.step) {
-        Step.New -> Choices(Button.Save.takeIf { state.savable }, state.copy(step = Step.Saved),
-            Button.Forget.takeIf { state.learned }, null)
-        Step.Saved -> if (state.builtIn) Choices(Button.Favourite, state.copy(step = Step.Favourite),
-            Button.Forget.takeUnless { state.oneLetter }, null)
-        else Choices(Button.Favourite, state.copy(step = Step.Favourite), Button.Unsave, state.copy(step = Step.New, learned = false))
-        Step.Favourite -> Choices(Button.Favourited, state, Button.Unfavourite, state.copy(step = Step.Saved))
+    fun choices(step: Step): Choices = when (step) {
+        Step.Favourite -> Choices(Button.Favourited, Step.Favourite, Button.Unfavourite, Step.Saved)
+        Step.Saved -> Choices(Button.Favourite, Step.Favourite, Button.Unsave, Step.New)
+        Step.New -> Choices(Button.Save, Step.Saved, Button.Block, Step.Blocked)
+        Step.Blocked -> Choices(Button.Unblock, Step.New, null, null)
     }
 
-    /** I's button at [step], for an ordinary word. */
-    fun first(step: Step) = choices(State(step, false)).i
-
-    /** O's button at [step], for an ordinary word that the keyboard [learned] or not. */
-    fun second(step: Step, learned: Boolean) = choices(State(step, learned)).o
-
-    /** The state after [button] at [state], or null when the menu closes, after Forget. */
-    fun press(state: State, button: Button): State? {
-        val choices = choices(state)
+    /** The rung after [button] at [step]. A button that [step] doesn't show changes nothing. */
+    fun press(step: Step, button: Button): Step {
+        val choices = choices(step)
         return when (button) {
-            choices.i -> choices.iNext
-            choices.o -> choices.oNext
-            else -> state
+            choices.i -> choices.iNext ?: step
+            choices.o -> choices.oNext ?: step
+            else -> step
         }
     }
 
-    /** How far [button] moves a word: up 1 or 2, down 1, 2 or 3 (Forget, the heaviest), or 0 for the spent heart. See [Haptics]. */
+    /**
+     * How high on the ladder [button]'s step is, up or down: up to not saved 1, to saved 2 and to favourite 3; down from favourite
+     * 1, from saved 2 and to blocked 3, the heaviest; 0 for the spent heart. Higher steps up end stronger, and lower steps down
+     * weigh more: see [Haptics].
+     */
     fun move(button: Button) = when (button) {
-        Button.Save -> 1
-        Button.Favourite -> 2
+        Button.Unblock -> 1
+        Button.Save -> 2
+        Button.Favourite -> 3
         Button.Favourited -> 0
         Button.Unfavourite -> -1
         Button.Unsave -> -2
-        Button.Forget -> -3
+        Button.Block -> -3
     }
 
     /**
      * Whether a finger hovering [column] shows a pill: I's and O's buttons do, where they have one. Back has none, no name and
      * no highlight: just its arrow, which works on a press (owner, 2026-11-12).
      */
-    fun pills(column: Int, state: State) = when (column) {
-        SAVE -> choices(state).i != null
-        FORGET -> choices(state).o != null
+    fun pills(column: Int, step: Step) = when (column) {
+        UP -> choices(step).i != null
+        DOWN -> choices(step).o != null
         else -> false
-    }
-
-    /**
-     * The animations of the word menu: see [MenuMotion]. Each change of step plays one, and so does Forget. Opening plays only a
-     * soft echo of where the word stands: [Echo] by a favourite, [SavedEcho] by a saved word.
-     */
-    enum class Motion { Save, Favourite, Unfavourite, Unsave, Forget, Echo, SavedEcho }
-
-    /**
-     * What plays as the word goes from [from] to [to], or as the menu opens on it when [from] is null: a soft echo for a saved word
-     * or a favourite, in its own mark, and nothing for one that isn't saved. Never a step's burst (owner, 2026-11-13: opening once
-     * showed hearts and then glitter, as if it replayed the steps).
-     */
-    fun motion(from: Step?, to: Step): Motion? = when {
-        from == null -> when (to) {
-            Step.New -> null
-            Step.Saved -> Motion.SavedEcho
-            Step.Favourite -> Motion.Echo
-        }
-        from == to -> null
-        to == Step.Favourite -> Motion.Favourite
-        from == Step.Favourite -> Motion.Unfavourite
-        to == Step.Saved -> Motion.Save
-        else -> Motion.Unsave
     }
 
     /**
@@ -189,6 +152,12 @@ object MenuKeys {
         val (left, right) = slot(width, column, alignment)
         val end = (left + right) / 2 + icon / 2 + padRight
         return end - padRight - icon - gap - label - padLeft to end
+    }
+
+    /** Whether a pill from [left] to [right] covers the button over [column], as it does every button to its left. */
+    fun covers(left: Float, right: Float, column: Int, width: Float, alignment: KeyAlignment = KeyAlignment.current): Boolean {
+        val (a, b) = slot(width, column, alignment)
+        return (a + b) / 2 in left..right
     }
 
     /**

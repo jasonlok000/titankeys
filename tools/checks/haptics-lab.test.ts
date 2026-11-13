@@ -96,7 +96,8 @@ test("the lab shows what the keyboard really plays, from a feed only the debug b
   expect(haptics.match(/HapticFeed\.record\(/g)?.length).toBe(1);
   expect(haptics).toContain("if (feeds) HapticFeed.record(");
   const users = [...new Bun.Glob("**/*.{kt,java}").scanSync(join(root, "android"))].filter(path =>
-    !path.endsWith("Haptics.kt") && read(join("android", path)).includes("HapticFeed"));
+    // The feed object itself, not View.isHapticFeedbackEnabled, which every press turns off (AppPress.kt).
+    !path.endsWith("Haptics.kt") && /\bHapticFeed\b/.test(read(join("android", path))));
   expect(users.map(path => path.replaceAll("\\", "/"))).toEqual(["kotlin/com/atlas/keyboard/HapticsLabActivity.kt"]);
   // The lab stops listening as it goes, so the keyboard never holds on to a closed screen.
   const screen = read("android/kotlin/com/atlas/keyboard/HapticsLabActivity.kt");
@@ -109,8 +110,9 @@ test("the lab has a practice field, a live timeline and an editor with small Pla
   expect(screen).toContain('val practice = field("Type, swipe, steer, open panels and menus here.", 3)');
   expect(screen).toContain('card("Last 5 seconds", timeline, key())');
   // Every haptic in the list opens its family's editor: a held delete's word opens Hit's.
-  expect(screen).toContain("setOnClickListener { edit(event.haptic.family, event.haptic) }");
-  expect(screen).toContain('button("Play", "Play ${family.label} alone") { lab.preview(family) }');
+  expect(screen).toContain("onPress(haptics) { edit(event.haptic.family, event.haptic) }");
+  // Play plays its family alone, with no Press on top.
+  expect(screen).toContain('button("Play", "Play ${family.label} alone", haptic = null) { lab.preview(family) }');
   expect(screen).toContain('button("Reset", "Reset ${family.label}")');
   // Nothing plays a haptic alone but the editors' Play.
   expect(screen.match(/lab\.preview\(/g)?.length).toBe(1);

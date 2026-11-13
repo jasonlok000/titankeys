@@ -32,6 +32,8 @@ import kotlin.math.roundToInt
  * that they still match. Settings keeps the app's page.
  */
 class ShareDisclosureActivity : Activity() {
+    /** Every press here plays its haptic: see [onPress]. */
+    private val haptics by lazy { Haptics(this) }
     /** The same sizes at any display size or font size (FixedScale). */
     override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
 
@@ -72,7 +74,8 @@ class ShareDisclosureActivity : Activity() {
                     setColor(Accent.colour)
                     cornerRadius = dp(28).toFloat()
                 }
-                setOnClickListener { answer(true) }
+                // Agreeing turns Share swipes on: it locks in, as a switch does.
+                onPress(haptics, Haptic.AppSwitchOn) { answer(true) }
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) })
             // Saying no is quiet, a text button under it.
             addView(quiet(DECLINE) { answer(false) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -139,7 +142,7 @@ class ShareDisclosureActivity : Activity() {
         setBackgroundColor(Color.TRANSPARENT)
         isClickable = true
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-        setOnClickListener { action() }
+        onPress(haptics) { action() }
     }
 
     private fun px(value: Float) = value * resources.displayMetrics.density

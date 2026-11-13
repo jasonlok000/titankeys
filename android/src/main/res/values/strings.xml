@@ -1,10 +1,8 @@
 <resources>
     <string name="back_service_description">Sends Back, so one press of Back closes the keyboard and goes back. While the Sym panel is open, in the Smart Launcher search field and for a moment after you press Back, TitanKeys sees the keys you press. While you type, it keeps the touchpad on the keys when a notification shows at the top of the screen. It can\'t read your screen, and it doesn\'t keep or send anything.</string>
-    <!-- The confirm on the suggestion strip after you hold a word to forget it. -->
-    <string name="strip_forgot">Forgot “%1$s”</string>
-    <string name="strip_undo">Undo</string>
     <!-- The menu of a word held on the strip, or of the word selected in the field. Hovering a button shows its name in a pill. -->
     <string name="strip_menu_word">“%1$s”</string>
+    <!-- I on a word that isn't saved: TitanKeys knows it now. -->
     <string name="strip_save">Save</string>
     <!-- I on a saved word, or one the dictionary knows: put it first among similar words. -->
     <string name="strip_favourite">Favourite</string>
@@ -12,9 +10,12 @@
     <string name="strip_favourited">Already a favourite</string>
     <!-- O on a favourite: one step down, to saved. -->
     <string name="strip_unfavourite">Unfavourite</string>
-    <!-- O on a saved word: one step down, out of Saved words. -->
+    <!-- O on a saved word: one step down, so TitanKeys doesn't know it, without blocking it. -->
     <string name="strip_unsave">Unsave</string>
-    <string name="strip_forget">Forget</string>
+    <!-- O on a word that isn't saved: onto Blocked words. -->
+    <string name="strip_block">Block</string>
+    <!-- I on a blocked word: off Blocked words, back to not saved. -->
+    <string name="strip_unblock">Unblock</string>
     <!-- When exporting or importing words, the favourites from the word menu go with them. -->
     <string name="favourites_not_exported">The words are exported, but the favourites couldn\'t be added. Try again.</string>
     <string name="favourites_not_imported">The words are imported, but the favourites couldn\'t be kept. Try again.</string>

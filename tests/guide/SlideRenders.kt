@@ -553,14 +553,18 @@ private fun wrap(g: Graphics2D, text: String, width: Int): List<String> {
     return lines
 }
 
-/** The finale's box on the end screen: under the top bar, to where the buttons start, as the phone measures it (v5.2). */
+/** The finale's box on the end screen: under the top bar, down to the grass at the bottom edge, as GuideActivity measures it. */
 private val FINALE_TOP = (V2.STATUS + dp(V2.TOP_BAR) + dp(16)).toFloat()
-private var finaleBottom = HEIGHT * .68f
+private val FINALE_BOTTOM = HEIGHT - GuideFinale.GRASS_DP * DP
 
-/** Draws the finale at [at] ms, on the end's orange, from [GuideFinale]: the same frames as the phone. */
-private fun drawFinale(g: Graphics2D, at: Long) {
-    val measure = GuideFinale.Measure { text, size, bold -> g.getFontMetrics(Font(Font.SANS_SERIF, if (bold) Font.BOLD else Font.PLAIN, 1).deriveFont(size)).stringWidth(text).toFloat() }
-    for (piece in GuideFinale.frame(at, SUMMARY_LINES, WIDTH.toFloat(), FINALE_TOP, finaleBottom, measure, 14f * DP)) when (piece) {
+private fun finaleMeasure(g: Graphics2D) =
+    GuideFinale.Measure { text, size, bold -> g.getFontMetrics(Font(Font.SANS_SERIF, if (bold) Font.BOLD else Font.PLAIN, 1).deriveFont(size)).stringWidth(text).toFloat() }
+
+/** Draws the finale at [at] ms, on the end's orange, from [GuideFinale]: the same frames as the phone, the name where the end's block puts it. */
+private fun drawFinale(g: Graphics2D, at: Long, answered: Boolean = false) {
+    val measure = finaleMeasure(g)
+    val nameBase = endPlace(g, answered).first
+    for (piece in GuideFinale.frame(at, SUMMARY_LINES, WIDTH.toFloat(), FINALE_TOP, FINALE_BOTTOM, measure, DP, nameBase)) when (piece) {
         is GuideFinale.Text -> {
             g.font = Font(Font.SANS_SERIF, if (piece.bold) Font.BOLD else Font.PLAIN, 1).deriveFont(piece.size)
             g.color = rgb(piece.colour, piece.alpha)
@@ -611,9 +615,8 @@ private fun drawFinaleFrame(file: File, at: Long, bright: Float = 1f) {
     val (image, g) = image()
     g.color = orange
     g.fillRect(0, 0, WIDTH, HEIGHT)
-    // The grass grows as the finale plays, on the room the end's buttons keep while they wait to show.
-    finaleBottom = endTop(g, false) - dp(FINALE_ROOM).toFloat()
-    g.drawImage(decorLayer(GuideDecor.FINALE, at, endKeepOut(g, false), true, bright), 0, 0, null)
+    // The grass grows from the bottom edge as the finale plays; the buttons wait unseen, so only the words keep it down.
+    g.drawImage(decorLayer(GuideDecor.FINALE, at, endKeepOut(g, false).dropLast(1), true, bright), 0, 0, null)
     topBar(g, GuideChapter.End, true, V2.STATUS)
     drawFinale(g, at)
     g.dispose()
@@ -644,9 +647,8 @@ private fun drawEnd(file: File, answered: Boolean, bright: Float = 1f) {
     val underHeight = under.size * g.fontMetrics.height
     val boring = dp(44)
     var y = endTop(g, answered)
-    finaleBottom = y - dp(FINALE_ROOM).toFloat()
-    drawFinale(g, GuideFinale.total(SUMMARY_LINES))
-    if (finaleBottom - FINALE_TOP < dp(220)) mark(g, "FINALE SQUEEZED", y)
+    drawFinale(g, GuideFinale.total(SUMMARY_LINES), answered)
+    if (y + endButtonsHeight(g, answered) > FINALE_BOTTOM) mark(g, "BUTTONS IN THE GRASS", y)
     // Every text on the end's orange is ink (design v2): the filled button is cream, with ink words. With Orange accents off the
     // end is cream, and the button is Accent's raised cream, so it still shows.
     g.font = V2.title()
@@ -683,25 +685,31 @@ private fun drawEnd(file: File, answered: Boolean, bright: Float = 1f) {
     ImageIO.write(image, "png", file)
 }
 
-/** Where the end's buttons start: the room they take, from the bottom up, as the column lays them out. */
-private fun endTop(g: Graphics2D, answered: Boolean): Int {
+/** How tall the end's buttons are, as the column lays them out: the two big ones, the share line, Start again and the boring guide. */
+private fun endButtonsHeight(g: Graphics2D, answered: Boolean): Int {
     val inner = WIDTH - 2 * dp(V2.SIDE)
     g.font = V2.title()
     val goHeight = g.fontMetrics.ascent + g.fontMetrics.descent + 2 * dp(16)
     g.font = V2.body()
     val againHeight = g.fontMetrics.ascent + g.fontMetrics.descent + 2 * dp(12)
     val underHeight = wrap(g, if (answered) SHARE_ANSWERED else SHARE_PLAIN, inner).size * g.fontMetrics.height
-    return HEIGHT - dp(24) - dp(44) - dp(4) - againHeight - dp(12) - underHeight - dp(4) - goHeight - dp(12) - goHeight
+    return goHeight + dp(12) + goHeight + dp(4) + underHeight + dp(12) + againHeight + dp(4) + dp(44)
 }
 
-/** The room between the finale and the end's buttons, for the grass, as GuideActivity's FINALE_ROOM. */
-private const val FINALE_ROOM = 56
+/** The end's block, as GuideActivity lays it out with [GuideFinale.endBlock]: the name's baseline and the buttons' top. */
+private fun endPlace(g: Graphics2D, answered: Boolean): Pair<Float, Float> {
+    val measure = finaleMeasure(g)
+    return GuideFinale.endBlock(FINALE_TOP, FINALE_BOTTOM, endButtonsHeight(g, answered).toFloat(), GuideFinale.nameSize(WIDTH.toFloat(), measure, DP), DP)
+}
 
-/** What the end keeps the grass out of: the top bar, the finale's words and the buttons' room. */
+/** Where the end's buttons start. */
+private fun endTop(g: Graphics2D, answered: Boolean) = Math.round(endPlace(g, answered).second)
+
+/** What the end keeps the grass out of: the top bar, the finale's words and the buttons. */
 private fun endKeepOut(g: Graphics2D, answered: Boolean) = listOf(
     RectF(0f, V2.STATUS.toFloat(), WIDTH.toFloat(), (V2.STATUS + dp(V2.TOP_BAR)).toFloat()),
-    RectF(0f, FINALE_TOP, WIDTH.toFloat(), endTop(g, answered) - dp(FINALE_ROOM).toFloat()),
-    RectF(dp(V2.SIDE).toFloat(), endTop(g, answered).toFloat(), (WIDTH - dp(V2.SIDE)).toFloat(), (HEIGHT - dp(24)).toFloat()),
+    RectF(0f, FINALE_TOP, WIDTH.toFloat(), FINALE_BOTTOM),
+    RectF(dp(V2.SIDE).toFloat(), endTop(g, answered).toFloat(), (WIDTH - dp(V2.SIDE)).toFloat(), (endTop(g, answered) + endButtonsHeight(g, answered)).toFloat()),
 )
 
 /** The real decoration, from GuideDecor, as the phone draws it; or [bright]er, to judge the drawing. */
@@ -715,8 +723,9 @@ private val DECOR by lazy {
  */
 private fun decorLayer(slide: String, millis: Long, keep: List<RectF>, onOrange: Boolean, bright: Float): BufferedImage {
     val layer = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
-    // Nothing under the status bar, as GuideDecorView.
-    DECOR.draw(Canvas(layer), slide, millis, RectF(0f, V2.STATUS.toFloat(), WIDTH.toFloat(), (HEIGHT - V2.BAR).toFloat()), keep, onOrange, DP)
+    // Nothing under the status bar, as GuideDecorView. The end has no keyboard, so its decoration reaches the bottom edge.
+    val bottom = if (slide == GuideDecor.FINALE) HEIGHT else HEIGHT - V2.BAR
+    DECOR.draw(Canvas(layer), slide, millis, RectF(0f, V2.STATUS.toFloat(), WIDTH.toFloat(), bottom.toFloat()), keep, onOrange, DP)
     if (bright != 1f) for (y in 0 until HEIGHT) for (x in 0 until WIDTH) {
         val argb = layer.getRGB(x, y)
         val alpha = argb ushr 24

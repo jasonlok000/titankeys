@@ -165,9 +165,33 @@ final class LanguageHabits {
     List<Entry> active(int day) { ArrayList<Entry> result = new ArrayList<>(); for (Entry entry : words.values()) if (entry.active(day) && SuggestionPolicy.allowed(entry.word)) result.add(entry); return result; }
     /** The words you saved with Save, in Settings or the word menu: not the ones learned from your typing. */
     java.util.Set<String> addedWords() { java.util.Set<String> result = new java.util.HashSet<>(); for (Entry entry : words.values()) if (entry.added) result.add(entry.word); return result; }
-    /** The words learned from your typing, which you never saved: a picked-up typo is one, until Forget takes it out. */
-    java.util.Set<String> learnedWords() { java.util.Set<String> result = new java.util.HashSet<>(); for (Entry entry : words.values()) if (!entry.added) result.add(entry.word); return result; }
+    /**
+     * Every word your typing put in the list, which you never saved, even one still gathering evidence: Forget takes any of them
+     * out. See {@link #learnedWords(int)} for the ones TitanKeys has learned.
+     */
+    java.util.Set<String> typedWords() { java.util.Set<String> result = new java.util.HashSet<>(); for (Entry entry : words.values()) if (!entry.added) result.add(entry.word); return result; }
+    /**
+     * The words TitanKeys learned from your typing, which you never saved: the ones it knows, so it suggests them (owner,
+     * 2026-11-13). A word still gathering evidence, such as one typed once, isn't learned yet, nor is one held back. A
+     * picked-up typo is learned, until Forget takes it out.
+     */
+    java.util.Set<String> learnedWords(int day) { java.util.Set<String> result = new java.util.HashSet<>(); for (Entry entry : active(day)) if (!entry.added) result.add(entry.word); return result; }
     java.util.Set<String> activeWords(int day) { java.util.Set<String> result = new java.util.HashSet<>(); for (Entry entry : active(day)) result.add(entry.word); return result; }
+    /**
+     * Rewrites each entry whose word [lowercaseWord] says the dictionary has in lowercase, and that is kept with capitals, back to
+     * lowercase: the one-time repair of words the word menu saved in the case a sentence start, Shift or Caps Lock gave them
+     * (owner, 2026-11-13: "And" and "AUTO"). Returns how many it rewrote.
+     */
+    int lowercase(java.util.function.Predicate<String> lowercaseWord) {
+        int changed = 0;
+        for (Entry entry : words.values()) {
+            if (entry.spelling.equals(entry.word) || !lowercaseWord.test(entry.word)) continue;
+            entry.spelling = entry.word;
+            changed++;
+        }
+        if (changed > 0) revision++;
+        return changed;
+    }
     String restoreCase(String word, int day) {
         Entry entry = words.get(SwipeWords.normalise(word));
         return entry != null && entry.active(day) && !entry.spelling.equals(entry.word) ? entry.spelling : word;

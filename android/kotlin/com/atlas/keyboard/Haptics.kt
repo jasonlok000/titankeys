@@ -70,6 +70,8 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
     Unfavourite("unfavourite", "Unfavourite", listOf(30, 40, 20, 40, 12)),
     /** A medium fall, between Unfavourite's and Removed's: the word left Saved words. */
     Unsaved("unsaved", "Unsaved", listOf(40, 40, 20, 40, 15)),
+    /** The lowest step up, off Blocked words: Saved's rise, lighter. */
+    Unblocked("unblocked", "Unblocked", listOf(15, 40, 15, 40, 30)),
     /** A rising run of three: the guide's celebrations. */
     Celebrate("celebrate", "Celebrate", listOf(15, 40, 22, 40, 35));
 
@@ -159,18 +161,18 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family, va
     MenuClosed("menu_closed", HapticGroup.Bar, Family.Release),
     /** Save in the word menu, by I or the strip. It has its own family, so it never feels like the menu opening. */
     WordSaved("word_saved", HapticGroup.Bar, Family.Saved),
-    /** Forget in the word menu, by O or the strip. */
-    WordForgotten("word_forgotten", HapticGroup.Bar, Family.Removed),
+    /** Block in the word menu, by O on a word that isn't saved, or the strip. */
+    WordBlocked("word_blocked", HapticGroup.Bar, Family.Removed),
     /** Favourite in the word menu, by I on a saved word or the strip. */
     WordFavourited("word_favourited", HapticGroup.Bar, Family.Favourite),
     /** Unfavourite in the word menu, by O on a favourite or the strip. */
     WordUnfavourited("word_unfavourited", HapticGroup.Bar, Family.Unfavourite),
     /** Unsave in the word menu: one step down, out of Saved words. */
     WordUnsaved("word_unsaved", HapticGroup.Bar, Family.Unsaved),
+    /** Unblock in the word menu, by I on a blocked word, or the strip: the lowest step up. */
+    WordUnblocked("word_unblocked", HapticGroup.Bar, Family.Unblocked),
     /** I on a favourite, the top of the ladder: nothing more to do. */
     MenuSpent("menu_spent", HapticGroup.Bar, Family.No),
-    /** Undo right after Forget: the word is back. */
-    ForgetUndone("forget_undone", HapticGroup.Bar, Family.Back),
     /** Save went wrong and the word isn't saved. */
     WordNotSaved("word_not_saved", HapticGroup.Bar, Family.No),
     ClipOffer("clip_offer", HapticGroup.Bar, Family.Confirm),
@@ -203,15 +205,18 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family, va
     /** Record a bug stopped: it lets go. */
     BugRecordingStopped("bug_recording_stopped", HapticGroup.Other, Family.Release),
     GuideCelebration("guide_celebration", HapticGroup.Other, Family.Celebrate),
-    /** Next pressed in the guide. */
-    GuideNext("guide_next", HapticGroup.Other, Family.Confirm),
     /** The guide's slide blocked something, and says so. */
     GuideBlocked("guide_blocked", HapticGroup.Other, Family.No),
     /** The guide showed a hint or a scenario chip. */
     GuideHint("guide_hint", HapticGroup.Other, Family.Change),
 
-    // TitanKeys' own screens (docs/haptics.md, The app's own controls). A press on the touchscreen has no click of its own,
-    // so the controls that change something say what changed. Navigation and plain buttons stay quiet.
+    // TitanKeys' own screens (docs/haptics.md, TitanKeys' own screens). A press on the touchscreen has no click of its own, so
+    // every press plays something: the controls that change something say what changed, and every other press plays Press.
+    /**
+     * Any other press in the app, the guide or the playground: ✕, ←, a row, a button, a pill, a link, Next or Skip (owner,
+     * 2026-11-13: "Add haptics to every touch screen press"). One light tick, a click. See [onPress] and [InkPress].
+     */
+    AppPress("app_press", HapticGroup.App, Family.Texture),
     /** A switch in the app, or the guide's, turned on: it locks in, as a quick setting does. */
     AppSwitchOn("app_switch_on", HapticGroup.App, Family.Lock),
     /** A switch in the app, or the guide's, turned off: it lets go. */

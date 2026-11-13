@@ -221,7 +221,26 @@ all of them are unapproved.
       key itself; the Settings title line (the fade starts on the whole pixel, with a scroll-fade check); and A's two raw oranges
       routed through Accent.
 
-    Waiting on: C's finale, then V's decorations (pushed), then W's ladder and D's press haptics.
+    - **W's ladder v4** (b8046a1, a fast-forward):
+      - four rungs, with Forget and Undo gone, and one-letter words, symbols and emoji opening no menu;
+      - Unsave on a dictionary word goes to a new unsaved_words list: hidden from suggestions but learnable again;
+      - Block takes over the autocorrect refusal;
+      - And/AUTO: Save stored the word as shown, so WordCase.kept now drops accidental capitals, with a one-time repair (word_case).
+
+      Follow-up sent: lift the heart preview off the bar's edge, and confirm the pill style is unchanged.
+
+    - **C's finale** (4a61820; merge 3e236a1), then **V's decorations** (7571f2c; merge b7d2b57, taking V's GuideDecor.kt and
+      GuideDecorRender.kt whole). guide-decor and guide pass on the merge.
+    - **D's press haptics** (27bdc2e; merge adcd3c5): a Press tick for every plain press, routed through one place (AppPress, plus
+      Ink), with docs/haptics-audit.md and a check.
+  - **To merge after build #6:**
+    - W's 2671bb0: the heart previews sit at the book's place, 8 dp over the bar; the book fades out under them; the pill is
+      unchanged, a 24% accent tint since v3;
+    - A's audit, claude/release-audit-2 81da968;
+    - then F's receiver drop and Record a bug wording, and D's baseline.
+  - **Build #6 started (12:25)** from adcd3c5. Still to come: W's heart-preview and pill follow-up, D's bar baseline, and A's release
+    audit.
+
   - **Faster finish (11:55):** the verify queue was six runs deep, about 90 minutes of duplicates. Every worker now pushes once its
     targeted checks pass and cancels its own queued verify. The Orchestrator merges C, V, W, D, A and F, then runs one full verify
     on the combined test-2.1h as build #6.

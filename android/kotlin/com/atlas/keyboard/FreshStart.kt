@@ -29,6 +29,8 @@ internal object FreshStart {
     val WIPED = setOf(
         SettingsReset.TYPING, SettingsReset.HAPTICS, "fixed_scale", "word_learning", "swipe_calibration", "blocked_words",
         "refused_fixes", "favourite_words", "snippets", "autocorrect_learning", "emoji", "easter_egg", "clipboard", "phone_checks",
+        // The dictionary words the word menu's Unsave took out, and the one-time repair of saved words' case having run.
+        "unsaved_words", "word_case",
     )
 
     /** Files kept whole: the key calibration, and the Accessibility disclosure's answer. */

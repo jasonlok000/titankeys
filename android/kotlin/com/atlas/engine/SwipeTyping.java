@@ -55,9 +55,13 @@ public final class SwipeTyping {
     private boolean configuredLearning;
     private volatile Words wordView = new Words(new String[0], new String[0], new String[0]);
     private volatile java.util.Set<String> activeWords = java.util.Set.of();
-    /** Words you saved, and words learned from your typing, normalised: see [addedWord] and [learnedWord]. */
+    /**
+     * Words you saved, words learned from your typing, and every word your typing put in the list, even one still gathering
+     * evidence, normalised: see [addedWord], [learnedWord] and [savedWord].
+     */
     private volatile java.util.Set<String> addedEntries = java.util.Set.of();
     private volatile java.util.Set<String> learnedEntries = java.util.Set.of();
+    private volatile java.util.Set<String> typedEntries = java.util.Set.of();
     /** Saved words whose spelling has capitals, such as "Lok", by their lowercase form. Read while typing. */
     private volatile Map<String, String> savedCapitals = Map.of();
     /** Names on this phone (see {@link PhoneNames}), by their lowercase form. Never learned, saved or logged. */
@@ -69,8 +73,19 @@ public final class SwipeTyping {
      * and the refusal would stop every swipe. Saved words come first, then names on this phone while there is room.
      */
     static final int PERSONAL_LIMIT = 256;
+    /** Whether the one-time repair of saved words' case has run: see [repairCase]. */
+    private static final String WORD_CASE = "word_case";
+    /** Where the dictionary words you took out are kept: see [unsavedWords]. */
+    private static final String UNSAVED_WORDS = "unsaved_words";
     private volatile long namesRevision;
     private volatile BlockedWords blockedWords;
+    /**
+     * Dictionary words you took out with Unsave (owner, 2026-11-13): never suggested, swiped or fixed into, yet not blocked, so
+     * typing one twice learns it back, and Save brings it back at once. See [unsaveWord].
+     */
+    private volatile BlockedWords unsavedWords;
+    /** Blocked words and the dictionary words you took out, together: what suggestions, swipes and fixes leave out. */
+    private volatile BlockedWords hiddenWords;
     private volatile ForgetWords.RefusedFixes refusedFixes;
     private final NextWordPredictor nextWords;
     /** Swipe engine 2.0's models, once loaded. Until then, or if they fail, the FUTO engine works alone. */
@@ -124,6 +139,8 @@ public final class SwipeTyping {
         nextWords = new NextWordPredictor(new UserNGramStore(context), System::currentTimeMillis,
                 word -> wordAllowed(rendered(word, TypingSettings.spelling(context))));
         blockedWords = new BlockedWords(context.getSharedPreferences("blocked_words", 0).getStringSet("words", java.util.Set.of()));
+        unsavedWords = new BlockedWords(context.getSharedPreferences(UNSAVED_WORDS, 0).getStringSet("words", java.util.Set.of()));
+        hide();
         refusedFixes = new ForgetWords.RefusedFixes(context.getSharedPreferences(REFUSED_FIXES, 0).getStringSet("fixes", java.util.Set.of()));
         Calibration.init(context);
         learningEnabled = storedLearning();
@@ -158,6 +175,7 @@ public final class SwipeTyping {
             typedPredictions = new TypedPredictions(vocabulary, dictionary, word -> recogniser.frequency(word));
         }
         sentenceStarts = FirstWords.popular(recogniser.firstWords(), typedPredictions::contains);
+        repairCase();
         syncDictionary(); publish();
         loadError = null; readiness = "ready";
         Log.d("TouchpadSwipe", "Swipe engine ready in " + (SystemClock.uptimeMillis() - began) + " ms");
@@ -272,7 +290,7 @@ public final class SwipeTyping {
                     try { decoded = loaded.rank(decoded, recogniser.readings(), gesture, text, allowed); ranked = true; features = loaded.lastFeatures; }
                     catch (Exception | LinkageError error) { Log.w("TouchpadSwipe", "Swipe ranker skipped", error); }
                 }
-                String[] words = blockedWords.filter(EnglishSpelling.candidates(Arrays.stream(decoded).map(result -> result.word).toArray(String[]::new), variant));
+                String[] words = hiddenWords.filter(EnglishSpelling.candidates(Arrays.stream(decoded).map(result -> result.word).toArray(String[]::new), variant));
                 // Saved spellings only where the swipe was personalised. A name on this phone gets its capitals in any
                 // field, a search field too, as reading it keeps nothing.
                 for (int i = 0; i < words.length; i++)
@@ -285,7 +303,7 @@ public final class SwipeTyping {
                 timing.finish();
                 main.post(() -> {
                     recognitionTiming.record(timing, false, false, true);
-                    callback.result(blockedWords.filter(words), elapsed, null, prediction);
+                    callback.result(hiddenWords.filter(words), elapsed, null, prediction);
                 });
             } catch (RuntimeException | LinkageError error) {
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
@@ -367,9 +385,9 @@ public final class SwipeTyping {
                     } catch (Exception | LinkageError error) { Log.w("TouchpadSwipe", "Next-word model skipped", error); }
                 }
                 String[] found = EnglishSpelling.candidates(typedPredictions.suggest(prefix, personal, day,
-                        word -> blockedWords.entries().isEmpty() || wordAllowed(rendered(word, variant)), likely), variant);
+                        word -> hiddenWords.entries().isEmpty() || wordAllowed(rendered(word, variant)), likely), variant);
                 if (prefix.isEmpty() && learningEnabled) found = NextWordPredictor.combined(found, learnedNextWords(contextText, variant));
-                result = blockedWords.filter(found);
+                result = hiddenWords.filter(found);
                 boolean upper = prefix.length() > 1 && prefix.equals(prefix.toUpperCase(Locale.UK));
                 String casedAfter = beforeSuggestion(contextText, prefix);
                 for (int i = 0; i < result.length; i++) {
@@ -388,7 +406,7 @@ public final class SwipeTyping {
             main.post(() -> {
                 boolean isCancelled = cancelled.get();
                 completionTiming.record(timing, error != null, isCancelled, true);
-                if (!isCancelled) callback.result(blockedWords.filter(words), timing.finished - timing.started, error);
+                if (!isCancelled) callback.result(hiddenWords.filter(words), timing.finished - timing.started, error);
             });
         });
     }
@@ -426,7 +444,19 @@ public final class SwipeTyping {
     String accuracyStats() { return accuracyStatus; }
     public Words learnedWords() { return wordView; }
     public String[] blockedWords() { return blockedWords.words(); }
-    public boolean wordAllowed(String word) { return blockedWords.allowed(word); }
+    /** Whether [word] may be suggested, swiped or fixed into: not blocked, and not a dictionary word you took out. */
+    public boolean wordAllowed(String word) { return hiddenWords.allowed(word); }
+    /** Whether [word] is on Blocked words. */
+    public boolean blockedWord(String word) { return blockedWords.contains(word); }
+    /** Whether [word] is a dictionary word you took out with Unsave: see [unsaveWord]. */
+    public boolean unsavedWord(String word) { return unsavedWords.contains(word); }
+
+    /** Runs where the lists change: the two lists of words to leave out, as one. */
+    private void hide() {
+        java.util.Set<String> both = new java.util.HashSet<>(blockedWords.entries());
+        both.addAll(unsavedWords.entries());
+        hiddenWords = new BlockedWords(both);
+    }
 
     public TypedPredictions typedPredictions() { return typedPredictions; }
 
@@ -565,6 +595,7 @@ public final class SwipeTyping {
             if (!context.getSharedPreferences("blocked_words", 0).edit().putStringSet("words", replacement.entries()).commit())
                 throw new IOException("Could not save blocked words");
             blockedWords = replacement;
+            hide();
             learningGeneration++;
             configuredRevision = -1;
             persisted = true;
@@ -595,25 +626,25 @@ public final class SwipeTyping {
      */
     public boolean addedWord(String word) { return addedEntries.contains(SwipeWords.normalise(word)); }
 
-    /** Whether the keyboard learned [word] from your typing, without your saving it. Forget takes it out. */
+    /**
+     * Whether TitanKeys learned [word] from your typing, without your saving it: it knows the word, so it suggests it. The word
+     * menu's Forget is only for these (owner, 2026-11-13: "Why is there a forget for a word clearly not known?"). A word still
+     * gathering evidence, such as gibberish typed once, isn't learned.
+     */
     public boolean learnedWord(String word) { return learnedEntries.contains(SwipeWords.normalise(word)); }
 
     /**
-     * Whether your words hold [word] at all: saved, or learned from your typing, even one still gathering evidence. Forget takes
+     * Whether your words hold [word] at all: saved, or put there by your typing, even one still gathering evidence. Forget takes
      * any of them out.
      */
-    public boolean savedWord(String word) { return addedWord(word) || learnedWord(word); }
-
-    /** What holding [word] on the strip would do to it. */
-    public ForgetWords.Kind forgetKind(String word) {
-        return ForgetWords.kind(word, builtInWord(word), savedWord(word));
-    }
+    public boolean savedWord(String word) { return addedWord(word) || typedEntries.contains(SwipeWords.normalise(word)); }
 
     /**
-     * Forgets a word that you held on the strip: it leaves Saved words with its learned pairs, and it is blocked. If it was a
-     * fix for the letters [typed], autocorrect also stops making that fix. [typed] is empty when no letters were typed.
+     * The word menu's Block (owner, 2026-11-13): puts [word] on Blocked words, so it's never suggested, learned or fixed into. If it
+     * was a fix for the letters [typed], autocorrect also stops making that fix. [typed] is empty when no letters were typed.
+     * Unblock ([setWordBlocked] to false) takes it off and allows the fix again.
      */
-    public void forgetWord(String word, String typed, OperationCallback callback) {
+    public void blockWord(String word, String typed, OperationCallback callback) {
         worker.execute(() -> {
             String failure = null;
             if (ForgetWords.fix(typed, word)) {
@@ -621,17 +652,52 @@ public final class SwipeTyping {
                 if (saveRefusedFixes(replacement)) refusedFixes = replacement;
                 else failure = "Could not save the change to autocorrect.";
             }
-            // Forget is for good: the word leaves Saved words, and it is blocked too, so typing it again can't learn it back.
-            // Save lets it back in.
-            boolean builtIn = builtInWord(word), saved = savedWord(word);
-            String result = null;
-            if (ForgetWords.removes(word, builtIn, saved)) {
-                result = remove(word);
-                publish();
-            }
-            if (result == null && ForgetWords.blocks(word, builtIn, saved)) result = block(word, true);
+            String result = block(word, true);
             operationResult(callback, result != null ? result : failure);
         });
+    }
+
+    /**
+     * The word menu's Unsave (owner, 2026-11-13): takes [word] out of what TitanKeys knows, without blocking it. It leaves Saved
+     * words, with what was learned of it, and a dictionary word goes on the list of words you took out, so it's never suggested,
+     * swiped or fixed into. Typing it twice learns it back ([typed]), and Save brings it back at once ([restoreWord]).
+     */
+    public void unsaveWord(String word, OperationCallback callback) {
+        learningGeneration++;
+        worker.execute(() -> {
+            String failure = null;
+            if (savedWord(word)) {
+                failure = remove(word);
+                publish();
+            }
+            if (failure == null && builtInWord(word)) failure = unsave(word, true);
+            operationResult(callback, failure);
+        });
+    }
+
+    /** Save on a dictionary word you took out: it's back. See [unsaveWord]. */
+    public void restoreWord(String word, OperationCallback callback) {
+        worker.execute(() -> operationResult(callback, unsave(word, false)));
+    }
+
+    /** Runs on the worker: puts [word] on the list of dictionary words you took out, or takes it off. Returns why it failed, or null. */
+    private String unsave(String word, boolean out) {
+        try {
+            BlockedWords replacement = out ? unsavedWords.add(word) : unsavedWords.remove(word);
+            if (!context.getSharedPreferences(UNSAVED_WORDS, 0).edit().putStringSet("words", replacement.entries()).commit())
+                throw new IOException("Could not save the words taken out");
+            unsavedWords = replacement;
+            hide();
+            learningGeneration++;
+            configuredRevision = -1;
+            if (out) nextWords.forget(word);
+            syncDictionary();
+            return null;
+        } catch (IllegalArgumentException error) {
+            return error.getMessage();
+        } catch (IOException | RuntimeException | LinkageError error) {
+            return out ? "Couldn't take the word out. Try again." : "Couldn't bring the word back. Try again.";
+        }
     }
 
     private void allowFixesTo(String word) {
@@ -864,7 +930,8 @@ public final class SwipeTyping {
         wordView = new Words(dictionary.spellings(day), dictionary.descriptions(day), dictionary.swipeStatuses(day));
         activeWords = dictionary.activeWords(day);
         addedEntries = dictionary.addedWords();
-        learnedEntries = dictionary.learnedWords();
+        learnedEntries = dictionary.learnedWords(day);
+        typedEntries = dictionary.typedWords();
         Map<String, String> capitals = new HashMap<>();
         if (wordsAvailable) for (LanguageHabits.Entry entry : dictionary.active(day))
             if (!entry.spelling.equals(entry.spelling.toLowerCase(Locale.ROOT)) && entry.spelling.equalsIgnoreCase(entry.word))
@@ -882,11 +949,20 @@ public final class SwipeTyping {
         if (!learningEnabled || !wordsAvailable || generation != learningGeneration || word.isEmpty()) return;
         worker.execute(() -> {
             if (!learningEnabled || !wordsAvailable || generation != learningGeneration || recogniser == null) return;
-            if (standard(word) || !wordAllowed(word) || phoneName(word)) return;
+            // Only words the dictionary lacks are learned, and a dictionary word you took out with Unsave, which typing twice brings
+            // back (owner, 2026-11-13).
+            boolean unsaved = unsavedWords.contains(word);
+            if ((standard(word) && !unsaved) || !blockedWords.allowed(word) || phoneName(word)) return;
             long revision = dictionary.revision;
             dictionary.typed(intended, today(), rememberCase);
             lastTyped = revision == dictionary.revision ? null : word;
             if (lastTyped == null) return;
+            if (unsaved && dictionary.activeWords(today()).contains(word)) {
+                // Learned back: the dictionary has it again, so its own entry goes.
+                dictionary.remove(word);
+                lastTyped = null;
+                unsave(word, false);
+            }
             try { syncDictionary(); }
             catch (RuntimeException | LinkageError error) {
                 if (recogniser != null && !recogniser.isOpen()) unavailable(error);
@@ -1014,6 +1090,22 @@ public final class SwipeTyping {
             accuracyStatus = accuracy.summary() + "\nAccuracy stats could not be saved.";
         }
     }
+    /**
+     * Once, on the update that brought it (owner, 2026-11-13: "why is And kept on auto correcting to cap? And AUTO too?"): a saved
+     * or learned word that the dictionary has in lowercase, kept with capitals that a sentence start, Shift or Caps Lock gave it,
+     * goes back to lowercase, so autocorrect stops writing it with capitals everywhere. See [WordCase]. Runs on the worker, once
+     * the word lists have loaded.
+     */
+    private void repairCase() {
+        android.content.SharedPreferences preferences = context.getSharedPreferences(WORD_CASE, 0);
+        if (!wordsAvailable || preferences.getBoolean("repaired", false)) return;
+        TypedPredictions lowercase = typedPredictions;
+        int changed = dictionary.lowercase(word -> baseFrequency(word) > 0 && lowercase.lowercase(word));
+        if (changed > 0) saveDictionary();
+        preferences.edit().putBoolean("repaired", true).apply();
+        if (changed > 0) Log.i("TouchpadSwipe", "Put " + changed + " saved words back in lowercase");
+    }
+
     private void saveDictionary() {
         if (!wordsAvailable) return;
         try {

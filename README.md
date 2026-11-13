@@ -50,7 +50,7 @@ The Titan's keys are a touchpad too. Slide across the letters of a word without 
 
 The strip above the keys shows the other words that a swipe could be. Touch one to put it in. Before you type, the strip suggests the next word.
 
-Touch and hold a word on the strip for its menu. **I** moves it up: Save, then Favourite. **O** moves it back down, one step at a time. A word TitanKeys only learned from your typing gets **Forget**, with Undo for a moment, and **Settings > Your words** gives it back. Select one word in the text, such as a name that never swipes right, and the strip shows it with the same menu.
+Touch and hold a word on the strip for its menu. **I** moves it up a step and **O** moves it down: Blocked, Not saved, Saved, Favourite. **Unsave** takes a word out without blocking it, so typing it twice brings it back. **Block** keeps it out until you unblock it, and **Settings > Your words** lists what you blocked. Select one word in the text, such as a name that never swipes right, and the strip shows it with the same menu.
 
 ### Delete without reaching up
 

@@ -1254,7 +1254,7 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            // One key at a time: the drawing hints Save on I, then Forget on O.
+            // One key at a time: the drawing hints Save on I, then Unsave on O.
             // The hint lights I once, steady, and only once the menu is open: the screen waits for it (owner, v5.2).
             GuideStage("Press I to save it.", GuideCue.Spot(listOf("I"), rounds = 1), MENU_SAVE) { event ->
                 when {
@@ -1262,6 +1262,9 @@ internal val GUIDE_STEPS = listOf(
                     event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint("Closed it. Hold the word again.", stage = 0)
                     // A word saved already, on this slide, opens saved: O on it is the next step.
                     event is MenuPicked && event.action == "Unsave" -> GuideVerdict.Finished
+                    // O on a word that isn't saved blocks it, for show; I takes it back off (ladder v4).
+                    event is MenuPicked && event.action == "Block" -> chip("Blocked. For show. I unblocks it.")
+                    event is MenuPicked && event.action == "Unblock" -> chip("Unblocked. Now I saves it.")
                     else -> GuideVerdict.Wait
                 }
             },

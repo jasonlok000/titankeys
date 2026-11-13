@@ -63,7 +63,43 @@ fun main() {
     thePlaygroundsFiveMoments()
     eachMomentPlaysOnceABurst()
     theSwitchSilencesThePlayground()
+    aPressInInkClicksUnlessItsControlMeansSomething()
     println("Haptic checks passed")
+}
+
+/**
+ * Every press in Ink's pages plays Press, a light tick, unless its control plays its own haptic in time: a switch only locks,
+ * never clicks then locks (owner, 2026-11-13: "Add haptics to every touch screen press").
+ */
+private fun aPressInInkClicksUnlessItsControlMeansSomething() {
+    check(Haptic.AppPress.family == Family.Texture && Haptic.AppPress.group == HapticGroup.App) { "Press is a texture tick in the app's group" }
+    var now = 0L
+    val waiting = HashMap<Runnable, Long>()
+    var played = 0
+    val press = InkPress({ run, millis -> waiting[run] = now + millis }, { waiting.remove(it) }) { played++ }
+    fun advance(millis: Long) {
+        now += millis
+        waiting.filterValues { it <= now }.keys.forEach { waiting.remove(it)?.let { _ -> it.run() } }
+    }
+    // A plain press: Press plays once its wait is over, not before.
+    press.pressed()
+    advance(InkPress.WAIT_MILLIS - 1)
+    check(played == 0) { "Press waits for a meaning" }
+    advance(1)
+    check(played == 1) { "then plays" }
+    // A switch: its Lock comes in time, and no Press plays.
+    press.pressed()
+    advance(20)
+    press.meaning()
+    advance(200)
+    check(played == 1) { "A control's own haptic takes the place of Press" }
+    // Two quick presses: one Press each, as texture may repeat. The second starts its own wait.
+    press.pressed()
+    advance(InkPress.WAIT_MILLIS)
+    press.pressed()
+    advance(InkPress.WAIT_MILLIS)
+    check(played == 3) { "Each press clicks: $played" }
+    check(InkPress.WAIT_MILLIS in 30L..80L) { "Press is near the press itself: ${InkPress.WAIT_MILLIS} ms" }
 }
 
 private fun check(condition: Boolean, message: () -> String) {
@@ -104,12 +140,12 @@ private val table = mapOf(
     Haptic.MenuMark to Family.Texture,
     Haptic.MenuClosed to Family.Release,
     Haptic.WordSaved to Family.Saved,
-    Haptic.WordForgotten to Family.Removed,
+    Haptic.WordBlocked to Family.Removed,
     Haptic.WordFavourited to Family.Favourite,
     Haptic.WordUnfavourited to Family.Unfavourite,
     Haptic.WordUnsaved to Family.Unsaved,
     Haptic.MenuSpent to Family.No,
-    Haptic.ForgetUndone to Family.Back,
+    Haptic.WordUnblocked to Family.Unblocked,
     Haptic.WordNotSaved to Family.No,
     Haptic.ClipOffer to Family.Confirm,
     Haptic.ExactKey to Family.Confirm,
@@ -130,10 +166,11 @@ private val table = mapOf(
     Haptic.BugRecordingStarted to Family.Lock,
     Haptic.BugRecordingStopped to Family.Release,
     Haptic.GuideCelebration to Family.Celebrate,
-    Haptic.GuideNext to Family.Confirm,
     Haptic.GuideBlocked to Family.No,
     Haptic.GuideHint to Family.Change,
-    // TitanKeys' own screens (docs/haptics.md): on locks, off lets go, a step ticks, a pick is done, a delete is gone, a refusal is no.
+    // TitanKeys' own screens (docs/haptics.md): any plain press clicks, on locks, off lets go, a step ticks, a pick is done, a delete
+    // is gone, a refusal is no.
+    Haptic.AppPress to Family.Texture,
     Haptic.AppSwitchOn to Family.Lock,
     Haptic.AppSwitchOff to Family.Release,
     Haptic.AppStep to Family.Texture,
@@ -171,6 +208,7 @@ private val patterns = mapOf(
     Family.Favourite to listOf(20L, 40L, 20L, 40L, 80L),
     Family.Unfavourite to listOf(30L, 40L, 20L, 40L, 12L),
     Family.Unsaved to listOf(40L, 40L, 20L, 40L, 15L),
+    Family.Unblocked to listOf(15L, 40L, 15L, 40L, 30L),
 )
 
 private fun eachHapticPlaysItsFamily() {
@@ -262,13 +300,15 @@ private fun everyFamilyHasItsOwnPattern() {
         check(HapticPalette.pulses(family.pattern) != HapticPalette.pulses(other.pattern)) { "$family feels different from $other" }
 }
 
-/** The word menu's Save and Forget each have a family of their own, used by nothing else. */
+/** The word menu's Save and Block each have a family of their own, used by nothing else, and so does Unblock. */
 private fun theWordMenuHasItsOwnFeels() {
-    check(Haptic.WordSaved.family == Family.Saved && Haptic.WordForgotten.family == Family.Removed) { "Save is Saved, Forget is Removed" }
+    check(Haptic.WordSaved.family == Family.Saved && Haptic.WordBlocked.family == Family.Removed) { "Save is Saved, Block is Removed" }
     check(Haptic.entries.filter { it.family == Family.Saved } == listOf(Haptic.WordSaved)) { "Only Save plays Saved" }
-    check(Haptic.entries.filter { it.family == Family.Removed } == listOf(Haptic.WordForgotten)) { "Only Forget plays Removed" }
+    check(Haptic.entries.filter { it.family == Family.Removed } == listOf(Haptic.WordBlocked)) { "Only Block plays Removed" }
+    check(Haptic.entries.filter { it.family == Family.Unblocked } == listOf(Haptic.WordUnblocked)) { "Only Unblock plays Unblocked" }
     check(Haptic.MenuOpen.family != Haptic.WordSaved.family) { "Save never shares the menu opening's family, so the repeat rule can't drop it" }
-    check(Haptic.WordNotSaved.family == Family.No && Haptic.ForgetUndone.family == Family.Back) { "A failed save is no, and Undo is back" }
+    check(Haptic.WordNotSaved.family == Family.No) { "A failed save is no" }
+    check(Haptic.entries.none { it.id == "forget_undone" || it.id == "word_forgotten" }) { "Forget and its Undo are gone (owner, 2026-11-13)" }
     for (family in ladder) check(HapticPalette.gaps(family.pattern).all { it == 40L }) { "$family's gaps are 40 ms" }
     // Favourite is Saved with a stronger last hit; Unfavourite is never Removed's fall.
     check(Haptic.WordFavourited.family == Family.Favourite && Haptic.WordUnfavourited.family == Family.Unfavourite) { "Favourite and Unfavourite have their own" }
@@ -294,7 +334,7 @@ private fun theWordMenuHasItsOwnFeels() {
 }
 
 /** The word menu's ladder: its steps' families, and each one's step. */
-private val ladder = listOf(Family.Saved, Family.Removed, Family.Favourite, Family.Unfavourite, Family.Unsaved)
+private val ladder = listOf(Family.Unblocked, Family.Saved, Family.Removed, Family.Favourite, Family.Unfavourite, Family.Unsaved)
 
 /**
  * The word menu's haptics are one system (owner, 2026-11-12): a step up rises, ending on its strongest pulse, and Favourite's last
@@ -302,9 +342,10 @@ private val ladder = listOf(Family.Saved, Family.Removed, Family.Favourite, Fami
  * says no. Each button plays the family of how far it moves the word: see [MenuKeys.move].
  */
 private fun theLadderRisesAndFalls() {
-    val family = mapOf(MenuKeys.Button.Save to Haptic.WordSaved, MenuKeys.Button.Favourite to Haptic.WordFavourited,
-        MenuKeys.Button.Favourited to Haptic.MenuSpent, MenuKeys.Button.Unfavourite to Haptic.WordUnfavourited,
-        MenuKeys.Button.Unsave to Haptic.WordUnsaved, MenuKeys.Button.Forget to Haptic.WordForgotten)
+    val family = mapOf(MenuKeys.Button.Unblock to Haptic.WordUnblocked, MenuKeys.Button.Save to Haptic.WordSaved,
+        MenuKeys.Button.Favourite to Haptic.WordFavourited, MenuKeys.Button.Favourited to Haptic.MenuSpent,
+        MenuKeys.Button.Unfavourite to Haptic.WordUnfavourited, MenuKeys.Button.Unsave to Haptic.WordUnsaved,
+        MenuKeys.Button.Block to Haptic.WordBlocked)
     check(family.keys == MenuKeys.Button.entries.toSet()) { "Every menu button has its haptic" }
     val up = family.filterKeys { MenuKeys.move(it) > 0 }.entries.sortedBy { MenuKeys.move(it.key) }.map { HapticPalette.pulses(it.value.family.pattern) }
     val down = family.filterKeys { MenuKeys.move(it) < 0 }.entries.sortedBy { -MenuKeys.move(it.key) }.map { HapticPalette.pulses(it.value.family.pattern) }

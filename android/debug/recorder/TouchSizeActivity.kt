@@ -39,6 +39,8 @@ import kotlin.math.roundToInt
  * touch positions, times and sizes while this screen is in front, never text.
  */
 class TouchSizeActivity : Activity(), Recording.Sink {
+    /** Every press here plays its haptic: see [onPress]. */
+    private val haptics by lazy { Haptics(this) }
     private enum class Kind(val label: String, val id: String, val colour: Int) {
         Free("Free", "free", Color.rgb(142, 142, 147)),
         TipSwipe("Fingertip swipe", "tip_swipe", Color.rgb(255, 149, 0)),
@@ -325,7 +327,7 @@ class TouchSizeActivity : Activity(), Recording.Sink {
         textSize = 11f
         isAllCaps = false
         layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        setOnClickListener { action() }
+        onPress(haptics) { action() }
     }
 
     /** The Titan keys, with the latest touches drawn on them as circles as large as their size. */

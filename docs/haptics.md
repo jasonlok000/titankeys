@@ -32,7 +32,7 @@ Patterns are on and off in ms, starting with on.
 
 | Family | Pattern | Plays for |
 |---|---|---|
-| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, the marked button in the word menu or a panel, a step of a stepper in the app, the playground's shake starting (a short run of ticks) |
+| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, the marked button in the word menu or a panel, a step of a stepper in the app, any other press in the app (Press), the playground's shake starting (a short run of ticks) |
 | **Crunch** | 9, 12, 9 | Keys crossed while a stroke is clearly a delete flick |
 | **Boundary** | 30 | A stroke that crunched stops being a flick, the cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel, a long delete's finger going into the pause zone or reaching the top-speed line |
 | **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, steering starts, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar, an option picked in the app |
@@ -42,32 +42,37 @@ Patterns are on and off in ms, starting with on.
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
 | **Hit** | 50 | Each word a long delete takes after its flick, shorter as it speeds up (see A held delete's hit, below). Each lightning flash in the playground |
 | **Gone** | 60 | The clipboard cleared, a confirmed delete in the app |
-| **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
+| **Back** | 35, 40, 15 | Backspace undoing a change |
 | **No** | 25, 40, 25, 40, 25 | A gesture that finds nothing at all: taps on Space or a steer with no text, a flick or a long delete with nothing to delete. Also a word that can't be saved, I on a word that's already a favourite, Ctrl + C with nothing selected, an action the guide blocks, something the app refuses. And the playground's confetti turning into rain, as a joke |
 | **Wall** | 40, 35, 20, 35, 12 | A gesture that did something and then ran out: steering hits the start or end of the text, selecting reaches either end, a long delete takes the last word |
 | **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations, the playground's first confetti |
 | **Saved** | 20, 40, 20, 40, 50 | Save in the word menu, by I or the strip |
-| **Removed** | 50, 40, 20, 40, 20 | Forget in the word menu, by O or the strip |
+| **Removed** | 50, 40, 20, 40, 20 | Block in the word menu, by O on a word that isn't saved, or the strip |
 | **Favourite** | 20, 40, 20, 40, 80 | Favourite in the word menu, by I on a saved word or the strip |
 | **Unfavourite** | 30, 40, 20, 40, 12 | Unfavourite in the word menu, by O on a favourite or the strip |
 | **Unsaved** | 40, 40, 20, 40, 15 | Unsave in the word menu, by O on a saved word or the strip |
+| **Unblocked** | 15, 40, 15, 40, 30 | Unblock in the word menu, by I on a blocked word or the strip |
 
 The rising and falling patterns use a short first or last pulse on purpose: the short pulse is what makes the rise or the fall. So Confirm's 15 ms and Change's 20 ms are under rule 1's "about 25". The table wins over that guide.
 
-Saved and Removed are the word menu's own, so Save and Forget feel different from each other and from everything else. Saved rises at the end, so it isn't No's three equal pulses or Celebrate's steady rise, and it has three pulses, not Confirm's two. Removed is its mirror, so it isn't Gone's one pulse or the two of Gone flick and Back. Save used to play Confirm, the same as the menu opening, so it felt like nothing new, and the repeat rule dropped it when you saved within 300 ms of the menu opening. Each message family has its own pattern, and tests/haptics checks it.
+Saved and Removed are the word menu's own, so Save and Block feel different from each other and from everything else. Saved rises at the end, so it isn't No's three equal pulses or Celebrate's steady rise, and it has three pulses, not Confirm's two. Removed is its mirror, so it isn't Gone's one pulse or the two of Gone flick and Back. Save used to play Confirm, the same as the menu opening, so it felt like nothing new, and the repeat rule dropped it when you saved within 300 ms of the menu opening. Each message family has its own pattern, and tests/haptics checks it.
 
-The word menu is a ladder, and its haptics are one system (owner, 2026-11-12). I moves a word one step up, and O one step down:
+The word menu is a ladder of four rungs, blocked, not saved, saved and favourite, and its haptics are one system (owner, 2026-11-12,
+and the ladder of 2026-11-13). I moves a word one step up, and O one step down. Each step's haptic plays on its effect's own frame:
+the book's clap, the page ripping, the hearts' release, the heart's crack, the strike landing, the strike gone. With motion off, it
+plays as the press lands.
 
 | Step | Button | Family | Pulses | Feel |
 |---|---|---|---|---|
+| Blocked → not saved | Unblock (I) | **Unblocked** | 15, 15, 30 | A light rise |
 | Not saved → saved | Save (I) | **Saved** | 20, 20, 50 | Rises |
 | Saved → favourite | Favourite (I) | **Favourite** | 20, 20, 80 | Rises to the strongest hit of the menu |
 | Favourite → saved | Unfavourite (O) | **Unfavourite** | 30, 20, 12 | A light fall |
 | Saved → not saved | Unsave (O) | **Unsaved** | 40, 20, 15 | A medium fall |
-| Not saved → never suggested | Forget (O) | **Removed** | 50, 20, 20 | The heaviest fall |
+| Not saved → blocked | Block (O) | **Removed** | 50, 20, 20 | The heaviest fall |
 | Favourite, the top | Already a favourite (I) | **No** | 25, 25, 25 | Nothing happened |
 
-Going up rises: each pattern ends on its strongest pulse, and Favourite's last hit is the strongest of all. Going down falls: each starts on its strongest pulse, and the further down a step goes, the harder it starts and the more it weighs in all (62, 75 and 90 ms of pulses). Every gap is 40 ms, so each pulse reads on its own. A word that is a dictionary word starts at Favourite, and Unfavourite takes it back there. The spent heart plays No, not nothing, so a press that does nothing still answers. tests/haptics checks the directions and that each step feels like no other family.
+Going up rises: each pattern ends on its strongest pulse, the higher the step the stronger, and Favourite's last hit is the strongest of all. Going down falls: each starts on its strongest pulse, and the further down a step goes, the harder it starts and the more it weighs in all (62, 75 and 90 ms of pulses). Every gap is 40 ms, so each pulse reads on its own. A word that is a dictionary word starts at Favourite, and Unfavourite takes it back there. The spent heart plays No, not nothing, so a press that does nothing still answers. tests/haptics checks the directions and that each step feels like no other family.
 
 Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single 30 ms pulse too, but it comes once, so it's a message. Hit is as firm as a message, but it's texture for the gate too: a long delete's words can come every 80 ms, and the repeat rule would drop them. Change's quiet swell is texture for the gate as well: it says something changed by itself, which needs nothing from you, so it never holds up or delays another haptic and may come again at once.
 
@@ -168,9 +173,10 @@ Back within 0.8 keys of where the flick started, measured across only, so at any
 - The word menu opens: confirm.
 - The marked menu button changes: texture.
 - Back closes the word menu: release. Typing or leaving the field closes it with nothing.
-- Save, by I or the strip: saved. It plays as you press, and a save that fails plays no after it.
-- Forget, by O or the strip: removed.
-- Undo after Forget: back.
+- Save, by I or the strip: saved, on the book's clap. A save that fails plays no after it.
+- Unsave: unsaved, as the page rips. Favourite: favourite, as the hearts release. Unfavourite: unfavourite, as the heart cracks.
+- Block, by O on a word that isn't saved, or the strip: removed, as the strike lands.
+- Unblock, by I on a blocked word: unblocked, as the strike is gone.
 - Save goes wrong: no.
 - Paste the offered clip: confirm.
 - Exact typing's bar: a key is confirm. A tap on a Shift, Alt or Ctrl chip is confirm, a long press that locks one is lock, and a tap that unlocks a locked one is release. The Haptics lab's experiment "Exact-typing keys feel like a key (texture)", off by default, tries a texture tick for the keys instead, in TitanKeys Debug only.
@@ -194,12 +200,14 @@ Back within 0.8 keys of where the flick started, measured across only, so at any
 
 **TitanKeys' own screens** (Settings, every page in it, the guide and the playground)
 
-A press on the touchscreen has no click of its own, so the controls that change something say what changed, in the keyboard's
-own words. Everything else stays quiet: Android's stock click is a prebaked effect (rule 5), so TitanKeys turns it off in
-Ink's screens and plays nothing in its place.
+A press on the touchscreen has no click of its own, so every press plays something (owner, 2026-11-13: "Add haptics to every
+touch screen press on the app"). The controls that change something say what changed, in the keyboard's own words, and every
+other press plays **Press**, one light tick, a click. Android's stock click is a prebaked effect (rule 5), so TitanKeys turns it
+off and plays its own in its place. Every control, page by page, and what it plays is in [haptics-audit.md](haptics-audit.md).
 
 | Control | Plays | Why |
 |---|---|---|
+| Any other press: ✕, ←, a row, a button, a pill, a link, Next, Skip, a topic opening or closing | **Press** | One Texture tick, 17 ms: a click is a small, fast thing, and the lightest pulse there is, so it never reads as a message. Being texture, it never holds up or cuts a message, and fast presses each tick. |
 | A switch turned on | **Lock** | It stays on, as a quick setting switched on does. |
 | A switch turned off | **Release** | It lets go, as a quick setting switched off does. |
 | Agreeing to share swipes | **Lock** | It turns Share swipes on. Declining changes nothing, so it's quiet. |
@@ -223,8 +231,15 @@ seconds, with the number back to nothing) and the show reaches it anew. Lightnin
 storm lasts. A jump in speed that passes several at once plays only the highest, and counts the rest as reached, so two never run
 into each other. All five share one switch, **Playground effects**.
 
+Every press goes through one place, so none can be forgotten. On the native screens, the guide, the playground and the
+others, a control is made with `onPress` (AppPress.kt), which plays its haptic and turns Android's click off. In Ink's pages,
+Ink sends every press, the header's ✕ and ← too, to `appPressHaptic`, which plays Press 50 ms later. A control that plays its
+own haptic, a switch, a stepper, a pick, a delete or a refusal, calls the app in that time, and its haptic takes the place of
+Press, so a switch only locks and never clicks first. tools/checks/app-haptics.test.ts fails on a native press set any other
+way, and on an Ink press with its haptic turned off.
+
 They play through the keyboard's switches: **All haptics** off silences them, and each has its own switch in Settings >
-Haptics, under TitanKeys' own screens, except the playground's five moments, which share **Playground effects**. Turning All haptics off plays its release first, while haptics are still on. Turning it
+Haptics, under TitanKeys' own screens (Press is **A press**, on to start with), except the playground's five moments, which share **Playground effects**. Turning All haptics off plays its release first, while haptics are still on. Turning it
 on plays nothing, as haptics were off when it was pressed.
 
 ## What plays nothing, and why
@@ -240,16 +255,13 @@ on plays nothing, as haptics were off when it was pressed.
 - **The touchpad's scroll, cursor and Back.** The screen moves.
 - **The first press of Clear, and Pin mode.** Key presses, and the page shows them.
 - **A key that picks a button in the word menu.** A key press. What the button does plays its own haptic.
-- **Save and Forget in the guide.** They're only for show there: nothing is saved or forgotten, and the guide says so.
+- **The word menu in the guide.** It plays its real haptics, but it's only for show: nothing is saved, blocked or taken out, and the guide says so.
 - **A new step in the guide, and setup changes there.** You're looking at the guide.
 - **The playground's speed show, apart from its five big moments, and idle games.** Each step, comment, spark and flame is for
   your eyes. Only the five moments above play, so nothing else buzzes while you type at speed.
-- **Navigation in TitanKeys' own screens:** opening a page, ←, ×, Back, links and tabs. The screen changes, so you see it.
-- **Plain buttons there:** Export, Import, Copy, Share, Open, Add app, the guide's Skip, Start again, Leave and the setup steps. What
-  they do shows on the screen, or opens another one.
-- **Removing one item from a list** (✕ on a word, a snippet, an app or a key). The row goes as you watch. Gone is for wiping
-  data, after a confirm.
-- **Typing in the app's own text fields.** Key presses.
+- **Typing in the app's own text fields.** Key presses. A tap that puts the caret in a field plays nothing either: Ink doesn't
+  report it as a press, and the caret and the keyboard show where it went.
+- **Android's own back gesture and its dialogs,** such as a permission request. They're the system's, not TitanKeys'.
 
 ## The gate
 

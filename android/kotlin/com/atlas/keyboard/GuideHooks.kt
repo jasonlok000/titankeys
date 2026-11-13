@@ -25,6 +25,14 @@ internal object GuideHooks {
     }
 
     const val FIELD = "com.titankeys.guide"
+    /**
+     * The playground's field: a real field, with the real word menu, saves and clipboard, and none of the slides' locks or
+     * show-only parts. It only shares the drawing of the keys with the guide's field. See [practice].
+     */
+    const val PLAYGROUND = "com.titankeys.playground"
+
+    /** Whether a field's private options are the guide's or the playground's: both draw the keys as your finger moves. */
+    fun practice(privateOptions: String?) = privateOptions?.contains(FIELD) == true || privateOptions?.contains(PLAYGROUND) == true
 
     /**
      * The next swipe comes out as its second guess, so that the right word is waiting on the strip. The guide says that it does

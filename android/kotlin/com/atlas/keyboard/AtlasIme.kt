@@ -1105,6 +1105,8 @@ class AtlasIme : InputMethodService() {
     /** Reads the emoji list away from the main thread, which also loads the emoji font before Sym is first pressed. */
     /** The guide's field is the one that this keyboard serves now. */
     private val inGuide get() = editing && currentInputEditorInfo?.privateImeOptions?.contains(GuideHooks.FIELD) == true
+    /** The guide's field or the playground's: both draw the keys, so both see every touch and a key let go. Nothing else. */
+    private val inPractice get() = editing && GuideHooks.practice(currentInputEditorInfo?.privateImeOptions)
     private var guideEmoji: EmojiPages? = null
 
     /** In the guide, the panel has its emoji to start from and keeps O shut; anywhere else it's as always. */
@@ -1271,7 +1273,7 @@ class AtlasIme : InputMethodService() {
         }
         // TitanKeys's own Settings fields hold snippets and words to add, which must not be learned. The guide's field is for
         // practice, so it learns nothing either: the guide never changes your real words (owner, 2026-11-12).
-        val ownSettings = info.packageName == packageName && info.privateImeOptions?.contains(GuideHooks.FIELD) != true
+        val ownSettings = info.packageName == packageName && !GuideHooks.practice(info.privateImeOptions)
         field = if (exact) Field.Exact else if (editing) Field.of(info.inputType, info.imeOptions) else Field.None
         if (info.packageName == packageName) field = field.copy(learning = false)
         // Android only calls onFinishInput first when the input is not restarting.
@@ -2262,7 +2264,7 @@ class AtlasIme : InputMethodService() {
                 contact.cancelActive()
             }
             // The guide's drawing of the keys still shows the finger, as it hovers the menu's buttons (owner, v5.2: every swipe).
-            if (inGuide) traceMenuFinger(event, samples)
+            if (inPractice) traceMenuFinger(event, samples)
             return
         }
         when (event.actionMasked) {
@@ -2317,7 +2319,7 @@ class AtlasIme : InputMethodService() {
                     it.isNotEmpty() && letterSpace(it).couldContinue(first.x, first.y * 4 / 3, first.time - it.last().time, composer.liftOffMillis.toLong())
                 } == true
                 // The bar's mini path joins it too, as one line.
-                swipeCarried = carries && !inGuide && strip?.gesture?.swipeCarriesOn() == true
+                swipeCarried = carries && !inPractice && strip?.gesture?.swipeCarriesOn() == true
                 Trace.touch(contact.points, false, if (carries && Trace.listening) lastTouch.orEmpty() else emptyList())
             }
             MotionEvent.ACTION_MOVE -> {
@@ -2408,7 +2410,7 @@ class AtlasIme : InputMethodService() {
         val travel = contact.travel
         val first = points.firstOrNull()
         val far = swipeCarried && gesture.swiping || travel != null && travel >= Contact.SWIPE_KEYS
-        if (inGuide || !contact.swipes || altOrPanel || travel == null || !far || first == null
+        if (inPractice || !contact.swipes || altOrPanel || travel == null || !far || first == null
             || startsDeleteFlick(first.x, first.y) && (isDeleteWordSwipe(points) || flickCrunch.mayBeFlick)) {
             gesture.swipeCancelled()
             swipeShown = 0
@@ -2498,7 +2500,7 @@ class AtlasIme : InputMethodService() {
         settleHeldTaps()
         // A lift whose last samples were off the touchpad still ends the trail the guide drew, and doesn't wipe it: the guide shows
         // every swipe (owner, v5.2). Trace itself leaves out the points the touchpad didn't read.
-        Trace.touch(if (points.size <= Swipe.MAX_POINTS && (inGuide || samples.all { it.valid })) points else emptyList(), true)
+        Trace.touch(if (points.size <= Swipe.MAX_POINTS && (inPractice || samples.all { it.valid })) points else emptyList(), true)
     }
 
     /** The finger's path while the word menu is open, for the guide's drawing only: nothing else reads it. */
@@ -3219,8 +3221,9 @@ class AtlasIme : InputMethodService() {
         val takeBack = inGuide && editing && heldLetter?.keyCode == keyCode
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
-        // The guide tells Alt pressed and let go from Alt held, and a letter let go before its symbol. Only in its own field.
-        if (inGuide && (Modifiers.isShiftOrAlt(keyCode) || HoldEngine.isLetter(keyCode))) KeyboardEvents.publish { KeyboardEvent.Released(keyCode) }
+        // The guide tells Alt pressed and let go from Alt held, and a letter let go before its symbol, and the playground's drawing
+        // lets go of a held key. Only in their fields.
+        if (inPractice && (Modifiers.isShiftOrAlt(keyCode) || HoldEngine.isLetter(keyCode))) KeyboardEvents.publish { KeyboardEvent.Released(keyCode) }
         // The release of a key that picked a menu button belongs to that pick.
         if (keyCode == menuKey) {
             menuKey = -1

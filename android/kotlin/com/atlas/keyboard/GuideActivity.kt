@@ -1252,8 +1252,9 @@ class GuideActivity : Activity() {
             minLines = 1
             maxLines = 2
             hint = FIELD_HINT
-            // Lets the keyboard know this field, for the one step that asks it for a near miss. See [GuideHooks].
-            privateImeOptions = GuideHooks.FIELD
+            // Lets the keyboard know this field. The playground is a real field, with the real word menu, so it has its own mark
+            // and only shares the drawing of the keys with the guide. See [GuideHooks].
+            privateImeOptions = if (playground) GuideHooks.PLAYGROUND else GuideHooks.FIELD
             isVerticalScrollBarEnabled = false
             importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
         }

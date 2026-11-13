@@ -577,6 +577,14 @@ private fun oneStepForEachIdea() {
     same(GuideHooks.takeNearMiss("some.other.app"), false, "No other field ever gets a near miss")
     same(GuideHooks.takeNearMiss(GuideHooks.FIELD), true, "The guide's field gets one near miss")
     same(GuideHooks.takeNearMiss(GuideHooks.FIELD), false, "One word uses it up")
+    // The playground is a real field with the real word menu (Master, 2026-11-13): its mark is never the guide's, and it only
+    // shares the drawing of the keys.
+    check(!GuideHooks.PLAYGROUND.contains(GuideHooks.FIELD)) { "The playground's mark doesn't count as the guide's" }
+    GuideHooks.nearMiss = true
+    same(GuideHooks.takeNearMiss(GuideHooks.PLAYGROUND), false, "The playground gets no near miss")
+    GuideHooks.nearMiss = false
+    check(GuideHooks.practice(GuideHooks.FIELD) && GuideHooks.practice(GuideHooks.PLAYGROUND)) { "Both draw the keys" }
+    check(!GuideHooks.practice(null) && !GuideHooks.practice("com.titankeys.rawlog.reference")) { "No other field does" }
 }
 
 /** A slide shows only the instruction that is needed now, and follows the keyboard forwards and back. */

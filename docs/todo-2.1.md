@@ -72,6 +72,9 @@ all of them are unapproved.
   the phone.
 - A (next): the slide decorations (design-v2 §7, one per slide, pure decoration) as a self-contained GuideDecor module, wired in
   after C's redesign merges.
+- F (next): a review of every user-facing text: "good, not cringey, not ai sounding, keep my tone, keep the ones I chose" (owner, 23:40).
+  F edits the Ink app, GuideSteps (incl. the playground lines beyond the owner's 22) and the release notes, and lists strings in files
+  C and D are editing, for the Orchestrator to apply after their merges.
 - Then: merge everything, one build, install, and a full run-through on the phone.
 - Release prep (Orchestrator):
   - Update release-notes.txt for everything new since it was written. One line is already wrong: steering taps now count

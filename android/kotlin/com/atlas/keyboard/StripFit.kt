@@ -24,6 +24,15 @@ internal object StripFit {
     /** Inter's descent, how far its tails reach under the baseline, as a part of its size: 494 of its 2048 units, in every weight. */
     const val DESCENT = 494f / 2048f
 
+    /** Inter's cap height, the height of its capitals, as a part of its size: 1490 of its 2048 units, in every weight. */
+    const val CAP_HEIGHT = 1490f / 2048f
+
+    /**
+     * Half the height of a caret beside words [size] px big: a caret as tall as their letters, from the top of a capital to the
+     * bottom of a tail. Centred on the bar's line, it lines up with the letters there to within 3% of their size.
+     */
+    fun caretHalf(size: Float) = size * (CAP_HEIGHT + DESCENT) / 2
+
     /** The bar's height in dp, at every Bar text size: the words, chips and menu in it grow, the bar doesn't. */
     const val BAR_DP = 56f
 

@@ -17,5 +17,5 @@ engine=android/kotlin/com/atlas/engine
   "$engine/Swipe.java" "$engine/Calibration.java" "$engine/TouchAlignment.java" \
   "$keyboard/Contact.kt" "$keyboard/CursorGesture.kt" "$keyboard/CursorMode.kt" "$keyboard/DeleteSwipe.kt" \
   "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" "$keyboard/WordSelection.kt" "$keyboard/GestureDisplay.kt" "$keyboard/TrailThickness.kt" \
-  "$keyboard/GestureDrawing.kt"
+  "$keyboard/GestureDrawing.kt" "$keyboard/StripFit.kt"
 java -Djava.awt.headless=true -cp "$work:$stdlib" com.atlas.keyboard.RenderBarKt "$out"

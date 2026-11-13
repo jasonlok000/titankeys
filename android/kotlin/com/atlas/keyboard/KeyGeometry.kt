@@ -5,9 +5,9 @@ package com.atlas.keyboard
  * key sits over its real key. It is built without Android, so the checks can use it too.
  *
  * The shape is the Titan 2 Elite's: keys 84 wide with gaps of 24, from Unihertz's own face-on drawing at 1080 px wide, and the
- * three letter rows in the same columns. The keys are square and the rows evenly spaced, a key and a gap apart, as the owner
- * sees on the phone (2026-11-12). Q's left edge, a key's width and a gap's come from [alignment], and the heights scale with a
- * column (a key and a gap), so a calibrated keyboard is the real one, scaled.
+ * three letter rows in the same columns. The keys are square, and the rows sit one right under the next with next to no gap, as
+ * the owner sees on the phone (2026-11-12). Q's left edge, a key's width and a gap's come from [alignment], and the heights
+ * scale with a column (a key and a gap), so a calibrated keyboard is the real one, scaled.
  *
  * The touchpad's coordinates run from 0 to 1 across the ten columns, with column c's middle at (c + .5) / 10, and from 0 to 1 down
  * the four rows, with row r's middle at (r + .5) / 4. [x] and [y] map them so those middles land on the middles of the keys.
@@ -90,9 +90,9 @@ class KeyGeometry(val width: Float, val alignment: KeyAlignment = KeyAlignment.c
         // The measured face, in px at 1080 wide: they set the proportions, and the calibration sets the size.
         const val KEY = 84f
         const val GAP = 24f
-        /** The keys are square, and each row is a key and a gap below the last, the same as across. */
+        /** The keys are square, and the rows touch: there's next to no gap between one row and the next (owner, 2026-11-12). */
         const val KEY_HEIGHT = KEY
-        const val ROW = KEY + GAP
+        const val ROW = KEY
         /** Ten keys and the nine gaps between them. */
         const val SPAN = COLUMNS * KEY + (COLUMNS - 1) * GAP
 

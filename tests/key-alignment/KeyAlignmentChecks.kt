@@ -56,7 +56,7 @@ private fun measuredDefaults() {
     check(q.left > 0f && p.right < 1076f) { "the keys stop short of the screen's edges" }
     near(keys.gap / keys.key, 24f / 84f, "gap to key")
     near(keys.keyHeight, keys.key, "the keys are square")
-    near(keys.rowPitch, keys.pitch, "the rows are a key and a gap apart, the same as across")
+    near(keys.rowPitch, keys.keyHeight, "the rows touch, with no gap between them")
     near(keys.key, 107.5f * 84f / 108f, "a key's width")
     // The spacing grows from the centre, and the shift moves the centre.
     val wider = KeyAlignment.DEFAULT.spaced(KeyAlignment.DEFAULT.key + KeyAlignment.DEFAULT.gap + .01f)
@@ -172,7 +172,8 @@ private fun zonesOnKeys() {
         val third = (box("C").right - box("C").left) / 3
         check(kotlin.math.abs(tap.left - box(Layout.SPACE).left) < third) { "the tap zone starts where Space does: ${tap.left} against ${box(Layout.SPACE).left}" }
         check(kotlin.math.abs(tap.right - box(Layout.SPACE).right) < third) { "and ends where it does: ${tap.right} against ${box(Layout.SPACE).right}" }
-        check(tap.top > box("A").bottom && tap.top < box("Z").top) { "from between the middle and bottom letter rows" }
+        // The rows touch, so the line between the middle and bottom letter rows is where both meet.
+        check(tap.top >= box("A").bottom - 1e-3f && tap.top <= box("Z").top + 1e-3f) { "from between the middle and bottom letter rows" }
         check(tap.bottom > box(Layout.SPACE).top && tap.bottom < box(Layout.SPACE).bottom) { "down onto Space" }
         val tapY = keys.y(ZONE_TAP_ROW)
         check(tapY > box("V").top && tapY < box("V").bottom) { "the taps land on the bottom letter row" }

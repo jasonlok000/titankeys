@@ -4,7 +4,7 @@ What's done, what's in progress, what's waiting and on whom. The orchestrating s
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
 [owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-13, 00:10.
 
-## On the phone now (build a5416a0e, test-2.1h at 9b67678)
+## On the phone now (build 2ec5f751, test-2.1h at 0f88ab9: v2 guide, menu v4, fixed sizes, bar fix)
 
 - Gestures:
   - The held delete: corner glow, pause zone, zone ticks, a firm hit per word, and a thin caret that blinks only when paused.
@@ -89,7 +89,8 @@ all of them are unapproved.
   - Unsave breaks a bookmark, quieter than the heart (owner's call, given in D's session).
   - D's own calls: a dictionary word's O is Forget, with Undo; a word the store can't hold opens no menu; a forgotten dictionary
     word opens Not saved; the particles go behind the word; an O that disappears fades out.
-- Combined build #1 (C, D, F and A's bar fix) started 00:20, for early phone testing while A and F finish.
+- Combined build #1 (C, D, F and A's bar fix): **2ec5f751, all 35 checks passed, installed 00:45, no crash.** The phone run-through
+  waits for the phone to be idle: the owner was in the Claude app. Meanwhile the swipe suite runs on the phone off screen.
 - A: **slide decorations done and merged** (6a2be09): GuideDecor, a pure renderer, and GuideDecorView, the host. Checks cover
   keep-outs, shape count, opacity, seamless loops and frame time. Contact sheets are in the notes folder under guide-decor/.
   - A's own calls: the decorations live mostly in the band between the field and the keys; the typewriter e sits in that band,

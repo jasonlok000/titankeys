@@ -165,7 +165,14 @@ all of them are unapproved.
 - **Front page title and one-paragraph text: done and merged** (e7acb0d, df8a6ce; merge fc2c23c). Renders checked: the title is on one line, ink on orange, and the text scrolls as one paragraph. Build #4 started.
 - **Build #4: 91b08c1c** (test-2.1h at bcaf215), all checks passed. Installed at 08:00 with no crash. This is the candidate for the owner's review.
 - **Owner's notes on build #4 (08:05), in progress:**
-  - **A** (claude/playground-haptics): five playground haptics and their own switch.
+  - **A** (claude/playground-haptics): **done and merged** (4dc5e00, merge c5b67c3). The five moments:
+    - Celebrate at 40;
+    - No at 100;
+    - a run of 7 Texture ticks over about 350 ms at 150;
+    - Hit on each lightning flash;
+    - Change (the swell) at the plant.
+
+    Each plays once until calm, and a jump plays only the highest. The "Playground effects" switch sits in Settings > Haptics. The feel and the hit landing on the flash still need the phone.
   - **F** (claude/size-setting): Settings > Look and feel > Size, with Normal, Bigger and Biggest, making everything bigger,
     the bar included.
   - **Orchestrator, done** (05fce6c): the boring guide's Scroll assistant rewritten (the phone hijacks the touchpad, the creator

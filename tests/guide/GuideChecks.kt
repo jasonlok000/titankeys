@@ -192,17 +192,20 @@ private fun theMenuHover() {
         same(MenuKeys.pills(MenuKeys.FORGET, at), MenuKeys.second(step, true) != null, "O has one where it has a button at $step")
     }
     same(MenuKeys.pills(MenuKeys.SAVE, MenuKeys.State(MenuKeys.Step.New, false, savable = false)), false, "A symbol has no Save to hover")
-    // After a press the finger stays on the key: letting the key go keeps the hover until the touchpad shows a lift or a move
-    // (owner, 2026-11-12: the hover was lost when the state changed).
+    // After a press the finger stays on the key: the touchpad's lift for the press, which on the phone comes after the key is let
+    // go, is the press's own and keeps the hover, and so does the quiet after it (owner, 2026-11-12 and 2026-11-13: the hover was
+    // lost when the state changed). tests/word-menu walks every order the lift and the key came in.
     val kept = SteadyKey(Layout::keyAt)
     kept.touch(.75f, .1f)
     kept.keyDown(37)
-    kept.lift(1000)
-    kept.release(37)
-    same(kept.expire(1000 + 20 * SteadyKey.LIFT_MILLIS), false, "The pressed key's hover stays after the press")
+    kept.press("I")
+    kept.release(37, 1086)
+    kept.lift(1210)
+    same(kept.expire(1210 + 20 * SteadyKey.LIFT_MILLIS), false, "The pressed key's hover outlasts the press's own lift")
     same(kept.key, "I", "on I")
+    kept.touch(.75f, .1f)
     kept.lift(9000)
-    same(kept.expire(9000 + SteadyKey.LIFT_MILLIS), true, "and goes when the finger lifts")
+    same(kept.expire(9000 + SteadyKey.LIFT_MILLIS), true, "and goes when the finger, seen again, lifts")
     val hover = SteadyKey(Layout::keyAt)
     hover.touch(.75f, .1f)
     same(MenuKeys.hovered(hover.key), MenuKeys.SAVE, "A finger on I hovers I's button")
@@ -315,7 +318,8 @@ private fun theV4Motions(word: MenuMotion.Word) {
  */
 private fun theMenuMotion() {
     val steps = MenuKeys.Step.entries
-    same(steps.map { MenuKeys.motion(null, it) }, listOf(null, MenuKeys.Motion.Echo, MenuKeys.Motion.Echo), "Opening echoes on a saved word or a favourite")
+    same(steps.map { MenuKeys.motion(null, it) }, listOf(null, MenuKeys.Motion.SavedEcho, MenuKeys.Motion.Echo),
+        "Opening echoes softly on a saved word or a favourite, each in its own mark")
     same(MenuKeys.motion(MenuKeys.Step.New, MenuKeys.Step.Saved), MenuKeys.Motion.Save, "Save")
     same(MenuKeys.motion(MenuKeys.Step.Saved, MenuKeys.Step.Favourite), MenuKeys.Motion.Favourite, "Favourite")
     same(MenuKeys.motion(MenuKeys.Step.Favourite, MenuKeys.Step.Saved), MenuKeys.Motion.Unfavourite, "Unfavourite")
@@ -364,27 +368,31 @@ private fun theMenuMotion() {
     // and then by a saved word, nothing by a word that isn't saved; still where motion is off.
     same(MenuMotion.ambient(MenuKeys.Step.New, 500, word, false), emptyList<MenuMotion.Sprite>(), "Nothing by a word that isn't saved")
     val sides = (0 until 4).map { cycle ->
-        val heart = MenuMotion.ambient(MenuKeys.Step.Favourite, cycle * MenuMotion.AMBIENT_HEART_EVERY + 400, word, false).single()
+        val heart = MenuMotion.ambient(MenuKeys.Step.Favourite, (cycle + 1) * MenuMotion.AMBIENT_HEART_EVERY + 400, word, false).single()
         check(heart.alpha <= MenuMotion.AMBIENT_ALPHA + .001f && heart.shape == MenuMotion.Shape.Heart) { "A faint heart: $heart" }
         heart.x > word.centre
     }
     same(sides, listOf(sides[0], !sides[0], sides[0], !sides[0]), "The hearts come from alternating sides")
-    same(MenuMotion.ambient(MenuKeys.Step.Favourite, MenuMotion.AMBIENT_HEART_MILLIS + 100, word, false), emptyList<MenuMotion.Sprite>(),
-        "and rest between")
+    same(MenuMotion.ambient(MenuKeys.Step.Favourite, MenuMotion.AMBIENT_HEART_EVERY + MenuMotion.AMBIENT_HEART_MILLIS + 100, word, false),
+        emptyList<MenuMotion.Sprite>(), "and rest between")
+    for (step in listOf(MenuKeys.Step.Saved, MenuKeys.Step.Favourite)) for (millis in 0L until 2_000L step 20)
+        same(MenuMotion.ambient(step, millis, word, false), emptyList<MenuMotion.Sprite>(), "Nothing right after the menu comes to rest at $step")
     check(MenuMotion.AMBIENT_HEART_EVERY in 2000L..3000L && MenuMotion.AMBIENT_TWINKLE_EVERY in 3000L..4000L) { "Every 2.5 s and every 3.5 s" }
-    val twinkle = MenuMotion.ambient(MenuKeys.Step.Saved, 350, word, false).single()
+    val twinkle = MenuMotion.ambient(MenuKeys.Step.Saved, MenuMotion.AMBIENT_TWINKLE_EVERY + 350, word, false).single()
     check(twinkle.shape == MenuMotion.Shape.Sparkle && twinkle.alpha in .3f..0.36f && twinkle.size > 8f) { "A faint sparkle twinkles: $twinkle" }
-    val twinkles = (0 until 4).map { cycle -> MenuMotion.ambient(MenuKeys.Step.Saved, cycle * MenuMotion.AMBIENT_TWINKLE_EVERY + 350, word, false).single().x > word.centre }
+    val twinkles = (0 until 4).map { cycle -> MenuMotion.ambient(MenuKeys.Step.Saved, (cycle + 1) * MenuMotion.AMBIENT_TWINKLE_EVERY + 350, word, false).single().x > word.centre }
     same(twinkles, listOf(twinkles[0], !twinkles[0], twinkles[0], !twinkles[0]), "at alternating ends")
-    same(MenuMotion.ambient(MenuKeys.Step.Saved, 2000, word, false), emptyList<MenuMotion.Sprite>(), "and rests between")
+    same(MenuMotion.ambient(MenuKeys.Step.Saved, MenuMotion.AMBIENT_TWINKLE_EVERY + 2000, word, false), emptyList<MenuMotion.Sprite>(), "and rests between")
     same(MenuMotion.ambient(MenuKeys.Step.Saved, 300, word, true).single().let { it.shape to it.turn }, MenuMotion.Shape.Sparkle to 0f,
         "With motion off a faint sparkle sits still by a saved word")
     same(MenuMotion.ambient(MenuKeys.Step.Favourite, 300, word, true).size, 1, "and a faint heart sits still by a favourite")
-    same(MenuMotion.ambientWait(MenuKeys.Step.Saved, 2000, false), MenuMotion.AMBIENT_TWINKLE_EVERY - 2000, "It redraws only when it moves")
+    same(MenuMotion.ambientWait(MenuKeys.Step.Saved, 2000, false), MenuMotion.AMBIENT_TWINKLE_EVERY - 2000, "It waits out the first cycle")
+    same(MenuMotion.ambientWait(MenuKeys.Step.Saved, MenuMotion.AMBIENT_TWINKLE_EVERY + 2000, false), MenuMotion.AMBIENT_TWINKLE_EVERY - 2000,
+        "It redraws only when it moves")
     val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
     // Places (owner, 2026-11-12): I, O and Back on the centres of their columns, a key apart; Back no longer dodges the corner.
     check("if (centre > most) centre = most" !in strip) { "Back no longer dodges the rounded corner" }
-    check("barHover.release(keyCode)" in java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()) { "A picking key keeps the hover" }
+    check("barHover.press(pressed)" in java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()) { "A picking key keeps the hover" }
     check("if (pillShown >= 0) ambientStart = -1L" in strip) { "The ambient status waits while a button is hovered" }
     check("MenuKeys.motion(if (opened) null else shownStep, menu.step)?.takeIf { GuideMotion.enabled }" in strip) { "Motion off, no animations" }
     check("drawable.setTint(look.accent)" in strip.substringAfter("private fun drawSprite(")) { "Every particle is orange" }

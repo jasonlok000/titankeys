@@ -67,6 +67,7 @@ fun main(args: Array<String>) {
             MenuKeys.Motion.Unsave -> state(saved = true) to state()
             MenuKeys.Motion.Forget -> state(learned = true) to state(learned = true)
             MenuKeys.Motion.Echo -> state(saved = true, favourite = true) to state(saved = true, favourite = true)
+            MenuKeys.Motion.SavedEcho -> state(saved = true) to state(saved = true)
         }
         val frames = 10
         (0 until frames).map { index ->
@@ -75,19 +76,20 @@ fun main(args: Array<String>) {
         }
     }
     // The ambient status at rest: a favourite's faint hearts, then a saved word's swaying ribbon.
-    val ambient = listOf(0L, 400L, 800L, 1200L, 2500L + 400L, 2500L + 800L).map { millis ->
+    // The first mark waits a whole cycle after the menu comes to rest, so nothing follows the open's echo or a step's burst.
+    val ambient = listOf(0L, 1200L, 2500L + 400L, 2500L + 800L, 2500L + 1200L, 5000L + 400L).map { millis ->
         Row("ambient-favourite-${millis}ms", "Ambient, favourite, at $millis ms", "Titankeys", state(saved = true, favourite = true), ambient = millis)
-    } + listOf(0L, 150L, 300L, 450L, 600L, 2000L).map { millis ->
+    } + listOf(0L, 2000L, 3500L + 150L, 3500L + 300L, 3500L + 450L, 3500L + 600L).map { millis ->
         Row("ambient-saved-${millis}ms", "Ambient, saved, at $millis ms", "Titankeys", state(saved = true), ambient = millis)
     }
     for (dark in listOf(true, false)) {
         val suffix = if (dark) "" else "-light"
-        for ((sheet, rows) in listOf("menu-all" to states, "menu-motion" to motions, "menu-ambient" to ambient)) {
+        for ((sheet, rows) in listOf("menu-all" to states, "menu-motion" to motions, "menu-ambient" to ambient, "menu-press" to pressRows())) {
             val image = BufferedImage(WIDTH, rows.size * (ROW + CAPTION), BufferedImage.TYPE_INT_RGB)
             for ((index, row) in rows.withIndex()) {
                 val single = draw(row, dark, regular, medium, strings, drawables)
                 image.createGraphics().apply { drawImage(single, 0, index * (ROW + CAPTION), null); dispose() }
-                if (sheet == "menu-all") ImageIO.write(single, "png", File(folder, "menu-${row.name}$suffix.png"))
+                if (sheet == "menu-all" || sheet == "menu-press") ImageIO.write(single, "png", File(folder, "menu-${row.name}$suffix.png"))
             }
             ImageIO.write(image, "png", File(folder, "$sheet$suffix.png"))
         }
@@ -96,6 +98,48 @@ fun main(args: Array<String>) {
     barSheet(folder, regular, medium, "Medium", -668 to 2272, drawables)
     barSheet(folder, regular, bold, "Bold", -685 to 2279, drawables)
     println("Drawn to $folder")
+}
+
+/**
+ * The hover before and after each press, up the ladder on I (and K) and down it on O (and L), as the real [SteadyKey] keeps it
+ * through the touchpad's events in the order the owner's phone sends them (tests/word-menu, [MenuBar]): the key down, up 86 ms
+ * later, the touchpad's lift for the press 124 ms after that, and then nothing while the finger stays still. Each frame's pill
+ * is the one the strip draws from the mark that the events leave.
+ */
+private fun pressRows(): List<Row> {
+    val rows = mutableListOf<Row>()
+    var count = 0
+    fun frame(bar: MenuBar, caption: String, from: MenuKeys.State? = null, motion: Pair<MenuKeys.Motion, Long>? = null) {
+        count++
+        rows += Row("press-%02d".format(count), caption, "Titankeys", bar.state, bar.mark, motion, from)
+    }
+    fun press(bar: MenuBar, key: String, time: Long) {
+        val from = bar.state
+        bar.keyDown(key, time)
+        bar.keyUp(key, time + 86)
+        val motion = MenuKeys.motion(from.step, bar.state.step)
+        fun playing(later: Long) = motion?.takeIf { later < MenuMotion.millis(it) }?.let { it to later }
+        bar.at(time + 1)
+        frame(bar, "$key pressed, 1 ms: ${bar.state.step}", from, playing(1))
+        bar.lift(time + 210)
+        bar.at(time + 400)
+        frame(bar, "$key, 400 ms: the touchpad lifted at 210 ms (before the fix, the pill went at 360)", from, playing(400))
+        bar.at(time + 1_500)
+        frame(bar, "$key, 1.5 s: the finger still on $key, the touchpad quiet")
+    }
+    for ((up, down) in listOf("I" to "O", "K" to "L")) {
+        val bar = MenuBar(MenuKeys.State(MenuKeys.Step.New, true))
+        bar.touch(up, 0)
+        frame(bar, "Resting on $up: learned, not saved")
+        press(bar, up, 1_000)
+        press(bar, up, 3_000)
+        press(bar, up, 5_000)
+        bar.touch(down, 7_000)
+        frame(bar, "Moved to $down")
+        press(bar, down, 8_000)
+        press(bar, down, 10_000)
+    }
+    return rows
 }
 
 private class Row(val name: String, val caption: String, val word: String, val state: MenuKeys.State, val hover: Int = -1,
@@ -189,7 +233,8 @@ private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: 
         val inPill = column == hovered
         if (pill != null && !inPill && middleX in pill.first..pill.second) continue
         val elapsed = row.motion?.second ?: MenuMotion.ICON_MILLIS
-        val layers = if (fromSlots != null && index < 2 && row.motion?.first != MenuKeys.Motion.Echo)
+        val layers = if (fromSlots != null && index < 2 && row.motion?.first != MenuKeys.Motion.Echo &&
+            row.motion?.first != MenuKeys.Motion.SavedEcho)
             MenuMotion.icon(fromSlots[index], button, elapsed) else listOf(MenuMotion.Layer(button, 1f, orange = MenuMotion.restingOrange(button)))
         for (layer in layers) {
             if (layer.button == null && index < 2) continue

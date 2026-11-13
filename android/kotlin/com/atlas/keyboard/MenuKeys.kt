@@ -154,15 +154,23 @@ object MenuKeys {
         else -> false
     }
 
-    /** The animations of the word menu: see [MenuMotion]. Each change of step plays one, and so do opening and Forget. */
-    enum class Motion { Save, Favourite, Unfavourite, Unsave, Forget, Echo }
+    /**
+     * The animations of the word menu: see [MenuMotion]. Each change of step plays one, and so does Forget. Opening plays only a
+     * soft echo of where the word stands: [Echo] by a favourite, [SavedEcho] by a saved word.
+     */
+    enum class Motion { Save, Favourite, Unfavourite, Unsave, Forget, Echo, SavedEcho }
 
     /**
      * What plays as the word goes from [from] to [to], or as the menu opens on it when [from] is null: a soft echo for a saved word
-     * or a favourite, and nothing for one that isn't saved.
+     * or a favourite, in its own mark, and nothing for one that isn't saved. Never a step's burst (owner, 2026-11-13: opening once
+     * showed hearts and then glitter, as if it replayed the steps).
      */
     fun motion(from: Step?, to: Step): Motion? = when {
-        from == null -> if (to == Step.New) null else Motion.Echo
+        from == null -> when (to) {
+            Step.New -> null
+            Step.Saved -> Motion.SavedEcho
+            Step.Favourite -> Motion.Echo
+        }
         from == to -> null
         to == Step.Favourite -> Motion.Favourite
         from == Step.Favourite -> Motion.Unfavourite

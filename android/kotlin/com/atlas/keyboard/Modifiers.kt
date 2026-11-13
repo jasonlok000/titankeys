@@ -12,6 +12,10 @@ import android.view.KeyEvent
  *
  * Ctrl is separate from those: it has no sticky state and applies only while it is held.
  *
+ * Two shortcuts count only while a modifier is physically held, so they work with Key Mapper off (owner, 2026-11-12):
+ * Shift + Backspace deletes a word ([backspaceDeletesWord]), and Alt + Sym switches to the next keyboard ([keyboardSwitch]).
+ * A tapped or automatic Shift, or a tapped Alt, doesn't count.
+ *
  * Where a sentence starts, Shift comes on by itself, the same as one push, so the first letter is a capital: see [autoShift].
  * Pushing Shift while it is on by itself turns it off, and it stays off until the cursor leaves that place, so the letter there
  * can be lowercase.
@@ -52,6 +56,27 @@ class Modifiers {
 
     /** A quick second press locks Shift or Alt, for the setting of the same name. */
     var doublePressLocks = false
+
+    /**
+     * Sym was pushed while Alt was held and the panel was closed: switch to the next keyboard. The panel stays as it was, and
+     * Alt counts as used, so it goes off when it's let go. The keyboard takes this with [takeKeyboardSwitch].
+     */
+    var keyboardSwitch = false
+        private set
+
+    /** Returns [keyboardSwitch] and clears it, so one push of Sym switches once. */
+    fun takeKeyboardSwitch() = keyboardSwitch.also { keyboardSwitch = false }
+
+    /**
+     * Whether Backspace deletes the previous word: with Ctrl ([ctrl], from the key's own meta state), with Alt on, or with Shift
+     * physically held. A tapped Shift, or one that came on by itself at a sentence start, leaves Backspace a plain Backspace.
+     */
+    fun backspaceDeletesWord(ctrl: Boolean) = ctrl || alt != Level.Off || holding(Key.Shift)
+
+    /** After a Backspace: a word delete with Alt on uses Alt up, as a character would. Otherwise only held modifiers count as used. */
+    fun afterBackspace() {
+        if (alt != Level.Off) consume() else useHeld()
+    }
 
     /** A key that counts as Ctrl is down. The modifier bar shows this at once. */
     val ctrlHeld get() = ctrlKeys.isNotEmpty()
@@ -214,7 +239,12 @@ class Modifiers {
             return
         }
         if (code == KeyEvent.KEYCODE_SYM) {
-            if (!symHeld) pressSym()
+            if (!symHeld) {
+                if (panel == Panel.Closed && holding(Key.Alt)) {
+                    useHeld()
+                    keyboardSwitch = true
+                } else pressSym()
+            }
             symHeld = true
             return
         }
@@ -278,6 +308,7 @@ class Modifiers {
         usedWhileHeld.clear()
         hiddenFromApp.clear()
         symHeld = false
+        keyboardSwitch = false
         if (keepCtrl) return
         ctrlKeys.clear()
     }

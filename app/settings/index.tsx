@@ -52,6 +52,9 @@ export default function Settings() {
       <Toggle label="Spell out shorthand, like shd as should" value={settings.expandShorthand}
         onChange={expandShorthand => save.run({ expandShorthand })} />
       <Field label="Exact typing (experimental)" href="/settings/exact-apps">{exactAppsLabel(settings)}</Field>
+      {/* Built in, with nothing to set: shown so you know they're there. They count only while the first key is held. */}
+      <Field label="Delete a word">Hold Shift + Backspace</Field>
+      <Field label="Next keyboard">Hold Alt + Sym</Field>
     </Section>
     {/* The bar is words, the Shift, Alt and Ctrl chips and the clip offer. Each setting here hides all of it, so each
         says "the bar", and the bar is turned off in this one place only. */}

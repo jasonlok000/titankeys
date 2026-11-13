@@ -67,7 +67,7 @@ export default function BoringGuide() {
       <Topic title="Hide the bar">{"Don't want the bar in some app? Pick the apps in Settings > Hide the bar in these apps. To hide it everywhere, turn off Show the bar in Settings. Either way, the keys, holds, Alt and the Sym panel still work."}</Topic>
     </Section>
     <Section title="Deleting">
-      <Topic title="Delete a word">{"Flick left, fast, from Backspace or the keys next to it. The interactive guide shades where to aim. Press Alt, then Backspace works too, and so do Ctrl and Backspace."}</Topic>
+      <Topic title="Delete a word">{"Flick left, fast, from Backspace or the keys next to it. The interactive guide shades where to aim. Press Alt, then Backspace works too, and so do Ctrl and Backspace, and Backspace while you hold Shift. Keep Backspace down to go on, word by word. A Shift that you only tapped, or that came on by itself, leaves Backspace as it is."}</Topic>
       <Topic title="Delete lots of words">{"Flick and keep your finger down. TitanKeys keeps deleting, word after word, and a longer flick goes faster. Lift your finger or press a key to stop."}</Topic>
     </Section>
     <Section title="Cursor and picking text">
@@ -89,6 +89,7 @@ export default function BoringGuide() {
     </Section>
     <Section title="Shortcuts">
       <Topic title="Snippets">{"Type a shortcut like ;addr and press Space. It turns into your address, or whatever you saved for it. Press Backspace right after to get the shortcut back. Make them in Settings > Snippets, where you can also change the ; at the start and back them up."}</Topic>
+      <Topic title="Next keyboard">{"Hold Alt and press Sym to switch to your next keyboard, as the globe key does on other phones. With the Sym panel open, Alt and Sym do their usual thing. The guide keeps its keyboard, so it does nothing there."}</Topic>
       <Topic title="Exact typing (experimental)">{"In terminals, remote desktops and game streaming, like Termux, AnyDesk and Moonlight, every key goes straight to the app, exactly as you press it. TitanKeys doesn't fix or suggest anything there, and the touchpad stays out of it. Add or remove apps in Settings > Exact typing (experimental)."}</Topic>
       <Topic title="Exact typing bar (experimental)">{"In those apps the bar shows Shift, Alt, Ctrl, Esc, Tab and More. Tap Shift, Alt or Ctrl to hold it for your next key, press and hold to lock it, and tap again to let go. They add to the keys you press: Shift on the keys and Esc on the bar sends Shift and Esc. More has the arrows, Home, End, PgUp, PgDn and F1 to F12. With Alt sends Alt on, Alt, Shift and Ctrl go to the app as real modifiers, and symbols come from Sym or from holding a key."}</Topic>
     </Section>

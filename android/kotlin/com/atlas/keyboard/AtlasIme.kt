@@ -2743,7 +2743,10 @@ class AtlasIme : InputMethodService() {
                 event.action == KeyEvent.ACTION_UP -> {
                     if (Modifiers.isModifier(event.keyCode)) modifiers.key(event)
                 }
-                Modifiers.isModifier(event.keyCode) -> modifiers.key(event)
+                Modifiers.isModifier(event.keyCode) -> {
+                    modifiers.key(event)
+                    switchKeyboardIfAsked()
+                }
                 panelOpen || event.isCtrlPressed || event.isMetaPressed || KeyEvent.isModifierKey(event.keyCode) -> return
                 event.keyCode == KeyEvent.KEYCODE_SPACE -> {
                     composer.space(event.repeatCount > 0, event.eventTime)
@@ -3106,6 +3109,16 @@ class AtlasIme : InputMethodService() {
     }
 
     /**
+     * Alt + Sym, with the panel closed: the next keyboard, as Key Mapper's switch did, not the picker. With no other keyboard
+     * nothing happens. Never in the guide's field, so the guide keeps its keyboard. Plays no haptic: the keyboard changes on
+     * screen (docs/haptics.md, Shortcuts).
+     */
+    private fun switchKeyboardIfAsked() {
+        if (!modifiers.takeKeyboardSwitch() || inGuide) return
+        main.post { switchToNextInputMethod(false) }
+    }
+
+    /**
      * Follows a key that counts as Ctrl, and returns false for any other key. Keys carry Ctrl from the moment they arrive,
      * so Ctrl does not wait in the input queue.
      */
@@ -3127,6 +3140,7 @@ class AtlasIme : InputMethodService() {
     private fun key(event: KeyEvent): Boolean {
         if (Modifiers.isModifier(event.keyCode)) {
             modifiers.key(event)
+            switchKeyboardIfAsked()
             if (field.exact) logModifiers(event)
             if (panelOpen && !isInputViewShown) main.post(showPanel)
             return true
@@ -3156,10 +3170,9 @@ class AtlasIme : InputMethodService() {
         }
         when (event.keyCode) {
             KeyEvent.KEYCODE_DEL -> {
-                // Ctrl or Alt with Backspace deletes the previous word.
-                val alt = modifiers.alt != Modifiers.Level.Off
-                composer.backspace(event.isCtrlPressed || alt)
-                if (alt) modifiers.consume() else modifiers.useHeld()
+                // Ctrl, Alt or a held Shift with Backspace deletes the previous word, and holding it goes on by word.
+                composer.backspace(modifiers.backspaceDeletesWord(event.isCtrlPressed))
+                modifiers.afterBackspace()
             }
             KeyEvent.KEYCODE_SPACE -> { composer.space(event.repeatCount > 0, event.eventTime); modifiers.useHeld() }
             KeyEvent.KEYCODE_TAB -> { modifiers.useHeld(); command(event) }

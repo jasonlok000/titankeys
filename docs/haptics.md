@@ -42,32 +42,37 @@ Patterns are on and off in ms, starting with on.
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
 | **Hit** | 50 | Each word a long delete takes after its flick, shorter as it speeds up (see A held delete's hit, below). Each lightning flash in the playground |
 | **Gone** | 60 | The clipboard cleared, a confirmed delete in the app |
-| **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
+| **Back** | 35, 40, 15 | Backspace undoing a change |
 | **No** | 25, 40, 25, 40, 25 | A gesture that finds nothing at all: taps on Space or a steer with no text, a flick or a long delete with nothing to delete. Also a word that can't be saved, I on a word that's already a favourite, Ctrl + C with nothing selected, an action the guide blocks, something the app refuses. And the playground's confetti turning into rain, as a joke |
 | **Wall** | 40, 35, 20, 35, 12 | A gesture that did something and then ran out: steering hits the start or end of the text, selecting reaches either end, a long delete takes the last word |
 | **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations, the playground's first confetti |
 | **Saved** | 20, 40, 20, 40, 50 | Save in the word menu, by I or the strip |
-| **Removed** | 50, 40, 20, 40, 20 | Forget in the word menu, by O or the strip |
+| **Removed** | 50, 40, 20, 40, 20 | Block in the word menu, by O on a word that isn't saved, or the strip |
 | **Favourite** | 20, 40, 20, 40, 80 | Favourite in the word menu, by I on a saved word or the strip |
 | **Unfavourite** | 30, 40, 20, 40, 12 | Unfavourite in the word menu, by O on a favourite or the strip |
 | **Unsaved** | 40, 40, 20, 40, 15 | Unsave in the word menu, by O on a saved word or the strip |
+| **Unblocked** | 15, 40, 15, 40, 30 | Unblock in the word menu, by I on a blocked word or the strip |
 
 The rising and falling patterns use a short first or last pulse on purpose: the short pulse is what makes the rise or the fall. So Confirm's 15 ms and Change's 20 ms are under rule 1's "about 25". The table wins over that guide.
 
-Saved and Removed are the word menu's own, so Save and Forget feel different from each other and from everything else. Saved rises at the end, so it isn't No's three equal pulses or Celebrate's steady rise, and it has three pulses, not Confirm's two. Removed is its mirror, so it isn't Gone's one pulse or the two of Gone flick and Back. Save used to play Confirm, the same as the menu opening, so it felt like nothing new, and the repeat rule dropped it when you saved within 300 ms of the menu opening. Each message family has its own pattern, and tests/haptics checks it.
+Saved and Removed are the word menu's own, so Save and Block feel different from each other and from everything else. Saved rises at the end, so it isn't No's three equal pulses or Celebrate's steady rise, and it has three pulses, not Confirm's two. Removed is its mirror, so it isn't Gone's one pulse or the two of Gone flick and Back. Save used to play Confirm, the same as the menu opening, so it felt like nothing new, and the repeat rule dropped it when you saved within 300 ms of the menu opening. Each message family has its own pattern, and tests/haptics checks it.
 
-The word menu is a ladder, and its haptics are one system (owner, 2026-11-12). I moves a word one step up, and O one step down:
+The word menu is a ladder of four rungs, blocked, not saved, saved and favourite, and its haptics are one system (owner, 2026-11-12,
+and the ladder of 2026-11-13). I moves a word one step up, and O one step down. Each step's haptic plays on its effect's own frame:
+the book's clap, the page ripping, the hearts' release, the heart's crack, the strike landing, the strike gone. With motion off, it
+plays as the press lands.
 
 | Step | Button | Family | Pulses | Feel |
 |---|---|---|---|---|
+| Blocked → not saved | Unblock (I) | **Unblocked** | 15, 15, 30 | A light rise |
 | Not saved → saved | Save (I) | **Saved** | 20, 20, 50 | Rises |
 | Saved → favourite | Favourite (I) | **Favourite** | 20, 20, 80 | Rises to the strongest hit of the menu |
 | Favourite → saved | Unfavourite (O) | **Unfavourite** | 30, 20, 12 | A light fall |
 | Saved → not saved | Unsave (O) | **Unsaved** | 40, 20, 15 | A medium fall |
-| Not saved → never suggested | Forget (O) | **Removed** | 50, 20, 20 | The heaviest fall |
+| Not saved → blocked | Block (O) | **Removed** | 50, 20, 20 | The heaviest fall |
 | Favourite, the top | Already a favourite (I) | **No** | 25, 25, 25 | Nothing happened |
 
-Going up rises: each pattern ends on its strongest pulse, and Favourite's last hit is the strongest of all. Going down falls: each starts on its strongest pulse, and the further down a step goes, the harder it starts and the more it weighs in all (62, 75 and 90 ms of pulses). Every gap is 40 ms, so each pulse reads on its own. A word that is a dictionary word starts at Favourite, and Unfavourite takes it back there. The spent heart plays No, not nothing, so a press that does nothing still answers. tests/haptics checks the directions and that each step feels like no other family.
+Going up rises: each pattern ends on its strongest pulse, the higher the step the stronger, and Favourite's last hit is the strongest of all. Going down falls: each starts on its strongest pulse, and the further down a step goes, the harder it starts and the more it weighs in all (62, 75 and 90 ms of pulses). Every gap is 40 ms, so each pulse reads on its own. A word that is a dictionary word starts at Favourite, and Unfavourite takes it back there. The spent heart plays No, not nothing, so a press that does nothing still answers. tests/haptics checks the directions and that each step feels like no other family.
 
 Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single 30 ms pulse too, but it comes once, so it's a message. Hit is as firm as a message, but it's texture for the gate too: a long delete's words can come every 80 ms, and the repeat rule would drop them. Change's quiet swell is texture for the gate as well: it says something changed by itself, which needs nothing from you, so it never holds up or delays another haptic and may come again at once.
 
@@ -168,9 +173,10 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 - The word menu opens: confirm.
 - The marked menu button changes: texture.
 - Back closes the word menu: release. Typing or leaving the field closes it with nothing.
-- Save, by I or the strip: saved. It plays as you press, and a save that fails plays no after it.
-- Forget, by O or the strip: removed.
-- Undo after Forget: back.
+- Save, by I or the strip: saved, on the book's clap. A save that fails plays no after it.
+- Unsave: unsaved, as the page rips. Favourite: favourite, as the hearts release. Unfavourite: unfavourite, as the heart cracks.
+- Block, by O on a word that isn't saved, or the strip: removed, as the strike lands.
+- Unblock, by I on a blocked word: unblocked, as the strike is gone.
 - Save goes wrong: no.
 - Paste the offered clip: confirm.
 - Exact typing's bar: a key is confirm. A tap on a Shift, Alt or Ctrl chip is confirm, a long press that locks one is lock, and a tap that unlocks a locked one is release. The Haptics lab's experiment "Exact-typing keys feel like a key (texture)", off by default, tries a texture tick for the keys instead, in TitanKeys Debug only.
@@ -238,7 +244,7 @@ on plays nothing, as haptics were off when it was pressed.
 - **The touchpad's scroll, cursor and Back.** The screen moves.
 - **The first press of Clear, and Pin mode.** Key presses, and the page shows them.
 - **A key that picks a button in the word menu.** A key press. What the button does plays its own haptic.
-- **Save and Forget in the guide.** They're only for show there: nothing is saved or forgotten, and the guide says so.
+- **The word menu in the guide.** It plays its real haptics, but it's only for show: nothing is saved, blocked or taken out, and the guide says so.
 - **A new step in the guide, and setup changes there.** You're looking at the guide.
 - **The playground's speed show, apart from its five big moments, and idle games.** Each step, comment, spark and flame is for
   your eyes. Only the five moments above play, so nothing else buzzes while you type at speed.

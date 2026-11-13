@@ -25,12 +25,12 @@ interface Fingers {
     fun press(key: String, time: Long, hold: Long = 0)
 }
 
-class MenuBar(state: MenuKeys.State) : Fingers {
+class MenuBar(state: MenuKeys.Step) : Fingers {
     private val hover = SteadyKey(Layout::keyAt)
-    /** The open menu's state, which every press moves along the ladder. */
+    /** The open menu's rung, which every press moves along the ladder. */
     var state = state
         private set
-    /** Whether the menu is open: Back and Forget close it, and so does a key that picks nothing, which types. */
+    /** Whether the menu is open: Back closes it, and so does a key that picks nothing, which types. Every step keeps it open. */
     var open = true
         private set
     /** The strip's menuMark: the column of the hovered button, or -1. */
@@ -50,7 +50,7 @@ class MenuBar(state: MenuKeys.State) : Fingers {
             if (!open) return null
             val column = mark.takeIf { MenuKeys.pills(it, state) } ?: return null
             val choices = MenuKeys.choices(state)
-            return column to (if (column == MenuKeys.SAVE) choices.i else choices.o)!!
+            return column to (if (column == MenuKeys.UP) choices.i else choices.o)!!
         }
 
     /** The key under the resting finger, as the hover holds it. */
@@ -129,7 +129,7 @@ class MenuBar(state: MenuKeys.State) : Fingers {
 
     private fun markMenu(key: String) {
         val column = if (open) MenuKeys.hovered(key) else -1
-        setMark(if (column == MenuKeys.SAVE || column == MenuKeys.FORGET) column else -1)
+        setMark(if (column == MenuKeys.UP || column == MenuKeys.DOWN) column else -1)
     }
 
     private fun setMark(value: Int) {
@@ -141,21 +141,17 @@ class MenuBar(state: MenuKeys.State) : Fingers {
     private fun menuAction(key: String): String? {
         val choices = MenuKeys.choices(state)
         return when (MenuKeys.hovered(key)) {
-            MenuKeys.SAVE -> choices.i?.name
-            MenuKeys.FORGET -> choices.o?.name
+            MenuKeys.UP -> choices.i?.name
+            MenuKeys.DOWN -> choices.o?.name
             MenuKeys.BACK -> "Back"
             else -> null
         }
     }
 
-    /** AtlasIme.stripAction: a step of the ladder keeps the menu open; Forget and Back close it. */
+    /** AtlasIme.stripAction: every step of the ladder keeps the menu open; Back closes it. */
     private fun stripAction(action: String) {
         picked += action
-        when (action) {
-            "Back" -> close()
-            "Forget" -> open = false
-            else -> state = MenuKeys.press(state, MenuKeys.Button.valueOf(action)) ?: state
-        }
+        if (action == "Back") close() else state = MenuKeys.press(state, MenuKeys.Button.valueOf(action))
     }
 
     private fun close() {

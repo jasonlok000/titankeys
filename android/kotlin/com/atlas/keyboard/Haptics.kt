@@ -70,6 +70,8 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
     Unfavourite("unfavourite", "Unfavourite", listOf(30, 40, 20, 40, 12)),
     /** A medium fall, between Unfavourite's and Removed's: the word left Saved words. */
     Unsaved("unsaved", "Unsaved", listOf(40, 40, 20, 40, 15)),
+    /** The lowest step up, off Blocked words: Saved's rise, lighter. */
+    Unblocked("unblocked", "Unblocked", listOf(15, 40, 15, 40, 30)),
     /** A rising run of three: the guide's celebrations. */
     Celebrate("celebrate", "Celebrate", listOf(15, 40, 22, 40, 35));
 
@@ -159,8 +161,8 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family, va
     MenuClosed("menu_closed", HapticGroup.Bar, Family.Release),
     /** Save in the word menu, by I or the strip. It has its own family, so it never feels like the menu opening. */
     WordSaved("word_saved", HapticGroup.Bar, Family.Saved),
-    /** Forget in the word menu, by O or the strip. */
-    WordForgotten("word_forgotten", HapticGroup.Bar, Family.Removed),
+    /** Block in the word menu, by O on a word that isn't saved, or the strip. */
+    WordBlocked("word_blocked", HapticGroup.Bar, Family.Removed),
     /** Favourite in the word menu, by I on a saved word or the strip. */
     WordFavourited("word_favourited", HapticGroup.Bar, Family.Favourite),
     /** Unfavourite in the word menu, by O on a favourite or the strip. */
@@ -169,8 +171,8 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family, va
     WordUnsaved("word_unsaved", HapticGroup.Bar, Family.Unsaved),
     /** I on a favourite, the top of the ladder: nothing more to do. */
     MenuSpent("menu_spent", HapticGroup.Bar, Family.No),
-    /** Undo right after Forget: the word is back. */
-    ForgetUndone("forget_undone", HapticGroup.Bar, Family.Back),
+    /** Unblock in the word menu, by I on a blocked word, or the strip: the lowest step up. */
+    WordUnblocked("word_unblocked", HapticGroup.Bar, Family.Unblocked),
     /** Save went wrong and the word isn't saved. */
     WordNotSaved("word_not_saved", HapticGroup.Bar, Family.No),
     ClipOffer("clip_offer", HapticGroup.Bar, Family.Confirm),

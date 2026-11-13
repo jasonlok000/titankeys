@@ -10,6 +10,7 @@ import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypedPredictions
 import com.atlas.engine.TypedWords
+import com.atlas.engine.WordCase
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** The text around the cursor, and the edits the keyboard makes there. */
@@ -1422,7 +1423,11 @@ class Composer(
     }
 
     private fun typeWord(word: String, rememberCase: Boolean) {
-        words.typed(word, rememberCase)
+        // A word is learned in its own case, never the one a sentence start or Caps Lock gave it: see [WordCase]. The text before
+        // it says whether it stood at a sentence start.
+        val before = snapshot().before
+        val index = before?.lastIndexOf(word) ?: -1
+        words.typed(WordCase.kept(word, if (index < 0) null else before!!.substring(0, index), false), rememberCase)
         rememberLearned(word, held = false)
     }
 

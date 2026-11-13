@@ -234,6 +234,20 @@ What the owner asked for, what's decided and by whom, and what's still open. The
     that can't fit there (the 42 dp menu pill, the two-line clip offer) shrink or rise only as much as they must to stay inside
     the bar; the lowest letter keeps at least 4 dp from the screen's edge (Biggest rises about 1 dp); Exact typing's bar and the
     Sym panel's bottom row get the same line; the bar's height, touch areas, keys and the guide's slides don't change.
+- **Bar text size: Smaller, Normal, Bigger; everyone starts at Normal** (owner, 2026-11-13: "let's make bigger normal, normal
+  smaller. default all use the new normal."). (Owner) Smaller 1.0, Normal 1.2 (the default for everyone, no more following the
+  phone's text size), Bigger 1.4 (renamed from Biggest so the middle reads Normal: the Orchestrator's call, unapproved). F builds it.
+- **The lower line and the effects** (owner: "will this affect stuff like introducing crops etc to all our effects? we have to
+  take into consideration the curved corner too"). The Orchestrator's answer: yes. Pieces that fall (Unsave's page, Unfavourite's
+  broken heart, Block's flecks) already fall off the screen's bottom edge and would just reach it sooner; what must stay whole
+  (the word, its underline, pills and icons, hearts and puffs, the idle games' letters, rope and ball) must stay inside the bar
+  and inside the screen's curved bottom corners, using the corner shape TitanKeys already measures. The build renders every
+  effect and idle game on the new line at all three sizes with the curve drawn, and checks it. Still waiting on the go.
+- **The idle animation works but is rare** (owner: "I've never seen the idle animation like ever. is it actually working?").
+  Triggered on the phone with the debug broadcast: the firework played in the playground's bar, then the words came back. It
+  needs the keyboard open on a field that shows words, 3 to 4.5 minutes with no key, touch or swipe, the screen on, then a 25%
+  chance, and never twice in a row: about 15 untouched minutes before the first game, so it's almost never seen. The
+  Orchestrator's proposal, unapproved: wait 60 to 90 s and a 50% chance, about 2.5 minutes on average; any input still ends it.
 - **The menu word moves left of the widest pill** (W's 536a3a7, merged for build #12). The owner judges it on the phone first:
   "ill see if it looks good first." If not, the owner's fallbacks: leave the word where it is and make the pill's label shorter
   ("Favourited", "alr a fav" or similar), or let the pill overlap the word, semi-transparent with a blur underneath. (Owner)

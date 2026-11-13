@@ -87,6 +87,12 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - Symbols and emoji can't be saved: the word store only takes 2 to 24 letters, so Save fails silently. Open: hide Save for them, or keep them somewhere else.
   - "and" shows as not saved: by the one-ladder rule, Saved means you pressed Save, and a dictionary word starts at Not saved. Open: should dictionary words start at Saved?
   - A visual mockup comes first (owner): scratchpad cal-tool/menu.html, on the phone at http://localhost:8765/menu.html.
+- Mockup review (owner, 22:45):
+  - The positioning is good: I, O and Back are evenly spaced, with Back on Backspace's centre.
+  - Save gets a **floppy disk** icon. The icon is fine; it's the effect that's bad. Save needs an effect that works, either a particle burst that really lands or another kind of effect.
+  - The heart is good. The heart breaking is slightly bad and needs work.
+  - **Hide Save for symbols and emoji.**
+- **A dictionary word counts as saved.** Saving a word means adding it to the dictionary, and forgetting a word means taking it out. So "and" starts at Saved, and taking a dictionary word down the ladder takes it out of the dictionary. (Owner, 2026-11-12)
 - A quiet ambient status: a favourite has a faint heart drifting up now and then, and a saved word has a faint resting ribbon. It pauses while hovering. (Owner, 2026-11-12)
 
 ## Guide
@@ -101,6 +107,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - The word-menu slide teaches the real ladder (Save, then Unsave) and matches the real menu exactly. (Orchestrator, within the owner's "the guide matches the real keyboard")
 - Every recording bug gets fixed: gap slides with a dead end, the selection toolbar, hints during gestures, wrong chapter messages, and the drawing glitches. (Owner, 2026-11-12)
 - End screen: × on the right and bigger, "Trust me bro." on its own line, a real "Start the guide again" button, and a custom "Leaving already?" pop-up. (Owner, 2026-11-12)
+
+- **Visual review, 2026-11-12 22:45: the guide is 5/10, and "feels like there's no design".** (Owner)
+  - The top bar is claustrophobic and all orange. The owner dislikes the slide ticks along the top and where Skip sits.
+  - The owner dislikes the scaling and the positioning of things.
+  - Idea from the owner: the title line ("Swipe it. One hand, no questions.") could be all upper case.
+  - The keyboard at the same width and 60% height is fine.
+  - Next: the Orchestrator judges the guide from screenshots and proposes how to reach 10/10. A mock on the quick page comes before anything is built.
 
 ## Typing, autocorrect and words
 
@@ -145,6 +158,10 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - Rename "Scroll assistant outside text fields" to "Scroll assistant". Inside text fields TitanKeys' own touchpad takes over, so the switch really turns app scrolling on or off. (Owner, 2026-11-12)
 - Bug: with that switch off, the keys still scroll apps outside text fields: first Reddit, then many apps ("it's scrolling many diff things now"). The block fails when the keyboard isn't in focus. The owner rejected the quick theories (Back service off, Atlas' service) and asked to find the last build that worked and compare the code. Status: A's hold-trace build is ready, and the bisect list of old builds is ready, but neither has been run yet. (Owner, 2026-11-12)
 - Trace result (21:53): TitanKeys reads its Scroll assistant setting as **on** (touchpadOnlyInFields=false) in every app, and every exported typing log since 11-09 says the same. So it never wanted the block, by design, and no code change explains it. The owner checks what the switch shows. If it shows off, it's a display or save bug. (Orchestrator)
+- Scroll assistant (owner, 22:45): the switch was on all along. The owner had read it the other way round.
+  - Remove the explanatory text under the switch.
+  - Default: TitanKeys' Scroll assistant starts the way the phone's own Scroll assistant is set. On if the phone's is on.
+- Bug (owner, 22:45): the **Orange accents** setting doesn't work, at least not everywhere.
 - No "Set it up for me" through Accessibility: Google Play's policy forbids it. (Owner's rule "only if it passes Google Play"; the Orchestrator checked the policy.)
 
 - No: password and 2FA codes on the bar (autofill chips). No: back up everything in one file. No: changing the defaults to match stock and BlackBerry (Caps Lock on double Shift, hold for a capital, spelling from the phone's language). (Owner, 2026-11-12)
@@ -167,7 +184,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - the app's scaling at large font sizes ("pretty awful");
   - on the playground, when the screen is fully orange, the words can't be read.
   - the guide's text field always shows two lines (owner, 2026-11-12: "it shd always show two lines, just bugged rn");
-  - the playground's text is rewritten in the owner's offensive, fun, casual tone, **lowercase with no punctuation, nothing off limits**, and long enough to type for a long time without looping. A sample of about 20 lines comes first, for tone (owner, 2026-11-12).
+  - the playground's text is rewritten in the owner's offensive, fun, casual tone, **lowercase with no punctuation, nothing off limits**. The tone sample is approved except the touchpad line, and "i am stupid" goes (owner, 22:45). The text is and long enough to type for a long time without looping. A sample of about 20 lines comes first, for tone (owner, 2026-11-12).
   - Before the batch is built, the owner sees the layout on a sample page with the real text and real elements (owner: "show me the layout first").
 - Built so far: the calibration as the default, and in-app calibration centred. This is look-only; the touchpad code is unchanged.
 

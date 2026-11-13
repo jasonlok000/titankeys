@@ -224,8 +224,12 @@ class CursorGesture {
         private const val MAX_DRAG_GAP_MILLIS = 200L
         /** Real taps of a pair landed up to 0.61 keys apart. */
         private const val MAX_APART_KEYS = 1f
-        /** The first tap must come this long after the touch before it, which also leaves out a resting finger's series. */
-        private const val ALONE_MILLIS = 200L
+        /**
+         * The first tap must come this long after the touch before it, which also leaves out a resting finger's series. It was
+         * 200 ms; in the owner's logs 7 failed steers came 155 to 191 ms after a lift, and 150 ms adds about 0.09 false triggers
+         * per 1,000 words (owner, 2026-11-12). Below about 140 ms, double taps on the Shift and ▦ spots would pick words.
+         */
+        internal const val ALONE_MILLIS = 150L
         /** A resting finger's touches last about this long; a tap that the rules left out and lasted longer is no rest. */
         private const val RESTING_TOUCH_MILLIS = 40L
         /** The first tap must come this long after a key press. */
@@ -251,15 +255,16 @@ class CursorGesture {
          */
         const val ZONE_TOP = .5f
         /**
-         * From C's left edge to N's right edge, the whole of C, V, B and N (owner, 2026-11-11). Over raw log 17 that is one more
-         * gesture and one more swiped word taken as one than the inner edges of C and N, and no press is lost: a press calls a
-         * gesture off.
+         * As wide as the Space bar itself, on the Space row and the row above it (owner, 2026-11-12). It was C's left edge to N's
+         * right edge, and anywhere on the Space row, so a double tap on the Shift or ▦ spots beside Space picked a word: in the
+         * owner's logs, 3 to 7 such picks, against no real gesture that landed outside Space's width. A steer or a select that
+         * starts here can still slide anywhere.
          */
-        const val ZONE_LEFT = .3f
-        const val ZONE_RIGHT = .7f
+        const val ZONE_LEFT = .36f
+        const val ZONE_RIGHT = .64f
 
-        /** Whether a touch that lands at [x], [y] may be part of a gesture: anywhere on Space, or in the zone above it. */
-        fun inZone(x: Float, y: Float) = y >= BOTTOM_ROW_TOP || y >= ZONE_TOP && x >= ZONE_LEFT && x < ZONE_RIGHT
+        /** Whether a touch that lands at [x], [y] may be part of a gesture: on the Space bar, or above it as wide as it. */
+        fun inZone(x: Float, y: Float) = y >= ZONE_TOP && x >= ZONE_LEFT && x < ZONE_RIGHT
         /** How far up the second or third touch must go to start a drag. Real sideways drags went at most 0.2 rows up before they started. */
         private const val UP_ROWS = .6f
         /** Real drags moved at most 0.43 keys between two points. One finger can't go this far so fast. */

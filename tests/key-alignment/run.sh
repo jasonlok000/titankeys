@@ -14,7 +14,7 @@ for pair in "GuideKeyboardView.kt:const val AREA_LEFT = .05f" "GuideKeyboardView
   "GuideKeyboardView.kt:const val ZONE_BOTTOM = .885f" "GuideKeyboardView.kt:const val ZONE_TAP_ROW = .72f" \
   "GuideKeyboardView.kt:const val HOLD_PAUSE_X = .95f - PAUSE_KEYS / 10f" "GuideKeyboardView.kt:const val HOLD_TOP_X = .95f - REPEAT_LONG_KEYS / 10f" \
   "DeleteSwipe.kt:internal const val PAUSE_KEYS = .8f" "DeleteSwipe.kt:internal const val REPEAT_LONG_KEYS = 5.5f" \
-  "CursorGesture.kt:const val ZONE_TOP = .5f" "CursorGesture.kt:const val ZONE_LEFT = .3f" "CursorGesture.kt:const val ZONE_RIGHT = .7f" \
+  "CursorGesture.kt:const val ZONE_TOP = .5f" "CursorGesture.kt:const val ZONE_LEFT = .36f" "CursorGesture.kt:const val ZONE_RIGHT = .64f" \
   'KeyCalibrationActivity.kt:pixels > 0 -> "$pixels px in"' 'KeyCalibrationActivity.kt:else -> "${-pixels} px out"'; do
   grep -qF "${pair#*:}" "$keyboard/${pair%%:*}" || { echo "${pair%%:*} changed: ${pair#*:}"; exit 1; }
 done

@@ -141,9 +141,9 @@ private const val AREA_LEFT = .05f
 private const val AREA_RIGHT = .95f
 private const val AREA_TOP = .5f / 4
 private const val AREA_BOTTOM = 3.54f / 4
-private const val ZONE_LEFT = .3f
+private const val ZONE_LEFT = .36f
 private const val ZONE_TOP = .5f
-private const val ZONE_RIGHT = .7f
+private const val ZONE_RIGHT = .64f
 private const val ZONE_BOTTOM = .885f
 private const val ZONE_TAP_ROW = .72f
 private const val HOLD_PAUSE_X = .95f - .8f / 10f
@@ -160,8 +160,10 @@ private fun zonesOnKeys() {
         near(area.top, box("Q").centreY, "from the top row's middle")
         check(area.bottom > box(Layout.SPACE).top && area.bottom < box(Layout.SPACE).bottom) { "to inside the bottom row" }
         val tap = keys.area(ZONE_LEFT, ZONE_TOP, ZONE_RIGHT, ZONE_BOTTOM)
-        near(tap.left, (box("X").right + box("C").left) / 2, "the tap zone starts in the gap between X and C, across C, V, B and N")
-        near(tap.right, (box("N").right + box("M").left) / 2, "and ends in the gap between N and M")
+        // As wide as the Space bar itself (owner, 2026-11-12), within a third of a key of its ends.
+        val third = (box("C").right - box("C").left) / 3
+        check(kotlin.math.abs(tap.left - box(Layout.SPACE).left) < third) { "the tap zone starts where Space does: ${tap.left} against ${box(Layout.SPACE).left}" }
+        check(kotlin.math.abs(tap.right - box(Layout.SPACE).right) < third) { "and ends where it does: ${tap.right} against ${box(Layout.SPACE).right}" }
         check(tap.top > box("A").bottom && tap.top < box("Z").top) { "from between the middle and bottom letter rows" }
         check(tap.bottom > box(Layout.SPACE).top && tap.bottom < box(Layout.SPACE).bottom) { "down onto Space" }
         val tapY = keys.y(ZONE_TAP_ROW)

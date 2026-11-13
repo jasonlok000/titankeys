@@ -119,6 +119,7 @@ export default function BoringGuide() {
     </Section>
     <Section title="Problems">
       <Topic title="Check the setup">{"Something fucked up? Nine times out of ten it's Setup. Settings > Setup, make every step say Done."}</Topic>
+      <Topic title="Messed up your settings">{"Changed so much you can't find your way back? At the bottom of Settings: Reset most things puts every switch and choice back how it started, and your words, snippets, shorthand and app lists stay. Reset literally everything wipes all of that too, like a fresh install. Swipes you already shared stay on our side until you delete them in Settings > Share swipes."}</Topic>
       <Topic title="Sym doesn't open the panel">{"Settings > Setup checks it. Set Sym to Programmable key opens the phone's Shortcut keys: set Sym key to Programmable key there."}</Topic>
       <Topic title="fn doesn't work as Ctrl">{"Settings > Setup checks it. Set fn to Programmable key opens the phone's Shortcut keys: set fn key to Programmable key there."}</Topic>
       <Topic title="Swiping doesn't work in an app">{"Settings > Setup lists the apps that aren't on Sliding Mode 1. Open Scroll assistant, find the app and pick Sliding Mode 1."}</Topic>

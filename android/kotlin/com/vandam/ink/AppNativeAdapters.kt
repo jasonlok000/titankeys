@@ -42,6 +42,8 @@ import com.atlas.keyboard.PhoneNameSource
 import com.atlas.keyboard.PhoneChecks
 import com.atlas.keyboard.PhoneSetup
 import com.atlas.keyboard.RawLog
+import com.atlas.keyboard.FreshStart
+import com.atlas.keyboard.SettingsReset
 import com.atlas.keyboard.SetupPart
 import com.atlas.keyboard.Snippets
 import com.atlas.keyboard.Trace
@@ -310,6 +312,20 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                         activity.runOnUiThread { complete(NativeResult.Success("null")) }
                     }.start()
                     null
+                }
+                // Settings > Reset most things. Settings shows it at once; the keyboard and the guide as they next draw.
+                "resetSettings" -> {
+                    SettingsReset.reset(activity)
+                    activity.applyAccent()
+                    activity.applyUserScale()
+                    publishState()
+                    "null"
+                }
+                // Settings > Reset literally everything: wipes it all and restarts TitanKeys on its front page (FreshStart).
+                "wipeEverything" -> {
+                    SettingsReset.reset(activity)
+                    FreshStart.wipe(activity)
+                    "null"
                 }
                 "nerdSeen" -> {
                     appPreferences().edit().putBoolean(NERD_SEEN, true).apply()

@@ -5,7 +5,7 @@
 - Type along: Each step has its own text to type in a box. Words you get right go grey, and missed ones get skipped, so you never get stuck.
 - Mean on purpose: It's way more sarcastic now. You'll paste something you won't like, and you'll have to find a clown.
 - Two guides: The fun one on the keys, and the boring one with every detail. Pick your poison in Settings > Guide.
-- New look: Pure black, Inter everywhere, and orange only where it means do this now. Each slide gets its own little decoration, just for looks.
+- New look: Pure black, Inter everywhere, and way less orange. Each slide gets its own little decoration, just for looks.
 - Playground: Type fast and it comments. Type really fast and it rains shit. Five quiet seconds and it all calms down.
 - Something to type: The front page has a new text to type along to, about an hour of it. It roasts you the whole way.
 
@@ -27,7 +27,7 @@
 - Steer and select: Taps for steering and selecting count on Space itself, not the keys next to it. The first tap counts sooner, at 150 ms, so fewer steers get missed. A triple tap with no slide selects the word.
 - You see it right away: The bar shows the gesture as soon as your tap counts, and the dots follow your real text.
 - Delete: A single flick lifts the word off and dissolves it. Keep holding and it eats a word at a time, each with a firm hit. Slide further out to go faster, or back onto Backspace to pause.
-- Word menu: Hold a word on the bar, then I moves it up and O moves it down: save, favourite, and back again. Learned a word you hate? O forgets it. Hearts burst for a favourite, bookmarks for a save. It doesn't time out.
+- Word menu: Hold a word on the bar, then I moves it up and O moves it down: save, favourite, and back again. Learned a word you hate? O forgets it. Hearts burst for a favourite, sparkles for a save. It doesn't time out.
 - Scroll assistant: It starts out matching the phone's own Scroll assistant. Change it and it stays your way.
 
 ## Haptics
@@ -35,6 +35,7 @@
 - Your switches: Settings > Haptics has one switch for all of it and one for every single haptic.
 - Quiet swell: When something changes by itself, like autocorrect, a snippet or a held symbol, you get a soft swell. Just a nod. Nothing to do.
 - Quiet when it should be: Key presses never buzz, and a fast run of buzzes doesn't turn into a rattle.
+- The app too: Switches and steppers in Settings have their own feel, and anything the app won't do says nope.
 
 ## Bar and panels
 - Idle games: Leave the bar alone and it starts playing with your words. Come back and it puts everything where it was.
@@ -45,7 +46,7 @@
 ## Privacy and data
 - Record a bug: Something broke? Settings > Record a bug records up to three minutes, shows you what's in it, and you share it wherever you want. Nothing gets uploaded.
 - No more typing log: The full typing log is gone from public builds. A log left over from 2.0 is deleted.
-- Share swipes: The last word of a message now counts too, if you agreed to share.
+- Share swipes: The last word of a message now counts too, if you agreed to share. The guide asks on a screen of its own at the end, and Not now really means not now.
 
 ## Fixed
 - Notifications: A pop-up at the top no longer steals the touchpad while you type, even after you lock and unlock.

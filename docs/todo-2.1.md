@@ -256,6 +256,9 @@ all of them are unapproved.
     - By design: the Saved word's faint book over the front page's drawn keys.
     - For the owner's hands: the touchpad (swipe, held flick and PAUSE height, steer, select), the real Sym key and held
       letters, haptic feel, pasting on the guide's slides, and Next on a really passed slide.
+  - **Build #10: bb6ee4b1**, all checks passed, installed at 14:25 with no crash. It has C's end-screen no-bar fix and "TL;DR Trust me
+    bro.". Next is build #11, the final candidate: W's grey Not saved word and status marks inside the bar, plus the guide's
+    "Nothing here gets saved".
   - **Build #9: f95a0380**, all checks passed, installed at 13:30 with no crash. The Orchestrator's walk confirmed the three fixes:
     capital titles, the demos, the clown valance and the end spacing. One regression: the real bar shows on the end screen and
     covers the grass's bottom, when arriving by Skip from the clipboard slide. Sent to C. Build #10 follows with that fix.

@@ -208,6 +208,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
+- **The guide says its word menu saves nothing** (owner, 2026-11-13, 14:25: "whatever the user does in the guide with the word menu is not saved right? we shd clearly says so"). (Owner) The menu slide's first instruction is now "Hold a word on the bar. Nothing here gets saved." (Orchestrator's wording, d200d58)
 - **Status marks sit inside the bar, just above the word; Saved's book is filled** (owner, 2026-11-13, 14:20: "I find the heart and
   small book bad to be over the bar as a status. particles are fine. but statuses should be kept maybe just slightly on top of the
   word. also the book should be filled"). (Owner) Particles and effects still rise over the app. Marks are about 12 dp, about 3 dp

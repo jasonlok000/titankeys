@@ -480,6 +480,7 @@ fun main() {
     theScriptMovesOnWithEachWord()
     theStripOffersTheScriptsWord()
     stepsStartInTheRightMenu()
+    theHoldZonesExplainThemselves()
     wrongEventsDoNotFinish()
     chapterOne()
     scenarios()
@@ -848,7 +849,11 @@ private fun stepsStartInTheRightMenu() {
         same(step.setup, Panel.Closed, "${step.id} starts closed, so that its first instruction opens the panel")
     for (step in GUIDE_STEPS.filter { !it.usesPanel }) same(step.setup, Panel.Closed, "${step.id} types, so the panel is closed for it")
     for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.End })
-        same(step.demo != null || step.bar != null, true, "${step.id} must show its gesture by itself when nobody acts")
+        same(step.demo != null || step.bar != null || step.cue != GuideCue.Free && step.cue !is GuideCue.Spot, true,
+            "${step.id} must show its gesture by itself when nobody acts")
+    // The held flick's field stays still: only the keyboard's ghost acts it out (owner, 2026-11-13).
+    same(byId.getValue("hold").demo, null, "The hold slide's field has no demo")
+    same(byId.getValue("hold").cue, GuideCue.Flick(hold = true), "The hold slide's keyboard acts out the held flick")
     same(byId.getValue("clipboard").demo, GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""), "The clipboard slide lights Sym, then A")
     same(byId.getValue("holdsym").demo, GuideDemo.HoldLetter(HOLD_SYMBOL), "The hold slide shows the key with ? held down")
     same(byId.getValue("alt").demo, GuideDemo.AltLetter(ALT_SYMBOL), "The Alt slide shows Alt, then the key with *")
@@ -1502,4 +1507,23 @@ private fun runThroughFixes() {
     // The owner's two lines, exactly.
     same(WEIRD_HUNT.fast, "Quick. Just like you in bed.", "The fast line")
     same(WEIRD_HUNT.slow(40), "That took 40 seconds. Still longer than you claim to last.", "The slow line")
+}
+
+/**
+ * The held delete's zones explain themselves (owner, 2026-11-13: ASDF looked like where to swipe, and the pause zone should be full
+ * height). Only START is a filled patch; FASTER is an arrow, never a box; PAUSE is the touchpad's full height, as the real hold
+ * counts it at any row. GuideKeyboardView and DeleteSwipe aren't compiled for these checks, so their source is read.
+ */
+private fun theHoldZonesExplainThemselves() {
+    val view = java.io.File("android/kotlin/com/atlas/keyboard/GuideKeyboardView.kt").readText()
+    val zones = view.substring(view.indexOf("private fun drawHoldZones("), view.indexOf("private fun holdLabel("))
+    for (word in listOf("\"START\"", "\"FASTER\"", "\"PAUSE\"")) check(word in zones) { "The hold zones say $word" }
+    check("geometry.area(HOLD_PAUSE_X, AREA_TOP, AREA_RIGHT, AREA_BOTTOM)" in zones) { "The pause zone is the touchpad's full height" }
+    check("onRow(" !in zones) { "No hold zone is one row" }
+    check("Paint.Style.STROKE" in zones && "zonePaint" !in zones) { "Nothing in the hold zones is filled like a target: START is the one patch" }
+    check("HOLD_TOP_X" in zones && "drawLine(" in zones) { "FASTER is an arrow out to the top-speed line" }
+    val swipe = java.io.File("android/kotlin/com/atlas/keyboard/DeleteSwipe.kt").readText()
+    check("if (back < PAUSE_KEYS)" in swipe && "private fun keysBack(from: Sample, to: Sample) = (from.x - to.x) * 10" in swipe) {
+        "The real pause goes by the way across only, so it counts at any height, as drawn"
+    }
 }

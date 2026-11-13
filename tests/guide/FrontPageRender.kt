@@ -232,16 +232,41 @@ internal object V2 {
         g.color = alpha(shade ?: if (onOrange) ORANGE else BLACK, .5f)
         g.fill(outside)
         if (zones) {
-            // The held delete's zones: back on Backspace pauses; further out, a lighter box, is top speed.
-            val fast = keys.onRow(1, .05f, .95f - 5.5f / 10f)
-            g.color = alpha(CREAM, .1f)
-            g.fill(RoundRectangle2D.Float(fast.left, top + fast.top, fast.width, fast.height, dp(8).toFloat(), dp(8).toFloat()))
-            val pause = keys.onRow(1, .95f - .8f / 10f, .95f)
-            g.color = alpha(CREAM, .2f)
-            g.fill(RoundRectangle2D.Float(pause.left, top + pause.top, pause.width, pause.height, dp(8).toFloat(), dp(8).toFloat()))
-            g.font = keyFont(maxOf(13f * D, minOf(keys.key, keys.keyHeight) * .24f))
-            g.color = alpha(CREAM, .85f)
-            g.drawString("pause", pause.left + dp(4), top + pause.bottom - dp(4))
+            // The held delete's zones, as GuideKeyboardView's drawDeleteZone and drawHoldZones (owner, 2026-11-13): only START is a
+            // filled patch; FASTER is an arrow out to the top-speed line; PAUSE is a dashed column the touchpad's full height.
+            val corner = dp(8).toFloat()
+            val start = keys.area(.76f, .175f, .95f, .62f)
+            g.color = alpha(ORANGE, .2f)
+            g.fill(RoundRectangle2D.Float(start.left, top + start.top, start.width, start.height, corner, corner))
+            val line = alpha(ORANGE, .7f)
+            val pause = keys.area(.95f - .8f / 10f, .5f / 4, .95f, 3.54f / 4)
+            g.color = line
+            g.stroke = java.awt.BasicStroke(2f * D, java.awt.BasicStroke.CAP_BUTT, java.awt.BasicStroke.JOIN_ROUND, 10f, floatArrayOf(5f * D, 5f * D), 0f)
+            g.draw(RoundRectangle2D.Float(pause.left, top + pause.top, pause.width, pause.height, corner, corner))
+            g.stroke = java.awt.BasicStroke(2f * D, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND)
+            val y = top + keys.y(.5f)
+            val from = keys.x(.76f) - 4f * D
+            val to = keys.x(.95f - 5.5f / 10f)
+            val head = 7f * D
+            g.draw(java.awt.geom.Line2D.Float(from, y, to, y))
+            val arrow = java.awt.geom.Path2D.Float()
+            arrow.moveTo(to + head, y - head * .7f)
+            arrow.lineTo(to, y)
+            arrow.lineTo(to + head, y + head * .7f)
+            g.draw(arrow)
+            g.stroke = java.awt.BasicStroke(1f)
+            fun pill(word: String, x: Float, cy: Float) {
+                g.font = tracked(BOLD_FACE.deriveFont(13f * D), .08f)
+                val half = g.fontMetrics.stringWidth(word) / 2f + 5f * D
+                val tall = 13f * D * .75f + 5f * D
+                g.color = alpha(BLACK, .85f)
+                g.fill(RoundRectangle2D.Float(x - half, cy - tall / 2, half * 2, tall, tall, tall))
+                g.color = ORANGE
+                g.drawString(word, x - g.fontMetrics.stringWidth(word) / 2f, cy + 13f * D * .36f)
+            }
+            pill("START", (keys.x(.76f) + keys.x(.87f)) / 2, top + keys.y(.25f))
+            pill("FASTER", (from + to) / 2, y)
+            pill("PAUSE", pause.centreX, top + keys.y(.75f))
         }
     }
 

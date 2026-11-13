@@ -1418,6 +1418,9 @@ class GuideActivity : Activity() {
         nextBig = bigButton("Next") { nextPressed() }.apply { visibility = View.GONE }
         // Under the field: an offer to turn on a setting, if a step needs one, on the left, and Skip or Next on the right.
         val actions = LinearLayout(this).apply {
+            // The playground has neither an offer nor Skip or Next, so the row and its 16 dp go, for the keys' room (owner,
+            // 2026-11-13: the front page's keys lost their bottom row to the bar).
+            if (playground) visibility = View.GONE
             gravity = Gravity.CENTER_VERTICAL or Gravity.END
             addView(offer, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(next, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
@@ -2995,7 +2998,8 @@ class GuideActivity : Activity() {
         keys.zoneMarks = true
         // The playground's own text, made for speed, in a new order each time.
         startPassage(PlaygroundText.make(kotlin.random.Random(SystemClock.uptimeMillis())))
-        swapIn(body, PLAYGROUND_BODY, 0)
+        // After Reset literally everything, the front page says so once (FreshStart).
+        swapIn(body, FreshStart.take(this) ?: PLAYGROUND_BODY, 0)
         for (view in listOf(title, field, keys, chapter, script, guideAction, settingsAction))
             view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         showScript()

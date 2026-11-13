@@ -320,6 +320,7 @@ fun main() {
     theStripOffersTheScriptsWord()
     stepsStartInTheRightMenu()
     theHoldZonesExplainThemselves()
+    theFrontPageKeepsAllFourRows()
     wrongEventsDoNotFinish()
     chapterOne()
     scenarios()
@@ -1366,3 +1367,24 @@ private fun theHoldZonesExplainThemselves() {
         "The real pause goes by the way across only, so it counts at any height, as drawn"
     }
 }
+
+/**
+ * The front page keeps all four rows of its keys above the keyboard's bar (owner, 2026-11-13: "the keyboard is cutoff by the bar").
+ * GuideActivity drops the bottom row when the content and the keys don't fit, and on the phone it had none to spare: the touch
+ * zone's label took 24 dp of its own over the keys, and the empty row of actions 16 dp. The label now sits in the room
+ * always kept over the keys, the playground has no actions row, and the room to spare must be at least [FRONT_SLACK_DP].
+ */
+private fun theFrontPageKeepsAllFourRows() {
+    val view = java.io.File("android/kotlin/com/atlas/keyboard/GuideKeyboardView.kt").readText()
+    check("ceil(if (lettersOnly) it.letterHeight else it.height).toInt()" in view) { "The drawing's height is its rows alone, with no room for a label" }
+    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    check("if (playground) visibility = View.GONE" in guide) { "The playground has no actions row taking room" }
+    val slack = frontPageSlack()
+    check(slack >= FRONT_SLACK_DP * V2.D) { "The front page has $slack px to spare over its four rows, under ${FRONT_SLACK_DP} dp" }
+}
+
+/**
+ * The room the front page keeps to spare, in dp, for rounding and a status bar a little taller than measured. A comment never wraps
+ * (the front page's render checks it stays one line), so this needn't hold a second line.
+ */
+private const val FRONT_SLACK_DP = 8

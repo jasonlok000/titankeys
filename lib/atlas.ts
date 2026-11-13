@@ -3,7 +3,7 @@ import { callNative, onNativeMessage } from "ink/native";
 
 export type Spelling = "british" | "american" | "canadian";
 /** Settings > The bar > Bar text size: how much bigger than normal the bar's words, menu and chips are (FixedScale.Size). */
-export type BarTextSize = "normal" | "bigger" | "biggest";
+export type BarTextSize = "small" | "medium" | "large";
 /** How many spaces go in after a full stop, a question mark or an exclamation mark. */
 export type SentenceSpaces = "one" | "two" | "none";
 export type EnterKey = "send" | "newline" | "app";
@@ -86,10 +86,8 @@ export type State = {
   touchpadOnlyInFields: boolean;
   /** A few small marks on the keyboard are orange, such as the key under a finger. Off, they are white or black. */
   orangeAccents: boolean;
-  /** The bar's text size: your pick, or the one for the phone's text size until you pick one. */
+  /** The bar's text size: your pick, or Normal ("medium"). */
   barTextSize: BarTextSize;
-  /** You picked the bar's text size. Until you do, and after a reset, it follows the phone's text size. */
-  barTextSizePicked: boolean;
   /** Swipes and typing know contacts' given and family names. True only while the setting is on and Android allows it. */
   contactNames: boolean;
   /** Which build this is: "play" for Google Play, which has no typing log, "github" or "debug". */

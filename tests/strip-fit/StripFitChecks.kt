@@ -90,16 +90,16 @@ fun main() {
         check(kotlin.math.abs(shrunk - full) <= .5f, "A word at $scale sits on the full-size line: $shrunk, not $full")
     }
 
-    // Bar text size at Biggest: the bar's places are as wide as ever, but every letter is bigger. The three places stay even,
+    // Bar text size at Bigger, the biggest: the bar's places are as wide as ever, but every letter is bigger. The three places stay even,
     // and long words shrink or lose a part to fit, as at Normal.
-    val biggest: (String) -> Float = { measure(it) * FixedScale.BIGGEST }
+    val biggest: (String) -> Float = { measure(it) * FixedScale.BIGGER }
     fun fitsBiggest(slots: List<StripFit.Slot>) = slots.all { biggest(it.text) * it.scale <= it.width - 10f + .01f }
     for (words in listOf(listOf("the", "and", "you"), listOf("the", "something", "you"), listOf("a", "internationalization", "of"),
         listOf("recommendation's", "recommendations", "recommendation"))) {
         val big = StripFit.fit(words, 300f, 5f, biggest, lend = false)
-        same(big.map { it.width }, List(3) { 100f }, "At Biggest the three places stay even for $words")
-        check(fitsBiggest(big), "At Biggest every word fits its place: $big")
-        check(big.all { it.scale >= StripFit.MIN_SCALE }, "At Biggest no word goes below the smallest size: $big")
+        same(big.map { it.width }, List(3) { 100f }, "At Bigger the three places stay even for $words")
+        check(fitsBiggest(big), "At Bigger every word fits its place: $big")
+        check(big.all { it.scale >= StripFit.MIN_SCALE }, "At Bigger no word goes below the smallest size: $big")
     }
 
     if (failures.isNotEmpty()) {

@@ -43,25 +43,26 @@ fun main() {
     // At the phone's default settings nothing moves: FixedScale's sizes are the ones TitanKeys was designed at.
     check(pixels(250, 1f, fixed = false) == reference, "At font size 1.0 and 250 dpi, FixedScale changes nothing")
 
-    // Before you pick one, Bar text size follows the phone's text size (owner, 2026-11-13): under 1.15 Normal, from 1.15 Bigger,
-    // and never Biggest, which is only ever picked. The owner's phone is at 2.0, so it lands on Bigger by itself.
-    val starts = mapOf(.85f to "Normal", 1f to "Normal", 1.1f to "Normal", 1.149f to "Normal", 1.15f to "Bigger", 1.3f to "Bigger",
-        1.5f to "Bigger", 1.51f to "Bigger", 1.8f to "Bigger", 2f to "Bigger")
-    for ((fontScale, name) in starts) {
-        check(FixedScale.forFontScale(fontScale).name == name, "At the phone's text size $fontScale the bar starts at $name: got ${FixedScale.forFontScale(fontScale)}")
+    // Bar text size (owner, 2026-11-13: "let's make bigger normal, normal smaller. default all use the new normal"): Smaller is
+    // the bar as designed, Normal 1.2 and Bigger 1.4, and everyone starts at Normal, whatever the phone's text size.
+    check(FixedScale.UNSCALED == 1f, "Every window but the bar stays at 1")
+    check(FixedScale.Size.entries.map { it.name to it.factor } == listOf("Smaller" to 1f, "Normal" to 1.2f, "Bigger" to 1.4f),
+        "The sizes are Smaller 1.0, Normal 1.2 and Bigger 1.4: got ${FixedScale.Size.entries.map { it.name to it.factor }}")
+    check(FixedScale.Size.entries.map { it.id } == listOf("small", "medium", "large"), "The sizes have fresh ids")
+    // No pick, and every id the first Bar text size stored, read as Normal: none can mean a different size than its name.
+    for (id in listOf(null, "", "normal", "bigger", "biggest", "size")) {
+        check(FixedScale.Size.of(id) == FixedScale.Size.Normal, "\"$id\" reads as Normal: got ${FixedScale.Size.of(id)}")
     }
-    check(FixedScale.Size.ofOrNull(null) == null && FixedScale.Size.ofOrNull("size") == null, "No pick reads as none, so the phone's text size counts")
 
     // Bar text size multiplies the unit in the bar's window, and with it every dp and sp in the bar. Every other window stays at 1.
-    check(FixedScale.Size.of(null) == FixedScale.Size.Normal && FixedScale.Size.Normal.factor == 1f, "Size starts at Normal, 1.0")
     check(FixedScale.Size.entries.zipWithNext().all { (a, b) -> b.factor > a.factor }, "Each size is bigger than the one before")
     for (size in FixedScale.Size.entries) {
         check(FixedScale.Size.of(size.id) == size, "${size.id} reads back as ${size.name}")
         val sized = FixedScale.densityDpi(width, height, size.factor)
         check(abs(sized - dpi * size.factor) <= 1f, "${size.name} makes a dp ${size.factor} times as big: got $sized dpi for $dpi")
         check(FixedScale.densityDpi(height, width, size.factor) == sized, "${size.name}: a turned screen keeps the same sizes")
-        // The bar keeps Normal's height, 56 dp at Normal, and only what's in it grows (FixedScale.normalPx, Strip.BAR_DP).
-        // normalPx takes the screen's pixels, which a window has at any size, never the window's own dp.
+        // The bar keeps its unscaled height, 56 dp, and only what's in it grows (FixedScale.fixedPx, Strip.BAR_DP).
+        // fixedPx takes the screen's pixels, which a window has at any size, never the window's own dp.
         val barPx = 56f * FixedScale.densityDpi(width, height) / 160f
         check(abs(56f * (sized / 160f) / size.factor - barPx) <= 1f, "${size.name}: the bar's window would agree on its height")
         check(abs(barPx - 56f * dpi / 160f) <= 1f, "${size.name}: the bar stays ${56f * dpi / 160f} px tall: got $barPx")

@@ -146,7 +146,6 @@ object RawLog {
         "touchpadOnlyInFields" to TypingSettings.touchpadOnlyInFields(context),
         "orangeAccents" to TypingSettings.orangeAccents(context),
         "barTextSize" to FixedScale.size(context).id,
-        "barTextSizePicked" to (FixedScale.picked(context) != null),
         "enterKey" to TypingSettings.enterKey(context),
         "enterApps" to TypingSettings.enterApps(context).sorted().joinToString(","),
         "spelling" to TypingSettings.spelling(context).value(),

@@ -22,8 +22,12 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
     Boundary("boundary", "Boundary", listOf(30)),
     /** Short then long, rising: done. */
     Confirm("confirm", "Confirm", listOf(15, 40, 35)),
-    /** Two quick light pulses: something changed by itself. */
-    Change("change", "Change", listOf(20, 35, 20)),
+    /**
+     * A quiet swell, light, fuller, light: something changed by itself, such as autocorrect, a shortcut spelled out or a held
+     * letter's symbol (owner, 2026-11-12). One soft rounded nudge, not a tick. Just an acknowledgement, nothing to do. It never
+     * holds up any other haptic, so the gate takes it as texture; its gaps are 35, so rule 4 holds.
+     */
+    Change("change", "Change", listOf(12, 35, 22, 35, 12)),
     /** Two equal firm pulses: it stays. */
     Lock("lock", "Lock", listOf(30, 50, 30)),
     /** One pulse: it no longer stays. */
@@ -70,10 +74,11 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
     Celebrate("celebrate", "Celebrate", listOf(15, 40, 22, 40, 35));
 
     /**
-     * Texture and Boundary come in fast runs, so they keep their own pace and never block a message. Every other family is a
-     * message: something happened.
+     * Texture and Boundary come in fast runs, so they keep their own pace and never block a message. Change's quiet swell is only
+     * an acknowledgement, so it never blocks or delays anything either, and is not held to the repeat rule. Every other family
+     * is a message: something happened.
      */
-    val texture get() = this == Texture || this == Boundary || this == Crunch || this == Hit
+    val texture get() = this == Texture || this == Boundary || this == Crunch || this == Hit || this == Change
 
     companion object {
         fun of(id: String) = entries.firstOrNull { it.id == id }

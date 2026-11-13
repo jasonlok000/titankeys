@@ -7,6 +7,7 @@ import java.io.File
  * gate that keeps a fast run calm, and the switches. These run without a phone.
  */
 fun main() {
+    changeIsAQuietSwell()
     eachHapticPlaysItsFamily()
     eachFamilyPlaysItsPattern()
     noReadyMadeEffects()
@@ -136,7 +137,7 @@ private val patterns = mapOf(
     Family.Texture to listOf(17L),
     Family.Boundary to listOf(30L),
     Family.Confirm to listOf(15L, 40L, 35L),
-    Family.Change to listOf(20L, 35L, 20L),
+    Family.Change to listOf(12L, 35L, 22L, 35L, 12L),
     Family.Lock to listOf(30L, 50L, 30L),
     Family.Release to listOf(30L),
     // The owner's table said 50/30/20. The gap is 35 so it keeps the rule that each pulse reads on its own.
@@ -219,8 +220,8 @@ private fun theRhythmsMeanTheSameEverywhere() {
     for (falling in listOf(Family.Back, Family.GoneFlick))
         check(pulses(falling).let { it.size == 2 && it[0] > it[1] }) { "$falling falls" }
     check(pulses(Family.Lock).let { it.size == 2 && it[0] == it[1] }) { "Lock is two equal pulses" }
-    check(pulses(Family.Change).let { it.size == 2 && it[0] == it[1] && it[0] < pulses(Family.Lock)[0] }) {
-        "Change is two equal pulses, lighter than a lock"
+    check(pulses(Family.Change).let { it.size == 3 && it[0] == it[2] && it[1] > it[0] && it.max() < pulses(Family.Lock)[0] }) {
+        "Change is a quiet swell: light, fuller, light, all lighter than a lock"
     }
     check(pulses(Family.Gone).size == 1 && pulses(Family.Gone)[0] > pulses(Family.Release)[0]) { "Gone is one long pulse" }
     check(pulses(Family.No).let { it.size == 3 && it.toSet().size == 1 }) { "No is three equal pulses" }
@@ -488,12 +489,12 @@ private fun aCountedTapNeverBlocksTheGesture() {
 private fun theGateSaysWhy() {
     val clock = Clock()
     val gate = HapticGate { clock.now }
-    check(gate.check(Family.Change) == HapticResult.Played) { "It plays" }
+    check(gate.check(Family.Confirm) == HapticResult.Played) { "It plays" }
     clock.now += 10
     check(gate.check(Family.No) == HapticResult.Busy) { "Another while it plays is busy" }
     check(gate.check(Family.Texture) == HapticResult.Busy) { "Texture while it plays is busy too" }
     clock.now += 200
-    check(gate.check(Family.Change) == HapticResult.TooSoon) { "The same family within 300 ms is too soon" }
+    check(gate.check(Family.Confirm) == HapticResult.TooSoon) { "The same family within 300 ms is too soon" }
     check(switches(mapOf(HapticSwitches.MASTER to false)).stops(Haptic.SwipeKey) == HapticResult.MasterOff) { "All off" }
     check(switches(mapOf(Haptic.SwipeKey.key to false)).stops(Haptic.SwipeKey) == HapticResult.SwitchedOff) { "Its switch off" }
     check(switches(emptyMap()).stops(Haptic.SwipeKey) == null) { "Nothing stops it" }
@@ -754,7 +755,7 @@ private fun aHitEvery80MsPassesTheGate() {
     val gate = HapticGate { clock.now }
     check(gate.admit(Family.Hit, 30)) { "A hit" }
     clock.now += 5
-    check(gate.check(Family.Change) == HapticResult.Played) { "and a message on top of it" }
+    check(gate.check(Family.Confirm) == HapticResult.Played) { "and a message on top of it" }
 }
 
 /** A wall's quiet silences the hit too, so the wall at the start of the text is felt clean. */
@@ -1112,4 +1113,28 @@ private fun switchesLockOnAndReleaseOff() {
     // Exact typing's bar keys stay Confirm; only the lab's experiment tries texture.
     check(Haptic.ExactKey.family == Family.Confirm) { "Exact typing keys still confirm by default" }
     for (haptic in listOf(Haptic.QuickSettingOff, Haptic.BugRecordingStopped)) check(HapticTimeline.trigger(haptic).isNotEmpty()) { "$haptic" }
+}
+
+/**
+ * Change is a quiet swell (owner, 2026-11-12): light, fuller, light, one soft rounded nudge for something that changed by
+ * itself. It never blocks or delays another haptic and isn't held to the repeat rule, as texture; its gaps keep rule 4.
+ */
+private fun changeIsAQuietSwell() {
+    check(Family.Change.pattern == listOf(12L, 35L, 22L, 35L, 12L)) { "12, 35, 22, 35, 12" }
+    check(HapticPalette.gaps(Family.Change.pattern).all { it >= HapticPalette.MIN_GAP_MILLIS }) { "Its gaps keep rule 4" }
+    check(Family.Change.texture) { "The gate takes it as texture" }
+    check(Family.entries.none { it != Family.Change && it.pattern == Family.Change.pattern }) { "No other family plays it" }
+    // The changes that happen by themselves play it; undoing one stays Back.
+    for (haptic in listOf(Haptic.Autocorrect, Haptic.Expansion, Haptic.HeldSymbol, Haptic.GuideHint))
+        check(haptic.family == Family.Change) { "$haptic swells" }
+    check(Haptic.AutocorrectUndone.family == Family.Back && Family.Back.pattern == listOf(35L, 40L, 15L)) { "Undoing a fix is Back" }
+    // It never holds up a message, and it can come again at once.
+    val clock = Clock(1_000)
+    val gate = HapticGate { clock.now }
+    check(gate.check(Family.Change) == HapticResult.Played) { "It plays" }
+    clock.now += 5
+    check(gate.check(Family.Confirm) == HapticResult.Played) { "A message plays right on top of it" }
+    clock.now += 200
+    check(gate.check(Family.Change) == HapticResult.Played) { "Another swell 205 ms later plays: no repeat rule" }
+    check(gate.check(Family.Change, HapticPalette.millis(Family.Change.pattern)) == HapticResult.Played) { "and again" }
 }

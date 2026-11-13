@@ -164,7 +164,7 @@ all of them are unapproved.
       It's dimmed to half, with a wider gap.
 - **Front page title and one-paragraph text: done and merged** (e7acb0d, df8a6ce; merge fc2c23c). Renders checked: the title is on one line, ink on orange, and the text scrolls as one paragraph. Build #4 started.
 - **Build #4: 91b08c1c** (test-2.1h at bcaf215), all checks passed. Installed at 08:00 with no crash. This is the candidate for the owner's review.
-- **Owner's notes on build #4 (08:10), in progress:**
+- **Owner's notes on build #4 (08:05), in progress:**
   - **A** (claude/playground-haptics): five playground haptics and their own switch.
   - **F** (claude/size-setting): Settings > Look and feel > Size, with Normal, Bigger and Biggest, making everything bigger,
     the bar included.
@@ -179,7 +179,7 @@ all of them are unapproved.
   - 180, each lightning flash: a firm hit;
   - the plant at the top: the swell.
 
-  Each would have its own switch. Owner said yes (08:10).
+  Each would have its own switch. Owner said yes (08:05).
 - **Front page text as one paragraph (owner, 07:50):** C drops the sentence anchoring and the next-line dimming (9b56000). The reference becomes a two-line window that scrolls through one continuous paragraph. Same branch as the title.
 - **Front page title (owner, 07:45):** a guide-style title and description. C adds it on claude/playground-next-line, after the
   next-line dimming (9b56000, render checked). Both go into build #4.

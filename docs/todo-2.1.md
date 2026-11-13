@@ -213,6 +213,14 @@ all of them are unapproved.
     - **Open:** the echo uses the word's own mark, and the ambient waits a full cycle, so there are no hearts and then glitter.
     - **Next for W:** the quick settings page has the same late lift (its mark clears about 0.3 s after a toggle), so it gets the
       same fix. The ladder work stays held until v4 is approved.
+  - **A's guide zones: merged** (325e623, ebe561e; merge 7405e10).
+    - Decorations are about twice as strong.
+    - The hold slide has no field demo.
+    - The zones read START (the only filled patch), a FASTER arrow, and a dashed full-height PAUSE column.
+    - The real pause now counts at any height (DeleteHold goes by distance across only).
+    - The Orchestrator resolved GuideDecor.LOOKS (F's accent form with A's levels) and the decoration check; guide and
+      guide-decor pass.
+    - On the phone: how the zones look, and the full-height pause by hand.
   - **Size and global Orange accents: merged** (F's 4af0690, c019ec2 and 03af407; merge 743a128). The Orchestrator resolved
     tests/menu-render/run.sh by keeping both file lists; menu-render and word-menu pass. The release notes cover both. Next for F:
     the two resets.

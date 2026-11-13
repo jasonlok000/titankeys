@@ -163,6 +163,16 @@ all of them are unapproved.
     - Follow-up sent: on black, the playground's next line had the same grey as the current line, so the two ran together.
       It's dimmed to half, with a wider gap.
 - **Front page title and one-paragraph text: done and merged** (e7acb0d, df8a6ce; merge fc2c23c). Renders checked: the title is on one line, ink on orange, and the text scrolls as one paragraph. Build #4 started.
+- **Build #4: 91b08c1c** (test-2.1h at bcaf215), all checks passed. Installed at 08:30 with no crash. This is the candidate for the owner's review.
+- **Asked the owner (08:25): haptics for the playground's effects?** Today they're silent. The Orchestrator's proposal is five big moments
+  and nothing per step:
+  - 40 wpm, the first confetti: Celebrate;
+  - 100, the rain: No;
+  - 150, the shake: one rumble;
+  - 180, each lightning flash: a firm hit;
+  - the plant at the top: the swell.
+
+  Each would have its own switch. Waiting for the owner's answer.
 - **Front page text as one paragraph (owner, 07:50):** C drops the sentence anchoring and the next-line dimming (9b56000). The reference becomes a two-line window that scrolls through one continuous paragraph. Same branch as the title.
 - **Front page title (owner, 07:45):** a guide-style title and description. C adds it on claude/playground-next-line, after the
   next-line dimming (9b56000, render checked). Both go into build #4.

@@ -71,9 +71,10 @@ class Modifiers {
      * Whether Backspace deletes the previous word: with Ctrl ([ctrl], from the key's own meta state), with Alt on, or with Shift
      * physically held. A tapped Shift, or one that came on by itself at a sentence start, leaves Backspace a plain Backspace.
      */
-    fun backspaceDeletesWord(ctrl: Boolean) = ctrl || alt != Level.Off || holding(Key.Shift)
+    fun backspaceDeletesWord(ctrl: Boolean) = ctrl || holding(Key.Shift)
 
-    /** After a Backspace: a word delete with Alt on uses Alt up, as a character would. Otherwise only held modifiers count as used. */
+    /** After a Backspace: with Alt on, Backspace went to the app as Alt + Backspace and uses Alt up, as a character would. Otherwise only held
+     * modifiers count as used. */
     fun afterBackspace() {
         if (alt != Level.Off) consume() else useHeld()
     }

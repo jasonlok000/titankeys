@@ -109,10 +109,14 @@ internal sealed interface GuideDemo {
     data object FixNext : GuideDemo
     /** The last word fades away. */
     data object DeleteLast : GuideDemo
+    /** Only the last letter goes, as one Backspace takes it. */
+    data object DeleteLetter : GuideDemo
     /** The cursor walks back through the last word. */
     data object MoveCursor : GuideDemo
     /** The last word is selected. */
     data object SelectLast : GuideDemo
+    /** The words the slide marks are selected, as three taps, the third held and slid, select them. */
+    data object SelectTarget : GuideDemo
     /** A letter appears from a key that stays down, then becomes the symbol in that key's corner. */
     data class HoldLetter(val key: String) : GuideDemo
     /** These keys light one after the other, then [text] appears, as from the Sym panel. */
@@ -1086,6 +1090,22 @@ internal fun grabTarget(text: String, from: Int): IntRange? {
     return at until at + GRAB_PHRASE.length
 }
 
+/**
+ * Where [demo] ends in [text]: the characters that it takes away or selects, as the real gesture would, or null if it does neither.
+ * [target] is what the slide marks, which [GuideDemo.SelectTarget] selects. The guide draws the demo from this, and the checks test
+ * that it ends where a pass does.
+ */
+internal fun demoRange(demo: GuideDemo, text: String, target: IntRange?): IntRange? {
+    val lastEnd = text.trimEnd().length
+    val lastStart = text.substring(0, lastEnd).lastIndexOf(' ') + 1
+    return when (demo) {
+        GuideDemo.DeleteLetter -> if (lastEnd > 0) lastEnd - 1 until lastEnd else null
+        GuideDemo.SelectTarget -> target ?: if (lastEnd > lastStart) lastStart until lastEnd else null
+        GuideDemo.DeleteLast, GuideDemo.SelectLast, GuideDemo.CopyLast -> if (lastEnd > lastStart) lastStart until lastEnd else null
+        else -> null
+    }
+}
+
 /** How a selection from [start] to [end] does on the marked words [aim]: short of them, all of them, or far too many. */
 internal fun grabbed(text: String, aim: IntRange, start: Int, end: Int): Int {
     if (start > aim.first || end < aim.last + 1) return GRAB_SHORT
@@ -1303,7 +1323,8 @@ internal val GUIDE_STEPS = listOf(
         // never the space first.
         cursorAt = { it.trimEnd().length },
         lessons = setOf(GuideLesson.Backspace),
-        demo = GuideDemo.DeleteLast,
+        // Only the extra e goes, as the one Backspace takes it (build #8 pass: the whole word went).
+        demo = GuideDemo.DeleteLetter,
     ),
     GuideStep(
         id = "flick", chapter = GuideChapter.Delete,
@@ -1460,7 +1481,8 @@ internal val GUIDE_STEPS = listOf(
         cue = GuideCue.Taps(3, drag = true),
         needs = GuideNeed.CursorControl,
         lessons = setOf(GuideLesson.Cursor),
-        demo = GuideDemo.SelectLast,
+        // The marked words, "my whole heart", as the real select takes them (build #8 pass: it selected the last word).
+        demo = GuideDemo.SelectTarget,
     ),
     // SYMBOLS AND EMOJI: each slide's line in the field with a gap, the cursor in it; the slide's symbol goes there, by its way.
     GuideStep(

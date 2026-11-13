@@ -319,6 +319,7 @@ fun main() {
     theScriptMovesOnWithEachWord()
     theStripOffersTheScriptsWord()
     stepsStartInTheRightMenu()
+    demosEndWhereAPassDoes()
     theHoldZonesExplainThemselves()
     theFrontPageKeepsAllFourRows()
     wrongEventsDoNotFinish()
@@ -1399,3 +1400,43 @@ private fun theFrontPageKeepsAllFourRows() {
  * (the front page's render checks it stays one line), so this needn't hold a second line.
  */
 private const val FRONT_SLACK_DP = 8
+
+/**
+ * A demo ends where a real pass does (build #8 pass): the Backspace slide's takes only the extra e, as its one Backspace does, and
+ * the grab slide's selects the marked "my whole heart", as three taps, the third held and slid, do. Each end state passes its slide.
+ */
+private fun demosEndWhereAPassDoes() {
+    val byId = GUIDE_STEPS.associateBy { it.id }
+
+    val seed = "$BACKSPACE_SEED "
+    val backspace = byId.getValue("backspace").demo!!
+    same(backspace, GuideDemo.DeleteLetter, "The Backspace slide's demo takes one letter")
+    val gone = demoRange(backspace, seed, null)!!
+    same(seed.substring(gone.first, gone.last + 1), "e", "and that letter is the extra e, not the whole word")
+    val after = seed.removeRange(gone)
+    val deleting = GuideFlow({ GuideSettings() })
+    deleting.start("backspace")
+    deleting.seed(seed, seed.trimEnd().length)
+    same(finishes(deleting.event(FieldChanged(after, gone.first, gone.first))), true, "What the demo leaves passes the slide")
+
+    val grab = byId.getValue("selectmore").demo!!
+    same(grab, GuideDemo.SelectTarget, "The grab slide's demo selects the marked words")
+    val text = "$STEER_LINE\n$GRAB_LINE "
+    val aim = grabTarget(text, 0)!!
+    val picked = demoRange(grab, text, aim)!!
+    same(picked, aim, "It selects exactly what the slide marks")
+    same(text.substring(picked.first, picked.last + 1), "my whole heart", "which is my whole heart, not the last word")
+    same(grabbed(text, aim, picked.first, picked.last + 1), GRAB_ALL, "and that is all of it, no more")
+    val selecting = GuideFlow({ GuideSettings() })
+    selecting.start("selectmore")
+    selecting.seed(text, aim.first)
+    selecting.aim(aim)
+    selecting.event(FieldChanged(text, aim.first, aim.first + 2))
+    same(selecting.event(CursorStarted(true)), GuideVerdict.Stage(1), "Three taps, the third held, start the slide")
+    selecting.event(FieldChanged(text, picked.first, picked.last + 1))
+    same(finishes(selecting.event(Moved(0f, lifted = true))), true, "and the demo's selection, let go, passes it")
+
+    // The other demos that delete or select still take the last word.
+    same(demoRange(GuideDemo.DeleteLast, seed, null)?.let { seed.substring(it.first, it.last + 1) }, "Backspacee", "A flick's demo takes the word")
+    same(demoRange(GuideDemo.SelectTarget, "a word ", null), 2 until 6, "With nothing marked, the select demo takes the last word")
+}

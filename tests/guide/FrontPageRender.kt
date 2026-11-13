@@ -11,47 +11,201 @@ import java.io.File
 import javax.imageio.ImageIO
 
 /*
- * Desktop drawings of the front page (the playground), on the black and orange theme (owner, v5.3, option B), for the owner to
- * review before it's built: the header with Guide and Settings, the line to type along to, the dark text box with its orange
- * accent, and the whole real keyboard at its real size with the touchpad's zone as an orange dashed outline. Ink's font, Inter,
- * as the phone draws it. The size is the owner's phone screenshots'.
+ * Desktop drawings of the front page (the playground) in the v2 look (docs/design-v2.md §3), and the drawing kit the slides'
+ * renders share: one dp is the screen's width ÷ 688.6, Inter in the type scale, the colours, and the keys at 60% of the real
+ * height, edge to edge. The size is the Titan 2 Elite's screen.
  */
 
-private object Theme {
-    // lib/brand.ts, agreed with F (v5.3): one accent, one secondary text colour, one divider.
+/** Design v2, as the phone draws it. */
+internal object V2 {
+    const val W = 1076
+    const val H = 1200
+    /** One dp: the screen's width ÷ 688.6 (design v2 §1). */
+    const val D = 1076f / 688.6f
+    fun dp(value: Number) = Math.round(value.toFloat() * D)
+
     val BLACK = Color(0x00, 0x00, 0x00)
     val ORANGE = Color(0xEF, 0x80, 0x4E)
     val CREAM = Color(0xFF, 0xF1, 0xE6)
     val MUTED = Color(0x99, 0x91, 0x8A)
+    val SURFACE = Color(0x16, 0x12, 0x10)
     val DIVIDER = Color(0x2A, 0x26, 0x23)
     val INK = Color(0x16, 0x0A, 0x04)
+
+    fun alpha(colour: Color, amount: Float) = Color(colour.red, colour.green, colour.blue, Math.round(amount.coerceIn(0f, 1f) * 255))
+
+    fun blend(from: Color, to: Color, amount: Float): Color {
+        fun mix(x: Int, y: Int) = Math.round(x + (y - x) * amount)
+        return Color(mix(from.red, to.red), mix(from.green, to.green), mix(from.blue, to.blue))
+    }
+
+    /** Inter from the repository, as the phone has it. Falls back to the desktop's sans. */
+    private val MEDIUM_FACE: Font by lazy { load("android/src/main/res/font/inter_medium.otf") }
+    private val BOLD_FACE: Font by lazy { load("android/src/main/res/font/inter_bold.otf") }
+
+    private fun load(path: String): Font = try {
+        File(path).inputStream().use { Font.createFont(Font.TRUETYPE_FONT, it) }
+    } catch (error: Exception) {
+        println("  v2: $path not loaded (${error.message}), using sans")
+        Font(Font.SANS_SERIF, Font.PLAIN, 1)
+    }
+
+    private fun tracked(font: Font, em: Float): Font =
+        font.deriveFont(mapOf(java.awt.font.TextAttribute.TRACKING to em))
+
+    // The type scale (design v2 §1), in dp.
+    fun display(size: Float = 30f) = tracked(BOLD_FACE.deriveFont(size * D), -.01f)
+    fun title() = BOLD_FACE.deriveFont(22f * D)
+    fun body() = MEDIUM_FACE.deriveFont(16f * D)
+    fun field() = MEDIUM_FACE.deriveFont(22f * D)
+    fun label() = tracked(BOLD_FACE.deriveFont(12f * D), .08f)
+    /** For the keys' labels: Inter Bold at a size in pixels. */
+    fun keyFont(pixels: Float) = BOLD_FACE.deriveFont(pixels)
+
+    fun image(): Pair<BufferedImage, Graphics2D> {
+        val image = BufferedImage(W, H, BufferedImage.TYPE_INT_RGB)
+        val g = image.createGraphics()
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+        g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
+        return image to g
+    }
+
+    /** The status bar's room at the top, and the keyboard's own bar's at the bottom, which the phone draws. */
+    val STATUS = dp(26)
+    val BAR = dp(40)
+    const val SIDE = 24
+    const val TOP_BAR = 48
+    const val HEADER = 56
+
+    /** The drawn keys (owner): the real keys' width and columns, 60% of their height. */
+    val KEYS = KeyGeometry(W.toFloat(), KeyAlignment.DEFAULT, KeyGeometry.DRAWN)
+    val keysTop get() = H - BAR - Math.ceil(KEYS.height.toDouble()).toInt()
+
+    /** The height of one line of [font], as the phone lays it out with no font padding. */
+    fun lineHeight(g: Graphics2D, font: Font) = g.getFontMetrics(font).let { it.ascent + it.descent } + dp(2)
+
+    /** [text] at [font], shrunk to fit [width] down to 80% (design v2), and whether it still doesn't fit. */
+    fun fitted(g: Graphics2D, text: String, font: Font, width: Int): Pair<Font, Boolean> {
+        var size = font.size2D
+        while (g.getFontMetrics(font.deriveFont(size)).stringWidth(text) > width && size > font.size2D * .8f) size -= .25f
+        val shown = font.deriveFont(size)
+        return shown to (g.getFontMetrics(shown).stringWidth(text) > width)
+    }
+
+    /** ✕, a 24 dp icon, its right edge on the side margin, centred on [cy]. */
+    fun close(g: Graphics2D, cy: Int, colour: Color) {
+        g.color = colour
+        g.stroke = BasicStroke(dp(2).toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+        val c = dp(7)
+        val cx = W - dp(SIDE) - dp(12)
+        g.drawLine(cx - c, cy - c, cx + c, cy + c)
+        g.drawLine(cx + c, cy - c, cx - c, cy + c)
+    }
+
+    /**
+     * The keys as GuideKeyboardView draws them (design v2): each key 3% of its width in from its sides, a cream outline at 16% over
+     * the surface at 50%, labels cream at 70%; the slide's keys orange with ink labels; corner symbols only when [corners]; the part
+     * the touchpad doesn't read dimmed.
+     */
+    fun keys(g: Graphics2D, top: Int, lit: Set<String> = emptySet(), held: Set<String> = emptySet(), hints: Map<String, String>? = null,
+             corners: Boolean = false, onOrange: Boolean = false, zones: Boolean = false, shade: Color? = null) {
+        val keys = KEYS
+        for (box in keys.boxes) {
+            val name = box.name
+            val hint = hints?.get(name)
+            val on = name in lit || hint != null && name == hints.keys.first()
+            val steady = name in held
+            val side = minOf(box.width, keys.pitch) * .03f
+            val radius = minOf(dp(6).toFloat(), box.height / 2) * 2
+            val shape = RoundRectangle2D.Float(box.left + side + .5f, top + box.top + .5f, box.width - 2 * side - 1f, box.height - 1f, radius, radius)
+            val idleFill = if (onOrange) alpha(INK, .05f) else alpha(SURFACE, .5f)
+            val idleLine = if (onOrange) alpha(INK, .5f) else alpha(CREAM, .16f)
+            g.color = when {
+                on -> if (onOrange) INK else ORANGE
+                steady -> alpha(ORANGE, .85f)
+                else -> idleFill
+            }
+            g.fill(shape)
+            g.stroke = BasicStroke(dp(1).toFloat())
+            g.color = if (on || steady) (if (onOrange) INK else ORANGE) else idleLine
+            g.draw(shape)
+            val labelColour = when {
+                on || steady -> if (onOrange) ORANGE else INK
+                onOrange -> INK
+                else -> alpha(CREAM, .7f)
+            }
+            g.color = labelColour
+            val text = when {
+                name == Layout.SPACE -> ""
+                name.length == 1 -> name
+                else -> name.take(3)
+            }
+            if (name == Layout.SPACE) {
+                // Space's mark, a little cup, as the phone draws it.
+                val r = minOf(box.width, box.height) * .52f * .42f
+                val half = box.width * .22f
+                val cx = box.centreX
+                val cy = top + box.centreY
+                g.stroke = BasicStroke(maxOf(1.5f, r / .42f * .14f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+                g.draw(java.awt.geom.Path2D.Float().apply {
+                    moveTo(cx - half, cy - r * .1f)
+                    lineTo(cx - half, cy + r * .35f)
+                    lineTo(cx + half, cy + r * .35f)
+                    lineTo(cx + half, cy - r * .1f)
+                })
+            }
+            val size = minOf(box.width, box.height) * (if (Layout.isLetter(name) || text.length == 1) .52f else .36f)
+            g.font = if (keyFont(size).canDisplayUpTo(text) == -1) keyFont(size) else Font(Font.SANS_SERIF, Font.BOLD, 1).deriveFont(size)
+            val fm = g.fontMetrics
+            val lift = if (hint != null) box.height * .14f else 0f
+            g.drawString(text, box.centreX - fm.stringWidth(text) / 2f, top + box.centreY + (fm.ascent - fm.descent) / 2f - lift)
+            if (hint != null) {
+                g.font = keyFont(minOf(box.width, box.height) * .24f)
+                g.drawString(hint, box.centreX - g.fontMetrics.stringWidth(hint) / 2f, top + box.bottom - box.height * .12f)
+            }
+            if (corners && Layout.isLetter(name) && hint == null) {
+                CORNER[name]?.let { symbol ->
+                    g.font = keyFont(minOf(box.width, box.height) * .26f)
+                    g.color = alpha(labelColour, .6f)
+                    g.drawString(symbol, box.left + side + box.width * .1f, top + box.top + g.fontMetrics.ascent + box.height * .05f)
+                }
+            }
+        }
+        // The part the touchpad doesn't read, dimmed, as GuideKeyboardView's drawTouchArea.
+        val area = keys.area(.05f, .5f / 4, .95f, 3.54f / 4)
+        val outside = java.awt.geom.Area(java.awt.Rectangle(0, top, W, Math.ceil(keys.height.toDouble()).toInt()))
+        outside.subtract(java.awt.geom.Area(RoundRectangle2D.Float(area.left, top + area.top, area.width, area.height, dp(12) * 2f, dp(12) * 2f)))
+        g.color = alpha(shade ?: if (onOrange) ORANGE else BLACK, .5f)
+        g.fill(outside)
+        if (zones) {
+            // The held delete's zones: back on Backspace pauses; further out, a lighter box, is top speed.
+            val fast = keys.onRow(1, .05f, .95f - 5.5f / 10f)
+            g.color = alpha(CREAM, .1f)
+            g.fill(RoundRectangle2D.Float(fast.left, top + fast.top, fast.width, fast.height, dp(8).toFloat(), dp(8).toFloat()))
+            val pause = keys.onRow(1, .95f - .8f / 10f, .95f)
+            g.color = alpha(CREAM, .2f)
+            g.fill(RoundRectangle2D.Float(pause.left, top + pause.top, pause.width, pause.height, dp(8).toFloat(), dp(8).toFloat()))
+            g.font = keyFont(minOf(keys.key, keys.keyHeight) * .24f)
+            g.color = alpha(CREAM, .85f)
+            g.drawString("pause", pause.left + dp(4), top + pause.bottom - dp(4))
+        }
+    }
+
+    /** The Alt symbols printed on the Titan 2 Elite's letter keys, for the corner symbols (the app reads them from the phone). */
+    private val CORNER = mapOf("Q" to "#", "W" to "1", "E" to "2", "R" to "3", "T" to "(", "Y" to ")", "U" to "_", "I" to "-", "O" to "+",
+        "P" to "@", "A" to "*", "S" to "4", "D" to "5", "F" to "6", "G" to "/", "H" to ":", "J" to ";", "K" to "'", "L" to "\"",
+        "Z" to "7", "X" to "8", "C" to "9", "V" to "?", "B" to "!", "N" to ",", "M" to ".")
+
+    /** A note on a render, for review only, in blue. */
+    fun note(g: Graphics2D, text: String, x: Int, y: Int) {
+        g.font = Font(Font.SANS_SERIF, Font.ITALIC, dp(10))
+        g.color = Color(0x66, 0xCC, 0xFF)
+        g.drawString(text, x, y)
+    }
 }
 
-private const val W = 1076
-private const val H = 1200
-private const val D = 1.56f
-private fun px(dp: Number) = Math.round(dp.toFloat() * D)
-
-/** Ink's font, from the repository: Inter Regular, Medium and Bold, as the phone has them. Falls back to the desktop's sans. */
-private val INTER: Font by lazy { load("assets/fonts/Inter-Regular.otf") }
-private val INTER_MEDIUM: Font by lazy { load("assets/fonts/Inter-Medium.otf") }
-private val INTER_BOLD: Font by lazy { load("android/src/main/res/font/inter_bold.otf") }
-
-private fun load(path: String): Font = try {
-    File(path).inputStream().use { Font.createFont(Font.TRUETYPE_FONT, it) }
-} catch (error: Exception) {
-    println("  front page: $path not loaded (${error.message}), using sans")
-    Font(Font.SANS_SERIF, Font.PLAIN, 1)
-}
-
-private fun regular(sp: Number) = INTER.deriveFont(sp.toFloat() * D)
-private fun medium(sp: Number) = INTER_MEDIUM.deriveFont(sp.toFloat() * D)
-/** The titles: Inter Bold. */
-private fun heavy(sp: Number) = INTER_BOLD.deriveFont(sp.toFloat() * D)
-
-private fun alpha(colour: Color, amount: Float) = Color(colour.red, colour.green, colour.blue, Math.round(amount.coerceIn(0f, 1f) * 255))
-
-/** Words wrapped at [width]: whole words only, and a sentence is never cut (v5.3: the prompt was cut mid-word). */
+/** Words wrapped at [width], whole words only. */
 private fun wrapped(g: Graphics2D, text: String, width: Int): List<String> {
     val lines = ArrayList<String>()
     var line = ""
@@ -66,188 +220,153 @@ private fun wrapped(g: Graphics2D, text: String, width: Int): List<String> {
     return lines
 }
 
+private var frontProblems = 0
+
+private fun problem(what: String) {
+    println("  front page: $what")
+    frontProblems++
+}
+
 /**
- * The front page. [typed] is what's in the text box, [wpm] the speed when typing (the name turns into it, as it does now), and
- * [sentence] the prompt, whole.
+ * The front page (design v2 §3). [typed] is what's in the text box; [wpm] the speed, or null before a real word is typed;
+ * [heat] how warm the background is, from 0 to 1; [comment] the line under the header; [passage] the line to type along to, with
+ * [done] words typed.
  */
-private fun drawFront(file: File, typed: String, wpm: Int?, sentence: String, doneWords: Int) {
-    val image = BufferedImage(W, H, BufferedImage.TYPE_INT_RGB)
-    val g = image.createGraphics()
-    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-    g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-    g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
-    g.color = Theme.BLACK
-    g.fillRect(0, 0, W, H)
-    val side = px(18)
-    val inner = W - 2 * side
-    var y = px(36)
+private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment: String, passage: String, done: Int) {
+    val (image, g) = V2.image()
+    val warmth = V2.blend(V2.BLACK, V2.ORANGE, heat * .85f)
+    val warmthArgb = (0xFF shl 24) or (warmth.red shl 16) or (warmth.green shl 8) or warmth.blue
+    // Ink once cream drops below 4.5:1, as WpmMeter.inkOn has it.
+    val ink = WpmMeter.inkOn(warmthArgb, inkNow = false)
+    val strong = if (ink) V2.INK else V2.CREAM
+    val quiet = if (ink) V2.alpha(V2.INK, .6f) else Color(WpmMeter.quietOn(warmthArgb), true)
+    g.color = warmth
+    g.fillRect(0, 0, V2.W, V2.H)
+    val side = V2.dp(V2.SIDE)
+    val inner = V2.W - 2 * side
+    val headerTop = V2.STATUS
+    val header = V2.dp(V2.HEADER)
+    val mid = headerTop + header / 2
 
-    // The header: the name in orange, big, on the left; Guide and Settings as two finger-sized buttons on the right (v5.3).
-    val headerHeight = px(52)
-    val button = px(44)
-    g.font = medium(15)
-    val labels = listOf("Guide", "Settings")
-    var right = W - side
-    val buttonTops = y + (headerHeight - button) / 2
-    for ((index, label) in labels.reversed().withIndex()) {
-        val wide = g.fontMetrics.stringWidth(label) + px(32)
+    // The header: the wordmark, Title, "Titan" cream and "Keys" orange; the words a minute in the middle; Guide and Settings as
+    // outline pills with muted outlines (design v2).
+    g.font = V2.title()
+    val fm = g.fontMetrics
+    val base = mid + (fm.ascent - fm.descent) / 2
+    g.color = strong
+    g.drawString("Titan", side, base)
+    g.color = if (ink) V2.INK else V2.ORANGE
+    g.drawString("Keys", side + fm.stringWidth("Titan"), base)
+    val wordmarkRight = side + fm.stringWidth("TitanKeys")
+    g.font = V2.label()
+    val pill = V2.dp(44)
+    var right = V2.W - side
+    var pillsLeft = right
+    for (label in listOf("SETTINGS", "GUIDE")) {
+        val wide = g.fontMetrics.stringWidth(label) + 2 * V2.dp(16)
         val left = right - wide
-        val shape = RoundRectangle2D.Float(left.toFloat(), buttonTops.toFloat(), wide.toFloat(), button.toFloat(), button.toFloat(), button.toFloat())
-        // Settings outlined in orange; Guide filled, as the one to try first.
-        if (index == 1) {
-            g.color = Theme.ORANGE
-            g.fill(shape)
-            g.color = Theme.INK
-        } else {
-            g.color = Theme.ORANGE
-            g.stroke = BasicStroke(px(1.5f).toFloat())
-            g.draw(shape)
-        }
-        g.drawString(label, left + px(16), buttonTops + button / 2 + g.fontMetrics.ascent / 2 - px(2))
-        right = left - px(8)
+        val shape = RoundRectangle2D.Float(left.toFloat(), (mid - pill / 2).toFloat(), wide.toFloat(), pill.toFloat(), pill.toFloat(), pill.toFloat())
+        g.color = if (ink) V2.alpha(V2.INK, .5f) else V2.MUTED
+        g.stroke = BasicStroke(maxOf(2, V2.dp(1)).toFloat())
+        g.draw(shape)
+        g.color = strong
+        g.drawString(label, left + V2.dp(16), mid + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
+        pillsLeft = left
+        right = left - V2.dp(8)
     }
-    val title = if (wpm != null) "$wpm wpm" else "TitanKeys"
-    g.font = heavy(30)
-    g.color = Theme.ORANGE
-    g.drawString(title, side, y + headerHeight / 2 + g.fontMetrics.ascent / 2 - px(3))
-    y += headerHeight + px(6)
-    // Under the name, the one line that says what this is, in the secondary colour.
-    g.font = regular(15)
-    g.color = Theme.MUTED
-    val tagline = if (wpm != null) "Faster than you look." else "Type or swipe anything. The line below is a suggestion."
-    g.drawString(tagline, side, y + g.fontMetrics.ascent)
-    y += g.fontMetrics.height + px(18)
+    if (wpm != null) {
+        val number = "$wpm"
+        val unit = " WPM"
+        val wide = g.fontMetrics.stringWidth(number + unit)
+        val x = V2.W / 2 - wide / 2
+        if (x < wordmarkRight + V2.dp(8) || x + wide > pillsLeft - V2.dp(8)) problem("the words a minute don't fit between the wordmark and the pills")
+        g.color = strong
+        g.drawString(number, x, mid + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
+        g.color = quiet
+        g.drawString(unit, x + g.fontMetrics.stringWidth(number), mid + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
+    }
+    val headerBottom = headerTop + header
 
-    // The prompt: whole sentences, wrapped by words, the words done faded, the next one in orange (v5.3).
-    g.font = regular(19)
-    val words = sentence.split(' ')
-    val lines = wrapped(g, sentence, inner)
+    // The block: the comment, one line of Body; 12 dp; the line to type along to, two lines of Body; 24 dp; the text box, three
+    // lines of Field. Centred between the header and the keys, with at least 24 dp above and below.
+    val bodyLine = V2.lineHeight(g, V2.body())
+    val fieldLine = V2.lineHeight(g, V2.field())
+    val pad = V2.dp(16)
+    val boxHeight = 3 * fieldLine + 2 * pad
+    val blockHeight = bodyLine + V2.dp(12) + 2 * bodyLine + V2.dp(24) + boxHeight
+    val keysTop = V2.keysTop
+    val room = keysTop - headerBottom
+    if (room < blockHeight + 2 * V2.dp(24)) problem("NO ROOM: the block needs ${blockHeight + 2 * V2.dp(24)} px, has $room")
+    var y = headerBottom + (room - blockHeight) / 2
+
+    g.font = V2.body()
+    g.color = quiet
+    g.drawString(comment, side, y + g.fontMetrics.ascent)
+    if (g.fontMetrics.stringWidth(comment) > inner) problem("the comment is over one line")
+    y += bodyLine + V2.dp(12)
+
+    // The line to type along to: typed words cream, the rest muted, the word you're on orange and underlined.
+    val lines = wrapped(g, passage, inner)
+    if (lines.size > 2) problem("the line to type along to is over two lines")
     var count = 0
-    for (line in lines) {
+    for ((index, line) in lines.take(2).withIndex()) {
         var x = side.toFloat()
-        val base = y + g.fontMetrics.ascent
+        val lineBase = y + index * bodyLine + g.fontMetrics.ascent
         for (word in line.split(' ')) {
+            val w = g.fontMetrics.stringWidth(word)
             g.color = when {
-                count < doneWords -> alpha(Theme.CREAM, .35f)
-                count == doneWords -> Theme.ORANGE
-                else -> Theme.CREAM
+                count < done -> strong
+                count == done -> if (ink) V2.INK else if (WpmMeter.quietOn(warmthArgb) == 0xFF99918A.toInt()) V2.ORANGE else strong
+                else -> quiet
             }
-            g.drawString(word, x, base.toFloat())
+            g.drawString(word, x, lineBase.toFloat())
+            if (count == done) g.fillRect(x.toInt(), lineBase + V2.dp(3), w, V2.dp(2))
             x += g.fontMetrics.stringWidth("$word ")
             count++
         }
-        y += g.fontMetrics.height
     }
-    if (count != words.size) println("  front page: prompt lost words")
-    y += px(14)
+    y += 2 * bodyLine + V2.dp(24)
 
-    // The text box: dark and warm, an orange bar down its left, an orange outline while it has the cursor (v5.3, option B).
-    g.font = regular(21)
-    val pad = px(14)
-    val boxLines = 4
-    val boxHeight = boxLines * g.fontMetrics.height + 2 * pad
-    val box = RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), boxHeight.toFloat(), px(16).toFloat(), px(16).toFloat())
-    g.color = Color(0x14, 0x0F, 0x0C)
+    // The text box: the surface, 16 dp corners and padding, three lines; on orange, a faint ink wash.
+    val box = RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), boxHeight.toFloat(), V2.dp(32).toFloat(), V2.dp(32).toFloat())
+    g.color = if (ink) V2.alpha(V2.INK, .1f) else V2.SURFACE
     g.fill(box)
-    g.color = Theme.ORANGE
-    g.stroke = BasicStroke(px(1.5f).toFloat())
-    g.draw(box)
-    g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat() + px(10), px(4).toFloat(), boxHeight - 2f * px(10), px(4).toFloat(), px(4).toFloat()))
-    val textLeft = side + pad + px(8)
-    val shown = if (typed.isEmpty()) listOf("Start anywhere.") else wrapped(g, typed, inner - 2 * pad - px(8))
-    g.color = if (typed.isEmpty()) Theme.MUTED else Theme.CREAM
-    // The placeholder sits just after the caret, so the caret never cuts its first letter.
-    val placeholderShift = if (typed.isEmpty()) px(6) else 0
-    for ((index, line) in shown.take(boxLines).withIndex())
-        g.drawString(line, textLeft + placeholderShift, y + pad + index * g.fontMetrics.height + g.fontMetrics.ascent)
-    // The caret, orange, after the text.
-    val last = shown.take(boxLines).last()
-    val caretX = if (typed.isEmpty()) textLeft else textLeft + g.fontMetrics.stringWidth(last) + px(2)
-    val caretLine = if (typed.isEmpty()) 0 else shown.take(boxLines).size - 1
-    g.color = Theme.ORANGE
-    g.fillRect(caretX, y + pad + caretLine * g.fontMetrics.height + px(3), px(2.5f), g.fontMetrics.height - px(6))
+    g.font = V2.field()
+    val shown = if (typed.isEmpty()) emptyList() else wrapped(g, typed, inner - 2 * pad).takeLast(3)
+    g.color = if (ink) V2.INK else V2.CREAM
+    for ((index, line) in shown.withIndex()) g.drawString(line, side + pad, y + pad + index * fieldLine + g.fontMetrics.ascent)
+    val caretX = side + pad + (shown.lastOrNull()?.let { g.fontMetrics.stringWidth(it) + V2.dp(1) } ?: 0)
+    val caretLine = (shown.size - 1).coerceAtLeast(0)
+    g.color = if (ink) V2.INK else V2.ORANGE
+    g.fillRect(caretX, y + pad + caretLine * fieldLine + V2.dp(2), V2.dp(2), fieldLine - V2.dp(4))
 
-    // The keyboard: every key of the real one, the bottom row too, at its real size, above the keyboard's own bar.
-    val geometry = KeyGeometry(W.toFloat(), KeyAlignment.DEFAULT)
-    val bar = px(60)
-    val top = H - bar - Math.ceil(geometry.height.toDouble()).toInt()
-    if (top < y + boxHeight + px(12)) println("  front page: NO ROOM FOR THE KEYS")
-    // Where the labels are, so the zone's dashes stop short of them and every letter stays clean.
-    val labelBoxes = java.awt.geom.Area()
-    for (key in geometry.boxes) {
-        val shape = RoundRectangle2D.Float(key.left, top + key.top, key.width, key.height, px(8).toFloat(), px(8).toFloat())
-        g.color = alpha(Theme.CREAM, .04f)
-        g.fill(shape)
-        g.color = Theme.DIVIDER.brighter()
-        g.stroke = BasicStroke(px(1).toFloat())
-        g.draw(shape)
-        val label = when (key.name) {
-            Layout.SPACE -> ""
-            "○", "◁", "▦" -> key.name
-            else -> if (key.name.length == 1) key.name else key.name.take(3)
-        }
-        // Inter as the app ships it has no ⌫, ↵ or ⇧, which the phone draws as shapes; the desktop's sans stands in for them.
-        g.font = if (medium(17).canDisplayUpTo(label) == -1) medium(17) else Font(Font.SANS_SERIF, Font.PLAIN, px(17))
-        g.color = alpha(Theme.CREAM, .72f)
-        val labelX = key.left + key.width / 2 - g.fontMetrics.stringWidth(label) / 2
-        val labelY = top + key.centreY + g.fontMetrics.ascent / 2 - px(2)
-        g.drawString(label, labelX, labelY)
-        if (label.isNotEmpty()) labelBoxes.add(java.awt.geom.Area(java.awt.Rectangle((labelX - px(5)).toInt(),
-            (labelY - g.fontMetrics.ascent - px(3)).toInt(), g.fontMetrics.stringWidth(label) + px(10), g.fontMetrics.ascent + px(8))))
-        if (key.name == Layout.SPACE) {
-            // Space's mark, a little cup, as on the phone.
-            val cx = key.centreX
-            val cy = top + key.centreY
-            val half = key.width * .2f
-            g.stroke = BasicStroke(px(2).toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-            g.drawLine((cx - half).toInt(), (cy + px(5)).toInt(), (cx + half).toInt(), (cy + px(5)).toInt())
-            g.drawLine((cx - half).toInt(), (cy + px(5)).toInt(), (cx - half).toInt(), (cy - px(2)).toInt())
-            g.drawLine((cx + half).toInt(), (cy + px(5)).toInt(), (cx + half).toInt(), (cy - px(2)).toInt())
-            labelBoxes.add(java.awt.geom.Area(java.awt.Rectangle((cx - half - px(6)).toInt(), (cy - px(6)).toInt(), (2 * half + px(12)).toInt(), px(16))))
-        }
-    }
-    // The touchpad's zone, where it really is (GuideKeyboardView's AREA_*), as an orange dashed outline: no key is two-toned.
-    val zone = geometry.area(.05f, .5f / 4, .95f, 3.54f / 4)
-    // Corner brackets (owner, v5.3): four orange marks at the zone's real corners, and no line across the keys. The corners fall on
-    // Q, P and the bottom row's outer keys, so each mark stops short of the key's label.
-    g.color = Theme.ORANGE
-    g.stroke = BasicStroke(px(2.5f).toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-    val clear = java.awt.geom.Area(java.awt.Rectangle(0, 0, W, H)).apply { subtract(labelBoxes) }
-    g.clip = clear
-    val arm = px(48).toFloat()
-    val zoneTop = top + zone.top
-    val zoneBottom = top + zone.bottom
-    for ((x, y, dx, dy) in listOf(
-        listOf(zone.left, zoneTop, 1f, 1f), listOf(zone.right, zoneTop, -1f, 1f),
-        listOf(zone.left, zoneBottom, 1f, -1f), listOf(zone.right, zoneBottom, -1f, -1f),
-    )) {
-        val path = java.awt.geom.Path2D.Float()
-        path.moveTo(x + dx * arm, y)
-        path.lineTo(x, y)
-        path.lineTo(x, y + dy * arm)
-        g.draw(path)
-    }
-    g.clip = null
-    // The label, small, just above the keys over the zone's top right corner, where it covers nothing.
-    g.font = medium(11)
-    val note = "TOUCHPAD"
-    val noteWidth = g.fontMetrics.stringWidth(note)
-    g.drawString(note, zone.right - noteWidth, top - px(8).toFloat())
-    // A note for review only, in the keyboard's bar room: the phone shows the keyboard's own bar there.
-    g.font = regular(11)
-    g.color = Color(0x66, 0xCC, 0xFF)
-    g.drawString("render note: the keyboard's own bar is here, pure black", side, H - bar / 2)
+    V2.keys(g, keysTop, onOrange = ink, shade = warmth)
+    V2.note(g, "render note: the keyboard's own bar is here", side, V2.H - V2.BAR / 2)
     g.dispose()
     ImageIO.write(image, "png", file)
 }
 
-/** The front page's review renders: empty, typing, and fast. */
+/** The playground's real comments on your speed, from the app's strings, one for each of [WpmComments.STEPS]. */
+private val COMMENTS: List<String> by lazy {
+    val xml = File("android/src/main/res/values/strings.xml").readText()
+    val array = xml.substringAfter("<string-array name=\"playground_comments\">").substringBefore("</string-array>")
+    Regex("<item>\"?(.*?)\"?</item>").findAll(array).map { it.groupValues[1].replace("\\'", "'") }.toList()
+}
+
+private fun comment(wpm: Int) = COMMENTS.getOrNull(WpmComments.step(wpm)) ?: IDLE
+
+private const val IDLE = "Type or swipe whatever you like. Follow the line below, or ignore it."
+
+/** The front page's renders: idle, typing, warm, and fully orange, where every text turns ink. */
 internal fun drawFrontPage(folder: String) {
     val out = File(folder).apply { mkdirs() }
-    val sentence = "titankeys fixes your typos so you can keep pretending you never make any. swipe a word and lift and titankeys types it before you even look."
-    drawFront(File(out, "front-1-empty.png"), "", null, sentence, 0)
-    drawFront(File(out, "front-2-typing.png"), "titankeys fixes your typos so you can", null, sentence, 7)
-    drawFront(File(out, "front-3-fast.png"), "titankeys fixes your typos so you can keep pretending you never make any swipe a word",
-        64, sentence, 17)
-    println("front page drawn to $folder")
+    frontProblems = 0
+    val passage = "titankeys fixes your typos so you can keep pretending you never make any"
+    drawFront(File(out, "front-1-idle.png"), "", null, 0f, IDLE, passage, 0)
+    drawFront(File(out, "front-2-typing.png"), "titankeys fixes your typos so", 34, WpmMeter.heat(34), comment(34), passage, 5)
+    drawFront(File(out, "front-3-warm.png"), "titankeys fixes your typos so you can keep pretending", 62, WpmMeter.heat(62),
+        comment(62), passage, 9)
+    drawFront(File(out, "front-4-orange.png"), "titankeys fixes your typos so you can keep pretending you never make any", 96,
+        WpmMeter.heat(96), comment(96), passage, 12)
+    println("front page drawn to $folder" + if (frontProblems > 0) " with $frontProblems problems" else "")
 }

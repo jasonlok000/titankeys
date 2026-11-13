@@ -553,7 +553,7 @@ private class GuideField(context: Context) : EditText(context) {
         canvas.restore()
     }
 
-    /** A wash of orange behind the target, and an orange line under it, on each of its lines. */
+    /** An orange line under the target, on each of its lines (design v2: the word to act on is underlined in orange). */
     private fun drawTarget(canvas: Canvas, own: android.text.Layout) {
         val aim = target ?: return
         val length = text.length
@@ -571,14 +571,9 @@ private class GuideField(context: Context) : EditText(context) {
             if (to <= from) continue
             val x1 = own.getPrimaryHorizontal(from)
             val x2 = if (to >= own.getLineEnd(line)) own.getLineRight(line) else own.getPrimaryHorizontal(to)
-            val lineTop = own.getLineTop(line).toFloat()
             val lineBottom = own.getLineBottom(line).toFloat()
-            if (!underlineOnly) {
-                targetPaint.color = GuideMotion.faded(GuideColours.ORANGE, GuideActivity.TARGET_WASH)
-                canvas.drawRoundRect(x1 - underline, lineTop, x2 + underline, lineBottom, underline * 2, underline * 2, targetPaint)
-            }
             targetPaint.color = GuideColours.ORANGE
-            val thick = if (underlineOnly) underline * 1.5f else underline
+            val thick = underline * 1.5f
             canvas.drawRect(x1, lineBottom - thick, x2, lineBottom, targetPaint)
         }
         canvas.restore()
@@ -719,6 +714,14 @@ class GuideActivity : Activity() {
     private lateinit var field: GuideField
     private lateinit var keys: GuideKeyboardView
     private lateinit var chapter: TextView
+    /** The playground's words a minute, small, in the header's middle. */
+    private lateinit var wpmView: TextView
+    /** The top bar, or the playground's header: a fixed height, always. */
+    private lateinit var topBar: FrameLayout
+    /** The content block, centred between the top bar and the keys. */
+    private lateinit var block: LinearLayout
+    /** The end's quiet way to the boring guide. */
+    private lateinit var boringLink: TextView
     /** The line above the field that suggests what to type. */
     private lateinit var script: TextView
     /** Over the field: what a demonstration would do, in grey, without typing it. */
@@ -1092,7 +1095,7 @@ class GuideActivity : Activity() {
             typeface = HEAVY
             gravity = Gravity.BOTTOM or Gravity.START
             includeFontPadding = false
-            letterSpacing = -.02f
+            letterSpacing = DISPLAY_SPACING
             // The owner's titles and scenarios run long: three lines, smaller if they need it, rather than cut words.
             maxLines = 3
             setAutoSizeTextTypeUniformWithConfiguration(TITLE_SMALLEST, TITLE_LARGEST, 2, TypedValue.COMPLEX_UNIT_DIP)
@@ -1111,27 +1114,30 @@ class GuideActivity : Activity() {
             maxLines = 3
             visibility = View.GONE
             setPadding(dp(12), dp(8), dp(12), dp(8))
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(14f), dp(18).toFloat()))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
         }
         offer = TextView(this).apply {
             typeface = HEAVY
             gravity = Gravity.CENTER
             maxLines = 2
             visibility = View.GONE
-            setPadding(dp(16), dp(10), dp(16), dp(10))
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(20).toFloat()))
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
             setOnClickListener { offerPressed() }
         }
-        // A small pill in the top bar: Skip until the slide is passed, then a filled Next.
+        // Under the field, on the right (design v2): a quiet "Skip" in the Label style, which shows once the slide has had 10 s or a
+        // hint, and once the slide is passed, an orange "Next" pill in the same place. Never in the top bar.
         next = TextView(this).apply {
-            text = "Skip"
+            text = SKIP_LABEL
             typeface = HEAVY
             gravity = Gravity.CENTER
+            includeFontPadding = false
             maxLines = 1
-            // A finger-sized target, though the pill looks small (owner, v5.3).
+            isAllCaps = true
+            letterSpacing = LABEL_SPACING
             minHeight = dp(TOUCH)
-            setPadding(dp(16), dp(4), dp(16), dp(4))
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(14f), dp(18).toFloat()))
+            setPadding(dp(16), 0, dp(16), 0)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, px(LABEL_TYPE))
             setOnClickListener { nextPressed() }
         }
         chip = TextView(this).apply {
@@ -1152,8 +1158,8 @@ class GuideActivity : Activity() {
             typeface = HEAVY
             gravity = Gravity.CENTER
             maxLines = 1
-            setPadding(dp(18), dp(10), dp(18), dp(10))
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(20).toFloat()))
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
             setOnClickListener { backPressed() }
         }
         field = GuideField(this).apply {
@@ -1174,14 +1180,14 @@ class GuideActivity : Activity() {
             customInsertionActionModeCallback = noToolbar
             setTextCursorDrawable(GradientDrawable().apply {
                 setColor(GuideColours.ORANGE)
-                setSize(dp(3), dp(20))
+                setSize(dp(2), dp(24))
             })
             background = GradientDrawable().apply {
                 setColor(GuideColours.CREAM)
-                cornerRadius = Radii.px(resources, FIELD_RADIUS)
+                cornerRadius = dp(FIELD_CORNER).toFloat()
             }
-            setPadding(dp(14), dp(10), dp(14), dp(10))
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(FIELD_SP), dp(FIELD_DP).toFloat()))
+            setPadding(dp(FIELD_PAD), dp(FIELD_PAD), dp(FIELD_PAD), dp(FIELD_PAD))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, px(FIELD_TYPE))
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_ENTER_ACTION
             minLines = 1
@@ -1207,44 +1213,40 @@ class GuideActivity : Activity() {
             isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
+        // The line to type along to (design v2): Body, exactly two lines, with no box of its own. The passage moves a whole line at a
+        // time. See [showScript].
         script = TextView(this).apply {
             typeface = MEDIUM
             includeFontPadding = false
-            // Exactly two lines, always: the passage moves a whole line at a time. See [showScript]. It has its own box, so it
-            // reads as the text to type and not as more instructions.
-            setLines(2)
-            setPadding(dp(12), dp(8), dp(12), dp(8))
-            background = GradientDrawable().apply {
-                setColor(GuideMotion.faded(GuideColours.CREAM, PASSAGE_BOX))
-                cornerRadius = dp(10).toFloat()
-            }
+            setLines(PROMPT_LINES)
             isVerticalScrollBarEnabled = false
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(16f), dp(22).toFloat()))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
             contentDescription = "Text to type"
         }
+        // The top bar's left: the chapter and its place, in the Label style (`DELETE · 2/4`). On the playground, the wordmark.
         chapter = TextView(this).apply {
             typeface = HEAVY
             includeFontPadding = false
-            isAllCaps = true
-            letterSpacing = .12f
+            letterSpacing = LABEL_SPACING
             maxLines = 1
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(11f), dp(15).toFloat()))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, px(LABEL_TYPE))
         }
-        segments = LinearLayout(this).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            // Once every chapter is finished, a touch on the bar jumps to that chapter.
-            setOnTouchListener { view, event ->
-                if (event.actionMasked == android.view.MotionEvent.ACTION_UP && childCount > 0 && view.width > 0) {
-                    chapterTouched((event.x / view.width * childCount).toInt().coerceIn(0, childCount - 1))
-                }
-                true
-            }
+        // The playground's words a minute: a small Label counter in the header's empty middle (design v2).
+        wpmView = TextView(this).apply {
+            typeface = HEAVY
+            includeFontPadding = false
+            gravity = Gravity.CENTER
+            letterSpacing = LABEL_SPACING
+            maxLines = 1
+            visibility = View.INVISIBLE
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, px(LABEL_TYPE))
         }
-        // Each segment's view is taller than its line, so the glow as it steps forward has room. Each is as wide as its slides.
-        for ((index, chapter) in flow.barChapters.withIndex()) segments.addView(GuideSegment(this),
-            LinearLayout.LayoutParams(0, dp(SEGMENT_HEIGHT + 2 * SEGMENT_GLOW), flow.idsOf(chapter).size.coerceAtLeast(1).toFloat()).apply {
-                if (index < flow.barChapters.lastIndex) marginEnd = dp(CHAPTER_GAP)
-            })
+        // No slide ticks any more (design v2): the place in the chapter is in the label. The bar is kept, unseen, for its bookkeeping.
+        segments = LinearLayout(this).apply { visibility = View.GONE }
+        for (chapter in flow.barChapters) segments.addView(GuideSegment(this),
+            LinearLayout.LayoutParams(0, dp(SEGMENT_HEIGHT + 2 * SEGMENT_GLOW), flow.idsOf(chapter).size.coerceAtLeast(1).toFloat()))
+        // Start again lives in the ✕ pop-up now (design v2): this one is never shown.
         again = topAction("Start again") { startAgain() }.apply { visibility = View.GONE }
         guideAction = topAction("Guide") {
             if (playground) leavePlayground(PLAYGROUND_GUIDE) else {
@@ -1253,11 +1255,11 @@ class GuideActivity : Activity() {
             }
         }.apply { visibility = View.GONE }
         settingsAction = topAction("Settings") { leavePlayground(PLAYGROUND_SETTINGS) }.apply { visibility = View.GONE }
-        // ✕ on the right, big enough to hit at once (owner, v5.2).
+        // ✕ on the right: a 24 dp icon in a 48 dp target.
         close = ImageView(this).apply {
             setImageResource(R.drawable.panel_close)
             contentDescription = "Close"
-            setPadding(dp(9), dp(9), dp(9), dp(9))
+            setPadding(dp((CLOSE_SIZE - CLOSE_ICON) / 2), dp((CLOSE_SIZE - CLOSE_ICON) / 2), dp((CLOSE_SIZE - CLOSE_ICON) / 2), dp((CLOSE_SIZE - CLOSE_ICON) / 2))
             setOnClickListener { confirmLeave() }
         }
         boringButton = bigButton(END_NEXT) {
@@ -1265,11 +1267,24 @@ class GuideActivity : Activity() {
             preferences.edit().remove(RESUME).apply()
             startActivity(Connected.pageIntent(this, "/"))
             finish()
-        }.apply { setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(24f), dp(32).toFloat())) }
+        }
         // A real button, outlined, not fine print (owner, v5.2).
         againLink = bigButton(AGAIN_LINK) { startAgain() }.apply {
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(17f), dp(22).toFloat()))
-            setPadding(dp(16), dp(11), dp(16), dp(11))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+        }
+        // The way to the boring guide, at the end: a quiet text button under the others (design v2: nothing but ✕ in the top bar).
+        boringLink = TextView(this).apply {
+            text = BORING_GUIDE_LABEL
+            typeface = HEAVY
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            isAllCaps = true
+            letterSpacing = LABEL_SPACING
+            maxLines = 1
+            minHeight = dp(TOUCH)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, px(LABEL_TYPE))
+            setOnClickListener { nextPressed() }
         }
         finaleView = GuideFinaleView(this).apply {
             visibility = View.GONE
@@ -1295,52 +1310,44 @@ class GuideActivity : Activity() {
             addView(againLink, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(12)
             })
+            addView(boringLink, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(4)
+            })
         }
         roastView = TextView(this).apply {
             typeface = HEAVY
             gravity = Gravity.CENTER
             includeFontPadding = false
-            letterSpacing = -.02f
+            letterSpacing = DISPLAY_SPACING
             visibility = View.GONE
             setPadding(dp(GUTTER * 2), 0, dp(GUTTER * 2), 0)
             setAutoSizeTextTypeUniformWithConfiguration(TITLE_SMALLEST, ROAST_LARGEST, 2, TypedValue.COMPLEX_UNIT_DIP)
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             setOnClickListener { endRoast() }
         }
-        // On top, the chapters across the whole width, a tick for each slide (owner, v5.2); under them, the chapter's name on the
-        // left, and Skip or Next and ✕ on the right. Back is the phone's Back.
+        // The top bar (design v2): 48 dp, the chapter on the left and ✕ on the right, and nothing else. On the playground it is the
+        // 56 dp header: the wordmark on the left, the words a minute in the middle, and Guide and Settings on the right. Its height
+        // is fixed, so nothing in it ever changes its size.
         val actionsRow = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
-            minimumHeight = dp(TOP_ACTION)
             addView(chapter, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            addView(again, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(guideAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(settingsAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 marginStart = dp(8)
             })
-            addView(next, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                marginStart = dp(10)
-            })
-            addView(close, LinearLayout.LayoutParams(dp(CLOSE_SIZE), dp(CLOSE_SIZE)).apply { marginStart = dp(4) })
+            addView(close, LinearLayout.LayoutParams(dp(CLOSE_SIZE), dp(CLOSE_SIZE)).apply { marginEnd = -dp((CLOSE_SIZE - CLOSE_ICON) / 2) })
         }
-        val topBar = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(segments, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(SEGMENT_HEIGHT + 2 * SEGMENT_GLOW)))
-            addView(actionsRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        topBar = FrameLayout(this).apply {
+            addView(actionsRow, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            addView(wpmView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         }
-        // The offer to turn on a setting, if a step needs one, sits above the keys.
-        // Next once a slide is passed: a normal button, not a huge one (owner, v5.2), on the right where a thumb reaches it.
-        nextBig = bigButton("Next") { nextPressed() }.apply {
-            visibility = View.GONE
-            setTextColor(GuideColours.INK)
-            background = rounded(GuideColours.ORANGE, OFFER_RADIUS)
-            setPadding(dp(NEXT_PAD_SIDE), dp(NEXT_PAD_TOP), dp(NEXT_PAD_SIDE), dp(NEXT_PAD_TOP))
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(NEXT_SP), dp(NEXT_DP).toFloat()))
-        }
+        // Kept for the code that still names it; Next is [next] now, in one place.
+        nextBig = bigButton("Next") { nextPressed() }.apply { visibility = View.GONE }
+        // Under the field: an offer to turn on a setting, if a step needs one, on the left, and Skip or Next on the right.
         val actions = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL or Gravity.END
             addView(offer, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            addView(nextBig, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            addView(next, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 marginStart = dp(12)
             })
         }
@@ -1349,33 +1356,47 @@ class GuideActivity : Activity() {
             addView(chip, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.START or Gravity.CENTER_VERTICAL))
             huntBar = View(context).apply {
-                background = rounded(GuideColours.ORANGE, Radii.SMALL)
+                // A progress bar is never orange (design v2): it's the muted grey.
+                background = rounded(GuideColours.MUTED, Radii.SMALL)
                 pivotX = 0f
                 visibility = View.GONE
             }
-            addView(huntBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3), Gravity.BOTTOM))
+            addView(huntBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2), Gravity.BOTTOM))
         }
         spacer = View(this)
         lowerSpacer = View(this)
-        column = LinearLayout(this).apply {
+        // The content block: title, instruction, the line to type along to, the field and Skip or Next, centred in the free room
+        // between the top bar and the keys, with at least 24 dp above and below (design v2). It fades and rises as a slide changes;
+        // the keys stay put.
+        block = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, TITLE_SHARE).apply { topMargin = dp(6) })
-            addView(instruction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, BODY_SHARE).apply { topMargin = dp(4) })
-            addView(hint, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
-            addView(script, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+            addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(instruction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
+            addView(hint, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+            addView(script, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
             addView(FrameLayout(context).apply {
                 addView(field, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 addView(phantom, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
-            // The room left between the field and the keys splits evenly above and below Next's place, so the field, Next and
-            // the keys are one column with even gaps (owner, v5).
-            addView(spacer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0))
-            addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(lowerSpacer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0))
-            addView(keys, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0).apply { topMargin = dp(8) })
-            addView(endButtons, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(24) })
+            addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) })
         }
+        column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            // The keys reach past the column's sides to the screen's edges: nothing may clip them there (owner: Q, A, alt, P and
+            // Backspace were cut by the margin).
+            clipToPadding = false
+            clipChildren = false
+            addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(if (playground) HEADER else TOP_BAR)))
+            addView(spacer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(BLOCK_ROOM) })
+            addView(block, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(lowerSpacer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { bottomMargin = dp(BLOCK_ROOM) })
+            addView(keys, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0))
+            addView(endButtons, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(12)
+                bottomMargin = dp(BLOCK_ROOM)
+            })
+        }
+        root.clipChildren = false
         root.addView(backdrop, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(effects, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(finaleView, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
@@ -1384,9 +1405,8 @@ class GuideActivity : Activity() {
         root.addView(overlay, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.setOnApplyWindowInsetsListener { _, insets ->
             val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout() or WindowInsets.Type.ime())
-            // The content nearest the screen's rounded corners, such as Back and Next at the bottom and the chapter at the top,
-            // keeps clear of them. The camera hole is in the status bar, which bars.top already leaves out.
-            val top = bars.top + dp(4)
+            // The top bar starts right under the status bar: it is 48 dp tall, and its words sit in its middle.
+            val top = bars.top
             // On the slides the keys stay where they are: the keyboard's bar hides for a moment as a slide changes, and the room it
             // gives back would drop the keys by its height (owner, 2026-11-11). They keep the most room the keyboard took.
             // Only the keyboard's own height counts: an open panel is much taller, and keeping its room after it closed squashed the
@@ -1396,18 +1416,20 @@ class GuideActivity : Activity() {
             // above the panel or get cut by it (owner, v5.3).
             panelRoom = panelSized
             if (panelSized && ::keys.isInitialized) keys.visibility = View.GONE
-            if (guideLooks != true) steadyBottom = 0
+            if (guideLooks != true && !playground) steadyBottom = 0
             else if (!panelOpen && !panelSized) steadyBottom = maxOf(steadyBottom, bars.bottom)
-            val bottom = (if (panelOpen) maxOf(bars.bottom, steadyBottom) else maxOf(steadyBottom, if (panelSized) 0 else bars.bottom)) + dp(8)
+            // The keys sit right on the keyboard's bar, edge to edge, as the real keys sit right under the screen.
+            val bottom = if (panelOpen) maxOf(bars.bottom, steadyBottom) else maxOf(steadyBottom, if (panelSized) 0 else bars.bottom)
             val corners = Corners.of(insets, display)
-            val corner = maxOf(corners.inset(bottom.toFloat()), corners.topInset(top.toFloat()))
-            column.setPadding(maxOf(dp(GUTTER) + bars.left, corner), top, maxOf(dp(GUTTER) + bars.right, corner), bottom)
+            val corner = corners.topInset(top.toFloat())
+            // 24 dp side margins (design v2), or more where the screen's rounded corners need it.
+            column.setPadding(maxOf(dp(BLOCK_SIDE) + bars.left, corner), top, maxOf(dp(BLOCK_SIDE) + bars.right, corner), bottom)
             fitKeys()
             insets
         }
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitKeys() }
         effects.shaking = { tip, dx, dy ->
-            title.rotation = tip
+            wpmView.rotation = tip
             column.translationX = dx
             column.translationY = dy
         }
@@ -1415,73 +1437,76 @@ class GuideActivity : Activity() {
     }
 
     /**
-     * The guide's slides have fixed heights and nothing reflows: one line for the title at one size, one line for the instruction,
-     * the field exactly two lines, and the room above the keys left free. Setup, the end and the playground keep their wrapping look.
+     * The guide's slides (design v2) have fixed heights and nothing reflows: the title in Display, upper case, one line, shrinking
+     * to 80% rather than wrapping; the instruction in Body, one line; the field exactly two lines (owner). Setup wraps its words
+     * over two lines of title and four of instruction, in the same type. The playground has its own look, [playgroundLook].
      */
     private fun guideLook(guide: Boolean) {
         if (guideLooks == guide) return
         guideLooks = guide
-        if (guide) {
-            val titlePx = min(sp(TITLE_SP), dp(TITLE_DP).toFloat())
-            val bodyPx = min(sp(BODY_SP), dp(BODY_DP).toFloat())
-            // The room goes to the words, not the keys (owner, v5.2): the keys take only their real size, and the title and the
-            // instruction are bigger, one line each, the same on every slide; a long one shrinks to fit rather than lose words.
-            title.isSingleLine = false
-            title.maxLines = TITLE_LINES
-            title.ellipsize = null
-            title.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-            shrinkToFit(title, sizeIn(TITLE_SMALLEST_SP, titlePx), titlePx.toInt())
-            title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, TITLE_LINES * lineHeight(HEAVY, titlePx)).apply {
-                topMargin = dp(GAP)
-            }
-            body.isSingleLine = false
-            body.maxLines = BODY_LINES
-            body.ellipsize = null
-            body.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-            shrinkToFit(body, sizeIn(BODY_SMALLEST_SP, bodyPx), bodyPx.toInt())
-            chip.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodyPx * CHIP_SCALE)
-            instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                BODY_LINES * lineHeight(MEDIUM, bodyPx) + 2 * dp(CHIP_PAD)).apply { topMargin = dp(GAP) }
-            spacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
-            lowerSpacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
-            // The field on ink, as the approved frame has it: what's typed in cream, exactly two lines.
-            field.setTextColor(GuideColours.CREAM)
-            field.setHintTextColor(GuideMotion.faded(GuideColours.CREAM, .45f))
-            field.background = rounded(fieldFill(), FIELD_RADIUS)
-            field.hint = null
-            field.ghostColour = ghostGrey()
-            // Three lines on every slide (v5): the slide's line and room to play, a writing area, not a strip.
-            for (view in listOf<TextView>(field, phantom)) {
-                view.minLines = FIELD_LINES
-                view.maxLines = FIELD_LINES
-                view.gravity = Gravity.TOP or Gravity.START
-            }
-        } else {
-            title.isSingleLine = false
-            title.maxLines = 3
-            title.ellipsize = null
-            title.gravity = Gravity.BOTTOM or Gravity.START
-            title.setAutoSizeTextTypeUniformWithConfiguration(TITLE_SMALLEST, TITLE_LARGEST, 2, TypedValue.COMPLEX_UNIT_DIP)
-            title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, TITLE_SHARE).apply { topMargin = dp(6) }
-            body.isSingleLine = false
-            body.maxLines = 5
-            body.ellipsize = null
-            body.gravity = Gravity.TOP or Gravity.START
-            body.setAutoSizeTextTypeUniformWithConfiguration(BODY_SMALLEST, BODY_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
-            instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, BODY_SHARE).apply { topMargin = dp(4) }
-            spacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0)
-            lowerSpacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0)
-            field.setTextColor(GuideColours.INK)
-            field.setHintTextColor(GuideMotion.faded(GuideColours.INK, .45f))
-            field.background = rounded(GuideColours.CREAM, FIELD_RADIUS)
-            field.hint = FIELD_HINT
-            field.ghost = ""
-            for (view in listOf<TextView>(field, phantom)) {
-                view.minLines = 1
-                view.maxLines = 2
-                view.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-            }
+        val titlePx = px(DISPLAY)
+        val bodyPx = px(BODY_TYPE)
+        val titleLines = if (guide) TITLE_LINES else SETUP_TITLE_LINES
+        val bodyLines = if (guide) BODY_LINES else SETUP_BODY_LINES
+        title.visibility = View.VISIBLE
+        title.isAllCaps = true
+        title.letterSpacing = DISPLAY_SPACING
+        title.isSingleLine = false
+        title.maxLines = titleLines
+        title.ellipsize = null
+        title.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+        shrinkToFit(title, (titlePx * SHRINK).toInt(), titlePx.toInt())
+        title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, titleLines * lineHeight(HEAVY, titlePx))
+        body.isSingleLine = false
+        body.maxLines = bodyLines
+        body.ellipsize = null
+        body.gravity = (if (guide) Gravity.CENTER_VERTICAL else Gravity.TOP) or Gravity.START
+        shrinkToFit(body, (bodyPx * SHRINK).toInt(), bodyPx.toInt())
+        // The hint chip takes the instruction's place, at the same size (design v2).
+        chip.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodyPx)
+        instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            maxOf(bodyLines * lineHeight(MEDIUM, bodyPx), lineHeight(MEDIUM, bodyPx) + 2 * dp(CHIP_TOP))).apply { topMargin = dp(12) }
+        field.hint = if (guide) null else FIELD_HINT
+        if (!guide) field.ghost = ""
+        fieldLook(FIELD_LINES)
+    }
+
+    /**
+     * The playground (design v2 §3): no title, since the header has the wordmark; a line for the comments on your speed in Body; the
+     * line to type along to, two lines; and the text box, three lines.
+     */
+    private fun playgroundLook() {
+        val bodyPx = px(BODY_TYPE)
+        title.visibility = View.GONE
+        body.isSingleLine = true
+        body.maxLines = 1
+        body.ellipsize = TextUtils.TruncateAt.END
+        body.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+        shrinkToFit(body, (bodyPx * SHRINK).toInt(), bodyPx.toInt())
+        instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, lineHeight(MEDIUM, bodyPx))
+        fieldLook(PLAYGROUND_FIELD_LINES)
+    }
+
+    /** The field: the surface, 16 dp corners and padding, and exactly [lines] lines, in the tone's colours. */
+    private fun fieldLook(lines: Int) {
+        for (view in listOf<TextView>(field, phantom)) {
+            view.minLines = lines
+            view.maxLines = lines
+            view.gravity = Gravity.TOP or Gravity.START
         }
+        paintField()
+    }
+
+    /** Typed text in cream on the surface; on the pass's orange, ink on a faint ink wash, as every text there is ink. */
+    private fun paintField() {
+        val onOrange = tone == GuideTone.Orange
+        field.setTextColor(if (onOrange) GuideColours.INK else GuideColours.CREAM)
+        field.setHintTextColor(if (onOrange) GuideMotion.faded(GuideColours.INK, FIELD_GHOST_ON_ORANGE) else GuideColours.MUTED)
+        field.background = GradientDrawable().apply {
+            setColor(if (onOrange) GuideMotion.faded(GuideColours.INK, FIELD_ON_ORANGE) else GuideColours.SURFACE)
+            cornerRadius = dp(FIELD_CORNER).toFloat()
+        }
+        field.ghostColour = ghostGrey()
     }
 
     /** When the word menu was last seen open, or -1 while it's closed. See [menuSettled]. */
@@ -1502,14 +1527,14 @@ class GuideActivity : Activity() {
     /** The end of the guide is on the screen: no drawn keys there, only the finale and its buttons (owner, v5). */
     private fun atEnd() = !playground && ::finaleView.isInitialized && finaleView.visibility == View.VISIBLE
 
-    /** The field's own colour on the slides, for a word in a demo to fade into. */
-    private fun fieldFill() = if (guideLooks == true) GuideMotion.blend(GuideColours.BLACK, GuideColours.CREAM, FIELD_FILL) else GuideColours.CREAM
+    /** The field's own colour, for a word in a demo to fade into: the surface, or on orange, orange with a faint ink wash. */
+    private fun fieldFill() = if (tone == GuideTone.Orange) GuideMotion.blend(GuideColours.ORANGE, GuideColours.INK, FIELD_ON_ORANGE) else GuideColours.SURFACE
 
-    /** The grey of what isn't typed yet: the ghost ahead of the cursor, and a demo's words. */
-    private fun ghostGrey() = if (guideLooks == true) GuideMotion.faded(GuideColours.CREAM, GHOST_ALPHA) else GuideMotion.faded(GuideColours.INK, PHANTOM_ALPHA)
+    /** The rest of the line, not typed yet: muted (design v2), or on orange, faded ink. */
+    private fun ghostGrey() = if (tone == GuideTone.Orange) GuideMotion.faded(GuideColours.INK, FIELD_GHOST_ON_ORANGE) else GuideColours.MUTED
 
-    /** [sp] in pixels, never more than [most]: the smallest size a title or instruction shrinks to. */
-    private fun sizeIn(sp: Float, most: Float) = min(sp(sp), most).toInt().coerceAtLeast(1)
+    /** [value] dp of the design scale in pixels: every size comes from the type and spacing scales, never the font size. */
+    private fun px(value: Float) = value * resources.displayMetrics.density
 
     /**
      * Lets [view]'s text shrink from [most] down to [least] pixels to fit. With the phone's font size turned right up, the
@@ -1529,14 +1554,14 @@ class GuideActivity : Activity() {
         return kotlin.math.ceil(metrics.bottom - metrics.top).toInt() + dp(2)
     }
 
-    /** One of the end's big buttons. */
+    /** One of the end's big buttons: Title type, a full-width pill. */
     private fun bigButton(text: String, press: () -> Unit) = TextView(this).apply {
         this.text = text
         typeface = HEAVY
         gravity = Gravity.CENTER
         maxLines = 1
-        setPadding(dp(16), dp(14), dp(16), dp(14))
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(20f), dp(26).toFloat()))
+        setPadding(dp(16), dp(16), dp(16), dp(16))
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, px(TITLE_TYPE))
         setOnClickListener { press() }
     }
 
@@ -1545,19 +1570,21 @@ class GuideActivity : Activity() {
         typeface = MEDIUM
         gravity = Gravity.CENTER
         maxLines = 4
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(19).toFloat()))
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
     }
 
-    /** A button in the header: finger-sized, a pill (owner, v5.3: the front page's were tiny). */
+    /** A button in the header: an outline pill in the Label style (design v2), finger-sized (owner, v5.3). */
     private fun topAction(text: String, press: () -> Unit) = TextView(this).apply {
         this.text = text
-        typeface = MEDIUM
+        typeface = HEAVY
         gravity = Gravity.CENTER
         includeFontPadding = false
+        isAllCaps = true
+        letterSpacing = LABEL_SPACING
         maxLines = 1
         minHeight = dp(TOUCH)
         setPadding(dp(16), 0, dp(16), 0)
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(19).toFloat()))
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, px(LABEL_TYPE))
         setOnClickListener { press() }
     }
 
@@ -1565,27 +1592,23 @@ class GuideActivity : Activity() {
     private fun chipBackground() = rounded(GuideColours.DIVIDER, Radii.LARGE)
 
     /**
-     * The drawing of the keys is exactly the real keyboard's size: the whole screen's width, past the column's sides, and the
-     * height that the keys' own proportions give it (owner, v5.2). The rest of the room goes to the words. With the screen too
-     * short, as with a panel open, the keys go away: the panel shows the same keys, right above your finger.
+     * The drawing of the keys is the real keyboard's width, edge to edge past the column's sides, at 60% of its height (owner,
+     * 2026-11-12). The rest of the room goes to the words, the content block centred in it. The field keeps its lines always (owner:
+     * exactly two): with the screen too short, the keys drop their bottom row, and shorter still, as with a panel open, they go
+     * away, as the panel shows the same keys, right above your finger.
      */
     private fun fitKeys() {
         val free = root.height - column.paddingTop - column.paddingBottom
         if (root.width == 0 || free <= 0) return
         val compact = free < dp(COMPACT_HEIGHT)
-        // The rest of the column has to fit above the keys, or the keys are cut at the bottom (owner, v5.3: the bottom row went
-        // under the bar). Too short, and the field gives a line; shorter still, and the keys drop their bottom row.
-        val above = (0 until column.childCount).map(column::getChildAt).filter { it !== keys && it !== spacer && it !== lowerSpacer && it.visibility != View.GONE }
-            .sumOf { child -> child.height + ((child.layoutParams as? LinearLayout.LayoutParams)?.let { it.topMargin + it.bottomMargin } ?: 0) }
-        keys.lettersOnly = false
-        if (guideLooks == true && above > 0 && above + keys.heightFor(root.width) + dp(8) > free) {
-            if (field.maxLines > FIELD_LINES - 1) for (view in listOf<TextView>(field, phantom)) {
-                view.minLines = FIELD_LINES - 1
-                view.maxLines = FIELD_LINES - 1
+        // Everything but the keys, with the spacers' least room, has to fit above them, or the keys are cut at the bottom.
+        val above = (0 until column.childCount).map(column::getChildAt).filter { it !== keys && it.visibility != View.GONE }
+            .sumOf { child ->
+                val margins = (child.layoutParams as? LinearLayout.LayoutParams)?.let { it.topMargin + it.bottomMargin } ?: 0
+                (if (child === spacer || child === lowerSpacer) 0 else child.height) + margins
             }
-            val saved = field.lineHeight
-            keys.lettersOnly = above - saved + keys.heightFor(root.width) + dp(8) > free
-        }
+        keys.lettersOnly = false
+        if (above > 0 && above + keys.heightFor(root.width) > free) keys.lettersOnly = true
         val target = if (compact) 0 else keys.heightFor(root.width)
         val params = keys.layoutParams as LinearLayout.LayoutParams
         // Shown or not follows every change of room, a panel's coming or going too, even when the size stays.
@@ -1599,39 +1622,40 @@ class GuideActivity : Activity() {
 
     private fun backgroundOf(tone: GuideTone) = if (tone == GuideTone.Orange) GuideColours.ORANGE else GuideColours.BLACK
 
-    /** The words take the colours of the background: cream on ink while you try, ink on orange once it is done. */
+    /**
+     * The words take the colours of the background (design v2): on black, titles cream and the rest muted, with orange only for
+     * what to do now; on orange, every text is ink.
+     */
     private fun applyTone(next: GuideTone) {
         tone = next
         val onInk = next == GuideTone.Ink
         val strong = if (onInk) GuideColours.CREAM else GuideColours.INK
-        // On black, the titles and the chapter's name are the orange accent; on the pass's orange, they're ink (v5.3).
-        val accent = if (onInk) GuideColours.ORANGE else GuideColours.INK
-        title.setTextColor(accent)
-        body.setTextColor(GuideMotion.faded(strong, BODY_ALPHA))
-        // A hint says what happened, calmly: it is not a mistake that counts.
-        // The guide's one chip style (owner, v5.3): the chip and the hint alike.
+        val quiet = if (onInk) quietColour() else GuideColours.INK
+        title.setTextColor(strong)
+        body.setTextColor(quiet)
+        // A hint says what happened, calmly: it is not a mistake that counts. The guide's one chip style (owner, v5.3).
         hint.setTextColor(GuideColours.CREAM)
         hint.background = chipBackground()
-        offer.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
-        offer.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.BLACK, OFFER_RADIUS)
+        offer.setTextColor(GuideColours.INK)
+        offer.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.CREAM, OFFER_RADIUS)
         again.setTextColor(strong)
         paintEndButtons()
-        for (index in 0 until endButtons.childCount) (endButtons.getChildAt(index) as TextView).let { line ->
-            if (line !== boringButton && line !== shareButton && line !== againLink) line.setTextColor(GuideMotion.faded(strong, BODY_ALPHA))
-        }
         roastView.setTextColor(strong)
-        // The front page's two buttons: Guide filled in orange, the one to try first; Settings outlined (owner, v5.3).
-        guideAction.setTextColor(GuideColours.INK)
-        guideAction.background = rounded(GuideColours.ORANGE, Radii.LARGE)
-        settingsAction.setTextColor(GuideColours.ORANGE)
-        settingsAction.background = GradientDrawable().apply {
-            setColor(Color.TRANSPARENT)
-            setStroke(dp(1).coerceAtLeast(2), GuideColours.ORANGE)
-            cornerRadius = Radii.px(resources, Radii.LARGE)
+        // The playground's Guide and Settings: outline pills, muted outlines (design v2).
+        for (action in listOf(guideAction, settingsAction)) {
+            action.setTextColor(strong)
+            action.background = GradientDrawable().apply {
+                setColor(Color.TRANSPARENT)
+                setStroke(dp(1).coerceAtLeast(2), if (onInk) GuideColours.MUTED else GuideMotion.faded(GuideColours.INK, OUTLINE_ON_ORANGE))
+                cornerRadius = Radii.px(resources, Radii.LARGE)
+            }
         }
         close.imageTintList = ColorStateList.valueOf(strong)
-        chapter.setTextColor(if (onInk) accent else GuideMotion.faded(strong, CHAPTER_ALPHA))
+        huntBar.background = rounded(quiet, Radii.SMALL)
+        paintChapter()
+        paintWpm()
         keys.tone = next
+        if (::field.isInitialized) paintField()
         paintNext()
         paintSegments(flow.stepIndex)
         val appearance = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
@@ -1639,28 +1663,104 @@ class GuideActivity : Activity() {
         if (::field.isInitialized && ::script.isInitialized) showScript()
     }
 
-    /** Next is an outline while the step waits, and filled once the step is done. Back is always a quiet outline. */
+    /**
+     * Secondary text on black: muted. On the playground as it warms, the muted grey moves towards cream just enough to keep 4.5:1
+     * (owner: always readable), until every text turns ink. See [WpmMeter.quietOn].
+     */
+    private fun quietColour() = if (playground) WpmMeter.quietOn(warmth) else GuideColours.MUTED
+
+    /** The playground's background now, as it warms with speed. */
+    private var warmth = GuideColours.BLACK
+
+    /** What the top bar's left says: [chapterName] and [chapterPlace], or on the playground, the wordmark. */
+    private var chapterName = ""
+    private var chapterPlace = ""
+
+    /** Sets the top bar's left to [name], cream, and [place] after it, muted: `DELETE · 2/4` (design v2). */
+    private fun showChapter(name: String, place: String = "") {
+        chapterName = name
+        chapterPlace = place
+        paintChapter()
+    }
+
+    private fun paintChapter() {
+        val onInk = tone == GuideTone.Ink
+        val strong = if (onInk) GuideColours.CREAM else GuideColours.INK
+        if (playground && !settingUp) {
+            // The wordmark, in the Title style: "Titan" cream and "Keys" orange; on orange, all ink (design v2).
+            chapter.typeface = HEAVY
+            chapter.letterSpacing = 0f
+            chapter.isAllCaps = false
+            chapter.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(TITLE_TYPE))
+            chapter.text = SpannableStringBuilder(PLAYGROUND_TITLE).apply {
+                val split = PLAYGROUND_TITLE.indexOf(NAME_SECOND_HALF)
+                setSpan(ForegroundColorSpan(strong), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                if (split > 0) setSpan(ForegroundColorSpan(if (onInk) GuideColours.ORANGE else GuideColours.INK), split, length,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            return
+        }
+        chapter.typeface = HEAVY
+        chapter.letterSpacing = LABEL_SPACING
+        chapter.isAllCaps = false
+        chapter.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(LABEL_TYPE))
+        chapter.text = SpannableStringBuilder(chapterName.uppercase()).apply {
+            setSpan(ForegroundColorSpan(strong), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            if (chapterPlace.isNotEmpty()) {
+                val start = length
+                append(" · ").append(chapterPlace)
+                setSpan(ForegroundColorSpan(if (onInk) GuideColours.MUTED else GuideMotion.faded(GuideColours.INK, PLACE_ON_ORANGE)),
+                    start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+    }
+
+    /**
+     * Skip, quiet, in the Label style and muted, with no box; once the slide is passed, Next, an orange pill with an ink label, in
+     * the same place (design v2). On the pass's orange the pill is cream, so it still stands out, and its label is ink.
+     */
     private fun paintNext() {
-        val strong = if (tone == GuideTone.Ink) GuideColours.CREAM else GuideColours.INK
+        val onInk = tone == GuideTone.Ink
+        val strong = if (onInk) GuideColours.CREAM else GuideColours.INK
         previous.setTextColor(GuideMotion.faded(strong, NEXT_WAITING))
         previous.background = GradientDrawable().apply {
             setColor(Color.TRANSPARENT)
             setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(strong, BACK_OUTLINE))
             cornerRadius = Radii.px(resources, OFFER_RADIUS)
         }
-        // Skip is an outline; once the slide is passed it's a filled orange Next.
         if (passed) {
+            next.text = NEXT_LABEL
             next.setTextColor(GuideColours.INK)
-            next.background = rounded(if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.BLACK, OFFER_RADIUS)
-            if (tone != GuideTone.Ink) next.setTextColor(GuideColours.CREAM)
+            next.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.CREAM, OFFER_RADIUS)
+            next.setPadding(dp(NEXT_PAD_SIDE), 0, dp(NEXT_PAD_SIDE), 0)
         } else {
-            next.setTextColor(GuideMotion.faded(strong, NEXT_WAITING))
-            next.background = GradientDrawable().apply {
-                setColor(Color.TRANSPARENT)
-                setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(strong, NEXT_WAITING))
-                cornerRadius = Radii.px(resources, OFFER_RADIUS)
-            }
+            next.text = SKIP_LABEL
+            next.setTextColor(if (onInk) GuideColours.MUTED else GuideColours.INK)
+            next.background = null
+            next.setPadding(dp(16), 0, dp(16), 0)
         }
+    }
+
+    /** Skip comes once the slide has had [SKIP_AFTER_MILLIS], or a hint: before then, there's nothing to skip from (design v2). */
+    private val revealSkip = Runnable { showSkip() }
+
+    private fun showSkip() {
+        if (playground || guideLooks != true || flow.step.chapter == GuideChapter.End || next.visibility == View.VISIBLE) return
+        appear(next)
+    }
+
+    /** The guide's one move (design v2): [view] fades in and rises 8 dp, in 220 ms, easing out. */
+    private fun appear(view: View, delay: Long = 0) {
+        view.animate().cancel()
+        view.visibility = View.VISIBLE
+        if (!GuideMotion.enabled) {
+            view.alpha = 1f
+            view.translationY = 0f
+            return
+        }
+        view.alpha = 0f
+        view.translationY = dp(MOVE_RISE).toFloat()
+        view.animate().alpha(1f).translationY(0f).setStartDelay(delay).setDuration(MOVE_MILLIS).setInterpolator(EASE_OUT).start()
     }
 
     /** A fill with one of the shared [Radii]. */
@@ -1766,16 +1866,25 @@ class GuideActivity : Activity() {
             if (step.chapter == GuideChapter.End) markAllFinished()
         }
         enteredChapter = step.chapter
-        // At the end Next keeps its room, so that the offer to start typing stays in the middle.
-        next.visibility = if (step.chapter == GuideChapter.End) View.INVISIBLE else View.VISIBLE
-        // Back is the phone's Back.
-        previous.visibility = View.GONE
-        chapter.text = step.chapter.label
-        GuideHooks.nearMiss = step.nearMiss
         // A slide with nothing to try is done as it opens.
         passed = step.info
+        // Skip keeps its room, unseen, until the slide has had a while or a hint (design v2); a slide that's done shows Next at once.
+        main.removeCallbacks(revealSkip)
+        next.animate().cancel()
+        next.alpha = 1f
+        next.translationY = 0f
+        next.visibility = if (step.chapter != GuideChapter.End && passed) View.VISIBLE else View.INVISIBLE
+        if (step.chapter != GuideChapter.End && !passed) main.postDelayed(revealSkip, SKIP_AFTER_MILLIS)
+        // Back is the phone's Back.
+        previous.visibility = View.GONE
+        // The chapter and the slide's place in it: `DELETE · 2/4` (design v2).
+        val ids = flow.idsOf(step.chapter)
+        val place = ids.indexOf(step.id)
+        showChapter(step.chapter.label, if (place >= 0 && ids.size > 1 && step.chapter != GuideChapter.End) "${place + 1}/${ids.size}" else "")
+        // The letters' corner symbols show only on the slides about them (design v2).
+        keys.corners = step.id in CORNER_SLIDES
+        GuideHooks.nearMiss = step.nearMiss
         // Until the slide is passed, Next says Skip.
-        next.text = if (passed) "Next" else "Skip"
         paintNext()
         offerFor(step)
         // A slide starts with a clean field, with its own text to work on or nothing, unless its chapter carries the field on.
@@ -1817,9 +1926,22 @@ class GuideActivity : Activity() {
         }
         arrivalTitle = null
         arrivalBody = null
-        swapIn(title, step.title, 0)
-        // Only the instruction that is needed now. The slide moves on, or back, as the keyboard changes. See [showStage].
-        swapIn(body, shownBody, ENTER_STAGGER_MILLIS)
+        // Slide to slide, the content block fades and rises as one; the keys stay put (design v2).
+        if (block.alpha < 1f) {
+            for (view in listOf(title, body)) {
+                view.animate().cancel()
+                view.alpha = 1f
+                view.translationX = 0f
+                view.translationY = 0f
+            }
+            title.text = step.title
+            // Only the instruction that is needed now. The slide moves on, or back, as the keyboard changes. See [showStage].
+            body.text = shownBody
+            appear(block)
+        } else {
+            swapIn(title, step.title, 0)
+            swapIn(body, shownBody, ENTER_STAGGER_MILLIS)
+        }
         if (said != null) main.postDelayed({ if (!passed && flow.step === step) showChip(said) }, ENTER_MILLIS)
         hideHint()
         if (missing == GuideNeed.FnAsCtrl) offerDecline()
@@ -1881,7 +2003,9 @@ class GuideActivity : Activity() {
         for (view in listOf<View>(script, title, instruction, hint, field, phantom, keys, segments, again, offer)) view.visibility = View.GONE
         // The chapter's name keeps its room, empty, so ✕ stays in the top right corner (owner, v5.2: it moved to the left).
         chapter.visibility = View.INVISIBLE
-        next.visibility = View.INVISIBLE
+        main.removeCallbacks(revealSkip)
+        next.visibility = View.GONE
+        block.visibility = View.GONE
         // The buttons keep their room, unseen, while the finale plays, so it's drawn between the top bar and them and nothing
         // overlaps, whatever the screen's size (owner, v5.2: the end didn't fit).
         fillEndChoices()
@@ -1891,7 +2015,7 @@ class GuideActivity : Activity() {
         finaleView.lines = SUMMARY_LINES
         finaleView.visibility = View.VISIBLE
         root.post {
-            val top = (column.paddingTop + dp(TOP_ACTION + 16)).toFloat()
+            val top = (column.paddingTop + dp(TOP_BAR + 16)).toFloat()
             val bottom = if (endButtons.height > 0) endButtons.top - dp(FINALE_ROOM).toFloat() else root.height * FINALE_SHARE
             finaleView.box = top to maxOf(top + dp(160), bottom)
             finaleView.play()
@@ -2093,15 +2217,18 @@ class GuideActivity : Activity() {
     /** The whole passage, coloured for where typing is: right words grey, skipped ones boxed, the word you're on underlined. */
     private fun passageSpans(track: Passage.Track, next: Int, cycle: Int): SpannableStringBuilder {
         val strong = if (tone == GuideTone.Ink) GuideColours.CREAM else GuideColours.INK
-        val accent = if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK
+        val quiet = if (tone == GuideTone.Ink) quietColour() else GuideMotion.faded(GuideColours.INK, PASSAGE_AHEAD_ON_ORANGE)
+        // The word you're on: orange on black; once the playground warms, orange text wouldn't read, so it's the strong colour,
+        // still underlined.
+        val accent = if (tone != GuideTone.Ink) GuideColours.INK else if (quiet == GuideColours.MUTED) GuideColours.ORANGE else strong
         val wrong = GuideMotion.faded(PASSAGE_WRONG, PASSAGE_WRONG_ALPHA)
         val built = SpannableStringBuilder(passage.text)
         fun span(what: Any, range: IntRange) = built.setSpan(what, range.first, range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        built.setSpan(ForegroundColorSpan(strong), 0, built.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        built.setSpan(ForegroundColorSpan(quiet), 0, built.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         for ((index, range) in passage.ranges.withIndex()) {
             when {
                 index < next -> {
-                    span(ForegroundColorSpan(GuideMotion.faded(strong, PASSAGE_DONE)), range)
+                    span(ForegroundColorSpan(strong), range)
                     // A word skipped over keeps a faint box, so you can see what you missed.
                     if (cycle + index !in track.done) span(BackgroundColorSpan(GuideMotion.faded(PASSAGE_WRONG, PASSAGE_SKIPPED_ALPHA)), range)
                 }
@@ -2117,7 +2244,7 @@ class GuideActivity : Activity() {
                         val at = (range.first + offset)..(range.first + offset)
                         // Each letter typed right turns grey as it's typed, like the words behind you; a wrong one is boxed.
                         if (!track.typed[letter].equals(char, ignoreCase = true)) span(BackgroundColorSpan(wrong), at)
-                        else span(ForegroundColorSpan(GuideMotion.faded(strong, PASSAGE_DONE)), at)
+                        else span(ForegroundColorSpan(strong), at)
                         letter++
                     }
                     if (track.typed.length > GuideScript.letters(expected).length) span(BackgroundColorSpan(wrong), range)
@@ -2129,8 +2256,8 @@ class GuideActivity : Activity() {
 
     /** A line of the script as it is, before typing reaches it. */
     private fun plain(text: String) = SpannableStringBuilder(text).apply {
-        val strong = if (tone == GuideTone.Ink) GuideColours.CREAM else GuideColours.INK
-        setSpan(ForegroundColorSpan(strong), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        val quiet = if (tone == GuideTone.Ink) quietColour() else GuideMotion.faded(GuideColours.INK, PASSAGE_AHEAD_ON_ORANGE)
+        setSpan(ForegroundColorSpan(quiet), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
 
     /** What the drawing of the keys can draw for [cue]: the next word of the script is turned into that word's letters. */
@@ -2222,9 +2349,12 @@ class GuideActivity : Activity() {
         chip.visibility = View.VISIBLE
         chipAt = SystemClock.uptimeMillis()
         chip.alpha = 0f
-        chip.translationX = dp(CHIP_SLIDE).toFloat()
-        chip.animate().alpha(1f).translationX(0f).setDuration(CHIP_IN_MILLIS).start()
-        body.animate().alpha(0f).setDuration(CHIP_IN_MILLIS).start()
+        chip.translationX = 0f
+        chip.translationY = dp(MOVE_RISE).toFloat()
+        chip.animate().alpha(1f).translationY(0f).setDuration(MOVE_MILLIS).setInterpolator(EASE_OUT).start()
+        body.animate().alpha(0f).setDuration(MOVE_MILLIS).start()
+        // After a hint, Skip may show at once (design v2).
+        if (!passed) showSkip()
         main.removeCallbacks(chipOver)
         main.postDelayed(chipOver, CHIP_MILLIS)
     }
@@ -2242,7 +2372,7 @@ class GuideActivity : Activity() {
             body.alpha = 1f
             return
         }
-        chip.animate().alpha(0f).translationX(-dp(CHIP_SLIDE / 4).toFloat()).setDuration(CHIP_OUT_MILLIS).withEndAction {
+        chip.animate().alpha(0f).setDuration(CHIP_OUT_MILLIS).withEndAction {
             chip.visibility = View.GONE
             if (waiting != null && !passed && !changing) showChip(waiting)
             else body.animate().alpha(1f).setDuration(CHIP_OUT_MILLIS).start()
@@ -2513,10 +2643,16 @@ class GuideActivity : Activity() {
     private fun swapIn(view: TextView, text: String, delay: Long) {
         view.animate().cancel()
         view.text = text
+        view.translationX = 0f
+        if (!GuideMotion.enabled) {
+            view.alpha = 1f
+            view.translationY = 0f
+            return
+        }
+        // The guide's one move (design v2): a fade and a rise of 8 dp, 220 ms, easing out.
         view.alpha = 0f
-        view.translationX = dp(ENTER_OFFSET).toFloat()
-        view.animate().alpha(1f).translationX(0f).setStartDelay(delay).setDuration(ENTER_MILLIS)
-            .setInterpolator(OvershootInterpolator(ENTER_OVERSHOOT)).start()
+        view.translationY = dp(MOVE_RISE).toFloat()
+        view.animate().alpha(1f).translationY(0f).setStartDelay(delay).setDuration(MOVE_MILLIS).setInterpolator(EASE_OUT).start()
     }
 
     private fun showHint(text: String) {
@@ -2530,7 +2666,7 @@ class GuideActivity : Activity() {
             hint.alpha = 0f
             hint.translationY = dp(8).toFloat()
         }
-        hint.animate().alpha(1f).translationY(0f).setDuration(ENTER_MILLIS).setInterpolator(OvershootInterpolator(ENTER_OVERSHOOT)).start()
+        hint.animate().alpha(1f).translationY(0f).setDuration(MOVE_MILLIS).setInterpolator(EASE_OUT).start()
     }
 
     private fun hideHint() {
@@ -2588,8 +2724,8 @@ class GuideActivity : Activity() {
             hint.text = if (pasteDeclined) DECLINE_ON else DECLINE_OFF
             if (pasteDeclined && !passed) {
                 passed = true
-                next.text = "Next"
                 paintNext()
+                showBigNext(true)
             }
         }
     }
@@ -2653,7 +2789,7 @@ class GuideActivity : Activity() {
         setupPart = part
         guideLook(false)
         unlockKeyboard()
-        chapter.text = SetupPart.LABEL
+        showChapter(SetupPart.LABEL)
         hideHint()
         swapIn(title, part.title, 0)
         swapIn(body, part.body, ENTER_STAGGER_MILLIS)
@@ -2744,22 +2880,23 @@ class GuideActivity : Activity() {
     /** The playground: the name, a line to follow if you like, the field and the keys. Nothing is checked, and nothing waits. */
     private fun showPlayground() {
         guideLook(false)
+        playgroundLook()
         unlockKeyboard()
         busy = true
         passed = false
         keys.appear()
-        // The bar keeps its room, so that Guide and Settings stay at the right.
-        segments.visibility = View.INVISIBLE
+        keys.corners = false
         for (view in listOf(next, previous, again, close, offer)) view.visibility = View.GONE
         hideHint()
         guideAction.visibility = View.VISIBLE
         settingsAction.visibility = View.VISIBLE
-        // The name below says it all: the header has only its two buttons, on the right.
-        chapter.text = ""
+        // The header (design v2): the wordmark on the left, the words a minute in the middle once you type, Guide and Settings on
+        // the right, and a fixed height, so it never jumps (owner: the name grew when a panel opened).
+        paintChapter()
+        paintWpm()
         // The playground's own text, made for speed, in a new order each time.
         startPassage(PlaygroundText.make(kotlin.random.Random(SystemClock.uptimeMillis())))
-        swapIn(title, PLAYGROUND_TITLE, 0)
-        swapIn(body, PLAYGROUND_BODY, ENTER_STAGGER_MILLIS)
+        swapIn(body, PLAYGROUND_BODY, 0)
         for (view in listOf(field, keys, chapter, script, guideAction, settingsAction))
             view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         showScript()
@@ -2979,13 +3116,21 @@ class GuideActivity : Activity() {
         override fun run() = showWpm()
     }
 
+    /**
+     * The speed starts only once a real word is being typed, from a letter key or a swipe (owner): a touch, Space, Backspace or a
+     * modifier never starts it. Once it runs, anything that types keeps it going; a touch types nothing, so it never counts.
+     */
     private fun countWpm(event: KeyboardEvent) {
         val now = SystemClock.uptimeMillis()
         when (event) {
-            // Shift, Alt, Sym, fn and Ctrl type nothing, so they don't count.
-            is KeyboardEvent.Pushed -> if (WpmMeter.counts(event.code)) wpm.input(now, field.length()) else return
-            is KeyboardEvent.Tapped, is KeyboardEvent.Recognised, is KeyboardEvent.DeletedWord,
-            is KeyboardEvent.Chosen -> wpm.input(now, field.length())
+            is KeyboardEvent.Pushed -> when {
+                WpmMeter.startsWord(event.code) -> wpm.input(now, field.length())
+                // Shift, Alt, Sym, fn and Ctrl type nothing, so they don't count at all.
+                WpmMeter.counts(event.code) -> wpm.keep(now, field.length())
+                else -> return
+            }
+            is KeyboardEvent.Recognised -> wpm.input(now, field.length())
+            is KeyboardEvent.DeletedWord, is KeyboardEvent.Chosen -> wpm.keep(now, field.length())
             is KeyboardEvent.FieldChanged -> wpm.text(event.text.length)
             else -> return
         }
@@ -3005,27 +3150,25 @@ class GuideActivity : Activity() {
         }
         val shown = Math.round(shownWpm)
         val heat = WpmMeter.heat(shown)
-        if (speed != null || shown > 0) {
-            showingWpm = true
-            title.text = SpannableStringBuilder("$shown").apply {
-                val start = length
-                append(getString(R.string.playground_wpm))
-                setSpan(RelativeSizeSpan(WPM_LABEL_SIZE), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-        } else if (showingWpm) {
-            showingWpm = false
-            title.text = PLAYGROUND_TITLE
-        }
+        val wasShowing = showingWpm
+        showingWpm = speed != null || shown > 0
+        shownNumber = shown
+        if (showingWpm != wasShowing || showingWpm) paintWpm()
         showComment(WpmComments.step(shown))
-        backdrop.show(GuideMotion.blend(backgroundOf(tone), GuideColours.ORANGE, heat * WPM_MOST_ORANGE))
-        title.post { effects.update(WpmEffects.at(shown), commentStep, numberBounds("$shown")) }
+        val warmth = GuideMotion.blend(GuideColours.BLACK, GuideColours.ORANGE, heat * WPM_MOST_ORANGE)
+        backdrop.show(warmth)
+        keys.shade = warmth
+        warmTo(warmth)
+        wpmView.post { effects.update(WpmEffects.at(shown), commentStep, numberBounds("$shown")) }
         // It stops ticking once the burst is over and the number is back to nothing.
         if (speed != null || shown > 0) main.postDelayed(wpmTick, WPM_TICK_MILLIS)
         else {
             // The number is back to nothing, so the playground's own line returns, however long the last comment has shown.
             showComment(-1, force = true)
             shownWpm = 0f
-            backdrop.show(backgroundOf(tone))
+            backdrop.show(GuideColours.BLACK)
+            keys.shade = null
+            warmTo(GuideColours.BLACK)
         }
     }
 
@@ -3044,41 +3187,83 @@ class GuideActivity : Activity() {
         val line = comments.getOrNull(step) ?: PLAYGROUND_BODY
         if (rose && GuideMotion.enabled) {
             swapIn(body, line, 0)
-            title.animate().cancel()
-            title.scaleX = WPM_PULSE
-            title.scaleY = WPM_PULSE
-            title.animate().scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(WPM_PULSE_MILLIS)
-                .setInterpolator(OvershootInterpolator(ENTER_OVERSHOOT)).start()
+            wpmView.animate().cancel()
+            wpmView.scaleX = WPM_PULSE
+            wpmView.scaleY = WPM_PULSE
+            wpmView.animate().scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(WPM_PULSE_MILLIS).setInterpolator(EASE_OUT).start()
         } else body.text = line
+    }
+
+    /** The number the counter shows now. */
+    private var shownNumber = 0
+
+    /** The counter: the number, then "WPM", in the Label style, in the header's middle; nothing until a real word is typed. */
+    private fun paintWpm() {
+        if (!::wpmView.isInitialized) return
+        if (!playground || !showingWpm) {
+            wpmView.visibility = View.INVISIBLE
+            return
+        }
+        val onInk = tone == GuideTone.Ink
+        wpmView.visibility = View.VISIBLE
+        wpmView.text = SpannableStringBuilder("$shownNumber").apply {
+            setSpan(ForegroundColorSpan(if (onInk) GuideColours.CREAM else GuideColours.INK), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val start = length
+            append(" ").append(WPM_UNIT)
+            setSpan(ForegroundColorSpan(if (onInk) quietColour() else GuideColours.INK), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+    }
+
+    /**
+     * Every text stays readable as the playground warms (owner: "when fully orange on playground words are not readable"): once
+     * cream on [background] drops below 4.5:1, every text turns ink, and back to cream once cream reads again, with a little
+     * room either way so it never flickers at the edge. See [WpmMeter.inkOn].
+     */
+    private fun warmTo(background: Int) {
+        val quietBefore = quietColour()
+        warmth = background
+        val ink = WpmMeter.inkOn(background, inkNow = tone == GuideTone.Orange)
+        val wanted = if (ink) GuideTone.Orange else GuideTone.Ink
+        if (wanted != tone) applyTone(wanted)
+        else if (tone == GuideTone.Ink && quietColour() != quietBefore) {
+            // Still cream: only the secondary text moves, towards cream, to stay readable.
+            body.setTextColor(quietColour())
+            paintWpm()
+            showScript()
+        }
     }
 
     /** Where the number is, in the show's own pixels, and the point that it pulses and wobbles around. */
     private fun numberBounds(number: String): RectF? {
-        val layout = title.layout ?: return null
+        val layout = wpmView.layout ?: return null
+        if (wpmView.visibility != View.VISIBLE) return null
         val at = IntArray(2)
         val origin = IntArray(2)
-        title.getLocationInWindow(at)
+        wpmView.getLocationInWindow(at)
         effects.getLocationInWindow(origin)
-        val inside = title.totalPaddingLeft + layout.getLineLeft(0)
-        val baseline = title.totalPaddingTop + layout.getLineBaseline(0).toFloat()
-        val wide = title.paint.measureText(number)
-        title.pivotX = inside + wide / 2
-        title.pivotY = baseline
+        val inside = wpmView.totalPaddingLeft + layout.getLineLeft(0)
+        val baseline = wpmView.totalPaddingTop + layout.getLineBaseline(0).toFloat()
+        val wide = wpmView.paint.measureText(number)
+        wpmView.pivotX = wpmView.width / 2f
+        wpmView.pivotY = baseline
         val left = at[0] - origin[0] + inside
         val top = at[1] - origin[1] + baseline
-        return RectF(left, top + title.paint.ascent() * .8f, left + wide, top + title.paint.descent() * .2f)
+        return RectF(left, top + wpmView.paint.ascent() * .8f, left + wide, top + wpmView.paint.descent() * .2f)
     }
 
     /** The playground went away: the speed starts over, and the show stops at once, with everything back in place. */
     private fun calmWpm() {
         shownWpm = 0f
-        if (showingWpm) title.text = PLAYGROUND_TITLE
         showingWpm = false
-        backdrop.show(backgroundOf(tone))
+        paintWpm()
+        backdrop.show(GuideColours.BLACK)
+        keys.shade = null
+        warmth = GuideColours.BLACK
+        if (tone != GuideTone.Ink) applyTone(GuideTone.Ink)
         if (commentStep >= 0) body.text = PLAYGROUND_BODY
         commentStep = -1
         effects.update(WpmEffects.NONE, -1, null)
-        title.rotation = 0f
+        wpmView.rotation = 0f
         column.translationX = 0f
         column.translationY = 0f
     }
@@ -3242,7 +3427,7 @@ class GuideActivity : Activity() {
         showBigNext(false)
         busy = false
         main.removeCallbacks(settleReaction)
-        next.text = "Skip"
+        paintNext()
         backdrop.wipeTo(GuideColours.BLACK)
         main.postDelayed({ if (!passed) applyTone(GuideTone.Ink) }, WIPE_MILLIS)
         title.animate().cancel()
@@ -3449,12 +3634,11 @@ class GuideActivity : Activity() {
         }
         title.animate().alpha(0f).setStartDelay(0).setDuration(SUCCESS_OUT_MILLIS).withEndAction {
             title.text = line
-            title.pivotX = 0f
-            title.pivotY = title.height / 2f
-            title.scaleX = SUCCESS_POP
-            title.scaleY = SUCCESS_POP
-            title.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(SUCCESS_IN_MILLIS)
-                .setInterpolator(android.view.animation.DecelerateInterpolator()).withEndAction {
+            title.scaleX = 1f
+            title.scaleY = 1f
+            // The guide's one move (design v2): the success line fades in and rises 8 dp, then its check draws in.
+            title.translationY = dp(MOVE_RISE).toFloat()
+            title.animate().alpha(1f).translationY(0f).setDuration(MOVE_MILLIS).setInterpolator(EASE_OUT).withEndAction {
                     ValueAnimator.ofFloat(0f, 1f).apply {
                         duration = CHECK_MILLIS
                         addUpdateListener {
@@ -3467,48 +3651,25 @@ class GuideActivity : Activity() {
         }.start()
     }
 
-    /**
-     * The calm done state: Next is a big orange button, full width above the keys, breathing gently until it's pressed. The small
-     * pill at the top steps aside meanwhile, so there's one Next.
-     */
+    /** The calm done state: Skip, in its place under the field, becomes the orange Next. It shows now if it hadn't yet. */
     private fun showBigNext(show: Boolean) {
         nextPulse?.cancel()
         nextPulse = null
-        nextBig.scaleX = 1f
-        nextBig.scaleY = 1f
-        if (!show || flow.step.chapter == GuideChapter.End) {
-            nextBig.visibility = if (flow.step.chapter == GuideChapter.End || guideLooks != true) View.GONE else View.INVISIBLE
-            next.visibility = if (flow.step.chapter == GuideChapter.End) next.visibility else View.VISIBLE
-            return
-        }
+        nextBig.visibility = View.GONE
+        if (!show || flow.step.chapter == GuideChapter.End) return
+        main.removeCallbacks(revealSkip)
         offer.visibility = View.GONE
-        next.visibility = View.INVISIBLE
-        nextBig.visibility = View.VISIBLE
-        nextBig.alpha = 0f
-        nextBig.animate().alpha(1f).setStartDelay(WASH_SETTLE_MILLIS).setDuration(ENTER_MILLIS).start()
-        if (!GuideMotion.enabled) return
-        nextPulse = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = NEXT_BREATH_MILLIS
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            interpolator = android.view.animation.AccelerateDecelerateInterpolator()
-            addUpdateListener {
-                val scale = 1f + NEXT_BREATH * it.animatedFraction
-                nextBig.scaleX = scale
-                nextBig.scaleY = scale
-            }
-            start()
-        }
+        if (next.visibility != View.VISIBLE) appear(next, WASH_SETTLE_MILLIS)
     }
 
-    /** Skip turns into a filled orange Next: the outline fills in, the words turn dark, and the pill gives one pulse. */
+    /** Skip turns into the filled Next: the pill fills in, the word turns ink, and the pill gives one pulse. */
     private fun morphNext() {
-        next.text = "Next"
         if (!GuideMotion.enabled || tone != GuideTone.Ink) {
             paintNext()
             return
         }
-        val strong = GuideColours.CREAM
+        next.text = NEXT_LABEL
+        next.setPadding(dp(NEXT_PAD_SIDE), 0, dp(NEXT_PAD_SIDE), 0)
         val pill = GradientDrawable().apply { cornerRadius = Radii.px(resources, OFFER_RADIUS) }
         next.background = pill
         ValueAnimator.ofFloat(0f, 1f).apply {
@@ -3516,8 +3677,7 @@ class GuideActivity : Activity() {
             addUpdateListener {
                 val t = it.animatedFraction
                 pill.setColor(GuideMotion.faded(GuideColours.ORANGE, t))
-                pill.setStroke(dp(1).coerceAtLeast(2), GuideMotion.blend(GuideMotion.faded(strong, NEXT_WAITING), GuideColours.ORANGE, t))
-                next.setTextColor(GuideMotion.blend(GuideMotion.faded(strong, NEXT_WAITING), GuideColours.INK, t))
+                next.setTextColor(GuideMotion.blend(GuideColours.MUTED, GuideColours.INK, t))
             }
             addListener(object : android.animation.AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: android.animation.Animator) {
@@ -3580,11 +3740,10 @@ class GuideActivity : Activity() {
         title.translationX = 0f
         title.pivotX = 0f
         title.pivotY = title.height.toFloat()
-        title.alpha = 0f
-        title.scaleX = REACTION_FROM
-        title.scaleY = REACTION_FROM
-        title.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(REACTION_IN_MILLIS)
-            .setInterpolator(OvershootInterpolator(REACTION_OVERSHOOT)).start()
+        title.scaleX = 1f
+        title.scaleY = 1f
+        // The guide's one move (design v2): it fades in and rises.
+        appear(title)
         body.animate().alpha(REACTION_DIM).setDuration(FADE_MILLIS).start()
     }
 
@@ -3617,8 +3776,8 @@ class GuideActivity : Activity() {
         if (forward) flow.advance() else flow.back()
         val coming = flow.step
         val target = if (coming.chapter == GuideChapter.End) GuideTone.Orange else GuideTone.Ink
-        val away = (if (forward) -dp(ENTER_OFFSET) else dp(ENTER_OFFSET)).toFloat()
-        for (view in listOf(title, body)) view.animate().alpha(0f).translationX(away).setDuration(FADE_MILLIS).start()
+        block.animate().cancel()
+        block.animate().alpha(0f).translationY(0f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         val newChapter = coming.chapter != leaving.chapter
         val arrive: () -> Unit = {
             if (target != tone) backdrop.wipeTo(backgroundOf(target))
@@ -3733,66 +3892,72 @@ class GuideActivity : Activity() {
     private var leavePopup: View? = null
 
     /**
-     * "Leaving already?" in the guide's own look, not Android's dialog (owner, v5.2): a cream card over the dimmed slide, its title
-     * heavy, Stay filled in orange and leaving outlined. A touch outside it, or Back, stays.
+     * "Leaving already?" (design v2): a card of the surface over the dimmed slide, its title in the Title style, and three choices:
+     * Keep going, the orange one, then Start again and Leave, outlined. A touch outside it, or Back, keeps going.
      */
     private fun showLeavePopup() {
         if (leavePopup != null) return
         haptics.play(Haptic.GuideHint)
+        fun quiet(text: String, press: () -> Unit) = bigButton(text, press).apply {
+            setTextColor(GuideColours.CREAM)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            background = GradientDrawable().apply {
+                setColor(Color.TRANSPARENT)
+                setStroke(dp(1).coerceAtLeast(2), GuideColours.DIVIDER)
+                cornerRadius = Radii.px(resources, OFFER_RADIUS)
+            }
+        }
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = rounded(GuideColours.CREAM, Radii.LARGE)
-            setPadding(dp(24), dp(24), dp(24), dp(20))
+            background = GradientDrawable().apply {
+                setColor(GuideColours.SURFACE)
+                setStroke(dp(1).coerceAtLeast(2), GuideColours.DIVIDER)
+                cornerRadius = dp(FIELD_CORNER).toFloat()
+            }
+            setPadding(dp(24), dp(24), dp(24), dp(24))
             isClickable = true
-            elevation = dp(8).toFloat()
             addView(TextView(context).apply {
                 text = LEAVE_TITLE
                 typeface = HEAVY
                 includeFontPadding = false
-                letterSpacing = -.02f
-                setTextColor(GuideColours.INK)
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(28f), dp(34).toFloat()))
+                setTextColor(GuideColours.CREAM)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, px(TITLE_TYPE))
             })
             addView(TextView(context).apply {
                 text = LEAVE_BODY
                 typeface = MEDIUM
-                setTextColor(GuideMotion.faded(GuideColours.INK, BODY_ALPHA))
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(17f), dp(22).toFloat()))
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
+                setTextColor(GuideColours.MUTED)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
             addView(bigButton(LEAVE_NO) { closeLeavePopup() }.apply {
                 setTextColor(GuideColours.INK)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
+                setPadding(dp(16), dp(12), dp(16), dp(12))
                 background = rounded(GuideColours.ORANGE, OFFER_RADIUS)
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(20) })
-            addView(bigButton(LEAVE_YES) {
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(24) })
+            addView(quiet(LEAVE_AGAIN) {
+                closeLeavePopup()
+                startAgain()
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+            addView(quiet(LEAVE_YES) {
                 preferences.edit().putBoolean(LEFT_EARLY, true).apply()
                 closeLeavePopup()
                 leave()
-            }.apply {
-                setTextColor(GuideColours.INK)
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(16f), dp(21).toFloat()))
-                background = GradientDrawable().apply {
-                    setColor(Color.TRANSPARENT)
-                    setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(GuideColours.INK, NEXT_WAITING))
-                    cornerRadius = Radii.px(resources, OFFER_RADIUS)
-                }
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
         }
         val scrim = FrameLayout(this).apply {
             setBackgroundColor(GuideMotion.faded(GuideColours.BLACK, LEAVE_SCRIM))
             isClickable = true
             setOnClickListener { closeLeavePopup() }
             addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER).apply {
-                leftMargin = dp(GUTTER + 8)
-                rightMargin = dp(GUTTER + 8)
+                leftMargin = dp(BLOCK_SIDE)
+                rightMargin = dp(BLOCK_SIDE)
             })
         }
         leavePopup = scrim
         root.addView(scrim, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        scrim.alpha = 0f
-        scrim.animate().alpha(1f).setDuration(FADE_MILLIS * 2).start()
-        card.scaleX = LEAVE_POP
-        card.scaleY = LEAVE_POP
-        card.animate().scaleX(1f).scaleY(1f).setDuration(ENTER_MILLIS).setInterpolator(android.view.animation.OvershootInterpolator()).start()
+        appear(scrim)
     }
 
     private fun closeLeavePopup() {
@@ -3818,9 +3983,7 @@ class GuideActivity : Activity() {
      */
     private fun showEndChoices() {
         if (!flow.finished) return
-        // The header keeps only the way to the boring guide, small, and ✕: the big button is going to type (owner, v5).
-        next.visibility = View.VISIBLE
-        next.text = BORING_GUIDE_LABEL
+        // The way to the boring guide is a quiet line under the buttons, and the top bar keeps only ✕ (design v2).
         offer.visibility = View.GONE
         hideHint()
         if (endButtons.visibility != View.VISIBLE) {
@@ -3845,17 +4008,20 @@ class GuideActivity : Activity() {
     private fun paintEndButtons() {
         val onInk = tone == GuideTone.Ink
         val strong = if (onInk) GuideColours.CREAM else GuideColours.INK
-        boringButton.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
-        boringButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.BLACK, OFFER_RADIUS)
+        // On the end's orange every text is ink (design v2): the filled buttons are cream there, with ink words.
+        boringButton.setTextColor(GuideColours.INK)
+        boringButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.CREAM, OFFER_RADIUS)
         againLink.setTextColor(strong)
+        shareLine.setTextColor(if (onInk) GuideColours.MUTED else GuideColours.INK)
+        boringLink.setTextColor(if (onInk) GuideColours.MUTED else GuideColours.INK)
         againLink.background = GradientDrawable().apply {
             setColor(Color.TRANSPARENT)
             setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(strong, NEXT_WAITING))
             cornerRadius = Radii.px(resources, OFFER_RADIUS)
         }
         if (Contributions.enabled(this)) {
-            shareButton.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
-            shareButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.BLACK, OFFER_RADIUS)
+            shareButton.setTextColor(GuideColours.INK)
+            shareButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.CREAM, OFFER_RADIUS)
         } else {
             shareButton.setTextColor(strong)
             shareButton.background = GradientDrawable().apply {
@@ -3904,7 +4070,8 @@ class GuideActivity : Activity() {
         main.removeCallbacksAndMessages(null)
         finaleView.stop()
         finaleView.visibility = View.GONE
-        for (view in listOf<View>(title, instruction, segments, chapter)) view.visibility = View.VISIBLE
+        for (view in listOf<View>(title, instruction, chapter, block)) view.visibility = View.VISIBLE
+        block.alpha = 0f
         busy = true
         passed = false
         changing = true
@@ -3955,8 +4122,6 @@ class GuideActivity : Activity() {
 
     private fun dp(value: Int) = Math.round(value * resources.displayMetrics.density)
 
-    private fun sp(value: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, value, resources.displayMetrics)
-
     companion object {
         private const val PREFERENCES = "app"
         private const val SHOWN = "guide_shown"
@@ -3984,7 +4149,7 @@ class GuideActivity : Activity() {
         private const val LEAVE_TITLE = "Leaving already?"
         private const val LEAVE_BODY = "You haven't finished the guide. Leave anyway?"
         private const val LEAVE_YES = "I already know everything"
-        private const val LEAVE_NO = "Stay"
+        private const val LEAVE_NO = "Keep going"
         /** The leaving pop-up's dimming, and how small its card starts before it pops in. */
         private const val LEAVE_SCRIM = .62f
         private const val LEAVE_POP = .92f
@@ -4014,20 +4179,52 @@ class GuideActivity : Activity() {
         /** The chapter one chips that the screen itself shows. */
         /** A rude clip, pasted on the clipboard slide, taken back out. */
         private const val RUDE_CLIP = "That one's rude. Took it back. Find the nice one."
-        // The slides' look, in the new layout: one size for every title, one for the instruction, and the chip's timing.
-        // Bigger in v5: the room above the keys goes to what's there, not to more things (owner).
-        private const val TITLE_SP = 36f
-        private const val TITLE_DP = 40
-        private const val TITLE_SMALLEST_SP = 24f
+        // Design v2's type scale (docs/design-v2.md §1), in dp of the design scale, never the phone's font size. Inter: Display is
+        // the slides' titles, upper case (Bold: the app carries no ExtraBold); Title the wordmark and dialogs; Body the instructions
+        // and chips; Field what you type; Label the chapter and small buttons, upper case. A line too long shrinks to [SHRINK].
+        private const val DISPLAY = 30f
+        private const val TITLE_TYPE = 22f
+        private const val BODY_TYPE = 16f
+        private const val FIELD_TYPE = 22f
+        private const val LABEL_TYPE = 12f
+        private const val SHRINK = .8f
+        private const val DISPLAY_SPACING = -.01f
+        private const val LABEL_SPACING = .08f
+        /** The slides: one line of title and one of instruction. Setup wraps over two and four. */
         private const val TITLE_LINES = 1
-        private const val BODY_SP = 20f
-        private const val BODY_DP = 24
-        private const val BODY_SMALLEST_SP = 15f
         private const val BODY_LINES = 1
-        private const val GAP = 14
-        private const val CHIP_PAD = 3
-        private const val CHIP_SCALE = .94f
-        private const val CHIP_SLIDE = 40
+        private const val SETUP_TITLE_LINES = 2
+        private const val SETUP_BODY_LINES = 4
+        /** The top bar, the playground's header, the side margins and the least room above and below the content block (dp). */
+        private const val TOP_BAR = 48
+        private const val HEADER = 56
+        private const val BLOCK_SIDE = 24
+        private const val BLOCK_ROOM = 24
+        /** The field: its corners and its padding. */
+        private const val FIELD_CORNER = 16
+        private const val FIELD_PAD = 16
+        /** On the pass's orange: the field's ink wash, and how strong its words still to type are; the other ink's strengths. */
+        private const val FIELD_ON_ORANGE = .1f
+        private const val FIELD_GHOST_ON_ORANGE = .55f
+        private const val PLACE_ON_ORANGE = .6f
+        private const val OUTLINE_ON_ORANGE = .5f
+        private const val PASSAGE_AHEAD_ON_ORANGE = .6f
+        /** ✕'s icon, in its target. */
+        private const val CLOSE_ICON = 24
+        /** Skip shows once a slide has had this long (design v2), or a hint. */
+        private const val SKIP_AFTER_MILLIS = 10_000L
+        private const val SKIP_LABEL = "Skip"
+        private const val NEXT_LABEL = "Next"
+        /** The slides whose keys show the letters' corner symbols (design v2): the ones about them. */
+        private val CORNER_SLIDES = setOf("alt", "holdsym")
+        /** The playground's text box, and the words a minute's unit. */
+        private const val PLAYGROUND_FIELD_LINES = 3
+        private const val WPM_UNIT = "WPM"
+        /** The guide's one move (design v2): a fade and a rise of 8 dp in 220 ms, easing out. */
+        private const val MOVE_MILLIS = 220L
+        private const val MOVE_RISE = 8
+        private val EASE_OUT = android.view.animation.DecelerateInterpolator(1.5f)
+        private const val LEAVE_AGAIN = "Start again"
         private const val CHIP_MILLIS = 3000L
         private const val CHIP_MIN_MILLIS = 1200L
         private const val CHIP_IN_MILLIS = 220L
@@ -4035,8 +4232,6 @@ class GuideActivity : Activity() {
         private const val CHECK_SIZE = .7f
         /** The pass beat: the old title's fade, the success line's pop from this size, its check, and the pill's morph and pulse. */
         private const val SUCCESS_OUT_MILLIS = 90L
-        private const val SUCCESS_IN_MILLIS = 250L
-        private const val SUCCESS_POP = 1.08f
         private const val CHECK_MILLIS = 220L
         private const val MORPH_MILLIS = 220L
         private const val PULSE_MILLIS = 240L
@@ -4127,7 +4322,7 @@ class GuideActivity : Activity() {
         private const val WPM_LABEL_SIZE = .35f
         /** At full speed the screen is this much of the way to orange, so that the words stay easy to read. */
         private const val WPM_MOST_ORANGE = .85f
-        private const val PLAYGROUND_BODY = "Type or swipe whatever you like. Follow the line above, or ignore it."
+        private const val PLAYGROUND_BODY = "Type or swipe whatever you like. Follow the line below, or ignore it."
 
         // The look, in dp. These are safe to change. Words fit their box at any system font size, because the boxes set their size.
         // Ink's font (v5.3): GuideFonts is loaded first thing in onCreate, before anything is built.
@@ -4135,7 +4330,6 @@ class GuideActivity : Activity() {
         private val MEDIUM: Typeface get() = GuideFonts.loadedMedium
         /** The same as the key columns' side, so that the drawn keys line up with the Sym panel's labels. */
         private const val GUTTER = Layout.KEY_SIDE_DP
-        private const val TOP_ACTION = 32
         private const val TITLE_SMALLEST = 18
         private const val TITLE_LARGEST = 76
         private const val BODY_SMALLEST = 11
@@ -4164,31 +4358,24 @@ class GuideActivity : Activity() {
         /** The chip's padding. */
         private const val CHIP_SIDE = 14
         private const val CHIP_TOP = 7
-        /** Next, once a slide is passed: a normal button. */
-        private const val NEXT_SP = 17f
-        private const val NEXT_DP = 22
-        private const val NEXT_PAD_SIDE = 28
-        private const val NEXT_PAD_TOP = 10
+        /** Next's pill, once a slide is passed. */
+        private const val NEXT_PAD_SIDE = 20
         /** Below this much height the screen is too short for the drawing of the keys. */
         private const val COMPACT_HEIGHT = 240
         /** How long the word menu is open before its key hints show: its buttons have moved in by then. */
         private const val MENU_SETTLE_MILLIS = 450L
-        /** The field on the slides: three lines, at this size. */
-        private const val FIELD_LINES = 3
+        /** The field on the slides: exactly two lines, always (owner). */
+        private const val FIELD_LINES = 2
         /** How many of the lines finished so far the steering slides put above their own. */
         private const val STEER_LINES_BEFORE = 4
-        private const val FIELD_SP = 23f
-        private const val FIELD_DP = 29
         /** A bottom inset this much over the keyboard's own is an open panel's, in dp. */
         private const val PANEL_EXTRA = 80
 
         // The motion, in ms. Android's animator duration setting also scales the parts that draw themselves.
         private const val INTRO_MILLIS = 1250L
         private const val FADE_MILLIS = 140L
-        private const val ENTER_MILLIS = 340L
+        private const val ENTER_MILLIS = MOVE_MILLIS
         private const val ENTER_STAGGER_MILLIS = 60L
-        private const val ENTER_OFFSET = 30
-        private const val ENTER_OVERSHOOT = 1.4f
         private const val REACTION_IN_MILLIS = 300L
         private const val REACTION_OVERSHOOT = 2.2f
         private const val REACTION_DIM = .3f
@@ -4212,8 +4399,8 @@ class GuideActivity : Activity() {
         private const val HELP_AFTER_MILLIS = 5000L
         /** How soon help that had to wait for a finger, a key or the menu looks again. */
         private const val HELP_RECHECK_MILLIS = 700L
-        /** The front page's prompt: room for a whole sentence. */
-        private const val PROMPT_LINES = 3
+        /** The line to type along to: two lines (design v2). */
+        private const val PROMPT_LINES = 2
         /** How long the bar's words wait as a slide opens, so it shows the slide's words once. */
         private const val BAR_SETTLE_MILLIS = 450L
         /** How strong a selection's cream is in the field. */

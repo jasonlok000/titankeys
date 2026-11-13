@@ -258,19 +258,22 @@ internal class KeyGrid(context: Context) : View(context) {
 
     override fun onDraw(canvas: Canvas) {
         val keys = KeyGeometry(width.toFloat(), alignment)
+        // Q's left edge and P's right, as calibrated: a key and a gap make a column, and the outer gaps' halves are outside.
+        val left = alignment.left * width
+        val right = alignment.right * width
         // The screen outside the keys, dimmed a little.
         fill.color = CalibrationColours.OUTSIDE
-        canvas.drawRect(0f, 0f, keys.left, height.toFloat(), fill)
-        canvas.drawRect(keys.right, 0f, width.toFloat(), height.toFloat(), fill)
+        canvas.drawRect(0f, 0f, left, height.toFloat(), fill)
+        canvas.drawRect(right, 0f, width.toFloat(), height.toFloat(), fill)
         // Each gap is one line, one pixel wide, at the gap's centre (owner, 2026-11-12), so it lines up with the middle of the dark
         // gap between the real keys below. Lines snap to whole pixels, so none blurs across two.
         line.color = CalibrationColours.ORANGE
         for (column in 0 until KeyGeometry.COLUMNS - 1) {
-            pixelLine(canvas, keys.keyLeft(column) + keys.key + keys.gap / 2)
+            pixelLine(canvas, keys.cell(column).second)
         }
         // The outer edges, Q's left and P's right, one pixel each too, each on the pixel just inside the row, so both show alike.
-        pixelLine(canvas, Math.floor(keys.left.toDouble()).toFloat() + .5f)
-        pixelLine(canvas, Math.ceil(keys.right.toDouble()).toFloat() - .5f)
+        pixelLine(canvas, Math.floor(left.toDouble()).toFloat() + .5f)
+        pixelLine(canvas, Math.ceil(right.toDouble()).toFloat() - .5f)
         // The letters, faint, between their bands.
         label.color = CalibrationColours.LABEL
         label.textSize = LABEL * density

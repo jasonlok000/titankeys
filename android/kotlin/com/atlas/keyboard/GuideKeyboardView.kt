@@ -30,6 +30,8 @@ internal object GuideColours {
     /** Secondary text, and hairlines: lib/brand.ts's MUTED and DIVIDER. */
     const val MUTED = 0xFF99918A.toInt()
     const val DIVIDER = 0xFF2A2623.toInt()
+    /** Fields and cards, and the drawn keys at half strength (design v2). */
+    const val SURFACE = 0xFF161210.toInt()
 }
 
 /**
@@ -182,6 +184,28 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         invalidate()
     }
 
+    /**
+     * The Alt symbols printed in the letter keys' corners: only on the slides about holding a key for its symbol (design v2), as
+     * everywhere else they're noise.
+     */
+    var corners = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
+    /**
+     * What's behind the drawing, when it isn't the tone's own black or orange: the playground's warming background. The part the
+     * touchpad doesn't read is dimmed towards it, so the dimming never shows as lighter patches.
+     */
+    var shade: Int? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
     /** Lets the keys arrive one after the other. */
     fun appear() {
         appearStart = GuideMotion.now()
@@ -265,8 +289,11 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         return false
     }
 
-    /** How tall the drawing is when it is [width] pixels wide: the real keyboard's four rows, scaled to the width. */
-    fun heightFor(width: Int): Int = KeyGeometry(width.toFloat(), KeyCalibration.load(context)).let {
+    /**
+     * How tall the drawing is when it is [width] pixels wide: the real keyboard's four rows at the screen's width, and at
+     * [KeyGeometry.DRAWN] of their real height (owner, 2026-11-12: same width, 60% height).
+     */
+    fun heightFor(width: Int): Int = KeyGeometry(width.toFloat(), KeyCalibration.load(context), KeyGeometry.DRAWN).let {
         ceil(if (lettersOnly) it.letterHeight else it.height).toInt()
     }
 
@@ -285,7 +312,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     /** Puts each key where the real one is, on [w] pixels, as Key calibration in TitanKeys Debug says. */
     private fun place(w: Int) {
-        geometry = KeyCalibration.geometry(context, w.toFloat())
+        geometry = KeyGeometry(w.toFloat(), KeyCalibration.load(context), KeyGeometry.DRAWN)
         for ((key, box) in keys.zip(geometry.boxes)) key.box.set(box.left, box.top, box.right, box.bottom)
     }
 
@@ -311,7 +338,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private fun drawKey(canvas: Canvas, key: Key, now: Long, frames: Float): Boolean {
         var moving = false
         val onOrange = tone == GuideTone.Orange
-        val idleFill = GuideMotion.faded(if (onOrange) GuideColours.INK else GuideColours.CREAM, if (onOrange) KEY_FILL_ORANGE else KEY_FILL_INK)
+        // Idle (design v2): the surface at half strength, a cream outline at 16%, the label cream at 70%. On the pass's orange, ink.
+        val idleFill = if (onOrange) GuideMotion.faded(GuideColours.INK, KEY_FILL_ORANGE) else GuideMotion.faded(GuideColours.SURFACE, KEY_FILL_INK)
         val idleOutline = GuideMotion.faded(if (onOrange) GuideColours.INK else GuideColours.CREAM,
             if (onOrange) KEY_OUTLINE_ORANGE else KEY_OUTLINE_INK)
         val idleLabel = if (onOrange) GuideColours.INK else GuideMotion.faded(GuideColours.CREAM, KEY_LABEL_INK)
@@ -337,10 +365,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             // A held modifier stays lit, steady, as a held key does: never flashing (owner, v5).
             if (key.name in spot.held) heat = max(heat, HELD_HEAT)
             val light = spotLight(spot, key.name, now)
-            if (light > 0f) {
-                heat = max(heat, light)
-                moving = true
-            } else if (spotRunning(spot, now)) moving = true
+            heat = max(heat, light)
+            // Only the rounds move: once they're over the keys are steady, and the drawing rests.
+            if (spotRunning(spot, now)) moving = true
         }
         // The wave moves over the keys from the left and from the top.
         var bump = 0f
@@ -361,9 +388,11 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             if (t < 1f) moving = true
         }
 
-        // The boxes are the real keys, gaps and all, so a key is drawn right to its edges: the outline sits just inside them.
+        // The boxes are the real keys, which have no gap between them: each is drawn [KEY_INSET] of its width in from either side,
+        // so neighbours read as separate keys, and the outline sits just inside that.
         val stroke = dp(KEY_OUTLINE)
         val inset = stroke / 2
+        val side = key.box.width().coerceAtMost(geometry.pitch) * KEY_INSET
         val pressed = 1f + bump * WAVE_SCALE - heat * PRESS_DEPTH
         val centreX = key.box.centerX()
         val centreY = key.box.centerY()
@@ -402,10 +431,10 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         // An idle key is a thin outline over a very faint fill, as the real keys read from above; a lit key fills, and its
         // outline goes into the fill.
         boxPaint.color = if (emptyKey) emptyFill else GuideMotion.blend(idleFill, litFill, heat.coerceIn(0f, 1f))
-        canvas.drawRoundRect(key.box.left + inset, key.box.top + inset, key.box.right - inset, key.box.bottom - inset, radius, radius, boxPaint)
+        canvas.drawRoundRect(key.box.left + side + inset, key.box.top + inset, key.box.right - side - inset, key.box.bottom - inset, radius, radius, boxPaint)
         outlinePaint.color = GuideMotion.blend(idleOutline, litFill, heat.coerceIn(0f, 1f))
         outlinePaint.strokeWidth = stroke
-        canvas.drawRoundRect(key.box.left + inset, key.box.top + inset, key.box.right - inset, key.box.bottom - inset, radius, radius, outlinePaint)
+        canvas.drawRoundRect(key.box.left + side + inset, key.box.top + inset, key.box.right - side - inset, key.box.bottom - inset, radius, radius, outlinePaint)
         val labelColour = GuideMotion.blend(idleLabel, litLabel, heat.coerceIn(0f, 1f))
         if (caption != null) {
             // The hint for this key: the letter moves up a little, and what it does now is written small under it.
@@ -420,13 +449,13 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             canvas.drawText(caption, key.box.centerX(), key.box.bottom - key.box.height() * CAPTION_BOTTOM, labelPaint)
         } else drawLabel(canvas, key, label, labelColour)
         // Like the real keys, each letter has its Alt symbol printed small in its top left corner.
-        altSymbols[key.name]?.takeIf { label == key.name && caption == null }?.let { symbol ->
+        altSymbols[key.name]?.takeIf { corners && label == key.name && caption == null }?.let { symbol ->
             // A slide that spots letter keys, as Alt's does with A for its *, fades the other corners, so the one to find stands out.
             val spotted = (cue as? GuideCue.Spot)?.keys?.takeIf { keys -> keys.all(Layout::isLetter) }
             val alpha = if (spotted != null && key.name !in spotted) ALT_ALPHA * ALT_FADED else ALT_ALPHA
             altPaint.color = GuideMotion.faded(labelColour, alpha)
             altPaint.textSize = min(key.box.width(), key.box.height()) * ALT_SIZE
-            canvas.drawText(symbol, key.box.left + inset + key.box.width() * ALT_INSET, key.box.top + inset - altPaint.ascent() + key.box.height() * ALT_INSET / 2, altPaint)
+            canvas.drawText(symbol, key.box.left + side + inset + key.box.width() * ALT_INSET, key.box.top + inset - altPaint.ascent() + key.box.height() * ALT_INSET / 2, altPaint)
         }
         canvas.restore()
         return moving
@@ -434,7 +463,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     /**
      * How lit [name] is by [spot] at [now]: the keys light one after the other, each for [SPOT_STEP_MILLIS], easing in and out,
-     * then a pause, for the spot's rounds, and then they stop (owner, v5: Space blinked forever, and the menu's keys flashed).
+     * then a pause, for the spot's rounds, and then they stay lit, steady (owner, v5: Space blinked forever, and the menu's keys
+     * flashed; design v2: the slide's keys are orange).
      */
     private fun spotLight(spot: GuideCue.Spot, name: String, now: Long): Float {
         val at = spot.keys.indexOf(name)
@@ -442,7 +472,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         if (!GuideMotion.enabled) return 1f
         val round = spot.keys.size * SPOT_STEP_MILLIS + SPOT_REST_MILLIS
         val elapsed = now - cueStart
-        if (elapsed < 0 || elapsed >= round * spot.rounds) return 0f
+        if (elapsed < 0) return 0f
+        // Once the rounds have shown the order, the slide's keys stay orange, steady (design v2): never blinking (owner, v5).
+        if (elapsed >= round * spot.rounds) return 1f
         val local = (elapsed % round - at * SPOT_STEP_MILLIS).toFloat() / SPOT_STEP_MILLIS
         if (local < 0f) return 0f
         // Past its turn, in this round, a key stays softly lit: the hint reads in order, from the first key, in any frame.
@@ -460,7 +492,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      * edge of the dimmed part is the box.
      */
     private fun drawTouchArea(canvas: Canvas) {
-        areaPaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.ORANGE else GuideColours.INK, AREA_SHADE)
+        areaPaint.color = GuideMotion.faded(shade ?: if (tone == GuideTone.Orange) GuideColours.ORANGE else GuideColours.INK, AREA_SHADE)
         areaPath.rewind()
         areaPath.fillType = Path.FillType.EVEN_ODD
         areaPath.addRect(0f, 0f, width.toFloat(), height.toFloat(), Path.Direction.CW)
@@ -805,13 +837,18 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         /** The most points the trail keeps, and from how far back, as a part of that, it fades out. */
         const val TRAIL_KEEP = 120
         const val TRAIL_FADE_FROM = .45f
-        /** A key's thin outline, and how strong it is, and the very faint fill inside it, on orange and on ink. */
+        /**
+         * A key's thin outline, and how strong it is, and the fill inside it, on orange and on black: on black, a cream outline at
+         * 16% over the surface at 50%, with labels cream at 70% (design v2).
+         */
         const val KEY_OUTLINE = 1f
         const val KEY_OUTLINE_ORANGE = .5f
-        const val KEY_OUTLINE_INK = .4f
+        const val KEY_OUTLINE_INK = .16f
         const val KEY_FILL_ORANGE = .05f
-        const val KEY_FILL_INK = .04f
-        const val KEY_LABEL_INK = .85f
+        const val KEY_FILL_INK = .5f
+        const val KEY_LABEL_INK = .7f
+        /** How far each key is drawn in from its sides, as a part of its width: the real keys touch, the drawn ones don't. */
+        const val KEY_INSET = .03f
         const val LABEL_LETTER = .52f
         const val LABEL_SMALL = .36f
         /** How much of a key's fill an empty key of the panel keeps. */

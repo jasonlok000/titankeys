@@ -22,7 +22,6 @@ import kotlin.math.sin
 
 /** The guide's brand colours. They are the values in lib/brand.ts and the app icon. */
 internal object GuideColours {
-    const val ORANGE = 0xFFEF804E.toInt()
     /** Only as text, or a button, on orange: no background is ink any more (owner, v5.3: pure black and orange). */
     const val INK = 0xFF160A04.toInt()
     const val CREAM = 0xFFFFF1E6.toInt()
@@ -373,7 +372,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      */
     private fun drawZoneMarks(canvas: Canvas) {
         val area = geometry.area(AREA_LEFT, AREA_TOP, AREA_RIGHT, AREA_BOTTOM)
-        val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE
+        val colour = if (tone == GuideTone.Orange) GuideColours.INK else Accent.colour
         bracketPaint.color = colour
         val stroke = dp(BRACKET_STROKE)
         bracketPaint.strokeWidth = stroke
@@ -464,8 +463,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val idleOutline = GuideMotion.faded(if (onOrange) GuideColours.INK else GuideColours.CREAM,
             if (onOrange) KEY_OUTLINE_ORANGE else KEY_OUTLINE_INK)
         val idleLabel = if (onOrange) GuideColours.INK else GuideMotion.faded(GuideColours.CREAM, KEY_LABEL_INK)
-        val litFill = if (onOrange) GuideColours.INK else GuideColours.ORANGE
-        val litLabel = if (onOrange) GuideColours.ORANGE else GuideColours.INK
+        val litFill = if (onOrange) GuideColours.INK else Accent.colour
+        val litLabel = if (onOrange) Accent.colour else GuideColours.INK
 
         var heat = key.heat
         if (key.heat > 0f) {
@@ -614,7 +613,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      * edge of the dimmed part is the box.
      */
     private fun drawTouchArea(canvas: Canvas) {
-        areaPaint.color = GuideMotion.faded(shade ?: if (tone == GuideTone.Orange) GuideColours.ORANGE else GuideColours.INK, AREA_SHADE)
+        areaPaint.color = GuideMotion.faded(shade ?: if (tone == GuideTone.Orange) Accent.colour else GuideColours.INK, AREA_SHADE)
         areaPath.rewind()
         areaPath.fillType = Path.FillType.EVEN_ODD
         areaPath.addRect(0f, 0f, width.toFloat(), height.toFloat(), Path.Direction.CW)
@@ -718,7 +717,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             moving = true
         }
         // Each pass is drawn whole and then faded, so where its pieces overlap it does not darken.
-        trailPaint.color = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE
+        trailPaint.color = if (tone == GuideTone.Orange) GuideColours.INK else Accent.colour
         if (inPauseZone()) alpha *= PAUSED_TRAIL
         var layer = canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), (TRAIL_SHADE * alpha * 255).roundToInt())
         drawTrailPieces(canvas, dp(TRAIL_WIDTH) * TRAIL_UNDER)
@@ -767,7 +766,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private fun drawGhost(canvas: Canvas, now: Long) {
         if (cue == GuideCue.Free || cue is GuideCue.Spot || !demoing) return
         if (ghostWaits(now)) return
-        val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE
+        val colour = if (tone == GuideTone.Orange) GuideColours.INK else Accent.colour
         val cycle = ghostMillis()
         val t = if (GuideMotion.enabled) ((now - cueStart).coerceAtMost(cycle - 1).toFloat() / cycle) else 1f
 
@@ -853,7 +852,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private fun drawTapZone(canvas: Canvas) {
         if (cue !is GuideCue.Taps) return
         val corner = Radii.px(resources, Radii.SMALL)
-        zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE, ZONE_ALPHA)
+        zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else Accent.colour, ZONE_ALPHA)
         val zone = geometry.area(CursorGesture.ZONE_LEFT, CursorGesture.ZONE_TOP, CursorGesture.ZONE_RIGHT, ZONE_BOTTOM)
         canvas.drawRoundRect(zone.left, zone.top, zone.right, zone.bottom, corner, corner, zonePaint)
     }
@@ -865,7 +864,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private fun drawDeleteZone(canvas: Canvas) {
         if (cue !is GuideCue.Flick) return
         val corner = Radii.px(resources, Radii.SMALL)
-        zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE, ZONE_ALPHA)
+        zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else Accent.colour, ZONE_ALPHA)
         deletePath.rewind()
         for ((left, top, right, bottom) in listOf(guideDeleteBox)) {
             val box = Path()

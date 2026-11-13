@@ -25,7 +25,8 @@ internal object V2 {
     fun dp(value: Number) = Math.round(value.toFloat() * D)
 
     val BLACK = Color(0x00, 0x00, 0x00)
-    val ORANGE = Color(0xEF, 0x80, 0x4E)
+    /** The accent, from Accent: orange, or cream with Orange accents off (ACCENT=off). */
+    val ORANGE get() = Color(Accent.colour and 0xFFFFFF)
     val CREAM = Color(0xFF, 0xF1, 0xE6)
     val MUTED = Color(0x99, 0x91, 0x8A)
     val SURFACE = Color(0x16, 0x12, 0x10)

@@ -25,6 +25,8 @@ import kotlin.math.roundToInt
  * same, brightened to judge the drawing), and one PNG for each slide.
  */
 fun main(args: Array<String>) {
+    // ACCENT=off draws everything as with Settings > Orange accents off: Accent's cream in place of orange.
+    if (System.getenv("ACCENT") == "off") Accent.on = false
     val out = File(args.getOrElse(0) { "guide-decor" }).apply { mkdirs() }
     val fonts = File(args.getOrElse(1) { "android/src/main/res/font" })
     val bold = Font.createFont(Font.TRUETYPE_FONT, File(fonts, "inter_bold.otf"))
@@ -40,7 +42,7 @@ fun main(args: Array<String>) {
 
     // The rules for every look.
     for ((slide, look) in GuideDecor.LOOKS) {
-        check(look.colour == GuideDecor.ORANGE && look.level in .06f..0.1201f || look.colour == GuideDecor.CREAM && look.level == .05f) {
+        check(look.accent && look.level in .06f..0.1201f || !look.accent && look.level == .05f) {
             "$slide is orange at 6-12% or cream at 5%"
         }
         check(look.loop in 6_000L..20_000L) { "$slide loops in 6 to 20 s" }

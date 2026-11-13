@@ -16,5 +16,5 @@ for line in "Action.Save -> R.drawable.menu_save" "Action.Favourite -> R.drawabl
   grep -qF "$line" "$keyboard/Strip.kt" || { echo "Strip.kt's icons changed: $line"; exit 1; }
 done
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}/platforms/android-36/android.jar" -d "$work" \
-  "$keyboard/MenuKeys.kt" "$keyboard/StripFit.kt" "$keyboard/MenuMotion.kt" "$keyboard/Layout.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" "$keyboard/FixedScale.kt" tests/menu-render/MenuRender.kt
+  "$keyboard/MenuKeys.kt" "$keyboard/StripFit.kt" "$keyboard/MenuMotion.kt" "$keyboard/Layout.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" "$keyboard/FixedScale.kt" "$keyboard/Accent.kt" tests/menu-render/MenuRender.kt
 java -Djava.awt.headless=true -cp "$work:$stdlib" com.atlas.keyboard.MenuRenderKt "$out" android/src/main/res/drawable android/src/main/res/values/strings.xml android/src/main/res/font

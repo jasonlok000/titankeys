@@ -23,6 +23,8 @@ import kotlin.math.floor
  * the density of the owner's screenshots. Each sheet is a PNG in the folder given, dark and light.
  */
 fun main(args: Array<String>) {
+    // ACCENT=off draws everything as with Settings > Orange accents off: Accent's cream in place of orange.
+    if (System.getenv("ACCENT") == "off") Accent.on = false
     val folder = File(args.getOrElse(0) { "menu-render" }).apply { mkdirs() }
     val drawables = File(args.getOrElse(1) { "android/src/main/res/drawable" })
     val strings = File(args.getOrElse(2) { "android/src/main/res/values/strings.xml" }).readText()
@@ -397,8 +399,8 @@ private const val WIDTH = 1076
 /** The bar: 56 dp at Normal, the same height at every Settings > Size (Strip.BAR_DP). */
 private val ROW = (56 * 1.55f).toInt()
 private const val CAPTION = 44
-/** The orange accent, GuideColours.ORANGE. */
-private const val ORANGE = 0xEF804E
+/** The accent, from Accent: orange, or cream with Orange accents off (ACCENT=off). */
+private val ORANGE get() = Accent.colour and 0xFFFFFF
 
 /**
  * The bar's own texts, at TitanKeys' fixed scale: the three words, all 20 dp with the best one in the middle in [best]'s weight

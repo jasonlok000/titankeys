@@ -23,13 +23,16 @@ index e5e9c50..c26b1ee 100644
  
  async function describe(theme) {
 diff --git a/crates/ink-core/src/lib.rs b/crates/ink-core/src/lib.rs
-index 3999e45..7013960 100644
+index 3999e45..a2b9608 100644
 --- a/crates/ink-core/src/lib.rs
 +++ b/crates/ink-core/src/lib.rs
-@@ -102,6 +102,10 @@ const DEFAULT_ICON_SIZE: f32 = 28.0;
+@@ -102,6 +102,13 @@ const DEFAULT_ICON_SIZE: f32 = 28.0;
  const BUTTON_HEIGHT: f32 = 40.0;
  const BUTTON_ICON_SIZE: f32 = 30.0;
  const BUTTON_ICON_GAP: f32 = 12.0;
++/// A custom switch drawn in an app accent: the knob's gap from the track's end, and its size, as parts of the height.
++const CUSTOM_SWITCH_INSET: f32 = 0.17;
++const CUSTOM_SWITCH_KNOB: f32 = 0.66;
 +/// The least room between an inline field's label and its value on the same line.
 +const INLINE_FIELD_GAP: f32 = 24.0;
 +/// A value up to this share of the row stays at the end while its label wraps beside it.
@@ -37,7 +40,7 @@ index 3999e45..7013960 100644
  const FIELD_LABEL_SIZE: f32 = 20.0;
  const FIELD_LABEL_HEIGHT: f32 = 25.0;
  const CONTENT_INSET_START: f32 = 37.0;
-@@ -424,6 +428,8 @@ pub enum Tone {
+@@ -424,6 +431,8 @@ pub enum Tone {
      #[default]
      Primary,
      Muted,
@@ -46,7 +49,7 @@ index 3999e45..7013960 100644
  }
  
  #[derive(Clone, Debug, PartialEq, Eq)]
-@@ -678,9 +684,11 @@ enum NodeKind {
+@@ -678,9 +687,11 @@ enum NodeKind {
          title: String,
          upper: String,
      },
@@ -59,7 +62,7 @@ index 3999e45..7013960 100644
      },
      Text {
          links: Vec<(std::ops::Range<usize>, Action)>,
-@@ -690,6 +698,7 @@ enum NodeKind {
+@@ -690,6 +701,7 @@ enum NodeKind {
          align: TextAlign,
          max_lines: Option<u32>,
          tabular_numbers: bool,
@@ -67,7 +70,7 @@ index 3999e45..7013960 100644
      },
      TextInput {
          placeholder: String,
-@@ -849,6 +858,7 @@ impl Node {
+@@ -849,6 +861,7 @@ impl Node {
                  align,
                  max_lines,
                  tabular_numbers,
@@ -75,7 +78,7 @@ index 3999e45..7013960 100644
              },
          }
      }
-@@ -1220,6 +1230,9 @@ pub struct Scene {
+@@ -1220,8 +1233,13 @@ pub struct Scene {
      pub scroll_offset: f32,
      pub scroll_max: f32,
      pub scroll_clip: Option<Rect>,
@@ -84,21 +87,28 @@ index 3999e45..7013960 100644
 +    pub scroll_fade: Option<Rect>,
      pub scroll_bar: Option<ScrollBar>,
      pub palette: Palette,
++    /// The app's own accent, in place of the theme's, as an app setting can change it. None keeps the theme's.
++    pub accent_override: Option<Colour>,
  }
-@@ -1267,6 +1280,12 @@ impl Scene {
+ 
+ #[derive(Clone, Copy, Debug, PartialEq)]
+@@ -1267,6 +1285,15 @@ impl Scene {
      pub fn background(&self) -> Colour {
          if self.light { self.palette.light.background } else { self.palette.dark.background }
      }
 +
 +    /// The theme's accent, or `fallback` resolved through the palette when it sets none.
 +    pub fn accent(&self, fallback: Colour) -> Colour {
++        if let Some(accent) = self.accent_override {
++            return accent;
++        }
 +        let roles = if self.light { &self.palette.light } else { &self.palette.dark };
 +        roles.accent.unwrap_or_else(|| self.colour(fallback))
 +    }
  }
  
  #[derive(Clone, Debug)]
-@@ -1563,6 +1582,8 @@ const PLAYBACK_CLOCK_JUMP: f32 = 0.25;
+@@ -1563,6 +1590,8 @@ const PLAYBACK_CLOCK_JUMP: f32 = 0.25;
  
  pub struct Engine {
      root: Node,
@@ -107,7 +117,7 @@ index 3999e45..7013960 100644
      marquees: HashMap<NodeIdentity, Marquee>,
      playback_progress: HashMap<NodeIdentity, PlaybackProgress>,
      playback_clocks: HashMap<u64, PlaybackClock>,
-@@ -1676,6 +1697,7 @@ impl Engine {
+@@ -1676,6 +1705,7 @@ impl Engine {
              root: Node::screen(vec![], None, false),
              state: Vec::new(),
              viewport: Viewport::default(),
@@ -115,7 +125,7 @@ index 3999e45..7013960 100644
              keyboard_inset: 0,
              display_cutouts: Vec::new(),
              native_editor_state: None,
-@@ -2033,7 +2055,7 @@ impl Engine {
+@@ -2033,7 +2063,7 @@ impl Engine {
              width,
              height,
              scale: if width > 0 {
@@ -124,7 +134,7 @@ index 3999e45..7013960 100644
              } else {
                  1.0
              },
-@@ -2047,6 +2069,20 @@ impl Engine {
+@@ -2047,6 +2077,20 @@ impl Engine {
          true
      }
  
@@ -145,7 +155,7 @@ index 3999e45..7013960 100644
      pub fn set_viewport_scale(&mut self, scale: f32) -> bool {
          if !scale.is_finite() || scale <= 0.0 || self.viewport.scale == scale {
              return false;
-@@ -2913,7 +2949,7 @@ impl Engine {
+@@ -2913,11 +2957,22 @@ impl Engine {
          let theme = theme.clone();
          self.scene.palette = theme.palette;
          if self.viewport.width > 0 {
@@ -154,7 +164,22 @@ index 3999e45..7013960 100644
          }
          self.theme = theme;
      }
-@@ -3273,6 +3309,7 @@ impl Engine {
+ 
++    /// Sets the app's own accent, in place of the theme's, or None for the theme's. A custom switch that is on, whose
++    /// images have the theme's accent in them, draws as a plain track and knob in this accent instead.
++    pub fn set_accent(&mut self, accent: Option<Colour>) -> bool {
++        if self.scene.accent_override == accent {
++            return false;
++        }
++        self.scene.accent_override = accent;
++        self.relayout_scene();
++        true
++    }
++
+     pub fn set_colour_scheme(&mut self, light: bool) -> bool {
+         if self.scene.light == light {
+             return false;
+@@ -3273,6 +3328,7 @@ impl Engine {
          self.scene.scroll_origin = self.scroll_origin;
          self.scene.scroll_offset = self.scroll_offset;
          self.scene.scroll_clip = None;
@@ -162,7 +187,7 @@ index 3999e45..7013960 100644
          self.scene.scroll_bar = None;
          self.hit_regions.clear();
          self.text_inputs.clear();
-@@ -3541,6 +3578,7 @@ impl Engine {
+@@ -3541,6 +3597,7 @@ impl Engine {
                  max_lines,
                  tabular_numbers,
                  links,
@@ -170,7 +195,7 @@ index 3999e45..7013960 100644
              } => {
                  let size = font_size.unwrap_or(DEFAULT_TEXT_SIZE);
                  let font_size = self.scaled_font(size);
-@@ -3586,8 +3624,8 @@ impl Engine {
+@@ -3586,8 +3643,8 @@ impl Engine {
                      height: self.scaled(BUTTON_HEIGHT).min(available.height),
                  }
              }
@@ -181,7 +206,7 @@ index 3999e45..7013960 100644
                  self.measure(&text, available)
              }
              // The rest of the content gap sits above the title, so titles group with their rows.
-@@ -3597,10 +3635,11 @@ impl Engine {
+@@ -3597,10 +3654,11 @@ impl Engine {
                      .min(available.height),
              },
              NodeKind::Field { label, value, action, .. } if self.theme.field == FieldLayout::Inline => {
@@ -195,7 +220,7 @@ index 3999e45..7013960 100644
                  }
              }
              NodeKind::Field { label, value, .. } => {
-@@ -3674,10 +3713,13 @@ impl Engine {
+@@ -3674,10 +3732,13 @@ impl Engine {
              NodeKind::Toggle { label, subtitle, .. } => {
                  let width = (available.width - self.scaled(self.toggle_control_width() + TOGGLE_LABEL_GAP)).max(0.0);
                  let lines = self.wrap_text(label, self.scaled_font(DEFAULT_TEXT_SIZE), width, None, false);
@@ -210,7 +235,7 @@ index 3999e45..7013960 100644
                          .max(self.scaled(TOGGLE_HEIGHT))
                          .min(available.height),
                  }
-@@ -4114,7 +4156,7 @@ impl Engine {
+@@ -4114,7 +4175,7 @@ impl Engine {
                  align,
                  max_lines,
                  tabular_numbers,
@@ -219,7 +244,7 @@ index 3999e45..7013960 100644
              } => {
                  let size = font_size.unwrap_or(DEFAULT_TEXT_SIZE);
                  let font = self.scaled_font(size);
-@@ -4149,6 +4191,12 @@ impl Engine {
+@@ -4149,6 +4210,12 @@ impl Engine {
                  }
                  let run = self.scene.text.len();
                  self.layout_text_lines(&lines, size, *align, *tabular_numbers, rect);
@@ -232,7 +257,7 @@ index 3999e45..7013960 100644
                  if node.identity.0 != 0 && *max_lines == Some(1) && links.is_empty() && self.scene.text.len() == run + 1 {
                      if let Some(width) = width { self.fixed_text_runs.insert(node.identity, FixedTextRun {
                          run, width: *width, font_size: *font_size, align: *align, tabular_numbers: *tabular_numbers,
-@@ -4261,9 +4309,9 @@ impl Engine {
+@@ -4261,9 +4328,9 @@ impl Engine {
                  );
              }
              NodeKind::Tabs { value, tabs } => self.layout_tabs(value, tabs, rect),
@@ -244,7 +269,7 @@ index 3999e45..7013960 100644
                  self.layout(&text, rect);
                  if self.theme.subtitle_muted == Some(true) {
                      let muted = self.scene.colour(Colour::MUTED);
-@@ -4278,7 +4326,7 @@ impl Engine {
+@@ -4278,7 +4345,7 @@ impl Engine {
                  let top = self.scaled((self.content_gap() - self.section_gap()).max(0.0));
                  let start = self.scene.text.len();
                  self.layout_text(text, Some(size), TextAlign::Start, Some(1), false, Rect { y: rect.y + top, height: (rect.height - top).max(0.0), ..rect });
@@ -253,7 +278,7 @@ index 3999e45..7013960 100644
                  for run in &mut self.scene.text[start..] {
                      run.colour = colour;
                  }
-@@ -4367,7 +4415,7 @@ impl Engine {
+@@ -4367,7 +4434,7 @@ impl Engine {
              header_inset
          };
          let has_left = (back_visible && !back_at_end) || left_action.is_some();
@@ -262,7 +287,7 @@ index 3999e45..7013960 100644
              let header = self.unobstructed_header(Rect { height: header_height, ..rect });
              let back_x = if back_at_end { header.x + header.width - end_inset - header_button_size } else { header.x + header_inset };
              // An end back button takes the end slot; the screen's end action moves in beside it.
-@@ -4378,15 +4426,22 @@ impl Engine {
+@@ -4378,15 +4445,22 @@ impl Engine {
                  else { header.x + header.width - self.scaled(self.content_inset()) };
              let width = (end - x).max(0.0);
              let lines = subtitle.map(|text| self.wrap_text(text, subtitle_font_size, width, None, false));
@@ -288,7 +313,7 @@ index 3999e45..7013960 100644
          };
          if back_visible {
              self.push_hit_region(
-@@ -4419,21 +4474,24 @@ impl Engine {
+@@ -4419,21 +4493,24 @@ impl Engine {
                  scrolling: false,
              });
          }
@@ -325,7 +350,7 @@ index 3999e45..7013960 100644
                  let colour = self.scene.colour(if self.theme.subtitle_muted == Some(false) { Colour::WHITE } else { Colour::MUTED });
                  for (index, line) in lines.iter().enumerate() {
                      self.scene.text.push(TextRun { font: self.theme.body_font,
-@@ -4469,7 +4527,7 @@ impl Engine {
+@@ -4469,7 +4546,7 @@ impl Engine {
                  rect: title_rect,
                  clip: self.clip,
                  font_size,
@@ -334,7 +359,7 @@ index 3999e45..7013960 100644
                  align: TextAlign::Centre,
                  scrolling: self.scrolling,
              });
-@@ -4547,13 +4605,14 @@ impl Engine {
+@@ -4547,13 +4624,14 @@ impl Engine {
          let rect = if let Some(note) = note {
              let inset = self.scaled(self.content_inset());
              let width = (rect.width - inset * 2.0).max(0.0);
@@ -352,7 +377,7 @@ index 3999e45..7013960 100644
              let colour = self.scene.colour(Colour::MUTED);
              for run in &mut self.scene.text[start..] {
                  run.colour = colour;
-@@ -4675,6 +4734,12 @@ impl Engine {
+@@ -4675,6 +4753,12 @@ impl Engine {
              height: content.height,
          };
          self.scene.scroll_clip = Some(scroll_clip);
@@ -365,7 +390,7 @@ index 3999e45..7013960 100644
          let previous_clip = self.clip;
          self.clip = Rect {
              y: scroll_clip.y - scroll_clip.height * SCROLL_OVERSCAN,
-@@ -5090,12 +5155,24 @@ impl Engine {
+@@ -5090,12 +5174,24 @@ impl Engine {
          if pressable { self.scaled(BUTTON_ICON_SIZE * 0.6 + BUTTON_ICON_GAP) } else { 0.0 }
      }
  
@@ -394,7 +419,7 @@ index 3999e45..7013960 100644
      }
  
      /// Label at the start with the value and a chevron at the end. Values that don't fit wrap
-@@ -5108,17 +5185,20 @@ impl Engine {
+@@ -5108,17 +5204,20 @@ impl Engine {
          let first = Rect { y: rect.y + self.scaled(1.0), height: (line_height - self.scaled(1.0)).max(0.0), width: available, ..rect };
          let primary = self.scene.colour(if disabled { Colour::MUTED } else { Colour::WHITE });
          let muted = self.scene.colour(Colour::MUTED);
@@ -423,7 +448,50 @@ index 3999e45..7013960 100644
          }
          for (text, run_rect, colour, align) in runs {
              self.scene.text.push(TextRun { font: self.theme.body_font, text: text.into(), rect: run_rect, clip: self.clip, font_size, colour, align, tabular_numbers: false, scrolling: self.scrolling });
-@@ -5300,7 +5380,8 @@ impl Engine {
+@@ -5245,6 +5344,42 @@ impl Engine {
+         let alpha = if enabled { 1.0 } else { 0.5 };
+         match &self.theme.toggle {
+             ToggleStyle::Line => {}
++            ToggleStyle::Custom { height, .. } if on && self.scene.accent_override.is_some() => {
++                // The images have the theme's accent in them, so an on switch is drawn here: a track in the app's accent and a
++                // knob in the background's colour, at the control's size, in the proportions of a switch.
++                let height = self.scaled(*height).round();
++                let width = rect.width.round();
++                let inset = (height * CUSTOM_SWITCH_INSET).round();
++                let knob = (height * CUSTOM_SWITCH_KNOB).round();
++                if self.switch_masks.as_ref().is_none_or(|(w, h, ..)| (*w, *h) != (width as u32, height as u32)) {
++                    self.switch_masks = Some((
++                        width as u32,
++                        height as u32,
++                        masks::rounded_rect(width as u32, height as u32, height / 2.0),
++                        masks::rounded_rect(knob as u32, knob as u32, knob / 2.0),
++                    ));
++                }
++                let (_, _, track, circle) = self.switch_masks.clone().expect("switch masks are cached above");
++                let y = (rect.y + (rect.height - height) / 2.0).round();
++                let x = rect.x.round();
++                let accent = self.scene.accent(Colour::WHITE);
++                let background = self.scene.background();
++                self.scene.masks.push(MaskRun {
++                    mask: track,
++                    rect: Rect { x, y, width, height },
++                    clip: self.clip,
++                    colour: Colour { alpha: accent.alpha * alpha, ..accent },
++                    scrolling: self.scrolling,
++                });
++                let gap = (height - knob) / 2.0;
++                self.scene.masks.push(MaskRun {
++                    mask: circle,
++                    rect: Rect { x: x + width - inset - knob, y: y + gap, width: knob, height: knob },
++                    clip: self.clip,
++                    colour: Colour { alpha: background.alpha * alpha, ..background },
++                    scrolling: self.scrolling,
++                });
++            }
+             ToggleStyle::Custom { height, images, .. } => {
+                 let height = self.scaled(*height);
+                 self.scene.images.push(ImageRun {
+@@ -5300,7 +5435,8 @@ impl Engine {
          let lines = self.wrap_text(label, label_font_size, label_rect.width, None, false);
          let text_height = self.text_line_height(DEFAULT_TEXT_SIZE) * lines.len() as f32;
          let subtitle_size = self.toggle_subtitle_size();
@@ -433,7 +501,7 @@ index 3999e45..7013960 100644
          let text_y = rect.y + (rect.height - text_height - subtitle_height).max(0.0) / 2.0;
          let start = self.scene.text.len();
          self.layout_text(
-@@ -5313,7 +5394,7 @@ impl Engine {
+@@ -5313,7 +5449,7 @@ impl Engine {
          );
          let subtitle_start = self.scene.text.len();
          if let Some(subtitle) = subtitle {
@@ -442,7 +510,7 @@ index 3999e45..7013960 100644
                  Rect { y: text_y + text_height, height: subtitle_height, ..label_rect });
          }
          for run in &mut self.scene.text[start..] {
-@@ -6052,7 +6133,7 @@ fn invert_colour(colour: Colour) -> Colour {
+@@ -6052,7 +6188,7 @@ fn invert_colour(colour: Colour) -> Colour {
  
  fn tone_colour(tone: Tone) -> Colour {
      match tone {
@@ -737,20 +805,22 @@ index 5093d42..fc7df53 100644
  
  export interface ThemeColours extends Colours {
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
-index aa4bc3b..96ad52e 100644
+index aa4bc3b..234c7ad 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
 +++ b/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
-@@ -17,6 +17,8 @@ internal object InkNative {
+@@ -17,6 +17,10 @@ internal object InkNative {
  
      @JvmStatic
      external fun nativeSetViewportScale(handle: Long, scale: Float)
 +    /** The app's own size setting, times every size the theme gives. */
 +    external fun nativeSetUserScale(handle: Long, scale: Float)
++    /** The app's own accent as ARGB, in place of the theme's; 0 keeps the theme's. */
++    external fun nativeSetAccent(handle: Long, argb: Int)
  
      @JvmStatic
      external fun nativeTakeJavaScriptError(handle: Long): String?
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
-index 46ad203..d0a62a9 100644
+index 46ad203..0688f9a 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
 +++ b/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
 @@ -1,6 +1,7 @@
@@ -761,7 +831,7 @@ index 46ad203..d0a62a9 100644
  import android.graphics.Color
  import android.graphics.Typeface
  import android.graphics.fonts.Font
-@@ -79,6 +80,19 @@ class MainActivity : Activity(), InkJavaScriptHost {
+@@ -79,6 +80,27 @@ class MainActivity : Activity(), InkJavaScriptHost {
          handleBack()
      }
  
@@ -773,6 +843,14 @@ index 46ad203..d0a62a9 100644
 +        inkView.requestFrame()
 +    }
 +
++    /** Draws every screen in the app's own accent (appAccent), as it is now. The app calls it when its setting changes. */
++    internal fun applyAccent() {
++        val handle = engineHandle
++        if (handle == 0L) return
++        InkNative.nativeSetAccent(handle, appAccent(this))
++        inkView.requestFrame()
++    }
++
 +    /** The app may adjust the activity's base context, for example to keep its sizes fixed. */
 +    override fun attachBaseContext(base: Context) {
 +        super.attachBaseContext(appBaseContext(base))
@@ -781,7 +859,7 @@ index 46ad203..d0a62a9 100644
      @Suppress("DEPRECATION")
      override fun onBackPressed() {
          handleBack()
-@@ -136,8 +150,9 @@ class MainActivity : Activity(), InkJavaScriptHost {
+@@ -136,8 +158,10 @@ class MainActivity : Activity(), InkJavaScriptHost {
                  if (textInputAdapter.hasEditor) syncTextInput()
              }
              override fun presented() = textInputAdapter.framePresented()
@@ -789,10 +867,11 @@ index 46ad203..d0a62a9 100644
 +            override fun haptic(view: android.view.View) { if (!appPressHaptic(view)) lightSdkAdapter.performHaptic(view) }
          })
 +        applyUserScale()
++        applyAccent()
          root = FrameLayout(this).apply {
              addView(
                  inkView,
-@@ -422,7 +437,7 @@ class MainActivity : Activity(), InkJavaScriptHost {
+@@ -422,7 +446,7 @@ class MainActivity : Activity(), InkJavaScriptHost {
      }
  
      internal fun performInteractionHaptic() {
@@ -801,19 +880,20 @@ index 46ad203..d0a62a9 100644
      }
  
      private fun executeJavaScriptCall(call: JSONObject) {
-@@ -571,6 +586,7 @@ class MainActivity : Activity(), InkJavaScriptHost {
+@@ -571,6 +595,8 @@ class MainActivity : Activity(), InkJavaScriptHost {
  
      override fun onResume() {
          super.onResume()
 +        applyUserScale()
++        applyAccent()
          overlaysAdapter.resume()
          externalAdapter.onResume()
          connectivityAdapter.start()
 diff --git a/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt b/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
-index c882a51..c252754 100644
+index c882a51..0b92d3b 100644
 --- a/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
 +++ b/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
-@@ -1,3 +1,13 @@
+@@ -1,3 +1,16 @@
  package com.vandam.ink
  
 +import android.content.Context
@@ -826,15 +906,38 @@ index c882a51..c252754 100644
 +/** The app's own size setting, times every size the theme gives. */
 +internal fun appUserScale(context: android.content.Context): Float = 1f
 +
++/** The app's own accent as ARGB, in place of the theme's; 0 keeps the theme's. */
++internal fun appAccent(context: android.content.Context): Int = 0
++
  internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> = emptyMap()
 diff --git a/platform/android/native/src/android.rs b/platform/android/native/src/android.rs
-index 0c6ae7c..9c7dcfd 100644
+index 0c6ae7c..20f27d7 100644
 --- a/platform/android/native/src/android.rs
 +++ b/platform/android/native/src/android.rs
-@@ -761,6 +761,21 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeResize(
+@@ -761,6 +761,41 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeResize(
      engine.resize(dimension(width), dimension(height));
  }
  
++#[unsafe(no_mangle)]
++pub extern "system" fn Java_com_vandam_ink_InkNative_nativeSetAccent(
++    _env: EnvUnowned<'_>,
++    _class: JClass<'_>,
++    handle: jlong,
++    argb: jint,
++) {
++    if let Some(engine) = engine(handle) {
++        let mut engine = engine.lock_arc();
++        // 0, fully transparent, keeps the theme's own accent.
++        let accent = (argb != 0).then(|| {
++            let channel = |shift: u32| ((argb as u32 >> shift) & 0xFF) as f32 / 255.0;
++            ink_core::Colour { red: channel(16), green: channel(8), blue: channel(0), alpha: channel(24) }
++        });
++        if engine.engine.set_accent(accent) {
++            engine.notify_layout_inputs();
++        }
++    }
++}
++
 +#[unsafe(no_mangle)]
 +pub extern "system" fn Java_com_vandam_ink_InkNative_nativeSetUserScale(
 +    _env: EnvUnowned<'_>,
@@ -854,7 +957,7 @@ index 0c6ae7c..9c7dcfd 100644
  pub extern "system" fn Java_com_vandam_ink_InkNative_nativeSetViewportScale(
      _env: EnvUnowned<'_>,
 diff --git a/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt b/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
-index 2b6b330..4f28b2f 100644
+index 2b6b330..9435f8c 100644
 --- a/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
 +++ b/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
 @@ -1,5 +1,6 @@
@@ -864,7 +967,7 @@ index 2b6b330..4f28b2f 100644
  import android.graphics.BitmapFactory
  import android.os.SystemClock
  import android.util.Log
-@@ -8,6 +9,14 @@ import java.security.MessageDigest
+@@ -8,6 +9,17 @@ import java.security.MessageDigest
  import org.json.JSONArray
  import org.json.JSONObject
  
@@ -875,6 +978,9 @@ index 2b6b330..4f28b2f 100644
 +
 +/** The app's own size setting, times every size the theme gives. */
 +internal fun appUserScale(context: android.content.Context): Float = 1f
++
++/** The app's own accent as ARGB, in place of the theme's; 0 keeps the theme's. */
++internal fun appAccent(context: android.content.Context): Int = 0
 +
  internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> =
      mapOf("device-benchmark" to DeviceBenchmark(activity))

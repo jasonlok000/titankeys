@@ -22,6 +22,7 @@ import com.atlas.autocorrect.Shorthand
 import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
+import com.atlas.keyboard.Accent
 import com.atlas.keyboard.AppBuild
 import com.atlas.keyboard.BackDisclosureActivity
 import com.atlas.keyboard.BackService
@@ -53,6 +54,9 @@ internal fun appBaseContext(base: Context): Context = FixedScale.wrap(base)
 
 /** Settings > Size: Ink's screens grow by the same factor as every other window TitanKeys draws (FixedScale). */
 internal fun appUserScale(context: Context): Float = FixedScale.size(context).factor
+
+/** Settings > Orange accents: with it off, Ink's screens take the cream that stands in for orange everywhere (Accent). */
+internal fun appAccent(context: Context): Int = if (Accent.on) 0 else Accent.colour
 
 /**
  * Ink's press haptic is Android's stock click, which TitanKeys never plays (docs/haptics.md, rule 5). Navigation and plain
@@ -622,7 +626,12 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "cursorControl" -> TypingSettings.cursorControl(activity, value as Boolean)
             "swipeTyping" -> TypingSettings.swipeTyping(activity, value as Boolean)
             "touchpadOnlyInFields" -> TypingSettings.touchpadOnlyInFields(activity, value as Boolean)
-            "orangeAccents" -> TypingSettings.orangeAccents(activity, value as Boolean)
+            "orangeAccents" -> {
+                TypingSettings.orangeAccents(activity, value as Boolean)
+                // Everything follows at once: Settings now, and every other window as it next draws.
+                Accent.on = value
+                activity.applyAccent()
+            }
             // Settings grows at once. The keyboard, the guide and the front page take it the next time they show.
             "size" -> {
                 FixedScale.size(activity, FixedScale.Size.of(value as String))

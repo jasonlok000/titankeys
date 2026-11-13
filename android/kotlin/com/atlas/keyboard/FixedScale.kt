@@ -83,14 +83,18 @@ object FixedScale {
      * [sized] false and stay at Normal: their slides are laid out to the dp. In tests/guide's drawings, 1.1 already put some
      * titles over one line even at their smallest, and from 1.2 the front page ran out of room above the keys (2026-11-13).
      */
-    fun wrap(base: Context, sized: Boolean = true): Context =
-        configuration(base, sized)?.let(base::createConfigurationContext) ?: base
+    fun wrap(base: Context, sized: Boolean = true): Context {
+        // Every window starts here, so each starts with Orange accents as it is now.
+        Accent.load(base)
+        return configuration(base, sized)?.let(base::createConfigurationContext) ?: base
+    }
 
     /**
      * For a service's views: a themed context with fixed sizes whose windows and system services are still the service's own.
      * [theme] is the service's theme, so default colours and text styles stay what they were.
      */
     fun themed(base: Context, theme: Int): Context = ContextThemeWrapper(base, theme).apply {
+        Accent.load(base)
         configuration(base)?.let(::applyOverrideConfiguration)
     }
 }

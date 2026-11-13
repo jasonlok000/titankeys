@@ -451,6 +451,8 @@ private fun drawMenuBar(path: String, width: Float, side: Float) {
 }
 
 fun main() {
+    // ACCENT=off draws everything as with Settings > Orange accents off: Accent's cream in place of orange.
+    if (System.getenv("ACCENT") == "off") Accent.on = false
     modifiersAreNoTyping()
     speedStartsWithAWord()
     readableWhenOrange()

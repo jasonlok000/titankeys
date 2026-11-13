@@ -92,7 +92,7 @@ export default function Settings() {
       <Field label="Haptics" href="/settings/haptics">{hapticsLabel(settings)}</Field>
       {/* The Haptics lab is only in TitanKeys Debug. Other builds get null for it, so the row never shows there. */}
       {settings.hapticsLab && <Field label="Haptics lab" href="/settings/haptics-lab" />}
-      <Toggle label="Orange accents" subtitle={accentsNote} value={settings.orangeAccents}
+      <Toggle label="Orange accents" subtitle={accentsNote(settings.orangeAccents)} value={settings.orangeAccents}
         onChange={orangeAccents => save.run({ orangeAccents })} />
       <Field label="Size" href="/settings/size">{sizeLabel(settings)}</Field>
     </Section>

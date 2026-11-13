@@ -62,8 +62,8 @@ private const val SWEEP_ANGLE = -40.5f
 /** The full-bleed background. A new colour comes in behind the cream line, at the angle of the logo. */
 internal class GuideBackdrop(context: Context) : View(context) {
     private val paint = Paint()
-    private var current = GuideColours.ORANGE
-    private var next = GuideColours.ORANGE
+    private var current = Accent.colour
+    private var next = Accent.colour
     private var start = -1L
 
     fun show(colour: Int) {
@@ -568,10 +568,10 @@ private class GuideField(context: Context) : EditText(context) {
         val wide = gapWidth() - unit * 6
         canvas.save()
         canvas.translate(compoundPaddingLeft.toFloat(), extendedPaddingTop.toFloat())
-        targetPaint.color = GuideMotion.faded(GuideColours.ORANGE, GuideActivity.TARGET_WASH)
+        targetPaint.color = GuideMotion.faded(Accent.colour, GuideActivity.TARGET_WASH)
         canvas.drawRoundRect(x + unit * 3, own.getLineTop(line) + unit * 2, x + unit * 3 + wide, own.getLineBottom(line) - unit * 2,
             unit * 3, unit * 3, targetPaint)
-        targetPaint.color = GuideColours.ORANGE
+        targetPaint.color = Accent.colour
         canvas.drawRect(x + unit * 3, own.getLineBottom(line) - unit * 2, x + unit * 3 + wide, own.getLineBottom(line).toFloat(), targetPaint)
         canvas.restore()
     }
@@ -595,7 +595,7 @@ private class GuideField(context: Context) : EditText(context) {
             val x1 = own.getPrimaryHorizontal(from)
             val x2 = if (to >= own.getLineEnd(line)) own.getLineRight(line) else own.getPrimaryHorizontal(to)
             val lineBottom = own.getLineBottom(line).toFloat()
-            targetPaint.color = GuideColours.ORANGE
+            targetPaint.color = Accent.colour
             val thick = underline * 1.5f
             canvas.drawRect(x1, lineBottom - thick, x2, lineBottom, targetPaint)
         }
@@ -617,7 +617,7 @@ private class GuideField(context: Context) : EditText(context) {
         canvas.restore()
         if (accent) {
             val unit = resources.displayMetrics.density
-            accentPaint.color = currentTextColor.let { if (it == GuideColours.INK) GuideColours.INK else GuideColours.ORANGE }
+            accentPaint.color = currentTextColor.let { if (it == GuideColours.INK) GuideColours.INK else Accent.colour }
             canvas.drawRoundRect(scrollX + unit * 6, scrollY + unit * 14, scrollX + unit * 9, scrollY + height - unit * 14, unit * 2, unit * 2,
                 accentPaint)
         }
@@ -705,8 +705,8 @@ private class GuideField(context: Context) : EditText(context) {
  * Practice text teaches the keyboard nothing: the field asks for no personalised learning, like the recorder's field.
  */
 class GuideActivity : Activity() {
-    /** The same sizes at any display size or font size (FixedScale). */
-    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
+    /** The same sizes at any display size or font size (FixedScale), and at Normal whatever Settings > Size says: see [FixedScale.wrap]. */
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base, sized = false))
 
     private val main = Handler(Looper.getMainLooper())
     /**
@@ -1249,7 +1249,7 @@ class GuideActivity : Activity() {
             customSelectionActionModeCallback = noToolbar
             customInsertionActionModeCallback = noToolbar
             setTextCursorDrawable(GradientDrawable().apply {
-                setColor(GuideColours.ORANGE)
+                setColor(Accent.colour)
                 setSize(dp(2), dp(24))
             })
             background = GradientDrawable().apply {
@@ -1630,7 +1630,7 @@ class GuideActivity : Activity() {
     private fun atEnd() = !playground && ::finaleView.isInitialized && finaleView.visibility == View.VISIBLE
 
     /** The field's own colour, for a word in a demo to fade into: the surface, or on orange, orange with a faint ink wash. */
-    private fun fieldFill() = if (tone == GuideTone.Orange) GuideMotion.blend(GuideColours.ORANGE, GuideColours.INK, FIELD_ON_ORANGE) else GuideColours.SURFACE
+    private fun fieldFill() = if (tone == GuideTone.Orange) GuideMotion.blend(Accent.colour, GuideColours.INK, FIELD_ON_ORANGE) else GuideColours.SURFACE
 
     /** The rest of the line, not typed yet: muted (design v2), or on orange, faded ink. */
     private fun ghostGrey() = if (tone == GuideTone.Orange) GuideMotion.faded(GuideColours.INK, FIELD_GHOST_ON_ORANGE) else GuideColours.MUTED
@@ -1722,7 +1722,7 @@ class GuideActivity : Activity() {
         root.post { keys.requestLayout() }
     }
 
-    private fun backgroundOf(tone: GuideTone) = if (tone == GuideTone.Orange) GuideColours.ORANGE else GuideColours.BLACK
+    private fun backgroundOf(tone: GuideTone) = if (tone == GuideTone.Orange) Accent.colour else GuideColours.BLACK
 
     /**
      * The words take the colours of the background (design v2): on black, titles cream and the rest muted, with orange only for
@@ -1739,7 +1739,7 @@ class GuideActivity : Activity() {
         hint.setTextColor(GuideColours.CREAM)
         hint.background = chipBackground()
         offer.setTextColor(GuideColours.INK)
-        offer.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.CREAM, OFFER_RADIUS)
+        offer.background = rounded(if (onInk) Accent.colour else Accent.raised, OFFER_RADIUS)
         again.setTextColor(strong)
         paintEndButtons()
         roastView.setTextColor(strong)
@@ -1799,7 +1799,7 @@ class GuideActivity : Activity() {
             chapter.text = SpannableStringBuilder(PLAYGROUND_TITLE).apply {
                 val split = PLAYGROUND_TITLE.indexOf(NAME_SECOND_HALF)
                 setSpan(ForegroundColorSpan(strong), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                if (split > 0) setSpan(ForegroundColorSpan(if (onInk) GuideColours.ORANGE else GuideColours.INK), split, length,
+                if (split > 0) setSpan(ForegroundColorSpan(if (onInk) Accent.colour else GuideColours.INK), split, length,
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             return
@@ -1835,7 +1835,7 @@ class GuideActivity : Activity() {
         if (passed) {
             next.text = NEXT_LABEL
             next.setTextColor(GuideColours.INK)
-            next.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.CREAM, OFFER_RADIUS)
+            next.background = rounded(if (onInk) Accent.colour else Accent.raised, OFFER_RADIUS)
             next.setPadding(dp(NEXT_PAD_SIDE), 0, dp(NEXT_PAD_SIDE), 0)
         } else {
             next.text = SKIP_LABEL
@@ -1879,7 +1879,7 @@ class GuideActivity : Activity() {
      */
     @Suppress("UNUSED_PARAMETER")
     private fun paintSegments(done: Int, advancing: Boolean = false) {
-        val strong = if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK
+        val strong = if (tone == GuideTone.Ink) Accent.colour else GuideColours.INK
         val passed = passedIds()
         // Each chapter is as wide as its slides, so every tick in the bar is the same size (owner, v5.2).
         for ((index, chapter) in flow.barChapters.withIndex()) {
@@ -1924,7 +1924,7 @@ class GuideActivity : Activity() {
             return
         }
         // The first thing you see: the line crosses the screen and leaves the mark behind.
-        overlay.showMark(GuideColours.ORANGE)
+        overlay.showMark(Accent.colour)
         main.postDelayed({
             overlay.hideMark()
             reveal(flow.step)
@@ -2088,7 +2088,7 @@ class GuideActivity : Activity() {
         if (step.pause) {
             busy = true
             passed = true
-            backdrop.wipeTo(GuideColours.ORANGE)
+            backdrop.wipeTo(Accent.colour)
             overlay.sweep()
             main.postDelayed({ if (passed) applyTone(GuideTone.Orange) }, WIPE_MILLIS)
         }
@@ -2312,7 +2312,7 @@ class GuideActivity : Activity() {
         val quiet = if (tone == GuideTone.Ink) quietColour() else GuideMotion.faded(GuideColours.INK, PASSAGE_AHEAD_ON_ORANGE)
         // The word you're on: orange on black; once the playground warms, orange text wouldn't read, so it's the strong colour,
         // still underlined.
-        val accent = if (tone != GuideTone.Ink) GuideColours.INK else if (quiet == GuideColours.MUTED) GuideColours.ORANGE else strong
+        val accent = if (tone != GuideTone.Ink) GuideColours.INK else if (quiet == GuideColours.MUTED) Accent.colour else strong
         val wrong = GuideMotion.faded(PASSAGE_WRONG, PASSAGE_WRONG_ALPHA)
         val built = SpannableStringBuilder(passage.text)
         fun span(what: Any, range: IntRange) = built.setSpan(what, range.first, range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -2607,26 +2607,18 @@ class GuideActivity : Activity() {
                 t > FIX_LANDS -> add(gap + next)
                 t > SWIPE_LANDS / 2 -> add(gap + GuideScript.slip(next))
             }
-            GuideDemo.DeleteLast -> if (lastEnd > lastStart) {
-                if ((flow.cue as? GuideCue.Flick)?.hold == true) {
-                    // A flick that stays: words keep going, one after another, while the finger is down.
-                    val gone = ((t - .5f) / .4f * HOLD_DEMO_WORDS).toInt().coerceIn(0, HOLD_DEMO_WORDS) + if (t > .5f) 1 else 0
-                    var from = lastEnd
-                    repeat(gone) { from = text.substring(0, from).trimEnd().lastIndexOf(' ') + 1 }
-                    if (from < lastEnd) built.setSpan(BackgroundColorSpan(fieldFill()), from, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                } else {
-                    // One flick, one word, gone at once.
-                    if (t > FLICK_GONE) built.setSpan(BackgroundColorSpan(fieldFill()), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
+            // One flick, one word, gone at once. The held flick's slide has no demo in the field.
+            GuideDemo.DeleteLast -> if (lastEnd > lastStart && t > FLICK_GONE) {
+                built.setSpan(BackgroundColorSpan(fieldFill()), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             GuideDemo.MoveCursor -> if (lastEnd > 0) {
                 val back = ((t - TAPS_SHARE).coerceAtLeast(0f) / (1f - TAPS_SHARE) * (lastEnd - lastStart + 1)).toInt()
                 val at = (lastEnd - back).coerceIn(1, lastEnd)
-                built.setSpan(BackgroundColorSpan(GuideMotion.faded(GuideColours.ORANGE, CARET_ALPHA)), at - 1, at, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                built.setSpan(BackgroundColorSpan(GuideMotion.faded(Accent.colour, CARET_ALPHA)), at - 1, at, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             GuideDemo.SelectLast -> if (lastEnd > lastStart && t > TAPS_SHARE) {
                 val wash = ((t - TAPS_SHARE) / .2f).coerceIn(0f, 1f) * SELECT_ALPHA
-                built.setSpan(BackgroundColorSpan(GuideMotion.faded(GuideColours.ORANGE, wash)), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                built.setSpan(BackgroundColorSpan(GuideMotion.faded(Accent.colour, wash)), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             is GuideDemo.HoldLetter -> {
                 val key = keyFor(demo.key)
@@ -2672,7 +2664,7 @@ class GuideActivity : Activity() {
             }
             GuideDemo.CopyLast -> if (lastEnd > lastStart && t > TAPS_SHARE) {
                 val wash = ((t - TAPS_SHARE) / .2f).coerceIn(0f, 1f) * SELECT_ALPHA
-                built.setSpan(BackgroundColorSpan(GuideMotion.faded(GuideColours.ORANGE, wash)), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                built.setSpan(BackgroundColorSpan(GuideMotion.faded(Accent.colour, wash)), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 if (t > COPY_KEYS && demoKeys == 0) {
                     demoKeys = 1
                     keys.light(Layout.FN)
@@ -2703,7 +2695,7 @@ class GuideActivity : Activity() {
         }
         // A selection is cream (owner, v5.3), except where it is the target: the paste slide says "Paste over the orange words", so
         // its selection is washed in orange, light enough that the cream words still read on it (Master, 2026-11-13).
-        field.highlightColor = GuideMotion.faded(if (step.preselect) GuideColours.ORANGE else GuideColours.CREAM,
+        field.highlightColor = GuideMotion.faded(if (step.preselect) Accent.colour else GuideColours.CREAM,
             if (step.preselect) PASTE_SELECTION_ALPHA else SELECTION_ALPHA)
         if (step.preselect && field.selectionStart == field.selectionEnd) {
             // The words that the text's first sentence points at: "Paste over this word."
@@ -3278,7 +3270,7 @@ class GuideActivity : Activity() {
         shownNumber = shown
         if (showingWpm != wasShowing || showingWpm) paintWpm()
         showComment(WpmComments.step(shown))
-        val warmth = GuideMotion.blend(GuideColours.BLACK, GuideColours.ORANGE, heat * WPM_MOST_ORANGE)
+        val warmth = GuideMotion.blend(GuideColours.BLACK, Accent.colour, heat * WPM_MOST_ORANGE)
         backdrop.show(warmth)
         keys.shade = warmth
         warmTo(warmth)
@@ -3727,7 +3719,7 @@ class GuideActivity : Activity() {
         // The pass beat, all at once: the title becomes the success line with a pop and a check that draws in, the chapter steps
         // forward with a glow, Skip turns into a filled Next with one pulse, and the phone celebrates. Nothing else moves.
         haptics.celebrate()
-        overlay.wash(GuideColours.ORANGE)
+        overlay.wash(Accent.colour)
         morphNext()
         showBigNext(true)
         val step = flow.step
@@ -3782,7 +3774,7 @@ class GuideActivity : Activity() {
      * then its orange check draws itself in.
      */
     private fun showSuccess(text: String) {
-        val check = CheckSpan(GuideColours.ORANGE).apply { progress = if (GuideMotion.enabled) 0f else 1f }
+        val check = CheckSpan(Accent.colour).apply { progress = if (GuideMotion.enabled) 0f else 1f }
         val line = SpannableStringBuilder(text).apply {
             append(" ")
             val start = length
@@ -3856,7 +3848,7 @@ class GuideActivity : Activity() {
             duration = MORPH_MILLIS
             addUpdateListener {
                 val t = it.animatedFraction
-                pill.setColor(GuideMotion.faded(GuideColours.ORANGE, t))
+                pill.setColor(GuideMotion.faded(Accent.colour, t))
                 next.setTextColor(GuideMotion.blend(GuideColours.MUTED, GuideColours.INK, t))
             }
             addListener(object : android.animation.AnimatorListenerAdapter() {
@@ -3996,7 +3988,7 @@ class GuideActivity : Activity() {
         keyboardShown(false)
         column.animate().cancel()
         column.animate().alpha(0f).setDuration(FADE_MILLIS).start()
-        backdrop.wipeTo(GuideColours.ORANGE)
+        backdrop.wipeTo(Accent.colour)
         overlay.sweep(thickness = LINE)
         roastView.setTextColor(GuideColours.INK)
         roastView.text = text
@@ -4130,7 +4122,7 @@ class GuideActivity : Activity() {
                 setTextColor(GuideColours.INK)
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
                 setPadding(dp(16), dp(12), dp(16), dp(12))
-                background = rounded(GuideColours.ORANGE, OFFER_RADIUS)
+                background = rounded(Accent.colour, OFFER_RADIUS)
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(24) })
             addView(quiet(LEAVE_AGAIN) {
                 closeLeavePopup()
@@ -4230,7 +4222,7 @@ class GuideActivity : Activity() {
         val strong = if (onInk) GuideColours.CREAM else GuideColours.INK
         // On the end's orange every text is ink (design v2): the filled buttons are cream there, with ink words.
         boringButton.setTextColor(GuideColours.INK)
-        boringButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.CREAM, OFFER_RADIUS)
+        boringButton.background = rounded(if (onInk) Accent.colour else Accent.raised, OFFER_RADIUS)
         againLink.setTextColor(strong)
         shareLine.setTextColor(if (onInk) GuideColours.MUTED else GuideColours.INK)
         boringLink.setTextColor(if (onInk) GuideColours.MUTED else GuideColours.INK)
@@ -4241,7 +4233,7 @@ class GuideActivity : Activity() {
         }
         if (Contributions.enabled(this)) {
             shareButton.setTextColor(GuideColours.INK)
-            shareButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.CREAM, OFFER_RADIUS)
+            shareButton.background = rounded(if (onInk) Accent.colour else Accent.raised, OFFER_RADIUS)
         } else {
             shareButton.setTextColor(strong)
             shareButton.background = GradientDrawable().apply {
@@ -4399,9 +4391,8 @@ class GuideActivity : Activity() {
         /** When the word menu's demo presses O: late in the hold demo, early once the menu is really open. */
         private const val MENU_O_AT = .75f
         private const val MENU_O_OPEN_AT = .3f
-        /** The flick demo's word goes as the flick snaps; the hold demo deletes up to this many more while the finger stays. */
+        /** The flick demo's word goes as the flick snaps. */
         private const val FLICK_GONE = .25f
-        private const val HOLD_DEMO_WORDS = 4
         /** The chapter one chips that the screen itself shows. */
         /** A rude clip, pasted on the clipboard slide, taken back out. */
         private const val RUDE_CLIP = "That one's rude. Took it back. Find the nice one."

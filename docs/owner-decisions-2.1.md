@@ -205,6 +205,60 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Owner's screenshot of build #5** (2026-11-13, 10:38):
+  - On the front page the real bar covers the drawn keyboard's bottom row. That was the "keyboard cut off by the bar" report. A
+    fixes it so the drawing sits fully above the bar, on the guide's slides too.
+  - The line to type along to stuttered ("your messages your messages") where two lines met. The Orchestrator fixed the shuffle
+    (7049463), and a check covers 200 seeds.
+  - The owner deleted the Sym $%= maps from Key Mapper. (Owner)
+  - The owner tests the menu all at once on the next build. (Owner)
+- **Two resets, named by the owner** (owner, 2026-11-13, 10:55): "Reset most things and reset literally everything. U could literally
+  call it that in the app." (Owner)
+  - "Reset most things" covers the settings only.
+  - "Reset literally everything" is a fresh install: it also wipes words, snippets, shorthand, app lists, the clipboard,
+    recordings, news state and Share swipes (back to off). Already-shared swipes are deleted separately on the Share swipes page.
+    It confirms with "Wipe it all" and plays Gone. (Orchestrator's details)
+- **Reset all settings** (owner, 2026-11-13, 10:50): "there's so many now its easy to mess up." (Owner) The Orchestrator's design
+  (unapproved), queued for F after the global accent:
+  - a row at the bottom of the Settings root;
+  - every switch, stepper and choice goes back to its default; Scroll assistant follows the phone again;
+  - words, snippets, shorthand, app lists, the clipboard, Share swipes consent and recordings stay;
+  - a confirm "Reset all settings?" with Reset and "Keep mine", and a note afterwards in the owner's tone.
+- **Decor review goes through the Orchestrator** (owner, 2026-11-13, 10:45): "for the decor do the mockups and then you review it for
+  me." (Owner) V sends its preview page and screencaps to the Orchestrator, who approves them before anything is built.
+- **Bar words, bottom aligned?** (owner, 10:45). The Orchestrator's answer: at equal sizes they already share one baseline. Only a
+  word that StripFit shrinks sat higher, because it was centred on its own small letters. D will put every word on the full-size
+  words' baseline. (Orchestrator)
+- **The paste slide turns wholesome** (owner, 2026-11-13, 10:40): "I am doing great, lets make this wholesome instead so its not what
+  the user thought... from I am doing great to I hope you are doing great, genuinely." (Owner)
+  - The nice clip "I'm doing great." pastes "I hope you're doing great, genuinely".
+  - The line is "Wanna paste? Sym, then A. I hope you're doing great, genuinely": 62 characters, starting with W for the finale.
+  - The slide says "Didn't see that coming, did you?", and the rain is 🫶. (Orchestrator)
+- **The paste prank** (owner, 2026-11-13, 10:30): "So is my whole personality didn't land. I don't get it honestly." (Owner)
+  - The Orchestrator's replacement: the nice clip "You're doing great." pastes "You're doing great. Kidding", and the slide says
+    "Gotcha. You believed it."
+  - The line is now "What you copy is in Sym, then A. You're doing great. Kidding". It's 60 characters, with no full stop, as
+    the summary needs.
+- **Haptics on every touchscreen press in the app** (owner, 2026-11-13, 10:20): "Add Haptics to every touch screen press on the
+  app. Do a audit. For example, the cross button and the back button." (Owner) This reverses "plain buttons stay quiet". D audits
+  every control and adds a light Press haptic with its own switch, with a check that no clickable is left silent. Controls with
+  a meaning keep theirs.
+- **"and" corrected to "And", and "auto" to "AUTO"** (owner's bug, 10:20). Orchestrator's diagnosis from the code: the word menu
+  saves or favourites the word as shown, so a capital from the sentence start, or caps, gets stored and treated like a name's
+  capitals. W fixes it in the ladder branch: store the dictionary's case, or the natural case, and repair existing entries once.
+- **The ∞ slide's text** (owner, 2026-11-13, 10:05–10:15). (Owner)
+  - The field line: "How long I last in bed with your mother: ∞". It's built as "Seriously, how long I last in bed with your
+    mother: ∞", because the finale's GO TOUCH GRASS NOW needs this line to start with S. (Orchestrator) This reverses the
+    earlier "me @ your mom" skip, at the owner's own request.
+  - The hunt's instruction is "Find the one that never ends.", and it never names ∞.
+  - Done is "Sure you do." The "Love you too" theme is gone. (Orchestrator)
+  - A slow find says its seconds: "That took N seconds. Still longer than you claim to last."
+  - The clipboard digs now fit on one line. "As discussed, Next is not a personality." didn't land, so it's now "Looping in
+    your last brain cell." (Orchestrator)
+- **Finale and end screen** (owner, 10:10): the gathered phrase is too small; the end screen sits too low and its scaling is off;
+  grass should grow along the bottom of the screen, like the owner's reference (layered flat blades, matched to our minimal
+  style); the phrase should hold longer. (Owner) C does it, with grass as ink at three strengths on orange.
+- **Build #5** (b3d80476) was installed at 10:15 with no crash.
 - **Guide notes** (owner, 2026-11-13, 10:00): the decorations barely show; the held-delete slide's text box doesn't need a deleting
   animation; the held-delete zones are badly labelled (ASDF looks like the place to swipe); the pause zone should be full height.
   (Owner)

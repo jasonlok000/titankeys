@@ -23,6 +23,7 @@ fun main() {
     theWaitIsTheSameForEveryWordOfAHold()
     theWaitCountsToWhereTheFingerStopped()
     backAtTheStartTheHoldPauses()
+    thePauseZoneIsFullHeight()
     aFlickNeverEndsInThePauseZone()
     thePaceTopsOutAtTheTopSpeedLine()
     eachZoneTicksOncePerCrossing()
@@ -714,4 +715,34 @@ private fun flickGlowRamp() {
     same(flickGlowStrength(1f), 1f, "and past it")
     // The full line is the hold's top-speed line: a flick started on Backspace, .95 across, reaches it after REPEAT_LONG_KEYS keys.
     isTrue(kotlin.math.abs((FLICK_GLOW_FULL - .05f) * 10 - REPEAT_LONG_KEYS) < .001f, "The full line is the top-speed line")
+}
+
+/**
+ * The pause zone is a column the touchpad's full height (owner, 2026-11-13: "the pause zone should be full height"): back on
+ * Backspace pauses at any row, not only the row the flick ran on, as the guide draws it. Height alone never pauses or leaves it.
+ */
+private fun thePauseZoneIsFullHeight() {
+    for (y in listOf(.05f, .125f, .35f, .625f, .885f)) {
+        val rig = Rig()
+        val started = 1_000L + 60 + holdMillis
+        rig.flick(1_000, SHORT_STOP)
+        rig.runTo(started)
+        same(rig.words.size, 1, "The hold has started")
+        rig.move(at(.9f, y, started + 10))
+        same(rig.hold.paused, true, "Back on Backspace at height $y, the hold pauses")
+        rig.runTo(started + 3_000)
+        same(rig.words.size, 1, "and no words go at height $y")
+        // Up and down the column it stays paused.
+        rig.move(at(.92f, 1f - y, started + 3_010))
+        same(rig.hold.paused, true, "Sliding up or down the column stays paused, from $y")
+        rig.move(at(SHORT_STOP, y, started + 4_000))
+        same(rig.hold.paused, false, "Out to the left again ends the pause, at height $y")
+    }
+    // Moving only up or down from where the flick ended, out of the column, never pauses.
+    val rig = Rig()
+    val started = 1_000L + 60 + holdMillis
+    rig.flick(1_000, SHORT_STOP)
+    rig.runTo(started)
+    rig.move(at(SHORT_STOP, .85f, started + 10))
+    same(rig.hold.paused, false, "Down the keys, still left of the column, the hold goes on")
 }

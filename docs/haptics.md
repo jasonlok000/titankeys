@@ -130,7 +130,7 @@ Shift + Backspace and Alt + Sym play nothing either. Both are presses of physica
 
 ### A long delete's zones
 
-Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 keys out is its top-speed line, past which it goes no faster. The finger going into the pause zone plays one boundary tick, and so does reaching the top-speed line. Each plays once per crossing and nothing more while the finger stays. The lab's experiment "Tick at delete zones" turns them off; it is on to start with.
+Back within 0.8 keys of where the flick started, measured across only, so at any height, a long delete pauses, and 5.5 keys out is its top-speed line, past which it goes no faster. The finger going into the pause zone plays one boundary tick, and so does reaching the top-speed line. Each plays once per crossing and nothing more while the finger stays. The lab's experiment "Tick at delete zones" turns them off; it is on to start with.
 
 ## What plays what
 

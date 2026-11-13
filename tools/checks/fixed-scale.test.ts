@@ -15,12 +15,44 @@ function kotlinFiles(folder: string): string[] {
 const activities = kotlinFiles("android/kotlin").map(path => ({ path, source: read(path) }))
   .filter(({ source }) => /class \w+ : Activity\(\)/.test(source));
 
+// The interactive guide and the front page stay at Normal whatever Settings > Size says: their slides are laid out to the dp
+// (FixedScale.wrap). Every other window grows with it.
+const NORMAL_ONLY = ["GuideActivity.kt"];
+
 test("every activity wraps its base context in FixedScale", () => {
   expect(activities.length).toBeGreaterThanOrEqual(8);
   for (const { path, source } of activities) {
-    expect({ path, wrapped: source.includes("override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))") })
-      .toEqual({ path, wrapped: true });
+    const normal = NORMAL_ONLY.includes(path.split(/[\\/]/).at(-1)!);
+    const wrap = `override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base${normal ? ", sized = false" : ""}))`;
+    expect({ path, wrapped: source.includes(wrap) }).toEqual({ path, wrapped: true });
   }
+});
+
+test("Settings > Size grows Ink's screens at once, the keyboard the next time it shows", () => {
+  const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
+  expect(adapter).toContain("internal fun appUserScale(context: Context): Float = FixedScale.size(context).factor");
+  expect(adapter).toMatch(/"size" -> \{\s*FixedScale\.size\(activity, FixedScale\.Size\.of\(value as String\)\)\s*activity\.applyUserScale\(\)/);
+  const patch = read("tools/ink/titankeys.patch");
+  expect(patch).toContain("+    pub fn set_user_scale(&mut self, scale: f32) -> bool {");
+  expect(patch).toContain("+internal fun appUserScale(context: android.content.Context): Float = 1f");
+  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  expect(ime).toContain("if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())");
+  // The page lists the sizes FixedScale knows, Normal first.
+  const kotlin = read("android/kotlin/com/atlas/keyboard/FixedScale.kt");
+  const ids = [...kotlin.matchAll(/^\s+\w+\("(\w+)", (NORMAL|BIGGER|BIGGEST)\)/gm)].map(match => match[1]);
+  expect(ids).toEqual(["normal", "bigger", "biggest"]);
+  expect(read("app/settings/size.tsx")).toContain('(["normal", "bigger", "biggest"] as const)');
+  expect(read("app/settings/index.tsx")).toContain('<Field label="Size" href="/settings/size">');
+});
+
+test("the bar and exact typing's bar keep Normal's height at every size, and the menu's pill stays inside it", () => {
+  const strip = read("android/kotlin/com/atlas/keyboard/Strip.kt");
+  expect(strip).toContain("private val barHeight = Math.round(FixedScale.normalPx(context, BAR_DP))");
+  expect(strip).not.toContain("dp(56)");
+  expect(strip).toContain("val pillHeight = minOf(dp(MENU_PILL_DP), barHeight * MENU_PILL_DP / BAR_DP.toInt()).toFloat()");
+  expect(strip).toContain("fitClipLines(wordPixels() * clipScale)");
+  expect(read("android/kotlin/com/atlas/keyboard/ExactBar.kt"))
+    .toContain("minimumHeight = Math.round(FixedScale.normalPx(context, HEIGHT)) + navigationInset");
 });
 
 test("every activity in the manifest is one that's checked, or Ink's own", () => {

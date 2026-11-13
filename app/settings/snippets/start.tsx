@@ -1,7 +1,7 @@
 import { Canvas, CanvasIcon, CanvasText, Rectangle, Screen, Stack, useAction, useSnapshot } from "ink";
 import { check } from "ink/icons";
 import { type SnippetStart, snippetStarts, state, update } from "../../../lib/atlas";
-import { CREAM, INK, ORANGE } from "../../../lib/brand";
+import { CREAM, INK, useAccent } from "../../../lib/brand";
 import { KeyCaps } from "../../../lib/keyboard";
 import { playHaptic } from "../../../lib/app-haptics";
 
@@ -36,10 +36,11 @@ export default function SnippetStart() {
 }
 
 function Choice({ start, letter, selected, onPress }: { start: string; letter?: string; selected: boolean; onPress: () => void }) {
+  const accent = useAccent();
   return <Canvas width={WIDTH} height={HEIGHT}>
     <Rectangle x={0} y={0} width={WIDTH} height={HEIGHT} fill={INK} onPress={onPress} />
-    <CanvasText x={0} y={0} width={SYMBOL} height={HEIGHT} size={40} colour={selected ? ORANGE : CREAM} align="start">{start}</CanvasText>
+    <CanvasText x={0} y={0} width={SYMBOL} height={HEIGHT} size={40} colour={selected ? accent : CREAM} align="start">{start}</CanvasText>
     {KeyCaps({ keys: letter ? ["Alt", letter] : ["Sym"], x: SYMBOL, y: 0, height: HEIGHT, keyPrefix: `cap-${start}` })}
-    {selected && <CanvasIcon x={WIDTH - TICK} y={(HEIGHT - TICK) / 2} size={TICK} name={check} colour={ORANGE} />}
+    {selected && <CanvasIcon x={WIDTH - TICK} y={(HEIGHT - TICK) / 2} size={TICK} name={check} colour={accent} />}
   </Canvas>;
 }

@@ -114,6 +114,8 @@ internal fun flickGlowStrength(reach: Float): Float {
  * While a hold deletes, a finger back within this many key widths of where the flick started pauses it: no words go until it
  * slides out again, by [PAUSE_LEAVE_KEYS] more, so a finger resting on the edge does not stutter. A flick travels a whole key at
  * least ([MIN_TRAVEL]), so it never ends inside, and the pause only counts once the hold has started.
+ * Only the way across counts, so the zone is a column the touchpad's full height, at any row, as the guide draws it (owner,
+ * 2026-11-13: "the pause zone should be full height"). Right of where the flick started is inside it too.
  */
 internal const val PAUSE_KEYS = .8f
 private const val PAUSE_LEAVE_KEYS = .1f
@@ -324,8 +326,9 @@ internal class DeleteHold(private val contact: Contact) {
         if (!contact.deleting || !started || !finger.valid) return null
         val from = origin ?: return null
         val keys = keysFrom(from, finger)
+        val back = keysBack(from, finger)
         if (paused) {
-            if (keys <= PAUSE_KEYS + PAUSE_LEAVE_KEYS) return null
+            if (back <= PAUSE_KEYS + PAUSE_LEAVE_KEYS) return null
             // Out again: the next word waits its whole step from here, at the speed for this distance.
             paused = false
             setPace(keys)
@@ -334,7 +337,7 @@ internal class DeleteHold(private val contact: Contact) {
             nextAt = lastAt + repeatMillis
             return nextAt
         }
-        if (keys < PAUSE_KEYS) {
+        if (back < PAUSE_KEYS) {
             paused = true
             atTop = false
             entered = Zone.Pause
@@ -361,6 +364,9 @@ internal class DeleteHold(private val contact: Contact) {
     }
 
     private fun keysFrom(from: Sample, to: Sample) = hypot((to.x - from.x) * 10, (to.y - from.y) * 4)
+
+    /** How many key widths left of [from] the finger is, whatever its height: negative to the right. The pause zone goes by it. */
+    private fun keysBack(from: Sample, to: Sample) = (from.x - to.x) * 10
 
     /**
      * The timer ran. Deletes a word if one is due, through [delete]: the flick itself for the first word, then null for each

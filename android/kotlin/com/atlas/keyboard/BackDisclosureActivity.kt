@@ -94,7 +94,7 @@ class BackDisclosureActivity : Activity() {
         textSize = 17f
         isAllCaps = false
         setTextColor(if (filled) GuideColours.INK else GuideColours.CREAM)
-        if (filled) setBackgroundColor(GuideColours.ORANGE) else setBackgroundColor(0)
+        if (filled) setBackgroundColor(Accent.colour) else setBackgroundColor(0)
         layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             .apply { marginStart = dp(12) }
         setPadding(dp(20), dp(10), dp(20), dp(10))

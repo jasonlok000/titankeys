@@ -210,7 +210,7 @@ class Strip(
             render()
             if (value && GuideMotion.enabled) for ((slot, view) in wordViews.withIndex()) {
                 if (WORD_ORDER[slot] == 0) continue
-                view.translationY = dp(56).toFloat()
+                view.translationY = barHeight.toFloat()
                 view.alpha = 0f
                 view.animate().translationY(0f).alpha(1f).setDuration(SIDES_MILLIS).start()
             }
@@ -329,14 +329,16 @@ class Strip(
     private val slotIcons = arrayOfNulls<MenuKeys.Button>(2)
     private val slotFrom = arrayOfNulls<MenuKeys.Button>(2)
     private val slotChanged = LongArray(2)
+    /** The bar's height: Normal's at every Settings > Size, while the words, chips, marks and menu in it grow (FixedScale). */
+    private val barHeight = Math.round(FixedScale.normalPx(context, BAR_DP))
 
     init {
         // The modifiers come first, so that their chips sit at the start of the words.
-        addView(modifierRow, LayoutParams(0, dp(56), 1f))
-        for (view in wordViews) addView(view, LayoutParams(0, dp(56), 1f))
-        addView(noticeRow, LayoutParams(0, dp(56), 1f))
-        addView(clipView, LayoutParams(0, dp(56), 1f))
-        addView(selectedView, LayoutParams(0, dp(56), 1f))
+        addView(modifierRow, LayoutParams(0, barHeight, 1f))
+        for (view in wordViews) addView(view, LayoutParams(0, barHeight, 1f))
+        addView(noticeRow, LayoutParams(0, barHeight, 1f))
+        addView(clipView, LayoutParams(0, barHeight, 1f))
+        addView(selectedView, LayoutParams(0, barHeight, 1f))
         // Screen readers go left to right, so point them at the best word first.
         val ranked = wordViews.withIndex().sortedBy { WORD_ORDER[it.index] }.map { it.value }
         for (view in ranked) view.id = generateViewId()
@@ -467,7 +469,6 @@ class Strip(
         val clipFit = if (clipRoom > 0 && preview.isNotEmpty()) StripFit.fit(listOf(preview), clipRoom, 0f, ::measureWord).single() else null
         val clipScale = clipFit?.scale ?: 1f
         clipText.text = if (clipFit == null) preview else ClipboardHistory.ends(preview, clipRoom) { measureWord(it) * clipScale }
-        clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * clipScale)
         clipText.setTextColor(look.ink)
         // The icon is as tall as the words' letters, so it sits on their line.
         clipText.setCompoundDrawablesRelative(context.getDrawable(R.drawable.clipboard)?.mutate()?.apply {
@@ -476,6 +477,7 @@ class Strip(
         }, null, null, null)
         clipHintText.visibility = if (offer != null && clipHint) VISIBLE else GONE
         clipHintText.setTextColor(look.muted)
+        fitClipLines(wordPixels() * clipScale)
         selectedView.visibility = if (chosen != null) VISIBLE else GONE
         // The selected word follows the words' rules too: it shrinks to fit, then loses its end.
         val selectedFit = if (room > 0 && !chosen.isNullOrEmpty()) StripFit.fit(listOf(chosen), room, wordRoomPadding(), ::measureWord).single() else null
@@ -524,6 +526,24 @@ class Strip(
             invalidate()
         }
     /** The height of Shift's chip: its text size and padding. The arrow's place is that tall. */
+    /**
+     * The clip and its hint stack in the bar, which keeps Normal's height at every Settings > Size. At Biggest the two lines would
+     * be taller than it, so both shrink alike, just enough to fit. At Normal and Bigger they fit as they are.
+     */
+    private fun fitClipLines(clipPixels: Float) {
+        val hintPixels = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, SMALLEST_TEXT, resources.displayMetrics)
+        clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, clipPixels)
+        clipHintText.setTextSize(TypedValue.COMPLEX_UNIT_PX, hintPixels)
+        if (clipHintText.visibility != VISIBLE) return
+        // The clip's line keeps Android's font padding and the hint's doesn't, as their views lay them out.
+        val clipLine = clipText.paint.fontMetrics.let { it.bottom - it.top }
+        val hintLine = clipHintText.paint.fontMetrics.let { it.descent - it.ascent }
+        val fit = minOf(1f, barHeight / (clipLine + hintLine))
+        if (fit >= 1f) return
+        clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, clipPixels * fit)
+        clipHintText.setTextSize(TypedValue.COMPLEX_UNIT_PX, hintPixels * fit)
+    }
+
     private fun capitalHeight(): Float {
         capitalText.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CHIP_SIZE, resources.displayMetrics)
         return capitalText.descent() - capitalText.ascent() + 2 * dp(3)
@@ -541,7 +561,7 @@ class Strip(
         val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
         val width = capitalWidth()
         val left = side.toFloat()
-        val top = (dp(56) - height) / 2
+        val top = (barHeight - height) / 2
         capitalBox.set(left, top, left + width, top + height)
         // The left word, as drawn: if its text would reach under the chip, the chip goes small into the corner.
         val word = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.minByOrNull { it.left }
@@ -609,7 +629,7 @@ class Strip(
         if (!gesture.busy) return
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
         val more = gesture.advance(SystemClock.uptimeMillis(), scale)
-        if (gesture.busy) drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), dp(56), look)
+        if (gesture.busy) drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), barHeight, look)
         if (more) postInvalidateOnAnimation()
     }
 
@@ -784,7 +804,8 @@ class Strip(
         if (noticeRow.visibility != VISIBLE || width == 0) return
         val now = SystemClock.uptimeMillis()
         val glide = if (GuideMotion.enabled) MENU_GLIDE_MILLIS else 0L
-        val height = dp(56).toFloat()
+        val height = barHeight.toFloat()
+        // The menu's dp grow with Settings > Size, as the words do; the bar keeps Normal's height.
         val density = resources.displayMetrics.density
         // The real keys' left edge, as calibrated: the word keeps over the keys, as the buttons do.
         val keySide = MenuKeys.slot(width.toFloat(), 0).first
@@ -805,7 +826,8 @@ class Strip(
         // Ink's font, in its own medium weight, as Ink's headings use it: no faked bold.
         pillText.typeface = boldTypeface
         pillText.textSize = wordPixels() * MENU_PILL_TEXT
-        val pillHeight = dp(MENU_PILL_DP).toFloat()
+        // The pill grows with Settings > Size, but never past its share of the bar, which doesn't.
+        val pillHeight = minOf(dp(MENU_PILL_DP), barHeight * MENU_PILL_DP / BAR_DP.toInt()).toFloat()
         var pill: Pair<Float, Float>? = null
         val action = pillAction.takeIf { pillShown >= 0 }
         if (action != null) {
@@ -1053,7 +1075,7 @@ class Strip(
     private var idleFrameAt = 0L
     private val idleFrame = Runnable { invalidate() }
     /** How many of the bar's pixels make one of the games' units: they are made for a bar 88 high. */
-    private val idleScale get() = dp(56) / Idle.H
+    private val idleScale get() = barHeight.toFloat() / Idle.H
     /** How far the game keeps from each side, in pixels, so that the screen's rounded corners cut nothing, down to its floor. */
     private var idleEdge = 0
     /** A game ended by itself, and the bar shows its words again: the next idle wait starts. */
@@ -1336,12 +1358,14 @@ class Strip(
         private const val CLIP_PREVIEW_LENGTH = 200
         /** The clipboard icon beside a clip, as a part of the text size. */
         private const val CLIP_ICON_SCALE = 1.1f
-        /** Save, Forget and Back. */
+        /** I's, O's and Back. */
         private const val MAX_BUTTONS = 3
         private const val CHIP_SIZE = 14f
         /** The gap after each modifier chip, in dp. */
         private const val CHIP_GAP = 6
         private const val CONTENT_ABOVE = 16
+        /** The bar's height in dp at Normal, which it keeps at every Settings > Size. */
+        const val BAR_DP = 56f
         /** No text on the bar or the panels is smaller than this, in sp: real text at TitanKeys' fixed scale (owner, 2026-11-13). */
         const val SMALLEST_TEXT = 13f
         private const val HINT_SMALLEST = SMALLEST_TEXT

@@ -398,7 +398,7 @@ internal class Passage(lead: String, loop: String = lead) {
  * "nothing off limits"), and long enough to type for about an hour: every line comes once, in a new order, before any comes again.
  */
 internal object PlaygroundText {
-    private val SENTENCES = listOf(
+    internal val SENTENCES = listOf(
         "your thumbs have more game than you do and even they get left on read",
         "you bought a phone with a real keyboard in this economy and you call other people weird",
         "touchscreen people tap glass like pigeons and think they are typing",
@@ -590,10 +590,29 @@ internal object PlaygroundText {
 
     /** At least [count] words: every line once in a random order, and then again in a new order, so nothing repeats early. */
     fun make(random: kotlin.random.Random, count: Int = WORDS): String {
-        val words = ArrayList<String>()
-        while (words.size < count) for (line in SENTENCES.shuffled(random)) words += line.split(' ')
-        return words.joinToString(" ")
+        val lines = ArrayList<String>()
+        var words = 0
+        while (words < count) {
+            // In one paragraph, a line that starts with the word the line before ends with reads as a stutter ("a lot of your
+            // messages your messages are long", owner, 2026-11-13): each next line is the first in the shuffled round that doesn't.
+            val round = SENTENCES.shuffled(random).toMutableList()
+            while (round.isNotEmpty()) {
+                val before = lines.lastOrNull()
+                val at = round.indexOfFirst { before == null || !stutters(before, it) }
+                val line = round.removeAt(at.coerceAtLeast(0))
+                words += line.split(' ').size
+                // Only a round's last line can be left with no clean place at the end: it goes in earlier, where it fits.
+                val earlier = if (at >= 0) -1 else (lines.size - 1 downTo 1).firstOrNull {
+                    !stutters(lines[it - 1], line) && !stutters(line, lines[it])
+                } ?: -1
+                if (earlier > 0) lines.add(earlier, line) else lines += line
+            }
+        }
+        return lines.joinToString(" ")
     }
+
+    /** Whether [next] starts with the word that [before] ends with. */
+    fun stutters(before: String, next: String) = before.substringAfterLast(' ') == next.substringBefore(' ')
 }
 
 /** One push in a demonstration: the keys that light, and the text that the word has become after it. */
@@ -904,7 +923,7 @@ internal const val SYM_LINE = "Sym has the rest, terms & conditions apply"
 internal const val WEIRD = "∞"
 // The owner's joke (2026-11-13): how long you last in bed, and the answer is the one that never ends. The line sets it up, so the
 // gap after "in bed:" says what goes there without naming it. It starts with S for the finale's GO TOUCH GRASS NOW.
-internal const val GROUPS_LINE = "Seriously, how long I last in bed: ∞"
+internal const val GROUPS_LINE = "Seriously, how long I last in bed with your mother: ∞"
 internal const val CLOWN = "🤡"
 internal const val CLOWN_LINE = "Need emoji? Press Sym twice. Signed, 🤡"
 
@@ -963,8 +982,10 @@ internal const val PASTE_TEXT = "can't type a thing myself"
 internal val CLIP_FIELD_KEYS = listOf("R", "I", "F", "K", "C")
 
 /** Slide 15's line: the clip that's nice to you pastes the end of it. */
-internal const val CLIP_LEAD = "What you copy is in Sym, then A. "
-internal const val PRANK_PASTE = "So is my whole personality"
+internal const val CLIP_LEAD = "Wanna paste? Sym, then A. "
+// After a thread of digs you expect one more roast, and the nice clip pastes something kind, and means it (owner, 2026-11-13: "make
+// this wholesome instead so its not what the user thought").
+internal const val PRANK_PASTE = "I hope you're doing great, genuinely"
 internal const val CLIP_LINE = CLIP_LEAD + PRANK_PASTE
 
 /** The clipboard lesson's clips, newest first: a thread of digs, and one nice one, which isn't what it pastes. */
@@ -974,7 +995,7 @@ internal val GUIDE_CLIPS = listOf(
     "Circling back: still can't read?",
     "Reminder: read the manual.",
     "Looping in your last brain cell.",
-    "Honestly, you're doing great.",
+    "I'm doing great.",
 )
 internal val PRANK_CLIP = GUIDE_CLIPS.last()
 /** Every clip that a guide ever put in the user's clipboard, this one's and older ones', to clear from it. */
@@ -984,7 +1005,7 @@ internal val OLD_GUIDE_CLIPS = GUIDE_CLIPS.toSet() + PASTE_TEXT + setOf(
     "Per my last four messages, please stop.", "Honestly, you're doing great.",
     "Per my last message, the grey words were the instructions.", "Circling back, since reading isn't your thing.",
     "Friendly reminder: nobody believes you read the manual.", "As discussed, Next is not a personality.",
-    "Next is not a personality.",
+    "Next is not a personality.", "You're doing great.",
 )
 
 /** The words that the steer slide aims at are at least this many words from the cursor's column. */
@@ -1341,7 +1362,8 @@ internal val GUIDE_STEPS = listOf(
         cue = GuideCue.Flick(hold = true),
         needs = GuideNeed.SwipeTyping,
         lessons = setOf(GuideLesson.Flick, GuideLesson.DeleteHold),
-        demo = GuideDemo.DeleteLast,
+        // No demo in the field: its text stays still, and only the keyboard's drawing acts the held flick out (owner, 2026-11-13:
+        // "the text box doesn't need animation deleting").
     ),
     // STEERING: the slide's line again and again, with the cursor in the middle; the cursor gestures only.
     GuideStep(
@@ -1702,15 +1724,15 @@ internal val GUIDE_STEPS = listOf(
                 }
             },
         ),
-        // The nice clip pastes the prank, and the slide owns up.
-        done = "Gotcha. Swapped it on purpose.",
+        // The nice clip pastes something kind instead of the roast you expected.
+        done = "Didn't see that coming, did you?",
         praise = "It keeps what you copy. Sym, then A, any time.",
         line = CLIP_LINE,
         seed = CLIP_LEAD.trimEnd(),
         usesPanel = true,
         setup = Panel.Closed,
         sandboxClips = GUIDE_CLIPS,
-        rain = "🤪",
+        rain = "🫶",
         lessons = setOf(GuideLesson.Sym),
         demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""),
     ),

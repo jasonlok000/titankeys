@@ -2,7 +2,7 @@
 
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
-[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 21:45.
+[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 22:00.
 
 ## On the phone now (build 3968470a, test-2.1h at f68044d)
 
@@ -42,39 +42,50 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 
 ## In progress
 
-- Nothing building. The workers are idle until the owner's review.
+- Build of a7cb9b9: the guide crash fix at font size 2.0, brought in ahead of the batch (owner: "bring the crash fix in now"). Install when it passes.
+- D: Save gets a particle burst like Favourite's heart burst, with orange bookmark shapes on both sides (owner: Favourite "done perfectly", Save "not done nicely"). Only Save changes.
+- Orchestrator: the layout sample page, with the real guide and playground text and elements, at 60% keys, for the owner before the batch is built (owner: "show me the layout first").
+- Orchestrator: about 20 sample lines of playground text in the owner's tone, lowercase with no punctuation and nothing off limits. The full text, enough for 15+ minutes without a repeat, follows once the tone is approved.
 
 ## Waiting on the owner
 
 - **Review of the current build**, then one batch for the whole app (owner's call):
   - Guide and playground keyboard: same width, 60% height, no gap between keys, 10.5 px between rows.
-  - The guide crash with the font size at 2.0: the fix is ready on claude/guide-font-crash.
   - Scaling: keep every size the same whatever the display size (DPI) or font size setting (owner, 21:45). The owner says the
     scaling in the current build "is better" (21:40), but the rule covers every setting.
   - Playground words unreadable when the screen is fully orange.
   - Guide: the text field must always show **two lines**. It's buggy now: the code asks for 3 and drops to 2 when tight.
-  - Playground text: rewrite it in the owner's tone ("offensive fun casual") and make it **long enough to type for a long time
-    without looping**. Today it's 10 short, tame sentences that repeat. A sample goes to the owner for tone before the full text.
-  - Question: should the Sym panel's rows also take the keys' shape? (asked, no answer yet)
-  - The owner can't open the guide right now (21:40). The phone's font size is 2.0, which hits the guide crash. The fix is
-    ready; ask whether to bring it in ahead of the batch, so the guide can be reviewed.
+  - Playground text: rewrite it in the owner's tone ("offensive fun casual"), lowercase with no punctuation, nothing off limits,
+    and **long enough to type for a long time without looping**. Today it's 10 short, tame sentences that repeat.
+  - The batch waits for the owner to approve the layout sample page.
 - Feel and judge on the phone:
   - Round 7 haptics and the quiet swell.
   - Exact-typing bar texture against confirm (lab switch).
-  - Word menu v3.1.
-- Key Mapper: import key_maps_titankeys_v2.zip (in Downloads) or switch the combos off by hand.
-- Launch decisions: whether 2.1 goes out as a public beta, and the language levels (see the decisions log, Open).
+  - Word menu v3.1: Favourite approved ("done perfectly"). Save is being redone by D.
+- Key Mapper: v2 is imported. Importing can't delete key maps, so the owner deletes the three switched-off Sym + S, P and E maps by hand
+  (owner: "the $%= shd be removed"). key_maps_titankeys_v3.zip in Downloads is the clean backup without them.
+- Launch: whether to launch at 3.0 with languages instead of 2.1 (the owner is leaning that way; see the decisions log).
+
+## Scroll assistant (traced 21:53)
+
+- In every app without a text field, TitanKeys read its own setting as touchpadOnlyInFields=false, which means **Scroll
+  assistant on**: the keys scroll apps outside text fields. So it never wanted the block, and hid as designed.
+- Every exported typing log since 11-09 has the same value, false. So the setting has been "on" all along, and no code changed
+  that. The phone's own props are the same as when first read: scroll_assistant=1, touchpad_forcescroll=yes.
+- **Owner to check:** Settings > Touchpad > Scroll assistant.
+  - If it shows on, turn it off and the block should come back.
+  - If it shows off while TitanKeys reads on, that's a display or save bug for A.
+- Also on the phone, with Accessibility on: TitanHold (com.jasonlok.titanhold HoldService) and DisplayExtend's touchpad service.
+  Either could affect scrolling.
 
 ## Waiting on the phone being free (the Orchestrator does these)
 
 - Measure the Sym panel's columns against the calibration lines from a screenshot, from Q to Sym.
 - Sym cycling: record the bar dropping to zero height for a moment, frame by frame, and find the cause.
-- Scroll assistant: install the hold-trace build (claude/hold-trace, ~/tk-install/hold-trace), capture the hold decisions while
-  switching apps, then bisect the old builds. The owner's hands are needed only to check key scrolling on each one.
 
 ## Blocked
 
-- Scroll assistant fix: blocked on the trace and the bisect above. A fixes it once the last good and first bad builds are known.
+- Scroll assistant: the trace ran at 21:53. The finding is in Waiting on the owner. No bisect until the owner has checked the switch.
 - Google Play: FUTO's licence must be settled first. Then 12 testers for 14 days in closed testing.
 
 ## Small things

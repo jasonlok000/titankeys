@@ -79,6 +79,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - Unsave: the ribbon tears.
   - Opening the menu on a saved word plays a soft echo.
   (Owner, 2026-11-12)
+- Favourite's heart burst is "done perfectly". **Save becomes a particle effect like it**, with orange bookmark shapes on both sides, replacing the ribbon drop. (Owner, 2026-11-12)
 - A quiet ambient status: a favourite has a faint heart drifting up now and then, and a saved word has a faint resting ribbon. It pauses while hovering. (Owner, 2026-11-12)
 
 ## Guide
@@ -117,6 +118,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - **Shift + Backspace** deletes a word.
   - **Alt + Sym** switches to the next keyboard. The owner suggested Alt + Sym rather than Shift + Sym.
   - Both count only while the modifier is held down. A tapped or automatic Shift doesn't count, so Backspace at the start of a sentence stays a plain Backspace. Switching goes to the next keyboard, as Key Mapper's switch did, not to the picker. (Orchestrator)
+- Key Mapper: the owner imported v2. **Sym + S, P and E ($ % =) are removed from Key Mapper, and TitanKeys doesn't get its own version** (owner: "no need to implement sth like that in titankeys"). key_maps_titankeys_v3.zip is the backup without them; importing can't delete, so the owner removes them by hand. (Owner, 2026-11-12)
 - Key Mapper: key_maps_titankeys_v2.zip removes Shift + Sym and Shift + Backspace, which TitanKeys now does itself. Sym + S, P and E and Space + Alt stay switched off, because they double Sym or hold back Space. (Owner asked, 2026-11-12)
 - Found: a Key Mapper combo that starts with Shift or Sym makes Key Mapper send that key a second time whenever the combo doesn't complete. TitanKeys then reads one push of Shift as two, and one push of Sym as two. A combo that starts with Space holds back every Space press until it's let go. The owner's working copy of the export turns those combos off. (Orchestrator, from Key Mapper's source, 2026-11-12)
 
@@ -135,6 +137,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - No: a letter-shortcuts row. (Owner, 2026-11-12)
 - Rename "Scroll assistant outside text fields" to "Scroll assistant". Inside text fields TitanKeys' own touchpad takes over, so the switch really turns app scrolling on or off. (Owner, 2026-11-12)
 - Bug: with that switch off, the keys still scroll apps outside text fields: first Reddit, then many apps ("it's scrolling many diff things now"). The block fails when the keyboard isn't in focus. The owner rejected the quick theories (Back service off, Atlas' service) and asked to find the last build that worked and compare the code. Status: A's hold-trace build is ready, and the bisect list of old builds is ready, but neither has been run yet. (Owner, 2026-11-12)
+- Trace result (21:53): TitanKeys reads its Scroll assistant setting as **on** (touchpadOnlyInFields=false) in every app, and every exported typing log since 11-09 says the same. So it never wanted the block, by design, and no code change explains it. The owner checks what the switch shows. If it shows off, it's a display or save bug. (Orchestrator)
 - No "Set it up for me" through Accessibility: Google Play's policy forbids it. (Owner's rule "only if it passes Google Play"; the Orchestrator checked the policy.)
 
 - No: password and 2FA codes on the bar (autofill chips). No: back up everything in one file. No: changing the defaults to match stock and BlackBerry (Caps Lock on double Shift, hold for a capital, spelling from the phone's language). (Owner, 2026-11-12)
@@ -147,21 +150,28 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - Calibrated by the owner on a quick page served to the phone (2026-11-12): a key and a gap every 107.5 px on the 1076 px screen, centred. This is now the default for everyone, and values stored against the old default are dropped.
 - The real keys, 1:1 (owner, tuned on the quick page, 2026-11-12): **square**, with **no gap between keys** in a row and **10.5 px between rows**. At 1:1 the four rows are about 461 px tall, nearly half the screen.
 - The overlays must line up exactly with the calibration, at least from Q (top left) to Sym (bottom right). (Owner, 2026-11-12)
+- The Sym panel keeps its own rows. Only its columns follow the calibration. (Owner, 2026-11-12)
 - Key calibration is for the overlays tied to keys: the Sym and emoji panels, the clipboard, the word menu buttons, and the guide's hints and trail. It has two sliders, Q's left edge and P's right edge, over the three letter rows. The defaults come from the phone's real geometry, and the owner fine-tunes it on the phone. (Owner, 2026-11-12)
 ### Open
 - The guide's keyboard: **same width, 60% of the real height**, with the bars below counted in the overall height. Same shape but smaller was rejected. (Owner, 2026-11-12)
 - Waiting for one batch after the owner reviews the current build (owner: "let's do the whole app thing in one batch after my review"):
   - the guide keyboard at 60%, with no gap between keys and 10.5 px between rows;
-  - the guide crash with the phone's font size at its largest (2.0): the fix is ready on claude/guide-font-crash;
+  - the guide crash with the phone's font size at its largest (2.0): brought in ahead of the batch, merged at a7cb9b9 (owner: "bring the crash fix in now");
   - the app's scaling at large font sizes ("pretty awful");
   - on the playground, when the screen is fully orange, the words can't be read.
   - the guide's text field always shows two lines (owner, 2026-11-12: "it shd always show two lines, just bugged rn");
-  - the playground's text is rewritten in the owner's offensive, fun, casual tone, and long enough to type for a long time without looping (owner, 2026-11-12).
+  - the playground's text is rewritten in the owner's offensive, fun, casual tone, **lowercase with no punctuation, nothing off limits**, and long enough to type for a long time without looping. A sample of about 20 lines comes first, for tone (owner, 2026-11-12).
+  - Before the batch is built, the owner sees the layout on a sample page with the real text and real elements (owner: "show me the layout first").
 - Built so far: the calibration as the default, and in-app calibration centred. This is look-only; the touchpad code is unchanged.
 
 ## Launch
 
+### Decided
+- The stability gate is **at least 3 days**, plus time to make the videos. (Owner, 2026-11-12)
+- **Languages need a repeatable framework**, so every language is added the same way. **Cantonese gets full support first**, because the owner can tune it, and the other languages use the same framework. (Owner, 2026-11-12)
+
 ### Open
+- The owner is thinking of making the public launch **3.0, with languages**, rather than 2.1. Not settled.
 - Launch 2.1 as a public beta? The Orchestrator recommends yes, after a stability gate: about 3 days of daily driving with no crash or broken basics, a clean fresh install, a known-issues list and the News feed working. Testers on GitHub are unlimited. Play closed testing can use a Google Group, but new personal accounts need 12 testers for 14 days. The owner hasn't decided.
 - Languages: the Orchestrator suggested two levels. Basic would be open to anyone, with autocorrect off by default and the label "help us make it great". Full would come only after a native speaker has worked on it, which is the owner's rule. The owner hasn't decided. 3.0 is languages (#56).
 

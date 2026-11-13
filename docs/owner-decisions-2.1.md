@@ -205,6 +205,23 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Ladder review, round 3** (owner, 2026-11-13, 09:20); the owner rated v3 7/10 for animation quality and execution. (Owner)
+  - The dotted outline isn't readable enough.
+  - Hovering a button previews the word as it will be, in grey. Pressing makes it real: for Block, the strike draws in orange,
+    left to right.
+  - Effects drift further up above the bar.
+  - Unsave's page is one full page with its torn edge on the left.
+  - Block's ring and the strike don't go together: alternatives wanted. Unblock reverses the stroke's direction.
+
+  Orchestrator's proposal, unapproved: Block is the strike itself, drawn like a pen, with the letters greying as it passes, and
+  Material's strikethrough as its icon. C builds v4 (`X:/Atlas/.dev/mockups/ladder-v4.html`) to the 10/10 list: springs, one
+  motion language, anticipation and follow-through, interruption, haptic beats, 60 fps, reduced motion and quiet ambient marks.
+- **Orange accents is global, with a roast** (owner, 09:20): "add a roast when they turn it off, to say that they're a boring
+  person, and it should work for the app as well. literally everything globally." (Owner)
+  - This replaces F's keyboard-only call.
+  - Off, orange becomes cream everywhere, and cream fills sit behind ink text.
+  - The note when off, the Orchestrator's line: "Orange is off everywhere. Boring, just like you."
+  - F does it after merging Size with D's bar change.
 - **Ladder review, round 2** (owner, 2026-11-13, 09:05). (Owner)
   - Not saved shows as dotted outline letters.
   - The book effect is OK, but the book icon looked bad, and mixing a ribbon icon with a book effect is inconsistent: one metaphor.

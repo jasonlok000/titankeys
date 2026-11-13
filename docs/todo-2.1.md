@@ -175,6 +175,8 @@ all of them are unapproved.
   - **D** (claude/bar-even): bar words at one size, 20 dp, the middle bold, a shared baseline, truly centred.
   - F's brief corrected: Size keeps the bar's height and grows only what's inside.
   - **Orchestrator, done:** the boring guide's new topic, "Space gestures: tap a bit higher".
+  - **W, a new dedicated worker** (2.1 W: word menu ladder and hover fix, local_7148acab): Forget only on really learned words, not
+    candidates; hover kept after a press, as in the quick settings; a check for the whole ladder.
   - Then: build #5, install, and phone checks. The release notes get a line for Size and one for the playground haptics.
 - **Asked the owner (07:58): haptics for the playground's effects?** Today they're silent. The Orchestrator's proposal is five big moments
   and nothing per step:

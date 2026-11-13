@@ -205,6 +205,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Word menu, still wrong on build #4** (owner, 2026-11-13, 08:20):
+  - Forget showed on a gibberish word typed once. Cause: D's menuFor counts any word "still gathering evidence" as learned.
+    The owner's meaning is a word TitanKeys knows, i.e. would suggest.
+  - The hover still resets after a press ("said multiple times"). D reported it done, but nobody checked it with a hand on the
+    touchpad. The fix should follow the quick settings' hover fix.
+  - The owner's call: "If it's worker then use a new worker dedicated to this." (Owner) W was started for it, with checks for the
+    whole ladder.
 - **The boring guide notes that Space gestures land best a bit higher** (owner, 2026-11-13, 08:15): "its better to type above space
   bar because of the touch zone." (Owner) It's a new topic, "Space gestures: tap a bit higher", at the top of Cursor and picking
   text. It says to tap the top half of Space or the keys right above it, from C to N, because the touch zone stops around the middle

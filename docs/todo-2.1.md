@@ -206,6 +206,16 @@ all of them are unapproved.
   - Owner's report: on the home screen the keyboard is cut off by the bar. It isn't on screen now, so the owner's screenshot is
     needed.
   - F's Size setting is pushed (4af0690, verify passed). F kept the guide and front page at Normal. Review before merging.
+  - **Ladder mockup v4** (C): `X:/Atlas/.dev/mockups/ladder-v4.html`, opened on the phone at 09:40.
+    - Not saved: a 42% fill under denser dots.
+    - Grey hover previews for every button.
+    - A 200 px stage above the bar.
+    - Unsave tears the right page down the spine.
+    - Block is the strike itself, with no ring: strikethrough icons, and Unblock pulls it back from the right.
+    - Springs, interruption, haptic ticks and reduced motion.
+    - C's own calls: the next grey preview waits for a fresh rest; Blocked's strike rests grey; the marks sit above the word.
+
+    Waiting on the owner's review.
   - **Effects above the bar:** today they're clipped to the bar's 56 dp (Strip draws inside its own bounds). Since the keyboard
     window became full height (A's bar fix), a see-through effects layer can sit above the bar and draw over the app. Touches still
     pass through, because onComputeInsets' touch region covers only the keyboard. W adds this layer when porting v4's animations.

@@ -902,7 +902,9 @@ internal const val HOLD_SYMBOL_LINE = "Are you even reading this?"
 internal const val SYM_LINE = "Sym has the rest, terms & conditions apply"
 /** The symbol that the weird-one hunt looks for. Its title doesn't name it (owner, v5.2). */
 internal const val WEIRD = "∞"
-internal const val GROUPS_LINE = "Swipe up in Sym for the weird ones, love you ∞"
+// The owner's joke (2026-11-13): how long you last in bed, and the answer is the one that never ends. The line sets it up, so the
+// gap after "in bed:" says what goes there without naming it. It starts with S for the finale's GO TOUCH GRASS NOW.
+internal const val GROUPS_LINE = "Seriously, how long I last in bed: ∞"
 internal const val CLOWN = "🤡"
 internal const val CLOWN_LINE = "Need emoji? Press Sym twice. Signed, 🤡"
 
@@ -966,11 +968,12 @@ internal const val PRANK_PASTE = "So is my whole personality"
 internal const val CLIP_LINE = CLIP_LEAD + PRANK_PASTE
 
 /** The clipboard lesson's clips, newest first: a thread of digs, and one nice one, which isn't what it pastes. */
+// Each fits its field on one line, so no dig ends in "…" (owner, 2026-11-13: the personality one didn't end).
 internal val GUIDE_CLIPS = listOf(
-    "Per my last message, the grey words were the instructions.",
-    "Circling back, since reading isn't your thing.",
-    "Friendly reminder: nobody believes you read the manual.",
-    "As discussed, Next is not a personality.",
+    "Per my last message: just read.",
+    "Circling back: still can't read?",
+    "Reminder: read the manual.",
+    "Next is not a personality.",
     "Honestly, you're doing great.",
 )
 internal val PRANK_CLIP = GUIDE_CLIPS.last()
@@ -979,6 +982,8 @@ internal val OLD_GUIDE_CLIPS = GUIDE_CLIPS.toSet() + PASTE_TEXT + setOf(
     "I'm an idiot.", "Sorry, I was busy ignoring you.", "Per my last message, learn to read.",
     "As I said in my last two messages, I'm still ignoring you.", "Just circling back to remind you I'm ignoring you.",
     "Per my last four messages, please stop.", "Honestly, you're doing great.",
+    "Per my last message, the grey words were the instructions.", "Circling back, since reading isn't your thing.",
+    "Friendly reminder: nobody believes you read the manual.", "As discussed, Next is not a personality.",
 )
 
 /** The words that the steer slide aims at are at least this many words from the cursor's column. */
@@ -1021,7 +1026,8 @@ internal val WEIRD_HUNT = Hunt(
     "It's not on the first page. Swipe up.",
     "Page two, near √ and ≈. Or skip it. It's ok.",
     "Quick. Just like you in bed.",
-    { "That took forever. Still shorter than you claim to last." },
+    // The seconds it really took (owner, 2026-11-13).
+    { seconds -> "That took $seconds ${if (seconds == 1) "second" else "seconds"}. Still longer than you claim to last." },
 )
 internal val CLOWN_HUNT = Hunt(
     "You see it in the mirror every day. Come on.",
@@ -1568,24 +1574,24 @@ internal val GUIDE_STEPS = listOf(
                 }
             },
             // Never names the symbol (owner, 2026-11-12): the joke is working out what lasts that long.
-            GuideStage("Find it and press its key. It's further in.", GuideCue.Free) { event ->
+            GuideStage("Find the one that never ends.", GuideCue.Free) { event ->
                 when {
                     event is FieldChanged && symbolInGap(event.text, GROUPS_LINE, WEIRD) -> GuideVerdict.Done
                     otherSymbol(event, GROUPS_LINE, WEIRD) -> {
                         mark = 1
-                        chip("Wrong squiggle. Took it back. Think forever.")
+                        chip("Not that one. It never ends, remember?")
                     }
                     otherGroup(event) && used and 4 == 0 -> {
                         used = used or 4
                         chip("Yeah, that works too.")
                     }
                     panel(event, Panel.Closed) && mark == 1 -> GuideVerdict.Stage(0)
-                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. Forever's still in there.", stage = 0)
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. The one that never ends is still in there.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
-        done = "Love you too. Forever.",
+        done = "Sure you do.",
         praise = "Up or down turns pages. The bottom row, groups.",
         line = GROUPS_LINE,
         seed = gapSeed(GROUPS_LINE, WEIRD),

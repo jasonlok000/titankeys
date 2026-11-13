@@ -612,7 +612,7 @@ private fun oneInstructionAtATime() {
     same(groups.event(PanelSwiped(0f, .4f, true)), GuideVerdict.Stage(1), "A page turned, so finding ∞ is next")
     same(groups.step.stages.size, 2, "Two steps: turn a page, then find ∞")
     same(groups.step.title.contains(WEIRD), false, "The title doesn't name the weird one")
-    same(GROUPS_LINE.startsWith("S") && GROUPS_LINE.endsWith("love you ∞"), true, "Its line ends with love you ∞")
+    same(GROUPS_LINE.startsWith("S") && GROUPS_LINE.endsWith("how long I last in bed: ∞"), true, "Its line sets up the joke, and starts with S for the finale")
     same(groups.event(FieldChanged(GROUPS_LINE.replace(WEIRD, "¤"), 4, 4)).let { it is GuideVerdict.Hint && !it.passes }, true,
         "Another symbol isn't ∞")
     same(groups.event(keys(Panel.Closed)), GuideVerdict.Stage(0), "A wrong one closed the panel: Sym again, the chip stays")
@@ -633,7 +633,7 @@ private fun oneInstructionAtATime() {
         same(line.length <= LINE_MOST, true, "The hunt's \"$line\" is one line")
     same(CLOWN_HUNT.skip.contains("skip") && WEIRD_HUNT.skip.contains("skip"), true, "Each hunt says it's ok to skip, at the end")
     same(WEIRD_HUNT.fast, "Quick. Just like you in bed.", "A quick find of ∞ gets the owner's chip")
-    same(WEIRD_HUNT.slow(40), "That took forever. Still shorter than you claim to last.", "and a slow one the owner's line")
+    same(WEIRD_HUNT.slow(40), "That took 40 seconds. Still longer than you claim to last.", "and a slow one the owner's line")
     same(CLOWN_HUNT.slow(40).contains("40"), true, "A slow clown says how long it took")
     same(huntFast(HUNT_DRAIN_SECONDS - 1) && !huntFast(HUNT_DRAIN_SECONDS), true, "Fast is before the mockery starts")
     same(GUIDE_STEPS.mapNotNull { it.hunt }, listOf(WEIRD_HUNT, CLOWN_HUNT), "The weird one and the clown are hunts")
@@ -1399,7 +1399,7 @@ private fun theOwnersInfinityJoke() {
     same(groups.title.contains(WEIRD), false, "never names the symbol")
     same(groups.hunt, WEIRD_HUNT, "It's a hunt")
     same(WEIRD_HUNT.fast, "Quick. Just like you in bed.", "Found fast")
-    for (seconds in listOf(HUNT_DRAIN_SECONDS, 40, 300)) same(WEIRD_HUNT.slow(seconds), "That took forever. Still shorter than you claim to last.",
+    for (seconds in listOf(HUNT_DRAIN_SECONDS, 40, 300)) same(WEIRD_HUNT.slow(seconds), "That took $seconds seconds. Still longer than you claim to last.",
         "Found after $seconds s")
     same(huntFast(0), true, "A find before the hunt's clock started is quick, so it gets its line too")
     same(huntFast(HUNT_DRAIN_SECONDS - 1) to huntFast(HUNT_DRAIN_SECONDS), true to false, "Quick until the bar has drained")
@@ -1482,7 +1482,7 @@ private fun runThroughFixes() {
     for (line in listOf(groups.title, groups.done, groups.praise) + groups.stages.map { it.text }) {
         same(line.contains(WEIRD), false, "\"$line\" doesn't name it")
     }
-    same(groups.stages[1].text, "Find it and press its key. It's further in.", "The hunt's instruction")
+    same(groups.stages[1].text, "Find the one that never ends.", "The hunt's instruction")
     for (line in listOf(WEIRD_HUNT.fast, WEIRD_HUNT.slow(HUNT_DRAIN_SECONDS))) same(line.contains(WEIRD), false, "\"$line\" doesn't name it")
     val steps = java.io.File("android/kotlin/com/atlas/keyboard/GuideSteps.kt").readText()
     val block = steps.substring(steps.indexOf("id = \"symgroups\""), steps.indexOf("id = \"clown\""))
@@ -1490,5 +1490,5 @@ private fun runThroughFixes() {
     same(literals.none { WEIRD in it }, true, "No line on the slide says the symbol")
     // The owner's two lines, exactly.
     same(WEIRD_HUNT.fast, "Quick. Just like you in bed.", "The fast line")
-    same(WEIRD_HUNT.slow(40), "That took forever. Still shorter than you claim to last.", "The slow line")
+    same(WEIRD_HUNT.slow(40), "That took 40 seconds. Still longer than you claim to last.", "The slow line")
 }

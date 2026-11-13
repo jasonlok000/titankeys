@@ -67,6 +67,14 @@
             android:exported="true"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
+        <!-- Reset literally everything restarts TitanKeys through this, in a process of its own: see FreshStart.kt. -->
+        <activity
+            android:name="com.atlas.keyboard.FreshStartActivity"
+            android:exported="false"
+            android:process=":restart"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity
             android:name="com.atlas.keyboard.GuideActivity"
             android:exported="false"

@@ -43,6 +43,8 @@ import com.atlas.keyboard.PhoneNameSource
 import com.atlas.keyboard.PhoneChecks
 import com.atlas.keyboard.PhoneSetup
 import com.atlas.keyboard.RawLog
+import com.atlas.keyboard.FreshStart
+import com.atlas.keyboard.SettingsReset
 import com.atlas.keyboard.SetupPart
 import com.atlas.keyboard.Snippets
 import com.atlas.keyboard.Trace
@@ -327,6 +329,20 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     }.start()
                     null
                 }
+                // Settings > Reset most things. Settings shows it at once; the keyboard and the guide as they next draw.
+                "resetSettings" -> {
+                    SettingsReset.reset(activity)
+                    activity.applyAccent()
+                    activity.applyUserScale()
+                    publishState()
+                    "null"
+                }
+                // Settings > Reset literally everything: wipes it all and restarts TitanKeys on its front page (FreshStart).
+                "wipeEverything" -> {
+                    SettingsReset.reset(activity)
+                    FreshStart.wipe(activity)
+                    "null"
+                }
                 "nerdSeen" -> {
                     appPreferences().edit().putBoolean(NERD_SEEN, true).apply()
                     "null"
@@ -485,6 +501,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("holdSymbols", TypingSettings.holdSymbols(activity))
             .put("holdSymbolMillis", TypingSettings.holdSymbolMillis(activity))
             .put("fnAsCtrl", TypingSettings.fnAsCtrl(activity))
+            .put("altBackspaceForward", TypingSettings.altBackspaceForward(activity))
             .put("doublePressLocks", TypingSettings.doublePressLocks(activity))
             .put("autoCapitalise", TypingSettings.autoCapitalise(activity))
             .put("autoPunctuation", TypingSettings.autoPunctuation(activity))
@@ -628,6 +645,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "holdSymbols" -> TypingSettings.holdSymbols(activity, value as Boolean)
             "holdSymbolMillis" -> TypingSettings.holdSymbolMillis(activity, (value as Number).toInt())
             "fnAsCtrl" -> TypingSettings.fnAsCtrl(activity, value as Boolean)
+            "altBackspaceForward" -> TypingSettings.altBackspaceForward(activity, value as Boolean)
             "doublePressLocks" -> TypingSettings.doublePressLocks(activity, value as Boolean)
             "autoCapitalise" -> TypingSettings.autoCapitalise(activity, value as Boolean)
             "autoPunctuation" -> TypingSettings.autoPunctuation(activity, value as Boolean)

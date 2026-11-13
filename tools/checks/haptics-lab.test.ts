@@ -83,8 +83,11 @@ test("the old adb length receivers are gone", () => {
 
 test("the lab shows what the keyboard really plays, from a feed only the debug build fills", () => {
   const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
-  // The keyboard and the lab share one process, so the feed is a plain object. Nothing else may run them apart.
-  expect(read("android/src/main/AndroidManifest.xml")).not.toContain("android:process");
+  // The keyboard and the lab share one process, so the feed is a plain object. Nothing else may run them apart. The one
+  // exception plays no haptics: Reset literally everything's restart, which must outlive the process it ends (FreshStart.kt).
+  const manifest = read("android/src/main/AndroidManifest.xml")
+    .replace(/<activity\s+android:name="com\.atlas\.keyboard\.FreshStartActivity"[^>]*\/>/, "");
+  expect(manifest).not.toContain("android:process");
   // The feed starts off, and only a debug package turns it on and records into it.
   expect(haptics).toMatch(/object HapticFeed \{\s+@Volatile\s+var enabled = false/);
   expect(haptics).toMatch(/fun record\(event: HapticEvent\) \{\s+if \(!enabled\) return/);

@@ -54,6 +54,8 @@ export type State = {
   holdSymbolMillis: number;
   /** The keyboard treats fn as Ctrl, so Key Mapper is not needed for this. */
   fnAsCtrl: boolean;
+  /** Alt + Backspace deletes forward, like Delete on a PC. Off, Android's own Alt + Backspace deletes the line. */
+  altBackspaceForward: boolean;
   /** Two quick pushes lock Shift or Alt, so Key Mapper is not needed to stop that. */
   doublePressLocks: boolean;
   autoCapitalise: boolean;
@@ -151,7 +153,7 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "size" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog"> & {
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "size" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog"> & {
   /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
   shorthandToggles: Record<string, boolean>;
 };
@@ -353,6 +355,21 @@ export async function markNerdSeen() {
 
 /** Opens the interactive guide. It starts where you stopped, or from the beginning if you finished it. */
 export const openGuide = () => atlas("guide");
+
+/**
+ * Settings > Reset most things: every switch, stepper and choice goes back to how it started (SettingsReset.kt). Words,
+ * snippets, shorthand, app lists and the rest of what's yours stay. Settings shows it at once.
+ */
+export async function resetSettings() {
+  await atlas("resetSettings");
+  await state.refresh();
+}
+
+/**
+ * Settings > Reset literally everything: settings and everything that's yours, as if freshly installed (FreshStart.kt).
+ * TitanKeys restarts on its front page, so nothing here runs after it.
+ */
+export const wipeEverything = () => atlas("wipeEverything");
 /**
  * Opens the playground, and tells where its buttons asked to go: "setup" when it closed from its setup slide, and "closed"
  * when something else closed it, such as a link that opened the app's own screen over it.

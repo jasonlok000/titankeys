@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Field, Screen, Section, replace, setRouteParents, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../lib/app-haptics";
 import { close } from "ink/icons";
@@ -5,7 +6,7 @@ import { showKeyCalibration, state, update } from "../../lib/atlas";
 import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
-import { accentsNote, barLabel, cursorLabel, scrollLabel } from "../../lib/setting-names";
+import { accentsNote, altBackspaceLabel, altBackspaceNote, barLabel, cursorLabel, scrollLabel } from "../../lib/setting-names";
 import { parentOf } from "../../lib/settings-tree";
 import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
@@ -22,6 +23,8 @@ import { shorthandLabel } from "./shorthand/index";
 import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
 import { tapKeysLabel } from "./tap-keys";
+import { RESET_NOTE, resetDone } from "./reset-most";
+import { Note } from "../../lib/note";
 
 // Links into Settings land with their parent pages under them, so ← and Back go up and never to the front page.
 setRouteParents(parentOf);
@@ -32,6 +35,8 @@ export default function Settings() {
   const connected = useSnapshot(connectedState);
   const save = useAction(update);
   const closeAction = { icon: close, onPress: () => replace("/") };
+  // The note after a reset stays until you leave Settings.
+  useEffect(() => () => { resetDone.shown = false; }, []);
   if (result.status !== "ready") return <Screen title="Settings" rightAction={closeAction} />;
   const settings = result.data;
   return <Screen title="Settings" rightAction={closeAction}>
@@ -87,6 +92,8 @@ export default function Settings() {
         onChange={doublePressLocks => save.run({ doublePressLocks })} />
       <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}
         onChange={fnAsCtrl => save.run({ fnAsCtrl })} />
+      <Toggle label={altBackspaceLabel} subtitle={altBackspaceNote} value={settings.altBackspaceForward}
+        onChange={altBackspaceForward => save.run({ altBackspaceForward })} />
     </Section>
     <Section title="Look and feel">
       <Field label="Haptics" href="/settings/haptics">{hapticsLabel(settings)}</Field>
@@ -110,6 +117,13 @@ export default function Settings() {
       <Field label="Send feedback" href="/settings/feedback" />
       <Field label={bugText.settingsLabel} href="/settings/bug" />
       <Field label="About" href="/settings/about" />
+    </Section>
+    {/* So many settings, it's easy to mess them up (owner, 2026-11-13: "Two resets. Reset most things and reset literally
+        everything"). Plain rows: each asks first, on its own page. */}
+    <Section title="Start over">
+      <Field label="Reset most things" href="/settings/reset-most" />
+      <Field label="Reset literally everything" href="/settings/reset-everything" />
+      {resetDone.shown && <Note>{RESET_NOTE}</Note>}
     </Section>
   </Screen>;
 }

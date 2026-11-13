@@ -208,6 +208,12 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
+- **Release rule** (owner, 2026-11-13, 11:50): "my rule is i'll use a pre-release for 3 days and only after 3 days no bug will i push it
+  for a real release." The build for it must have no dev stuff and be tested thoroughly. (Owner) A audits the release build for
+  dev-only features (docs/release-audit-2.1.md, extending debug-only.test.ts). The Orchestrator tests the final build on the
+  phone. Signing and publishing stay with the owner.
+- **Settings shows a 1 px line under the title** (owner's report). Reproduced: while scrolling, the first row of the fade under the
+  fixed title shows content at full strength (y = 268). It's queued for F.
 - **Alt + Backspace deletes forward, behind a switch** (owner, 2026-11-13, 11:40): "make that a toggle. I think no one really uses alt
   backspace... as a pc user i'm used to control backspace. alt+backspace = forward delete too." (Owner)
   - The switch is "Alt + Backspace deletes forward", on by default. Off, Alt + Backspace goes to Android, which deletes the line.

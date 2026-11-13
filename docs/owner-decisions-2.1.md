@@ -205,6 +205,20 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **The ladder is approved: build it in the app** (owner, 2026-11-13, 09:55): "let's focus this patch on the ladder logic and the
+  animation. no need to build from scratch. the mockup only for concept and design and execution reference. build the app." (Owner)
+  Corrections to v4:
+  - Not saved is a plain outline, with no dots and no fill.
+  - Save's book is opaque when closed, so the word can't be seen through it.
+  - The book sits fully above the bar, not across its top edge.
+  - Hovering Unsave covers Favourite, as the pill already does.
+
+  W builds it on the existing code. The Orchestrator's calls (unapproved):
+  - one-letter words, symbols and emoji open no menu;
+  - Unsave on a dictionary word removes it from suggestions without blocking it (it can be learned back), with a fallback to
+    Saved → Block if the store can't do that safely;
+  - Block takes over the autocorrect refusal that Forget used to add;
+  - "Undo after Forget" goes away.
 - **The guide always starts from the beginning** (owner, 2026-11-13, 09:45): "everytime I click on the guide, i shd start from the
   beginning. no saved slide." (Owner) Done in ca6559a: the guide no longer saves the slide, and an older saved place is cleared on open.
 - **Ladder review, round 3** (owner, 2026-11-13, 09:20); the owner rated v3 7/10 for animation quality and execution. (Owner)

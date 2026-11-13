@@ -4,7 +4,7 @@ What's done, what's in progress, what's waiting and on whom. The orchestrating s
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
 [owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 21:30.
 
-## On the phone now (build 6e8ab179, test-2.1h at 2facc72)
+## On the phone now (build 3968470a, test-2.1h at f68044d)
 
 - Gestures:
   - The held delete: corner glow, pause zone, zone ticks, a firm hit per word, and a thin caret that blinks only when paused.
@@ -17,7 +17,10 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 - Haptics:
   - Round 7: quick settings and Record a bug as Lock/Release, and the exact-typing lab switch.
   - The quiet swell for changes that happen by themselves (A).
-- Word menu v3 (D). The v3.1 ladder fix is in the next build.
+- Word menu v3.1 (D):
+  - one ladder for every word, with Unfavourite back to Saved and no snaps;
+  - orange particles on both sides, a heart burst, a crack and a ribbon;
+  - the ambient heart and ribbon.
 - Guide v5.3 (C).
 - Settings (F):
   - One Show the bar setting.
@@ -39,11 +42,7 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 
 ## In progress
 
-- Build f68044d: D's word menu v3.1. It has:
-  - one ladder for every word, with Unfavourite back to Saved and no snaps;
-  - orange particles on both sides, a heart burst, a crack and a ribbon;
-  - the ambient heart and ribbon.
-  It was finished at 18:34 but missed in the merges until 21:28. Install when it passes.
+- Nothing building. The workers are idle until the owner's review.
 
 ## Waiting on the owner
 

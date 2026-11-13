@@ -44,7 +44,7 @@ fun main(args: Array<String>) {
 
     // The rules for every look.
     for ((slide, look) in GuideDecor.LOOKS) {
-        // Round 2, reviewed on the phone (2026-11-13): the accent at 36–46%, the typewriter's cream layer at 40%, the grass's ink up to 60%.
+        // Round 2, reviewed on the phone (2026-11-13): the accent at 36–46%, the struck e's cream layer at 40%, the grass's ink up to 60%.
         if (slide == GuideDecor.FINALE) check(look.accent && look.level in .4999f..0.6001f) { "The grass's front tone is ink at 50-60%" }
         else check(look.level in .2999f..0.5001f) { "$slide is the accent or cream at 30-50%" }
         check(look.loop in 6_000L..20_000L) { "$slide loops in 6 to 20 s" }

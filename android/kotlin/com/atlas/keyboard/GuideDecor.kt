@@ -31,7 +31,7 @@ import kotlin.math.sin
  * bands it found for an area) is only a cache that it rebuilds when anything changes.
  *
  * The rules, from §7, as reviewed on the phone (round 2, 2026-11-13; at 6–12% they vanished, the owner: "too subtle"):
- * - The accent at 36–46%, the typewriter's layer at 40% (its e cream at about 20%), and the grass in ink at 24, 40 and 60% on the
+ * - The accent at 36–46%, the struck e's layer at 40% (its e cream at about 20%), and the grass in ink at 24, 40 and 60% on the
  *   end's accent. Each picture is laid down as one layer, so overlaps never add up. Ink at 8% on the pass screen ([draw]'s
  *   onOrange). With Orange accents off, the accent is cream at the orange's lightness ([accentColour]), so nothing turns brighter.
  * - At most [MAX_SHAPES] shapes at once, slow loops of 6–20 s ([loopMillis]).
@@ -129,7 +129,7 @@ class GuideDecor(private val font: Typeface? = null) {
             "type" -> redPen(t)
             "swipe" -> airSwipes(t)
             "menu" -> starfield(t)
-            "backspace" -> typewriter(t)
+            "backspace" -> struckE(t)
             "flick" -> paperBalls(t)
             "hold" -> shredder(t)
             "steer" -> nightDrive(t)
@@ -320,53 +320,55 @@ class GuideDecor(private val font: Typeface? = null) {
 
     // Delete
 
-    /** Typewriter e: a huge cream e with a letterpress shadow, and every few seconds a strip of correction tape rolls over it. */
-    private fun typewriter(t: Float) {
+    /**
+     * Struck e: a big flat cream e in the app's own Inter Bold, and a pen strike drawn across it, left to right, as the word menu's
+     * Block strike draws (owner, 2026-11-13: the letterpress e and its correction tape looked out of place with the design, and a
+     * deleted letter is struck through). The strike has the Block strike's weight for its size, a pen's taper where it starts, a
+     * round end and the pen's dot while it draws, on the same critically damped pen. It holds, the e and its strike fade away
+     * together, and the e comes back for the next. The e sits wholly inside its band, clear of the soft edges, so it stays flat.
+     */
+    private fun struckE(t: Float) {
         val g = lower()
-        val size = max(min((g[1] - g[0] - 5f * dp) / .56f * .94f, 240f * dp), 40f * dp)
+        val soft = FEATHER_DP * dp + 2f * dp
+        val size = max(min((g[1] - g[0] - 2 * soft) / E_HEIGHT, 240f * dp), 40f * dp)
         val cx = area.left + area.width() * .66f
-        val cy = (g[0] + g[1]) / 2 - 2.5f * dp
-        val baseline = cy + .27f * size
-        val u = t / TYPEWRITER_LOOP
-        val roll = sine((u - .15f) / .18f)
-        val peel = smooth((u - .55f) / .15f)
-        val tape = roll * (1f - peel)
+        val baseline = (g[0] + g[1]) / 2 + (E_TOP - E_BELOW) / 2 * size
+        // Both fade out once the strike has held, and the e alone fades back in before the next.
+        val shown = (1f - smooth((t - STRIKE_FADE) / STRIKE_FADE_MILLIS)) + smooth((t - E_BACK) / (TYPE_LOOP - E_BACK))
+        if (shown <= 0f) return
         paint.textSize = size
-        // The type's shoulder: its outline set off a little, then the face.
-        stroke(.36f, 2.6f * dp)
-        canvas.drawText("e", cx + 6f * dp, baseline + 6f * dp, paint)
-        fill(.5f)
+        fill(.5f * shown)
         canvas.drawText("e", cx, baseline, paint)
-        shapes += 2
-        if (tape <= .01f) return
-        val left = cx - .46f * size
-        val right = left + .92f * size * roll
-        val tapeTop = cy - .05f * size
-        val tapeBottom = tapeTop + .17f * size
-        canvas.save()
-        canvas.translate(0f, -peel * .12f * size)
-        canvas.rotate(-4f - 6f * peel, cx, cy)
+        shapes++
+        val since = (t - STRIKE_FROM) / 1000f
+        if (since <= 0f || t >= E_BACK) return
+        // The Block strike's pen, a critically damped spring, slowed to the same speed across a letter this big.
+        val w = STRIKE_OMEGA * since
+        val drawn = 1f - (1f + w) * exp(-w)
+        val x0 = cx - (E_ADVANCE / 2 + STRIKE_OVER) * size
+        val x1 = cx + (E_ADVANCE / 2 + STRIKE_OVER) * size
+        val xe = x0 + (x1 - x0) * drawn
+        val y = baseline - STRIKE_HEIGHT * size
+        val hw = STRIKE_WEIGHT * size / 2
+        if (xe - x0 < 1f) return
+        val taper = min(STRIKE_TAPER * size, xe - x0)
         path.reset()
-        path.moveTo(left, tapeTop)
-        path.lineTo(right, tapeTop)
-        // The tape's torn end, while it rolls out.
-        val teeth = 6
-        for (k in 1..teeth) path.lineTo(right + if (k % 2 == 1) -4f * dp * roll else 0f, tapeTop + (tapeBottom - tapeTop) * k / teeth)
-        path.lineTo(left, tapeBottom)
+        path.moveTo(x0, y)
+        path.lineTo(x0 + taper, y - hw)
+        path.lineTo(xe, y - hw)
+        path.arcTo(xe - hw, y - hw, xe + hw, y + hw, -90f, 180f, false)
+        path.lineTo(x0 + taper, y + hw)
         path.close()
-        erase(tape)
-        fill(tape, accent)
+        // One flat tone as it fades: what's under it goes first, so the e never shows through.
+        erase()
+        fill(shown, accent)
         canvas.drawPath(path, paint)
-        // Its sheen.
-        path.reset()
-        path.moveTo(left + 8f * dp, tapeTop + 4f * dp)
-        path.lineTo(max(left + 8f * dp, right - 14f * dp), tapeTop + 4f * dp)
-        erase(.35f * tape, 2f * dp)
-        canvas.restore()
+        // The pen's dot at its tip, until it lands.
+        if (drawn < .985f) canvas.drawCircle(xe, y, STRIKE_PEN * size, paint)
         shapes++
     }
 
-    /** Paper balls: now and then a crumpled ball arcs in from the right and drops into a wire bin on the left, which wobbles. */
+    /** Paper balls: now and then a flat crumpled ball arcs in from the right and drops into a wire bin on the left, which wobbles. */
     private fun paperBalls(t: Float) {
         val g = lower()
         val floor = g[1] - 12f * dp
@@ -427,15 +429,7 @@ class GuideDecor(private val font: Typeface? = null) {
             crumple(r, i)
             fill(.42f * alpha)
             canvas.drawPath(path, paint)
-            crumple(r, i)
-            // Creases across the ball.
-            for (k in 0..2) {
-                val a = TAU * hash(42 + i, k)
-                val b = a + 2.2f + hash(44 + i, k)
-                path.moveTo(cos(a) * r * .75f, sin(a) * r * .75f)
-                path.lineTo(cos(a + .9f) * r * .2f, sin(a + .9f) * r * .2f)
-                path.lineTo(cos(b) * r * .7f, sin(b) * r * .7f)
-            }
+            // Its outline, flat: no creases drawn across it (owner, 2026-11-13: decorations stay flat, in the app's style).
             stroke(alpha, 2.2f * dp)
             canvas.drawPath(path, paint)
             canvas.restore()
@@ -1039,7 +1033,7 @@ class GuideDecor(private val font: Typeface? = null) {
 
     // Copy and paste
 
-    /** Sticky notes: notes with scribbles, pinned at angles, sway as if in a breeze, and now and then one flaps a corner. */
+    /** Sticky notes: flat notes with scribbles, pinned at angles, sway as if in a breeze, and now and then one swings on its pin. */
     private fun stickyNotes(t: Float) {
         val spots = spots(14, 42f, 4)
         val flapping = Math.floorMod(floor(t / NOTE_FLAP).toInt(), 4)
@@ -1047,27 +1041,16 @@ class GuideDecor(private val font: Typeface? = null) {
         for (i in 0 until spots.size / 2) {
             val period = NOTE_LOOP / (2 + i % 2)
             val sway = (hash(80, i) - .5f) * 22f + 3.2f * sin(TAU * (t / period + hash(81, i)))
-            val corner = 7f + if (i == flapping) 16f * bump(flapU / .55f) else 0f
+            // Now and then one swings further on its pin, as if caught by the breeze.
+            val swing = if (i == flapping) (if (i % 2 == 0) 12f else -12f) * bump(flapU / .55f) else 0f
             canvas.save()
             canvas.translate(spots[i * 2], spots[i * 2 + 1] - 32f * dp)
-            canvas.rotate(sway)
+            canvas.rotate(sway + swing)
             canvas.scale(dp, dp)
+            // A flat note, no folded corner (owner, 2026-11-13: decorations stay flat, in the app's style).
             path.reset()
-            path.moveTo(-32f, 4f)
-            path.lineTo(32f, 4f)
-            path.lineTo(32f, 68f - corner)
-            path.lineTo(32f - corner, 68f)
-            path.lineTo(-32f, 68f)
-            path.close()
+            roundRect(-32f, 4f, 32f, 68f, 4f)
             fill(.5f)
-            canvas.drawPath(path, paint)
-            // The corner, folded over.
-            path.reset()
-            path.moveTo(32f, 68f - corner)
-            path.lineTo(32f - corner, 68f)
-            path.lineTo(32f - corner * 1.05f, 68f - corner * 1.05f)
-            path.close()
-            fill(.95f)
             canvas.drawPath(path, paint)
             // The scribbles, as cut-outs.
             path.reset()
@@ -1509,7 +1492,7 @@ class GuideDecor(private val font: Typeface? = null) {
         fun accentColour(): Int = Accent.warm(Accent.of(true))
 
         /**
-         * Each slide's colour and how strong its whole layer is: the accent at 36–46%, or cream for the typewriter's e, its layer at
+         * Each slide's colour and how strong its whole layer is: the accent at 36–46%, or cream for the struck e, its layer at
          * 40% (round 2, reviewed on the phone, 2026-11-13). The finale's level is its grass's front tone, in ink.
          */
         class Look(val accent: Boolean, val level: Float, val loop: Long, val still: Long) {
@@ -1563,7 +1546,26 @@ class GuideDecor(private val font: Typeface? = null) {
         /** The swipe's glow and its trail: how much wider each is, and how strong. */
         private val GLOW = listOf(2.6f to .2f, 1f to 1f)
         private const val SHOOT = 1300f
-        private const val TYPEWRITER_LOOP = 7000f
+        /** The struck e's loop, and in it: the strike starts to draw, the e and the strike fade, and the e alone comes back, in ms. */
+        private const val TYPE_LOOP = 7000f
+        private const val STRIKE_FROM = 700f
+        private const val STRIKE_FADE = 4800f
+        private const val STRIKE_FADE_MILLIS = 1000f
+        private const val E_BACK = 6100f
+        /** The pen's spring, per second: the Block strike's (420 stiffness, critically damped) slowed so it lands in about 0.9 s. */
+        private const val STRIKE_OMEGA = 6.3f
+        /** The strike in ems of the e, as the Block strike is in ems of the bar's 20 dp word: its weight, height over the baseline,
+         *  and how far past the e it reaches each side; its taper is shorter, for one letter, and its pen's dot smaller. */
+        private const val STRIKE_WEIGHT = .105f
+        private const val STRIKE_HEIGHT = .28f
+        private const val STRIKE_OVER = .15f
+        private const val STRIKE_PEN = .07f
+        private const val STRIKE_TAPER = .22f
+        /** Inter Bold's e in ems: its advance, how far it reaches above the baseline and below it, and so its height. */
+        private const val E_ADVANCE = .596f
+        private const val E_TOP = .553f
+        private const val E_BELOW = .011f
+        private const val E_HEIGHT = E_TOP + E_BELOW
         private const val BALL_LOOP = 6000f
         private const val BALL_FLIGHT = 1500f
         private const val BALL_DROP = 380f

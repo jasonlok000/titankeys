@@ -131,10 +131,12 @@ Master approved them as below (V).
 
 **Rules for every decoration:**
 - It's pure decoration. It never reacts to typing, a mistake, a hint or a pass, and never tells you anything. It only follows the slide's theme.
+- **Flat:** flat fills and strokes in the app's own style and type, as minimal as the rest of the design. No 3D shading, shadows, sheen,
+  textures or letterpress (owner, 2026-11-13).
 - **Where:** a layer behind the title, instruction and field, above the black. It lives in the empty space. It's never drawn
   inside the field, over the keyboard drawing, or on the bar, and it keeps 8 dp clear of text.
 - **How strong:** the accent at 36–46%, tuned per slide so it reads at a glance on the phone but stays behind everything (owner,
-  2026-11-13: at 6–12% it mostly vanished). The typewriter's e is cream at about 20%, and the grass is ink at 24, 40 and 60%. With
+  2026-11-13: at 6–12% it mostly vanished). The struck e is cream at about 20%, and the grass is ink at 24, 40 and 60%. With
   Orange accents off, the accent is cream at the orange's lightness, so nothing turns brighter. On the orange pass screen it turns
   ink at 8% and keeps moving.
 - **Motion:** slow loops of 6–20 s, eased, with at most 12 shapes at once. Drawn at up to 30 fps, and stopped when the screen is off.
@@ -149,8 +151,8 @@ Master approved them as below (V).
 | Typing | Make a typo. We'll fix it. | **Red pen.** Proofreader's marks draw themselves stroke by stroke behind a fountain pen's nib in the empty space: a squiggly underline, a caret ^, a circled letter, a scribbled "sp?", a pigtail, a double underline. Each one lingers, fades, and the next appears somewhere else. |
 | Typing | Swipe it. One hand, no questions. | **Air swipes.** Three long soft S-curves sweep across the band under the field, one every 4 s, each a glowing trail with a round head and a tapering tail. |
 | Typing | Save a word. Then unsave it. | **Starfield.** Four-point sparkles, Save's own shape, twinkle at scattered spots, and a shooting star crosses a band every 6 s. |
-| Delete | Delete the extra e. The old way. | **Typewriter e.** A huge cream "e" with a letterpress shadow sits in the band under the field. Every 7 s a strip of correction tape in the accent rolls across it and peels off. |
-| Delete | Flick away the stupid word. | **Paper balls.** Now and then a crumpled paper ball arcs in from the right and drops into a wire bin on the left, which wobbles. |
+| Delete | Delete the extra e. The old way. | **Struck e.** A big flat cream "e" in Inter Bold sits in the band under the field. Every 7 s a pen strike in the accent draws across it, left to right, like the word menu's Block strike, and holds; then the e and its strike fade together, and the e comes back for the next. The e sits wholly inside the band, clear of the soft edges, so it stays crisp (owner, 2026-11-13: it was a letterpress e under correction tape, "out of place with our design", and "it shd be a strike through"). |
+| Delete | Flick away the stupid word. | **Paper balls.** Now and then a flat crumpled paper ball, with no creases drawn, arcs in from the right and drops into a wire bin on the left, which wobbles. |
 | Delete | Hold the flick. Delete in bulk. | **Shredder belt.** Letter tiles ride a belt into a shredder on the left, with a toothed mouth and a blinking light, and fall out underneath as strips, endlessly. |
 | Steering | Steer to the underlined word. | **Night drive.** A road winds away to the horizon in the band under the field, bending one way and then the other; its centre dashes and roadside posts stream towards you, under a crescent moon. |
 | Steering | Grab my whole heart. Three taps. | **Heartbeat.** A bold ECG line with a glowing head traces across on a loop, flat, beat, beat, flat, and filled hearts pulse on the beats. |
@@ -159,7 +161,7 @@ Master approved them as below (V).
 | Symbols | Add the &. It's behind Sym. | **Peekaboo.** Ampersands peek out from behind the screen's edges, the title and the keys, look about, then slide back out of sight. |
 | Symbols | Find the weird one. It's further in. | **Forever.** A glowing dot runs endlessly along a big ∞ under the field, leaving a fading trail. |
 | Symbols | Sign it with 🤡. Find yourself. | **Big top.** A light striped valance hangs under the top bar, rippling, with chase lights along its edge, and three two-tone balls are juggled on their faint arcs, each with a trail. |
-| Copy and paste | Paste over the orange words. | **Sticky notes.** Four sticky notes with scribbles are pinned at angles in the open space, swaying as if in a breeze. Now and then one flaps a corner. |
+| Copy and paste | Paste over the orange words. | **Sticky notes.** Four sticky notes with scribbles are pinned at angles in the open space, swaying as if in a breeze. Now and then one swings further on its pin. They're flat, with no folded corner. |
 | Copy and paste | Paste the one nice clip. | **Zero-g clips.** Bold outline paper clips float, drifting and turning slowly, as if in zero gravity. |
 | End | GO TOUCH GRASS NOW (the finale) | **Grass (owner likes it).** As the finale plays, a dense band of flat pointed blades, about 150 dp tall, in three ink tones, grows up from the bottom edge, its blades swaying, and three small flowers open on tall stems. |
 | Setup | The phone's settings | **Gears.** Two pairs of meshed gears turn slowly in two corners. |

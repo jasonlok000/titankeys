@@ -143,6 +143,47 @@ fun main(args: Array<String>) {
     ImageIO.write(strip(listOf(3_000L, 9_000L, 15_000L).map { frame(decor, "clown", phone, it, bold, medium, true) }), "png",
         File(out, "clown-phone.png"))
 
+    // A panel opening moves nothing (Master, 2026-11-13, build #10: with Sym open, the drawing of the keys went, and the ∞, the
+    // juggling and the rest moved down behind the panel). The drawing of the keys keeps its room under the panel and stays the
+    // floor, so every slide's picture is laid out as with the panel closed, and only cut at the panel's top, 202 px over the bar.
+    // Build #10's way is drawn too, to show the check sees what it moved: the picture down to the screen's bottom edge, with the
+    // keys, and then with them gone as a panel opened.
+    val keyboardTop = 1110f
+    val panelTop = keyboardTop - 202f
+    val moved = ArrayList<String>()
+    for (slide in SLIDES.filter { it != GuideDecor.FINALE && it != GuideDecor.SETUP }) {
+        val screen = screenFor(slide)
+        val keys = screen.keepOut.last()
+        fun area(top: Float) = RectF(screen.area.left, screen.area.top, screen.area.right, GuideDecor.layoutBottom(slide, H, top, keyboardTop))
+        var differs = false
+        for (k in 0 until 8) {
+            val t = GuideDecor.LOOKS.getValue(slide).loop * k / 8
+            val closed = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
+            decor.draw(Canvas(closed), slide, t, area(keyboardTop), screen.keepOut, false, DP, 1f, GuideDecor.clipBottom(slide, H, keyboardTop))
+            val open = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
+            decor.draw(Canvas(open), slide, t, area(panelTop), screen.keepOut, false, DP, 1f, GuideDecor.clipBottom(slide, H, panelTop))
+            val whole = RectF(screen.area.left, screen.area.top, screen.area.right, H)
+            val build10 = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
+            decor.draw(Canvas(build10), slide, t, whole, screen.keepOut, false, DP)
+            val build10Panel = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
+            decor.draw(Canvas(build10Panel), slide, t, whole, screen.keepOut - keys, false, DP)
+            var bad: String? = null
+            for (y in 0 until HEIGHT) for (x in 0 until WIDTH) {
+                val o = open.getRGB(x, y)
+                if (y < panelTop) {
+                    if (o != closed.getRGB(x, y) && bad == null) bad = "$x, $y: a shape moved or changed"
+                    if (build10Panel.getRGB(x, y) != build10.getRGB(x, y)) differs = true
+                } else if (o ushr 24 != 0 && bad == null) bad = "$x, $y: it draws behind the panel"
+            }
+            check(bad == null) { "$slide with a panel open, at $t ms, at $bad" }
+        }
+        if (differs) moved += slide
+    }
+    // In this stand-in, build #10's picture down to the bottom edge had the clown juggling in the band under the keys, behind the
+    // keyboard, panel or not; the ∞ is the one Master saw move.
+    check("symgroups" in moved && moved.size >= 10) { "Build #10's way moves the ∞ and most pictures, which the check must see: $moved" }
+    println("With build #10's panel, these moved: ${moved.joinToString()}")
+
     // The pass screen: three slides on orange.
     val orange = listOf("type", "alt", "clipboard").map { slide ->
         val screen = screenFor(slide)

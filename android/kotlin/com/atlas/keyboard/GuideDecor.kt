@@ -105,15 +105,16 @@ class GuideDecor(private val font: Typeface? = null) {
     /**
      * Draws [slide]'s decoration as it is [millis] after the slide settled, inside [area] and outside [keepOut] (each with
      * [CLEAR_DP] around it), in the pass screen's ink when [onOrange]. [fade] runs from 0 to 1 for the fades in and between slides.
+     * Nothing shows below [clip], where the keyboard's top is: a panel cuts the picture there without moving it.
      * Returns how many shapes it drew, never more than [MAX_SHAPES].
      */
     fun draw(canvas: Canvas, slide: String, millis: Long, area: RectF, keepOut: List<RectF>, onOrange: Boolean, dp: Float,
-             fade: Float = 1f): Int {
+             fade: Float = 1f, clip: Float = Float.POSITIVE_INFINITY): Int {
         val look = LOOKS[slide] ?: return 0
         // The grass is always on the end's accent, in ink at its own strengths; the slides turn ink at 8% on the pass screen.
         val level = if (slide == FINALE || !onOrange) look.level else INK_LEVEL
         val alpha = (level * fade.coerceIn(0f, 1f) * 255).roundToInt()
-        if (alpha <= 0 || area.width() <= 0f || area.height() <= 0f) return 0
+        if (alpha <= 0 || area.width() <= 0f || area.height() <= 0f || clip <= area.top) return 0
         this.canvas = canvas
         this.area.set(area.left, area.top, area.right, area.bottom)
         this.keepOut = keepOut
@@ -122,7 +123,7 @@ class GuideDecor(private val font: Typeface? = null) {
         accent = if (onOrange) INK else accentColour()
         shapes = 0
         canvas.save()
-        canvas.clipRect(area.left, area.top, area.right, area.bottom)
+        canvas.clipRect(area.left, area.top, area.right, min(area.bottom, clip))
         canvas.saveLayerAlpha(this.area, alpha)
         val t = loopTime(slide, millis)
         when (slide) {
@@ -1469,6 +1470,22 @@ class GuideDecor(private val font: Typeface? = null) {
     }
 
     companion object {
+        /**
+         * The bottom a slide's decoration is laid out to, in a view whose bottom is [viewBottom]: the drawing of the keys' bottom,
+         * [floor], while it keeps its room, shown or hidden under a panel, so a panel coming or going moves nothing (Master,
+         * 2026-11-13, build #10: with the keys gone, the ∞, the juggling and the rest moved down behind the panel); without it,
+         * the keyboard's top. The end's grass grows from the view's bottom edge, behind the bar, as it always has.
+         */
+        fun layoutBottom(slide: String, viewBottom: Float, keyboardTop: Float, floor: Float?): Float = when {
+            slide == FINALE -> viewBottom
+            floor != null -> min(floor, viewBottom)
+            else -> min(keyboardTop, viewBottom)
+        }
+
+        /** Where a slide's decoration is cut: the keyboard's top, a panel's when one is open, so it never draws behind it. */
+        fun clipBottom(slide: String, viewBottom: Float, keyboardTop: Float): Float =
+            if (slide == FINALE) viewBottom else min(keyboardTop, viewBottom)
+
         /** The id for the end's grass, which GuideSteps calls "end". */
         const val FINALE = "finale"
         /** The id for slide zero, the phone's settings. */

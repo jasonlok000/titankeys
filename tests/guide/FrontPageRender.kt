@@ -83,6 +83,11 @@ internal object V2 {
     const val SIDE = 24
     const val TOP_BAR = 48
     const val HEADER = 56
+    /**
+     * How far an open panel reaches over the keyboard's bar, in px: every page of it (symbols, emoji, clipboard, quick settings)
+     * the same. On build #10 the slide dropped 51 px as Sym opened and the drawing of the keys' 304 px went: (304 − 202) / 2.
+     */
+    const val PANEL = 202
 
     /** The drawn keys (owner): the real keys' width and columns, 60% of their height. */
     val KEYS = KeyGeometry(W.toFloat(), KeyAlignment.DEFAULT, KeyGeometry.DRAWN)

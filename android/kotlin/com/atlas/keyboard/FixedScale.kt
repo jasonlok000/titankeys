@@ -47,6 +47,11 @@ object FixedScale {
         preferences(context).edit().putString(SIZE, size.id).apply()
     }
 
+    /** Settings > Reset all settings: Size goes back to its default. */
+    fun resetSize(context: Context) {
+        preferences(context).edit().remove(SIZE).apply()
+    }
+
     /**
      * [dp] at Normal, in pixels, in a window of [context] at any Settings > Size: for what keeps its size while what's in it grows,
      * as the bar's height does (owner, 2026-11-13: "bar size stays the same").

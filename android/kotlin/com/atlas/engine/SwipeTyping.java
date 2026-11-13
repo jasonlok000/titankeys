@@ -126,8 +126,7 @@ public final class SwipeTyping {
         blockedWords = new BlockedWords(context.getSharedPreferences("blocked_words", 0).getStringSet("words", java.util.Set.of()));
         refusedFixes = new ForgetWords.RefusedFixes(context.getSharedPreferences(REFUSED_FIXES, 0).getStringSet("fixes", java.util.Set.of()));
         Calibration.init(context);
-        learningEnabled = context.getSharedPreferences("word_learning", 0).getBoolean("enabled",
-                context.getSharedPreferences("swipe_calibration", 0).getBoolean("enabled", true));
+        learningEnabled = storedLearning();
         context.getSharedPreferences("word_learning", 0).edit().remove("gesture_enabled").apply();
         accuracyFile = new AtomicFile(new File(context.getNoBackupFilesDir(), "word-accuracy-v1"));
         worker.execute(() -> {
@@ -647,6 +646,18 @@ public final class SwipeTyping {
     public void learningEnabled(boolean enabled) {
         learningEnabled = enabled; learningGeneration++;
         context.getSharedPreferences("word_learning", 0).edit().putBoolean("enabled", enabled).apply();
+    }
+
+    /** Whether to learn new words, as stored, or the default: on, unless an old version's setting said otherwise. */
+    private boolean storedLearning() {
+        return context.getSharedPreferences("word_learning", 0).getBoolean("enabled",
+                context.getSharedPreferences("swipe_calibration", 0).getBoolean("enabled", true));
+    }
+
+    /** Settings > Reset all settings: the learning switch goes back to its default. The words it learned stay. */
+    public void resetLearning() {
+        context.getSharedPreferences("word_learning", 0).edit().remove("enabled").apply();
+        learningEnabled = storedLearning(); learningGeneration++;
     }
     void resetAccuracyStats() {
         accuracyEpoch++;

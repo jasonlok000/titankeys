@@ -353,6 +353,15 @@ export async function markNerdSeen() {
 
 /** Opens the interactive guide. It starts where you stopped, or from the beginning if you finished it. */
 export const openGuide = () => atlas("guide");
+
+/**
+ * Settings > Reset all settings: every switch, stepper and choice goes back to how it started (SettingsReset.kt). Words,
+ * snippets, shorthand, app lists and the rest of what's yours stay. Settings shows it at once.
+ */
+export async function resetSettings() {
+  await atlas("resetSettings");
+  await state.refresh();
+}
 /**
  * Opens the playground, and tells where its buttons asked to go: "setup" when it closed from its setup slide, and "closed"
  * when something else closed it, such as a link that opened the app's own screen over it.

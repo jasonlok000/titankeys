@@ -80,6 +80,7 @@ all of them are unapproved.
   webpage and the Play listing. F returns a before/after audit table for the owner.
 - **Phone for overnight tests (owner, 23:50):** "Test it when u find my phone idle. It'll be charging and unlocked." Wake it with
   KEYCODE_WAKEUP. If it's locked anyway, never unlock it with credentials: stop the phone part and log what's left.
+- A (after GuideDecor): the flick glow's strength ramps from none at the right edge to full at the top-speed line (owner, 23:58).
 - Then: merge everything, one build, install, and a full run-through on the phone.
 - Release prep (Orchestrator):
   - Update release-notes.txt for everything new since it was written. One line is already wrong: steering taps now count

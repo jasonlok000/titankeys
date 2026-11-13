@@ -47,6 +47,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - The flick-dots wait can be set in the lab; the owner likes the current 200 ms. (Owner, 2026-11-12)
 - The space-gesture zone is not made taller: the misses are timing, not height. (Owner, after the logs study, 2026-11-12)
 
+- **The flick's glow ramps with distance** (owner, 2026-11-12, 23:58): "there should be no glow when at the very right and the glow is stronger the more left it is to the limit... when I flick I shouldn't see the glow when I'm still at the right." None at the right edge, full at the top-speed line (about F/G), then capped. A short flick's after-lift glow follows the same ramp. The held delete's glow is unchanged.
 - The held delete has no fade: each word is one firm hit, 50 ms at the slow pace down to 30 ms at top speed. That's the version the owner has on the phone, and the owner keeps it. (Owner, 2026-11-12)
 
 - A double or triple tap only picks or steers when it lands on the Space bar itself, not on the Shift or ▦ spots beside it. No lab slider for the wait: 150 ms is fixed. Going lower recovered nothing in the logs. (Owner, 2026-11-12)

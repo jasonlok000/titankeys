@@ -260,6 +260,17 @@ all of them are unapproved.
     above the keyboard; F: Size grows only the bar's contents, follows the phone's font size until picked, moves to The bar; W:
     an immediate haptic on Save's press (and any late menu button); A: switches for Delete a word and Next keyboard. All from
     059caf3. Then: check the owner's phone lands on Biggest.
+  - **Path to the 2.1 pre-release (asked by the owner, 2026-11-13):**
+    1. W's, A's and D's work lands; the Orchestrator reviews W's corner and border renders; build #13; phone check.
+    2. The owner's hands-only pass: the touchpad (swipe, held flick and its trail, PAUSE height, steer, select), the real Sym key
+       and held letters, haptic feel (the menu's press tick too), pasting on the guide's slides, the two shortcut switches, and
+       judging the moved menu word.
+    3. The Orchestrator: recheck the old "bar drops to zero height while cycling Sym" (never closed in this file), and build the
+       release variant without the owner's key to check it compiles and carries no debug code (against docs/release-audit-2.1.md).
+       The release notes get a final pass for today's changes.
+    4. The owner: merge test-2.1h or open the PR, run tools/release.sh with their own signing credentials, publish it as a GitHub
+       pre-release, install it and daily-drive it for 3 days. The release app is com.titankeys, separate from the debug app on the
+       phone, so it starts with fresh settings and words, and needs to be set as the keyboard and turned on in Accessibility.
   - **Assigned for build #13 (owner's go, 2026-11-13):** W: the 11 dp optical line with its mitigations and corner_check and
     simulated-border renders (reviewed before the build); A: idle games roll once at 3:00, no two triggers or same games running;
     D: shorthand saved lowercase and the cap-flag cause.

@@ -206,6 +206,14 @@ all of them are unapproved.
   - Owner's report: on the home screen the keyboard is cut off by the bar. It isn't on screen now, so the owner's screenshot is
     needed.
   - F's Size setting is pushed (4af0690, verify passed). F kept the guide and front page at Normal. Review before merging.
+  - **W's fixes, merged** (46977ef, fd01c83; merge 179b7ad):
+    - **Hover:** the owner's raw log showed the touchpad's lift arriving about 124 ms after the key-up, and then nothing more. So
+      the hover now pins to the pressed key and moves or ends only when the touchpad reports the finger again. The catch: after
+      a real lift the pill stays until the next touch, since the touchpad reports nothing after a press.
+    - **Open:** the echo uses the word's own mark, and the ambient waits a full cycle, so there are no hearts and then glitter.
+    - **Next for W:** the quick settings page has the same late lift (its mark clears about 0.3 s after a toggle), so it gets the
+      same fix. The ladder work stays held until v4 is approved.
+  - **Build #5** started (test-2.1h at 179b7ad). It has everything merged except F's Size and Orange work and W's ladder.
   - **Ladder mockup v4** (C): `X:/Atlas/.dev/mockups/ladder-v4.html`, opened on the phone at 09:40.
     - Not saved: a 42% fill under denser dots.
     - Grey hover previews for every button.

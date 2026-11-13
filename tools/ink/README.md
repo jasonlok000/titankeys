@@ -19,3 +19,5 @@ It adds:
 - `appBaseContext`, which the app defines beside `createAppNativeAdapters`: the activity's base context, so TitanKeys can keep
   Ink's activity at fixed sizes whatever the phone's display size or font size.
 - `appPressHaptic`, beside it: the app can play its own haptic for a press, or none, in place of Android's stock click.
+- No Light Phone receiver: Ink adds `InkLightSdkReceiver`, the Light Phone SDK's marker, exported behind a permission named
+  "normal" that nothing defines. TitanKeys runs on the Titan, not a Light Phone, so the patch takes it out of the manifest.

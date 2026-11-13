@@ -82,4 +82,15 @@ describe("record a bug", () => {
     expect(words).toContain("TitanKeys doesn't upload it");
     expect(words.toLowerCase().includes("anonym")).toBe(false);
   });
+
+  test("says what a recording can show before you start one, in the same words as the privacy policy", async () => {
+    const said = "It doesn't save your text, but the keys and word choices it records can show most of what you typed while it ran. "
+      + "Only share it with people you'd show that to.";
+    expect(await text("lib/bug-text.ts")).toContain(`beforeRecord: "${said}"`);
+    const screen = await text("app/settings/bug.tsx");
+    expect(screen.indexOf("<Note>{text.beforeRecord}</Note>")).toBeGreaterThan(-1);
+    expect(screen.indexOf("<Note>{text.beforeRecord}</Note>")).toBeLessThan(screen.indexOf("<Field label={text.record}"));
+    const policy = (await text("site/privacy/index.html")).replace(/\s+/g, " ");
+    expect(policy).toContain(said);
+  });
 });

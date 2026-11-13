@@ -828,6 +828,28 @@ index 5093d42..fc7df53 100644
  }
  
  export interface ThemeColours extends Colours {
+diff --git a/platform/android/app/src/main/AndroidManifest.xml b/platform/android/app/src/main/AndroidManifest.xml
+index 9f7305d..8d9d6b9 100644
+--- a/platform/android/app/src/main/AndroidManifest.xml
++++ b/platform/android/app/src/main/AndroidManifest.xml
+@@ -24,17 +24,6 @@
+                 <category android:name="android.intent.category.LAUNCHER" />
+             </intent-filter>
+         </activity>
+-        <receiver
+-            android:name=".InkLightSdkReceiver"
+-            android:exported="true"
+-            android:permission="normal">
+-            <intent-filter>
+-                <action android:name="com.thelightphone.sdk.ACTION_SDK_MARKER" />
+-            </intent-filter>
+-            <meta-data
+-                android:name="com.thelightphone.sdk.SDK_VERSION"
+-                android:value="${inkLightSdkVersion}" />
+-        </receiver>
+     </application>
+     <queries>
+         <package android:name="${inkLightServerPackage}" />
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
 index aa4bc3b..234c7ad 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt

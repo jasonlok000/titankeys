@@ -165,7 +165,7 @@ all of them are unapproved.
 - **Front page text as one paragraph (owner, 07:50):** C drops the sentence anchoring and the next-line dimming (9b56000). The reference becomes a two-line window that scrolls through one continuous paragraph. Same branch as the title.
 - **Front page title (owner, 07:45):** a guide-style title and description. C adds it on claude/playground-next-line, after the
   next-line dimming (9b56000, render checked). Both go into build #4.
-- **Build #3: 3511f1fa**, from 7db5c06, with everything from the run-through: all checks passed. Installed at 08:00 with no crash, while the owner was on the phone. The Orchestrator's phone checks wait until it's idle.
+- **Build #3: 3511f1fa**, from 7db5c06, with everything from the run-through: all checks passed. Installed at 07:50 with no crash, while the owner was on the phone. The Orchestrator's phone checks wait until it's idle.
     - the share screen gets FixedScale, with its buttons pinned (at font 2.0 the accept was off screen);
     - decoration keep-outs feathered, with the 8 dp gap and nothing under the status bar;
     - the playground's effects go behind its text;

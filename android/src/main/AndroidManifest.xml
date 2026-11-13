@@ -61,10 +61,11 @@
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
-        <!-- One still frame of the new guide, for review. Exported so that adb can open it; it closes at once outside TitanKeys Debug. -->
+        <!-- One still frame of the new guide, for review. Not exported here: tools/debug.sh exports it in TitanKeys Debug only, so
+             that adb can open it, and it closes at once outside TitanKeys Debug anyway. -->
         <activity
             android:name="com.atlas.keyboard.GuideFrameActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <!-- Reset literally everything restarts TitanKeys through this, in a process of its own: see FreshStart.kt. -->

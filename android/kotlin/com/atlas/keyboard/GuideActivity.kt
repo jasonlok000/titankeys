@@ -2607,17 +2607,9 @@ class GuideActivity : Activity() {
                 t > FIX_LANDS -> add(gap + next)
                 t > SWIPE_LANDS / 2 -> add(gap + GuideScript.slip(next))
             }
-            GuideDemo.DeleteLast -> if (lastEnd > lastStart) {
-                if ((flow.cue as? GuideCue.Flick)?.hold == true) {
-                    // A flick that stays: words keep going, one after another, while the finger is down.
-                    val gone = ((t - .5f) / .4f * HOLD_DEMO_WORDS).toInt().coerceIn(0, HOLD_DEMO_WORDS) + if (t > .5f) 1 else 0
-                    var from = lastEnd
-                    repeat(gone) { from = text.substring(0, from).trimEnd().lastIndexOf(' ') + 1 }
-                    if (from < lastEnd) built.setSpan(BackgroundColorSpan(fieldFill()), from, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                } else {
-                    // One flick, one word, gone at once.
-                    if (t > FLICK_GONE) built.setSpan(BackgroundColorSpan(fieldFill()), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
+            // One flick, one word, gone at once. The held flick's slide has no demo in the field.
+            GuideDemo.DeleteLast -> if (lastEnd > lastStart && t > FLICK_GONE) {
+                built.setSpan(BackgroundColorSpan(fieldFill()), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             GuideDemo.MoveCursor -> if (lastEnd > 0) {
                 val back = ((t - TAPS_SHARE).coerceAtLeast(0f) / (1f - TAPS_SHARE) * (lastEnd - lastStart + 1)).toInt()
@@ -4399,9 +4391,8 @@ class GuideActivity : Activity() {
         /** When the word menu's demo presses O: late in the hold demo, early once the menu is really open. */
         private const val MENU_O_AT = .75f
         private const val MENU_O_OPEN_AT = .3f
-        /** The flick demo's word goes as the flick snaps; the hold demo deletes up to this many more while the finger stays. */
+        /** The flick demo's word goes as the flick snaps. */
         private const val FLICK_GONE = .25f
-        private const val HOLD_DEMO_WORDS = 4
         /** The chapter one chips that the screen itself shows. */
         /** A rude clip, pasted on the clipboard slide, taken back out. */
         private const val RUDE_CLIP = "That one's rude. Took it back. Find the nice one."

@@ -4,6 +4,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
@@ -879,24 +880,63 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private val deletePath = Path()
 
     /**
-     * The held delete's zones, on its slide, on the Backspace row: back on Backspace pauses, and from between F and G leftwards is
-     * top speed, a lighter box. They are where the hold really has them: [PAUSE_KEYS] key widths from where a flick on Backspace
-     * starts, and [REPEAT_LONG_KEYS].
+     * The held delete's zones, on its slide, so they explain themselves at a glance (owner, 2026-11-13: ASDF looked like where to
+     * swipe). Only the start is a filled patch, [drawDeleteZone]'s, labelled START. FASTER is a direction, not a place: an arrow
+     * from the start out to the top-speed line, between F and G, on the gap under the Backspace row. PAUSE is back on Backspace:
+     * a dashed column the full height that the touchpad feels, as the hold counts it at any height ([PAUSE_KEYS] key widths from
+     * where a flick on Backspace starts; the top speed is [REPEAT_LONG_KEYS]). The words are in the Label style, in the zone's tint.
      */
     private fun drawHoldZones(canvas: Canvas) {
         if ((cue as? GuideCue.Flick)?.hold != true) return
-        val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.CREAM
+        val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE
         val corner = Radii.px(resources, Radii.SMALL)
-        val fast = geometry.onRow(1, AREA_LEFT, HOLD_TOP_X)
-        zonePaint.color = GuideMotion.faded(colour, ZONE_ALPHA * FAST_ZONE)
-        canvas.drawRoundRect(fast.left, fast.top, fast.right, fast.bottom, corner, corner, zonePaint)
-        val pause = geometry.onRow(1, HOLD_PAUSE_X, AREA_RIGHT)
-        zonePaint.color = GuideMotion.faded(colour, ZONE_ALPHA)
-        canvas.drawRoundRect(pause.left, pause.top, pause.right, pause.bottom, corner, corner, zonePaint)
-        altPaint.color = GuideMotion.faded(colour, .85f)
-        altPaint.textSize = max(dp(SUBLABEL_MIN), min(geometry.key, geometry.keyHeight) * ZONE_LABEL)
-        val word = "pause"
-        canvas.drawText(word, pause.centreX - altPaint.measureText(word) / 2, pause.bottom - dp(3f), altPaint)
+        // PAUSE: an outline, not a fill, so it never reads as where to go.
+        val pause = geometry.area(HOLD_PAUSE_X, AREA_TOP, AREA_RIGHT, AREA_BOTTOM)
+        holdPaint.style = Paint.Style.STROKE
+        holdPaint.strokeWidth = dp(HOLD_STROKE)
+        holdPaint.pathEffect = DashPathEffect(floatArrayOf(dp(HOLD_DASH), dp(HOLD_DASH)), 0f)
+        holdPaint.color = GuideMotion.faded(colour, HOLD_LINE)
+        canvas.drawRoundRect(pause.left, pause.top, pause.right, pause.bottom, corner, corner, holdPaint)
+        // FASTER: a straight arrow out to the left, from the start's left edge to the top-speed line.
+        val y = geometry.y(HOLD_ARROW_Y)
+        val from = geometry.x(guideDeleteBox[0]) - dp(HOLD_STROKE * 2)
+        val to = geometry.x(HOLD_TOP_X)
+        val head = dp(HOLD_HEAD)
+        holdPaint.pathEffect = null
+        holdPaint.strokeCap = Paint.Cap.ROUND
+        holdPaint.strokeJoin = Paint.Join.ROUND
+        canvas.drawLine(from, y, to, y, holdPaint)
+        path.rewind()
+        path.moveTo(to + head, y - head * .7f)
+        path.lineTo(to, y)
+        path.lineTo(to + head, y + head * .7f)
+        canvas.drawPath(path, holdPaint)
+        // The labels, last, over everything.
+        val start = geometry.area(guideDeleteBox[0], AREA_TOP, HOLD_PAUSE_X, AREA_TOP)
+        holdLabel(canvas, "START", start.centreX, geometry.y(HOLD_START_Y), colour)
+        holdLabel(canvas, "FASTER", (from + to) / 2, y, colour)
+        holdLabel(canvas, "PAUSE", pause.centreX, geometry.y(HOLD_PAUSE_Y), colour)
+    }
+
+    /** One of the held delete's words, in the Label style on a small pill of the background, so it reads over the keys. */
+    private fun holdLabel(canvas: Canvas, word: String, x: Float, y: Float, colour: Int) {
+        holdLabelPaint.textSize = dp(SUBLABEL_MIN)
+        holdLabelPaint.color = colour
+        val half = holdLabelPaint.measureText(word) / 2 + dp(HOLD_PILL_SIDE)
+        val tall = dp(SUBLABEL_MIN) * .75f + dp(HOLD_PILL_SIDE)
+        holdPaint.style = Paint.Style.FILL
+        holdPaint.pathEffect = null
+        holdPaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.ORANGE else GuideColours.BLACK, HOLD_PILL)
+        canvas.drawRoundRect(x - half, y - tall / 2, x + half, y + tall / 2, tall / 2, tall / 2, holdPaint)
+        canvas.drawText(word, x, y + dp(SUBLABEL_MIN) * .36f, holdLabelPaint)
+    }
+
+    private val holdPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    /** The Label style: heavy, spaced out, in capitals, as the top bar's chapter. */
+    private val holdLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = GuideFonts.heavy(context)
+        textAlign = Paint.Align.CENTER
+        letterSpacing = .08f
     }
 
     /** The hold's finger is back in the pause zone: its trail dims, as the bar's glow fades there. */
@@ -1042,9 +1082,18 @@ internal class GuideKeyboardView(context: Context) : View(context) {
          *  pauses, and [REPEAT_LONG_KEYS] keys out is top speed, between F and G. */
         const val HOLD_PAUSE_X = .95f - PAUSE_KEYS / 10f
         const val HOLD_TOP_X = .95f - REPEAT_LONG_KEYS / 10f
-        const val ZONE_LABEL = .24f
-        /** The top-speed box is lighter than the pause box: this much of its strength. */
-        const val FAST_ZONE = .5f
+        /** The held delete's drawing: the arrow's and the dashed column's stroke, dash and arrowhead in dp, and their strength. */
+        const val HOLD_STROKE = 2f
+        const val HOLD_DASH = 5f
+        const val HOLD_HEAD = 7f
+        const val HOLD_LINE = .7f
+        /** The arrow runs on the gap under the Backspace row; START sits on the gap over it, PAUSE on the gap under sym. */
+        const val HOLD_ARROW_Y = .5f
+        const val HOLD_START_Y = .25f
+        const val HOLD_PAUSE_Y = .75f
+        /** The labels' pill: its padding in dp, and how much of the background it is. */
+        const val HOLD_PILL_SIDE = 5f
+        const val HOLD_PILL = .85f
         /** How much the trail dims while the hold is paused. */
         const val PAUSED_TRAIL = .3f
 

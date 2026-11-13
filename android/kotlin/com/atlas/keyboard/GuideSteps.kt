@@ -1331,7 +1331,8 @@ internal val GUIDE_STEPS = listOf(
         cue = GuideCue.Flick(hold = true),
         needs = GuideNeed.SwipeTyping,
         lessons = setOf(GuideLesson.Flick, GuideLesson.DeleteHold),
-        demo = GuideDemo.DeleteLast,
+        // No demo in the field: its text stays still, and only the keyboard's drawing acts the held flick out (owner, 2026-11-13:
+        // "the text box doesn't need animation deleting").
     ),
     // STEERING: the slide's line again and again, with the cursor in the middle; the cursor gestures only.
     GuideStep(

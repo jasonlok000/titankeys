@@ -256,6 +256,9 @@ all of them are unapproved.
     - By design: the Saved word's faint book over the front page's drawn keys.
     - For the owner's hands: the touchpad (swipe, held flick and PAUSE height, steer, select), the real Sym key and held
       letters, haptic feel, pasting on the guide's slides, and Next on a really passed slide.
+  - **Build #11 started** from e4ea287. It adds A's TitanKeys underline on the bar for the whole menu slide (fad05f1; the wiggle
+    is gone) and W's light-look accents-off favourite #35312E (b619011; all four statuses checked in both looks). Not in it: the
+    Sym jump and decoration fix, which waits on the owner.
   - **Merged for build #11, round 2 (176b921):** W's colour-only status (6694e8c: Favourite in the accent, Saved white, Not saved
     #99918A, Blocked #5E5853 with a strike, no marks; hover leans 60%; Strip.lit underlines a bar word), A's render fix for the
     passed menu slide (2dc6e18), and V's flat e with a pen strike (claude/flat-e-strike; paper balls and sticky notes flattened).

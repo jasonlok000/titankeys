@@ -68,6 +68,7 @@ object HapticTimeline {
         Haptic.BarWord -> "You tapped a word on the bar"
         Haptic.MenuOpen -> "The word menu opened"
         Haptic.MenuMark -> "The menu mark moved"
+        Haptic.MenuPress -> "A word menu button pressed"
         Haptic.MenuClosed -> "Back closed the word menu"
         Haptic.WordSaved -> "Saved the word"
         Haptic.WordBlocked -> "Blocked the word"

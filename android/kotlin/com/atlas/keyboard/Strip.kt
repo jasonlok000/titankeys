@@ -364,6 +364,8 @@ class Strip(
     var effects: android.view.View? = null
     /** Each effect's haptic, on its frame: the book's clap, the rip, the hearts' release, the crack, the strike landing or gone. */
     var menuBeat: (MenuKeys.Button) -> Unit = {}
+    /** The light tick on a menu press, at once, before the effect's own haptic: see [MenuScene.PRESS]. */
+    var menuPress: () -> Unit = {}
     /**
      * I's and O's icons, and the icons they are changing from, since when: no icon snaps to another, see [MenuMotion.icon]. Each
      * as the menu's buttons, not the strip's actions.
@@ -912,7 +914,7 @@ class Strip(
         shown.cx = menuWordCentre / density
         shown.reducedMotion = !GuideMotion.enabled
         shown.palette = palette()
-        shown.onHaptic = { button, _ -> menuBeat(button) }
+        shown.onHaptic = { button, label -> if (label == MenuScene.PRESS) menuPress() else menuBeat(button) }
         // The button under the resting finger, whose press the grey preview shows.
         val under = if (hovered < 0) null else MenuKeys.choices(menu.step).let { if (hovered == MenuKeys.UP) it.i else it.o }
         // A press plays its effect once; a menu read again only shows where the word stands. The press keeps the preview it took

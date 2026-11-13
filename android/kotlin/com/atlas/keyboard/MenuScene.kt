@@ -27,7 +27,8 @@ import kotlin.math.sin
  * [ABOVE] dp over the app. The scene is plain Kotlin, so the checks drive and draw the very same thing without a phone.
  *
  * [word] is the word as shown, and [layout] where its letters are in the menu's font at [FONT_DP]. The word is centred on [cx],
- * on the baseline [baseline]. [onHaptic] is called on each effect's one haptic frame, with the step that played it.
+ * on the baseline [baseline]. [onHaptic] is called on each effect's one haptic frame, with the step that played it, and with
+ * [PRESS] on the press itself, since every effect's own haptic lands well after it.
  */
 class MenuScene(
     val word: String,
@@ -324,6 +325,9 @@ class MenuScene(
             onHaptic(button, "end state")
             return
         }
+        // The press is felt at once, a light tick, before the effect's own haptic lands 166 to 760 ms later (owner, 2026-11-13: "the
+        // save button shd have a immediate haptic before the book closes"). With motion off the step's haptic is already the press's.
+        haptic(button, PRESS)
         // A preview for some other step fades; the press's own preview is handed to its effect.
         if (ghost != button) {
             leans.forEach { it.to(0f, FADE) }
@@ -845,6 +849,8 @@ class MenuScene(
     companion object {
         /** The menu word's size: as the mockup, 20 dp in Inter Bold. */
         const val FONT_DP = 20f
+        /** The haptic label of a press's light tick at once: see [press]. */
+        const val PRESS = "the press"
         /** How far a resting finger's preview moves the word toward its next look: about 60% of the way (owner, 2026-11-13). */
         const val LEAN = .6f
         /** The bar's height, and how far over it the effects may rise. */

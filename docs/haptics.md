@@ -24,7 +24,7 @@
 
 The owner's lab notes led here: swipe and cursor ticks at 17 ms felt very good, every prebaked effect felt generic, messages were too subtle, and "can't save" didn't feel like an error.
 
-**Haptics are only for what your thumb can't feel or see.** A physical key press already clicks under your thumb, so it never buzzes. A buzz is for the touchpad, which has no click of its own, and for what changes where you aren't looking.
+**Haptics are only for what your thumb can't feel or see.** A physical key press already clicks under your thumb, so it never buzzes. A buzz is for the touchpad, which has no click of its own, and for what changes where you aren't looking. The one exception is a word menu press: it ticks at once, because its step's own haptic lands with the effect, up to 760 ms later (owner, 2026-11-13: "the save button shd have a immediate haptic before the book closes").
 
 ## The families
 
@@ -32,7 +32,7 @@ Patterns are on and off in ms, starting with on.
 
 | Family | Pattern | Plays for |
 |---|---|---|
-| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, the marked button in the word menu or a panel, a step of a stepper in the app, any other press in the app (Press), the playground's shake starting (a short run of ticks) |
+| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, the marked button in the word menu or a panel, a word menu press that moves the word (Menu press), a step of a stepper in the app, any other press in the app (Press), the playground's shake starting (a short run of ticks) |
 | **Crunch** | 9, 12, 9 | Keys crossed while a stroke is clearly a delete flick |
 | **Boundary** | 30 | A stroke that crunched stops being a flick, the cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel, a long delete's finger going into the pause zone or reaching the top-speed line |
 | **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, steering starts, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar, an option picked in the app |
@@ -59,8 +59,22 @@ Saved and Removed are the word menu's own, so Save and Block feel different from
 
 The word menu is a ladder of four rungs, blocked, not saved, saved and favourite, and its haptics are one system (owner, 2026-11-12,
 and the ladder of 2026-11-13). I moves a word one step up, and O one step down. Each step's haptic plays on its effect's own frame:
-the book's clap, the page ripping, the hearts' release, the heart's crack, the strike landing, the strike gone. With motion off, it
-plays as the press lands.
+the book's clap, the page ripping, the hearts' release, the heart's crack, the strike landing, the strike gone. Each lands well
+after the press, so the press itself plays a texture tick at once (Menu press): you feel the press, then the step. With motion off,
+the step's haptic plays as the press lands, with no tick, so nothing hits twice.
+
+| Button | The step's haptic, after the press | Press tick |
+|---|---|---|
+| Save | the book's clap, about 760 ms | yes |
+| Unsave | the page ripping, about 424 ms | yes |
+| Favourite | the hearts' release, about 166 ms | yes |
+| Unfavourite | the heart's crack, about 191 ms | yes |
+| Block | the strike landing, about 366 ms | yes |
+| Unblock | the strike gone, about 366 ms | yes |
+| Already a favourite | No, at once | no |
+| Any, with motion off | the step's own, at once | no |
+
+A press gets the tick only when its step's haptic lands more than 80 ms after it; tests/word-menu measures each one.
 
 | Step | Button | Family | Pulses | Feel |
 |---|---|---|---|---|
@@ -172,6 +186,7 @@ Back within 0.8 keys of where the flick started, measured across only, so at any
 - Tap a word: confirm.
 - The word menu opens: confirm.
 - The marked menu button changes: texture.
+- A press that moves the word: texture at once, then the step's own haptic with its effect, below. With motion off, only the step's, at once.
 - Back closes the word menu: release. Typing or leaving the field closes it with nothing.
 - Save, by I or the strip: saved, on the book's clap. A save that fails plays no after it.
 - Unsave: unsaved, as the page rips. Favourite: favourite, as the hearts release. Unfavourite: unfavourite, as the heart cracks.

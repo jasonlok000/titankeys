@@ -1202,6 +1202,7 @@ class AtlasIme : InputMethodService() {
         val effects = MenuEffects(ui, words)
         words.effects = effects
         words.menuBeat = ::menuBeat
+        words.menuPress = { haptics.play(Haptic.MenuPress) }
         // The keyboard sits on the bottom of a window as tall as the screen. See [fillScreen].
         return FrameLayout(ui).apply {
             addView(keyboard, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
@@ -1965,7 +1966,8 @@ class AtlasIme : InputMethodService() {
     /**
      * Each step's haptic, which the strip plays on the effect's own frame (ladder v4): the book's clap for Save, the rip for Unsave,
      * the hearts' release for Favourite, the crack for Unfavourite, the strike landing for Block and the strike gone for Unblock.
-     * With motion off, it plays as the press lands.
+     * The press itself plays [Haptic.MenuPress] at once, a light tick, since each of these lands well after it. With motion off,
+     * the step's haptic plays as the press lands, with no tick.
      */
     private fun menuBeat(button: MenuKeys.Button) = haptics.play(when (button) {
         MenuKeys.Button.Save -> Haptic.WordSaved

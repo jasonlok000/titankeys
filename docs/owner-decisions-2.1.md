@@ -208,6 +208,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
+- **"TL;DR Trust me bro."** replaces "Trust me bro." on the share screen, before the accept (owner, 2026-11-13, 13:35). (Owner)
 - **Release audit** (A, claude/release-audit-2 81da968, docs/release-audit-2.1.md). The release APK is 115.9 MB (engine 2.0's next-word
   model and onnxruntime), with 6 permissions. Dev screens and adb hooks are gated, and GuideFrameActivity is now unexported in
   release. Seven new checks were added. The Orchestrator's calls on A's open points, unapproved:

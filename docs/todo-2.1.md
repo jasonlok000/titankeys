@@ -75,6 +75,8 @@ all of them are unapproved.
 - F (next): a review of every user-facing text: "good, not cringey, not ai sounding, keep my tone, keep the ones I chose" (owner, 23:40).
   F edits the Ink app, GuideSteps (incl. the playground lines beyond the owner's 22) and the release notes, and lists strings in files
   C and D are editing, for the Orchestrator to apply after their merges.
+- **Phone for overnight tests (owner, 23:50):** "Test it when u find my phone idle. It'll be charging and unlocked." Wake it with
+  KEYCODE_WAKEUP. If it's locked anyway, never unlock it with credentials: stop the phone part and log what's left.
 - Then: merge everything, one build, install, and a full run-through on the phone.
 - Release prep (Orchestrator):
   - Update release-notes.txt for everything new since it was written. One line is already wrong: steering taps now count

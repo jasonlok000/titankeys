@@ -260,6 +260,13 @@ all of them are unapproved.
     above the keyboard; F: Size grows only the bar's contents, follows the phone's font size until picked, moves to The bar; W:
     an immediate haptic on Save's press (and any late menu button); A: switches for Delete a word and Next keyboard. All from
     059caf3. Then: check the owner's phone lands on Biggest.
+  - **Build #11 on the phone (1b094db8, installed 14:53, 0 crashes):** the menu slide works from start to pass over adb (hold
+    TitanKeys, I, I): underlined in the box and on the bar, grey, then white, then orange, "FAVOURITED. GOOD TASTE.", Next. The ∞
+    slide reads "ANSWER HONESTLY." over "So how long do I last in bed with your mother?". Found: at favourite, the "Already a
+    favourite" pill covers the word ("TitanKe"); sent to W. The ∞ is cut by the Sym panel and the slide drops, as expected
+    before V's fix.
+  - **Bar text size starts at Bigger, never Biggest** (owner: "if it detects the size being big, it'll select big, not
+    biggest. I think big is a good spot for me personally"). f8f743f. Biggest is only ever picked.
   - **Merged for build #12 (2abbaed):**
     - W's press tick (claude/menu-press-tick 5a9aebf): a 17 ms Texture tick on every word menu press whose own haptic lands later
       than 80 ms (Save 758 ms, Unsave 424, Favourite 166, Unfavourite 191, Block and Unblock 366); its own switch in Haptics > Bar.

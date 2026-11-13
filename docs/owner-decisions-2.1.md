@@ -212,9 +212,12 @@ What the owner asked for, what's decided and by whom, and what's still open. The
     bar? (but not the height of the bar itself)"). (Owner) Orchestrator's design, unapproved: the bar's words, its word menu, chips,
     clip offer and hints grow; the bar stays 56 dp; Ink's settings, the panels, the guide and the front page stay Normal. The
     setting moves to The bar as "Bar text size" or similar. F builds it.
-  - **Starting size follows the phone's font size** until the user picks one: under 1.15 Normal, up to 1.5 Bigger, above that
-    Biggest; the resets go back to following it. (Owner's yes; thresholds the Orchestrator's.) The owner's phone (2.0) lands on
-    Biggest by itself; the Orchestrator checks it once F's build is installed.
+  - **Starting size follows the phone's font size** until the user picks one: under 1.15 Normal, from 1.15 Bigger, never Biggest
+    (owner: "how about by default if it detects the size being big, it'll select big, not biggest? I think big is a good spot for
+    me personally"). Biggest is only ever picked. The resets go back to following it. The owner's phone (2.0) lands on Bigger by
+    itself; the Orchestrator checks it once build #12 is installed. (Owner)
+- **Never wait for the phone to be idle** (owner, 2026-11-13: "take my phone. never ever wait for my phone to be idle any
+  more."). Installs and checks run at once; navigation and the TitanKeys-in-front check still stop them. (Owner)
   - **The Sym jump** goes to V, with checks that reproduce it.
 - **Save gives a haptic at once** (owner: "the save button shd have a immediate haptic before the book closes"). (Owner) A light
   tick on the press, then the clap as the book shuts; every other menu button whose beat lands more than about 80 ms late gets the

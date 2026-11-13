@@ -66,7 +66,7 @@ export type State = {
   cursorControl: boolean;
   /** A swipe on the touchpad types a word, and a flick left from Backspace deletes one. */
   swipeTyping: boolean;
-  /** The touchpad overlay stays up when no field is active, so the touchpad does not scroll apps. Settings shows this reversed, as Scroll assistant outside text fields. */
+  /** The touchpad overlay stays up when no field is active, so the touchpad does not scroll apps. Settings shows this reversed, as Scroll assistant. */
   touchpadOnlyInFields: boolean;
   /** A few small marks on the keyboard are orange, such as the key under a finger. Off, they are white or black. */
   orangeAccents: boolean;

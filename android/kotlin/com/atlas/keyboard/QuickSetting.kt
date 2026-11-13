@@ -16,8 +16,8 @@ enum class QuickSetting(val key: String, val label: String, val title: String) {
     HoldSymbols("H", "Hold", "Hold a letter for its symbol"),
     CursorControl("M", "Move", "Space taps move and select"),
     DoublePressLocks("L", "Lock", "Press twice to lock Shift and Alt"),
-    /** On is the phone's own Scroll assistant outside text fields, the other way round from the setting that it changes. */
-    ScrollAssistant("R", "Scrl", "Scroll assistant outside text fields"),
+    /** On is the phone's own Scroll assistant for apps, the other way round from the setting that it changes. */
+    ScrollAssistant("R", "Scrl", "Scroll assistant"),
     OpenSettings("O", "Open", "Open TitanKeys settings"),
     /** X as in cut and copy. It opens the clipboard page, and is no setting. */
     Clipboard("X", "Clip", "Clipboard"),

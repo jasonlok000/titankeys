@@ -4,7 +4,7 @@ import { showKeyCalibration, state, update } from "../../lib/atlas";
 import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
-import { barLabel, cursorLabel } from "../../lib/setting-names";
+import { barLabel, cursorLabel, scrollLabel, scrollNote } from "../../lib/setting-names";
 import { parentOf } from "../../lib/settings-tree";
 import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
@@ -70,7 +70,7 @@ export default function Settings() {
       {(settings.swipeTyping || settings.cursorControl)
         && <Field label="Keep swiping after a short lift" href="/settings/lift">{liftLabel(settings)}</Field>}
       <Field label="Type with a light touch" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
-      <Toggle label="Scroll assistant outside text fields" value={!settings.touchpadOnlyInFields}
+      <Toggle label={scrollLabel} subtitle={scrollNote} value={!settings.touchpadOnlyInFields}
         onChange={scroll => save.run({ touchpadOnlyInFields: !scroll })} />
       {/* Key calibration is only in TitanKeys Debug, as the Haptics lab is, so it shows with the Haptics lab. */}
       {settings.hapticsLab && <Field label="Key calibration" onPress={() => void showKeyCalibration()} />}

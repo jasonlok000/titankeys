@@ -12,7 +12,7 @@ For #36. Checked against [Use of the AccessibilityService API](https://support.g
 - **Keys:** `canRequestFilterKeyEvents="true"`. It turns key filtering on only while the keyboard asks for it (`AtlasIme.updateKeyWatch`):
   - while the Sym panel is open, and until a key the panel took is let go, so that Enter and Backspace turn the panel's pages and don't reach the app;
   - in the Smart Launcher search field, when hold for symbols is on or double-press lock is off, so that holds and two presses of Shift or Alt work there;
-  - between the first and second press of Back, while the keyboard holds the touchpad (when "Scroll assistant outside text fields" is off), so the second press reaches the app.
+  - between the first and second press of Back, while the keyboard holds the touchpad (when "Scroll assistant" is off), so the second press reaches the app.
 - **Touchpad (2.1):** while the keyboard has the touchpad, it shows a 1×1 `TYPE_ACCESSIBILITY_OVERLAY` window (`TouchpadOverlay`) above the notification shade, because the firmware gives a touchpad swipe to the shade when a notification pops up. It takes no screen touches and reads nothing. It's hidden on the lock screen and when the screen is off.
 - Nothing it sees is stored or sent.
 

@@ -1,14 +1,14 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { barLabel, cursorLabel } from "../../lib/setting-names";
+import { barLabel, cursorLabel, scrollLabel } from "../../lib/setting-names";
 
 // A setting has one name everywhere: Settings, the keyboard's quick settings and the fun guide's "Turn on" steps.
 const root = join(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 const settings = read("app/settings/index.tsx");
 const labels = new Set([...settings.matchAll(/label="([^"]+)"/g)].map(match => match[1]));
-labels.add(barLabel).add(cursorLabel);
+labels.add(barLabel).add(cursorLabel).add(scrollLabel);
 
 test("each quick setting has its name in Settings", () => {
   const quick = [...read("android/kotlin/com/atlas/keyboard/QuickSetting.kt").matchAll(/^\s+(\w+)\("\w", "[^"]+", "([^"]+)"\)/gm)];
@@ -29,6 +29,8 @@ test("the bar is turned off in one place, and the cursor setting uses its one na
   expect(read("app/settings/hidden-bar.tsx")).not.toContain("<Toggle");
   expect(read("app/settings/guide-boring.tsx")).toContain(cursorLabel);
   expect(read("app/settings/guide-boring.tsx")).toContain(`turn off ${barLabel}`);
+  expect(settings).toContain("label={scrollLabel}");
+  expect(read("app/settings/guide-boring.tsx")).toContain(`Turn it off with ${scrollLabel} in Settings`);
 });
 
 test("Record a bug has one way in: Settings > Help", () => {

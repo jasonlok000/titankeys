@@ -270,6 +270,11 @@ all of them are unapproved.
       kept). TitanKeys itself follows each field's own capital flags; no wider bug.
     - Idle, autocorrect and guide checks pass; bun 169 of 171 (the two that need the ink package).
     - Still to come: W's 11 dp line and its renders, then build #13.
+  - **The old "bar drops to zero height while cycling Sym", rechecked (build #12):** a screen recording of the playground while
+    10 panel changes ran by the debug broadcast (370 frames). The keyboard never collapsed. What does jump is the playground's
+    own layout: 51 px lower with a panel open, and one frame a further 139 px lower at each open and close (the drawn keys hide
+    before the column takes the panel's room). V extends panel-still to the playground. The real Sym key stays for the owner's
+    hands. The frames were deleted; some showed the clipboard.
   - **Languages wait until 2.1 is out** (owner, 2026-11-13: "Lets finis up 2.1 first.").
   - **Path to the 2.1 pre-release (asked by the owner, 2026-11-13):**
     1. W's, A's and D's work lands; the Orchestrator reviews W's corner and border renders; build #13; phone check.

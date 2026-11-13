@@ -111,6 +111,8 @@ internal object V2 {
     fun keys(g: Graphics2D, top: Int, lit: Set<String> = emptySet(), held: Set<String> = emptySet(), hints: Map<String, String>? = null,
              corners: Boolean = false, onOrange: Boolean = false, zones: Boolean = false, shade: Color? = null, marks: Boolean = false) {
         val keys = KEYS
+        // Each key's label as drawn, for the touch zone's brackets to pass behind.
+        val labels = java.util.IdentityHashMap<Any, java.awt.geom.Rectangle2D>()
         for (box in keys.boxes) {
             val name = box.name
             val hint = hints?.get(name)
@@ -148,18 +150,24 @@ internal object V2 {
                 val cx = box.centreX
                 val cy = top + box.centreY
                 g.stroke = BasicStroke(maxOf(1.5f, r / .42f * .14f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-                g.draw(java.awt.geom.Path2D.Float().apply {
+                val cup = java.awt.geom.Path2D.Float().apply {
                     moveTo(cx - half, cy - r * .1f)
                     lineTo(cx - half, cy + r * .35f)
                     lineTo(cx + half, cy + r * .35f)
                     lineTo(cx + half, cy - r * .1f)
-                })
+                }
+                g.draw(cup)
+                labels[box] = g.stroke.createStrokedShape(cup).bounds2D
             }
             val size = minOf(box.width, box.height) * (if (Layout.isLetter(name) || text.length == 1) .52f else .36f)
             g.font = if (keyFont(size).canDisplayUpTo(text) == -1) keyFont(size) else Font(Font.SANS_SERIF, Font.BOLD, 1).deriveFont(size)
             val fm = g.fontMetrics
             val lift = if (hint != null) box.height * .14f else 0f
-            g.drawString(text, box.centreX - fm.stringWidth(text) / 2f, top + box.centreY + (fm.ascent - fm.descent) / 2f - lift)
+            val textX = box.centreX - fm.stringWidth(text) / 2f
+            val textY = top + box.centreY + (fm.ascent - fm.descent) / 2f - lift
+            g.drawString(text, textX, textY)
+            if (text.isNotEmpty()) labels[box] = g.font.createGlyphVector(g.fontRenderContext, text).visualBounds
+                .let { java.awt.geom.Rectangle2D.Float(textX + it.x.toFloat(), textY + it.y.toFloat(), it.width.toFloat(), it.height.toFloat()) }
             if (hint != null) {
                 g.font = keyFont(minOf(box.width, box.height) * .3f)
                 g.drawString(hint, box.centreX - g.fontMetrics.stringWidth(hint) / 2f, top + box.bottom - box.height * .12f)
@@ -179,23 +187,40 @@ internal object V2 {
             val colour = if (onOrange) INK else ORANGE
             g.color = colour
             g.stroke = BasicStroke(2.5f * D, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-            val arm = 26f * D
-            val clear = java.awt.geom.Area(java.awt.Rectangle(0, 0, W, H))
-            for (box in keys.boxes) if (box.right < area.left + arm * 1.5f && box.left > area.left - arm ||
-                box.left > area.right - arm * 1.5f && box.right < area.right + arm) {
-                val half = minOf(box.width, box.height) * .52f * .62f
-                clear.subtract(java.awt.geom.Area(java.awt.geom.Rectangle2D.Float(box.centreX - half, top + box.centreY - half, 2 * half, 2 * half)))
-            }
-            g.clip = clear
-            for ((x, y, dx, dy) in listOf(listOf(area.left, area.top, 1f, 1f), listOf(area.right, area.top, -1f, 1f),
+            // Every label an arm reaches is cut out of it, 4 dp clear, and each arm shows 20 dp past its last gap (Master,
+            // 2026-11-13), as drawZoneMarks.
+            val stroke = 2.5f * D
+            val clearing = 4f * D
+            val shown = 20f * D
+            for ((cornerX, cornerY, dx, dy) in listOf(listOf(area.left, area.top, 1f, 1f), listOf(area.right, area.top, -1f, 1f),
                 listOf(area.left, area.bottom, 1f, -1f), listOf(area.right, area.bottom, -1f, -1f))) {
+                val x = cornerX
+                val y = top + cornerY
+                var across = 26f * D
+                var along = 26f * D
+                var gaps = emptyList<java.awt.geom.Rectangle2D>()
+                for (round in 0..1) {
+                    val reach = java.awt.geom.Rectangle2D.Float(minOf(x, x + dx * across) - stroke / 2, minOf(y, y + dy * along) - stroke / 2,
+                        across + stroke, along + stroke)
+                    gaps = keys.boxes.filter { reach.intersects(it.left.toDouble(), (top + it.top).toDouble(), it.width.toDouble(), it.height.toDouble()) }
+                        .mapNotNull { labels[it] }
+                        .map { java.awt.geom.Rectangle2D.Double(it.x - clearing, it.y - clearing, it.width + 2 * clearing, it.height + 2 * clearing) }
+                    if (round > 0) break
+                    across = maxOf(26f * D, (gaps.filter { it.minY <= y + stroke / 2 && it.maxY >= y - stroke / 2 && (if (dx > 0) it.minX - x else x - it.maxX) < across }
+                        .maxOfOrNull { (if (dx > 0) it.maxX - x else x - it.minX).toFloat() } ?: 0f) + shown)
+                    along = maxOf(26f * D, (gaps.filter { it.minX <= x + stroke / 2 && it.maxX >= x - stroke / 2 && (if (dy > 0) it.minY - y else y - it.maxY) < along }
+                        .maxOfOrNull { (if (dy > 0) it.maxY - y else y - it.minY).toFloat() } ?: 0f) + shown)
+                }
+                val clear = java.awt.geom.Area(java.awt.Rectangle(0, 0, W, H))
+                for (gap in gaps) clear.subtract(java.awt.geom.Area(gap))
+                g.clip = clear
                 val path = java.awt.geom.Path2D.Float()
-                path.moveTo(x + dx * arm, top + y)
-                path.lineTo(x, top + y)
-                path.lineTo(x, top + y + dy * arm)
+                path.moveTo(x + dx * across, y)
+                path.lineTo(x, y)
+                path.lineTo(x, y + dy * along)
                 g.draw(path)
+                g.clip = null
             }
-            g.clip = null
             g.font = label()
             g.drawString("TOUCH ZONE", area.right - g.fontMetrics.stringWidth("TOUCH ZONE"), top - 6f * D)
             return

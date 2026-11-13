@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -409,18 +410,49 @@ public final class TypingSettings {
             int tab = entry.indexOf('\t');
             if (tab > 0 && tab < entry.length() - 1) own.put(entry.substring(0, tab), entry.substring(tab + 1));
         }
+        Map<String, String> lower = lowercaseShorthand(own);
+        if (!lower.equals(own)) {
+            // Shorthand saved with capitals: repaired once, the first time it's read, and kept in lowercase from then on.
+            entries = shorthandEntries(lower);
+            preferences(context).edit().putStringSet(OWN_SHORTHAND, entries).apply();
+        }
         ownShorthandRead = entries;
-        ownShorthandCache = Collections.unmodifiableMap(own);
+        ownShorthandCache = Collections.unmodifiableMap(lower);
         return ownShorthandCache;
     }
 
-    /** Saves the user's own shorthand, which the caller has checked. [full] null removes it. */
+    /**
+     * Saves the user's own shorthand, which the caller has checked, in lowercase whatever was typed: "HW" saves as "hw". Its
+     * full word stays as typed. [full] null removes it.
+     */
     public static synchronized void ownShorthand(Context context, String shorthand, String full) {
         Map<String, String> own = new TreeMap<>(ownShorthand(context));
-        if (full == null) own.remove(shorthand); else own.put(shorthand, full);
+        if (full == null) own.remove(shorthandKey(shorthand)); else own.put(shorthandKey(shorthand), full);
+        preferences(context).edit().putStringSet(OWN_SHORTHAND, shorthandEntries(own)).apply();
+    }
+
+    /** How a shorthand is kept and looked up: in lowercase, with a curly apostrophe as a straight one, as Shorthand.key. */
+    public static String shorthandKey(String shorthand) {
+        return shorthand.toLowerCase(Locale.ROOT).replace('’', '\'');
+    }
+
+    /**
+     * The user's own shorthand with every shorthand in lowercase, so "HW" is kept as "hw". Where that makes two the same, the
+     * one already in lowercase wins, as it's the one typing found; with none in lowercase, the first in sorted order does.
+     */
+    public static Map<String, String> lowercaseShorthand(Map<String, String> own) {
+        Map<String, String> lower = new TreeMap<>();
+        for (Map.Entry<String, String> entry : own.entrySet())
+            if (shorthandKey(entry.getKey()).equals(entry.getKey())) lower.put(entry.getKey(), entry.getValue());
+        for (Map.Entry<String, String> entry : new TreeMap<>(own).entrySet())
+            lower.putIfAbsent(shorthandKey(entry.getKey()), entry.getValue());
+        return lower;
+    }
+
+    private static Set<String> shorthandEntries(Map<String, String> own) {
         Set<String> entries = new HashSet<>();
         for (Map.Entry<String, String> entry : own.entrySet()) entries.add(entry.getKey() + "\t" + entry.getValue());
-        preferences(context).edit().putStringSet(OWN_SHORTHAND, entries).apply();
+        return entries;
     }
 
     /** A name between two colons, such as :smile:, types its emoji. */

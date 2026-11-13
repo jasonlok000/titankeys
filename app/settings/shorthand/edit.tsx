@@ -28,7 +28,7 @@ function ShorthandForm({ title, previous, ...initial }: {
     back();
   });
   const ready = shorthand.trim().length > 0 && full.trim().length > 0;
-  return <Screen title={title} subtitle="Letters, numbers and ' only. It works once Spell out shorthand is on.">
+  return <Screen title={title} subtitle="Letters, numbers and ' only, saved in lowercase. It works once Spell out shorthand is on.">
     <Stack gap={24}>
       <TextInput label="Shorthand" value={shorthand} onChange={setShorthand} placeholder="hw"
         autoFocus={!previous} autoCapitalise={false} action="done" />

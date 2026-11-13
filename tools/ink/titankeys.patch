@@ -22,6 +22,27 @@ index e5e9c50..c26b1ee 100644
  };
  
  async function describe(theme) {
+diff --git a/crates/ink-core/src/input.rs b/crates/ink-core/src/input.rs
+index 668ee33..43a4093 100644
+--- a/crates/ink-core/src/input.rs
++++ b/crates/ink-core/src/input.rs
+@@ -163,13 +163,15 @@ pub(super) struct InputOptions {
+     pub label: String,
+     pub description: String,
+     pub error: String,
++    /// Whether the keyboard starts sentences with a capital. `autoCapitalise={false}` turns it off.
++    pub capitalise: bool,
+ }
+ 
+ impl Default for InputOptions {
+     fn default() -> Self {
+         Self { appearance: InputAppearance::default(), disabled: false, read_only: false, invalid: false,
+             clearable: true, min_lines: 1, max_lines: TEXT_INPUT_MAX_LINES, leading_icon: None,
+-            label: String::new(), description: String::new(), error: String::new() }
++            label: String::new(), description: String::new(), error: String::new(), capitalise: true }
+     }
+ }
+ 
 diff --git a/crates/ink-core/src/lib.rs b/crates/ink-core/src/lib.rs
 index 3999e45..35e86ab 100644
 --- a/crates/ink-core/src/lib.rs
@@ -543,8 +564,20 @@ index 3999e45..35e86ab 100644
          Tone::Muted => Colour::MUTED,
      }
  }
+diff --git a/crates/ink-core/src/native_editor.rs b/crates/ink-core/src/native_editor.rs
+index 813bb54..34aad4f 100644
+--- a/crates/ink-core/src/native_editor.rs
++++ b/crates/ink-core/src/native_editor.rs
+@@ -56,6 +56,7 @@ impl Engine {
+             "label": options.label,
+             "description": options.description,
+             "error": options.error,
++            "capitalise": options.capitalise,
+             "cursor": text[..text_cursor_boundary(text, self.focused_input_cursor)].encode_utf16().count(),
+             "nativeEditor": self.native_editor_state == Some(state),
+             "editor": {
 diff --git a/crates/ink-core/src/react.rs b/crates/ink-core/src/react.rs
-index ea746fc..8e67e05 100644
+index ea746fc..6e32d5f 100644
 --- a/crates/ink-core/src/react.rs
 +++ b/crates/ink-core/src/react.rs
 @@ -56,6 +56,7 @@ enum HostProps {
@@ -588,7 +621,15 @@ index ea746fc..8e67e05 100644
              }
              node.identity = NodeIdentity(id);
              return Ok(Some(node));
-@@ -1330,7 +1339,7 @@ impl Engine {
+@@ -1084,6 +1093,7 @@ impl ReactTree {
+                     options.read_only = props.get("readOnly") == Some(&Json::Bool(true));
+                     options.error = string(props, "error").unwrap_or("").to_owned();
+                     options.label = string(props, "label").unwrap_or("").to_owned();
++                    options.capitalise = props.get("autoCapitalise") != Some(&Json::Bool(false));
+                     options.description = string(props, "description").unwrap_or("").to_owned();
+                     options.invalid = !options.error.is_empty() || props.get("invalid") == Some(&Json::Bool(true));
+                     options.clearable = props.get("clearable") != Some(&Json::Bool(false));
+@@ -1330,7 +1340,7 @@ impl Engine {
          let mut result = Vec::with_capacity(patches.len());
          for patch in patches {
              let node = patch.as_ref()?;
@@ -728,6 +769,19 @@ index 1ceb202..74c219c 100644
  }
  
  // Keep text as a host element while checking literal route parameters in JSX.
+diff --git a/packages/ink/src/input.ts b/packages/ink/src/input.ts
+index 75f3a64..10458a6 100644
+--- a/packages/ink/src/input.ts
++++ b/packages/ink/src/input.ts
+@@ -19,6 +19,8 @@ export function TextInput(props: HitAreaProps & {
+   invalid?: boolean;
+   disabled?: boolean;
+   readOnly?: boolean;
++  /** Whether the keyboard starts sentences with a capital. On unless `false`, for names, codes and other words typed as they are. */
++  autoCapitalise?: boolean;
+   clearable?: boolean;
+   leadingIcon?: IconAsset;
+   minLines?: number;
 diff --git a/packages/ink/src/navigation.ts b/packages/ink/src/navigation.ts
 index 6bfbfc8..6ce9836 100644
 --- a/packages/ink/src/navigation.ts
@@ -956,6 +1010,35 @@ index c882a51..0b92d3b 100644
 +internal fun appAccent(context: android.content.Context): Int = 0
 +
  internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> = emptyMap()
+diff --git a/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt b/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt
+index eb0a9b2..84f4951 100644
+--- a/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt
++++ b/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt
+@@ -46,6 +46,7 @@ private class SystemKeyboardAdapter(
+     private var active = false
+     private var action = -1
+     private var numeric = false
++    private var capitalise = true
+     private var inputId = -1
+     private var nativeText = ""
+     private var nativeCursor = 0
+@@ -333,6 +334,7 @@ private class SystemKeyboardAdapter(
+         syncing = true
+         val changed = inputId != id
+         val textChanged = editor.text.toString() != text
++        capitalise = data.optBoolean("capitalise", true)
+         val type = inputType()
+         val typeChanged = editor.inputType != type
+         if (typeChanged) {
+@@ -363,7 +365,7 @@ private class SystemKeyboardAdapter(
+ 
+     private fun inputType(): Int = if (numeric) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT or
+         (if (action == 0) InputType.TYPE_TEXT_FLAG_MULTI_LINE else 0) or
+-        InputType.TYPE_TEXT_FLAG_AUTO_CORRECT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
++        InputType.TYPE_TEXT_FLAG_AUTO_CORRECT or (if (capitalise) InputType.TYPE_TEXT_FLAG_CAP_SENTENCES else 0)
+ 
+     override fun dismiss(): Boolean {
+         if (!active) return false
 diff --git a/platform/android/native/src/android.rs b/platform/android/native/src/android.rs
 index 0c6ae7c..20f27d7 100644
 --- a/platform/android/native/src/android.rs

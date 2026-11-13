@@ -615,6 +615,16 @@ private fun composerFlow(world: Realistic) {
         same(capitals().type("use e.g.").swipe("this").text, "Use e.g. this ", "A swiped word that adds its space after e.g. stays in lowercase")
         same(capitals().type("Hi.").tap("a").text, "Hi. A ", "A tap that adds its space after a full stop is a capital")
         same(capitals().type("use e.g.").tap("a").text, "Use e.g. a ", "A tap that adds its space after e.g. stays in lowercase")
+        // The capital follows the field's own flags: a field that asks for none, such as Settings' shorthand, gets none.
+        val plain = Typist(world, autocorrect = null, field = Field.of(InputType.TYPE_CLASS_TEXT, 0), autoCapitalise = true)
+        same(plain.type("hw. ok").text, "hw. ok", "A field that asks for no capitals gets none")
+        must(!Field.of(InputType.TYPE_CLASS_TEXT, 0).sentenceCapitalisation, "A plain text field asks for no capitals")
+        for (variation in listOf(InputType.TYPE_TEXT_VARIATION_URI, InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
+            InputType.TYPE_TEXT_VARIATION_PASSWORD))
+            must(!Field.of(InputType.TYPE_CLASS_TEXT or variation or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, 0).sentenceCapitalisation,
+                "An address or a password never gets a capital, whatever it asks: $variation")
+        for (flag in listOf(InputType.TYPE_TEXT_FLAG_CAP_WORDS, InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS))
+            must(!Field.of(InputType.TYPE_CLASS_TEXT or flag, 0).sentenceCapitalisation, "Only the sentence flag starts sentences: $flag")
     }
     same(SwipeTyping.capitalise("there", SwipeTyping.beforeSuggestion("Hi.", ""), 0, false, true), "There",
         "A pick straight after a full stop gets a space, so it is a capital")
@@ -2081,6 +2091,25 @@ private fun shorthandSettings(world: Realistic, typed: (String, Lists) -> String
     must(Shorthand.problem("abcdefghijklm", "x") != null, "Thirteen letters is too long")
     must(Shorthand.problem("hw", " ") != null, "An empty full word doesn't save")
     must(Shorthand.problem("hw", "x".repeat(41)) != null, "Forty-one characters is too long")
+
+    // The user's own shorthand is kept in lowercase, whatever was typed, and its full word as typed (owner, 2026-11-13).
+    for (word in listOf("HW", "Hw", "hW", "hw", "Y’ALL", "B4N"))
+        same(TypingSettings.shorthandKey(word), Shorthand.key(word), "Settings keeps \"$word\" as autocorrect looks it up")
+    same(TypingSettings.shorthandKey("HW"), "hw", "\"HW\" saves as \"hw\"")
+    same(TypingSettings.shorthandKey("Hw"), "hw", "\"Hw\" saves as \"hw\"")
+    // Shorthand saved with capitals before: repaired once, and merged where two become the same.
+    val saved = mapOf("HW" to "Homework", "brt" to "be right there")
+    val repaired = TypingSettings.lowercaseShorthand(saved)
+    same(repaired, mapOf("hw" to "Homework", "brt" to "be right there"), "Capitals are repaired to lowercase; the full word stays as typed")
+    must(typed("my hw is done", Lists(world.words, expand = true, ownShorthand = saved)) != "my Homework is done",
+        "Saved with capitals, typing never found it")
+    same(typed("my hw is done", Lists(world.words, expand = true, ownShorthand = repaired)), "my Homework is done",
+        "Repaired, it's found, and its full word comes out as it was saved")
+    same(TypingSettings.lowercaseShorthand(mapOf("HW" to "how", "hw" to "homework")), mapOf("hw" to "homework"),
+        "Where two become the same, the one already in lowercase wins, as typing found it")
+    same(TypingSettings.lowercaseShorthand(mapOf("Hw" to "his work", "HW" to "how")), mapOf("hw" to "how"),
+        "With none in lowercase, the first in sorted order wins")
+    same(TypingSettings.lowercaseShorthand(repaired), repaired, "Shorthand in lowercase stays as it is, so the repair runs once")
 }
 
 /** The owner's rule, Nov 11: a single letter stays as typed, as "p" kept turning into "up". Only "i" gets its capital. */

@@ -39,3 +39,24 @@ test("each listed shorthand fits what Settings takes as the user's own", async (
     expect(full.length, line).toBeLessThanOrEqual(40);
   }
 });
+
+test("shorthand is kept in lowercase, and its fields ask for no capitals (owner, 2026-11-13)", async () => {
+  const settings = await read("android/kotlin/com/atlas/engine/TypingSettings.java");
+  // Saved and removed by its lowercase key, and what was saved with capitals before is repaired when it's read.
+  expect(settings).toContain("own.put(shorthandKey(shorthand), full)");
+  expect(settings).toContain("own.remove(shorthandKey(shorthand))");
+  expect(settings).toContain("Map<String, String> lower = lowercaseShorthand(own);");
+  for (const page of ["app/settings/shorthand/edit.tsx", "app/settings/snippets/edit.tsx"]) {
+    const inputs = (await read(page)).match(/<TextInput[\s\S]*?\/>/g) ?? [];
+    expect(inputs.length, page).toBeGreaterThan(0);
+    // Every shorthand field, and a snippet's shortcut; a snippet's text is prose and keeps its capitals.
+    for (const input of inputs) if (!input.includes('label="Text"')) expect(input, page).toContain("autoCapitalise={false}");
+  }
+  // Ink's TextInput passes autoCapitalise={false} through, so the field asks the keyboard for no capitals.
+  const patch = await read("tools/ink/titankeys.patch");
+  expect(patch).toContain('+  autoCapitalise?: boolean;');
+  expect(patch).toContain('+                    options.capitalise = props.get("autoCapitalise") != Some(&Json::Bool(false));');
+  expect(patch).toContain('+            "capitalise": options.capitalise,');
+  expect(patch).toContain('+        capitalise = data.optBoolean("capitalise", true)');
+  expect(patch).toContain("(if (capitalise) InputType.TYPE_TEXT_FLAG_CAP_SENTENCES else 0)");
+});

@@ -105,6 +105,18 @@ all of them are unapproved.
     BACK_FROM_END → "Miss us already? That's a bit sad."
   - Fix in the final release-notes pass: "bookmarks for a save" is out of date; Save bursts sparkles now (D's v4).
 - Swipe suite on the phone (build 2ec5f751): **passed** (saved-word swipes, context swipes).
+- **Plan for the rest of the night (Orchestrator):**
+  1. Merge C's decoration wiring.
+  2. Apply F's two GuideActivity strings, and fix the release-notes Save line (sparkles, not bookmarks).
+  3. Build #2, then install once the phone is idle (scratchpad idle.sh; wait-idle.sh is watching).
+  4. A does the full phone run-through and reports a concise issue list, to keep screenshots out of the Orchestrator's context:
+     - run1.sh: playground, panels, word menu, Settings at font 2.0;
+     - a walk through every guide slide;
+     - phone-suite.sh, which skips feedback.sh because it force-stops;
+     - judged against design-v2.
+  5. The Orchestrator decides the fixes, the workers make them, then the final build and install.
+  6. Last: update this file and the decisions log for the owner's morning review, with the release notes ready. The signed
+     release build and publishing stay with the owner.
 - Then: merge everything, one build, install, and a full run-through on the phone.
 - Release prep (Orchestrator):
   - Update release-notes.txt for everything new since it was written. One line is already wrong: steering taps now count

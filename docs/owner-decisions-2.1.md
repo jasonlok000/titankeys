@@ -111,6 +111,12 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - Boundary study (the owner's idea): the window goes back to the last sentence mark (. ! ? a line break, or the start of the field), at most 10 words, plus 2 after. Commas don't count as boundaries; they measured no better. Still no wrong changes, and the fewest misses. (Study result, 2026-11-12)
 - Build it as soon as the study is in. The study judges which form was right by reading the context, not by what the owner kept, because the owner usually leaves wrong apostrophes in place. A does the study; D builds it in TypedCorrector. (Owner, 2026-11-12)
 
+- Built into TitanKeys, so they work with Key Mapper off (owner's yes, 2026-11-12):
+  - **Shift + Backspace** deletes a word.
+  - **Alt + Sym** switches to the next keyboard. The owner suggested Alt + Sym rather than Shift + Sym.
+  - Both count only while the modifier is held down. A tapped or automatic Shift doesn't count, so Backspace at the start of a sentence stays a plain Backspace. Switching goes to the next keyboard, as Key Mapper's switch did, not to the picker. (Orchestrator)
+- Found: a Key Mapper combo that starts with Shift or Sym makes Key Mapper send that key a second time whenever the combo doesn't complete. TitanKeys then reads one push of Shift as two, and one push of Sym as two. A combo that starts with Space holds back every Space press until it's let go. The owner's working copy of the export turns those combos off. (Orchestrator, from Key Mapper's source, 2026-11-12)
+
 ## Setup and settings scope
 
 ### Decided
@@ -134,6 +140,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ### Decided
 - Calibrate by the **gaps between keys**, with every key the same width. Only the gaps are drawn, as bands that line up with the real gaps below the screen. Sliders for key width, gap width and shift, each with fine −/+ steps. This replaces the two-edge version, which was too hard to judge by eye. (Owner, 2026-11-12)
+- The lines are **one pixel**, at the **centre** of each gap, with one at each outer edge. There are two sliders, Spacing (key plus gap) and Shift. This replaces the bands and the separate key and gap sliders. (Owner, 2026-11-12)
 - Key calibration is for the overlays tied to keys: the Sym and emoji panels, the clipboard, the word menu buttons, and the guide's hints and trail. It has two sliders, Q's left edge and P's right edge, over the three letter rows. The defaults come from the phone's real geometry, and the owner fine-tunes it on the phone. (Owner, 2026-11-12)
 
 ## Launch

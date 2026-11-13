@@ -848,10 +848,9 @@ class Strip(
             pillRight.jump(Float.NaN)
         }
         // The word, placed once in the room left of the buttons, in Inter Bold at 20 dp. A long word loses its middle to fit.
-        val fontPixels = MenuScene.FONT_DP * density
-        val baseline = StripFit.baseline(height / 2f, fontPixels)
         menuWordText.typeface = bestTypeface
-        menuWordText.textSize = fontPixels
+        menuWordText.textSize = MenuScene.FONT_DP * density
+        val baseline = StripFit.baseline(height / 2f, menuWordText.textSize)
         val wordFoot = navigationInset + height - (baseline + menuWordText.descent())
         val wordLeft = maxOf(side.toFloat(), keySide, corners.inset(wordFoot).toFloat() + dp(MENU_CORNER_GAP))
         val wordRight = MenuKeys.wordRight(width.toFloat(), dp(MENU_WORD_GAP).toFloat())

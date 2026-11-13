@@ -169,10 +169,10 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family, va
     WordUnfavourited("word_unfavourited", HapticGroup.Bar, Family.Unfavourite),
     /** Unsave in the word menu: one step down, out of Saved words. */
     WordUnsaved("word_unsaved", HapticGroup.Bar, Family.Unsaved),
-    /** I on a favourite, the top of the ladder: nothing more to do. */
-    MenuSpent("menu_spent", HapticGroup.Bar, Family.No),
     /** Unblock in the word menu, by I on a blocked word, or the strip: the lowest step up. */
     WordUnblocked("word_unblocked", HapticGroup.Bar, Family.Unblocked),
+    /** I on a favourite, the top of the ladder: nothing more to do. */
+    MenuSpent("menu_spent", HapticGroup.Bar, Family.No),
     /** Save went wrong and the word isn't saved. */
     WordNotSaved("word_not_saved", HapticGroup.Bar, Family.No),
     ClipOffer("clip_offer", HapticGroup.Bar, Family.Confirm),

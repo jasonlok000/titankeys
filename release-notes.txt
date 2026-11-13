@@ -30,7 +30,7 @@
 - Steer and select: Taps for steering and selecting count on Space itself, not the keys next to it. The first tap counts sooner, at 150 ms, so fewer steers get missed. A triple tap with no slide selects the word.
 - You see it right away: The bar shows the gesture as soon as your tap counts, and the dots follow your real text.
 - Delete: A single flick lifts the word off and dissolves it. Keep holding and it eats a word at a time, each with a firm hit. Slide further out to go faster, or back onto Backspace to pause.
-- Word menu: Hold a word on the bar, then I moves it up and O moves it down: save, favourite, and back again. Learned a word you hate? O forgets it. Hearts burst for a favourite, sparkles for a save. It doesn't time out.
+- Word menu: Hold a word on the bar, then I moves it up and O moves it down: blocked, not saved, saved, favourite, and back again. Learned a word you hate? O unsaves it, and O again blocks it. A book claps shut for a save, hearts burst for a favourite. It doesn't time out.
 - Scroll assistant: It starts out matching the phone's own Scroll assistant. Change it and it stays your way.
 
 ## Haptics

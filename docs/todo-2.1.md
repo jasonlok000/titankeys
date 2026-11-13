@@ -270,6 +270,15 @@ all of them are unapproved.
       kept). TitanKeys itself follows each field's own capital flags; no wider bug.
     - Idle, autocorrect and guide checks pass; bun 169 of 171 (the two that need the ink package).
     - Still to come: W's 11 dp line and its renders, then build #13.
+  - **Merged for build #13: W's 11 dp line** (claude/bar-line-11dp 52e6297, merge 2b7d234). StripFit.BORDER_DP = 22; everything
+    with text in the bar on the line 39 dp down (within 0.47, 0.17 and 0.13 px at Smaller, Normal, Bigger); the simulated-border
+    render puts the letters' middle 0.13 to 0.72 px from the black band's middle; corner_check (r 100, margin 4) gives 0 of 96
+    renders with red marks (7 before). Beyond the brief: side margins measured straight to the curve (words 63/73/91 px, chips
+    67/77/100); the two-line clip offer shrinks a little to keep 4 px clear; Back rises 2/4/6 px; the pill is 32.6 dp; the guide's
+    wiggle bobs upward only; Exact typing's chips hug their labels. Left on the old middle: the gesture display's shapes and the
+    guide's ghost finger. Strip-fit, word-menu, fixed-scale, guide, idle, words and menu-render checks pass. Reviewed by the
+    Orchestrator from the regenerated renders (border.png, before-after.png).
+  - **Release re-audit (A)** on 2b7d234: throwaway keystore, the Ink patch, debug-only code, permissions, release-notes gaps.
   - **The old "bar drops to zero height while cycling Sym", rechecked (build #12):** a screen recording of the playground while
     10 panel changes ran by the debug broadcast (370 frames). The keyboard never collapsed. What does jump is the playground's
     own layout: 51 px lower with a panel open, and one frame a further 139 px lower at each open and close (the drawn keys hide

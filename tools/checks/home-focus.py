@@ -3,7 +3,7 @@
 when you leave the app and come back, Settings opens without the field or the keyboard, and closing Settings brings the
 playground back with its field focused.
 
-Opens TitanKeys if the playground isn't on screen. APP=com.titankeys.debug checks the debug build instead.
+Opens the front page if the playground isn't on screen. APP=com.titankeys.debug checks the debug build instead.
 """
 
 import os
@@ -11,8 +11,11 @@ import re
 import subprocess
 import time
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
-HINT = "Your words go here."
+# The playground's hint, read from the app so that a new wording can't leave this check looking for the old one.
+GUIDE = Path(__file__).resolve().parents[2] / "android/kotlin/com/atlas/keyboard/GuideActivity.kt"
+HINT = re.search(r'FIELD_HINT = "([^"]+)"', GUIDE.read_text(encoding="utf-8")).group(1)
 APP = os.environ.get("APP", "com.titankeys")
 
 
@@ -52,8 +55,16 @@ def centre(text):
 
 
 def launch():
+    """Opens TitanKeys as the launcher does, which brings back the screen you left."""
     shell("am", "start", "-a", "android.intent.action.MAIN",
           "-c", "android.intent.category.LAUNCHER", "-n", f"{APP}/com.vandam.ink.MainActivity")
+    time.sleep(1)
+
+
+def open_front_page():
+    """Opens the front page, which opens the playground. The launcher alone would bring back the last Settings page."""
+    shell("am", "start", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER",
+          "-f", "0x30000000", "-n", f"{APP}/com.vandam.ink.MainActivity", "--es", "com.vandam.ink.notification.HREF", "/")
     time.sleep(1)
 
 
@@ -67,7 +78,7 @@ def main():
         editor()
     except StopIteration:
         # No force-stop: that turns off the keyboard and its Accessibility service until the user turns them on again.
-        launch()
+        open_front_page()
         time.sleep(2)
     # A force-stopped keyboard hands the phone to another keyboard until its app runs again, so this is read after the launch.
     keyboard = shell("settings", "get", "secure", "default_input_method").strip()

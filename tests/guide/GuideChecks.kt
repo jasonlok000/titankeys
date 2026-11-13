@@ -262,7 +262,7 @@ private fun theMenuMotion() {
             }
             check(frame.wordScale in 1f..1.07f && kotlin.math.abs(frame.wordShift) <= 1.5f) { "$motion only pops or shakes the word a little" }
         }
-        if (motion != MenuKeys.Motion.Save && motion != MenuKeys.Motion.Unsave) check(left && right) { "$motion plays on both sides of the word" }
+        if (motion != MenuKeys.Motion.Unsave) check(left && right) { "$motion plays on both sides of the word" }
     }
     val favourite = MenuMotion.frame(MenuKeys.Motion.Favourite, 200, word)
     check(favourite.sprites.size in 6..8 && favourite.sprites.map { it.size }.toSet().size >= 2) { "6 to 8 hearts of different sizes" }
@@ -270,7 +270,13 @@ private fun theMenuMotion() {
     check(MenuMotion.peak(MenuKeys.Motion.Favourite) == 0L) { "Favourite's haptic hits on the burst" }
     val unfavourite = MenuMotion.peak(MenuKeys.Motion.Unfavourite)
     check(kotlin.math.abs(MenuMotion.frame(MenuKeys.Motion.Unfavourite, unfavourite + 30, word).wordShift) > .1f) { "The word shakes with the crack's haptic" }
-    check(MenuMotion.frame(MenuKeys.Motion.Save, 10, word).sprites.single().x < word.left) { "Save's ribbon comes down on the word's left edge" }
+    // Save is Favourite's burst in ribbons (owner, 2026-11-12): the same count, sizes, timing, pop and haptic, only the shape differs.
+    val save = MenuMotion.frame(MenuKeys.Motion.Save, 200, word)
+    check(save.sprites.size in 6..8 && save.sprites.all { it.shape == MenuMotion.Shape.Ribbon && it.behind }) { "6 to 8 ribbons burst from behind the word" }
+    check(save.sprites.map { it.size }.toSet().size >= 2) { "of different sizes" }
+    same(MenuMotion.millis(MenuKeys.Motion.Save), MenuMotion.millis(MenuKeys.Motion.Favourite), "Save takes as long as Favourite")
+    check(MenuMotion.frame(MenuKeys.Motion.Save, 90, word).wordScale > 1.03f) { "The word pops as the ribbons burst" }
+    same(MenuMotion.peak(MenuKeys.Motion.Save), 0L, "Save's haptic hits on the burst")
     check(MenuMotion.frame(MenuKeys.Motion.Forget, 300, word).wordAlpha < 1f) { "Forget dissolves the word" }
     check(MenuMotion.frame(MenuKeys.Motion.Favourite, 200, MenuMotion.Word(120f, 220f, 27f, MenuMotion.Word.seed("hello")))
         != favourite) { "Another word gets another layout" }

@@ -105,3 +105,29 @@ are already settled are marked (Owner).
   - The explanation under the switch goes.
   - The default follows the phone's own Scroll assistant (`persist.sys.scroll_assistant`): on if the phone's is on (Owner).
 - **Orange accents** must apply everywhere the setting says it does (the owner's bug report).
+
+## 6. The keyboard window (A, Orchestrator approved)
+
+- The keyboard's window is the full height of the screen and never resizes. The keyboard sits on its bottom edge, and only
+  its top is reported to apps (content insets and touch region). Before, the window grew and shrank with the panel, and for
+  one frame the bar floated about 200 px up while Android caught up. Taps above the keyboard still reach the app.
+
+## 7. Effects on top of the guide (after the redesign lands)
+
+The owner asked for fun effects that aren't generic (23:20). The Orchestrator's picks, not approved by the owner:
+1. The keys spell words like a dot-matrix sign: NOPE after a wrong move, LOL at a typo, YAWN when idle.
+2. Progress as backlight: each passed slide lights one more key outline for good, and the keyboard glows by the end.
+3. Letters fly from each pressed key into the field at the caret. A swipe's letters gather along the trail and fly up as the word.
+4. A flick-deleted word shatters into letter shards that bounce off the keycaps with physics.
+5. Titles slam in like a rubber stamp, with a tiny jolt and ink specks.
+6. Typo crime scene: the wrong word gets a chalk outline and tape, and the fixed word drops into it.
+7. A streak flame grows on the caret with words typed right in a row, and a typo puffs it into smoke.
+8. Chapter finishes:
+   - Typing: a stadium wave across the keys.
+   - Delete: a DELETED stamp crumbles.
+   - Steering: the caret runs a victory lap.
+   - Symbols: honk squashes, and red noses rain when the clown is found.
+   - Clipboard: the paste slaps in like a sticky note.
+9. The finale grows grass up through the keyboard.
+Left out: a split-flap chapter flip (slows changes down), an impatient keyboard (could nag), and speed lines (clash with the warm-up).
+Every effect is off when Android's animations are off, never delays typing or a lesson, uses only orange and ink, and follows the haptics rulebook.

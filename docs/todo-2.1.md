@@ -60,7 +60,12 @@ all of them are unapproved.
   - dictionary words count as Saved, and there's no Save for symbols or emoji;
   - the sparkle burst for Save, a quieter Unsave, and a better heart break.
 - F: sizes that ignore the font size and display size (FixedScale), the Scroll assistant note and default, and the orange accents bug.
-- A: the bar jumping when the Sym panel closes. It's recorded: at frame 14 the bar sits at the top of the old panel-sized window.
+- A: the bar jump is **done**, claude/bar-bottom 52227c3, merged.
+  - The keyboard window stays full height, and onComputeInsets reports only the keyboard's top, as the content insets and the touch region.
+  - After: across 44 frames of opening and closing, the bar is never more than 26 px off the bottom edge. Before, it floated 195 px up.
+  - Checks: taps above the keyboard reach the app, apps resize, panels and the bar work, and a hidden keyboard catches no touches.
+  - Not testable over adb: keys scrolling a no-field app (needs the physical scroll), and the phone locked itself at 23:15 mid-test.
+  - A's slip: one tap and one Back landed in the Claude app. Nothing was typed and nothing visible changed.
 - Then: merge everything, one build, install, and a full run-through on the phone.
 - Release prep (Orchestrator):
   - Update release-notes.txt for everything new since it was written. One line is already wrong: steering taps now count

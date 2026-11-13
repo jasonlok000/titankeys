@@ -208,6 +208,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
+- **No status marks: the word's colour is the status** (owner, 2026-11-13, 14:45: "remove the statuses for the heart and book etc.
+  keep it simple. favourited = orange. saved = white. neutral = grey. blocked = grey + striked through"). (Owner)
+  - This replaces the marks inside the bar and the drifting heart. It also replaces the earlier rule that the word is always white.
+  - Hover previews tint the word about 60% toward its next colour, and the effects' particles stay. (Orchestrator)
+  - With Orange accents off, a favourite uses the warm accent-off colour, so it still differs from white. (Orchestrator)
 - **The word menu slide teaches the ladder with TitanKeys** (owner, 2026-11-13, 14:30: "teach them the ladder system like only having
   titankeys as a option, maybe have it pre-highlighted, and then have them favorite TitanKeys"). (Owner) The Orchestrator's design,
   built by A:

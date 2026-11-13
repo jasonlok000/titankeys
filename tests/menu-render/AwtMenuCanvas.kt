@@ -55,8 +55,8 @@ class AwtMenuCanvas(private val g: Graphics2D, private val font: Font) : MenuCan
         g.fill(Rectangle2D.Float(left, top, right - left, bottom - top))
     }
 
-    override fun text(text: String, x: Float, y: Float, size: Float, fill: Int, outline: Int, outlineWidth: Float, centred: Boolean) {
-        if (size <= 0f) return
+    override fun text(text: String, x: Float, y: Float, size: Float, colour: Int, centred: Boolean) {
+        if (size <= 0f || colour ushr 24 == 0) return
         val sized = font.deriveFont(size)
         val glyphs = sized.createGlyphVector(g.fontRenderContext, text)
         var left = x
@@ -66,17 +66,13 @@ class AwtMenuCanvas(private val g: Graphics2D, private val font: Font) : MenuCan
             left = x - glyphs.logicalBounds.width.toFloat() / 2
             baseline = y + (metrics.ascent - metrics.descent) / 2
         }
-        val outlineShape = glyphs.getOutline(left, baseline)
-        if (fill ushr 24 != 0) {
-            g.color = Color(fill, true)
-            g.fill(outlineShape)
-        }
-        if (outline ushr 24 != 0 && outlineWidth > 0f) {
-            g.color = Color(outline, true)
-            g.stroke = BasicStroke(outlineWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-            g.draw(outlineShape)
-        }
+        g.color = Color(colour, true)
+        g.fill(glyphs.getOutline(left, baseline))
     }
+
+    /** How high [text] reaches over its baseline in the menu's font at [size] dp. */
+    fun top(text: String, size: Float = MenuScene.FONT_DP): Float =
+        -font.deriveFont(size).createGlyphVector(g.fontRenderContext, text).visualBounds.y.toFloat()
 
     /** The width of [text] in the menu's font at [size] dp. */
     fun measure(text: String, size: Float = MenuScene.FONT_DP): Float =

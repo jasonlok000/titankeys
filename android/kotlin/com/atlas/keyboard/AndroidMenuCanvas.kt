@@ -3,6 +3,7 @@ package com.atlas.keyboard
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
 import android.graphics.Typeface
 
 /** The word menu's [MenuCanvas] on an Android [Canvas], in dp: the strip scales the canvas by the density first. */
@@ -17,8 +18,8 @@ class AndroidMenuCanvas(typeface: Typeface) : MenuCanvas {
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.typeface = typeface
         textAlign = Paint.Align.LEFT
-        strokeJoin = Paint.Join.ROUND
     }
+    private val bounds = Rect()
 
     override fun save() {
         canvas.save()
@@ -58,8 +59,8 @@ class AndroidMenuCanvas(typeface: Typeface) : MenuCanvas {
         canvas.drawRect(left, top, right, bottom, fillPaint)
     }
 
-    override fun text(text: String, x: Float, y: Float, size: Float, fill: Int, outline: Int, outlineWidth: Float, centred: Boolean) {
-        if (size <= 0f) return
+    override fun text(text: String, x: Float, y: Float, size: Float, colour: Int, centred: Boolean) {
+        if (size <= 0f || colour ushr 24 == 0) return
         textPaint.textSize = size
         var left = x
         var baseline = y
@@ -67,17 +68,15 @@ class AndroidMenuCanvas(typeface: Typeface) : MenuCanvas {
             left = x - textPaint.measureText(text) / 2
             baseline = y - (textPaint.ascent() + textPaint.descent()) / 2
         }
-        if (fill ushr 24 != 0) {
-            textPaint.style = Paint.Style.FILL
-            textPaint.color = fill
-            canvas.drawText(text, left, baseline, textPaint)
-        }
-        if (outline ushr 24 != 0 && outlineWidth > 0f) {
-            textPaint.style = Paint.Style.STROKE
-            textPaint.strokeWidth = outlineWidth
-            textPaint.color = outline
-            canvas.drawText(text, left, baseline, textPaint)
-        }
+        textPaint.color = colour
+        canvas.drawText(text, left, baseline, textPaint)
+    }
+
+    /** How high [text] reaches over its baseline in the menu's font at [size] dp, measured ten times as big for its fractions. */
+    fun top(text: String, size: Float = MenuScene.FONT_DP): Float {
+        textPaint.textSize = size * 10f
+        textPaint.getTextBounds(text, 0, text.length, bounds)
+        return -bounds.top / 10f
     }
 
     /** The width of [text] in the menu's font at [size] dp. */

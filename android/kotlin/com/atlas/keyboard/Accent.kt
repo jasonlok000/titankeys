@@ -32,6 +32,12 @@ internal object Accent {
     /** The accent for a drawing told the setting itself, such as [Look]: orange, or [off]. */
     fun of(orange: Boolean, off: Int = CREAM) = if (orange) ORANGE else off
 
+    /**
+     * A favourite word's colour on the dark bar: orange, or with Orange accents off, the darker cream, so a favourite stays apart
+     * from a white saved word and a grey unsaved one. [warm] of the orange is that very grey, #9B938C.
+     */
+    val favourite: Int get() = if (on) ORANGE else RAISED_CREAM
+
     /** A button that sits on an accent background, which was cream on orange: off, a darker cream, so it still shows. */
     val raised: Int get() = if (on) CREAM else RAISED_CREAM
 

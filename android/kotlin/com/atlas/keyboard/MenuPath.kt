@@ -99,8 +99,8 @@ interface MenuCanvas {
     fun circle(x: Float, y: Float, radius: Float, colour: Int)
     fun rect(left: Float, top: Float, right: Float, bottom: Float, colour: Int)
     /**
-     * [text] in the menu word's font at [size] dp: filled in [fill] and outlined in [outline] [outlineWidth] dp wide, either left out
-     * when its alpha is 0. Its left end is at [x] on the baseline [y], or, when [centred], its middle is at [x], [y].
+     * [text] in the menu word's font at [size] dp, solid in [colour], left out when its alpha is 0. Its left end is at [x] on the
+     * baseline [y], or, when [centred], its middle is at [x], [y].
      */
-    fun text(text: String, x: Float, y: Float, size: Float, fill: Int, outline: Int, outlineWidth: Float, centred: Boolean = false)
+    fun text(text: String, x: Float, y: Float, size: Float, colour: Int, centred: Boolean = false)
 }

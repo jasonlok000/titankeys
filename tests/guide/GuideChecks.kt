@@ -520,8 +520,12 @@ private fun oneInstructionAtATime() {
 private fun theLadderOnTitanKeys() {
     val step = GUIDE_STEPS.first { it.id == "menu" }
     same(step.title, "Make TitanKeys your favourite.", "The slide's title")
-    same(step.barWord to step.sides, "TitanKeys" to false, "The bar shows only TitanKeys, in the middle")
-    same(step.line, MENU_LINE, "The line stays, for the finale's first letters")
+    same(step.barWord, "TitanKeys", "The bar shows only TitanKeys, in the middle")
+    same(step.line to step.seed, MENU_LINE to MENU_LINE, "The slide's line")
+    same(MENU_LINE, "TitanKeys belongs in your favourites", "It starts with TitanKeys (owner, 2026-11-13)")
+    same(MENU_LINE.first(), 'T', "and keeps the T for the finale's GO TOUCH GRASS NOW")
+    same(menuTarget("$MENU_LINE ")?.let { "$MENU_LINE ".substring(it.first, it.last + 1) }, "TitanKeys", "TitanKeys is the box's marked word")
+    same(step.lessons, setOf(GuideLesson.BarHold), "Only the hold: typing, swiping, Space and Backspace are blocked")
     same(step.stages.map { it.text }, listOf("Hold TitanKeys on the bar. Nothing gets saved.", "Press I to save it.",
         "Press I again to favourite it."), "Hold, I, then I again")
     same(step.done to step.praise, "Favourited. Good taste." to "O steps it back down. P closes the menu.", "Done and praise")
@@ -563,6 +567,46 @@ private fun theLadderOnTitanKeys() {
     same(blockedChip(step, GuideLesson.BarTap.name), "Taps are blocked here. Hold, don't tap.", "and the lock says so, as blocked")
     for (stage in step.stages) same(stage.text.length <= 50, true, "Stage within 50: ${stage.text}")
     same(step.title.length <= 38, true, "Title within 38")
+    theMenuSlidesOffTrackMoves(step)
+}
+
+/**
+ * Every off-track move on the word menu slide says what to do instead, in one short chip (owner, 2026-11-13: "what about did not
+ * select the right word? or selected other stuff instead?"). Each stage answers the same; each chip is 50 or less.
+ */
+private fun theMenuSlidesOffTrackMoves(step: GuideStep) {
+    fun said(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.let { it.title ?: it.text }
+    val text = "$MENU_LINE "
+    for (stage in 0..2) {
+        val flow = GuideFlow({ GuideSettings() })
+        flow.start("menu")
+        if (stage >= 1) flow.event(WordMenu(MENU_WORD))
+        if (stage >= 2) flow.event(MenuPicked("Save"))
+        same(flow.stage, stage, "At stage $stage")
+        same(said(flow.event(FieldChanged(text, 0, 9))), "Not the box. Hold TitanKeys on the bar.", "Text selected in the box, at $stage")
+        same(said(flow.event(KeyboardEvent.EmptyBarHeld)), "The one in the middle. TitanKeys.", "A hold beside TitanKeys, at $stage")
+        same(said(flow.event(KeyboardEvent.MenuMissed)), "I or O. Nothing else does anything here.", "Another key in the menu, at $stage")
+        same(flow.stage, stage, "and none of them moves the slide, at $stage")
+        same(flow.event(FieldChanged(text, 3, 3)), GuideVerdict.Wait, "A moved cursor means nothing, at $stage")
+    }
+    // The lock's words on this slide: each says it's blocked, then points at TitanKeys.
+    same(blockedChip(step, GuideLesson.Typing.name), "Typing's blocked here. Hold TitanKeys.", "Typing a letter")
+    same(blockedChip(step, GuideLesson.Swipe.name), "Swiping's blocked here. Hold TitanKeys.", "Swiping a word")
+    same(blockedChip(step, GuideLesson.Cursor.name), "Space taps are blocked. Hold TitanKeys on the bar.", "Space taps that would select")
+    same(blockedChip(step, GuideLesson.Space.name), "Spaces are blocked here. Hold TitanKeys.", "A space")
+    same(blockedChip(step, GuideLesson.Backspace.name), "Backspace is blocked here. Hold TitanKeys.", "Backspace with the menu shut")
+    for (lesson in GuideLesson.entries) same(blockedChip(step, lesson.name).length <= 50, true, "The lock's chip for $lesson fits")
+    for (line in listOf(MENU_CLOSED, MENU_UNSAVED, MENU_NOT_BOX, MENU_MIDDLE, MENU_MISSED, "Blocked TitanKeys? Rude. I brings it back."))
+        same(line.length <= 50, true, "\"$line\" is 50 or less")
+    // Closed halfway, it keeps its step: held again after the save it opens saved, and I favourites it.
+    val halfway = GuideFlow({ GuideSettings() })
+    halfway.start("menu")
+    halfway.event(WordMenu(MENU_WORD))
+    halfway.event(MenuPicked("Save"))
+    same(said(halfway.event(MenuPicked("Close"))), "Closed it. Hold TitanKeys again.", "Closed after the save")
+    halfway.event(WordMenu(MENU_WORD))
+    same(finishes(halfway.event(MenuPicked("Favourite"))), true, "and held again, it carries on from saved")
+    same(step.help, "Hold, don't tap. Keep your finger on TitanKeys.", "The help line")
 }
 
 /** & passes as soon as it's in, even after a wrong one (owner, v5.2); the screen takes a wrong one back out. */
@@ -763,8 +807,9 @@ private fun chapterOne() {
     val keys = setOf(GuideLesson.Typing, GuideLesson.Backspace)
     val typing = GUIDE_STEPS.filter { it.chapter == GuideChapter.Typing }
     // Swiping types its own spaces, so its slide locks a lone Space (owner, 2026-11-13).
+    // The word menu slide teaches only the hold on TitanKeys: everything else is blocked (owner, 2026-11-13).
     same(typing.map { it.lessons }, listOf(keys + GuideLesson.Space, setOf(GuideLesson.Swipe) + keys,
-        setOf(GuideLesson.BarHold, GuideLesson.Space) + keys), "Each slide unlocks what it teaches; none teaches picking from the bar (v5.2)")
+        setOf(GuideLesson.BarHold)), "Each slide unlocks what it teaches; none teaches picking from the bar (v5.2)")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }.map { it.lessons }, listOf(setOf(GuideLesson.Backspace),
         setOf(GuideLesson.Flick), setOf(GuideLesson.Flick, GuideLesson.DeleteHold)), "Delete unlocks Backspace, the flick, then its hold")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Steering }.map { it.lessons }, List(2) { setOf(GuideLesson.Cursor) },
@@ -776,7 +821,7 @@ private fun chapterOne() {
         "Copy and paste unlocks fn for the paste, then Sym for the clipboard")
     for (line in DELETE_RESETS) same(line.length <= LINE_MOST, true, "The reset chip \"$line\" is one line")
     same(STEER_RESET.length <= LINE_MOST, true, "The steering reset chip is one line")
-    same(typing.map { it.sides }, listOf(false, true, false), "The first slide and the menu slide show just the bar's middle word")
+    same(typing.map { it.sides }, listOf(false, true, true), "Only the first slide shows just the bar's middle word")
     same(GUIDE_STEPS.first { it.id == "type" }.cue, GuideCue.Spell, "The first slide spells the next word's keys, then Space")
     GuideHooks.lessons = setOf(GuideLesson.Swipe)
     same(GuideHooks.allows(GuideLesson.Swipe) to GuideHooks.allows(GuideLesson.BarHold), true to false, "The lock lets through what's taught")
@@ -1352,7 +1397,8 @@ private fun runThroughFixes() {
 
     // A lone Space that would type is blocked where the slide has no typing, with the slide's own words.
     for (id in listOf("swipe", "steer", "selectmore")) same(step(id).lessons.orEmpty().contains(GuideLesson.Space), false, "$id locks a lone Space")
-    for (id in listOf("type", "menu")) same(step(id).lessons.orEmpty().contains(GuideLesson.Space), true, "$id types spaces")
+    same(step("type").lessons.orEmpty().contains(GuideLesson.Space), true, "type types spaces")
+    same(step("menu").lessons.orEmpty().contains(GuideLesson.Space), false, "the menu slide's Space is blocked: only the hold counts")
     for (id in listOf("steer", "selectmore")) {
         same(step(id).lessons.orEmpty().contains(GuideLesson.Cursor), true, "$id still teaches the steering taps")
         same(blockedChip(step(id), GuideLesson.Space.name), "Typed spaces are blocked. Taps on Space steer.", "Space on $id")

@@ -94,15 +94,23 @@ docs/owner-decisions-2.1.md wins over this list wherever they differ.
 | Stopping before three swipes | The instruction counts the swipes left. |
 
 ### menu: Make TitanKeys your favourite.
-The ladder, on one word (owner, 2026-11-13). The bar shows only TitanKeys, in the middle, wiggling until it's held. Its show-only
-menu opens at not saved; I saves it, and I again makes it a favourite, which passes. Nothing is saved anywhere.
+The ladder, on one word (owner, 2026-11-13). The line is "TitanKeys belongs in your favourites", with TitanKeys marked in the
+box. The bar shows only TitanKeys, in the middle with its side places empty, and it wiggles the whole slide. Nothing typed, selected
+or moved changes the bar. Its show-only menu opens at not saved; I saves it, and I again makes it a favourite, which passes.
+Nothing is saved anywhere. Only the hold is unlocked; with the menu open, its keys work. Every chip below is 50 characters or less.
 
 | What the user does | What happens |
 |---|---|
 | A tap on TitanKeys | Nothing types. "Taps are blocked here. Hold, don't tap." and a no, as every lock's chip says blocked. A tap that gets past the lock gets "Hold, don't tap." Checked. |
+| A hold on an empty place beside it | Nothing opens. "The one in the middle. TitanKeys." Checked. |
+| Text selected in the box, by touch | The selection snaps back to the end, no menu opens, and "Not the box. Hold TitanKeys on the bar." Checked. |
+| Space taps, that would steer or select | Blocked: "Space taps are blocked. Hold TitanKeys on the bar." and a no. Checked. |
+| Typing a letter, a space or Backspace, with the menu shut | Blocked: "Typing's blocked here. Hold TitanKeys.", "Spaces are blocked here. Hold TitanKeys." or "Backspace is blocked here. Hold TitanKeys." The field and the bar don't change. Checked. |
+| Swiping a word | Its start shows, then "Swiping's blocked here. Hold TitanKeys." and a no. Nothing types. Checked. |
+| A key that isn't I, O, K, L, P or Backspace, with the menu open | Nothing happens, and the menu stays open: "I or O. Nothing else does anything here." Checked. |
 | O at not saved (Block) | "Blocked TitanKeys? Rude. I brings it back." It still waits for the save; I unblocks it, then saves it. Checked. |
 | O at saved (Unsave) | "Unsaved. Cold. I, then I again." It goes back to the save. Checked. |
-| P or Backspace closes the menu | "Closed it. Hold TitanKeys again." It goes back to the hold. Opened again after the save, it's still saved, and I favourites it, which passes. Checked. |
+| P or Backspace closes the menu | "Closed it. Hold TitanKeys again." It goes back to the hold. TitanKeys keeps the step it reached: held again after the save, it opens saved, and I favourites it, which passes. Checked. |
 | The bar runs empty | Never: the bar always shows TitanKeys on this slide. |
 
 ## Delete

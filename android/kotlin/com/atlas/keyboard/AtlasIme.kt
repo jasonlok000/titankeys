@@ -1730,7 +1730,12 @@ class AtlasIme : InputMethodService() {
         // A guide slide that doesn't teach the menu yet: the hold opens nothing, and the guide says it's blocked, with a no.
         if (guideBlocked(GuideLesson.BarHold)) return false
         // The guide's own word, alone in the middle place: its show-only menu.
-        shownGuideWord()?.let { word -> return index == 0 && openMenu(HeldWord(word, "")) }
+        shownGuideWord()?.let { word ->
+            if (index == 0) return openMenu(HeldWord(word, ""))
+            // An empty place beside it: nothing opens, and the guide points at the middle.
+            KeyboardEvents.publish { KeyboardEvent.EmptyBarHeld }
+            return false
+        }
         val (word, typed) = composer.shownWord(index) ?: return false
         return openMenu(HeldWord(word, typed))
     }
@@ -1810,9 +1815,12 @@ class AtlasIme : InputMethodService() {
     /** The guide's word, while it shows: only in the guide's own field. */
     private fun shownGuideWord() = guideBarWord?.takeIf { inGuide }
 
-    /** The bar shows the composer's words, or only the guide's word, in the middle place. */
+    /**
+     * The bar shows the composer's words, or only the guide's word, in the middle place, with its side places empty but there, so
+     * a hold on one is heard. Nothing typed, selected or moved changes it.
+     */
     private fun showBarWords() {
-        barWords = shownGuideWord()?.let(::listOf) ?: ownBarWords
+        barWords = shownGuideWord()?.let { listOf(it, "", "") } ?: ownBarWords
         strip?.words = barWords
     }
 
@@ -3110,7 +3118,8 @@ class AtlasIme : InputMethodService() {
         strip?.gesture?.glowOff()
         wakeIdleBar()
         // A guide slide that doesn't teach this key yet: it does nothing at all, and its release is kept too.
-        val locked = if (editing && inGuide && !event.isSystem) guideLesson(event) else null
+        // With the word menu open, the keys press its buttons, never type: the menu's own handling below decides.
+        val locked = if (editing && inGuide && !event.isSystem && !menuOpen) guideLesson(event) else null
         if (locked != null && !guideAllows(locked)) {
             if (event.repeatCount == 0) guideBlocked(locked)
             lockedKeys += keyCode
@@ -3165,6 +3174,11 @@ class AtlasIme : InputMethodService() {
                 }
                 return true
             }
+        }
+        // In the guide's show-only menu on its own word, any other key does nothing, and the guide says so; the menu stays open.
+        if (!event.isSystem && menuOpen && shownGuideWord() != null && !Modifiers.isModifier(keyCode)) {
+            if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.MenuMissed }
+            return true
         }
         // Typing on closes the menu, and the strip shows words again. The newest clip goes from the strip too.
         if (!event.isSystem && !Modifiers.isModifier(keyCode)) {

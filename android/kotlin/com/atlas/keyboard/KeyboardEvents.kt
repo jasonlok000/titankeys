@@ -88,6 +88,12 @@ sealed interface KeyboardEvent {
     /** A button of the word menu was picked, by a touch or a key: Save, Forget or Back, by its name. */
     data class MenuPicked(val action: String) : KeyboardEvent
 
+    /** In the guide's show-only menu, a key that is none of its buttons was pressed: it does nothing there. */
+    data object MenuMissed : KeyboardEvent
+
+    /** In the guide, an empty place on the bar was held, beside the slide's one word. */
+    data object EmptyBarHeld : KeyboardEvent
+
     /**
      * What each key of the open Sym panel shows, by the name of the key under it in [Layout]: a symbol, an emoji, a setting's
      * label or a short mark for an icon. Keys that show nothing are left out. Sent each time the panel draws itself.

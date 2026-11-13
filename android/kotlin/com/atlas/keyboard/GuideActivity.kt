@@ -3075,6 +3075,8 @@ class GuideActivity : Activity() {
             "backspace" -> if (text.trimEnd() == BACKSPACE_SEED) text.trimEnd().length - 1..text.trimEnd().length - 1 else null
             "flick" -> if (passed) null else flickTarget(text)
             "hold" -> if (passed) null else holdTarget(text, field.selectionStart)
+            // The menu slide's TitanKeys stays marked the whole slide, as its bar word stays pointed at.
+            "menu" -> menuTarget(text)
             "steer", "selectmore" -> steerAim
             else -> null
         }
@@ -3564,6 +3566,10 @@ class GuideActivity : Activity() {
         }
         // The held delete only ever takes the regrets (owner, v5.3: it went on 1.1 s past the lift and ate the line's first word).
         // Once they're gone, deleting is locked for the slide, and a word of the line that goes anyway comes straight back.
+        // The menu slide's box only holds its line: text selected in it snaps back, and the slide says to hold TitanKeys instead.
+        if (event is KeyboardEvent.FieldChanged && step.barWord != null && event.end > event.start) {
+            main.post { if (flow.step === step && field.selectionStart != field.selectionEnd) field.setSelection(field.length()) }
+        }
         if (event is KeyboardEvent.FieldChanged && step.id == "hold") {
             if (holdTarget(event.text, event.start) == null) GuideHooks.lessons = emptySet()
             if (!event.text.startsWith(HOLD_LEAD)) {
@@ -3681,15 +3687,14 @@ class GuideActivity : Activity() {
     }
 
     /**
-     * The slide's own bar word, alone in the middle, wiggles while the slide waits for it to be held, and stops once its menu is
-     * open (owner, 2026-11-13: "pre-highlighted"). It waits for the bar to settle after a slide change. Nothing points on other
-     * slides.
+     * The slide's own bar word, alone in the middle, wiggles through every step of the slide, until it passes (owner, 2026-11-13:
+     * "keep it highlighted the whole time"). It waits for the bar to settle after a slide change. Nothing points on other slides.
      */
     private fun pointAtBarWord() {
-        val word = flow.step.barWord?.takeIf { flow.stage == 0 && !passed }
+        val word = flow.step.barWord?.takeIf { !passed }
         GuideHooks.stripPointWord(null)
         if (word == null) return
-        main.postDelayed({ if (!changing && !passed && flow.stage == 0) GuideHooks.stripPointWord(word) }, BAR_SETTLE_MILLIS + POINT_AFTER_MILLIS)
+        main.postDelayed({ if (!changing && !passed) GuideHooks.stripPointWord(word) }, BAR_SETTLE_MILLIS + POINT_AFTER_MILLIS)
     }
 
     /** A scenario about Alt or the panel, waiting to be sure, and the one that shows, which goes as soon as it is no longer true. */

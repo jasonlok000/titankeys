@@ -888,7 +888,8 @@ internal const val SWIPE_LEAD = "One "
 internal const val SWIPE_LINE = "One swipe per word"
 
 /** Slide 3's line, in the field already, so the bar has words to hold. */
-internal const val MENU_LINE = "Teach it words by holding them on the bar"
+// TitanKeys first, the slide's marked word, and still a T for the finale's GO TOUCH GRASS NOW (owner, 2026-11-13).
+internal const val MENU_LINE = "TitanKeys belongs in your favourites"
 
 /** Slide 4's line, and the field it starts with: one e too many, right before the cursor. */
 internal const val BACKSPACE_LINE = "Old school: one letter per Backspace"
@@ -1090,6 +1091,12 @@ internal val MENU_FAVOURITE = mapOf("I" to "Favourite", "K" to "Favourite", "P" 
 internal const val MENU_WORD = "TitanKeys"
 internal const val MENU_CLOSED = "Closed it. Hold TitanKeys again."
 internal const val MENU_UNSAVED = "Unsaved. Cold. I, then I again."
+internal const val MENU_NOT_BOX = "Not the box. Hold TitanKeys on the bar."
+internal const val MENU_MIDDLE = "The one in the middle. TitanKeys."
+internal const val MENU_MISSED = "I or O. Nothing else does anything here."
+
+/** The word menu slide's marked word in its line: TitanKeys, wherever [text] has it, or null. */
+internal fun menuTarget(text: String): IntRange? = text.indexOf(MENU_WORD).takeIf { it >= 0 }?.let { it until it + MENU_WORD.length }
 
 /** The words that the Grab a bunch slide marks in orange to select. */
 internal const val GRAB_PHRASE = "my whole heart"
@@ -1103,6 +1110,18 @@ internal const val GRAB_GREEDY = 2
 internal fun grabTarget(text: String, from: Int): IntRange? {
     val at = text.indexOf(GRAB_PHRASE, from).takeIf { it >= 0 } ?: text.lastIndexOf(GRAB_PHRASE, from).takeIf { it >= 0 } ?: return null
     return at until at + GRAB_PHRASE.length
+}
+
+/**
+ * The word menu slide's off-track moves that every stage answers the same way (owner, 2026-11-13: "did not select the right word?
+ * or selected other stuff instead?"): text selected in the box snaps back, a hold beside TitanKeys points at the middle, and a key
+ * that isn't a menu button does nothing.
+ */
+internal fun menuOffTrack(event: KeyboardEvent): GuideVerdict = when {
+    event is FieldChanged && event.end > event.start -> chip(MENU_NOT_BOX)
+    event is KeyboardEvent.EmptyBarHeld -> chip(MENU_MIDDLE)
+    event is KeyboardEvent.MenuMissed -> chip(MENU_MISSED)
+    else -> GuideVerdict.Wait
 }
 
 /**
@@ -1286,11 +1305,11 @@ internal val GUIDE_STEPS = listOf(
         stages = listOf(
             // The guide's menu is only for show, and says so before anything is pressed (owner, 2026-11-13).
             GuideStage("Hold TitanKeys on the bar. Nothing gets saved.") { event ->
-                when (event) {
-                    is WordMenu -> GuideVerdict.Done
+                when {
+                    event is WordMenu -> GuideVerdict.Done
                     // The lock blocks a tap with the same words; this is for a tap that gets through without it.
-                    is Chosen -> chip("Hold, don't tap.")
-                    else -> GuideVerdict.Wait
+                    event is Chosen -> chip("Hold, don't tap.")
+                    else -> menuOffTrack(event)
                 }
             },
             // One key at a time: the drawing hints Save on I, then Favourite on I again.
@@ -1305,7 +1324,7 @@ internal val GUIDE_STEPS = listOf(
                     event is MenuPicked && event.action == "Block" -> chip("Blocked TitanKeys? Rude. I brings it back.")
                     event is MenuPicked && event.action == "Unblock" -> chip("Unblocked. Now I saves it.")
                     event is MenuPicked && event.action == "Unsave" -> chip(MENU_UNSAVED)
-                    else -> GuideVerdict.Wait
+                    else -> menuOffTrack(event)
                 }
             },
             // The top of the ladder: I again on a saved word makes it a favourite, and the hearts burst.
@@ -1315,7 +1334,7 @@ internal val GUIDE_STEPS = listOf(
                     // O on a saved word unsaves it: back to the save.
                     event is MenuPicked && event.action == "Unsave" -> GuideVerdict.Hint(MENU_UNSAVED, stage = 1)
                     event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint(MENU_CLOSED, stage = 0)
-                    else -> GuideVerdict.Wait
+                    else -> menuOffTrack(event)
                 }
             },
         ),
@@ -1324,9 +1343,9 @@ internal val GUIDE_STEPS = listOf(
         line = MENU_LINE,
         seed = MENU_LINE,
         help = "Hold, don't tap. Keep your finger on TitanKeys.",
-        lessons = setOf(GuideLesson.BarHold, GuideLesson.Typing, GuideLesson.Space, GuideLesson.Backspace),
-        // Only TitanKeys on the bar, in the middle, pointed at until its menu opens.
-        sides = false,
+        // Only the hold: typing, swiping, Space taps and Backspace are blocked, and say so. With the menu open, its keys work.
+        lessons = setOf(GuideLesson.BarHold),
+        // Only TitanKeys on the bar, in the middle, pointed at the whole slide; the side places are empty.
         barWord = MENU_WORD,
         bar = GuideBar.Menu,
     ),
@@ -1807,8 +1826,23 @@ internal fun groupsPraise(used: Int) = when {
  * The chip for something that [step]'s lock kept from the field, by its [GuideLesson] name. Nothing is ever blocked silently
  * (owner, v5): each says that it's blocked, and why or what to do instead. [lessons] is what the slide lets through now.
  */
+/** What the word menu slide's lock says for [lesson]: blocked, then hold TitanKeys. Null for the usual words. */
+private fun menuBlocked(lesson: String): String? = when (lesson) {
+    GuideLesson.Typing.name -> "Typing's blocked here. Hold TitanKeys."
+    GuideLesson.Swipe.name -> "Swiping's blocked here. Hold TitanKeys."
+    GuideLesson.Space.name -> "Spaces are blocked here. Hold TitanKeys."
+    GuideLesson.Cursor.name -> "Space taps are blocked. Hold TitanKeys on the bar."
+    GuideLesson.Backspace.name -> "Backspace is blocked here. Hold TitanKeys."
+    GuideLesson.Flick.name, GuideLesson.DeleteHold.name -> "Deleting's blocked here. Hold TitanKeys."
+    GuideLesson.BarTap.name -> "Taps are blocked here. Hold, don't tap."
+    else -> null
+}
+
 internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLesson>? = step.lessons): String {
     val open = lessons.orEmpty()
+    // The word menu slide: only TitanKeys on the bar counts, so every refusal says it's blocked, then points at it (owner,
+    // 2026-11-13: "selected other stuff instead?").
+    if (step.barWord != null) menuBlocked(lesson)?.let { return it }
     return when (lesson) {
         GuideLesson.Typing.name -> when {
             step.chapter in NOT_TYPING -> "Typing's blocked here. Typing's done. Keep up."

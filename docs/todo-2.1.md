@@ -85,6 +85,11 @@ all of them are unapproved.
   C's own 18 calls are in guide-v2-built.md in the notes folder. Among them: titles in Inter Bold (the app ships no ExtraBold),
   lesson keys stay steady orange, the leave pop-up offers Keep going / Start again / I already know everything, and the boring guide
   button moved under the end's buttons. All unapproved.
+- D: **word menu v4 done and merged** (4dd9fed). Frames checked: Save's sparkle ring reads well next to Favourite's hearts.
+  - Unsave breaks a bookmark, quieter than the heart (owner's call, given in D's session).
+  - D's own calls: a dictionary word's O is Forget, with Undo; a word the store can't hold opens no menu; a forgotten dictionary
+    word opens Not saved; the particles go behind the word; an O that disappears fades out.
+- Combined build #1 (C, D, F and A's bar fix) started 00:20, for early phone testing while A and F finish.
 - Then: merge everything, one build, install, and a full run-through on the phone.
 - Release prep (Orchestrator):
   - Update release-notes.txt for everything new since it was written. One line is already wrong: steering taps now count

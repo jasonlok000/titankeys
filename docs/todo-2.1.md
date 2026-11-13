@@ -145,7 +145,10 @@ all of them are unapproved.
   - **D** (claude/playground-menu): the playground used the guide's show-only word menu (its field carries the guide's tag), so
     "then" showed Not saved and Save did nothing real. It now gets the real menu. That likely explains the owner's "why are words
     like 'and' not even saved?".
-  - **A** (claude/guide-polish):
+  - **A** (claude/guide-polish): **done and merged** (1d0f715, merge 1f98259). New chips: Swipe "Spaces are blocked here. Swipes
+    space themselves.", Steering "Typed spaces are blocked. Taps on Space steer.", ∞ "Find it and press its key. It's further in."
+    The stray space was the Backspace slide's cursor, not the menu. On the phone: the light-tap Space refusal and steering.
+    The fixes:
     - Typing 3/3: a bar tap gets "hold, don't tap";
     - the help is on time after a Skip;
     - a lone Space is refused on the Swipe and Steering slides, with a Space-appropriate chip on the Alt slide;

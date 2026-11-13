@@ -229,7 +229,13 @@ all of them are unapproved.
 
       Follow-up sent: lift the heart preview off the bar's edge, and confirm the pill style is unchanged.
 
-    Waiting on: C's finale, then V's decorations (pushed), and D's press haptics.
+    - **C's finale** (4a61820; merge 3e236a1), then **V's decorations** (7571f2c; merge b7d2b57, taking V's GuideDecor.kt and
+      GuideDecorRender.kt whole). guide-decor and guide pass on the merge.
+    - **D's press haptics** (27bdc2e; merge adcd3c5): a Press tick for every plain press, routed through one place (AppPress, plus
+      Ink), with docs/haptics-audit.md and a check.
+  - **Build #6 started (12:25)** from adcd3c5. Still to come: W's heart-preview and pill follow-up, D's bar baseline, and A's release
+    audit.
+
   - **Faster finish (11:55):** the verify queue was six runs deep, about 90 minutes of duplicates. Every worker now pushes once its
     targeted checks pass and cancels its own queued verify. The Orchestrator merges C, V, W, D, A and F, then runs one full verify
     on the combined test-2.1h as build #6.

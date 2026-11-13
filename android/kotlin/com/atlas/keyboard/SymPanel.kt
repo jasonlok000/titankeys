@@ -96,7 +96,7 @@ class SymPanel(
             clipPages.fit(value)
             if (clipboard) render()
         }
-    /** A clip that flashes on the clipboard page, to show where to look: the guide's newest. Null for none. */
+    /** A clip that pulses on the clipboard page, to show which to pick: the guide's right one. Null for none. */
     var flashClip: String? = null
     /** The open group of the clipboard, Clipboard or Pinned, and its page. */
     private val clipPages = ClipboardHistory.Pages()
@@ -190,7 +190,7 @@ class SymPanel(
      * The clips that pulse softly, each with its animation: see [flash]. Before init, which renders, so it is never null there.
      * See tools/checks/init-order.test.ts.
      */
-    private val flashes = HashMap<android.view.View, android.animation.ObjectAnimator>()
+    private val flashes = HashMap<android.view.View, android.animation.ValueAnimator>()
 
     init {
         orientation = VERTICAL
@@ -595,7 +595,10 @@ class SymPanel(
             val index = clipPages.index(clips, field.slot)
             val clip = index?.let(clips::getOrNull)
             field.frame.visibility = if (!clipboard) GONE else if (clip == null) INVISIBLE else VISIBLE
-            if (!clipboard || clip == null) continue
+            if (!clipboard || clip == null) {
+                flash(field.frame, false)
+                continue
+            }
             val lit = under == index
             field.text.text = ClipboardHistory.preview(clip.text, CLIP_PREVIEW)
             field.text.sized(CLIP_TEXT_SIZE, CLIP_TEXT_LARGEST)
@@ -613,19 +616,36 @@ class SymPanel(
     }
 
 
+    /**
+     * A gentle orange pulse on [view]'s field, never a harsh flash (owner, 2026-11-13): its outline glows in and out in orange,
+     * and its fill warms a little, slowly. With animations off, it keeps a steady orange outline. It reads the field's
+     * background on every frame, since the page draws it anew.
+     */
     private fun flash(view: android.view.View, on: Boolean) {
-        val running = flashes[view]
-        if (on == (running != null)) return
-        running?.cancel()
-        view.alpha = 1f
-        flashes.remove(view)
-        if (!on || !GuideMotion.enabled) return
-        flashes[view] = android.animation.ObjectAnimator.ofFloat(view, android.view.View.ALPHA, 1f, FLASH_ALPHA).apply {
-            duration = FLASH_MILLIS
+        if (!on || !GuideMotion.enabled) {
+            flashes.remove(view)?.cancel()
+            if (on) pulse(view, 1f)
+            return
+        }
+        // The page drew the field anew: the running pulse paints over it at once, so it never blinks plain.
+        flashes[view]?.let { running ->
+            pulse(view, running.animatedValue as Float)
+            return
+        }
+        flashes[view] = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = PULSE_MILLIS
             repeatCount = android.animation.ValueAnimator.INFINITE
             repeatMode = android.animation.ValueAnimator.REVERSE
+            interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+            addUpdateListener { pulse(view, it.animatedValue as Float) }
             start()
         }
+    }
+
+    private fun pulse(view: android.view.View, t: Float) {
+        val fill = view.background as? GradientDrawable ?: return
+        fill.setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(look.accent, PULSE_LEAST + (1f - PULSE_LEAST) * t))
+        fill.setColor(GuideMotion.blend(look.wash, look.accent, PULSE_WARMTH * t))
     }
 
     /** The key under a finger. A key in an outer column keeps its highlight clear of the screen's corners. */
@@ -667,8 +687,10 @@ class SymPanel(
 
     private companion object {
         /** A flashing clip dims to this and back, once each way in this long. */
-        const val FLASH_ALPHA = .45f
-        const val FLASH_MILLIS = 650L
+        /** The right clip's pulse: one way takes this long, its outline never fainter than [PULSE_LEAST], its fill this warm at most. */
+        const val PULSE_MILLIS = 1100L
+        const val PULSE_LEAST = .3f
+        const val PULSE_WARMTH = .14f
         /** How much of a clip the guide's drawing shows on its key. */
         const val FACE_CLIP_LENGTH = 4
         const val BAND_HEIGHT = 32

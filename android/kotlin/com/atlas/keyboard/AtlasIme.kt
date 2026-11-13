@@ -89,6 +89,8 @@ class AtlasIme : InputMethodService() {
     private var gestureRegistered = false
     /** This touch's Space gesture found nothing to work on, played its no, and does nothing more. See [nothingToPick]. */
     private var gestureEmpty = false
+    /** This touch's gesture was refused by the guide's slide, which has said so: the rest of the touch says nothing more. */
+    private var refused = false
     /** Where that touch landed, for the strip's track. */
     private var gestureLanded: Sample? = null
     /** The cursor has moved far from where its text was read, so the next step reads it again. */
@@ -342,6 +344,11 @@ class AtlasIme : InputMethodService() {
         if (!cursorGesture.confirm()) return@Runnable
         Recording.sink?.gesture("double", SystemClock.uptimeMillis(), "")
         finishHeldTaps(type = false)
+        // A guide slide that doesn't teach it yet: the taps glowed as they counted, and now the slide says it's blocked.
+        if (inGuide && !guideAllows(GuideLesson.Cursor)) {
+            guideBlocked(GuideLesson.Cursor)
+            return@Runnable
+        }
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped(2) }
         // With text selected, a double space puts the cursor back, as steering would start from there.
         if (collapseSelection()) {
@@ -367,6 +374,8 @@ class AtlasIme : InputMethodService() {
     /** Two taps above Space pick nothing; the guide says so, once no third tap follows. Only in its own field. */
     private val confirmTwoAbove = Runnable {
         if (!inGuide || !cursorGesture.confirmTwoAbove()) return@Runnable
+        // Where the slide doesn't teach Space gestures yet, they're blocked, and the slide says so.
+        if (guideBlocked(GuideLesson.Cursor)) return@Runnable
         // A no, so the taps that did nothing are felt as nothing. Everywhere else they stay quiet.
         haptics.play(Haptic.NothingToPick)
         KeyboardEvents.publish { KeyboardEvent.TwoTapsAbove }
@@ -397,13 +406,14 @@ class AtlasIme : InputMethodService() {
     /** The finger moved, so the wait for a hold starts again, or ends if the finger is no longer on a delete flick. */
     private fun followDeleteHold() {
         val start = contact.points.firstOrNull()
-        val at = deleteHold.moved(!altOrPanel && start != null && pieces.canDelete(start.time) && guideAllows(GuideLesson.Flick))
+        val at = deleteHold.moved(!altOrPanel && start != null && pieces.canDelete(start.time))
         main.removeCallbacks(blockDeleteHold)
         when {
             at == null -> main.removeCallbacks(stepDeleteHold)
-            // A guide slide that teaches the flick but not the hold: the hold never starts, and the guide says it's blocked. The
-            // flick still deletes its one word at the lift.
-            !guideAllows(GuideLesson.DeleteHold) && !contact.deleting -> {
+            // A guide slide that doesn't teach the hold, or the flick, yet: the hold never starts, its glow shows it was felt, and
+            // the guide says it's blocked as it would have started (owner, 2026-11-13: blocked, not ignored). A flick the slide
+            // teaches still deletes its one word at the lift.
+            (!guideAllows(GuideLesson.Flick) || !guideAllows(GuideLesson.DeleteHold)) && !contact.deleting -> {
                 main.removeCallbacks(stepDeleteHold)
                 main.postAtTime(blockDeleteHold, at)
             }
@@ -411,8 +421,8 @@ class AtlasIme : InputMethodService() {
         }
     }
 
-    /** A held delete that the guide's slide blocks: said once each time the finger stays. */
-    private val blockDeleteHold = Runnable { guideBlocked(GuideLesson.DeleteHold) }
+    /** A held delete that the guide's slide blocks: said once each time the finger stays, as the flick's if that's locked too. */
+    private val blockDeleteHold = Runnable { refuse(if (guideAllows(GuideLesson.Flick)) GuideLesson.DeleteHold else GuideLesson.Flick) }
 
     private fun endDeleteHold() {
         main.removeCallbacks(stepDeleteHold)
@@ -469,6 +479,10 @@ class AtlasIme : InputMethodService() {
 
     private fun startCursor(drag: CursorGesture.Drag, samples: List<Sample>) {
         if (strip?.gesture?.softDelete == true) interruptGesture()
+        if (inGuide && !guideAllows(GuideLesson.Cursor)) {
+            refuseSpaceGesture()
+            return
+        }
         // A slide before the hold registered still steers nothing where there is no text. Selecting was decided on landing.
         if (!gestureEmpty && !gestureRegistered && !drag.words && nothingHere(words = false)) nothingToPick()
         if (gestureEmpty) {
@@ -508,6 +522,13 @@ class AtlasIme : InputMethodService() {
         if (taps >= 3 && tripleDown && !gestureEmpty) strip?.gesture?.pickHeldGlow(now)
         if (taps == 0 || gestureRegistered || gestureEmpty) return
         val words = taps >= 3
+        // A guide slide that doesn't teach steering or selecting yet: the bar shows it registered, then the slide refuses it.
+        if (inGuide && !guideAllows(GuideLesson.Cursor)) {
+            if (words) readWordsAroundCursor() else readCursorText()
+            strip?.gesture?.cursorFrame((gestureLanded?.x ?: .5f) * 10, 0, 0f, words, now)
+            refuseSpaceGesture()
+            return
+        }
         // Selecting was decided as the touch landed, in [pickOnLand]. Steering with no text at all does nothing but say no.
         if (!words && nothingHere(words = false)) {
             nothingToPick()
@@ -547,6 +568,11 @@ class AtlasIme : InputMethodService() {
      */
     private fun pickOnLand() {
         Recording.sink?.gesture("triple", SystemClock.uptimeMillis(), "")
+        // A guide slide that doesn't teach it yet: the taps glowed as they counted, and the third is refused as it lands.
+        if (inGuide && !guideAllows(GuideLesson.Cursor)) {
+            refuseSpaceGesture()
+            return
+        }
         // The mark at the selection's moving end, as the Haptics lab tried it in TitanKeys Debug.
         GestureDisplay.selectionEnd = SelectionEnd.stored(Haptics.selectionEndId(this))
         gestureRegistered = true
@@ -748,8 +774,8 @@ class AtlasIme : InputMethodService() {
                 } else {
                     val now = System.currentTimeMillis()
                     guideClips = ClipboardHistory().apply { for (text in clips.reversed()) add(text, now) }
-                    // The newest of them flashes, to show where to look.
-                    guideFlashClip = clips.firstOrNull()
+                    // The right one to paste, the last, pulses to show which one to pick (owner, 2026-11-13).
+                    guideFlashClip = clips.lastOrNull()
                 }
                 showClips()
             }
@@ -1496,7 +1522,7 @@ class AtlasIme : InputMethodService() {
     /** The clips that the clipboard page shows: the guide's own in its sandbox, or the user's. */
     private val shownClips get() = guideClips?.takeIf { inGuide } ?: clipHistory
     private val clipFile by lazy { AtomicFile(java.io.File(noBackupFilesDir, CLIP_FILE)) }
-    /** The guide's clip that flashes on the clipboard page until a clip is pasted. */
+    /** The guide's clip that pulses on the clipboard page until it is pasted: the right one to pick. */
     private var guideFlashClip: String? = null
     private var clipPinning = false
     private var clipClearing = false
@@ -1637,7 +1663,8 @@ class AtlasIme : InputMethodService() {
                     haptics.play(Haptic.ClipPasted)
                     // The guide swaps one clip for a prank, and says so; anywhere else a clip pastes as it is.
                     composer.paste(if (inGuide) GuideHooks.swapClip(clip.text) else clip.text)
-                    guideFlashClip = null
+                    // A rude one is taken back out, so the pulse stays until the right one is pasted.
+                    if (clip.text == guideFlashClip) guideFlashClip = null
                     closePanel()
                     return
                 }
@@ -1681,7 +1708,7 @@ class AtlasIme : InputMethodService() {
 
     /** Holding a word on the strip opens its menu. */
     private fun holdWord(index: Int): Boolean {
-        // A guide slide that doesn't teach the menu yet: the hold does nothing, not even a haptic.
+        // A guide slide that doesn't teach the menu yet: the hold opens nothing, and the guide says it's blocked, with a no.
         if (guideBlocked(GuideLesson.BarHold)) return false
         val (word, typed) = composer.shownWord(index) ?: return false
         return openMenu(HeldWord(word, typed))
@@ -1793,11 +1820,36 @@ class AtlasIme : InputMethodService() {
 
     private fun guideAllows(lesson: GuideLesson) = !inGuide || GuideHooks.allows(lesson)
 
-    /** True if the guide's slide locks [lesson], and tells the guide, which says so once. */
+    /** True if the guide's slide locks [lesson], and tells the guide, which says so with its chip and a no. */
     private fun guideBlocked(lesson: GuideLesson): Boolean {
         if (guideAllows(lesson)) return false
         KeyboardEvents.publish { KeyboardEvent.Blocked(lesson.name) }
         return true
+    }
+
+    /**
+     * A gesture the guide's slide doesn't teach yet: it has shown that it registered, as it always does, and now the slide refuses
+     * it (owner, 2026-11-13: "blocked not ignored"). The guide says so once for the touch, nothing reaches the field, and the
+     * rest of the touch does nothing. True if it is refused.
+     */
+    private fun refuse(lesson: GuideLesson): Boolean {
+        if (guideAllows(lesson)) return false
+        if (!refused) {
+            refused = true
+            guideBlocked(lesson)
+        }
+        return true
+    }
+
+    /** A Space gesture refused: the rest of the touch neither steers, nor selects, nor types. Its glow goes with the lift. */
+    private fun refuseSpaceGesture() {
+        refuse(GuideLesson.Cursor)
+        gestureEmpty = true
+        gestureRegistered = true
+        main.removeCallbacks(registerGestureLater)
+        main.removeCallbacks(confirmDoubleTap)
+        contact.cancelActive()
+        finishHeldTaps(type = false)
     }
 
     /**
@@ -2219,8 +2271,9 @@ class AtlasIme : InputMethodService() {
                 // Each stroke hits its own wall.
                 deleteWall.left()
                 // Only where a delete flick would count, and with something to delete, can the stroke crunch and glow.
-                flickCrunch.begin(!altOrPanel && field.words && pieces.canDelete(first.time) && guideAllows(GuideLesson.Flick)
-                    && somethingToDelete(first))
+                // On a guide slide that doesn't teach the flick, it still glows, so it's seen to register before it's refused.
+                flickCrunch.begin(!altOrPanel && field.words && pieces.canDelete(first.time) && somethingToDelete(first))
+                refused = false
                 endDeleteHold()
                 contact.down(first)
                 if (cursor.resume(first, composer.liftOffMillis.toLong())) {
@@ -2239,7 +2292,8 @@ class AtlasIme : InputMethodService() {
                 cursorPath = ArrayList(samples.filter { it.valid })
                 // With Alt on or the panel open the touchpad does not type, so the cursor waits until they are off.
                 // A finger the contact ignored landed while typing, so it must not start the cursor.
-                val gestureCounts = cursorControl && !altOrPanel && contact.travel != null && guideAllows(GuideLesson.Cursor)
+                // On a guide slide that doesn't teach them yet, Space gestures still count and glow, and are refused as they act.
+                val gestureCounts = cursorControl && !altOrPanel && contact.travel != null
                 Recording.sink?.gesture("down", first.time, "counts=$gestureCounts cursorControl=$cursorControl " +
                     "altOrPanel=$altOrPanel contact=${contact.travel != null}")
                 cursorGesture.down(first, gestureCounts)
@@ -2304,14 +2358,16 @@ class AtlasIme : InputMethodService() {
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
-                if (contact.swipes && !altOrPanel && guideAllows(GuideLesson.Swipe) && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
+                if (contact.swipes && !altOrPanel && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) {
                     // Clearly a delete flick, the keys it crosses crunch; once it stops being one, a break, then swiping's ticks.
+                    // On a guide slide only what the slide teaches is felt: a locked one glows, and its feel is the no at the end.
+                    val felt = guideAllows(if (flickCrunch.crunching) GuideLesson.Flick else GuideLesson.Swipe)
                     if (flickCrunch.move(contact.points)) {
-                        haptics.play(Haptic.DeleteBreak)
+                        if (felt) haptics.play(Haptic.DeleteBreak)
                         strip?.gesture?.flickGlowEnded(SystemClock.uptimeMillis())
                     }
-                    haptics.move(samples, flickCrunch.crunching)
+                    if (guideAllows(if (flickCrunch.crunching) GuideLesson.Flick else GuideLesson.Swipe)) haptics.move(samples, flickCrunch.crunching)
                     // While it is clearly a flick, the delete glow reaches from the corner to the finger and follows it.
                     if (flickCrunch.crunching) samples.lastOrNull { it.valid }?.let { strip?.gesture?.flickGlow(it.x, it.time) }
                 }
@@ -2917,8 +2973,8 @@ class AtlasIme : InputMethodService() {
                     return
                 }
                 if (!field.words) return
-                // A guide slide that doesn't teach this yet: the swipe or the flick does nothing.
-                if (guideBlocked(if (outcome.deletesWord) GuideLesson.Flick else GuideLesson.Swipe)) return
+                // A guide slide that doesn't teach this yet: the swipe or the flick does nothing, and the slide says so, once.
+                if (refuse(if (outcome.deletesWord) GuideLesson.Flick else GuideLesson.Swipe)) return
                 if (outcome.deletesWord) {
                     val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
                     val nothingLeft = before?.isEmpty() == true
@@ -3069,6 +3125,13 @@ class AtlasIme : InputMethodService() {
         }
         // A key held on Alt's slide types one symbol, not a row of them: the guide never repeats a typing key.
         if (locked == GuideLesson.Alt && event.repeatCount > 0 && !Modifiers.isModifier(keyCode)) return true
+        // A letter held on a slide that doesn't teach holding yet: it stays the letter it typed, its repeats type nothing, and the
+        // guide says holding is for later, once for the hold (owner, 2026-11-13: blocked, not ignored).
+        if (editing && inGuide && holdSymbols && event.repeatCount > 0 && HoldEngine.isLetter(keyCode) &&
+            !guideAllows(GuideLesson.HoldSymbol)) {
+            if (event.repeatCount == 1) guideBlocked(GuideLesson.HoldSymbol)
+            return true
+        }
         if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))

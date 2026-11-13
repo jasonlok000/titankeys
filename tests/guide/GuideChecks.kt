@@ -473,6 +473,10 @@ fun main() {
     wrongEventsDoNotFinish()
     chapterOne()
     scenarios()
+    everyWayToFailIsAnswered()
+    everyPassShowsNext()
+    theOwnersInfinityJoke()
+    theRightClipPulses()
     theCursorHasToMove()
     steeringToAWord()
     grabbingABunch()
@@ -855,7 +859,7 @@ private fun chapterOne() {
 /** The chapters rebuilt in the new layout so far. */
 private val NEW_LAYOUT = setOf(GuideChapter.Typing, GuideChapter.Delete, GuideChapter.Steering, GuideChapter.Symbols,
     GuideChapter.Clipboard)
-/** Titles shrink to fit their one line now (v5.2); the owner's "Find the weird one. It's further in." is the longest. */
+/** Titles shrink to fit their one line now (v5.2). */
 private const val TITLE_MOST = 38
 private const val LINE_MOST = 50
 
@@ -1300,4 +1304,89 @@ private fun readableWhenOrange() {
         if (WpmMeter.inkOn(background, inkNow = false)) continue
         check(WpmMeter.contrast(WpmMeter.quietOn(background), background) >= WpmMeter.READABLE) { "secondary text reads at heat ${step / 100f}" }
     }
+}
+
+/**
+ * Every way to fail gets an answer (owner, 2026-11-13; docs/guide-failures.md lists them all). A locked gesture or key is blocked
+ * with words of its own for the slide, never the catch-all, and each slide's wrong moves get a chip or a hint, not silence or a pass.
+ */
+private fun everyWayToFailIsAnswered() {
+    fun title(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.let { it.title ?: it.text }.orEmpty()
+    // The list covers every slide.
+    val doc = java.io.File("docs/guide-failures.md").readText()
+    for (step in GUIDE_STEPS.filter { it.id != "end" }) same(doc.contains("### ${step.id}:"), true, "docs/guide-failures.md lists ${step.id}")
+    // Every lesson a slide locks has its own words: never the catch-all.
+    for (step in GUIDE_STEPS) for (lesson in GuideLesson.entries) {
+        if (step.lessons?.contains(lesson) == true) continue
+        same(blockedChip(step, lesson.name) != "That's blocked here. That's later.", true, "${step.id} says why ${lesson.name} is blocked")
+    }
+    fun step(id: String) = GUIDE_STEPS.first { it.id == id }
+    same(blockedChip(step("backspace"), GuideLesson.Flick.name), "Flicks are blocked here. Backspace this one.", "A flick on the Backspace slide")
+    same(blockedChip(step("hold"), GuideLesson.Flick.name, emptySet()), "Blocked. The regrets are gone, the rest stays.",
+        "Deleting on, once the regrets are gone")
+    same(blockedChip(step("flick"), GuideLesson.DeleteHold.name), "Held delete is blocked here. Flick and lift.", "A hold on the flick slide")
+    same(blockedChip(step("swipe"), GuideLesson.DeleteHold.name), "Held delete is blocked here. That's later.", "A hold before its time")
+    same(blockedChip(step("type"), GuideLesson.Cursor.name), "Space taps are blocked here. That's later.", "Double or triple Space before steering")
+    same(blockedChip(step("type"), GuideLesson.HoldSymbol.name), "Holding for symbols is blocked here. That's later.", "A letter held too early")
+    same(blockedChip(step("type"), GuideLesson.BarHold.name), "Holding bar words is blocked here. That's later.", "A bar word held too early")
+    // Wrong moves the earlier checks don't cover.
+    val menu = GuideFlow({ GuideSettings() })
+    menu.start("menu")
+    same(title(menu.event(Chosen("the"))), "That typed it. Hold it, don't tap.", "A tap on a bar word")
+    val paste = GuideFlow({ GuideSettings() })
+    paste.start("paste")
+    same(title(paste.event(KeyboardEvent.Copied("orange words"))).startsWith("That's copy"), true, "A copy on the paste slide")
+    same(finishes(paste.event(FieldChanged(PASTE_SEED + " " + PASTE_TEXT, 3, 3))), true, "and ours pasted after it still passes")
+    val clown = GuideFlow({ GuideSettings() })
+    clown.start("clown")
+    same(clown.event(keys(Panel.Emoji)), GuideVerdict.Stage(1), "Sym twice: the emoji")
+    same(clown.event(keys(Panel.Closed)).let { it is GuideVerdict.Hint && it.stage == 0 }, true, "Closed, it goes back to Sym")
+    val clips = GuideFlow({ GuideSettings() })
+    clips.start("clipboard")
+    clips.event(keys(Panel.Symbols))
+    clips.event(keys(Panel.Clipboard))
+    same(clips.event(keys(Panel.Closed)).let { it is GuideVerdict.Hint && it.stage == 0 }, true, "Leaving the clips goes back to Sym")
+    // Nothing a slide doesn't teach passes it.
+    for (id in listOf("backspace", "flick", "steer", "alt", "symmain")) {
+        val flow = GuideFlow({ GuideSettings() })
+        flow.start(id)
+        for (event in listOf(Pushed(KEY_A), Tapped("A"), Moved(0f, lifted = true), keys(Panel.Settings)))
+            same(finishes(flow.event(event)), false, "$id doesn't pass on $event")
+    }
+}
+
+/** Every passed slide shows Next, however it passed (owner, 2026-11-13: "some next are missing after completion"). */
+private fun everyPassShowsNext() {
+    for (step in GUIDE_STEPS) same(showsNextWhenPassed(step), step.chapter != GuideChapter.End, "${step.id} shows Next once passed")
+    // The pass's pulse must never stop Next's own fade-in, which a quick pass waits for.
+    val source = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val morph = source.substring(source.indexOf("private fun morphNext()"), source.indexOf("private fun nextPressed()"))
+    same(morph.contains("next.animate().cancel()"), false, "The pass's pulse leaves Next's fade-in alone")
+    same(source.contains("private val nextInView"), true, "and Next is put in full view after a pass whatever happens")
+}
+
+/** The ∞ is the owner's joke (owner, 2026-11-13): the title never names it, and the found-fast and took-long lines land as written. */
+private fun theOwnersInfinityJoke() {
+    val groups = GUIDE_STEPS.first { it.id == "symgroups" }
+    same(groups.title, "Add how long you last in bed.", "The ∞ slide's title")
+    same(groups.title.contains(WEIRD), false, "never names the symbol")
+    same(groups.hunt, WEIRD_HUNT, "It's a hunt")
+    same(WEIRD_HUNT.fast, "Quick. Just like you in bed.", "Found fast")
+    for (seconds in listOf(HUNT_DRAIN_SECONDS, 40, 300)) same(WEIRD_HUNT.slow(seconds), "That took forever. Still shorter than you claim to last.",
+        "Found after $seconds s")
+    same(huntFast(0), true, "A find before the hunt's clock started is quick, so it gets its line too")
+    same(huntFast(HUNT_DRAIN_SECONDS - 1) to huntFast(HUNT_DRAIN_SECONDS), true to false, "Quick until the bar has drained")
+    val flow = GuideFlow({ GuideSettings() })
+    flow.start("symgroups")
+    same(flow.instruction.contains("Sym"), true, "The instruction still says where it is")
+}
+
+/** The clipboard slide's right clip, the last and the nice one, is the one that pulses (owner, 2026-11-13). */
+private fun theRightClipPulses() {
+    same(PRANK_CLIP, GUIDE_CLIPS.last(), "The nice clip is the last")
+    val keyboard = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    same(keyboard.contains("guideFlashClip = clips.lastOrNull()"), true, "The last clip pulses")
+    same(keyboard.contains("if (clip.text == guideFlashClip) guideFlashClip = null"), true, "until it's the one pasted")
+    val panel = java.io.File("android/kotlin/com/atlas/keyboard/SymPanel.kt").readText()
+    same(panel.contains("View.ALPHA"), false, "A pulse in orange, not a blink of the whole field")
 }

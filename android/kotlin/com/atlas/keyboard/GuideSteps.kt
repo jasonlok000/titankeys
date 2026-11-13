@@ -1126,6 +1126,12 @@ internal fun lineTyped(text: String, line: String): Boolean {
 }
 
 /**
+ * Whether Next shows once [step] has passed (owner, 2026-11-13: "some next are missing after completion"): on every slide,
+ * however it passed. Only the end, with its own buttons, has none.
+ */
+internal fun showsNextWhenPassed(step: GuideStep) = step.chapter != GuideChapter.End
+
+/**
  * The guide's one list (v5). Each title says what to do, and its instruction how; the jokes are in how it's said. Each slide has
  * its own [GuideStep.line] to finish, and its own field. Each slide's words, scenarios and check are together.
  */
@@ -1535,7 +1541,8 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "symgroups", chapter = GuideChapter.Symbols,
         // The title doesn't name the symbol: the gap in the field shows which (owner, v5.2).
-        title = "Find the weird one. It's further in.",
+        // The owner's joke (owner, 2026-11-13): how long you last, found in the ∞. The title never names the symbol.
+        title = "Add how long you last in bed.",
         // used holds what was used: 1 a page by swiping up or down, 2 a page by the arrows (Backspace or Enter), 4 a group by the
         // bottom row or a sideways swipe, which works too and says so.
         stages = listOf(
@@ -1743,9 +1750,15 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
         GuideLesson.BarTap.name -> if (step.id == "type") "The bar's blocked here. Type it, typo and all." else
             "The bar's blocked here. Do it with the keys."
         GuideLesson.BarHold.name -> "Holding bar words is blocked here. That's later."
-        GuideLesson.Flick.name -> "Flicks are blocked here. That's later."
-        GuideLesson.DeleteHold.name -> "Held delete is blocked here. Flick and lift."
-        GuideLesson.Cursor.name -> "Steering's blocked here. That's later."
+        GuideLesson.Flick.name -> when {
+            step.id == "backspace" -> "Flicks are blocked here. Backspace this one."
+            // The held delete's slide locks deleting once the regrets are gone.
+            step.id == "hold" -> "Blocked. The regrets are gone, the rest stays."
+            else -> "Flicks are blocked here. That's later."
+        }
+        GuideLesson.DeleteHold.name -> if (step.id == "flick") "Held delete is blocked here. Flick and lift." else
+            "Held delete is blocked here. That's later."
+        GuideLesson.Cursor.name -> "Space taps are blocked here. That's later."
         GuideLesson.Alt.name -> if (step.chapter == GuideChapter.Symbols) "Alt is blocked on this slide. Not this way." else
             "Alt is blocked here. That's later."
         GuideLesson.Sym.name -> if (step.chapter == GuideChapter.Symbols) "Sym is blocked on this slide. Not this way." else

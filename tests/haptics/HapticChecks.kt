@@ -130,6 +130,13 @@ private val table = mapOf(
     Haptic.GuideNext to Family.Confirm,
     Haptic.GuideBlocked to Family.No,
     Haptic.GuideHint to Family.Change,
+    // TitanKeys' own screens (docs/haptics.md): on locks, off lets go, a step ticks, a pick is done, a delete is gone, a refusal is no.
+    Haptic.AppSwitchOn to Family.Lock,
+    Haptic.AppSwitchOff to Family.Release,
+    Haptic.AppStep to Family.Texture,
+    Haptic.AppPicked to Family.Confirm,
+    Haptic.AppDeleted to Family.Gone,
+    Haptic.AppRefused to Family.No,
 )
 
 /** The rulebook's patterns: on and off in ms, starting with on. */

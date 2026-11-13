@@ -248,6 +248,23 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   needs the keyboard open on a field that shows words, 3 to 4.5 minutes with no key, touch or swipe, the screen on, then a 25%
   chance, and never twice in a row: about 15 untouched minutes before the first game, so it's almost never seen. The
   Orchestrator's proposal, unapproved: wait 60 to 90 s and a 50% chance, about 2.5 minutes on average; any input still ends it.
+- **Evaluations for the owner (2026-11-13):**
+  - **Idle game odds, simulated** from the real rules (a wait of W to 1.5 W, then the chance, never twice running). Average
+    untouched, keyboard-open time to the first game: 15 min today (W 3 min, 25%), 2.5 min proposed (W 60 s, 50%). Chance in one
+    untouched pause: 60 s 0% and 0%; 90 s 0% and 50%; 2 min 0% and 50%; 3 min 0% and 75%; 4 min 17% and 85%; 5 min 25% and 91%.
+  - **The lower line against the edge and the corners** (the screen reports a 100 px radius at each bottom corner, so the
+    whole 88 px bar is inside the curve's height). At 11 dp lower the line is 26.6 px over the bottom edge (43.8 today).
+    Px over the edge at Smaller, Normal, Bigger: tails 11.3, 8.2, 5.1; the guide's underline 10.2, 8.5, 6.8; the 42 dp pill
+    -6.2 at every size (off the screen); Shift/Alt/Ctrl chips 8.7, 5.1, 1.5; the notice 6.2, 2.1, -2.0; the two-line clip offer
+    can't move (it already fills the bar at Bigger). The side margin the curve needs grows from 40 px today to 60, 67, 75 px for
+    the side words' tails, and 66, 75, 89 px for the chips. The back arrow at P clears the curve by 5.3, 3.0 and 0.6 px.
+    Effects: falling pieces leave by the bottom edge as today; rising ones are unchanged; the idle games use the bar's own floor
+    and keep 100 px from the corners, so only the letters' home places move.
+  - **Mitigations the Orchestrator proposes:** text sits on the line (words, the menu word, the underline, the labels in pills);
+    boxes stay at least 1 dp inside the edge, so the pill slims from 42 to about 32 dp, the notice rises 2 dp at Bigger, and
+    the clip offer stays where it is; side items take their margin from the curve at their own lowest point (the bar's existing
+    corner rule, fed the new height), so long side words shorten a little sooner and the chips step in 25 to 50 px; the back
+    arrow nudges in 2 dp at Bigger. Still waiting on the owner's go.
 - **The menu word moves left of the widest pill** (W's 536a3a7, merged for build #12). The owner judges it on the phone first:
   "ill see if it looks good first." If not, the owner's fallbacks: leave the word where it is and make the pill's label shorter
   ("Favourited", "alr a fav" or similar), or let the pill overlap the word, semi-transparent with a blur underneath. (Owner)

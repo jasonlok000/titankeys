@@ -114,6 +114,17 @@ internal object GuideHooks {
         barSideRequests?.invoke(show)
     }
 
+    /**
+     * The keyboard listens here, so the bar shows only [barWord]'s word, in its middle place, and a hold on it opens that word's
+     * show-only menu: the word menu slide's TitanKeys (owner, 2026-11-13). Null gives the bar its own words back. Only in the
+     * guide's field.
+     */
+    @Volatile var barWordRequests: ((String?) -> Unit)? = null
+
+    fun barWord(word: String?) {
+        barWordRequests?.invoke(word)
+    }
+
     /** The keyboard listens here, so the guide points at a word by itself, wherever it sits on the bar. */
     @Volatile var stripPointWords: ((String?) -> Unit)? = null
 

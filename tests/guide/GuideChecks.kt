@@ -34,7 +34,7 @@ private const val KEY_DEL = 67
 private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "type" to listOf(Fixed("Gte", "Get"), FieldChanged("$TYPE_LINE ", 32, 32)),
     "swipe" to listOf(Recognised(listOf("swipe")), Recognised(listOf("per")), Recognised(listOf("word"))),
-    "menu" to listOf(WordMenu("bar"), MenuPicked("Save"), MenuPicked("Unsave")),
+    "menu" to listOf(WordMenu(MENU_WORD), MenuPicked("Save"), MenuPicked("Favourite")),
     "backspace" to listOf(Pushed(KEY_DEL), FieldChanged("$BACKSPACE_LINE ", 0, 0)),
     "flick" to listOf(DeletedWord(held = false)),
     "hold" to listOf(DeleteHoldStarted) + List(REGRETS_TO_PASS) { DeletedWord(held = true) },
@@ -510,24 +510,103 @@ private fun oneInstructionAtATime() {
     same(GuideHooks.swapClip(GUIDE_CLIPS.first()), GUIDE_CLIPS.first(), "Every other clip pastes as it is")
     same(OLD_GUIDE_CLIPS.containsAll(GUIDE_CLIPS), true, "The guide clears its own clips from the clipboard")
 
+    theLadderOnTitanKeys()
+}
+
+/**
+ * The word menu slide teaches the ladder on TitanKeys alone (owner, 2026-11-13): the bar shows only TitanKeys, pointed at, its menu
+ * opens at not saved, I saves it, and I again makes it a favourite, which passes. Each wrong move says so in the owner's tone.
+ */
+private fun theLadderOnTitanKeys() {
+    val step = GUIDE_STEPS.first { it.id == "menu" }
+    same(step.title, "Make TitanKeys your favourite.", "The slide's title")
+    same(step.barWord, "TitanKeys", "The bar shows only TitanKeys, in the middle")
+    same(step.line to step.seed, MENU_LINE to MENU_LINE, "The slide's line")
+    same(MENU_LINE, "TitanKeys belongs in your favourites", "It starts with TitanKeys (owner, 2026-11-13)")
+    same(MENU_LINE.first(), 'T', "and keeps the T for the finale's GO TOUCH GRASS NOW")
+    same(menuTarget("$MENU_LINE ")?.let { "$MENU_LINE ".substring(it.first, it.last + 1) }, "TitanKeys", "TitanKeys is the box's marked word")
+    same(step.lessons, setOf(GuideLesson.BarHold), "Only the hold: typing, swiping, Space and Backspace are blocked")
+    same(step.stages.map { it.text }, listOf("Hold TitanKeys on the bar. Nothing gets saved.", "Press I to save it.",
+        "Press I again to favourite it."), "Hold, I, then I again")
+    same(step.done to step.praise, "Favourited. Good taste." to "O steps it back down. P closes the menu.", "Done and praise")
+    // The show-only menu opens at not saved: the ladder's I is Save, then Favourite.
+    same(MenuKeys.choices(MenuKeys.Step.New).i to MenuKeys.choices(MenuKeys.Step.Saved).i, MenuKeys.Button.Save to MenuKeys.Button.Favourite,
+        "Not saved, I saves; saved, I favourites")
+
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
     same(menu.event(MenuPicked("Save")), GuideVerdict.Wait, "A pick before the menu opens means nothing")
-    same(menu.event(WordMenu("to")), GuideVerdict.Stage(1), "The menu opens, so Save is next")
+    same(menu.event(WordMenu(MENU_WORD)), GuideVerdict.Stage(1), "The menu opens, so Save is next")
     same(menu.labels to menu.cue, MENU_SAVE to GuideCue.Spot(listOf("I"), rounds = 1), "I lights once: Save")
     same(MENU_SAVE["K"] to MENU_SAVE[Layout.BACKSPACE], "Save" to "Back", "K works as I, and Backspace as P, and they say so")
-    same(menu.event(MenuPicked("Save")), GuideVerdict.Stage(2), "Saved, so Unsave is next, as the real menu's O")
-    same(menu.labels to menu.cue, MENU_UNSAVE to GuideCue.Spot(listOf("O"), rounds = 1), "then O: Unsave")
-    same(MENU_UNSAVE["L"], "Unsave", "L works as O")
-    same(menu.event(MenuPicked("Favourite")) is GuideVerdict.Hint, true, "I again makes a favourite, and the slide says so")
-    same(menu.event(MenuPicked("Unfavourite")) is GuideVerdict.Hint, true, "O takes the favourite back first")
-    same(menu.event(MenuPicked("Unsave")), GuideVerdict.Done, "Unsave on the saved word finishes it")
-    val early = GuideFlow({ GuideSettings() })
-    early.start("menu")
-    early.event(WordMenu("to"))
-    same(early.event(MenuPicked("Unsave")), GuideVerdict.Done, "A word saved already opens saved: Unsave straight away counts")
-    for (stage in GUIDE_STEPS.first { it.id == "menu" }.stages) same(stage.text.contains("O, and O again"), false, "No O, and O again")
-    same(early.event(MenuPicked("Close")).let { it is GuideVerdict.Hint || it == GuideVerdict.Wait }, true, "Closed, it waits for a hold")
+    fun said(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.let { it.title ?: it.text }
+    same(said(menu.event(MenuPicked("Block"))), "Blocked TitanKeys? Rude. I brings it back.", "O at not saved blocks it")
+    same(menu.stage, 1, "and it still waits for the save")
+    menu.event(MenuPicked("Unblock"))
+    same(menu.event(MenuPicked("Save")), GuideVerdict.Stage(2), "Saved, so the favourite is next")
+    same(menu.labels to menu.cue, MENU_FAVOURITE to GuideCue.Spot(listOf("I"), rounds = 1), "I lights once again: Favourite")
+    same(MENU_FAVOURITE["K"] to MENU_FAVOURITE["P"], "Favourite" to "Back", "K works as I, and P is Back")
+    val unsaved = menu.event(MenuPicked("Unsave"))
+    same(said(unsaved) to (unsaved as GuideVerdict.Hint).stage, "Unsaved. Cold. I, then I again." to 1, "O at saved unsaves it: back to the save")
+    menu.event(MenuPicked("Save"))
+    same(menu.event(MenuPicked("Favourite")), GuideVerdict.Done, "I again: a favourite, and the slide passes")
+
+    val closed = GuideFlow({ GuideSettings() })
+    closed.start("menu")
+    closed.event(WordMenu(MENU_WORD))
+    val close = closed.event(MenuPicked("Close"))
+    same(said(close) to (close as GuideVerdict.Hint).stage, "Closed it. Hold TitanKeys again." to 0, "Backspace or P closes it: hold again")
+    closed.event(WordMenu(MENU_WORD))
+    closed.event(MenuPicked("Save"))
+    val again = closed.event(MenuPicked("Close"))
+    same((again as GuideVerdict.Hint).stage, 0, "Closed after the save too")
+    closed.event(WordMenu(MENU_WORD))
+    same(finishes(closed.event(MenuPicked("Favourite"))), true, "Opened again, it's saved: I favourites it, and that passes")
+
+    same(said(GuideFlow({ GuideSettings() }).also { it.start("menu") }.event(Chosen(MENU_WORD))), "Hold, don't tap.", "A tap instead of a hold")
+    same(blockedChip(step, GuideLesson.BarTap.name), "Taps are blocked here. Hold, don't tap.", "and the lock says so, as blocked")
+    for (stage in step.stages) same(stage.text.length <= 50, true, "Stage within 50: ${stage.text}")
+    same(step.title.length <= 38, true, "Title within 38")
+    theMenuSlidesOffTrackMoves(step)
+}
+
+/**
+ * Every off-track move on the word menu slide says what to do instead, in one short chip (owner, 2026-11-13: "what about did not
+ * select the right word? or selected other stuff instead?"). Each stage answers the same; each chip is 50 or less.
+ */
+private fun theMenuSlidesOffTrackMoves(step: GuideStep) {
+    fun said(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.let { it.title ?: it.text }
+    val text = "$MENU_LINE "
+    for (stage in 0..2) {
+        val flow = GuideFlow({ GuideSettings() })
+        flow.start("menu")
+        if (stage >= 1) flow.event(WordMenu(MENU_WORD))
+        if (stage >= 2) flow.event(MenuPicked("Save"))
+        same(flow.stage, stage, "At stage $stage")
+        same(said(flow.event(FieldChanged(text, 0, 9))), "Not the box. Hold TitanKeys on the bar.", "Text selected in the box, at $stage")
+        same(said(flow.event(KeyboardEvent.EmptyBarHeld)), "The one in the middle. TitanKeys.", "A hold beside TitanKeys, at $stage")
+        same(said(flow.event(KeyboardEvent.MenuMissed)), "I or O. Nothing else does anything here.", "Another key in the menu, at $stage")
+        same(flow.stage, stage, "and none of them moves the slide, at $stage")
+        same(flow.event(FieldChanged(text, 3, 3)), GuideVerdict.Wait, "A moved cursor means nothing, at $stage")
+    }
+    // The lock's words on this slide: each says it's blocked, then points at TitanKeys.
+    same(blockedChip(step, GuideLesson.Typing.name), "Typing's blocked here. Hold TitanKeys.", "Typing a letter")
+    same(blockedChip(step, GuideLesson.Swipe.name), "Swiping's blocked here. Hold TitanKeys.", "Swiping a word")
+    same(blockedChip(step, GuideLesson.Cursor.name), "Space taps are blocked. Hold TitanKeys on the bar.", "Space taps that would select")
+    same(blockedChip(step, GuideLesson.Space.name), "Spaces are blocked here. Hold TitanKeys.", "A space")
+    same(blockedChip(step, GuideLesson.Backspace.name), "Backspace is blocked here. Hold TitanKeys.", "Backspace with the menu shut")
+    for (lesson in GuideLesson.entries) same(blockedChip(step, lesson.name).length <= 50, true, "The lock's chip for $lesson fits")
+    for (line in listOf(MENU_CLOSED, MENU_UNSAVED, MENU_NOT_BOX, MENU_MIDDLE, MENU_MISSED, "Blocked TitanKeys? Rude. I brings it back."))
+        same(line.length <= 50, true, "\"$line\" is 50 or less")
+    // Closed halfway, it keeps its step: held again after the save it opens saved, and I favourites it.
+    val halfway = GuideFlow({ GuideSettings() })
+    halfway.start("menu")
+    halfway.event(WordMenu(MENU_WORD))
+    halfway.event(MenuPicked("Save"))
+    same(said(halfway.event(MenuPicked("Close"))), "Closed it. Hold TitanKeys again.", "Closed after the save")
+    halfway.event(WordMenu(MENU_WORD))
+    same(finishes(halfway.event(MenuPicked("Favourite"))), true, "and held again, it carries on from saved")
+    same(step.help, "Hold, don't tap. Keep your finger on TitanKeys.", "The help line")
 }
 
 /** & passes as soon as it's in, even after a wrong one (owner, v5.2); the screen takes a wrong one back out. */
@@ -728,8 +807,9 @@ private fun chapterOne() {
     val keys = setOf(GuideLesson.Typing, GuideLesson.Backspace)
     val typing = GUIDE_STEPS.filter { it.chapter == GuideChapter.Typing }
     // Swiping types its own spaces, so its slide locks a lone Space (owner, 2026-11-13).
+    // The word menu slide teaches only the hold on TitanKeys: everything else is blocked (owner, 2026-11-13).
     same(typing.map { it.lessons }, listOf(keys + GuideLesson.Space, setOf(GuideLesson.Swipe) + keys,
-        setOf(GuideLesson.BarHold, GuideLesson.Space) + keys), "Each slide unlocks what it teaches; none teaches picking from the bar (v5.2)")
+        setOf(GuideLesson.BarHold)), "Each slide unlocks what it teaches; none teaches picking from the bar (v5.2)")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }.map { it.lessons }, listOf(setOf(GuideLesson.Backspace),
         setOf(GuideLesson.Flick), setOf(GuideLesson.Flick, GuideLesson.DeleteHold)), "Delete unlocks Backspace, the flick, then its hold")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Steering }.map { it.lessons }, List(2) { setOf(GuideLesson.Cursor) },
@@ -772,7 +852,7 @@ private fun wrongEventsDoNotFinish() {
     same(finishes(flow.event(FieldChanged("faster", 6, 6))), false, "Typing must not finish the swipe")
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
-    same(menu.event(Chosen("to")) is GuideVerdict.Hint, true, "A touch on a word is not a hold, and the slide says so")
+    same(menu.event(Chosen(MENU_WORD)) is GuideVerdict.Hint, true, "A touch on a word is not a hold, and the slide says so")
 }
 
 /** The owner's scenarios: what happens says so, in a chip, and some of it counts. */
@@ -1231,7 +1311,7 @@ private fun everyWayToFailIsAnswered() {
     // Wrong moves the earlier checks don't cover.
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
-    same(title(menu.event(Chosen("the"))), "That typed it. Hold it, don't tap.", "A tap on a bar word")
+    same(title(menu.event(Chosen(MENU_WORD))), "Hold, don't tap.", "A tap on a bar word")
     val paste = GuideFlow({ GuideSettings() })
     paste.start("paste")
     same(title(paste.event(KeyboardEvent.Copied("orange words"))).startsWith("That's copy"), true, "A copy on the paste slide")
@@ -1318,7 +1398,8 @@ private fun runThroughFixes() {
 
     // A lone Space that would type is blocked where the slide has no typing, with the slide's own words.
     for (id in listOf("swipe", "steer", "selectmore")) same(step(id).lessons.orEmpty().contains(GuideLesson.Space), false, "$id locks a lone Space")
-    for (id in listOf("type", "menu")) same(step(id).lessons.orEmpty().contains(GuideLesson.Space), true, "$id types spaces")
+    same(step("type").lessons.orEmpty().contains(GuideLesson.Space), true, "type types spaces")
+    same(step("menu").lessons.orEmpty().contains(GuideLesson.Space), false, "the menu slide's Space is blocked: only the hold counts")
     for (id in listOf("steer", "selectmore")) {
         same(step(id).lessons.orEmpty().contains(GuideLesson.Cursor), true, "$id still teaches the steering taps")
         same(blockedChip(step(id), GuideLesson.Space.name), "Typed spaces are blocked. Taps on Space steer.", "Space on $id")

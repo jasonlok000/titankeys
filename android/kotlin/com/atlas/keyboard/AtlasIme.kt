@@ -718,7 +718,10 @@ class AtlasIme : InputMethodService() {
         composer = Composer(editor, EngineWords(SwipeTyping.get(this), FavouriteWords.get(this)::contains),
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
-            { modifiers.autoShifted }) { barWords = it; strip?.words = it }
+            { modifiers.autoShifted }) { words ->
+                ownBarWords = words
+                showBarWords()
+            }
         composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
         composer.sentenceSpaces = {
             when (TypingSettings.sentenceSpaces(this)) {
@@ -745,6 +748,11 @@ class AtlasIme : InputMethodService() {
         // The guide's slides show the bar's side words, or only its middle one, and point at a word wherever it sits.
         GuideHooks.barSideRequests = { show -> main.post { if (!show && !inGuide) return@post else strip?.sides = show } }
         GuideHooks.stripPointWords = { word -> main.post { if (word == null || inGuide) strip?.pointWord(word) } }
+        // The word menu slide's bar: only its word, to hold. Null gives the bar its own words back.
+        GuideHooks.barWordRequests = { word -> main.post {
+            guideBarWord = word
+            showBarWords()
+        } }
         composer.onRestored = {
             haptics.play(Haptic.AutocorrectUndone)
             KeyboardEvents.publish { KeyboardEvent.Restored }
@@ -1144,7 +1152,8 @@ class AtlasIme : InputMethodService() {
         viewSize = FixedScale.size(this)
         val ui = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod)
         val words = Strip(ui, { index ->
-            if (!guideBlocked(GuideLesson.BarTap)) {
+            // The guide's own word only opens its menu: a tap never types a word that the bar doesn't show.
+            if (!guideBlocked(GuideLesson.BarTap) && shownGuideWord() == null) {
                 haptics.play(Haptic.BarWord)
                 enqueue { composer.choose(index) }
             }
@@ -1720,6 +1729,13 @@ class AtlasIme : InputMethodService() {
     private fun holdWord(index: Int): Boolean {
         // A guide slide that doesn't teach the menu yet: the hold opens nothing, and the guide says it's blocked, with a no.
         if (guideBlocked(GuideLesson.BarHold)) return false
+        // The guide's own word, alone in the middle place: its show-only menu.
+        shownGuideWord()?.let { word ->
+            if (index == 0) return openMenu(HeldWord(word, ""))
+            // An empty place beside it: nothing opens, and the guide points at the middle.
+            KeyboardEvents.publish { KeyboardEvent.EmptyBarHeld }
+            return false
+        }
         val (word, typed) = composer.shownWord(index) ?: return false
         return openMenu(HeldWord(word, typed))
     }
@@ -1790,6 +1806,22 @@ class AtlasIme : InputMethodService() {
         val pressed = Strip.Notice.Menu(held.word, next, button)
         strip?.notice = pressed
         if (inGuide) guideMenus[held.word.lowercase()] = pressed
+    }
+
+    /** The composer's words, and the guide's own word that shows alone in their place on its slide. See [GuideHooks.barWord]. */
+    private var ownBarWords = emptyList<String>()
+    private var guideBarWord: String? = null
+
+    /** The guide's word, while it shows: only in the guide's own field. */
+    private fun shownGuideWord() = guideBarWord?.takeIf { inGuide }
+
+    /**
+     * The bar shows the composer's words, or only the guide's word, in the middle place, with its side places empty but there, so
+     * a hold on one is heard. Nothing typed, selected or moved changes it.
+     */
+    private fun showBarWords() {
+        barWords = shownGuideWord()?.let { listOf(it, "", "") } ?: ownBarWords
+        strip?.words = barWords
     }
 
     /** Where each word stands in the guide's for-show menu, until the slide changes. Nothing reaches the word lists. */
@@ -3086,7 +3118,8 @@ class AtlasIme : InputMethodService() {
         strip?.gesture?.glowOff()
         wakeIdleBar()
         // A guide slide that doesn't teach this key yet: it does nothing at all, and its release is kept too.
-        val locked = if (editing && inGuide && !event.isSystem) guideLesson(event) else null
+        // With the word menu open, the keys press its buttons, never type: the menu's own handling below decides.
+        val locked = if (editing && inGuide && !event.isSystem && !menuOpen) guideLesson(event) else null
         if (locked != null && !guideAllows(locked)) {
             if (event.repeatCount == 0) guideBlocked(locked)
             lockedKeys += keyCode
@@ -3141,6 +3174,11 @@ class AtlasIme : InputMethodService() {
                 }
                 return true
             }
+        }
+        // In the guide's show-only menu on its own word, any other key does nothing, and the guide says so; the menu stays open.
+        if (!event.isSystem && menuOpen && shownGuideWord() != null && !Modifiers.isModifier(keyCode)) {
+            if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.MenuMissed }
+            return true
         }
         // Typing on closes the menu, and the strip shows words again. The newest clip goes from the strip too.
         if (!event.isSystem && !Modifiers.isModifier(keyCode)) {
@@ -3617,6 +3655,7 @@ class AtlasIme : InputMethodService() {
         GuideHooks.stripPoints = null
         GuideHooks.barSideRequests = null
         GuideHooks.stripPointWords = null
+        GuideHooks.barWordRequests = null
         GuideHooks.clipSeeds = null
         GuideHooks.barCount = null
         GuideHooks.barHolds = null

@@ -1061,6 +1061,7 @@ class GuideActivity : Activity() {
         if (ready && started && !playground && !settingUp && !flow.finished && guideLooks == true) {
             GuideHooks.lessons = flow.step.lessons
             GuideHooks.barSides(flow.step.sides)
+            GuideHooks.barWord(flow.step.barWord)
         }
     }
 
@@ -1068,6 +1069,7 @@ class GuideActivity : Activity() {
     private fun unlockKeyboard() {
         GuideHooks.lessons = null
         GuideHooks.barSides(true)
+        GuideHooks.barWord(null)
     }
 
     override fun onPause() {
@@ -2024,6 +2026,8 @@ class GuideActivity : Activity() {
         GuideHooks.forceFix = step.forceFix
         field.underlineOnly = step.id == "steer"
         GuideHooks.barSides(step.sides)
+        GuideHooks.barWord(step.barWord)
+        pointAtBarWord()
         setUpLesson(step)
         flow.seed(field.text.toString(), field.selectionStart)
         aim()
@@ -2539,10 +2543,10 @@ class GuideActivity : Activity() {
             return
         }
         demo?.let { showPhantom(it, t) }
-        // Once the menu is really open, the demo presses P, which closes it.
-        if (flow.step.bar == GuideBar.Menu && flow.stage == 1 && demoKeys == 0 && t > MENU_O_OPEN_AT) {
+        // Once the menu is really open, the demo presses I: the save, then the favourite.
+        if (flow.step.bar == GuideBar.Menu && flow.stage >= 1 && demoKeys == 0 && t > MENU_O_OPEN_AT) {
             demoKeys = 1
-            keys.light("P")
+            keys.light("I")
         }
         main.postDelayed(demoTick, DEMO_FRAME_MILLIS)
     }
@@ -3071,6 +3075,8 @@ class GuideActivity : Activity() {
             "backspace" -> if (text.trimEnd() == BACKSPACE_SEED) text.trimEnd().length - 1..text.trimEnd().length - 1 else null
             "flick" -> if (passed) null else flickTarget(text)
             "hold" -> if (passed) null else holdTarget(text, field.selectionStart)
+            // The menu slide's TitanKeys stays marked the whole slide, as its bar word stays pointed at.
+            "menu" -> menuTarget(text)
             "steer", "selectmore" -> steerAim
             else -> null
         }
@@ -3560,6 +3566,10 @@ class GuideActivity : Activity() {
         }
         // The held delete only ever takes the regrets (owner, v5.3: it went on 1.1 s past the lift and ate the line's first word).
         // Once they're gone, deleting is locked for the slide, and a word of the line that goes anyway comes straight back.
+        // The menu slide's box only holds its line: text selected in it snaps back, and the slide says to hold TitanKeys instead.
+        if (event is KeyboardEvent.FieldChanged && step.barWord != null && event.end > event.start) {
+            main.post { if (flow.step === step && field.selectionStart != field.selectionEnd) field.setSelection(field.length()) }
+        }
         if (event is KeyboardEvent.FieldChanged && step.id == "hold") {
             if (holdTarget(event.text, event.start) == null) GuideHooks.lessons = emptySet()
             if (!event.text.startsWith(HOLD_LEAD)) {
@@ -3663,7 +3673,7 @@ class GuideActivity : Activity() {
             GuideHooks.lessons = flow.lessons
             startHunt()
             showScript()
-            if (flow.step.nearMiss && flow.stage == 1) pointAtRightWord() else GuideHooks.stripPointWord(null)
+            if (flow.step.nearMiss && flow.stage == 1) pointAtRightWord() else pointAtBarWord()
         }
         hinted(verdict.title ?: verdict.text)
     }
@@ -3674,6 +3684,17 @@ class GuideActivity : Activity() {
      */
     private fun pointAtRightWord() {
         main.postDelayed({ if (!changing) GuideHooks.stripPointWord(GuideHooks.rightWord) }, POINT_AFTER_MILLIS)
+    }
+
+    /**
+     * The slide's own bar word, alone in the middle, wiggles through every step of the slide, until it passes (owner, 2026-11-13:
+     * "keep it highlighted the whole time"). It waits for the bar to settle after a slide change. Nothing points on other slides.
+     */
+    private fun pointAtBarWord() {
+        val word = flow.step.barWord?.takeIf { !passed }
+        GuideHooks.stripPointWord(null)
+        if (word == null) return
+        main.postDelayed({ if (!changing && !passed) GuideHooks.stripPointWord(word) }, BAR_SETTLE_MILLIS + POINT_AFTER_MILLIS)
     }
 
     /** A scenario about Alt or the panel, waiting to be sure, and the one that shows, which goes as soon as it is no longer true. */
@@ -3715,7 +3736,7 @@ class GuideActivity : Activity() {
         startHunt()
         showScript()
         // The word came out wrong on purpose: the right word, wherever it is on the bar, dances to show where to tap.
-        if (flow.step.nearMiss && flow.stage == 1) pointAtRightWord() else GuideHooks.stripPointWord(null)
+        if (flow.step.nearMiss && flow.stage == 1) pointAtRightWord() else pointAtBarWord()
         // A stage can lock more than its slide does, as the bar slide's tap does.
         GuideHooks.lessons = flow.lessons
         main.removeCallbacks(showHelp)

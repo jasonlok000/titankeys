@@ -104,7 +104,7 @@ private fun at(step: GuideStep, text: String, start: Int = text.length, end: Int
 private fun fieldFor(step: GuideStep): Frame = when (step.id) {
     "type" -> at(step, "", ghost = TYPE_TYPOS)
     "swipe" -> at(step, SWIPE_LEAD.trimEnd(), ghost = " " + SWIPE_LINE.removePrefix(SWIPE_LEAD))
-    "menu" -> at(step, "$MENU_LINE ")
+    "menu" -> at(step, "$MENU_LINE ").copy(target = menuTarget("$MENU_LINE "))
     "backspace" -> at(step, "$BACKSPACE_SEED ", BACKSPACE_SEED.length).copy(target = BACKSPACE_SEED.length - 1..BACKSPACE_SEED.length - 1)
     "flick" -> at(step, "$FLICK_SEED ", flickCursor(FLICK_SEED)).copy(target = flickTarget(FLICK_SEED))
     "hold" -> at(step, "$HOLD_SEED ", holdCursor(HOLD_SEED)).copy(target = holdTarget(HOLD_SEED, holdCursor(HOLD_SEED)), zones = true)

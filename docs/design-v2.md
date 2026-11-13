@@ -66,7 +66,15 @@ are already settled are marked (Owner).
 
 - **Header:** 56 dp, with the wordmark "TitanKeys" in Title style on the left, in cream with "Keys" in orange. Guide and Settings are
   outline pills on the right (Label style, muted outline). The header never changes size, including when a panel opens.
-- **The line to type along to:** Body, two lines. Typed words in cream, the rest muted, and the current word underlined in orange.
+- **Title:** in the guide's format (Owner): "PRACTICE. YOU NEED IT." (the Orchestrator's pick, the owner may change it), in Display
+  as on the slides: 36, bold, upper case, cream, one line, shrinking to fit. It turns ink with the rest past the readability point,
+  and never changes as you type.
+- **Description:** 12 dp under the title, in Body, muted: "Type or swipe whatever you like. Follow the line below, or ignore it."
+  The comments on your speed take its place as now.
+- **The line to type along to:** 24 dp under the description, Body, two lines. The text is one paragraph, wrapped by words, with
+  no break between its lines (Owner, replacing v5.3's "the sentence you're in"): the line with the current word and the line after
+  it, scrolling up a line as you reach the next, and on round as it loops. Typed words in cream, the rest muted, and the current
+  word underlined in orange.
 - **The text box:** the same as the guide's field, three lines.
 - **Words a minute:** a small Label counter in the header's empty middle. It **starts only once a real word is being typed** (a
   letter key or a swipe), not on a touch, Space, Backspace or a modifier (Owner).

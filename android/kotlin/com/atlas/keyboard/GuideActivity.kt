@@ -1556,18 +1556,31 @@ class GuideActivity : Activity() {
     }
 
     /**
-     * The playground (design v2 §3): no title, since the header has the wordmark; a line for the comments on your speed in Body; the
-     * line to type along to, two lines; and the text box, three lines.
+     * The playground (design v2 §3), in the guide's own format (owner, 2026-11-13: "a title and a description"): the title in
+     * Display, upper case, one line, shrinking to fit, and never changing; 12 dp under it the description in Body, which the
+     * comments on your speed replace; 24 dp on, the line to type along to, two lines; and the text box, three lines.
      */
     private fun playgroundLook() {
         val bodyPx = px(BODY_TYPE)
-        title.visibility = View.GONE
+        val titlePx = px(DISPLAY)
+        title.visibility = View.VISIBLE
+        title.isAllCaps = true
+        title.letterSpacing = DISPLAY_SPACING
+        title.isSingleLine = true
+        title.maxLines = 1
+        title.ellipsize = null
+        title.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+        shrinkToFit(title, (titlePx * SHRINK).toInt(), titlePx.toInt())
+        title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, lineHeight(HEAVY, titlePx))
+        title.text = FRONT_TITLE
         body.isSingleLine = true
         body.maxLines = 1
         body.ellipsize = TextUtils.TruncateAt.END
         body.gravity = Gravity.CENTER_VERTICAL or Gravity.START
         shrinkToFit(body, (bodyPx * SHRINK).toInt(), bodyPx.toInt())
         instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, lineHeight(MEDIUM, bodyPx))
+            .apply { topMargin = dp(12) }
+        (script.layoutParams as LinearLayout.LayoutParams).topMargin = dp(PLAYGROUND_SCRIPT_GAP)
         fieldLook(PLAYGROUND_FIELD_LINES)
     }
 
@@ -2200,7 +2213,6 @@ class GuideActivity : Activity() {
     private fun startPassage(text: String) {
         if (text.isEmpty()) return
         passage = Passage(text)
-        sentenceStarts = null
         passageFrom = field.length()
         passageLayout = null
         passageLine = -1
@@ -2250,32 +2262,8 @@ class GuideActivity : Activity() {
         val cycle = track.next - next
         val line = layout.getLineForOffset(passage.ranges[next].first)
         val styled = passageSpans(track, next, cycle)
-        if (playground) {
-            // The front page starts at the sentence you're in, wrapped by words, never cut (owner, v5.3), and always fills both
-            // lines: a short sentence carries on into the next, and a long one never ends on a lone word (Master, 2026-11-13). Once
-            // the word you're on is past the second line, its line is the top one.
-            val starts = sentenceStarts ?: PlaygroundText.sentenceStarts(passage.words).also { sentenceStarts = it }
-            val first = PlaygroundText.sentenceAround(starts, count, next).first
-            // Enough words for the lines on show, not the whole passage, so each key stays cheap.
-            val from = passage.ranges[first].first
-            val shown = SpannableStringBuilder(styled.subSequence(from, minOf(text.length, from + PLAYGROUND_REACH)))
-            // After the passage's end, it starts over, as the typing does, in the quiet colour.
-            if (from + PLAYGROUND_REACH > text.length) {
-                val after = (0 until first).joinToString(" ") { passage.wordAt(it) }.take(PLAYGROUND_REACH)
-                if (after.isNotEmpty()) shown.append(" ").append(plain(after))
-            }
-            val wrapped = StaticLayout.Builder.obtain(shown, 0, shown.length, script.paint, width).setIncludePad(false).build()
-            val at = wrapped.getLineForOffset((passage.ranges[next].first - from).coerceIn(0, shown.length))
-            val top = if (at < PROMPT_LINES) 0 else at
-            val last = minOf(top + PROMPT_LINES, wrapped.lineCount) - 1
-            var end = wrapped.getLineEnd(last)
-            while (end > 0 && shown[end - 1].isWhitespace()) end--
-            script.maxLines = PROMPT_LINES
-            script.setLines(PROMPT_LINES)
-            script.scrollTo(0, 0)
-            script.text = shown.subSequence(wrapped.getLineStart(top), end)
-            return
-        }
+        // The front page's text is one paragraph, as the guide's is (owner, 2026-11-13: "one giant paragraph not multiple"): the
+        // line with the word you're on and the line after it, scrolling up a line as you reach the next, and on round the loop.
         // The line after the last is the first again, as the script starts over.
         fun lineText(at: Int): CharSequence {
             val wrapped = at.mod(layout.lineCount)
@@ -2314,9 +2302,6 @@ class GuideActivity : Activity() {
             start()
         }
     }
-
-    /** The front page's sentences, by the word each starts at, for its passage. */
-    private var sentenceStarts: List<Int>? = null
 
     /** The whole passage, coloured for where typing is: right words grey, skipped ones boxed, the word you're on underlined. */
     private fun passageSpans(track: Passage.Track, next: Int, cycle: Int): SpannableStringBuilder {
@@ -3016,7 +3001,7 @@ class GuideActivity : Activity() {
         // The playground's own text, made for speed, in a new order each time.
         startPassage(PlaygroundText.make(kotlin.random.Random(SystemClock.uptimeMillis())))
         swapIn(body, PLAYGROUND_BODY, 0)
-        for (view in listOf(field, keys, chapter, script, guideAction, settingsAction))
+        for (view in listOf(title, field, keys, chapter, script, guideAction, settingsAction))
             view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         showScript()
         field.requestFocus()
@@ -4537,6 +4522,10 @@ class GuideActivity : Activity() {
         /** At full speed the screen is this much of the way to orange, so that the words stay easy to read. */
         private const val WPM_MOST_ORANGE = .85f
         private const val PLAYGROUND_BODY = "Type or swipe whatever you like. Follow the line below, or ignore it."
+        /** The front page's title (the Orchestrator's pick; the owner may change it). It never changes as you type. */
+        private const val FRONT_TITLE = "PRACTICE. YOU NEED IT."
+        /** From the description to the line to type along to, on the front page, as the guide's gap before its field. */
+        private const val PLAYGROUND_SCRIPT_GAP = 24
 
         // The look, in dp. These are safe to change. Words fit their box at any system font size, because the boxes set their size.
         // Ink's font (v5.3): GuideFonts is loaded first thing in onCreate, before anything is built.
@@ -4617,8 +4606,6 @@ class GuideActivity : Activity() {
         private const val HELP_RECHECK_MILLIS = 700L
         /** The line to type along to: two lines (design v2). */
         private const val PROMPT_LINES = 2
-        /** How much of the playground's passage it lays out at a time, in characters: far more than its lines show. */
-        private const val PLAYGROUND_REACH = 600
         /** How long the bar's words wait as a slide opens, so it shows the slide's words once. */
         private const val BAR_SETTLE_MILLIS = 450L
         /** How strong a selection's cream is in the field. */

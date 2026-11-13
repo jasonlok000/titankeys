@@ -221,7 +221,15 @@ all of them are unapproved.
       key itself; the Settings title line (the fade starts on the whole pixel, with a scroll-fade check); and A's two raw oranges
       routed through Accent.
 
-    Waiting on: C's finale, then V's decorations (pushed), then W's ladder and D's press haptics.
+    - **W's ladder v4** (b8046a1, a fast-forward):
+      - four rungs, with Forget and Undo gone, and one-letter words, symbols and emoji opening no menu;
+      - Unsave on a dictionary word goes to a new unsaved_words list: hidden from suggestions but learnable again;
+      - Block takes over the autocorrect refusal;
+      - And/AUTO: Save stored the word as shown, so WordCase.kept now drops accidental capitals, with a one-time repair (word_case).
+
+      Follow-up sent: lift the heart preview off the bar's edge, and confirm the pill style is unchanged.
+
+    Waiting on: C's finale, then V's decorations (pushed), and D's press haptics.
   - **Faster finish (11:55):** the verify queue was six runs deep, about 90 minutes of duplicates. Every worker now pushes once its
     targeted checks pass and cancels its own queued verify. The Orchestrator merges C, V, W, D, A and F, then runs one full verify
     on the combined test-2.1h as build #6.

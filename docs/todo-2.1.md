@@ -2,7 +2,7 @@
 
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
-[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 23:05.
+[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 23:35.
 
 ## On the phone now (build a5416a0e, test-2.1h at 9b67678)
 
@@ -66,6 +66,12 @@ all of them are unapproved.
   - Checks: taps above the keyboard reach the app, apps resize, panels and the bar work, and a hidden keyboard catches no touches.
   - Not testable over adb: keys scrolling a no-field app (needs the physical scroll), and the phone locked itself at 23:15 mid-test.
   - A's slip: one tap and one Back landed in the Claude app. Nothing was typed and nothing visible changed.
+- F: **done and merged** (873b859): FixedScale in every window; Scroll assistant follows the phone's setting until changed, with no
+  note under it; Orange accents. F's call: Orange accents covers the keyboard's marks over other apps, while TitanKeys' own screens
+  keep the app's orange, and a note under the switch says so. Every keyboard colour goes through Look, with a check. Not yet seen on
+  the phone.
+- A (next): the slide decorations (design-v2 §7, one per slide, pure decoration) as a self-contained GuideDecor module, wired in
+  after C's redesign merges.
 - Then: merge everything, one build, install, and a full run-through on the phone.
 - Release prep (Orchestrator):
   - Update release-notes.txt for everything new since it was written. One line is already wrong: steering taps now count

@@ -8,7 +8,7 @@ export const spellingLabel = ({ spelling }: State) => labels[spelling] ?? "Briti
 
 export default function SpellingPage() {
   return <ChoicePage title="English spelling"
-    subtitle={"Colour or color? Pick the spelling for suggestions and typo fixes.\nCanadian: colour and realize. Both, eh."}
+    subtitle={"Colour or color? Pick the spelling for suggestions and typo fixes.\nCanadian: colour and realize. Both. Eh."}
     options={options}
     read={({ spelling }) => spelling}
     write={spelling => ({ spelling })} />;

@@ -8,7 +8,8 @@ const root = join(import.meta.dir, "../..");
 const ime = readFileSync(join(root, "android/kotlin/com/atlas/keyboard/AtlasIme.kt"), "utf8");
 
 test("Backspace asks the modifiers what it does, once a press, after exact typing has taken its keys", () => {
-  expect(ime).toContain("backspaceDoes = modifiers.backspaceDoes(event.metaState, TypingSettings.altBackspaceForward(this))");
+  expect(ime).toContain("backspaceDoes = modifiers.backspaceDoes(event.metaState, TypingSettings.altBackspaceForward(this),");
+  expect(ime).toContain("TypingSettings.shiftBackspaceWord(this))");
   expect(ime).toContain("if (event.repeatCount == 0 || backspaceDoes == null)");
   expect(ime.indexOf("if (field.exact) return exactKey(event)")).toBeLessThan(ime.indexOf("modifiers.backspaceDoes("));
 });
@@ -37,11 +38,38 @@ test("Alt + Sym goes to the next keyboard, never the picker, and never from the 
   expect(body).not.toContain("showInputMethodPicker");
 });
 
-test("both are listed in Settings and the boring guide", () => {
+test("each has its switch, on to start, read by the keyboard and reset with the rest", () => {
+  // Owner, 2026-11-13: "why is delete a word shift backspace and next keyboard alt sym not toggleable?"
+  const typing = readFileSync(join(root, "android/kotlin/com/atlas/engine/TypingSettings.java"), "utf8");
+  expect(typing).toContain('getBoolean("shift_backspace_word", true)');
+  expect(typing).toContain('getBoolean("alt_sym_next_keyboard", true)');
+  expect(ime).toContain("modifiers.altSymSwitches = TypingSettings.altSymNextKeyboard(this)");
+  const modifiers = readFileSync(join(root, "android/kotlin/com/atlas/keyboard/Modifiers.kt"), "utf8");
+  expect(modifiers).toContain("if (panel == Panel.Closed && holding(Key.Alt) && altSymSwitches) {");
+  expect(modifiers).toContain("shiftWord && (holding(Key.Shift) || meta and KeyEvent.META_SHIFT_ON != 0) -> Backspace.Word");
+  const reset = readFileSync(join(root, "android/kotlin/com/atlas/keyboard/SettingsReset.kt"), "utf8");
+  expect(reset).toContain('"shift_backspace_word"');
+  expect(reset).toContain('"alt_sym_next_keyboard"');
+  const adapters = readFileSync(join(root, "android/kotlin/com/vandam/ink/AppNativeAdapters.kt"), "utf8");
+  for (const name of ["shiftBackspaceWord", "altSymNextKeyboard"]) {
+    expect(adapters).toContain(`.put("${name}", TypingSettings.${name}(activity))`);
+    expect(adapters).toContain(`"${name}" -> TypingSettings.${name}(activity, value as Boolean)`);
+  }
+});
+
+test("both are switches in Settings > Shortcuts, and the boring guide says each can be turned off", () => {
   const settings = readFileSync(join(root, "app/settings/index.tsx"), "utf8");
-  expect(settings).toContain("Hold Shift + Backspace");
-  expect(settings).toContain("Hold Alt + Sym");
+  const shortcuts = settings.slice(settings.indexOf('<Section title="Shortcuts">'), settings.indexOf("</Section>", settings.indexOf('<Section title="Shortcuts">')));
+  expect(shortcuts).toContain("<Toggle label={shiftBackspaceLabel} subtitle={shiftBackspaceNote} value={settings.shiftBackspaceWord}");
+  expect(shortcuts).toContain("<Toggle label={altSymLabel} subtitle={altSymNote} value={settings.altSymNextKeyboard}");
+  const names = readFileSync(join(root, "lib/setting-names.ts"), "utf8");
+  expect(names).toContain('shiftBackspaceLabel = "Hold Shift + Backspace to delete a word"');
+  expect(names).toContain('altSymLabel = "Hold Alt + Sym for the next keyboard"');
   const guide = readFileSync(join(root, "app/settings/guide-boring.tsx"), "utf8");
   expect(guide).toContain("Backspace while you hold Shift");
   expect(guide).toContain("Hold Alt and press Sym");
+  expect(guide).toContain("Turn off Hold Shift + Backspace to delete a word in Settings");
+  expect(guide).toContain("Turn off Hold Alt + Sym for the next keyboard in Settings");
+  // Off can't leave anyone without another keyboard: Android's own switcher still works, and Settings says so.
+  expect(names).toContain("Android's own keyboard switcher still works");
 });

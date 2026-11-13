@@ -13,7 +13,8 @@ import android.view.KeyEvent
  * Ctrl is separate from those: it has no sticky state and applies only while it is held.
  *
  * Two shortcuts count only while a modifier is physically held, so they work with Key Mapper off (owner, 2026-11-12):
- * Shift + Backspace deletes a word ([backspaceDoes]), and Alt + Sym switches to the next keyboard ([keyboardSwitch]).
+ * Shift + Backspace deletes a word ([backspaceDoes]), and Alt + Sym switches to the next keyboard ([keyboardSwitch]). Each has its
+ * own switch in Settings, on to start (owner, 2026-11-13): off, the keys do what they would without the shortcut.
  * A tapped or automatic Shift, or a tapped Alt, doesn't count for those. Alt + Backspace, tapped or held, deletes forward, the
  * character after the cursor, like Delete on a PC, or with that setting off goes to the app as Android's own Alt + Backspace,
  * which deletes the line (owner, 2026-11-13). A word delete wins over it when both apply.
@@ -58,6 +59,8 @@ class Modifiers {
 
     /** A quick second press locks Shift or Alt, for the setting of the same name. */
     var doublePressLocks = false
+    /** A held Alt + Sym switches to the next keyboard. Off, Sym does what it would without it. See [down]. */
+    var altSymSwitches = true
 
     /**
      * Sym was pushed while Alt was held and the panel was closed: switch to the next keyboard. The panel stays as it was, and
@@ -82,8 +85,10 @@ class Modifiers {
      * owner's phone, a held Shift's press didn't reach [held], so held Shift + Backspace deleted one letter (2026-11-13).
      * A tapped Shift, or one that came on by itself at a sentence start, is neither, and leaves Backspace a plain Backspace.
      */
-    fun backspaceDoes(meta: Int, altForward: Boolean): Backspace = when {
-        meta and KeyEvent.META_CTRL_ON != 0 || holding(Key.Shift) || meta and KeyEvent.META_SHIFT_ON != 0 -> Backspace.Word
+    fun backspaceDoes(meta: Int, altForward: Boolean, shiftWord: Boolean = true): Backspace = when {
+        meta and KeyEvent.META_CTRL_ON != 0 -> Backspace.Word
+        // A held Shift deletes a word, unless its switch is off: then Backspace is plain, as if the shortcut weren't there.
+        shiftWord && (holding(Key.Shift) || meta and KeyEvent.META_SHIFT_ON != 0) -> Backspace.Word
         alt != Level.Off || meta and KeyEvent.META_ALT_ON != 0 -> if (altForward) Backspace.Forward else Backspace.AltToApp
         else -> Backspace.Letter
     }
@@ -256,7 +261,7 @@ class Modifiers {
         }
         if (code == KeyEvent.KEYCODE_SYM) {
             if (!symHeld) {
-                if (panel == Panel.Closed && holding(Key.Alt)) {
+                if (panel == Panel.Closed && holding(Key.Alt) && altSymSwitches) {
                     useHeld()
                     keyboardSwitch = true
                 } else pressSym()

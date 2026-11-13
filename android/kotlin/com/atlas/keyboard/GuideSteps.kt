@@ -817,6 +817,11 @@ internal class GuideStep(
     val lessons: Set<GuideLesson>? = null,
     /** The bar shows its side words. False shows only the middle one. */
     val sides: Boolean = true,
+    /**
+     * The only word on the bar, in its middle place, pointed at until its menu opens, or null for the bar's own words. A hold on it
+     * opens its show-only menu. See [GuideHooks.barWord].
+     */
+    val barWord: String? = null,
     /** What the line under the title says once the slide is done: about what you just did, never the next instruction. */
     val praise: String = "",
     /** The slide offers to share swipes: its offer opens the disclosure, and an answer finishes it. */
@@ -1080,7 +1085,11 @@ internal fun huntLine(line: String, seconds: Int) = "$line $seconds s"
 /** The word menu's buttons, on the keys that pick them, as the drawing of the keys hints them one at a time. */
 // K and L work as I and O, and Backspace as P (see [MenuKeys.hovered]), so their keys say so too (owner, v5.2).
 internal val MENU_SAVE = mapOf("I" to "Save", "K" to "Save", "P" to "Back", Layout.BACKSPACE to "Back")
-internal val MENU_UNSAVE = mapOf("O" to "Unsave", "L" to "Unsave", "P" to "Back", Layout.BACKSPACE to "Back")
+internal val MENU_FAVOURITE = mapOf("I" to "Favourite", "K" to "Favourite", "P" to "Back", Layout.BACKSPACE to "Back")
+/** The word menu slide's one word on the bar, which it saves, then favourites (owner, 2026-11-13). */
+internal const val MENU_WORD = "TitanKeys"
+internal const val MENU_CLOSED = "Closed it. Hold TitanKeys again."
+internal const val MENU_UNSAVED = "Unsaved. Cold. I, then I again."
 
 /** The words that the Grab a bunch slide marks in orange to select. */
 internal const val GRAB_PHRASE = "my whole heart"
@@ -1271,48 +1280,54 @@ internal val GUIDE_STEPS = listOf(
     ),
     GuideStep(
         id = "menu", chapter = GuideChapter.Typing,
-        title = "Save a word. Then unsave it.",
+        // The ladder, on TitanKeys alone (owner, 2026-11-13: "teach them the ladder system like only having titankeys as a
+        // option, maybe have it pre-highlighted, and then have them favorite TitanKeys"). Not saved, saved, then a favourite.
+        title = "Make TitanKeys your favourite.",
         stages = listOf(
             // The guide's menu is only for show, and says so before anything is pressed (owner, 2026-11-13).
-            GuideStage("Hold a word on the bar. Nothing here gets saved.") { event ->
+            GuideStage("Hold TitanKeys on the bar. Nothing gets saved.") { event ->
                 when (event) {
                     is WordMenu -> GuideVerdict.Done
-                    is Chosen -> chip("That typed it. Hold it, don't tap.")
+                    // The lock blocks a tap with the same words; this is for a tap that gets through without it.
+                    is Chosen -> chip("Hold, don't tap.")
                     else -> GuideVerdict.Wait
                 }
             },
-            // One key at a time: the drawing hints Save on I, then Unsave on O.
+            // One key at a time: the drawing hints Save on I, then Favourite on I again.
             // The hint lights I once, steady, and only once the menu is open: the screen waits for it (owner, v5.2).
             GuideStage("Press I to save it.", GuideCue.Spot(listOf("I"), rounds = 1), MENU_SAVE) { event ->
                 when {
                     event is MenuPicked && event.action == "Save" -> GuideVerdict.Done
-                    event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint("Closed it. Hold the word again.", stage = 0)
-                    // A word saved already, on this slide, opens saved: O on it is the next step.
-                    event is MenuPicked && event.action == "Unsave" -> GuideVerdict.Finished
+                    // Held again after the save: it opens saved, and I on it favourites it, which is the whole slide.
+                    event is MenuPicked && event.action == "Favourite" -> GuideVerdict.Finished
+                    event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint(MENU_CLOSED, stage = 0)
                     // O on a word that isn't saved blocks it, for show; I takes it back off (ladder v4).
-                    event is MenuPicked && event.action == "Block" -> chip("Blocked. For show. I unblocks it.")
+                    event is MenuPicked && event.action == "Block" -> chip("Blocked TitanKeys? Rude. I brings it back.")
                     event is MenuPicked && event.action == "Unblock" -> chip("Unblocked. Now I saves it.")
+                    event is MenuPicked && event.action == "Unsave" -> chip(MENU_UNSAVED)
                     else -> GuideVerdict.Wait
                 }
             },
-            // The real menu's next step (owner, v5.3): on a saved word O is Unsave, the broken bookmark. The guide teaches that.
-            GuideStage("Now press O to unsave it.", GuideCue.Spot(listOf("O"), rounds = 1), MENU_UNSAVE) { event ->
+            // The top of the ladder: I again on a saved word makes it a favourite, and the hearts burst.
+            GuideStage("Press I again to favourite it.", GuideCue.Spot(listOf("I"), rounds = 1), MENU_FAVOURITE) { event ->
                 when {
-                    event is MenuPicked && event.action == "Unsave" -> GuideVerdict.Done
-                    // I again makes it a favourite, and O steps it back down to saved first.
-                    event is MenuPicked && event.action == "Favourite" -> chip("A favourite. Fancy. O steps it back down.")
-                    event is MenuPicked && event.action == "Unfavourite" -> chip("Saved again. Now O unsaves it.")
-                    event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint("Closed it. Hold the word again.", stage = 0)
+                    event is MenuPicked && event.action == "Favourite" -> GuideVerdict.Done
+                    // O on a saved word unsaves it: back to the save.
+                    event is MenuPicked && event.action == "Unsave" -> GuideVerdict.Hint(MENU_UNSAVED, stage = 1)
+                    event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint(MENU_CLOSED, stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
-        done = "Saved, then unsaved. Cold.",
-        praise = "I twice makes a favourite. P closes the menu.",
+        done = "Favourited. Good taste.",
+        praise = "O steps it back down. P closes the menu.",
         line = MENU_LINE,
         seed = MENU_LINE,
-        help = "Hold, don't tap. Keep your finger on a bar word.",
+        help = "Hold, don't tap. Keep your finger on TitanKeys.",
         lessons = setOf(GuideLesson.BarHold, GuideLesson.Typing, GuideLesson.Space, GuideLesson.Backspace),
+        // Only TitanKeys on the bar, in the middle, pointed at until its menu opens.
+        sides = false,
+        barWord = MENU_WORD,
         bar = GuideBar.Menu,
     ),
     // DELETE: each slide starts with its line in the field and the cursor where the deleting is; the thing to delete in orange.
@@ -1825,7 +1840,7 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
         }
         GuideLesson.BarTap.name -> when {
             step.id == "type" -> "The bar's blocked here. Type it, typo and all."
-            // The menu slide wants the bar word held: a tap gets its own words (owner, 2026-11-13).
+            // The menu slide wants TitanKeys held: a tap gets its own words, saying it's blocked, as every lock's chip does (v5).
             GuideLesson.BarHold in open -> "Taps are blocked here. Hold, don't tap."
             else -> "The bar's blocked here. Do it with the keys."
         }

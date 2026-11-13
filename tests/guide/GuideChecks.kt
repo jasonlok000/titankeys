@@ -34,7 +34,7 @@ private const val KEY_DEL = 67
 private val walk: List<Pair<String, List<KeyboardEvent>>> = listOf(
     "type" to listOf(Fixed("Gte", "Get"), FieldChanged("$TYPE_LINE ", 32, 32)),
     "swipe" to listOf(Recognised(listOf("swipe")), Recognised(listOf("per")), Recognised(listOf("word"))),
-    "menu" to listOf(WordMenu("bar"), MenuPicked("Save"), MenuPicked("Unsave")),
+    "menu" to listOf(WordMenu(MENU_WORD), MenuPicked("Save"), MenuPicked("Favourite")),
     "backspace" to listOf(Pushed(KEY_DEL), FieldChanged("$BACKSPACE_LINE ", 0, 0)),
     "flick" to listOf(DeletedWord(held = false)),
     "hold" to listOf(DeleteHoldStarted) + List(REGRETS_TO_PASS) { DeletedWord(held = true) },
@@ -510,24 +510,59 @@ private fun oneInstructionAtATime() {
     same(GuideHooks.swapClip(GUIDE_CLIPS.first()), GUIDE_CLIPS.first(), "Every other clip pastes as it is")
     same(OLD_GUIDE_CLIPS.containsAll(GUIDE_CLIPS), true, "The guide clears its own clips from the clipboard")
 
+    theLadderOnTitanKeys()
+}
+
+/**
+ * The word menu slide teaches the ladder on TitanKeys alone (owner, 2026-11-13): the bar shows only TitanKeys, pointed at, its menu
+ * opens at not saved, I saves it, and I again makes it a favourite, which passes. Each wrong move says so in the owner's tone.
+ */
+private fun theLadderOnTitanKeys() {
+    val step = GUIDE_STEPS.first { it.id == "menu" }
+    same(step.title, "Make TitanKeys your favourite.", "The slide's title")
+    same(step.barWord to step.sides, "TitanKeys" to false, "The bar shows only TitanKeys, in the middle")
+    same(step.line, MENU_LINE, "The line stays, for the finale's first letters")
+    same(step.stages.map { it.text }, listOf("Hold TitanKeys on the bar. Nothing gets saved.", "Press I to save it.",
+        "Press I again to favourite it."), "Hold, I, then I again")
+    same(step.done to step.praise, "Favourited. Good taste." to "O steps it back down. P closes the menu.", "Done and praise")
+    // The show-only menu opens at not saved: the ladder's I is Save, then Favourite.
+    same(MenuKeys.choices(MenuKeys.Step.New).i to MenuKeys.choices(MenuKeys.Step.Saved).i, MenuKeys.Button.Save to MenuKeys.Button.Favourite,
+        "Not saved, I saves; saved, I favourites")
+
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
     same(menu.event(MenuPicked("Save")), GuideVerdict.Wait, "A pick before the menu opens means nothing")
-    same(menu.event(WordMenu("to")), GuideVerdict.Stage(1), "The menu opens, so Save is next")
+    same(menu.event(WordMenu(MENU_WORD)), GuideVerdict.Stage(1), "The menu opens, so Save is next")
     same(menu.labels to menu.cue, MENU_SAVE to GuideCue.Spot(listOf("I"), rounds = 1), "I lights once: Save")
     same(MENU_SAVE["K"] to MENU_SAVE[Layout.BACKSPACE], "Save" to "Back", "K works as I, and Backspace as P, and they say so")
-    same(menu.event(MenuPicked("Save")), GuideVerdict.Stage(2), "Saved, so Unsave is next, as the real menu's O")
-    same(menu.labels to menu.cue, MENU_UNSAVE to GuideCue.Spot(listOf("O"), rounds = 1), "then O: Unsave")
-    same(MENU_UNSAVE["L"], "Unsave", "L works as O")
-    same(menu.event(MenuPicked("Favourite")) is GuideVerdict.Hint, true, "I again makes a favourite, and the slide says so")
-    same(menu.event(MenuPicked("Unfavourite")) is GuideVerdict.Hint, true, "O takes the favourite back first")
-    same(menu.event(MenuPicked("Unsave")), GuideVerdict.Done, "Unsave on the saved word finishes it")
-    val early = GuideFlow({ GuideSettings() })
-    early.start("menu")
-    early.event(WordMenu("to"))
-    same(early.event(MenuPicked("Unsave")), GuideVerdict.Done, "A word saved already opens saved: Unsave straight away counts")
-    for (stage in GUIDE_STEPS.first { it.id == "menu" }.stages) same(stage.text.contains("O, and O again"), false, "No O, and O again")
-    same(early.event(MenuPicked("Close")).let { it is GuideVerdict.Hint || it == GuideVerdict.Wait }, true, "Closed, it waits for a hold")
+    fun said(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.let { it.title ?: it.text }
+    same(said(menu.event(MenuPicked("Block"))), "Blocked TitanKeys? Rude. I brings it back.", "O at not saved blocks it")
+    same(menu.stage, 1, "and it still waits for the save")
+    menu.event(MenuPicked("Unblock"))
+    same(menu.event(MenuPicked("Save")), GuideVerdict.Stage(2), "Saved, so the favourite is next")
+    same(menu.labels to menu.cue, MENU_FAVOURITE to GuideCue.Spot(listOf("I"), rounds = 1), "I lights once again: Favourite")
+    same(MENU_FAVOURITE["K"] to MENU_FAVOURITE["P"], "Favourite" to "Back", "K works as I, and P is Back")
+    val unsaved = menu.event(MenuPicked("Unsave"))
+    same(said(unsaved) to (unsaved as GuideVerdict.Hint).stage, "Unsaved. Cold. I, then I again." to 1, "O at saved unsaves it: back to the save")
+    menu.event(MenuPicked("Save"))
+    same(menu.event(MenuPicked("Favourite")), GuideVerdict.Done, "I again: a favourite, and the slide passes")
+
+    val closed = GuideFlow({ GuideSettings() })
+    closed.start("menu")
+    closed.event(WordMenu(MENU_WORD))
+    val close = closed.event(MenuPicked("Close"))
+    same(said(close) to (close as GuideVerdict.Hint).stage, "Closed it. Hold TitanKeys again." to 0, "Backspace or P closes it: hold again")
+    closed.event(WordMenu(MENU_WORD))
+    closed.event(MenuPicked("Save"))
+    val again = closed.event(MenuPicked("Close"))
+    same((again as GuideVerdict.Hint).stage, 0, "Closed after the save too")
+    closed.event(WordMenu(MENU_WORD))
+    same(finishes(closed.event(MenuPicked("Favourite"))), true, "Opened again, it's saved: I favourites it, and that passes")
+
+    same(said(GuideFlow({ GuideSettings() }).also { it.start("menu") }.event(Chosen(MENU_WORD))), "Hold, don't tap.", "A tap instead of a hold")
+    same(blockedChip(step, GuideLesson.BarTap.name), "Taps are blocked here. Hold, don't tap.", "and the lock says so, as blocked")
+    for (stage in step.stages) same(stage.text.length <= 50, true, "Stage within 50: ${stage.text}")
+    same(step.title.length <= 38, true, "Title within 38")
 }
 
 /** & passes as soon as it's in, even after a wrong one (owner, v5.2); the screen takes a wrong one back out. */
@@ -741,7 +776,7 @@ private fun chapterOne() {
         "Copy and paste unlocks fn for the paste, then Sym for the clipboard")
     for (line in DELETE_RESETS) same(line.length <= LINE_MOST, true, "The reset chip \"$line\" is one line")
     same(STEER_RESET.length <= LINE_MOST, true, "The steering reset chip is one line")
-    same(typing.map { it.sides }, listOf(false, true, true), "Only the first slide shows just the bar's middle word")
+    same(typing.map { it.sides }, listOf(false, true, false), "The first slide and the menu slide show just the bar's middle word")
     same(GUIDE_STEPS.first { it.id == "type" }.cue, GuideCue.Spell, "The first slide spells the next word's keys, then Space")
     GuideHooks.lessons = setOf(GuideLesson.Swipe)
     same(GuideHooks.allows(GuideLesson.Swipe) to GuideHooks.allows(GuideLesson.BarHold), true to false, "The lock lets through what's taught")
@@ -772,7 +807,7 @@ private fun wrongEventsDoNotFinish() {
     same(finishes(flow.event(FieldChanged("faster", 6, 6))), false, "Typing must not finish the swipe")
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
-    same(menu.event(Chosen("to")) is GuideVerdict.Hint, true, "A touch on a word is not a hold, and the slide says so")
+    same(menu.event(Chosen(MENU_WORD)) is GuideVerdict.Hint, true, "A touch on a word is not a hold, and the slide says so")
 }
 
 /** The owner's scenarios: what happens says so, in a chip, and some of it counts. */
@@ -1231,7 +1266,7 @@ private fun everyWayToFailIsAnswered() {
     // Wrong moves the earlier checks don't cover.
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
-    same(title(menu.event(Chosen("the"))), "That typed it. Hold it, don't tap.", "A tap on a bar word")
+    same(title(menu.event(Chosen(MENU_WORD))), "Hold, don't tap.", "A tap on a bar word")
     val paste = GuideFlow({ GuideSettings() })
     paste.start("paste")
     same(title(paste.event(KeyboardEvent.Copied("orange words"))).startsWith("That's copy"), true, "A copy on the paste slide")

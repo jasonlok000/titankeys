@@ -56,7 +56,7 @@ after a Skip).
 
 | What | When | Slides |
 |---|---|---|
-| The slide's help, how to start its gesture | First after **3 s** however the slide was reached (Next, Skip or Back), then again every **6 s** while the slide still waits for that first step. Each time the chip comes back in and the slide's demonstration plays again, so it's never a silent text swap. Never on a later step. (Owner, 2026-11-13: "sooner and more frequent".) | menu ("Hold, don't tap. Keep your finger on a bar word."), steer, selectmore |
+| The slide's help, how to start its gesture | First after **3 s** however the slide was reached (Next, Skip or Back), then again every **6 s** while the slide still waits for that first step. Each time the chip comes back in and the slide's demonstration plays again, so it's never a silent text swap. Never on a later step. (Owner, 2026-11-13: "sooner and more frequent".) | menu ("Hold, don't tap. Keep your finger on TitanKeys."), steer, selectmore |
 | The demonstration (the ghost finger, the bar's hold) | After 5 s with no input, and 1 s later if a finger is down or the menu is open | Every slide with one |
 | A chip | Shows for 3 s, and another waits until it's gone | All |
 | The idle chips | After 20 s with no input: "Still there?". After 20 s more: "The keys won't press themselves. We checked." Once a slide. | All |
@@ -93,14 +93,17 @@ docs/owner-decisions-2.1.md wins over this list wherever they differ.
 | A swipe that starts on Backspace, read as a flick | It glows, then "Flicks are blocked here. That's later." and a no. Nothing deletes. New. |
 | Stopping before three swipes | The instruction counts the swipes left. |
 
-### menu: Save a word. Then unsave it.
+### menu: Make TitanKeys your favourite.
+The ladder, on one word (owner, 2026-11-13). The bar shows only TitanKeys, in the middle, wiggling until it's held. Its show-only
+menu opens at not saved; I saves it, and I again makes it a favourite, which passes. Nothing is saved anywhere.
+
 | What the user does | What happens |
 |---|---|
-| A tap on a bar word | Nothing types. "Taps are blocked here. Hold, don't tap." and a no, never the other slides' "Do it with the keys". (Owner, 2026-11-13.) Checked. |
-| P closes the menu | "Closed it. Hold the word again." It goes back to the hold. |
-| I twice makes it a favourite | "A favourite. Fancy. O steps it back down." |
-| The bar runs empty | "Nothing to judge. Rare for you." and "Type a letter so the bar fills up." |
-| A word already saved | O on it is the next step, and the slide moves on. |
+| A tap on TitanKeys | Nothing types. "Taps are blocked here. Hold, don't tap." and a no, as every lock's chip says blocked. A tap that gets past the lock gets "Hold, don't tap." Checked. |
+| O at not saved (Block) | "Blocked TitanKeys? Rude. I brings it back." It still waits for the save; I unblocks it, then saves it. Checked. |
+| O at saved (Unsave) | "Unsaved. Cold. I, then I again." It goes back to the save. Checked. |
+| P or Backspace closes the menu | "Closed it. Hold TitanKeys again." It goes back to the hold. Opened again after the save, it's still saved, and I favourites it, which passes. Checked. |
+| The bar runs empty | Never: the bar always shows TitanKeys on this slide. |
 
 ## Delete
 

@@ -867,25 +867,30 @@ class AtlasIme : InputMethodService() {
         updateHold()
     }
 
-    // The idle games on the bar (an Easter egg, see IdlePlayer): after three minutes or more with no key, touch or swipe, while plain words
-    // show. Any input ends it at once. It stays off with exact typing, in apps where the bar hides, in fields with no suggestions,
-    // with the bar or the screen off, with the Sym panel open, and with Android's animations off.
+    // The idle games on the bar (an Easter egg, see IdlePlayer): an idle period starts with each key, touch or swipe, a new field or
+    // the keyboard opening, and the screen coming back on. Exactly three minutes in, while plain words show, it rolls once, and
+    // that's all for the period, however long it lasts (owner, 2026-11-13: "it triggers only on the 3 min mark of idle. Not
+    // resetting."). Any input ends a game at once. It stays off with exact typing, in apps where the bar hides, in fields with no
+    // suggestions, with the bar or the screen off, with the Sym panel open, and with Android's animations off.
 
     /**
-     * The idle time is reached: most times nothing plays, and the next wait starts; see [IdlePlayer.PLAY_CHANCE] and [IdleSchedule]
-     * (never two games in a row, and no game again within two idle times).
+     * The idle period's one roll, at [IDLE_BAR_MILLIS]: most times nothing plays, and nothing more rolls until the next period; see
+     * [IdlePlayer.PLAY_CHANCE] and [IdleSchedule] (no game in the period after one that played, never the same game twice running).
      */
     private val idleBar = Runnable {
+        if (!idleClock.roll(SystemClock.uptimeMillis())) return@Runnable
         val random = Random(System.nanoTime())
-        if (!idleSchedule.trigger(random) || !startIdleBar(random = random, schedule = idleSchedule)) waitIdleBar()
+        if (idleSchedule.trigger(random)) startIdleBar(random = random, schedule = idleSchedule)
     }
+    private val idleClock = IdleClock()
     private val idleSchedule = IdleSchedule()
     private var idleBarTriggerRegistered = false
     /**
-     * The debug build's trigger, from adb. It always starts a game, with no roll of the chance. With no extra the game is picked by
-     * rarity among the ones the letters fit. The extra "game" picks one by name or by the demo's number (1 drift, 2 pong, 3 bowling,
-     * 5 rope, 6 firework, 7 race, 8 juggle), if the letters fit it; the extra "return" sends the running game home by one way (shell,
-     * firework, drop, exit), as coming back would.
+     * The debug build's trigger, from adb. It always starts a game, with no roll of the chance, and it doesn't count toward
+     * [IdleSchedule]'s rules: a demo neither keeps the next period from playing nor keeps its game from playing next. With no
+     * extra the game is picked by rarity among the ones the letters fit. The extra "game" picks one by name or by the demo's
+     * number (1 drift, 2 pong, 3 bowling, 5 rope, 6 firework, 7 race, 8 juggle), if the letters fit it; the extra "return" sends the
+     * running game home by one way (shell, firework, drop, exit), as coming back would.
      */
     private val idleBarTrigger = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -988,8 +993,8 @@ class AtlasIme : InputMethodService() {
         idleBarAllowed() && strip?.startIdle(random, kind, schedule) == true
 
     /**
-     * Input starts the wait again. Coming back, with a finger on the touchpad or a touch on the bar, sends the idle game's letters
-     * home; typing or swiping ([cut]) puts the words back at once. The next game waits a random while, at least [IDLE_BAR_MILLIS].
+     * Input starts a new idle period. Coming back, with a finger on the touchpad or a touch on the bar, sends the idle game's letters
+     * home; typing or swiping ([cut]) puts the words back at once. The period's one roll is [IDLE_BAR_MILLIS] from now.
      */
     private fun wakeIdleBar(cut: Boolean = true) {
         main.removeCallbacks(idleBar)
@@ -999,20 +1004,24 @@ class AtlasIme : InputMethodService() {
         waitIdleBar()
     }
 
-    /** The idle wait starts again from now, a random while of at least [IDLE_BAR_MILLIS]. */
+    /** A new idle period starts now: its one roll is exactly [IDLE_BAR_MILLIS] away, with no random extra. */
     private fun waitIdleBar() {
         main.removeCallbacks(idleBar)
-        if (idleBarAllowed()) main.postDelayed(idleBar, IDLE_BAR_MILLIS + Random.nextLong(IDLE_BAR_MILLIS / 2))
+        idleClock.input(SystemClock.uptimeMillis())
+        if (idleBarAllowed()) main.postDelayed(idleBar, IDLE_BAR_MILLIS)
     }
 
     private fun sleepIdleBar() {
         main.removeCallbacks(idleBar)
+        idleClock.stop()
         strip?.stopIdle()
     }
 
     private val screenOn = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             hold.screenOn()
+            // The screen coming back on starts a new idle period, as the keyboard opening would.
+            waitIdleBar()
             updateKeyWatch()
             updateHold()
         }
@@ -1167,7 +1176,6 @@ class AtlasIme : InputMethodService() {
         }, ::holdWord,
             { action -> enqueue { stripAction(action) } }, { enqueue { pasteOfferedClip() } }, { wakeIdleBar(cut = false) })
         // A game that ended by itself, or was sent home, gives the bar back: the next wait starts fresh, with the same roll.
-        words.idleEnded = ::waitIdleBar
         val keys = SymPanel(ui,
             pick = { item -> enqueue { typePanelItem(item) } },
             useQuickSetting = { item -> enqueue { useQuickSetting(item) } },
@@ -3723,7 +3731,7 @@ class AtlasIme : InputMethodService() {
         /** While taps may still be a gesture, a held tap looks again this often, so it types as soon as they can't be one. */
         private const val HELD_TAP_LOOK_MILLIS = 30L
         /** How long with no input before the idle scene starts on the bar. */
-        private const val IDLE_BAR_MILLIS = 3 * 60 * 1000L
+        private const val IDLE_BAR_MILLIS = IdleClock.MILLIS
         /** The debug build starts the idle scene at once on this broadcast, from adb. */
         private const val IDLE_BAR_ACTION = "com.titankeys.debug.IDLE_BAR"
         private const val PANEL_ACTION = "com.titankeys.debug.PANEL"

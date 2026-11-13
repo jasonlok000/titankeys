@@ -53,7 +53,33 @@ fun main() {
         "Bowling, Race and Firework are common, the loops Drift, Pong, Jump rope and Juggling rare: $counts")
     check(IdlePlayer.LOOP_MILLIS == 30_000f, "A loop plays 30 seconds at most")
 
-    // The idle times in a row: never two games back to back, and no game again within two idle times.
+    // The idle periods (owner, 2026-11-13: "it triggers only on the 3 min mark of idle. Not resetting. The chance of triggering is
+    // 1/4... no two same animations in a row. Also no two triggers in a row").
+    val clock = IdleClock()
+    check(IdleClock.MILLIS == 180_000L, "The roll is at exactly three minutes")
+    check(!clock.roll(1_000_000), "No roll before any input")
+    clock.input(10_000)
+    check(!clock.roll(10_000 + IdleClock.MILLIS - 1), "Not a moment before 3:00")
+    check(clock.roll(10_000 + IdleClock.MILLIS), "One roll at 3:00")
+    var later = 0
+    for (t in 10_000 + IdleClock.MILLIS + 1..10_000 + 4 * 3_600_000L step 1_000) if (clock.roll(t)) later++
+    check(later == 0, "However long the idle lasts, nothing more rolls in that period, not $later times")
+    // Input resets the clock: a key at 2:59 starts a new period, which rolls 3:00 after it, not at the old mark.
+    clock.input(500_000)
+    clock.input(500_000 + IdleClock.MILLIS - 1_000)
+    check(!clock.roll(500_000 + IdleClock.MILLIS), "Input before 3:00 moves the roll")
+    check(clock.roll(500_000 + 2 * IdleClock.MILLIS - 1_000), "to 3:00 after the last input")
+    clock.input(2_000_000)
+    check(clock.roll(2_000_000 + IdleClock.MILLIS), "A new period after a roll rolls again")
+    clock.input(3_000_000)
+    clock.stop()
+    check(!clock.roll(3_000_000 + IdleClock.MILLIS), "Hidden or with the screen off, no period runs")
+    val ime = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    check(ime.contains("main.postDelayed(idleBar, IDLE_BAR_MILLIS)") && ime.contains("IDLE_BAR_MILLIS = IdleClock.MILLIS"),
+        "The keyboard posts its roll for exactly 3:00, with no random extra")
+    check(!ime.contains("idleEnded"), "A game that ends by itself starts no new wait")
+
+    // The periods in a row: a quarter play, never two running, never the same game twice running.
     val schedule = IdleSchedule()
     val rolls = Random(5)
     val played = ArrayList<IdlePlayer.Kind?>()
@@ -62,13 +88,21 @@ fun main() {
         kind?.let { schedule.played(it) }
         played += kind
     }
-    for (i in 1 until played.size) check(played[i] == null || played[i - 1] == null, "Idle time $i: a quiet idle time always comes between games")
-    for (i in played.indices) played[i]?.let { kind ->
-        for (j in maxOf(0, i - IdleSchedule.GAP)..<i) check(played[j] != kind, "Idle time $i: $kind waits two idle times before it plays again")
-    }
-    val games = played.count { it != null }
-    check(games in 6_400..9_600, "Most idle times play nothing: $games games in 40000")
-    check(IdlePlayer.Kind.entries.all { kind -> played.any { it == kind } }, "Every game still turns up")
+    for (i in 1 until played.size) check(played[i] == null || played[i - 1] == null, "Period $i: no game in the period after a game")
+    val kinds = played.filterNotNull()
+    for (i in 1 until kinds.size) check(kinds[i] != kinds[i - 1], "Game $i: never the same game twice running, not ${kinds[i]} again")
+    val games = kinds.size
+    // A quarter of the periods that may play: p / (1 + p) = 20%.
+    check(games in 7_400..8_600, "About one period in five plays: $games games in 40000")
+    check(IdlePlayer.Kind.entries.all { kind -> kinds.any { it == kind } }, "Every game still turns up")
+    // The period after a game is held back whatever the roll: it never even rolls.
+    val held = IdleSchedule()
+    held.played(IdlePlayer.Kind.Race)
+    val sure = object : Random() { override fun nextBits(bitCount: Int) = 0 }
+    check(!held.trigger(sure), "The period after a game doesn't play, even on a winning roll")
+    check(held.trigger(sure), "and the one after that may")
+    check(!held.allows(IdlePlayer.Kind.Race) && held.allows(IdlePlayer.Kind.Firework), "The last game can't play next, any other can")
+    check(IdlePlayer.choose(bar("x"), Random(1)) { held.allows(it) } != null, "With Race out, a bar that fits others plays one")
 
     val ways = HashSet<String>()
     fun home(glyphs: List<Glyph>, what: String) {

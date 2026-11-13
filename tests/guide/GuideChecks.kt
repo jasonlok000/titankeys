@@ -886,7 +886,7 @@ private fun scenarios() {
     val empty = GuideFlow({ GuideSettings() })
     empty.start("symmain")
     empty.event(keys(Panel.Symbols))
-    same(title(empty.event(EmptyKey)).startsWith("That one's empty"), true, "A key with nothing on it")
+    same(title(empty.event(EmptyKey)).startsWith("That key's empty"), true, "A key with nothing on it")
 
     val settings = GuideFlow({ GuideSettings() })
     settings.start("swipe")

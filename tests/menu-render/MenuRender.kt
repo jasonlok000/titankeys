@@ -25,8 +25,9 @@ import kotlin.math.floor
  * It checks three of the owner's corrections in pixels too, and fails if any breaks: a hovered button's pill covers the buttons to
  * its left (hovering Unsave covers Favourite), the book is opaque once it shuts, so the word's ink can't be seen through it, and
  * every rung's word is solid in its own colour, the status, with each preview about 60% of the way to the next, with Orange accents
- * on and off. The rungs at rest and hovered are drawn with accents off too (menu-all-accent-off), and the guide's light under its
- * word (Strip.lit) on the bar and through the word's menu.
+ * on and off. The rungs at rest and hovered are drawn with accents off too (menu-all-accent-off), the four statuses side by side
+ * in both looks with accents on and off (menu-statuses), where a favourite must stand apart from Saved and Not saved, and the
+ * guide's light under its word (Strip.lit) on the bar and through the word's menu.
  */
 fun main(args: Array<String>) {
     // ACCENT=off draws everything as with Settings > Orange accents off: Accent's cream in place of orange.
@@ -121,6 +122,7 @@ fun main(args: Array<String>) {
     thePillCoversTheButtonsToItsLeft(looks)
     theShutBookHidesTheWord(looks, folder)
     theWordIsSolid(looks)
+    theStatusesStandApart(looks, folder)
     // The best word in each weight the owner could have, to pick the one that reads as bold without looking heavy.
     barSheet(folder, regular, medium, "Medium", -668 to 2272, drawables)
     barSheet(folder, regular, bold, "Bold", -685 to 2279, drawables)
@@ -502,6 +504,80 @@ private fun theWordIsSolid(looks: Looks) {
     }
     Accent.on = accents
     println("Every rung's word is solid in its own colour, each preview 60% of the way to the next, dark and light, accents on and off")
+}
+
+/** [rgb]'s CIE L*a*b*, from sRGB under D65. */
+private fun lab(rgb: Int): DoubleArray {
+    fun lin(c: Int): Double { val v = c / 255.0; return if (v <= .04045) v / 12.92 else Math.pow((v + .055) / 1.055, 2.4) }
+    val r = lin(rgb shr 16 and 0xFF)
+    val g = lin(rgb shr 8 and 0xFF)
+    val b = lin(rgb and 0xFF)
+    fun f(t: Double) = if (t > 216.0 / 24389) Math.cbrt(t) else (24389.0 / 27 * t + 16) / 116
+    val x = f((.4124 * r + .3576 * g + .1805 * b) / .95047)
+    val y = f(.2126 * r + .7152 * g + .0722 * b)
+    val z = f((.0193 * r + .1192 * g + .9505 * b) / 1.08883)
+    return doubleArrayOf(116 * y - 16, 500 * (x - y), 200 * (y - z))
+}
+
+/** How far apart two colours look, as CIE76's ΔE: with no hue between them, their L* gap. */
+private fun deltaE(a: Int, b: Int) = lab(a).zip(lab(b)).sumOf { (x, y) -> (x - y) * (x - y) }.let(Math::sqrt)
+
+/**
+ * The four statuses side by side, the word's colour alone (owner, 2026-11-13: "favourited = orange. saved = white. neutral = grey.
+ * blocked = grey + striked through"), in the dark look and the light one, with Orange accents on and off: menu-statuses.png, each
+ * row's caption giving every colour's L*. In every row a favourite stands apart from both its neighbours on the ladder: from Saved's
+ * ink by at least the dark look's white-to-cream gap (about 14 L*), and from Not saved's grey by at least 15, as ΔE, which is the
+ * L* gap where there's no hue.
+ */
+private fun theStatusesStandApart(looks: Looks, folder: File) {
+    val accents = Accent.on
+    // The dark look's gap between Saved's white and the favourite's cream with accents off, about 14 L*.
+    Accent.on = false
+    val least = deltaE(0xFFFFFF, MenuScene.Palette.DARK.favourite)
+    val names = listOf("Blocked", "Not saved", "Saved", "Favourite")
+    val rows = ArrayList<BufferedImage>()
+    for (on in listOf(true, false)) for (dark in listOf(true, false)) {
+        Accent.on = on
+        val p = if (dark) MenuScene.Palette.DARK else MenuScene.Palette.LIGHT
+        val colours = listOf(p.dim, p.grey, p.ink, p.favourite)
+        val look = "${if (dark) "Dark" else "Light"}, accents ${if (on) "on" else "off"}"
+        check(deltaE(p.favourite, p.ink) >= least - .05) {
+            "$look: a favourite, #%06X, stands at least %.1f from Saved's ink, not %.1f".format(p.favourite, least, deltaE(p.favourite, p.ink))
+        }
+        check(deltaE(p.favourite, p.grey) >= 15) {
+            "$look: a favourite, #%06X, stands well apart from Not saved's grey, not %.1f".format(p.favourite, deltaE(p.favourite, p.grey))
+        }
+        val image = BufferedImage(WIDTH, CAPTION + ROW, BufferedImage.TYPE_INT_RGB)
+        val g = image.createGraphics()
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+        g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
+        g.color = if (dark) Color(0x22, 0x22, 0x22) else Color(0xDD, 0xDD, 0xDD)
+        g.fillRect(0, 0, WIDTH, CAPTION)
+        g.color = Color.GRAY
+        g.font = looks.medium.deriveFont(16f)
+        g.drawString("$look: " + names.zip(colours).joinToString(" · ") { (name, colour) -> "%s #%06X L* %.0f".format(name, colour, lab(colour)[0]) },
+            16, CAPTION - 14)
+        g.color = Color(p.paper)
+        g.fillRect(0, CAPTION, WIDTH, ROW)
+        g.translate(0, CAPTION)
+        g.scale(DENSITY.toDouble(), DENSITY.toDouble())
+        for ((column, step) in MenuKeys.Step.entries.withIndex()) {
+            val scene = looks.scene("whatever", step, KeyAlignment.DEFAULT)
+            scene.cx = WIDTH * (2 * column + 1) / 8f / DENSITY
+            scene.palette = p
+            scene.paintWord(AwtMenuCanvas(g, looks.bold))
+        }
+        g.dispose()
+        rows += image
+        println("$look: favourite #%06X, %.1f from Saved's ink, %.1f from Not saved's grey".format(p.favourite, deltaE(p.favourite, p.ink),
+            deltaE(p.favourite, p.grey)))
+    }
+    Accent.on = accents
+    val sheet = BufferedImage(WIDTH, rows.sumOf { it.height }, BufferedImage.TYPE_INT_RGB)
+    var y = 0
+    for (row in rows) { sheet.createGraphics().apply { drawImage(row, 0, y, null); dispose() }; y += row.height }
+    ImageIO.write(sheet, "png", File(folder, "menu-statuses.png"))
 }
 
 /** A vector drawable's paths, filled or stroked as it says, in [colour], scaled from its 24 by 24 viewport into [size]. */

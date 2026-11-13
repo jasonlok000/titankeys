@@ -205,6 +205,10 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **The boring guide notes that Space gestures land best a bit higher** (owner, 2026-11-13, 08:20): "its better to type above space
+  bar because of the touch zone." (Owner) It's a new topic, "Space gestures: tap a bit higher", at the top of Cursor and picking
+  text. It says to tap the top half of Space or the keys right above it, from C to N, because the touch zone stops around the middle
+  of Space. That's true to the code: CursorGesture.inZone takes Space's width on its row and the row above.
 - **Bar words: one size, the middle bold** (owner, 2026-11-13, 08:15): "I want it consistent but bolded is a nice touch." All three
   are 20 dp on one shared baseline, truly centred on the bar's height, and the middle is in a bolder weight. (Owner) This replaces
   D's 20/18 split. D picks Medium or Bold for the middle from renders, as the Orchestrator's call.

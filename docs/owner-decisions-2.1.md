@@ -205,6 +205,17 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **The ∞ slide says ∞ outright: a symbol hunt, not a riddle** (owner, 2026-11-13: "we should be explicit with the symbol to
+  find. Its a symbol hunt not a riddle. Ok use ur recommendation but also make it explicitly the ∞"). (Owner) This reverses the
+  earlier "never names the symbol" rule. Built in 4c6fd0e:
+  - title "Answer honestly." (Orchestrator's, approved), which still leaves the ∞ to the hunt;
+  - the field line "So how long do I last in bed with your mother? ∞" (Orchestrator's, approved): a question, and it still starts
+    with S for GO TOUCH GRASS NOW;
+  - the hunt "Find ∞ and press its key. It's further in.", a wrong symbol "Not that one. Find ∞.", and closing Sym "Closed it.
+    The ∞ is still in there." (Orchestrator's wording);
+  - done stays "Sure you do.", and the fast and slow lines are unchanged;
+  - the ∞ decoration stays: with ∞ named it no longer gives anything away, and it shows the shape to look for (Orchestrator,
+    unapproved). The stopwatch idea is dropped.
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
@@ -328,7 +339,8 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - The field line: "How long I last in bed with your mother: ∞". It's built as "Seriously, how long I last in bed with your
     mother: ∞", because the finale's GO TOUCH GRASS NOW needs this line to start with S. (Orchestrator) This reverses the
     earlier "me @ your mom" skip, at the owner's own request.
-  - The hunt's instruction is "Find the one that never ends.", and it never names ∞.
+  - The hunt's instruction is "Find the one that never ends.", and it never names ∞. Superseded: the slide now names ∞ (see
+    "a symbol hunt, not a riddle" above).
   - Done is "Sure you do." The "Love you too" theme is gone. (Orchestrator)
   - A slow find says its seconds: "That took N seconds. Still longer than you claim to last."
   - The clipboard digs now fit on one line. "As discussed, Next is not a personality." didn't land, so it's now "Looping in

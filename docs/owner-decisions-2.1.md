@@ -205,6 +205,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **No TitanKeys Alt + Backspace** (owner, 2026-11-13, 08:15): "I didn't want Alt backspace to work unless it's a native key
+  combination, and I'm intending it to be hold shift then backspace." (Owner)
+  - Android's own Alt + Backspace deletes the line in a standard field. So TitanKeys now sends Alt + Backspace to the app as it is,
+    with no word delete of its own. (Orchestrator)
+  - A held Shift + Backspace deletes a word (TitanKeys'). Ctrl or fn + Backspace deletes a word, as Android does natively.
 - **Playground haptics: yes** (owner, 2026-11-13, 08:05: "Add the haptics"). (Owner) The design, the Orchestrator's and approved:
   - only five big moments, each once until the playground calms down: 40 wpm Celebrate, 100 the rain No, 150 the shake one
     short rumble, 180+ each lightning flash a firm hit, the plant at the top the swell;

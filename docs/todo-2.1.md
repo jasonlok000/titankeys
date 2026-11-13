@@ -170,6 +170,8 @@ all of them are unapproved.
     the bar included.
   - **Orchestrator, done** (05fce6c): the boring guide's Scroll assistant rewritten (the phone hijacks the touchpad, the creator
     hates it, TitanKeys can block it), plus a new topic, "The local LLM". The boring guide checks pass.
+  - **Orchestrator, done:** TitanKeys' Alt + Backspace word delete is gone. Alt + Backspace now goes to the app as Android's own
+    combination. The boring guide's Delete a word is fixed. The modifiers and text checks pass.
   - Then: build #5, install, and phone checks. The release notes get a line for Size and one for the playground haptics.
 - **Asked the owner (07:58): haptics for the playground's effects?** Today they're silent. The Orchestrator's proposal is five big moments
   and nothing per step:

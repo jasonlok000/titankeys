@@ -1519,6 +1519,9 @@ class GuideActivity : Activity() {
             insets
         }
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitKeys() }
+        // The end's buttons hang from the column's bottom padding, which the keyboard's bar can change after the end was laid out:
+        // left alone, they rose by that much over BUILT FOR TITAN 2 ELITE (pre-release, build #8). Any new layout places them again.
+        column.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> if (atEnd()) column.post { placeEnd() } }
         // What falls passes behind the words and the field, so they always sit on top, and stays in the content between the top
         // bar and the keys (Master, 2026-11-13: the 🌱 and the cheat rain on the field and the header; the paste lesson's burst
         // over the title, the status bar and the keys). The plant grows between the field and the keys.

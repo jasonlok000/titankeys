@@ -72,7 +72,8 @@ internal object GuideFinale {
     const val NAME_DP = 64f
     const val BUILT_DP = 19f
     const val PHRASE_DP = 112f
-    const val BLOCK_GAP = 32f
+    /** Between the name's lines and the buttons (pre-release, build #8: at 32 dp the name almost touched the first button). */
+    const val BLOCK_GAP = 48f
     /** The bottom of the end is the grass's, this tall, a real band (owner's reference): the finale and the end's block keep above it. */
     const val GRASS_DP = 150f
     /** How much bigger a first letter grows as it lights. */

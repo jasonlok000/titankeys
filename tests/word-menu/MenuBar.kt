@@ -10,7 +10,22 @@ import java.util.PriorityQueue
  *
  * Times are the events' own, in milliseconds. Every event runs the posts that fell due before it, as the looper would.
  */
-class MenuBar(state: MenuKeys.State) {
+/**
+ * What a press under a resting finger reaches, as AtlasIme hears it: the touchpad's touches and lifts, and the keys, at their times.
+ * The word menu ([MenuBar]) and the quick settings page ([QuickSettingsPage]) both take it, so one set of event orders drives both.
+ */
+interface Fingers {
+    /** Runs what the looper had posted for [time]. */
+    fun at(time: Long): Fingers
+    fun touch(key: String, time: Long)
+    fun lift(time: Long)
+    fun keyDown(key: String, time: Long)
+    fun keyUp(key: String, time: Long)
+    /** A press and its release, [hold] ms apart. */
+    fun press(key: String, time: Long, hold: Long = 0)
+}
+
+class MenuBar(state: MenuKeys.State) : Fingers {
     private val hover = SteadyKey(Layout::keyAt)
     /** The open menu's state, which every press moves along the ladder. */
     var state = state
@@ -42,7 +57,7 @@ class MenuBar(state: MenuKeys.State) {
     val key get() = hover.key
 
     /** Runs the expireHover posts due by [time]. */
-    fun at(time: Long): MenuBar {
+    override fun at(time: Long): MenuBar {
         while (posts.isNotEmpty() && posts.peek() <= time) {
             now = posts.poll()
             expireHovers()
@@ -52,7 +67,7 @@ class MenuBar(state: MenuKeys.State) {
     }
 
     /** A finger reported on [key]'s centre at [time]: followRestingKey. */
-    fun touch(key: String, time: Long) = touchAt(centre(key), time)
+    override fun touch(key: String, time: Long) = touchAt(centre(key), time)
 
     fun touchAt(place: Pair<Float, Float>, time: Long) {
         at(time)
@@ -61,14 +76,14 @@ class MenuBar(state: MenuKeys.State) {
     }
 
     /** The touchpad reports the finger lifted at [time]: followRestingKey. */
-    fun lift(time: Long) {
+    override fun lift(time: Long) {
         at(time)
         hover.lift(time)
         posts += time + SteadyKey.LIFT_MILLIS
     }
 
     /** [key] goes down at [time]: onKeyDown, with the word menu open. */
-    fun keyDown(key: String, time: Long) {
+    override fun keyDown(key: String, time: Long) {
         at(time)
         val code = code(key)
         hover.keyDown(code)
@@ -89,7 +104,7 @@ class MenuBar(state: MenuKeys.State) {
     }
 
     /** [key] is let go at [time]: onKeyUp. */
-    fun keyUp(key: String, time: Long) {
+    override fun keyUp(key: String, time: Long) {
         at(time)
         val code = code(key)
         val menuRelease = code == menuKey && open
@@ -103,7 +118,7 @@ class MenuBar(state: MenuKeys.State) {
     }
 
     /** A press and its release, [hold] ms apart, under a finger that rests: down, then up. */
-    fun press(key: String, time: Long, hold: Long = 0) {
+    override fun press(key: String, time: Long, hold: Long) {
         keyDown(key, time)
         keyUp(key, time + hold)
     }

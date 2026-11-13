@@ -270,6 +270,17 @@ all of them are unapproved.
       kept). TitanKeys itself follows each field's own capital flags; no wider bug.
     - Idle, autocorrect and guide checks pass; bun 169 of 171 (the two that need the ink package).
     - Still to come: W's 11 dp line and its renders, then build #13.
+  - **Build #13 on the phone (f4d4e6c6, from ee80354, installed 17:54, 0 crashes; every verify check passed):**
+    - The front page through 10 panel switches (371 frames): the text box stays at 573-574 px the whole time (before: 51 px
+      lower with a panel open and a 139 px one-frame flash). Frames deleted.
+    - The ∞ slide's title stays at 185 px with Sym open; the ∞ stays whole above the panel.
+    - The menu slide passes (hold, I, I); TitanKeys stays whole beside "Already a favourite".
+    - Settings is at normal size; Bar text size shows Smaller, Normal (ticked), Bigger.
+    - Delete 1/3 shows the flat e with its strike.
+    - The real bar: the small letters' middle sits on the new line, 61 px under the bar's top (11 dp under the old middle); a
+      'g' tail ends about 10 px over the screen's edge.
+  - **Build #14, the release candidate,** started from e3cefc5 (adds only the release guard, the release notes and the audit
+    doc). After it passes, the WSL build copy holds the final tree with Ink patched, ready for the owner's tools/release.sh.
   - **Merged for build #13: W's 11 dp line** (claude/bar-line-11dp 52e6297, merge 2b7d234). StripFit.BORDER_DP = 22; everything
     with text in the bar on the line 39 dp down (within 0.47, 0.17 and 0.13 px at Smaller, Normal, Bigger); the simulated-border
     render puts the letters' middle 0.13 to 0.72 px from the black band's middle; corner_check (r 100, margin 4) gives 0 of 96

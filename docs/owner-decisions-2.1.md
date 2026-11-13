@@ -208,7 +208,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
-- **Analytics: deferred until there are users** (owner, 2026-11-13, 14:00: "theres no user now it's just me honestly"). (Owner)
+- **Analytics: in 3.0, the launch build** (owner, 2026-11-13, 14:05: "do it in 3.0? 3.0 is the build I would acc promote and launch"; before that, "theres no user now it's just me honestly"). (Owner) It must be ready at launch, since that's when other users arrive. Until then, the owner's raw log is the baseline.
   - With one user, the debug build's raw typing log and Record a bug already give richer data.
   - When a public release brings other users, revisit, under #55's regulated internet rules, with:
     - opt-in crash and ANR reports, never text;

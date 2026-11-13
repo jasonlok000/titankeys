@@ -205,6 +205,9 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **The front page gets a title and a description, like the guide (owner, 2026-11-13, 07:45):** "I'm expecting the format to be
+  like the guide there a title and a description." (Owner) The title is "PRACTICE. YOU NEED IT." in the guide's title style
+  (Orchestrator's pick, unapproved). The line under it stays the description, and the speed comments still take its place.
 - **Morning calls (Orchestrator, 2026-11-13, 06:40; none approved by the owner):**
   - Guide titles stay cream, as in v2, which the owner saw on build 2ec5f751 ("Looks much nicer now"). Settings keeps its orange
     titles (option B).

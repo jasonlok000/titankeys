@@ -162,6 +162,8 @@ all of them are unapproved.
     - Not in the renders: the share screen and the paste selection. Check both on the phone.
     - Follow-up sent: on black, the playground's next line had the same grey as the current line, so the two ran together.
       It's dimmed to half, with a wider gap.
+- **Front page title (owner, 07:45):** a guide-style title and description. C adds it on claude/playground-next-line, after the
+  next-line dimming (9b56000, render checked). Both go into build #4.
 - **Build #3** started from 7db5c06, with everything from the run-through except that follow-up.
     - the share screen gets FixedScale, with its buttons pinned (at font 2.0 the accept was off screen);
     - decoration keep-outs feathered, with the 8 dp gap and nothing under the status bar;

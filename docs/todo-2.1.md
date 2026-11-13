@@ -106,6 +106,16 @@ all of them are unapproved.
   - Fix in the final release-notes pass: "bookmarks for a save" is out of date; Save bursts sparkles now (D's v4).
 - Swipe suite on the phone (build 2ec5f751): **passed** (saved-word swipes, context swipes).
 - D: **bigger bar text done and merged** (d89e536). Bar words at 20 dp, ranked by size, with the word menu scaled to match. A source check keeps bar and panel text at 13 dp or more. Nothing in it breaks an owner decision (D checked).
+- A: **guide robustness done and merged** (a5f41ef):
+  - Blocked, not ignored: every locked gesture shows its start, then the chip and No, once per attempt. That follows the
+    owner's v5 rule "each try says it's blocked"; my brief's "once per slide" wasn't the owner's.
+  - The flick slide's glow and crunch had never shown (they sat behind the Swipe lock). Fixed.
+  - The failure matrix is in docs/guide-failures.md. Dead ends fixed: a screen tap moving the cursor, fn+C on the paste slide.
+  - The help hint comes after 3 s and repeats every 6 s, with the demo replayed.
+  - Missing Next: the morph's pulse cancelled Next's fade-in at alpha 0. Fixed, with a check per slide.
+  - The ∞ title is "Add how long you last in bed.", with the owner's two lines pinned.
+  - The paste slide's nice clip pulses gently until pasted.
+  - The Space and flick refusals live in AtlasIme, so they need the phone pass.
 - **Plan for the rest of the night (Orchestrator):**
   1. Merge C's decoration wiring.
   2. Apply F's two GuideActivity strings, and fix the release-notes Save line (sparkles, not bookmarks).

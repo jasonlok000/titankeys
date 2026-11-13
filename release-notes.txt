@@ -21,7 +21,7 @@
 - One size: The bar's three words are the same size and sit dead centre. The best one's in bold.
 - Canadian spelling: Settings > English spelling has Canadian now. Colour and realize. Both. Eh.
 - Two new shortcuts: Hold Shift and press Backspace to delete a word, and Alt + Sym switches to your next keyboard. They're built in, so Key Mapper can sit this one out.
-- Alt + Backspace: It now does what Android does and deletes the line. For a word, hold Shift with Backspace, or use Ctrl.
+- Alt + Backspace: Deletes forward, the letter after the cursor, like Delete on a PC. Hold it to keep going. Rather have Android's own, which deletes the line? Turn off Alt + Backspace deletes forward in Settings. For a word, hold Shift with Backspace, or use Ctrl.
 - Same size at any setting: TitanKeys ignores the phone's font size and display size, so a huge font doesn't blow it up anymore. Want it bigger? Settings > Size has Bigger and Biggest, and the bar keeps its height.
 - Orange off means off: Turn off Orange accents and nothing TitanKeys draws is orange anymore, keys, bar, guide or Settings. It'll tell you what it thinks of that.
 - Snippets start with /: Alt+G or hold G, so no more digging for ; on the Sym panel. Already have snippets with ;? You keep it. Pick another in Settings > Snippets.

@@ -6,7 +6,7 @@ import { showKeyCalibration, state, update } from "../../lib/atlas";
 import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
-import { accentsNote, barLabel, cursorLabel, scrollLabel } from "../../lib/setting-names";
+import { accentsNote, altBackspaceLabel, altBackspaceNote, barLabel, cursorLabel, scrollLabel } from "../../lib/setting-names";
 import { parentOf } from "../../lib/settings-tree";
 import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
@@ -92,6 +92,8 @@ export default function Settings() {
         onChange={doublePressLocks => save.run({ doublePressLocks })} />
       <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}
         onChange={fnAsCtrl => save.run({ fnAsCtrl })} />
+      <Toggle label={altBackspaceLabel} subtitle={altBackspaceNote} value={settings.altBackspaceForward}
+        onChange={altBackspaceForward => save.run({ altBackspaceForward })} />
     </Section>
     <Section title="Look and feel">
       <Field label="Haptics" href="/settings/haptics">{hapticsLabel(settings)}</Field>

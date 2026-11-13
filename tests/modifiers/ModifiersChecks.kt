@@ -24,6 +24,8 @@ private const val WORD = 900L
 fun main() {
     heldShiftBackspaceDeletesWords()
     tappedOrAutomaticShiftLeavesBackspacePlain()
+    heldShiftBackspaceAsTheOwnersPhoneSentIt()
+    altBackspaceDeletesForward()
     altSymSwitchesTheKeyboard()
     altSymWithThePanelOpenIsAsBefore()
     shortcutsActOncePerPress()
@@ -210,8 +212,13 @@ private class Keyboard {
 
     fun appPressed(code: Int = SHIFT) = appPush(code).also { appRelease(code) }
 
+    /** What Backspace does, as the keyboard decides it: [meta] is the key's own meta state. */
+    fun backspaceDoes(meta: Int = 0, altForward: Boolean = true) =
+        modifiers.backspaceDoes(meta, altForward).also { modifiers.afterBackspace() }
+
     /** Backspace as the keyboard handles it: true when it deletes a word. [ctrl] is the key's own Ctrl. */
-    fun backspace(ctrl: Boolean = false) = modifiers.backspaceDeletesWord(ctrl).also { modifiers.afterBackspace() }
+    fun backspace(ctrl: Boolean = false) =
+        (backspaceDoes(if (ctrl) KeyEvent.META_CTRL_ON else 0, altForward = false) == Modifiers.Backspace.Word)
 }
 
 private fun heldShiftBackspaceDeletesWords() = Keyboard().run {
@@ -225,6 +232,69 @@ private fun heldShiftBackspaceDeletesWords() = Keyboard().run {
     up(SHIFT)
     same(shift, Level.Off, "Shift must go off when it's let go after deleting words")
     same(backspace(), false, "After Shift is let go, Backspace must delete one character again")
+}
+
+/**
+ * Held Shift + Backspace in the events' real order, from the owner's typing log (2026-11-11, "In " then Shift held and
+ * Backspace pressed): Shift down with Shift's meta set, Backspace down 32 ms later with Shift's meta, Backspace up, Shift up.
+ * On build #5 that deleted one letter: Shift's own press never reached the modifiers, as when Key Mapper takes a Shift press
+ * and sends its own (the same log has its injected Shift down with no meta and Enter with Shift's, at one instant). Backspace
+ * still carries the held Shift in its meta state, which Android sets from the keys physically down.
+ */
+private fun heldShiftBackspaceAsTheOwnersPhoneSentIt() {
+    val shiftHeld = KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON
+    Keyboard().run {
+        down(SHIFT)
+        idle(32)
+        same(backspaceDoes(shiftHeld), Modifiers.Backspace.Word, "Shift held, as logged, then Backspace must delete a word")
+        up(SHIFT)
+    }
+    Keyboard().run {
+        // Shift's own press is lost; only Backspace says Shift is down.
+        same(backspaceDoes(shiftHeld), Modifiers.Backspace.Word, "A Backspace that says Shift is held must delete a word")
+        idle(50)
+        same(backspaceDoes(shiftHeld), Modifiers.Backspace.Word, "Its repeats must go on deleting words")
+        same(shift, Level.Off, "It must not turn Shift on")
+    }
+    Keyboard().run {
+        // Key Mapper's own tap of Shift arrives, then the held Shift's Backspace: still a word.
+        press(SHIFT)
+        same(backspaceDoes(shiftHeld), Modifiers.Backspace.Word, "A re-sent Shift tap must not stop a held Shift's word delete")
+    }
+    Keyboard().run {
+        // A tapped Shift: Backspace comes with no Shift of its own, and stays a plain Backspace.
+        press(SHIFT)
+        same(backspaceDoes(0), Modifiers.Backspace.Letter, "A tapped Shift must leave Backspace a plain Backspace")
+    }
+}
+
+/** Alt + Backspace, tapped or held, deletes forward with the setting on, and goes to the app with it off. A word delete wins. */
+private fun altBackspaceDeletesForward() {
+    val altHeld = KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON
+    Keyboard().run {
+        press(ALT)
+        same(backspaceDoes(), Modifiers.Backspace.Forward, "A tapped Alt, then Backspace, must delete forward")
+        same(modifiers.alt, Level.Off, "A forward delete must use a tapped Alt up")
+        same(backspaceDoes(), Modifiers.Backspace.Letter, "The next Backspace must be plain again")
+    }
+    Keyboard().run {
+        down(ALT)
+        same(backspaceDoes(altHeld), Modifiers.Backspace.Forward, "Alt held with Backspace must delete forward")
+        idle(50)
+        same(backspaceDoes(altHeld), Modifiers.Backspace.Forward, "Holding them must go on deleting forward")
+        up(ALT)
+    }
+    Keyboard().run {
+        press(ALT)
+        same(backspaceDoes(altForward = false), Modifiers.Backspace.AltToApp, "With the setting off, Alt + Backspace must go to the app")
+        same(modifiers.alt, Level.Off, "Alt + Backspace to the app must still use Alt up")
+    }
+    Keyboard().run {
+        down(ALT)
+        down(SHIFT)
+        same(backspaceDoes(altHeld or KeyEvent.META_SHIFT_ON), Modifiers.Backspace.Word, "Shift and Alt held: the word delete wins")
+        same(backspaceDoes(altHeld or KeyEvent.META_CTRL_ON), Modifiers.Backspace.Word, "Ctrl and Alt: the word delete wins")
+    }
 }
 
 private fun tappedOrAutomaticShiftLeavesBackspacePlain() {
@@ -241,7 +311,7 @@ private fun tappedOrAutomaticShiftLeavesBackspacePlain() {
     Keyboard().run {
         same(backspace(ctrl = true), true, "Ctrl + Backspace must still delete a word")
         press(ALT)
-        same(backspace(), false, "Alt, then Backspace is Android's own Alt + Backspace, not a TitanKeys word delete")
+        same(backspace(), false, "Alt, then Backspace is not a TitanKeys word delete")
         same(modifiers.alt, Level.Off, "Alt + Backspace must use Alt up")
     }
 }

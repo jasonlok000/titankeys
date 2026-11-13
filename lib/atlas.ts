@@ -54,6 +54,8 @@ export type State = {
   holdSymbolMillis: number;
   /** The keyboard treats fn as Ctrl, so Key Mapper is not needed for this. */
   fnAsCtrl: boolean;
+  /** Alt + Backspace deletes forward, like Delete on a PC. Off, Android's own Alt + Backspace deletes the line. */
+  altBackspaceForward: boolean;
   /** Two quick pushes lock Shift or Alt, so Key Mapper is not needed to stop that. */
   doublePressLocks: boolean;
   autoCapitalise: boolean;
@@ -151,7 +153,7 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "size" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog"> & {
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "size" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog"> & {
   /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
   shorthandToggles: Record<string, boolean>;
 };

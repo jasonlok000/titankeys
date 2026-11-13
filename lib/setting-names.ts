@@ -17,6 +17,10 @@ export const scrollLabel = "Scroll assistant";
 /** Space taps: a double tap moves the cursor, a triple tap selects words. */
 export const cursorLabel = "Space taps move and select";
 
+/** Alt + Backspace as Delete on a PC (owner, 2026-11-13: "alt+backspace = forward delete too"). On to start. */
+export const altBackspaceLabel = "Alt + Backspace deletes forward";
+export const altBackspaceNote = "Like Delete on a PC. Off, Android deletes the whole line instead.";
+
 /**
  * The note under Orange accents. It changes every orange TitanKeys draws: the keyboard, the bar, the guide, the front page and
  * these pages (owner, 2026-11-13: "literally everything globally"). Turned off, it roasts you (the Orchestrator's line, the

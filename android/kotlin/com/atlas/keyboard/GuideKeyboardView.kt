@@ -884,7 +884,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      */
     private fun drawHoldZones(canvas: Canvas) {
         if ((cue as? GuideCue.Flick)?.hold != true) return
-        val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE
+        val colour = if (tone == GuideTone.Orange) GuideColours.INK else Accent.colour
         val corner = Radii.px(resources, Radii.SMALL)
         // PAUSE: an outline, not a fill, so it never reads as where to go.
         val pause = geometry.area(HOLD_PAUSE_X, AREA_TOP, AREA_RIGHT, AREA_BOTTOM)
@@ -922,7 +922,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val tall = dp(SUBLABEL_MIN) * .75f + dp(HOLD_PILL_SIDE)
         holdPaint.style = Paint.Style.FILL
         holdPaint.pathEffect = null
-        holdPaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.ORANGE else GuideColours.BLACK, HOLD_PILL)
+        holdPaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) Accent.colour else GuideColours.BLACK, HOLD_PILL)
         canvas.drawRoundRect(x - half, y - tall / 2, x + half, y + tall / 2, tall / 2, tall / 2, holdPaint)
         canvas.drawText(word, x, y + dp(SUBLABEL_MIN) * .36f, holdLabelPaint)
     }

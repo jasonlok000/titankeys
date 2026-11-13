@@ -13,8 +13,10 @@ import android.view.KeyEvent
  * Ctrl is separate from those: it has no sticky state and applies only while it is held.
  *
  * Two shortcuts count only while a modifier is physically held, so they work with Key Mapper off (owner, 2026-11-12):
- * Shift + Backspace deletes a word ([backspaceDeletesWord]), and Alt + Sym switches to the next keyboard ([keyboardSwitch]).
- * A tapped or automatic Shift, or a tapped Alt, doesn't count.
+ * Shift + Backspace deletes a word ([backspaceDoes]), and Alt + Sym switches to the next keyboard ([keyboardSwitch]).
+ * A tapped or automatic Shift, or a tapped Alt, doesn't count for those. Alt + Backspace, tapped or held, deletes forward, the
+ * character after the cursor, like Delete on a PC, or with that setting off goes to the app as Android's own Alt + Backspace,
+ * which deletes the line (owner, 2026-11-13). A word delete wins over it when both apply.
  *
  * Where a sentence starts, Shift comes on by itself, the same as one push, so the first letter is a capital: see [autoShift].
  * Pushing Shift while it is on by itself turns it off, and it stays off until the cursor leaves that place, so the letter there
@@ -67,14 +69,27 @@ class Modifiers {
     /** Returns [keyboardSwitch] and clears it, so one push of Sym switches once. */
     fun takeKeyboardSwitch() = keyboardSwitch.also { keyboardSwitch = false }
 
-    /**
-     * Whether Backspace deletes the previous word: with Ctrl ([ctrl], from the key's own meta state), with Alt on, or with Shift
-     * physically held. A tapped Shift, or one that came on by itself at a sentence start, leaves Backspace a plain Backspace.
-     */
-    fun backspaceDeletesWord(ctrl: Boolean) = ctrl || holding(Key.Shift)
+    /** What a press of Backspace does. */
+    enum class Backspace { Letter, Word, Forward, AltToApp }
 
-    /** After a Backspace: with Alt on, Backspace went to the app as Alt + Backspace and uses Alt up, as a character would. Otherwise only held
-     * modifiers count as used. */
+    /**
+     * What a press of Backspace does, from the key's own meta state [meta] and the modifiers now. With Ctrl, or with Shift
+     * physically held, it deletes the previous word. With Alt, tapped or held, it deletes forward if [altForward], or goes to
+     * the app as Android's own Alt + Backspace. Otherwise it deletes one character. A word delete wins over Alt.
+     *
+     * Shift counts as held when its press reached the keyboard and is still down, or when the Backspace says so itself: Android
+     * marks every key with the modifiers physically down on the keyboard, whatever happened to their own key events. On the
+     * owner's phone, a held Shift's press didn't reach [held], so held Shift + Backspace deleted one letter (2026-11-13).
+     * A tapped Shift, or one that came on by itself at a sentence start, is neither, and leaves Backspace a plain Backspace.
+     */
+    fun backspaceDoes(meta: Int, altForward: Boolean): Backspace = when {
+        meta and KeyEvent.META_CTRL_ON != 0 || holding(Key.Shift) || meta and KeyEvent.META_SHIFT_ON != 0 -> Backspace.Word
+        alt != Level.Off || meta and KeyEvent.META_ALT_ON != 0 -> if (altForward) Backspace.Forward else Backspace.AltToApp
+        else -> Backspace.Letter
+    }
+
+    /** After a Backspace: with Alt on, Backspace deleted forward or went to the app as Alt + Backspace, and uses Alt up, as a
+     * character would. Otherwise only held modifiers count as used. */
     fun afterBackspace() {
         if (alt != Level.Off) consume() else useHeld()
     }

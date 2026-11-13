@@ -654,7 +654,7 @@ public final class SwipeTyping {
                 context.getSharedPreferences("swipe_calibration", 0).getBoolean("enabled", true));
     }
 
-    /** Settings > Reset all settings: the learning switch goes back to its default. The words it learned stay. */
+    /** Settings > Reset most things: the learning switch goes back to its default. The words it learned stay. */
     public void resetLearning() {
         context.getSharedPreferences("word_learning", 0).edit().remove("enabled").apply();
         learningEnabled = storedLearning(); learningGeneration++;

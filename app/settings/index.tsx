@@ -23,7 +23,7 @@ import { shorthandLabel } from "./shorthand/index";
 import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
 import { tapKeysLabel } from "./tap-keys";
-import { RESET_NOTE, resetDone } from "./reset-all";
+import { RESET_NOTE, resetDone } from "./reset-most";
 import { Note } from "../../lib/note";
 
 // Links into Settings land with their parent pages under them, so ← and Back go up and never to the front page.
@@ -116,9 +116,11 @@ export default function Settings() {
       <Field label={bugText.settingsLabel} href="/settings/bug" />
       <Field label="About" href="/settings/about" />
     </Section>
-    {/* So many settings, it's easy to mess them up (owner, 2026-11-13). A plain row: it resets choices, it wipes nothing. */}
+    {/* So many settings, it's easy to mess them up (owner, 2026-11-13: "Two resets. Reset most things and reset literally
+        everything"). Plain rows: each asks first, on its own page. */}
     <Section title="Start over">
-      <Field label="Reset all settings" href="/settings/reset-all" />
+      <Field label="Reset most things" href="/settings/reset-most" />
+      <Field label="Reset literally everything" href="/settings/reset-everything" />
       {resetDone.shown && <Note>{RESET_NOTE}</Note>}
     </Section>
   </Screen>;

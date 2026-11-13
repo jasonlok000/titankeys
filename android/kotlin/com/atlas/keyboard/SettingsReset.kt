@@ -4,7 +4,7 @@ import android.content.Context
 import com.atlas.engine.SwipeTyping
 
 /**
- * Settings > Reset all settings (owner, 2026-11-13: "there's so many now its easy to mess up"). A reset removes each setting's
+ * Settings > Reset most things (owner, 2026-11-13: "there's so many now its easy to mess up"). A reset removes each setting's
  * stored value, so each falls back to the default its own code defines: no second list of defaults to drift. What's yours
  * stays: words, snippets and their start, shorthand, the app lists, the clipboard, Share swipes, news, the key calibration and
  * recordings, each in its own file or listed in [TYPING_DATA].

@@ -100,8 +100,14 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - Spelling: add **Canadian**, whose description carries the joke ("Both. Eh."). (Owner, 2026-11-12)
 - A lone "i" becomes "I" even when "i" is in Blocked words. (Owner; fixed 2026-11-12)
 
+- Apostrophe autocorrect is planned in three groups, which the owner agreed:
+  - Always fix: dont, isnt, youre, im…
+  - Fix only with context: its/it's, were/we're, lets, id, ill.
+  - Never change automatically: well, hell, shell, shed, wed, cant, wont.
+  The reverse direction (it's → its) is left out. The owner wants the logs analysed before any of it is built, including how much context the language model should use. (Owner, 2026-11-12)
+
 ### Open
-- "were" → "we're" and "its" → "it's" only with context, after the next word: "were going" changes, "were friends" doesn't. Proposed and waiting for a go.
+- Waiting on A's log study (apostrophe-study.md), which tests a context of 2+1, 5+2, the whole sentence + 2, and 10+10 words. Building waits for it.
 
 ## Setup and settings scope
 

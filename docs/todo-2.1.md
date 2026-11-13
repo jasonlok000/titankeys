@@ -260,6 +260,16 @@ all of them are unapproved.
     above the keyboard; F: Size grows only the bar's contents, follows the phone's font size until picked, moves to The bar; W:
     an immediate haptic on Save's press (and any late menu button); A: switches for Delete a word and Next keyboard. All from
     059caf3. Then: check the owner's phone lands on Biggest.
+  - **Build #12 on the phone (5acc28a2, from 574184f, installed 15:30, 0 crashes; every verify check passed).** Checked over
+    adb:
+    - Sym on the ∞ slide: the title stays at the same pixel (185 before, at 0.6 s, at 2 s and after; build #10 dropped 51 px),
+      and the ∞ stays whole above the panel (V's panel-still).
+    - The menu slide at Bigger: TitanKeys moves left as the menu opens and stays whole beside "Already a favourite" (W's
+      menu-word-clear). The owner judges whether the move looks good; fallbacks are logged.
+    - Settings is at Normal size; Settings > The bar > Bar text size shows Bigger, following the phone's text size (F).
+    - Delete 1/3 shows the flat e with its strike (V).
+    - Left for the owner's hands: the touchpad (swipe, held flick and its trail, PAUSE height, steer, select), the real Sym key
+      and held letters, haptic feel (the menu's press tick included), pasting on the guide's slides, the two shortcut switches.
   - **Build #11 on the phone (1b094db8, installed 14:53, 0 crashes):** the menu slide works from start to pass over adb (hold
     TitanKeys, I, I): underlined in the box and on the bar, grey, then white, then orange, "FAVOURITED. GOOD TASTE.", Next. The ∞
     slide reads "ANSWER HONESTLY." over "So how long do I last in bed with your mother?". Found: at favourite, the "Already a

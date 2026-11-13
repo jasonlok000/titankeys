@@ -393,34 +393,185 @@ internal class Passage(lead: String, loop: String = lead) {
 }
 
 /**
- * The playground's own text, made for speed: short, common words, no capitals and no marks. Now and then, once you're going, it
- * slips in "i am stupid", to see if you're paying attention.
+ * The playground's own text, made for speed: common words, no capitals and no marks, and no apostrophes either, since autocorrect
+ * would put them back and the line would no longer match. It's in the owner's tone (owner, 2026-11-12: "offensive fun casual",
+ * "nothing off limits"), and long enough to type for about an hour: every line comes once, in a new order, before any comes again.
  */
 internal object PlaygroundText {
     private val SENTENCES = listOf(
-        "titankeys fixes your typos so you can keep pretending you never make any",
-        "swipe a word and lift and titankeys types it before you even look",
-        "flick left from backspace and the whole word is gone like it never happened",
-        "two taps on space and the cursor goes wherever you slide it",
-        "hold a letter and titankeys gives you the symbol in its corner",
+        "your thumbs have more game than you do and even they get left on read",
+        "you bought a phone with a real keyboard in this economy and you call other people weird",
+        "touchscreen people tap glass like pigeons and think they are typing",
+        "this keyboard fixes your typos so your boss keeps thinking you went to school",
+        "somewhere a blackberry is crying because you finally moved on",
+        "you type faster than you think which explains a lot of your messages",
+        "swipe like you mean it and stop poking the keys like they owe you money",
+        "if you can read this you are already smarter than half your group chat",
+        "your ex had a touchscreen and look how that turned out",
+        "every typo you make here stays between you and god and also me",
+        "nobody asked for a phone this thick but here we are loving it",
+        "you spent more time picking this keyboard than picking your friends and it shows",
+        "the delete key has seen things it will never tell anyone about",
+        "you last longer typing this line than you do in bed and that is saying something",
+        "you could have bought an iphone but you wanted to feel something",
+        "type it like you are texting your crush and pretend they will reply this time",
+        "this text never ends just like your screen time report",
+        "your search history would get you arrested in three countries and your typos would get you deported",
+        "your mom liked this keyboard before it was cool",
+        "go outside after this line you absolute keyboard goblin",
+        "just kidding nobody goes outside keep typing",
+        "titankeys does not judge you but it does keep a list",
+        "real keys for real people and a pocket that will never close again",
+        "your phone weighs more than your opinions and both are pretty dense",
+        "every time you swipe a word a touchscreen user loses their job",
+        "the guide called you dumb and honestly the guide was right",
+        "you are not typing fast you are just panicking with confidence",
+        "titankeys learned more words from you this week than you learned all year",
+        "if typing was a sport you would still be on the bench eating chips",
+        "your messages are long because your keyboard finally lets you be annoying",
+        "somebody out there is typing on glass and getting every word wrong and you are smiling",
+        "this is the only workout your thumbs will get today",
+        "you did not choose the titan life the titan life chose you and it regrets nothing",
+        "go ahead and make a typo titankeys is right there waiting to clean up after you again",
+        "your autocorrect has seen you at your worst and still shows up every morning",
+        "the best thing about this keyboard is that nobody can see you type this badly",
+        "one day your grandchildren will ask what a real keyboard was and you will cry",
+        "you type like a raccoon that found a laptop in a dumpster and honestly respect",
+        "your group chat muted you and you still typed a whole paragraph",
+        "typing this slow should be illegal but we are not the police",
+        "keep going you are almost as fast as a kid with a touchscreen",
+        "that was a joke you are nowhere close",
+        "your thumbs called and they want a raise",
+        "titankeys is the only thing in your life that fixes your mistakes without a lecture",
+        "you hold your phone like it owes you rent",
+        "this phone survived a drop that would kill a normal phone and also your dignity",
+        "the keys click and your heart races and that is the most action you got this week",
+        "if you swiped that word perfectly do not tell anyone or they will expect it every time",
         "the screen is for looking at and the keys are for everything else",
-        "titankeys was built for the titan and the titan deserves it",
-        "nobody reads the manual but you swiped through the whole thing",
-        "type fast and do not look at your hands they know the way",
-        "every word you type here is one titankeys did not have to fix",
+        "hold a letter for its symbol like a wizard who never leaves the house",
+        "two taps on space and the cursor goes wherever you slide it like a little dog on a leash",
+        "flick left on the keys and the word is gone like your last relationship",
+        "every great writer started with a keyboard and most of them also had talent",
+        "your spelling is a crime scene and titankeys is the detective",
+        "type the next word and try not to think about how much this phone cost",
+        "people stare at your phone on the train and you pretend you do not love it",
+        "your phone has more buttons than your microwave and you use all of them",
+        "this keyboard runs on your tears and a tiny bit of electricity",
+        "tell your friends about titankeys or keep it a secret like everything else you do",
+        "no cloud no tracking no nonsense just you and your terrible typing",
+        "if your thumbs had a dating profile it would say good with their hands",
+        "you could be doing anything right now and you chose this and that is beautiful",
+        "the faster you type the less time you have to regret what you said",
+        "this sentence is long on purpose to see if you give up and you probably will",
+        "you did not give up which is more than we can say for your diet",
+        "the keyboard is square the phone is square and so are you",
+        "your hands are cold your phone is warm and your messages are lukewarm at best",
+        "every word you swipe is a tiny victory against the touchscreen empire",
+        "typing on glass is like dancing on ice in socks and you are wearing boots",
+        "your thumbs move like they are late for something and they are",
+        "the backspace key is your most loyal friend and it never asks how you are",
+        "nobody needs to know you practiced this for an hour",
+        "you said one more line an hour ago and here we are",
+        "this text is longer than your attention span so we will see who wins",
+        "type like nobody is watching because honestly nobody is",
+        "your phone is thick your keyboard is real and your excuses are thin",
+        "titankeys fixed that word before you even noticed and it will never let you forget it",
+        "your typing speed is impressive for someone using their thumbs and a lot of hope",
+        "somewhere a teacher is proud of you and it is not your typing teacher",
+        "the sound of real keys is the only applause you will get today",
+        "slow down champ the words are not going anywhere",
+        "actually speed up we do not have all day",
+        "the keyboard has your back but your posture does not",
+        "sit up straight you look like a shrimp holding a brick",
+        "you type with the energy of someone who just found out about coffee",
+        "your typos have typos and titankeys has seen them all",
+        "one swipe one word one less reason to touch the screen",
+        "every time you touch the screen a small part of titankeys dies inside",
+        "do not touch the screen we talked about this",
+        "your fingers know this keyboard better than you know your own family",
+        "the guide was short this text is long and your patience is somewhere in between",
+        "congrats on owning a phone that can stop a bullet and still send memes",
+        "this keyboard has more personality than most people you know including you",
+        "you thought this would be a quick test and now you live here",
+        "the only thing faster than your typing is how fast you change your mind",
+        "you would type better if you stopped laughing at these lines",
+        "do not laugh at the next one it is not that funny",
+        "your boss thinks you are working and technically you are practicing",
+        "you are the main character and this is the boring montage",
+        "type until your thumbs ache and then type a little more because you are a legend",
+        "the titan is heavy because it carries the weight of your bad decisions",
+        "a real keyboard in your pocket and still you text like a caveman",
+        "titankeys suggests words because you clearly need suggestions",
+        "your vocabulary is small but your thumbs are mighty",
+        "if you get this whole line right you can call yourself a typing god for ten seconds",
+        "time is up and you are back to being a regular person",
+        "the world is full of touchscreens and you chose violence",
+        "your phone is the last of its kind like a dinosaur that sends emails",
+        "nothing says i peaked in high school like loving real keyboards",
+        "but you are right and everyone else is wrong and that feels great",
+        "typing on real keys is like driving stick and you never let anyone forget it",
+        "your friends ask why your phone is so big and you start a twenty minute speech",
+        "they stopped asking and you kept talking",
+        "you are the reason this keyboard has a delete gesture",
+        "flick that mistake away and pretend it never happened like you do with everything",
+        "your thumbs are faster than your brain and that is a problem for everyone",
+        "the space bar is the biggest key because you hit it the most and think the least",
+        "every message you send is a little worse than you think and that is fine",
+        "titankeys will not tell your secrets but your typos might",
+        "this is a safe space for bad spelling and worse decisions",
+        "you made it this far and that is more than your new year resolutions",
+        "the clock is ticking and so are your keys",
+        "your phone could survive a war and you still put it in a case",
+        "you type like you are defusing a bomb and every word is the red wire",
+        "breathe in breathe out and type the next word you drama queen",
+        "nobody types like you and the world is grateful",
+        "if you are reading this out loud please stop people are looking",
+        "you would be a great writer if you had anything to say",
+        "titankeys loves you but it will still fix your grammar",
+        "the keyboard does not care about your feelings it cares about your spelling",
+        "your thumbs deserve a vacation and you deserve a better phone case",
+        "just kidding your phone case is perfect just like you",
+        "that was sarcasm in case your keyboard did not catch it",
+        "you have been typing for so long your phone is starting to sweat",
+        "the battery is dying and so is your social life but at least you are fast now",
+        "the only thing smaller than these keys is the number of people who understand you",
+        "but titankeys understands you and that has to count for something",
+        "type with one hand and pretend the other one is doing something important",
+        "everyone has a talent and yours is typing nonsense at high speed",
+        "you are not addicted to this keyboard you can stop any time you want",
+        "prove it and stop typing right now",
+        "we knew you could not do it",
+        "your thumbs called in sick but you made them work anyway you monster",
+        "a real keyboard makes you feel like a hacker in a movie from the nineties",
+        "you are not hacking anything you are typing silly sentences into a practice box",
+        "it still looks cool though and that is all that matters",
+        "every swipe is a love letter to a phone nobody else wanted",
+        "this line is here to make sure you are still awake",
+        "you blinked and missed the last word so go back",
+        "never mind keep going there is no going back in life or in this text",
+        "type it type it right type it fast and then go drink some water",
+        "hydration is important and so is a keyboard that does not hate you",
+        "titankeys was built by someone with too much free time and you are welcome",
+        "if you find a bug in this keyboard it was a feature all along",
+        "you are typing faster than your internet and that is not a compliment to your internet",
+        "the people next door can hear you clicking and they have opinions",
+        "click louder and let them know you have a real keyboard",
+        "when the zombies come you will survive because your phone doubles as a brick",
+        "you could stop now but then you would have to talk to people",
+        "keep typing because nobody bothers you while you look this busy",
+        "the end of this text is far away like your dreams but closer than your goals",
+        "and when you reach the end it starts again because you never learn",
     )
-    const val SLIP = "i am stupid"
-    /** The slip comes no sooner than this many words in, and then every so often. */
-    const val SLIP_FIRST = 30
-    const val SLIP_GAP_MIN = 35
-    const val SLIP_GAP_MAX = 70
+
+    /** All the lines' words, which is how long one round of the text is. */
+    val WORDS = SENTENCES.sumOf { it.split(' ').size }
 
     /**
      * Where each sentence of a [make] text starts, by word: the text has no marks, so the sentences are found by their words. The
      * front page shows the whole sentence you're in, never a line cut out of the middle of one (owner, v5.3).
      */
     fun sentenceStarts(words: List<String>): List<Int> {
-        val known = (SENTENCES + SLIP).map { it.split(' ') }
+        val known = SENTENCES.map { it.split(' ') }
         val starts = ArrayList<Int>()
         var at = 0
         while (at < words.size) {
@@ -437,17 +588,10 @@ internal object PlaygroundText {
         return (starts.getOrNull(at) ?: 0) until (starts.getOrNull(at + 1) ?: count)
     }
 
-    /** A long text in a random order, about [count] words, with the slip in a few places. */
-    fun make(random: kotlin.random.Random, count: Int = 600): String {
+    /** At least [count] words: every line once in a random order, and then again in a new order, so nothing repeats early. */
+    fun make(random: kotlin.random.Random, count: Int = WORDS): String {
         val words = ArrayList<String>()
-        var slipAt = SLIP_FIRST + random.nextInt(SLIP_GAP_MAX - SLIP_GAP_MIN)
-        while (words.size < count) {
-            words += SENTENCES[random.nextInt(SENTENCES.size)].split(' ')
-            if (words.size >= slipAt) {
-                words += SLIP.split(' ')
-                slipAt = words.size + SLIP_GAP_MIN + random.nextInt(SLIP_GAP_MAX - SLIP_GAP_MIN)
-            }
-        }
+        while (words.size < count) for (line in SENTENCES.shuffled(random)) words += line.split(' ')
         return words.joinToString(" ")
     }
 }

@@ -155,7 +155,10 @@ private fun drawFront(file: File, typed: String, wpm: Int?, sentence: String, do
     val textLeft = side + pad + px(8)
     val shown = if (typed.isEmpty()) listOf("Start anywhere.") else wrapped(g, typed, inner - 2 * pad - px(8))
     g.color = if (typed.isEmpty()) Theme.MUTED else Theme.CREAM
-    for ((index, line) in shown.take(boxLines).withIndex()) g.drawString(line, textLeft, y + pad + index * g.fontMetrics.height + g.fontMetrics.ascent)
+    // The placeholder sits just after the caret, so the caret never cuts its first letter.
+    val placeholderShift = if (typed.isEmpty()) px(6) else 0
+    for ((index, line) in shown.take(boxLines).withIndex())
+        g.drawString(line, textLeft + placeholderShift, y + pad + index * g.fontMetrics.height + g.fontMetrics.ascent)
     // The caret, orange, after the text.
     val last = shown.take(boxLines).last()
     val caretX = if (typed.isEmpty()) textLeft else textLeft + g.fontMetrics.stringWidth(last) + px(2)
@@ -204,19 +207,31 @@ private fun drawFront(file: File, typed: String, wpm: Int?, sentence: String, do
     }
     // The touchpad's zone, where it really is (GuideKeyboardView's AREA_*), as an orange dashed outline: no key is two-toned.
     val zone = geometry.area(.05f, .5f / 4, .95f, 3.54f / 4)
-    g.color = alpha(Theme.ORANGE, .9f)
-    g.stroke = BasicStroke(px(1.5f).toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, floatArrayOf(px(6).toFloat(), px(5).toFloat()), 0f)
+    // Corner brackets (owner, v5.3): four orange marks at the zone's real corners, and no line across the keys. The corners fall on
+    // Q, P and the bottom row's outer keys, so each mark stops short of the key's label.
+    g.color = Theme.ORANGE
+    g.stroke = BasicStroke(px(2.5f).toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
     val clear = java.awt.geom.Area(java.awt.Rectangle(0, 0, W, H)).apply { subtract(labelBoxes) }
     g.clip = clear
-    g.draw(RoundRectangle2D.Float(zone.left, top + zone.top, zone.width, zone.height, px(14).toFloat(), px(14).toFloat()))
+    val arm = px(48).toFloat()
+    val zoneTop = top + zone.top
+    val zoneBottom = top + zone.bottom
+    for ((x, y, dx, dy) in listOf(
+        listOf(zone.left, zoneTop, 1f, 1f), listOf(zone.right, zoneTop, -1f, 1f),
+        listOf(zone.left, zoneBottom, 1f, -1f), listOf(zone.right, zoneBottom, -1f, -1f),
+    )) {
+        val path = java.awt.geom.Path2D.Float()
+        path.moveTo(x + dx * arm, y)
+        path.lineTo(x, y)
+        path.lineTo(x, y + dy * arm)
+        g.draw(path)
+    }
     g.clip = null
+    // The label, small, just above the keys over the zone's top right corner, where it covers nothing.
     g.font = medium(11)
     val note = "TOUCHPAD"
-    g.color = Theme.BLACK
-    val noteWidth = g.fontMetrics.stringWidth(note) + px(10)
-    g.fillRect((zone.right - noteWidth - px(14)).toInt(), (top + zone.top - g.fontMetrics.height / 2).toInt(), noteWidth, g.fontMetrics.height)
-    g.color = Theme.ORANGE
-    g.drawString(note, zone.right - noteWidth - px(9), top + zone.top + g.fontMetrics.ascent / 2 - px(1))
+    val noteWidth = g.fontMetrics.stringWidth(note)
+    g.drawString(note, zone.right - noteWidth, top - px(8).toFloat())
     // A note for review only, in the keyboard's bar room: the phone shows the keyboard's own bar there.
     g.font = regular(11)
     g.color = Color(0x66, 0xCC, 0xFF)

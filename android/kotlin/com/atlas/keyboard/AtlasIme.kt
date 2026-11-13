@@ -2258,6 +2258,7 @@ class AtlasIme : InputMethodService() {
                 flickCrunch.begin(!altOrPanel && field.words && pieces.canDelete(first.time) && somethingToDelete(first))
                 refused = false
                 endDeleteHold()
+                holdTrail.clear()
                 contact.down(first)
                 if (cursor.resume(first, composer.liftOffMillis.toLong())) {
                     // Back within the slip recovery period: still steering the cursor, never typing. A tick says so.
@@ -2312,8 +2313,9 @@ class AtlasIme : InputMethodService() {
                 contact.move(samples)
                 // A held delete flick waits for the finger to lift, and goes faster the further the finger is from where it started.
                 if (contact.deleting) {
-                    // The guide's drawing of the keys follows a held delete too (owner, v5.2: some slides showed no trail).
-                    Trace.touch(contact.points, false)
+                    // The guide's drawing of the keys follows a held delete too (owner, v5.2: some slides showed no trail): the
+                    // flick's path and the finger since, as the contact keeps no points once it deletes (build #10).
+                    Trace.touch(holdTrail.follow(contact, samples), false)
                     strip?.gesture?.swipeCancelled()
                     samples.lastOrNull { it.valid }?.let { finger ->
                         val next = deleteHold.follow(finger)
@@ -2354,7 +2356,7 @@ class AtlasIme : InputMethodService() {
                     // While it is clearly a flick, the delete glow reaches from the corner to the finger and follows it.
                     if (flickCrunch.crunching) samples.lastOrNull { it.valid }?.let { strip?.gesture?.flickGlow(it.x, it.time) }
                 }
-                Trace.touch(contact.points, false)
+                Trace.touch(holdTrail.follow(contact, samples), false)
                 // A guide slide that doesn't teach swiping shows no word growing on the bar either.
                 if (guideAllows(GuideLesson.Swipe)) showSwipe()
             }
@@ -2480,8 +2482,14 @@ class AtlasIme : InputMethodService() {
         settleHeldTaps()
         // A lift whose last samples were off the touchpad still ends the trail the guide drew, and doesn't wipe it: the guide shows
         // every swipe (owner, v5.2). Trace itself leaves out the points the touchpad didn't read.
-        Trace.touch(if (points.size <= Swipe.MAX_POINTS && (inPractice || samples.all { it.valid })) points else emptyList(), true)
+        // A held delete's trail ends with its own path, flick and hold together, and fades as a swipe's does.
+        val traced = if (holdTrail.held) holdTrail.points.toList() else points
+        Trace.touch(if (traced.size <= Swipe.MAX_POINTS && (inPractice || holdTrail.held || samples.all { it.valid })) traced else emptyList(), true)
+        holdTrail.clear()
     }
+
+    /** A held delete's path, for the guide's drawing: see [HoldTrail]. */
+    private val holdTrail = HoldTrail()
 
     /** The finger's path while the word menu is open, for the guide's drawing only: nothing else reads it. */
     private val menuFinger = ArrayList<Sample>()

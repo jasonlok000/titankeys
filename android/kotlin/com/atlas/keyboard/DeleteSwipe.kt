@@ -406,3 +406,42 @@ internal class DeleteHold(private val contact: Contact) {
         entered = null
     }
 }
+
+/**
+ * The finger's path through a held delete, for the guide's drawing of the keys. Once a contact deletes it keeps no points, so the
+ * drawing was sent an empty path from the moment the hold started, and the trail vanished for the whole hold and its lift (owner,
+ * build #10: "long flick delete it shd show my swipe. it did not show"). This keeps the flick's own points from its last moment as a
+ * stroke, then adds each sample the finger makes as it slides on, back, and rests in the pause, as a swipe's trail does.
+ */
+internal class HoldTrail {
+    private val path = ArrayList<Sample>()
+    private var stroke: List<Sample> = emptyList()
+
+    /** True once the touch has become a held delete, and [points] is its path. */
+    val held get() = path.isNotEmpty()
+
+    /** The held delete's path so far: the flick's points, then every sample since. */
+    val points: List<Sample> get() = path
+
+    /**
+     * The touch's path after [samples]: the stroke's own points while it is one, and the flick's points and every valid sample
+     * since while it deletes. At most [Swipe.MAX_POINTS], the newest kept, so a long hold never stops the trail.
+     */
+    fun follow(contact: Contact, samples: List<Sample>): List<Sample> {
+        if (!contact.deleting) {
+            stroke = contact.points
+            path.clear()
+            return contact.points
+        }
+        if (path.isEmpty()) path.addAll(stroke)
+        path.addAll(samples.filter { it.valid })
+        if (path.size > com.atlas.engine.Swipe.MAX_POINTS) path.subList(0, path.size - com.atlas.engine.Swipe.MAX_POINTS).clear()
+        return path
+    }
+
+    /** A new touch: nothing held yet. */
+    fun clear() {
+        path.clear()
+        stroke = emptyList()
+    }
+}

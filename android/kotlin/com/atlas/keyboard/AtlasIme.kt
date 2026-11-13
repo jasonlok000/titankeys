@@ -312,6 +312,7 @@ class AtlasIme : InputMethodService() {
     private val hideStrip = Runnable {
         // A held status has no strip to hide, and hiding the window would give the touchpad back to the app.
         if (editing || hold.held) return@Runnable
+        holdTrace("strip hide")
         try {
             hideWindow()
             requestHideSelf(0)
@@ -992,11 +993,24 @@ class AtlasIme : InputMethodService() {
 
     private val releaseHighTouchpad = Runnable { BackService.touchpad(null) }
 
+    /**
+     * TitanKeys Debug only: one logcat line (tag AtlasHold) for each decision about the touchpad hold, with everything it
+     * depends on, so a phone where the keys scroll apps outside text fields shows why. Every other build logs nothing.
+     */
+    private fun holdTrace(event: String) {
+        if (!packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) return
+        Log.i("AtlasHold", "$event app=${currentInputEditorInfo?.packageName} wanted=${holdWanted()} " +
+            "setting=${TypingSettings.touchpadOnlyInFields(this)} editing=$editing overlay=${overlay.up} " +
+            "back=${BackService.enabled(this)} lettingGo=${hold.lettingGo} held=${hold.held} shown=$isInputViewShown " +
+            "binding=${currentInputBinding != null}")
+    }
+
     private fun holdWanted() =
         TouchpadHold.wanted(TypingSettings.touchpadOnlyInFields(this), editing, overlay.up, BackService.enabled(this), hold.lettingGo)
 
     /** Puts the status that the firmware reads where the setting and the field need it. See [TouchpadHold]. */
     private fun updateHold() {
+        holdTrace("update")
         if (holdWanted()) {
             // A strip that is still up keeps the status on until it hides, and its hide leaves the status on.
             if (hold.held || isInputViewShown || main.hasCallbacks(showHold)) return
@@ -1011,14 +1025,19 @@ class AtlasIme : InputMethodService() {
     }
 
     private val showHold = Runnable {
-        if (!holdWanted() || hold.held || isInputViewShown || currentInputBinding == null) return@Runnable
+        if (!holdWanted() || hold.held || isInputViewShown || currentInputBinding == null) {
+            holdTrace("show skipped")
+            return@Runnable
+        }
         try {
             backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
             showWindow(false)
             // Only the status is wanted. Before the first frame, this takes the window back off the screen.
             holdWindow()
+            holdTrace("shown")
         } catch (error: RuntimeException) {
             Log.w("Atlas", "Could not report the keyboard status", error)
+            holdTrace("show failed: $error")
         }
     }
 
@@ -1029,6 +1048,7 @@ class AtlasIme : InputMethodService() {
 
     /** With no field, a hide takes only the window away. Android's own would also turn the status off. See [TouchpadHold]. */
     override fun hideWindow() {
+        holdTrace("hide asked, keeps=${TouchpadHold.keepsStatus(holdWanted(), isInputViewShown)}")
         if (!TouchpadHold.keepsStatus(holdWanted(), isInputViewShown)) {
             super.hideWindow()
             return
@@ -1217,6 +1237,7 @@ class AtlasIme : InputMethodService() {
         }
         updateExactBar()
         hold.started(info.packageName, editing)
+        holdTrace("input start restarting=$restarting")
         if (!statusReported) {
             statusReported = true
             // A new back disposition sends the current status, which clears a status that a dead process left on.
@@ -1382,6 +1403,7 @@ class AtlasIme : InputMethodService() {
         inputRoot?.setPadding(0, 0, 0, 0)
         // Android's hide also turned the status off.
         hold.hidden()
+        holdTrace("window hidden")
         // A panel that nobody can see must not take the next key.
         closePanel()
         // A delayed hide from the previous app arrives just after this field starts. A later hide, or one

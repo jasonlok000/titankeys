@@ -105,6 +105,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - Never change automatically: well, hell, shell, shed, wed, cant, wont.
   The reverse direction (it's → its) is left out. The owner wants the logs analysed before any of it is built, including how much context the language model should use. (Owner, 2026-11-12)
 
+- Study result (A, apostrophe-study.md, judged by meaning): today 73% are right, with no wrong changes but many misses. With the study's policy it's 93%, still with no wrong changes. The policy uses 5 words before and 2 after, a margin of 1.0 nats, and fires 2 words back. D builds it exactly to the study's spec, which replaces the earlier lists. were → we're is never changed automatically. (Owner's go, 2026-11-12)
 - Build it as soon as the study is in. The study judges which form was right by reading the context, not by what the owner kept, because the owner usually leaves wrong apostrophes in place. A does the study; D builds it in TypedCorrector. (Owner, 2026-11-12)
 
 ## Setup and settings scope

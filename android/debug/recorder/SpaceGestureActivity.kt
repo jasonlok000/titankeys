@@ -37,6 +37,8 @@ import java.util.Locale
  * the field changed, so a tool can find which rule made a try fail. The field holds sample text only.
  */
 class SpaceGestureActivity : Activity(), Recording.Sink {
+    /** Every press here plays its haptic: see [onPress]. */
+    private val haptics by lazy { Haptics(this) }
     private enum class Kind(val label: String, val id: String, val colour: Int, val wanted: String) {
         Steer("Steer: Space twice, then swipe", "steer", Color.rgb(90, 200, 250), "steer"),
         Select("Select: Space three times, then swipe", "select", Color.rgb(255, 149, 0), "select"),
@@ -365,7 +367,7 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
         textSize = 13f
         isAllCaps = false
         setTextColor(each.colour)
-        setOnClickListener { choose(each) }
+        onPress(haptics) { choose(each) }
         kindButtons[each] = this
     }
 
@@ -374,7 +376,7 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
         textSize = 11f
         isAllCaps = false
         layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        setOnClickListener { action() }
+        onPress(haptics) { action() }
     }
 
     private companion object {

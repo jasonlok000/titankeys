@@ -203,15 +203,18 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family, va
     /** Record a bug stopped: it lets go. */
     BugRecordingStopped("bug_recording_stopped", HapticGroup.Other, Family.Release),
     GuideCelebration("guide_celebration", HapticGroup.Other, Family.Celebrate),
-    /** Next pressed in the guide. */
-    GuideNext("guide_next", HapticGroup.Other, Family.Confirm),
     /** The guide's slide blocked something, and says so. */
     GuideBlocked("guide_blocked", HapticGroup.Other, Family.No),
     /** The guide showed a hint or a scenario chip. */
     GuideHint("guide_hint", HapticGroup.Other, Family.Change),
 
-    // TitanKeys' own screens (docs/haptics.md, The app's own controls). A press on the touchscreen has no click of its own,
-    // so the controls that change something say what changed. Navigation and plain buttons stay quiet.
+    // TitanKeys' own screens (docs/haptics.md, TitanKeys' own screens). A press on the touchscreen has no click of its own, so
+    // every press plays something: the controls that change something say what changed, and every other press plays Press.
+    /**
+     * Any other press in the app, the guide or the playground: ✕, ←, a row, a button, a pill, a link, Next or Skip (owner,
+     * 2026-11-13: "Add haptics to every touch screen press"). One light tick, a click. See [onPress] and [InkPress].
+     */
+    AppPress("app_press", HapticGroup.App, Family.Texture),
     /** A switch in the app, or the guide's, turned on: it locks in, as a quick setting does. */
     AppSwitchOn("app_switch_on", HapticGroup.App, Family.Lock),
     /** A switch in the app, or the guide's, turned off: it lets go. */

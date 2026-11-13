@@ -32,7 +32,7 @@ Patterns are on and off in ms, starting with on.
 
 | Family | Pattern | Plays for |
 |---|---|---|
-| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, the marked button in the word menu or a panel, a step of a stepper in the app, the playground's shake starting (a short run of ticks) |
+| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, the marked button in the word menu or a panel, a step of a stepper in the app, any other press in the app (Press), the playground's shake starting (a short run of ticks) |
 | **Crunch** | 9, 12, 9 | Keys crossed while a stroke is clearly a delete flick |
 | **Boundary** | 30 | A stroke that crunched stops being a flick, the cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel, a long delete's finger going into the pause zone or reaching the top-speed line |
 | **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, steering starts, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar, an option picked in the app |
@@ -194,12 +194,14 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 
 **TitanKeys' own screens** (Settings, every page in it, the guide and the playground)
 
-A press on the touchscreen has no click of its own, so the controls that change something say what changed, in the keyboard's
-own words. Everything else stays quiet: Android's stock click is a prebaked effect (rule 5), so TitanKeys turns it off in
-Ink's screens and plays nothing in its place.
+A press on the touchscreen has no click of its own, so every press plays something (owner, 2026-11-13: "Add haptics to every
+touch screen press on the app"). The controls that change something say what changed, in the keyboard's own words, and every
+other press plays **Press**, one light tick, a click. Android's stock click is a prebaked effect (rule 5), so TitanKeys turns it
+off and plays its own in its place. Every control, page by page, and what it plays is in [haptics-audit.md](haptics-audit.md).
 
 | Control | Plays | Why |
 |---|---|---|
+| Any other press: ✕, ←, a row, a button, a pill, a link, Next, Skip, a topic opening or closing | **Press** | One Texture tick, 17 ms: a click is a small, fast thing, and the lightest pulse there is, so it never reads as a message. Being texture, it never holds up or cuts a message, and fast presses each tick. |
 | A switch turned on | **Lock** | It stays on, as a quick setting switched on does. |
 | A switch turned off | **Release** | It lets go, as a quick setting switched off does. |
 | Agreeing to share swipes | **Lock** | It turns Share swipes on. Declining changes nothing, so it's quiet. |
@@ -221,8 +223,15 @@ seconds, with the number back to nothing) and the show reaches it anew. Lightnin
 storm lasts. A jump in speed that passes several at once plays only the highest, and counts the rest as reached, so two never run
 into each other. All five share one switch, **Playground effects**.
 
+Every press goes through one place, so none can be forgotten. On the native screens, the guide, the playground and the
+others, a control is made with `onPress` (AppPress.kt), which plays its haptic and turns Android's click off. In Ink's pages,
+Ink sends every press, the header's ✕ and ← too, to `appPressHaptic`, which plays Press 50 ms later. A control that plays its
+own haptic, a switch, a stepper, a pick, a delete or a refusal, calls the app in that time, and its haptic takes the place of
+Press, so a switch only locks and never clicks first. tools/checks/app-haptics.test.ts fails on a native press set any other
+way, and on an Ink press with its haptic turned off.
+
 They play through the keyboard's switches: **All haptics** off silences them, and each has its own switch in Settings >
-Haptics, under TitanKeys' own screens, except the playground's five moments, which share **Playground effects**. Turning All haptics off plays its release first, while haptics are still on. Turning it
+Haptics, under TitanKeys' own screens (Press is **A press**, on to start with), except the playground's five moments, which share **Playground effects**. Turning All haptics off plays its release first, while haptics are still on. Turning it
 on plays nothing, as haptics were off when it was pressed.
 
 ## What plays nothing, and why
@@ -242,12 +251,9 @@ on plays nothing, as haptics were off when it was pressed.
 - **A new step in the guide, and setup changes there.** You're looking at the guide.
 - **The playground's speed show, apart from its five big moments, and idle games.** Each step, comment, spark and flame is for
   your eyes. Only the five moments above play, so nothing else buzzes while you type at speed.
-- **Navigation in TitanKeys' own screens:** opening a page, ←, ×, Back, links and tabs. The screen changes, so you see it.
-- **Plain buttons there:** Export, Import, Copy, Share, Open, Add app, the guide's Skip, Start again, Leave and the setup steps. What
-  they do shows on the screen, or opens another one.
-- **Removing one item from a list** (✕ on a word, a snippet, an app or a key). The row goes as you watch. Gone is for wiping
-  data, after a confirm.
-- **Typing in the app's own text fields.** Key presses.
+- **Typing in the app's own text fields.** Key presses. A tap that puts the caret in a field plays nothing either: Ink doesn't
+  report it as a press, and the caret and the keyboard show where it went.
+- **Android's own back gesture and its dialogs,** such as a permission request. They're the system's, not TitanKeys'.
 
 ## The gate
 

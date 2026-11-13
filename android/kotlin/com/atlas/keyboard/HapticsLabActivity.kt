@@ -50,6 +50,8 @@ private object LabColours {
  * The notes and the patterns in use go in a file that adb can pull.
  */
 class HapticsLabActivity : Activity() {
+    /** Every press here plays its haptic: see [onPress]. */
+    private val haptics by lazy { Haptics(this) }
     /** The same sizes at any display size or font size (FixedScale). */
     override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
 
@@ -158,7 +160,7 @@ class HapticsLabActivity : Activity() {
         setPadding(0, dp(6), 0, dp(6))
         isClickable = true
         isFocusable = true
-        setOnClickListener { edit(event.haptic.family, event.haptic) }
+        onPress(haptics) { edit(event.haptic.family, event.haptic) }
     }
 
     /** The editor with nothing picked: each family, to open its editor without waiting for it to play. */
@@ -177,7 +179,7 @@ class HapticsLabActivity : Activity() {
                 gravity = Gravity.CENTER_VERTICAL
                 isClickable = true
                 isFocusable = true
-                setOnClickListener { edit(family, null) }
+                onPress(haptics) { edit(family, null) }
             })
         }
     }
@@ -202,7 +204,7 @@ class HapticsLabActivity : Activity() {
         }
         editor.addView(LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            addView(button("Play", "Play ${family.label} alone") { lab.preview(family) })
+            addView(button("Play", "Play ${family.label} alone", haptic = null) { lab.preview(family) })
             addView(button("Reset", "Reset ${family.label}") {
                 lab.tryPattern(family, null)
                 drawEditor()
@@ -215,7 +217,7 @@ class HapticsLabActivity : Activity() {
             editor.addView(text("A hold's words play it shorter as the hold speeds up, down to " +
                 "${HapticPalette.MESSAGE_PULSE_MILLIS} ms at the top pace. Every word plays.", 13f, LabColours.DIM)
                 .apply { setPadding(0, dp(8), 0, 0) })
-            editor.addView(button("Play a hold", "Play a held delete of ${HoldTicks.PLAY_WORDS} words and its dots") { lab.playHold() },
+            editor.addView(button("Play a hold", "Play a held delete of ${HoldTicks.PLAY_WORDS} words and its dots", haptic = null) { lab.playHold() },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)).apply { topMargin = dp(8) })
             editor.addView(text("It holds for the flick and ${HoldTicks.PLAY_WORDS} words, $REPEAT_SLOW_MILLIS ms apart, as " +
                 "a hold starts. Then it lifts and the dots land. ${HapticTimeline.planWords(lab.holdPlan())}", 13f, LabColours.DIM)
@@ -274,7 +276,8 @@ class HapticsLabActivity : Activity() {
     }
 
     /** A small pill button, still 48 dp tall so it's easy to press. */
-    private fun button(label: String, description: String, pressed: () -> Unit) = TextView(this).apply {
+    /** A button that plays [haptic] as it's pressed: null for Play and Play a hold, so nothing plays on top of what they play. */
+    private fun button(label: String, description: String, haptic: Haptic? = Haptic.AppPress, pressed: () -> Unit) = TextView(this).apply {
         text = label
         contentDescription = description
         textSize = 15f
@@ -289,7 +292,7 @@ class HapticsLabActivity : Activity() {
         }
         isClickable = true
         isFocusable = true
-        setOnClickListener { pressed() }
+        onPress(haptics, haptic) { pressed() }
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48))
     }
 

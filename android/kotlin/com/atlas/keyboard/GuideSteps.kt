@@ -1273,7 +1273,8 @@ internal val GUIDE_STEPS = listOf(
         id = "menu", chapter = GuideChapter.Typing,
         title = "Save a word. Then unsave it.",
         stages = listOf(
-            GuideStage("Hold any word on the bar until its menu opens.") { event ->
+            // The guide's menu is only for show, and says so before anything is pressed (owner, 2026-11-13).
+            GuideStage("Hold a word on the bar. Nothing here gets saved.") { event ->
                 when (event) {
                     is WordMenu -> GuideVerdict.Done
                     is Chosen -> chip("That typed it. Hold it, don't tap.")

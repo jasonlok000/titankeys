@@ -192,7 +192,15 @@ all of them are unapproved.
   - **Orchestrator, done:** the boring guide's new topic, "Space gestures: tap a bit higher".
   - **W, a new dedicated worker** (2.1 W: word menu ladder and hover fix, local_7148acab): Forget only on really learned words, not
     candidates; hover kept after a press, as in the quick settings; a check for the whole ladder.
-  - Then: build #5, install, and phone checks. The release notes get a line for Size and one for the playground haptics.
+  - **Release notes** (3122c02): Alt + Backspace (2.0 deleted a word, and now Android deletes the line), one-size bar words, and
+    playground haptics. Size gets its line once F's branch merges.
+  - **The plan from 08:45:**
+    1. F's Size setting (its verify is running) and W's word menu fix land, and get reviewed and merged.
+    2. Build #5 and install.
+    3. The Orchestrator's phone checks, done without hands: run1, the Sym panel over the lines at 108, the share screen, the paste
+       selection, the front page, and Size at Biggest.
+    4. The owner's hands-on review: the word menu's hover and ladder, how the haptics feel, swipe, flick, steer, and the clown hunt.
+    5. Release: the owner removes the Sym $%= maps from Key Mapper, does the signed release build and publishes. The release notes get a line for Size and one for the playground haptics.
 - **Asked the owner (07:58): haptics for the playground's effects?** Today they're silent. The Orchestrator's proposal is five big moments
   and nothing per step:
   - 40 wpm, the first confetti: Celebrate;

@@ -24,9 +24,13 @@ const parents: Record<string, string> = {
   "/settings/licences": "/settings/about",
 };
 
-/** A page's parent in Settings, null for the top of Settings, or undefined for a page outside it. */
+/**
+ * A page's parent in Settings, null for the top of Settings or for the front page, or undefined for a page outside them.
+ * The front page is the top of its own tree, so a link to it, such as the guide's Go type something, opens it alone, with
+ * no ← for the moment before the playground covers it.
+ */
 export function parentOf(path: string): string | null | undefined {
-  if (path === TOP) return null;
+  if (path === TOP || path === "/") return null;
   if (!path.startsWith(`${TOP}/`)) return undefined;
   if (parents[path]) return parents[path];
   // A page in a folder, such as /settings/data/reset, sits under the folder's own page.

@@ -11,6 +11,8 @@ It adds:
 - An `accent` theme colour, for screen titles, section titles and field values.
 - `tone` on `Text`: `"muted"` for notes, `"accent"` for what stands out.
 - Wrapped descriptions: a switch's description always wraps, and a row's wraps with `wrapSubtitle`.
+- Wrapped titles and rows: a large screen title wraps instead of ending in …, and an inline field's label wraps beside a
+  short value, with a clear gap, instead of running into it. A long value still wraps under the label.
 - A screen's `note` at the theme's subtitle size, so fine print is never smaller than a subtitle.
 - A short fade under the header, so content scrolls away softly instead of being cut.
 - `setRouteParents`, so a link into a Settings page lands with its parent pages under it, and ← goes up.

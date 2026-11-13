@@ -38,7 +38,8 @@ test("every Settings page goes up to a real page, and reaches the top of Setting
 
 test("the top of Settings has no parent, and pages outside Settings are not in the tree", () => {
   expect(parentOf("/settings")).toBeNull();
-  expect(parentOf("/")).toBeUndefined();
+  // The front page is the top of its own tree: a link to it opens it alone, with no ←.
+  expect(parentOf("/")).toBeNull();
   expect(parentOf("/settingsx")).toBeUndefined();
 });
 

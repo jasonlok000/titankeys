@@ -38,7 +38,7 @@ export default function BoringGuide() {
   const startKey = settings ? settings.altKeys[start] : "G";
   const typeStart = !startKey ? `${start} is on the Sym panel.`
     : settings?.holdSymbols === false ? `${start} is Alt and ${startKey}.` : `${start} is Alt and ${startKey}, or hold ${startKey}.`;
-  return <Screen title="The boring guide" subtitle="Every feature, every setting, in words. Enjoy, nerd.">
+  return <Screen title="The boring guide" subtitle="Every feature and every setting, in words. Enjoy, nerd.">
     <Section title="Start here">
       <Topic title="The fun guide">{"The fun guide teaches the main stuff right on the keys, a chapter at a time. Open it from Settings > Guide. This one is for everything else."}</Topic>
       <Topic title="The front page">{"Open TitanKeys and you land on a place to type and swipe whatever you like. The line above the field suggests words if you want something to follow. Type fast and it shows your words a minute, and the screen warms up to orange. Guide and Settings are at the top."}</Topic>

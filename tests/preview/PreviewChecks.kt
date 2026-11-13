@@ -119,7 +119,7 @@ class PreviewChecks : Instrumentation() {
     }
 
     private companion object {
-        const val HINT = "Your words go here."
+        const val HINT = "Type here. Or swipe."
         const val OPEN_MILLIS = 15_000L
     }
 }

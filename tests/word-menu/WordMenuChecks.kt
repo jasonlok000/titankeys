@@ -11,6 +11,7 @@ import com.atlas.keyboard.MenuScene
 import com.atlas.keyboard.QuickSetting
 import com.atlas.keyboard.QuickSettingsPage
 import com.atlas.keyboard.SteadyKey
+import com.atlas.keyboard.StripFit
 import java.io.File
 
 /**
@@ -245,7 +246,7 @@ private fun theLadder() {
 
 /** A word's layout for the checks: each letter 11 dp wide, as a stand-in for the font. */
 private fun scene(word: String, step: MenuKeys.Step, onHaptic: (MenuKeys.Button, String) -> Unit = { _, _ -> }) =
-    MenuScene(word, MenuScene.WordLayout.of(word) { it.length * 11f }, 160f, MenuScene.CY + 6.5f, step, onHaptic = onHaptic)
+    MenuScene(word, MenuScene.WordLayout.of(word) { it.length * 11f }, 160f, StripFit.baseline(StripFit.LINE_DP, MenuScene.FONT_DP), step, onHaptic = onHaptic)
 
 /**
  * Opening the menu plays no step's burst, and never two things in a row (owner, 2026-11-13: "when selecting a word, it first shows

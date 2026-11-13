@@ -97,7 +97,7 @@ class Strip(
      * The newest clip, right after a copy: a clipboard icon and the start of the clip, at the size and on the line of the words, so
      * that it reads as one of them. A touch pastes it.
      */
-    private val clipText = TextView(context).apply {
+    private val clipText = LineText(context).apply {
         typeface = this@Strip.typeface
         textSize = WORD_SIZE
         gravity = Gravity.CENTER
@@ -128,7 +128,8 @@ class Strip(
         setOnClickListener { paste() }
     }
     private val chips = ModifierBar.ALL.associateWith(::chip)
-    private val hint = TextView(context).apply {
+    /** What each key does while a modifier is held. It shrinks to fit, and is drawn on the bar's line at whatever size it takes. */
+    private val hint = LineText(context).apply {
         typeface = this@Strip.typeface
         gravity = Gravity.CENTER
         // A single-line view scrolls where this one must shrink, so it only has a limit of one line.
@@ -142,7 +143,8 @@ class Strip(
             1, TypedValue.COMPLEX_UNIT_PX)
     }
     private val modifierRow = LinearLayout(context).apply {
-        gravity = Gravity.CENTER_VERTICAL
+        // Each chip's top is set so that its text sits on the bar's line: see [chipBox].
+        gravity = Gravity.TOP
         for (chip in chips.values) addView(chip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(CHIP_GAP) })
         addView(hint, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
     }
@@ -187,7 +189,7 @@ class Strip(
         wordsRelease = Runnable { render() }.also { postDelayed(it, millis) }
     }
 
-    // The guide points at a word: it wiggles up and down in its place until it is picked or changes. See [GuideHooks.stripPoint].
+    // The guide points at a word: it bobs up from its line and back until it is picked or changes. See [GuideHooks.stripPoint].
 
     private var pointedIndex = -1
     private var pointed: String? = null
@@ -232,7 +234,8 @@ class Strip(
             duration = POINT_MILLIS
             repeatCount = android.animation.ValueAnimator.INFINITE
             addUpdateListener {
-                view.translationY = -reach * kotlin.math.sin(it.animatedFraction * 2 * Math.PI).toFloat()
+                // Up from its line and back, never under it: on the bar's line a word's tails are already low by the screen's edge.
+                view.translationY = -reach * (1f - kotlin.math.cos(it.animatedFraction * 2 * Math.PI).toFloat())
                 // A lit word's line moves with it.
                 if (litIndex >= 0) invalidate()
             }
@@ -375,6 +378,21 @@ class Strip(
     private val slotChanged = LongArray(2)
     /** The bar's height: the same at every Bar text size, while the words, chips, marks and menu in it grow (FixedScale). */
     private val barHeight = Math.round(FixedScale.fixedPx(context, BAR_DP))
+    /**
+     * The bar's line, in px under its top, at every Bar text size: the middle of the bar and the black border under the screen
+     * ([StripFit.LINE_DP]). Every text in the bar has the middle of its small letters on it.
+     */
+    private val line = FixedScale.fixedPx(context, StripFit.LINE_DP)
+    /**
+     * How far what shows clearly keeps from the screen's outline, in px ([StripFit.EDGE_DP]), and so the lowest it may reach, in px
+     * under the bar's top. Text only rises over it at a size the bar wasn't made for; a chip's box rises just enough.
+     */
+    private val edge = FixedScale.fixedPx(context, StripFit.EDGE_DP)
+    private val floor = barHeight - edge
+    /** How far a faint box, the menu's pill, and the menu's icons' boxes keep inside the bar at least: [StripFit.INSIDE_DP]. */
+    private val inside = FixedScale.fixedPx(context, StripFit.INSIDE_DP)
+    /** How far the Shift, Alt and Ctrl chips, and the automatic capital's arrow in their place, keep from each side: see [chipBox]. */
+    private var chipSide = 0
 
     init {
         // The modifiers come first, so that their chips sit at the start of the words.
@@ -459,8 +477,11 @@ class Strip(
         val offer = clip.takeIf { showSuggestions && confirm == null && bar == null && demo == null }
         val chosen = selected.takeIf { showSuggestions && confirm == null && bar == null && offer == null && demo == null }
         setBackgroundColor(if (!showSuggestions) Color.TRANSPARENT else look.paper)
-        // The lowest text sits about 16 dp over the bottom of the strip, where the corners curve in.
-        side = maxOf(dp(8), corners.inset((navigationInset + dp(CONTENT_ABOVE)).toFloat()) + dp(4))
+        // Each side item keeps from the screen's rounded corners at its own lowest point, low in the bar where the corners curve in:
+        // the words' tails on the line, and the chips' boxes, a little lower.
+        side = sideFor(barHeight - wordFoot())
+        val (chipTop, chipHeight) = chipBox()
+        chipSide = maxOf(side, sideFor(barHeight - (chipTop + chipHeight)))
         setPadding(side, 0, side, if (showSuggestions) navigationInset else 0)
         // Keep a window for firmware touchpad routing when there is nothing to display.
         minimumHeight = if (showSuggestions) 0 else 1
@@ -486,7 +507,15 @@ class Strip(
             view.setTextColor(look.ink)
         }
         modifierRow.visibility = if (bar != null) VISIBLE else GONE
+        // The chips start further in than the words, as their boxes reach lower, and each box has its text on the line.
+        modifierRow.setPadding(chipSide - side, 0, 0, 0)
         for ((name, chip) in chips) {
+            (chip.layoutParams as LayoutParams).let { params ->
+                if (params.topMargin != chipTop.toInt()) {
+                    params.topMargin = chipTop.toInt()
+                    chip.layoutParams = params
+                }
+            }
             chip.visibility = if (bar != null && name in bar.chips) VISIBLE else GONE
             // A key that a finger holds down is filled. One that was pushed and let go is an outline.
             val held = bar != null && name in bar.held
@@ -504,9 +533,11 @@ class Strip(
         showNotice(confirm)
         clipView.visibility = if (offer != null) VISIBLE else GONE
         // The clip follows the words' rules: it shrinks to fit, and then shows its start and its last word, "word word … word".
-        // While the automatic capital's arrow shows, the clip keeps out of the arrow's place at the left.
-        val reserve = if (autoCapital && showSuggestions) Math.round(capitalWidth()) + dp(CAPITAL_CLEAR) + dp(4) else 0
-        clipView.setPadding(dp(6) + reserve, 0, dp(6), 0)
+        // While the automatic capital's arrow shows, the clip keeps out of the arrow's place at the left, which is in as far as the
+        // chips are.
+        val reserve = if (autoCapital && showSuggestions) Math.round(capitalWidth()) + dp(CAPITAL_CLEAR) + dp(4) + chipSide - side else 0
+        // A clip with its hint stacks two lines that can't sit on the line; they keep the edge's distance over the screen's bottom.
+        clipView.setPadding(dp(6) + reserve, 0, dp(6), if (offer != null && clipHint) Math.round(edge) else 0)
         val preview = offer?.let { ClipboardHistory.preview(it, CLIP_PREVIEW_LENGTH) }.orEmpty()
         val icon = Math.round(wordPixels() * CLIP_ICON_SCALE)
         val clipRoom = (width - paddingLeft - paddingRight - clipView.paddingLeft - clipView.paddingRight - icon - clipText.compoundDrawablePadding).toFloat()
@@ -536,15 +567,50 @@ class Strip(
 
     /**
      * Sets [view]'s one line on the bar's line of words: the baseline that puts the small letters of words [lineSize] px big on
-     * the bar's centre line. The words give their full size, so a word shrunk to fit sits on the same line as its neighbours,
+     * the bar's [line]. The words give their full size, so a word shrunk to fit sits on the same line as its neighbours,
      * not centred on its own smaller letters (owner, 2026-11-13: one bar baseline). A notice gives its own. Keeps its padding at
      * the sides, and its gravity across.
      */
     private fun centreLetters(view: TextView, lineSize: Float = view.paint.textSize) {
         view.includeFontPadding = false
         view.gravity = (view.gravity and Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK) or Gravity.TOP
-        val top = StripFit.top(barHeight, lineSize, view.paint.fontMetricsInt.ascent)
+        val top = StripFit.top(line, lineSize, view.paint.fontMetricsInt.ascent, floor)
         if (view.paddingTop != top || view.paddingBottom != 0) view.setPadding(view.paddingLeft, top, view.paddingRight, 0)
+    }
+
+    /** The lowest point of the words on the line, their tails, in px under the bar's top. The selected word and a clip are as low. */
+    private fun wordFoot() = Math.round(StripFit.baseline(line, wordPixels(), floor)) + wordPixels() * StripFit.DESCENT
+
+    /**
+     * How far in from each side something keeps whose lowest point is [above] px over the bar's bottom (the bar's corner rule): far
+     * enough that it stays [edge] from the curve of the screen's rounded corner at that height, measured straight to the curve.
+     */
+    private fun sideFor(above: Float) = maxOf(dp(8), corners.clearInset(navigationInset + above, edge))
+
+    /**
+     * Where a Shift, Alt or Ctrl chip sits, its top and its height in px: its text on the bar's line, unless its box would then
+     * reach under [floor], and then it rises just enough. Shift's arrow for an automatic capital sits in the same place.
+     */
+    private fun chipBox(): Pair<Float, Float> {
+        val chip = chips.values.first()
+        val metrics = chip.paint.fontMetricsInt
+        val height = (2 * dp(3) + metrics.descent - metrics.ascent).toFloat()
+        val middle = dp(3) - metrics.ascent - chip.textSize * StripFit.X_HEIGHT / 2
+        return StripFit.boxTopPx(line, middle, height, floor).toFloat() to height
+    }
+
+    /** The modifiers' hint, and a clip offered alone, draw their letters on the bar's line wherever they were laid out. */
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        super.onLayout(changed, l, t, r, b)
+        onLine(hint, modifierRow.top + hint.top)
+        // A clip and its hint stack in the middle of the bar, over the edge: at Bigger the two lines fill it.
+        if (clipHintText.visibility == VISIBLE) clipText.line = Float.NaN else onLine(clipText, clipView.top + clipText.top)
+    }
+
+    /** [view] draws on the bar's line and over its floor, from its [top] in the bar. */
+    private fun onLine(view: LineText, top: Int) {
+        view.line = line - top
+        view.floor = floor - top
     }
 
     /** How wide a word is at the words' full size. */
@@ -573,21 +639,24 @@ class Strip(
         }
     /** The height of Shift's chip: its text size and padding. The arrow's place is that tall. */
     /**
-     * The clip and its hint stack in the bar, which keeps its height at every Bar text size. At Bigger the two lines would
-     * be taller than it, so both shrink alike, just enough to fit. At Normal and Bigger they fit as they are.
+     * The clip and its hint stack in the bar, which keeps its height at every Bar text size, and they keep the edge's distance
+     * over the screen's bottom ([StripFit.EDGE_DP]). At Normal and Bigger the two lines would be taller than that, so both shrink
+     * alike, just enough to fit: a hundredth at Normal. At Smaller they fit as they are.
      */
     private fun fitClipLines(clipPixels: Float) {
         val hintPixels = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, SMALLEST_TEXT, resources.displayMetrics)
         clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, clipPixels)
         clipHintText.setTextSize(TypedValue.COMPLEX_UNIT_PX, hintPixels)
         if (clipHintText.visibility != VISIBLE) return
-        // The clip's line keeps Android's font padding and the hint's doesn't, as their views lay them out.
-        val clipLine = clipText.paint.fontMetrics.let { it.bottom - it.top }
-        val hintLine = clipHintText.paint.fontMetrics.let { it.descent - it.ascent }
-        val fit = minOf(1f, barHeight / (clipLine + hintLine))
-        if (fit >= 1f) return
-        clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, clipPixels * fit)
-        clipHintText.setTextSize(TypedValue.COMPLEX_UNIT_PX, hintPixels * fit)
+        // The clip's line keeps Android's font padding and the hint's doesn't, as their views lay them out, in whole px.
+        fun lines() = clipText.paint.fontMetricsInt.let { it.bottom - it.top } + clipHintText.paint.fontMetricsInt.let { it.descent - it.ascent }
+        val room = barHeight - clipView.paddingBottom
+        var fit = 1f
+        while (lines() > room && fit > CLIP_SMALLEST) {
+            fit -= .01f
+            clipText.setTextSize(TypedValue.COMPLEX_UNIT_PX, clipPixels * fit)
+            clipHintText.setTextSize(TypedValue.COMPLEX_UNIT_PX, hintPixels * fit)
+        }
     }
 
     private fun capitalHeight(): Float {
@@ -606,8 +675,9 @@ class Strip(
         val height = capitalHeight()
         val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
         val width = capitalWidth()
-        val left = side.toFloat()
-        val top = (barHeight - height) / 2
+        // Where Shift's chip would be: in as far as the chips, on their line.
+        val left = chipSide.toFloat()
+        val top = chipBox().first
         capitalBox.set(left, top, left + width, top + height)
         // The left word, as drawn: if its text would reach under the chip, the chip goes small into the corner.
         val word = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.minByOrNull { it.left }
@@ -873,8 +943,9 @@ class Strip(
         // Ink's font, in its own medium weight, as Ink's headings use it: no faked bold.
         pillText.typeface = boldTypeface
         pillText.textSize = wordPixels() * MENU_PILL_TEXT
-        // The pill grows with Bar text size, but never past its share of the bar, which doesn't.
-        val pillHeight = minOf(dp(MENU_PILL_DP), barHeight * MENU_PILL_DP / BAR_DP.toInt()).toFloat()
+        // The pill's middle is on the bar's line, and it grows with Bar text size only as far as fits round the line inside the
+        // bar, which doesn't grow: about 32 dp, where its icon and its name still fit at Bigger.
+        val pillHeight = minOf(dp(MENU_PILL_DP).toFloat(), StripFit.around(line, height, inside))
         var pill: Pair<Float, Float>? = null
         val action = pillAction.takeIf { pillShown >= 0 }
         if (action != null) {
@@ -898,9 +969,11 @@ class Strip(
         // show, on any rung under either button, so no pill ever covers it. A long word loses its middle to fit.
         menuWordText.typeface = bestTypeface
         menuWordText.textSize = MenuScene.FONT_DP * density
-        val baseline = StripFit.baseline(height / 2f, menuWordText.textSize)
-        val wordFoot = navigationInset + height - (baseline + menuWordText.descent())
-        val wordLeft = maxOf(side.toFloat(), keySide, corners.inset(wordFoot).toFloat() + dp(MENU_CORNER_GAP))
+        // On the bar's line, as the words are. Its lowest point is its tails, or the guide's light under it when it has it.
+        val baseline = StripFit.baseline(line, menuWordText.textSize, floor)
+        val lit = litIndex >= 0 && menu.word.equals(litWord, ignoreCase = true)
+        val wordFoot = navigationInset + height - (baseline + maxOf(menuWordText.descent(), if (lit) (LIT_GAP_DP + LIT_DP) * density else 0f))
+        val wordLeft = maxOf(side.toFloat(), keySide, corners.clearInset(wordFoot, edge).toFloat())
         val wordRight = MenuKeys.wordRight(width.toFloat(), dp(MENU_WORD_GAP).toFloat())
         val wordEnd = MenuKeys.wordEnd(width.toFloat(), dp(MENU_WORD_GAP).toFloat(), { pillText.measureText(context.getString(label(it.action))) },
             icon.toFloat(), dp(MENU_PILL_LEFT).toFloat(), dp(MENU_PILL_GAP).toFloat(), dp(MENU_PILL_RIGHT).toFloat())
@@ -943,12 +1016,12 @@ class Strip(
         shown.paintWord(menuCanvas)
         canvas.restore()
         // The guide's light stays under its word through the word's menu, under the pill: see [lit].
-        if (litIndex >= 0 && menu.word.equals(litWord, ignoreCase = true)) underline(canvas, textLeft, textLeft + textWidth, baseline)
+        if (lit) underline(canvas, textLeft, textLeft + textWidth, baseline)
         effects?.invalidate()
         // The pill, under its icon, with the action's name. It covers the buttons it slides over, never the word: see [MenuKeys.wordEnd].
         val spent = action == Action.Favourited
         if (pill != null && action != null) {
-            menuBox.set(pill.first, (height - pillHeight) / 2, pill.second, (height + pillHeight) / 2)
+            menuBox.set(pill.first, line - pillHeight / 2, pill.second, line + pillHeight / 2)
             menuPaint.color = GuideMotion.faded(look.accent, (if (spent) MENU_SPENT_PILL_ALPHA else MENU_PILL_ALPHA) * open)
             canvas.drawRoundRect(menuBox, pillHeight / 2, pillHeight / 2, menuPaint)
             canvas.save()
@@ -958,20 +1031,24 @@ class Strip(
             val name = context.getString(label(action))
             canvas.drawText(name, MenuKeys.pillLabel(pill.second, pillText.measureText(name), icon.toFloat(), dp(MENU_PILL_GAP).toFloat(),
                 dp(MENU_PILL_RIGHT).toFloat()),
-                StripFit.baseline(height / 2f, pillText.textSize), pillText)
+                StripFit.baseline(line, pillText.textSize, floor), pillText)
             canvas.restore()
         }
         val slide = (1f - menuShown) * dp(MENU_SLIDE_DP)
         val alpha = (menuShown * 255).toInt().coerceIn(0, 255)
-        val top = (height - icon) / 2
+        // The icons' middles are on the bar's line, with the pill's, and their boxes inside the bar.
+        val iconTop = minOf(line - icon / 2f, height - inside - icon)
         for ((index, slotAction) in slots.withIndex()) {
             // A button that just went still fades out: nothing snaps away.
             if (slotAction == null && !(index < 2 && slotChanged[index] > 0L)) continue
             val column = MenuKeys.UP + index
             val (left, end) = menuColumn(column)
             // On its key's centre, a key apart (owner, 2026-11-12): Back sits on Backspace's centre and no longer dodges the
-            // rounded corner. Back has no pill, and I's and O's pills end well clear of it.
+            // rounded corner sideways. On the bar's line its arrow would reach into the curve at Bigger, so it rises just enough
+            // to keep clear of it. Back has no pill, and I's and O's pills end well clear of it.
             val centre = (left + end) / 2 + slide
+            val top = if (column != MenuKeys.BACK) iconTop else iconTop - MenuKeys.rise(MenuKeys.BACK_ARROW, icon.toFloat(), (left + end) / 2,
+                iconTop) { x, y -> corners.clear(x, navigationInset + height - y, width.toFloat(), edge) }
             val inPill = pill != null && column == pillShown
             // The pill covers the buttons to its left while it shows: hovering Unsave covers Favourite (owner, 2026-11-13).
             if (pill != null && !inPill && centre in pill.first..pill.second) continue
@@ -1391,8 +1468,6 @@ class Strip(
         private val CRACK = listOf(12.3f to 0f, 12.3f to 6.6f, 10.4f to 10.4f, 13.6f to 12.6f, 11.6f to 17.4f, 11.6f to 24f)
         private val CRACK_LEFT = listOf(0f to 0f) + CRACK + listOf(0f to 24f)
         private val CRACK_RIGHT = listOf(24f to 0f) + CRACK + listOf(24f to 24f)
-        /** How far the menu keeps from a rounded corner, in dp. */
-        private const val MENU_CORNER_GAP = 4
         private const val MENU_LABEL_GAP = 2
         private const val MENU_WORD_GAP = 8
         private const val MENU_SLIDE_DP = 40
@@ -1402,14 +1477,15 @@ class Strip(
         private const val CLIP_PREVIEW_LENGTH = 200
         /** The clipboard icon beside a clip, as a part of the text size. */
         private const val CLIP_ICON_SCALE = 1.1f
+        /** The clip and its hint shrink no further than this to fit the bar together. */
+        private const val CLIP_SMALLEST = .7f
         /** I's, O's and Back. */
         private const val MAX_BUTTONS = 3
         private const val CHIP_SIZE = 14f
         /** The gap after each modifier chip, in dp. */
         private const val CHIP_GAP = 6
-        private const val CONTENT_ABOVE = 16
-        /** The bar's height in dp at Normal, which it keeps at every Bar text size. */
-        const val BAR_DP = 56f
+        /** The bar's height in dp at Normal, which it keeps at every Bar text size: see [StripFit.BAR_DP]. */
+        const val BAR_DP = StripFit.BAR_DP
         /** No text on the bar or the panels is smaller than this, in sp: real text at TitanKeys' fixed scale (owner, 2026-11-13). */
         const val SMALLEST_TEXT = 13f
         private const val HINT_SMALLEST = SMALLEST_TEXT

@@ -75,18 +75,62 @@ fun main() {
     val even = StripFit.fit(listOf("a", "internationalization", "of"), 300f, 5f, measure, lend = false)
     check(even[0].scale == 1f && even[2].scale == 1f && even[1].scale < 1f, "Only the long word shrinks: $even")
 
-    // The words sit truly in the middle of the bar: the middle of Inter's small letters on its centre line, not the font's box.
-    val size = 31.25f
-    check(kotlin.math.abs(StripFit.baseline(44f, size) - size * StripFit.X_HEIGHT / 2 - 44f) < .001f, "The baseline puts the letters' middle on the line")
+    // The bar's one line (owner, 2026-11-13: "11dp lower is right… the letter's middle is right in the middle"): the middle of the
+    // black you see, the bar's 56 dp and the 22 dp border under the screen, 39 dp under the bar's top and 17 dp over the edge.
+    same(StripFit.BORDER_DP, 22f, "The border under the screen, as the owner measured it")
+    same(StripFit.LINE_DP, (StripFit.BAR_DP + StripFit.BORDER_DP) / 2, "The line is the middle of the bar and the border")
+    same(StripFit.LINE_DP, 39f, "39 dp under the bar's top")
+    same(StripFit.LINE_DP - StripFit.BAR_DP / 2, 11f, "11 dp under the bar's own middle")
+    same(StripFit.LINE_ABOVE_DP, 17f, "17 dp over the screen's edge")
+    // The Titan 2 Elite's bar: 88 px, at 1.5625 px to a dp, and its text at each Bar text size's factor.
+    val unit = 1.5625f
+    val line = StripFit.LINE_DP * unit
+    val floor = 88 - StripFit.EDGE_DP * unit
+    check(kotlin.math.abs(StripFit.baseline(line, 31.25f) - 31.25f * StripFit.X_HEIGHT / 2 - line) < .001f, "The baseline puts the letters' middle on the line")
     // A view with its text at the top starts it at [StripFit.top]: its baseline is that, less its ascent as Android rounds it.
-    fun drawnBaseline(textSize: Float) = kotlin.math.floor(-textSize * 1984 / 2048).toInt().let { ascent -> StripFit.top(88, size, ascent) - ascent }
+    fun drawnBaseline(textSize: Float, lineSize: Float = textSize) =
+        kotlin.math.floor(-textSize * 1984 / 2048).toInt().let { ascent -> StripFit.top(line, lineSize, ascent, floor) - ascent }
+    for (factor in listOf(FixedScale.SMALLER, FixedScale.NORMAL, FixedScale.BIGGER)) {
+        val word = 20 * unit * factor
+        val middle = drawnBaseline(word) - word * StripFit.X_HEIGHT / 2
+        check(kotlin.math.abs(middle - 39 * unit) <= .5f, "At $factor the words' small letters' middle is within half a pixel of 39 dp: $middle, not ${39 * unit}")
+        // Their tails stay the edge's distance over the screen's bottom, so nothing rises at the bar's own sizes.
+        check(drawnBaseline(word) + word * StripFit.DESCENT <= floor + .5f, "At $factor the words' tails stay over the edge's distance")
+        check(StripFit.baseline(line, word, floor) == StripFit.baseline(line, word), "At $factor the words don't rise")
+    }
+    // A text too big for the bar rises just enough that its tails stay over the floor.
+    check(kotlin.math.abs(StripFit.baseline(line, 80f, floor) + 80f * StripFit.DESCENT - floor) < .001f, "A text too big for the line rises just enough")
+    // A box round the line: its text on the line, unless it would reach under the floor, and then it rises just enough.
+    same(StripFit.boxTop(60f, 20f, 30f, 100f), 40f, "A box that fits sits with its text on the line")
+    same(StripFit.boxTop(60f, 20f, 50f, 85f), 35f, "A box that would reach under the floor rises just enough")
+    same(StripFit.boxTopPx(60f, 20.4f, 30f, 100f), 40, "In whole px, the nearest to the line")
+    same(StripFit.boxTopPx(60f, 20.6f, 50f, 88.9f), 38, "In whole px, never under the floor")
+    // The pill: as tall as fits round the line, 1 dp inside the bar, about 32 dp.
+    val pill = StripFit.around(StripFit.LINE_DP, StripFit.BAR_DP, StripFit.INSIDE_DP)
+    same(pill, 32f, "The pill fits round the line in 32 dp")
+    // The edge's distance is corner_check.py's margin, 4 px on the Titan 2 Elite.
+    check(kotlin.math.abs(StripFit.EDGE_DP * unit - 4f) < .01f, "What shows keeps 4 px from the screen's outline")
+
+    // The bar's corner rule: in from the side as far as clearInset says, what shows is the gap from the curve itself, measured
+    // straight to it, and much less isn't. Near the bottom of the curve, where it's nearly flat, that's more than across alone.
+    val corners = Corners(100f)
+    for (above in listOf(5f, 8f, 12f, 30f, 60f, 99f)) {
+        val inset = corners.clearInset(above, 4f)
+        check(Corners.clear(100f, inset.toFloat(), above, 1076f, 4f), "At $above px over the edge, $inset px in is clear of the curve")
+        check(Corners.clear(100f, 1076f - inset, above, 1076f, 4f), "At $above px over the edge, $inset px in from the right is clear too")
+        check(inset <= 5 || !Corners.clear(100f, inset - 2.5f, above, 1076f, 4f), "At $above px over the edge, much less than $inset px in isn't")
+    }
+    check(corners.clearInset(5f, 4f) > corners.inset(5f) + 4, "Near the bottom of the curve, straight to it needs more room than across")
+    check(!Corners.clear(100f, 538f, 3f, 1076f, 4f), "Nothing shows within the gap of the bottom edge")
+
+    // The words sit truly on the line: the middle of Inter's small letters on it, not the font's box.
+    val size = 31.25f
     val full = drawnBaseline(size)
-    check(kotlin.math.abs(full - size * StripFit.X_HEIGHT / 2 - 44f) <= 1f, "A full-size word's letters are within 1 px of the centre: $full")
     // "recommendations" shrunk to fit beside full-size words sits on their line (owner, 2026-11-13: one bar baseline).
     val long = StripFit.fit(listOf("recommendations", "the", "you"), 300f, 5f, measure, lend = false)
     check(long[0].scale < 1f && long[1].scale == 1f, "The long word shrinks and the others don't: $long")
     for (scale in listOf(long[0].scale, StripFit.MIN_SCALE, .85f)) {
-        val shrunk = drawnBaseline(size * scale)
+        val shrunk = drawnBaseline(size * scale, size)
         check(kotlin.math.abs(shrunk - full) <= .5f, "A word at $scale sits on the full-size line: $shrunk, not $full")
     }
 

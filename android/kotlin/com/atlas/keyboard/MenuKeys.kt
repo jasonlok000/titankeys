@@ -40,6 +40,20 @@ object MenuKeys {
     fun slot(width: Float, column: Int, alignment: KeyAlignment = KeyAlignment.current): Pair<Float, Float> =
         KeyGeometry(width, alignment).cell(column)
 
+    /** Back's arrow: the corners of panel_back's outline, in its 24 by 24 units, which must keep clear of the screen's corner. */
+    val BACK_ARROW = listOf(20f to 11f, 7.8f to 11f, 13.4f to 5.4f, 12f to 4f, 4f to 12f, 12f to 20f, 13.4f to 18.6f, 7.8f to 13f, 20f to 13f)
+
+    /**
+     * How far an icon [size] px across, its middle at [centre] and its top at [top], rises, in whole px and no more than its own
+     * size, so that every corner of its [outline] (in its 24 by 24 units) is [clear], given at x and y in px. Back's arrow rises
+     * over Backspace's centre this way, where the bar's line would take it into the curve of the screen's corner at Bigger.
+     */
+    fun rise(outline: List<Pair<Float, Float>>, size: Float, centre: Float, top: Float, clear: (Float, Float) -> Boolean): Float {
+        var rise = 0f
+        while (rise < size && outline.any { (x, y) -> !clear(centre + (x / 24f - .5f) * size, top - rise + y / 24f * size) }) rise++
+        return rise
+    }
+
     /** Where the word ends on the right, [gap] pixels left of I's column. */
     fun wordRight(width: Float, gap: Float, alignment: KeyAlignment = KeyAlignment.current) = slot(width, UP, alignment).first - gap
 

@@ -18,7 +18,7 @@
 - Fewer dumb fixes: Typos like defalt, receieve and bckspace get fixed now.
 - Capital at the start: Shift turns on by itself at the start of a sentence. Press Shift once if you want lowercase.
 - Long words fit: Long suggestions fit in their spot, and the three spots never move.
-- One size: The bar's three words are the same size and sit dead centre. The best one's in bold.
+- One size: The bar's three words are the same size, and everything on the bar sits dead centre of the black you see, the bar and the border under the screen. The best one's in bold.
 - Canadian spelling: Settings > English spelling has Canadian now. Colour and realize. Both. Eh.
 - Two new shortcuts: Hold Shift and press Backspace to delete a word, and Alt + Sym switches to your next keyboard. They're built in, so Key Mapper can sit this one out.
 - Alt + Backspace: Deletes forward, the letter after the cursor, like Delete on a PC. Hold it to keep going. Rather have Android's own, which deletes the line? Turn off Alt + Backspace deletes forward in Settings. For a word, hold Shift with Backspace, or use Ctrl.

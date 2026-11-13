@@ -55,7 +55,7 @@ class SymPanel(
     private val typeface = resources.getFont(R.font.inter_regular)
     private val symbols = EmojiPages(Keys.symbolGroups(), emptyList())
     /** The setting under a finger on the quick settings page, in the strip at the bottom. */
-    private val preview = TextView(context).apply {
+    private val preview = LineText(context).apply {
         typeface = this@SymPanel.typeface
         gravity = Gravity.CENTER
         maxLines = 1
@@ -72,7 +72,7 @@ class SymPanel(
         addView(preview, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
     }
     /** On the clipboard page, the whole clip under a finger, or a message, in the place of the groups. A long clip scrolls. */
-    private val clipLine = TextView(context).apply {
+    private val clipLine = LineText(context).apply {
         typeface = this@SymPanel.typeface
         includeFontPadding = false
         visibility = GONE
@@ -80,7 +80,7 @@ class SymPanel(
     private val clipMarquee = BandMarquee(clipLine)
     private val grid = LinearLayout(context)
     private val cells = (Layout.letterKeys + Layout.ALT + Layout.SYM + Layout.BACKSPACE + Layout.ENTER).associateWith(::cell)
-    private var tabs = emptyList<TextView>()
+    private var tabs = emptyList<LineText>()
     /** How far the band's groups keep from each side, for the screen's corners. */
     private var bandInset = 0
     private var shownSamples = emptyList<String>()
@@ -413,7 +413,7 @@ class SymPanel(
 
     private fun dim(key: String) = quick && (key in blockedKeys || QuickSetting.on(key)?.let(quickSettingOn) == false)
 
-    private fun categoryTab(sample: String, name: String, index: Int) = TextView(context).apply {
+    private fun categoryTab(sample: String, name: String, index: Int) = LineText(context).apply {
         text = sample
         gravity = Gravity.CENTER
         isSingleLine = true
@@ -509,7 +509,12 @@ class SymPanel(
      * the strip at the bottom keeps clear of them, so that the keys stay in line with the physical keys.
      */
     private fun keepClearOfCorners() {
-        bandInset = corners.inset((navigationInset + dp(BAND_CONTENT_ABOVE)).toFloat())
+        // The band's text sits on the bar's line, and its tails are the lowest that shows in it.
+        val line = bandLine()
+        for (view in listOf(preview, clipLine) + tabs) onLine(view, line)
+        val tails = dp(BAND_HEIGHT) - line - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, BAND_TEXT_LARGEST_ANY,
+            resources.displayMetrics) * (StripFit.X_HEIGHT / 2 + StripFit.DESCENT)
+        bandInset = corners.clearInset(navigationInset + tails, edge())
         categories.setPadding(bandInset, 0, bandInset, 0)
         preview.setPadding(bandInset + dp(8), 0, bandInset + dp(8), 0)
         clipLine.setPadding(bandInset + dp(8), 0, bandInset + dp(8), 0)
@@ -538,15 +543,20 @@ class SymPanel(
             categories.removeAllViews()
             val names = if (clipboard) groups else current?.groupNames().orEmpty()
             tabs = samples.mapIndexed { index, sample ->
-                categoryTab(sample, names[index], index).also { categories.addView(it, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f)) }
+                categoryTab(sample, names[index], index).also {
+                    onLine(it, bandLine())
+                    categories.addView(it, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+                }
             }
         }
         val open = if (clipboard) clipPages.group else current?.groupIndex() ?: -1
         tabs.forEachIndexed { index, tab ->
             tab.sized(CATEGORY_SIZE, CATEGORY_LARGEST)
             tab.setTextColor(look.ink)
+            // The wash is round the tab's text, on the bar's line, a little over the band's own middle.
             tab.background = if (index != open) null else clearOfCorners(rounded(look.wash), navigationInset, dp(TAB_INSET),
-                first = index == 0, last = index == tabs.lastIndex, sideGap = dp(4) + bandInset)
+                first = index == 0, last = index == tabs.lastIndex, sideGap = dp(4) + bandInset,
+                lift = Math.round(dp(BAND_HEIGHT) / 2f - bandLine()))
         }
     }
 
@@ -667,10 +677,25 @@ class SymPanel(
      * from the box's top and bottom, and moves in from the side as far as the corner needs at its lowest edge. Only the
      * highlight changes: the box itself does not move.
      */
-    private fun clearOfCorners(highlight: Drawable, bottom: Int, inset: Int, first: Boolean, last: Boolean, sideGap: Int): Drawable {
-        val side = (corners.inset((bottom + inset).toFloat()) + dp(CORNER_MARGIN) - sideGap).coerceAtLeast(0)
-        return InsetDrawable(highlight, if (first) side else 0, inset, if (last) side else 0, inset)
+    private fun clearOfCorners(highlight: Drawable, bottom: Int, inset: Int, first: Boolean, last: Boolean, sideGap: Int, lift: Int = 0): Drawable {
+        val side = (corners.inset((bottom + inset + lift).toFloat()) + dp(CORNER_MARGIN) - sideGap).coerceAtLeast(0)
+        return InsetDrawable(highlight, if (first) side else 0, inset - lift, if (last) side else 0, inset + lift)
     }
+
+    /**
+     * The bar's line in the band, in px under the band's top: [StripFit.LINE_ABOVE_DP] over the screen's bottom edge, where the
+     * strip's words sit, by the black border under the screen.
+     */
+    private fun bandLine() = dp(BAND_HEIGHT) - StripFit.LINE_ABOVE_DP * resources.displayMetrics.density
+
+    /** [view], which fills the band, draws its text on the band's [line]. */
+    private fun onLine(view: LineText, line: Float) {
+        view.line = line
+        view.floor = dp(BAND_HEIGHT) - edge()
+    }
+
+    /** How far what shows keeps from the screen's outline, in px: [StripFit.EDGE_DP]. */
+    private fun edge() = StripFit.EDGE_DP * resources.displayMetrics.density
 
     /** A fill with the small corners that every highlight in TitanKeys has. */
     private fun rounded(colour: Int) = GradientDrawable().apply {
@@ -699,7 +724,8 @@ class SymPanel(
         const val ROW_HEIGHT = 46
         /** How far the lowest content of a row is over the row's bottom: an icon in the middle of the row. */
         const val ROW_CONTENT_ABOVE = 11
-        const val BAND_CONTENT_ABOVE = 6
+        /** The band's largest text, its tabs' and the quick setting's name, in dp: their tails are the lowest that shows in it. */
+        const val BAND_TEXT_LARGEST_ANY = 18f
         /** How far the washed group keeps from the top and bottom of the band, so it is a pill inside the band. */
         const val TAB_INSET = 3
         /** How far a highlight keeps from the curve of a screen corner. */

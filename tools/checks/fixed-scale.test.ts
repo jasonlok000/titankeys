@@ -90,7 +90,8 @@ test("the bar keeps its height at every size, and the menu's pill stays inside i
   const strip = read("android/kotlin/com/atlas/keyboard/Strip.kt");
   expect(strip).toContain("private val barHeight = Math.round(FixedScale.fixedPx(context, BAR_DP))");
   expect(strip).not.toContain("dp(56)");
-  expect(strip).toContain("val pillHeight = minOf(dp(MENU_PILL_DP), barHeight * MENU_PILL_DP / BAR_DP.toInt()).toFloat()");
+  // The pill grows with Bar text size only as far as fits round the bar's line, inside the bar, which doesn't grow.
+  expect(strip).toContain("val pillHeight = minOf(dp(MENU_PILL_DP).toFloat(), StripFit.around(line, height, inside))");
   expect(strip).toContain("fitClipLines(wordPixels() * clipScale)");
   // fixedPx works from the screen, not the window's own density, so it's right from a window at any size.
   expect(read("android/kotlin/com/atlas/keyboard/FixedScale.kt"))

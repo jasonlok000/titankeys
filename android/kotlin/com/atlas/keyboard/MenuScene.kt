@@ -41,6 +41,12 @@ class MenuScene(
     var onHaptic: (MenuKeys.Button, String) -> Unit = { _, _ -> },
 ) {
     /**
+     * The middle of the word's small letters, on the bar's line (StripFit.LINE_DP): Save's and Unsave's book flies to its place
+     * over the word from here, so it rises from where the word is.
+     */
+    private val middle = baseline - FONT_DP * StripFit.X_HEIGHT / 2
+
+    /**
      * Where each letter of a word starts and has its middle, from the word's left, the word's width, and how high its tallest letter
      * reaches over the baseline, in dp.
      */
@@ -190,7 +196,7 @@ class MenuScene(
     /** Save's and Unsave's book. [phi] turns the left cover over the spine: 0 open as the icon, π shut on the right page. */
     inner class Book {
         val x get() = cx
-        val y = Spring(CY - 92f, DRIFT)
+        val y = Spring(middle - 92f, DRIFT)
         val size = 40f
         val a = Tween(0f)
         val s = Spring(0f, POP)
@@ -397,7 +403,7 @@ class MenuScene(
         val b = ensureBook()
         squash()
         b.gone = false; b.landed = false; b.torn = false; b.onLand = null; b.tear.set(0f); b.tug.set(0f)
-        b.falling = false; b.phiS.set(b.phi).to(0f); b.a.to(1f, FADE); b.y.to(CY - 92f)
+        b.falling = false; b.phiS.set(b.phi).to(0f); b.a.to(1f, FADE); b.y.to(middle - 92f)
         if (b.s.x < .05f) b.s.set(.3f)
         b.s.to(1f, POP)
         at(110f) {
@@ -427,7 +433,7 @@ class MenuScene(
                 }
             }
             pop(KICK * .6f)
-            at(240f) { b.y.to(CY - 118f); b.a.to(0f, EXIT, ::easeInOut); b.gone = true }
+            at(240f) { b.y.to(middle - 118f); b.a.to(0f, EXIT, ::easeInOut); b.gone = true }
         }
     }
 
@@ -435,7 +441,7 @@ class MenuScene(
         val b = ensureBook()
         squash()
         b.gone = false; b.torn = false; b.landed = false; b.onLand = null; b.tear.set(0f); b.tug.set(0f)
-        b.falling = false; b.phiS.set(b.phi).to(0f); b.a.to(1f, FADE); b.y.to(CY - 92f)
+        b.falling = false; b.phiS.set(b.phi).to(0f); b.a.to(1f, FADE); b.y.to(middle - 92f)
         if (b.s.x < .05f) b.s.set(.3f)
         b.s.to(1f, POP)
         at(250f) { b.tug.to(1f, WOBBLE); b.tear.to(1f, 150f, ::easeInOut) }
@@ -450,7 +456,7 @@ class MenuScene(
             }
             // The letters drain from white to grey, right to left, as the page tears.
             sweep(-1) { i -> tones[i].to(1f) }
-            at(280f) { b.y.to(CY - 112f); b.a.to(0f, EXIT, ::easeInOut); b.gone = true }
+            at(280f) { b.y.to(middle - 112f); b.a.to(0f, EXIT, ::easeInOut); b.gone = true }
         }
     }
 
@@ -856,7 +862,6 @@ class MenuScene(
         /** The bar's height, and how far over it the effects may rise. */
         const val BAR = 56f
         const val ABOVE = 200f
-        const val CY = BAR / 2
         /** How far over the bar's top Save's flying book keeps its bottom, at the least: it never crosses the edge (owner, 2026-11-13). */
         const val CLEAR = 8f
         /** How high the menu font's tallest small letters reach over the baseline, in em: Inter's i and j dots, 1572 of 2048. Capitals reach 1490. */

@@ -208,6 +208,9 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
+- **Delete 1/3's decoration: a flat e with a strike** (owner, 2026-11-13, 14:50: "the decoration e is good but like the style looks
+  out of place with our design and also it shd be a strike through why is there a tape"). (Owner) V redraws it: a flat Inter
+  Bold e with a pen strike drawn across it, in the Block strike's style, and brings any other non-flat decoration into line.
 - **No status marks: the word's colour is the status** (owner, 2026-11-13, 14:45: "remove the statuses for the heart and book etc.
   keep it simple. favourited = orange. saved = white. neutral = grey. blocked = grey + striked through"). (Owner)
   - This replaces the marks inside the bar and the drifting heart. It also replaces the earlier rule that the word is always white.

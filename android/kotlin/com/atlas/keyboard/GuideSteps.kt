@@ -931,11 +931,11 @@ internal const val HOLD_SYMBOL = "?"
 internal const val HOLD_SYMBOL_KEY = "V"
 internal const val HOLD_SYMBOL_LINE = "Are you even reading this?"
 internal const val SYM_LINE = "Sym has the rest, terms & conditions apply"
-/** The symbol that the weird-one hunt looks for. Its title doesn't name it (owner, v5.2). */
+/** The symbol that the weird-one hunt looks for. Its title doesn't name it, its hunt does (owner, 2026-11-13). */
 internal const val WEIRD = "∞"
-// The owner's joke (2026-11-13): how long you last in bed, and the answer is the one that never ends. The line sets it up, so the
-// gap after "in bed:" says what goes there without naming it. It starts with S for the finale's GO TOUCH GRASS NOW.
-internal const val GROUPS_LINE = "Seriously, how long I last in bed with your mother: ∞"
+// The owner's joke (2026-11-13): the line asks how long, and the ∞ the user adds is the answer, then "Sure you do." It starts with
+// S for the finale's GO TOUCH GRASS NOW.
+internal const val GROUPS_LINE = "So how long do I last in bed with your mother? ∞"
 internal const val CLOWN = "🤡"
 internal const val CLOWN_LINE = "Need emoji? Press Sym twice. Signed, 🤡"
 
@@ -1606,9 +1606,8 @@ internal val GUIDE_STEPS = listOf(
     ),
     GuideStep(
         id = "symgroups", chapter = GuideChapter.Symbols,
-        // The title doesn't name the symbol: the gap in the field shows which (owner, v5.2).
-        // The owner's joke (owner, 2026-11-13): how long you last, found in the ∞. The title never names the symbol.
-        title = "Add how long you last in bed.",
+        // A three-beat joke (owner, 2026-11-13): answer honestly, add ∞, "Sure you do." The title leaves the ∞ to the hunt.
+        title = "Answer honestly.",
         // used holds what was used: 1 a page by swiping up or down, 2 a page by the arrows (Backspace or Enter), 4 a group by the
         // bottom row or a sideways swipe, which works too and says so.
         stages = listOf(
@@ -1630,20 +1629,20 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            // Never names the symbol (owner, 2026-11-12): the joke is working out what lasts that long.
-            GuideStage("Find the one that never ends.", GuideCue.Free) { event ->
+            // A symbol hunt, not a riddle (owner, 2026-11-13): it says ∞ outright.
+            GuideStage("Find ∞ and press its key. It's further in.", GuideCue.Free) { event ->
                 when {
                     event is FieldChanged && symbolInGap(event.text, GROUPS_LINE, WEIRD) -> GuideVerdict.Done
                     otherSymbol(event, GROUPS_LINE, WEIRD) -> {
                         mark = 1
-                        chip("Not that one. It never ends, remember?")
+                        chip("Not that one. Find ∞.")
                     }
                     otherGroup(event) && used and 4 == 0 -> {
                         used = used or 4
                         chip("Yeah, that works too.")
                     }
                     panel(event, Panel.Closed) && mark == 1 -> GuideVerdict.Stage(0)
-                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. The one that never ends is still in there.", stage = 0)
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. The ∞ is still in there.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },

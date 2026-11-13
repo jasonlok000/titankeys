@@ -1,14 +1,18 @@
 import type { State } from "../../lib/atlas";
-import { DurationPage, ms } from "../../lib/duration";
+import { ChoicePage } from "../../lib/choice";
 
-export const holdLabel = ({ holdSymbols, holdSymbolMillis }: State) => holdSymbols ? ms(holdSymbolMillis) : "Off";
+const durations = Array.from({ length: 17 }, (_, step) => String(200 + step * 50));
+const options = [
+  { value: "off", label: "Off" },
+  ...durations.map(value => ({ value, label: `${value} ms` })),
+];
 
-/** The keyboard takes 200 to 1000 ms (HoldEngine.clamp), and 250 is its default. */
+export const holdLabel = ({ holdSymbols, holdSymbolMillis }: State) => holdSymbols ? `${holdSymbolMillis} ms` : "Off";
+
 export default function Hold() {
-  return <DurationPage title="Hold for symbols"
+  return <ChoicePage title="Hold for symbols"
     subtitle="Hold a letter to type the symbol printed on it. Pick how long you hold."
-    min={200} max={1000} step={50}
-    presets={[{ label: "Quick", millis: 250 }, { label: "Medium", millis: 400 }, { label: "Slow", millis: 600 }]}
-    read={({ holdSymbols, holdSymbolMillis }) => holdSymbols ? holdSymbolMillis : null}
-    write={millis => millis === null ? { holdSymbols: false } : { holdSymbols: true, holdSymbolMillis: millis }} />;
+    options={options}
+    read={({ holdSymbols, holdSymbolMillis }) => holdSymbols ? String(holdSymbolMillis) : "off"}
+    write={value => value === "off" ? { holdSymbols: false } : { holdSymbols: true, holdSymbolMillis: Number(value) }} />;
 }

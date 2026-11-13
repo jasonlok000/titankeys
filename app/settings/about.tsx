@@ -1,10 +1,10 @@
-import { Row, Screen, Stack, Text, openURL, useSnapshot } from "ink";
+import { Canvas, CanvasText, Row, Screen, Stack, Text, openURL, useSnapshot } from "ink";
 import { arrowOutward, chevronRight } from "ink/icons";
 import { state } from "../../lib/atlas";
 import { PRIVACY_URL } from "../../lib/connected";
+import { MUTED } from "../../lib/brand";
 import { hasReleaseNotes } from "../../lib/release-notes";
-import { Note } from "../../lib/note";
-import icon from "../../assets/icon.png";
+import icon from "../../assets/atlas-glyph.png";
 
 export default function About() {
   const result = useSnapshot(state);
@@ -21,7 +21,9 @@ export default function About() {
         <Row title="Privacy policy" endIcon={arrowOutward} onPress={() => void openURL(PRIVACY_URL)} />
       </Stack>
       <Stack align="center" gap={4}>
-        <Note align="center">Powered by</Note>
+        <Canvas width={596} height={28}>
+          <CanvasText x={0} y={0} width={596} height={28} size={20} align="center" colour={MUTED}>Powered by</CanvasText>
+        </Canvas>
         <Text align="center">FUTO Swipe</Text>
       </Stack>
     </Stack>

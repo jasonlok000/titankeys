@@ -19,8 +19,6 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
-        <!-- The phone's Shortcut keys page, which Settings > Setup opens for the Sym and fn keys. -->
-        <package android:name="com.agui.shortcutsettings" />
     </queries>
     <!-- Opted in, apps play their own keyboard-dismiss animation on back and never pass back on. -->
     <application android:enableOnBackInvokedCallback="false">

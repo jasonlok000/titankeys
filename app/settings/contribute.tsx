@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Field, Row, Screen, Section, Toggle, navigate, openURL, useAction, useSnapshot } from "ink";
+import { Field, Row, Screen, Section, Text, Toggle, navigate, openURL, useAction, useSnapshot } from "ink";
 import { arrowOutward, chevronRight } from "ink/icons";
 import { MUTED, ORANGE } from "../../lib/brand";
 import { connectedState, copyContributorId, deleteQueued, kilobytes, PRIVACY_URL, setContribute } from "../../lib/connected";
 import { contributeText as text, swipes } from "../../lib/connected-text";
-import { StatusLine } from "../../lib/contribute";
-import { Note } from "../../lib/note";
+import { SMALL, StatusLine } from "../../lib/contribute";
 
 export const contributeLabel = (on: boolean) => on ? "On" : "Off";
 
@@ -17,9 +16,9 @@ export default function Contribute() {
   const state = result.data;
   // The contributor ID and deletion stay here after the user stops, so that what was sent can still be deleted.
   const idSection = state.contributorId !== "" && <Section title={text.idTitle}>
-    <Note>{state.contributorId}</Note>
+    <Text size={SMALL}>{state.contributorId}</Text>
     <Field label={text.copy} onPress={() => void copyContributorId().then(() => setCopied(true))}>{copied ? text.copied : ""}</Field>
-    <Note>{text.idNote}</Note>
+    <Text size={SMALL}>{text.idNote}</Text>
   </Section>;
   // Turning it on shows the policy first; turning it off is immediate.
   const turn = (on: boolean) => on ? navigate("/settings/share-policy") : void save.run(false);

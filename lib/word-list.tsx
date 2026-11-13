@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Row, Screen, TextInput, useAction } from "ink";
 import { add, close } from "ink/icons";
-import { Note } from "./note";
 
 export function WordList({ title, words, empty, placeholder, addWord, removeWord }: {
   title: string;
@@ -30,6 +29,6 @@ export function WordList({ title, words, empty, placeholder, addWord, removeWord
     {words.length
       ? words.map(({ word, description }) => <Row key={word} title={word} subtitle={description || undefined}
         endAction={{ icon: close, onPress: () => remove.run(word) }} />)
-      : <Note>{empty}</Note>}
+      : <Row title={empty} />}
   </Screen>;
 }

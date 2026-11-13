@@ -1,31 +1,23 @@
 import { defineTheme, defineToggle } from "ink/theme";
 
-// Pure black with orange accents. Same names and values as lib/brand.ts, which a theme can't import.
-// The orange of the Titan 2 Elite, sampled from Unihertz's product photos, marks titles, section labels, values and
-// switches that are on. Everything else is cream on black, with muted cream for what's secondary.
-const black = "#000000";
+// The orange of the Titan 2 Elite, sampled from Unihertz's product photos. Same values as lib/brand.ts.
+// Like the interactive guide: cream on ink, with orange only for what stands out.
 const orange = "#EF804E";
-const cream = "#FFF1E6";
-const muted = "#99918A";
-// Only for the knob on an orange switch.
 const ink = "#160A04";
+const cream = "#FFF1E6";
+const muted = "#A2958C";
 
 export default defineTheme({
   fonts: { body: "./assets/fonts/Inter-Regular.otf", display: "./assets/fonts/Inter-Medium.otf" },
   // Without its own light colours, a phone in light mode would get the inverse of these.
-  colours: {
-    background: black, foreground: cream, muted, accent: orange,
-    light: { background: black, foreground: cream, muted, accent: orange },
-  },
+  colours: { background: ink, foreground: cream, muted, light: { background: ink, foreground: cream, muted } },
   text: { size: 45 },
   spacing: { inset: 92, gap: 69, rowGap: 52 },
   // Ink clips the first row's top edge at the scroll viewport.
   hitSlop: { top: 16, right: 18, bottom: 30, left: 18 },
   header: { layout: "large", size: 84, top: 21, bottom: 51, cutout: "below", back: { position: "end", icon: "arrow" }, iconSize: 60 },
   section: { uppercase: true, size: 31, gap: 48 },
-  // Subtitles, row and switch descriptions and a screen's fine print share one size: 39 pixels, 14 sp on the Titan 2
-  // Elite. Rows are 45. lib/note.tsx's Note draws explanations at the same size.
-  subtitle: { size: 39, tone: "muted" },
+  subtitle: { size: 30, tone: "muted" },
   scrollBar: { colour: muted, visibility: "scrolling", track: false, width: 8, inset: 30 },
   field: "inline",
   selection: "check",

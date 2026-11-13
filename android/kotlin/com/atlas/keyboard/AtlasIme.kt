@@ -1344,11 +1344,6 @@ class AtlasIme : InputMethodService() {
         // The bar may only now be set up for this field, so the wait starts once it is.
         main.post { wakeIdleBar() }
         offerClip()
-        // Settings > Setup lists the apps whose Scroll assistant isn't in Sliding Mode 1. The system sets the touchpad's mode
-        // for the app in front as it comes in, so this looks a moment later, if the keyboard is still in that app.
-        info.packageName?.let { app ->
-            main.postDelayed({ if (currentInputEditorInfo?.packageName == app) PhoneChecks.noteSlidingMode(this, app) }, SLIDING_CHECK_MILLIS)
-        }
         // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
     }
@@ -3487,8 +3482,6 @@ class AtlasIme : InputMethodService() {
         private const val DEBUG_PACKAGE_SUFFIX = ".debug"
         /** The app opens the page in this extra when it starts. tools/checks/about.sh uses it to open About. */
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"
-        /** How long after the keyboard shows in an app that its touchpad mode is read. */
-        private const val SLIDING_CHECK_MILLIS = 600L
         private const val SMART_LAUNCHER = "ginlemon.flowerfree"
         /** Characters of a typed clip sent each frame. */
         private const val CLIP_CHUNK = 40

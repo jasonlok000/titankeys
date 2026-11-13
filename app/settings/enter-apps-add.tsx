@@ -1,7 +1,6 @@
 import { Row, Screen, back, useAction, useSnapshot } from "ink";
 import { add } from "ink/icons";
 import { setEnterApp, state } from "../../lib/atlas";
-import { Note } from "../../lib/note";
 
 const title = "Add app";
 const subtitle = "Apps where you've typed a message lately. This list stays on your phone.";
@@ -18,6 +17,6 @@ export default function AddEnterApp() {
   return <Screen title={title} subtitle={subtitle}>
     {apps.length
       ? apps.map(({ app, name }) => <Row key={app} title={name} titleMaxLines={2} endIcon={add} onPress={() => insert.run(app)} />)
-      : <Note>No apps to add yet. Type a message in the app, then come back here.</Note>}
+      : <Row title="No apps to add" subtitle="Type a message in the app, then come back here." wrapSubtitle />}
   </Screen>;
 }

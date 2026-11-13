@@ -8,13 +8,12 @@ package com.atlas.keyboard
 enum class QuickSetting(val key: String, val label: String, val title: String) {
     Autocorrect("F", "Fix", "Fix typos as you type"),
     SwipeTyping("S", "Swipe", "Swipe to type words"),
-    /** The whole bar: words, the Shift, Alt and Ctrl chips and the clip offer. W is the key it has always had. */
-    SuggestionBar("W", "Bar", "Show the bar"),
+    SuggestionBar("W", "Words", "Show word suggestions"),
     AutoCapitalise("C", "Caps", "Capital letter to start a sentence"),
     AutoPunctuation("D", "Dot", "Double Space types a full stop"),
     Vibration("V", "Vib", "Haptics"),
     HoldSymbols("H", "Hold", "Hold a letter for its symbol"),
-    CursorControl("M", "Move", "Space taps move and select"),
+    CursorControl("M", "Move", "Move the cursor from Space"),
     DoublePressLocks("L", "Lock", "Press twice to lock Shift and Alt"),
     /** On is the phone's own Scroll assistant outside text fields, the other way round from the setting that it changes. */
     ScrollAssistant("R", "Scrl", "Scroll assistant outside text fields"),

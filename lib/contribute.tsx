@@ -1,9 +1,10 @@
-import { Canvas, CanvasText, Field, Row, Screen, Section, openURL } from "ink";
+import { Canvas, CanvasText, Field, Row, Screen, Section, Text, openURL } from "ink";
 import { arrowOutward } from "ink/icons";
 import { contributeText as text, sharePolicyText as policy } from "./connected-text";
 import { PRIVACY_URL } from "./connected";
-import { Note, Notes } from "./note";
 
+/** Long text on these pages uses the subtitle's size, as the rest of Settings does, so that it fits the square screen. */
+export const SMALL = 30;
 /** The width of a screen's content, as the About page and the front page draw it. */
 const WIDTH = 596;
 
@@ -15,7 +16,7 @@ export function Disclosure({ onAgree, onDecline }: { onAgree: () => void; onDecl
   return <Screen title={policy.title} subtitle={policy.subtitle}>
     <Points title={policy.sentTitle} points={policy.sent} />
     <Points title={policy.neverTitle} points={policy.never} />
-    <Note>{policy.how}</Note>
+    <Text size={SMALL}>{policy.how}</Text>
     <Field label={policy.agree} onPress={onAgree}>{""}</Field>
     <Field label={policy.decline} onPress={onDecline}>{""}</Field>
     <Row title={policy.policy} endIcon={arrowOutward} onPress={() => void openURL(PRIVACY_URL)} />
@@ -33,7 +34,7 @@ export function WhatIsSent() {
 
 function Points({ title, points }: { title: string; points: readonly string[] }) {
   return <Section title={title}>
-    <Notes lines={points} />
+    {points.map(point => <Text key={point} size={SMALL}>{`• ${point}`}</Text>)}
   </Section>;
 }
 

@@ -106,8 +106,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - Never change automatically: well, hell, shell, shed, wed, cant, wont.
   The reverse direction (it's → its) is left out. The owner wants the logs analysed before any of it is built, including how much context the language model should use. (Owner, 2026-11-12)
 
-### Open
-- Waiting on A's log study (apostrophe-study.md), which tests a context of 2+1, 5+2, the whole sentence + 2, and 10+10 words. Building waits for it.
+- Build it as soon as the study is in. The study judges which form was right by reading the context, not by what the owner kept, because the owner usually leaves wrong apostrophes in place. A does the study; D builds it in TypedCorrector. (Owner, 2026-11-12)
 
 ## Setup and settings scope
 

@@ -62,6 +62,7 @@ fun main(args: Array<String>) {
             MenuKeys.Motion.Unsave -> state(saved = true) to state()
             MenuKeys.Motion.Forget -> state(learned = true) to state(learned = true)
             MenuKeys.Motion.Echo -> state(saved = true, favourite = true) to state(saved = true, favourite = true)
+            MenuKeys.Motion.SavedEcho -> state(saved = true) to state(saved = true)
         }
         val frames = 10
         (0 until frames).map { index ->
@@ -70,9 +71,10 @@ fun main(args: Array<String>) {
         }
     }
     // The ambient status at rest: a favourite's faint hearts, then a saved word's swaying ribbon.
-    val ambient = listOf(0L, 400L, 800L, 1200L, 2500L + 400L, 2500L + 800L).map { millis ->
+    // The first mark waits a whole cycle after the menu comes to rest, so nothing follows the open's echo or a step's burst.
+    val ambient = listOf(0L, 1200L, 2500L + 400L, 2500L + 800L, 2500L + 1200L, 5000L + 400L).map { millis ->
         Row("ambient-favourite-${millis}ms", "Ambient, favourite, at $millis ms", "Titankeys", state(saved = true, favourite = true), ambient = millis)
-    } + listOf(0L, 150L, 300L, 450L, 600L, 2000L).map { millis ->
+    } + listOf(0L, 2000L, 3500L + 150L, 3500L + 300L, 3500L + 450L, 3500L + 600L).map { millis ->
         Row("ambient-saved-${millis}ms", "Ambient, saved, at $millis ms", "Titankeys", state(saved = true), ambient = millis)
     }
     for (dark in listOf(true, false)) {
@@ -223,7 +225,8 @@ private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: 
         val inPill = column == hovered
         if (pill != null && !inPill && middleX in pill.first..pill.second) continue
         val elapsed = row.motion?.second ?: MenuMotion.ICON_MILLIS
-        val layers = if (fromSlots != null && index < 2 && row.motion?.first != MenuKeys.Motion.Echo)
+        val layers = if (fromSlots != null && index < 2 && row.motion?.first != MenuKeys.Motion.Echo &&
+            row.motion?.first != MenuKeys.Motion.SavedEcho)
             MenuMotion.icon(fromSlots[index], button, elapsed) else listOf(MenuMotion.Layer(button, 1f, orange = MenuMotion.restingOrange(button)))
         for (layer in layers) {
             if (layer.button == null && index < 2) continue

@@ -3,18 +3,82 @@ package com.atlas.engine
 import com.atlas.keyboard.Layout
 import com.atlas.keyboard.MenuBar
 import com.atlas.keyboard.MenuKeys
+import com.atlas.keyboard.MenuMotion
 import com.atlas.keyboard.SteadyKey
 import java.io.File
 
 /**
- * The word menu without a phone (owner, 2026-11-13: the hover was reported lost after a press again and again, so it is proved here
- * instead of on anyone's word): the hover after a press, up and down, from I, O, K and L, in every order the touchpad's lift and
- * the key came in on the owner's phone.
+ * The word menu without a phone (owner, 2026-11-13: bugs reported again and again, so they are proved here instead of on anyone's
+ * word): opening plays no step's burst, and the hover after a press stays, up and down, from I, O, K and L, in every order the
+ * touchpad's lift and the key came in on the owner's phone.
  */
 fun main() {
+    theOpening()
     theHover()
     theKeyboardMakesTheseCalls()
     println("Word menu checks passed")
+}
+
+// The opening -------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Opening the menu plays no step's burst, and never two things in a row (owner, 2026-11-13: "when selecting a word, it first shows
+ * the heart particles, then the glitter"). A word that isn't saved gets nothing; a saved word, a dictionary word included, gets a
+ * soft echo of its own mark; a favourite a soft echo of hearts. The quiet ambient marks then wait a whole cycle before the first.
+ *
+ * The cause was two things: the open's echo drew hearts for every saved word, a favourite's sign; and the ambient began with its
+ * mark, a sparkle by a saved word, the moment the echo ended. The strip plays MenuKeys.motion(null, step) as it opens, then the
+ * ambient from when the motion ends, as checked below in its source.
+ */
+private fun theOpening() {
+    val box = MenuMotion.Word(120f, 220f, 27f, MenuMotion.Word.seed("Titankeys"))
+    val bursts = setOf(MenuKeys.Motion.Save, MenuKeys.Motion.Favourite, MenuKeys.Motion.Unfavourite, MenuKeys.Motion.Unsave, MenuKeys.Motion.Forget)
+    val (new, saved, favourite) = Triple(MenuKeys.Step.New, MenuKeys.Step.Saved, MenuKeys.Step.Favourite)
+    val kinds = listOf(
+        "unknown" to MenuKeys.State(new, false),
+        "learned" to MenuKeys.State(new, true),
+        "saved" to MenuKeys.State(saved, false),
+        "dictionary" to MenuKeys.State(saved, false, builtIn = true),
+        "favourite" to MenuKeys.State(favourite, false),
+    )
+    for ((kind, opening) in kinds) {
+        val motion = MenuKeys.motion(null, opening.step)
+        check(motion !in bursts) { "$kind: opening plays no step's burst, but $motion" }
+        same(motion, when (opening.step) {
+            MenuKeys.Step.New -> null
+            MenuKeys.Step.Saved -> MenuKeys.Motion.SavedEcho
+            MenuKeys.Step.Favourite -> MenuKeys.Motion.Echo
+        }, "$kind: what opening plays")
+        val echo = motion?.let { MenuMotion.millis(it) } ?: 0L
+        val mark = if (opening.step == favourite) MenuMotion.Shape.Heart else MenuMotion.Shape.Sparkle
+        for (millis in 0 until echo step 10) {
+            val sprites = MenuMotion.frame(motion!!, millis, box).sprites
+            check(sprites.size <= 3 && sprites.all { it.shape == mark && it.size <= 9f && it.alpha <= .75f }) {
+                "$kind: the echo is soft, a few faint ${mark}s, at $millis ms: $sprites"
+            }
+        }
+        // After the echo the menu rests: nothing for a whole cycle of its ambient mark.
+        val quiet = when (opening.step) {
+            MenuKeys.Step.New -> Long.MAX_VALUE
+            MenuKeys.Step.Saved -> MenuMotion.AMBIENT_TWINKLE_EVERY
+            MenuKeys.Step.Favourite -> MenuMotion.AMBIENT_HEART_EVERY
+        }
+        for (millis in 0L until minOf(quiet, 6_000L) step 10) same(MenuMotion.ambient(opening.step, millis, box, false), emptyList<MenuMotion.Sprite>(),
+            "$kind: nothing plays $millis ms after the echo")
+        if (opening.step != new) check(MenuMotion.ambient(opening.step, quiet + 300, box, false).single().let {
+            it.shape == mark && it.alpha <= MenuMotion.AMBIENT_ALPHA + .001f
+        }) { "$kind: then a faint ${mark.name.lowercase()} now and then" }
+    }
+    // A step's burst is followed by the same quiet: never two in a row after a press either.
+    for (step in listOf(saved, favourite)) for (millis in 0L until 2_000L step 10)
+        same(MenuMotion.ambient(step, millis, box, false), emptyList<MenuMotion.Sprite>(), "Nothing right after a press to $step")
+    // The strip plays these: the open's motion from no step, then the ambient from when the motion ends.
+    val strip = File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    for (line in listOf(
+        "menuMotion = MenuKeys.motion(if (opened) null else shownStep, menu.step)?.takeIf { GuideMotion.enabled }",
+        "if (ambientStart < 0) ambientStart = now",
+        "for (sprite in MenuMotion.ambient(menu.step, now - ambientStart, box, still)) drawSprite(canvas, sprite, density)",
+    )) check(line in strip) { "Strip no longer has: $line" }
 }
 
 // The hover -----------------------------------------------------------------------------------------------------------------------

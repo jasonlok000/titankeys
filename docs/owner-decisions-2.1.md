@@ -248,6 +248,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   needs the keyboard open on a field that shows words, 3 to 4.5 minutes with no key, touch or swipe, the screen on, then a 25%
   chance, and never twice in a row: about 15 untouched minutes before the first game, so it's almost never seen. The
   Orchestrator's proposal, unapproved: wait 60 to 90 s and a 50% chance, about 2.5 minutes on average; any input still ends it.
+- **No AI-use declaration** (owner, 2026-11-13: "We don't care about ai use declaration remember?"). (Owner) Pre-release and PR
+  handovers carry no AI-use line, whatever AGENTS.md says.
+- **Languages in parallel?** (owner, 2026-11-13: "if I already want to start working on the other languages support, can I do it
+  in parrelel or something?"). The Orchestrator's answer: yes, in its own session and branch, in two steps. Now: design and
+  research only (where English is assumed today, the framework every language plugs into, how Cantonese is typed on a QWERTY
+  keyboard and what the bar becomes, and data licences), new files only, no phone. After 2.1's release: the refactor of
+  English into the framework, then Cantonese. Proposed as a session card, waiting on the owner.
 - **The 11 dp line: build it** (owner, 2026-11-13: "For the 11dp lower, implement it. Do visual checks with the corner overlays
   that we used before. Check the visuals if they're aligned properly with a simulated border too. Do it"). (Owner) W builds it
   with the Orchestrator's mitigations below: the middle of the bar plus a 22 dp border; boxes at least 1 dp inside the edge (the

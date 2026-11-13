@@ -213,6 +213,15 @@ all of them are unapproved.
     - **Open:** the echo uses the word's own mark, and the ambient waits a full cycle, so there are no hearts and then glitter.
     - **Next for W:** the quick settings page has the same late lift (its mark clears about 0.3 s after a toggle), so it gets the
       same fix. The ladder work stays held until v4 is approved.
+  - **Merged for build #6 (12:05):**
+    - **A's front bar fix** (2169552; merge e1bf15c). It wasn't an overlap: fitKeys dropped the bottom row when the page was about
+      42 px short (the TOUCH ZONE label's 24 dp room, an empty actions row, and renders that assumed small bars). The label now sits
+      in the existing gap, the actions row is gone, and 20 px are left to spare.
+    - **F's branch** (merge 6ae0880): Alt + Backspace forward delete behind a switch; held Shift + Backspace reading Shift from the
+      key itself; the Settings title line (the fade starts on the whole pixel, with a scroll-fade check); and A's two raw oranges
+      routed through Accent.
+
+    Waiting on: C's finale, then V's decorations (pushed), then W's ladder and D's press haptics.
   - **Faster finish (11:55):** the verify queue was six runs deep, about 90 minutes of duplicates. Every worker now pushes once its
     targeted checks pass and cancels its own queued verify. The Orchestrator merges C, V, W, D, A and F, then runs one full verify
     on the combined test-2.1h as build #6.

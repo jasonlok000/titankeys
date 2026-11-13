@@ -213,6 +213,10 @@ all of them are unapproved.
     - **Open:** the echo uses the word's own mark, and the ambient waits a full cycle, so there are no hearts and then glitter.
     - **Next for W:** the quick settings page has the same late lift (its mark clears about 0.3 s after a toggle), so it gets the
       same fix. The ladder work stays held until v4 is approved.
+  - **V, a new focused session** (2.1 V: guide decorations and grass, local_23ffee83, 10:35): decorations and finale grass, through
+    phone preview pages and the owner's review ("current install still too subtle"). It then builds them into GuideDecor. A
+    keeps the held-delete items, with its strength pass handed on if already done. C keeps the finale layout and the grass's
+    placement.
   - **Quick settings hover: merged** (71acf0b). The pressed key pins the mark, its late lift is ignored, and there's no timer. On the phone: rest on F (Sym, then Alt) and press it three times; the mark should stay.
   - **Build #5** started (test-2.1h at 179b7ad). It has everything merged except F's Size and Orange work and W's ladder.
   - **Ladder mockup v4** (C): `X:/Atlas/.dev/mockups/ladder-v4.html`, opened on the phone at 09:40.

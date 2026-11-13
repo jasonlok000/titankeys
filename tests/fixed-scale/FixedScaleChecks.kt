@@ -43,7 +43,16 @@ fun main() {
     // At the phone's default settings nothing moves: FixedScale's sizes are the ones TitanKeys was designed at.
     check(pixels(250, 1f, fixed = false) == reference, "At font size 1.0 and 250 dpi, FixedScale changes nothing")
 
-    // Settings > Size multiplies the unit, and with it every dp and sp TitanKeys draws: the bar, the panels' text, the guide.
+    // Before you pick one, Bar text size follows the phone's text size (owner, 2026-11-13): under 1.15 Normal, from 1.15 Bigger,
+    // and never Biggest, which is only ever picked. The owner's phone is at 2.0, so it lands on Bigger by itself.
+    val starts = mapOf(.85f to "Normal", 1f to "Normal", 1.1f to "Normal", 1.149f to "Normal", 1.15f to "Bigger", 1.3f to "Bigger",
+        1.5f to "Bigger", 1.51f to "Bigger", 1.8f to "Bigger", 2f to "Bigger")
+    for ((fontScale, name) in starts) {
+        check(FixedScale.forFontScale(fontScale).name == name, "At the phone's text size $fontScale the bar starts at $name: got ${FixedScale.forFontScale(fontScale)}")
+    }
+    check(FixedScale.Size.ofOrNull(null) == null && FixedScale.Size.ofOrNull("size") == null, "No pick reads as none, so the phone's text size counts")
+
+    // Bar text size multiplies the unit in the bar's window, and with it every dp and sp in the bar. Every other window stays at 1.
     check(FixedScale.Size.of(null) == FixedScale.Size.Normal && FixedScale.Size.Normal.factor == 1f, "Size starts at Normal, 1.0")
     check(FixedScale.Size.entries.zipWithNext().all { (a, b) -> b.factor > a.factor }, "Each size is bigger than the one before")
     for (size in FixedScale.Size.entries) {
@@ -52,7 +61,9 @@ fun main() {
         check(abs(sized - dpi * size.factor) <= 1f, "${size.name} makes a dp ${size.factor} times as big: got $sized dpi for $dpi")
         check(FixedScale.densityDpi(height, width, size.factor) == sized, "${size.name}: a turned screen keeps the same sizes")
         // The bar keeps Normal's height, 56 dp at Normal, and only what's in it grows (FixedScale.normalPx, Strip.BAR_DP).
-        val barPx = 56f * (sized / 160f) / size.factor
+        // normalPx takes the screen's pixels, which a window has at any size, never the window's own dp.
+        val barPx = 56f * FixedScale.densityDpi(width, height) / 160f
+        check(abs(56f * (sized / 160f) / size.factor - barPx) <= 1f, "${size.name}: the bar's window would agree on its height")
         check(abs(barPx - 56f * dpi / 160f) <= 1f, "${size.name}: the bar stays ${56f * dpi / 160f} px tall: got $barPx")
         // What sits over the real keys takes its places from the key calibration, in parts of the screen's width, never from
         // the unit: the panels' columns, the word menu's places, the hover marks and the drawn keyboard stay over their keys.

@@ -60,7 +60,7 @@ import kotlin.random.Random
 class AtlasIme : InputMethodService() {
     private val main = Handler(Looper.getMainLooper())
     private lateinit var touchpad: Touchpad
-    /** Settings > Size when the bar and the panels were made. */
+    /** Bar text size when the bar was made. */
     private var viewSize = FixedScale.Size.Normal
     private lateinit var haptics: Haptics
     /** The cursor plays gone once each time it reaches an end of the text. */
@@ -1156,7 +1156,9 @@ class AtlasIme : InputMethodService() {
         // makes this view again when those settings change, so each time takes the screen as it is now.
         viewSize = FixedScale.size(this)
         val ui = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod)
-        val words = Strip(ui, { index ->
+        // Bar text size grows only what's in the bar, and the word menu's effects with it. The bar keeps Normal's height.
+        val barUi = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod, viewSize.factor)
+        val words = Strip(barUi, { index ->
             // The guide's own word only opens its menu: a tap never types a word that the bar doesn't show.
             if (!guideBlocked(GuideLesson.BarTap) && shownGuideWord() == null) {
                 haptics.play(Haptic.BarWord)
@@ -1199,9 +1201,10 @@ class AtlasIme : InputMethodService() {
             roundTopCorners(this)
         }
         // The word menu's effects rise above the bar, over the app, in a see-through layer that takes no touch (ladder v4).
-        val effects = MenuEffects(ui, words)
+        val effects = MenuEffects(barUi, words)
         words.effects = effects
         words.menuBeat = ::menuBeat
+        words.menuPress = { haptics.play(Haptic.MenuPress) }
         // The keyboard sits on the bottom of a window as tall as the screen. See [fillScreen].
         return FrameLayout(ui).apply {
             addView(keyboard, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
@@ -1349,6 +1352,7 @@ class AtlasIme : InputMethodService() {
         holdEngine.threshold(TypingSettings.holdSymbolMillis(this))
         modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
+        modifiers.altSymSwitches = TypingSettings.altSymNextKeyboard(this)
         cursorControl = TypingSettings.cursorControl(this)
         exactRealAlt = ExactTyping.realAlt(this)
         // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
@@ -1457,7 +1461,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        // Settings > Size changed since the bar and the panels were made, so they're made again at the new size.
+        // Bar text size changed since the bar was made, by a pick or the phone's text size, so it's made again at the new size.
         if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())
         // The bar may only now be set up for this field, so the wait starts once it is.
         main.post { wakeIdleBar() }
@@ -1964,7 +1968,8 @@ class AtlasIme : InputMethodService() {
     /**
      * Each step's haptic, which the strip plays on the effect's own frame (ladder v4): the book's clap for Save, the rip for Unsave,
      * the hearts' release for Favourite, the crack for Unfavourite, the strike landing for Block and the strike gone for Unblock.
-     * With motion off, it plays as the press lands.
+     * The press itself plays [Haptic.MenuPress] at once, a light tick, since each of these lands well after it. With motion off,
+     * the step's haptic plays as the press lands, with no tick.
      */
     private fun menuBeat(button: MenuKeys.Button) = haptics.play(when (button) {
         MenuKeys.Button.Save -> Haptic.WordSaved
@@ -3375,7 +3380,8 @@ class AtlasIme : InputMethodService() {
                 // which deletes the line (owner, 2026-11-13). See [Modifiers.backspaceDoes]. A press decides once, so its repeats
                 // go on the same way after a tapped Alt is used up.
                 if (event.repeatCount == 0 || backspaceDoes == null)
-                    backspaceDoes = modifiers.backspaceDoes(event.metaState, TypingSettings.altBackspaceForward(this))
+                    backspaceDoes = modifiers.backspaceDoes(event.metaState, TypingSettings.altBackspaceForward(this),
+                        TypingSettings.shiftBackspaceWord(this))
                 when (backspaceDoes) {
                     Modifiers.Backspace.Forward -> command(withKey(event, KeyEvent.KEYCODE_FORWARD_DEL), dropMeta = KeyEvent.META_ALT_MASK)
                     Modifiers.Backspace.AltToApp -> command(withMeta(event, KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON))

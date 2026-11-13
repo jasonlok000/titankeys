@@ -6,7 +6,9 @@ import { showKeyCalibration, state, update } from "../../lib/atlas";
 import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
-import { accentsNote, altBackspaceLabel, altBackspaceNote, barLabel, cursorLabel, scrollLabel } from "../../lib/setting-names";
+import { barTextSizeLabel, barTextSizeTitle } from "./bar-text-size";
+import { accentsNote, altBackspaceLabel, altBackspaceNote, altSymLabel, altSymNote, barLabel, cursorLabel, scrollLabel, shiftBackspaceLabel,
+  shiftBackspaceNote } from "../../lib/setting-names";
 import { parentOf } from "../../lib/settings-tree";
 import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
@@ -18,7 +20,6 @@ import { liftLabel } from "./lift";
 import { rawLogLabel } from "./rawlog";
 import { sentenceSpacesLabel } from "./sentence-spaces";
 import { setupLabel } from "./setup";
-import { sizeLabel } from "./size";
 import { shorthandLabel } from "./shorthand/index";
 import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
@@ -61,9 +62,11 @@ export default function Settings() {
         onChange={shortcodes => save.run({ shortcodes })} />
       <Field label="Spell out shorthand" href="/settings/shorthand">{shorthandLabel(settings)}</Field>
       <Field label="Exact typing (experimental)" href="/settings/exact-apps">{exactAppsLabel(settings)}</Field>
-      {/* Built in, with nothing to set: shown so you know they're there. They count only while the first key is held. */}
-      <Field label="Delete a word">Hold Shift + Backspace</Field>
-      <Field label="Next keyboard">Hold Alt + Sym</Field>
+      {/* Built in, each with its switch (owner, 2026-11-13). They count only while the first key is held. */}
+      <Toggle label={shiftBackspaceLabel} subtitle={shiftBackspaceNote} value={settings.shiftBackspaceWord}
+        onChange={shiftBackspaceWord => save.run({ shiftBackspaceWord })} />
+      <Toggle label={altSymLabel} subtitle={altSymNote} value={settings.altSymNextKeyboard}
+        onChange={altSymNextKeyboard => save.run({ altSymNextKeyboard })} />
     </Section>
     {/* The bar is words, the Shift, Alt and Ctrl chips and the clip offer. Each setting here hides all of it, so each
         says "the bar", and the bar is turned off in this one place only. */}
@@ -73,6 +76,7 @@ export default function Settings() {
       {settings.suggestionBar && <Toggle label="Hide the bar on an empty home search" value={settings.launcherHidesBar}
         onChange={launcherHidesBar => save.run({ launcherHidesBar })} />}
       {settings.suggestionBar && <Field label={hiddenBarTitle} href="/settings/hidden-bar">{hiddenBarLabel(settings)}</Field>}
+      {settings.suggestionBar && <Field label={barTextSizeTitle} href="/settings/bar-text-size">{barTextSizeLabel(settings)}</Field>}
     </Section>
     <Section title="Touchpad">
       <Toggle label="Swipe to type words" value={settings.swipeTyping}
@@ -101,7 +105,6 @@ export default function Settings() {
       {settings.hapticsLab && <Field label="Haptics lab" href="/settings/haptics-lab" />}
       <Toggle label="Orange accents" subtitle={accentsNote(settings.orangeAccents)} value={settings.orangeAccents}
         onChange={orangeAccents => save.run({ orangeAccents })} />
-      <Field label="Size" href="/settings/size">{sizeLabel(settings)}</Field>
     </Section>
     <Section title="Your data">
       <Field label="Your words" href="/settings/data" />

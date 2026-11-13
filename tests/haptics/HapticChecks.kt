@@ -138,6 +138,7 @@ private val table = mapOf(
     Haptic.BarWord to Family.Confirm,
     Haptic.MenuOpen to Family.Confirm,
     Haptic.MenuMark to Family.Texture,
+    Haptic.MenuPress to Family.Texture,
     Haptic.MenuClosed to Family.Release,
     Haptic.WordSaved to Family.Saved,
     Haptic.WordBlocked to Family.Removed,
@@ -308,6 +309,16 @@ private fun theWordMenuHasItsOwnFeels() {
     check(Haptic.entries.filter { it.family == Family.Unblocked } == listOf(Haptic.WordUnblocked)) { "Only Unblock plays Unblocked" }
     check(Haptic.MenuOpen.family != Haptic.WordSaved.family) { "Save never shares the menu opening's family, so the repeat rule can't drop it" }
     check(Haptic.WordNotSaved.family == Family.No) { "A failed save is no" }
+    // A press ticks at once, before its step's own haptic (owner, 2026-11-13): texture, so the step's message still plays on its
+    // frame, even right after the tick, and nothing waits for it.
+    check(Haptic.MenuPress.family == Family.Texture) { "A menu press is a light tick" }
+    for (step in listOf(Haptic.WordSaved, Haptic.WordUnsaved, Haptic.WordFavourited, Haptic.WordUnfavourited, Haptic.WordBlocked, Haptic.WordUnblocked)) {
+        val clock = Clock()
+        val gate = HapticGate { clock.now }
+        check(gate.admit(Haptic.MenuPress.family)) { "The press ticks" }
+        clock.now += 1
+        check(gate.admit(step.family)) { "$step plays on its frame right after the press's tick" }
+    }
     check(Haptic.entries.none { it.id == "forget_undone" || it.id == "word_forgotten" }) { "Forget and its Undo are gone (owner, 2026-11-13)" }
     for (family in ladder) check(HapticPalette.gaps(family.pattern).all { it == 40L }) { "$family's gaps are 40 ms" }
     // Favourite is Saved with a stronger last hit; Unfavourite is never Removed's fall.

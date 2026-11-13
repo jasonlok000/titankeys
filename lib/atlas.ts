@@ -2,8 +2,8 @@ import { resource } from "ink";
 import { callNative, onNativeMessage } from "ink/native";
 
 export type Spelling = "british" | "american" | "canadian";
-/** Settings > Size: how much bigger than normal TitanKeys draws everything (FixedScale.Size). */
-export type Size = "normal" | "bigger" | "biggest";
+/** Settings > The bar > Bar text size: how much bigger than normal the bar's words, menu and chips are (FixedScale.Size). */
+export type BarTextSize = "normal" | "bigger" | "biggest";
 /** How many spaces go in after a full stop, a question mark or an exclamation mark. */
 export type SentenceSpaces = "one" | "two" | "none";
 export type EnterKey = "send" | "newline" | "app";
@@ -56,6 +56,10 @@ export type State = {
   fnAsCtrl: boolean;
   /** Alt + Backspace deletes forward, like Delete on a PC. Off, Android's own Alt + Backspace deletes the line. */
   altBackspaceForward: boolean;
+  /** A held Shift + Backspace deletes a word. Off, it's a plain Backspace. */
+  shiftBackspaceWord: boolean;
+  /** A held Alt + Sym switches to the next keyboard. Off, Sym does what it would without it. */
+  altSymNextKeyboard: boolean;
   /** Two quick pushes lock Shift or Alt, so Key Mapper is not needed to stop that. */
   doublePressLocks: boolean;
   autoCapitalise: boolean;
@@ -82,7 +86,10 @@ export type State = {
   touchpadOnlyInFields: boolean;
   /** A few small marks on the keyboard are orange, such as the key under a finger. Off, they are white or black. */
   orangeAccents: boolean;
-  size: Size;
+  /** The bar's text size: your pick, or the one for the phone's text size until you pick one. */
+  barTextSize: BarTextSize;
+  /** You picked the bar's text size. Until you do, and after a reset, it follows the phone's text size. */
+  barTextSizePicked: boolean;
   /** Swipes and typing know contacts' given and family names. True only while the setting is on and Android allows it. */
   contactNames: boolean;
   /** Which build this is: "play" for Google Play, which has no typing log, "github" or "debug". */
@@ -153,7 +160,7 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "size" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog"> & {
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog"> & {
   /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
   shorthandToggles: Record<string, boolean>;
 };

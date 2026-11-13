@@ -397,6 +397,9 @@ private fun theColours() {
     same(MenuScene.LEAN, .6f, "A preview goes about 60% of the way")
 }
 
+/** A step's own haptic later than this after the press, in ms, and the press ticks at once (owner, 2026-11-13). */
+private const val LATE_BEAT = 80
+
 /**
  * The six effects of ladder v4, played as the strip plays them: hover first, then the press, a frame at a time. Each plays its
  * haptic once, on its own frame; the book stays wholly above the bar with its bottom at least 8 dp over it, and once shut its
@@ -439,8 +442,15 @@ private fun theEffects() {
                 shutChecked = true
             }
         }
-        same(haptics.map { it.first to it.second }, listOf(move.button to move.haptic), "${move.button}: one haptic, on its frame")
-        check(haptics.single().third in move.millis) { "${move.button}'s haptic at ${haptics.single().third} ms" }
+        // The press ticks at once wherever the step's own haptic lands later than [LATE_BEAT]; that one plays once, on its frame.
+        val beat = haptics.filter { it.second != MenuScene.PRESS }
+        same(beat.map { it.first to it.second }, listOf(move.button to move.haptic), "${move.button}: one haptic of its own, on its frame")
+        check(beat.single().third in move.millis) { "${move.button}'s haptic at ${beat.single().third} ms" }
+        val ticks = haptics.filter { it.second == MenuScene.PRESS }
+        if (beat.single().third > LATE_BEAT) same(ticks.map { it.first to it.third }, listOf(move.button to 0), "${move.button}: its beat lands late, so the press ticks at once")
+        else same(ticks, emptyList<Any>(), "${move.button}: its beat is already at once, so no tick")
+        same(haptics.first().second, if (ticks.isEmpty()) move.haptic else MenuScene.PRESS, "${move.button}: the first haptic is on the press")
+        println("${move.button}: the press ${if (ticks.isEmpty()) "plays its step at once" else "ticks at once"}, its step's haptic at ${beat.single().third} ms")
         same(played.rung, MenuScene.next(move.button), "${move.button}: the word ends on its rung")
         check(played.parts.isEmpty() && played.book == null) { "${move.button}: it's all over in 3 s" }
         if (move.button == MenuKeys.Button.Save) check(shutChecked) { "Save's book shut" }
@@ -450,7 +460,7 @@ private fun theEffects() {
     val calm = scene("whatever", MenuKeys.Step.New) { _, label -> haptics += label }
     calm.reducedMotion = true
     calm.press(MenuKeys.Button.Save)
-    same(haptics, listOf("end state"), "Reduced motion: the haptic as the press lands")
+    same(haptics, listOf("end state"), "Reduced motion: the step's haptic as the press lands, with no tick, so nothing hits twice")
     repeat(25) { calm.step(1 / 120f); check(calm.parts.isEmpty() && calm.book == null) { "No particles with motion off" } }
     repeat(10) { calm.step(1 / 120f) }
     check(!calm.busy && calm.rung == MenuKeys.Step.Saved) { "Done within the crossfade's 200 ms" }
@@ -727,6 +737,9 @@ private fun theKeyboardMakesTheseCalls() {
         "SwipeTyping.get(this).setWordBlocked(held.word, false) { error ->",
         "typing.builtInWord(held.word) && !typing.unsavedWord(held.word)",
         "MenuKeys.Button.Block -> Haptic.WordBlocked",
+        // A menu press ticks at once, in the guide's for-show menu too, which plays its presses through the same scene.
+        "words.menuPress = { haptics.play(Haptic.MenuPress) }",
+        "if (inGuide && held != null && action in MENU_CHOICES) {",
         "MenuKeys.Button.Unblock -> Haptic.WordUnblocked",
     )) check(line in ime) { "AtlasIme no longer has: $line" }
     val typing = File("android/kotlin/com/atlas/engine/SwipeTyping.java").readText()
@@ -752,6 +765,10 @@ private fun theKeyboardMakesTheseCalls() {
     check("menuMark" !in showNotice) { "A new notice must not touch the hover's mark" }
     check("pillShown = -1" in showNotice.substringAfter("if (menu == null) {").substringBefore("} else {")) { "Only a closed menu lets go of the pill" }
     check("pillShown" !in showNotice.substringAfter("} else {")) { "A new step keeps the pill" }
+    // The scene's press tick reaches the phone as the menu press's tick, and every other haptic as the step's.
+    check("shown.onHaptic = { button, label -> if (label == MenuScene.PRESS) menuPress() else menuBeat(button) }" in strip) {
+        "The strip plays the press's tick as Haptic.MenuPress, and each effect's beat as its step's"
+    }
 }
 
 private fun same(actual: Any?, expected: Any?, message: String) {

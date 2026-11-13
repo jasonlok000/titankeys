@@ -157,6 +157,12 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family, va
     BarWord("bar_word", HapticGroup.Bar, Family.Confirm),
     MenuOpen("menu_open", HapticGroup.Bar, Family.Confirm),
     MenuMark("menu_mark", HapticGroup.Bar, Family.Texture),
+    /**
+     * A word menu button that moves the word was pressed: one light tick at once, as it lands, since the step's own haptic plays
+     * with its effect, 166 to 760 ms later (owner, 2026-11-13: "the save button shd have a immediate haptic before the book
+     * closes"). Texture, so it never holds up or cuts that haptic. With motion off, the step's haptic plays at once instead.
+     */
+    MenuPress("menu_press", HapticGroup.Bar, Family.Texture),
     /** Back closed the word menu, by P or the strip, with nothing picked. */
     MenuClosed("menu_closed", HapticGroup.Bar, Family.Release),
     /** Save in the word menu, by I or the strip. It has its own family, so it never feels like the menu opening. */

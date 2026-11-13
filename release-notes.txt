@@ -22,7 +22,7 @@
 - Canadian spelling: Settings > English spelling has Canadian now. Colour and realize. Both. Eh.
 - Two new shortcuts: Hold Shift and press Backspace to delete a word, and Alt + Sym switches to your next keyboard. They're built in, so Key Mapper can sit this one out.
 - Alt + Backspace: Deletes forward, the letter after the cursor, like Delete on a PC. Hold it to keep going. Rather have Android's own, which deletes the line? Turn off Alt + Backspace deletes forward in Settings. For a word, hold Shift with Backspace, or use Ctrl.
-- Same size at any setting: TitanKeys ignores the phone's font size and display size, so a huge font doesn't blow it up anymore. Want it bigger? Settings > Size has Bigger and Biggest, and the bar keeps its height.
+- Same size at any setting: TitanKeys ignores the phone's font size and display size, so a huge font doesn't blow it up anymore. Only the bar's text follows your phone's text size, and Settings > Bar text size picks your own: Normal, Bigger or Biggest. The bar keeps its height.
 - Orange off means off: Turn off Orange accents and nothing TitanKeys draws is orange anymore, keys, bar, guide or Settings. It'll tell you what it thinks of that.
 - Snippets start with /: Alt+G or hold G, so no more digging for ; on the Sym panel. Already have snippets with ;? You keep it. Pick another in Settings > Snippets.
 
@@ -37,7 +37,8 @@
 - One feel, one meaning: Moving, a step, done, locked, gone and "nope" each feel different, so you can tell what happened without looking.
 - Your switches: Settings > Haptics has one switch for all of it and one for every single haptic.
 - Quiet swell: When something changes by itself, like autocorrect, a snippet or a held symbol, you get a soft swell. Just a nod. Nothing to do.
-- Quiet when it should be: Key presses never buzz, and a fast run of buzzes doesn't turn into a rattle.
+- Quiet when it should be: Key presses don't buzz, except in the word menu, and a fast run of buzzes doesn't turn into a rattle.
+- Word menu presses: I and O give a light tick the moment you press them, then the step's own buzz lands with its effect. Settings > Haptics > Press a word menu button turns it off.
 - Playground: Its big moments buzz too: the confetti, the rain, the shake, the lightning and the plant. Settings > Haptics > Playground effects turns them off.
 - Every tap: Every button in TitanKeys' own screens gives a light tick now, so you feel what you pressed. Settings > Haptics > A press turns it off.
 - The app too: Switches and steppers in Settings have their own feel, and anything the app won't do says nope.

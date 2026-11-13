@@ -364,6 +364,8 @@ class Strip(
     var effects: android.view.View? = null
     /** Each effect's haptic, on its frame: the book's clap, the rip, the hearts' release, the crack, the strike landing or gone. */
     var menuBeat: (MenuKeys.Button) -> Unit = {}
+    /** The light tick on a menu press, at once, before the effect's own haptic: see [MenuScene.PRESS]. */
+    var menuPress: () -> Unit = {}
     /**
      * I's and O's icons, and the icons they are changing from, since when: no icon snaps to another, see [MenuMotion.icon]. Each
      * as the menu's buttons, not the strip's actions.
@@ -371,7 +373,7 @@ class Strip(
     private val slotIcons = arrayOfNulls<MenuKeys.Button>(2)
     private val slotFrom = arrayOfNulls<MenuKeys.Button>(2)
     private val slotChanged = LongArray(2)
-    /** The bar's height: Normal's at every Settings > Size, while the words, chips, marks and menu in it grow (FixedScale). */
+    /** The bar's height: Normal's at every Bar text size, while the words, chips, marks and menu in it grow (FixedScale). */
     private val barHeight = Math.round(FixedScale.normalPx(context, BAR_DP))
 
     init {
@@ -571,7 +573,7 @@ class Strip(
         }
     /** The height of Shift's chip: its text size and padding. The arrow's place is that tall. */
     /**
-     * The clip and its hint stack in the bar, which keeps Normal's height at every Settings > Size. At Biggest the two lines would
+     * The clip and its hint stack in the bar, which keeps Normal's height at every Bar text size. At Biggest the two lines would
      * be taller than it, so both shrink alike, just enough to fit. At Normal and Bigger they fit as they are.
      */
     private fun fitClipLines(clipPixels: Float) {
@@ -850,7 +852,7 @@ class Strip(
         val now = SystemClock.uptimeMillis()
         val glide = if (GuideMotion.enabled) MENU_GLIDE_MILLIS else 0L
         val height = barHeight.toFloat()
-        // The menu's dp grow with Settings > Size, as the words do; the bar keeps Normal's height.
+        // The menu's dp grow with Bar text size, as the words do; the bar keeps Normal's height.
         val density = resources.displayMetrics.density
         // The real keys' left edge, as calibrated: the word keeps over the keys, as the buttons do.
         val keySide = MenuKeys.slot(width.toFloat(), 0).first
@@ -871,7 +873,7 @@ class Strip(
         // Ink's font, in its own medium weight, as Ink's headings use it: no faked bold.
         pillText.typeface = boldTypeface
         pillText.textSize = wordPixels() * MENU_PILL_TEXT
-        // The pill grows with Settings > Size, but never past its share of the bar, which doesn't.
+        // The pill grows with Bar text size, but never past its share of the bar, which doesn't.
         val pillHeight = minOf(dp(MENU_PILL_DP), barHeight * MENU_PILL_DP / BAR_DP.toInt()).toFloat()
         var pill: Pair<Float, Float>? = null
         val action = pillAction.takeIf { pillShown >= 0 }
@@ -912,7 +914,7 @@ class Strip(
         shown.cx = menuWordCentre / density
         shown.reducedMotion = !GuideMotion.enabled
         shown.palette = palette()
-        shown.onHaptic = { button, _ -> menuBeat(button) }
+        shown.onHaptic = { button, label -> if (label == MenuScene.PRESS) menuPress() else menuBeat(button) }
         // The button under the resting finger, whose press the grey preview shows.
         val under = if (hovered < 0) null else MenuKeys.choices(menu.step).let { if (hovered == MenuKeys.UP) it.i else it.o }
         // A press plays its effect once; a menu read again only shows where the word stands. The press keeps the preview it took
@@ -1414,7 +1416,7 @@ class Strip(
         /** The gap after each modifier chip, in dp. */
         private const val CHIP_GAP = 6
         private const val CONTENT_ABOVE = 16
-        /** The bar's height in dp at Normal, which it keeps at every Settings > Size. */
+        /** The bar's height in dp at Normal, which it keeps at every Bar text size. */
         const val BAR_DP = 56f
         /** No text on the bar or the panels is smaller than this, in sp: real text at TitanKeys' fixed scale (owner, 2026-11-13). */
         const val SMALLEST_TEXT = 13f

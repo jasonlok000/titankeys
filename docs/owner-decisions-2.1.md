@@ -205,6 +205,26 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Owner's answers, 2026-11-13 (afternoon):** "yes to all" (fix the Sym jump now; Biggest for the owner; starting size from the
+  phone's font size). (Owner)
+  - **Size grows only the bar's contents** (owner: "size shouldn't apply to the bar height … maybe not literally everything
+    bigger. i feel like the settings become a bit unusable after making it bigger. Maybe only applies to the elements of the
+    bar? (but not the height of the bar itself)"). (Owner) Orchestrator's design, unapproved: the bar's words, its word menu, chips,
+    clip offer and hints grow; the bar stays 56 dp; Ink's settings, the panels, the guide and the front page stay Normal. The
+    setting moves to The bar as "Bar text size" or similar. F builds it.
+  - **Starting size follows the phone's font size** until the user picks one: under 1.15 Normal, from 1.15 Bigger, never Biggest
+    (owner: "how about by default if it detects the size being big, it'll select big, not biggest? I think big is a good spot for
+    me personally"). Biggest is only ever picked. The resets go back to following it. The owner's phone (2.0) lands on Bigger by
+    itself; the Orchestrator checks it once build #12 is installed. (Owner)
+- **Never wait for the phone to be idle** (owner, 2026-11-13: "take my phone. never ever wait for my phone to be idle any
+  more."). Installs and checks run at once; navigation and the TitanKeys-in-front check still stop them. (Owner)
+  - **The Sym jump** goes to V, with checks that reproduce it.
+- **Save gives a haptic at once** (owner: "the save button shd have a immediate haptic before the book closes"). (Owner) A light
+  tick on the press, then the clap as the book shuts; every other menu button whose beat lands more than about 80 ms late gets the
+  same tick (Orchestrator). W builds it.
+- **Delete a word and Next keyboard become switches** (owner: "why is delte a word shift backsapce and next keyboard alt sym not
+  toggelable?"). They were info rows with nothing to set. Both become switches in Shortcuts, on by default, back on with the
+  resets (Orchestrator, by the vision: every behaviour adjustable). A builds them.
 - **The bar isn't shorter; its words are smaller** (owner's question, 2026-11-13: "the bar by default is shorter than before and
   also the text are smaller?"). Measured on the phone's captures, the bar is 88 px (56 dp) on 11-09, on 11-12 and today. The
   words were 17 sp, which the phone's font size 2.0 made about 29 dp; since fixed sizes (11-12) they're 20 dp at Normal, about a

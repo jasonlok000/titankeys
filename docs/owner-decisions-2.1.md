@@ -205,6 +205,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Guide notes** (owner, 2026-11-13, 10:00): the decorations barely show; the held-delete slide's text box doesn't need a deleting
+  animation; the held-delete zones are badly labelled (ASDF looks like the place to swipe); the pause zone should be full height.
+  (Owner)
+  - A does all four: decorations about twice as strong; no field animation on that slide; zones relabelled as start, a
+    "← faster" direction and pause; and the pause zone full height, in the real gesture too if it was one row only.
 - **The ladder is approved: build it in the app** (owner, 2026-11-13, 09:55): "let's focus this patch on the ladder logic and the
   animation. no need to build from scratch. the mockup only for concept and design and execution reference. build the app." (Owner)
   Corrections to v4:

@@ -746,7 +746,7 @@ class Strip(
         if (!gesture.busy) return
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
         val more = gesture.advance(SystemClock.uptimeMillis(), scale)
-        if (gesture.busy) drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), barHeight, look)
+        if (gesture.busy) drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), barHeight, look, line, wordFoot(), wordPixels())
         if (more) postInvalidateOnAnimation()
     }
 
@@ -1295,7 +1295,6 @@ class Strip(
     /** The ghost finger on the middle word, from 0 (gone) to 1, and how far its hold has run. */
     private var fingerAlpha = 0f
     private var fingerHold = 0f
-    private val fingerPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
     private val demoFrame = object : Runnable {
         override fun run() = stepDemo()
     }
@@ -1384,16 +1383,8 @@ class Strip(
     private fun drawDemoFinger(canvas: Canvas) {
         if (demo !is GuideHooks.StripDemo.Menu || fingerAlpha <= 0f) return
         val view = middleWord()
-        val x = view.left + view.width / 2f
-        val y = height / 2f - (paddingBottom - paddingTop) / 2f
-        val radius = dp(9).toFloat()
-        fingerPaint.style = android.graphics.Paint.Style.FILL
-        fingerPaint.color = GuideMotion.faded(look.accent, .35f * fingerAlpha)
-        canvas.drawCircle(x, y, radius, fingerPaint)
-        fingerPaint.style = android.graphics.Paint.Style.STROKE
-        fingerPaint.strokeWidth = dp(2).toFloat()
-        fingerPaint.color = GuideMotion.faded(look.accent, fingerAlpha)
-        canvas.drawCircle(x, y, radius * (2.6f - 1.6f * fingerHold), fingerPaint)
+        // On the word's letters, on the bar's line, as the gestures are.
+        drawing.finger(canvas, view.left + view.width / 2f, line, floor, fingerAlpha, fingerHold, look, FixedScale.fixedPx(context, 1f))
     }
 
     private fun dp(value: Int) = Math.round(value * resources.displayMetrics.density)

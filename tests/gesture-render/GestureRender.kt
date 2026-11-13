@@ -40,7 +40,8 @@ fun main(args: Array<String>) {
             g.color = java.awt.Color(look.paper, true)
             g.fillRect(0, 0, WIDTH, strip)
             g.dispose()
-            drawing.draw(Canvas(image), display, SIDE * DENSITY, WIDTH - SIDE * DENSITY, strip, look)
+            drawing.draw(Canvas(image), display, SIDE * DENSITY, WIDTH - SIDE * DENSITY, strip, look,
+                StripFit.LINE_DP * DENSITY, strip - StripFit.EDGE_DP * DENSITY, 20 * DENSITY)
             ImageIO.write(image, "png", File(folder, "${moment.first}$suffix.png"))
             val out = sheet.createGraphics()
             out.color = java.awt.Color(look.paper, true)

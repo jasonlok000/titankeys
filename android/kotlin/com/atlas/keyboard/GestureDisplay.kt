@@ -1533,7 +1533,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
 /** The marks a selection's moving end can have. [id] is stored by the Haptics lab, so it never changes. */
 enum class SelectionEnd(val id: String, val label: String) {
-    /** A selection handle: a line taller than the selection, with a round knob below it, as text selection has. */
+    /** A selection handle: a line as tall as the selection or taller, with a round knob on top, as the bar has no room below. */
     Handle("handle", "Handle"),
     /** A small chevron just outside the end, pointing the way the selection grows. */
     Chevron("chevron", "Chevron"),

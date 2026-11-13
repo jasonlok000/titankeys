@@ -49,7 +49,8 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 - **Review of the current build**, then one batch for the whole app (owner's call):
   - Guide and playground keyboard: same width, 60% height, no gap between keys, 10.5 px between rows.
   - The guide crash with the font size at 2.0: the fix is ready on claude/guide-font-crash.
-  - The app's scaling at large font sizes. The owner says the scaling in the current build "is better" (21:40).
+  - Scaling: keep every size the same whatever the display size (DPI) or font size setting (owner, 21:45). The owner says the
+    scaling in the current build "is better" (21:40), but the rule covers every setting.
   - Playground words unreadable when the screen is fully orange.
   - Guide: the text field must always show **two lines**. It's buggy now: the code asks for 3 and drops to 2 when tight.
   - Playground text: rewrite it in the owner's tone ("offensive fun casual") and make it **long enough to type for a long time

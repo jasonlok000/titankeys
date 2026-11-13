@@ -19,6 +19,8 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - Front page: a proper header with the title, Guide and Settings; whole sentences in the prompt line; a dark text box with personality (an orange accent); the full real-size drawn keyboard, bottom row included; the touchpad zone kept and shown as an outline in its real place. (Owner, 2026-11-12)
 - Animation timing is not unified across the app. Keep the current timings and fix only what looks off; the owner felt one set of timings could make it generic. (Owner, 2026-11-12)
 
+- **Sizes stay the same whatever the phone's display size (DPI) or font size setting.** TitanKeys' own screens, the guide, the bar, the panels and the playground look the same at any setting. (Owner, 2026-11-12) How: in the batch, TitanKeys' windows size by the screen's width, not the system's density or font scale. A font size of 2.0 then no longer doubles the text, and "the scaling" item is covered by this rule.
+
 - The front page touchpad zone uses **corner brackets with a label** ("TOUCHPAD"), with no lines across the keys. (Owner, 2026-11-12)
 - Add the real **Inter Bold** font file (OFL, from the official source), listed in the licences. (Owner, 2026-11-12)
 

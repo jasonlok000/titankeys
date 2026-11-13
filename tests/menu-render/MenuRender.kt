@@ -87,6 +87,7 @@ fun main(args: Array<String>) {
             ImageIO.write(image, "png", File(folder, "$sheet$suffix.png"))
         }
     }
+    barSheet(folder, regular, medium, drawables)
     println("Drawn to $folder")
 }
 
@@ -117,7 +118,7 @@ private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: 
     fun buttonAt(column: Int) = slots[column - MenuKeys.SAVE]
     val hovered = row.hover.takeIf { MenuKeys.pills(it, row.state) } ?: -1
     // The real keys' left edge, then the word placed once in the room left of the buttons, in Ink's font, never another colour.
-    g.font = regular.deriveFont(17 * DENSITY)
+    g.font = regular.deriveFont(20 * DENSITY)
     val wordLeft = MenuKeys.slot(WIDTH.toFloat(), 0, row.alignment).first.coerceAtLeast(8 * DENSITY)
     val wordRight = MenuKeys.wordRight(WIDTH.toFloat(), 8 * DENSITY, row.alignment)
     val shown = MenuKeys.shorten(row.word) { g.fontMetrics.stringWidth(it) <= wordRight - wordLeft }
@@ -152,7 +153,7 @@ private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: 
     val spent = hovered == MenuKeys.SAVE && buttonAt(hovered) == MenuKeys.Button.Favourited
     if (hovered >= 0) {
         val name = name(strings, buttonAt(hovered))
-        g.font = medium.deriveFont(17 * DENSITY * .88f)
+        g.font = medium.deriveFont(20 * DENSITY * .88f)
         val label = g.fontMetrics.stringWidth(name).toFloat()
         pill = MenuKeys.pill(WIDTH.toFloat(), hovered, label, icon, 18 * DENSITY, 12 * DENSITY, 11 * DENSITY, row.alignment)
         val height = 42 * DENSITY
@@ -383,3 +384,184 @@ private val ROW = (56 * DENSITY).toInt()
 private const val CAPTION = 44
 /** The orange accent, GuideColours.ORANGE. */
 private const val ORANGE = 0xEF804E
+
+/**
+ * The bar's own texts, at TitanKeys' fixed scale (owner, 2026-11-13: "the suggestion bar text a bit too small"): the three words
+ * before and after, long words fitted by the real [StripFit], the clip offer and its hint, the modifier bar's chip and hint, the
+ * automatic capital's arrow beside a short and a long left word, the Forget notice, and the panel's labels. Sizes are Strip's
+ * and SymPanel's, in dp, at 1.5625 px to a dp.
+ */
+private fun barSheet(folder: File, regular: Font, medium: Font, drawables: File) {
+    val scale = 1.5625f
+    val width = 1076
+    val bar = (56 * scale).toInt()
+    val caption = 44
+    val side = 8 * scale
+    val pad = (6 + 2) * scale
+    data class BarRow(val caption: String, val draw: (Graphics2D, Color, Color, Color) -> Unit)
+    fun words(g: Graphics2D, ink: Color, shown: List<String>, sizes: List<Float>, weights: List<Font>) {
+        val room = width - 2 * side
+        val fits = StripFit.fit(shown, room, pad, { text ->
+            g.font = medium.deriveFont(20 * scale); g.fontMetrics.stringWidth(text).toFloat()
+        }, lend = false, sizes = sizes.map { it / 20f })
+        var left = side
+        for ((index, slot) in fits.withIndex()) {
+            g.font = weights[index].deriveFont(sizes[index] * scale * slot.scale)
+            g.color = ink
+            val textWidth = g.fontMetrics.stringWidth(slot.text)
+            g.drawString(slot.text, left + slot.width / 2 - textWidth / 2, bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+            left += slot.width
+        }
+    }
+    fun ladder(g: Graphics2D, ink: Color, shown: List<String>) = words(g, ink, shown, listOf(18f, 20f, 18f), listOf(regular, medium, regular))
+    val orange = Color(ORANGE)
+    val rows = listOf(
+        BarRow("Before: 17 dp, all three the same") { g, ink, _, _ ->
+            words(g, ink, listOf("I'm", "the", "you"), listOf(17f, 17f, 17f), listOf(regular, regular, regular))
+        },
+        BarRow("Now: the best word 20 dp in Inter Medium, the others 18 dp") { g, ink, _, _ -> ladder(g, ink, listOf("I'm", "the", "you")) },
+        BarRow("Long words fit in their own places: they shrink, then lose what they share") { g, ink, _, _ ->
+            ladder(g, ink, listOf("recommendations", "recommend", "recommended"))
+        },
+        BarRow("A very long best word") { g, ink, _, _ -> ladder(g, ink, listOf("a", "internationalization", "of")) },
+        BarRow("The clip offer, at the best word's size, and its hint at 13 dp") { g, ink, muted, _ ->
+            val icon = (20 * scale * 1.1f)
+            g.font = regular.deriveFont(20 * scale)
+            val text = "Meet at the corner of King and Bay at 6"
+            val textWidth = g.fontMetrics.stringWidth(text)
+            val gap = 8 * scale
+            val start = width / 2f - (icon + gap + textWidth) / 2
+            val top = bar / 2f - 10 * scale
+            drawVector(g, File(drawables, "clipboard.xml").readText(), start, top - icon / 2 + 6 * scale, icon, orange)
+            g.color = ink
+            g.drawString(text, start + icon + gap, top + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f + 6 * scale)
+            g.font = regular.deriveFont(13 * scale)
+            g.color = muted
+            val hint = "Older clips: press Sym, then A"
+            g.drawString(hint, width / 2f - g.fontMetrics.stringWidth(hint) / 2, top + 6 * scale + 22 * scale)
+        },
+        BarRow("Ctrl held: its chip at 14 dp, and what each key does at 18 dp") { g, ink, _, _ ->
+            g.font = regular.deriveFont(14 * scale)
+            val chip = "Ctrl"
+            val chipWidth = g.fontMetrics.stringWidth(chip) + 16 * scale
+            val chipHeight = g.fontMetrics.height + 6 * scale
+            val x = side + 4 * scale
+            val y = (bar - chipHeight) / 2f
+            g.color = orange
+            g.fill(RoundRectangle2D.Float(x, y, chipWidth, chipHeight, 8 * scale, 8 * scale))
+            g.color = Color.BLACK
+            g.drawString(chip, x + 8 * scale, y + 3 * scale + g.fontMetrics.ascent)
+            g.font = regular.deriveFont(18 * scale)
+            g.color = ink
+            val hint = "A all  C copy  X cut  V paste  Z undo  Y redo"
+            val room = width - x - chipWidth - 6 * scale - side
+            g.drawString(hint, x + chipWidth + 6 * scale + (room - g.fontMetrics.stringWidth(hint)) / 2, bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+        },
+        BarRow("A sentence starts: Shift's arrow at the left, clear of the left word") { g, ink, _, _ ->
+            ladder(g, ink, listOf("The", "I", "This"))
+            capitalArrow(g, side, bar, scale, small = false)
+        },
+        BarRow("Long left words: the arrow stays unless the word reaches under it, as Strip decides") { g, ink, _, _ ->
+            ladder(g, ink, listOf("Unfortunately", "I", "This"))
+            capitalArrow(g, side, bar, scale, small = reachesArrow(g, regular, "Unfortunately", side, width, scale))
+        },
+        BarRow("A left word that does reach under it: the arrow goes small into the corner") { g, ink, _, _ ->
+            val word = "Incomprehensibilities"
+            ladder(g, ink, listOf(word, "I", "This"))
+            capitalArrow(g, side, bar, scale, small = reachesArrow(g, regular, word, side, width, scale))
+        },
+        BarRow("Forget's notice and its Undo at 18 dp") { g, ink, _, _ ->
+            g.font = regular.deriveFont(18 * scale)
+            g.color = ink
+            g.drawString("Forgot “utun”", side + 8 * scale, bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+            g.color = orange
+            val undo = "Undo"
+            g.drawString(undo, width - side - 14 * scale - g.fontMetrics.stringWidth(undo), bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+        },
+        BarRow("The quick settings page: key labels at 16 dp, at least 13, and the setting's name at 18") { g, ink, muted, _ ->
+            val each = (width - 2 * side) / 10f
+            g.font = regular.deriveFont(16 * scale)
+            for ((index, label) in listOf("", "", "", "", "", "Fix", "Swipe", "Caps", "Dot", "1/3").withIndex()) {
+                if (label.isEmpty()) continue
+                g.color = if (label == "1/3") muted else ink
+                g.drawString(label, side + each * index + each / 2 - g.fontMetrics.stringWidth(label) / 2, bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+            }
+            g.font = regular.deriveFont(18 * scale)
+            g.color = ink
+            val name = "Fix typos as you type"
+            g.drawString(name, side + each * 2.5f - g.fontMetrics.stringWidth(name) / 2, bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+        },
+    )
+    for (dark in listOf(true, false)) {
+        val paper = if (dark) Color.BLACK else Color.WHITE
+        val ink = if (dark) Color.WHITE else Color.BLACK
+        val muted = if (dark) Color.GRAY else Color.DARK_GRAY
+        val image = BufferedImage(width, rows.size * (bar + caption), BufferedImage.TYPE_INT_RGB)
+        val g = image.createGraphics()
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+        g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
+        for ((index, row) in rows.withIndex()) {
+            val top = index * (bar + caption)
+            g.color = if (dark) Color(0x22, 0x22, 0x22) else Color(0xEE, 0xEE, 0xEE)
+            g.fillRect(0, top, width, caption)
+            g.color = Color.GRAY
+            g.font = regular.deriveFont(22f)
+            g.drawString(row.caption, 24, top + caption - 14)
+            g.color = paper
+            g.fillRect(0, top + caption, width, bar)
+            val saved = g.transform
+            g.translate(0, top + caption)
+            row.draw(g, ink, muted, paper)
+            g.transform = saved
+        }
+        g.dispose()
+        ImageIO.write(image, "png", File(folder, "bar-text${if (dark) "" else "-light"}.png"))
+    }
+}
+
+/**
+ * Whether the left [word], centred in its place at 18 dp, starts under the arrow's place, as Strip's placeCapital decides. A word too
+ * long for its place shrinks first, so this takes the fitted size.
+ */
+private fun reachesArrow(g: Graphics2D, regular: Font, word: String, side: Float, width: Int, scale: Float): Boolean {
+    val place = (width - 2 * side) / 3
+    g.font = regular.deriveFont(18 * scale)
+    val natural = g.fontMetrics.stringWidth(word).toFloat()
+    val room = place - 2 * (6 + 2) * scale
+    val shown = minOf(natural, room)
+    val textLeft = side + place / 2 - shown / 2
+    val arrowRight = side + ((14 * 1.21f + 6) * scale - 8 * scale + 10 * scale)
+    return textLeft < arrowRight + 2 * scale
+}
+
+/** Shift's arrow as Strip draws it for an automatic capital: at the left, the chip's size at 14 dp, or small in the corner. */
+private fun capitalArrow(g: Graphics2D, side: Float, bar: Int, scale: Float, small: Boolean) {
+    val height = (14 * 1.21f + 6) * scale
+    val arrow = height - 8 * scale
+    val width = height - 8 * scale + 10 * scale
+    var left = side
+    var top = (bar - height) / 2
+    var size = arrow
+    if (small) {
+        left = side / 2 + 2 * scale
+        top = 4 * scale
+        size = arrow * .6f
+    }
+    val boxWidth = if (small) width * .6f else width
+    val boxHeight = if (small) height * .6f else height
+    val x = left + boxWidth / 2 - size / 2
+    val y = top + boxHeight / 2 - size / 2
+    val path = Path2D.Float()
+    path.moveTo(x + size / 2, y)
+    path.lineTo(x + size, y + size * .52f)
+    path.lineTo(x + size * .73f, y + size * .52f)
+    path.lineTo(x + size * .73f, y + size)
+    path.lineTo(x + size * .27f, y + size)
+    path.lineTo(x + size * .27f, y + size * .52f)
+    path.lineTo(x, y + size * .52f)
+    path.closePath()
+    g.color = Color(ORANGE)
+    g.stroke = BasicStroke(1.3f * scale * (if (small) .6f else 1f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+    g.draw(path)
+}

@@ -71,6 +71,17 @@ fun main() {
     same(StripFit.fit(listOf("Hello"), 300f, 5f, measure).single(), StripFit.Slot("Hello", 1f, 300f), "A short clip stays whole")
     same(StripFit.fit(emptyList(), 300f, 5f, measure), emptyList<StripFit.Slot>(), "No words, no places")
 
+    // The bar's side words are a step smaller than the middle one (owner, 2026-11-13): each place fits its word at its own size.
+    val sizes = listOf(.9f, 1f, .9f)
+    val stepped = StripFit.fit(listOf("abcdefghi", "abcdefghi", "abcdefghi"), 300f, 5f, measure, lend = false, sizes = sizes)
+    same(stepped.map { it.scale }, listOf(1f, 1f, 1f), "A word that fits at its own size keeps it")
+    val tight = StripFit.fit(listOf("abcdefghij", "abcdefghij", "abcdefghij"), 300f, 5f, measure, lend = false, sizes = sizes)
+    check(tight[0].scale == 1f && tight[1].scale < 1f, "A side word that fits at its smaller size keeps it, where the middle one shrinks: $tight")
+    for ((index, slot) in tight.withIndex()) check(measure(slot.text) * sizes[index] * slot.scale <= slot.width - 10f + .01f,
+        "Every word fits its place at its own size: $slot")
+    val cutSide = StripFit.fit(listOf("internationalization", "a", "b"), 300f, 5f, measure, lend = false, sizes = sizes)
+    check(measure(cutSide[0].text) * sizes[0] * cutSide[0].scale <= cutSide[0].width - 10f + .01f, "A cut side word fits at its own size: ${cutSide[0]}")
+
     if (failures.isNotEmpty()) {
         failures.forEach(::println)
         throw AssertionError("${failures.size} strip fit check(s) failed")

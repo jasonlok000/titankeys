@@ -120,7 +120,8 @@ internal class ExactBar(
         /** The strip's own height. */
         const val HEIGHT = 56f
         const val TEXT_SIZE = 17f
-        const val SMALLEST_TEXT = 9f
+        /** No smaller: [Strip.SMALLEST_TEXT]. The bar scrolls sideways, so a label never needs to be smaller to fit. */
+        const val SMALLEST_TEXT = Strip.SMALLEST_TEXT
         private const val CONTENT_ABOVE = 16f
     }
 }

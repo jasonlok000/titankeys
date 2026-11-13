@@ -684,12 +684,13 @@ class SymPanel(
         const val CORNER_MARGIN = 2
         const val CATEGORY_SIZE = 15f
         const val CATEGORY_LARGEST = 18f
-        const val PREVIEW_SMALLEST = 8
-        const val PREVIEW_LARGEST = 16
+        /** No text below [Strip.SMALLEST_TEXT]: 13 at the least, for the setting's name in the strip and a key's label. */
+        const val PREVIEW_SMALLEST = 13
+        const val PREVIEW_LARGEST = 18
         const val ITEM_SIZE = 22f
         const val ITEM_LARGEST = 30f
-        const val LABEL_SMALLEST = 8
-        const val LABEL_LARGEST = 14
+        const val LABEL_SMALLEST = 13
+        const val LABEL_LARGEST = 16
         /** A clip in its field: two lines that fit the row at any system font size. */
         const val CLIP_TEXT_SIZE = 15f
         const val CLIP_TEXT_LARGEST = 16f

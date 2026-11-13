@@ -70,7 +70,7 @@ class Strip(
     private val selectedView = item({ act(Action.OpenSelected) }, { act(Action.OpenSelected); true })
     private val noticeLabel = TextView(context).apply {
         typeface = this@Strip.typeface
-        textSize = 16f
+        textSize = NOTICE_SIZE
         gravity = Gravity.CENTER_VERTICAL or Gravity.START
         isSingleLine = true
         ellipsize = TextUtils.TruncateAt.END
@@ -82,7 +82,7 @@ class Strip(
     private val noticeButtons = List(MAX_BUTTONS) {
         TextView(context).apply {
             typeface = this@Strip.typeface
-            textSize = 16f
+            textSize = NOTICE_SIZE
             gravity = Gravity.CENTER
             isSingleLine = true
             isFocusable = false
@@ -114,7 +114,7 @@ class Strip(
     /** Said once, under the first clip that the strip offers: where the older clips are. */
     private val clipHintText = TextView(context).apply {
         typeface = this@Strip.typeface
-        textSize = 12f
+        textSize = SMALLEST_TEXT
         gravity = Gravity.CENTER
         isSingleLine = true
         ellipsize = TextUtils.TruncateAt.END
@@ -428,7 +428,8 @@ class Strip(
         // so that the text always fits its view and Android never cuts it with an "…" of its own.
         val shown = WORD_ORDER.map { (demoWords ?: words).getOrElse(it) { "" } }
         val room = (width - paddingLeft - paddingRight).toFloat()
-        val fits = if (room > 0) StripFit.fit(shown, room, wordRoomPadding(), ::measureWord, lend = false) else null
+        val sizes = WORD_ORDER.map { wordSize(it) / WORD_SIZE }
+        val fits = if (room > 0) StripFit.fit(shown, room, wordRoomPadding(), ::measureWord, lend = false, sizes = sizes) else null
         for ((slot, view) in wordViews.withIndex()) {
             val index = WORD_ORDER[slot]
             // While the idle scene plays, it draws the letters itself, and the words keep their places underneath.
@@ -436,7 +437,10 @@ class Strip(
                 (if (idle != null || !sides && index != 0) INVISIBLE else VISIBLE) else GONE
             val fit = fits?.get(slot)
             view.text = fit?.text ?: shown[slot]
-            view.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (fit?.scale ?: 1f))
+            // The middle word is the strongest: bigger, and in Ink's medium weight. The side words are a step down (owner,
+            // 2026-11-13: "text size should convey hierarchy").
+            view.typeface = if (index == 0) boldTypeface else typeface
+            view.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * sizes[slot] * (fit?.scale ?: 1f))
             view.isEnabled = index < words.size && demo == null
             view.setTextColor(look.ink)
         }
@@ -488,9 +492,13 @@ class Strip(
     /** The words' size in pixels, at full size. */
     private fun wordPixels() = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, WORD_SIZE, resources.displayMetrics)
 
+    /** The size of word [index], 0 for the best one in the middle, in sp. */
+    private fun wordSize(index: Int) = if (index == 0) WORD_SIZE else SIDE_WORD_SIZE
+
     /** How wide a word is at the words' full size. */
     private fun measureWord(text: String): Float {
-        measurePaint.typeface = typeface
+        // In the middle word's weight, the widest of the three, so a fitted word never runs over.
+        measurePaint.typeface = boldTypeface
         measurePaint.textSize = wordPixels()
         return measurePaint.measureText(text)
     }
@@ -1354,8 +1362,13 @@ class Strip(
         /** How far, in dp, and how quickly a word that the guide points at wiggles. */
         private const val POINT_DP = 3
         private const val POINT_MILLIS = 650L
-        /** The words' size, in sp, and the room on each side of a word. */
-        private const val WORD_SIZE = 17f
+        /**
+         * The words' size, in sp, which is dp at TitanKeys' fixed scale: the middle word's, the best one, and the side words', a
+         * step down, so the sizes show which word is best and every one reads on a 9 cm screen (owner, 2026-11-13: "a bit too
+         * small"). The room on each side of a word.
+         */
+        private const val WORD_SIZE = 20f
+        private const val SIDE_WORD_SIZE = 18f
         private const val WORD_PADDING = 6
         /** A little room, in dp, that a fitted word keeps on each side, so that Android never has to cut it. */
         private const val WORD_SLACK = 2
@@ -1386,7 +1399,7 @@ class Strip(
         /** How long the side words take to slide back up. */
         private const val SIDES_MILLIS = 260L
         /** The menu's word, small above its buttons: its size in sp and its top in dp. */
-        private const val MENU_WORD_SIZE = 11f
+        private const val MENU_WORD_SIZE = 13f
         private const val MENU_WORD_ABOVE = false
         /** The menu's icons, as a part of the words' size, and how far and how long its buttons move in. */
         private const val MENU_ICON_SCALE = 1.2f
@@ -1426,12 +1439,16 @@ class Strip(
         private const val CLIP_ICON_SCALE = 1.1f
         /** Save, Forget and Back. */
         private const val MAX_BUTTONS = 3
-        private const val CHIP_SIZE = 13f
+        private const val CHIP_SIZE = 14f
         /** The gap after each modifier chip, in dp. */
         private const val CHIP_GAP = 6
         private const val CONTENT_ABOVE = 16
-        private const val HINT_SMALLEST = 8f
-        private const val HINT_LARGEST = 17f
+        /** No text on the bar or the panels is smaller than this, in sp: real text at TitanKeys' fixed scale (owner, 2026-11-13). */
+        const val SMALLEST_TEXT = 13f
+        private const val HINT_SMALLEST = SMALLEST_TEXT
+        private const val HINT_LARGEST = 18f
+        /** "Forgot it" and its Undo, in sp: a step under the words. */
+        private const val NOTICE_SIZE = 18f
     }
 }
 

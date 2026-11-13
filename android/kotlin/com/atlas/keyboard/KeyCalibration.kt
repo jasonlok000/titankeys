@@ -9,14 +9,14 @@ import android.content.SharedPreferences
  */
 object KeyCalibration {
     private const val FILE = "key_calibration"
-    const val LEFT = "left_edge"
-    const val KEY = "key_width"
-    const val GAP = "gap_width"
+    const val LEFT = "q_left"
+    const val KEY = "key_size"
+    const val GAP = "gap_size"
     /**
-     * What the screen stored before it calibrated by the gaps: a scale, a shift and a shift for each row, then P's right edge. They
-     * mean nothing now.
+     * What the screen stored before: a scale, a shift and a shift for each row, then P's right edge, then the edge and widths set
+     * against the old defaults. The defaults are now the owner's own calibration (2026-11-12), so those mean nothing now.
      */
-    private val OLD = listOf("scale", "offset", "row0", "row1", "row2", "row3", "right_edge")
+    private val OLD = listOf("scale", "offset", "row0", "row1", "row2", "row3", "right_edge", "left_edge", "key_width", "gap_width")
 
     private var prefs: SharedPreferences? = null
     /** Kept here, as SharedPreferences holds its listeners only weakly. */

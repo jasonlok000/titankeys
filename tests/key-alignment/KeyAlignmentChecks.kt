@@ -44,20 +44,26 @@ fun main() {
     println("Key alignment checks passed")
 }
 
-/** At 1080 px with the defaults, the keys are the ones measured from Unihertz's drawing. */
+/** At 1076 px with the defaults, the keys are the owner's calibration: a key and a gap every 107.5 px, centred, square keys. */
 private fun measuredDefaults() {
-    check(KeyAlignment.DEFAULT.left == 0f && KeyAlignment.DEFAULT.right == 1f) { "the defaults span the screen" }
     check(KeyAlignment.current == KeyAlignment.DEFAULT) { "nothing is calibrated until someone calibrates" }
-    val keys = KeyGeometry(1080f, KeyAlignment.DEFAULT)
+    near(KeyAlignment.DEFAULT.centre, .5f, "the defaults are centred")
+    val keys = KeyGeometry(1076f, KeyAlignment.DEFAULT)
     val q = keys.boxes.first { it.name == "Q" }
     val p = keys.boxes.first { it.name == "P" }
-    near(q.left, 0f, "Q's left edge is the screen's")
-    near(p.right, 1080f, "P's right edge is the screen's")
+    near(keys.pitch, 107.5f, "the owner's spacing")
+    near(q.left, 1076f - p.right, "as far in from each side")
+    check(q.left > 0f && p.right < 1076f) { "the keys stop short of the screen's edges" }
     near(keys.gap / keys.key, 24f / 84f, "gap to key")
-    near(keys.rowPitch / keys.keyHeight, 123f / 107f, "row to key height")
-    near(keys.keyHeight / keys.key, 107f / 84f, "a key's shape")
-    // 1056 px of measured keys fill 1080, so each is a little bigger, in the same proportions.
-    near(keys.key, 84f * 1080f / 1056f, "a key's width")
+    near(keys.keyHeight, keys.key, "the keys are square")
+    near(keys.rowPitch, keys.pitch, "the rows are a key and a gap apart, the same as across")
+    near(keys.key, 107.5f * 84f / 108f, "a key's width")
+    // The spacing grows from the centre, and the shift moves the centre.
+    val wider = KeyAlignment.DEFAULT.spaced(KeyAlignment.DEFAULT.key + KeyAlignment.DEFAULT.gap + .01f)
+    near(wider.centre, .5f, "spacing keeps the row centred")
+    near(wider.gap, KeyAlignment.DEFAULT.gap, "spacing keeps the gap")
+    near(KeyAlignment.DEFAULT.centredAt(.52f).centre, .52f, "shift moves the centre")
+    near(KeyAlignment.DEFAULT.centredAt(.52f).key, KeyAlignment.DEFAULT.key, "shift keeps the keys")
     near(keys.height, 3 * keys.rowPitch + keys.keyHeight, "four rows")
     // The three letter rows sit in the same columns, ten keys each, a key apart.
     for (row in 0..2) {
@@ -78,10 +84,10 @@ private fun measuredDefaults() {
     for (index in 1 until bottom.size) near(bottom[index].left - bottom[index - 1].right, keys.gap, "the bottom row's gap $index")
     near(bottom[3].width / bottom[0].width, 2.8f / 1.2f, "Space is as much wider as Layout says")
     near(bottom.last().bottom, keys.height, "the bottom row ends the drawing")
-    near(KeyGeometry.heightFor(1080f, KeyAlignment.DEFAULT), keys.height, "heightFor")
+    near(KeyGeometry.heightFor(1076f, KeyAlignment.DEFAULT), keys.height, "heightFor")
     // Each column of the menu and the Sym panel runs from the middle of one gap to the next, and holds its key in the middle.
     for (column in 0..9) {
-        val (left, right) = KeyAlignment.column(1080f, column)
+        val (left, right) = KeyAlignment.column(1076f, column)
         near(right - left, keys.pitch, "column $column's width")
         near((left + right) / 2, keys.boxes[column].centreX, "column $column's middle")
     }
@@ -112,7 +118,8 @@ private fun touchpadOnKeys() {
 
 /** Moving an edge moves every key, the bottom row and the touchpad with it, and scales the heights. */
 private fun edgesMoveEverything() {
-    val base = KeyGeometry(1080f, KeyAlignment.DEFAULT)
+    // Keys spanning the whole width, and the same with Q's left edge moved in.
+    val base = KeyGeometry(1080f, KeyAlignment(0f, 1f))
     val moved = KeyGeometry(1080f, KeyAlignment(.05f, 1f))
     near(moved.boxes.first().left, 54f, "Q's left follows the left edge")
     near(moved.boxes[9].right, 1080f, "P's right stays")
@@ -124,7 +131,8 @@ private fun edgesMoveEverything() {
     val right = KeyGeometry(1080f, KeyAlignment(0f, .9f))
     near(right.boxes[9].right, 972f, "P's right follows the right edge")
     near(right.boxes[0].left, 0f, "Q stays")
-    near(KeyAlignment.column(1080f, 0).first, -base.gap / 2, "with the defaults, Q's column starts half a gap past the screen")
+    val defaults = KeyGeometry(1080f, KeyAlignment.DEFAULT)
+    near(KeyAlignment.column(1080f, 0).first, defaults.left - defaults.gap / 2, "with the defaults, Q's column starts half a gap left of Q")
     // Every column moves when the edges do, as the menu and the Sym panel read them.
     val saved = KeyAlignment.current
     KeyAlignment.current = KeyAlignment(.05f, .95f)
@@ -183,8 +191,8 @@ private fun zonesOnKeys() {
 private fun slidersRoundTrip() {
     val wide = WIDTH.toFloat()
     val measured = KeyAlignment.DEFAULT
-    same(measured, KeyAlignment(0f, 1f), "measured is the keys spanning the screen")
-    near(measured.right, 1f, "and P's right edge is the screen's edge")
+    same(measured, KeyAlignment(KeyAlignment.DEFAULT_LEFT, KeyAlignment.DEFAULT_RIGHT), "measured is the owner's calibration")
+    near(measured.left + measured.right, 1f, "centred on the screen")
     for ((default, reach) in listOf(measured.key * wide to KeyAlignment.KEY_REACH, measured.gap * wide to KeyAlignment.GAP_REACH,
         measured.left * wide to KeyAlignment.SHIFT_REACH)) {
         same(KeyAlignment.progressOf(default, reach, default), KeyAlignment.steps(reach) / 2, "a slider starts in the middle")

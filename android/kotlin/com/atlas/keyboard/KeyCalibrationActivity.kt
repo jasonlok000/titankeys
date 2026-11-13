@@ -78,11 +78,12 @@ class KeyCalibrationActivity : Activity() {
             addView(card(
                 // The lines sit at the gaps' centres, so only the spacing from one line to the next shows: a key and a gap together.
                 // The gap keeps its measured width, and the key takes the rest.
+                // The row grows and shrinks from its centre, and Shift moves that centre (owner, 2026-11-12: centre aligned).
                 slider("Spacing", (measured.key + measured.gap) * wide, KeyAlignment.KEY_REACH, { (it.key + it.gap) * wide }) { a, px ->
-                    KeyAlignment(a.left, px / wide - a.gap, a.gap)
+                    a.spaced(px / wide)
                 },
-                slider("Shift", measured.left * wide, KeyAlignment.SHIFT_REACH, { it.left * wide }) { a, px ->
-                    KeyAlignment(px / wide, a.key, a.gap)
+                slider("Shift", (measured.centre - .5f) * wide, KeyAlignment.SHIFT_REACH, { (it.centre - .5f) * wide }) { a, px ->
+                    a.centredAt(.5f + px / wide)
                 },
             ))
             addView(button("Reset to measured") {
@@ -264,9 +265,9 @@ internal class KeyGrid(context: Context) : View(context) {
         for (column in 0 until KeyGeometry.COLUMNS - 1) {
             pixelLine(canvas, keys.keyLeft(column) + keys.key + keys.gap / 2)
         }
-        // The outer edges, Q's left and P's right, one pixel each too.
-        pixelLine(canvas, keys.left)
-        pixelLine(canvas, keys.right)
+        // The outer edges, Q's left and P's right, one pixel each too, each on the pixel just inside the row, so both show alike.
+        pixelLine(canvas, Math.floor(keys.left.toDouble()).toFloat() + .5f)
+        pixelLine(canvas, Math.ceil(keys.right.toDouble()).toFloat() - .5f)
         // The letters, faint, between their bands.
         label.color = CalibrationColours.LABEL
         label.textSize = LABEL * density

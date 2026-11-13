@@ -8,8 +8,9 @@ import kotlin.math.roundToInt
  * left + c × (key + gap) (owner, 2026-11-12: the keyboard is calibrated by its gaps, which are what the eye can judge). Every
  * drawing of the keys is built from these three by [KeyGeometry], so a drawn key sits right over its real key.
  *
- * The defaults are Unihertz's own face-on drawing of the Titan 2 Elite: keys 84 wide with gaps of 24, spanning the whole width of
- * the screen. The Key calibration screen in TitanKeys Debug sets the three ([KeyCalibration]).
+ * The defaults are the owner's calibration on the phone (2026-11-12): a key and a gap every 107.5 px on its 1076 px wide screen,
+ * centred, with Unihertz's own proportions of keys 84 wide and gaps of 24. So the keys stop a little short of both screen edges.
+ * The Key calibration screen in TitanKeys Debug sets the three ([KeyCalibration]).
  */
 class KeyAlignment(val left: Float, val key: Float, val gap: Float) {
     /** Q's left edge and P's right edge, the keys spanning the whole width at the measured shape. */
@@ -19,12 +20,28 @@ class KeyAlignment(val left: Float, val key: Float, val gap: Float) {
     /** P's right edge. */
     val right get() = left + KeyGeometry.COLUMNS * key + (KeyGeometry.COLUMNS - 1) * gap
 
+    /** The middle of the row, halfway from Q's left edge to P's right. */
+    val centre get() = (left + right) / 2
+
+    /** The same row with [pitch], a key and a gap, from one key to the next. The gap keeps its width, and the row its centre. */
+    fun spaced(pitch: Float): KeyAlignment {
+        val key = pitch - gap
+        return KeyAlignment(centre - (KeyGeometry.COLUMNS * key + (KeyGeometry.COLUMNS - 1) * gap) / 2, key, gap)
+    }
+
+    /** The same row moved so its middle is at [centre]. */
+    fun centredAt(centre: Float) = KeyAlignment(left + centre - this.centre, key, gap)
+
     override fun equals(other: Any?) = other is KeyAlignment && other.left == left && other.key == key && other.gap == gap
     override fun hashCode() = (left.hashCode() * 31 + key.hashCode()) * 31 + gap.hashCode()
 
     companion object {
-        const val DEFAULT_LEFT = 0f
-        const val DEFAULT_RIGHT = 1f
+        /** A key and a gap, as a part of the width: 107.5 px on the phone's 1076 px wide screen. */
+        const val DEFAULT_PITCH = 107.5f / 1076f
+        /** Ten keys and the nine gaps between them, centred on the screen. */
+        private const val DEFAULT_SPAN = KeyGeometry.COLUMNS * DEFAULT_PITCH - DEFAULT_PITCH * KeyGeometry.GAP / (KeyGeometry.KEY + KeyGeometry.GAP)
+        const val DEFAULT_LEFT = (1f - DEFAULT_SPAN) / 2
+        const val DEFAULT_RIGHT = 1f - DEFAULT_LEFT
         val DEFAULT = KeyAlignment()
 
         /**

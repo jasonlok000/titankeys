@@ -227,6 +227,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
     14.5 dp under the baseline. On request ("can we do sth like drawing some guidelines"), the page now draws guides (the bar's
     middle, the letters' middle, the small letters' top and the baseline, with the gaps in dp) and saves every change to
     cal-values.log, so the Orchestrator reads the final pick from there.
+  - **The owner's pick: 11 dp lower** (owner: "I measured with a ruler and I think 11dp lower is right… the letter's middle is
+    right in the middle"). That centres the letters on the visible black band, the bar's 56 dp plus about 22 dp of black border
+    under the screen: 39 dp from the bar's top. The Orchestrator's proposal, waiting on the owner's go: build it as that band's
+    middle (one constant for the border), not a loose 11 dp; everything with text in the bar sits on that one line; containers
+    that can't fit there (the 42 dp menu pill, the two-line clip offer) shrink or rise only as much as they must to stay inside
+    the bar; the lowest letter keeps at least 4 dp from the screen's edge (Biggest rises about 1 dp); Exact typing's bar and the
+    Sym panel's bottom row get the same line; the bar's height, touch areas, keys and the guide's slides don't change.
 - **The menu word moves left of the widest pill** (W's 536a3a7, merged for build #12). The owner judges it on the phone first:
   "ill see if it looks good first." If not, the owner's fallbacks: leave the word where it is and make the pill's label shorter
   ("Favourited", "alr a fav" or similar), or let the pill overlap the word, semi-transparent with a blur underneath. (Owner)

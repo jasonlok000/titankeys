@@ -4097,7 +4097,7 @@ class GuideActivity : Activity() {
     private fun showLeavePopup() {
         // ✕ played Press as it opened this: nothing more.
         if (leavePopup != null) return
-        fun quiet(text: String, press: () -> Unit) = bigButton(text, press).apply {
+        fun quiet(text: String, press: () -> Unit) = bigButton(text, press = press).apply {
             setTextColor(GuideColours.CREAM)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
             setPadding(dp(16), dp(12), dp(16), dp(12))

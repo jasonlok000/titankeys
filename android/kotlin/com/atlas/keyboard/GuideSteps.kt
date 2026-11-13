@@ -458,7 +458,7 @@ internal data class DemoPush(val keys: List<String>, val text: String)
 /** A setting that a step needs. If it is off, the step offers to turn it on. */
 internal enum class GuideNeed(val offer: String, val optional: Boolean = false) {
     HoldSymbols("Turn on Hold a letter for its symbol"),
-    CursorControl("Turn on Space taps move the cursor"),
+    CursorControl("Turn on Space taps move and select"),
     SwipeTyping("Turn on Swipe to type words"),
     FnAsCtrl("Turn it on"),
 }

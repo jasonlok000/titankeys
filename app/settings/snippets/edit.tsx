@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Button, Screen, Stack, Text, TextInput, back, useAction, useRouteParams, useSnapshot } from "ink";
+import { Button, Screen, Stack, TextInput, back, useAction, useRouteParams, useSnapshot } from "ink";
 import { putSnippet, state } from "../../../lib/atlas";
+import { Note } from "../../../lib/note";
 
 /** Adds a snippet, or changes the one whose shortcut is in the route's `shortcut` parameter. */
 export default function EditSnippet() {
@@ -34,7 +35,7 @@ function SnippetForm({ title, start, previous, ...initial }: {
         autoFocus={!previous} autoCapitalise={false} action="done" />
       <TextInput label="Text" value={text} onChange={setText} placeholder="What the shortcut turns into"
         minLines={3} maxLines={10} action="return" />
-      {save.status === "error" && <Text size={18}>{save.error.message}</Text>}
+      {save.status === "error" && <Note>{save.error.message}</Note>}
       <Button disabled={!ready || save.status === "pending"} onPress={() => save.run()}>Save</Button>
     </Stack>
   </Screen>;

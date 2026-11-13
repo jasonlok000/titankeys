@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Row, Stack, Text } from "ink";
+import { Row, Stack } from "ink";
 import { expandLess, expandMore } from "ink/icons";
+import { Note } from "./note";
 
 /**
  * One entry of a written guide. A row holds only one line of text, so the row shows the title, and a touch opens the whole
@@ -10,7 +11,7 @@ export function Topic({ title, children }: { title: string; children: string }) 
   const [open, setOpen] = useState(false);
   return <Stack align="stretch" gap={TEXT_GAP}>
     <Row title={title} titleMaxLines={TITLE_LINES} endIcon={open ? expandLess : expandMore} onPress={() => setOpen(!open)} />
-    {open && <Text>{children}</Text>}
+    {open && <Note>{children}</Note>}
   </Stack>;
 }
 

@@ -32,20 +32,20 @@ Patterns are on and off in ms, starting with on.
 
 | Family | Pattern | Plays for |
 |---|---|---|
-| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, the marked button in the word menu or a panel, a step of a stepper in the app |
+| **Texture** | 17 | Each of a flick's dots landing in the caret, swipe start, keys crossed, a light touch typing a key, each counted Space tap, steering picking up after a slip, cursor letters, the marked button in the word menu or a panel, a step of a stepper in the app, the playground's shake starting (a short run of ticks) |
 | **Crunch** | 9, 12, 9 | Keys crossed while a stroke is clearly a delete flick |
 | **Boundary** | 30 | A stroke that crunched stops being a flick, the cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel, a long delete's finger going into the pause zone or reaching the top-speed line |
 | **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, steering starts, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar, an option picked in the app |
-| **Change** | 12, 35, 22, 35, 12 | The quiet swell: autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol, a hint in the guide. Texture for the gate |
+| **Change** | 12, 35, 22, 35, 12 | The quiet swell: autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol, a hint in the guide, the playground's plant at the top. Texture for the gate |
 | **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar, a quick setting switched on, Record a bug starts, a switch turned on in the app or the guide, agreeing to share swipes |
 | **Release** | 30 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked, Back closing the word menu, a quick setting switched off, Record a bug stops, a switch turned off in the app or the guide |
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
-| **Hit** | 50 | Each word a long delete takes after its flick, shorter as it speeds up (see A held delete's hit, below) |
+| **Hit** | 50 | Each word a long delete takes after its flick, shorter as it speeds up (see A held delete's hit, below). Each lightning flash in the playground |
 | **Gone** | 60 | The clipboard cleared, a confirmed delete in the app |
 | **Back** | 35, 40, 15 | Undo after Forget, Backspace undoing a change |
-| **No** | 25, 40, 25, 40, 25 | A gesture that finds nothing at all: taps on Space or a steer with no text, a flick or a long delete with nothing to delete. Also a word that can't be saved, I on a word that's already a favourite, Ctrl + C with nothing selected, an action the guide blocks, something the app refuses |
+| **No** | 25, 40, 25, 40, 25 | A gesture that finds nothing at all: taps on Space or a steer with no text, a flick or a long delete with nothing to delete. Also a word that can't be saved, I on a word that's already a favourite, Ctrl + C with nothing selected, an action the guide blocks, something the app refuses. And the playground's confetti turning into rain, as a joke |
 | **Wall** | 40, 35, 20, 35, 12 | A gesture that did something and then ran out: steering hits the start or end of the text, selecting reaches either end, a long delete takes the last word |
-| **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations |
+| **Celebrate** | 15, 40, 22, 40, 35 | The guide's celebrations, the playground's first confetti |
 | **Saved** | 20, 40, 20, 40, 50 | Save in the word menu, by I or the strip |
 | **Removed** | 50, 40, 20, 40, 20 | Forget in the word menu, by O or the strip |
 | **Favourite** | 20, 40, 20, 40, 80 | Favourite in the word menu, by I on a saved word or the strip |
@@ -209,9 +209,20 @@ Ink's screens and plays nothing in its place.
 | An option picked in a list of choices: a preset, a spelling, the Enter key, a snippet start | **Confirm** | Done. It isn't Lock: Lock is kept for on and off. |
 | A confirmed delete: Remove all learned words, Delete the log, Delete my swipes, Delete waiting swipes, deleting a bug recording | **Gone** | Gone means gone, as the cleared clipboard. Only for wiping data. |
 | Something the app refuses: a word, a snippet or a shorthand it can't take | **No** | Nothing happened, and the page says why. |
+| The playground at 40 words a minute: the first confetti pops | **Celebrate** | The guide's celebration: you got going. |
+| The playground at 100: the confetti turns into rain | **No** | The joke: the party's over, nope. The one No that isn't about nothing happening. |
+| The playground at 150: the screen starts to shake | **Texture**, a short run | One short rumble as the shake starts: 7 ticks 55 ms apart, about 350 ms, never a continuous rumble. Each gap keeps rule 4. |
+| The playground at 180 and up: each lightning flash | **Hit** | A firm hit with each flash, the held delete's per-word hit. Hit is texture, so it never blocks or delays a message. |
+| The playground at the top: everything stops and the plant grows | **Change** | The quiet swell: it changed by itself, and it's calm now. |
+
+The playground's speed show plays only those five big moments, never a step and never a comment (owner, 2026-11-13: "Add the
+haptics"). Each plays once, the first time the show reaches it, and again only after the playground has calmed down (five quiet
+seconds, with the number back to nothing) and the show reaches it anew. Lightning is the exception: each flash hits while the
+storm lasts. A jump in speed that passes several at once plays only the highest, and counts the rest as reached, so two never run
+into each other. All five share one switch, **Playground effects**.
 
 They play through the keyboard's switches: **All haptics** off silences them, and each has its own switch in Settings >
-Haptics, under TitanKeys' own screens. Turning All haptics off plays its release first, while haptics are still on. Turning it
+Haptics, under TitanKeys' own screens, except the playground's five moments, which share **Playground effects**. Turning All haptics off plays its release first, while haptics are still on. Turning it
 on plays nothing, as haptics were off when it was pressed.
 
 ## What plays nothing, and why
@@ -229,7 +240,8 @@ on plays nothing, as haptics were off when it was pressed.
 - **A key that picks a button in the word menu.** A key press. What the button does plays its own haptic.
 - **Save and Forget in the guide.** They're only for show there: nothing is saved or forgotten, and the guide says so.
 - **A new step in the guide, and setup changes there.** You're looking at the guide.
-- **Speed effects and idle games.** They're for your eyes.
+- **The playground's speed show, apart from its five big moments, and idle games.** Each step, comment, spark and flame is for
+  your eyes. Only the five moments above play, so nothing else buzzes while you type at speed.
 - **Navigation in TitanKeys' own screens:** opening a page, ←, ×, Back, links and tabs. The screen changes, so you see it.
 - **Plain buttons there:** Export, Import, Copy, Share, Open, Add app, the guide's Skip, Start again, Leave and the setup steps. What
   they do shows on the screen, or opens another one.

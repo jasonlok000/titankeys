@@ -60,6 +60,9 @@ fun main() {
     nothingFoundIsANoAndRunningOutIsAWall()
     switchesLockOnAndReleaseOff()
     aFlickCrunches()
+    thePlaygroundsFiveMoments()
+    eachMomentPlaysOnceABurst()
+    theSwitchSilencesThePlayground()
     println("Haptic checks passed")
 }
 
@@ -137,6 +140,12 @@ private val table = mapOf(
     Haptic.AppPicked to Family.Confirm,
     Haptic.AppDeleted to Family.Gone,
     Haptic.AppRefused to Family.No,
+    // The playground's five moments (owner, 2026-11-13).
+    Haptic.PlaygroundConfetti to Family.Celebrate,
+    Haptic.PlaygroundRain to Family.No,
+    Haptic.PlaygroundShake to Family.Texture,
+    Haptic.PlaygroundLightning to Family.Hit,
+    Haptic.PlaygroundSprout to Family.Change,
 )
 
 /** The rulebook's patterns: on and off in ms, starting with on. */
@@ -949,9 +958,10 @@ private fun aWallBouncesAndSettles() {
         "Steering, selecting and a held delete that ran out hit the wall"
     }
     // No is for nothing happening at all: Space taps or a steer with no text, a delete with nothing to delete, a failed save, a
-    // copy of nothing, the word menu's spent heart, the guide's blocks, and something the app refuses.
+    // copy of nothing, the word menu's spent heart, the guide's blocks, and something the app refuses. And one joke, which the owner
+    // approved (2026-11-13): the playground's confetti turning into rain is a "nope".
     check(Haptic.entries.filter { it.family == Family.No }.toSet() == setOf(Haptic.NothingToPick, Haptic.DeleteNothing,
-            Haptic.WordNotSaved, Haptic.CopyNothing, Haptic.GuideBlocked, Haptic.MenuSpent, Haptic.AppRefused)) {
+            Haptic.WordNotSaved, Haptic.CopyNothing, Haptic.GuideBlocked, Haptic.MenuSpent, Haptic.AppRefused, Haptic.PlaygroundRain)) {
         "No is for gestures that found nothing, and the rest that did nothing"
     }
     check(HapticTimeline.meaning(Family.Wall).isNotEmpty()) { "The lab says what it means" }
@@ -1144,4 +1154,76 @@ private fun changeIsAQuietSwell() {
     clock.now += 200
     check(gate.check(Family.Change) == HapticResult.Played) { "Another swell 205 ms later plays: no repeat rule" }
     check(gate.check(Family.Change, HapticPalette.millis(Family.Change.pattern)) == HapticResult.Played) { "and again" }
+}
+
+/** The playground's show plays only five big moments, each the haptic the owner approved (2026-11-13). */
+private fun thePlaygroundsFiveMoments() {
+    val expected = mapOf(
+        PlaygroundMoment.Confetti to Haptic.PlaygroundConfetti, PlaygroundMoment.Rain to Haptic.PlaygroundRain,
+        PlaygroundMoment.Shake to Haptic.PlaygroundShake, PlaygroundMoment.Lightning to Haptic.PlaygroundLightning,
+        PlaygroundMoment.Sprout to Haptic.PlaygroundSprout,
+    )
+    check(PlaygroundMoment.entries.size == 5) { "Five moments, no more" }
+    for ((moment, haptic) in expected) check(Haptic.of(moment.haptic) == haptic) { "$moment plays $haptic" }
+    check(Haptic.PlaygroundConfetti.family == Haptic.GuideCelebration.family) { "Confetti is the guide's celebration" }
+    check(Haptic.PlaygroundRain.family == Family.No) { "Rain is the no, as the joke" }
+    check(Haptic.PlaygroundLightning.family == Haptic.DeleteWord.family) { "Lightning is the held delete's hit" }
+    check(Haptic.PlaygroundSprout.family == Family.Change) { "The plant is the quiet swell" }
+    // The shake is one short run of texture ticks as it starts: under 400 ms, each gap keeping rule 4.
+    val rumble = PlaygroundMoments.rumble()
+    check(Haptic.PlaygroundShake.family == Family.Texture) { "The shake is built from texture" }
+    check(rumble.first() == 0L && rumble.last() + HapticPalette.TEXTURE_MILLIS in 300L..400L) { "The rumble lasts 300 to 400 ms: $rumble" }
+    for ((a, b) in rumble.zipWithNext()) check(b - a - HapticPalette.TEXTURE_MILLIS >= HapticPalette.MIN_GAP_MILLIS) { "Rule 4 between ticks" }
+    // Nothing else in the show plays: no step, no comment.
+    val guide = File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val comment = guide.substring(guide.indexOf("private fun showComment("), guide.indexOf("private fun playMoment("))
+    check("haptics." !in comment) { "A comment plays nothing" }
+    val view = File("android/kotlin/com/atlas/keyboard/WpmEffectsView.kt").readText()
+    check("Haptic" !in view) { "The show itself plays nothing: only the playground's moments do" }
+}
+
+/** Each moment plays once a burst, and again only after the playground has calmed down and the show reaches it anew. */
+private fun eachMomentPlaysOnceABurst() {
+    val moments = PlaygroundMoments()
+    fun at(wpm: Int) = moments.reach(WpmEffects.at(wpm))
+    check(at(30) == null) { "Nothing below the first confetti" }
+    check(at(40) == PlaygroundMoment.Confetti) { "40: the first confetti pop" }
+    check(at(45) == null && at(40) == null) { "Once: a bigger pop, or the same again, plays nothing" }
+    check(at(100) == PlaygroundMoment.Rain && at(120) == null) { "100: the rain, once" }
+    check(at(150) == PlaygroundMoment.Shake && at(170) == null) { "150: the shake, once" }
+    check(at(200) == PlaygroundMoment.Sprout && at(200) == null) { "The top: the plant, once" }
+    // Slowing down to nothing while still typing isn't calm: going back up plays nothing again.
+    check(at(10) == null && at(40) == null && at(150) == null) { "No replay without calming down" }
+    moments.calm()
+    check(at(40) == PlaygroundMoment.Confetti) { "After calming down, the confetti plays again" }
+    // A jump past several at once counts them all, and plays only the highest, so two never run together.
+    val jump = PlaygroundMoments()
+    check(jump.reach(WpmEffects.at(160)) == PlaygroundMoment.Shake) { "A jump to 160 plays the shake alone" }
+    check(jump.reach(WpmEffects.at(110)) == null) { "and the rain it passed counts as reached" }
+    // Each lightning flash plays, while there's a storm.
+    check(moments.flash(WpmEffects.at(180)) == PlaygroundMoment.Lightning) { "A flash at 180 hits" }
+    check(moments.flash(WpmEffects.at(185)) == PlaygroundMoment.Lightning) { "and the next one too" }
+    check(moments.flash(WpmEffects.at(150)) == null && moments.flash(WpmEffects.at(200)) == null) { "No storm, no hit" }
+    // The playground resets the moments as it calms: five quiet seconds with the number at nothing, or when it closes.
+    val guide = File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    check(Regex("""showComment\(-1, force = true\)\s+// [^\n]+\n\s+moments\.calm\(\)""").containsMatchIn(guide)) { "Calm resets them" }
+    check(Regex("""private fun calmWpm\(\) \{\s+moments\.calm\(\)""").containsMatchIn(guide)) { "and so does the playground closing" }
+}
+
+/** The five share one switch, Playground effects, on to start with and under All haptics. */
+private fun theSwitchSilencesThePlayground() {
+    val playground = listOf(Haptic.PlaygroundConfetti, Haptic.PlaygroundRain, Haptic.PlaygroundShake, Haptic.PlaygroundLightning,
+        Haptic.PlaygroundSprout)
+    for (haptic in playground) {
+        check(haptic.switch == "playground_effects" && haptic.key == "haptic_playground_effects") { "$haptic is under Playground effects" }
+        check(haptic.group == HapticGroup.App) { "$haptic is with TitanKeys' own screens" }
+    }
+    check(Haptic.entries.filter { it.switch == "playground_effects" } == playground) { "Only the five share it" }
+    check(Haptic.entries.filter { it !in playground }.all { it.switch == it.id }) { "Every other haptic has its own switch" }
+    check(playground.all { switches(emptyMap()).allows(it) }) { "On to start with" }
+    val off = switches(mapOf("haptic_playground_effects" to false))
+    for (haptic in playground) check(!off.allows(haptic)) { "Playground effects off silences $haptic" }
+    for (haptic in Haptic.entries - playground.toSet()) check(off.allows(haptic)) { "$haptic still plays" }
+    val master = switches(mapOf(HapticSwitches.MASTER to false))
+    for (haptic in playground) check(!master.allows(haptic)) { "All haptics off silences $haptic" }
 }

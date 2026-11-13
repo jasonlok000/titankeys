@@ -1154,6 +1154,8 @@ class GuideActivity : Activity() {
         overlay = GuideOverlay(this)
         effects = WpmEffectsView(this).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            // Each flash of the playground's lightning hits as it shows.
+            flashed = { if (playground) moments.flash(showing)?.let(::playMoment) }
         }
         keys = GuideKeyboardView(this)
         title = TextView(this).apply {
@@ -3220,6 +3222,10 @@ class GuideActivity : Activity() {
     // nothing, and the number counts back down to nothing, and the show winds down with it.
 
     private val wpm = WpmMeter()
+    /** The show's five big moments, which play a haptic each: see [PlaygroundMoments]. */
+    private val moments = PlaygroundMoments()
+    /** The show as it is now, for a lightning flash to check. */
+    private var showing = WpmEffects.NONE
     /** The speed that shows: it counts up and down towards the real one, so that nothing ever jumps or cuts off. */
     private var shownWpm = 0f
     private var showingWpm = false
@@ -3275,12 +3281,17 @@ class GuideActivity : Activity() {
         backdrop.show(warmth)
         keys.shade = warmth
         warmTo(warmth)
-        wpmView.post { effects.update(WpmEffects.at(shown), commentStep, numberBounds("$shown")) }
+        val show = WpmEffects.at(shown)
+        showing = show
+        moments.reach(show)?.let(::playMoment)
+        wpmView.post { effects.update(show, commentStep, numberBounds("$shown")) }
         // It stops ticking once the burst is over and the number is back to nothing.
         if (speed != null || shown > 0) main.postDelayed(wpmTick, WPM_TICK_MILLIS)
         else {
             // The number is back to nothing, so the playground's own line returns, however long the last comment has shown.
             showComment(-1, force = true)
+            // Five quiet seconds, and the number is back to nothing: the playground has calmed down, so every moment can play again.
+            moments.calm()
             shownWpm = 0f
             backdrop.show(GuideColours.BLACK)
             keys.shade = null
@@ -3367,8 +3378,36 @@ class GuideActivity : Activity() {
         return RectF(left, top + wpmView.paint.ascent() * .8f, left + wide, top + wpmView.paint.descent() * .2f)
     }
 
+    /**
+     * One of the show's big moments: its haptic, through its switch and the gate. The shake's is a short run of ticks as it starts,
+     * never a continuous rumble.
+     */
+    private fun playMoment(moment: PlaygroundMoment) {
+        val haptic = Haptic.of(moment.haptic) ?: return
+        if (moment != PlaygroundMoment.Shake) {
+            haptics.play(haptic)
+            return
+        }
+        rumbleLeft = PlaygroundMoments.RUMBLE_TICKS
+        main.removeCallbacks(rumbleTick)
+        rumbleTick.run()
+    }
+
+    private var rumbleLeft = 0
+    private val rumbleTick = object : Runnable {
+        override fun run() {
+            if (rumbleLeft <= 0) return
+            rumbleLeft--
+            haptics.play(Haptic.PlaygroundShake)
+            if (rumbleLeft > 0) main.postDelayed(this, PlaygroundMoments.RUMBLE_GAP_MILLIS)
+        }
+    }
+
     /** The playground went away: the speed starts over, and the show stops at once, with everything back in place. */
     private fun calmWpm() {
+        moments.calm()
+        showing = WpmEffects.NONE
+        main.removeCallbacks(rumbleTick)
         shownWpm = 0f
         showingWpm = false
         paintWpm()

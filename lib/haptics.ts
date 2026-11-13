@@ -87,5 +87,6 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "app_picked", label: "An option picked", about: "When you pick one of a list of choices, such as a preset." },
     { id: "app_deleted", label: "A confirmed delete", about: "When you confirm a delete, such as Remove all learned words." },
     { id: "app_refused", label: "Something refused", about: "When the app can't take what you asked, such as a shortcut with the wrong characters." },
+    { id: "playground_effects", label: "Playground effects", about: "The playground's five big moments as you speed up: confetti, rain, the shake, each lightning flash and the plant." },
   ] },
 ];

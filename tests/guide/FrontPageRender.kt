@@ -257,6 +257,32 @@ internal object V2 {
     }
 }
 
+/** What follows the front page's sentence in the renders. */
+private const val FOLLOWING = "the sound of real keys is the only applause you will get today"
+
+/** [sentence] then [following], wrapped at [width] by whole words, with [gap] in place of a space where they meet. */
+private fun wrappedWithGap(g: Graphics2D, sentence: String, following: String, width: Int, gap: Int): List<List<String>> {
+    val words = sentence.split(' ') + following.split(' ')
+    val first = sentence.split(' ').size
+    val space = g.fontMetrics.stringWidth(" ")
+    val lines = ArrayList<List<String>>()
+    var line = ArrayList<String>()
+    var used = 0
+    for ((index, word) in words.withIndex()) {
+        val join = if (line.isEmpty()) 0 else if (index == first) gap else space
+        val w = g.fontMetrics.stringWidth(word)
+        if (line.isNotEmpty() && used + join + w > width) {
+            lines += line
+            line = ArrayList()
+            used = 0
+        }
+        used += (if (line.isEmpty()) 0 else join) + w
+        line += word
+    }
+    if (line.isNotEmpty()) lines += line
+    return lines
+}
+
 /** Words wrapped at [width], whole words only. */
 private fun wrapped(g: Graphics2D, text: String, width: Int): List<String> {
     val lines = ArrayList<String>()
@@ -284,7 +310,8 @@ private fun problem(what: String) {
  * [heat] how warm the background is, from 0 to 1; [comment] the line under the header; [passage] the line to type along to, with
  * [done] words typed.
  */
-private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment: String, passage: String, done: Int) {
+private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment: String, passage: String, done: Int,
+                      following: String = FOLLOWING) {
     val (image, g) = V2.image()
     val warmth = V2.blend(V2.BLACK, V2.ORANGE, heat * .85f)
     val warmthArgb = (0xFF shl 24) or (warmth.red shl 16) or (warmth.green shl 8) or warmth.blue
@@ -359,18 +386,24 @@ private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment
     y += bodyLine + V2.dp(12)
 
     // The line to type along to: typed words cream, the rest muted, the word you're on orange and underlined. Always two full lines,
-    // carrying on into the next sentence, as GuideActivity's showPassage.
-    val lines = wrapped(g, passage, inner).take(2)
-    if (lines.last().split(' ').size < 2) problem("the line to type along to ends on a lone word")
+    // carrying on into the next sentence, as GuideActivity's showPassage: an en space away and, on black, at half the muted
+    // strength, so the join reads as a break.
+    val sentenceWords = passage.split(' ').size
+    val gap = g.fontMetrics.stringWidth(" ")
+    val lines = wrappedWithGap(g, passage, following, inner, gap).take(2)
+    if (lines.last().size < 2) problem("the line to type along to ends on a lone word")
+    val next = if (ink) quiet else V2.alpha(quiet, .5f)
     var count = 0
-    for ((index, line) in lines.take(2).withIndex()) {
+    for ((index, line) in lines.withIndex()) {
         var x = side.toFloat()
         val lineBase = y + index * bodyLine + g.fontMetrics.ascent
-        for (word in line.split(' ')) {
+        for (word in line) {
+            if (count == sentenceWords && x > side) x += gap - g.fontMetrics.stringWidth(" ")
             val w = g.fontMetrics.stringWidth(word)
             g.color = when {
                 count < done -> strong
                 count == done -> if (ink) V2.INK else if (WpmMeter.quietOn(warmthArgb) == 0xFF99918A.toInt()) V2.ORANGE else strong
+                count >= sentenceWords -> next
                 else -> quiet
             }
             g.drawString(word, x, lineBase.toFloat())
@@ -418,7 +451,7 @@ private const val IDLE = "Type or swipe whatever you like. Follow the line below
 internal fun drawFrontPage(folder: String) {
     val out = File(folder).apply { mkdirs() }
     frontProblems = 0
-    val passage = "titankeys fixes your typos so you can keep pretending you never make any the sound of real keys is the only applause you will get today"
+    val passage = "titankeys fixes your typos so you can keep pretending you never make any"
     drawFront(File(out, "front-1-idle.png"), "", null, 0f, IDLE, passage, 0)
     drawFront(File(out, "front-2-typing.png"), "titankeys fixes your typos so", 34, WpmMeter.heat(34), comment(34), passage, 5)
     drawFront(File(out, "front-3-warm.png"), "titankeys fixes your typos so you can keep pretending", 62, WpmMeter.heat(62),

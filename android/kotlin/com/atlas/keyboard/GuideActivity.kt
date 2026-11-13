@@ -2255,15 +2255,24 @@ class GuideActivity : Activity() {
             // lines: a short sentence carries on into the next, and a long one never ends on a lone word (Master, 2026-11-13). Once
             // the word you're on is past the second line, its line is the top one.
             val starts = sentenceStarts ?: PlaygroundText.sentenceStarts(passage.words).also { sentenceStarts = it }
-            val first = PlaygroundText.sentenceAround(starts, count, next).first
-            // Enough words for the lines on show, not the whole passage, so each key stays cheap.
+            val sentence = PlaygroundText.sentenceAround(starts, count, next)
+            val first = sentence.first
             val from = passage.ranges[first].first
-            val shown = SpannableStringBuilder(styled.subSequence(from, minOf(text.length, from + PLAYGROUND_REACH)))
-            // After the passage's end, it starts over, as the typing does, in the quiet colour.
-            if (from + PLAYGROUND_REACH > text.length) {
-                val after = (0 until first).joinToString(" ") { passage.wordAt(it) }.take(PLAYGROUND_REACH)
-                if (after.isNotEmpty()) shown.append(" ").append(plain(after))
+            val shown = SpannableStringBuilder(styled.subSequence(from, passage.ranges[sentence.last].last + 1))
+            // What follows the sentence, on round past the passage's end as the typing goes: enough words for the lines on show,
+            // not the whole passage, so each key stays cheap. It sits a wider gap away and, on black, at half the muted strength,
+            // so the join reads as a break with no mark added to the owner's text (Master, 2026-11-13).
+            val following = StringBuilder()
+            var word = sentence.last + 1
+            while (following.length < PLAYGROUND_REACH && word - sentence.last <= count) {
+                if (following.isNotEmpty()) following.append(' ')
+                following.append(passage.wordAt(word++))
             }
+            if (following.isNotEmpty()) shown.append(SENTENCE_GAP).append(SpannableStringBuilder(following).apply {
+                val colour = if (tone == GuideTone.Ink) GuideMotion.faded(quietColour(), NEXT_SENTENCE)
+                    else GuideMotion.faded(GuideColours.INK, PASSAGE_AHEAD_ON_ORANGE)
+                setSpan(ForegroundColorSpan(colour), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            })
             val wrapped = StaticLayout.Builder.obtain(shown, 0, shown.length, script.paint, width).setIncludePad(false).build()
             val at = wrapped.getLineForOffset((passage.ranges[next].first - from).coerceIn(0, shown.length))
             val top = if (at < PROMPT_LINES) 0 else at
@@ -4619,6 +4628,10 @@ class GuideActivity : Activity() {
         private const val PROMPT_LINES = 2
         /** How much of the playground's passage it lays out at a time, in characters: far more than its lines show. */
         private const val PLAYGROUND_REACH = 600
+        /** Between the playground's sentence and what follows it: an en space, about two spaces' width, where lines may still break. */
+        private const val SENTENCE_GAP = "\u2002"
+        /** How strong what follows the sentence is, of the muted colour, on black. */
+        private const val NEXT_SENTENCE = .5f
         /** How long the bar's words wait as a slide opens, so it shows the slide's words once. */
         private const val BAR_SETTLE_MILLIS = 450L
         /** How strong a selection's cream is in the field. */

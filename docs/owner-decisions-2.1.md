@@ -205,6 +205,8 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **The guide always starts from the beginning** (owner, 2026-11-13, 09:45): "everytime I click on the guide, i shd start from the
+  beginning. no saved slide." (Owner) Done in ca6559a: the guide no longer saves the slide, and an older saved place is cleared on open.
 - **Ladder review, round 3** (owner, 2026-11-13, 09:20); the owner rated v3 7/10 for animation quality and execution. (Owner)
   - The dotted outline isn't readable enough.
   - Hovering a button previews the word as it will be, in grey. Pressing makes it real: for Block, the strike draws in orange,

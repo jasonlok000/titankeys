@@ -206,6 +206,10 @@ all of them are unapproved.
   - Owner's report: on the home screen the keyboard is cut off by the bar. It isn't on screen now, so the owner's screenshot is
     needed.
   - F's Size setting is pushed (4af0690, verify passed). F kept the guide and front page at Normal. Review before merging.
+  - **Effects above the bar:** today they're clipped to the bar's 56 dp (Strip draws inside its own bounds). Since the keyboard
+    window became full height (A's bar fix), a see-through effects layer can sit above the bar and draw over the app. Touches still
+    pass through, because onComputeInsets' touch region covers only the keyboard. W adds this layer when porting v4's animations.
+  - W: the hover and open-burst fixes are in verify. W pushes both, then holds the ladder work.
   - **The plan from 08:45:**
     1. F's Size setting (its verify is running) and W's word menu fix land, and get reviewed and merged.
     2. Build #5 and install.

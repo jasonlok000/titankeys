@@ -120,6 +120,8 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   (Owner, 2026-11-12)
 - Later: accented letters in Sym, voice input, a per-app modes page, bar size. (Owner, 2026-11-12)
 - No: a letter-shortcuts row. (Owner, 2026-11-12)
+- Rename "Scroll assistant outside text fields" to "Scroll assistant". Inside text fields TitanKeys' own touchpad takes over, so the switch really turns app scrolling on or off. (Owner, 2026-11-12)
+- Bug: with that switch off, the keys still scroll Reddit (its full-screen viewer). A is investigating. (Owner report, 2026-11-12)
 - No "Set it up for me" through Accessibility: Google Play's policy forbids it. (Owner's rule "only if it passes Google Play"; the Orchestrator checked the policy.)
 
 - No: password and 2FA codes on the bar (autofill chips). No: back up everything in one file. No: changing the defaults to match stock and BlackBerry (Caps Lock on double Shift, hold for a capital, spelling from the phone's language). (Owner, 2026-11-12)

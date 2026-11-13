@@ -78,6 +78,7 @@ export default function BoringGuide() {
       <Topic title="Delete lots of words">{"Flick and keep your finger down. TitanKeys keeps deleting, word after word. Slide further out to go faster, or back onto Backspace to pause. Lift your finger or press a key to stop."}</Topic>
     </Section>
     <Section title="Cursor and picking text">
+      <Topic title="Space gestures: tap a bit higher">{"The double and triple taps on Space work best a little higher up. The touch zone stops around the middle of Space, so a tap low on Space can go unfelt. Tap the top half of Space, or the keys right above it, from C to N. Anywhere as wide as Space, on those two rows, counts."}</Topic>
       <Topic title="Move the cursor">{"Tap Space twice, quickly, and keep your finger down after the second tap. Slide left or right. The cursor goes slowly near the middle and fast near the edges, and stops when you come back to the middle. You feel a stronger buzz each time it passes a space. Turn it off with Space taps move and select in Settings."}</Topic>
       <Topic title="Pick a word">{"Tap Space twice, lifting after each tap. That picks the word at the cursor."}</Topic>
       <Topic title="Pick more words">{"Tap Space three times to pick the word at the cursor. Keep your finger down after the third tap and slide to take more words. Lean back the other way to give them back, one at a time. Space taps move and select in Settings turns these taps off, with the cursor ones."}</Topic>

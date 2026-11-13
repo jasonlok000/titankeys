@@ -1105,7 +1105,10 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
-        val words = Strip(this, { index ->
+        // The bar, the panels and exact typing's bar are the same size at any display size or font size (FixedScale). Android
+        // makes this view again when those settings change, so each time takes the screen as it is now.
+        val ui = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod)
+        val words = Strip(ui, { index ->
             if (!guideBlocked(GuideLesson.BarTap)) {
                 haptics.play(Haptic.BarWord)
                 enqueue { composer.choose(index) }
@@ -1114,7 +1117,7 @@ class AtlasIme : InputMethodService() {
             { action -> enqueue { stripAction(action) } }, { enqueue { pasteOfferedClip() } }, { wakeIdleBar(cut = false) })
         // A game that ended by itself, or was sent home, gives the bar back: the next wait starts fresh, with the same roll.
         words.idleEnded = ::waitIdleBar
-        val keys = SymPanel(this,
+        val keys = SymPanel(ui,
             pick = { item -> enqueue { typePanelItem(item) } },
             useQuickSetting = { item -> enqueue { useQuickSetting(item) } },
             quickSettingOn = ::quickSettingOn,
@@ -1133,11 +1136,11 @@ class AtlasIme : InputMethodService() {
         // Android can make this view after the field has started, and again when the screen settings change.
         words.words = barWords
         // Exact typing's bar starts hidden and is made before the first check, so a normal field never shows it.
-        val exact = ExactBar(this, ::exactChip, ::exactBarKey).apply { visibility = View.GONE }
+        val exact = ExactBar(ui, ::exactChip, ::exactBarKey).apply { visibility = View.GONE }
         exactBar = exact
         words.showSuggestions = showSuggestions()
         showModifiers()
-        return LinearLayout(this).apply {
+        return LinearLayout(ui).apply {
             orientation = LinearLayout.VERTICAL
             addView(keys)
             addView(exact)
@@ -1152,7 +1155,7 @@ class AtlasIme : InputMethodService() {
      * drawn, so nothing moves. It reaches past the bottom, where the screen's own corners do the rounding.
      */
     private fun roundTopCorners(view: View) {
-        val radius = Radii.px(resources, Radii.MEDIUM)
+        val radius = Radii.px(view.resources, Radii.MEDIUM)
         view.outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) =
                 outline.setRoundRect(0, 0, view.width, view.height + radius.toInt(), radius)

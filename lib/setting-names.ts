@@ -9,10 +9,16 @@ export const barLabel = "Show the bar";
 
 /**
  * The phone's Scroll assistant for apps: with it on, the keys scroll apps when no text field is active. Inside a text field
- * TitanKeys's own touchpad features take over either way.
+ * TitanKeys's own touchpad features take over either way. It has no note under it (owner, 2026-11-12), and until it's
+ * changed it follows the phone's own Scroll assistant (TypingSettings.touchpadOnlyInFields).
  */
 export const scrollLabel = "Scroll assistant";
-export const scrollNote = "Scrolls apps with the keys when you're not typing.";
 
 /** Space taps: a double tap moves the cursor, a triple tap selects words. */
 export const cursorLabel = "Space taps move and select";
+
+/**
+ * What Orange accents changes: the marks the keyboard draws over other apps (android/kotlin/com/atlas/keyboard/Look.kt). TitanKeys'
+ * own screens stay orange, the app's look (owner, 2026-11-12), so the note says where it applies.
+ */
+export const accentsNote = "The keyboard's marks, such as the key under your finger and your swipe trail. Off, they match the text.";

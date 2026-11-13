@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
+import com.atlas.engine.TypingSettings
 
 /** Reads each part of setup from the phone, and gives the Settings page that changes it. The app and the guide both use this. */
 internal object PhoneSetup {
@@ -20,11 +21,7 @@ internal object PhoneSetup {
     fun overlay(context: Context) = Settings.canDrawOverlays(context)
 
     /** Phones without the touchpad have no Scroll assistant, so there it counts as on. */
-    fun scrollAssistant(): Boolean {
-        val get = Class.forName("android.os.SystemProperties").getMethod("get", String::class.java, String::class.java)
-        if (get.invoke(null, "ro.agui.touchpad_function", "") != "yes") return true
-        return get.invoke(null, "persist.sys.scroll_assistant", "0") == "1"
-    }
+    fun scrollAssistant() = TypingSettings.phoneScrollAssistant()
 
     fun done(context: Context, part: SetupPart) = when (part) {
         SetupPart.Enable -> enabled(context)

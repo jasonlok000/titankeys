@@ -675,6 +675,9 @@ private class GuideField(context: Context) : EditText(context) {
  * Practice text teaches the keyboard nothing: the field asks for no personalised learning, like the recorder's field.
  */
 class GuideActivity : Activity() {
+    /** The same sizes at any display size or font size (FixedScale). */
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
+
     private val main = Handler(Looper.getMainLooper())
     /**
      * The app's front page: the same screen with no steps, a free place to type and swipe. The line above the field still

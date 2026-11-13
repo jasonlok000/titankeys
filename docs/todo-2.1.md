@@ -43,7 +43,7 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 
 ## In progress
 
-- D: Save gets a particle burst like Favourite's heart burst, with orange bookmark shapes on both sides (owner: Favourite "done perfectly", Save "not done nicely"). Only Save changes.
+- D's Save burst (claude/save-burst 987ca01): Save now uses Favourite's burst with ribbons in place of hearts, and its haptic lands on the burst. Merged and building; install when it passes.
 - Layout sample page: on the phone at http://localhost:8765/sample.html, served from the PC through adb reverse. It's scratchpad
   cal-tool/sample.html, with the Guide and Playground screens, a Sizes button and Full screen. **Waiting for the owner's verdict** before the batch.
 - Playground tone sample: 22 lines in docs/playground-text-draft.md. **Waiting for the owner's verdict**, then the full ~3,000 words.

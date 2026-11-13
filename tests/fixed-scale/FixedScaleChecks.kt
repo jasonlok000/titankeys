@@ -43,6 +43,30 @@ fun main() {
     // At the phone's default settings nothing moves: FixedScale's sizes are the ones TitanKeys was designed at.
     check(pixels(250, 1f, fixed = false) == reference, "At font size 1.0 and 250 dpi, FixedScale changes nothing")
 
+    // Settings > Size multiplies the unit, and with it every dp and sp TitanKeys draws: the bar, the panels' text, the guide.
+    check(FixedScale.Size.of(null) == FixedScale.Size.Normal && FixedScale.Size.Normal.factor == 1f, "Size starts at Normal, 1.0")
+    check(FixedScale.Size.entries.zipWithNext().all { (a, b) -> b.factor > a.factor }, "Each size is bigger than the one before")
+    for (size in FixedScale.Size.entries) {
+        check(FixedScale.Size.of(size.id) == size, "${size.id} reads back as ${size.name}")
+        val sized = FixedScale.densityDpi(width, height, size.factor)
+        check(abs(sized - dpi * size.factor) <= 1f, "${size.name} makes a dp ${size.factor} times as big: got $sized dpi for $dpi")
+        check(FixedScale.densityDpi(height, width, size.factor) == sized, "${size.name}: a turned screen keeps the same sizes")
+        // The bar keeps Normal's height, 56 dp at Normal, and only what's in it grows (FixedScale.normalPx, Strip.BAR_DP).
+        val barPx = 56f * (sized / 160f) / size.factor
+        check(abs(barPx - 56f * dpi / 160f) <= 1f, "${size.name}: the bar stays ${56f * dpi / 160f} px tall: got $barPx")
+        // What sits over the real keys takes its places from the key calibration, in parts of the screen's width, never from
+        // the unit: the panels' columns, the word menu's places, the hover marks and the drawn keyboard stay over their keys.
+        // A view gets its width in pixels: at a bigger size the screen is fewer dp wide, but just as many pixels.
+        val density = sized / 160f
+        val viewWidth = Math.round(width / density * density).toFloat()
+        val boxes = { geometry: KeyGeometry -> geometry.boxes.map { listOf(it.left, it.top, it.right, it.bottom) } }
+        check(boxes(KeyGeometry(viewWidth)) == boxes(KeyGeometry(width.toFloat())), "${size.name}: the keys' boxes don't move")
+        check(boxes(KeyGeometry(viewWidth, scale = KeyGeometry.DRAWN)) == boxes(KeyGeometry(width.toFloat(), scale = KeyGeometry.DRAWN)),
+            "${size.name}: the guide's drawn keyboard and its touch zone don't move")
+        check((0 until KeyGeometry.COLUMNS).all { KeyGeometry(viewWidth).cell(it) == KeyGeometry(width.toFloat()).cell(it) },
+            "${size.name}: the word menu's places and the panels' columns don't move")
+    }
+
     if (failures.isEmpty()) println("Fixed scale: all checks pass") else {
         failures.forEach(::println)
         throw IllegalStateException("${failures.size} fixed scale checks failed")

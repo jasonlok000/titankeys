@@ -60,6 +60,8 @@ import kotlin.random.Random
 class AtlasIme : InputMethodService() {
     private val main = Handler(Looper.getMainLooper())
     private lateinit var touchpad: Touchpad
+    /** Settings > Size when the bar and the panels were made. */
+    private var viewSize = FixedScale.Size.Normal
     private lateinit var haptics: Haptics
     /** The cursor plays gone once each time it reaches an end of the text. */
     private val cursorSteps = CursorSteps()
@@ -1139,6 +1141,7 @@ class AtlasIme : InputMethodService() {
     override fun onCreateInputView(): View {
         // The bar, the panels and exact typing's bar are the same size at any display size or font size (FixedScale). Android
         // makes this view again when those settings change, so each time takes the screen as it is now.
+        viewSize = FixedScale.size(this)
         val ui = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod)
         val words = Strip(ui, { index ->
             if (!guideBlocked(GuideLesson.BarTap)) {
@@ -1434,6 +1437,8 @@ class AtlasIme : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        // Settings > Size changed since the bar and the panels were made, so they're made again at the new size.
+        if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())
         // The bar may only now be set up for this field, so the wait starts once it is.
         main.post { wakeIdleBar() }
         offerClip()

@@ -51,6 +51,9 @@ import org.json.JSONObject
 /** Ink's activity keeps TitanKeys' sizes at any display size or font size, like every other TitanKeys window (FixedScale). */
 internal fun appBaseContext(base: Context): Context = FixedScale.wrap(base)
 
+/** Settings > Size: Ink's screens grow by the same factor as every other window TitanKeys draws (FixedScale). */
+internal fun appUserScale(context: Context): Float = FixedScale.size(context).factor
+
 /**
  * Ink's press haptic is Android's stock click, which TitanKeys never plays (docs/haptics.md, rule 5). Navigation and plain
  * buttons stay quiet, and the controls that change something play their own through lib/app-haptics.tsx.
@@ -474,6 +477,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("swipeTyping", TypingSettings.swipeTyping(activity))
             .put("touchpadOnlyInFields", TypingSettings.touchpadOnlyInFields(activity))
             .put("orangeAccents", TypingSettings.orangeAccents(activity))
+            .put("size", FixedScale.size(activity).id)
             .put("enterKey", TypingSettings.enterKey(activity))
             .also(::putEnterApps)
             .also(::putExactApps)
@@ -619,6 +623,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "swipeTyping" -> TypingSettings.swipeTyping(activity, value as Boolean)
             "touchpadOnlyInFields" -> TypingSettings.touchpadOnlyInFields(activity, value as Boolean)
             "orangeAccents" -> TypingSettings.orangeAccents(activity, value as Boolean)
+            // Settings grows at once. The keyboard, the guide and the front page take it the next time they show.
+            "size" -> {
+                FixedScale.size(activity, FixedScale.Size.of(value as String))
+                activity.applyUserScale()
+            }
             "enterKey" -> TypingSettings.enterKey(activity, value as String)
             "snippetStart" -> TypingSettings.snippetStart(activity, value as String)
             "shortcodes" -> TypingSettings.shortcodes(activity, value as Boolean)

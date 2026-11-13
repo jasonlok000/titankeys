@@ -96,7 +96,8 @@ internal class ExactBar(
     private fun layoutBar() {
         val side = maxOf(dp(8f).toInt(), corners.inset(navigationInset + dp(CONTENT_ABOVE)) + dp(4f).toInt())
         setPadding(side, 0, side, navigationInset)
-        minimumHeight = dp(HEIGHT).toInt() + navigationInset
+        // Normal's height at every Settings > Size, as the bar keeps (FixedScale.normalPx). Its labels grow inside it.
+        minimumHeight = Math.round(FixedScale.normalPx(context, HEIGHT)) + navigationInset
     }
 
     private fun keyView(name: String, code: Int) = label(name).apply { setOnClickListener { key(code) } }

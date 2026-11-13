@@ -17,6 +17,7 @@ import { liftLabel } from "./lift";
 import { rawLogLabel } from "./rawlog";
 import { sentenceSpacesLabel } from "./sentence-spaces";
 import { setupLabel } from "./setup";
+import { sizeLabel } from "./size";
 import { shorthandLabel } from "./shorthand/index";
 import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
@@ -93,6 +94,7 @@ export default function Settings() {
       {settings.hapticsLab && <Field label="Haptics lab" href="/settings/haptics-lab" />}
       <Toggle label="Orange accents" subtitle={accentsNote} value={settings.orangeAccents}
         onChange={orangeAccents => save.run({ orangeAccents })} />
+      <Field label="Size" href="/settings/size">{sizeLabel(settings)}</Field>
     </Section>
     <Section title="Your data">
       <Field label="Your words" href="/settings/data" />

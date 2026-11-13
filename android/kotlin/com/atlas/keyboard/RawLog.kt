@@ -145,6 +145,7 @@ object RawLog {
         "swipeTyping" to TypingSettings.swipeTyping(context),
         "touchpadOnlyInFields" to TypingSettings.touchpadOnlyInFields(context),
         "orangeAccents" to TypingSettings.orangeAccents(context),
+        "size" to FixedScale.size(context).id,
         "enterKey" to TypingSettings.enterKey(context),
         "enterApps" to TypingSettings.enterApps(context).sorted().joinToString(","),
         "spelling" to TypingSettings.spelling(context).value(),

@@ -82,6 +82,18 @@ fun main() {
     val cutSide = StripFit.fit(listOf("internationalization", "a", "b"), 300f, 5f, measure, lend = false, sizes = sizes)
     check(measure(cutSide[0].text) * sizes[0] * cutSide[0].scale <= cutSide[0].width - 10f + .01f, "A cut side word fits at its own size: ${cutSide[0]}")
 
+    // Settings > Size at Biggest: the bar's places are as wide as ever, but every letter is bigger. The three places stay even,
+    // and long words shrink or lose a part to fit, as at Normal.
+    val biggest: (String) -> Float = { measure(it) * FixedScale.BIGGEST }
+    fun fitsBiggest(slots: List<StripFit.Slot>) = slots.all { biggest(it.text) * it.scale <= it.width - 10f + .01f }
+    for (words in listOf(listOf("the", "and", "you"), listOf("the", "something", "you"), listOf("a", "internationalization", "of"),
+        listOf("recommendation's", "recommendations", "recommendation"))) {
+        val big = StripFit.fit(words, 300f, 5f, biggest, lend = false)
+        same(big.map { it.width }, List(3) { 100f }, "At Biggest the three places stay even for $words")
+        check(fitsBiggest(big), "At Biggest every word fits its place: $big")
+        check(big.all { it.scale >= StripFit.MIN_SCALE }, "At Biggest no word goes below the smallest size: $big")
+    }
+
     if (failures.isNotEmpty()) {
         failures.forEach(::println)
         throw AssertionError("${failures.size} strip fit check(s) failed")

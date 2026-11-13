@@ -286,6 +286,12 @@ all of them are unapproved.
     swiftkey"). Home app ginlemon.flowerfree. From the code: TitanKeys treats a field as text only when it isn't TYPE_NULL
     (`editing`), shows its window only while editing (onEvaluateInputViewShown), and with "Hide the bar on an empty home search"
     on hides the bar in the home app's empty field. A passive watcher reads the field's settings while the owner opens it.
+    - Found in Android's input history: the home screen itself starts as TYPE_NULL (normal for a window with no field), and the
+      search box is a normal field, inputType 0x1 (plain text, no autocorrect flag) with imeOptions 0x3 (Search), field id
+      0x7f0a029b. So TitanKeys does treat it as text: the TYPE_NULL theory is out. "Hide the bar on an empty home search"
+      defaults off. Next suspect: Smart Launcher rewrites or restarts the box on each key to update its results, which would
+      reset the word being typed (autocorrect, word delete). Why Sym and emoji don't show is still open. Needs a live repro
+      in its search box; waiting on the owner's OK to type a test word there.
   - **Withdrawn: build #14 is no longer the release candidate** (owner's round 2 on the line, 2026-11-13). In progress: W (the
     modifier bar's cut chips, the menu effects' anchor and scale), C (the gesture display on the line), A (the idle games on the
     line). Each sends keyframe strips in the border-and-corner render; the Orchestrator reviews every frame, then the phone.

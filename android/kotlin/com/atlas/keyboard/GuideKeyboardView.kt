@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.SystemClock
@@ -220,6 +221,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
 
     /** The room above the keys for the touch zone's label, while [zoneMarks] shows. */
     private val topRoom get() = if (zoneMarks) dp(ZONE_LABEL_ROOM) else 0f
+    /** Where a bracket's arms reach, and a label's measured glyph, reused each frame. */
+    private val reach = RectF()
+    private val textBounds = Rect()
     private val bracketPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -371,31 +375,85 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val area = geometry.area(AREA_LEFT, AREA_TOP, AREA_RIGHT, AREA_BOTTOM)
         val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE
         bracketPaint.color = colour
-        bracketPaint.strokeWidth = dp(BRACKET_STROKE)
-        val arm = dp(BRACKET_ARM)
-        canvas.save()
-        // The corners fall on the outer keys' middles: their labels stay clean.
-        for (key in keys) {
-            val box = key.box
-            if (box.right < area.left + arm * 1.5f && box.left > area.left - arm || box.left > area.right - arm * 1.5f && box.right < area.right + arm) {
-                val half = min(box.width(), box.height()) * LABEL_LETTER * .62f
-                canvas.clipOutRect(box.centerX() - half, box.centerY() - half, box.centerX() + half, box.centerY() + half)
-            }
-        }
+        val stroke = dp(BRACKET_STROKE)
+        bracketPaint.strokeWidth = stroke
+        val clear = dp(BRACKET_CLEAR)
+        val shown = dp(BRACKET_SHOWN)
+        // The corners fall on the outer keys' middles, right on Q's, P's and the Shifts' labels (owner: they stay there). Every
+        // label an arm reaches is cut out of it with room around it, so the bracket passes behind the label and never crosses it,
+        // and each arm runs on past its last gap, so the corner still reads as a corner (Master, 2026-11-13).
         for ((x, y, dx, dy) in listOf(
             listOf(area.left, area.top, 1f, 1f), listOf(area.right, area.top, -1f, 1f),
             listOf(area.left, area.bottom, 1f, -1f), listOf(area.right, area.bottom, -1f, -1f),
         )) {
+            var across = dp(BRACKET_ARM)
+            var along = dp(BRACKET_ARM)
+            val gaps = ArrayList<RectF>()
+            // The arms first reach past the labels at the corner; then every label the longer arms touch is cut out too, with no
+            // more lengthening, or each new label would stretch them on across the keys.
+            for (round in 0..1) {
+                reach.set(min(x, x + dx * across), min(y, y + dy * along), max(x, x + dx * across), max(y, y + dy * along))
+                reach.inset(-stroke / 2, -stroke / 2)
+                gaps.clear()
+                for (key in keys) {
+                    if (lettersOnly && key.box.top >= geometry.letterHeight || !RectF.intersects(key.box, reach)) continue
+                    labelBounds(key)?.let { gaps += it.apply { inset(-clear, -clear) } }
+                }
+                if (round > 0) break
+                // Only a label the arm really crosses lengthens it: one it merely comes near would join the corners into a frame.
+                across = max(dp(BRACKET_ARM), (gaps.filter { it.top <= y + stroke / 2 && it.bottom >= y - stroke / 2 && (if (dx > 0) it.left - x else x - it.right) < across }
+                    .maxOfOrNull { if (dx > 0) it.right - x else x - it.left } ?: 0f) + shown)
+                along = max(dp(BRACKET_ARM), (gaps.filter { it.left <= x + stroke / 2 && it.right >= x - stroke / 2 && (if (dy > 0) it.top - y else y - it.bottom) < along }
+                    .maxOfOrNull { if (dy > 0) it.bottom - y else y - it.top } ?: 0f) + shown)
+            }
+            canvas.save()
+            for (gap in gaps) canvas.clipOutRect(gap)
             path.rewind()
-            path.moveTo(x + dx * arm, y)
+            path.moveTo(x + dx * across, y)
             path.lineTo(x, y)
-            path.lineTo(x, y + dy * arm)
+            path.lineTo(x, y + dy * along)
             canvas.drawPath(path, bracketPaint)
+            canvas.restore()
         }
-        canvas.restore()
         zoneLabelPaint.color = colour
         zoneLabelPaint.textSize = dp(ZONE_LABEL_SIZE)
         canvas.drawText(ZONE_NAME, area.right, -dp(ZONE_LABEL_GAP), zoneLabelPaint)
+    }
+
+    /**
+     * Where [key]'s own label is drawn at rest, as [drawLabel] draws it: a letter's measured glyph, or the icon's shape with its
+     * stroke. Null for a key with no label.
+     */
+    private fun labelBounds(key: Key): RectF? {
+        val box = key.box
+        val label = key.name
+        val size = min(box.width(), box.height()) * (if (key.letter || label.length == 1) LABEL_LETTER else LABEL_SMALL)
+        val x = box.centerX()
+        val y = box.centerY()
+        val r = size * .42f
+        val line = max(1.5f, size * .14f) / 2
+        val bounds = when (label) {
+            "" -> return null
+            Layout.SPACE -> RectF(x - box.width() * .22f, y - r * .1f, x + box.width() * .22f, y + r * .35f)
+            Layout.BACKSPACE -> RectF(x - r * 1.2f, y - r, x + r * 1.2f, y + r)
+            Layout.ENTER -> RectF(x - r, y - r, x + r, y + r * .95f)
+            "⇧" -> RectF(x - r, y - r, x + r, y + r)
+            "○" -> RectF(x - r * .8f, y - r * .8f, x + r * .8f, y + r * .8f)
+            "◁" -> RectF(x - r * .7f, y - r * .8f, x + r * .7f, y + r * .8f)
+            "▦" -> RectF(x - r * .75f, y - r * .75f, x + r * .75f, y + r * .75f)
+            else -> {
+                labelPaint.textSize = size
+                val wide = labelPaint.measureText(label)
+                val room = box.width() * LABEL_ROOM
+                if (wide > room) labelPaint.textSize = size * room / wide
+                labelPaint.getTextBounds(label, 0, label.length, textBounds)
+                // Bounds come from the left of the text; the label is centred, on the baseline drawLabel uses.
+                val baseline = y - (labelPaint.ascent() + labelPaint.descent()) / 2
+                val left = x - labelPaint.measureText(label) / 2
+                return RectF(left + textBounds.left, baseline + textBounds.top, left + textBounds.right, baseline + textBounds.bottom)
+            }
+        }
+        return bounds.apply { inset(-line, -line) }
     }
 
     private fun drawKey(canvas: Canvas, key: Key, now: Long, frames: Float): Boolean {
@@ -998,6 +1056,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         /** The playground's touch zone marks (owner): the brackets' arms and stroke, and the label, its size and room, in dp. */
         const val BRACKET_ARM = 26f
         const val BRACKET_STROKE = 2.5f
+        /** The room left around each label a bracket passes behind, and how much of each arm shows past its last gap, in dp. */
+        const val BRACKET_CLEAR = 4f
+        const val BRACKET_SHOWN = 20f
         const val ZONE_NAME = "TOUCH ZONE"
         const val ZONE_LABEL_SIZE = 14f
         const val ZONE_LABEL_ROOM = 24f

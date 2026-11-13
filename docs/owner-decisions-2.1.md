@@ -205,6 +205,23 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Playground haptics: yes** (owner, 2026-11-13, 08:10: "Add the haptics"). (Owner) The design, the Orchestrator's and approved:
+  - only five big moments, each once until the playground calms down: 40 wpm Celebrate, 100 the rain No, 150 the shake one
+    short rumble, 180+ each lightning flash a firm hit, the plant at the top the swell;
+  - nothing per step or per comment;
+  - its own "Playground effects" switch in Settings > Haptics.
+- **A size setting that makes everything bigger, the bar included** (owner, 08:10): "Right now it's smaller which should be fine for
+  most ppl but usually I like bigger and it was bigger for me." (Owner) The Orchestrator's design, unapproved:
+  - Settings > Look and feel > Size: Normal 1.0 (the default), Bigger 1.2, Biggest 1.4;
+  - it grows FixedScale's unit, so text and the bar's height grow;
+  - anything calibrated to the physical keys keeps its place.
+- **The boring guide's Scroll assistant text** (owner, 08:10): it should say the phone hijacks the touchpad with its Scroll
+  assistant, the creator doesn't like it, and TitanKeys can block it. The old text was confusing. (Owner) Rewritten by the
+  Orchestrator.
+- **Say we use a local LLM** where it helps, with "that data doesn't go online and is never used for training" (owner, 08:10). (Owner)
+  - The Orchestrator's topic "The local LLM" sits in the boring guide's Typing section and names DistilGPT-2, which runs on the phone.
+  - To stay true to the privacy policy, it says what you type never goes online and never trains any model. The one exception is
+    Share swipes, which is off until you agree and sends swipe examples to train the swipe models.
 - **The front page's text is one giant paragraph (owner, 2026-11-13, 07:50):** "I would want to join them without adding a new line
   even though they're two different lines. So it's one giant paragraph not multiple." (Owner) It replaces the v5.3 rule "starts at
   the sentence you're in". The reference is a two-line window on one continuous paragraph, scrolling a line at a time, with no break

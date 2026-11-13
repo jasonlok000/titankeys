@@ -1192,6 +1192,8 @@ class Strip(
 
     private val idleDrawing = IdleDrawing()
     private var idle: IdlePlayer? = null
+    /** The words' typefaces, left to right, as the game's letters count them: see [IdleDrawing.draw]. */
+    private var idleTypefaces: List<android.graphics.Typeface?> = emptyList()
     private var idleFrameAt = 0L
     private val idleFrame = Runnable { invalidate() }
     /** How many of the bar's pixels make one of the games' units: they are made for a bar 88 high. */
@@ -1214,6 +1216,7 @@ class Strip(
         val glyphs = ArrayList<Glyph>()
         // The words left to right, in the order of the bar, so that word 0, 1 and 2 are left, middle and right.
         val views = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.sortedBy { it.left }
+        idleTypefaces = views.map { it.paint.typeface }
         for ((word, view) in views.withIndex()) {
             val layout = view.layout
             val paint = view.paint
@@ -1275,7 +1278,7 @@ class Strip(
         }
         canvas.save()
         canvas.translate(idleEdge.toFloat(), 0f)
-        idleDrawing.draw(canvas, player, idleScale, wordViews.first().paint, look)
+        idleDrawing.draw(canvas, player, idleScale, idleTypefaces, look)
         canvas.restore()
         postDelayed(idleFrame, IDLE_FRAME_MILLIS)
     }

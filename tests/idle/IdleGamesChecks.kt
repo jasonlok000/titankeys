@@ -1,18 +1,31 @@
 package com.atlas.keyboard
 
 import kotlin.math.abs
+import kotlin.math.min
+import kotlin.math.sin
 import kotlin.random.Random
 
 fun main() {
-    val width = 1076f
-    // Words in their thirds, as the bar lays them out, at about the bar's own letter size.
+    // The game's width on the Titan 2 Elite: its 1076 px, less a corner's inset and 2 dp at each side, as Strip.startIdle gives it.
+    val width = 870f
+    // The word size at each Bar text size, in the bar's units: 20 dp at 1.5625 px a dp, times Smaller's 1, Normal's 1.2, Bigger's 1.4.
+    val sizes = listOf(31.25f, 37.5f, 43.75f)
+    var size = 37.5f
+    // Where a letter's middle is on the bar, as Strip.startIdle measures it: the middle of Inter's ascent and descent, with the small
+    // letters' middle on the line, unless the descenders would reach the floor (StripFit.baseline).
+    fun baseline(size: Float) = min(Idle.LINE + size * 1118 / 2048 / 2, Idle.FLOOR - size * 494 / 2048)
+    fun middle(size: Float, letters: Float = size) = baseline(size) - letters * (1984 - 494) / 2048 / 2
+    // Words in their thirds, as the bar lays them out, at the bar's own letter size, on its line; a long word shrinks to fit its third,
+    // on the same baseline, as StripFit shrinks it.
     fun bar(vararg words: String): List<Glyph> = words.flatMapIndexed { w, word ->
-        val start = width / 3 * w + width / 6 - word.length * 11f
-        word.mapIndexed { i, c -> Glyph(c, w, start + i * 22f + 11f, Idle.H / 2, 22f, 40f) }
+        val letters = size * min(1f, (width / 3 - 8) / (word.length * size * .55f))
+        val advance = letters * .55f
+        val start = width / 3 * w + width / 6 - word.length * advance / 2
+        word.mapIndexed { i, c -> Glyph(c, w, start + i * advance + advance / 2, middle(size, letters), advance, letters) }
     }
     fun fits(kind: IdlePlayer.Kind, vararg words: String) = IdlePlayer.fits(kind, bar(*words))
-    // The automatic capital's arrow, at the left of the bar, first in the left word.
-    fun withArrow(glyphs: List<Glyph>) = listOf(Glyph(Idle.ARROW, 0, 18f, Idle.H / 2, 20f, 40f, arrow = true)) + glyphs
+    // The automatic capital's arrow, at the left of the bar, first in the left word, on the line with the chips.
+    fun withArrow(glyphs: List<Glyph>) = listOf(Glyph(Idle.ARROW, 0, 18f, middle(size), size * .5f, size, arrow = true)) + glyphs
     val bars = listOf(listOf("going", "the", "and"), listOf("good", "one", "gonna"), listOf("recommendations", "red", "recommended"))
     for (words in bars) for (kind in IdlePlayer.Kind.entries) check(fits(kind, *words.toTypedArray()), "$words fit $kind")
 
@@ -110,10 +123,11 @@ fun main() {
             "$what: ${g.char} is back in its word exactly")
     }
 
-    for (seed in 1..30) for (words in bars) for (kind in IdlePlayer.Kind.entries) {
+    for (s in sizes) for (seed in 1..12) for (words in bars) for (kind in IdlePlayer.Kind.entries) {
+        size = s
         val glyphs = bar(*words.toTypedArray())
         val player = IdlePlayer(glyphs, width, Random(seed), kind)
-        val what = "Seed $seed, $kind with $words"
+        val what = "Seed $seed, $kind with $words at $s"
         check(!player.returning, "$what: starts as a game, not a way home")
 
         // Nothing pops in: after the first frame every letter is still close to its place in the words.
@@ -170,6 +184,7 @@ fun main() {
         home(glyphs, what)
     }
     check("Shell" in ways && "Firework" in ways && "Exit" in ways && "Drop" in ways, "Every way home turns up, not only $ways")
+    size = 37.5f
 
     // The arrow plays along while it shows, and always comes home to its own place, never left behind or out of the bar.
     val arrowBars = bars.map { withArrow(bar(*it.toTypedArray())) } + listOf(withArrow(bar("good", "", "gonna")))
@@ -198,6 +213,67 @@ fun main() {
         check(kind in moved, "$kind plays with the arrow, not only $moved")
     check(fits(IdlePlayer.Kind.Pong, "good", "", "gonna").not() && IdlePlayer.fits(IdlePlayer.Kind.Pong, withArrow(bar("good", "", "gonna"))),
         "With no middle letter, the arrow is Pong's ball")
+
+    // The bar's line (owner, 2026-11-13: "make sure that its perfect with the new updated visual border rule"). The words sit on the
+    // line, the middle of the bar and the 22 dp black border under the screen, so every game starts there and ends there. Every
+    // letter's ink, the figure, the rope, the sparks and the finish line keep inside the bar: under its top, and over its floor, 2.56
+    // dp over the screen's edge. This is by each letter's box; tests/idle-render checks the letters' real outlines and the screen's
+    // corners too, every frame at 60 fps.
+    val stripFit = java.io.File("android/kotlin/com/atlas/keyboard/StripFit.kt").readText()
+    for (line in listOf("const val BAR_DP = 56f", "const val BORDER_DP = 22f", "const val LINE_DP = (BAR_DP + BORDER_DP) / 2", "const val EDGE_DP = 2.56f"))
+        check(line in stripFit, "Idle.LINE and Idle.FLOOR are StripFit's: $line")
+    check(abs(Idle.LINE - 88f * 39 / 56) < .001f && abs(Idle.FLOOR - 88f * (56 - 2.56f) / 56) < .001f,
+        "The line is 39 of the bar's 56 dp, and the floor 2.56 dp over its edge")
+    fun inside(player: IdlePlayer, what: String) {
+        for (g in player.glyphs) if (g.alpha > .16f) {
+            check(g.y + g.below() <= Idle.FLOOR + .01f, "$what: ${g.char}'s ink reaches under the floor, to ${g.y + g.below()}")
+            check(g.y - g.above() >= Idle.TOP - .01f, "$what: ${g.char}'s ink reaches over the bar's top, to ${g.y - g.above()}")
+        }
+        player.game.figure?.takeIf { it.alpha > .16f }?.let { f ->
+            check(f.feet + abs(sin(f.lean)) * 10 + Figure.LINE / 2 <= Idle.FLOOR + .01f, "$what: the figure's feet reach under the floor")
+            check(f.feet - Figure.NECK - 2 * Figure.HEAD - Figure.LINE / 2 >= Idle.TOP - .01f, "$what: the figure's head reaches over the bar's top")
+        }
+        (player.game as? JumpRope)?.let { r ->
+            if (r.ropeAmount > 0) check(r.ropeMid in Idle.TOP + 1.5f..Idle.FLOOR - 1.5f, "$what: the rope swings inside the bar, not at ${r.ropeMid}")
+        }
+        (player.game as? Race)?.let { r -> check(r.lineTop - 1.5f >= Idle.TOP && r.lineBottom + 1.5f <= Idle.FLOOR, "$what: the finish line stays inside") }
+        (player.game as? Firework)?.let { f -> for (spark in f.sparks) check(spark.y + 2 <= Idle.FLOOR, "$what: a spark goes out at the floor") }
+    }
+    val lineBars = listOf(listOf("going", "the", "jumpy"), listOf("Hello", "and", "World"), listOf("my", "pig", "jog"))
+    for (s in sizes) for (seed in 1..6) for (words in lineBars) for (kind in IdlePlayer.Kind.entries) for (way in listOf(null) + IdlePlayer.Way.entries) {
+        size = s
+        val glyphs = bar(*words.toTypedArray())
+        if (!IdlePlayer.fits(kind, glyphs) || way == IdlePlayer.Way.Drop && kind != IdlePlayer.Kind.Juggle) continue
+        val what = "$kind at $s, seed $seed, $words, ${way ?: "alone"}"
+        for (g in glyphs) check(g.y == middle(s, g.size) && g.y == g.homeY, "$what: ${g.char} starts on the line")
+        val player = IdlePlayer(glyphs, width, Random(seed), kind)
+        var time = 0f
+        while (player.update(16f)) {
+            time += 16
+            inside(player, "$what, at $time ms")
+            if (way != null && time == 4000f) player.comeBack(way)
+            check(time < IdlePlayer.LOOP_MILLIS + 15_000, "$what: ends")
+        }
+        home(glyphs, what)
+        for (g in glyphs) check(g.y == middle(s, g.size), "$what: ${g.char} ends on the line")
+    }
+    // The jump rope's holders and jumper stay on the line: the holders step apart along it, and the jumper only jumps up from it.
+    for (s in sizes) {
+        size = s
+        val glyphs = bar("going", "the", "jumpy")
+        val player = IdlePlayer(glyphs, width, Random(4), IdlePlayer.Kind.JumpRope)
+        repeat(90) { player.update(16f) }
+        var lowest = Float.MIN_VALUE
+        repeat(200) {
+            player.update(16f)
+            for (g in glyphs.filter { it.word == 1 }) check(g.y <= g.homeY + .001f, "At $s, the jumper never sinks under the line")
+            lowest = maxOf(lowest, glyphs.first { it.word == 1 }.y)
+            val holders = listOf(glyphs.first(), glyphs.last())
+            for (h in holders) check(h.y <= h.homeY + .001f && h.y >= h.homeY - 4, "At $s, ${h.char} holds the rope on the line, not at ${h.y}")
+        }
+        check(abs(lowest - glyphs.first { it.word == 1 }.homeY) < .01f, "At $s, the jumper lands back on the line")
+    }
+    size = 37.5f
 
     // The shell game is a way home only with three words.
     repeat(200) { seed ->

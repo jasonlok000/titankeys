@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Canvas, CanvasIcon, CanvasText, Screen, Stack, Text, navigate, replace, useSnapshot } from "ink";
 import { arrowOutward } from "ink/icons";
 import { cancelPlayground, markNotesSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
-import { INK, ORANGE } from "../lib/brand";
+import { INK, useAccent } from "../lib/brand";
 import { connectedState, declineContributions, setContribute } from "../lib/connected";
 import { Disclosure } from "../lib/contribute";
 import { RADIUS } from "../lib/radii";
@@ -14,10 +14,11 @@ const WIDTH = 596;
 const REOPEN_DELAY_MILLIS = 600;
 
 function Action({ label, onPress }: { label: string; onPress: () => void }) {
+  const accent = useAccent();
   const height = 108;
   const icon = 30;
   return <Canvas width={WIDTH} height={height}>
-    <RoundedFill x={0} y={0} width={WIDTH} height={height} radius={RADIUS.large} fill={ORANGE} onPress={onPress} />
+    <RoundedFill x={0} y={0} width={WIDTH} height={height} radius={RADIUS.large} fill={accent} onPress={onPress} />
     <CanvasText x={0} y={0} width={WIDTH} height={height} size={32} colour={INK} align="center">{label}</CanvasText>
     <CanvasIcon x={WIDTH - icon - 32} y={(height - icon) / 2} size={icon} name={arrowOutward} colour={INK} />
   </Canvas>;

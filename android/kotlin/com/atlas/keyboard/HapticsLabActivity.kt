@@ -36,7 +36,7 @@ private object LabColours {
     const val INK = GuideColours.BLACK
     const val CARD = 0xFF141312.toInt()
     const val TRACK = GuideColours.DIVIDER
-    const val ORANGE = GuideColours.ORANGE
+    val ACCENT get() = Accent.colour
     const val CREAM = GuideColours.CREAM
     const val DIM = GuideColours.MUTED
     /** A delete's dots landing, so they stand apart from the words' ticks. */
@@ -151,7 +151,7 @@ class HapticsLabActivity : Activity() {
         val first = "$seconds  ${HapticTimeline.title(event, name(event.haptic))}"
         text = SpannableStringBuilder("$first\n${HapticPalette.describe(event.pattern)} · $outcome").apply {
             setSpan(ForegroundColorSpan(LabColours.CREAM), 0, first.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            if (!event.result.played) setSpan(ForegroundColorSpan(LabColours.ORANGE), length - outcome.length, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            if (!event.result.played) setSpan(ForegroundColorSpan(LabColours.ACCENT), length - outcome.length, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         textSize = 14f
         setTextColor(LabColours.DIM)
@@ -261,8 +261,8 @@ class HapticsLabActivity : Activity() {
     private fun slider(range: LongRange, changed: (Long) -> Unit) = SeekBar(this).apply {
         min = range.first.toInt()
         max = range.last.toInt()
-        progressTintList = ColorStateList.valueOf(LabColours.ORANGE)
-        thumbTintList = ColorStateList.valueOf(LabColours.ORANGE)
+        progressTintList = ColorStateList.valueOf(LabColours.ACCENT)
+        thumbTintList = ColorStateList.valueOf(LabColours.ACCENT)
         progressBackgroundTintList = ColorStateList.valueOf(LabColours.TRACK)
         setPadding(dp(12), dp(12), dp(12), dp(16))
         setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -287,7 +287,7 @@ class HapticsLabActivity : Activity() {
         minHeight = dp(48)
         setPadding(dp(20), 0, dp(20), 0)
         background = GradientDrawable().apply {
-            setColor(LabColours.ORANGE)
+            setColor(LabColours.ACCENT)
             cornerRadius = dp(24).toFloat()
         }
         isClickable = true
@@ -323,8 +323,8 @@ class HapticsLabActivity : Activity() {
     private fun key() = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(8), 0, 0)
-        addView(keyLine("■", LabColours.ORANGE, "on"))
-        addView(keyLine("□", LabColours.ORANGE, "dropped, with the reason"))
+        addView(keyLine("■", LabColours.ACCENT, "on"))
+        addView(keyLine("□", LabColours.ACCENT, "dropped, with the reason"))
         addView(keyLine("●", LabColours.DOT, "a delete's dot landing, numbered for a hold"))
         addView(keyLine("○", LabColours.DOT, "a hold's dot skipped near a word's tick"))
     }
@@ -403,10 +403,10 @@ internal class LiveTimeline(context: Context, private val name: (Haptic) -> Stri
     }
     private val nameText = text(11f, LabColours.CREAM).apply { typeface = GuideFonts.heavy(context) }
     private val wordsText = text(11f, LabColours.DIM)
-    private val droppedText = text(11f, LabColours.ORANGE)
+    private val droppedText = text(11f, LabColours.ACCENT)
     private val axisText = text(10f, LabColours.DIM)
     private val dotText = text(9f, LabColours.DOT).apply { textAlign = Paint.Align.CENTER }
-    private val skippedDotText = text(9f, LabColours.ORANGE).apply { textAlign = Paint.Align.CENTER }
+    private val skippedDotText = text(9f, LabColours.ACCENT).apply { textAlign = Paint.Align.CENTER }
 
     fun events(events: List<HapticEvent>) {
         this.events = events
@@ -441,11 +441,11 @@ internal class LiveTimeline(context: Context, private val name: (Haptic) -> Stri
                 // A 17 ms pulse is about a pixel at this scale, so every pulse gets at least 2 dp.
                 val right = maxOf(x(buzz.toMillis, now), left + 2 * density)
                 if (dropped) {
-                    outline.color = LabColours.ORANGE
+                    outline.color = LabColours.ACCENT
                     val inset = outline.strokeWidth / 2
                     canvas.drawRect(left + inset, barTop + inset, right - inset, barTop + barHeight - inset, outline)
                 } else {
-                    fill.color = LabColours.ORANGE
+                    fill.color = LabColours.ACCENT
                     canvas.drawRect(left, barTop, right, barTop + barHeight, fill)
                 }
             }
@@ -545,7 +545,7 @@ internal class PatternBars(context: Context) : View(context) {
         canvas.drawRect(0f, barTop, width.toFloat(), barTop + barHeight, fill)
         for (millis in gridMillis until spanMillis step gridMillis)
             canvas.drawLine(x(millis), barTop - 2 * density, x(millis), barTop + barHeight + 2 * density, grid)
-        fill.color = LabColours.ORANGE
+        fill.color = LabColours.ACCENT
         for (buzz in buzzes) {
             val left = x(buzz.fromMillis)
             canvas.drawRect(left, barTop, maxOf(x(buzz.toMillis), left + 2 * density), barTop + barHeight, fill)

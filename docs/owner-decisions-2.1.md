@@ -205,6 +205,19 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Owner's screenshot of build #5** (2026-11-13, 10:38):
+  - On the front page the real bar covers the drawn keyboard's bottom row. That was the "keyboard cut off by the bar" report. A
+    fixes it so the drawing sits fully above the bar, on the guide's slides too.
+  - The line to type along to stuttered ("your messages your messages") where two lines met. The Orchestrator fixed the shuffle
+    (7049463), and a check covers 200 seeds.
+  - The owner deleted the Sym $%= maps from Key Mapper. (Owner)
+  - The owner tests the menu all at once on the next build. (Owner)
+- **Two resets, named by the owner** (owner, 2026-11-13, 10:55): "Reset most things and reset literally everything. U could literally
+  call it that in the app." (Owner)
+  - "Reset most things" covers the settings only.
+  - "Reset literally everything" is a fresh install: it also wipes words, snippets, shorthand, app lists, the clipboard,
+    recordings, news state and Share swipes (back to off). Already-shared swipes are deleted separately on the Share swipes page.
+    It confirms with "Wipe it all" and plays Gone. (Orchestrator's details)
 - **Reset all settings** (owner, 2026-11-13, 10:50): "there's so many now its easy to mess up." (Owner) The Orchestrator's design
   (unapproved), queued for F after the global accent:
   - a row at the bottom of the Settings root;

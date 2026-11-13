@@ -213,6 +213,32 @@ all of them are unapproved.
     - **Open:** the echo uses the word's own mark, and the ambient waits a full cycle, so there are no hearts and then glitter.
     - **Next for W:** the quick settings page has the same late lift (its mark clears about 0.3 s after a toggle), so it gets the
       same fix. The ladder work stays held until v4 is approved.
+  - **Usage limit hit, about 10:55 to 11:10.** On resuming, each worker continued from its branch:
+    - W: claude/word-ladder-v4 f112d60, the ladder;
+    - C: claude/finale-grass cddc991, the finale;
+    - D: claude/press-haptics 59e7e01, then the bar baseline;
+    - A: the front page bar overlap;
+    - V: the GuideDecor port, from guide-decor-v3-handover.md.
+
+    F kept running: its resets are on fork/claude/resets (f6f6d87), waiting for its report. Merge order: C, then V; the rest
+    as they report. Then build #6.
+  - **Decor v3 review (Orchestrator, 11:05).** Approved: strengths of 36–46%, grass ink at 24/40/60%, and every design.
+    Changes:
+    - the clown valance about half as deep at about 30%, with juggling balls that read as balls;
+    - grass about 150 dp tall. C makes the room 150 dp (GRASS_DP was 96).
+
+    Merge C's finale branch first, then V's GuideDecor build.
+  - **A's guide zones: merged** (325e623, ebe561e; merge 7405e10).
+    - Decorations are about twice as strong.
+    - The hold slide has no field demo.
+    - The zones read START (the only filled patch), a FASTER arrow, and a dashed full-height PAUSE column.
+    - The real pause now counts at any height (DeleteHold goes by distance across only).
+    - The Orchestrator resolved GuideDecor.LOOKS (F's accent form with A's levels) and the decoration check; guide and
+      guide-decor pass.
+    - On the phone: how the zones look, and the full-height pause by hand.
+  - **Size and global Orange accents: merged** (F's 4af0690, c019ec2 and 03af407; merge 743a128). The Orchestrator resolved
+    tests/menu-render/run.sh by keeping both file lists; menu-render and word-menu pass. The release notes cover both. Next for F:
+    the two resets.
   - **V, a new focused session** (2.1 V: guide decorations and grass, local_23ffee83, 10:35): decorations and finale grass, through
     phone preview pages and the owner's review ("current install still too subtle"). It then builds them into GuideDecor. A
     keeps the held-delete items, with its strength pass handed on if already done. C keeps the finale layout and the grass's

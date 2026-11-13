@@ -166,7 +166,7 @@ class GuideFrameActivity : Activity() {
             setTextColor(if (passed) GuideColours.INK else GuideMotion.faded(GuideColours.CREAM, PILL_FADED))
             background = GradientDrawable().apply {
                 cornerRadius = dp(PILL_HEIGHT).toFloat()
-                if (passed) setColor(GuideColours.ORANGE)
+                if (passed) setColor(Accent.colour)
                 else setStroke(dp(1).coerceAtLeast(2), GuideMotion.faded(GuideColours.CREAM, PILL_FADED))
             }
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(12) })
@@ -193,7 +193,7 @@ class GuideFrameActivity : Activity() {
             // A small orange check after the line that lands.
             val start = length
             append(" ✓")
-            setSpan(ForegroundColorSpan(GuideColours.ORANGE), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(ForegroundColorSpan(Accent.colour), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             setSpan(RelativeSizeSpan(CHECK_SIZE), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
@@ -248,7 +248,7 @@ class GuideFrameActivity : Activity() {
             setSpan(ForegroundColorSpan(GuideColours.CREAM), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             val cursor = length
             append("|")
-            setSpan(ForegroundColorSpan(GuideColours.ORANGE), cursor, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(ForegroundColorSpan(Accent.colour), cursor, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             val rest = length
             append(ahead)
             setSpan(ForegroundColorSpan(GuideMotion.faded(GuideColours.CREAM, AHEAD_ALPHA)), rest, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -289,10 +289,10 @@ class GuideFrameActivity : Activity() {
 
         override fun onDraw(canvas: Canvas) {
             val radius = height / 2f
-            pen.color = GuideMotion.faded(GuideColours.ORANGE, SEGMENT_OFF)
+            pen.color = GuideMotion.faded(Accent.colour, SEGMENT_OFF)
             canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), radius, radius, pen)
             if (fill <= 0f) return
-            pen.color = GuideColours.ORANGE
+            pen.color = Accent.colour
             canvas.drawRoundRect(0f, 0f, maxOf(height.toFloat(), width * fill), height.toFloat(), radius, radius, pen)
         }
     }

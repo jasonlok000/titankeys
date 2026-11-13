@@ -28,14 +28,14 @@ private object CalibrationColours {
     const val INK = GuideColours.BLACK
     const val CARD = 0xFF141312.toInt()
     const val TRACK = GuideColours.DIVIDER
-    const val ORANGE = GuideColours.ORANGE
+    val ACCENT get() = Accent.colour
     const val CREAM = GuideColours.CREAM
     const val DIM = GuideColours.MUTED
     /** A gap between two keys: faint orange, so the gaps read as one line of stripes against the real keys' gaps. */
-    const val GAP = 0x40EF804E
+    val GAP get() = GuideMotion.faded(Accent.colour, 0x40 / 255f)
     const val LABEL = 0x80FFF1E6.toInt()
     /** The screen outside the keyboard's two edges, a little dimmer, so the edges show. */
-    const val OUTSIDE = 0x33EF804E
+    val OUTSIDE get() = GuideMotion.faded(Accent.colour, 0x33 / 255f)
 }
 
 /**
@@ -129,7 +129,7 @@ class KeyCalibrationActivity : Activity() {
      */
     private fun slider(name: String, measured: Float, reach: Float, pixels: (KeyAlignment) -> Float,
                        changed: (KeyAlignment, Float) -> KeyAlignment): View {
-        val shown = text("", 15f, CalibrationColours.ORANGE, bold = true).apply { gravity = Gravity.END }
+        val shown = text("", 15f, CalibrationColours.ACCENT, bold = true).apply { gravity = Gravity.END }
         fun set(px: Float) {
             val next = changed(alignment, px.coerceIn(measured - reach, measured + reach))
             KeyCalibration.save(this@KeyCalibrationActivity, next)
@@ -138,8 +138,8 @@ class KeyCalibrationActivity : Activity() {
         val bar = SeekBar(this).apply {
             max = KeyAlignment.steps(reach)
             contentDescription = name
-            progressTintList = ColorStateList.valueOf(CalibrationColours.ORANGE)
-            thumbTintList = ColorStateList.valueOf(CalibrationColours.ORANGE)
+            progressTintList = ColorStateList.valueOf(CalibrationColours.ACCENT)
+            thumbTintList = ColorStateList.valueOf(CalibrationColours.ACCENT)
             progressBackgroundTintList = ColorStateList.valueOf(CalibrationColours.TRACK)
             setPadding(dp(12), dp(12), dp(12), dp(16))
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -178,10 +178,10 @@ class KeyCalibrationActivity : Activity() {
         textSize = 20f
         typeface = GuideFonts.heavy(context)
         gravity = Gravity.CENTER
-        setTextColor(CalibrationColours.ORANGE)
+        setTextColor(CalibrationColours.ACCENT)
         background = GradientDrawable().apply {
             setColor(Color.TRANSPARENT)
-            setStroke(dp(1).coerceAtLeast(2), CalibrationColours.ORANGE)
+            setStroke(dp(1).coerceAtLeast(2), CalibrationColours.ACCENT)
             cornerRadius = dp(22).toFloat()
         }
         layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
@@ -199,7 +199,7 @@ class KeyCalibrationActivity : Activity() {
         minHeight = dp(48)
         setPadding(dp(20), 0, dp(20), 0)
         background = GradientDrawable().apply {
-            setColor(CalibrationColours.ORANGE)
+            setColor(CalibrationColours.ACCENT)
             cornerRadius = dp(24).toFloat()
         }
         isClickable = true
@@ -269,7 +269,7 @@ internal class KeyGrid(context: Context) : View(context) {
         canvas.drawRect(right, 0f, width.toFloat(), height.toFloat(), fill)
         // Each gap is one line, one pixel wide, at the gap's centre (owner, 2026-11-12), so it lines up with the middle of the dark
         // gap between the real keys below. Lines snap to whole pixels, so none blurs across two.
-        line.color = CalibrationColours.ORANGE
+        line.color = CalibrationColours.ACCENT
         for (column in 0 until KeyGeometry.COLUMNS - 1) {
             pixelLine(canvas, keys.cell(column).second)
         }

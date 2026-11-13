@@ -398,7 +398,7 @@ internal class Passage(lead: String, loop: String = lead) {
  * "nothing off limits"), and long enough to type for about an hour: every line comes once, in a new order, before any comes again.
  */
 internal object PlaygroundText {
-    private val SENTENCES = listOf(
+    internal val SENTENCES = listOf(
         "your thumbs have more game than you do and even they get left on read",
         "you bought a phone with a real keyboard in this economy and you call other people weird",
         "touchscreen people tap glass like pigeons and think they are typing",
@@ -590,10 +590,29 @@ internal object PlaygroundText {
 
     /** At least [count] words: every line once in a random order, and then again in a new order, so nothing repeats early. */
     fun make(random: kotlin.random.Random, count: Int = WORDS): String {
-        val words = ArrayList<String>()
-        while (words.size < count) for (line in SENTENCES.shuffled(random)) words += line.split(' ')
-        return words.joinToString(" ")
+        val lines = ArrayList<String>()
+        var words = 0
+        while (words < count) {
+            // In one paragraph, a line that starts with the word the line before ends with reads as a stutter ("a lot of your
+            // messages your messages are long", owner, 2026-11-13): each next line is the first in the shuffled round that doesn't.
+            val round = SENTENCES.shuffled(random).toMutableList()
+            while (round.isNotEmpty()) {
+                val before = lines.lastOrNull()
+                val at = round.indexOfFirst { before == null || !stutters(before, it) }
+                val line = round.removeAt(at.coerceAtLeast(0))
+                words += line.split(' ').size
+                // Only a round's last line can be left with no clean place at the end: it goes in earlier, where it fits.
+                val earlier = if (at >= 0) -1 else (lines.size - 1 downTo 1).firstOrNull {
+                    !stutters(lines[it - 1], line) && !stutters(line, lines[it])
+                } ?: -1
+                if (earlier > 0) lines.add(earlier, line) else lines += line
+            }
+        }
+        return lines.joinToString(" ")
     }
+
+    /** Whether [next] starts with the word that [before] ends with. */
+    fun stutters(before: String, next: String) = before.substringAfterLast(' ') == next.substringBefore(' ')
 }
 
 /** One push in a demonstration: the keys that light, and the text that the word has become after it. */
@@ -1340,7 +1359,8 @@ internal val GUIDE_STEPS = listOf(
         cue = GuideCue.Flick(hold = true),
         needs = GuideNeed.SwipeTyping,
         lessons = setOf(GuideLesson.Flick, GuideLesson.DeleteHold),
-        demo = GuideDemo.DeleteLast,
+        // No demo in the field: its text stays still, and only the keyboard's drawing acts the held flick out (owner, 2026-11-13:
+        // "the text box doesn't need animation deleting").
     ),
     // STEERING: the slide's line again and again, with the cursor in the middle; the cursor gestures only.
     GuideStep(

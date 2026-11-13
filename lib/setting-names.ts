@@ -18,7 +18,10 @@ export const scrollLabel = "Scroll assistant";
 export const cursorLabel = "Space taps move and select";
 
 /**
- * What Orange accents changes: the marks the keyboard draws over other apps (android/kotlin/com/atlas/keyboard/Look.kt). TitanKeys'
- * own screens stay orange, the app's look (owner, 2026-11-12), so the note says where it applies.
+ * The note under Orange accents. It changes every orange TitanKeys draws: the keyboard, the bar, the guide, the front page and
+ * these pages (owner, 2026-11-13: "literally everything globally"). Turned off, it roasts you (the Orchestrator's line, the
+ * owner may change it); turned back on, it says what the switch does.
  */
-export const accentsNote = "The keyboard's marks, such as the key under your finger and your swipe trail. Off, they match the text.";
+export const accentsNote = (on: boolean) => on
+  ? "Orange marks everywhere TitanKeys draws: the keys, the bar, the guide and these pages. Off, they match the text."
+  : "Orange is off everywhere. Boring, just like you.";

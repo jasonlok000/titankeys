@@ -18,13 +18,15 @@ import kotlin.math.roundToInt
  * Draws every slide's decoration with the real GuideDecor on a 1076×1200 frame (the Titan 2 Elite's), behind a stand-in of the
  * slide's content, and checks §7's rules on it:
  * - nothing is drawn inside a keep-out rect or within 8 dp of one, or outside the area;
- * - at most 12 shapes at once, and no layer stronger than its level (orange 6–12%, cream 5%, ink 8% on the pass screen);
+ * - at most 12 shapes at once, and no layer stronger than its level (orange 14–24%, cream 10–14%, ink 8% on the pass screen);
  * - the same moment draws the same picture, every loop comes round exactly, and the picture moves;
  * - a frame takes GuideDecor under 2 ms on this computer.
  * Usage: GuideDecorRenderKt <out folder> <font folder>. It writes sheet.png (as faint as on the phone), sheet-bright.png (the
  * same, brightened to judge the drawing), and one PNG for each slide.
  */
 fun main(args: Array<String>) {
+    // ACCENT=off draws everything as with Settings > Orange accents off: Accent's cream in place of orange.
+    if (System.getenv("ACCENT") == "off") Accent.on = false
     val out = File(args.getOrElse(0) { "guide-decor" }).apply { mkdirs() }
     val fonts = File(args.getOrElse(1) { "android/src/main/res/font" })
     val bold = Font.createFont(Font.TRUETYPE_FONT, File(fonts, "inter_bold.otf"))
@@ -40,8 +42,8 @@ fun main(args: Array<String>) {
 
     // The rules for every look.
     for ((slide, look) in GuideDecor.LOOKS) {
-        check(look.colour == GuideDecor.ORANGE && look.level in .06f..0.1201f || look.colour == GuideDecor.CREAM && look.level == .05f) {
-            "$slide is orange at 6-12% or cream at 5%"
+        check(look.accent && look.level in .1399f..0.2401f || !look.accent && look.level in .0999f..0.1401f) {
+            "$slide is the accent at 14-24% or cream at 10-14%"
         }
         check(look.loop in 6_000L..20_000L) { "$slide loops in 6 to 20 s" }
     }

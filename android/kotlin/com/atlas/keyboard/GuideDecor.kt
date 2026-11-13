@@ -29,7 +29,7 @@ import kotlin.math.sin
  * for an area) is only a cache that it rebuilds when anything changes.
  *
  * The rules, from §7:
- * - Orange at 6–12% or cream at 5%, the whole picture laid down as one layer so overlaps never add up; ink at 8% on the orange
+ * - Orange at 14–24% or cream at 10–14%, the whole picture laid down as one layer so overlaps never add up; ink at 8% on the orange
  *   pass screen ([draw]'s onOrange).
  * - At most [MAX_SHAPES] shapes at once, slow loops of 6–20 s ([loopMillis]).
  * - Nothing inside a keep-out rect or within [CLEAR_DP] of one: the rects are cut out of the clip, so a shape that passes behind
@@ -1082,34 +1082,39 @@ class GuideDecor(private val font: Typeface? = null) {
         /** How far past [CLEAR_DP] the decoration fades back in round a keep-out, and in how many rings, in dp. */
         const val FEATHER_DP = 16f
         const val FEATHER_STEPS = 8
-        const val ORANGE = 0xFFEF804E.toInt()
         const val CREAM = 0xFFFFF1E6.toInt()
         const val INK = 0xFF160A04.toInt()
         const val INK_LEVEL = .08f
 
         private const val TAU = (2 * PI).toFloat()
 
-        /** Each slide's colour and how strong its whole layer is: orange at 6–12% or cream at 5% (§7). */
-        class Look(val colour: Int, val level: Float, val loop: Long, val still: Long)
+        /**
+         * Each slide's colour and how strong its whole layer is: the accent at 14–24% or cream at 10–14% (§7), tuned per slide so each
+         * reads at a glance on the phone, still behind everything (owner, 2026-11-13: at 6–12% it mostly vanished). The accent is orange,
+         * or cream with Orange accents off ([Accent]).
+         */
+        class Look(val accent: Boolean, val level: Float, val loop: Long, val still: Long) {
+            val colour: Int get() = if (accent) Accent.colour else CREAM
+        }
 
         val LOOKS = mapOf(
-            "type" to Look(ORANGE, .12f, 18_000, 4_400),
-            "swipe" to Look(ORANGE, .1f, 19_500, 1_500),
-            "menu" to Look(ORANGE, .11f, 12_000, 2_000),
-            "backspace" to Look(CREAM, .05f, 7_000, 3_000),
-            "flick" to Look(ORANGE, .1f, 6_000, 900),
-            "hold" to Look(ORANGE, .08f, 16_000, 900),
-            "steer" to Look(ORANGE, .09f, 6_000, 1_000),
-            "selectmore" to Look(ORANGE, .11f, 6_000, 2_700),
-            "alt" to Look(ORANGE, .1f, 20_000, 3_000),
-            "holdsym" to Look(ORANGE, .09f, 20_000, 1_000),
-            "symmain" to Look(ORANGE, .09f, 10_000, 2_000),
-            "symgroups" to Look(ORANGE, .09f, 10_000, 3_000),
-            "clown" to Look(ORANGE, .07f, 20_000, 2_000),
-            "paste" to Look(ORANGE, .08f, 20_000, 2_500),
-            "clipboard" to Look(ORANGE, .09f, 20_000, 3_000),
-            FINALE to Look(ORANGE, .12f, 8_000, 6_000),
-            SETUP to Look(ORANGE, .08f, 20_000, 0),
+            "type" to Look(true, .24f, 18_000, 4_400),
+            "swipe" to Look(true, .2f, 19_500, 1_500),
+            "menu" to Look(true, .2f, 12_000, 2_000),
+            "backspace" to Look(false, .12f, 7_000, 3_000),
+            "flick" to Look(true, .24f, 6_000, 900),
+            "hold" to Look(true, .22f, 16_000, 900),
+            "steer" to Look(true, .24f, 6_000, 1_000),
+            "selectmore" to Look(true, .2f, 6_000, 2_700),
+            "alt" to Look(true, .2f, 20_000, 3_000),
+            "holdsym" to Look(true, .18f, 20_000, 1_000),
+            "symmain" to Look(true, .24f, 10_000, 2_000),
+            "symgroups" to Look(true, .18f, 10_000, 3_000),
+            "clown" to Look(true, .16f, 20_000, 2_000),
+            "paste" to Look(true, .18f, 20_000, 2_500),
+            "clipboard" to Look(true, .18f, 20_000, 3_000),
+            FINALE to Look(true, .2f, 8_000, 6_000),
+            SETUP to Look(true, .16f, 20_000, 0),
         )
 
         /** How long [slide]'s picture takes to come round again: after the grass has grown, for the finale. 0 for no slide. */

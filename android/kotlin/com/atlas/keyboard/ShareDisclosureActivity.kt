@@ -71,7 +71,7 @@ class ShareDisclosureActivity : Activity() {
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
                 minHeight = dp(56)
                 background = GradientDrawable().apply {
-                    setColor(GuideColours.ORANGE)
+                    setColor(Accent.colour)
                     cornerRadius = dp(28).toFloat()
                 }
                 // Agreeing turns Share swipes on: it locks in, as a switch does.

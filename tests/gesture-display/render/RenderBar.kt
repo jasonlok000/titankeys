@@ -21,8 +21,8 @@ private fun frame(display: GestureDisplay, look: Look, label: String): BufferedI
     g.fillRect(0, 0, WIDTH, HEIGHT)
     g.color = java.awt.Color(look.ink, true)
     for ((index, word) in listOf("going", "good", "gonna").withIndex()) {
-        // As the bar has them: the best word in the middle, bigger and bolder, the others a step down.
-        g.font = Font(Font.SANS_SERIF, if (index == 1) Font.BOLD else Font.PLAIN, ((if (index == 1) 20 else 18) * DENSITY).toInt())
+        // As the bar has them: all three one size, the best word in the middle bold.
+        g.font = Font(Font.SANS_SERIF, if (index == 1) Font.BOLD else Font.PLAIN, (20 * DENSITY).toInt())
         val x = WIDTH / 6 * (2 * index + 1) - g.fontMetrics.stringWidth(word) / 2
         g.drawString(word, x, HEIGHT / 2 + g.fontMetrics.ascent / 3)
     }

@@ -169,12 +169,12 @@ internal object V2 {
             if (text.isNotEmpty()) labels[box] = g.font.createGlyphVector(g.fontRenderContext, text).visualBounds
                 .let { java.awt.geom.Rectangle2D.Float(textX + it.x.toFloat(), textY + it.y.toFloat(), it.width.toFloat(), it.height.toFloat()) }
             if (hint != null) {
-                g.font = keyFont(minOf(box.width, box.height) * .3f)
+                g.font = keyFont(maxOf(13f * D, minOf(box.width, box.height) * .3f))
                 g.drawString(hint, box.centreX - g.fontMetrics.stringWidth(hint) / 2f, top + box.bottom - box.height * .12f)
             }
             if (corners && Layout.isLetter(name) && hint == null) {
                 CORNER[name]?.let { symbol ->
-                    g.font = keyFont(minOf(box.width, box.height) * .3f)
+                    g.font = keyFont(maxOf(13f * D, minOf(box.width, box.height) * .3f))
                     g.color = alpha(labelColour, .6f)
                     g.drawString(symbol, box.left + side + box.width * .1f, top + box.top + g.fontMetrics.ascent + box.height * .05f)
                 }
@@ -238,7 +238,7 @@ internal object V2 {
             val pause = keys.onRow(1, .95f - .8f / 10f, .95f)
             g.color = alpha(CREAM, .2f)
             g.fill(RoundRectangle2D.Float(pause.left, top + pause.top, pause.width, pause.height, dp(8).toFloat(), dp(8).toFloat()))
-            g.font = keyFont(minOf(keys.key, keys.keyHeight) * .24f)
+            g.font = keyFont(maxOf(13f * D, minOf(keys.key, keys.keyHeight) * .24f))
             g.color = alpha(CREAM, .85f)
             g.drawString("pause", pause.left + dp(4), top + pause.bottom - dp(4))
         }
@@ -358,9 +358,10 @@ private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment
     if (g.fontMetrics.stringWidth(comment) > inner) problem("the comment is over one line")
     y += bodyLine + V2.dp(12)
 
-    // The line to type along to: typed words cream, the rest muted, the word you're on orange and underlined.
-    val lines = wrapped(g, passage, inner)
-    if (lines.size > 2) problem("the line to type along to is over two lines")
+    // The line to type along to: typed words cream, the rest muted, the word you're on orange and underlined. Always two full lines,
+    // carrying on into the next sentence, as GuideActivity's showPassage.
+    val lines = wrapped(g, passage, inner).take(2)
+    if (lines.last().split(' ').size < 2) problem("the line to type along to ends on a lone word")
     var count = 0
     for ((index, line) in lines.take(2).withIndex()) {
         var x = side.toFloat()
@@ -417,7 +418,7 @@ private const val IDLE = "Type or swipe whatever you like. Follow the line below
 internal fun drawFrontPage(folder: String) {
     val out = File(folder).apply { mkdirs() }
     frontProblems = 0
-    val passage = "titankeys fixes your typos so you can keep pretending you never make any"
+    val passage = "titankeys fixes your typos so you can keep pretending you never make any the sound of real keys is the only applause you will get today"
     drawFront(File(out, "front-1-idle.png"), "", null, 0f, IDLE, passage, 0)
     drawFront(File(out, "front-2-typing.png"), "titankeys fixes your typos so", 34, WpmMeter.heat(34), comment(34), passage, 5)
     drawFront(File(out, "front-3-warm.png"), "titankeys fixes your typos so you can keep pretending", 62, WpmMeter.heat(62),

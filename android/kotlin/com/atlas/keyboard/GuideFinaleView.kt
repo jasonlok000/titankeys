@@ -60,7 +60,7 @@ internal class GuideFinaleView(context: Context) : View(context) {
         val total = GuideFinale.total(lines)
         val at = if (!GuideMotion.enabled) total else ((GuideMotion.now() - start) / ValueAnimator.getDurationScale()).toLong()
         val (top, bottom) = box
-        for (piece in GuideFinale.frame(at, lines, width.toFloat(), top, bottom, measure)) when (piece) {
+        for (piece in GuideFinale.frame(at, lines, width.toFloat(), top, bottom, measure, LABEL_DP * resources.displayMetrics.density)) when (piece) {
             is GuideFinale.Text -> {
                 text.typeface = if (piece.bold) heavy else medium
                 text.textSize = piece.size
@@ -116,5 +116,10 @@ internal class GuideFinaleView(context: Context) : View(context) {
             points.forEachIndexed { index, (x, y) -> if (index == 0) moveTo(x, y) else lineTo(x, y) }
             close()
         }
+    }
+
+    private companion object {
+        /** The Label style (design v2 §1), for "BUILT FOR TITAN 2 ELITE". */
+        const val LABEL_DP = 14f
     }
 }

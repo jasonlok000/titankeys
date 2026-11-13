@@ -3,6 +3,8 @@ package com.atlas.keyboard
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
 import android.graphics.Typeface
 import kotlin.math.PI
@@ -40,6 +42,11 @@ import kotlin.math.sin
  * [GuideDecorView] hosts it with the timing, fades and frame rate. How the guide adds it is in that view's KDoc.
  */
 class GuideDecor(private val font: Typeface? = null) {
+    /** Takes the decoration away where it would sit round a keep-out (featherOut). */
+    private val eraser = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF000000.toInt()
+        setXfermode(PorterDuffXfermode(PorterDuff.Mode.DST_OUT))
+    }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
@@ -100,10 +107,8 @@ class GuideDecor(private val font: Typeface? = null) {
         this.dp = dp
         colour = if (onOrange) INK else look.colour
         shapes = 0
-        val clear = CLEAR_DP * dp
         canvas.save()
         canvas.clipRect(area.left, area.top, area.right, area.bottom)
-        for (r in keepOut) canvas.clipOutRect(r.left - clear, r.top - clear, r.right + clear, r.bottom + clear)
         canvas.saveLayerAlpha(this.area, alpha)
         val t = loopTime(slide, millis)
         when (slide) {
@@ -125,6 +130,7 @@ class GuideDecor(private val font: Typeface? = null) {
             FINALE -> grass(t)
             SETUP -> gearsIn(t)
         }
+        featherOut()
         canvas.restore()
         canvas.restore()
         return shapes
@@ -1005,6 +1011,30 @@ class GuideDecor(private val font: Typeface? = null) {
     /** The keep-out rect most like the keyboard drawing: the widest in the bottom half. */
     private fun floorLike(): RectF? = keepOut.filter { it.centerY() > area.centerY() }.maxByOrNull { it.width() * 2 + it.top / 1000f }
 
+    /**
+     * Takes the decoration away round every keep-out, softly: nothing inside one or its [CLEAR_DP], then it comes back over
+     * [FEATHER_DP], so a shape that crosses a box fades out before it rather than stopping at a hard edge (Master, 2026-11-13: the
+     * clown's rays showed black boxes round the title, the chip and the field). The top edge, under the status bar, fades too.
+     */
+    private fun featherOut() {
+        val clear = CLEAR_DP * dp
+        val step = FEATHER_DP * dp / FEATHER_STEPS
+        for (r in keepOut) {
+            eraser.alpha = 255
+            canvas.drawRect(r.left - clear, r.top - clear, r.right + clear, r.bottom + clear, eraser)
+            // Ring k takes away 1/(k + 1) of what's left, so what remains climbs evenly from the box out to the full strength.
+            for (k in 1..FEATHER_STEPS) {
+                val grow = clear + k * step
+                eraser.alpha = (255f / (k + 1)).roundToInt()
+                canvas.drawRoundRect(r.left - grow, r.top - grow, r.right + grow, r.bottom + grow, k * step, k * step, eraser)
+            }
+        }
+        for (k in 0..FEATHER_STEPS) {
+            eraser.alpha = (255f / (k + 1)).roundToInt()
+            canvas.drawRect(area.left, area.top - area.height(), area.right, area.top + k * step, eraser)
+        }
+    }
+
     // Drawing
 
     private fun strokes(mark: Array<FloatArray>, fraction: Float) {
@@ -1049,6 +1079,9 @@ class GuideDecor(private val font: Typeface? = null) {
         const val MAX_SHAPES = 12
         /** How far every shape keeps from a keep-out rect. */
         const val CLEAR_DP = 8f
+        /** How far past [CLEAR_DP] the decoration fades back in round a keep-out, and in how many rings, in dp. */
+        const val FEATHER_DP = 16f
+        const val FEATHER_STEPS = 8
         const val ORANGE = 0xFFEF804E.toInt()
         const val CREAM = 0xFFFFF1E6.toInt()
         const val INK = 0xFF160A04.toInt()

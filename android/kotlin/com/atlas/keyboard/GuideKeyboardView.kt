@@ -563,8 +563,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             canvas.translate(0f, -key.box.height() * CAPTION_LIFT)
             drawLabel(canvas, key, label, labelColour)
             canvas.restore()
-            labelPaint.textSize = min(key.box.width(), key.box.height()) * CAPTION_SIZE
-            val room = key.box.width() * LABEL_ROOM
+            // Never under [SUBLABEL_MIN] (Master, 2026-11-13: Save, Back and Unsave were 10 to 11 dp), inside the drawn key.
+            labelPaint.textSize = max(dp(SUBLABEL_MIN), min(key.box.width(), key.box.height()) * CAPTION_SIZE)
+            val room = key.box.width() - 2 * (side + inset + dp(SUBLABEL_SIDE))
             if (labelPaint.measureText(caption) > room) labelPaint.textSize *= room / labelPaint.measureText(caption)
             labelPaint.color = labelColour
             canvas.drawText(caption, key.box.centerX(), key.box.bottom - key.box.height() * CAPTION_BOTTOM, labelPaint)
@@ -575,7 +576,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             val spotted = (cue as? GuideCue.Spot)?.keys?.takeIf { keys -> keys.all(Layout::isLetter) }
             val alpha = if (spotted != null && key.name !in spotted) ALT_ALPHA * ALT_FADED else ALT_ALPHA
             altPaint.color = GuideMotion.faded(labelColour, alpha)
-            altPaint.textSize = min(key.box.width(), key.box.height()) * ALT_SIZE
+            altPaint.textSize = max(dp(SUBLABEL_MIN), min(key.box.width(), key.box.height()) * ALT_SIZE)
             canvas.drawText(symbol, key.box.left + side + inset + key.box.width() * ALT_INSET, key.box.top + inset - altPaint.ascent() + key.box.height() * ALT_INSET / 2, altPaint)
         }
         canvas.restore()
@@ -893,7 +894,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         zonePaint.color = GuideMotion.faded(colour, ZONE_ALPHA)
         canvas.drawRoundRect(pause.left, pause.top, pause.right, pause.bottom, corner, corner, zonePaint)
         altPaint.color = GuideMotion.faded(colour, .85f)
-        altPaint.textSize = min(geometry.key, geometry.keyHeight) * ZONE_LABEL
+        altPaint.textSize = max(dp(SUBLABEL_MIN), min(geometry.key, geometry.keyHeight) * ZONE_LABEL)
         val word = "pause"
         canvas.drawText(word, pause.centreX - altPaint.measureText(word) / 2, pause.bottom - dp(3f), altPaint)
     }
@@ -995,6 +996,9 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         /** A hint on a key: how much its letter moves up, the hint's size, and how far from the key's bottom. */
         const val CAPTION_LIFT = .14f
         const val CAPTION_SIZE = .3f
+        /** The smallest a key's caption, its Alt symbol or the pause zone's word is, in dp, and the room it keeps from the key's sides. */
+        const val SUBLABEL_MIN = 13f
+        const val SUBLABEL_SIDE = 2f
         const val CAPTION_BOTTOM = .12f
         /** A flick's ghost snaps to its end in this part of the demo, then lifts and fades in this part. */
         const val FLICK_SNAP = .25f

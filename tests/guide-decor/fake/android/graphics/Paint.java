@@ -16,6 +16,7 @@ public class Paint {
     Align align = Align.LEFT;
     float textSize = 12f;
     Typeface typeface;
+    Xfermode xfermode;
 
     public Paint(int flags) {}
     public void setColor(int colour) { this.colour = colour; }
@@ -36,4 +37,6 @@ public class Paint {
     public float getTextSize() { return textSize; }
     public Typeface setTypeface(Typeface typeface) { this.typeface = typeface; return typeface; }
     public Typeface getTypeface() { return typeface; }
+    public Xfermode setXfermode(Xfermode xfermode) { this.xfermode = xfermode; return xfermode; }
+    public Xfermode getXfermode() { return xfermode; }
 }

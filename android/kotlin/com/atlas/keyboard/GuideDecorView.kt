@@ -6,8 +6,10 @@ import android.graphics.Canvas
 import android.graphics.RectF
 import android.os.SystemClock
 import android.view.View
+import android.view.WindowInsets
 import android.widget.EditText
 import android.widget.TextView
+import kotlin.math.max
 
 /**
  * Hosts [GuideDecor]: the slide's decoration behind the guide's content, with its fades and its frame rate.
@@ -96,7 +98,10 @@ class GuideDecorView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         val slide = current
         val now = SystemClock.uptimeMillis()
-        area.set(0f, 0f, width.toFloat(), height.toFloat())
+        // Nothing draws under the status bar (Master, 2026-11-13: shredder tiles, sparkles and rays showed there).
+        getLocationInWindow(here)
+        val bar = rootWindowInsets?.getInsets(WindowInsets.Type.statusBars())?.top ?: 0
+        area.set(0f, max(0, bar - here[1]).toFloat(), width.toFloat(), height.toFloat())
         measureKeepOut()
         val dp = resources.displayMetrics.density
         if (!ValueAnimator.areAnimatorsEnabled()) {

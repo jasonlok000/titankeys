@@ -7,6 +7,9 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.LeadingMarginSpan
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -16,6 +19,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.atlas.connected.Connected
 import com.atlas.connected.Contributions
+import kotlin.math.roundToInt
 
 /**
  * The short policy before Share swipes turns on, for the guide's end screen (owner: "the share swipe should go back to the end
@@ -34,18 +38,28 @@ class ShareDisclosureActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setFinishOnTouchOutside(false)
+        // The policy scrolls; the owner's line and the two answers stay pinned at the bottom, so the accept shows on any screen
+        // (Master, 2026-11-13: at the phone's largest font it sat off screen with no sign of more).
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(32), dp(24), dp(32))
+            setPadding(dp(24), dp(32), dp(24), dp(16))
             addView(text(TITLE, TITLE_TYPE, bold = true))
             addView(text(SUBTITLE, BODY_TYPE, colour = GuideColours.MUTED, top = 12))
             addView(text(SENT_TITLE, LABEL_TYPE, bold = true, top = 32, label = true))
-            for (line in SENT) addView(text("•  $line", BODY_TYPE, top = 8))
+            for (line in SENT) addView(bullet(line))
             addView(text(NEVER_TITLE, LABEL_TYPE, bold = true, top = 24, label = true))
-            for (line in NEVER) addView(text("•  $line", BODY_TYPE, top = 8))
+            for (line in NEVER) addView(bullet(line))
             addView(text(HOW, BODY_TYPE, colour = GuideColours.MUTED, top = 24))
+            addView(quiet(POLICY) {
+                try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Connected.PRIVACY_URL))) } catch (_: RuntimeException) {}
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+        }
+        val answers = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(8), dp(24), dp(16))
+            setBackgroundColor(GuideColours.BLACK)
             // The owner's line, on its own, right before the accept (owner, 2026-11-13: it moved here from the end screen).
-            addView(text(TRUST, BODY_TYPE, bold = true, top = 24))
+            addView(text(TRUST, BODY_TYPE, bold = true))
             // The one thing to press to agree: the orange pill, full width, labelled plainly.
             addView(TextView(context).apply {
                 text = AGREE
@@ -59,18 +73,22 @@ class ShareDisclosureActivity : Activity() {
                     cornerRadius = dp(28).toFloat()
                 }
                 setOnClickListener { answer(true) }
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(32) })
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) })
             // Saying no is quiet, a text button under it.
             addView(quiet(DECLINE) { answer(false) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-            addView(quiet(POLICY) {
-                try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Connected.PRIVACY_URL))) } catch (_: RuntimeException) {}
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
         }
-        setContentView(ScrollView(this).apply {
+        setContentView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             setBackgroundColor(GuideColours.BLACK)
             fitsSystemWindows = true
-            addView(content)
+            // The text fades out at the bottom edge while there's more of it: the sign that it scrolls.
+            addView(ScrollView(context).apply {
+                isVerticalFadingEdgeEnabled = true
+                setFadingEdgeLength(dp(48))
+                addView(content)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+            addView(answers, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         })
         window.statusBarColor = GuideColours.BLACK
         window.navigationBarColor = GuideColours.BLACK
@@ -101,6 +119,14 @@ class ShareDisclosureActivity : Activity() {
             letterSpacing = .08f
         }
         setPadding(0, dp(top), 0, 0)
+    }
+
+    /** A bullet whose wrapped lines start under its words, not under the dot (Master, 2026-11-13). */
+    private fun bullet(line: String) = text("", BODY_TYPE, top = 8).apply {
+        val dot = "•  "
+        text = SpannableString(dot + line).apply {
+            setSpan(LeadingMarginSpan.Standard(0, paint.measureText(dot).roundToInt()), 0, length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+        }
     }
 
     private fun quiet(label: String, action: () -> Unit) = TextView(this).apply {

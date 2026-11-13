@@ -28,6 +28,7 @@ fun main() {
     altBackspaceDeletesForward()
     altSymSwitchesTheKeyboard()
     altSymWithThePanelOpenIsAsBefore()
+    theShortcutsSwitchOff()
     shortcutsActOncePerPress()
     droppedKeysUseTheirModifiers()
     onePress()
@@ -213,8 +214,8 @@ private class Keyboard {
     fun appPressed(code: Int = SHIFT) = appPush(code).also { appRelease(code) }
 
     /** What Backspace does, as the keyboard decides it: [meta] is the key's own meta state. */
-    fun backspaceDoes(meta: Int = 0, altForward: Boolean = true) =
-        modifiers.backspaceDoes(meta, altForward).also { modifiers.afterBackspace() }
+    fun backspaceDoes(meta: Int = 0, altForward: Boolean = true, shiftWord: Boolean = true) =
+        modifiers.backspaceDoes(meta, altForward, shiftWord).also { modifiers.afterBackspace() }
 
     /** Backspace as the keyboard handles it: true when it deletes a word. [ctrl] is the key's own Ctrl. */
     fun backspace(ctrl: Boolean = false) =
@@ -1512,5 +1513,46 @@ private fun chipsBesideTheWords() {
         same(bar()?.replacesWords, true, "Ctrl shows its shortcuts in the place of the words")
         up(CTRL)
         same(bar(), null, "Nothing on shows the words alone")
+    }
+}
+
+/**
+ * Each held shortcut has its switch, on to start (owner, 2026-11-13: "why is delete a word shift backspace and next keyboard alt
+ * sym not toggleable?"). Off, the keys do what they would without it: Shift + Backspace is a plain Backspace, and Sym with Alt
+ * held opens its panel with no keyboard switch. Ctrl + Backspace's word delete and Alt + Backspace's own switch are untouched.
+ */
+private fun theShortcutsSwitchOff() {
+    val shiftHeld = KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON
+    Keyboard().run {
+        down(SHIFT)
+        idle(WORD)
+        same(backspaceDoes(shiftHeld, shiftWord = false), Modifiers.Backspace.Letter, "Off, a held Shift + Backspace deletes one letter")
+        same(backspaceDoes(shiftHeld, shiftWord = false), Modifiers.Backspace.Letter, "and holding it goes on letter by letter")
+        same(backspaceDoes(shiftHeld or KeyEvent.META_CTRL_ON, shiftWord = false), Modifiers.Backspace.Word, "Ctrl + Backspace still deletes a word")
+        same(backspaceDoes(shiftHeld, shiftWord = true), Modifiers.Backspace.Word, "On, it deletes a word")
+    }
+    Keyboard().run {
+        // Only the meta says Shift, as from the owner's phone: off, that's plain too.
+        same(backspaceDoes(shiftHeld, shiftWord = false), Modifiers.Backspace.Letter, "Off, Shift's meta alone is plain too")
+    }
+    Keyboard().run {
+        press(ALT)
+        same(backspaceDoes(shiftWord = false), Modifiers.Backspace.Forward, "Alt + Backspace keeps its own switch")
+    }
+    Keyboard().run {
+        modifiers.altSymSwitches = false
+        down(ALT)
+        idle(GAP)
+        press(SYM)
+        same(modifiers.takeKeyboardSwitch(), false, "Off, Alt + Sym never switches keyboards")
+        same(modifiers.panel, Panel.Symbols, "and Sym opens its panel, as it would without the shortcut")
+        up(ALT)
+    }
+    Keyboard().run {
+        same(modifiers.altSymSwitches, true, "On to start")
+        down(ALT)
+        idle(GAP)
+        press(SYM)
+        same(modifiers.takeKeyboardSwitch(), true, "On, Alt + Sym switches")
     }
 }

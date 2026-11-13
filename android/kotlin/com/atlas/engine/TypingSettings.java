@@ -250,6 +250,30 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("alt_backspace_forward", enabled).apply();
     }
 
+    /**
+     * A held Shift + Backspace deletes a word. Off, it's a plain Backspace, one character, as if the shortcut weren't there.
+     * Ctrl or fn + Backspace still deletes a word. On to start (owner, 2026-11-13: "why is delete a word shift backspace and next keyboard alt sym not toggleable?").
+     */
+    public static boolean shiftBackspaceWord(Context context) {
+        return preferences(context).getBoolean("shift_backspace_word", true);
+    }
+
+    public static void shiftBackspaceWord(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("shift_backspace_word", enabled).apply();
+    }
+
+    /**
+     * A held Alt + Sym switches to the next keyboard. Off, the keys do what they would without it: Sym opens its panel. Android's
+     * own keyboard switcher still changes keyboards, so nobody is stuck. On to start (owner, 2026-11-13: "why is delete a word shift backspace and next keyboard alt sym not toggleable?").
+     */
+    public static boolean altSymNextKeyboard(Context context) {
+        return preferences(context).getBoolean("alt_sym_next_keyboard", true);
+    }
+
+    public static void altSymNextKeyboard(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("alt_sym_next_keyboard", enabled).apply();
+    }
+
     /** A few small marks on the keyboard are orange, such as the key under a finger. Off, they take the colour of the text. */
     public static boolean orangeAccents(Context context) {
         return preferences(context).getBoolean("orange_accents", true);

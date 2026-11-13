@@ -21,6 +21,12 @@ export const cursorLabel = "Space taps move and select";
 export const altBackspaceLabel = "Alt + Backspace deletes forward";
 export const altBackspaceNote = "Like Delete on a PC. Off, Android deletes the whole line instead.";
 
+/** The two held shortcuts, each a switch, on to start (owner, 2026-11-13: "why is delete a word shift backspace and next keyboard alt sym not toggleable?"). */
+export const shiftBackspaceLabel = "Hold Shift + Backspace to delete a word";
+export const shiftBackspaceNote = "Off, it deletes one letter, as Backspace does.";
+export const altSymLabel = "Hold Alt + Sym for the next keyboard";
+export const altSymNote = "Off, Android's own keyboard switcher still works.";
+
 /**
  * The note under Orange accents. It changes every orange TitanKeys draws: the keyboard, the bar, the guide, the front page and
  * these pages (owner, 2026-11-13: "literally everything globally"). Turned off, it roasts you (the Orchestrator's line, the

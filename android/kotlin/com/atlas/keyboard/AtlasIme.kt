@@ -1349,6 +1349,7 @@ class AtlasIme : InputMethodService() {
         holdEngine.threshold(TypingSettings.holdSymbolMillis(this))
         modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
+        modifiers.altSymSwitches = TypingSettings.altSymNextKeyboard(this)
         cursorControl = TypingSettings.cursorControl(this)
         exactRealAlt = ExactTyping.realAlt(this)
         // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
@@ -3375,7 +3376,8 @@ class AtlasIme : InputMethodService() {
                 // which deletes the line (owner, 2026-11-13). See [Modifiers.backspaceDoes]. A press decides once, so its repeats
                 // go on the same way after a tapped Alt is used up.
                 if (event.repeatCount == 0 || backspaceDoes == null)
-                    backspaceDoes = modifiers.backspaceDoes(event.metaState, TypingSettings.altBackspaceForward(this))
+                    backspaceDoes = modifiers.backspaceDoes(event.metaState, TypingSettings.altBackspaceForward(this),
+                        TypingSettings.shiftBackspaceWord(this))
                 when (backspaceDoes) {
                     Modifiers.Backspace.Forward -> command(withKey(event, KeyEvent.KEYCODE_FORWARD_DEL), dropMeta = KeyEvent.META_ALT_MASK)
                     Modifiers.Backspace.AltToApp -> command(withMeta(event, KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON))

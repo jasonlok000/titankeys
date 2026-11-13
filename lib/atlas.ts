@@ -56,6 +56,10 @@ export type State = {
   fnAsCtrl: boolean;
   /** Alt + Backspace deletes forward, like Delete on a PC. Off, Android's own Alt + Backspace deletes the line. */
   altBackspaceForward: boolean;
+  /** A held Shift + Backspace deletes a word. Off, it's a plain Backspace. */
+  shiftBackspaceWord: boolean;
+  /** A held Alt + Sym switches to the next keyboard. Off, Sym does what it would without it. */
+  altSymNextKeyboard: boolean;
   /** Two quick pushes lock Shift or Alt, so Key Mapper is not needed to stop that. */
   doublePressLocks: boolean;
   autoCapitalise: boolean;
@@ -153,7 +157,7 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "size" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog"> & {
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "size" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog"> & {
   /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
   shorthandToggles: Record<string, boolean>;
 };

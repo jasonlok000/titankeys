@@ -964,7 +964,9 @@ internal val CLIP_FIELD_KEYS = listOf("R", "I", "F", "K", "C")
 
 /** Slide 15's line: the clip that's nice to you pastes the end of it. */
 internal const val CLIP_LEAD = "What you copy is in Sym, then A. "
-internal const val PRANK_PASTE = "So is my whole personality"
+// The nice clip pastes itself and one more word: the bait and switch lands at once (owner, 2026-11-13: the old "So is my whole
+// personality" didn't land).
+internal const val PRANK_PASTE = "Honestly, you're doing great. Kidding."
 internal const val CLIP_LINE = CLIP_LEAD + PRANK_PASTE
 
 /** The clipboard lesson's clips, newest first: a thread of digs, and one nice one, which isn't what it pastes. */
@@ -1700,7 +1702,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         // The nice clip pastes the prank, and the slide owns up.
-        done = "Gotcha. Swapped it on purpose.",
+        done = "Gotcha. You believed it.",
         praise = "It keeps what you copy. Sym, then A, any time.",
         line = CLIP_LINE,
         seed = CLIP_LEAD.trimEnd(),

@@ -19,7 +19,8 @@ for line in "Action.Save -> R.drawable.menu_save" "Action.Favourite -> R.drawabl
   "Action.Unsave -> R.drawable.menu_unsave" "Action.Block -> R.drawable.menu_block" "Action.Unblock -> R.drawable.menu_unblock" \
   "private const val MENU_ICON_DP = 22" "private const val MENU_PILL_DP = 42" "private const val MENU_PILL_TEXT = .88f" \
   "private const val MENU_PILL_LEFT = 18" "private const val MENU_PILL_RIGHT = 11" "private const val MENU_PILL_GAP = 12" \
-  "private const val MENU_PILL_FADE = 20" "private const val MENU_WORD_GAP = 8" "private const val LIT_DP = 2f" \
+  "private const val MENU_WORD_GAP = 8" "private const val LIT_DP = 2f" \
+  "menuWordCentre = MenuKeys.wordCentre(wordLeft, wordRight, wordEnd, textWidth)" "val wordEnd = MenuKeys.wordEnd(width.toFloat(), dp(MENU_WORD_GAP).toFloat()" \
   "private const val LIT_GAP_DP = 3f"; do
   grep -qF "$line" "$keyboard/Strip.kt" || { echo "Strip.kt's menu icons or sizes changed: $line"; exit 1; }
 done

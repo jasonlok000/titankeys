@@ -197,12 +197,13 @@ private fun theMenuWord() {
     val iconLeft = right - 17f - icon
     val labelLeft = MenuKeys.pillLabel(right, 120f, icon, 18f, 17f)
     check(labelLeft + 120f <= iconLeft - 18f + .01f) { "The name ends before the icon" }
-    same(MenuKeys.wordCentre(10f, 50f), 30f, "The word is centred in its room")
+    same(MenuKeys.wordCentre(10f, 50f, 50f, 10f), 30f, "The word is centred in its room")
+    same(MenuKeys.wordCentre(10f, 50f, 30f, 10f), 25f, "unless the widest pill could reach it: then it moves left just enough")
     val shown = MenuKeys.shorten("incomprehensibilities") { it.length <= 12 }
     check(shown.length <= 12 && shown.startsWith("inco") && shown.endsWith("ties") && "…" in shown) { "Shortened in the middle: $shown" }
     val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
     val draw = strip.substringAfter("private fun drawMenu(canvas: Canvas)").substringBefore("private fun drawIcon(")
-    check("if (menuWordCentre.isNaN()) menuWordCentre = MenuKeys.wordCentre(wordLeft, wordRight)" in draw) { "The word is placed once" }
+    check("if (menuWordCentre.isNaN()) menuWordCentre = MenuKeys.wordCentre(wordLeft, wordRight, wordEnd, textWidth)" in draw) { "The word is placed once" }
     check("strip_menu_word" !in draw) { "The word has no quotes" }
     check("isFakeBoldText" !in draw && "boldTypeface" in draw) { "The pill's name is Ink's medium weight" }
     check("shown.paintWord(menuCanvas)" in draw && "if (pill != null && !inPill && centre in pill.first..pill.second) continue" in draw) {

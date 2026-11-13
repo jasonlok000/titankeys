@@ -143,7 +143,7 @@ object MenuKeys {
 
     /**
      * The hovered button's pill: it grows left from its key's column to hold the action's name, and covers the buttons to its
-     * left, and the end of a long word, which fades under its leading edge. In pixels on a bar [width] wide, over the real keys:
+     * left, but never the word, which ends before the widest pill: see [wordEnd]. In pixels on a bar [width] wide, over the real keys:
      * [label] is the name's width and [icon] the icon's; [padLeft] and [padRight] are the room at the pill's ends, and [gap] is
      * between the name and the icon. Returns its left and right.
      */
@@ -166,11 +166,29 @@ object MenuKeys {
      */
     fun pillLabel(right: Float, label: Float, icon: Float, gap: Float, padRight: Float) = right - padRight - icon - gap - label
 
+    /** Every button, with the column it shows in: I's buttons on some rung, and O's. */
+    val placed: List<Pair<Int, Button>>
+        get() = Step.entries.flatMap { step -> choices(step).let { listOfNotNull(it.i?.let { b -> UP to b }, it.o?.let { b -> DOWN to b }) } }
+            .distinct()
+
     /**
-     * Where the word is centred: in the room from [left] to [right], left of the buttons. It is placed once, as the menu opens,
-     * and never moves for a pill or an animation (owner, 2026-11-12).
+     * How far right the word may reach: [gap] left of the leftmost edge that any pill can have, under I or O on any rung, and never
+     * past [wordRight]. [label] is a button's name's width at the Bar text size now; the rest is as [pill] has it. So no pill ever
+     * covers the word, or the guide's underline under it, whatever its step or its name (owner, 2026-11-13: the guide's TitanKeys
+     * was cut to "TitanKe" under "Already a favourite").
      */
-    fun wordCentre(left: Float, right: Float) = (left + right) / 2
+    fun wordEnd(width: Float, gap: Float, label: (Button) -> Float, icon: Float, padLeft: Float, pillGap: Float, padRight: Float,
+                alignment: KeyAlignment = KeyAlignment.current): Float =
+        minOf(wordRight(width, gap, alignment),
+            placed.minOf { (column, button) -> pill(width, column, label(button), icon, padLeft, pillGap, padRight, alignment).first } - gap)
+
+    /**
+     * Where the word is centred: in the room from [left] to [right], left of the buttons, unless a word [textWidth] wide would then
+     * reach past [end], where the widest pill could begin ([wordEnd]); then just far enough left to clear it, and never left of
+     * [left]. It is placed once, as the menu opens, and never moves for a pill or an animation (owner, 2026-11-12).
+     */
+    fun wordCentre(left: Float, right: Float, end: Float, textWidth: Float) =
+        minOf((left + right) / 2, end - textWidth / 2).coerceAtLeast(left + textWidth / 2)
 
     /**
      * [word], shortened in the middle with "…" until [fits] says it fits, keeping its start and end, which tell a word apart best.

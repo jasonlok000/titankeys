@@ -1548,9 +1548,11 @@ class GuideActivity : Activity() {
         val titleLines = if (guide) TITLE_LINES else SETUP_TITLE_LINES
         val bodyLines = if (guide) BODY_LINES else SETUP_BODY_LINES
         title.visibility = View.VISIBLE
-        title.isAllCaps = true
         title.letterSpacing = DISPLAY_SPACING
         title.isSingleLine = false
+        // After setSingleLine, which replaces the transformation and so wiped the capitals: titles were in sentence case on the
+        // phone while every render showed them upper case (owner's own call: "all upper case").
+        title.isAllCaps = true
         title.maxLines = titleLines
         title.ellipsize = null
         title.gravity = Gravity.CENTER_VERTICAL or Gravity.START
@@ -1579,9 +1581,10 @@ class GuideActivity : Activity() {
         val bodyPx = px(BODY_TYPE)
         val titlePx = px(DISPLAY)
         title.visibility = View.VISIBLE
-        title.isAllCaps = true
         title.letterSpacing = DISPLAY_SPACING
         title.isSingleLine = true
+        // After setSingleLine, which replaces the transformation and would wipe the capitals.
+        title.isAllCaps = true
         title.maxLines = 1
         title.ellipsize = null
         title.gravity = Gravity.CENTER_VERTICAL or Gravity.START

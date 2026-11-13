@@ -213,6 +213,7 @@ all of them are unapproved.
     - **Open:** the echo uses the word's own mark, and the ambient waits a full cycle, so there are no hearts and then glitter.
     - **Next for W:** the quick settings page has the same late lift (its mark clears about 0.3 s after a toggle), so it gets the
       same fix. The ladder work stays held until v4 is approved.
+  - **Quick settings hover: merged** (71acf0b). The pressed key pins the mark, its late lift is ignored, and there's no timer. On the phone: rest on F (Sym, then Alt) and press it three times; the mark should stay.
   - **Build #5** started (test-2.1h at 179b7ad). It has everything merged except F's Size and Orange work and W's ladder.
   - **Ladder mockup v4** (C): `X:/Atlas/.dev/mockups/ladder-v4.html`, opened on the phone at 09:40.
     - Not saved: a 42% fill under denser dots.

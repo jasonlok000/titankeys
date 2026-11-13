@@ -205,6 +205,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Haptics on every touchscreen press in the app** (owner, 2026-11-13, 10:20): "Add Haptics to every touch screen press on the
+  app. Do a audit. For example, the cross button and the back button." (Owner) This reverses "plain buttons stay quiet". D audits
+  every control and adds a light Press haptic with its own switch, with a check that no clickable is left silent. Controls with
+  a meaning keep theirs.
+- **"and" corrected to "And", and "auto" to "AUTO"** (owner's bug, 10:20). Orchestrator's diagnosis from the code: the word menu
+  saves or favourites the word as shown, so a capital from the sentence start, or caps, gets stored and treated like a name's
+  capitals. W fixes it in the ladder branch: store the dictionary's case, or the natural case, and repair existing entries once.
 - **The ∞ slide's text** (owner, 2026-11-13, 10:05–10:15). (Owner)
   - The field line: "How long I last in bed with your mother: ∞". It's built as "Seriously, how long I last in bed with your
     mother: ∞", because the finale's GO TOUCH GRASS NOW needs this line to start with S. (Orchestrator) This reverses the

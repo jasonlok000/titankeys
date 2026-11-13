@@ -59,7 +59,7 @@ fun main(args: Array<String>) {
         Still("10-favourite-hover-i", "Favourite, hovering I: already a favourite, so the word stays", word, favourite, up),
         Still("11-favourite-hover-o", "Favourite, hovering O: Unfavourite fades the word 60% toward white", word, favourite, down),
         Still("12-hover-p", "Hovering P (or Backspace): Back has no pill", word, saved, back),
-        Still("13-long-hover-o", "Long word, hovering O: the pill slides over its fading end", "pneumonoultramicroscopicsilicovolcanoconiosis", saved, down),
+        Still("13-long-hover-o", "Long word, hovering O: it ends before the widest pill, so no pill covers it", "pneumonoultramicroscopicsilicovolcanoconiosis", saved, down),
         Still("14-moved-calibration", "A moved calibration (Q at 5%, P at 93%): the buttons follow the keys", word, saved, alignment = moved),
         Still("15-moved-hover-o", "Moved calibration, hovering O", word, saved, down, alignment = moved),
         Still("16-long-favourite", "A long favourite, hovering O", "pneumonoultramicroscopicsilicovolcanoconiosis", favourite, down),
@@ -69,6 +69,9 @@ fun main(args: Array<String>) {
         Still("19-lit-hover-i", "Lit, hovering I: Save's preview", "TitanKeys", new, up, lit = true),
         Still("20-lit-saved", "Lit, saved: white", "TitanKeys", saved, lit = true),
         Still("21-lit-favourite", "Lit, a favourite: the accent", "TitanKeys", favourite, lit = true),
+        Still("22-lit-favourite-hover-i", "Lit, a favourite, hovering I: Already a favourite clears the word and its line", "TitanKeys", favourite, up, lit = true),
+        Still("23-lit-favourite-hover-o", "Lit, a favourite, hovering O: Unfavourite clears it too", "TitanKeys", favourite, down, lit = true),
+        Still("24-long-favourite-hover-i", "A long favourite, hovering I", "pneumonoultramicroscopicsilicovolcanoconiosis", favourite, up),
     ).map { it.frame(looks) }
     val states = stills()
     // Each effect: the resting finger's preview, then the press and its frames, with the haptic's frame marked in the caption.
@@ -120,6 +123,7 @@ fun main(args: Array<String>) {
         }
     }
     thePillCoversTheButtonsToItsLeft(looks)
+    theWordIsNeverCovered(looks)
     theShutBookHidesTheWord(looks, folder)
     theWordIsSolid(looks)
     theStatusesStandApart(looks, folder)
@@ -257,10 +261,33 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
     }
     private val measure = AwtMenuCanvas(probe, bold)
 
-    /** The room left of the buttons, in px, as Strip has it (without the screen's corners, which this flat render lacks). */
-    fun room(alignment: KeyAlignment): Pair<Float, Float> {
-        val left = maxOf(8 * DENSITY, MenuKeys.slot(WIDTH.toFloat(), 0, alignment).first)
-        return left to MenuKeys.wordRight(WIDTH.toFloat(), MENU_WORD_GAP * DENSITY, alignment)
+    /**
+     * The room left of the buttons, in px, as Strip has it (without the screen's corners, which this flat render lacks): its left,
+     * its right, and where the word must end, before the widest pill, at [density] (Bar text size's).
+     */
+    fun room(alignment: KeyAlignment, density: Float = DENSITY): Triple<Float, Float, Float> {
+        val left = maxOf(8 * density, MenuKeys.slot(WIDTH.toFloat(), 0, alignment).first)
+        val end = MenuKeys.wordEnd(WIDTH.toFloat(), MENU_WORD_GAP * density, { labelWidth(it, density) }, MENU_ICON_DP * density,
+            MENU_PILL_LEFT * density, MENU_PILL_GAP * density, MENU_PILL_RIGHT * density, alignment)
+        return Triple(left, MenuKeys.wordRight(WIDTH.toFloat(), MENU_WORD_GAP * density, alignment), end)
+    }
+
+    /** A button's name's width in the pill, in px, at [density], as Strip measures it: Inter Medium at the bar words' size, times .88. */
+    fun labelWidth(button: MenuKeys.Button, density: Float = DENSITY): Float {
+        probe.font = medium.deriveFont(20 * density * MENU_PILL_TEXT)
+        return probe.fontMetrics.stringWidth(label(button)).toFloat()
+    }
+
+    /** The word's width in px at [density]. */
+    fun wordWidth(text: String, density: Float = DENSITY) = measure.measure(text) * density
+
+    /** Where the word shows for [word], as Strip places it: its text, shortened to fit, and its left and right, in px, at [density]. */
+    fun placed(word: String, alignment: KeyAlignment, density: Float = DENSITY): Triple<String, Float, Float> {
+        val (left, right, end) = room(alignment, density)
+        val text = MenuKeys.shorten(word) { wordWidth(it, density) <= end - left }
+        val width = wordWidth(text, density)
+        val centre = MenuKeys.wordCentre(left, right, end, width)
+        return Triple(text, centre - width / 2, centre + width / 2)
     }
 
     /**
@@ -268,9 +295,8 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
      * keeps Normal's at every Bar text size.
      */
     fun scene(word: String, step: MenuKeys.Step, alignment: KeyAlignment): MenuScene {
-        val (left, right) = room(alignment)
-        val text = MenuKeys.shorten(word) { measure.measure(it) * DENSITY <= right - left }
-        return MenuScene(text, MenuScene.WordLayout.of(text, measure.top(text)) { measure.measure(it) }, MenuKeys.wordCentre(left, right) / DENSITY,
+        val (text, left, right) = placed(word, alignment)
+        return MenuScene(text, MenuScene.WordLayout.of(text, measure.top(text)) { measure.measure(it) }, (left + right) / 2 / DENSITY,
             StripFit.baseline(ROW / 2f, MenuScene.FONT_DP * DENSITY) / DENSITY, step)
     }
 
@@ -341,11 +367,6 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
             // As Strip: the pill grows with Bar text size, but never past its share of the bar, which keeps its height.
             val height = minOf(MENU_PILL_DP * DENSITY, ROW * MENU_PILL_DP / 56f)
             val shape = RoundRectangle2D.Float(pill.first, (ROW - height) / 2, pill.second - pill.first, height, height, height)
-            val fade = MENU_PILL_FADE * DENSITY
-            g.paint = java.awt.GradientPaint(pill.first - fade, 0f, Color(paper.red, paper.green, paper.blue, 0), pill.first + height / 2, 0f, paper)
-            g.fill(java.awt.geom.Rectangle2D.Float(pill.first - fade, 0f, fade + height / 2, ROW.toFloat()))
-            g.color = paper
-            g.fill(shape)
             val spent = button == MenuKeys.Button.Favourited
             g.color = faded(ORANGE, if (spent) .12f else .24f, paper)
             g.fill(shape)
@@ -403,6 +424,47 @@ private fun thePillCoversTheButtonsToItsLeft(looks: Looks) {
         check(!MenuKeys.covers(left, right, MenuKeys.BACK, WIDTH.toFloat(), alignment)) { "Hovering $o leaves Back be" }
     }
     println("Hovering O's button covers I's, for every name it has")
+}
+
+/**
+ * No pill and no icon ever covers the menu's word, or the guide's underline under it, which is as wide as the word (owner,
+ * 2026-11-13: the guide's TitanKeys was cut to "TitanKe" under "Already a favourite" at Bar text size Bigger). For the guide's
+ * TitanKeys, a short word, long real words, at every Bar text size, on the default keys and a moved calibration: on every rung,
+ * hovering I, O or nothing, the word is whole in its room and ends at least the word's gap before the pill and every icon. TitanKeys
+ * and the short word show whole, never shortened.
+ */
+private fun theWordIsNeverCovered(looks: Looks) {
+    // Every problem, so a failure shows them all.
+    val problems = ArrayList<String>()
+    fun check(ok: Boolean, problem: () -> String) { if (!ok) problems += problem() }
+    for ((size, factor) in listOf("Normal" to FixedScale.NORMAL, "Bigger" to FixedScale.BIGGER, "Biggest" to FixedScale.BIGGEST)) {
+        val density = 1.55f * factor
+        val gap = MENU_WORD_GAP * density
+        val icon = MENU_ICON_DP * density
+        for (alignment in listOf(KeyAlignment.DEFAULT, KeyAlignment(.05f, .93f))) {
+            for (word in listOf("TitanKeys", "whatever", "pneumonoultramicroscopicsilicovolcanoconiosis", "antidisestablishmentarianism")) {
+                val (text, left, right) = looks.placed(word, alignment, density)
+                val (roomLeft, _, _) = looks.room(alignment, density)
+                val how = "$size, ${if (alignment == KeyAlignment.DEFAULT) "default keys" else "moved keys"}, \"$text\""
+                if (word.length < 12) check(text == word) { "$how: shows whole, not shortened from $word" }
+                check(left >= roomLeft - .5f) { "$how: starts in its room, at $left, not before $roomLeft" }
+                for (column in MenuKeys.UP..MenuKeys.BACK) {
+                    val (a, b) = MenuKeys.slot(WIDTH.toFloat(), column, alignment)
+                    check(right + gap <= (a + b) / 2 - icon / 2 + .5f) { "$how: ends ${(a + b) / 2 - icon / 2 - right} px before the icon of column $column" }
+                }
+                for (step in MenuKeys.Step.entries) for (column in listOf(MenuKeys.UP, MenuKeys.DOWN)) {
+                    val button = MenuKeys.choices(step).let { if (column == MenuKeys.UP) it.i else it.o } ?: continue
+                    val (pillLeft, _) = MenuKeys.pill(WIDTH.toFloat(), column, looks.labelWidth(button, density), icon, MENU_PILL_LEFT * density,
+                        MENU_PILL_GAP * density, MENU_PILL_RIGHT * density, alignment)
+                    check(right + gap <= pillLeft + .5f) { "$how, $step, hovering $button: the pill starts ${pillLeft - right} px after the word ends, under its gap of $gap" }
+                }
+            }
+        }
+        val (text, left, right) = looks.placed("TitanKeys", KeyAlignment.DEFAULT, density)
+        println("$size: \"$text\" from ${left.toInt()} to ${right.toInt()} px; the room ends at ${looks.room(KeyAlignment.DEFAULT, density).third.toInt()} px")
+    }
+    kotlin.check(problems.isEmpty()) { "A pill or an icon covers the menu's word:\n" + problems.joinToString("\n") }
+    println("No pill or icon covers the menu's word, at every Bar text size, on every rung and hover")
 }
 
 /**
@@ -713,7 +775,6 @@ private const val MENU_PILL_TEXT = .88f
 private const val MENU_PILL_LEFT = 18
 private const val MENU_PILL_RIGHT = 11
 private const val MENU_PILL_GAP = 12
-private const val MENU_PILL_FADE = 20
 private const val MENU_WORD_GAP = 8
 /** Strip's light under a word for the guide (Strip.lit), in dp: its thickness, and its gap under the baseline. */
 private const val LIT_DP = 2f

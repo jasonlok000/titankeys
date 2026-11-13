@@ -894,16 +894,19 @@ class Strip(
             pillLeft.jump(Float.NaN)
             pillRight.jump(Float.NaN)
         }
-        // The word, placed once in the room left of the buttons, in Inter Bold at 20 dp. A long word loses its middle to fit.
+        // The word, placed once in the room left of the buttons, in Inter Bold at 20 dp, ending before the widest pill the menu can
+        // show, on any rung under either button, so no pill ever covers it. A long word loses its middle to fit.
         menuWordText.typeface = bestTypeface
         menuWordText.textSize = MenuScene.FONT_DP * density
         val baseline = StripFit.baseline(height / 2f, menuWordText.textSize)
         val wordFoot = navigationInset + height - (baseline + menuWordText.descent())
         val wordLeft = maxOf(side.toFloat(), keySide, corners.inset(wordFoot).toFloat() + dp(MENU_CORNER_GAP))
         val wordRight = MenuKeys.wordRight(width.toFloat(), dp(MENU_WORD_GAP).toFloat())
-        if (menuWordCentre.isNaN()) menuWordCentre = MenuKeys.wordCentre(wordLeft, wordRight)
-        val text = MenuKeys.shorten(menu.word) { menuCanvas.measure(it) * density <= (wordRight - wordLeft).coerceAtLeast(0f) }
+        val wordEnd = MenuKeys.wordEnd(width.toFloat(), dp(MENU_WORD_GAP).toFloat(), { pillText.measureText(context.getString(label(it.action))) },
+            icon.toFloat(), dp(MENU_PILL_LEFT).toFloat(), dp(MENU_PILL_GAP).toFloat(), dp(MENU_PILL_RIGHT).toFloat())
+        val text = MenuKeys.shorten(menu.word) { menuCanvas.measure(it) * density <= (wordEnd - wordLeft).coerceAtLeast(0f) }
         val textWidth = menuCanvas.measure(text) * density
+        if (menuWordCentre.isNaN()) menuWordCentre = MenuKeys.wordCentre(wordLeft, wordRight, wordEnd, textWidth)
         val textLeft = menuWordCentre - textWidth / 2
         val shown = scene?.takeIf { it.word == text } ?: MenuScene(text, MenuScene.WordLayout.of(text, menuCanvas.top(text)) { menuCanvas.measure(it) },
             menuWordCentre / density, baseline / density, menu.step).also {
@@ -942,19 +945,10 @@ class Strip(
         // The guide's light stays under its word through the word's menu, under the pill: see [lit].
         if (litIndex >= 0 && menu.word.equals(litWord, ignoreCase = true)) underline(canvas, textLeft, textLeft + textWidth, baseline)
         effects?.invalidate()
-        // The pill, under its icon, with the action's name. It covers what it slides over: a long word's end fades under it.
+        // The pill, under its icon, with the action's name. It covers the buttons it slides over, never the word: see [MenuKeys.wordEnd].
         val spent = action == Action.Favourited
         if (pill != null && action != null) {
             menuBox.set(pill.first, (height - pillHeight) / 2, pill.second, (height + pillHeight) / 2)
-            if (textLeft + textWidth > pill.first - dp(MENU_PILL_FADE)) {
-                val fade = dp(MENU_PILL_FADE).toFloat()
-                menuPaint.shader = android.graphics.LinearGradient(pill.first - fade, 0f, pill.first + pillHeight / 2, 0f,
-                    look.paper and 0x00FFFFFF, look.paper, android.graphics.Shader.TileMode.CLAMP)
-                canvas.drawRect(pill.first - fade, 0f, pill.first + pillHeight / 2, height, menuPaint)
-                menuPaint.shader = null
-                menuPaint.color = look.paper
-                canvas.drawRoundRect(menuBox, pillHeight / 2, pillHeight / 2, menuPaint)
-            }
             menuPaint.color = GuideMotion.faded(look.accent, (if (spent) MENU_SPENT_PILL_ALPHA else MENU_PILL_ALPHA) * open)
             canvas.drawRoundRect(menuBox, pillHeight / 2, pillHeight / 2, menuPaint)
             canvas.save()
@@ -1394,7 +1388,6 @@ class Strip(
         private const val MENU_SPENT_ALPHA = .6f
         private const val MENU_GLIDE_MILLIS = 140L
         /** How far the pill's leading edge fades a long word that it slides over, in dp. */
-        private const val MENU_PILL_FADE = 20
         /** The broken heart's crack, in its icon's 24 by 24 units: each half of a broken heart or bookmark is cut along it. */
         private val CRACK = listOf(12.3f to 0f, 12.3f to 6.6f, 10.4f to 10.4f, 13.6f to 12.6f, 11.6f to 17.4f, 11.6f to 24f)
         private val CRACK_LEFT = listOf(0f to 0f) + CRACK + listOf(0f to 24f)

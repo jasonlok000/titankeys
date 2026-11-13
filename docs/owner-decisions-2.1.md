@@ -205,6 +205,16 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **The bar isn't shorter; its words are smaller** (owner's question, 2026-11-13: "the bar by default is shorter than before and
+  also the text are smaller?"). Measured on the phone's captures, the bar is 88 px (56 dp) on 11-09, on 11-12 and today. The
+  words were 17 sp, which the phone's font size 2.0 made about 29 dp; since fixed sizes (11-12) they're 20 dp at Normal, about a
+  third smaller. Settings > Look and feel > Size > Biggest (1.4) makes them 28 dp, close to before, and the bar keeps its height.
+  The default stays Normal unless the owner says otherwise. (Orchestrator)
+- **The decoration with Sym open** (owner, 2026-11-13: "The background decor probably bugs visually when sym is open"). From the
+  code: with a panel open, the keys drawing hides, so the decoration's lower band runs to the screen's bottom, behind the panel;
+  the ∞ is centred in that band, so it jumps down, grows and is cut by the panel's top. A phone capture is queued. Proposed fix
+  (Orchestrator, waiting on the owner's go): the decoration stops at the keyboard's top, and keeps the keys drawing's place while a
+  panel is open, so nothing moves. For V.
 - **The ∞ slide says ∞ outright: a symbol hunt, not a riddle** (owner, 2026-11-13: "we should be explicit with the symbol to
   find. Its a symbol hunt not a riddle. Ok use ur recommendation but also make it explicitly the ∞"). (Owner) This reverses the
   earlier "never names the symbol" rule. Built in 4c6fd0e:

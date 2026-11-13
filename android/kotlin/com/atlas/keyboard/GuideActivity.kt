@@ -1427,7 +1427,7 @@ class GuideActivity : Activity() {
             title.maxLines = TITLE_LINES
             title.ellipsize = null
             title.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-            title.setAutoSizeTextTypeUniformWithConfiguration(sizeIn(TITLE_SMALLEST_SP, titlePx), titlePx.toInt(), 1, TypedValue.COMPLEX_UNIT_PX)
+            shrinkToFit(title, sizeIn(TITLE_SMALLEST_SP, titlePx), titlePx.toInt())
             title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, TITLE_LINES * lineHeight(HEAVY, titlePx)).apply {
                 topMargin = dp(GAP)
             }
@@ -1435,7 +1435,7 @@ class GuideActivity : Activity() {
             body.maxLines = BODY_LINES
             body.ellipsize = null
             body.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-            body.setAutoSizeTextTypeUniformWithConfiguration(sizeIn(BODY_SMALLEST_SP, bodyPx), bodyPx.toInt(), 1, TypedValue.COMPLEX_UNIT_PX)
+            shrinkToFit(body, sizeIn(BODY_SMALLEST_SP, bodyPx), bodyPx.toInt())
             chip.setTextSize(TypedValue.COMPLEX_UNIT_PX, bodyPx * CHIP_SCALE)
             instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 BODY_LINES * lineHeight(MEDIUM, bodyPx) + 2 * dp(CHIP_PAD)).apply { topMargin = dp(GAP) }
@@ -1507,6 +1507,18 @@ class GuideActivity : Activity() {
 
     /** [sp] in pixels, never more than [most]: the smallest size a title or instruction shrinks to. */
     private fun sizeIn(sp: Float, most: Float) = min(sp(sp), most).toInt().coerceAtLeast(1)
+
+    /**
+     * Lets [view]'s text shrink from [most] down to [least] pixels to fit. With the phone's font size turned right up, the
+     * smallest size can reach the largest, and Android refuses a range with nothing in it, so the text then stays at [most].
+     */
+    private fun shrinkToFit(view: TextView, least: Int, most: Int) {
+        if (least < most) view.setAutoSizeTextTypeUniformWithConfiguration(least, most, 1, TypedValue.COMPLEX_UNIT_PX)
+        else {
+            view.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
+            view.setTextSize(TypedValue.COMPLEX_UNIT_PX, most.toFloat())
+        }
+    }
 
     /** The height of one line of [face] at [px], from its font's top to its bottom, so nothing is cut. */
     private fun lineHeight(face: Typeface, px: Float): Int {

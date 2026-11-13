@@ -20,7 +20,15 @@ internal object GuideFinale {
     data class Text(val text: String, val x: Float, val y: Float, val size: Float, val colour: Int, override val alpha: Float,
                     val bold: Boolean, val spacing: Float = 0f) : Piece
 
-    data class Mark(val x: Float, val y: Float, val side: Float, override val alpha: Float) : Piece
+    /**
+     * The logo's mark, centred on [x], [y], [side] across its shape, or one [part] of it, with its slash at [line]'s strength. The
+     * parts are the mark's own T and K: they split along the diagonal between the T's bar and the K's arm, and each keeps the
+     * shared stem, so the logo itself can walk apart into the T and the K of "TitanKeys".
+     */
+    data class Mark(val x: Float, val y: Float, val side: Float, override val alpha: Float, val part: MarkPart = MarkPart.Whole,
+                    val line: Float = alpha) : Piece
+
+    enum class MarkPart { Whole, T, K }
 
     /** Measures [text] at [size], bold or not, as the screen will draw it. */
     fun interface Measure {
@@ -49,11 +57,11 @@ internal object GuideFinale {
     const val MARK_IN = 520L
     const val TK_IN = 360L
     const val TK_HOLD = 300L
-    const val GROW = 900L
+    /** The mark walking apart into the name: long enough to follow, as the logo itself becomes the word. */
+    const val GROW = 1500L
     const val BUILT_IN = 450L
 
-    /** How the logo's name starts, and what it grows into. "T" and "K" stay; the rest comes in between and after them. */
-    const val SHORT = "TK"
+    /** What the logo grows into: its T and K become the name's, and the rest comes in between and after them. */
     const val NAME = "TitanKeys"
     const val BUILT_FOR = "BUILT FOR TITAN 2 ELITE"
     /** How much bigger a first letter grows as it lights. */
@@ -65,6 +73,21 @@ internal object GuideFinale {
     const val LINE_PATH = "M289.8,756.2 L303.6,767.2 L808.6,335.8 L794.8,324.7 Z"
     /** The part of the 1080 square that the mark's shape takes, so it can be sized by its shape. */
     const val MARK_SHAPE = 520f / 1080f
+    /** The mark's letters in its 1080 square: their cap top and baseline, the shared stem's left and right, and the T's middle. */
+    const val MARK_TOP = 328.4f
+    const val MARK_BASE = 751.6f
+    const val STEM_LEFT = 438.8f
+    const val STEM_RIGHT = 523.4f
+    const val T_MIDDLE = 481.1f
+    /**
+     * The mark's T and K, as clips in its 1080 square. They part along the line midway between the T bar's slanted end and the K
+     * arm's parallel edge, which meets the stem at y 490.4; the K keeps the stem below the bar too.
+     */
+    val T_CLIP = floatArrayOf(0f, 0f, 891.2f, 0f, STEM_RIGHT, 490.4f, STEM_RIGHT, 1080f, 0f, 1080f)
+    val K_CLIP = floatArrayOf(891.2f, 0f, 1080f, 0f, 1080f, 1080f, STEM_LEFT, 1080f, STEM_LEFT, 420f, STEM_RIGHT, 420f, STEM_RIGHT, 490.4f)
+    /** Inter Bold's capitals, as a part of its size, and its K's stem in from the letter's left. */
+    const val CAP = .727f
+    const val K_STEM = .08f
 
     private fun count(lines: List<String>) = lines.size
     fun summaryEnd(lines: List<String>) = (count(lines) - 1) * LINE_GAP + LINE_IN
@@ -74,6 +97,8 @@ internal object GuideFinale {
     fun phraseEnd(lines: List<String>) = gatherStart(lines) + GATHER + PHRASE_HOLD
     fun markStart(lines: List<String>) = phraseEnd(lines) + PHRASE_OUT
     fun growStart(lines: List<String>) = markStart(lines) + MARK_IN + TK_IN + TK_HOLD
+    /** From here the parts give way to the name's own letters, so it ends as crisp type. */
+    const val SETTLE = .8f
     /** When the whole show is over and the end's buttons come in. */
     fun total(lines: List<String>) = growStart(lines) + GROW + BUILT_IN
 
@@ -130,28 +155,48 @@ internal object GuideFinale {
             val alpha = landing * (1f - phraseOut)
             if (alpha > 0f) pieces += Text(head, x, baseline - phraseOut * height * .08f, size, colour, alpha, lit > .5f || gather > 0f)
         }
-        // The logo: the mark, then "TK", which grows into the name, then what it's built for.
+        // The logo (owner: "the ending tk animation should be the logo itself"): the real mark comes in, holds, then walks apart into
+        // the name, its own T to the T of "TitanKeys" and its own K to the K, shrinking to the name's capitals, while the slash
+        // goes and the rest of the name comes in between them. At the end the parts give way to the name's own type.
         val markIn = ease(part(at, markStart(lines), MARK_IN))
         if (markIn > 0f) {
             val markSide = min(width * .5f, height * .38f)
-            pieces += Mark(width / 2, top + height * .3f, markSide * (.7f + .3f * markIn), markIn)
+            val bigScale = markSide * (.7f + .3f * markIn) / (1080f * MARK_SHAPE)
+            val bigX = width / 2
+            val bigY = top + height * .45f
             val nameSize = min(room / measure.width(NAME, 100f, true) * 100f * .82f, height * .13f)
-            val baseline = top + height * .74f
-            val tkIn = ease(part(at, markStart(lines) + MARK_IN, TK_IN))
+            val baseline = top + height * .55f
             val grow = easeInOut(part(at, growStart(lines), GROW))
             fun w(text: String) = measure.width(text, nameSize, true)
-            val startLeft = (width - w(SHORT)) / 2
-            val endLeft = (width - w(NAME)) / 2
-            val tX = startLeft + (endLeft - startLeft) * grow
-            val kX = startLeft + w("T") + (endLeft + w("Titan") - startLeft - w("T")) * grow
-            pieces += Text("T", tX, baseline, nameSize, INK, tkIn, true)
-            pieces += Text("K", kX, baseline, nameSize, INK, tkIn, true)
-            // The letters between come in once the gap between T and K is wide enough for them, so they never overlap.
-            val gap = kX - tX - w("T")
-            val letters = ((gap / w("itan") - .85f) / .15f).coerceIn(0f, 1f)
-            if (letters > 0f) {
-                pieces += Text("itan", tX + w("T"), baseline, nameSize, INK, letters, true)
-                pieces += Text("eys", kX + w("K"), baseline, nameSize, INK, letters, true)
+            val left = (width - w(NAME)) / 2
+            val kLeft = left + w("Titan")
+            // The parts end at the name's capitals: the mark's cap height is the name's.
+            val smallScale = CAP * nameSize / (MARK_BASE - MARK_TOP)
+            val scale = bigScale + (smallScale - bigScale) * grow
+            // Where each part's centre goes, so its stem lands on its letter's stem and its baseline on the name's.
+            val endY = baseline - (MARK_BASE - 540f) * smallScale
+            val tEndX = left + w("T") / 2 - (T_MIDDLE - 540f) * smallScale
+            val kEndX = kLeft + nameSize * K_STEM - (STEM_LEFT - 540f) * smallScale
+            val y = bigY + (endY - bigY) * grow
+            val settle = ((grow - SETTLE) / (1f - SETTLE)).coerceIn(0f, 1f)
+            val side = scale * 1080f * MARK_SHAPE
+            val slash = markIn * (1f - (grow / .35f).coerceIn(0f, 1f))
+            if (grow <= 0f) pieces += Mark(bigX, bigY, side, markIn)
+            else {
+                pieces += Mark(bigX + (tEndX - bigX) * grow, y, side, 1f - settle, MarkPart.T, 0f)
+                pieces += Mark(bigX + (kEndX - bigX) * grow, y, side, 1f - settle, MarkPart.K, 0f)
+                // The slash goes as they part.
+                if (slash > 0f) pieces += Mark(bigX, bigY + (endY - bigY) * grow, side, 0f, MarkPart.Whole, slash)
+            }
+            // The name's other letters come in once the parts are well on their way; its T and K take over as they land.
+            val between = ((grow - .5f) / .35f).coerceIn(0f, 1f)
+            if (between > 0f) {
+                pieces += Text("itan", left + w("T"), baseline, nameSize, INK, between, true)
+                pieces += Text("eys", kLeft + w("K"), baseline, nameSize, INK, between, true)
+            }
+            if (settle > 0f) {
+                pieces += Text("T", left, baseline, nameSize, INK, settle, true)
+                pieces += Text("K", kLeft, baseline, nameSize, INK, settle, true)
             }
             val built = ease(part(at, growStart(lines) + GROW, BUILT_IN))
             if (built > 0f) {
@@ -162,7 +207,7 @@ internal object GuideFinale {
                     true, spacing)
             }
         }
-        return pieces.filter { it.alpha > 0f }
+        return pieces.filter { it.alpha > 0f || it is Mark && it.line > 0f }
     }
 
     /** Reads the simple moves and lines of the logo's path data, as points per part: each list is one closed shape. */

@@ -54,11 +54,11 @@ internal object V2 {
         font.deriveFont(mapOf(java.awt.font.TextAttribute.TRACKING to em))
 
     // The type scale (design v2 §1), in dp.
-    fun display(size: Float = 30f) = tracked(BOLD_FACE.deriveFont(size * D), -.01f)
-    fun title() = BOLD_FACE.deriveFont(22f * D)
-    fun body() = MEDIUM_FACE.deriveFont(16f * D)
-    fun field() = MEDIUM_FACE.deriveFont(22f * D)
-    fun label() = tracked(BOLD_FACE.deriveFont(12f * D), .08f)
+    fun display(size: Float = 36f) = tracked(BOLD_FACE.deriveFont(size * D), -.01f)
+    fun title() = BOLD_FACE.deriveFont(24f * D)
+    fun body() = MEDIUM_FACE.deriveFont(19f * D)
+    fun field() = MEDIUM_FACE.deriveFont(24f * D)
+    fun label() = tracked(BOLD_FACE.deriveFont(14f * D), .08f)
     /** For the keys' labels: Inter Bold at a size in pixels. */
     fun keyFont(pixels: Float) = BOLD_FACE.deriveFont(pixels)
 
@@ -109,7 +109,7 @@ internal object V2 {
      * the touchpad doesn't read dimmed.
      */
     fun keys(g: Graphics2D, top: Int, lit: Set<String> = emptySet(), held: Set<String> = emptySet(), hints: Map<String, String>? = null,
-             corners: Boolean = false, onOrange: Boolean = false, zones: Boolean = false, shade: Color? = null) {
+             corners: Boolean = false, onOrange: Boolean = false, zones: Boolean = false, shade: Color? = null, marks: Boolean = false) {
         val keys = KEYS
         for (box in keys.boxes) {
             val name = box.name
@@ -161,19 +161,46 @@ internal object V2 {
             val lift = if (hint != null) box.height * .14f else 0f
             g.drawString(text, box.centreX - fm.stringWidth(text) / 2f, top + box.centreY + (fm.ascent - fm.descent) / 2f - lift)
             if (hint != null) {
-                g.font = keyFont(minOf(box.width, box.height) * .24f)
+                g.font = keyFont(minOf(box.width, box.height) * .3f)
                 g.drawString(hint, box.centreX - g.fontMetrics.stringWidth(hint) / 2f, top + box.bottom - box.height * .12f)
             }
             if (corners && Layout.isLetter(name) && hint == null) {
                 CORNER[name]?.let { symbol ->
-                    g.font = keyFont(minOf(box.width, box.height) * .26f)
+                    g.font = keyFont(minOf(box.width, box.height) * .3f)
                     g.color = alpha(labelColour, .6f)
                     g.drawString(symbol, box.left + side + box.width * .1f, top + box.top + g.fontMetrics.ascent + box.height * .05f)
                 }
             }
         }
-        // The part the touchpad doesn't read, dimmed, as GuideKeyboardView's drawTouchArea.
         val area = keys.area(.05f, .5f / 4, .95f, 3.54f / 4)
+        if (marks) {
+            // The playground's touch zone (owner): corner brackets at its real corners, clear of the corner keys' labels, and
+            // "TOUCH ZONE" over the top right one, as GuideKeyboardView's drawZoneMarks.
+            val colour = if (onOrange) INK else ORANGE
+            g.color = colour
+            g.stroke = BasicStroke(2.5f * D, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+            val arm = 26f * D
+            val clear = java.awt.geom.Area(java.awt.Rectangle(0, 0, W, H))
+            for (box in keys.boxes) if (box.right < area.left + arm * 1.5f && box.left > area.left - arm ||
+                box.left > area.right - arm * 1.5f && box.right < area.right + arm) {
+                val half = minOf(box.width, box.height) * .52f * .62f
+                clear.subtract(java.awt.geom.Area(java.awt.geom.Rectangle2D.Float(box.centreX - half, top + box.centreY - half, 2 * half, 2 * half)))
+            }
+            g.clip = clear
+            for ((x, y, dx, dy) in listOf(listOf(area.left, area.top, 1f, 1f), listOf(area.right, area.top, -1f, 1f),
+                listOf(area.left, area.bottom, 1f, -1f), listOf(area.right, area.bottom, -1f, -1f))) {
+                val path = java.awt.geom.Path2D.Float()
+                path.moveTo(x + dx * arm, top + y)
+                path.lineTo(x, top + y)
+                path.lineTo(x, top + y + dy * arm)
+                g.draw(path)
+            }
+            g.clip = null
+            g.font = label()
+            g.drawString("TOUCH ZONE", area.right - g.fontMetrics.stringWidth("TOUCH ZONE"), top - 6f * D)
+            return
+        }
+        // The part the touchpad doesn't read, dimmed, as GuideKeyboardView's drawTouchArea.
         val outside = java.awt.geom.Area(java.awt.Rectangle(0, top, W, Math.ceil(keys.height.toDouble()).toInt()))
         outside.subtract(java.awt.geom.Area(RoundRectangle2D.Float(area.left, top + area.top, area.width, area.height, dp(12) * 2f, dp(12) * 2f)))
         g.color = alpha(shade ?: if (onOrange) ORANGE else BLACK, .5f)
@@ -294,8 +321,9 @@ private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment
     val pad = V2.dp(16)
     val boxHeight = 3 * fieldLine + 2 * pad
     val blockHeight = bodyLine + V2.dp(12) + 2 * bodyLine + V2.dp(24) + boxHeight
+    // The playground's keys keep room above them for the touch zone's label.
     val keysTop = V2.keysTop
-    val room = keysTop - headerBottom
+    val room = keysTop - V2.dp(24) - headerBottom
     if (room < blockHeight + 2 * V2.dp(24)) problem("NO ROOM: the block needs ${blockHeight + 2 * V2.dp(24)} px, has $room")
     var y = headerBottom + (room - blockHeight) / 2
 
@@ -331,6 +359,9 @@ private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment
     val box = RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), boxHeight.toFloat(), V2.dp(32).toFloat(), V2.dp(32).toFloat())
     g.color = if (ink) V2.alpha(V2.INK, .1f) else V2.SURFACE
     g.fill(box)
+    // Its personality (owner): a thin orange bar down its left.
+    g.color = if (ink) V2.INK else V2.ORANGE
+    g.fill(RoundRectangle2D.Float(side + 6 * V2.D, y + 14 * V2.D, 3 * V2.D, boxHeight - 28 * V2.D, 4 * V2.D, 4 * V2.D))
     g.font = V2.field()
     val shown = if (typed.isEmpty()) emptyList() else wrapped(g, typed, inner - 2 * pad).takeLast(3)
     g.color = if (ink) V2.INK else V2.CREAM
@@ -340,7 +371,7 @@ private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment
     g.color = if (ink) V2.INK else V2.ORANGE
     g.fillRect(caretX, y + pad + caretLine * fieldLine + V2.dp(2), V2.dp(2), fieldLine - V2.dp(4))
 
-    V2.keys(g, keysTop, onOrange = ink, shade = warmth)
+    V2.keys(g, keysTop, onOrange = ink, shade = warmth, marks = true)
     V2.note(g, "render note: the keyboard's own bar is here", side, V2.H - V2.BAR / 2)
     g.dispose()
     ImageIO.write(image, "png", file)

@@ -8,6 +8,11 @@ stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 keyboard=android/kotlin/com/atlas/keyboard
+# The guide's own Share swipes policy must say exactly what the app's policy page says, word for word.
+sed -n '/POLICY TEXT:/,/fun intent/p' "$keyboard/ShareDisclosureActivity.kt" | grep -o '"[^"]*"' | tr -d '"' |
+  while IFS= read -r line; do
+    grep -qF "$line" lib/connected-text.ts || { echo "ShareDisclosureActivity.kt differs from lib/connected-text.ts: $line"; exit 1; }
+  done
 # The slides' renders draw the real decoration (GuideDecor) on tests/guide-decor's stand-in Canvas, Paint and Path, which draw with
 # Java2D and come before Android on the class path.
 mkdir -p "$work/fake"

@@ -26,6 +26,8 @@ internal class GuideFinaleView(context: Context) : View(context) {
     private val shape = Paint(Paint.ANTI_ALIAS_FLAG)
     private val mark = path(GuideFinale.MARK_PATH)
     private val line = path(GuideFinale.LINE_PATH)
+    private val tPart = polygon(GuideFinale.T_CLIP)
+    private val kPart = polygon(GuideFinale.K_CLIP)
 
     init {
         isClickable = false
@@ -71,10 +73,20 @@ internal class GuideFinaleView(context: Context) : View(context) {
                 canvas.save()
                 canvas.translate(piece.x - 540f * scale, piece.y - 540f * scale)
                 canvas.scale(scale, scale)
-                shape.color = GuideMotion.faded(GuideFinale.INK, piece.alpha)
-                canvas.drawPath(mark, shape)
-                shape.color = GuideMotion.faded(GuideFinale.CREAM, piece.alpha)
-                canvas.drawPath(line, shape)
+                // The whole mark, or only its T or its K, as the logo walks apart into the name.
+                when (piece.part) {
+                    GuideFinale.MarkPart.T -> canvas.clipPath(tPart)
+                    GuideFinale.MarkPart.K -> canvas.clipPath(kPart)
+                    GuideFinale.MarkPart.Whole -> Unit
+                }
+                if (piece.alpha > 0f) {
+                    shape.color = GuideMotion.faded(GuideFinale.INK, piece.alpha)
+                    canvas.drawPath(mark, shape)
+                }
+                if (piece.line > 0f) {
+                    shape.color = GuideMotion.faded(GuideFinale.CREAM, piece.line)
+                    canvas.drawPath(line, shape)
+                }
                 canvas.restore()
             }
         }
@@ -91,6 +103,12 @@ internal class GuideFinaleView(context: Context) : View(context) {
             return
         }
         postInvalidateOnAnimation()
+    }
+
+    private fun polygon(points: FloatArray) = Path().apply {
+        moveTo(points[0], points[1])
+        for (at in 2 until points.size step 2) lineTo(points[at], points[at + 1])
+        close()
     }
 
     private fun path(data: String) = Path().apply {

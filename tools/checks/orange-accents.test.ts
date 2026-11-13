@@ -7,7 +7,7 @@ import { join } from "node:path";
 // keyboard file may hold its own orange.
 const root = join(import.meta.dir, "../..");
 const folder = "android/kotlin/com/atlas/keyboard";
-const own = /^(Guide|HapticsLab|KeyCalibration|BackDisclosure|WpmEffectsView|Look\.kt)/;
+const own = /^(Guide|HapticsLab|KeyCalibration|BackDisclosure|ShareDisclosure|WpmEffectsView|Look\.kt)/;
 const keyboard = readdirSync(join(root, folder)).filter(name => name.endsWith(".kt") && !own.test(name));
 
 test("no keyboard drawing has an orange of its own", () => {

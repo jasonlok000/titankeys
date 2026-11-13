@@ -349,7 +349,7 @@ private fun draw(frame: Frame, file: File, decorated: Boolean = true, bright: Fl
     frame.hunt?.let { left ->
         // A hunt's time left: a thin bar, muted, never orange (design v2).
         g.color = V2.MUTED
-        g.fillRect(side, y + bodyLine - dp(2), Math.round(inner * left), dp(2))
+        g.fillRect(side, y + bodyLine - dp(3), Math.round(inner * left), dp(3))
     }
     y += bodyLine + dp(24)
 
@@ -522,7 +522,7 @@ private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
     if (corners) V2.note(g, "render note: the corner symbols here are approximate; the phone reads its own", side, top - dp(6))
     // Each key's label must fit in its key.
     frame?.labels?.values?.forEach { hint ->
-        g.font = V2.keyFont(minOf(V2.KEYS.key, V2.KEYS.keyHeight) * .24f)
+        g.font = V2.keyFont(minOf(V2.KEYS.key, V2.KEYS.keyHeight) * .3f)
         if (g.fontMetrics.stringWidth(hint) > V2.KEYS.key * .86f) mark(g, "KEY HINT TOO LONG", top)
     }
 }
@@ -533,8 +533,8 @@ private const val REPEAT_LONG_KEYS_COPY = 5.5f
 
 /** The end's words that live in GuideActivity, which isn't compiled for these checks: the same text, copied. */
 private const val SHARE_PLAIN = "Off until you agree. Then we get examples of your swipes to make swiping better. Change it " +
-    "any time in Settings > Share swipes.\nTrust me bro."
-private const val SHARE_ANSWERED = "Trust me bro."
+    "any time in Settings > Share swipes."
+private const val SHARE_ANSWERED = ""
 
 /** [text] wrapped at [width], line by line. */
 private fun wrap(g: Graphics2D, text: String, width: Int): List<String> {
@@ -578,14 +578,29 @@ private fun drawFinale(g: Graphics2D, at: Long) {
                 translate((piece.x - 540f * scale).toDouble(), (piece.y - 540f * scale).toDouble())
                 scale(scale.toDouble(), scale.toDouble())
             }
-            for ((data, colour) in listOf(GuideFinale.MARK_PATH to Paint.INK, GuideFinale.LINE_PATH to Paint.CREAM)) {
+            // The whole mark, or only its T or its K, as GuideFinaleView clips it.
+            val clip = when (piece.part) {
+                GuideFinale.MarkPart.T -> GuideFinale.T_CLIP
+                GuideFinale.MarkPart.K -> GuideFinale.K_CLIP
+                GuideFinale.MarkPart.Whole -> null
+            }?.let { points ->
+                java.awt.geom.Area(transform.createTransformedShape(Path2D.Float().apply {
+                    moveTo(points[0], points[1])
+                    for (at in 2 until points.size step 2) lineTo(points[at], points[at + 1])
+                    closePath()
+                }))
+            }
+            for ((data, colour, alpha) in listOf(Triple(GuideFinale.MARK_PATH, Paint.INK, piece.alpha), Triple(GuideFinale.LINE_PATH, Paint.CREAM, piece.line))) {
+                if (alpha <= 0f) continue
                 val path = Path2D.Float()
                 for (shape in GuideFinale.shapes(data)) {
                     shape.forEachIndexed { index, (x, y) -> if (index == 0) path.moveTo(x, y) else path.lineTo(x, y) }
                     path.closePath()
                 }
-                g.color = rgb(colour, piece.alpha)
-                g.fill(transform.createTransformedShape(path))
+                val area = java.awt.geom.Area(transform.createTransformedShape(path))
+                if (clip != null) area.intersect(clip)
+                g.color = rgb(colour, alpha)
+                g.fill(area)
             }
         }
     }

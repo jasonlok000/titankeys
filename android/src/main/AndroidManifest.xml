@@ -35,6 +35,11 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <activity
+            android:name="com.atlas.keyboard.ShareDisclosureActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
+        <activity
             android:name="com.atlas.keyboard.BackDisclosureActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"

@@ -206,6 +206,31 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             invalidate()
         }
 
+    /**
+     * The playground's way to show the touch zone (owner): corner brackets at its real corners with a small "TOUCH ZONE" label,
+     * and no line across the keys and no dimming. The label sits in room above the keys, which this adds to the drawing's height.
+     */
+    var zoneMarks = false
+        set(value) {
+            if (field == value) return
+            field = value
+            requestLayout()
+            invalidate()
+        }
+
+    /** The room above the keys for the touch zone's label, while [zoneMarks] shows. */
+    private val topRoom get() = if (zoneMarks) dp(ZONE_LABEL_ROOM) else 0f
+    private val bracketPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    private val zoneLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = GuideFonts.heavy(context)
+        textAlign = Paint.Align.RIGHT
+        letterSpacing = .08f
+    }
+
     /** Lets the keys arrive one after the other. */
     fun appear() {
         appearStart = GuideMotion.now()
@@ -294,7 +319,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      * [KeyGeometry.DRAWN] of their real height (owner, 2026-11-12: same width, 60% height).
      */
     fun heightFor(width: Int): Int = KeyGeometry(width.toFloat(), KeyCalibration.load(context), KeyGeometry.DRAWN).let {
-        ceil(if (lettersOnly) it.letterHeight else it.height).toInt()
+        ceil((if (lettersOnly) it.letterHeight else it.height) + topRoom).toInt()
     }
 
     /**
@@ -325,14 +350,52 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val frameCount = if (GuideMotion.enabled) elapsed / FRAME_MILLIS else 99f
         var moving = cue != GuideCue.Free && GuideMotion.enabled && isShown
         hovered = if (pressedAt >= 0 && now - pressedAt < PRESS_QUIET_MILLIS) null else hover.current(now)
+        canvas.save()
+        canvas.translate(0f, topRoom)
         for (key in keys) if (!lettersOnly || key.box.top < geometry.letterHeight) moving = drawKey(canvas, key, now, frameCount) || moving
-        drawTouchArea(canvas)
+        if (zoneMarks) drawZoneMarks(canvas) else drawTouchArea(canvas)
         drawTapZone(canvas)
         drawDeleteZone(canvas)
         drawHoldZones(canvas)
         drawGhost(canvas, now)
         moving = drawTrail(canvas, now) || moving
+        canvas.restore()
         if (moving) postInvalidateOnAnimation() else lastFrame = 0
+    }
+
+    /**
+     * The touch zone as the owner chose it for the playground: four corner brackets where the touchpad really starts and stops,
+     * each stopping short of its key's label, and "TOUCH ZONE" small over the top right one, in the room above the keys.
+     */
+    private fun drawZoneMarks(canvas: Canvas) {
+        val area = geometry.area(AREA_LEFT, AREA_TOP, AREA_RIGHT, AREA_BOTTOM)
+        val colour = if (tone == GuideTone.Orange) GuideColours.INK else GuideColours.ORANGE
+        bracketPaint.color = colour
+        bracketPaint.strokeWidth = dp(BRACKET_STROKE)
+        val arm = dp(BRACKET_ARM)
+        canvas.save()
+        // The corners fall on the outer keys' middles: their labels stay clean.
+        for (key in keys) {
+            val box = key.box
+            if (box.right < area.left + arm * 1.5f && box.left > area.left - arm || box.left > area.right - arm * 1.5f && box.right < area.right + arm) {
+                val half = min(box.width(), box.height()) * LABEL_LETTER * .62f
+                canvas.clipOutRect(box.centerX() - half, box.centerY() - half, box.centerX() + half, box.centerY() + half)
+            }
+        }
+        for ((x, y, dx, dy) in listOf(
+            listOf(area.left, area.top, 1f, 1f), listOf(area.right, area.top, -1f, 1f),
+            listOf(area.left, area.bottom, 1f, -1f), listOf(area.right, area.bottom, -1f, -1f),
+        )) {
+            path.rewind()
+            path.moveTo(x + dx * arm, y)
+            path.lineTo(x, y)
+            path.lineTo(x, y + dy * arm)
+            canvas.drawPath(path, bracketPaint)
+        }
+        canvas.restore()
+        zoneLabelPaint.color = colour
+        zoneLabelPaint.textSize = dp(ZONE_LABEL_SIZE)
+        canvas.drawText(ZONE_NAME, area.right, -dp(ZONE_LABEL_GAP), zoneLabelPaint)
     }
 
     private fun drawKey(canvas: Canvas, key: Key, now: Long, frames: Float): Boolean {
@@ -856,7 +919,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         /** The part of a key's width that a label may take. */
         const val LABEL_ROOM = .86f
         // The Alt symbol in the corner of a letter key, as parts of the key's size.
-        const val ALT_SIZE = .26f
+        const val ALT_SIZE = .3f
         const val ALT_INSET = .1f
         const val ALT_ALPHA = .6f
         /** How much of a lit key's size goes away, so that it looks pushed in. */
@@ -873,7 +936,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val HELD_HEAT = .85f
         /** A hint on a key: how much its letter moves up, the hint's size, and how far from the key's bottom. */
         const val CAPTION_LIFT = .14f
-        const val CAPTION_SIZE = .24f
+        const val CAPTION_SIZE = .3f
         const val CAPTION_BOTTOM = .12f
         /** A flick's ghost snaps to its end in this part of the demo, then lifts and fades in this part. */
         const val FLICK_SNAP = .25f
@@ -932,5 +995,12 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         const val AREA_BOTTOM = 3.54f / 4
         /** How strongly the part that the touchpad does not read is dimmed. */
         const val AREA_SHADE = .5f
+        /** The playground's touch zone marks (owner): the brackets' arms and stroke, and the label, its size and room, in dp. */
+        const val BRACKET_ARM = 26f
+        const val BRACKET_STROKE = 2.5f
+        const val ZONE_NAME = "TOUCH ZONE"
+        const val ZONE_LABEL_SIZE = 14f
+        const val ZONE_LABEL_ROOM = 24f
+        const val ZONE_LABEL_GAP = 6f
     }
 }

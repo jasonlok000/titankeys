@@ -257,6 +257,11 @@ internal object V2 {
     }
 }
 
+/** The front page's title, read from GuideActivity's FRONT_TITLE, so the render shows the app's own. */
+private val FRONT_TITLE: String by lazy {
+    Regex("FRONT_TITLE = \"(.*?)\"").find(File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText())!!.groupValues[1]
+}
+
 /** What follows the front page's sentence in the renders. */
 private const val FOLLOWING = "the sound of real keys is the only applause you will get today"
 
@@ -366,24 +371,34 @@ private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment
     }
     val headerBottom = headerTop + header
 
-    // The block: the comment, one line of Body; 12 dp; the line to type along to, two lines of Body; 24 dp; the text box, three
-    // lines of Field. Centred between the header and the keys, with at least 24 dp above and below.
+    // The block, in the guide's format (owner): the title, one line of Display; 12 dp; the description or the comment, one line
+    // of Body; 24 dp; the line to type along to, two lines of Body; 24 dp; the text box, three lines of Field. Centred between the
+    // header and the keys, with at least 24 dp above and below.
+    val titleLine = V2.lineHeight(g, V2.display())
     val bodyLine = V2.lineHeight(g, V2.body())
     val fieldLine = V2.lineHeight(g, V2.field())
     val pad = V2.dp(16)
     val boxHeight = 3 * fieldLine + 2 * pad
-    val blockHeight = bodyLine + V2.dp(12) + 2 * bodyLine + V2.dp(24) + boxHeight
+    val blockHeight = titleLine + V2.dp(12) + bodyLine + V2.dp(24) + 2 * bodyLine + V2.dp(24) + boxHeight
     // The playground's keys keep room above them for the touch zone's label.
     val keysTop = V2.keysTop
     val room = keysTop - V2.dp(24) - headerBottom
     if (room < blockHeight + 2 * V2.dp(24)) problem("NO ROOM: the block needs ${blockHeight + 2 * V2.dp(24)} px, has $room")
     var y = headerBottom + (room - blockHeight) / 2
 
+    // The title: Display, upper case, one line, shrinking to 80% before it would wrap; cream, or ink once the warm-up passes.
+    val (titleFont, over) = V2.fitted(g, FRONT_TITLE, V2.display(), inner)
+    if (over) problem("the title is over one line")
+    g.font = titleFont
+    g.color = strong
+    g.drawString(FRONT_TITLE, side, y + (titleLine + g.fontMetrics.ascent - g.fontMetrics.descent) / 2 - V2.dp(1))
+    y += titleLine + V2.dp(12)
+
     g.font = V2.body()
     g.color = quiet
     g.drawString(comment, side, y + g.fontMetrics.ascent)
     if (g.fontMetrics.stringWidth(comment) > inner) problem("the comment is over one line")
-    y += bodyLine + V2.dp(12)
+    y += bodyLine + V2.dp(24)
 
     // The line to type along to: typed words cream, the rest muted, the word you're on orange and underlined. Always two full lines,
     // carrying on into the next sentence, as GuideActivity's showPassage: an en space away and, on black, at half the muted

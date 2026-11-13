@@ -1556,18 +1556,31 @@ class GuideActivity : Activity() {
     }
 
     /**
-     * The playground (design v2 §3): no title, since the header has the wordmark; a line for the comments on your speed in Body; the
-     * line to type along to, two lines; and the text box, three lines.
+     * The playground (design v2 §3), in the guide's own format (owner, 2026-11-13: "a title and a description"): the title in
+     * Display, upper case, one line, shrinking to fit, and never changing; 12 dp under it the description in Body, which the
+     * comments on your speed replace; 24 dp on, the line to type along to, two lines; and the text box, three lines.
      */
     private fun playgroundLook() {
         val bodyPx = px(BODY_TYPE)
-        title.visibility = View.GONE
+        val titlePx = px(DISPLAY)
+        title.visibility = View.VISIBLE
+        title.isAllCaps = true
+        title.letterSpacing = DISPLAY_SPACING
+        title.isSingleLine = true
+        title.maxLines = 1
+        title.ellipsize = null
+        title.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+        shrinkToFit(title, (titlePx * SHRINK).toInt(), titlePx.toInt())
+        title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, lineHeight(HEAVY, titlePx))
+        title.text = FRONT_TITLE
         body.isSingleLine = true
         body.maxLines = 1
         body.ellipsize = TextUtils.TruncateAt.END
         body.gravity = Gravity.CENTER_VERTICAL or Gravity.START
         shrinkToFit(body, (bodyPx * SHRINK).toInt(), bodyPx.toInt())
         instruction.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, lineHeight(MEDIUM, bodyPx))
+            .apply { topMargin = dp(12) }
+        (script.layoutParams as LinearLayout.LayoutParams).topMargin = dp(PLAYGROUND_SCRIPT_GAP)
         fieldLook(PLAYGROUND_FIELD_LINES)
     }
 
@@ -3025,7 +3038,7 @@ class GuideActivity : Activity() {
         // The playground's own text, made for speed, in a new order each time.
         startPassage(PlaygroundText.make(kotlin.random.Random(SystemClock.uptimeMillis())))
         swapIn(body, PLAYGROUND_BODY, 0)
-        for (view in listOf(field, keys, chapter, script, guideAction, settingsAction))
+        for (view in listOf(title, field, keys, chapter, script, guideAction, settingsAction))
             view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         showScript()
         field.requestFocus()
@@ -4546,6 +4559,10 @@ class GuideActivity : Activity() {
         /** At full speed the screen is this much of the way to orange, so that the words stay easy to read. */
         private const val WPM_MOST_ORANGE = .85f
         private const val PLAYGROUND_BODY = "Type or swipe whatever you like. Follow the line below, or ignore it."
+        /** The front page's title (the Orchestrator's pick; the owner may change it). It never changes as you type. */
+        private const val FRONT_TITLE = "PRACTICE. YOU NEED IT."
+        /** From the description to the line to type along to, on the front page, as the guide's gap before its field. */
+        private const val PLAYGROUND_SCRIPT_GAP = 24
 
         // The look, in dp. These are safe to change. Words fit their box at any system font size, because the boxes set their size.
         // Ink's font (v5.3): GuideFonts is loaded first thing in onCreate, before anything is built.

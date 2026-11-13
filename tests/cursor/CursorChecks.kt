@@ -18,7 +18,7 @@ fun main() {
     theBarShowsWhatIsSelected()
     tapsWithNoWordPickNothing()
     steeringNeedsSomeText()
-    worksAnywhereOnTheRow()
+    worksAcrossSpacesWidth()
     selectingNeedsTheConfirmWait()
     dragStartsFromWhereTheSecondTouchLanded()
     spaceIsADeadZone()
@@ -106,6 +106,8 @@ fun main() {
     threeQuickTapsPickAWord()
     manyTapsNeverLockTheGesturesOut()
     aTripleLeavesNothingWaiting()
+    aFirstTapComes150AfterTheLastTouch()
+    onlyTapsOnSpacesWidthCount()
     println("Cursor checks passed")
 }
 
@@ -195,12 +197,13 @@ private fun twoQuickTapsSelect() {
     same(pad.started, null, "Two quick taps must not start the cursor")
 }
 
-private fun worksAnywhereOnTheRow() {
-    for (column in listOf(.4f, 2.5f, 5.3f, 8f, 9.6f)) {
+/** A double tap counts across the Space bar's width, and nowhere else on its row (owner, 2026-11-12). */
+private fun worksAcrossSpacesWidth() {
+    for ((column, counts) in listOf(3.7f to true, 5.3f to true, 6.3f to true, .4f to false, 2.5f to false, 8f to false, 9.6f to false)) {
         val pad = Pad()
         pad.tap(column, 1_000, FIRST_MILLIS)
         pad.tap(column, 1_140, 90)
-        same(pad.selects(), true, "A double tap must count at column $column")
+        same(pad.selects(), counts, "A double tap at column $column ${if (counts) "must" else "must not"} count")
     }
 }
 
@@ -665,9 +668,9 @@ private fun doubleTapCountsOnce() {
     pad.up(landed + 90)
     same(pad.selects(), true, "The double tap must select")
     same(pad.gesture.confirm(), false, "One double tap must select only once")
-    // A tap straight after the selection is too soon to start another one.
-    pad.tap(COLUMN, landed + 90 + 160, FIRST_MILLIS)
-    pad.tap(COLUMN, landed + 90 + 160 + FIRST_MILLIS + GAP_MILLIS, 90)
+    // A tap straight after the selection, under the 150 ms wait, is too soon to start another one.
+    pad.tap(COLUMN, landed + 90 + 140, FIRST_MILLIS)
+    pad.tap(COLUMN, landed + 90 + 140 + FIRST_MILLIS + GAP_MILLIS, 90)
     same(pad.selects(), false, "A tap straight after a double tap must not be the first tap of another")
 }
 
@@ -1022,8 +1025,9 @@ private fun steersFrom(column: Float, row: Float): Boolean {
 private fun aboveSpaceOnlyAsWideAsSpace() {
     same(steersFrom(3.7f, ABOVE_ROW), true, "The zone is as wide as Space, so it takes the edge of C next to V")
     same(steersFrom(6.3f, ABOVE_ROW), true, "The zone is as wide as Space, so it takes the edge of N next to B")
-    same(steersFrom(3.1f, ABOVE_ROW), true, "All of C is in the zone (owner, 2026-11-11)")
-    same(steersFrom(6.9f, ABOVE_ROW), true, "and all of N")
+    // Only as wide as Space now (owner, 2026-11-12): the outer parts of C and N type, as Shift and ▦ do below them.
+    same(steersFrom(3.1f, ABOVE_ROW), false, "The outer part of C, past Space's edge, keeps typing")
+    same(steersFrom(6.9f, ABOVE_ROW), false, "and so does N's")
     same(steersFrom(2.9f, ABOVE_ROW), false, "X, just left of C, keeps typing")
     same(steersFrom(7.1f, ABOVE_ROW), false, "M, just right of N, keeps typing")
     same(steersFrom(2.5f, ABOVE_ROW), false, "X keeps typing")
@@ -1269,4 +1273,57 @@ private fun aTripleLeavesNothingWaiting() {
     val twoLifted = 1_000 + FIRST_MILLIS + GAP_MILLIS + 60
     same(two.gesture.tapped, 2, "Two taps above Space")
     same(two.gesture.deciding(twoLifted + 1_000), false, "leave nothing waiting a second later")
+}
+
+/**
+ * A first tap must come alone: 150 ms after the touch before it (owner, 2026-11-12, from 200). A tap 160 ms after a lift starts
+ * a gesture, as the owner's quick repeat steers do; one 140 ms after doesn't. The hold wait before a slide stays at 200 ms.
+ */
+private fun aFirstTapComes150AfterTheLastTouch() {
+    same(CursorGesture.ALONE_MILLIS, 150L, "The wait is 150 ms")
+    val soon = Pad()
+    soon.tap(COLUMN, 1_000, FIRST_MILLIS)
+    soon.tap(COLUMN, 1_000 + FIRST_MILLIS + 400, 200)
+    val lifted = 1_000 + FIRST_MILLIS + 400 + 200
+    soon.tap(COLUMN, lifted + 160, FIRST_MILLIS)
+    same(soon.gesture.tapped, 1, "A tap 160 ms after the last lift counts as a first tap")
+    val sooner = Pad()
+    sooner.tap(COLUMN, 1_000, FIRST_MILLIS)
+    sooner.tap(COLUMN, 1_000 + FIRST_MILLIS + 400, 200)
+    sooner.tap(COLUMN, lifted + 140, FIRST_MILLIS)
+    same(sooner.gesture.tapped, 0, "One 140 ms after doesn't")
+    // A steer then still needs its tap and its held touch within 200 ms of each other.
+    val steer = Pad()
+    steer.tap(COLUMN, 1_000, FIRST_MILLIS)
+    steer.down(at(COLUMN, 1_000 + FIRST_MILLIS + 210))
+    same(steer.gesture.touchPending, false, "A held touch 210 ms after the tap is no steer: the hold wait stays 200 ms")
+}
+
+/**
+ * A double or triple tap counts only on the Space bar's width, on its row or the row above (owner, 2026-11-12), so a double tap
+ * on the Shift or ▦ spots beside Space never picks a word. A steer that starts on Space still slides anywhere.
+ */
+private fun onlyTapsOnSpacesWidthCount() {
+    // Columns are in tenths across the touchpad: Space runs from 3.6 to 6.4.
+    for ((column, row, counts) in listOf(Triple(5f, 3.4f, true), Triple(3.7f, 3.4f, true), Triple(6.3f, 3.4f, true),
+            Triple(5f, 2.6f, true), Triple(3.3f, 3.4f, false), Triple(6.7f, 3.4f, false), Triple(2f, 3.4f, false),
+            Triple(8f, 3.4f, false), Triple(3.3f, 2.6f, false), Triple(6.7f, 2.6f, false), Triple(5f, 1.6f, false))) {
+        same(CursorGesture.inZone(column / 10, row / 4), counts, "A touch at column $column, row $row ${if (counts) "counts" else "doesn't"}")
+    }
+    // Two quick taps on the ▦ spot, just right of Space, pick nothing.
+    val grid = Pad()
+    grid.tap(6.8f, 1_000, FIRST_MILLIS)
+    grid.tap(6.8f, 1_000 + FIRST_MILLIS + GAP_MILLIS, 60)
+    same(grid.gesture.tapped, 0, "Two taps on the ▦ spot are no double tap")
+    same(grid.tapped, false, "and pick no word")
+    // On Space they do.
+    val space = Pad()
+    space.tap(5f, 1_000, FIRST_MILLIS)
+    space.tap(5f, 1_000 + FIRST_MILLIS + GAP_MILLIS, 60)
+    same(space.tapped, true, "Two taps on Space pick a word")
+    // A steer that starts on Space slides anywhere, off its width too.
+    val steer = Pad()
+    val landed = steer.tapThenLand(5f)
+    steer.move(*path(5f, ROW, 9f, ROW, landed))
+    same(steer.started != null, true, "A steer from Space slides past its edge")
 }

@@ -260,6 +260,9 @@ all of them are unapproved.
     above the keyboard; F: Size grows only the bar's contents, follows the phone's font size until picked, moves to The bar; W:
     an immediate haptic on Save's press (and any late menu button); A: switches for Delete a word and Next keyboard. All from
     059caf3. Then: check the owner's phone lands on Biggest.
+  - **Merged for build #13:** F's renamed sizes (claude/bar-sizes-renamed cb5984d): Smaller 1.0, Normal 1.2 (everyone's
+    default, no following the phone), Bigger 1.4. Fixed-scale, strip-fit, word-menu, guide and menu-render checks pass; bun 168 of
+    170 (the two that need the ink package). Waiting on the owner: the lower line with the effects check, and the idle odds.
   - **Build #12 on the phone (5acc28a2, from 574184f, installed 15:30, 0 crashes; every verify check passed).** Checked over
     adb:
     - Sym on the ∞ slide: the title stays at the same pixel (185 before, at 0.6 s, at 2 s and after; build #10 dropped 51 px),

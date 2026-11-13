@@ -3,6 +3,7 @@ package com.atlas.autocorrect
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import com.atlas.engine.EnglishSpelling
+import com.atlas.engine.NextWordModel
 import com.atlas.engine.PhoneWords
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
@@ -49,7 +50,11 @@ private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = Phone
                     /** Listed shorthand that the user switched off there. */
                     val shorthandOff: Set<String> = emptySet(),
                     /** The user's own shorthand there, by its shorthand in lowercase. */
-                    val ownShorthand: Map<String, String> = emptyMap()) : Lexicon {
+                    val ownShorthand: Map<String, String> = emptyMap(),
+                    /** The kinds of fix switched off in Settings > What gets fixed. */
+                    val off: Set<FixKind> = emptySet(),
+                    /** Settings > What gets fixed > Only fix when sure. */
+                    val sure: Boolean = false) : Lexicon {
     override fun known(word: String) = words.contains(word) || habits.active(word) || word.lowercase() in phoneNames
     override fun frequency(word: String) = words.frequency(word)
     override fun personal(word: String) = habits.active(word) || word.lowercase() in phoneNames
@@ -60,6 +65,8 @@ private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = Phone
     override fun expandShorthand() = expand
     override fun shorthandOff(shorthand: String) = shorthand in shorthandOff
     override fun ownShorthand(shorthand: String) = ownShorthand[shorthand]
+    override fun fixes(kind: FixKind) = kind !in off
+    override fun onlyWhenSure() = sure
     override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
 }
 
@@ -72,9 +79,10 @@ private class Realistic {
     val loadMillis = (System.nanoTime() - loadStart) / 1_000_000
     val heapAfter = used()
     val learned = ArrayList<String>()
-    fun autocorrect(lexicon: Lexicon = lists): Autocorrect = wired(Autocorrect(KeptOnceStore.inMemory(), { learned += it }), lexicon)
-    fun wired(autocorrect: Autocorrect, lexicon: Lexicon = lists): Autocorrect = autocorrect.also {
-        it.corrector = TypedCorrector(lexicon, data, it.rejected, it.recent)
+    fun autocorrect(lexicon: Lexicon = lists, scorer: ContinuationScorer? = null): Autocorrect =
+        wired(Autocorrect(KeptOnceStore.inMemory(), { learned += it }), lexicon, scorer)
+    fun wired(autocorrect: Autocorrect, lexicon: Lexicon = lists, scorer: ContinuationScorer? = null): Autocorrect = autocorrect.also {
+        it.corrector = TypedCorrector(lexicon, data, it.rejected, it.recent, continuation = scorer)
     }
 
     companion object {
@@ -209,6 +217,7 @@ private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.aut
 
     init {
         composer.autocorrect = autocorrect
+        composer.fixOn = { lists.fixes(it) }
         composer.onAutocorrect = { vibrations++ }
         composer.start(field, 0, 0)
         settle()
@@ -426,8 +435,6 @@ private fun sentenceAware(world: Realistic) {
         Triple(START, "Dome", "food") to "Some", Triple("get", "dome", END) to "some",
         Triple("go", "hone", END) to "home", Triple("be", "herr", END) to "here",
         Triple("at", "wor", END) to "work", Triple("some", "foo", END) to "food",
-        Triple("wagged", "it's", "tail") to "its", Triple(START, "Its", "raining") to "It's",
-        Triple("lost", "it's", "way") to "its",
     )
     // Correct sentences full of near-miss words: must never be touched.
     val untouched = listOf(
@@ -457,9 +464,10 @@ private fun sentenceAware(world: Realistic) {
         Triple(START, "Ids", "when"), Triple("the", "debug", "and"), Triple("for", "parity", "with"),
         Triple("be", "handy", "if"), Triple("had", "dined", "that"), Triple("yet", "borne", "a"),
         Triple("village", "inn", "over"), Triple("business", "nor", "anything"),
-        // Its / it's used correctly.
+        // Its / it's used correctly. An apostrophe is never taken out, and "its" is the next-word model's to change, not this one's.
         Triple("of", "its", "own"), Triple(START, "It's", "a"), Triple("think", "it's", "time"),
-        Triple("and", "its", "products"),
+        Triple("and", "its", "products"), Triple("wagged", "it's", "tail"), Triple("lost", "it's", "way"),
+        Triple(START, "Its", "raining"), Triple("ok", "ill", "call"), Triple(START, "Id", "like"),
         // Slang is meant as typed.
         Triple("good", "tho", END), Triple("was", "meh", END), Triple("nice", "tho", "lol"),
     )
@@ -532,20 +540,14 @@ private fun fieldReports(world: Realistic) {
         "the cat hs fur" to "the cat has fur",
         "I hs a car" to "I hs a car",
         "return the ewe to her" to "return the ewe to her",
-        // Contractions follow the sentence.
-        "ill be there soon" to "I'll be there soon",
-        "ok ill call you" to "ok I'll call you",
-        "its raining again" to "it's raining again",
+        // Contractions. "its", "ill" and "id" are real words, which the next-word model decides: see apostrophes().
         "dont worry" to "don't worry",
-        "thanks for your projects ill quit soon" to "thanks for your projects I'll quit soon",
-        "Ok, ill call you" to "Ok, I'll call you",
         "I ll quit now" to "I'll quit now",
         "I don t know" to "I don't know",
         "she fell ill and stayed home" to "she fell ill and stayed home",
-        "id like that a lot" to "I'd like that a lot",
         "show your id card please" to "show your id card please",
-        "it's messy and its mostly on there" to "it's messy and it's mostly on there",
-        "it was it's own thing" to "it was its own thing",
+        // An apostrophe is never taken out (apostrophe study, 2026-11-11).
+        "it was it's own thing" to "it was it's own thing",
         "the dog wagged its tail" to "the dog wagged its tail",
         "He was very ill" to "He was very ill",
         "Have you got your ID" to "Have you got your ID",
@@ -554,7 +556,7 @@ private fun fieldReports(world: Realistic) {
         "a letter form my mom" to "a letter from my mom",
         "get dome food" to "get some food",
         "she is he best" to "she is the best",
-        "the dog wagged it's tail" to "the dog wagged its tail",
+        "the dog wagged it's tail" to "the dog wagged it's tail",
         "hellohow are you" to "hello how are you",
     )
     val wrong = cases.mapNotNull { (typed, expected) -> typed(typed).takeIf { it != expected }?.let { "$typed -> $it (want $expected)" } }
@@ -1644,9 +1646,10 @@ private fun smallerChecks() {
         val counts = mapOf("its tail" to 253, "its own" to 3241, "it's own" to 16, "it's raining" to 507,
             "$START its" to 9972, "$START it's" to 50935, "of its" to 7755, "of it's" to 61, "it's a" to 8921, "its a" to 43)
         val choose = corrector(counts)
-        same(choose.review("wagged", "it's", "tail"), "its", "it's becomes its by usage")
-        same(choose.review("wagged", "it’s", "tail"), "its", "A curly apostrophe counts")
-        same(choose.review(START, "Its", "raining"), "It's", "its becomes it's by usage")
+        // Apostrophes are the next-word model's now, which only ever adds one (apostrophe study, 2026-11-11): usage changes none.
+        same(choose.review("wagged", "it's", "tail"), null, "it's never loses its apostrophe")
+        same(choose.review("wagged", "it’s", "tail"), null, "nor with a curly apostrophe")
+        same(choose.review(START, "Its", "raining"), null, "its is left to the next-word model")
         same(choose.review("of", "its", "own"), null, "Right as typed")
         same(choose.review("the", "its", "zebra"), null, "No evidence, no change")
     }
@@ -1953,7 +1956,8 @@ private fun speed(world: Realistic) {
 
 // As measured on this word list; raise as accuracy improves and never lower without a reason.
 private const val MIN_FIXED = 115
-private const val MIN_SENTENCE_FIXES = 23
+// 23 before the three its / it's swaps went to the next-word model (apostrophe study, 2026-11-11).
+private const val MIN_SENTENCE_FIXES = 20
 private const val MAX_SENTENCE_CHANGES = 2
 // "Vool" and "Ok, ill" need Numen's older rules, which the issue leaves out.
 private const val MAX_FIELD_REPORT_MISSES = 2
@@ -1989,7 +1993,8 @@ private fun ownerTypos(world: Realistic) {
         "two weeks ago" to "two weeks ago",
         "the teams plan" to "the teams plan",
         "lets go" to "lets go",
-        "its done now" to "it's done now",
+        // Without the next-word model, "its" stays: only the words around it can tell. See apostrophes().
+        "its done now" to "its done now",
         // Rule B: shorthand stays as typed while the setting is off.
         "i shd go" to "I shd go",
         "do sth now" to "do sth now",
@@ -2179,6 +2184,272 @@ private fun capitalI(world: Realistic) {
 }
 
 /**
+ * The real next-word model, DistilGPT-2 as the phone runs it, when this run has a desktop ONNX Runtime: tests/autocorrect/run.sh
+ * puts ORT_DESKTOP_JAR first on the class path. Without one, the apostrophe checks use the study's measured margins instead.
+ */
+private val realModel: NextWordModel? by lazy {
+    if (System.getenv("ORT_DESKTOP_JAR").isNullOrEmpty()) return@lazy null
+    try { NextWordModel(File("android/assets/swipe2/predictor"), "model-int8pc.onnx", 32, 4) }
+    catch (error: Throwable) {
+        println("\nAPOSTROPHES: the real next-word model didn't load ($error), so the study's margins stand in")
+        null
+    }
+}
+
+private val realScorer: ContinuationScorer? by lazy {
+    realModel?.let { model -> ContinuationScorer { before, texts -> model.continuations(before, texts.toTypedArray()) } }
+}
+
+/**
+ * The owner's apostrophe study (2026-11-11), its made-up test sentences: the typed word is in brackets, "/" is a line break.
+ * [margin] is the study's measured margin of the apostrophe form over the typed one, in nats, null where it gave none.
+ */
+private class StudyCase(val number: Int, val text: String, val expected: String, val margin: Double?) {
+    val typed = text.substringAfter('[').substringBefore(']')
+    val before = text.substringBefore('[').replace(" / ", "\n")
+    val rest = text.substringAfter(']')
+    /** The sentence as typed, and as it should end up. */
+    val sentence = before + typed + rest
+    val wanted = before + expected + rest
+    /** The words after the typed one that the check waits for, as the keyboard reads them once they're typed. */
+    val after = (ApostropheContext.following("$rest ", 2) as? ApostropheContext.Following.Ready)?.after ?: ""
+}
+
+private val studyCases = listOf(
+    StudyCase(1, "The dog wagged [its] tail at the door.", "its", -7.5),
+    StudyCase(2, "Bring a coat, [its] going to rain later.", "it's", 6.3),
+    StudyCase(3, "Each plant needs [its] own pot.", "its", -7.5),
+    StudyCase(4, "Let me know when [its] ready to test.", "it's", 4.0),
+    StudyCase(5, "The app saves [its] settings on exit.", "its", -5.6),
+    StudyCase(6, "Maybe [its] better to wait a day.", "it's", 2.0),
+    StudyCase(7, "They [were] late for the meeting.", "were", -4.5),
+    StudyCase(8, "We [were] going to call you.", "were", -0.2),
+    StudyCase(9, "The kids [were] playing outside.", "were", -9.2),
+    StudyCase(10, "The new plan worked [well] for us.", "well", -26.6),
+    StudyCase(11, "She did really [well] in the exam.", "well", -22.6),
+    StudyCase(12, "Don't worry, [well] be there by six.", "we'll", 13.9),
+    StudyCase(13, "If it rains [well] stay home.", "we'll", 4.3),
+    StudyCase(14, "He was [ill] all last week.", "ill", -9.1),
+    StudyCase(15, "Sorry, [ill] call you back in five.", "I'll", 8.4),
+    StudyCase(16, "The food made me feel [ill] after lunch.", "ill", -10.7),
+    StudyCase(17, "She [lets] the cat sleep on the bed.", "lets", -7.1),
+    StudyCase(18, "Okay [lets] try that again.", "let's", 2.7),
+    StudyCase(19, "The app [lets] you share files.", "lets", -13.1),
+    StudyCase(20, "They built a [shed] in the garden.", "shed", -14.4),
+    StudyCase(21, "She said [shed] call back later.", "she'd", 14.9),
+    StudyCase(22, "They [wed] in a small chapel last June.", "wed", -0.1),
+    StudyCase(23, "If we left now [wed] catch the early train.", "we'd", 14.5),
+    StudyCase(24, "Show me your [id] at the door.", "id", -8.2),
+    StudyCase(25, "Said [id] help him move.", "I'd", 7.1),
+    StudyCase(26, "What the [hell] happened here?", "hell", -22.0),
+    StudyCase(27, "Ask him if [hell] be at the game.", "he'll", 9.6),
+    StudyCase(28, "Put [your] bag on the chair.", "your", -6.5),
+    StudyCase(29, "Let me know when [your] free.", "you're", 4.5),
+    StudyCase(30, "The kids lost [their] shoes again.", "their", -14.4),
+    // Too thin: the study's +1.5, +5.3 and -0.8 must never be used.
+    StudyCase(31, "[Its]", "Its", 1.5),
+    StudyCase(32, "Sure [ill]", "ill", 5.3),
+    StudyCase(33, "Okay [well]", "well", -0.8),
+    // Always fixed, at the word's own end.
+    StudyCase(34, "[Whats] the plan for tonight?", "What's", null),
+    StudyCase(35, "I [cant] find my keys anywhere.", "can't", null),
+    // The boundary window: back to the last sentence mark, at most 10 words, and 2 after.
+    StudyCase(36, "The dog ran off. Honestly [its] fine now.", "it's", 1.5),
+    StudyCase(37, "We sold the old car. [Its] engine was shot.", "Its", -6.0),
+    StudyCase(38, "ok so after lunch we can test again and [its] probably fine", "it's", 2.4),
+    StudyCase(39, "the new app runs fast but [its] icon looks odd", "its", -8.2),
+    StudyCase(40, "Thanks for the help! / [ill] send the files tonight", "I'll", 4.8),
+    StudyCase(41, "Dinner was great. [Lets] book the same place soon.", "Let's", 2.8),
+    StudyCase(42, "The tree by the gate is old. It [shed] its bark this year.", "shed", -8.6),
+    StudyCase(43, "so tired today and the bus came late twice [well] see how tomorrow goes", "we'll", 6.1),
+)
+
+/**
+ * The study's margins as a scorer: the typed form scores 0 and its apostrophe form the margin, for exactly the words that the
+ * window reads around each case. Anything else has no score, so nothing changes.
+ */
+private val studyScorer = run {
+    val margins = HashMap<String, Double>()
+    for (case in studyCases) {
+        val margin = case.margin ?: continue
+        val window = ContextWindow.SENTENCE.before(case.before)
+        val lead = if (window.isEmpty()) "" else " "
+        margins[window + "\u0000" + lead + ApostropheContext.cased(case.typed, case.typed, window.isEmpty()) + case.after] = margin
+    }
+    ContinuationScorer { before, texts -> margins[before + "\u0000" + texts[0]]?.let { doubleArrayOf(0.0) + DoubleArray(texts.size - 1) { _ -> it } } }
+}
+
+/**
+ * Apostrophes (owner, 2026-11-12, from the apostrophe study): an always-fix list at the word's end, a context list that the next-word
+ * model decides two words later, and words that never change. The study's sentences run against the real model when this run has
+ * one, and against its measured margins otherwise.
+ */
+private fun apostrophes(world: Realistic) {
+    val real = realScorer
+    val scorer = real ?: studyScorer
+    val source = if (real != null) "the real DistilGPT-2" else "the study's measured margins"
+    fun typist(lists: Lists = world.lists, with: ContinuationScorer? = scorer) = Typist(world, world.autocorrect(lists, with), lists = lists)
+
+    // The window: back to the last . ! ? or line break, at most 10 words. Commas aren't boundaries.
+    val window = ContextWindow.SENTENCE
+    same(window.before("The dog ran off. Honestly "), "Honestly", "The window starts after a full stop")
+    same(window.before("Thanks for the help!\n"), "", "A line break right before is a boundary")
+    same(window.before("Sorry, "), "Sorry,", "A comma is no boundary")
+    same(window.before("ok so after lunch we can test again and "), "ok so after lunch we can test again and", "Nine words, no marks")
+    same(window.before("one two three four five six seven eight nine ten eleven twelve "),
+        "three four five six seven eight nine ten eleven twelve", "At most 10 words")
+    same(window.before(""), "", "The start of the field")
+    same(ApostropheContext.following(" going to ", 2), ApostropheContext.Following.Ready(" going to"), "Two words after")
+    same(ApostropheContext.following(" going ", 2), ApostropheContext.Following.Wait, "One word after: wait")
+    same(ApostropheContext.following(" going to rai", 2), ApostropheContext.Following.Ready(" going to"), "The third word doesn't count")
+    same(ApostropheContext.following(" go", 2), ApostropheContext.Following.Wait, "A word still being typed doesn't count")
+    same(ApostropheContext.following(" free.", 2), ApostropheContext.Following.Ready(" free."), "A full stop ends it sooner, and counts")
+    same(ApostropheContext.following(" going to, ", 2), ApostropheContext.Following.Ready(" going to,"), "A mark stuck to a word counts")
+    same(ApostropheContext.following(" free\n", 2), ApostropheContext.Following.Ready(" free"), "A line break ends it sooner")
+    same(ApostropheContext.following(" going, to ", 2), ApostropheContext.Following.Ready(" going, to"), "A comma doesn't end it")
+    same(ApostropheContext.following("s ", 2), ApostropheContext.Following.Drop, "Letters straight after: no whole word")
+
+    // The study's sentences: decided by the rule, and typed into the keyboard.
+    val report = StringBuilder("\nAPOSTROPHES on the study's sentences, against $source\n")
+    report.append("  #  | sentence | expected | rule | typed | margin (study)\n")
+    for (case in studyCases) {
+        val verdict = ApostropheContext(scorer).judge(case.before, case.typed, case.after)
+        val decided = ApostropheContext(scorer).decide(case.before, case.typed, case.after) ?: case.typed
+        val always = case.number in 34..35
+        val got = typist().type(case.sentence + " ").text.trimEnd()
+        val ok = (always || decided == case.expected) && got == case.wanted
+        report.append("  ${case.number} | ${case.sentence.replace("\n", " / ")} | ${case.expected} | ${if (always) "-" else decided} | " +
+            "${got.replace("\n", " / ")} | ${verdict?.margin?.let { "%.1f".format(it) } ?: "-"} (${case.margin ?: "-"})${if (ok) "" else "  <-- DIFFERS"}\n")
+        if (!always) same(decided, case.expected, "Study case ${case.number}: ${case.sentence}")
+        same(got, case.wanted, "Study case ${case.number} typed: ${case.sentence}")
+    }
+    println(report)
+    for (number in 31..33) same(ApostropheContext(scorer).judge(studyCases[number - 1].before, studyCases[number - 1].typed, ""), null,
+        "Study case $number is too thin for a score")
+
+    // The low-confidence words, meant as typed. Only the real model can say: the study has no margins for these.
+    val meant = listOf("That was [well] done of you.", "Can I see [your] id please?", "Tell him to go to [hell] right now.",
+        "The tools are in the [shed] out back.", "They [wed] last spring in Rome.", "She found a sea [shell] on the beach.",
+        "Show me [your] id at the door.", "I think [its] tail is hurt.")
+    if (real != null) {
+        val lines = StringBuilder("\nAPOSTROPHES, low-confidence words meant as typed, against the real model\n")
+        for (text in meant) {
+            val case = StudyCase(0, text, text.substringAfter('[').substringBefore(']'), null)
+            val got = typist().type(case.sentence + " ").text.trimEnd()
+            val margin = ApostropheContext(real).judge(case.before, case.typed, case.after)?.margin
+            lines.append("  ${case.sentence} | ${case.typed} | $got | ${margin?.let { "%.1f".format(it) } ?: "-"}\n")
+            same(got, case.sentence, "Meant as typed: $text")
+        }
+        // The owner's reports, typed as they were.
+        val reports = listOf(
+            "ill be there soon" to "I'll be there soon", "ok ill call you" to "ok I'll call you",
+            "its raining again" to "it's raining again", "Ok, ill call you" to "Ok, I'll call you",
+            "id like that a lot" to "I'd like that a lot", "it's messy and its mostly on there" to "it's messy and it's mostly on there",
+            "its done now" to "it's done now", "thanks for your projects ill quit soon" to "thanks for your projects I'll quit soon",
+        )
+        for ((typed, expected) in reports) {
+            val got = typist().type("$typed ").text.trimEnd()
+            lines.append("  $typed | $expected | $got${if (got == expected) "" else "  <-- DIFFERS"}\n")
+            same(got, expected, "Owner's report with the real model: $typed")
+        }
+        println(lines)
+    }
+
+    // Always fixed at the word's end, though "whats", "cant", "wont", "hes" and "shes" are in the word lists.
+    val always = listOf("whats" to "what's", "wheres" to "where's", "hes" to "he's", "shes" to "she's", "cant" to "can't",
+        "wont" to "won't", "hed" to "he'd", "whod" to "who'd", "wholl" to "who'll", "dont" to "don't", "isnt" to "isn't",
+        "youre" to "you're", "im" to "I'm", "ive" to "I've", "theyre" to "they're", "thats" to "that's", "doesnt" to "doesn't",
+        "didnt" to "didn't", "wouldnt" to "wouldn't", "theres" to "there's", "youll" to "you'll", "itll" to "it'll")
+    for ((typed, fixed) in always) {
+        same(typist(with = null).type("so $typed ").text, "so $fixed ", "\"$typed\" always gets its apostrophe")
+        same(typist(with = null).type("so ${typed.replaceFirstChar(Char::uppercaseChar)} ").text.drop(3).trimEnd(),
+            fixed.replaceFirstChar(Char::uppercaseChar), "\"$typed\" keeps its capital")
+    }
+    same(typist(with = null).type("so cant ").backspace().text, "so cant", "Backspace right after puts \"cant\" back")
+    same(typist(with = null).type("so cant ").backspace().type(" or cant ").text, "so cant or cant ", "and it stays for the field")
+    // "lets" is a context word now: alone it stays.
+    same(typist(with = null).type("so lets ").text, "so lets ", "\"lets\" isn't always fixed")
+
+    // Never: "were" to "we're", "their" and "there" swapped, an apostrophe taken out, or a swiped word.
+    same(typist().type("We were going to call you. ").text, "We were going to call you. ", "\"were\" never becomes \"we're\"")
+    for (text in listOf("put it there for now ", "their dog is here ", "the dog wagged it's tail ", "it was it's own thing "))
+        same(typist().type(text).text, text, "Never changed: $text")
+    same(typist().type("Bring a coat, ").swipe("its").type("going to ").text, "Bring a coat, its going to ", "A swiped word never changes")
+
+    // When it lands: two words later, or sooner at the end of a sentence, and Backspace right after puts it back.
+    val coat = typist().type("Bring a coat, its going ")
+    same(coat.text, "Bring a coat, its going ", "One word after isn't enough yet")
+    same(coat.type("to ").text, "Bring a coat, it's going to ", "The second word after brings the apostrophe")
+    same(coat.backspace().text, "Bring a coat, its going to ", "Backspace right after puts back what was typed")
+    same(coat.type("rain. Ok its going to ").text, "Bring a coat, its going to rain. Ok its going to ", "and it stays for the field")
+    same(typist().type("Let me know when your free.").text, "Let me know when you're free.", "A full stop brings it with one word after")
+    same(typist().type("Bring a coat, its going").backspace().type("g to ").text, "Bring a coat, its going to ",
+        "Words after it that were changed let it go")
+    // The setting, and the model not there yet.
+    same(typist(Lists(world.words, off = setOf(FixKind.CONTEXT_APOSTROPHES))).type("Bring a coat, its going to ").text,
+        "Bring a coat, its going to ", "Switched off, \"its\" stays")
+    same(typist(with = null).type("Bring a coat, its going to ").text, "Bring a coat, its going to ", "Without the model, \"its\" stays")
+    // Only when sure: a margin of 2. The study's case 6 is +2.0, so it stays; case 2 is +6.3.
+    val sure = Lists(world.words, sure = true)
+    same(ApostropheContext(studyScorer) { ApostropheContext.SURE_MARGIN }.decide(studyCases[5].before, "its", studyCases[5].after), null,
+        "Only when sure: +2.0 isn't enough")
+    same(typist(sure, studyScorer).type("Bring a coat, its going to ").text, "Bring a coat, it's going to ", "Only when sure: +6.3 is")
+}
+
+/** Settings > What gets fixed (owner, 2026-11-12): each kind of fix has its own switch, all on by default. Off, it leaves the word. */
+private fun fixSwitches(world: Realistic) {
+    fun typed(text: String, off: Set<FixKind> = emptySet(), scorer: ContinuationScorer? = studyScorer): String {
+        val lists = Lists(world.words, off = off)
+        return Typist(world, world.autocorrect(lists, scorer), lists = lists).type(text).text
+    }
+    val cases = listOf(
+        Triple(FixKind.TYPOS, "teh ", "the "),
+        Triple(FixKind.APOSTROPHES, "so dont ", "so don't "),
+        Triple(FixKind.APOSTROPHES, "check todays log ", "check today's log "),
+        Triple(FixKind.CONTEXT_APOSTROPHES, "Bring a coat, its going to ", "Bring a coat, it's going to "),
+        Triple(FixKind.SPACED_APOSTROPHES, "I don t know ", "I don't know "),
+        Triple(FixKind.CAPITAL_I, "so i went ", "so I went "),
+        Triple(FixKind.NAME_CAPITALS, "see you on monday ", "see you on Monday "),
+        Triple(FixKind.NAME_CAPITALS, "ask mr smith ", "ask Mr smith "),
+        Triple(FixKind.SHIFT_HELD, "THe ", "The "),
+        Triple(FixKind.DOUBLE_LETTERS, "yeahh sure ", "yeah sure "),
+        Triple(FixKind.MISSING_SPACES, "hellohow are you ", "hello how are you "),
+        Triple(FixKind.MISSING_SPACES, "alot of people ", "a lot of people "),
+        Triple(FixKind.NAME_SLIPS, "See you next Sudnay then ", "See you next Sunday then "),
+        Triple(FixKind.RECENT_WORDS, "Ximena is here. I told Ximena. Ximwna said hi ", "Ximena is here. I told Ximena. Ximena said hi "),
+        Triple(FixKind.SECOND_LOOK, "get dome food ", "get some food "),
+    )
+    for ((kind, text, fixed) in cases) {
+        same(typed(text), fixed, "${kind.id} on fixes \"$text\"")
+        same(typed(text, setOf(kind)), text, "${kind.id} off leaves \"$text\"")
+    }
+    // Capital I off holds before the word data loads too, and the other switches leave it alone.
+    val noI = Lists(world.words, off = setOf(FixKind.CAPITAL_I))
+    same(Typist(world, Autocorrect(KeptOnceStore.inMemory(), {}), lists = noI).type("so i ").text, "so i ", "Capital I off, before the data loads")
+    same(typed("so i went ", FixKind.entries.toSet() - FixKind.CAPITAL_I), "so I went ", "Capital I alone still works")
+    // Switching one off leaves the others: "teh" still goes with apostrophes off.
+    same(typed("teh dont ", setOf(FixKind.APOSTROPHES)), "the dont ", "Apostrophes off leaves typos on")
+    same(typed("teh dont ", setOf(FixKind.TYPOS)), "teh don't ", "Typos off leaves apostrophes on")
+
+    // Only fix when sure: fewer fixes on the typo list, and no fix that the usual bar wouldn't make.
+    val usual = corrector(world)
+    val sureLists = Lists(world.words, sure = true)
+    val sure = corrector(world, world.autocorrect(sureLists))
+    var usualFixes = 0
+    var sureFixes = 0
+    for ((_, pairs) in typos) for ((typo, _) in pairs) {
+        val plain = usual.check(typo, "", null)?.word
+        val careful = sure.check(typo, "", null)?.word
+        if (plain != null) usualFixes++
+        if (careful != null) sureFixes++
+        if (careful != null) same(careful, plain, "Only when sure fixes \"$typo\" as the usual bar does")
+    }
+    println("\nONLY WHEN SURE: $sureFixes of the typo list fixed, against $usualFixes usually")
+    must(sureFixes < usualFixes, "Only when sure must fix fewer words ($sureFixes, usually $usualFixes)")
+    must(sureFixes >= usualFixes * 3 / 4, "Only when sure must still fix most of them ($sureFixes, usually $usualFixes)")
+}
+
+/**
  * A favourite comes first among similar words (owner, 2026-11-12): among the bar's three for a swipe or a typed word's completions,
  * and in a close call between autocorrect's fixes. It never beats a word that clearly fits better.
  */
@@ -2221,6 +2492,8 @@ fun main() {
     ownerTypos(world)
     singleLetters(world)
     capitalI(world)
+    apostrophes(world)
+    fixSwitches(world)
     simulation(world)
     speed(world)
     if (failures.isNotEmpty()) {

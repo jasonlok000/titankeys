@@ -82,14 +82,50 @@ public final class NextWordModel implements AutoCloseable {
         int[] ids = context(text);
         Last known = last;
         if (known != null && java.util.Arrays.equals(ids, known.ids)) return known.chances;
+        float[] chances = run(ids);
+        last = new Last(ids, chances);
+        return chances;
+    }
+
+    /** One run of the model: the log chances of the token after these. */
+    private float[] run(int[] ids) throws OrtException {
         long[] input = new long[ids.length];
         for (int i = 0; i < ids.length; i++) input[i] = ids[i];
         try (OnnxTensor tensor = OnnxTensor.createTensor(env, LongBuffer.wrap(input), new long[]{1, input.length});
              OrtSession.Result result = session.run(Collections.singletonMap("input_ids", tensor))) {
             float[][] out = (float[][]) result.get(0).getValue();
-            last = new Last(ids, out[0]);
             return out[0];
         }
+    }
+
+    /**
+     * The summed log chance, in nats, of all the tokens of each of {@code texts} straight after {@code before}, such as " it's going
+     * to" after "Bring a coat,". It takes one run per token, and runs the texts share are done once. Each run reads only the last
+     * tokens, as {@link #context} does. The kept answer that {@link #ifReady} reads is left alone.
+     */
+    public synchronized double[] continuations(String before, String[] texts) throws OrtException {
+        int[] start = context(before);
+        Map<List<Integer>, float[]> runs = new HashMap<>();
+        double[] totals = new double[texts.length];
+        for (int i = 0; i < texts.length; i++) {
+            List<Integer> ids = new ArrayList<>();
+            for (int id : start) ids.add(id);
+            double total = 0;
+            for (int token : bpe.encode(texts[i].replace('’', '\''))) {
+                List<Integer> read = new ArrayList<>(ids.subList(Math.max(0, ids.size() - cap), ids.size()));
+                float[] chances = runs.get(read);
+                if (chances == null) {
+                    int[] input = new int[read.size()];
+                    for (int j = 0; j < input.length; j++) input[j] = read.get(j);
+                    chances = run(input);
+                    runs.put(read, chances);
+                }
+                total += token >= 0 && token < chances.length ? chances[token] : -99;
+                ids.add(token);
+            }
+            totals[i] = total;
+        }
+        return totals;
     }
 
     /**

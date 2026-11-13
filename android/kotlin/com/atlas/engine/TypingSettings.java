@@ -299,6 +299,27 @@ public final class TypingSettings {
         return context.getSharedPreferences("snippets", Context.MODE_PRIVATE).contains("list");
     }
 
+    /**
+     * Whether one kind of autocorrect fix is on, by its id (FixKind in the autocorrect): Settings > Fix typos as you type > What gets
+     * fixed. All are on by default, which is autocorrect as it always was.
+     */
+    public static boolean fixOn(Context context, String id) {
+        return preferences(context).getBoolean("fix_" + id, true);
+    }
+
+    public static void fixOn(Context context, String id, boolean on) {
+        preferences(context).edit().putBoolean("fix_" + id, on).apply();
+    }
+
+    /** A fix must be clearly right before it goes in: fewer fixes, and fewer wrong ones. Off by default. */
+    public static boolean fixOnlyWhenSure(Context context) {
+        return preferences(context).getBoolean("fix_only_when_sure", false);
+    }
+
+    public static void fixOnlyWhenSure(Context context, boolean on) {
+        preferences(context).edit().putBoolean("fix_only_when_sure", on).apply();
+    }
+
     /** Chat shorthand such as "shd" becomes its full word, "should" (issue 63). Off by default: then it stays as typed. */
     public static boolean expandShorthand(Context context) {
         return preferences(context).getBoolean("expand_shorthand", false);

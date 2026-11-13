@@ -151,6 +151,9 @@ final class SwipeModels implements AutoCloseable {
         return chances == null ? Double.NaN : predictor.word(chances, word.toLowerCase(java.util.Locale.ROOT).replace('’', '\''));
     }
 
+    /** The summed log chance of each of these texts after this one: see {@link NextWordModel#continuations}. It runs the model. */
+    double[] continuations(String before, String[] texts) throws Exception { return predictor.continuations(before, texts); }
+
     @Override
     public void close() {
         reader.close();

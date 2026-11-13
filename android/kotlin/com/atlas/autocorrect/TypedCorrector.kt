@@ -31,6 +31,10 @@ interface Lexicon {
     fun ownShorthand(shorthand: String): String? = null
     /** Whether the user made [word] a favourite in its menu: it wins a close call between fixes. */
     fun favourite(word: String): Boolean = false
+    /** Whether this kind of fix is on, in Settings > What gets fixed. All are on by default. */
+    fun fixes(kind: FixKind): Boolean = true
+    /** Whether the user wants a fix only when it's clearly right: fewer fixes, and fewer wrong ones. Off by default. */
+    fun onlyWhenSure(): Boolean = false
     /** Calls [action] with each word in lowercase and its frequency. */
     fun forEachWord(action: (String, Int) -> Unit)
 }
@@ -126,6 +130,8 @@ class CorrectionData private constructor(
                     possessives[word.dropLast(2) + "s"] = word
                 }
             }
+            // Every always-fix contraction, even one the word list doesn't hold or rates too rare ("where's", "who'll").
+            for (contraction in NoisyChannel.unambiguousContractions()) contractions.putIfAbsent(contraction.replace("'", ""), contraction)
             return CorrectionData(pairs, triples, confusions, misspellings, known, names, slang, shortWords,
                 spelling, contractions, possessives, shorthand, longWords)
         }
@@ -187,6 +193,10 @@ class TypedCorrector(
     /** The next-word model's log chance of a word after the text before it, or NaN while it is not worked out. */
     private val nextWordChance: ((before: String, word: String) -> Double)? = null,
     contextWeight: Double = NoisyChannel.CONTEXT_WEIGHT,
+    /** The next-word model's chance of whole phrases, which may take a while: it decides apostrophes such as "its" ("it's"). */
+    continuation: ContinuationScorer? = null,
+    /** Which words around a word the model reads for its apostrophe. */
+    window: ContextWindow = ContextWindow.SENTENCE,
 ) {
     /** The last [typed] characters of the text should become [word]. */
     class Fix(val typed: String, val word: String)
@@ -195,7 +205,13 @@ class TypedCorrector(
     class Review(val word: String, val fix: String, val original: String, val replaced: String, val reviewedLast: Boolean)
 
     private val channel = NoisyChannel(::candidates, KeyNeighbours::near, data.pairs::count, data.triples::count, contextWeight,
-        lexicon::favourite)
+        lexicon::favourite, lexicon::onlyWhenSure)
+
+    private val apostrophes = continuation?.let { scorer ->
+        ApostropheContext(scorer, window) { if (lexicon.onlyWhenSure()) ApostropheContext.SURE_MARGIN else ApostropheContext.MARGIN }
+    }
+
+    private fun on(kind: FixKind) = lexicon.fixes(kind)
 
     private val context = ContextCorrector(
         frequencyOf = lexicon::frequency,
@@ -249,7 +265,11 @@ class TypedCorrector(
      */
     private fun fixedCapitals(word: String): String? {
         // "I" and its contractions are always capitalised, though the word list also has a lowercase "i" and it is one letter.
-        ALWAYS_CAPITAL[word.replace('’', '\'')]?.let { fixed -> return if ('’' in word) fixed.replace('\'', '’') else fixed }
+        CAPITAL_I[word.replace('’', '\'')]?.let { fixed ->
+            return if (!on(FixKind.CAPITAL_I)) null else if ('’' in word) fixed.replace('\'', '’') else fixed
+        }
+        if (!on(FixKind.NAME_CAPITALS)) return null
+        TITLES[word]?.let { return it }
         if (word.length < 2 || !word.all { it.isLetter() || it == '\'' || it == '’' }) return null
         if (word.drop(1).any { it.isUpperCase() }) return null
         val lower = word.lowercase()
@@ -305,6 +325,23 @@ class TypedCorrector(
     fun capitals(word: String, before: String): String? =
         if (isInsideAddress(before + word) || word.lowercase() in rejected) null else fixedCapitals(word)
 
+    /**
+     * Whether the typed [word], after [before], waits for the words after it to say if it's missing its apostrophe ("its going" is
+     * "it's going"): the model is there, the switch is on, and Backspace didn't take this word's fix back in this field.
+     */
+    fun awaitsApostrophe(word: String, before: String): Boolean = apostrophes != null && on(FixKind.CONTEXT_APOSTROPHES) &&
+        ApostropheContext.isTarget(word) && word.lowercase() !in rejected && !isInsideAddress(before + word)
+
+    /** What [rest], the text from a waiting word to the cursor, says: wait, give up, or ask now. See [ApostropheContext.following]. */
+    fun apostropheFollowing(rest: String) = ApostropheContext.following(rest, apostrophes?.wanted ?: ContextWindow.SENTENCE.after)
+
+    /**
+     * The waiting [word]'s form with an apostrophe, or null to keep it. [before] is the text before it and [after] the words after it,
+     * each with its space. It runs the model, which takes a while, so it runs away from the keyboard's thread.
+     */
+    fun contextApostrophe(before: String, word: String, after: String): String? =
+        apostrophes?.takeIf { on(FixKind.CONTEXT_APOSTROPHES) }?.decide(before, word, after)
+
     private fun typoFix(word: String, before: String, typedPrevious: String?): Fix? {
         if (isInsideAddress(before + word)) return null
         val lower = word.lowercase()
@@ -314,15 +351,20 @@ class TypedCorrector(
             if (isRejected || isKnown(word)) return null
             return nameSplit(word)?.let { Fix(word, it) }
         }
-        if (!isRejected && !hasExactCase(word)) shiftHeldTooLongFix(word, lexicon::frequency)?.let { return Fix(word, it) }
+        if (!isRejected && !hasExactCase(word) && on(FixKind.SHIFT_HELD)) shiftHeldTooLongFix(word, lexicon::frequency)?.let { return Fix(word, it) }
         if (!isRejected) spacedContraction(word, before, typedPrevious)?.let { return it }
-        // A left-out apostrophe before a final s ("todays", "whats"), where the word without it is no word in the list. It
-        // goes before the other fixes, which would drop the s ("today") or split the word ("to days").
-        if (!isRejected && word.all { it.isLetter() } && word.drop(1).none { it.isUpperCase() } && lexicon.frequency(word) == 0 &&
-            !lexicon.personal(word))
-            (data.possessives[lower] ?: data.contractions[lower]?.takeIf { it.endsWith("'s") })?.let { return Fix(word, recased(it, word)) }
+        if (!isRejected && word.all { it.isLetter() } && word.drop(1).none { it.isUpperCase() } && !lexicon.personal(word)) {
+            // A missing apostrophe ("dont", "whats", "cant"). Every one listed is meant with it, so this goes before the known-word
+            // checks: "whats", "cant" and "wont" are in the word lists, but nobody means them (apostrophe study, 2026-11-11).
+            // A left-out apostrophe before a final s ("todays"), where the word without it is no word in the list. It goes before
+            // the other fixes, which would drop the s ("today") or split the word ("to days").
+            val apostrophe = data.contractions[lower] ?: data.possessives[lower]?.takeIf { lexicon.frequency(word) == 0 }
+            // With the switch off, such a word stays as typed: no other fix gets to make it something else.
+            if (apostrophe != null) return if (on(FixKind.APOSTROPHES)) Fix(word, recased(apostrophe, word)) else null
+        }
         val letters = word.all { it.isLetter() }
-        if (!isKnown(word) && word !in data.names && !isRejected && letters) nameSplit(word)?.let { return Fix(word, it) }
+        if (!isKnown(word) && word !in data.names && !isRejected && letters && on(FixKind.MISSING_SPACES))
+            nameSplit(word)?.let { return Fix(word, it) }
         val isName = isCapitalizedName(word, before)
         when {
             word.any { it.isDigit() } -> return null // "3pm", "5km"
@@ -332,23 +374,22 @@ class TypedCorrector(
             isWordWithClitic(word, ::isKnown, rootMayBeName = isName) -> return null
             // A capitalised first name ("Ali") is meant, even where it could be a slip ("All").
             word.first().isUpperCase() && word.drop(1).all { it.isLowerCase() } && word in data.names && !isKnown(word) -> return null
-            isName -> return (recentSlip(word, lower) ?: nameSlip(word, lower))?.let { Fix(word, it) }
+            isName -> return slip(word, lower)?.let { Fix(word, it) }
             word.all { it.isLowerCase() } && word in data.known -> return null
         }
         if (isRejected || isKnown(word)) return null
-        // A well-known misspelling ("recieve") has one known fix.
-        data.misspellings[lower]?.let { return Fix(word, recased(it, word)) }
-        // A missing apostrophe ("doesnt"). Without it these are not words, so there is nothing else it could be.
-        data.contractions[lower]?.let { return Fix(word, recased(it, word)) }
+        // A well-known misspelling ("recieve") has one known fix. Some are words run together ("alot"), which are missed spaces.
+        data.misspellings[lower]?.takeIf { on(if (' ' in it) FixKind.MISSING_SPACES else FixKind.TYPOS) }
+            ?.let { return Fix(word, recased(it, word)) }
         // The last letter typed twice ("yeahh", "showw"): the word without it, if that is a common word.
-        if (lower.length >= 4 && lower.last() == lower[lower.length - 2] && lower.all { it in 'a'..'z' }) {
+        if (on(FixKind.DOUBLE_LETTERS) && lower.length >= 4 && lower.last() == lower[lower.length - 2] && lower.all { it in 'a'..'z' }) {
             val single = lower.dropLast(1)
             if (lexicon.frequency(single) >= DOUBLED_LAST_MIN_FREQUENCY) return Fix(word, recased(single, word))
         }
         val previous = previousWordFor(before)
         val beforePrevious = wordBeforePrevious(before, previous)
         val casual = word.all { it.isLowerCase() } || isSentenceStartCapital(word, before)
-        if (casual) {
+        if (casual && on(FixKind.TYPOS)) {
             twoLetterFix(lower, lexicon::frequency, KeyNeighbours::near) { contextFit(it, previous, beforePrevious) }
                 ?.let { return Fix(word, recased(it, word)) }
             if (letters && word.length >= 2) {
@@ -360,15 +401,15 @@ class TypedCorrector(
                 if (fixed != null) return Fix(word, recased(fixed, word))
             }
         }
-        (recentSlip(word, lower) ?: nameSlip(word, lower))?.let { return Fix(word, it) }
+        slip(word, lower)?.let { return Fix(word, it) }
         if (isLikelyCompound(lower, null)) return null
-        findWordSplit(word, lexicon::frequency, ::isKnown) { left, right ->
+        if (on(FixKind.MISSING_SPACES)) findWordSplit(word, lexicon::frequency, ::isKnown) { left, right ->
             // A rare half must be seen next to the other ("con tuned" is no missed space), and a
             // capitalised word may be a name, so it always must ("Mansell" is not "Man sell").
             data.pairs.count(left.lowercase(), right.lowercase()) > 0 || !word.first().isUpperCase() &&
                 minOf(lexicon.frequency(left), lexicon.frequency(right)) >= unattestedSplitFrequency(left, right)
         }?.let { return Fix(word, it) }
-        if (word.length >= DEEP_FIX_MIN_LENGTH && letters) {
+        if (word.length >= DEEP_FIX_MIN_LENGTH && letters && on(FixKind.TYPOS)) {
             deepFix(word, data.longWords[lower.first()].orEmpty(), KeyNeighbours::near)
                 ?.takeIf { isPlausibleForCasing(word, spelled(it)) }
                 ?.let { return Fix(word, recased(it, word)) }
@@ -381,26 +422,37 @@ class TypedCorrector(
      * there is one. A swiped [latest] says what fits around [earlier], but only a typed word is reviewed.
      */
     fun review(text: String, truncated: Boolean, earlier: EndedWord?, latest: String, latestTyped: Boolean): Review? {
+        if (!on(FixKind.SECOND_LOOK)) return null
         val trailing = ContextCorrector.findTrailing(text, truncated) ?: return null
         if (!same(trailing.next, latest)) return null
-        if (earlier != null && same(trailing.word, earlier.word) && !isDeliberate(trailing.word)) {
+        if (earlier != null && same(trailing.word, earlier.word) && !isDeliberate(trailing.word) && !modelDecides(trailing.word)) {
             val typo = earlier.typo
-            // "mr" fixed to "me", then a word that never follows "me" ("me smith"): it was the title after all.
+            // "mr" fixed to "me", then a word that never follows "me" ("me smith"): it was the title after all. Without capitals for
+            // names, it goes back as typed.
             if (typo != null && typo.equals("mr", ignoreCase = true) && trailing.word.equals("me", ignoreCase = true)
-                && trailing.next.all { it.isLetter() } && data.pairs.count("me", trailing.next.lowercase()) == 0)
-                return Review(trailing.word, "Mr", "${trailing.word} ${trailing.next}${trailing.tail}",
-                    "Mr ${trailing.next}${trailing.tail}", false)
+                && trailing.next.all { it.isLetter() } && data.pairs.count("me", trailing.next.lowercase()) == 0) {
+                val title = if (on(FixKind.NAME_CAPITALS)) "Mr" else typo
+                return Review(trailing.word, title, "${trailing.word} ${trailing.next}${trailing.tail}",
+                    "$title ${trailing.next}${trailing.tail}", false)
+            }
             // A fix made at the last space, seen again with the word after it. Shorthand spelled out stays as the setting asks.
             val fixed = respelled(typo?.takeUnless(::isShorthand)?.let { context.reconsiderFix(trailing.before, it, trailing.word, trailing.next) }, trailing.word)
                 ?: respelled(context.review(trailing.before, trailing.word, trailing.next, trailing.beforePrevious, typedAsIs = typo == null), trailing.word)
             if (fixed != null) return Review(trailing.word, fixed, "${trailing.word} ${trailing.next}${trailing.tail}",
                 "$fixed ${trailing.next}${trailing.tail}", false)
         }
-        if (!latestTyped || trailing.tail.firstOrNull() !in SENTENCE_END_MARKS || isDeliberate(trailing.next)) return null
+        if (!latestTyped || trailing.tail.firstOrNull() !in SENTENCE_END_MARKS || isDeliberate(trailing.next) || modelDecides(trailing.next))
+            return null
         return respelled(context.review(trailing.word, trailing.next, PairCounts.SENTENCE_END), trailing.next)?.let { fixed ->
             Review(trailing.next, fixed, "${trailing.next}${trailing.tail}", "$fixed${trailing.tail}", true)
         }
     }
+
+    /**
+     * A word whose apostrophe the next-word model decides ("shed" for "she'd"): the second check leaves it to the model, as it could
+     * only make it another word ("she").
+     */
+    private fun modelDecides(word: String) = apostrophes != null && on(FixKind.CONTEXT_APOSTROPHES) && ApostropheContext.isTarget(word)
 
     /** The first check left these alone on purpose, so the second must too. */
     private fun isDeliberate(word: String) =
@@ -412,13 +464,17 @@ class TypedCorrector(
 
     /** A space typed for the apostrophe: "I ll" to "I'll", "don t" to "don't". */
     private fun spacedContraction(word: String, before: String, typedPrevious: String?): Fix? {
-        if (!before.endsWith(' ')) return null
+        if (!before.endsWith(' ') || !on(FixKind.SPACED_APOSTROPHES)) return null
         val previous = before.removeSuffix(" ").takeLastWhile { it.isLetter() }
         val beforePrevious = before.removeSuffix(" ").dropLast(previous.length).lastOrNull()
         if (previous.isEmpty() || beforePrevious?.isLetterOrDigit() == true || !previous.equals(typedPrevious, ignoreCase = true)
             || "${previous.lowercase()}'${word.lowercase()}" !in SPACED_CONTRACTIONS) return null
         return Fix("$previous $word", "$previous'$word")
     }
+
+    /** A slip on a word from this conversation, or on a common name, each as its switch allows. */
+    private fun slip(word: String, lower: String): String? =
+        (if (on(FixKind.RECENT_WORDS)) recentSlip(word, lower) else null) ?: if (on(FixKind.NAME_SLIPS)) nameSlip(word, lower) else null
 
     /** A slip on a word used twice in this conversation, such as a friend's name. */
     private fun recentSlip(word: String, lower: String): String? {
@@ -522,11 +578,11 @@ class TypedCorrector(
         private const val MAX_CANDIDATES = 64
         /** "I" and its contractions. They need no word data, so they get their capital even before it loads. */
         private val CAPITAL_I = mapOf("i" to "I", "i'm" to "I'm", "i've" to "I've", "i'll" to "I'll", "i'd" to "I'd")
-        /** Words that are always written with a capital, however they are typed. */
-        private val ALWAYS_CAPITAL = CAPITAL_I + mapOf(
-            // Titles that are never ordinary words. Acronyms such as OK, PC and CD stay as typed: lowercase is common in chat.
-            // "mr" can be a slip for "me": the typo check runs first, and only a "mr" it leaves becomes "Mr".
-            "mr" to "Mr", "mrs" to "Mrs", "dr" to "Dr", "jr" to "Jr", "phd" to "PhD")
+        /**
+         * Titles that are never ordinary words, always written with a capital. Acronyms such as OK, PC and CD stay as typed: lowercase is
+         * common in chat. "mr" can be a slip for "me": the typo check runs first, and only a "mr" it leaves becomes "Mr".
+         */
+        private val TITLES = mapOf("mr" to "Mr", "mrs" to "Mrs", "dr" to "Dr", "jr" to "Jr", "phd" to "PhD")
 
         /** "i" as "I", and "i'm" as "I'm", with the apostrophe as typed. Null for every other word, and for one already right. */
         fun capitalI(word: String): String? {

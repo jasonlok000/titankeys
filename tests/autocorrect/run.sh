@@ -20,4 +20,7 @@ keyboard=$root/com/atlas/keyboard
   tests/autocorrect/AutocorrectChecks.kt tests/autocorrect/PhoneWords.java $(find "$engine" "$root/org" -name '*.java')
 javac --release 17 -nowarn -cp "$work:$stdlib:$android:$ort" -d "$work" tests/autocorrect/PhoneWords.java \
   $(find "$engine" "$root/org" -name '*.java')
-java -cp "$work:$stdlib:$android:$ort" com.atlas.autocorrect.AutocorrectChecksKt
+# The apostrophe checks run the real next-word model when ORT_DESKTOP_JAR names a desktop ONNX Runtime jar (onnxruntime-*.jar from
+# Maven, with native code for this computer). It goes first, so its classes stand in for Android's. Without it they use the study's
+# measured margins.
+java -cp "${ORT_DESKTOP_JAR:+$ORT_DESKTOP_JAR:}$work:$stdlib:$android:$ort" com.atlas.autocorrect.AutocorrectChecksKt

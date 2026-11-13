@@ -17,6 +17,7 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import com.atlas.autocorrect.FixKind
 import com.atlas.autocorrect.Shorthand
 import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeTyping
@@ -435,6 +436,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("sentenceSpaces", TypingSettings.sentenceSpaces(activity))
             .put("commaSpace", TypingSettings.commaSpace(activity))
             .put("autocorrect", TypingSettings.autocorrect(activity))
+            .put("fixToggles", JSONObject(FixKind.entries.associate { it.id to TypingSettings.fixOn(activity, it.id) }))
+            .put("fixOnlyWhenSure", TypingSettings.fixOnlyWhenSure(activity))
             .put("suggestionBar", TypingSettings.suggestionBar(activity))
             .put("launcherHidesBar", TypingSettings.launcherHidesBar(activity))
             .put("cursorControl", TypingSettings.cursorControl(activity))
@@ -575,6 +578,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "sentenceSpaces" -> TypingSettings.sentenceSpaces(activity, value as String)
             "commaSpace" -> TypingSettings.commaSpace(activity, value as Boolean)
             "autocorrect" -> TypingSettings.autocorrect(activity, value as Boolean)
+            // Only the switches that came, as for haptics.
+            "fixToggles" -> (value as JSONObject).let { toggles ->
+                for (id in toggles.keys()) FixKind.of(id)?.let { TypingSettings.fixOn(activity, it.id, toggles.getBoolean(id)) }
+            }
+            "fixOnlyWhenSure" -> TypingSettings.fixOnlyWhenSure(activity, value as Boolean)
             "suggestionBar" -> TypingSettings.suggestionBar(activity, value as Boolean)
             "launcherHidesBar" -> TypingSettings.launcherHidesBar(activity, value as Boolean)
             "cursorControl" -> TypingSettings.cursorControl(activity, value as Boolean)

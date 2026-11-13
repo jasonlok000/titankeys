@@ -1,7 +1,9 @@
 package com.atlas.keyboard
 
+import com.atlas.autocorrect.ApostropheContext
 import com.atlas.autocorrect.Autocorrect
 import com.atlas.autocorrect.EndedWord
+import com.atlas.autocorrect.FixKind
 import com.atlas.autocorrect.TypedCorrector
 import com.atlas.engine.KeptWords
 import com.atlas.engine.Swipe
@@ -62,6 +64,8 @@ interface Words {
      * about. Only data sharing listens: the keyboard learns nothing from it, as before.
      */
     fun keptAtEnd(swipe: Swipe, context: String, recognition: Recognition, word: String) = Unit
+    /** Runs [work], which may take a while, away from the keyboard's thread when it can, and hands its answer back on that thread. */
+    fun background(work: () -> String?, result: (String?) -> Unit) = result(work())
 }
 
 /** Told what the keyboard does to the text, only while the raw input log records the field. */
@@ -199,6 +203,10 @@ class Composer(
     private var endedBeforeSwipe: EndedWord? = null
     /** A word that Backspace put back, until the next word shows whether the user kept it. */
     private var restoredWord: String? = null
+    /** A typed word that only the words after it can give its apostrophe ("its" for "it's"). It starts at [start] in the field. */
+    private class ApostropheTarget(val word: String, var start: Int)
+    /** Typed words waiting for the words after them, oldest first. */
+    private val apostropheTargets = ArrayList<ApostropheTarget>()
     /** An unknown typed word. The next word can still change it, so it is learned after that. */
     private var heldWord: String? = null
     /** The typed word that was just learned or held, which ends at [end]. Deleting into it takes that back. */
@@ -252,6 +260,8 @@ class Composer(
     var intended: (String) -> String? = { null }
     /** Told where the guide's word went among a swipe's choices, as they rank, so that the guide can point at it. */
     var guidePlaced: (place: Int, word: String) -> Unit = { _, _ -> }
+    /** Whether a kind of fix is on, in Settings > What gets fixed. "i" uses it even before autocorrect's word data loads. */
+    var fixOn: (FixKind) -> Boolean = { true }
     /** Only the keyboard sets this, so replaying a recording never adds to the raw input log. */
     var log: EditLog? = null
     /** Only the keyboard sets this, and only while the setting is on, so replaying a recording never changes a word. */
@@ -364,6 +374,7 @@ class Composer(
         awaitingNextWord = null
         expectedSelections.clear()
         settleTypedWords()
+        apostropheTargets.clear()
         if (predicts) predict()
     }
 
@@ -824,6 +835,8 @@ class Composer(
             return
         }
         if (!word && undoCorrection()) return
+        // The words after a waiting word are being changed, so it isn't looked at again.
+        apostropheTargets.clear()
         val typed = lastLearned?.takeIf { snapshot() == it.snapshot }
         lastLearned = null
         // Deleting or cancelling a swipe is not evidence that the word was kept.
@@ -1436,7 +1449,7 @@ class Composer(
 
     /** "i" as "I", or "i'm" as "I'm", after [before], unless Backspace took this one's capital back. */
     private fun capitalI(word: String, before: String): TypedCorrector.Fix? {
-        if (!capitalsOn() || TypedCorrector.isInsideAddress(before + word) || keptLowercase(word, before)) return null
+        if (!capitalsOn() || !fixOn(FixKind.CAPITAL_I) || TypedCorrector.isInsideAddress(before + word) || keptLowercase(word, before)) return null
         return TypedCorrector.capitalI(word)?.let { TypedCorrector.Fix(word, it) }
     }
 
@@ -1516,9 +1529,17 @@ class Composer(
 
     /**
      * Runs once the space or mark [mark] that ended the typed word [word] is in the text. It offers [fix] for undo or,
-     * if the first check found none, checks again with the word on each side known. Returns null if an edit failed.
+     * if the first check found none, checks again with the word on each side known. Then a word that waits for the words after
+     * it to get its apostrophe may be ready. Returns null if an edit failed.
      */
     private fun wordEnded(word: String?, fix: TypedCorrector.Fix?, mark: String, completed: String?): Ended? {
+        val ended = endWord(word, fix, mark, completed) ?: return null
+        if (word != null && fix == null) awaitApostrophe(word, mark)
+        checkApostrophes()
+        return ended
+    }
+
+    private fun endWord(word: String?, fix: TypedCorrector.Fix?, mark: String, completed: String?): Ended? {
         val autocorrect = autocorrect
         val corrector = corrector()
         // A fix is offered for undo even without the word data, as "i" gets its capital then too.
@@ -1560,6 +1581,75 @@ class Composer(
         if (field.learning) autocorrect.recent.record(latest)
         if (review?.reviewedLast == true) return Ended(true, null)
         return Ended(review != null, completed.takeUnless { hold(it, corrector) })
+    }
+
+    /**
+     * The typed [word] that [mark] just ended may wait for the words after it: "its" is "it's" in "its going", which only the
+     * next-word model can tell once those words are in (owner's apostrophe study, 2026-11-11). Typed words only: a swiped word picks
+     * its own form.
+     */
+    private fun awaitApostrophe(word: String, mark: String) {
+        val corrector = corrector() ?: return
+        val anchor = snapshot()
+        val before = anchor.before ?: return
+        if (!anchor.available || anchor.selected || !anchor.knownSelection || !before.endsWith(mark)) return
+        val end = before.length - mark.length
+        val start = end - word.length
+        if (start < 0 || !before.regionMatches(start, word, 0, word.length) || start > 0 && !before[start - 1].isWhitespace()) return
+        val textBefore = before.substring(0, start)
+        if (intended(textBefore) != null || !corrector.awaitsApostrophe(word, textBefore)) return
+        apostropheTargets += ApostropheTarget(word, anchor.selection.end - (before.length - start))
+        if (apostropheTargets.size > MAX_APOSTROPHE_TARGETS) apostropheTargets.removeAt(0)
+    }
+
+    /**
+     * Asks the model about the first waiting word whose words after it are in: two words, or fewer where a . ! ? or line break ends
+     * the sentence. The answer comes back from the engine's thread, and goes in only if nothing changed meanwhile. A word whose
+     * text moved or changed is let go.
+     */
+    private fun checkApostrophes() {
+        if (apostropheTargets.isEmpty()) return
+        val corrector = corrector()
+        val anchor = snapshot()
+        val before = anchor.before
+        if (corrector == null || before == null || !anchor.available || anchor.selected || !anchor.knownSelection) {
+            apostropheTargets.clear()
+            return
+        }
+        for (target in apostropheTargets.toList()) {
+            val offset = anchor.selection.end - target.start
+            val tail = if (offset > target.word.length && offset <= before.length) before.takeLast(offset) else null
+            if (tail == null || !tail.startsWith(target.word) || tail.length < before.length && !before[before.length - offset - 1].isWhitespace()) {
+                apostropheTargets.remove(target)
+                continue
+            }
+            val following = corrector.apostropheFollowing(tail.substring(target.word.length))
+            if (following == ApostropheContext.Following.Wait) continue
+            apostropheTargets.remove(target)
+            if (following !is ApostropheContext.Following.Ready) continue
+            val textBefore = before.dropLast(offset)
+            val current = epoch
+            words.background({ corrector.contextApostrophe(textBefore, target.word, following.after) }) { fixed ->
+                if (current != epoch || hasPendingInput || snapshot() != anchor) return@background
+                if (fixed != null && fixed != target.word && words.allowed(fixed) && words.fixAllowed(target.word, fixed)
+                    && corrector() != null) addApostrophe(target, fixed, tail, anchor)
+                checkApostrophes()
+            }
+            return
+        }
+    }
+
+    /** Puts [fixed] in place of [target]'s word at the start of [tail], the text up to the cursor. Backspace straight after puts it back. */
+    private fun addApostrophe(target: ApostropheTarget, fixed: String, tail: String, anchor: Snapshot) {
+        val replaced = fixed + tail.substring(target.word.length)
+        invalidate(false)
+        if (!replaceBehind(composition, anchor, EditCause.Autocorrect, tail.length, replaced)) return
+        onAutocorrect?.invoke()
+        offerUndo(replaced, tail, target.word, true)
+        if (field.learning) words.typed(fixed, false)
+        val change = fixed.length - target.word.length
+        for (later in apostropheTargets) if (later.start > target.start) later.start += change
+        confirmState(snapshot())
     }
 
     /** The next word can still change a word that the list does not hold, so it is held to learn after that. True if held. */
@@ -2037,5 +2127,7 @@ class Composer(
         private const val ADDRESS_FOLLOWERS = ".,!?;:/)]"
         /** How much text the second check reads. Numen tuned it on this much. */
         private const val REVIEW_LENGTH = 96
+        /** Typed words that wait for their apostrophe at once: "if its your turn" has two. */
+        private const val MAX_APOSTROPHE_TARGETS = 3
     }
 }

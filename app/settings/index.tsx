@@ -6,6 +6,7 @@ import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
 import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
+import { fixesLabel } from "./fixes";
 import { hapticsLabel } from "./haptics";
 import { hiddenBarLabel } from "./hidden-bar";
 import { holdLabel } from "./hold";
@@ -29,6 +30,7 @@ export default function Settings() {
     <Section title="Typing">
       <Toggle label="Fix typos as you type" value={settings.autocorrect}
         onChange={autocorrect => save.run({ autocorrect })} />
+      {settings.autocorrect && <Field label="What gets fixed" href="/settings/fixes">{fixesLabel(settings)}</Field>}
       <Toggle label="Capital letter to start a sentence" value={settings.autoCapitalise}
         onChange={autoCapitalise => save.run({ autoCapitalise })} />
       <Field label="Space after a sentence" href="/settings/sentence-spaces">{sentenceSpacesLabel(settings)}</Field>

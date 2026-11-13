@@ -44,6 +44,8 @@ class EngineWords(private val typing: SwipeTyping, private val favourite: (Strin
     override fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit) =
         typing.lookAlike(context, word, next) { result(it) }
 
+    override fun background(work: () -> String?, result: (String?) -> Unit) = typing.background({ work() }) { result(it) }
+
     override fun typed(word: String, rememberCase: Boolean) = typing.typed(word, typing.learningGeneration(), rememberCase)
     override fun untyped(word: String) = typing.untyped(word, typing.learningGeneration())
 

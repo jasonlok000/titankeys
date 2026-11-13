@@ -179,7 +179,12 @@ all of them are unapproved.
     hates it, TitanKeys can block it), plus a new topic, "The local LLM". The boring guide checks pass.
   - **Orchestrator, done:** TitanKeys' Alt + Backspace word delete is gone. Alt + Backspace now goes to the app as Android's own
     combination. The boring guide's Delete a word is fixed. The modifiers and text checks pass.
-  - **D** (claude/bar-even): bar words at one size, 20 dp, the middle bold, a shared baseline, truly centred.
+  - **D** (claude/bar-even): **done and merged** (e56f3cc, merge 3baeb3e). All three words are 20 dp, with the best in Inter Bold
+    and Medium dropped. Font padding is off and the words are lifted by Inter's x-height, so the letters sit −0.5 px from the bar's
+    centre, against +3.3 px before. The render checked out.
+  - **Fine calibration (owner, 08:35):** the grid is right, but "maybe the calibration guide a bit off". The owner is refining it on
+    cal-tool/fine.html (full-height lines, quarter-pixel steps). When the owner is done, the saved values go into KeyAlignment's
+    defaults, with a shift if there is one.
   - F's brief corrected: Size keeps the bar's height and grows only what's inside.
   - **Orchestrator, done:** the boring guide's new topic, "Space gestures: tap a bit higher".
   - **W, a new dedicated worker** (2.1 W: word menu ladder and hover fix, local_7148acab): Forget only on really learned words, not

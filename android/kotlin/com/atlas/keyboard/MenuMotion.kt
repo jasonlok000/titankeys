@@ -10,8 +10,8 @@ import kotlin.random.Random
  *   swaying and fading. The haptic lands on the burst.
  * - Unfavourite: a heart cracks over the word, and its halves fall and spin away with gravity. The word gives a tiny shake in time
  *   with the haptic.
- * - Save: a bookmark ribbon slides down onto the word's left edge, bounces once and settles. Unsave: the ribbon tears, and its
- *   halves drift down.
+ * - Save: the same burst as Favourite's, in small bookmark ribbons instead of hearts (owner, 2026-11-12: "not done nicely" as
+ *   a single ribbon dropping in). The haptic lands on the burst. Unsave: the ribbon tears, and its halves drift down.
  * - Forget: the word dissolves into a little dust. Opening on a saved word or a favourite: two or three hearts drift up, once.
  *
  * Every particle and mark is orange; the word itself never changes colour. Each word always gets the same layout, seeded by the
@@ -42,7 +42,7 @@ object MenuMotion {
 
     /** How long each animation takes, in ms. */
     fun millis(motion: MenuKeys.Motion) = when (motion) {
-        MenuKeys.Motion.Save -> 520L
+        MenuKeys.Motion.Save -> 620L
         MenuKeys.Motion.Favourite -> 620L
         MenuKeys.Motion.Unfavourite -> 640L
         MenuKeys.Motion.Unsave -> 520L
@@ -52,7 +52,6 @@ object MenuMotion {
 
     /** When the animation peaks, in ms from its start: its haptic plays then, so what you feel lands with what you see. */
     fun peak(motion: MenuKeys.Motion) = when (motion) {
-        MenuKeys.Motion.Save -> (millis(motion) * RIBBON_LANDS).toLong()
         MenuKeys.Motion.Unfavourite -> (millis(motion) * CRACK).toLong()
         MenuKeys.Motion.Unsave -> (millis(motion) * TEAR).toLong()
         else -> 0L
@@ -65,9 +64,9 @@ object MenuMotion {
         val t = elapsed.toFloat() / total
         val random = Random(word.seed * 31 + motion.ordinal)
         val frame = when (motion) {
-            MenuKeys.Motion.Favourite -> favourite(t, word, random)
+            MenuKeys.Motion.Favourite -> burst(t, word, random, Shape.Heart, HEART_TURN)
             MenuKeys.Motion.Unfavourite -> unfavourite(t, word, random)
-            MenuKeys.Motion.Save -> Frame(listOf(Sprite(Shape.Ribbon, word.left - RIBBON_OFF, ribbonY(t, word), RIBBON, 0f, fade(t, .7f))))
+            MenuKeys.Motion.Save -> burst(t, word, random, Shape.Ribbon, RIBBON_TURN)
             MenuKeys.Motion.Unsave -> unsave(t, word, random)
             MenuKeys.Motion.Forget -> dust(t, word, random)
             MenuKeys.Motion.Echo -> echo(t, word, random)
@@ -75,8 +74,11 @@ object MenuMotion {
         return frame.copy(sprites = frame.sprites.map { it.copy(y = it.y.coerceIn(it.size / 2, BAR - it.size / 2)) })
     }
 
-    /** The word pops, and hearts burst from behind it, up and out to both sides, swaying as they rise and fade. */
-    private fun favourite(t: Float, word: Word, random: Random): Frame {
+    /**
+     * The word pops, and [shape]s burst from behind it, up and out to both sides, swaying as they rise and fade, each turning by up
+     * to [turn] degrees: Favourite's hearts, and Save's ribbons, which flutter a little more.
+     */
+    private fun burst(t: Float, word: Word, random: Random, shape: Shape, turn: Float): Frame {
         val count = 6 + random.nextInt(3)
         val width = word.right - word.left
         val hearts = (0 until count).mapNotNull { index ->
@@ -88,8 +90,8 @@ object MenuMotion {
             val rise = 12f + 12f * random.nextFloat()
             val own = ((t - delay) / (1f - delay)).takeIf { it in 0f..1f } ?: return@mapNotNull null
             val out = 1f - (1f - own) * (1f - own)
-            Sprite(Shape.Heart, from + (to - from) * out + 2f * sin(own * 2.5f * PI.toFloat() + index), word.middle - rise * out, size,
-                (if (right) 8f else -8f) * own, (own / .12f).coerceAtMost(1f) * fade(own, .55f), behind = true)
+            Sprite(shape, from + (to - from) * out + 2f * sin(own * 2.5f * PI.toFloat() + index), word.middle - rise * out, size,
+                (if (right) turn else -turn) * own, (own / .12f).coerceAtMost(1f) * fade(own, .55f), behind = true)
         }
         return Frame(hearts, wordScale = if (t < POP) 1f + .06f * sin(PI.toFloat() * t / POP) else 1f)
     }
@@ -110,18 +112,6 @@ object MenuMotion {
         )
         val shake = if (s < SHAKE) 1.4f * sin(s / SHAKE * 4 * PI.toFloat()) * (1f - s / SHAKE) else 0f
         return Frame(halves, wordShift = shake)
-    }
-
-    /** Where the ribbon is as it slides down onto the word's left edge, bounces once and settles. */
-    private fun ribbonY(t: Float, word: Word): Float {
-        val land = word.middle - 4f
-        val top = RIBBON / 2
-        if (t < RIBBON_LANDS) {
-            val fall = t / RIBBON_LANDS
-            return top + (land - top) * fall * fall
-        }
-        val bounce = (t - RIBBON_LANDS) / .2f
-        return land - if (bounce < 1f) 3f * sin(PI.toFloat() * bounce) else 0f
     }
 
     /** The ribbon at the word's left edge tears, and its halves drift down and fade. */
@@ -270,6 +260,8 @@ object MenuMotion {
     private const val POP = .3f
     private const val CRACK = .2f
     private const val SHAKE = .3f
-    private const val RIBBON_LANDS = .4f
+    /** How far a burst's hearts and ribbons turn as they fly, in degrees. */
+    private const val HEART_TURN = 8f
+    private const val RIBBON_TURN = 14f
     private const val TEAR = .18f
 }

@@ -205,6 +205,10 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
+  because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
+  and proud of it". (Orchestrator's wording)
+- **Two resets merged** (F's f6f6d87; merge 67cdd95): Reset most things, and Reset literally everything.
 - **Owner's screenshot of build #5** (2026-11-13, 10:38):
   - On the front page the real bar covers the drawn keyboard's bottom row. That was the "keyboard cut off by the bar" report. A
     fixes it so the drawing sits fully above the bar, on the guide's slides too.

@@ -718,9 +718,14 @@ class AtlasIme : InputMethodService() {
         }
         // The guide asks whether the word menu is open, so its demos keep off it, and closes it as a slide changes.
         GuideHooks.menuOpen = { inGuide && menuOpen }
-        GuideHooks.menuCloses = { main.post { if (inGuide) closeMenu() } }
+        // A slide changing closes the menu, and its words start over on the next slide.
+        GuideHooks.menuCloses = { main.post { if (inGuide) {
+            closeMenu()
+            guideMenus.clear()
+        } } }
         // The guide asks whether the bar has words to hold, for its word menu slide. Only in its own field.
         GuideHooks.barCount = { if (inGuide) barWords.size else -1 }
+        GuideHooks.barHolds = { millis -> main.post { if (inGuide) strip?.holdWords(millis) } }
         // The interactive guide acts out a gesture on this bar, only in its own field. See [Strip.playDemo].
         GuideHooks.stripDemos = { demo ->
             main.post {
@@ -1618,8 +1623,10 @@ class AtlasIme : InputMethodService() {
         menuWord = held
         strip?.menuMark = -1
         haptics.play(Haptic.MenuOpen)
-        // The guide's menu is only for show, and its keys say Save and Forget, so it always starts there.
-        strip?.notice = if (inGuide) Strip.Notice.Menu(held.word, true) else menuFor(held.word)
+        // The guide's menu is only for show, but it is the real menu: a word starts unsaved, with nothing to forget, as a word the
+        // keyboard never learned is, and a word it just saved opens saved again, never back at Save (owner, v5.3).
+        strip?.notice = if (inGuide) guideMenus[held.word.lowercase()]?.copy(word = held.word) ?: Strip.Notice.Menu(held.word, false)
+            else menuFor(held.word)
         KeyboardEvents.publish { KeyboardEvent.WordMenu(held.word) }
     }
 
@@ -1664,8 +1671,13 @@ class AtlasIme : InputMethodService() {
         val menu = strip?.notice as? Strip.Notice.Menu ?: return
         if (menuWord !== held) return
         val next = MenuKeys.press(MenuKeys.State(menu.step, menu.base, menu.forget), button) ?: return
-        strip?.notice = menu.copy(step = next.step, base = next.base, forget = next.forget)
+        val pressed = menu.copy(step = next.step, base = next.base, forget = next.forget)
+        strip?.notice = pressed
+        if (inGuide) guideMenus[held.word.lowercase()] = pressed
     }
+
+    /** Where each word stands in the guide's for-show menu, until the slide changes. Nothing reaches the word lists. */
+    private val guideMenus = HashMap<String, Strip.Notice.Menu>()
 
     private fun closeMenu() {
         if (menuWord == null) return
@@ -1785,10 +1797,9 @@ class AtlasIme : InputMethodService() {
                     haptics.play(Haptic.WordUnsaved)
                     menuPressed(held, MenuKeys.Button.Unsave)
                 }
-                // O forgets, for show: on a saved word that's its step down, Unsave, and in the guide it forgets as well, since the
-                // slide teaches Save, then Forget (owner, v5.2: O didn't forget). It shows Forget's own notice, with its haptic,
-                // for as long as the real Undo would, and nothing is forgotten.
-                Strip.Action.Forget, Strip.Action.Unsave -> showGuideForget(held)
+                // Forget only shows for a word the keyboard learned, which no guide word is; if it ever shows, it forgets for show:
+                // Forget's own notice and haptic, for as long as the real Undo would, and nothing is forgotten.
+                Strip.Action.Forget -> showGuideForget(held)
                 else -> Unit
             }
             return
@@ -3427,6 +3438,7 @@ class AtlasIme : InputMethodService() {
         GuideHooks.stripPointWords = null
         GuideHooks.clipSeeds = null
         GuideHooks.barCount = null
+        GuideHooks.barHolds = null
         GuideHooks.clipDismissals = null
         // A held status must not outlive the keyboard.
         if (hold.held) hideHeldWindow()

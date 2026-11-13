@@ -167,8 +167,24 @@ class Strip(
             field = value
             // A word that the guide points at stops when it is no longer in its place.
             if (pointed != null && value.getOrNull(pointedIndex) != pointed) point(null)
+            // While the guide changes slides, the words wait and show once, settled: see [holdWords].
+            if (SystemClock.uptimeMillis() < wordsHeldUntil) return
             render()
         }
+
+    /** Until when the words wait, and the redraw that shows them after. Both start unset, so the init may run before them. */
+    private var wordsHeldUntil = 0L
+    private var wordsRelease: Runnable? = null
+
+    /**
+     * The words don't change on the screen for [millis]; then the latest show, once. The guide's slide change sets the field a few
+     * times over, and the bar showed each of them, five sets in a blink (owner, v5.3).
+     */
+    fun holdWords(millis: Long) {
+        wordsHeldUntil = SystemClock.uptimeMillis() + millis
+        wordsRelease?.let(::removeCallbacks)
+        wordsRelease = Runnable { render() }.also { postDelayed(it, millis) }
+    }
 
     // The guide points at a word: it wiggles up and down in its place until it is picked or changes. See [GuideHooks.stripPoint].
 

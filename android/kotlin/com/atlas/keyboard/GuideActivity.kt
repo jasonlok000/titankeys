@@ -439,6 +439,18 @@ private class CheckSpan(private val colour: Int) : android.text.style.Replacemen
     }
 }
 
+/** Room before a letter, [extra] wide: the gap's box sits in it, so the letter and the rest of the line move over. */
+private class GapRoom(private val extra: Float) : android.text.style.ReplacementSpan() {
+    override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, metrics: Paint.FontMetricsInt?): Int {
+        metrics?.let { paint.getFontMetricsInt(it) }
+        return kotlin.math.ceil(extra + paint.measureText(text, start, end)).toInt()
+    }
+
+    override fun draw(canvas: Canvas, text: CharSequence, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
+        canvas.drawText(text, start, end, x + extra, y.toFloat(), paint)
+    }
+}
+
 private class GuideField(context: Context) : EditText(context) {
     /** Android calls [onSelectionChanged] while it builds the view, so this has to work before it is set. */
     var changed: (() -> Unit)? = null
@@ -493,13 +505,35 @@ private class GuideField(context: Context) : EditText(context) {
             invalidate()
         }
 
-    /** Where a symbol slide's gap is, in the text, or -1: an orange box the width of a letter, where the symbol goes (v5). */
+    /**
+     * Where a symbol slide's gap is, in the text, or -1: an orange box the width of [gapSymbol], where the symbol goes (v5). The text
+     * after it moves over by the box's width, so the box never sits on the next letters (owner, v5.3: it covered "c" and "4").
+     */
     var gap = -1
         set(value) {
             if (field == value) return
             field = value
+            makeRoom()
             invalidate()
         }
+
+    /** The symbol the gap waits for, which sets the box's width. */
+    var gapSymbol = ""
+
+    /** The room made after the gap, on the letter that follows it, if any. */
+    private var room: GapRoom? = null
+
+    private fun makeRoom() {
+        val own = text ?: return
+        room?.let(own::removeSpan)
+        room = null
+        val at = gap
+        if (at < 0 || at >= own.length) return
+        room = GapRoom(gapWidth()).also { own.setSpan(it, at, at + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+    }
+
+    /** The gap's box: its symbol's width and a little either side, never narrower than a letter. */
+    private fun gapWidth() = max(paint.measureText(gapSymbol.ifEmpty { "M" }), paint.measureText("n")) + resources.displayMetrics.density * 6
 
     /** The gap's box, on the line where it is, right where the cursor waits. */
     private fun drawGap(canvas: Canvas, own: android.text.Layout) {
@@ -507,8 +541,8 @@ private class GuideField(context: Context) : EditText(context) {
         if (at < 0 || at > text.length) return
         val line = own.getLineForOffset(at)
         val x = own.getPrimaryHorizontal(at)
-        val wide = paint.measureText("M")
         val unit = resources.displayMetrics.density
+        val wide = gapWidth() - unit * 6
         canvas.save()
         canvas.translate(compoundPaddingLeft.toFloat(), extendedPaddingTop.toFloat())
         targetPaint.color = GuideMotion.faded(GuideColours.ORANGE, GuideActivity.TARGET_WASH)
@@ -750,6 +784,8 @@ class GuideActivity : Activity() {
     private var started = false
     private var seeding = false
     private var panelOpen = false
+    /** The keyboard's window has a panel's room, which can come before it says a panel is open. */
+    private var panelRoom = false
     private var lastKey: String? = null
     private var travel = 0f
     private var lastPoint: FloatArray? = null
@@ -865,7 +901,25 @@ class GuideActivity : Activity() {
     }
 
     private var helpShown = false
-    private val showHelp = Runnable {
+    private val showHelp = Runnable { helpDue() }
+
+    /** Keys down now, as the keyboard reported them: help waits while one is held. */
+    private val heldKeys = HashSet<Int>()
+
+    /** Restarts the help's wait, on any input: help comes after a pause, never in the middle of trying (owner, v5.3). */
+    private fun waitForHelp() {
+        if (helpShown || passed || flow.step.help == null) return
+        main.removeCallbacks(showHelp)
+        main.postDelayed(showHelp, if (flow.step.helpTitle != null) HELP_TITLE_AFTER_MILLIS else HELP_AFTER_MILLIS)
+    }
+
+    private fun helpDue() {
+        // Never while a finger is down, a key is held or the word menu is open: "Hold, don't tap" showed with the menu open, and
+        // the steer help mid-steer. It waits, and asks again.
+        if (fingerDown || heldKeys.isNotEmpty() || GuideHooks.menuOpen?.invoke() == true) {
+            main.postDelayed(showHelp, HELP_RECHECK_MILLIS)
+            return
+        }
         helpShown = true
         val step = flow.step
         val help = step.help
@@ -880,9 +934,10 @@ class GuideActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        GuideFonts.load(this)
         overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
         overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, 0, 0)
-        window.setBackgroundDrawable(ColorDrawable(GuideColours.INK))
+        window.setBackgroundDrawable(ColorDrawable(GuideColours.BLACK))
         window.setDecorFitsSystemWindows(false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
@@ -1070,8 +1125,10 @@ class GuideActivity : Activity() {
             typeface = HEAVY
             gravity = Gravity.CENTER
             maxLines = 1
-            setPadding(dp(12), dp(3), dp(12), dp(3))
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(12f), dp(15).toFloat()))
+            // A finger-sized target, though the pill looks small (owner, v5.3).
+            minHeight = dp(TOUCH)
+            setPadding(dp(16), dp(4), dp(16), dp(4))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(14f), dp(18).toFloat()))
             setOnClickListener { nextPressed() }
         }
         chip = TextView(this).apply {
@@ -1082,9 +1139,9 @@ class GuideActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             includeFontPadding = false
             visibility = View.GONE
-            setPadding(dp(12), dp(6), dp(12), dp(6))
-            setTextColor(GuideColours.INK)
-            background = rounded(GuideColours.CREAM, Radii.LARGE)
+            setPadding(dp(CHIP_SIDE), dp(CHIP_TOP), dp(CHIP_SIDE), dp(CHIP_TOP))
+            setTextColor(GuideColours.CREAM)
+            background = chipBackground()
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
         previous = TextView(this).apply {
@@ -1100,7 +1157,18 @@ class GuideActivity : Activity() {
             typeface = MEDIUM
             setTextColor(GuideColours.INK)
             setHintTextColor(GuideMotion.faded(GuideColours.INK, .45f))
-            highlightColor = GuideMotion.faded(GuideColours.ORANGE, .5f)
+            // A selection is cream, so it never reads as the orange words a slide marks to aim at (owner, v5.3).
+            highlightColor = GuideMotion.faded(GuideColours.CREAM, SELECTION_ALPHA)
+            // No Cut, Copy or Paste toolbar: it covered the instructions, stayed into the next slide, and its Cut and Paste went
+            // round the slides' locks (owner, v5.3). Copy and paste are fn and C or V, as the guide teaches.
+            val noToolbar = object : android.view.ActionMode.Callback {
+                override fun onCreateActionMode(mode: android.view.ActionMode, menu: android.view.Menu) = false
+                override fun onPrepareActionMode(mode: android.view.ActionMode, menu: android.view.Menu) = false
+                override fun onActionItemClicked(mode: android.view.ActionMode, item: android.view.MenuItem) = false
+                override fun onDestroyActionMode(mode: android.view.ActionMode) = Unit
+            }
+            customSelectionActionModeCallback = noToolbar
+            customInsertionActionModeCallback = noToolbar
             setTextCursorDrawable(GradientDrawable().apply {
                 setColor(GuideColours.ORANGE)
                 setSize(dp(3), dp(20))
@@ -1244,7 +1312,9 @@ class GuideActivity : Activity() {
             addView(chapter, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(again, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(guideAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(settingsAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(settingsAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = dp(8)
+            })
             addView(next, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 marginStart = dp(10)
             })
@@ -1319,6 +1389,10 @@ class GuideActivity : Activity() {
             // Only the keyboard's own height counts: an open panel is much taller, and keeping its room after it closed squashed the
             // keys and left a gap for the rest of the guide (owner, v5: slide 12). The panel's room counts only while it's open.
             val panelSized = steadyBottom > 0 && bars.bottom > steadyBottom + dp(PANEL_EXTRA)
+            // A panel's room arrives before the keyboard says the panel is open: the drawing hides at once, so its rows never peek
+            // above the panel or get cut by it (owner, v5.3).
+            panelRoom = panelSized
+            if (panelSized && ::keys.isInitialized) keys.visibility = View.GONE
             if (guideLooks != true) steadyBottom = 0
             else if (!panelOpen && !panelSized) steadyBottom = maxOf(steadyBottom, bars.bottom)
             val bottom = (if (panelOpen) maxOf(bars.bottom, steadyBottom) else maxOf(steadyBottom, if (panelSized) 0 else bars.bottom)) + dp(8)
@@ -1426,7 +1500,7 @@ class GuideActivity : Activity() {
     private fun atEnd() = !playground && ::finaleView.isInitialized && finaleView.visibility == View.VISIBLE
 
     /** The field's own colour on the slides, for a word in a demo to fade into. */
-    private fun fieldFill() = if (guideLooks == true) GuideMotion.blend(GuideColours.INK, GuideColours.CREAM, FIELD_FILL) else GuideColours.CREAM
+    private fun fieldFill() = if (guideLooks == true) GuideMotion.blend(GuideColours.BLACK, GuideColours.CREAM, FIELD_FILL) else GuideColours.CREAM
 
     /** The grey of what isn't typed yet: the ghost ahead of the cursor, and a demo's words. */
     private fun ghostGrey() = if (guideLooks == true) GuideMotion.faded(GuideColours.CREAM, GHOST_ALPHA) else GuideMotion.faded(GuideColours.INK, PHANTOM_ALPHA)
@@ -1459,16 +1533,21 @@ class GuideActivity : Activity() {
         setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(19).toFloat()))
     }
 
+    /** A button in the header: finger-sized, a pill (owner, v5.3: the front page's were tiny). */
     private fun topAction(text: String, press: () -> Unit) = TextView(this).apply {
         this.text = text
-        typeface = HEAVY
+        typeface = MEDIUM
         gravity = Gravity.CENTER
         includeFontPadding = false
         maxLines = 1
-        setPadding(dp(10), dp(6), dp(10), dp(6))
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(13f), dp(17).toFloat()))
+        minHeight = dp(TOUCH)
+        setPadding(dp(16), 0, dp(16), 0)
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, min(sp(15f), dp(19).toFloat()))
         setOnClickListener { press() }
     }
+
+    /** The guide's one chip, for every chip and hint: a pill of the divider colour with cream words. */
+    private fun chipBackground() = rounded(GuideColours.DIVIDER, Radii.LARGE)
 
     /**
      * The drawing of the keys is exactly the real keyboard's size: the whole screen's width, past the column's sides, and the
@@ -1479,40 +1558,64 @@ class GuideActivity : Activity() {
         val free = root.height - column.paddingTop - column.paddingBottom
         if (root.width == 0 || free <= 0) return
         val compact = free < dp(COMPACT_HEIGHT)
+        // The rest of the column has to fit above the keys, or the keys are cut at the bottom (owner, v5.3: the bottom row went
+        // under the bar). Too short, and the field gives a line; shorter still, and the keys drop their bottom row.
+        val above = (0 until column.childCount).map(column::getChildAt).filter { it !== keys && it !== spacer && it !== lowerSpacer && it.visibility != View.GONE }
+            .sumOf { child -> child.height + ((child.layoutParams as? LinearLayout.LayoutParams)?.let { it.topMargin + it.bottomMargin } ?: 0) }
+        keys.lettersOnly = false
+        if (guideLooks == true && above > 0 && above + keys.heightFor(root.width) + dp(8) > free) {
+            if (field.maxLines > FIELD_LINES - 1) for (view in listOf<TextView>(field, phantom)) {
+                view.minLines = FIELD_LINES - 1
+                view.maxLines = FIELD_LINES - 1
+            }
+            val saved = field.lineHeight
+            keys.lettersOnly = above - saved + keys.heightFor(root.width) + dp(8) > free
+        }
         val target = if (compact) 0 else keys.heightFor(root.width)
         val params = keys.layoutParams as LinearLayout.LayoutParams
+        // Shown or not follows every change of room, a panel's coming or going too, even when the size stays.
+        keys.visibility = if (target == 0 || atEnd() || panelOpen || panelRoom) View.GONE else View.VISIBLE
         if (params.height == target && params.leftMargin == -column.paddingLeft && params.rightMargin == -column.paddingRight) return
         params.height = target
         params.leftMargin = -column.paddingLeft
         params.rightMargin = -column.paddingRight
-        keys.visibility = if (target == 0 || atEnd() || panelOpen) View.GONE else View.VISIBLE
         root.post { keys.requestLayout() }
     }
 
-    private fun backgroundOf(tone: GuideTone) = if (tone == GuideTone.Orange) GuideColours.ORANGE else GuideColours.INK
+    private fun backgroundOf(tone: GuideTone) = if (tone == GuideTone.Orange) GuideColours.ORANGE else GuideColours.BLACK
 
     /** The words take the colours of the background: cream on ink while you try, ink on orange once it is done. */
     private fun applyTone(next: GuideTone) {
         tone = next
         val onInk = next == GuideTone.Ink
         val strong = if (onInk) GuideColours.CREAM else GuideColours.INK
-        title.setTextColor(strong)
+        // On black, the titles and the chapter's name are the orange accent; on the pass's orange, they're ink (v5.3).
+        val accent = if (onInk) GuideColours.ORANGE else GuideColours.INK
+        title.setTextColor(accent)
         body.setTextColor(GuideMotion.faded(strong, BODY_ALPHA))
         // A hint says what happened, calmly: it is not a mistake that counts.
-        hint.setTextColor(strong)
-        hint.background = rounded(GuideMotion.faded(strong, HINT_FILL), HINT_RADIUS)
+        // The guide's one chip style (owner, v5.3): the chip and the hint alike.
+        hint.setTextColor(GuideColours.CREAM)
+        hint.background = chipBackground()
         offer.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
-        offer.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
+        offer.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.BLACK, OFFER_RADIUS)
         again.setTextColor(strong)
         paintEndButtons()
         for (index in 0 until endButtons.childCount) (endButtons.getChildAt(index) as TextView).let { line ->
             if (line !== boringButton && line !== shareButton && line !== againLink) line.setTextColor(GuideMotion.faded(strong, BODY_ALPHA))
         }
         roastView.setTextColor(strong)
-        guideAction.setTextColor(strong)
-        settingsAction.setTextColor(strong)
+        // The front page's two buttons: Guide filled in orange, the one to try first; Settings outlined (owner, v5.3).
+        guideAction.setTextColor(GuideColours.INK)
+        guideAction.background = rounded(GuideColours.ORANGE, Radii.LARGE)
+        settingsAction.setTextColor(GuideColours.ORANGE)
+        settingsAction.background = GradientDrawable().apply {
+            setColor(Color.TRANSPARENT)
+            setStroke(dp(1).coerceAtLeast(2), GuideColours.ORANGE)
+            cornerRadius = Radii.px(resources, Radii.LARGE)
+        }
         close.imageTintList = ColorStateList.valueOf(strong)
-        chapter.setTextColor(GuideMotion.faded(strong, CHAPTER_ALPHA))
+        chapter.setTextColor(if (onInk) accent else GuideMotion.faded(strong, CHAPTER_ALPHA))
         keys.tone = next
         paintNext()
         paintSegments(flow.stepIndex)
@@ -1533,7 +1636,7 @@ class GuideActivity : Activity() {
         // Skip is an outline; once the slide is passed it's a filled orange Next.
         if (passed) {
             next.setTextColor(GuideColours.INK)
-            next.background = rounded(if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
+            next.background = rounded(if (tone == GuideTone.Ink) GuideColours.ORANGE else GuideColours.BLACK, OFFER_RADIUS)
             if (tone != GuideTone.Ink) next.setTextColor(GuideColours.CREAM)
         } else {
             next.setTextColor(GuideMotion.faded(strong, NEXT_WAITING))
@@ -1620,6 +1723,9 @@ class GuideActivity : Activity() {
     }
 
     private fun enter(step: GuideStep) {
+        heldKeys.clear()
+        // The field is set a few times as the slide opens: the bar shows only where it settles.
+        GuideHooks.holdBar(BAR_SETTLE_MILLIS)
         guideLook(true)
         showBigNext(false)
         hideChip(now = true)
@@ -1865,6 +1971,7 @@ class GuideActivity : Activity() {
     private fun startPassage(text: String) {
         if (text.isEmpty()) return
         passage = Passage(text)
+        sentenceStarts = null
         passageFrom = field.length()
         passageLayout = null
         passageLine = -1
@@ -1914,6 +2021,18 @@ class GuideActivity : Activity() {
         val cycle = track.next - next
         val line = layout.getLineForOffset(passage.ranges[next].first)
         val styled = passageSpans(track, next, cycle)
+        if (playground) {
+            // The front page shows the whole sentence you're in, wrapped by words, never cut (owner, v5.3).
+            val starts = sentenceStarts ?: PlaygroundText.sentenceStarts(passage.words).also { sentenceStarts = it }
+            val words = PlaygroundText.sentenceAround(starts, count, next)
+            val from = passage.ranges[words.first].first
+            val to = passage.ranges[words.last].last + 1
+            script.maxLines = PROMPT_LINES
+            script.setLines(PROMPT_LINES)
+            script.scrollTo(0, 0)
+            script.text = styled.subSequence(from, to)
+            return
+        }
         // The line after the last is the first again, as the script starts over.
         fun lineText(at: Int): CharSequence {
             val wrapped = at.mod(layout.lineCount)
@@ -1952,6 +2071,9 @@ class GuideActivity : Activity() {
             start()
         }
     }
+
+    /** The front page's sentences, by the word each starts at, for its passage. */
+    private var sentenceStarts: List<Int>? = null
 
     /** The whole passage, coloured for where typing is: right words grey, skipped ones boxed, the word you're on underlined. */
     private fun passageSpans(track: Passage.Track, next: Int, cycle: Int): SpannableStringBuilder {
@@ -2201,8 +2323,17 @@ class GuideActivity : Activity() {
         if (text.isNotEmpty()) built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         val gap = if (text.isEmpty() || text.endsWith(' ')) "" else " "
         val next = passage.wordAt(passage.track(typedSince(text)).next)
+        // On a symbol slide what the demo types goes in the gap, where the cursor waits, never after the line (owner, v5.3: a
+        // grey "p" sat after the line).
+        val inGap = field.gap.takeIf { it in 0..text.length }
         fun add(added: String) {
             if (added.isEmpty()) return
+            if (inGap != null) {
+                val shown = added.trim()
+                built.insert(inGap, shown)
+                built.setSpan(ForegroundColorSpan(grey), inGap, inGap + shown.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                return
+            }
             val start = built.length
             built.append(added)
             built.setSpan(ForegroundColorSpan(grey), start, built.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -2608,7 +2739,8 @@ class GuideActivity : Activity() {
         hideHint()
         guideAction.visibility = View.VISIBLE
         settingsAction.visibility = View.VISIBLE
-        chapter.text = PLAYGROUND_LABEL
+        // The name below says it all: the header has only its two buttons, on the right.
+        chapter.text = ""
         // The playground's own text, made for speed, in a new order each time.
         startPassage(PlaygroundText.make(kotlin.random.Random(SystemClock.uptimeMillis())))
         swapIn(title, PLAYGROUND_TITLE, 0)
@@ -2667,6 +2799,7 @@ class GuideActivity : Activity() {
             else -> null
         }
         // A symbol slide's gap, while it's empty: where the cursor waits for the symbol.
+        field.gapSymbol = step.symbol.orEmpty()
         field.gap = if (playground || guideLooks != true || passed || step.symbol == null || step.line.isEmpty() ||
             text.trimEnd() != gapSeed(step.line, step.symbol).trimEnd()) -1 else gapCursor(step.line, step.symbol)
         field.target = range
@@ -2808,6 +2941,7 @@ class GuideActivity : Activity() {
             lastPoint = point
         }
         keys.trace(points, reset, lifted)
+        waitForHelp()
         if (lifted) freezeRegrets()
         acted()
         if (!busy && ready) judge(KeyboardEvent.Moved(travel, lifted))
@@ -2937,12 +3071,18 @@ class GuideActivity : Activity() {
     private fun handle(event: KeyboardEvent) {
         if (playground) countWpm(event)
         // The keyboard reports its modifiers whenever it redraws them, as when a slide opens a panel. That is not you acting.
-        if (::phantom.isInitialized && event !is KeyboardEvent.ModifierState) acted()
+        if (::phantom.isInitialized && event !is KeyboardEvent.ModifierState) {
+            acted()
+            waitForHelp()
+        }
         when (event) {
             is KeyboardEvent.Pushed -> keyName(event.code)?.let {
                 lastKey = it
-                keys.light(it)
+                // The right Shift is the second ⇧ of the drawing; every other key has one.
+                keys.press(it, if (event.code == KeyEvent.KEYCODE_SHIFT_RIGHT) 1 else 0)
+                heldKeys += event.code
             }
+            is KeyboardEvent.Released -> heldKeys -= event.code
             is KeyboardEvent.Resting -> if (event.key.isNotEmpty()) {
                 keys.light(event.key)
                 keys.touched()
@@ -2952,7 +3092,7 @@ class GuideActivity : Activity() {
                 panelOpen = event.panel != Modifiers.Panel.Closed
                 // The drawing of the keys never covers the real keyboard or its panels (owner, v5.2): it hides while a panel
                 // (Sym, emoji or clipboard) is open, and comes back as it closes. The panel shows the same keys itself.
-                keys.visibility = if (keys.layoutParams.height > 0 && !atEnd() && !panelOpen) View.VISIBLE else View.GONE
+                keys.visibility = if (keys.layoutParams.height > 0 && !atEnd() && !panelOpen && !panelRoom) View.VISIBLE else View.GONE
                 // The panel's room is the keyboard's only while it's open: closed, the slide gets it back (owner, v5: slide 12).
                 root.requestApplyInsets()
                 altOn = event.alt != Modifiers.Level.Off
@@ -3036,6 +3176,23 @@ class GuideActivity : Activity() {
             haptics.play(Haptic.GuideBlocked)
             showChip(RUDE_CLIP, force = true)
         }
+        // The held delete only ever takes the regrets (owner, v5.3: it went on 1.1 s past the lift and ate the line's first word).
+        // Once they're gone, deleting is locked for the slide, and a word of the line that goes anyway comes straight back.
+        if (event is KeyboardEvent.FieldChanged && step.id == "hold") {
+            if (holdTarget(event.text, event.start) == null) GuideHooks.lessons = emptySet()
+            if (!event.text.startsWith(HOLD_LEAD)) {
+                val tail = event.text.substring(event.start.coerceIn(0, event.text.length)).trimStart()
+                val mended = HOLD_LEAD + tail.removePrefix(HOLD_LEAD)
+                main.post {
+                    if (flow.step !== step || field.text.toString() == mended) return@post
+                    seeding = true
+                    field.setText(mended)
+                    field.setSelection(HOLD_LEAD.length.coerceAtMost(field.length()))
+                    seeding = false
+                    flow.seed(field.text.toString(), field.selectionStart)
+                }
+            }
+        }
         // A wrong symbol in a symbol slide's gap is taken back out at once, so the right one passes on its own (owner, v5.2). The
         // slide's check says so with its chip.
         val symbol = step.symbol
@@ -3071,7 +3228,7 @@ class GuideActivity : Activity() {
         busy = false
         main.removeCallbacks(settleReaction)
         next.text = "Skip"
-        backdrop.wipeTo(GuideColours.INK)
+        backdrop.wipeTo(GuideColours.BLACK)
         main.postDelayed({ if (!passed) applyTone(GuideTone.Ink) }, WIPE_MILLIS)
         title.animate().cancel()
         title.scaleX = 1f
@@ -3606,7 +3763,7 @@ class GuideActivity : Activity() {
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
         }
         val scrim = FrameLayout(this).apply {
-            setBackgroundColor(GuideMotion.faded(GuideColours.INK, LEAVE_SCRIM))
+            setBackgroundColor(GuideMotion.faded(GuideColours.BLACK, LEAVE_SCRIM))
             isClickable = true
             setOnClickListener { closeLeavePopup() }
             addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER).apply {
@@ -3674,7 +3831,7 @@ class GuideActivity : Activity() {
         val onInk = tone == GuideTone.Ink
         val strong = if (onInk) GuideColours.CREAM else GuideColours.INK
         boringButton.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
-        boringButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
+        boringButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.BLACK, OFFER_RADIUS)
         againLink.setTextColor(strong)
         againLink.background = GradientDrawable().apply {
             setColor(Color.TRANSPARENT)
@@ -3683,7 +3840,7 @@ class GuideActivity : Activity() {
         }
         if (Contributions.enabled(this)) {
             shareButton.setTextColor(if (onInk) GuideColours.INK else GuideColours.CREAM)
-            shareButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.INK, OFFER_RADIUS)
+            shareButton.background = rounded(if (onInk) GuideColours.ORANGE else GuideColours.BLACK, OFFER_RADIUS)
         } else {
             shareButton.setTextColor(strong)
             shareButton.background = GradientDrawable().apply {
@@ -3958,8 +4115,9 @@ class GuideActivity : Activity() {
         private const val PLAYGROUND_BODY = "Type or swipe whatever you like. Follow the line above, or ignore it."
 
         // The look, in dp. These are safe to change. Words fit their box at any system font size, because the boxes set their size.
-        private val HEAVY: Typeface = Typeface.create(Typeface.DEFAULT, 900, false)
-        private val MEDIUM: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        // Ink's font (v5.3): GuideFonts is loaded first thing in onCreate, before anything is built.
+        private val HEAVY: Typeface get() = GuideFonts.loadedHeavy
+        private val MEDIUM: Typeface get() = GuideFonts.loadedMedium
         /** The same as the key columns' side, so that the drawn keys line up with the Sym panel's labels. */
         private const val GUTTER = Layout.KEY_SIDE_DP
         private const val TOP_ACTION = 32
@@ -3985,7 +4143,12 @@ class GuideActivity : Activity() {
         /** The room between two chapters in the bar: wider than between two slides' ticks. */
         private const val CHAPTER_GAP = 6
         /** ✕, in the top right corner. */
-        private const val CLOSE_SIZE = 44
+        private const val CLOSE_SIZE = 48
+        /** The least height of anything to touch. */
+        private const val TOUCH = 44
+        /** The chip's padding. */
+        private const val CHIP_SIDE = 14
+        private const val CHIP_TOP = 7
         /** Next, once a slide is passed: a normal button. */
         private const val NEXT_SP = 17f
         private const val NEXT_DP = 22
@@ -4032,6 +4195,14 @@ class GuideActivity : Activity() {
         private const val SLOGAN_DELAY_MILLIS = 260L
         /** A slide's help shows this soon (v5: sooner, so the hint is there before anyone gives up). */
         private const val HELP_AFTER_MILLIS = 5000L
+        /** How soon help that had to wait for a finger, a key or the menu looks again. */
+        private const val HELP_RECHECK_MILLIS = 700L
+        /** The front page's prompt: room for a whole sentence. */
+        private const val PROMPT_LINES = 3
+        /** How long the bar's words wait as a slide opens, so it shows the slide's words once. */
+        private const val BAR_SETTLE_MILLIS = 450L
+        /** How strong a selection's cream is in the field. */
+        private const val SELECTION_ALPHA = .32f
         /** How long Alt or the panel must stay on before the guide says so. */
         private const val MODIFIER_HINT_MILLIS = 350L
         /** How strong the words after the next one are in that line. */

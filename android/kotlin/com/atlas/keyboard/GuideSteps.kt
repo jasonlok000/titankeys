@@ -415,6 +415,28 @@ internal object PlaygroundText {
     const val SLIP_GAP_MIN = 35
     const val SLIP_GAP_MAX = 70
 
+    /**
+     * Where each sentence of a [make] text starts, by word: the text has no marks, so the sentences are found by their words. The
+     * front page shows the whole sentence you're in, never a line cut out of the middle of one (owner, v5.3).
+     */
+    fun sentenceStarts(words: List<String>): List<Int> {
+        val known = (SENTENCES + SLIP).map { it.split(' ') }
+        val starts = ArrayList<Int>()
+        var at = 0
+        while (at < words.size) {
+            starts += at
+            val match = known.filter { at + it.size <= words.size && words.subList(at, at + it.size) == it }.maxOfOrNull { it.size }
+            at += match ?: 1
+        }
+        return starts
+    }
+
+    /** The words of the sentence that word [index] is in, from its first to after its last. */
+    fun sentenceAround(starts: List<Int>, count: Int, index: Int): IntRange {
+        val at = starts.indexOfLast { it <= index }.coerceAtLeast(0)
+        return (starts.getOrNull(at) ?: 0) until (starts.getOrNull(at + 1) ?: count)
+    }
+
     /** A long text in a random order, about [count] words, with the slip in a few places. */
     fun make(random: kotlin.random.Random, count: Int = 600): String {
         val words = ArrayList<String>()
@@ -874,7 +896,7 @@ internal fun huntLine(line: String, seconds: Int) = "$line $seconds s"
 /** The word menu's buttons, on the keys that pick them, as the drawing of the keys hints them one at a time. */
 // K and L work as I and O, and Backspace as P (see [MenuKeys.hovered]), so their keys say so too (owner, v5.2).
 internal val MENU_SAVE = mapOf("I" to "Save", "K" to "Save", "P" to "Back", Layout.BACKSPACE to "Back")
-internal val MENU_FORGET = mapOf("O" to "Forget", "L" to "Forget", "P" to "Back", Layout.BACKSPACE to "Back")
+internal val MENU_UNSAVE = mapOf("O" to "Unsave", "L" to "Unsave", "P" to "Back", Layout.BACKSPACE to "Back")
 
 /** The words that the Grab a bunch slide marks in orange to select. */
 internal const val GRAB_PHRASE = "my whole heart"
@@ -1043,7 +1065,7 @@ internal val GUIDE_STEPS = listOf(
     ),
     GuideStep(
         id = "menu", chapter = GuideChapter.Typing,
-        title = "Save a word. Then dump it.",
+        title = "Save a word. Then unsave it.",
         stages = listOf(
             GuideStage("Hold any word on the bar until its menu opens.") { event ->
                 when (event) {
@@ -1058,25 +1080,24 @@ internal val GUIDE_STEPS = listOf(
                 when {
                     event is MenuPicked && event.action == "Save" -> GuideVerdict.Done
                     event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint("Closed it. Hold the word again.", stage = 0)
-                    // O first forgets it at once, for show, and the menu is gone: hold it again, and save it first.
-                    event is MenuPicked && event.action == "Forget" ->
-                        GuideVerdict.Hint("Dumped it unsaved. Cold. Hold it again, save first.", stage = 0)
+                    // A word saved already, on this slide, opens saved: O on it is the next step.
+                    event is MenuPicked && event.action == "Unsave" -> GuideVerdict.Finished
                     else -> GuideVerdict.Wait
                 }
             },
-            GuideStage("Now press O to forget it.", GuideCue.Spot(listOf("O"), rounds = 1), MENU_FORGET) { event ->
+            // The real menu's next step (owner, v5.3): on a saved word O is Unsave, the broken bookmark. The guide teaches that.
+            GuideStage("Now press O to unsave it.", GuideCue.Spot(listOf("O"), rounds = 1), MENU_UNSAVE) { event ->
                 when {
-                    // On a saved word O is a step down, and in the guide it forgets, for show, as Forget does (owner, v5.2).
-                    event is MenuPicked && (event.action == "Forget" || event.action == "Unsave") -> GuideVerdict.Done
-                    // I again makes it a favourite, and then O takes that back first.
-                    event is MenuPicked && event.action == "Favourite" -> chip("A favourite. Fancy. O, and O again.")
-                    event is MenuPicked && event.action == "Unfavourite" -> chip("Unfavourited. Once more, O forgets.")
+                    event is MenuPicked && event.action == "Unsave" -> GuideVerdict.Done
+                    // I again makes it a favourite, and O steps it back down to saved first.
+                    event is MenuPicked && event.action == "Favourite" -> chip("A favourite. Fancy. O steps it back down.")
+                    event is MenuPicked && event.action == "Unfavourite" -> chip("Saved again. Now O unsaves it.")
                     event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint("Closed it. Hold the word again.", stage = 0)
                     else -> GuideVerdict.Wait
                 }
             },
         ),
-        done = "Saved, then dumped. Cold.",
+        done = "Saved, then unsaved. Cold.",
         praise = "I twice makes a favourite. P closes the menu.",
         line = MENU_LINE,
         seed = MENU_LINE,
@@ -1210,7 +1231,16 @@ internal val GUIDE_STEPS = listOf(
                 when {
                     event is CursorStarted && event.words -> GuideVerdict.Done
                     event is CursorStarted -> chip("That's two. Count to three. We believe in you.")
-                    event is FieldChanged && event.end > event.start -> chip("One word? I'm worth more than that.")
+                    // The held third tap picks a word first, then the slide starts: only a word picked and let go is one word
+                    // (owner, v5.3: a right held third tap was told "One word?").
+                    event is FieldChanged && event.end > event.start -> {
+                        mark = 2
+                        GuideVerdict.Wait
+                    }
+                    event is Moved && event.lifted && mark == 2 -> {
+                        mark = -1
+                        chip("One word? I'm worth more than that.")
+                    }
                     else -> GuideVerdict.Wait
                 }
             },
@@ -1558,7 +1588,14 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
         }
         GuideLesson.Backspace.name -> if (GuideLesson.Flick in open) "Backspace is blocked. Flick it." else
             "Backspace is blocked here. Nothing to delete."
-        GuideLesson.Swipe.name -> "Swiping's blocked here. Type it. Swiping's next."
+        // Each fits its own slide (owner, v5.3: the typing slide's line showed on the delete slides).
+        GuideLesson.Swipe.name -> when (step.chapter) {
+            GuideChapter.Typing -> "Swiping's blocked here. Type it. Swiping's next."
+            GuideChapter.Delete -> if (GuideLesson.Flick in open) "Swiping's blocked here. Flick from Backspace." else
+                "Swiping's blocked here. Backspace this one."
+            GuideChapter.Steering -> "Swiping's blocked here. Taps on Space steer."
+            else -> "Swiping's blocked on this slide. Not this way."
+        }
         GuideLesson.BarTap.name -> if (step.id == "type") "The bar's blocked here. Type it, typo and all." else
             "The bar's blocked here. Do it with the keys."
         GuideLesson.BarHold.name -> "Holding bar words is blocked here. That's later."

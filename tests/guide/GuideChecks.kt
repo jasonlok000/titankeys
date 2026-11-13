@@ -362,6 +362,7 @@ fun main() {
     demonstrationsTypePunctuation()
     // Drawings of the slides in the new layout, to look at without a phone. See SlideRenders.kt.
     System.getenv("SLIDES_PNG")?.let { drawSlides(it, NEW_LAYOUT + GuideChapter.End) }
+    System.getenv("FRONT_PNG")?.let { drawFrontPage(it) }
     println("Guide checks passed")
 }
 
@@ -436,6 +437,14 @@ private fun oneStepForEachIdea() {
     same(byId.getValue("selectmore").cue, GuideCue.Taps(3, drag = true), "Selecting more is three taps and a slide")
     same(GUIDE_STEPS.filter { it.nearMiss }.map { it.id }, emptyList<String>(), "No slide misses on purpose any more (v5.2)")
     same(GUIDE_STEPS.filter { it.forceFix }.map { it.id }, listOf("type", "swipe"), "Typed or swiped, any word becomes the line's next")
+    // The front page's prompt is whole sentences (v5.3).
+    val front = PlaygroundText.make(kotlin.random.Random(7)).split(' ')
+    val starts = PlaygroundText.sentenceStarts(front)
+    same(starts.first() == 0 && starts.zipWithNext().all { (a, b) -> b - a >= 3 }, true, "Every sentence found is a real one")
+    val around = PlaygroundText.sentenceAround(starts, front.size, 40)
+    same(40 in around && around.first in starts, true, "A word's sentence starts where a sentence does")
+    for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.Typing && it.chapter != GuideChapter.End })
+        same(blockedChip(step, GuideLesson.Swipe.name).contains("Type it"), false, "${step.id}'s swipe chip fits its own slide")
     same(byId.getValue("swipe").lessons.orEmpty().contains(GuideLesson.BarTap), false, "No slide teaches picking from the bar")
     same(GuideHooks.takeNearMiss(GuideHooks.FIELD), false, "Nothing is asked for until the step asks")
     GuideHooks.nearMiss = true
@@ -521,17 +530,17 @@ private fun oneInstructionAtATime() {
     same(menu.event(WordMenu("to")), GuideVerdict.Stage(1), "The menu opens, so Save is next")
     same(menu.labels to menu.cue, MENU_SAVE to GuideCue.Spot(listOf("I"), rounds = 1), "I lights once: Save")
     same(MENU_SAVE["K"] to MENU_SAVE[Layout.BACKSPACE], "Save" to "Back", "K works as I, and Backspace as P, and they say so")
-    same(menu.event(MenuPicked("Save")), GuideVerdict.Stage(2), "Saved, so Forget is next")
-    same(menu.labels to menu.cue, MENU_FORGET to GuideCue.Spot(listOf("O"), rounds = 1), "then O: Forget")
-    same(MENU_FORGET["L"], "Forget", "L works as O")
+    same(menu.event(MenuPicked("Save")), GuideVerdict.Stage(2), "Saved, so Unsave is next, as the real menu's O")
+    same(menu.labels to menu.cue, MENU_UNSAVE to GuideCue.Spot(listOf("O"), rounds = 1), "then O: Unsave")
+    same(MENU_UNSAVE["L"], "Unsave", "L works as O")
     same(menu.event(MenuPicked("Favourite")) is GuideVerdict.Hint, true, "I again makes a favourite, and the slide says so")
     same(menu.event(MenuPicked("Unfavourite")) is GuideVerdict.Hint, true, "O takes the favourite back first")
-    same(menu.event(MenuPicked("Unsave")), GuideVerdict.Done, "O on the saved word forgets it, in the guide, and finishes it")
+    same(menu.event(MenuPicked("Unsave")), GuideVerdict.Done, "Unsave on the saved word finishes it")
     val early = GuideFlow({ GuideSettings() })
     early.start("menu")
     early.event(WordMenu("to"))
-    same(early.event(MenuPicked("Forget")).let { it is GuideVerdict.Hint && it.stage == 0 }, true,
-        "O before saving dumps it, and the slide starts over: hold it again")
+    same(early.event(MenuPicked("Unsave")), GuideVerdict.Done, "A word saved already opens saved: Unsave straight away counts")
+    for (stage in GUIDE_STEPS.first { it.id == "menu" }.stages) same(stage.text.contains("O, and O again"), false, "No O, and O again")
     same(early.event(MenuPicked("Close")).let { it is GuideVerdict.Hint || it == GuideVerdict.Wait }, true, "Closed, it waits for a hold")
 }
 
@@ -797,7 +806,12 @@ private fun scenarios() {
     val more = GuideFlow({ GuideSettings() })
     more.start("selectmore")
     same(title(more.event(CursorStarted(false))).startsWith("That's two"), true, "Two taps, the second held, steer")
-    same(title(more.event(FieldChanged("a b", 0, 1))).startsWith("One word"), true, "Three taps that lift pick one word")
+    same(more.event(FieldChanged("a b", 0, 1)), GuideVerdict.Wait, "A held third tap picks a word first: no scolding yet")
+    same(title(more.event(Moved(0f, true))).startsWith("One word"), true, "Three taps that lift pick one word")
+    val held = GuideFlow({ GuideSettings() })
+    held.start("selectmore")
+    held.event(FieldChanged("a b", 0, 1))
+    same(held.event(CursorStarted(true)), GuideVerdict.Stage(1), "and the held third tap that starts the slide passes the step")
 
     val holdsym = GuideFlow({ GuideSettings() })
     holdsym.start("holdsym")

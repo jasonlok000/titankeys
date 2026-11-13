@@ -22,8 +22,40 @@ import kotlin.math.sin
 /** The guide's brand colours. They are the values in lib/brand.ts and the app icon. */
 internal object GuideColours {
     const val ORANGE = 0xFFEF804E.toInt()
+    /** Only as text, or a button, on orange: no background is ink any more (owner, v5.3: pure black and orange). */
     const val INK = 0xFF160A04.toInt()
     const val CREAM = 0xFFFFF1E6.toInt()
+    /** Every background (v5.3). */
+    const val BLACK = 0xFF000000.toInt()
+    /** Secondary text, and hairlines: lib/brand.ts's MUTED and DIVIDER. */
+    const val MUTED = 0xFF99918A.toInt()
+    const val DIVIDER = 0xFF2A2623.toInt()
+}
+
+/**
+ * Ink's font, Inter, for everything the guide and its screens draw (owner, v5.3: no Roboto): Regular, Medium, and the real Bold
+ * for titles and bold text, from the official Inter 4.1 release (OFL). Loaded once, from any context.
+ */
+internal object GuideFonts {
+    @Volatile private var regular: android.graphics.Typeface? = null
+    @Volatile private var medium: android.graphics.Typeface? = null
+    @Volatile private var heavy: android.graphics.Typeface? = null
+
+    fun load(context: Context) {
+        if (heavy != null) return
+        val res = context.applicationContext.resources
+        regular = runCatching { res.getFont(R.font.inter_regular) }.getOrNull()
+        medium = runCatching { res.getFont(R.font.inter_medium) }.getOrNull()
+        heavy = runCatching { res.getFont(R.font.inter_bold) }.getOrNull()
+            ?: android.graphics.Typeface.create(medium ?: android.graphics.Typeface.DEFAULT, 700, false)
+    }
+
+    fun regular(context: Context) = load(context).let { regular ?: android.graphics.Typeface.DEFAULT }
+    fun medium(context: Context) = load(context).let { medium ?: android.graphics.Typeface.DEFAULT }
+    fun heavy(context: Context) = load(context).let { heavy ?: android.graphics.Typeface.DEFAULT_BOLD }
+    /** The same, once [load] has run: for code with no context at hand. */
+    val loadedMedium get() = medium ?: android.graphics.Typeface.DEFAULT
+    val loadedHeavy get() = heavy ?: android.graphics.Typeface.DEFAULT_BOLD
 }
 
 /** Time for the guide's motion. It follows Android's animator duration setting, and with animations off every motion ends at once. */
@@ -78,7 +110,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        typeface = Typeface.create(Typeface.DEFAULT, 800, false)
+        typeface = GuideFonts.heavy(context)
         textAlign = Paint.Align.CENTER
     }
     private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -98,7 +130,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val altPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = Typeface.create(Typeface.DEFAULT, 600, false) }
+    private val altPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = GuideFonts.medium(context) }
     /** The symbol that Alt types on each letter key, read from the phone's own keyboard, as it is printed on the key. */
     private val altSymbols = keys.filter { it.letter }.mapNotNull { key ->
         Keys.letter(key.name, android.view.KeyEvent.META_ALT_ON)?.let { key.name to it }
@@ -168,6 +200,19 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         invalidate()
     }
 
+    /**
+     * A real key pressed: only that key lights, the [nth] of its name for the two Shifts (owner, v5.3: both lit for one press), and
+     * the finger's light goes, since the touchpad can read a finger on Sym as being on Enter beside it.
+     */
+    fun press(name: String, nth: Int = 0) {
+        keys.filter { it.name == name }.getOrNull(nth)?.heat = 1f
+        pressedAt = GuideMotion.now()
+        invalidate()
+    }
+
+    /** When a real key was last pressed: the finger's light stays off for a moment after. */
+    private var pressedAt = -1L
+
     /** The key that [name] names turns over and shows its [symbol]. */
     fun flip(name: String, symbol: String) {
         val key = byName[name] ?: return
@@ -181,6 +226,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     fun trace(points: List<FloatArray>, reset: Boolean, lifted: Boolean) {
         if (reset) trail.clear()
         trail.addAll(points)
+        // A long steer kept every point, and the trail built into a solid smear (owner, v5.3): only the newest stay.
+        if (trail.size > TRAIL_KEEP) trail.subList(0, trail.size - TRAIL_KEEP).clear()
         for (point in points) hover.point(point[0], point[1])
         liftedAt = if (lifted) GuideMotion.now() else -1
         if (lifted) {
@@ -219,7 +266,20 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     }
 
     /** How tall the drawing is when it is [width] pixels wide: the real keyboard's four rows, scaled to the width. */
-    fun heightFor(width: Int): Int = ceil(KeyGeometry(width.toFloat(), KeyCalibration.load(context)).height).toInt()
+    fun heightFor(width: Int): Int = KeyGeometry(width.toFloat(), KeyCalibration.load(context)).let {
+        ceil(if (lettersOnly) it.letterHeight else it.height).toInt()
+    }
+
+    /**
+     * Only the three letter rows, when the screen is too short for the whole keyboard at its real size: the bottom row goes,
+     * cleanly, rather than being cut by the keyboard's bar (owner, v5.3). The keys keep their real size and place.
+     */
+    var lettersOnly = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) = place(w)
 
@@ -237,8 +297,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         lastFrame = now
         val frameCount = if (GuideMotion.enabled) elapsed / FRAME_MILLIS else 99f
         var moving = cue != GuideCue.Free && GuideMotion.enabled && isShown
-        hovered = hover.current(now)
-        for (key in keys) moving = drawKey(canvas, key, now, frameCount) || moving
+        hovered = if (pressedAt >= 0 && now - pressedAt < PRESS_QUIET_MILLIS) null else hover.current(now)
+        for (key in keys) if (!lettersOnly || key.box.top < geometry.letterHeight) moving = drawKey(canvas, key, now, frameCount) || moving
         drawTouchArea(canvas)
         drawTapZone(canvas)
         drawDeleteZone(canvas)
@@ -536,7 +596,12 @@ internal class GuideKeyboardView(context: Context) : View(context) {
             path.moveTo(startX, startY)
             path.quadTo(cx, cy, endX, endY)
             trailPaint.strokeWidth = width * thickness(corner)
+            // The oldest part fades out, so a long trail tapers away behind the finger and never piles up.
+            val colour = trailPaint.color
+            val age = (trail.size - i).toFloat() / TRAIL_KEEP
+            if (age > TRAIL_FADE_FROM) trailPaint.color = GuideMotion.faded(colour, (colour ushr 24) / 255f * ((1f - age) / (1f - TRAIL_FADE_FROM)))
             canvas.drawPath(path, trailPaint)
+            trailPaint.color = colour
             startX = endX
             startY = endY
         }
@@ -735,6 +800,11 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private companion object {
         // Keys. Sizes are in dp unless they say otherwise. Change these to adjust the look.
         const val FRAME_MILLIS = 16f
+        /** How long the finger's light stays off after a real key press, so the pressed key is the one lit. */
+        const val PRESS_QUIET_MILLIS = 400L
+        /** The most points the trail keeps, and from how far back, as a part of that, it fades out. */
+        const val TRAIL_KEEP = 120
+        const val TRAIL_FADE_FROM = .45f
         /** A key's thin outline, and how strong it is, and the very faint fill inside it, on orange and on ink. */
         const val KEY_OUTLINE = 1f
         const val KEY_OUTLINE_ORANGE = .5f

@@ -20,8 +20,8 @@ internal class GuideFinaleView(context: Context) : View(context) {
     private var start = -1L
     private var beatsDone = 0
     private var overDone = false
-    private val heavy = Typeface.create(Typeface.DEFAULT, 900, false)
-    private val medium = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+    private val heavy = GuideFonts.heavy(context)
+    private val medium = GuideFonts.medium(context)
     private val text = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shape = Paint(Paint.ANTI_ALIAS_FLAG)
     private val mark = path(GuideFinale.MARK_PATH)

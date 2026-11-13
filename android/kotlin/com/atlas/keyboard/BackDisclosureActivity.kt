@@ -50,7 +50,7 @@ class BackDisclosureActivity : Activity() {
             })
         }
         setContentView(ScrollView(this).apply {
-            setBackgroundColor(GuideColours.INK)
+            setBackgroundColor(GuideColours.BLACK)
             fitsSystemWindows = true
             addView(content)
         })
@@ -82,7 +82,7 @@ class BackDisclosureActivity : Activity() {
         text = value
         textSize = size
         setTextColor(GuideColours.CREAM)
-        if (bold) typeface = Typeface.DEFAULT_BOLD
+        typeface = if (bold) GuideFonts.heavy(context) else GuideFonts.regular(context)
         setPadding(dp(indent), dp(top), 0, 0)
     }
 

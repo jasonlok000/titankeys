@@ -34,8 +34,8 @@ import android.widget.TextView
  * [STATE] picks the frame: "a" mid-task, "b" with a hint over the instruction, "c" passed.
  */
 class GuideFrameActivity : Activity() {
-    private val heavy: Typeface = Typeface.create(Typeface.DEFAULT, 900, false)
-    private val medium: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+    private val heavy: Typeface get() = GuideFonts.heavy(this)
+    private val medium: Typeface get() = GuideFonts.medium(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,7 +46,7 @@ class GuideFrameActivity : Activity() {
         }
         val state = intent.getStringExtra(STATE) ?: "a"
         val passed = state == "c"
-        window.setBackgroundDrawable(ColorDrawable(GuideColours.INK))
+        window.setBackgroundDrawable(ColorDrawable(GuideColours.BLACK))
         window.setDecorFitsSystemWindows(false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT

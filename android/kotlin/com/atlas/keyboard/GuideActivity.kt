@@ -55,6 +55,7 @@ import org.json.JSONObject
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /** The heavy diagonal of the logo's swipe line, in degrees. A line at this angle rises towards the right. */
 private const val SWEEP_ANGLE = -40.5f
@@ -1375,6 +1376,9 @@ class GuideActivity : Activity() {
         endButtons = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
+            addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+                if (bottom - top != oldBottom - oldTop && atEnd()) post { placeEnd() }
+            }
             addView(boringButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(shareButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(12)
@@ -2113,8 +2117,7 @@ class GuideActivity : Activity() {
         main.removeCallbacks(revealSkip)
         next.visibility = View.GONE
         block.visibility = View.GONE
-        // The buttons keep their room, unseen, while the finale plays, so it's drawn between the top bar and them and nothing
-        // overlaps, whatever the screen's size (owner, v5.2: the end didn't fit).
+        // The buttons keep their size, unseen, while the finale plays, so the end's block can be laid out before they show.
         fillEndChoices()
         endButtons.visibility = View.INVISIBLE
         spacer.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
@@ -2122,11 +2125,13 @@ class GuideActivity : Activity() {
         finaleView.lines = SUMMARY_LINES
         finaleView.visibility = View.VISIBLE
         root.post {
+            // The finale has the screen from under the top bar down to the grass, which has the bottom edge (owner, 2026-11-13).
             val top = (column.paddingTop + dp(TOP_BAR + 16)).toFloat()
-            val bottom = if (endButtons.height > 0) endButtons.top - dp(FINALE_ROOM).toFloat() else root.height * FINALE_SHARE
+            val bottom = root.height - dp(GuideFinale.GRASS_DP.toInt()).toFloat()
             finaleView.box = top to maxOf(top + dp(160), bottom)
-            // The finale's words are the decoration's to keep clear of: the grass grows in the room under them, on the buttons.
-            decor.keepOutArea(RectF(0f, top, root.width.toFloat(), maxOf(top + dp(160), bottom)))
+            placeEnd()
+            // The finale's words are the decoration's to keep clear of: the grass grows under them, from the bottom edge.
+            decor.keepOutArea(RectF(0f, top, root.width.toFloat(), finaleView.box.second))
             finaleView.play()
         }
     }
@@ -4210,6 +4215,27 @@ class GuideActivity : Activity() {
         fillEndChoices()
     }
 
+    /**
+     * Lays the end out as one block (owner, 2026-11-13: it sat too low): the name, BUILT FOR TITAN 2 ELITE and the buttons, centred
+     * in the finale's room above the grass by [GuideFinale.endBlock]. The finale draws the name there, and the buttons' bottom
+     * margin puts them under it. Again whenever the buttons change size, as the share line does once it's answered.
+     */
+    private fun placeEnd() {
+        if (!::finaleView.isInitialized || endButtons.height == 0 || root.height == 0) return
+        val density = resources.displayMetrics.density
+        val (top, bottom) = finaleView.box
+        val name = GuideFinale.nameSize(root.width.toFloat(), finaleView.measure, density)
+        val (base, buttonsTop) = GuideFinale.endBlock(top, bottom, endButtons.height.toFloat(), name, density)
+        finaleView.nameBase = base
+        finaleView.invalidate()
+        val margin = (column.height - column.paddingBottom - buttonsTop - endButtons.height).roundToInt().coerceAtLeast(dp(BLOCK_ROOM))
+        val params = endButtons.layoutParams as LinearLayout.LayoutParams
+        if (params.bottomMargin != margin) {
+            params.bottomMargin = margin
+            endButtons.layoutParams = params
+        }
+    }
+
     /** The end's words: the share switch, and under it the explanation until it's answered, then the owner's line alone. */
     private fun fillEndChoices() {
         val asking = Contributions.unanswered(this)
@@ -4510,10 +4536,6 @@ class GuideActivity : Activity() {
          */
         private const val SHARE_ANSWERED = ""
         private const val AGAIN_LINK = "Start the guide again"
-        /** The finale's part of the end screen, from the top: the buttons have the rest. */
-        private const val FINALE_SHARE = .68f
-        /** The room between the finale and the end's buttons. */
-        private const val FINALE_ROOM = 56
 
         // Setup, in ms. These are safe to change.
         private const val SETUP_REQUEST = 7

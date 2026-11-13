@@ -121,6 +121,8 @@ A crunch's gap is 12 ms, under rule 4 on purpose: its two pulses are one grain. 
 
 Shortcuts stay quiet. The owner tried a confirm for Ctrl's copy, cut, paste, undo and select all, and change for Alt's and the Sym panel's symbols, and found it annoying (2026-11-12), so that experiment is gone. Ctrl + C with nothing selected copies nothing, so it plays no.
 
+Shift + Backspace and Alt + Sym play nothing either. Both are presses of physical keys, which your thumb already feels, and you see what they do: a word goes from the text, or another keyboard comes up. A word delete by flick plays gone flick because the touchpad has no click, and these have one. Lock or release would say a modifier stayed or went, which isn't what happened, and confirm on every switch would be the annoying shortcut confirm again. With no other keyboard, Alt + Sym does nothing and plays nothing: it isn't a gesture that searched and found nothing, so no doesn't fit.
+
 ### A long delete's zones
 
 Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 keys out is its top-speed line, past which it goes no faster. The finger going into the pause zone plays one boundary tick, and so does reaching the top-speed line. Each plays once per crossing and nothing more while the finger stays. The lab's experiment "Tick at delete zones" turns them off; it is on to start with.
@@ -194,6 +196,7 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 
 - **Physical key presses.** Your thumb feels them.
 - **Shift or Alt once.** A key press, and the bar shows it.
+- **Shift + Backspace and Alt + Sym.** Key presses, and you see the word go or the keyboard change (see Shortcuts, above).
 - **The double-space full stop, the space after a mark and the automatic capital.** You see them land as you type. Backspace taking that space out again is a key press too.
 - **A swiped word landing.** Its ticks already played.
 - **Slipping and carrying on in a swipe.** The swipe just goes on. Steering is different: it ticks once when your finger lands again, above.

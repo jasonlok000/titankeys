@@ -22,6 +22,10 @@ private const val GAP = 100L
 private const val WORD = 900L
 
 fun main() {
+    heldShiftBackspaceDeletesWords()
+    tappedOrAutomaticShiftLeavesBackspacePlain()
+    altSymSwitchesTheKeyboard()
+    altSymWithThePanelOpenIsAsBefore()
     shortcutsActOncePerPress()
     droppedKeysUseTheirModifiers()
     onePress()
@@ -205,6 +209,78 @@ private class Keyboard {
     }
 
     fun appPressed(code: Int = SHIFT) = appPush(code).also { appRelease(code) }
+
+    /** Backspace as the keyboard handles it: true when it deletes a word. [ctrl] is the key's own Ctrl. */
+    fun backspace(ctrl: Boolean = false) = modifiers.backspaceDeletesWord(ctrl).also { modifiers.afterBackspace() }
+}
+
+private fun heldShiftBackspaceDeletesWords() = Keyboard().run {
+    down(SHIFT)
+    idle(WORD)
+    same(backspace(), true, "Backspace with Shift held must delete a word")
+    repeat(3) {
+        idle(50)
+        same(backspace(), true, "Holding Backspace with Shift held must go on deleting words")
+    }
+    up(SHIFT)
+    same(shift, Level.Off, "Shift must go off when it's let go after deleting words")
+    same(backspace(), false, "After Shift is let go, Backspace must delete one character again")
+}
+
+private fun tappedOrAutomaticShiftLeavesBackspacePlain() {
+    Keyboard().run {
+        press(SHIFT)
+        same(backspace(), false, "A tapped Shift must leave Backspace a plain Backspace")
+        same(shift, Level.Once, "A plain Backspace must leave a tapped Shift on, as before")
+    }
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        same(modifiers.autoShifted, true, "Shift must come on by itself at a sentence start")
+        same(backspace(), false, "An automatic Shift must leave Backspace a plain Backspace")
+    }
+    Keyboard().run {
+        same(backspace(ctrl = true), true, "Ctrl + Backspace must still delete a word")
+        press(ALT)
+        same(backspace(), true, "Alt, then Backspace must still delete a word")
+        same(modifiers.alt, Level.Off, "Alt + Backspace must use Alt up")
+    }
+}
+
+private fun altSymSwitchesTheKeyboard() {
+    Keyboard().run {
+        down(ALT)
+        idle(GAP)
+        press(SYM)
+        same(modifiers.takeKeyboardSwitch(), true, "Sym with Alt held must switch to the next keyboard")
+        same(modifiers.takeKeyboardSwitch(), false, "One push of Sym must switch only once")
+        same(modifiers.panel, Panel.Closed, "Alt + Sym must not open the Sym panel")
+        up(ALT)
+        same(modifiers.alt, Level.Off, "Alt must count as used by Alt + Sym, so it goes off")
+        idle(WORD)
+        press(SYM)
+        same(modifiers.panel, Panel.Symbols, "Sym alone must open the panel again afterwards")
+        same(modifiers.takeKeyboardSwitch(), false, "Sym alone must not switch keyboards")
+    }
+    Keyboard().run {
+        press(ALT)
+        idle(WORD)
+        press(SYM)
+        same(modifiers.takeKeyboardSwitch(), false, "A tapped Alt, then Sym, must not switch keyboards")
+        same(modifiers.panel, Panel.Symbols, "A tapped Alt, then Sym, must open the panel as before")
+    }
+}
+
+private fun altSymWithThePanelOpenIsAsBefore() = Keyboard().run {
+    press(SYM)
+    same(modifiers.panel, Panel.Symbols, "Sym must open the panel")
+    idle(WORD)
+    down(ALT)
+    same(modifiers.panel, Panel.Settings, "Alt with the panel open must open the quick settings, as before")
+    idle(GAP)
+    press(SYM)
+    same(modifiers.takeKeyboardSwitch(), false, "With the panel open, Alt + Sym must not switch keyboards")
+    same(modifiers.panel, Panel.Closed, "With the panel open, Sym must move the panel on as before")
+    up(ALT)
 }
 
 private fun onePress() = Keyboard().run {

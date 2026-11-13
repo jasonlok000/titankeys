@@ -172,6 +172,8 @@ all of them are unapproved.
     hates it, TitanKeys can block it), plus a new topic, "The local LLM". The boring guide checks pass.
   - **Orchestrator, done:** TitanKeys' Alt + Backspace word delete is gone. Alt + Backspace now goes to the app as Android's own
     combination. The boring guide's Delete a word is fixed. The modifiers and text checks pass.
+  - **D** (claude/bar-even): bar words at one size, 20 dp, the middle bold, a shared baseline, truly centred.
+  - F's brief corrected: Size keeps the bar's height and grows only what's inside.
   - Then: build #5, install, and phone checks. The release notes get a line for Size and one for the playground haptics.
 - **Asked the owner (07:58): haptics for the playground's effects?** Today they're silent. The Orchestrator's proposal is five big moments
   and nothing per step:

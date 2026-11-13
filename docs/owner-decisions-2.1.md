@@ -205,6 +205,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Bar words: one size, the middle bold** (owner, 2026-11-13, 08:20): "I want it consistent but bolded is a nice touch." All three
+  are 20 dp on one shared baseline, truly centred on the bar's height, and the middle is in a bolder weight. (Owner) This replaces
+  D's 20/18 split. D picks Medium or Bold for the middle from renders, as the Orchestrator's call.
+- **Size setting: the bar keeps its height** (owner, 08:20): "the bigger everything means the bigger elements, bar size stays the
+  same." Only what's inside the bar grows. (Owner)
 - **No TitanKeys Alt + Backspace** (owner, 2026-11-13, 08:15): "I didn't want Alt backspace to work unless it's a native key
   combination, and I'm intending it to be hold shift then backspace." (Owner)
   - Android's own Alt + Backspace deletes the line in a standard field. So TitanKeys now sends Alt + Backspace to the app as it is,

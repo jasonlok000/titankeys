@@ -239,14 +239,14 @@ all of them are unapproved.
       Favourite on the phone, and run1 now only opens and closes the menu.
   - **Build #7, the release candidate,** started from 098c159, after merging W's 2671bb0, A's audit (81da968), D's baseline
     (780dbe5) and F's release fixes (fed4129). debug-only passes on the merge.
-  - **Build #7 (354c9b85) passed and is on the phone (13:05).** Verified by adb in the playground: held Shift + Backspace deletes a
+  - **Build #7 (354c9b85) passed and is on the phone (12:20).** Verified by adb in the playground: held Shift + Backspace deletes a
     word, Ctrl + Backspace deletes a word, and Alt + Backspace deletes forward.
   - **A slip in the Orchestrator's guide walk:** the walk driver read the finale's orange as Next and tapped through the end screen,
     turning Share swipes ON. It was turned off at once on the phone and checked on the Share swipes page. Nothing was sent, since
     swipes are only collected while it's on and none were made. The driver now stops at any orange screen without tapping.
   - **Found on the phone:** guide titles showed in sentence case. setSingleLine wiped isAllCaps; this was never visible in the
     renders. Fixed in 9f15383, with the check guide-title-caps.test.ts.
-  - **Build #8: aaef6f81**, all checks passed, installed at 13:30 with no crash. A's pre-release pass is running on it.
+  - **Build #8: aaef6f81**, all checks passed, installed at 12:40 with no crash. A's pre-release pass is running on it.
   - **Build #8** started with the caps fix. A runs the pre-release phone pass on it, with strict guardrails: no share step, no reset
     confirms, settings restored, the owner's words untouched.
   - **To merge after build #6:**

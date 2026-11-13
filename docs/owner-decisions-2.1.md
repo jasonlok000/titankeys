@@ -204,6 +204,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **The Orchestrator decides everything for 2.1 (owner, 23:15):** "You can change the decisions that you made yourself. If anything fails, or looks ugly, or whatever, you can change your mind. otherwise make all decisions. I want this to be ready for a 2.1 release, with as much things fixed and polished and refined as possible. And then tmr morning I just review and if no comments good to go. so it shd be 10/10. review the work yourself. make the micro decisions if needed." The owner saw the list of 28 decisions in design-v2.md and the chat, and raised no objection. (Owner)
 - **Unattended round (owner, 22:55):** build straight to "10/10" without mockups. The Orchestrator decides, marks every decision as unapproved, and the owner reviews them on the final product. The decisions are in [design-v2.md](design-v2.md). Mockups come back next round. (Owner)
 - The Orchestrator may take the phone any time without asking: "take my phone. do not ask for it again." (Owner, 2026-11-12)
 - **The WPM starts only once a real word is being typed.** (Owner, 2026-11-12)

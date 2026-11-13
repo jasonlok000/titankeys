@@ -86,7 +86,7 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
 }
 
 /** The groups on the Haptics settings page, in its order. */
-enum class HapticGroup { Swipe, Delete, Space, Changes, Bar, Modifiers, Panels, Other }
+enum class HapticGroup { Swipe, Delete, Space, Changes, Bar, Modifiers, Panels, Other, App }
 
 /**
  * Every action that plays a haptic, each with its own switch in Settings > Haptics. [id] is stored, so it never changes.
@@ -207,7 +207,22 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family) {
     /** The guide's slide blocked something, and says so. */
     GuideBlocked("guide_blocked", HapticGroup.Other, Family.No),
     /** The guide showed a hint or a scenario chip. */
-    GuideHint("guide_hint", HapticGroup.Other, Family.Change);
+    GuideHint("guide_hint", HapticGroup.Other, Family.Change),
+
+    // TitanKeys' own screens (docs/haptics.md, The app's own controls). A press on the touchscreen has no click of its own,
+    // so the controls that change something say what changed. Navigation and plain buttons stay quiet.
+    /** A switch in the app, or the guide's, turned on: it locks in, as a quick setting does. */
+    AppSwitchOn("app_switch_on", HapticGroup.App, Family.Lock),
+    /** A switch in the app, or the guide's, turned off: it lets go. */
+    AppSwitchOff("app_switch_off", HapticGroup.App, Family.Release),
+    /** One step of a stepper, such as Shorter or Longer: a tick, as each one is a small move. */
+    AppStep("app_step", HapticGroup.App, Family.Texture),
+    /** An option picked in a list of choices: done. */
+    AppPicked("app_picked", HapticGroup.App, Family.Confirm),
+    /** A confirmed delete, such as Remove all learned words: gone. */
+    AppDeleted("app_deleted", HapticGroup.App, Family.Gone),
+    /** The app refused what you asked, such as a shortcut it can't take: no. */
+    AppRefused("app_refused", HapticGroup.App, Family.No);
 
     /** Its switch in the "swipe_haptics" preferences. */
     val key get() = "haptic_$id"

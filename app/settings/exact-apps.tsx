@@ -1,4 +1,5 @@
-import { Section, Toggle, useAction, useSnapshot } from "ink";
+import { Section, useAction, useSnapshot } from "ink";
+import { Toggle } from "../../lib/app-haptics";
 import { type State, state, update } from "../../lib/atlas";
 import { AppListPage, appsLabel } from "../../lib/app-list";
 

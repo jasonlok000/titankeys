@@ -6,6 +6,7 @@ import { bugText as text, duration } from "../../lib/bug-text";
 import { allowNotifications } from "../../lib/connected";
 import { StatusLine } from "../../lib/contribute";
 import { Note, Notes } from "../../lib/note";
+import { playHaptic } from "../../lib/app-haptics";
 
 /** Record a bug (#64): record, stop, look at what's in it, then share it through Android's share sheet. */
 export default function RecordBug() {
@@ -51,7 +52,7 @@ export default function RecordBug() {
     </Section>
     <Field label={text.share} onPress={() => void shareBug(text.shareSubject, text.shareText)}>{""}</Field>
     <Field label={text.again} onPress={() => void startBug()}>{""}</Field>
-    <Field label={text.delete} onPress={() => void deleteBug()}>{""}</Field>
+    <Field label={text.delete} onPress={() => void deleteBug().then(() => playHaptic("app_deleted"))}>{""}</Field>
   </Screen>;
 
   return <Screen title={text.title} subtitle={text.subtitle}>

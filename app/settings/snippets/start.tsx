@@ -3,6 +3,7 @@ import { check } from "ink/icons";
 import { type SnippetStart, snippetStarts, state, update } from "../../../lib/atlas";
 import { CREAM, INK, ORANGE } from "../../../lib/brand";
 import { KeyCaps } from "../../../lib/keyboard";
+import { playHaptic } from "../../../lib/app-haptics";
 
 const title = "Start of each shortcut";
 const WIDTH = 596;
@@ -26,7 +27,10 @@ export default function SnippetStart() {
     subtitle={`Every shortcut starts with this, like ${snippetStart}addr. Pick one you never start a word with.${hold}`}>
     <Stack gap={24}>
       {starts.map(start => <Choice key={start} start={start} letter={altKeys[start]} selected={start === snippetStart}
-        onPress={() => save.run({ snippetStart: start })} />)}
+        onPress={() => {
+          playHaptic("app_picked");
+          void save.run({ snippetStart: start });
+        }} />)}
     </Stack>
   </Screen>;
 }

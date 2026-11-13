@@ -1,4 +1,5 @@
-import { Field, Row, Screen, Section, Stack, Toggle, navigate, openURL, useAction, useSnapshot } from "ink";
+import { Field, Row, Screen, Section, Stack, navigate, openURL, useAction, useSnapshot } from "ink";
+import { Toggle } from "../../lib/app-haptics";
 import { arrowOutward, chevronRight } from "ink/icons";
 import { allowNotifications, connectedState, dismissEntry, type NewsEntry, setAnnouncements } from "../../lib/connected";
 import { newsText as text } from "../../lib/connected-text";

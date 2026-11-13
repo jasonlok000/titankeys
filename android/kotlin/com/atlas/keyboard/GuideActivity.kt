@@ -1295,6 +1295,8 @@ class GuideActivity : Activity() {
         shareButton = bigButton(SHARE_OFFER) {
             if (Contributions.enabled(this)) {
                 Contributions.enabled(this, false)
+                // A switch turned off lets go; on is agreed on the share policy page, which plays its own.
+                haptics.play(Haptic.AppSwitchOff)
                 showEndChoices()
             } else startActivity(Connected.pageIntent(this, Contributions.PAGE))
         }
@@ -2721,6 +2723,7 @@ class GuideActivity : Activity() {
         keepHint = false
         hint.setOnClickListener {
             pasteDeclined = !pasteDeclined
+            haptics.play(if (pasteDeclined) Haptic.AppSwitchOn else Haptic.AppSwitchOff)
             hint.text = if (pasteDeclined) DECLINE_ON else DECLINE_OFF
             if (pasteDeclined && !passed) {
                 passed = true

@@ -29,6 +29,8 @@ import com.atlas.keyboard.EnterKey
 import com.atlas.keyboard.ExactTyping
 import com.atlas.keyboard.FixedScale
 import com.atlas.keyboard.GuideActivity
+import com.atlas.keyboard.Haptic
+import com.atlas.keyboard.HapticGroup
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.HapticsLab
 import com.atlas.keyboard.KeyCalibrationActivity
@@ -49,6 +51,12 @@ import org.json.JSONObject
 /** Ink's activity keeps TitanKeys' sizes at any display size or font size, like every other TitanKeys window (FixedScale). */
 internal fun appBaseContext(base: Context): Context = FixedScale.wrap(base)
 
+/**
+ * Ink's press haptic is Android's stock click, which TitanKeys never plays (docs/haptics.md, rule 5). Navigation and plain
+ * buttons stay quiet, and the controls that change something play their own through lib/app-haptics.tsx.
+ */
+internal fun appPressHaptic(view: android.view.View): Boolean = true
+
 internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> =
     mapOf("atlas" to AtlasAdapter(activity), "connected" to ConnectedAdapter(activity))
 
@@ -65,6 +73,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private var keyCaptureRequested = false
     private val appNames = HashMap<String, String>()
     private val hapticsLab = lazy { HapticsLab(activity) }
+    /** Plays the app's own controls' haptics, through the same switches and gate as the keyboard's. */
+    private val haptics by lazy { Haptics(activity) }
     /** The listed shorthand that has a full word, with that word, in the list's order, for its switches in Settings. */
     private val listedShorthand by lazy {
         activity.assets.open("autocorrect/en_shorthand.txt").bufferedReader().useLines(Shorthand::parse)
@@ -161,6 +171,13 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             // Asynchronous engine operations complete through their own outcome callback.
             val result: String? = when (operation) {
                 "state" -> state().toString()
+                // A control on a TitanKeys screen (lib/app-haptics.ts). Only the app's own haptics: the keyboard's play from the keyboard.
+                "haptic" -> {
+                    val haptic = Haptic.of(data.getString("id"))
+                    require(haptic?.group == HapticGroup.App) { "Not an app haptic: ${data.getString("id")}" }
+                    haptics.play(haptic!!)
+                    "null"
+                }
                 "set" -> {
                     set(data.getString("key"), data.get("value"))
                     "null"

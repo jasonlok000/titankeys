@@ -1,5 +1,6 @@
 import { Field, Screen, Section, SettingsChoices, useAction, useSnapshot } from "ink";
 import { type Settings, type State, state, update } from "./atlas";
+import { playHaptic } from "./app-haptics";
 
 /** A setting that is off or a number of milliseconds, such as how long to hold a letter for its symbol. */
 export type Duration = {
@@ -29,11 +30,18 @@ export function DurationPage({ title, subtitle, min, max, step, presets, read, w
   const millis = read(result.data);
   const options = [{ value: "off", label: "Off" }, ...presets.map(preset => ({ value: String(preset.millis), label: `${preset.label}, ${ms(preset.millis)}` }))];
   // A time between the presets ticks none of them; the first row still shows it.
-  const set = (next: number) => save.run(write(Math.max(min, Math.min(max, next))));
+  // Each step is a tick, as each one is a small move.
+  const set = (next: number) => {
+    playHaptic("app_step");
+    return save.run(write(Math.max(min, Math.min(max, next))));
+  };
   return <Screen title={title} subtitle={subtitle}>
     <Section title="Presets">
       <SettingsChoices value={millis === null ? "off" : String(millis)} options={options}
-        onChange={value => void save.run(write(value === "off" ? null : Number(value)))} />
+        onChange={value => {
+          playHaptic("app_picked");
+          void save.run(write(value === "off" ? null : Number(value)));
+        }} />
     </Section>
     <Section title="Fine-tune">
       <Field label="Now">{millis === null ? "Off" : ms(millis)}</Field>

@@ -1020,7 +1020,10 @@ class GuideActivity : Activity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
             override fun afterTextChanged(s: Editable?) = fieldChanged()
         })
-        flow.start(preferences.getString(RESUME, null))
+        // The guide always starts from its first slide, never where it was left (owner, 2026-11-13: "everytime I click on the guide,
+        // i shd start from the beginning. no saved slide."). A place kept by an older build is cleared.
+        preferences.edit().remove(RESUME).apply()
+        flow.start(null)
         applyTone(GuideTone.Ink)
         backdrop.show(backgroundOf(tone))
         for (view in listOf(title, body, hint, offer, next, previous, chapter, again, close, segments, script, field, keys)) view.alpha = 0f
@@ -2068,11 +2071,9 @@ class GuideActivity : Activity() {
         paintSegments(flow.stepIndex)
         main.removeCallbacks(showHelp)
         if (step.help != null) main.postDelayed(showHelp, if (step.helpTitle != null) HELP_TITLE_AFTER_MILLIS else HELP_AFTER_MILLIS)
-        if (step.chapter == GuideChapter.End) {
-            preferences.edit().remove(RESUME).apply()
-            // The end of the guide offers to share swipes until the user answers: here, and in the app if they leave.
-            Contributions.guideEnded(this)
-        } else preferences.edit().putString(RESUME, flow.resumeId).apply()
+        // The end of the guide offers to share swipes until the user answers: here, and in the app if they leave. No slide is kept
+        // for next time: the guide starts from the beginning every time.
+        if (step.chapter == GuideChapter.End) Contributions.guideEnded(this)
         busy = false
         // A new slide shows its gesture at once, as soon as its words are in.
         acted(DEMO_ENTER_MILLIS)

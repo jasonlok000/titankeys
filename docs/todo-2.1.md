@@ -256,6 +256,8 @@ all of them are unapproved.
     - By design: the Saved word's faint book over the front page's drawn keys.
     - For the owner's hands: the touchpad (swipe, held flick and PAUSE height, steer, select), the real Sym key and held
       letters, haptic feel, pasting on the guide's slides, and Next on a really passed slide.
+  - **Owner's report (14:55):** the held flick shows no finger trail on the guide's "Hold the flick" slide. Sent to A, after the
+    TitanKeys menu slide.
   - **Build #10: bb6ee4b1**, all checks passed, installed at 14:25 with no crash. It has C's end-screen no-bar fix and "TL;DR Trust me
     bro.". Next is build #11, the final candidate: W's grey Not saved word and status marks inside the bar, plus the guide's
     "Nothing here gets saved".

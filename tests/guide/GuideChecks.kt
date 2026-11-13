@@ -612,7 +612,7 @@ private fun oneInstructionAtATime() {
     same(groups.event(PanelSwiped(0f, .4f, true)), GuideVerdict.Stage(1), "A page turned, so finding ∞ is next")
     same(groups.step.stages.size, 2, "Two steps: turn a page, then find ∞")
     same(groups.step.title.contains(WEIRD), false, "The title doesn't name the weird one")
-    same(GROUPS_LINE.startsWith("S") && GROUPS_LINE.endsWith("how long I last in bed: ∞"), true, "Its line sets up the joke, and starts with S for the finale")
+    same(GROUPS_LINE.startsWith("S") && GROUPS_LINE.endsWith("how long I last in bed with your mother: ∞"), true, "Its line sets up the joke, and starts with S for the finale")
     same(groups.event(FieldChanged(GROUPS_LINE.replace(WEIRD, "¤"), 4, 4)).let { it is GuideVerdict.Hint && !it.passes }, true,
         "Another symbol isn't ∞")
     same(groups.event(keys(Panel.Closed)), GuideVerdict.Stage(0), "A wrong one closed the panel: Sym again, the chip stays")

@@ -904,7 +904,7 @@ internal const val SYM_LINE = "Sym has the rest, terms & conditions apply"
 internal const val WEIRD = "∞"
 // The owner's joke (2026-11-13): how long you last in bed, and the answer is the one that never ends. The line sets it up, so the
 // gap after "in bed:" says what goes there without naming it. It starts with S for the finale's GO TOUCH GRASS NOW.
-internal const val GROUPS_LINE = "Seriously, how long I last in bed: ∞"
+internal const val GROUPS_LINE = "Seriously, how long I last in bed with your mother: ∞"
 internal const val CLOWN = "🤡"
 internal const val CLOWN_LINE = "Need emoji? Press Sym twice. Signed, 🤡"
 

@@ -194,6 +194,11 @@ all of them are unapproved.
     candidates; hover kept after a press, as in the quick settings; a check for the whole ladder.
   - **Release notes** (3122c02): Alt + Backspace (2.0 deleted a word, and now Android deletes the line), one-size bar words, and
     playground haptics. Size gets its line once F's branch merges.
+  - **Owner's bug (08:50):** opening the menu on a selected word plays the heart burst, then the glitter. Sent to W: nothing bursts
+    on open.
+  - **Under discussion (08:50):** the owner finds Save's glitter generic, and Save could become another word if that's easier to
+    animate. The Orchestrator proposed "Add" and "Remove" with a book: the word drops into a book that claps shut, and on Remove a
+    page tears out. Waiting on the owner.
   - **The plan from 08:45:**
     1. F's Size setting (its verify is running) and W's word menu fix land, and get reviewed and merged.
     2. Build #5 and install.

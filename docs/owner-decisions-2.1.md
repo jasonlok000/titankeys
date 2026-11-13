@@ -205,6 +205,16 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Morning calls (Orchestrator, 2026-11-13, 06:40; none approved by the owner):**
+  - Guide titles stay cream, as in v2, which the owner saw on build 2ec5f751 ("Looks much nicer now"). Settings keeps its orange
+    titles (option B).
+  - The playground keeps the 60% keyboard drawing, as the guide does. It follows the owner's later v2 call ("I think 60% rn is
+    good height"), not the earlier "full real-size drawn keyboard".
+  - The TOUCH ZONE brackets stay at the zone's real corners, which fall on the Q, P and Shift labels. Each bracket passes behind
+    its label with a 4 dp gap, instead of striking through it.
+  - Release notes: "New look: Pure black, Inter everywhere, and way less orange." The old "orange only where it means do this now"
+    stopped being true once the text box's orange bar and the brackets came back. New lines cover the app's haptics and the share
+    screen.
 - **"me @ your mom" is out:** "is bad let's skip it." Any @ line gets something better, or no joke at all. The slide may use another symbol if the line lands better (owner, 23:50). (Owner, 23:45)
 - **Before bed (owner, 01:35):** "Ok continue working and make decisions good night." (Owner)
   - **"Trust me bro." moves** from the end screen to the share step, right before you accept. You still return to the end screen after. (Owner) C does it.

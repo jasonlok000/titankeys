@@ -2,7 +2,7 @@
 
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
-[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-13, 00:10.
+[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-13, 06:45.
 
 ## On the phone now (build 2ec5f751, test-2.1h at 0f88ab9: v2 guide, menu v4, fixed sizes, bar fix)
 
@@ -122,10 +122,28 @@ all of them are unapproved.
   - The boring guide says "touch zone".
   - F reports Ink's text was already above the size floor, so nothing was enlarged. Check that on the phone, since the owner
     found some elements too small.
+- C: **decoration wiring and the readability batch done and merged** (7ff66cc, d49ea3d; merged on 2026-11-13, 06:30).
+  - Decorations sit behind the content, with live keep-outs, and fade in 320 ms after a slide settles. They turn ink on orange.
+    None show on the playground or under the leave pop-up.
+  - Type scale 36/24/19/24/14, with bigger key hints and corner symbols. The reference text always shows two lines.
+  - Share swipes is now a native screen over the end. "Trust me bro." sits right before the one orange accept. Not now and Back
+    return to the end, and "Trust me bro." is gone from the end screen.
+  - Finale: the real logo splits into its T and K, which walk into "TitanKeys".
+  - Owner-log items restored: the text box's orange bar, the TOUCH ZONE brackets, the guide's own pops and 340 ms timings,
+    and the bigger end ✕.
+  - Orchestrator's review of the renders: clean and readable, with two things to look at:
+    - **The TOUCH ZONE brackets strike through the Q, P and Shift labels.** The clip-out's key test never matches. Sent back to
+      C (06:35): clip the real label bounds plus 4 dp, and lengthen the arms.
+    - The finale's "TitanKeys" looks like DejaVu in the desktop render, likely the render's font fallback. Check it on the phone.
+  - C's open questions, settled by the Orchestrator (unapproved): guide titles stay cream (v2, which the owner saw), and the
+    playground keeps the 60% drawing (the owner's own v2 call, later than "full real-size").
+- Orchestrator (06:40, 70f4f38): F's two guide lines applied; release notes: sparkles for a save, "way less orange", a line for
+  the app's haptics, and one for the share screen.
+- Build #2 started 06:45. The phone is busy: the owner has been in the Claude app since about 06:10, so the 6-hour idle wait gave up.
 - **Plan for the rest of the night (Orchestrator):**
-  1. Merge C's decoration wiring.
-  2. Apply F's two GuideActivity strings, and fix the release-notes Save line (sparkles, not bookmarks).
-  3. Build #2, then install once the phone is idle (scratchpad idle.sh; wait-idle.sh is watching).
+  1. ~~Merge C's decoration wiring.~~ Done.
+  2. ~~Apply F's two GuideActivity strings, and fix the release-notes Save line.~~ Done.
+  3. Build #2, then install once the phone is idle (scratchpad idle.sh). Then C's bracket fix, and build #3.
   4. A does the full phone run-through and reports a concise issue list, to keep screenshots out of the Orchestrator's context:
      - run1.sh: playground, panels, word menu, Settings at font 2.0;
      - a walk through every guide slide;

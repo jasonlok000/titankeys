@@ -216,6 +216,9 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - the steps: hold, I to save, I again to favourite;
   - chips for the wrong moves;
   - done: "Favourited. Good taste."
+  - The line starts with TitanKeys, keeping the T for the finale: "TitanKeys belongs in your favourites" (Orchestrator's wording).
+    TitanKeys stays highlighted the whole time, in the box and on the bar (owner, 14:35: "naturally we can make it start with
+    TitanKeys in the box. also keep it highlighted").
 - **The guide says its word menu saves nothing** (owner, 2026-11-13, 14:25: "whatever the user does in the guide with the word menu is not saved right? we shd clearly says so"). (Owner) The menu slide's first instruction is now "Hold a word on the bar. Nothing here gets saved." (Orchestrator's wording, d200d58)
 - **Status marks sit inside the bar, just above the word; Saved's book is filled** (owner, 2026-11-13, 14:20: "I find the heart and
   small book bad to be over the bar as a status. particles are fine. but statuses should be kept maybe just slightly on top of the

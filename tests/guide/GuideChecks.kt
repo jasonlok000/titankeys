@@ -350,36 +350,99 @@ private fun same(actual: Any?, expected: Any?, message: String) {
     check(actual == expected) { "$message: expected $expected, got $actual" }
 }
 
+/** The Titan 2 Elite's column, in px: the screen 1200 tall, the status bar 124, the keyboard's own bar 90. */
+private const val PHONE_HEIGHT = 1200
+private const val PHONE_STATUS = 124
+private const val PHONE_BAR = 90
+
+/**
+ * The phone's drawing of the keys and its panel, in px, from Master's recording of build #12's playground (2026-11-13): the frame
+ * with the drawing gone and the padding still the keyboard's showed the block half the drawing lower, 139 px, so the drawing is 278
+ * px (the owner's calibration; the renders' default is 304), and with the panel settled the block was 51 px lower, half of the
+ * drawing less the panel, so the panel is 176 px over the bar. Build #10's 51 px on a slide agrees.
+ */
+private const val PHONE_KEYS = 278
+private const val PHONE_PANEL = 176
+
+private fun phonePx(value: Int) = Math.round(value * 1076f / 688.6f)
+
 /**
  * Opening a panel moves nothing on a slide (Master, 2026-11-13, build #10: as Sym opened on the clown slide, the title, the
- * instruction and the field dropped 51 px, and rose back as it closed). The column is the Titan 2 Elite's: 1200 px tall, a 124 px
- * status bar, the 48 dp top bar, the keyboard's bar 90 px, the drawing of the keys 304 px, and the panel about 202 px over the bar,
- * every page the same. Build #10's layout, the drawing of the keys gone and the bottom padding the panel's, is here too, to show
- * that the check sees its drop.
+ * instruction and the field dropped 51 px, and rose back as it closed). The column is the phone's, with the 48 dp top bar, and the
+ * panel every page the same height. Build #10's layout, the drawing of the keys gone and the bottom padding the panel's, is here
+ * too, to show that the check sees its drop.
  */
 private fun aPanelMovesNothing() {
-    val dp = 1076f / 688.6f
-    fun px(value: Int) = Math.round(value * dp)
-    fun column(block: Int, panelOver: Int) = GuideRoom.Column(height = 1200, top = 124, above = px(48) + px(24), block = block,
-        below = px(24), keys = 304, keyboard = 90, panel = if (panelOver > 0) 90 + panelOver else 0, gap = px(24))
+    fun column(block: Int, panelOver: Int) = GuideRoom.Column(height = PHONE_HEIGHT, top = PHONE_STATUS,
+        above = phonePx(48) + phonePx(24), block = block, below = phonePx(24), keys = PHONE_KEYS, keyboard = PHONE_BAR,
+        panel = if (panelOver > 0) PHONE_BAR + panelOver else 0, gap = phonePx(24))
     for (block in 200..520 step 20) {
         val closed = GuideRoom.blockTop(column(block, 0))
-        val c = column(block, 202)
+        val c = column(block, PHONE_PANEL)
         val build10 = c.top + c.above + maxOf(0, c.height - c.top - c.panel - c.above - c.block - c.below) / 2
         same(build10 - closed, 51, "Build #10's layout drops a $block px block as Sym opens")
-        for (over in listOf(150, 202, 260)) same(GuideRoom.blockTop(column(block, over)), closed, "A $block px block with a panel $over px over the bar")
+        for (over in listOf(150, PHONE_PANEL, 202, 260)) same(GuideRoom.blockTop(column(block, over)), closed, "A $block px block with a panel $over px over the bar")
     }
-    // A panel taller than the drawing of the keys' room, which this phone's never is: the block rises only as far as it must to
-    // keep 24 dp over the panel, and never drops.
+    risesOnlyAsFarAsItMust("slide", ::column)
+    thePlaygroundHoldsStill()
+}
+
+/**
+ * A panel taller than the drawing of the keys' room, which this phone's never is: the block rises only as far as it must to keep
+ * 24 dp over the panel, and never drops.
+ */
+private fun risesOnlyAsFarAsItMust(where: String, column: (block: Int, panelOver: Int) -> GuideRoom.Column) {
     for (block in 200..520 step 20) for (over in 0..900 step 10) {
         val c = column(block, over)
         val top = GuideRoom.blockTop(c)
         val closed = GuideRoom.blockTop(column(block, 0))
         val panelTop = c.height - c.panel
-        check(top <= closed) { "A panel $over px over the bar drops a $block px block" }
-        if (over == 0 || closed + block + c.gap <= panelTop) same(top, closed, "A $block px block clear of a panel $over px over the bar")
-        else if (GuideRoom.over(c) > 0) same(top + block + c.gap, panelTop, "A $block px block over a panel $over px over the bar")
+        check(top <= closed) { "A panel $over px over the bar drops a $block px block on the $where" }
+        if (over == 0 || closed + block + c.gap <= panelTop) same(top, closed, "A $block px block clear of a panel $over px over the bar on the $where")
+        else if (GuideRoom.over(c) > 0) same(top + block + c.gap, panelTop, "A $block px block over a panel $over px over the bar on the $where")
     }
+}
+
+/**
+ * Opening or closing a panel moves nothing on the playground either, not even for a frame (Master, 2026-11-13, build #12's
+ * recording: with any panel open the title, the line and the field sat 51 px lower, and at every opening and closing one frame
+ * showed them 139 px lower, then they settled).
+ *
+ * The flash is two signals arriving apart: the keyboard says a panel is open or closed ([GuideActivity]'s ModifierState), and its
+ * window takes or gives back the panel's room (the insets). Each frame is one of the four pairs of the two, the steady room the
+ * keyboard's own; each goes through GuideRoom's real [GuideRoom.room], [GuideRoom.keys] and [GuideRoom.padding], as GuideActivity
+ * does, into the column, and gives the block's top. Build #12's rule, a panel not still, shows the drop in the settled pair and
+ * the flash in both half-way ones; the playground now gives every frame the same top.
+ */
+private fun thePlaygroundHoldsStill() {
+    val extra = phonePx(80)
+    val keyboard = PHONE_BAR
+    val opened = PHONE_BAR + PHONE_PANEL
+    fun top(block: Int, still: Boolean, inset: Int, panelOpen: Boolean): Int {
+        val room = GuideRoom.room(inset, panelOpen, keyboard, extra, keep = true)
+        val keys = GuideRoom.keys(PHONE_KEYS, still, panelOpen || room.sized, end = false)
+        val padding = GuideRoom.padding(still, panelOpen, room.keyboard, room.panel)
+        // GuideActivity holds the block against a panel only where a panel is still.
+        return GuideRoom.blockTop(GuideRoom.Column(height = PHONE_HEIGHT, top = PHONE_STATUS, above = phonePx(56) + phonePx(24),
+            block = block, below = phonePx(24), keys = if (keys == GuideRoom.Keys.Gone) 0 else PHONE_KEYS, keyboard = padding,
+            panel = if (still) room.panel else 0, gap = phonePx(24)))
+    }
+    val (_, g) = V2.image()
+    for (block in (200..500 step 20) + frontBlock(g)) {
+        val closed = top(block, false, keyboard, false)
+        same(top(block, false, opened, true) - closed, 51, "Build #12's playground drops a $block px block with a panel open")
+        same(top(block, false, keyboard, true) - closed, 139, "Build #12's playground flashes a $block px block lower as a panel opens, the word first")
+        same(top(block, false, opened, false) - closed, 139, "Build #12's playground flashes a $block px block lower as a panel's room comes first, or goes last")
+        for (inset in listOf(keyboard, opened)) for (open in listOf(false, true))
+            same(top(block, true, inset, open), closed, "The playground's $block px block, the panel ${if (open) "open" else "closed"} and its room ${if (inset == opened) "taken" else "not"}")
+    }
+    risesOnlyAsFarAsItMust("playground") { block, over ->
+        GuideRoom.Column(height = PHONE_HEIGHT, top = PHONE_STATUS, above = phonePx(56) + phonePx(24), block = block, below = phonePx(24),
+            keys = PHONE_KEYS, keyboard = PHONE_BAR, panel = if (over > 0) PHONE_BAR + over else 0, gap = phonePx(24))
+    }
+    // On the phone the playground's block never rises: its drawing of the keys keeps all four rows (theFrontPageKeepsAllFourRows),
+    // and the panel's top is lower than theirs.
+    check(PHONE_PANEL < PHONE_KEYS) { "On the phone the panel reaches over the playground's drawing of the keys" }
 }
 
 /** A verdict that finishes the slide: done, or a scenario that counts. */

@@ -139,7 +139,12 @@ all of them are unapproved.
     playground keeps the 60% drawing (the owner's own v2 call, later than "full real-size").
 - Orchestrator (06:40, 70f4f38): F's two guide lines applied; release notes: sparkles for a save, "way less orange", a line for
   the app's haptics, and one for the share screen.
-- Build #2 started 06:45. The phone is busy: the owner has been in the Claude app since about 06:10, so the 6-hour idle wait gave up.
+- Build #2 started 06:45.
+- **The overnight phone run-through never ran (the Orchestrator's miss).** idle.sh read the frozen "state at time of last ANR"
+  snapshot in dumpsys input, which always says 5218 ms. So it called the phone busy for 6 hours while nobody had touched it.
+  Fixed: it now reads only the live dispatcher.
+- That snapshot shows an old ANR: GuideActivity didn't answer a focus change for 5 s, on 2026-11-12 at 14:23, a build before
+  2ec5f751. The run-through checks for new ANRs.
 - **Plan for the rest of the night (Orchestrator):**
   1. ~~Merge C's decoration wiring.~~ Done.
   2. ~~Apply F's two GuideActivity strings, and fix the release-notes Save line.~~ Done.

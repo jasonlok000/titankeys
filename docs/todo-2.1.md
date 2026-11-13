@@ -90,6 +90,12 @@ all of them are unapproved.
   - D's own calls: a dictionary word's O is Forget, with Undo; a word the store can't hold opens no menu; a forgotten dictionary
     word opens Not saved; the particles go behind the word; an O that disappears fades out.
 - Combined build #1 (C, D, F and A's bar fix) started 00:20, for early phone testing while A and F finish.
+- A: **slide decorations done and merged** (6a2be09): GuideDecor, a pure renderer, and GuideDecorView, the host. Checks cover
+  keep-outs, shape count, opacity, seamless loops and frame time. Contact sheets are in the notes folder under guide-decor/.
+  - A's own calls: the decorations live mostly in the band between the field and the keys; the typewriter e sits in that band,
+    not behind the title; the starfield keeps four-point sparkles; the e is cream, all others orange at 7–12%.
+- C (now): wiring the decorations into the v2 guide, with live keep-outs; then check them in the renders.
+- A (now): the flick glow ramp.
 - Then: merge everything, one build, install, and a full run-through on the phone.
 - Release prep (Orchestrator):
   - Update release-notes.txt for everything new since it was written. One line is already wrong: steering taps now count

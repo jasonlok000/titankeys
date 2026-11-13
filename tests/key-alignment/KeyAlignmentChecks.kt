@@ -28,7 +28,7 @@ fun main() {
     System.getenv("CALIBRATION_PNG")?.let { folder ->
         File(folder).mkdirs()
         drawCalibration(KeyAlignment.DEFAULT, File(folder, "calibration-default.png"))
-        drawCalibration(KeyAlignment(.03f, .96f), File(folder, "calibration-moved.png"))
+        drawCalibration(KeyAlignment(8f / WIDTH, 83f / WIDTH, 26f / WIDTH), File(folder, "calibration-moved.png"))
         println("Drew the calibration screen in $folder")
     }
     System.getenv("KEYS_PNG")?.let { folder ->
@@ -117,7 +117,7 @@ private fun edgesMoveEverything() {
     near(moved.boxes.first().left, 54f, "Q's left follows the left edge")
     near(moved.boxes[9].right, 1080f, "P's right stays")
     for (index in 1 until 10) check(moved.boxes[index].left > base.boxes[index].left) { "column $index moves right" }
-    check(moved.boxes.last().right == base.boxes.last().right && moved.boxes[30].left > base.boxes[30].left) { "the bottom row follows" }
+    check(abs(moved.boxes.last().right - base.boxes.last().right) < 1e-2f && moved.boxes[30].left > base.boxes[30].left) { "the bottom row follows" }
     check(moved.x(.5f) > base.x(.5f)) { "the touchpad follows" }
     near(moved.key / base.key, .95f, "a narrower span makes smaller keys")
     near(moved.height / base.height, .95f, "and a shorter keyboard")
@@ -177,16 +177,26 @@ private fun zonesOnKeys() {
     }
 }
 
+/** The calibration by gaps (owner, 2026-11-12): a key's width, a gap's and the shift, each in half pixels either side of measured. */
 private fun slidersRoundTrip() {
-    same(KeyAlignment.leftAt(KeyAlignment.leftProgress(0f)), 0f, "the left slider's default")
-    same(KeyAlignment.rightAt(KeyAlignment.rightProgress(1f)), 1f, "the right slider's default")
-    same(KeyAlignment.leftProgress(0f), KeyAlignment.EDGE_STEPS / 2, "the left slider starts in the middle")
-    near(KeyAlignment.leftAt(0), -KeyAlignment.EDGE_REACH, "the leftmost left edge")
-    near(KeyAlignment.rightAt(KeyAlignment.EDGE_STEPS), 1f + KeyAlignment.EDGE_REACH, "the rightmost right edge")
-    for (progress in 0..KeyAlignment.EDGE_STEPS) {
-        same(KeyAlignment.leftProgress(KeyAlignment.leftAt(progress)), progress, "left step $progress")
-        same(KeyAlignment.rightProgress(KeyAlignment.rightAt(progress)), progress, "right step $progress")
+    val wide = WIDTH.toFloat()
+    val measured = KeyAlignment.DEFAULT
+    same(measured, KeyAlignment(0f, 1f), "measured is the keys spanning the screen")
+    near(measured.right, 1f, "and P's right edge is the screen's edge")
+    for ((default, reach) in listOf(measured.key * wide to KeyAlignment.KEY_REACH, measured.gap * wide to KeyAlignment.GAP_REACH,
+        measured.left * wide to KeyAlignment.SHIFT_REACH)) {
+        same(KeyAlignment.progressOf(default, reach, default), KeyAlignment.steps(reach) / 2, "a slider starts in the middle")
+        for (progress in 0..KeyAlignment.steps(reach))
+            same(KeyAlignment.progressOf(default, reach, KeyAlignment.pixelsAt(default, reach, progress)), progress, "step $progress")
+        near(KeyAlignment.pixelsAt(default, reach, 1) - KeyAlignment.pixelsAt(default, reach, 0), KeyAlignment.STEP, "half a pixel a step")
     }
+    // Columns are offset + i × (key + gap), every key the same width.
+    val tuned = KeyAlignment(6f / wide, 83f / wide, 25.5f / wide)
+    val keys = KeyGeometry(wide, tuned)
+    for (column in 0 until 10) near(keys.keyLeft(column), 6f + column * (83f + 25.5f), "column $column follows the three")
+    near(keys.right, 6f + 10 * 83f + 9 * 25.5f, "P's right edge follows")
+    same(KeyAlignment.pixelText(measured.gap * wide, measured.gap * wide).endsWith("measured"), true, "the measured gap says so")
+    same(KeyAlignment.pixelText(25.5f, 24.5f), "25.5 px, +1", "a moved value says by how much")
 }
 
 private fun same(actual: Any?, expected: Any?, message: String) = check(actual == expected) { "$message: expected $expected, got $actual" }
@@ -202,18 +212,19 @@ private fun rgb(argb: Long) = Color(argb.toInt(), true)
 private fun faded(argb: Long, alpha: Float) = Color(((argb and 0xFFFFFF) or ((alpha * 255).toLong() shl 24)).toInt(), true)
 
 /**
- * The calibration screen as KeyCalibrationActivity lays it out, with its KeyGrid at the bottom edge: each letter key a thin cream
- * outline, each gap a faint orange stripe, and Q's left edge and P's right edge in orange. The desktop's fonts are close, not exact.
+ * The calibration screen as KeyCalibrationActivity lays it out (owner, 2026-11-12): the words, three sliders with − and +, Reset to
+ * measured, and at the very bottom only the gaps, as orange bands that rise from the screen's bottom edge, with the outer edges and
+ * the columns' letters. The desktop's fonts are close, not exact.
  */
 private fun drawCalibration(alignment: KeyAlignment, file: File) {
     val keys = KeyGeometry(WIDTH.toFloat(), alignment)
-    // The text, the sliders and Reset, then the grid below them, as the screen scrolls them over it.
-    val height = (dp(560) + keys.letterHeight).toInt()
+    val bands = dp(72)
+    val height = (dp(620) + bands).toInt()
     val image = BufferedImage(WIDTH, height, BufferedImage.TYPE_INT_RGB)
     val g = image.createGraphics()
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
     g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-    g.color = rgb(0xFF160A04)
+    g.color = rgb(0xFF000000)
     g.fillRect(0, 0, WIDTH, height)
     val pad = dp(16)
     var y = dp(28) + pad
@@ -221,77 +232,79 @@ private fun drawCalibration(alignment: KeyAlignment, file: File) {
     g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(24).toInt())
     y += dp(28)
     g.drawString("Key calibration", pad, y)
-    g.color = rgb(0xFFA2958C)
+    g.color = rgb(0xFF99918A)
     g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(15).toInt())
-    for (line in listOf("Line the drawing at the bottom up with the real", "keys under the screen. Move the left edge to Q's", "left edge and the right edge to P's right edge.",
-        "It saves as you go.")) {
+    for (line in listOf("Make the orange bands at the bottom carry on the", "dark gaps between the real keys below. Set the gap's",
+        "width first, then the key's, then shift the row. Every", "key is the same width. It saves as you go.")) {
         y += dp(22)
         g.drawString(line, pad, y)
     }
     y += dp(16)
-    val sliderHeight = dp(64)
-    g.color = rgb(0xFF21140C)
-    g.fill(RoundRectangle2D.Float(pad, y, WIDTH - 2 * pad, 2 * sliderHeight + dp(20), dp(24), dp(24)))
+    val sliderHeight = dp(84)
+    g.color = rgb(0xFF141312)
+    g.fill(RoundRectangle2D.Float(pad, y, WIDTH - 2 * pad, 3 * sliderHeight + dp(20), dp(24), dp(24)))
     y += dp(12)
+    val wide = WIDTH.toFloat()
+    val measured = KeyAlignment.DEFAULT
     val sliders = listOf(
-        Triple("Q's left edge", KeyCalibrationText.edge(Math.round(alignment.left * WIDTH)), KeyAlignment.leftProgress(alignment.left)),
-        Triple("P's right edge", KeyCalibrationText.edge(Math.round((1 - alignment.right) * WIDTH)), KeyAlignment.rightProgress(alignment.right)),
+        Triple("Gap width", alignment.gap * wide to measured.gap * wide, KeyAlignment.GAP_REACH),
+        Triple("Key width", alignment.key * wide to measured.key * wide, KeyAlignment.KEY_REACH),
+        Triple("Shift", alignment.left * wide to measured.left * wide, KeyAlignment.SHIFT_REACH),
     )
-    for ((name, value, progress) in sliders) {
+    for ((name, values, reach) in sliders) {
+        val (value, default) = values
         g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(15).toInt())
         g.color = rgb(0xFFFFF1E6)
         g.drawString(name, pad + dp(16), y + dp(18))
         g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(15).toInt())
         g.color = rgb(0xFFEF804E)
-        g.drawString(value, WIDTH - pad - dp(16) - g.fontMetrics.stringWidth(value), y + dp(18))
-        val trackLeft = pad + dp(28)
-        val trackRight = WIDTH - pad - dp(28)
-        val trackY = y + dp(42)
-        g.color = rgb(0xFF3A2A20)
-        g.fill(RoundRectangle2D.Float(trackLeft, trackY - dp(2), trackRight - trackLeft, dp(4), dp(4), dp(4)))
-        val thumb = trackLeft + (trackRight - trackLeft) * progress / KeyAlignment.EDGE_STEPS
+        val text = KeyAlignment.pixelText(value, default)
+        g.drawString(text, WIDTH - pad - dp(16) - g.fontMetrics.stringWidth(text), y + dp(18))
+        // − and +, round, either side of the track.
+        val rowY = y + dp(50)
+        g.stroke = BasicStroke(dp(1.2f))
+        g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(20).toInt())
+        for ((x, mark) in listOf(pad + dp(16) to "−", WIDTH - pad - dp(16) - dp(44) to "+")) {
+            g.draw(Ellipse2D.Float(x, rowY - dp(22), dp(44), dp(44)))
+            g.drawString(mark, x + dp(22) - g.fontMetrics.stringWidth(mark) / 2f, rowY + dp(7))
+        }
+        val trackLeft = pad + dp(16) + dp(44) + dp(14)
+        val trackRight = WIDTH - pad - dp(16) - dp(44) - dp(14)
+        g.color = rgb(0xFF2A2623)
+        g.fill(RoundRectangle2D.Float(trackLeft, rowY - dp(2), trackRight - trackLeft, dp(4), dp(4), dp(4)))
+        val progress = KeyAlignment.progressOf(default, reach, value)
+        val thumb = trackLeft + (trackRight - trackLeft) * progress / KeyAlignment.steps(reach)
         g.color = rgb(0xFFEF804E)
-        g.fill(RoundRectangle2D.Float(trackLeft, trackY - dp(2), thumb - trackLeft, dp(4), dp(4), dp(4)))
-        g.fill(Ellipse2D.Float(thumb - dp(8), trackY - dp(8), dp(16), dp(16)))
+        g.fill(RoundRectangle2D.Float(trackLeft, rowY - dp(2), thumb - trackLeft, dp(4), dp(4), dp(4)))
+        g.fill(Ellipse2D.Float(thumb - dp(8), rowY - dp(8), dp(16), dp(16)))
         y += sliderHeight
     }
     y += dp(32)
     g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(15).toInt())
-    val resetWidth = g.fontMetrics.stringWidth("Reset") + dp(40)
+    val reset = "Reset to measured"
+    val resetWidth = g.fontMetrics.stringWidth(reset) + dp(40)
     g.color = rgb(0xFFEF804E)
     g.fill(RoundRectangle2D.Float(pad, y, resetWidth, dp(48), dp(48), dp(48)))
     g.color = rgb(0xFF160A04)
-    g.drawString("Reset", pad + dp(20), y + dp(30))
-    // The grid, at the very bottom, as KeyGrid draws it.
-    val top = height - keys.letterHeight
-    val stroke = DP
-    g.stroke = BasicStroke(stroke)
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, 1).deriveFont(keys.key * .3f)
-    for (box in keys.boxes.filter { it.row <= 2 }) {
-        g.color = rgb(0xFFFFF1E6)
-        g.draw(Rectangle2D.Float(box.left + stroke / 2, top + box.top + stroke / 2, box.width - stroke, box.height - stroke))
-        g.color = rgb(0x80FFF1E6)
-        val metrics = g.fontMetrics
-        g.drawString(box.name, box.centreX - metrics.stringWidth(box.name) / 2f, top + box.centreY + (metrics.ascent - metrics.descent) / 2f)
-    }
-    g.color = rgb(0x40EF804E)
-    for (row in 0..2) for (column in 0 until 9) {
-        g.fill(Rectangle2D.Float(keys.keyLeft(column) + keys.key, top + keys.rowTop(row), keys.gap, keys.keyHeight))
-    }
+    g.drawString(reset, pad + dp(20), y + dp(30))
+    // The bands, at the very bottom, as KeyGrid draws them: the gaps bright, the outside of the edges dimmed, the edges, the letters.
+    val top = height - bands
     g.color = rgb(0xFFEF804E)
-    g.fill(Rectangle2D.Float(keys.left, top, dp(2), keys.letterHeight))
-    g.fill(Rectangle2D.Float(keys.right - dp(2), top, dp(2), keys.letterHeight))
+    for (column in 0 until 9) g.fill(Rectangle2D.Float(keys.keyLeft(column) + keys.key, top, keys.gap, bands))
+    g.color = rgb(0x33EF804E)
+    g.fill(Rectangle2D.Float(0f, top, keys.left, bands))
+    g.fill(Rectangle2D.Float(keys.right, top, WIDTH - keys.right, bands))
+    g.color = rgb(0xFFEF804E)
+    g.fill(Rectangle2D.Float(keys.left - dp(2), top, dp(2), bands))
+    g.fill(Rectangle2D.Float(keys.right, top, dp(2), bands))
+    g.color = rgb(0x80FFF1E6)
+    g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(12).toInt())
+    for ((column, name) in Layout.rows[0].withIndex()) {
+        val centre = keys.keyLeft(column) + keys.key / 2
+        g.drawString(name, centre - g.fontMetrics.stringWidth(name) / 2f, top + dp(6) + g.fontMetrics.ascent)
+    }
     g.dispose()
     ImageIO.write(image, "png", file)
-}
-
-/** KeyCalibrationActivity.edgeText, which needs Android to compile with the rest of the screen. run.sh checks it is the same. */
-private object KeyCalibrationText {
-    fun edge(pixels: Int) = when {
-        pixels == 0 -> "on the edge"
-        pixels > 0 -> "$pixels px in"
-        else -> "${-pixels} px out"
-    }
 }
 
 private enum class Scene { Plain, Lit, Word, Taps, Hold }

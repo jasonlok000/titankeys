@@ -34,13 +34,17 @@ private object CalibrationColours {
     /** A gap between two keys: faint orange, so the gaps read as one line of stripes against the real keys' gaps. */
     const val GAP = 0x40EF804E
     const val LABEL = 0x80FFF1E6.toInt()
+    /** The screen outside the keyboard's two edges, a little dimmer, so the edges show. */
+    const val OUTSIDE = 0x33EF804E
 }
 
 /**
  * Key calibration, in TitanKeys Debug only. The real keys sit just below the screen, and the guide, the Sym panel, the word menu
- * and the swipe's path line up with them. This screen draws the three letter rows right at the screen's bottom edge, and its two
- * sliders move Q's left edge and P's right edge until the drawing sits right over the real keys; the rest of the keys follow,
- * as the real keyboard scaled ([KeyGeometry]). Every change is saved at once ([KeyCalibration]), and every drawing follows it.
+ * and the swipe's path line up with them. This screen draws only the gaps between the key columns, as orange bands that rise from
+ * the screen's bottom edge, so they read as the real dark gaps between the keys below carrying on up the screen (owner,
+ * 2026-11-12: the two edges were too hard to judge). Three sliders set a key's width, a gap's width and the shift of the whole
+ * row, every key the same width; each has − and + for half a pixel. Every change is saved at once ([KeyCalibration]), and every
+ * drawing follows it ([KeyGeometry]).
  */
 class KeyCalibrationActivity : Activity() {
     private lateinit var grid: KeyGrid
@@ -66,17 +70,23 @@ class KeyCalibrationActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
             addView(text("Key calibration", 24f, CalibrationColours.CREAM, bold = true))
-            addView(text("Line the drawing at the bottom up with the real keys under the screen. Move the left edge to Q's left " +
-                "edge and the right edge to P's right edge. It saves as you go.", 15f, CalibrationColours.DIM))
+            addView(text("Make the orange bands at the bottom carry on the dark gaps between the real keys below. Set the gap's " +
+                "width first, then the key's, then shift the row. Every key is the same width. It saves as you go.", 15f,
+                CalibrationColours.DIM))
+            val wide = resources.displayMetrics.widthPixels.toFloat()
+            val measured = KeyAlignment.DEFAULT
             addView(card(
-                slider("Q's left edge", { KeyAlignment.leftProgress(it.left) }, { edge(it.left) }) { a, p ->
-                    KeyAlignment(KeyAlignment.leftAt(p), a.right)
+                slider("Gap width", measured.gap * wide, KeyAlignment.GAP_REACH, { it.gap * wide }) { a, px ->
+                    KeyAlignment(a.left, a.key, px / wide)
                 },
-                slider("P's right edge", { KeyAlignment.rightProgress(it.right) }, { edge(1f - it.right) }) { a, p ->
-                    KeyAlignment(a.left, KeyAlignment.rightAt(p))
+                slider("Key width", measured.key * wide, KeyAlignment.KEY_REACH, { it.key * wide }) { a, px ->
+                    KeyAlignment(a.left, px / wide, a.gap)
+                },
+                slider("Shift", measured.left * wide, KeyAlignment.SHIFT_REACH, { it.left * wide }) { a, px ->
+                    KeyAlignment(px / wide, a.key, a.gap)
                 },
             ))
-            addView(button("Reset") {
+            addView(button("Reset to measured") {
                 KeyCalibration.reset(this@KeyCalibrationActivity)
                 show(KeyAlignment.DEFAULT)
             }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -108,12 +118,20 @@ class KeyCalibrationActivity : Activity() {
         grid.alignment = next
     }
 
-    /** A slider called [name], with its value live beside the name. Each move saves, and the grid draws again. */
-    private fun slider(name: String, progress: (KeyAlignment) -> Int, value: (KeyAlignment) -> String,
-                       changed: (KeyAlignment, Int) -> KeyAlignment): View {
+    /**
+     * A slider called [name] for a value in pixels, [measured] ± [reach], with its value live beside the name, and − and + that
+     * step it by half a pixel. Each change saves, and the bands draw again.
+     */
+    private fun slider(name: String, measured: Float, reach: Float, pixels: (KeyAlignment) -> Float,
+                       changed: (KeyAlignment, Float) -> KeyAlignment): View {
         val shown = text("", 15f, CalibrationColours.ORANGE, bold = true).apply { gravity = Gravity.END }
+        fun set(px: Float) {
+            val next = changed(alignment, px.coerceIn(measured - reach, measured + reach))
+            KeyCalibration.save(this@KeyCalibrationActivity, next)
+            show(next)
+        }
         val bar = SeekBar(this).apply {
-            max = KeyAlignment.EDGE_STEPS
+            max = KeyAlignment.steps(reach)
             contentDescription = name
             progressTintList = ColorStateList.valueOf(CalibrationColours.ORANGE)
             thumbTintList = ColorStateList.valueOf(CalibrationColours.ORANGE)
@@ -121,18 +139,15 @@ class KeyCalibrationActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(16))
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(bar: SeekBar, value: Int, fromUser: Boolean) {
-                    if (!fromUser) return
-                    val next = changed(alignment, value)
-                    KeyCalibration.save(this@KeyCalibrationActivity, next)
-                    show(next)
+                    if (fromUser) set(KeyAlignment.pixelsAt(measured, reach, value))
                 }
 
                 override fun onStartTrackingTouch(bar: SeekBar) = Unit
                 override fun onStopTrackingTouch(bar: SeekBar) = Unit
             })
         }
-        sliders += bar to progress
-        values += shown to value
+        sliders += bar to { a -> KeyAlignment.progressOf(measured, reach, pixels(a)) }
+        values += shown to { a -> KeyAlignment.pixelText(pixels(a), measured) }
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(LinearLayout(this@KeyCalibrationActivity).apply {
@@ -140,12 +155,35 @@ class KeyCalibrationActivity : Activity() {
                 addView(text(name, 15f, CalibrationColours.CREAM), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
                 addView(shown)
             })
-            addView(bar)
+            addView(LinearLayout(this@KeyCalibrationActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                // Half a pixel at a time, for tuning by eye.
+                addView(step("−", "$name, half a pixel less") { set(pixels(alignment) - KeyAlignment.STEP) })
+                addView(bar, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                addView(step("+", "$name, half a pixel more") { set(pixels(alignment) + KeyAlignment.STEP) })
+            })
         }
     }
 
-    /** An edge [inward] of the screen's width in from its side, in pixels, as the slider's value. */
-    private fun edge(inward: Float) = edgeText((inward * resources.displayMetrics.widthPixels).roundToInt())
+    /** A round − or + button, finger-sized. */
+    private fun step(label: String, description: String, pressed: () -> Unit) = TextView(this).apply {
+        text = label
+        contentDescription = description
+        textSize = 20f
+        typeface = GuideFonts.heavy(context)
+        gravity = Gravity.CENTER
+        setTextColor(CalibrationColours.ORANGE)
+        background = GradientDrawable().apply {
+            setColor(Color.TRANSPARENT)
+            setStroke(dp(1).coerceAtLeast(2), CalibrationColours.ORANGE)
+            cornerRadius = dp(22).toFloat()
+        }
+        layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
+        isClickable = true
+        isFocusable = true
+        setOnClickListener { pressed() }
+    }
 
     private fun button(label: String, pressed: () -> Unit) = TextView(this).apply {
         text = label
@@ -187,72 +225,64 @@ class KeyCalibrationActivity : Activity() {
 
     companion object {
         fun intent(context: Context) = Intent(context, KeyCalibrationActivity::class.java)
-
-        /** An edge [pixels] in from the screen's side, or out past it when below 0, in words. */
-        fun edgeText(pixels: Int) = when {
-            pixels == 0 -> "on the edge"
-            pixels > 0 -> "$pixels px in"
-            else -> "${-pixels} px out"
-        }
     }
 }
 
 /**
- * The three letter rows of [KeyGeometry], as wide as the screen and as tall as the rows, so that the bottom row ends right at the
- * screen's bottom edge, over the real keys. Each key is a thin outline and each gap a faint orange stripe, to hold against the real
- * keys and their gaps, and Q's left edge and P's right edge, the two that the sliders move, are orange lines.
+ * The gaps between the ten key columns of [KeyGeometry], and the keyboard's two outer edges, as thin orange bands that rise a short
+ * way from the screen's bottom edge, so each reads as a real gap between the keys below carrying on up the screen (owner,
+ * 2026-11-12). No key is drawn whole: the boxes were what made it hard to judge. Each column's letter sits faintly between its
+ * bands, for the top row.
  */
 internal class KeyGrid(context: Context) : View(context) {
     var alignment = KeyAlignment.DEFAULT
         set(value) {
             field = value
-            requestLayout()
             invalidate()
         }
     private val density = resources.displayMetrics.density
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        typeface = GuideFonts.heavy(context)
+        typeface = GuideFonts.medium(context)
         textAlign = Paint.Align.CENTER
     }
 
-    /** As tall as the three letter rows on this width: a narrower keyboard is shorter too. */
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val width = MeasureSpec.getSize(widthMeasureSpec)
-        setMeasuredDimension(width, ceil(KeyGeometry(width.toFloat(), alignment).letterHeight).toInt())
+        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), (BANDS * density).toInt())
     }
 
     override fun onDraw(canvas: Canvas) {
         val keys = KeyGeometry(width.toFloat(), alignment)
-        // The rows sit at the bottom, so the bottom letter row's bottom is the screen's bottom edge.
-        val top = height - keys.letterHeight
-        val stroke = density
-        outline.strokeWidth = stroke
-        outline.color = CalibrationColours.CREAM
-        label.color = CalibrationColours.LABEL
-        label.textSize = keys.key * LABEL
-        for (box in keys.boxes) {
-            if (box.row > 2) continue
-            // The outline sits inside the key, so its outer edge is the key's edge.
-            canvas.drawRect(box.left + stroke / 2, top + box.top + stroke / 2, box.right - stroke / 2, top + box.bottom - stroke / 2, outline)
-            canvas.drawText(box.name, box.centreX, top + box.centreY - (label.ascent() + label.descent()) / 2, label)
-        }
-        fill.color = CalibrationColours.GAP
-        for (row in 0..2) for (column in 0 until KeyGeometry.COLUMNS - 1) {
-            val left = keys.keyLeft(column) + keys.key
-            canvas.drawRect(left, top + keys.rowTop(row), left + keys.gap, top + keys.rowTop(row) + keys.keyHeight, fill)
-        }
-        // The two edges that the sliders move, down the whole drawing.
+        // The gaps: bright, and as wide as the gaps themselves, from the very bottom edge up.
         fill.color = CalibrationColours.ORANGE
-        canvas.drawRect(keys.left, 0f, keys.left + EDGE * density, height.toFloat(), fill)
-        canvas.drawRect(keys.right - EDGE * density, 0f, keys.right, height.toFloat(), fill)
+        for (column in 0 until KeyGeometry.COLUMNS - 1) {
+            val left = keys.keyLeft(column) + keys.key
+            canvas.drawRect(left, 0f, left + keys.gap, height.toFloat(), fill)
+        }
+        // The outer edges, Q's left and P's right: a thin line each, with the screen outside them dimmed a little.
+        fill.color = CalibrationColours.OUTSIDE
+        canvas.drawRect(0f, 0f, keys.left, height.toFloat(), fill)
+        canvas.drawRect(keys.right, 0f, width.toFloat(), height.toFloat(), fill)
+        fill.color = CalibrationColours.ORANGE
+        canvas.drawRect(keys.left - EDGE * density, 0f, keys.left, height.toFloat(), fill)
+        canvas.drawRect(keys.right, 0f, keys.right + EDGE * density, height.toFloat(), fill)
+        // The letters, faint, between their bands.
+        label.color = CalibrationColours.LABEL
+        label.textSize = LABEL * density
+        val names = Layout.rows[0]
+        for (column in 0 until KeyGeometry.COLUMNS) {
+            val centre = keys.keyLeft(column) + keys.key / 2
+            canvas.drawText(names[column], centre, LABEL_TOP * density - label.ascent(), label)
+        }
     }
 
     private companion object {
-        /** A key's label, as a part of its width, faint: the edges matter here, not the letters. */
-        const val LABEL = .3f
-        /** How thick the two edges are, in dp. */
+        /** How far the bands rise from the screen's bottom edge, in dp: a short way, like the real gaps. */
+        const val BANDS = 72f
+        /** The outer edges' lines, in dp, outside the keys. */
         const val EDGE = 2f
+        /** The letters' size and how far from the bands' top, in dp. */
+        const val LABEL = 12f
+        const val LABEL_TOP = 6f
     }
 }

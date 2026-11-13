@@ -747,10 +747,19 @@ private fun theFinale() {
     same(gathered.map { it.text }.joinToString(""), ACROSTIC.replace(" ", ""), "Then only the first letters, which spell the phrase")
     same(gathered.zipWithNext().all { (a, b) -> a.x < b.x }, true, "in order, left to right")
     same(gathered.map { Math.round(it.y) }.distinct().size, 1, "on one line")
+    // The logo itself becomes the name (owner): the real mark comes back whole, then walks apart into its T and its K, which land
+    // on the name's T and K, and the name's own type takes over as they land.
+    val mark = GuideFinale.frame(GuideFinale.growStart(lines) - 10, lines, 1076f, 120f, 760f, measure)
+    same(mark.filterIsInstance<GuideFinale.Mark>().map { it.part }, listOf(GuideFinale.MarkPart.Whole), "The logo's mark comes back whole")
+    same(mark.none { it is GuideFinale.Text && it.text in listOf("T", "K") }, true, "with no stand-in letters beside it")
+    val walking = GuideFinale.frame(GuideFinale.growStart(lines) + GuideFinale.GROW / 2, lines, 1076f, 120f, 760f, measure)
+    val parts = walking.filterIsInstance<GuideFinale.Mark>().filter { it.alpha > 0f }
+    same(parts.map { it.part }.sorted(), listOf(GuideFinale.MarkPart.T, GuideFinale.MarkPart.K), "Halfway, the mark is its own T and K")
+    check(parts.first { it.part == GuideFinale.MarkPart.K }.x > parts.first { it.part == GuideFinale.MarkPart.T }.x) { "the K walks right of the T" }
     val logo = GuideFinale.frame(GuideFinale.total(lines), lines, 1076f, 120f, 760f, measure)
-    same(logo.any { it is GuideFinale.Mark }, true, "The logo's mark comes back")
+    same(logo.none { it is GuideFinale.Mark }, true, "At the end the mark has become the name")
     val name = logo.filterIsInstance<GuideFinale.Text>().filter { it.text != GuideFinale.BUILT_FOR }.sortedBy { it.x }.joinToString("") { it.text }
-    same(name, GuideFinale.NAME, "TK grows into TitanKeys")
+    same(name, GuideFinale.NAME, "The mark grows into TitanKeys")
     same(logo.filterIsInstance<GuideFinale.Text>().any { it.text == GuideFinale.BUILT_FOR }, true, "and says what it's built for")
     same(GuideFinale.beats(lines).size, 2, "Two beats to feel: the phrase locking, the name grown")
 }

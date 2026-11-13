@@ -13,6 +13,9 @@ import com.atlas.keyboard.KeyboardEvent.Recognised
 import com.atlas.keyboard.KeyboardEvent.WordMenu
 import com.atlas.keyboard.Modifiers.Level
 import com.atlas.keyboard.Modifiers.Panel
+import android.graphics.Canvas
+import android.graphics.RectF
+import android.graphics.Typeface
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Font
@@ -271,13 +274,21 @@ private fun topBar(g: Graphics2D, chapter: GuideChapter, onOrange: Boolean, y: I
  * and below: the title in Display, upper case, one line; 12 dp; the instruction in Body, muted, one line, or the chip in its place;
  * 24 dp; the field, exactly two lines; 16 dp; Skip or Next on the right. The keys at the bottom, edge to edge, at 60%.
  */
-private fun draw(frame: Frame, file: File) {
-    val (image, g) = image()
-    g.color = Color.BLACK
-    g.fillRect(0, 0, WIDTH, HEIGHT)
+private fun draw(frame: Frame, file: File, decorated: Boolean = true, bright: Float = 1f) {
+    val (image, base) = image()
+    base.color = Color.BLACK
+    base.fillRect(0, 0, WIDTH, HEIGHT)
+    // The content on a layer of its own, so the decoration can go behind it, clear of everything the guide keeps it out of.
+    val content = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
+    val g = content.createGraphics()
+    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+    g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+    g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
+    val keep = ArrayList<RectF>()
     val side = dp(V2.SIDE)
     val inner = WIDTH - 2 * side
     val barBottom = V2.STATUS + topBar(g, frame.chapter, false, V2.STATUS, frame.name.substringBefore('-'))
+    keep += RectF(0f, V2.STATUS.toFloat(), WIDTH.toFloat(), barBottom.toFloat())
     val keysTop = V2.keysTop
     val titleLine = V2.lineHeight(g, V2.display())
     val bodyLine = maxOf(V2.lineHeight(g, V2.body()), V2.lineHeight(g, V2.body()) + 2 * dp(7) - dp(2))
@@ -298,6 +309,9 @@ private fun draw(frame: Frame, file: File) {
     g.color = V2.CREAM
     val titleBase = y + (titleLine + g.fontMetrics.ascent - g.fontMetrics.descent) / 2 - dp(1)
     g.drawString(title, side, titleBase)
+    // A plain text keeps out only its words, as GuideDecorView measures it; the check after a pass is in the same view.
+    keep += RectF(side.toFloat(), y.toFloat(), side + g.fontMetrics.stringWidth(title) + if (frame.passed) dp(36).toFloat() else 0f,
+        (y + titleLine).toFloat())
     if (frame.passed) {
         // The check that draws in after the success line, orange: what just happened.
         val at = side + g.fontMetrics.stringWidth(title) + dp(8)
@@ -323,29 +337,35 @@ private fun draw(frame: Frame, file: File) {
         g.color = V2.CREAM
         g.drawString(shown, side + dp(14), y + (chipHeight + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
         if (g.fontMetrics.stringWidth(frame.chip) + 2 * dp(14) > inner) mark(g, "CHIP TOO LONG", y)
+        keep += RectF(side.toFloat(), y.toFloat(), (side + width).toFloat(), (y + chipHeight).toFloat())
     } else {
         val (bodyFont, bodyOver) = V2.fitted(g, frame.line, V2.body(), inner)
         if (bodyOver) mark(g, "INSTRUCTION OVER ONE LINE", y)
         g.font = bodyFont
         g.color = V2.MUTED
         g.drawString(frame.line, side, y + (bodyLine + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
+        keep += RectF(side.toFloat(), y.toFloat(), (side + g.fontMetrics.stringWidth(frame.line)).toFloat(), (y + bodyLine).toFloat())
     }
     frame.hunt?.let { left ->
         // A hunt's time left: a thin bar, muted, never orange (design v2).
         g.color = V2.MUTED
-        g.fillRect(side, y + bodyLine - dp(2), Math.round(inner * left), dp(2))
+        g.fillRect(side, y + bodyLine - dp(3), Math.round(inner * left), dp(3))
     }
     y += bodyLine + dp(24)
 
     // The field: the surface, 16 dp corners and padding, exactly two lines; typed text cream, the rest muted.
     g.color = V2.SURFACE
     g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), fieldHeight.toFloat(), dp(32).toFloat(), dp(32).toFloat()))
+    keep += RectF(side.toFloat(), y.toFloat(), (WIDTH - side).toFloat(), (y + fieldHeight).toFloat())
     g.font = V2.field()
     drawField(g, frame, side + pad, y + pad, inner - 2 * pad, fieldLine)
     y += fieldHeight + dp(16)
 
-    // Skip, quiet, once there's been a hint; Next, an orange pill, once the slide is passed. Right-aligned, under the field.
+    // Skip, quiet, once there's been a hint; Next, an orange pill, once the slide is passed. Right-aligned, under the field. Its
+    // place is kept clear even before it shows, as GuideDecorView keeps an invisible view's room.
     g.font = V2.label()
+    val actionWide = if (frame.passed) g.fontMetrics.stringWidth("NEXT") + 2 * dp(20) else g.fontMetrics.stringWidth("SKIP") + 2 * dp(16)
+    keep += RectF((WIDTH - side - actionWide).toFloat(), y.toFloat(), (WIDTH - side).toFloat(), (y + action).toFloat())
     if (frame.passed) {
         val wide = g.fontMetrics.stringWidth("NEXT") + 2 * dp(20)
         val left = WIDTH - side - wide
@@ -362,13 +382,20 @@ private fun draw(frame: Frame, file: File) {
         // A panel is open: the drawing of the keys hides, so it never covers the real panel. Only a note, for review.
         V2.note(g, "render note: $panel is open; the drawn keys hide under it", side, keysTop + dp(24))
     }
-    if (frame.panel == null) drawKeys(g, keysTop, side, frame)
+    if (frame.panel == null) {
+        drawKeys(g, keysTop, side, frame)
+        keep += RectF(0f, keysTop.toFloat(), WIDTH.toFloat(), keysTop + V2.KEYS.height)
+    }
     if (frame.wash > 0f) {
         g.color = rgb(Paint.ORANGE, .85f * frame.wash)
         g.fillRect(0, 0, WIDTH, HEIGHT)
     }
     V2.note(g, "render note: the keyboard's own bar is here", side, HEIGHT - V2.BAR / 2)
     g.dispose()
+    val slide = frame.name.substringBefore('-')
+    if (decorated) base.drawImage(decorLayer(slide, GuideDecor.stillMillis(slide), keep, false, bright), 0, 0, null)
+    base.drawImage(content, 0, 0, null)
+    base.dispose()
     ImageIO.write(image, "png", file)
 }
 
@@ -483,6 +510,8 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
 }
 
 private const val FIELD_LINES = 2
+/** How much stronger the brightened renders draw the decoration. */
+private const val BRIGHT = 5f
 
 /** The drawing of the keys (design v2), lit for a spot, steady for a held key, with corner symbols on the slides about them. */
 private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
@@ -493,7 +522,7 @@ private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
     if (corners) V2.note(g, "render note: the corner symbols here are approximate; the phone reads its own", side, top - dp(6))
     // Each key's label must fit in its key.
     frame?.labels?.values?.forEach { hint ->
-        g.font = V2.keyFont(minOf(V2.KEYS.key, V2.KEYS.keyHeight) * .24f)
+        g.font = V2.keyFont(minOf(V2.KEYS.key, V2.KEYS.keyHeight) * .3f)
         if (g.fontMetrics.stringWidth(hint) > V2.KEYS.key * .86f) mark(g, "KEY HINT TOO LONG", top)
     }
 }
@@ -504,8 +533,8 @@ private const val REPEAT_LONG_KEYS_COPY = 5.5f
 
 /** The end's words that live in GuideActivity, which isn't compiled for these checks: the same text, copied. */
 private const val SHARE_PLAIN = "Off until you agree. Then we get examples of your swipes to make swiping better. Change it " +
-    "any time in Settings > Share swipes.\nTrust me bro."
-private const val SHARE_ANSWERED = "Trust me bro."
+    "any time in Settings > Share swipes."
+private const val SHARE_ANSWERED = ""
 
 /** [text] wrapped at [width], line by line. */
 private fun wrap(g: Graphics2D, text: String, width: Int): List<String> {
@@ -549,24 +578,42 @@ private fun drawFinale(g: Graphics2D, at: Long) {
                 translate((piece.x - 540f * scale).toDouble(), (piece.y - 540f * scale).toDouble())
                 scale(scale.toDouble(), scale.toDouble())
             }
-            for ((data, colour) in listOf(GuideFinale.MARK_PATH to Paint.INK, GuideFinale.LINE_PATH to Paint.CREAM)) {
+            // The whole mark, or only its T or its K, as GuideFinaleView clips it.
+            val clip = when (piece.part) {
+                GuideFinale.MarkPart.T -> GuideFinale.T_CLIP
+                GuideFinale.MarkPart.K -> GuideFinale.K_CLIP
+                GuideFinale.MarkPart.Whole -> null
+            }?.let { points ->
+                java.awt.geom.Area(transform.createTransformedShape(Path2D.Float().apply {
+                    moveTo(points[0], points[1])
+                    for (at in 2 until points.size step 2) lineTo(points[at], points[at + 1])
+                    closePath()
+                }))
+            }
+            for ((data, colour, alpha) in listOf(Triple(GuideFinale.MARK_PATH, Paint.INK, piece.alpha), Triple(GuideFinale.LINE_PATH, Paint.CREAM, piece.line))) {
+                if (alpha <= 0f) continue
                 val path = Path2D.Float()
                 for (shape in GuideFinale.shapes(data)) {
                     shape.forEachIndexed { index, (x, y) -> if (index == 0) path.moveTo(x, y) else path.lineTo(x, y) }
                     path.closePath()
                 }
-                g.color = rgb(colour, piece.alpha)
-                g.fill(transform.createTransformedShape(path))
+                val area = java.awt.geom.Area(transform.createTransformedShape(path))
+                if (clip != null) area.intersect(clip)
+                g.color = rgb(colour, alpha)
+                g.fill(area)
             }
         }
     }
 }
 
 /** A frame of the finale, alone on the end's orange, as it plays before the buttons come in. */
-private fun drawFinaleFrame(file: File, at: Long) {
+private fun drawFinaleFrame(file: File, at: Long, bright: Float = 1f) {
     val (image, g) = image()
     g.color = orange
     g.fillRect(0, 0, WIDTH, HEIGHT)
+    // The grass grows as the finale plays, on the room the end's buttons keep while they wait to show.
+    finaleBottom = endTop(g, false) - dp(FINALE_ROOM).toFloat()
+    g.drawImage(decorLayer(GuideDecor.FINALE, at, endKeepOut(g, false), true, bright), 0, 0, null)
     topBar(g, GuideChapter.End, true, V2.STATUS)
     drawFinale(g, at)
     g.dispose()
@@ -578,10 +625,11 @@ private fun drawFinaleFrame(file: File, at: Long) {
  * its line, and the way to start again. The header has only the boring guide and ✕. [answered] draws it after the share offer
  * has an answer.
  */
-private fun drawEnd(file: File, answered: Boolean) {
+private fun drawEnd(file: File, answered: Boolean, bright: Float = 1f) {
     val (image, g) = image()
     g.color = orange
     g.fillRect(0, 0, WIDTH, HEIGHT)
+    g.drawImage(decorLayer(GuideDecor.FINALE, GuideFinale.total(SUMMARY_LINES).toLong() + 20_000L, endKeepOut(g, answered), true, bright), 0, 0, null)
     val side = dp(V2.SIDE)
     val inner = WIDTH - 2 * side
     topBar(g, GuideChapter.End, true, V2.STATUS)
@@ -595,8 +643,8 @@ private fun drawEnd(file: File, answered: Boolean) {
     if (under.size > 4) mark(g, "SHARE TEXT OVER FOUR LINES", HEIGHT - dp(60))
     val underHeight = under.size * g.fontMetrics.height
     val boring = dp(44)
-    var y = HEIGHT - dp(24) - boring - dp(4) - againHeight - dp(12) - underHeight - dp(4) - shareHeight - dp(12) - goHeight
-    finaleBottom = y - dp(20).toFloat()
+    var y = endTop(g, answered)
+    finaleBottom = y - dp(FINALE_ROOM).toFloat()
     drawFinale(g, GuideFinale.total(SUMMARY_LINES))
     if (finaleBottom - FINALE_TOP < dp(220)) mark(g, "FINALE SQUEEZED", y)
     // Every text on the end's orange is ink (design v2): the filled button is cream, with ink words.
@@ -634,12 +682,54 @@ private fun drawEnd(file: File, answered: Boolean) {
     ImageIO.write(image, "png", file)
 }
 
+/** Where the end's buttons start: the room they take, from the bottom up, as the column lays them out. */
+private fun endTop(g: Graphics2D, answered: Boolean): Int {
+    val inner = WIDTH - 2 * dp(V2.SIDE)
+    g.font = V2.title()
+    val goHeight = g.fontMetrics.ascent + g.fontMetrics.descent + 2 * dp(16)
+    g.font = V2.body()
+    val againHeight = g.fontMetrics.ascent + g.fontMetrics.descent + 2 * dp(12)
+    val underHeight = wrap(g, if (answered) SHARE_ANSWERED else SHARE_PLAIN, inner).size * g.fontMetrics.height
+    return HEIGHT - dp(24) - dp(44) - dp(4) - againHeight - dp(12) - underHeight - dp(4) - goHeight - dp(12) - goHeight
+}
+
+/** The room between the finale and the end's buttons, for the grass, as GuideActivity's FINALE_ROOM. */
+private const val FINALE_ROOM = 56
+
+/** What the end keeps the grass out of: the top bar, the finale's words and the buttons' room. */
+private fun endKeepOut(g: Graphics2D, answered: Boolean) = listOf(
+    RectF(0f, V2.STATUS.toFloat(), WIDTH.toFloat(), (V2.STATUS + dp(V2.TOP_BAR)).toFloat()),
+    RectF(0f, FINALE_TOP, WIDTH.toFloat(), endTop(g, answered) - dp(FINALE_ROOM).toFloat()),
+    RectF(dp(V2.SIDE).toFloat(), endTop(g, answered).toFloat(), (WIDTH - dp(V2.SIDE)).toFloat(), (HEIGHT - dp(24)).toFloat()),
+)
+
+/** The real decoration, from GuideDecor, as the phone draws it; or [bright]er, to judge the drawing. */
+private val DECOR by lazy {
+    GuideDecor(Typeface(Font.createFont(Font.TRUETYPE_FONT, File("android/src/main/res/font/inter_bold.otf"))))
+}
+
+/**
+ * [slide]'s decoration at [millis], on a layer of its own, in the guide's root (the screen down to the keyboard's bar), clear of
+ * [keep], in ink when [onOrange]. [bright] multiplies its strength, for a render that shows the drawing plainly.
+ */
+private fun decorLayer(slide: String, millis: Long, keep: List<RectF>, onOrange: Boolean, bright: Float): BufferedImage {
+    val layer = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
+    DECOR.draw(Canvas(layer), slide, millis, RectF(0f, 0f, WIDTH.toFloat(), (HEIGHT - V2.BAR).toFloat()), keep, onOrange, DP)
+    if (bright != 1f) for (y in 0 until HEIGHT) for (x in 0 until WIDTH) {
+        val argb = layer.getRGB(x, y)
+        val alpha = argb ushr 24
+        if (alpha > 0) layer.setRGB(x, y, (minOf(255, Math.round(alpha * bright)) shl 24) or (argb and 0xFFFFFF))
+    }
+    return layer
+}
+
 /**
  * "Leaving already?" (design v2): a card of the surface over the dimmed slide, its title in the Title style, and Keep going in
  * orange, then Start again and Leave, outlined.
  */
 private fun drawLeave(file: File, under: Frame) {
-    draw(under, file)
+    // No decoration under the pop-up: it fades away as the pop-up opens.
+    draw(under, file, decorated = false)
     val image = ImageIO.read(file)
     val g = image.createGraphics()
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
@@ -698,6 +788,8 @@ private fun drawLeave(file: File, under: Frame) {
 /** Draws every slide in [chapters], in each of its states, to PNGs in [folder], and the finale's frames and the end. */
 internal fun drawSlides(folder: String, chapters: Set<GuideChapter>) {
     val out = File(folder).apply { mkdirs() }
+    // The decoration brightened, to judge its drawing: the slides' starts, the grass and the end.
+    val bright = File(out, "bright").apply { mkdirs() }
     var count = 0
     for ((index, step) in GUIDE_STEPS.withIndex()) {
         if (step.chapter !in chapters || step.chapter == GuideChapter.End) continue
@@ -705,6 +797,7 @@ internal fun drawSlides(folder: String, chapters: Set<GuideChapter>) {
             drawing = frame.name
             draw(frame, File(out, "%02d-%s.png".format(index + 1, frame.name)))
             count++
+            if (frame.name.endsWith("-1-start")) draw(frame, File(bright, "%02d-%s.png".format(index + 1, frame.name)), bright = BRIGHT)
         }
     }
     if (GuideChapter.End in chapters) {
@@ -724,11 +817,13 @@ internal fun drawSlides(folder: String, chapters: Set<GuideChapter>) {
         for ((name, at) in moments) {
             drawing = "finale-$name"
             drawFinaleFrame(File(out, "%02d-finale-%s.png".format(GUIDE_STEPS.size, name)), at)
+            if (name == "d-lit" || name == "j-titankeys") drawFinaleFrame(File(bright, "%02d-finale-%s.png".format(GUIDE_STEPS.size, name)), at, BRIGHT)
             count++
         }
         for (answered in listOf(false, true)) {
             drawing = "end-" + if (answered) "answered" else "asking"
             drawEnd(File(out, "%02d-%s.png".format(GUIDE_STEPS.size, drawing)), answered)
+            if (!answered) drawEnd(File(bright, "%02d-%s.png".format(GUIDE_STEPS.size, drawing)), answered, BRIGHT)
             count++
         }
     }

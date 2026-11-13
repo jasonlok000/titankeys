@@ -15,12 +15,13 @@ are already settled are marked (Owner).
     activity, and the debug screens.
 - **Spacing scale:** 4, 8, 12, 16, 24, 32, 48 dp. Nothing in between.
 - **Type scale (Inter):**
-  - **Display:** 30 dp, ExtraBold, UPPER CASE, letter spacing −0.01 em. Slide titles only.
-  - **Title:** 22 dp, Bold. The playground wordmark, dialog titles.
-  - **Body:** 16 dp, Medium. Instructions, chips.
-  - **Field:** 22 dp, Medium. What you type in the guide and playground.
-  - **Label:** 12 dp, Bold, UPPER CASE, letter spacing +0.08 em. The chapter label, small buttons.
+  - **Display:** 36 dp, ExtraBold (Bold in the app, which has no ExtraBold), UPPER CASE, letter spacing −0.01 em. Slide titles only.
+  - **Title:** 24 dp, Bold. The playground wordmark, dialog titles.
+  - **Body:** 19 dp, Medium. Instructions, chips.
+  - **Field:** 24 dp, Medium. What you type in the guide and playground.
+  - **Label:** 14 dp, Bold, UPPER CASE, letter spacing +0.08 em. The chapter label, small buttons.
   - A line that's too long shrinks to fit, down to 80% of its size, and never wraps unless its role says so.
+  - The sizes were raised on 2026-11-13 for the phone's 9 cm screen, where a dp is about 0.13 mm (owner: "isn't the title too small?").
 - **Colours:**
   - Black #000 background.
   - Cream #FFF1E6 text.

@@ -463,6 +463,15 @@ private class GuideField(context: Context) : EditText(context) {
     override fun scrollTo(x: Int, y: Int) {
         val own = layout
         val shown = maxLines
+        // With grey text to type along to, the field shows the cursor's line and the next, so the reference text is always two
+        // full lines where it has them, never cut to one (owner: "shouldn't the reference text be two lines?").
+        val ghostly = if (ghost.isNotEmpty() && own != null && shown in 1 until Int.MAX_VALUE) ghostLayout(own) else null
+        if (ghostly != null && ghostly.lineCount > shown) {
+            val cursor = ghostly.getLineForOffset(selectionEnd.coerceIn(0, text.length))
+            val top = minOf(cursor, ghostly.lineCount - shown).coerceAtLeast(0)
+            super.scrollTo(x, ghostly.getLineTop(top))
+            return
+        }
         if (own == null || shown < 1 || shown == Int.MAX_VALUE || own.lineCount <= shown) {
             super.scrollTo(x, y)
             return
@@ -483,10 +492,24 @@ private class GuideField(context: Context) : EditText(context) {
             if (field == value) return
             field = value
             invalidate()
+            // The lines shown follow the grey text too.
+            post { scrollTo(scrollX, scrollY) }
         }
     var ghostColour = 0
     private var ghostLayout: StaticLayout? = null
     private var ghostKey = ""
+
+    /**
+     * The playground's text box has personality (owner: "a dark text box with personality (an orange accent)"): a thin orange bar
+     * down its left, inside its padding.
+     */
+    var accent = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+    private val accentPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     /** The text that the slide marks in orange to aim at, by its characters, or null. See [GuideMemory.target]. */
     var target: IntRange? = null
@@ -592,13 +615,35 @@ private class GuideField(context: Context) : EditText(context) {
         }
         super.onDraw(canvas)
         canvas.restore()
+        if (accent) {
+            val unit = resources.displayMetrics.density
+            accentPaint.color = currentTextColor.let { if (it == GuideColours.INK) GuideColours.INK else GuideColours.ORANGE }
+            canvas.drawRoundRect(scrollX + unit * 6, scrollY + unit * 14, scrollX + unit * 9, scrollY + height - unit * 14, unit * 2, unit * 2,
+                accentPaint)
+        }
         if (own == null) return
         drawTarget(canvas, own)
         drawGap(canvas, own)
         if (ghost.isEmpty()) return
+        val ghostly = ghostLayout(own)
+        // The same place the field draws its own text: inside its padding, scrolled with it, and only within its lines.
+        val left = compoundPaddingLeft.toFloat()
+        val top = extendedPaddingTop.toFloat()
+        canvas.save()
+        val first = ghostly.getLineForVertical(scrollY)
+        val lastTop = if (maxLines in 1 until Int.MAX_VALUE) top + ghostly.getLineTop(minOf(first + maxLines, ghostly.lineCount)) else Float.MAX_VALUE
+        canvas.clipRect(left + scrollX, top + scrollY, (width - compoundPaddingRight + scrollX).toFloat(),
+            minOf((height - extendedPaddingBottom + scrollY).toFloat(), lastTop))
+        canvas.translate(left, top)
+        ghostly.draw(canvas)
+        canvas.restore()
+    }
+
+    /** What's typed, invisible, then the grey text, laid out as one paragraph with the field's own text, so they wrap alike. */
+    private fun ghostLayout(own: android.text.Layout): StaticLayout {
         val typed = text.toString()
         val key = "$typed\u0000$ghost\u0000${own.width}\u0000$ghostColour"
-        val ghostly = ghostLayout?.takeIf { ghostKey == key } ?: run {
+        return ghostLayout?.takeIf { ghostKey == key } ?: run {
             // What's typed, invisible, then the ghost: so the ghost starts exactly where the typed text ends, on its line.
             val built = SpannableStringBuilder(typed)
             if (typed.isNotEmpty()) built.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, typed.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -614,18 +659,8 @@ private class GuideField(context: Context) : EditText(context) {
                 .build()
                 .also { ghostLayout = it; ghostKey = key }
         }
-        // The same place the field draws its own text: inside its padding, scrolled with it, and only within its lines.
-        val left = compoundPaddingLeft.toFloat()
-        val top = extendedPaddingTop.toFloat()
-        canvas.save()
-        val first = ghostly.getLineForVertical(scrollY)
-        val lastTop = if (maxLines in 1 until Int.MAX_VALUE) top + ghostly.getLineTop(minOf(first + maxLines, ghostly.lineCount)) else Float.MAX_VALUE
-        canvas.clipRect(left + scrollX, top + scrollY, (width - compoundPaddingRight + scrollX).toFloat(),
-            minOf((height - extendedPaddingBottom + scrollY).toFloat(), lastTop))
-        canvas.translate(left, top)
-        ghostly.draw(canvas)
-        canvas.restore()
     }
+
     /** A finger lifted from the field: the guide's steering slides have words for that. */
     var touched: (() -> Unit)? = null
 
@@ -722,6 +757,12 @@ class GuideActivity : Activity() {
     private lateinit var block: LinearLayout
     /** The end's quiet way to the boring guide. */
     private lateinit var boringLink: TextView
+    /** The slide's decoration, behind the content (design v2 §7). Never on the playground. */
+    private lateinit var decor: GuideDecorView
+    /** The decoration that waits for the slide to settle, and the one hidden under the leaving pop-up. */
+    private var decorWaiting: String? = null
+    private var decorUnderPopup: String? = null
+    private val decorSettled = Runnable { if (leavePopup == null) decor.slide = decorWaiting else decorUnderPopup = decorWaiting }
     /** The line above the field that suggests what to type. */
     private lateinit var script: TextView
     /** Over the field: what a demonstration would do, in grey, without typing it. */
@@ -1316,7 +1357,7 @@ class GuideActivity : Activity() {
                 // A switch turned off lets go; on is agreed on the share policy page, which plays its own.
                 haptics.play(Haptic.AppSwitchOff)
                 showEndChoices()
-            } else startActivity(Connected.pageIntent(this, Contributions.PAGE))
+            } else openShare()
         }
         shareLine = underLine()
         endButtons = LinearLayout(this).apply {
@@ -1381,7 +1422,7 @@ class GuideActivity : Activity() {
                 pivotX = 0f
                 visibility = View.GONE
             }
-            addView(huntBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2), Gravity.BOTTOM))
+            addView(huntBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3), Gravity.BOTTOM))
         }
         spacer = View(this)
         lowerSpacer = View(this)
@@ -1418,6 +1459,14 @@ class GuideActivity : Activity() {
         }
         root.clipChildren = false
         root.addView(backdrop, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        // The slide's decoration (design v2 §7): above the background, behind everything else, clear of everything we draw. It reads
+        // their places on every frame, so it follows the layout, a chip in the instruction's place and Next as it appears. None on
+        // the playground.
+        decor = GuideDecorView(this).apply {
+            visibility = if (playground) View.GONE else View.VISIBLE
+            keepOutOf(listOf(topBar, title, body, chip, hint, script, field, next, offer, keys, endButtons))
+        }
+        root.addView(decor, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(effects, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(finaleView, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(roastView, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
@@ -1675,6 +1724,8 @@ class GuideActivity : Activity() {
         paintChapter()
         paintWpm()
         keys.tone = next
+        // On the orange screens the decoration turns ink and keeps moving; it never marks the pass.
+        if (::decor.isInitialized) decor.onOrange = next == GuideTone.Orange
         if (::field.isInitialized) paintField()
         paintNext()
         paintSegments(flow.stepIndex)
@@ -2008,7 +2059,7 @@ class GuideActivity : Activity() {
             overlay.sweep()
             main.postDelayed({ if (passed) applyTone(GuideTone.Orange) }, WIPE_MILLIS)
         }
-        if (step.chapter == GuideChapter.End) showEnd(step)
+        if (step.chapter == GuideChapter.End) showEnd(step) else decorate(step.id)
     }
 
     /**
@@ -2038,6 +2089,8 @@ class GuideActivity : Activity() {
             val top = (column.paddingTop + dp(TOP_BAR + 16)).toFloat()
             val bottom = if (endButtons.height > 0) endButtons.top - dp(FINALE_ROOM).toFloat() else root.height * FINALE_SHARE
             finaleView.box = top to maxOf(top + dp(160), bottom)
+            // The finale's words are the decoration's to keep clear of: the grass grows in the room under them, on the buttons.
+            decor.keepOutArea(RectF(0f, top, root.width.toFloat(), maxOf(top + dp(160), bottom)))
             finaleView.play()
         }
     }
@@ -2368,11 +2421,12 @@ class GuideActivity : Activity() {
         chip.text = text
         chip.visibility = View.VISIBLE
         chipAt = SystemClock.uptimeMillis()
+        // The chip's own move, at its own timing (owner: one set of timings would make it generic).
         chip.alpha = 0f
-        chip.translationX = 0f
-        chip.translationY = dp(MOVE_RISE).toFloat()
-        chip.animate().alpha(1f).translationY(0f).setDuration(MOVE_MILLIS).setInterpolator(EASE_OUT).start()
-        body.animate().alpha(0f).setDuration(MOVE_MILLIS).start()
+        chip.translationY = 0f
+        chip.translationX = dp(CHIP_SLIDE).toFloat()
+        chip.animate().alpha(1f).translationX(0f).setDuration(CHIP_IN_MILLIS).start()
+        body.animate().alpha(0f).setDuration(CHIP_IN_MILLIS).start()
         // After a hint, Skip may show at once (design v2).
         if (!passed) showSkip()
         main.removeCallbacks(chipOver)
@@ -2392,7 +2446,7 @@ class GuideActivity : Activity() {
             body.alpha = 1f
             return
         }
-        chip.animate().alpha(0f).setDuration(CHIP_OUT_MILLIS).withEndAction {
+        chip.animate().alpha(0f).translationX(-dp(CHIP_SLIDE / 4).toFloat()).setDuration(CHIP_OUT_MILLIS).withEndAction {
             chip.visibility = View.GONE
             if (waiting != null && !passed && !changing) showChip(waiting)
             else body.animate().alpha(1f).setDuration(CHIP_OUT_MILLIS).start()
@@ -2720,7 +2774,7 @@ class GuideActivity : Activity() {
         val step = flow.step
         when {
             // The app shows the full disclosure, with "I agree" and "No thanks". Nothing is shared before that.
-            step.offersShare && Contributions.unanswered(this) -> startActivity(Connected.pageIntent(this, Contributions.PAGE))
+            step.offersShare && Contributions.unanswered(this) -> openShare()
             step.pause -> leave()
             !ready -> input.showInputMethodPicker()
             else -> flow.missing?.let { need ->
@@ -2808,6 +2862,7 @@ class GuideActivity : Activity() {
             for (view in listOf(chapter, close)) view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         }
         setupPart = part
+        decorate(GuideDecor.SETUP)
         guideLook(false)
         unlockKeyboard()
         showChapter(SetupPart.LABEL)
@@ -2867,6 +2922,11 @@ class GuideActivity : Activity() {
     @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        // Back from Share swipes' policy, however it was left: the end screen shows the answer, or still offers it.
+        if (requestCode == SHARE_REQUEST) {
+            showEndChoices()
+            return
+        }
         if (requestCode != DISCLOSURE_REQUEST) return
         // After "Agree" Accessibility opens as before. After "No thanks" the part is no longer missing, and setup moves on.
         if (resultCode == RESULT_OK && setupPart == SetupPart.Back) openPart(SetupPart.Back) else checkKeyboard()
@@ -2915,6 +2975,9 @@ class GuideActivity : Activity() {
         // the right, and a fixed height, so it never jumps (owner: the name grew when a panel opened).
         paintChapter()
         paintWpm()
+        // The owner's front page: the text box's orange accent, and the touch zone's corner brackets on the keys.
+        field.accent = true
+        keys.zoneMarks = true
         // The playground's own text, made for speed, in a new order each time.
         startPassage(PlaygroundText.make(kotlin.random.Random(SystemClock.uptimeMillis())))
         swapIn(body, PLAYGROUND_BODY, 0)
@@ -3676,11 +3739,13 @@ class GuideActivity : Activity() {
         }
         title.animate().alpha(0f).setStartDelay(0).setDuration(SUCCESS_OUT_MILLIS).withEndAction {
             title.text = line
-            title.scaleX = 1f
-            title.scaleY = 1f
-            // The guide's one move (design v2): the success line fades in and rises 8 dp, then its check draws in.
-            title.translationY = dp(MOVE_RISE).toFloat()
-            title.animate().alpha(1f).translationY(0f).setDuration(MOVE_MILLIS).setInterpolator(EASE_OUT).withEndAction {
+            title.pivotX = 0f
+            title.pivotY = title.height / 2f
+            // The pass beat's own pop, at its own timing (owner: keep the current timings).
+            title.scaleX = SUCCESS_POP
+            title.scaleY = SUCCESS_POP
+            title.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(SUCCESS_IN_MILLIS)
+                .setInterpolator(android.view.animation.DecelerateInterpolator()).withEndAction {
                     ValueAnimator.ofFloat(0f, 1f).apply {
                         duration = CHECK_MILLIS
                         addUpdateListener {
@@ -3802,10 +3867,11 @@ class GuideActivity : Activity() {
         title.translationX = 0f
         title.pivotX = 0f
         title.pivotY = title.height.toFloat()
-        title.scaleX = 1f
-        title.scaleY = 1f
-        // The guide's one move (design v2): it fades in and rises.
-        appear(title)
+        title.alpha = 0f
+        title.scaleX = REACTION_FROM
+        title.scaleY = REACTION_FROM
+        title.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(REACTION_IN_MILLIS)
+            .setInterpolator(OvershootInterpolator(REACTION_OVERSHOOT)).start()
         body.animate().alpha(REACTION_DIM).setDuration(FADE_MILLIS).start()
     }
 
@@ -3941,6 +4007,13 @@ class GuideActivity : Activity() {
         }, WIPE_MILLIS)
     }
 
+    /**
+     * Share swipes' short policy, over the guide, so that agreeing, "Not now" and Back all land back on the end screen (owner: "the
+     * share swipe should go back to the end screen with a clear indication on where to click accept"). See [ShareDisclosureActivity].
+     */
+    @Suppress("DEPRECATION")
+    private fun openShare() = startActivityForResult(ShareDisclosureActivity.intent(this), SHARE_REQUEST)
+
     /** Leaving before the end asks first. Coming back after that gets a line. */
     private fun confirmLeave() {
         if (playground || settingUp || flow.finished || !ready) {
@@ -4018,8 +4091,16 @@ class GuideActivity : Activity() {
             })
         }
         leavePopup = scrim
+        // No decoration under the pop-up: it fades away, and comes back as it closes.
+        decorUnderPopup = decor.slide
+        decor.slide = null
         root.addView(scrim, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        appear(scrim)
+        // Its own pop, at its own timing, as before (owner: keep the current timings).
+        scrim.alpha = 0f
+        scrim.animate().alpha(1f).setDuration(FADE_MILLIS * 2).start()
+        card.scaleX = LEAVE_POP
+        card.scaleY = LEAVE_POP
+        card.animate().scaleX(1f).scaleY(1f).setDuration(ENTER_MILLIS).setInterpolator(android.view.animation.OvershootInterpolator()).start()
     }
 
     private fun closeLeavePopup() {
@@ -4027,6 +4108,19 @@ class GuideActivity : Activity() {
         leavePopup = null
         popup.animate().cancel()
         root.removeView(popup)
+        decor.slide = decorUnderPopup
+        decorUnderPopup = null
+    }
+
+    /**
+     * Shows [slide]'s decoration once the slide has settled: after the content's own move ([DECOR_SETTLE_MILLIS]), so the two never
+     * move at once. The decoration then fades in over 600 ms, or crossfades from the last over 400 ms ([GuideDecorView]).
+     */
+    private fun decorate(slide: String?, after: Long = DECOR_SETTLE_MILLIS) {
+        if (playground) return
+        main.removeCallbacks(decorSettled)
+        decorWaiting = slide
+        if (after <= 0L) decorSettled.run() else main.postDelayed(decorSettled, after)
     }
 
     /**
@@ -4035,6 +4129,8 @@ class GuideActivity : Activity() {
      */
     private fun finale(end: GuideStep) {
         haptics.celebrate()
+        // The grass grows as the finale plays (owner: "go touch grass now is good").
+        decorate(GuideDecor.FINALE, 0)
         for (sweep in 0 until FINALE_SWEEPS) overlay.sweep(delay = sweep * FINALE_STAGGER_MILLIS, thickness = BEAT_LINE + sweep * 2f)
         enter(end)
     }
@@ -4063,6 +4159,7 @@ class GuideActivity : Activity() {
         // A switch, off until the user agrees on the share policy page; never shown on before that.
         shareButton.text = if (Contributions.enabled(this)) SHARE_ON else SHARE_OFF
         shareLine.text = if (asking) SHARE_PLAIN else SHARE_ANSWERED
+        shareLine.visibility = if (shareLine.text.isEmpty()) View.GONE else View.VISIBLE
         paintEndButtons()
     }
 
@@ -4130,6 +4227,7 @@ class GuideActivity : Activity() {
 
     private fun startAgain() {
         main.removeCallbacksAndMessages(null)
+        decor.keepOutArea(null)
         finaleView.stop()
         finaleView.visibility = View.GONE
         for (view in listOf<View>(title, instruction, chapter, block)) view.visibility = View.VISIBLE
@@ -4246,11 +4344,13 @@ class GuideActivity : Activity() {
         // Design v2's type scale (docs/design-v2.md §1), in dp of the design scale, never the phone's font size. Inter: Display is
         // the slides' titles, upper case (Bold: the app carries no ExtraBold); Title the wordmark and dialogs; Body the instructions
         // and chips; Field what you type; Label the chapter and small buttons, upper case. A line too long shrinks to [SHRINK].
-        private const val DISPLAY = 30f
-        private const val TITLE_TYPE = 22f
-        private const val BODY_TYPE = 16f
-        private const val FIELD_TYPE = 22f
-        private const val LABEL_TYPE = 12f
+        // Readable on the phone's 9 cm screen, where a dp is about 0.13 mm (owner: "isn't the title too small?", "text size should
+        // convey hierarchy"): the Orchestrator's scale, 2026-11-13.
+        private const val DISPLAY = 36f
+        private const val TITLE_TYPE = 24f
+        private const val BODY_TYPE = 19f
+        private const val FIELD_TYPE = 24f
+        private const val LABEL_TYPE = 14f
         private const val SHRINK = .8f
         private const val DISPLAY_SPACING = -.01f
         private const val LABEL_SPACING = .08f
@@ -4274,7 +4374,8 @@ class GuideActivity : Activity() {
         private const val OUTLINE_ON_ORANGE = .5f
         private const val PASSAGE_AHEAD_ON_ORANGE = .6f
         /** ✕'s icon, in its target. */
-        private const val CLOSE_ICON = 24
+        /** ✕'s icon: bigger, the owner's call for the end screen (v5.2), kept everywhere the guide shows ✕. */
+        private const val CLOSE_ICON = 30
         /** Skip shows once a slide has had this long (design v2), or a hint. */
         private const val SKIP_AFTER_MILLIS = 10_000L
         private const val SKIP_LABEL = "Skip"
@@ -4287,13 +4388,18 @@ class GuideActivity : Activity() {
         /** The guide's one move (design v2): a fade and a rise of 8 dp in 220 ms, easing out. */
         private const val MOVE_MILLIS = 220L
         private const val MOVE_RISE = 8
+        /** The decoration waits for the content's move, and the instruction's stagger after it, to end. */
+        private const val DECOR_SETTLE_MILLIS = MOVE_MILLIS + 60L + 40L
         private val EASE_OUT = android.view.animation.DecelerateInterpolator(1.5f)
         private const val LEAVE_AGAIN = "Start again"
         private const val CHIP_MILLIS = 3000L
         private const val CHIP_MIN_MILLIS = 1200L
+        private const val CHIP_SLIDE = 40
         private const val CHIP_IN_MILLIS = 220L
         private const val CHIP_OUT_MILLIS = 180L
         private const val CHECK_SIZE = .7f
+        private const val SUCCESS_IN_MILLIS = 250L
+        private const val SUCCESS_POP = 1.08f
         /** The pass beat: the old title's fade, the success line's pop from this size, its check, and the pill's morph and pulse. */
         private const val SUCCESS_OUT_MILLIS = 90L
         private const val CHECK_MILLIS = 220L
@@ -4339,18 +4445,21 @@ class GuideActivity : Activity() {
         private const val BORING_GUIDE_LINE = "Every feature in words. For nerds, and for people who skipped half of this. So, you."
         private const val SHARE_ON = "Share my swipes: on"
         private const val SHARE_OFF = "Share my swipes: off"
-        /** The owner's words (v5). */
-        /** The share line is the owner's words alone; how to change it later is in the explanation (owner, v5.2). */
-        private const val SHARE_ANSWERED = "Trust me bro."
+        /**
+         * Once answered, the end says nothing more under the switch: "Trust me bro." moved to the share step itself, right before
+         * its accept (owner, 2026-11-13: "remove trust me bro at the end guide. put it in place of before you share").
+         */
+        private const val SHARE_ANSWERED = ""
         private const val AGAIN_LINK = "Start the guide again"
         /** The finale's part of the end screen, from the top: the buttons have the rest. */
         private const val FINALE_SHARE = .68f
         /** The room between the finale and the end's buttons. */
-        private const val FINALE_ROOM = 20
+        private const val FINALE_ROOM = 56
 
         // Setup, in ms. These are safe to change.
         private const val SETUP_REQUEST = 7
         private const val DISCLOSURE_REQUEST = 8
+        private const val SHARE_REQUEST = 9
         /** How often the guide looks at the part whose page is open. Reading these settings is cheap. */
         private const val SETUP_POLL_MILLIS = 400L
         /** How long the guide waits to be in front again after it closes a page, before it sends for itself. */
@@ -4371,7 +4480,7 @@ class GuideActivity : Activity() {
         /** The end's instruction. */
         /** The one boring thing at the end, in plain words: it is about consent, so no jokes here. */
         private const val SHARE_PLAIN = "Off until you agree. Then we get examples of your swipes to make swiping better. Change it " +
-            "any time in Settings > Share swipes.\n" + SHARE_ANSWERED
+            "any time in Settings > Share swipes."
         private const val END_NEXT = "Go type something"
         /** How many things the paste lesson rains down. */
         private const val RAIN_PIECES = 26
@@ -4440,7 +4549,7 @@ class GuideActivity : Activity() {
         // The motion, in ms. Android's animator duration setting also scales the parts that draw themselves.
         private const val INTRO_MILLIS = 1250L
         private const val FADE_MILLIS = 140L
-        private const val ENTER_MILLIS = MOVE_MILLIS
+        private const val ENTER_MILLIS = 340L
         private const val ENTER_STAGGER_MILLIS = 60L
         private const val REACTION_IN_MILLIS = 300L
         private const val REACTION_OVERSHOOT = 2.2f

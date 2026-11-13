@@ -246,11 +246,11 @@ class GuideDecor(private val font: Typeface? = null) {
 
     /** Typewriter e: a huge e like old metal type, and every few seconds a strip of correction tape glides across part of it. */
     private fun typewriter(t: Float) {
-        val mid = band(5, 100f)
-        val (top, bottom) = open(mid)
-        // Inter's e is about .56 of its size tall; it fills the band, a little over.
-        val size = max((bottom - top) / .56f * .86f, 110f * dp)
-        val spot = floatArrayOf(area.left + area.width() * .7f, mid)
+        val (top, bottom) = open(band(5, 100f))
+        // Inter's e is about .56 of its size tall, and its shoulder sits 5 dp lower: it fills the open band and stays in it. It
+        // used to be at least 110 dp, which, in the guide's real layout, ran into the field above it (v2 wiring).
+        val size = min((bottom - top - 5f * dp) / .56f * .9f, 220f * dp).coerceAtLeast(40f * dp)
+        val spot = floatArrayOf(area.left + area.width() * .7f, (top + bottom) / 2 - 2.5f * dp)
         val cx = spot[0]
         val baseline = spot[1] + .27f * size
         val u = t / TYPEWRITER_LOOP
@@ -783,9 +783,16 @@ class GuideDecor(private val font: Typeface? = null) {
 
     /** Grass: as the finale plays, grass grows up from the bottom edge, its blades swaying, and three small flowers open. */
     private fun grass(t: Float) {
-        val grow = sine(t / GRASS_GROW)
+        val growth = sine(t / GRASS_GROW)
+        if (growth <= 0f) return
+        // The grass stands on the end's buttons, the widest thing at the bottom, as on the ground: from the screen's bottom edge it
+        // would grow behind them and never show. With nothing there, it grows from the bottom edge.
+        val floor = floorLike()?.let { it.top - CLEAR_DP * dp }?.takeIf { it > area.centerY() }
+        val bottom = (floor ?: area.bottom) + 2f * dp
+        // As tall as the room under whatever is above it allows, the finale's words most of all: it never grows into them.
+        val ceiling = keepOut.filter { it.bottom < bottom - 1f && it.width() > area.width() * .4f }.maxOfOrNull { it.bottom + CLEAR_DP * dp }
+        val grow = growth * ((if (ceiling == null) 1f else ((bottom - ceiling) / (GRASS_TALLEST * dp)).coerceIn(0f, 1f)))
         if (grow <= 0f) return
-        val bottom = area.bottom + 2f * dp
         val tufts = 9
         val wind = TAU * ((t - GRASS_SETTLED).coerceAtLeast(0f) / GRASS_LOOP)
         for (i in 0 until tufts) {
@@ -1118,6 +1125,8 @@ class GuideDecor(private val font: Typeface? = null) {
         private const val CLIPS_LOOP = 20000f
         private const val CLIP_LENGTH = 44f
         private const val GRASS_GROW = 2600f
+        /** The tallest the grass grows, a flower's head and petals included, in dp. */
+        private const val GRASS_TALLEST = 124f
         private const val GRASS_SETTLED = 4500f
         private const val GRASS_LOOP = 8000f
         private const val GEAR_LOOP = 20000f

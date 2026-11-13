@@ -219,9 +219,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
     Bigger, above Biggest) until the user picks one, so people with big text don't get small words the way the owner did.
 - **The decoration with Sym open** (owner, 2026-11-13: "The background decor probably bugs visually when sym is open"). From the
   code: with a panel open, the keys drawing hides, so the decoration's lower band runs to the screen's bottom, behind the panel;
-  the ∞ is centred in that band, so it jumps down, grows and is cut by the panel's top. A phone capture is queued. Proposed fix
-  (Orchestrator, waiting on the owner's go): the decoration stops at the keyboard's top, and keeps the keys drawing's place while a
-  panel is open, so nothing moves. For V.
+  the ∞ is centred in that band, so it jumps down, grows and is cut by the panel's top. Confirmed on the phone (build #10, the
+  clown slide, Sym opened by the debug broadcast): the juggling balls vanish behind the panel, and the whole slide (title, field)
+  drops 51 px (33 dp) as Sym opens and rises back as it closes, since the block is centred between two spacers and the keys'
+  room changes. Proposed fix (Orchestrator, waiting on the owner's go): a panel opening moves nothing on the slide; the block
+  keeps its place, and the decoration stops at the keyboard's top and keeps the keys drawing's place as its floor. For V.
 - **The ∞ slide says ∞ outright: a symbol hunt, not a riddle** (owner, 2026-11-13: "we should be explicit with the symbol to
   find. Its a symbol hunt not a riddle. Ok use ur recommendation but also make it explicitly the ∞"). (Owner) This reverses the
   earlier "never names the symbol" rule. Built in 4c6fd0e:

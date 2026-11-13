@@ -126,14 +126,17 @@ are already settled are marked (Owner).
 The owner's direction (23:25): "it should be sth that decorate the slides. not sth that changes the meaning or gives any meaning",
 "design the effects of each of the slides individually", and "go touch grass now is good". The earlier picks (keys spelling
 NOPE, progress backlight, streak flame and so on) are dropped, because they carried meaning. The Orchestrator designed each slide's
-decoration below. None of it is approved by the owner.
+decoration below. Round 2 (2026-11-13) redrew them bolder after the owner found them "too subtle", through a phone preview, and
+Master approved them as below (V).
 
 **Rules for every decoration:**
 - It's pure decoration. It never reacts to typing, a mistake, a hint or a pass, and never tells you anything. It only follows the slide's theme.
 - **Where:** a layer behind the title, instruction and field, above the black. It lives in the empty space. It's never drawn
   inside the field, over the keyboard drawing, or on the bar, and it keeps 8 dp clear of text.
-- **How faint:** orange at 14–24% opacity, or cream at 10–14%, tuned per slide so it reads at a glance on the phone but stays
-  behind everything (owner, 2026-11-13: at 6–12% it mostly vanished). On the orange pass screen it turns ink at 8% and keeps moving.
+- **How strong:** the accent at 36–46%, tuned per slide so it reads at a glance on the phone but stays behind everything (owner,
+  2026-11-13: at 6–12% it mostly vanished). The typewriter's e is cream at about 20%, and the grass is ink at 24, 40 and 60%. With
+  Orange accents off, the accent is cream at the orange's lightness, so nothing turns brighter. On the orange pass screen it turns
+  ink at 8% and keeps moving.
 - **Motion:** slow loops of 6–20 s, eased, with at most 12 shapes at once. Drawn at up to 30 fps, and stopped when the screen is off.
   - With Android's animations off, it shows as a still picture.
   - It fades in 600 ms after the slide settles. Between slides it crossfades over 400 ms. The keyboard never moves for it.
@@ -143,22 +146,22 @@ decoration below. None of it is approved by the owner.
 
 | Chapter | Slide | Decoration |
 |---|---|---|
-| Typing | Make a typo. We'll fix it. | **Red pen.** Faint proofreader's marks draw themselves stroke by stroke in the empty space: a squiggly underline, a caret ^, a circled letter, a scribbled "sp?". Each one lingers, fades, and the next appears somewhere else. |
-| Typing | Swipe it. One hand, no questions. | **Air swipes.** Three long soft S-curves sweep across the background, one at a time, each drawn with a tapering tail like a swipe trail, then fading. |
-| Typing | Save a word. Then unsave it. | **Starfield.** Four-point sparkles, Save's own shape, twinkle at scattered spots, and a few drift slowly up. |
-| Delete | Delete the extra e. The old way. | **Typewriter e.** A huge faint serif "e", like old metal type, sits off-centre behind the title. Every few seconds a strip of correction tape glides across part of it. |
-| Delete | Flick away the stupid word. | **Paper balls.** Now and then a crumpled paper ball arcs across the background from right to left, as if tossed at a bin off screen. |
-| Delete | Hold the flick. Delete in bulk. | **Shredder belt.** Rows of faint letter tiles slide left behind the content and dissolve at the left edge, endlessly. |
-| Steering | Steer to the underlined word. | **Night drive.** Faint dashed lane lines stream towards you from a vanishing point behind the title. |
-| Steering | Grab my whole heart. Three taps. | **Heartbeat.** An ECG line traces across the background on a loop, flat, beat, beat, flat, and small outline hearts pulse on the beats. |
-| Symbols | Add the *, the traditional way. | **Asterisk snow.** Asterisks of different sizes fall slowly, turning like snowflakes. |
-| Symbols | Add the ?. Hold V for it. | **Buoys.** Big faint question marks bob and tilt, as if puzzled. |
-| Symbols | Add the &. It's behind Sym. | **Peekaboo.** Ampersands peek out from behind the screen's edges and the title, then slide back out of sight. |
-| Symbols | Find the weird one. It's further in. | **Forever.** A glowing dot runs endlessly along a big faint ∞ behind the content, leaving a fading trail. |
-| Symbols | Sign it with 🤡. Find yourself. | **Big top.** Faint circus-tent rays turn slowly from the top centre, and a few juggling balls arc across. |
-| Copy and paste | Paste over the orange words. | **Sticky notes.** Three or four faint sticky notes are pinned at angles in the margins, swaying as if in a breeze. Now and then one flaps a corner. |
-| Copy and paste | Paste the one nice clip. | **Zero-g clips.** Outline paper clips float, turning slowly, as if in zero gravity. |
-| End | GO TOUCH GRASS NOW (the finale) | **Grass (owner likes it).** As the finale plays, grass grows up from the bottom edge, its blades swaying, and two or three small flowers open. |
-| Setup | The phone's settings | **Gears.** Faint gear outlines turn slowly in two corners. |
+| Typing | Make a typo. We'll fix it. | **Red pen.** Proofreader's marks draw themselves stroke by stroke behind a fountain pen's nib in the empty space: a squiggly underline, a caret ^, a circled letter, a scribbled "sp?", a pigtail, a double underline. Each one lingers, fades, and the next appears somewhere else. |
+| Typing | Swipe it. One hand, no questions. | **Air swipes.** Three long soft S-curves sweep across the band under the field, one every 4 s, each a glowing trail with a round head and a tapering tail. |
+| Typing | Save a word. Then unsave it. | **Starfield.** Four-point sparkles, Save's own shape, twinkle at scattered spots, and a shooting star crosses a band every 6 s. |
+| Delete | Delete the extra e. The old way. | **Typewriter e.** A huge cream "e" with a letterpress shadow sits in the band under the field. Every 7 s a strip of correction tape in the accent rolls across it and peels off. |
+| Delete | Flick away the stupid word. | **Paper balls.** Now and then a crumpled paper ball arcs in from the right and drops into a wire bin on the left, which wobbles. |
+| Delete | Hold the flick. Delete in bulk. | **Shredder belt.** Letter tiles ride a belt into a shredder on the left, with a toothed mouth and a blinking light, and fall out underneath as strips, endlessly. |
+| Steering | Steer to the underlined word. | **Night drive.** A road winds away to the horizon in the band under the field, bending one way and then the other; its centre dashes and roadside posts stream towards you, under a crescent moon. |
+| Steering | Grab my whole heart. Three taps. | **Heartbeat.** A bold ECG line with a glowing head traces across on a loop, flat, beat, beat, flat, and filled hearts pulse on the beats. |
+| Symbols | Add the *, the traditional way. | **Asterisk snow.** Bold asterisks of different sizes fall slowly, swaying and turning like snowflakes. |
+| Symbols | Add the ?. Hold V for it. | **Buoys.** Big question marks bob and tilt on a rolling sea, as if puzzled. |
+| Symbols | Add the &. It's behind Sym. | **Peekaboo.** Ampersands peek out from behind the screen's edges, the title and the keys, look about, then slide back out of sight. |
+| Symbols | Find the weird one. It's further in. | **Forever.** A glowing dot runs endlessly along a big ∞ under the field, leaving a fading trail. |
+| Symbols | Sign it with 🤡. Find yourself. | **Big top.** A light striped valance hangs under the top bar, rippling, with chase lights along its edge, and three two-tone balls are juggled on their faint arcs, each with a trail. |
+| Copy and paste | Paste over the orange words. | **Sticky notes.** Four sticky notes with scribbles are pinned at angles in the open space, swaying as if in a breeze. Now and then one flaps a corner. |
+| Copy and paste | Paste the one nice clip. | **Zero-g clips.** Bold outline paper clips float, drifting and turning slowly, as if in zero gravity. |
+| End | GO TOUCH GRASS NOW (the finale) | **Grass (owner likes it).** As the finale plays, a dense band of flat pointed blades, about 150 dp tall, in three ink tones, grows up from the bottom edge, its blades swaying, and three small flowers open on tall stems. |
+| Setup | The phone's settings | **Gears.** Two pairs of meshed gears turn slowly in two corners. |
 
 The playground keeps its own effects (warm-up, comments, rain) and gets no decoration.

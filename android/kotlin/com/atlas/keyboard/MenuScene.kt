@@ -49,7 +49,8 @@ class MenuScene(
     /** The colours, as RGB: the word's ink, grey, the accent, the bar's own colour, and the cream of the quiet marks. */
     data class Palette(val ink: Int, val grey: Int, val accent: Int, val paper: Int, val cream: Int) {
         companion object {
-            val DARK = Palette(0xFFFFFF, 0x99918A, 0xEF804E, 0x000000, 0xFFF1E6)
+            /** The bar's dark look, with Accent's colour: orange, or cream with Settings > Orange accents off. */
+            val DARK get() = Palette(0xFFFFFF, 0x99918A, Accent.colour and 0xFFFFFF, 0x000000, 0xFFF1E6)
         }
     }
 

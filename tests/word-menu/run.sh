@@ -15,6 +15,6 @@ keyboard=android/kotlin/com/atlas/keyboard
 javac --release 17 -nowarn -cp "$sdk/platforms/android-36/android.jar" -d "$work" \
   "$engine/LanguageHabits.java" "$engine/SwipeWords.java" "$engine/SuggestionPolicy.java" "$engine/BlockedWords.java" "$engine/ForgetWords.java"
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$work:$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
-  "$keyboard/MenuKeys.kt" "$keyboard/MenuPath.kt" "$keyboard/MenuScene.kt" "$keyboard/SteadyKey.kt" "$keyboard/Layout.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" \
+  "$keyboard/MenuKeys.kt" "$keyboard/MenuPath.kt" "$keyboard/MenuScene.kt" "$keyboard/Accent.kt" "$keyboard/SteadyKey.kt" "$keyboard/Layout.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" \
   "$keyboard/QuickSetting.kt" tests/word-menu/MenuBar.kt tests/word-menu/QuickSettingsPage.kt tests/word-menu/WordMenuChecks.kt
 java -cp "$work:$stdlib:$sdk/platforms/android-36/android.jar" com.atlas.engine.WordMenuChecksKt

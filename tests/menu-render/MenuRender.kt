@@ -146,7 +146,7 @@ private class Snapshot(val darkWord: Recording, val darkEffects: Recording, val 
 /** The bar's light look, as the scene's colours, with Accent's colour: orange, or cream with Orange accents off. */
 private val LIGHT get() = MenuScene.Palette(0x000000, 0x444444, ORANGE, 0xFFFFFF, 0x000000)
 /** The bar's dark look, with Accent's colour. */
-private val DARK get() = MenuScene.Palette.DARK.copy(accent = ORANGE)
+private val DARK get() = MenuScene.Palette.DARK
 
 /** The scene as it is now, recorded in both looks, to draw later: the scene moves on. */
 private fun MenuScene.snapshot(): Snapshot {

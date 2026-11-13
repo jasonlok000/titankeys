@@ -213,6 +213,9 @@ all of them are unapproved.
     - **Open:** the echo uses the word's own mark, and the ambient waits a full cycle, so there are no hearts and then glitter.
     - **Next for W:** the quick settings page has the same late lift (its mark clears about 0.3 s after a toggle), so it gets the
       same fix. The ladder work stays held until v4 is approved.
+  - **Size and global Orange accents: merged** (F's 4af0690, c019ec2 and 03af407; merge 743a128). The Orchestrator resolved
+    tests/menu-render/run.sh by keeping both file lists; menu-render and word-menu pass. The release notes cover both. Next for F:
+    the two resets.
   - **V, a new focused session** (2.1 V: guide decorations and grass, local_23ffee83, 10:35): decorations and finale grass, through
     phone preview pages and the owner's review ("current install still too subtle"). It then builds them into GuideDecor. A
     keeps the held-delete items, with its strength pass handed on if already done. C keeps the finale layout and the grass's

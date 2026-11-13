@@ -63,7 +63,43 @@ fun main() {
     thePlaygroundsFiveMoments()
     eachMomentPlaysOnceABurst()
     theSwitchSilencesThePlayground()
+    aPressInInkClicksUnlessItsControlMeansSomething()
     println("Haptic checks passed")
+}
+
+/**
+ * Every press in Ink's pages plays Press, a light tick, unless its control plays its own haptic in time: a switch only locks,
+ * never clicks then locks (owner, 2026-11-13: "Add haptics to every touch screen press").
+ */
+private fun aPressInInkClicksUnlessItsControlMeansSomething() {
+    check(Haptic.AppPress.family == Family.Texture && Haptic.AppPress.group == HapticGroup.App) { "Press is a texture tick in the app's group" }
+    var now = 0L
+    val waiting = HashMap<Runnable, Long>()
+    var played = 0
+    val press = InkPress({ run, millis -> waiting[run] = now + millis }, { waiting.remove(it) }) { played++ }
+    fun advance(millis: Long) {
+        now += millis
+        waiting.filterValues { it <= now }.keys.forEach { waiting.remove(it)?.let { _ -> it.run() } }
+    }
+    // A plain press: Press plays once its wait is over, not before.
+    press.pressed()
+    advance(InkPress.WAIT_MILLIS - 1)
+    check(played == 0) { "Press waits for a meaning" }
+    advance(1)
+    check(played == 1) { "then plays" }
+    // A switch: its Lock comes in time, and no Press plays.
+    press.pressed()
+    advance(20)
+    press.meaning()
+    advance(200)
+    check(played == 1) { "A control's own haptic takes the place of Press" }
+    // Two quick presses: one Press each, as texture may repeat. The second starts its own wait.
+    press.pressed()
+    advance(InkPress.WAIT_MILLIS)
+    press.pressed()
+    advance(InkPress.WAIT_MILLIS)
+    check(played == 3) { "Each press clicks: $played" }
+    check(InkPress.WAIT_MILLIS in 30L..80L) { "Press is near the press itself: ${InkPress.WAIT_MILLIS} ms" }
 }
 
 private fun check(condition: Boolean, message: () -> String) {
@@ -130,10 +166,11 @@ private val table = mapOf(
     Haptic.BugRecordingStarted to Family.Lock,
     Haptic.BugRecordingStopped to Family.Release,
     Haptic.GuideCelebration to Family.Celebrate,
-    Haptic.GuideNext to Family.Confirm,
     Haptic.GuideBlocked to Family.No,
     Haptic.GuideHint to Family.Change,
-    // TitanKeys' own screens (docs/haptics.md): on locks, off lets go, a step ticks, a pick is done, a delete is gone, a refusal is no.
+    // TitanKeys' own screens (docs/haptics.md): any plain press clicks, on locks, off lets go, a step ticks, a pick is done, a delete
+    // is gone, a refusal is no.
+    Haptic.AppPress to Family.Texture,
     Haptic.AppSwitchOn to Family.Lock,
     Haptic.AppSwitchOff to Family.Release,
     Haptic.AppStep to Family.Texture,

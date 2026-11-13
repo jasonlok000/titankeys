@@ -1194,7 +1194,7 @@ class GuideActivity : Activity() {
             visibility = View.GONE
             setPadding(dp(16), dp(12), dp(16), dp(12))
             setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
-            setOnClickListener { offerPressed() }
+            onPress(haptics) { offerPressed() }
         }
         // Under the field, on the right (design v2): a quiet "Skip" in the Label style, which shows once the slide has had 10 s or a
         // hint, and once the slide is passed, an orange "Next" pill in the same place. Never in the top bar.
@@ -1209,7 +1209,7 @@ class GuideActivity : Activity() {
             minHeight = dp(TOUCH)
             setPadding(dp(16), 0, dp(16), 0)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, px(LABEL_TYPE))
-            setOnClickListener { nextPressed() }
+            onPress(haptics) { nextPressed() }
         }
         chip = TextView(this).apply {
             typeface = MEDIUM
@@ -1231,7 +1231,7 @@ class GuideActivity : Activity() {
             maxLines = 1
             setPadding(dp(16), dp(12), dp(16), dp(12))
             setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
-            setOnClickListener { backPressed() }
+            onPress(haptics) { backPressed() }
         }
         field = GuideField(this).apply {
             typeface = MEDIUM
@@ -1332,10 +1332,9 @@ class GuideActivity : Activity() {
             setImageResource(R.drawable.panel_close)
             contentDescription = "Close"
             setPadding(dp((CLOSE_SIZE - CLOSE_ICON) / 2), dp((CLOSE_SIZE - CLOSE_ICON) / 2), dp((CLOSE_SIZE - CLOSE_ICON) / 2), dp((CLOSE_SIZE - CLOSE_ICON) / 2))
-            setOnClickListener { confirmLeave() }
+            onPress(haptics) { confirmLeave() }
         }
         boringButton = bigButton(END_NEXT) {
-            haptics.play(Haptic.GuideNext)
             preferences.edit().remove(RESUME).apply()
             startActivity(Connected.pageIntent(this, "/"))
             finish()
@@ -1356,7 +1355,7 @@ class GuideActivity : Activity() {
             maxLines = 1
             minHeight = dp(TOUCH)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, px(LABEL_TYPE))
-            setOnClickListener { nextPressed() }
+            onPress(haptics) { nextPressed() }
         }
         finaleView = GuideFinaleView(this).apply {
             visibility = View.GONE
@@ -1364,13 +1363,17 @@ class GuideActivity : Activity() {
             over = { showEndChoices() }
         }
         // A switch: on opens the share policy, to agree there; off is at once.
-        shareButton = bigButton(SHARE_OFFER) {
+        shareButton = bigButton(SHARE_OFFER, haptic = null) {
             if (Contributions.enabled(this)) {
                 Contributions.enabled(this, false)
                 // A switch turned off lets go; on is agreed on the share policy page, which plays its own.
                 haptics.play(Haptic.AppSwitchOff)
                 showEndChoices()
-            } else openShare()
+            } else {
+                // Opening the policy is a plain press.
+                haptics.play(Haptic.AppPress)
+                openShare()
+            }
         }
         shareLine = underLine()
         endButtons = LinearLayout(this).apply {
@@ -1400,7 +1403,7 @@ class GuideActivity : Activity() {
             setPadding(dp(GUTTER * 2), 0, dp(GUTTER * 2), 0)
             setAutoSizeTextTypeUniformWithConfiguration(TITLE_SMALLEST, ROAST_LARGEST, 2, TypedValue.COMPLEX_UNIT_DIP)
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
-            setOnClickListener { endRoast() }
+            onPress(haptics) { endRoast() }
         }
         // The top bar (design v2): 48 dp, the chapter on the left and ✕ on the right, and nothing else. On the playground it is the
         // 56 dp header: the wordmark on the left, the words a minute in the middle, and Guide and Settings on the right. Its height
@@ -1663,15 +1666,15 @@ class GuideActivity : Activity() {
         return kotlin.math.ceil(metrics.bottom - metrics.top).toInt() + dp(2)
     }
 
-    /** One of the end's big buttons: Title type, a full-width pill. */
-    private fun bigButton(text: String, press: () -> Unit) = TextView(this).apply {
+    /** One of the end's big buttons: Title type, a full-width pill. It plays [haptic] as it's pressed: see [onPress]. */
+    private fun bigButton(text: String, haptic: Haptic? = Haptic.AppPress, press: () -> Unit) = TextView(this).apply {
         this.text = text
         typeface = HEAVY
         gravity = Gravity.CENTER
         maxLines = 1
         setPadding(dp(16), dp(16), dp(16), dp(16))
         setTextSize(TypedValue.COMPLEX_UNIT_PX, px(TITLE_TYPE))
-        setOnClickListener { press() }
+        onPress(haptics, haptic) { press() }
     }
 
     /** The line under one of the end's big buttons. */
@@ -1694,7 +1697,7 @@ class GuideActivity : Activity() {
         minHeight = dp(TOUCH)
         setPadding(dp(16), 0, dp(16), 0)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, px(LABEL_TYPE))
-        setOnClickListener { press() }
+        onPress(haptics) { press() }
     }
 
     /** The guide's one chip, for every chip and hint: a pill of the divider colour with cream words. */
@@ -2816,7 +2819,8 @@ class GuideActivity : Activity() {
         keepHint = true
         showHint(DECLINE_OFF)
         keepHint = false
-        hint.setOnClickListener {
+        // A switch: it plays its own lock or release, not Press.
+        hint.onPress(haptics, haptic = null) {
             pasteDeclined = !pasteDeclined
             haptics.play(if (pasteDeclined) Haptic.AppSwitchOn else Haptic.AppSwitchOff)
             hint.text = if (pasteDeclined) DECLINE_ON else DECLINE_OFF
@@ -3883,7 +3887,6 @@ class GuideActivity : Activity() {
 
     private fun nextPressed() {
         if (changing || !ready) return
-        haptics.play(Haptic.GuideNext)
         // At the end, the small pill at the top is the boring guide; the big button below goes to type.
         if (flow.finished) {
             preferences.edit().remove(RESUME).apply()
@@ -4093,9 +4096,9 @@ class GuideActivity : Activity() {
      * Keep going, the orange one, then Start again and Leave, outlined. A touch outside it, or Back, keeps going.
      */
     private fun showLeavePopup() {
+        // ✕ played Press as it opened this: nothing more.
         if (leavePopup != null) return
-        haptics.play(Haptic.GuideHint)
-        fun quiet(text: String, press: () -> Unit) = bigButton(text, press).apply {
+        fun quiet(text: String, press: () -> Unit) = bigButton(text, press = press).apply {
             setTextColor(GuideColours.CREAM)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, px(BODY_TYPE))
             setPadding(dp(16), dp(12), dp(16), dp(12))
@@ -4146,7 +4149,8 @@ class GuideActivity : Activity() {
         val scrim = FrameLayout(this).apply {
             setBackgroundColor(GuideMotion.faded(GuideColours.BLACK, LEAVE_SCRIM))
             isClickable = true
-            setOnClickListener { closeLeavePopup() }
+            // A touch outside the card keeps going.
+            onPress(haptics) { closeLeavePopup() }
             addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER).apply {
                 leftMargin = dp(BLOCK_SIDE)
                 rightMargin = dp(BLOCK_SIDE)

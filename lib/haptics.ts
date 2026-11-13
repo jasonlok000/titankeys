@@ -76,11 +76,11 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "bug_recording", label: "Record a bug starts", about: "When Record a bug starts." },
     { id: "bug_recording_stopped", label: "Record a bug stops", about: "When Record a bug stops." },
     { id: "guide_celebration", label: "Guide celebrations", about: "When you finish a part of the guide." },
-    { id: "guide_next", label: "Guide Next", about: "When you press Next in the guide." },
     { id: "guide_blocked", label: "Guide blocks", about: "When the guide blocks something a slide doesn't teach yet." },
     { id: "guide_hint", label: "Guide hints", about: "When the guide shows a hint." },
   ] },
   { title: "TitanKeys' own screens", haptics: [
+    { id: "app_press", label: "A press", about: "Any other press on the screen in Settings, the guide and the playground: a button, a row, a link, ×, ←, Next or Skip. A light click." },
     { id: "app_switch_on", label: "A switch turns on", about: "When you turn a switch on in Settings or the guide." },
     { id: "app_switch_off", label: "A switch turns off", about: "When you turn a switch off in Settings or the guide." },
     { id: "app_step", label: "A step", about: "Each press of Shorter or Longer, a tick." },

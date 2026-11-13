@@ -22,6 +22,8 @@ import android.widget.TextView
  * shows this screen again. The text is in strings.xml (docs/play/accessibility.md).
  */
 class BackDisclosureActivity : Activity() {
+    /** Every press here plays its haptic: see [onPress]. */
+    private val haptics by lazy { Haptics(this) }
     /** The same sizes at any display size or font size (FixedScale). */
     override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
 
@@ -98,7 +100,7 @@ class BackDisclosureActivity : Activity() {
         layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             .apply { marginStart = dp(12) }
         setPadding(dp(20), dp(10), dp(20), dp(10))
-        setOnClickListener { action() }
+        onPress(haptics) { action() }
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()

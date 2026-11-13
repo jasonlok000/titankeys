@@ -34,6 +34,7 @@ import com.atlas.keyboard.Haptic
 import com.atlas.keyboard.HapticGroup
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.HapticsLab
+import com.atlas.keyboard.InkPress
 import com.atlas.keyboard.KeyCalibrationActivity
 import com.atlas.keyboard.KeyCapture
 import com.atlas.keyboard.Keys
@@ -61,10 +62,17 @@ internal fun appUserScale(context: Context): Float = FixedScale.size(context).fa
 internal fun appAccent(context: Context): Int = if (Accent.on) 0 else Accent.colour
 
 /**
- * Ink's press haptic is Android's stock click, which TitanKeys never plays (docs/haptics.md, rule 5). Navigation and plain
- * buttons stay quiet, and the controls that change something play their own through lib/app-haptics.tsx.
+ * Ink's press haptic is Android's stock click, which TitanKeys never plays (docs/haptics.md, rule 5). Every press in Ink's pages
+ * comes here, ✕ and ← in the header too, and plays Press, unless the control plays its own through lib/app-haptics.tsx: see
+ * [InkPress]. Always true, so Ink's own click never plays.
  */
-internal fun appPressHaptic(view: android.view.View): Boolean = true
+internal fun appPressHaptic(view: android.view.View): Boolean {
+    inkPress?.pressed()
+    return true
+}
+
+/** The live Settings screen's [InkPress], while it lives. */
+private var inkPress: InkPress? = null
 
 internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> =
     mapOf("atlas" to AtlasAdapter(activity), "connected" to ConnectedAdapter(activity))
@@ -84,6 +92,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private val hapticsLab = lazy { HapticsLab(activity) }
     /** Plays the app's own controls' haptics, through the same switches and gate as the keyboard's. */
     private val haptics by lazy { Haptics(activity) }
+    private val pressHandler = Handler(Looper.getMainLooper())
+    /** Press for each press in Ink's pages, which a control's own haptic takes the place of. */
+    private val press = InkPress({ run, millis -> pressHandler.postDelayed(run, millis) }, pressHandler::removeCallbacks) {
+        haptics.play(Haptic.AppPress)
+    }
     /** The listed shorthand that has a full word, with that word, in the list's order, for its switches in Settings. */
     private val listedShorthand by lazy {
         activity.assets.open("autocorrect/en_shorthand.txt").bufferedReader().useLines(Shorthand::parse)
@@ -119,6 +132,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     }
 
     init {
+        inkPress = press
         activity.application.registerActivityLifecycleCallbacks(this)
         activity.window.decorView.viewTreeObserver.addOnWindowFocusChangeListener(windowFocus)
         // Enabling and choosing the keyboard happen outside the app; the screens follow as they change.
@@ -184,6 +198,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 "haptic" -> {
                     val haptic = Haptic.of(data.getString("id"))
                     require(haptic?.group == HapticGroup.App) { "Not an app haptic: ${data.getString("id")}" }
+                    // The control's own haptic, for what it means, takes the place of the press's click.
+                    press.meaning()
                     haptics.play(haptic!!)
                     "null"
                 }
@@ -434,6 +450,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 }
                 "labPlayFlick" -> {
                     lab().playFlick()
+                    // The lab's flick is what's being judged: no Press on top of it.
+                    press.meaning()
                     "null"
                 }
                 else -> throw IllegalArgumentException("Unknown Atlas operation: $operation")

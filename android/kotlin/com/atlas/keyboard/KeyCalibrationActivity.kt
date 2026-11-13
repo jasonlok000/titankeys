@@ -47,6 +47,8 @@ private object CalibrationColours {
  * drawing follows it ([KeyGeometry]).
  */
 class KeyCalibrationActivity : Activity() {
+    /** Every press here plays its haptic: see [onPress]. */
+    private val haptics by lazy { Haptics(this) }
     /** The same sizes at any display size or font size (FixedScale). */
     override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
 
@@ -185,7 +187,7 @@ class KeyCalibrationActivity : Activity() {
         layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
         isClickable = true
         isFocusable = true
-        setOnClickListener { pressed() }
+        onPress(haptics) { pressed() }
     }
 
     private fun button(label: String, pressed: () -> Unit) = TextView(this).apply {
@@ -202,7 +204,7 @@ class KeyCalibrationActivity : Activity() {
         }
         isClickable = true
         isFocusable = true
-        setOnClickListener { pressed() }
+        onPress(haptics) { pressed() }
     }
 
     private fun card(vararg views: View) = LinearLayout(this).apply {

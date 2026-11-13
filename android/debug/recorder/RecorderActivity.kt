@@ -32,6 +32,8 @@ import java.util.Locale
  * The field asks for no personalised learning, so a session never teaches TitanKeys Debug its prompts.
  */
 class RecorderActivity : Activity(), Recording.Sink {
+    /** Every press here plays its haptic: see [onPress]. */
+    private val haptics by lazy { Haptics(this) }
     private class Attempt {
         val events = JSONArray()
         val gaps = JSONArray()
@@ -103,7 +105,7 @@ class RecorderActivity : Activity(), Recording.Sink {
                     text = "Next"
                     textSize = 16f
                     isAllCaps = false
-                    setOnClickListener { next() }
+                    onPress(haptics) { next() }
                 })
                 addView(details)
                 addView(buttons)
@@ -298,7 +300,7 @@ class RecorderActivity : Activity(), Recording.Sink {
         textSize = 11f
         isAllCaps = false
         layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        setOnClickListener { action() }
+        onPress(haptics) { action() }
     }
 
     private companion object {

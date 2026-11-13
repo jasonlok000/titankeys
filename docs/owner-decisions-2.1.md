@@ -205,6 +205,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **The paste prank** (owner, 2026-11-13, 10:30): "So is my whole personality didn't land. I don't get it honestly." (Owner)
+  - The Orchestrator's replacement: the nice clip "You're doing great." pastes "You're doing great. Kidding", and the slide says
+    "Gotcha. You believed it."
+  - The line is now "What you copy is in Sym, then A. You're doing great. Kidding". It's 60 characters, with no full stop, as
+    the summary needs.
 - **Haptics on every touchscreen press in the app** (owner, 2026-11-13, 10:20): "Add Haptics to every touch screen press on the
   app. Do a audit. For example, the cross button and the back button." (Owner) This reverses "plain buttons stay quiet". D audits
   every control and adds a light Press haptic with its own switch, with a check that no clickable is left silent. Controls with

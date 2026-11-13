@@ -21,6 +21,8 @@ import kotlin.math.min
  */
 fun main() {
     measuredDefaults()
+    columnsStay()
+    drawnAtSixty()
     touchpadOnKeys()
     edgesMoveEverything()
     zonesOnKeys()
@@ -44,7 +46,10 @@ fun main() {
     println("Key alignment checks passed")
 }
 
-/** At 1076 px with the defaults, the keys are the owner's calibration: a key and a gap every 107.5 px, centred, square keys. */
+/**
+ * At 1076 px with the defaults, the keys are the owner's calibration and shape: a column every 107.5 px, centred, square keys with
+ * no gap between keys, and 10.5 px between rows (owner, 2026-11-12).
+ */
 private fun measuredDefaults() {
     check(KeyAlignment.current == KeyAlignment.DEFAULT) { "nothing is calibrated until someone calibrates" }
     near(KeyAlignment.DEFAULT.centre, .5f, "the defaults are centred")
@@ -54,10 +59,11 @@ private fun measuredDefaults() {
     near(keys.pitch, 107.5f, "the owner's spacing")
     near(q.left, 1076f - p.right, "as far in from each side")
     check(q.left > 0f && p.right < 1076f) { "the keys stop short of the screen's edges" }
-    near(keys.gap / keys.key, 24f / 84f, "gap to key")
+    near(keys.gap, 0f, "no gap between keys")
+    near(keys.key, 107.5f, "a key takes its whole column")
     near(keys.keyHeight, keys.key, "the keys are square")
-    near(keys.rowPitch, keys.pitch, "the rows are a key and a gap apart, the same as across")
-    near(keys.key, 107.5f * 84f / 108f, "a key's width")
+    near(keys.rowPitch - keys.keyHeight, 10.5f, "10.5 px between rows")
+    near(keys.right - keys.left, 1075f, "ten columns")
     // The spacing grows from the centre, and the shift moves the centre.
     val wider = KeyAlignment.DEFAULT.spaced(KeyAlignment.DEFAULT.key + KeyAlignment.DEFAULT.gap + .01f)
     near(wider.centre, .5f, "spacing keeps the row centred")
@@ -76,7 +82,7 @@ private fun measuredDefaults() {
             near(box.top, row * keys.rowPitch, "row $row's top")
         }
     }
-    // The bottom row spans the same edges with the same gaps, and its keys keep Layout's widths.
+    // The bottom row spans the same edges, with no gaps either, and its keys keep Layout's widths.
     val bottom = keys.boxes.filter { it.row == 3 }
     same(bottom.map { it.name }, Layout.rows[3], "the bottom row's keys")
     near(bottom.first().left, q.left, "the bottom row starts under Q")
@@ -91,6 +97,49 @@ private fun measuredDefaults() {
         near(right - left, keys.pitch, "column $column's width")
         near((left + right) / 2, keys.boxes[column].centreX, "column $column's middle")
     }
+}
+
+/**
+ * The keys losing their gap moves no column and no key's middle (owner: never change touchpad or input code for this): each
+ * column still runs from the middle of the calibration's gap on its left to the middle of the one on its right, and each key's
+ * middle is still the calibration's key's middle, so the menu's buttons, the Sym panel and the touchpad stay where they were.
+ */
+private fun columnsStay() {
+    for (alignment in listOf(KeyAlignment.DEFAULT, KeyAlignment(.04f, .93f), KeyAlignment(6f / 1080f, 83f / 1080f, 25.5f / 1080f))) {
+        val width = 1080f
+        val calibratedLeft = alignment.left * width
+        val calibratedKey = alignment.key * width
+        val calibratedGap = alignment.gap * width
+        val keys = KeyGeometry(width, alignment)
+        for (column in 0..9) {
+            val start = calibratedLeft + column * (calibratedKey + calibratedGap)
+            val (left, right) = keys.cell(column)
+            near(left, start - calibratedGap / 2, "column $column starts half a gap left of its calibrated key")
+            near(right, start + calibratedKey + calibratedGap / 2, "and ends half a gap right of it")
+            near(keys.boxes[column].centreX, start + calibratedKey / 2, "key $column's middle is the calibrated key's")
+            near(keys.x((column + .5f) / 10), start + calibratedKey / 2, "the touchpad's column $column lands there")
+        }
+    }
+}
+
+/**
+ * The guide's and the playground's drawing (owner, 2026-11-12): the same width and columns as the real keys, and 60% of their
+ * height, every row and the space between rows alike.
+ */
+private fun drawnAtSixty() {
+    same(KeyGeometry.DRAWN, .6f, "60% of the real height")
+    val real = KeyGeometry(1076f, KeyAlignment.DEFAULT)
+    val drawn = KeyGeometry(1076f, KeyAlignment.DEFAULT, KeyGeometry.DRAWN)
+    near(drawn.height, real.height * .6f, "the whole drawing")
+    near(drawn.keyHeight, real.keyHeight * .6f, "a key")
+    near(drawn.rowPitch - drawn.keyHeight, 10.5f * .6f, "between rows")
+    near(KeyGeometry.heightFor(1076f, KeyAlignment.DEFAULT, KeyGeometry.DRAWN), drawn.height, "heightFor at 60%")
+    for ((index, box) in drawn.boxes.withIndex()) {
+        near(box.left, real.boxes[index].left, "${box.name} keeps its left")
+        near(box.right, real.boxes[index].right, "${box.name} keeps its right")
+    }
+    // Edge to edge: the drawn keys fill the screen's width, half a pixel in from each side at 1076 px.
+    check(drawn.left >= 0f && drawn.left < 1f && drawn.right <= 1076f && drawn.right > 1075f) { "edge to edge: ${drawn.left} to ${drawn.right}" }
 }
 
 /** The touchpad's column and row middles land on the keys' middles, and the mapping goes both ways. */
@@ -121,18 +170,20 @@ private fun edgesMoveEverything() {
     // Keys spanning the whole width, and the same with Q's left edge moved in.
     val base = KeyGeometry(1080f, KeyAlignment(0f, 1f))
     val moved = KeyGeometry(1080f, KeyAlignment(.05f, 1f))
-    near(moved.boxes.first().left, 54f, "Q's left follows the left edge")
-    near(moved.boxes[9].right, 1080f, "P's right stays")
+    val half = KeyAlignment(.05f, 1f).gap * 1080f / 2
+    near(moved.boxes.first().left, 54f - half, "Q's column follows the left edge, half a gap out")
+    near(moved.boxes[9].right, 1080f + half, "P's stays, half a gap out")
     for (index in 1 until 10) check(moved.boxes[index].left > base.boxes[index].left) { "column $index moves right" }
-    check(abs(moved.boxes.last().right - base.boxes.last().right) < 1e-2f && moved.boxes[30].left > base.boxes[30].left) { "the bottom row follows" }
+    check(abs(moved.boxes.last().right - moved.boxes[9].right) < 1e-2f && moved.boxes[30].left > base.boxes[30].left) { "the bottom row follows" }
     check(moved.x(.5f) > base.x(.5f)) { "the touchpad follows" }
     near(moved.key / base.key, .95f, "a narrower span makes smaller keys")
     near(moved.height / base.height, .95f, "and a shorter keyboard")
     val right = KeyGeometry(1080f, KeyAlignment(0f, .9f))
-    near(right.boxes[9].right, 972f, "P's right follows the right edge")
-    near(right.boxes[0].left, 0f, "Q stays")
+    val rightHalf = KeyAlignment(0f, .9f).gap * 1080f / 2
+    near(right.boxes[9].right, 972f + rightHalf, "P's column follows the right edge")
+    near(right.boxes[0].left, -rightHalf, "Q's stays")
     val defaults = KeyGeometry(1080f, KeyAlignment.DEFAULT)
-    near(KeyAlignment.column(1080f, 0).first, defaults.left - defaults.gap / 2, "with the defaults, Q's column starts half a gap left of Q")
+    near(KeyAlignment.column(1080f, 0).first, defaults.left, "with the defaults, Q's column is Q")
     // Every column moves when the edges do, as the menu and the Sym panel read them.
     val saved = KeyAlignment.current
     KeyAlignment.current = KeyAlignment(.05f, .95f)
@@ -177,13 +228,14 @@ private fun zonesOnKeys() {
         val tapY = keys.y(ZONE_TAP_ROW)
         check(tapY > box("V").top && tapY < box("V").bottom) { "the taps land on the bottom letter row" }
         val pause = keys.onRow(1, HOLD_PAUSE_X, AREA_RIGHT)
-        same(pause.top, box(Layout.BACKSPACE).top, "the pause box is on the Backspace row")
-        same(pause.bottom, box(Layout.BACKSPACE).bottom, "from its top to its bottom")
+        near(pause.top, box(Layout.BACKSPACE).top, "the pause box is on the Backspace row")
+        near(pause.bottom, box(Layout.BACKSPACE).bottom, "from its top to its bottom")
         check(pause.left > box("L").left && pause.left < box("L").right) { "it starts on L" }
         near(pause.right, box(Layout.BACKSPACE).centreX, "and ends at Backspace's middle, where the touchpad stops")
         val fast = keys.onRow(1, AREA_LEFT, HOLD_TOP_X)
         near(fast.left, box("A").centreX, "top speed starts at A's middle")
-        check(fast.right > box("F").right && fast.right < box("G").left) { "and reaches the gap between F and G: ${fast.right}" }
+        near(fast.right, box("F").right, "and reaches the line between F and G")
+        near(box("F").right, box("G").left, "where F meets G")
     }
 }
 
@@ -200,11 +252,12 @@ private fun slidersRoundTrip() {
             same(KeyAlignment.progressOf(default, reach, KeyAlignment.pixelsAt(default, reach, progress)), progress, "step $progress")
         near(KeyAlignment.pixelsAt(default, reach, 1) - KeyAlignment.pixelsAt(default, reach, 0), KeyAlignment.STEP, "half a pixel a step")
     }
-    // Columns are offset + i × (key + gap), every key the same width.
+    // Columns are offset + i × (key + gap), every key the same width; the face's keys fill them, with no gap.
     val tuned = KeyAlignment(6f / wide, 83f / wide, 25.5f / wide)
     val keys = KeyGeometry(wide, tuned)
-    for (column in 0 until 10) near(keys.keyLeft(column), 6f + column * (83f + 25.5f), "column $column follows the three")
-    near(keys.right, 6f + 10 * 83f + 9 * 25.5f, "P's right edge follows")
+    for (column in 0 until 10) near(keys.keyLeft(column), 6f - 25.5f / 2 + column * (83f + 25.5f), "column $column follows the three")
+    near(tuned.right * wide, 6f + 10 * 83f + 9 * 25.5f, "P's calibrated right edge follows")
+    near(keys.right, tuned.right * wide + 25.5f / 2, "and the face's right edge is half a gap past it")
     same(KeyAlignment.pixelText(measured.gap * wide, measured.gap * wide).endsWith("measured"), true, "the measured gap says so")
     same(KeyAlignment.pixelText(25.5f, 24.5f), "25.5 px, +1", "a moved value says by how much")
 }
@@ -299,11 +352,13 @@ private fun drawCalibration(alignment: KeyAlignment, file: File) {
     // The lines, at the very bottom, as KeyGrid draws them: the outside of the edges dimmed, then one pixel at each gap's centre
     // and at each outer edge, snapped to whole pixels, then the letters.
     val top = height - bands
+    val left = alignment.left * WIDTH
+    val right = alignment.right * WIDTH
     g.color = rgb(0x33EF804E)
-    g.fill(Rectangle2D.Float(0f, top, keys.left, bands))
-    g.fill(Rectangle2D.Float(keys.right, top, WIDTH - keys.right, bands))
+    g.fill(Rectangle2D.Float(0f, top, left, bands))
+    g.fill(Rectangle2D.Float(right, top, WIDTH - right, bands))
     g.color = rgb(0xFFEF804E)
-    val lines = (0 until 9).map { keys.keyLeft(it) + keys.key + keys.gap / 2 } + listOf(keys.left, keys.right)
+    val lines = (0 until 9).map { keys.cell(it).second } + listOf(left, right)
     for (x in lines) g.fillRect(Math.round(x - 0.5f), top.toInt(), 1, bands.toInt())
     g.color = rgb(0x80FFF1E6)
     g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(12).toInt())
@@ -318,17 +373,18 @@ private fun drawCalibration(alignment: KeyAlignment, file: File) {
 private enum class Scene { Plain, Lit, Word, Taps, Hold }
 
 /**
- * The guide's keys as GuideKeyboardView draws them on ink, full width: thin outlines over a faint fill, the dimmed part outside
- * the touch area, and a scene's zones, lit keys or ghost path on top.
+ * The guide's keys as GuideKeyboardView draws them on black (design v2): full width, 60% of the real height, each key 3% of its
+ * width in from its sides, a cream outline at 16% over the surface at 50%, labels cream at 70%, the dimmed part outside the touch
+ * area, and a scene's zones, lit keys or ghost path on top.
  */
 private fun drawKeys(alignment: KeyAlignment, scene: Scene, file: File) {
-    val keys = KeyGeometry(WIDTH.toFloat(), alignment)
+    val keys = KeyGeometry(WIDTH.toFloat(), alignment, KeyGeometry.DRAWN)
     val height = Math.ceil(keys.height.toDouble()).toInt()
     val image = BufferedImage(WIDTH, height + 2 * dp(24).toInt(), BufferedImage.TYPE_INT_RGB)
     val g = image.createGraphics()
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
     g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-    g.color = rgb(0xFF160A04)
+    g.color = rgb(0xFF000000)
     g.fillRect(0, 0, image.width, image.height)
     // A band above and below, so the drawing's own top and bottom show.
     g.translate(0.0, dp(24).toDouble())
@@ -340,13 +396,15 @@ private fun drawKeys(alignment: KeyAlignment, scene: Scene, file: File) {
     }
     for (box in keys.boxes) {
         val on = box.name in lit
-        val shape = RoundRectangle2D.Float(box.left + stroke / 2, box.top + stroke / 2, box.width - stroke, box.height - stroke, radius, radius)
-        g.color = if (on) rgb(0xFFEF804E) else faded(0xFFFFF1E6, .04f)
+        val side = min(box.width, keys.pitch) * .03f
+        val shape = RoundRectangle2D.Float(box.left + side + stroke / 2, box.top + stroke / 2, box.width - 2 * side - stroke, box.height - stroke,
+            radius, radius)
+        g.color = if (on) rgb(0xFFEF804E) else faded(0xFF161210, .5f)
         g.fill(shape)
         g.stroke = BasicStroke(stroke)
-        g.color = if (on) rgb(0xFFEF804E) else faded(0xFFFFF1E6, .4f)
+        g.color = if (on) rgb(0xFFEF804E) else faded(0xFFFFF1E6, .16f)
         g.draw(shape)
-        val label = if (on) rgb(0xFF160A04) else faded(0xFFFFF1E6, .85f)
+        val label = if (on) rgb(0xFF160A04) else faded(0xFFFFF1E6, .7f)
         g.color = label
         val text = when (box.name) {
             Layout.SPACE -> "␣"

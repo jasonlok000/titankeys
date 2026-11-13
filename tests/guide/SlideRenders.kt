@@ -25,10 +25,10 @@ import java.io.File
 import javax.imageio.ImageIO
 
 /*
- * Desktop drawings of the guide's slides (v5), to look at without a phone: each slide at its start, its hint, a blocked try, a
- * real mistake's chip, the pass's wash and its calm done state with the big Next; then the finale's frames and the end page. They
- * follow the slide's real words, chips and field, from the guide's own steps, laid out as the guide lays them out, at the Titan 2
- * Elite's size. The fonts are the desktop's, not the phone's, so widths are close, not exact. Set SLIDES_PNG to a folder.
+ * Desktop drawings of the guide's slides in the v2 look (docs/design-v2.md §2), to look at without a phone: each slide at its
+ * start, its hint, a blocked try, a real mistake's chip, the pass's wash and its done state with Next; then the finale's frames,
+ * the end page and the leaving pop-up. They follow the slide's real words, chips and field, from the guide's own steps, laid out
+ * as the guide lays them out, at the Titan 2 Elite's size, in Inter from the repository ([V2]). Set SLIDES_PNG to a folder.
  */
 
 /** One state of a slide, as the screen shows it. */
@@ -222,19 +222,10 @@ private object Paint {
 }
 
 /** The size of the owner's phone screenshots (UAT c1-01.png), whose 18 dp gutter is 28 px. */
-private const val WIDTH = 1076
-private const val HEIGHT = 1200
-private const val DP = 1.56f
+private const val WIDTH = V2.W
+private const val HEIGHT = V2.H
+private const val DP = V2.D
 
-/**
- * A font sized so that [sample] is [pixels] wide, as measured on the phone's own screenshot: the desktop's fonts are wider than
- * the phone's, so sizes are set by width, which is what a one-line check needs.
- */
-private fun calibrated(g: Graphics2D, style: Int, sample: String, pixels: Int): Font {
-    var size = 10f
-    while (g.getFontMetrics(Font(Font.SANS_SERIF, style, 1).deriveFont(size + .5f)).stringWidth(sample) <= pixels) size += .5f
-    return Font(Font.SANS_SERIF, style, 1).deriveFont(size)
-}
 private fun dp(value: Number) = Math.round(value.toFloat() * DP)
 
 private fun rgb(argb: Int, alpha: Float = 1f) = Color((argb shr 16) and 0xFF, (argb shr 8) and 0xFF, argb and 0xFF, (alpha.coerceIn(0f, 1f) * 255).toInt())
@@ -251,195 +242,134 @@ private fun image(): Pair<BufferedImage, Graphics2D> {
 }
 
 /**
- * The top bar (v5.2): the chapters across the whole width, a tick for each slide, the ones passed filled and the one on the screen
- * half lit; under it, the chapter's name on the left, and the pill and ✕ on the right. Returns its height.
+ * The top bar (design v2): 48 dp, the chapter's name in cream and its place muted, in the Label style, on the left (`DELETE ·
+ * 2/4`), and ✕ on the right. No ticks, and nothing else. Returns its height.
  */
-private fun topBar(g: Graphics2D, chapter: GuideChapter, pillText: String?, filled: Boolean, onOrange: Boolean, y: Int,
-                   current: String? = null, passed: Boolean = false): Int {
-    val side = dp(Layout.KEY_SIDE_DP)
-    val strong = if (onOrange) ink else cream
-    val accent = if (onOrange) ink else orange
-    val tickRow = dp(4 + 2 * 4)
+private fun topBar(g: Graphics2D, chapter: GuideChapter, onOrange: Boolean, y: Int, current: String? = null): Int {
+    val side = dp(V2.SIDE)
+    val bar = dp(V2.TOP_BAR)
+    val mid = y + bar / 2
     if (chapter != GuideChapter.End) {
-        val chapters = GuideChapter.entries.filter { it != GuideChapter.End }
-        val ids = chapters.map { c -> GUIDE_STEPS.filter { it.chapter == c }.map { it.id } }
-        val ticks = ids.sumOf { it.size }
-        val room = WIDTH - 2 * side - dp(6) * (chapters.size - 1) - dp(2) * (ticks - chapters.size)
-        val each = room.toFloat() / ticks
-        val at = GUIDE_STEPS.indexOfFirst { it.id == current }
-        var x = side.toFloat()
-        for (slides in ids) {
-            for ((index, id) in slides.withIndex()) {
-                val order = GUIDE_STEPS.indexOfFirst { it.id == id }
-                g.color = when {
-                    order < at || order == at && passed -> accent
-                    order == at -> rgb(if (onOrange) Paint.INK else Paint.ORANGE, .55f)
-                    else -> rgb(if (onOrange) Paint.INK else Paint.ORANGE, .25f)
-                }
-                g.fill(RoundRectangle2D.Float(x, y + tickRow / 2f - dp(2), each, dp(4).toFloat(), dp(4).toFloat(), dp(4).toFloat()))
-                x += each + if (index < slides.lastIndex) dp(2) else dp(6)
-            }
+        g.font = V2.label()
+        val name = chapter.label.uppercase()
+        val base = mid + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2
+        g.color = if (onOrange) V2.INK else V2.CREAM
+        g.drawString(name, side, base)
+        val ids = GUIDE_STEPS.filter { it.chapter == chapter }.map { it.id }
+        val at = ids.indexOf(current)
+        if (at >= 0 && ids.size > 1) {
+            g.color = if (onOrange) V2.alpha(V2.INK, .6f) else V2.MUTED
+            g.drawString(" · ${at + 1}/${ids.size}", side + g.fontMetrics.stringWidth(name), base)
         }
     }
-    val rowTop = y + tickRow
-    val bar = dp(44)
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(13))
-    if (chapter != GuideChapter.End) {
-        // The chapter's name is a section label: orange on black (v5.3).
-        g.color = if (onOrange) rgb(Paint.INK, .55f) else orange
-        g.drawString(chapter.label.uppercase(), side, rowTop + bar / 2 + g.fontMetrics.ascent / 2 - dp(1))
-    }
-    val close = dp(44)
-    var x = WIDTH - side - close
-    if (pillText != null) {
-        val pillWidth = g.fontMetrics.stringWidth(pillText) + dp(20)
-        val pillX = x - dp(4) - pillWidth
-        val pill = RoundRectangle2D.Float(pillX.toFloat(), rowTop + dp(9).toFloat(), pillWidth.toFloat(), bar - dp(18).toFloat(), bar.toFloat(), bar.toFloat())
-        if (filled) {
-            g.color = orange
-            g.fill(pill)
-            g.color = ink
-        } else {
-            g.color = if (onOrange) ink else rgb(Paint.CREAM, .6f)
-            g.stroke = BasicStroke(dp(1).toFloat())
-            g.draw(pill)
-        }
-        g.drawString(pillText, pillX + dp(10), rowTop + bar / 2 + g.fontMetrics.ascent / 2 - dp(1))
-    }
-    g.color = strong
-    g.stroke = BasicStroke(dp(2f).toFloat())
-    val c = dp(8)
-    val cx = x + close / 2
-    val cy = rowTop + bar / 2
-    g.drawLine(cx - c, cy - c, cx + c, cy + c)
-    g.drawLine(cx + c, cy - c, cx - c, cy + c)
-    return tickRow + bar
+    V2.close(g, mid, if (onOrange) V2.INK else V2.CREAM)
+    return bar
 }
 
-/** [text] in at most [lines] lines at [font]'s size, smaller down to [smallest] if it needs to be: as the phone's auto-size does. */
-private fun shrinkToFit(g: Graphics2D, text: String, font: Font, smallest: Float, width: Int, lines: Int): Pair<Font, List<String>> {
-    var size = font.size2D
-    while (true) {
-        val tried = font.deriveFont(size)
-        g.font = tried
-        val wrapped = wrap(g, text, width)
-        if (wrapped.size <= lines || size <= smallest) return tried to wrapped
-        size -= .5f
-    }
-}
-
+/**
+ * A slide (design v2 §2): the top bar; the content block centred in the room between it and the keys, with at least 24 dp above
+ * and below: the title in Display, upper case, one line; 12 dp; the instruction in Body, muted, one line, or the chip in its place;
+ * 24 dp; the field, exactly two lines; 16 dp; Skip or Next on the right. The keys at the bottom, edge to edge, at 60%.
+ */
 private fun draw(frame: Frame, file: File) {
     val (image, g) = image()
-    // Pure black, with orange titles (owner, v5.3).
     g.color = Color.BLACK
     g.fillRect(0, 0, WIDTH, HEIGHT)
-    val side = dp(Layout.KEY_SIDE_DP)
+    val side = dp(V2.SIDE)
     val inner = WIDTH - 2 * side
-    var y = dp(40)
-    // Passed, the small pill steps aside: Next, by the keys, is the one Next.
-    y += topBar(g, frame.chapter, if (frame.passed) null else "Skip", false, false, y, frame.name.substringBefore('-'), frame.passed) + dp(14)
-    // The title: one line at 36 sp, smaller if it needs to be, with the orange check once passed (v5.2).
-    val titleFont = calibrated(g, Font.BOLD, "Type like a normal person.", 540 * 36 / 28)
-    val titleLine = dp(45)
-    val (titleShown, titleLines) = shrinkToFit(g, frame.title + if (frame.passed) " ✓" else "", titleFont, titleFont.size2D * 24 / 36, inner, 1)
-    g.font = titleShown
-    g.color = orange
-    val titleRoom = titleLine
-    val titleTop = y + (titleRoom - titleLines.size * g.fontMetrics.height) / 2
-    for ((index, line) in titleLines.withIndex()) {
-        val base = titleTop + (index + 1) * g.fontMetrics.height - g.fontMetrics.descent
-        if (frame.passed && index == titleLines.lastIndex && line.endsWith("✓")) {
-            val words = line.dropLast(1)
-            g.drawString(words, side, base)
-            val at = side + g.fontMetrics.stringWidth(words)
-            val size = titleShown.size2D * .5f
-            g.color = orange
-            g.stroke = BasicStroke(dp(2.8f).toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-            g.draw(Path2D.Float().apply {
-                moveTo(at.toFloat(), base - size * .45f)
-                lineTo(at + size * .36f, base - size * .08f)
-                lineTo(at + size, base - size * .86f)
-            })
-            g.color = orange
-        } else g.drawString(line, side, base)
+    val barBottom = V2.STATUS + topBar(g, frame.chapter, false, V2.STATUS, frame.name.substringBefore('-'))
+    val keysTop = V2.keysTop
+    val titleLine = V2.lineHeight(g, V2.display())
+    val bodyLine = maxOf(V2.lineHeight(g, V2.body()), V2.lineHeight(g, V2.body()) + 2 * dp(7) - dp(2))
+    val fieldLine = V2.lineHeight(g, V2.field())
+    val pad = dp(16)
+    val fieldHeight = FIELD_LINES * fieldLine + 2 * pad
+    val action = dp(44)
+    val blockHeight = titleLine + dp(12) + bodyLine + dp(24) + fieldHeight + dp(16) + action
+    val room = keysTop - barBottom
+    if (room < blockHeight + 2 * dp(24)) mark(g, "NO ROOM: block ${blockHeight + 2 * dp(24)} in $room", barBottom)
+    var y = barBottom + (room - blockHeight) / 2
+
+    // The title: Display, upper case, cream, one line, shrinking to 80% before it would wrap.
+    val title = frame.title.uppercase()
+    val (titleFont, over) = V2.fitted(g, title, V2.display(), inner - if (frame.passed) dp(28) else 0)
+    if (over) mark(g, "TITLE OVER ONE LINE", y)
+    g.font = titleFont
+    g.color = V2.CREAM
+    val titleBase = y + (titleLine + g.fontMetrics.ascent - g.fontMetrics.descent) / 2 - dp(1)
+    g.drawString(title, side, titleBase)
+    if (frame.passed) {
+        // The check that draws in after the success line, orange: what just happened.
+        val at = side + g.fontMetrics.stringWidth(title) + dp(8)
+        val size = titleFont.size2D * .5f
+        g.color = V2.ORANGE
+        g.stroke = BasicStroke(dp(2.8f).toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+        g.draw(Path2D.Float().apply {
+            moveTo(at.toFloat(), titleBase - size * .45f)
+            lineTo(at + size * .36f, titleBase - size * .08f)
+            lineTo(at + size, titleBase - size * .86f)
+        })
     }
-    if (titleLines.size > 1) mark(g, "TITLE OVER ONE LINE", y)
-    y += titleRoom + dp(14)
-    // The instruction, one line at 20 sp, smaller if it needs to be, or a chip over it.
-    val bodyFont = calibrated(g, Font.PLAIN, "Back for a refresher? Pick a chapter. No judgement. Some judgement.", 875 * 20 / 16)
-    val bodyLine = dp(28)
-    val lineHeight = bodyLine + 2 * dp(3)
+    y += titleLine + dp(12)
+
+    // The instruction in Body, muted, or the chip in its place at the same size.
     if (frame.chip != null) {
-        g.font = calibrated(g, Font.PLAIN, "Oh, look who's back. Didn't know everything after all?", 672 * 20 / 18)
-        val shown = fit(g, frame.chip, inner - dp(24))
-        val width = g.fontMetrics.stringWidth(shown) + dp(24)
-        val chipHeight = g.fontMetrics.height + dp(12)
-        val chipTop = y + (lineHeight - chipHeight) / 2
-        // The one chip style (v5.3): a pill of the divider colour, cream words.
-        g.color = Color(0x2A, 0x26, 0x23)
-        g.fill(RoundRectangle2D.Float(side.toFloat(), chipTop.toFloat(), width.toFloat(), chipHeight.toFloat(), chipHeight.toFloat(), chipHeight.toFloat()))
-        g.color = cream
-        g.drawString(shown, side + dp(12), chipTop + chipHeight / 2 + g.fontMetrics.ascent / 2 - dp(2))
-        if (g.fontMetrics.stringWidth(frame.chip) + dp(24) > inner) mark(g, "CHIP TOO LONG", y)
+        g.font = V2.body()
+        val shown = fit(g, frame.chip, inner - 2 * dp(14))
+        val width = g.fontMetrics.stringWidth(shown) + 2 * dp(14)
+        val chipHeight = bodyLine
+        g.color = V2.DIVIDER
+        g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), width.toFloat(), chipHeight.toFloat(), chipHeight.toFloat(), chipHeight.toFloat()))
+        g.color = V2.CREAM
+        g.drawString(shown, side + dp(14), y + (chipHeight + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
+        if (g.fontMetrics.stringWidth(frame.chip) + 2 * dp(14) > inner) mark(g, "CHIP TOO LONG", y)
     } else {
-        val (shownFont, lines) = shrinkToFit(g, frame.line, bodyFont, bodyFont.size2D * 15 / 20, inner, 1)
-        g.font = shownFont
-        g.color = rgb(Paint.CREAM, .86f)
-        val top = y + (lineHeight - lines.size * g.fontMetrics.height) / 2
-        for ((index, line) in lines.withIndex()) g.drawString(line, side, top + (index + 1) * g.fontMetrics.height - g.fontMetrics.descent)
-        if (lines.size > 1) mark(g, "INSTRUCTION OVER ONE LINE", y)
+        val (bodyFont, bodyOver) = V2.fitted(g, frame.line, V2.body(), inner)
+        if (bodyOver) mark(g, "INSTRUCTION OVER ONE LINE", y)
+        g.font = bodyFont
+        g.color = V2.MUTED
+        g.drawString(frame.line, side, y + (bodyLine + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
     }
     frame.hunt?.let { left ->
-        g.color = orange
-        g.fillRect(side, y + lineHeight - dp(3), Math.round(inner * left), dp(3))
+        // A hunt's time left: a thin bar, muted, never orange (design v2).
+        g.color = V2.MUTED
+        g.fillRect(side, y + bodyLine - dp(2), Math.round(inner * left), dp(2))
     }
-    y += lineHeight + dp(14)
-    // The field: three lines, on ink, with what's typed in cream and the ghost after it in grey.
-    val fieldFont = calibrated(g, Font.PLAIN, "Tihs keybaord fxies yuor typos, sp yuo cna kepe", 807 * 23 / 18)
-    g.font = fieldFont
-    val pad = dp(12)
-    val fieldLine = g.fontMetrics.height
-    val fieldHeight = FIELD_LINES * fieldLine + 2 * pad
-    g.color = blend(0xFF000000.toInt(), Paint.CREAM, .08f)
-    g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), fieldHeight.toFloat(), dp(12).toFloat(), dp(12).toFloat()))
+    y += bodyLine + dp(24)
+
+    // The field: the surface, 16 dp corners and padding, exactly two lines; typed text cream, the rest muted.
+    g.color = V2.SURFACE
+    g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), fieldHeight.toFloat(), dp(32).toFloat(), dp(32).toFloat()))
+    g.font = V2.field()
     drawField(g, frame, side + pad, y + pad, inner - 2 * pad, fieldLine)
-    y += fieldHeight
-    // The keys at the bottom, the whole width, at the real keyboard's size, above the keyboard's own bar (v5.2).
-    val keysTop = HEIGHT - BAR_ROOM - Math.ceil(GEOMETRY.height.toDouble()).toInt()
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(17))
-    val nextHeight = g.fontMetrics.height + dp(20)
-    val gap = (keysTop - y - nextHeight) / 2
-    if (gap < dp(8)) mark(g, "NO ROOM BETWEEN FIELD AND KEYS", keysTop)
+    y += fieldHeight + dp(16)
+
+    // Skip, quiet, once there's been a hint; Next, an orange pill, once the slide is passed. Right-aligned, under the field.
+    g.font = V2.label()
     if (frame.passed) {
-        // Next: a normal button, on the right, in its place (v5.2).
-        val top = y + gap
-        val wide = g.fontMetrics.stringWidth("Next") + 2 * dp(28)
-        g.color = orange
-        g.fill(RoundRectangle2D.Float((WIDTH - side - wide).toFloat(), top.toFloat(), wide.toFloat(), nextHeight.toFloat(), nextHeight.toFloat(), nextHeight.toFloat()))
-        g.color = ink
-        g.drawString("Next", WIDTH - side - wide / 2 - g.fontMetrics.stringWidth("Next") / 2, top + nextHeight / 2 + g.fontMetrics.ascent / 2 - dp(2))
-        if (top < y + dp(8)) mark(g, "NEXT OVERLAPS THE FIELD", top)
+        val wide = g.fontMetrics.stringWidth("NEXT") + 2 * dp(20)
+        val left = WIDTH - side - wide
+        g.color = V2.ORANGE
+        g.fill(RoundRectangle2D.Float(left.toFloat(), y.toFloat(), wide.toFloat(), action.toFloat(), action.toFloat(), action.toFloat()))
+        g.color = V2.INK
+        g.drawString("NEXT", left + dp(20), y + (action + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
+    } else if (frame.chip != null) {
+        val wide = g.fontMetrics.stringWidth("SKIP") + 2 * dp(16)
+        g.color = V2.MUTED
+        g.drawString("SKIP", WIDTH - side - wide + dp(16), y + (action + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
     }
     frame.panel?.let { panel ->
-        // A panel is open: the drawing of the keys hides, so it never covers the real panel (v5.2). Only a note, for review.
-        g.color = Color(0x66, 0xCC, 0xFF)
-        g.font = Font(Font.SANS_SERIF, Font.ITALIC, dp(12))
-        g.drawString("render note: $panel is open; the drawn keys hide under it", side, keysTop + dp(24))
+        // A panel is open: the drawing of the keys hides, so it never covers the real panel. Only a note, for review.
+        V2.note(g, "render note: $panel is open; the drawn keys hide under it", side, keysTop + dp(24))
     }
     if (frame.panel == null) drawKeys(g, keysTop, side, frame)
     if (frame.wash > 0f) {
         g.color = rgb(Paint.ORANGE, .85f * frame.wash)
         g.fillRect(0, 0, WIDTH, HEIGHT)
     }
+    V2.note(g, "render note: the keyboard's own bar is here", side, HEIGHT - V2.BAR / 2)
     g.dispose()
     ImageIO.write(image, "png", file)
-}
-
-private fun blend(from: Int, to: Int, amount: Float): Color {
-    val a = rgb(from)
-    val b = rgb(to)
-    fun mix(x: Int, y: Int) = Math.round(x + (y - x) * amount)
-    return Color(mix(a.red, b.red), mix(a.green, b.green), mix(a.blue, b.blue))
 }
 
 private var drawing = ""
@@ -529,18 +459,15 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
             val w = g.fontMetrics.stringWidth(char)
             val aim = shown.target
             if (aim != null && offset in aim) {
-                if (!frame.underline) {
-                    g.color = rgb(Paint.ORANGE, .35f)
-                    g.fillRect(x, top + row * line, w, line)
-                }
+                // The word to act on, underlined in orange (design v2).
                 g.color = orange
-                g.fillRect(x, top + (row + 1) * line - dp(if (frame.underline) 3 else 2), w, dp(if (frame.underline) 3 else 2))
+                g.fillRect(x, top + (row + 1) * line - dp(3), w, dp(3))
             }
             if (offset in shown.start until shown.end) {
                 g.color = rgb(Paint.ORANGE, .45f)
                 g.fillRect(x, top + row * line, w, line)
             }
-            g.color = if (offset < frame.field.length) cream else rgb(Paint.CREAM, .38f)
+            g.color = if (offset < frame.field.length) cream else V2.MUTED
             g.drawString(char, x, base)
             if (offset == shown.start && shown.start == shown.end && (offset != shown.gap || frame.passed)) {
                 g.color = orange
@@ -555,58 +482,19 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
     }
 }
 
-private const val FIELD_LINES = 3
-/** Room at the bottom for the keyboard's own bar, under the drawing. */
-private val BAR_ROOM = dp(60)
-/** The keys, as the phone draws them: the measured keyboard across the whole width, at the default calibration. */
-private val GEOMETRY = KeyGeometry(WIDTH.toFloat(), KeyAlignment.DEFAULT)
+private const val FIELD_LINES = 2
 
-/** The drawing of the keys: the real keyboard's size and proportions, thin outlines, lit for a spot, steady for a held key. */
+/** The drawing of the keys (design v2), lit for a spot, steady for a held key, with corner symbols on the slides about them. */
 private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
-    for (box in GEOMETRY.boxes) {
-        val key = box.name
-        val x = box.left
-        val y = top + box.top
-        val hint = frame?.labels?.get(key)
-        val lit = frame != null && (key == frame.spot || hint != null && key == frame.labels?.keys?.first())
-        val held = frame != null && key in frame.held
-        val shape = RoundRectangle2D.Float(x, y, box.width, box.height, dp(8).toFloat(), dp(8).toFloat())
-        g.color = when {
-            lit -> orange
-            held -> rgb(Paint.ORANGE, .8f)
-            else -> rgb(Paint.CREAM, .04f)
-        }
-        g.fill(shape)
-        g.color = if (lit || held) orange else rgb(Paint.CREAM, .4f)
-        g.stroke = BasicStroke(dp(1).toFloat())
-        g.draw(shape)
-        g.color = if (lit || held) ink else rgb(Paint.CREAM, .7f)
-        g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(19))
-        // Space has no word on it, on the phone a small cup: never "spa" (v5.3).
-        val text = when {
-            key == Layout.SPACE -> "⎵"
-            key.length == 1 -> key
-            else -> key.take(3)
-        }
-        val lift = if (hint != null) dp(7) else 0
-        g.drawString(text, x + box.width / 2 - g.fontMetrics.stringWidth(text) / 2, y + box.height / 2f + dp(7) - lift)
-        if (hint != null) {
-            g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(10))
-            if (g.fontMetrics.stringWidth(hint) > box.width - dp(4)) mark(g, "KEY HINT TOO LONG", y.toInt())
-            g.drawString(hint, x + box.width / 2 - g.fontMetrics.stringWidth(hint) / 2, y + box.height - dp(8).toFloat())
-        }
-    }
-    if (frame?.zones == true) {
-        // The held delete's zones: back on Backspace pauses; further out, a lighter box, is top speed. No line, no label for it.
-        val fast = GEOMETRY.onRow(1, .05f, .95f - REPEAT_LONG_KEYS_COPY / 10f)
-        g.color = rgb(Paint.CREAM, .1f)
-        g.fill(RoundRectangle2D.Float(fast.left, top + fast.top, fast.width, fast.height, dp(8).toFloat(), dp(8).toFloat()))
-        val pause = GEOMETRY.onRow(1, .95f - PAUSE_KEYS_COPY / 10f, .95f)
-        g.color = rgb(Paint.CREAM, .2f)
-        g.fill(RoundRectangle2D.Float(pause.left, top + pause.top, pause.width, pause.height, dp(8).toFloat(), dp(8).toFloat()))
-        g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(10))
-        g.color = rgb(Paint.CREAM, .85f)
-        g.drawString("pause", pause.left + dp(4), top + pause.bottom - dp(6))
+    val id = frame?.name?.substringBefore('-')
+    val corners = id == "alt" || id == "holdsym"
+    V2.keys(g, top, lit = setOfNotNull(frame?.spot), held = frame?.held?.toSet() ?: emptySet(), hints = frame?.labels,
+        corners = corners, zones = frame?.zones == true)
+    if (corners) V2.note(g, "render note: the corner symbols here are approximate; the phone reads its own", side, top - dp(6))
+    // Each key's label must fit in its key.
+    frame?.labels?.values?.forEach { hint ->
+        g.font = V2.keyFont(minOf(V2.KEYS.key, V2.KEYS.keyHeight) * .24f)
+        if (g.fontMetrics.stringWidth(hint) > V2.KEYS.key * .86f) mark(g, "KEY HINT TOO LONG", top)
     }
 }
 
@@ -637,7 +525,7 @@ private fun wrap(g: Graphics2D, text: String, width: Int): List<String> {
 }
 
 /** The finale's box on the end screen: under the top bar, to where the buttons start, as the phone measures it (v5.2). */
-private val FINALE_TOP = (dp(40) + dp(12) + dp(44) + dp(16)).toFloat()
+private val FINALE_TOP = (V2.STATUS + dp(V2.TOP_BAR) + dp(16)).toFloat()
 private var finaleBottom = HEIGHT * .68f
 
 /** Draws the finale at [at] ms, on the end's orange, from [GuideFinale]: the same frames as the phone. */
@@ -679,7 +567,7 @@ private fun drawFinaleFrame(file: File, at: Long) {
     val (image, g) = image()
     g.color = orange
     g.fillRect(0, 0, WIDTH, HEIGHT)
-    topBar(g, GuideChapter.End, null, false, true, dp(40))
+    topBar(g, GuideChapter.End, true, V2.STATUS)
     drawFinale(g, at)
     g.dispose()
     ImageIO.write(image, "png", file)
@@ -694,100 +582,115 @@ private fun drawEnd(file: File, answered: Boolean) {
     val (image, g) = image()
     g.color = orange
     g.fillRect(0, 0, WIDTH, HEIGHT)
-    val side = dp(Layout.KEY_SIDE_DP)
+    val side = dp(V2.SIDE)
     val inner = WIDTH - 2 * side
-    topBar(g, GuideChapter.End, "The boring guide", false, true, dp(40))
+    topBar(g, GuideChapter.End, true, V2.STATUS)
     // The buttons, from the bottom up, as the column lays them out under the spacer; the finale ends 20 dp above them.
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(24))
-    val goHeight = g.fontMetrics.height + dp(28)
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(20))
-    val shareHeight = g.fontMetrics.height + dp(28)
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(17))
-    val againHeight = g.fontMetrics.height + dp(22)
-    g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(15))
+    g.font = V2.title()
+    val goHeight = g.fontMetrics.ascent + g.fontMetrics.descent + 2 * dp(16)
+    val shareHeight = goHeight
+    g.font = V2.body()
+    val againHeight = g.fontMetrics.ascent + g.fontMetrics.descent + 2 * dp(12)
     val under = wrap(g, if (answered) SHARE_ANSWERED else SHARE_PLAIN, inner)
     if (under.size > 4) mark(g, "SHARE TEXT OVER FOUR LINES", HEIGHT - dp(60))
     val underHeight = under.size * g.fontMetrics.height
-    var y = HEIGHT - dp(16) - againHeight - dp(12) - underHeight - dp(4) - shareHeight - dp(12) - goHeight
+    val boring = dp(44)
+    var y = HEIGHT - dp(24) - boring - dp(4) - againHeight - dp(12) - underHeight - dp(4) - shareHeight - dp(12) - goHeight
     finaleBottom = y - dp(20).toFloat()
     drawFinale(g, GuideFinale.total(SUMMARY_LINES))
     if (finaleBottom - FINALE_TOP < dp(220)) mark(g, "FINALE SQUEEZED", y)
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(24))
-    g.color = ink
-    g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), goHeight.toFloat(), dp(24).toFloat(), dp(24).toFloat()))
+    // Every text on the end's orange is ink (design v2): the filled button is cream, with ink words.
+    g.font = V2.title()
     g.color = cream
-    g.drawString("Go type something", WIDTH / 2 - g.fontMetrics.stringWidth("Go type something") / 2, y + goHeight / 2 + g.fontMetrics.ascent / 2 - dp(2))
+    g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), goHeight.toFloat(), goHeight.toFloat(), goHeight.toFloat()))
+    g.color = ink
+    g.drawString("Go type something", WIDTH / 2 - g.fontMetrics.stringWidth("Go type something") / 2, y + (goHeight + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
     y += goHeight + dp(12)
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(20))
     g.color = ink
     g.stroke = BasicStroke(dp(1).toFloat())
-    g.draw(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), shareHeight.toFloat(), dp(24).toFloat(), dp(24).toFloat()))
+    g.draw(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), shareHeight.toFloat(), shareHeight.toFloat(), shareHeight.toFloat()))
     val share = "Share my swipes: off"
-    g.drawString(share, WIDTH / 2 - g.fontMetrics.stringWidth(share) / 2, y + shareHeight / 2 + g.fontMetrics.ascent / 2 - dp(2))
+    g.drawString(share, WIDTH / 2 - g.fontMetrics.stringWidth(share) / 2, y + (shareHeight + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
     y += shareHeight + dp(4)
-    g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(15))
-    g.color = rgb(Paint.INK, .86f)
+    g.font = V2.body()
+    g.color = ink
     for (line in under) {
         y += g.fontMetrics.height
         g.drawString(line, WIDTH / 2 - g.fontMetrics.stringWidth(line) / 2, y - g.fontMetrics.descent)
     }
     y += dp(12)
     // Start again: a real button, outlined, not fine print (v5.2).
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(17))
+    g.font = V2.body().deriveFont(java.awt.Font.BOLD)
     g.color = rgb(Paint.INK, .6f)
-    g.draw(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), againHeight.toFloat(), dp(24).toFloat(), dp(24).toFloat()))
+    g.draw(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), againHeight.toFloat(), againHeight.toFloat(), againHeight.toFloat()))
     g.color = ink
-    g.drawString("Start the guide again", WIDTH / 2 - g.fontMetrics.stringWidth("Start the guide again") / 2, y + againHeight / 2 + g.fontMetrics.ascent / 2 - dp(2))
+    g.drawString("Start the guide again", WIDTH / 2 - g.fontMetrics.stringWidth("Start the guide again") / 2, y + (againHeight + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
+    y += againHeight + dp(4)
+    // The way to the boring guide: a quiet line under the buttons, never in the top bar (design v2).
+    g.font = V2.label()
+    val boringText = "THE BORING GUIDE"
+    g.drawString(boringText, WIDTH / 2 - g.fontMetrics.stringWidth(boringText) / 2, y + (boring + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
     g.dispose()
     ImageIO.write(image, "png", file)
 }
 
-/** "Leaving already?" in the guide's own look (v5.2): a cream card over the dimmed slide, Stay in orange, leaving outlined. */
+/**
+ * "Leaving already?" (design v2): a card of the surface over the dimmed slide, its title in the Title style, and Keep going in
+ * orange, then Start again and Leave, outlined.
+ */
 private fun drawLeave(file: File, under: Frame) {
     draw(under, file)
     val image = ImageIO.read(file)
     val g = image.createGraphics()
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
     g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-    g.color = rgb(Paint.INK, .62f)
+    g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
+    g.color = rgb(0xFF000000.toInt(), .62f)
     g.fillRect(0, 0, WIDTH, HEIGHT)
-    val margin = dp(Layout.KEY_SIDE_DP + 8)
+    val margin = dp(V2.SIDE)
     val width = WIDTH - 2 * margin
     val pad = dp(24)
-    g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(17))
+    g.font = V2.body()
     val body = wrap(g, "You haven't finished the guide. Leave anyway?", width - 2 * pad)
     val bodyHeight = body.size * g.fontMetrics.height
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(20))
-    val button = g.fontMetrics.height + dp(28)
-    val height = pad + dp(34) + dp(10) + bodyHeight + dp(20) + button + dp(10) + button + dp(20)
+    val button = g.fontMetrics.ascent + g.fontMetrics.descent + 2 * dp(12)
+    g.font = V2.title()
+    val titleHeight = g.fontMetrics.ascent + g.fontMetrics.descent
+    val height = pad + titleHeight + dp(12) + bodyHeight + dp(24) + 3 * button + 2 * dp(8) + pad
     val top = (HEIGHT - height) / 2
-    g.color = cream
-    g.fill(RoundRectangle2D.Float(margin.toFloat(), top.toFloat(), width.toFloat(), height.toFloat(), dp(24).toFloat(), dp(24).toFloat()))
+    g.color = V2.SURFACE
+    val card = RoundRectangle2D.Float(margin.toFloat(), top.toFloat(), width.toFloat(), height.toFloat(), dp(32).toFloat(), dp(32).toFloat())
+    g.fill(card)
+    g.color = V2.DIVIDER
+    g.stroke = BasicStroke(dp(1).toFloat())
+    g.draw(card)
     var y = top + pad
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(28))
-    g.color = ink
+    g.color = V2.CREAM
     g.drawString("Leaving already?", margin + pad, y + g.fontMetrics.ascent)
-    y += dp(34) + dp(10)
-    g.font = Font(Font.SANS_SERIF, Font.PLAIN, dp(17))
-    g.color = rgb(Paint.INK, .86f)
+    y += titleHeight + dp(12)
+    g.font = V2.body()
+    g.color = V2.MUTED
     for (line in body) {
         y += g.fontMetrics.height
         g.drawString(line, margin + pad, y - g.fontMetrics.descent)
     }
-    y += dp(20)
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(20))
-    g.color = orange
-    g.fill(RoundRectangle2D.Float((margin + pad).toFloat(), y.toFloat(), (width - 2 * pad).toFloat(), button.toFloat(), dp(24).toFloat(), dp(24).toFloat()))
-    g.color = ink
-    g.drawString("Stay", WIDTH / 2 - g.fontMetrics.stringWidth("Stay") / 2, y + button / 2 + g.fontMetrics.ascent / 2 - dp(2))
-    y += button + dp(10)
-    g.font = Font(Font.SANS_SERIF, Font.BOLD, dp(16))
-    g.color = rgb(Paint.INK, .6f)
-    g.stroke = BasicStroke(dp(1).toFloat())
-    g.draw(RoundRectangle2D.Float((margin + pad).toFloat(), y.toFloat(), (width - 2 * pad).toFloat(), button.toFloat(), dp(24).toFloat(), dp(24).toFloat()))
-    g.color = ink
-    val leave = "I already know everything"
-    g.drawString(leave, WIDTH / 2 - g.fontMetrics.stringWidth(leave) / 2, y + button / 2 + g.fontMetrics.ascent / 2 - dp(2))
+    y += dp(24)
+    val buttonFont = V2.body().deriveFont(java.awt.Font.BOLD)
+    for ((index, label) in listOf("Keep going", "Start again", "I already know everything").withIndex()) {
+        g.font = buttonFont
+        val shape = RoundRectangle2D.Float((margin + pad).toFloat(), y.toFloat(), (width - 2 * pad).toFloat(), button.toFloat(), button.toFloat(), button.toFloat())
+        if (index == 0) {
+            g.color = V2.ORANGE
+            g.fill(shape)
+            g.color = V2.INK
+        } else {
+            g.color = V2.DIVIDER
+            g.draw(shape)
+            g.color = V2.CREAM
+        }
+        g.drawString(label, WIDTH / 2 - g.fontMetrics.stringWidth(label) / 2, y + (button + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
+        y += button + dp(8)
+    }
     g.dispose()
     ImageIO.write(image, "png", file)
 }

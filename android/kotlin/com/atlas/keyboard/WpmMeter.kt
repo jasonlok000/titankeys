@@ -2,12 +2,14 @@ package com.atlas.keyboard
 
 import android.view.KeyEvent
 import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * Words a minute over one burst of typing in the playground, like a typing game but with no score to keep. A burst starts at the
- * first key, touch or swipe, and ends after [IDLE_MILLIS] with nothing. A word is five characters, and nothing checks what they are.
- * It needs no Android, so the checks can run it with any clock.
+ * Words a minute over one burst of typing in the playground, like a typing game but with no score to keep. A burst starts only
+ * once a real word is being typed, from a letter key or a swipe ([input]), never from a touch, Space, Backspace or a modifier
+ * (owner); once it runs, the rest of the typing keeps it going ([keep]). It ends after [IDLE_MILLIS] with nothing. A word is five
+ * characters, and nothing checks what they are. It needs no Android, so the checks can run it with any clock.
  */
 internal class WpmMeter {
     private var start = -1L
@@ -15,12 +17,22 @@ internal class WpmMeter {
     private var startLength = 0
     private var length = 0
 
-    /** Something went in at [now], and the text is [textLength] long. The first input of a burst sets where it starts. */
+    /**
+     * A real word is being typed at [now], from a letter key or a swipe, and the text is [textLength] long: it starts a burst, or
+     * keeps one going. The first input of a burst sets where it starts.
+     */
     fun input(now: Long, textLength: Int) {
         if (!active(now)) {
             start = now
             startLength = textLength
         }
+        last = now
+        length = textLength
+    }
+
+    /** Typing that isn't a word's letters, as Space, Backspace or a word from the bar, at [now]: it keeps a burst going, never starts one. */
+    fun keep(now: Long, textLength: Int) {
+        if (!active(now)) return
         last = now
         length = textLength
     }
@@ -45,8 +57,68 @@ internal class WpmMeter {
             KeyEvent.KEYCODE_ALT_RIGHT, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT, KeyEvent.KEYCODE_META_LEFT,
             KeyEvent.KEYCODE_META_RIGHT, KeyEvent.KEYCODE_SYM, KeyEvent.KEYCODE_FUNCTION, KeyEvent.KEYCODE_CAPS_LOCK)
 
-        /** Whether a push of [code] is typing, which counts towards the speed. */
+        /** Whether a push of [code] is typing, which counts towards the speed once it runs. */
         fun counts(code: Int) = code !in MODIFIERS
+
+        /** Whether a push of [code] types a word's letter, which starts the speed: the letter keys only. */
+        fun startsWord(code: Int) = code in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z
+
+        /** The playground's cream text. */
+        private const val CREAM = 0xFFFFF1E6.toInt()
+        /** The least contrast for text to read (WCAG AA): below it, cream on the warming background turns to ink. */
+        const val READABLE = 4.5
+        /** Once ink, the text goes back to cream only above [READABLE] by this much, so it never flickers at the edge. */
+        const val READABLE_SLACK = .3
+
+        /**
+         * Whether the playground's text is ink on [background], as an ARGB colour: once cream drops below [READABLE] contrast on
+         * it (owner: "when fully orange on playground words are not readable"). [inkNow] is whether it's ink already.
+         */
+        fun inkOn(background: Int, inkNow: Boolean): Boolean {
+            val contrast = contrast(CREAM, background)
+            return if (inkNow) contrast < READABLE + READABLE_SLACK else contrast < READABLE
+        }
+
+        /** The playground's muted grey, for secondary text. */
+        private const val MUTED = 0xFF99918A.toInt()
+
+        /**
+         * The secondary text's colour on [background] while the text is cream: the muted grey, moved towards cream just enough to
+         * keep [READABLE] contrast, so it stays readable as the playground warms and before every text turns ink.
+         */
+        fun quietOn(background: Int): Int {
+            for (step in 0..QUIET_STEPS) {
+                val colour = mix(MUTED, CREAM, step.toFloat() / QUIET_STEPS)
+                if (contrast(colour, background) >= READABLE) return colour
+            }
+            return CREAM
+        }
+
+        private const val QUIET_STEPS = 20
+
+        private fun mix(from: Int, to: Int, amount: Float): Int {
+            fun channel(shift: Int): Int {
+                val a = from shr shift and 0xFF
+                val b = to shr shift and 0xFF
+                return (a + (b - a) * amount + .5f).toInt().coerceIn(0, 255) shl shift
+            }
+            return channel(24) or channel(16) or channel(8) or channel(0)
+        }
+
+        /** The contrast between two opaque colours, from 1 to 21, as WCAG measures it. */
+        fun contrast(a: Int, b: Int): Double {
+            val lighter = max(luminance(a), luminance(b))
+            val darker = minOf(luminance(a), luminance(b))
+            return (lighter + .05) / (darker + .05)
+        }
+
+        private fun luminance(colour: Int): Double {
+            fun channel(shift: Int): Double {
+                val c = (colour shr shift and 0xFF) / 255.0
+                return if (c <= .04045) c / 12.92 else ((c + .055) / 1.055).pow(2.4)
+            }
+            return .2126 * channel(16) + .7152 * channel(8) + .0722 * channel(0)
+        }
 
         /** Each comment stays at least this long, up or down, so that it can be read. */
         const val COMMENT_MIN_MILLIS = 3000L

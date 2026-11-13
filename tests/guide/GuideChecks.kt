@@ -382,6 +382,8 @@ private fun drawMenuBar(path: String, width: Float, side: Float) {
 
 fun main() {
     modifiersAreNoTyping()
+    speedStartsWithAWord()
+    readableWhenOrange()
     theMenuKeys()
     steadyKeyLight()
     playgroundSpeed()
@@ -1167,4 +1169,65 @@ private fun modifiersAreNoTyping() {
         if (WpmMeter.counts(code)) throw AssertionError("Key $code must not count towards the speed")
     for (code in listOf(android.view.KeyEvent.KEYCODE_A, android.view.KeyEvent.KEYCODE_SPACE, android.view.KeyEvent.KEYCODE_DEL))
         if (!WpmMeter.counts(code)) throw AssertionError("Key $code is typing and counts")
+}
+
+/**
+ * The playground's speed starts only once a real word is being typed, from a letter key or a swipe (owner): a touch, Space,
+ * Backspace or a modifier never starts it. Once it runs, Space, Backspace and a word from the bar keep it going.
+ */
+private fun speedStartsWithAWord() {
+    for (code in android.view.KeyEvent.KEYCODE_A..android.view.KeyEvent.KEYCODE_Z) same(WpmMeter.startsWord(code), true, "Letter key $code starts it")
+    for (code in listOf(android.view.KeyEvent.KEYCODE_SPACE, android.view.KeyEvent.KEYCODE_DEL, android.view.KeyEvent.KEYCODE_ENTER,
+            android.view.KeyEvent.KEYCODE_SHIFT_LEFT, android.view.KeyEvent.KEYCODE_ALT_LEFT, android.view.KeyEvent.KEYCODE_SYM))
+        same(WpmMeter.startsWord(code), false, "Key $code doesn't start it")
+    val meter = WpmMeter()
+    meter.keep(1000, 1)
+    same(meter.active(1000), false, "Space or Backspace before any word starts nothing")
+    same(meter.wpm(1000), null, "and shows no speed")
+    meter.text(4)
+    same(meter.wpm(1100), null, "Text that changes by itself starts nothing either")
+    meter.input(2000, 4)
+    same(meter.active(2000), true, "A letter starts it")
+    meter.keep(4000, 10)
+    meter.keep(6500, 12)
+    same(meter.active(6500 + WpmMeter.IDLE_MILLIS), true, "Once it runs, Space and Backspace keep it going")
+    same(meter.wpm(6500), Math.round((12 - 4) / WpmMeter.CHARS_PER_WORD / (4500 / 60_000.0)).toInt(), "and what they type counts")
+    meter.keep(6501 + 2 * WpmMeter.IDLE_MILLIS, 20)
+    same(meter.active(6501 + 2 * WpmMeter.IDLE_MILLIS), false, "After the burst, Space starts nothing again")
+}
+
+/**
+ * Every text on the playground stays readable as it warms (owner): once cream drops below 4.5:1 on the background, the text
+ * turns ink, and it goes back to cream only a little past that, so it never flickers. Black is cream's; full orange is ink's.
+ */
+private fun readableWhenOrange() {
+    fun warmth(heat: Float): Int {
+        fun mix(shift: Int) = Math.round((0xEF804E shr shift and 0xFF) * heat * .85f) shl shift
+        return (0xFF shl 24) or mix(16) or mix(8) or mix(0)
+    }
+    same(WpmMeter.inkOn(0xFF000000.toInt(), inkNow = false), false, "Cream on black")
+    same(WpmMeter.inkOn(warmth(1f), inkNow = false), true, "Ink on the warmest orange")
+    check(WpmMeter.contrast(0xFFFFF1E6.toInt(), 0xFF000000.toInt()) > 18) { "cream on black reads very well" }
+    check(Math.abs(WpmMeter.contrast(0xFFFFFFFF.toInt(), 0xFF000000.toInt()) - 21.0) < 1e-6) { "white on black is 21:1" }
+    // Where it turns: every heat with cream under 4.5:1 is ink, every one over it is cream.
+    var turned = -1f
+    for (step in 0..100) {
+        val heat = step / 100f
+        val contrast = WpmMeter.contrast(0xFFFFF1E6.toInt(), warmth(heat))
+        same(WpmMeter.inkOn(warmth(heat), inkNow = false), contrast < WpmMeter.READABLE, "heat $heat")
+        if (turned < 0 && contrast < WpmMeter.READABLE) turned = heat
+    }
+    check(turned > 0f && turned < 1f) { "it turns somewhere on the way to orange" }
+    // Once ink, a tiny cooling doesn't flip it back.
+    var heat = turned
+    while (WpmMeter.contrast(0xFFFFF1E6.toInt(), warmth(heat)) < WpmMeter.READABLE + .1) heat -= .002f
+    same(WpmMeter.inkOn(warmth(heat), inkNow = true), true, "just past the edge, ink stays")
+    same(WpmMeter.inkOn(warmth(heat), inkNow = false), false, "though cream would read there")
+    // The secondary text stays readable too, while the rest is still cream: muted on black, nearer cream as it warms.
+    same(WpmMeter.quietOn(0xFF000000.toInt()), 0xFF99918A.toInt(), "Muted on black")
+    for (step in 0..100) {
+        val background = warmth(step / 100f)
+        if (WpmMeter.inkOn(background, inkNow = false)) continue
+        check(WpmMeter.contrast(WpmMeter.quietOn(background), background) >= WpmMeter.READABLE) { "secondary text reads at heat ${step / 100f}" }
+    }
 }

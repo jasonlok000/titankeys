@@ -19,9 +19,8 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - Front page: a proper header with the title, Guide and Settings; whole sentences in the prompt line; a dark text box with personality (an orange accent); the full real-size drawn keyboard, bottom row included; the touchpad zone kept and shown as an outline in its real place. (Owner, 2026-11-12)
 - Animation timing is not unified across the app. Keep the current timings and fix only what looks off; the owner felt one set of timings could make it generic. (Owner, 2026-11-12)
 
-### Open
-- The front page touchpad zone: corner brackets (Orchestrator's pick) or the full dashed line. Renders in `.dev/renders/guide-v53/front/`.
-- Inter Bold font file (OFL licence; a download needs the owner's OK). For now titles use Medium, emboldened.
+- The front page touchpad zone uses **corner brackets with a label** ("TOUCHPAD"), with no lines across the keys. (Owner, 2026-11-12)
+- Add the real **Inter Bold** font file (OFL, from the official source), listed in the licences. (Owner, 2026-11-12)
 
 ## Gestures (double space, triple space, flick to delete)
 
@@ -46,9 +45,10 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - The flick-dots wait can be set in the lab; the owner likes the current 200 ms. (Owner, 2026-11-12)
 - The space-gesture zone is not made taller: the misses are timing, not height. (Owner, after the logs study, 2026-11-12)
 
+- The held delete has no fade: each word is one firm hit, 50 ms at the slow pace down to 30 ms at top speed. That's the version the owner has on the phone, and the owner keeps it. (Owner, 2026-11-12)
+
 ### Open
-- Bring back a gentler held-delete fade, or keep it removed? The fade is what made held words feel light.
-- The space "first tap alone" wait: change 200 → 150 ms? It recovers 7 failed steers and adds about 0.09 false triggers per 1,000 words.
+- The space "first tap alone" wait: change 200 → 150 ms? It recovers 7 failed steers and adds about 0.09 false triggers per 1,000 words. The owner asked what it is; explained 2026-11-12.
 
 ## Haptics
 
@@ -118,10 +118,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - No: a letter-shortcuts row. (Owner, 2026-11-12)
 - No "Set it up for me" through Accessibility: Google Play's policy forbids it. (Owner's rule "only if it passes Google Play"; the Orchestrator checked the policy.)
 
-### Open
-- Password and 2FA codes on the bar (autofill chips): this release, later, or no?
-- Back up and restore everything in one file: this release, later, or no?
-- Defaults matching stock and BlackBerry: double Shift as Caps Lock on by default; "hold a letter for: symbol / capital"; spelling from the phone's language.
+- No: password and 2FA codes on the bar (autofill chips). No: back up everything in one file. No: changing the defaults to match stock and BlackBerry (Caps Lock on double Shift, hold for a capital, spelling from the phone's language). (Owner, 2026-11-12)
 
 ## Calibration
 

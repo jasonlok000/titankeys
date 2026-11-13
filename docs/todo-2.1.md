@@ -182,7 +182,10 @@ all of them are unapproved.
   - **D** (claude/bar-even): **done and merged** (e56f3cc, merge 3baeb3e). All three words are 20 dp, with the best in Inter Bold
     and Medium dropped. Font padding is off and the words are lifted by Inter's x-height, so the letters sit −0.5 px from the bar's
     centre, against +3.3 px before. The render checked out.
-  - **Fine calibration (owner, 08:35):** the grid is right, but "maybe the calibration guide a bit off". The owner is refining it on
+  - **Fine calibration: done** (db4889b). The owner set 108 px, centred, and KeyAlignment and its checks follow. To re-measure the Sym
+    panel over the lines on build #5: on build #4 the symbols leaned 0–3 px left (about 1 px on average) on both sides, which is
+    glyph shape and rounding, not spacing.
+  - Before: the grid is right, but "maybe the calibration guide a bit off". The owner is refining it on
     cal-tool/fine.html (full-height lines, quarter-pixel steps). When the owner is done, the saved values go into KeyAlignment's
     defaults, with a shift if there is one.
   - F's brief corrected: Size keeps the bar's height and grows only what's inside.

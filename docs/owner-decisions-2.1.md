@@ -205,6 +205,10 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Key calibration refined: 108 px a key and gap, centred** (owner, 2026-11-13, 08:38, on full-height lines in quarter-pixel
+  steps). It replaces 107.5. (Owner) The outer keys now reach 2 px past each screen edge: the real keyboard is a touch wider than
+  the screen. The drawings follow the calibration exactly, including the 2 px past each edge. The row gap keeps the hardware's ratio.
+  (Orchestrator)
 - **Word menu, still wrong on build #4** (owner, 2026-11-13, 08:20):
   - Forget showed on a gibberish word typed once. Cause: D's menuFor counts any word "still gathering evidence" as learned.
     The owner's meaning is a word TitanKeys knows, i.e. would suggest.

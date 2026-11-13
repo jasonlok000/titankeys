@@ -292,6 +292,13 @@ all of them are unapproved.
       defaults off. Next suspect: Smart Launcher rewrites or restarts the box on each key to update its results, which would
       reset the word being typed (autocorrect, word delete). Why Sym and emoji don't show is still open. Needs a live repro
       in its search box; waiting on the owner's OK to type a test word there.
+  - **Merged: C's gesture line** (claude/gesture-line 8ecfe99): every gesture shape on the words' line (carets, the held
+    delete's word bars, flick dots, the selection and its handle, steering dots, the finger), carets as tall as the letters, the
+    handle knob on top, drags clipped at the bar's sides. Reviewed by the Orchestrator from X:\Atlas\.devenders\gesture-line
+    (sheet-normal). The edge glows (Space, steering, the held delete's corner glow) still rise from the screen's edge as designed:
+    kept (Orchestrator). gesture-line, gesture-display, gesture-render, strip-fit and guide checks pass.
+  - **The real Sym key in Smart Launcher:** the owner confirms it doesn't get through. Android's dispatcher keeps no key codes and
+    TitanKeys doesn't log Sym yet; D's debug trace will show where it goes.
   - **Withdrawn: build #14 is no longer the release candidate** (owner's round 2 on the line, 2026-11-13). In progress: W (the
     modifier bar's cut chips, the menu effects' anchor and scale), C (the gesture display on the line), A (the idle games on the
     line). Each sends keyframe strips in the border-and-corner render; the Orchestrator reviews every frame, then the phone.

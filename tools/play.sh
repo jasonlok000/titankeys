@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds TitanKeys for Google Play: a signed Android App Bundle (dist/titankeys-<version>.aab) with the Play version code
+# Builds TitanKeys for Google Play: a signed Android App Bundle (dist/titankeys-keyboard-<version>.aab) with the Play version code
 # and the build mark that turns off the typing log. See docs/play/build-tasks.md and docs/play/signing.md.
 #
 # Version codes: the GitHub APK has the odd code in ink.toml, and the Play build the even code after it (2.1.0: 57 on
@@ -64,11 +64,11 @@ edit android/src/main/AndroidManifest.xml \
 grep -q 'com.titankeys.build' android/src/main/AndroidManifest.xml || { echo "Could not mark the manifest as the Play build" >&2; exit 1; }
 
 bash tools/release.sh --bundle
-bundle="dist/titankeys-$version.aab"
+bundle="dist/titankeys-keyboard-$version.aab"
 [[ -f "$bundle" ]] || { echo "The build made no $bundle" >&2; exit 1; }
 if $local; then
-  mv "$bundle" "dist/titankeys-$version-local.aab"
-  bundle="dist/titankeys-$version-local.aab"
+  mv "$bundle" "dist/titankeys-keyboard-$version-local.aab"
+  bundle="dist/titankeys-keyboard-$version-local.aab"
 fi
 bash tools/page-size.sh "$bundle"
 echo "Built $bundle: version $version, Play version code $play_code$($local && echo ', signed with the GitHub key for local checks only')"

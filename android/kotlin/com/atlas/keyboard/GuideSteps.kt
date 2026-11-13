@@ -51,15 +51,15 @@ internal enum class GuideChapter(val label: String, val roast: String? = null) {
  * [title] and [body] follow the same rules as a step's words. [help] shows if you come back with the part still not done.
  */
 internal enum class SetupPart(val title: String, val body: String, val action: String, val help: String? = null) {
-    Enable("Turn the keyboard on.", "Flip TitanKeys on in the list. You'll land back here by yourself.", "Open the keyboard list",
+    Enable("Turn the keyboard on.", "Flip TitanKeys Keyboard on in the list. You'll come straight back.", "Open the keyboard list",
         "Can't see it? Scroll down. Flip its switch, then press OK twice."),
-    Choose("Make it your keyboard.", "Pick TitanKeys in the list. That's it.", "Pick TitanKeys"),
+    Choose("Make it your keyboard.", "Pick TitanKeys Keyboard in the list. That's it.", "Pick TitanKeys"),
     // Android shows a list of all apps here, not the page for TitanKeys alone.
-    Overlay("Let it sit over other apps.", "Allow TitanKeys in the list. It keeps the touchpad on the keys.", "Open the list",
-        "Find TitanKeys in the list, open it and flip the switch."),
+    Overlay("Let it sit over other apps.", "Allow TitanKeys Keyboard in the list. It keeps the touchpad on the keys.", "Open the list",
+        "Find TitanKeys Keyboard in the list, open it and flip the switch."),
     ScrollAssistant("Turn on Scroll assistant.", "Swiping reads the touchpad through it. Flip its switch on.", "Open Scroll assistant",
         "The switch is at the top of that page."),
-    Back("Let TitanKeys handle Back.", "Turn TitanKeys on in Accessibility. Then Back works in one press.", "Open Accessibility",
+    Back("Let TitanKeys handle Back.", "Turn TitanKeys Keyboard on in Accessibility, so Back takes one press.", "Open Accessibility",
         "Switch greyed out? Android is being careful. In App info, open the menu and allow restricted settings."),
     ;
 

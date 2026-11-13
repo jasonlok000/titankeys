@@ -7,6 +7,32 @@ import { join } from "node:path";
 const root = join(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
+test("the release is TitanKeys Keyboard outside the app, and the debug build TitanKeys Debug", () => {
+  // Owner, 2026-11-13: "TitanKeys Keyboard in the app name so that it's easier to search in the launchers". The launcher and
+  // app info take ink.toml's name; the keyboard list and Accessibility take the services' labels.
+  const ink = read("ink.toml");
+  const manifest = read("android/src/main/AndroidManifest.xml");
+  expect(ink).toMatch(/^name = "TitanKeys Keyboard"$/m);
+  const labels = [...manifest.matchAll(/android:label="([^"]*)"/g)].map(match => match[1]);
+  expect(labels).toEqual(["TitanKeys Keyboard", "TitanKeys Keyboard"]);
+  // tools/debug.sh's own edits, applied here as its sed applies them, give TitanKeys Debug everywhere instead.
+  const debug = read("tools/debug.sh");
+  expect(debug).toContain(`edit ink.toml -e 's/^name = .*/name = "TitanKeys Debug"/'`);
+  const label = debug.match(/edit android\/src\/main\/AndroidManifest\.xml 's\/(android:label="[^"]*")\/(android:label="[^"]*")\/'/);
+  expect(label).not.toBeNull();
+  const debugManifest = manifest.split("\n").map(line => line.replace(label![1], label![2])).join("\n");
+  expect([...debugManifest.matchAll(/android:label="([^"]*)"/g)].map(match => match[1])).toEqual(["TitanKeys Debug", "TitanKeys Debug"]);
+});
+
+test("Settings > Setup and the boring guide name the list entries TitanKeys Keyboard", () => {
+  const setup = read("app/settings/setup.tsx");
+  expect(setup).toContain('<Field label="Turn on TitanKeys Keyboard" onPress={enableKeyboard}>');
+  expect(setup).toContain('<Field label="Turn on TitanKeys Keyboard in Accessibility" onPress={allowBack}>');
+  expect(read("app/settings/guide-boring.tsx")).toContain("Turn TitanKeys Keyboard on in Accessibility.");
+  // Ink names the build's files after the app name, so Play's bundle is titankeys-keyboard-<version>.aab.
+  expect(read("tools/play.sh")).toContain('bundle="dist/titankeys-keyboard-$version.aab"');
+});
+
 test("release has no way to reach the raw log copy", () => {
   expect(existsSync(join(root, "android/kotlin/com/atlas/keyboard/RawLogPull.kt"))).toBe(false);
   expect(read("android/src/main/AndroidManifest.xml")).not.toContain("RawLogPull");

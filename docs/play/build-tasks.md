@@ -57,14 +57,14 @@ Build {
 2. `gradle_command`: treat `Bundle` like `Release`. Signing: `if profile != Profile::Debug`. Assets: `Profile::Debug => android_assets_path, _ => release_assets_path`.
 3. `compile`: no change (the `else` branch already covers it).
 4. `build`: skip `verify_apk` for `Bundle`, because `apksigner` can't check an `.aab`. Instead, run `jarsigner -verify` on it (the JDK has it), or leave the check to bundletool in task C9.
-5. `copy_build`: use the `.aab` extension for `Bundle`, so the file is `dist/titankeys-<version>.aab`.
+5. `copy_build`: use the `.aab` extension for `Bundle`, so the file is `dist/titankeys-keyboard-<version>.aab`.
 6. `assemble`: the progress text says "Building … APK". Make it say "bundle" for `Bundle`.
 
 **In `crates/ink-cli/src/main.rs`** (line 140): pick `Profile::Bundle` when `bundle` is set, and print "AAB" instead of "APK" in the result line.
 
 **On the TitanKeys side:** `tools/release.sh` already passes its arguments on (`exec bun run build "$@"`), so `bash tools/release.sh --bundle` works with no change.
 
-**Check:** `ink build` and `ink build --debug` behave exactly as before (same files in `dist/`, same verification). Then `bash tools/release.sh --bundle` makes `dist/titankeys-<version>.aab`.
+**Check:** `ink build` and `ink build --debug` behave exactly as before (same files in `dist/`, same verification). Then `bash tools/release.sh --bundle` makes `dist/titankeys-keyboard-<version>.aab`.
 
 **Optional, for Play Console:** upload the R8 mapping file (`.ink/build/android/outputs/mapping/release/mapping.txt`) with each release, so crash reports are readable. Play will also warn that native debug symbols are missing. That is a warning only.
 
@@ -115,7 +115,7 @@ Build {
 **Check the result** in the built bundle and APK (task C9):
 
 ```bash
-bundletool dump config --bundle=dist/titankeys-<version>.aab | grep -i alignment   # expect PAGE_ALIGNMENT_16K
+bundletool dump config --bundle=dist/titankeys-keyboard-<version>.aab | grep -i alignment   # expect PAGE_ALIGNMENT_16K
 zipalign -c -P 16 -v 4 <universal>.apk                                              # expect "Verification successful"
 ```
 
@@ -146,7 +146,7 @@ Target SDK 36 is already done. The rest, in rough order. Items marked **(F)** be
 **C4. Check the final permissions and manifest** of the built bundle:
 
 ```bash
-bundletool dump manifest --bundle=dist/titankeys-<version>.aab
+bundletool dump manifest --bundle=dist/titankeys-keyboard-<version>.aab
 ```
 
 Expected `uses-permission`: `VIBRATE`, `SYSTEM_ALERT_WINDOW`, `INTERNET`, `ACCESS_NETWORK_STATE`, `POST_NOTIFICATIONS`, and nothing else. In particular, no `com.google.android.gms.permission.AD_ID`, no `QUERY_ALL_PACKAGES`, no `RECEIVE_BOOT_COMPLETED` or foreground-service permissions unless 2.1 really uses them. Ink adds permissions per capability (`crates/ink-compiler/capabilities-v1.json`): its `network` capability adds `INTERNET` and `ACCESS_NETWORK_STATE`, and `notification-permission` adds `POST_NOTIFICATIONS`. If F adds them through Ink capabilities instead of the app manifest, check that no other capability came with them. Also check `com.titankeys.build` is `play`, `versionCode` is the Play code, and `targetSdkVersion` is 36.
@@ -162,9 +162,9 @@ Expected `uses-permission`: `VIBRATE`, `SYSTEM_ALERT_WINDOW`, `INTERNET`, `ACCES
 **C9. Test the bundle locally before uploading.** Ask the orchestrator before downloading `bundletool` (from Google's [bundletool releases](https://github.com/google/bundletool/releases)) and before using the phone.
 
 ```bash
-java -jar bundletool.jar validate --bundle=dist/titankeys-<version>.aab
-jarsigner -verify -verbose -certs dist/titankeys-<version>.aab | tail   # signed with the upload key
-java -jar bundletool.jar build-apks --bundle=dist/titankeys-<version>.aab --output=/tmp/tk.apks --mode=universal \
+java -jar bundletool.jar validate --bundle=dist/titankeys-keyboard-<version>.aab
+jarsigner -verify -verbose -certs dist/titankeys-keyboard-<version>.aab | tail   # signed with the upload key
+java -jar bundletool.jar build-apks --bundle=dist/titankeys-keyboard-<version>.aab --output=/tmp/tk.apks --mode=universal \
   --ks=signing/atlas.keystore --ks-key-alias=atlas   # signs like Play will; passwords via --ks-pass=file:...
 unzip -o /tmp/tk.apks universal.apk -d /tmp/tk && zipalign -c -P 16 -v 4 /tmp/tk/universal.apk
 ```

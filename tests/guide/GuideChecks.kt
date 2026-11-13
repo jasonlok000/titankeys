@@ -497,6 +497,10 @@ private fun theStepsHaveOkayWords() {
         same(part.title.length <= 32 && part.title.endsWith("."), true, "Setup title \"${part.title}\" is one short sentence")
         same(part.body.length <= 72, true, "Setup body \"${part.body}\" must stay short")
     }
+    // Android's lists show the app as TitanKeys Keyboard (owner, 2026-11-13), so the steps that send you there say so.
+    for (part in listOf(SetupPart.Enable, SetupPart.Choose, SetupPart.Overlay, SetupPart.Back))
+        same(part.body.contains("TitanKeys Keyboard"), true, "Setup body \"${part.body}\" names the list entry")
+    same(SetupPart.Overlay.help, "Find TitanKeys Keyboard in the list, open it and flip the switch.", "The overlay help names the entry")
 }
 
 private fun oneStepForEachIdea() {

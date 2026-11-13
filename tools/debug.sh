@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds "TitanKeys Debug": a separate app with its own package and pale icon, so it installs next to the
-# real TitanKeys without replacing it or touching its saved words. Pass --install to install it over adb.
+# Builds "TitanKeys Debug": a separate app with its own package, pale icon and short name, so it installs next to the
+# real TitanKeys Keyboard without replacing it or touching its saved words. Pass --install to install it over adb.
 # This build also adds the sample recorder from android/debug/recorder, which normal TitanKeys never compiles.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -24,7 +24,7 @@ trap restore EXIT
 edit() { local file=$1; shift; sed "$@" "$file" > "$file.tmp"; mv "$file.tmp" "$file"; }
 
 edit ink.toml -e 's/^name = .*/name = "TitanKeys Debug"/' -e 's/^package = .*/package = "com.titankeys.debug"/'
-edit android/src/main/AndroidManifest.xml 's/android:label="TitanKeys"/android:label="TitanKeys Debug"/'
+edit android/src/main/AndroidManifest.xml 's/android:label="TitanKeys Keyboard"/android:label="TitanKeys Debug"/'
 # The guide's still frames open from adb, so only this build exports them.
 edit android/src/main/AndroidManifest.xml '/android:name="com.atlas.keyboard.GuideFrameActivity"/{n;s/android:exported="false"/android:exported="true"/;}'
 cp "$recorder"/*.kt "$keyboard/"

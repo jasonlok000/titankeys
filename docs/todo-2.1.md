@@ -2,9 +2,9 @@
 
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
-[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 22:10.
+[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 22:30.
 
-## On the phone now (build 26dabd27, test-2.1h at a7cb9b9)
+## On the phone now (build a5416a0e, test-2.1h at 9b67678)
 
 - Gestures:
   - The held delete: corner glow, pause zone, zone ticks, a firm hit per word, and a thin caret that blinks only when paused.
@@ -20,7 +20,8 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 - Word menu v3.1 (D):
   - one ladder for every word, with Unfavourite back to Saved and no snaps;
   - orange particles on both sides, a heart burst, a crack and a ribbon;
-  - the ambient heart and ribbon.
+  - the ambient heart and ribbon;
+  - Save bursts like Favourite, with small orange ribbons in place of hearts (owner, 2026-11-12).
 - Guide v5.3 (C).
 - Settings (F):
   - One Show the bar setting.
@@ -43,7 +44,6 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 
 ## In progress
 
-- D's Save burst (claude/save-burst 987ca01): Save now uses Favourite's burst with ribbons in place of hearts, and its haptic lands on the burst. Merged and building; install when it passes.
 - Layout sample page: on the phone at http://localhost:8765/sample.html, served from the PC through adb reverse. It's scratchpad
   cal-tool/sample.html, with the Guide and Playground screens, a Sizes button and Full screen. **Waiting for the owner's verdict** before the batch.
 - Playground tone sample: 22 lines in docs/playground-text-draft.md. **Waiting for the owner's verdict**, then the full ~3,000 words.
@@ -62,7 +62,7 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 - Feel and judge on the phone:
   - Round 7 haptics and the quiet swell.
   - Exact-typing bar texture against confirm (lab switch).
-  - Word menu v3.1: Favourite approved ("done perfectly"). Save is being redone by D.
+  - Word menu v3.1: Favourite approved ("done perfectly"). The new Save burst is on the phone for the owner to judge.
 - Key Mapper: v2 is imported. Importing can't delete key maps, so the owner deletes the three switched-off Sym + S, P and E maps by hand
   (owner: "the $%= shd be removed"). key_maps_titankeys_v3.zip in Downloads is the clean backup without them.
 - Launch: whether to launch at 3.0 with languages instead of 2.1 (the owner is leaning that way; see the decisions log).

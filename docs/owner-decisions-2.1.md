@@ -216,6 +216,9 @@ What the owner asked for, what's decided and by whom, and what's still open. The
     (owner: "how about by default if it detects the size being big, it'll select big, not biggest? I think big is a good spot for
     me personally"). Biggest is only ever picked. The resets go back to following it. The owner's phone (2.0) lands on Bigger by
     itself; the Orchestrator checks it once build #12 is installed. (Owner)
+- **The menu word moves left of the widest pill** (W's 536a3a7, merged for build #12). The owner judges it on the phone first:
+  "ill see if it looks good first." If not, the owner's fallbacks: leave the word where it is and make the pill's label shorter
+  ("Favourited", "alr a fav" or similar), or let the pill overlap the word, semi-transparent with a blur underneath. (Owner)
 - **Never wait for the phone to be idle** (owner, 2026-11-13: "take my phone. never ever wait for my phone to be idle any
   more."). Installs and checks run at once; navigation and the TitanKeys-in-front check still stop them. (Owner)
   - **The Sym jump** goes to V, with checks that reproduce it.

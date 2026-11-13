@@ -912,11 +912,21 @@ class GuideActivity : Activity() {
     /** Keys down now, as the keyboard reported them: help waits while one is held. */
     private val heldKeys = HashSet<Int>()
 
-    /** Restarts the help's wait, on any input: help comes after a pause, never in the middle of trying (owner, v5.3). */
+    /**
+     * Restarts the help's wait, on any input: help comes after a pause, never in the middle of trying (owner, v5.3). It comes
+     * [HELP_AFTER_MILLIS] after the last input, then again every [HELP_REPEAT_MILLIS] while the slide still waits for that step
+     * (owner, 2026-11-13: "the tap hint still needs to be sooner and more frequent").
+     */
     private fun waitForHelp() {
-        if (helpShown || passed || flow.step.help == null) return
+        if (passed || flow.step.help == null) return
         main.removeCallbacks(showHelp)
-        main.postDelayed(showHelp, if (flow.step.helpTitle != null) HELP_TITLE_AFTER_MILLIS else HELP_AFTER_MILLIS)
+        main.postDelayed(showHelp, helpWait())
+    }
+
+    private fun helpWait() = when {
+        flow.step.helpTitle != null -> HELP_TITLE_AFTER_MILLIS
+        helpShown -> HELP_REPEAT_MILLIS
+        else -> HELP_AFTER_MILLIS
     }
 
     private fun helpDue() {
@@ -926,16 +936,24 @@ class GuideActivity : Activity() {
             main.postDelayed(showHelp, HELP_RECHECK_MILLIS)
             return
         }
-        helpShown = true
         val step = flow.step
         val help = step.help
-        if (help != null && !passed) {
-            if (step.helpTitle != null) showScenario(step.helpTitle, help) else {
-                haptics.play(Haptic.GuideHint)
-                showHint(help)
+        // Each slide's help is about its first step: how to start the gesture. Past it, it would be wrong.
+        if (help == null || passed || flow.stage != 0) return
+        val again = helpShown
+        helpShown = true
+        if (step.helpTitle != null) showScenario(step.helpTitle, help) else {
+            haptics.play(Haptic.GuideHint)
+            // Each time it plays again, so it's seen again: the chip comes back in, and the slide's demonstration plays.
+            if (again && ::chip.isInitialized && chip.visibility == View.VISIBLE && chip.text.toString() == help) hideChip(now = true)
+            showHint(help)
+            if (again && demoStart < 0) {
+                main.removeCallbacks(startDemo)
+                main.post(startDemo)
             }
+            main.postDelayed(showHelp, HELP_REPEAT_MILLIS)
         }
-        offerFor(step)
+        if (!again) offerFor(step)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -3069,8 +3087,20 @@ class GuideActivity : Activity() {
 
     /** A touch on the field, on a slide about doing that from the keys. */
     private fun fieldTouched() {
-        if (playground || passed || busy || flow.step.chapter != GuideChapter.Steering) return
-        showScenario(SCREEN_TOUCHED, flow.instruction)
+        if (playground || passed || busy) return
+        val step = flow.step
+        if (step.chapter == GuideChapter.Steering) return showScenario(SCREEN_TOUCHED, flow.instruction)
+        // A slide whose cursor has to be in one place, a gap or the word to delete: a touch on the screen that moved it puts it
+        // back, and says the keys do this (owner, 2026-11-13: every way to fail recovers).
+        val place = step.cursorAt ?: return
+        main.post {
+            if (passed || flow.step !== step) return@post
+            val want = place(field.text.toString()).coerceIn(0, field.length())
+            if (field.selectionStart == want && field.selectionEnd == want) return@post
+            field.setSelection(want)
+            haptics.play(Haptic.GuideBlocked)
+            showChip(SCREEN_PUT_BACK, force = true)
+        }
     }
 
     private fun trace(message: JSONObject) {
@@ -3365,6 +3395,14 @@ class GuideActivity : Activity() {
             haptics.play(Haptic.GuideBlocked)
             showChip(blockedChip(step, event.lesson, flow.lessons), force = true)
         }
+        // A copy on the paste slide put something else on the clipboard: the slide's clip goes back on it, so fn and V still
+        // pastes the slide's words. The slide's own chip says it was a copy.
+        val clip = step.clip
+        if (event is KeyboardEvent.Copied && clip != null && !passed && event.text != clip) main.post {
+            if (passed || flow.step !== step) return@post
+            runCatching { clipboard.setPrimaryClip(android.content.ClipData.newPlainText("TitanKeys guide", clip)) }
+            main.postDelayed({ GuideHooks.dismissClip() }, CLIP_HIDE_MILLIS)
+        }
         // A rude clip pasted on the clipboard slide is taken back out at once, and the slide says so: only the nice one counts.
         if (event is KeyboardEvent.FieldChanged && step.id == "clipboard" && !passed && flow.stage == 2 &&
             event.text.trimEnd() != step.seed && PRANK_PASTE !in event.text && event.text.length > step.seed.length + 2) {
@@ -3568,7 +3606,8 @@ class GuideActivity : Activity() {
         val step = flow.step
         markPassed(step)
         showSuccess(reaction ?: step.done)
-        val hunted = if (step.hunt != null && huntStart >= 0) huntSeconds() else -1
+        // A find before the hunt's clock started, straight from the first step, counts as quick: it always gets its line.
+        val hunted = if (step.hunt == null) -1 else if (huntStart >= 0) huntSeconds() else 0
         stopHunt()
         // A hunt's roast goes by how long it took (owner, v5.2): a quick find gets a chip, a slow one its line under the success,
         // where it has room.
@@ -3656,10 +3695,22 @@ class GuideActivity : Activity() {
         nextPulse?.cancel()
         nextPulse = null
         nextBig.visibility = View.GONE
-        if (!show || flow.step.chapter == GuideChapter.End) return
+        if (!show || !showsNextWhenPassed(flow.step)) return
         main.removeCallbacks(revealSkip)
         offer.visibility = View.GONE
         if (next.visibility != View.VISIBLE) appear(next, WASH_SETTLE_MILLIS)
+        // Whatever happens to its animation, a passed slide ends with Next in full view.
+        main.postDelayed(nextInView, WASH_SETTLE_MILLIS + MOVE_MILLIS + NEXT_CHECK_MILLIS)
+    }
+
+    private val nextInView = Runnable {
+        if (!passed || changing || !showsNextWhenPassed(flow.step) || flow.step.pause) return@Runnable
+        next.visibility = View.VISIBLE
+        if (next.alpha < 1f || next.translationY != 0f) {
+            next.animate().cancel()
+            next.alpha = 1f
+            next.translationY = 0f
+        }
     }
 
     /** Skip turns into the filled Next: the pill fills in, the word turns ink, and the pill gives one pulse. */
@@ -3682,10 +3733,18 @@ class GuideActivity : Activity() {
             addListener(object : android.animation.AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: android.animation.Animator) {
                     paintNext()
-                    next.animate().cancel()
-                    next.animate().scaleX(NEXT_PULSE).scaleY(NEXT_PULSE).setDuration(PULSE_MILLIS / 2).withEndAction {
-                        next.animate().scaleX(1f).scaleY(1f).setDuration(PULSE_MILLIS / 2).start()
-                    }.start()
+                    // The pulse runs on its own animator. Cancelling the view's own animation here stopped Next's fade-in, which
+                    // waits [WASH_SETTLE_MILLIS] on a slide passed before Skip showed, so a quick pass left Next unseen (owner,
+                    // 2026-11-13: "some next are missing after completion").
+                    ValueAnimator.ofFloat(0f, 1f, 0f).apply {
+                        duration = PULSE_MILLIS
+                        addUpdateListener {
+                            val scale = 1f + (NEXT_PULSE - 1f) * (it.animatedValue as Float)
+                            next.scaleX = scale
+                            next.scaleY = scale
+                        }
+                        start()
+                    }
                 }
             })
             start()
@@ -4146,6 +4205,8 @@ class GuideActivity : Activity() {
         private const val DECLINE_OFF = "☐  I'd rather not paste. That's on me, and I accept the consequences."
         private const val DECLINE_ON = "☑  I'd rather not paste. That's on me, and I accept the consequences."
         private const val SCREEN_TOUCHED = "The screen? Really? Why'd you buy this phone?"
+        /** A touch on the screen moved the cursor from where the slide needs it, and the guide put it back. */
+        private const val SCREEN_PUT_BACK = "Put it back. The keys do this, not the screen."
         private const val LEAVE_TITLE = "Leaving already?"
         private const val LEAVE_BODY = "You haven't finished the guide. Leave anyway?"
         private const val LEAVE_YES = "I already know everything"
@@ -4240,6 +4301,8 @@ class GuideActivity : Activity() {
         private const val NEXT_BREATH = .035f
         private const val NEXT_BREATH_MILLIS = 1100L
         private const val WASH_SETTLE_MILLIS = 250L
+        /** After Next's fade-in should be over, this much more, then it's put in full view if anything stopped it. */
+        private const val NEXT_CHECK_MILLIS = 120L
         /** The field's fill on ink, and how grey the ghost is, as in the approved frame. */
         private const val FIELD_FILL = .08f
         /** How strong the orange wash is behind what a slide aims at, in the field. */
@@ -4396,7 +4459,9 @@ class GuideActivity : Activity() {
         /** The slogan comes after the name has clicked into place, and the line above it after that. */
         private const val SLOGAN_DELAY_MILLIS = 260L
         /** A slide's help shows this soon (v5: sooner, so the hint is there before anyone gives up). */
-        private const val HELP_AFTER_MILLIS = 5000L
+        private const val HELP_AFTER_MILLIS = 3000L
+        /** Then the help comes again this often while the slide still waits for its first step. */
+        private const val HELP_REPEAT_MILLIS = 6000L
         /** How soon help that had to wait for a finger, a key or the menu looks again. */
         private const val HELP_RECHECK_MILLIS = 700L
         /** The line to type along to: two lines (design v2). */

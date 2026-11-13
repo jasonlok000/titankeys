@@ -248,6 +248,14 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   needs the keyboard open on a field that shows words, 3 to 4.5 minutes with no key, touch or swipe, the screen on, then a 25%
   chance, and never twice in a row: about 15 untouched minutes before the first game, so it's almost never seen. The
   Orchestrator's proposal, unapproved: wait 60 to 90 s and a 50% chance, about 2.5 minutes on average; any input still ends it.
+- **The app is called "TitanKeys Keyboard"** (owner, 2026-11-13: "could we call it sth like TitanKeys Keyboard in the app name so
+  that it's easier to search in the launchers?"). (Owner) The Orchestrator's scope: the launcher label, app info, the keyboard
+  picker and Accessibility say "TitanKeys Keyboard"; the app's own screens keep "TitanKeys"; the debug build stays "TitanKeys
+  Debug". F builds it; the Orchestrator checks on the phone how the launcher shortens a name that long.
+- **"Built for Titan 2 Elite" on Play** (owner: "can we do sth like 'built for titan2elite' when people open their play store?").
+  For the Play launch, not 2.1. No custom device badge was found for Play listings. The plan instead: make it available only on
+  the Titan 2 Elite in Play Console's device catalog (if its model is listed), and say "Built for the Titan 2 Elite" in the short
+  description, feature graphic and screenshots. Recorded in the Play plan. (Orchestrator)
 - **The 11 dp line, round 2** (owner, 2026-11-13, on build #13: "With the illusion shift, the modifier bar is not done well. The
   delete cursor looks visibly too far up not vertically center aligned. Space gestures seems also not be optimized… The position
   and scaling of the word menu effects seems inconsistent. Like the book seems to be much higher up than the heart animation. I

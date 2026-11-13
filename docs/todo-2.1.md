@@ -140,6 +140,36 @@ all of them are unapproved.
 - Orchestrator (06:40, 70f4f38): F's two guide lines applied; release notes: sparkles for a save, "way less orange", a line for
   the app's haptics, and one for the share screen.
 - **Build #2: 150cd978** (test-2.1h at 70f4f38 plus docs), all checks passed. Installed 07:05, no crash. A runs the full phone run-through (07:07).
+- **A's run-through of build #2 (07:40): no blocker, 12 ugly, 9 nits, no crash, no new ANR.** Notes: run-through-build2.md in the
+  notes folder. Fixes assigned at 07:45, all from 29c411a, none on the phone:
+  - **D** (claude/playground-menu): the playground used the guide's show-only word menu (its field carries the guide's tag), so
+    "then" showed Not saved and Save did nothing real. It now gets the real menu. That likely explains the owner's "why are words
+    like 'and' not even saved?".
+  - **A** (claude/guide-polish):
+    - Typing 3/3: a bar tap gets "hold, don't tap";
+    - the help is on time after a Skip;
+    - a lone Space is refused on the Swipe and Steering slides, with a Space-appropriate chip on the Alt slide;
+    - no stray space after Next with the menu open;
+    - the ∞ instruction stops naming ∞.
+  - **C** (claude/guide-visual-polish, with the brackets):
+    - the share screen gets FixedScale, with its buttons pinned (at font 2.0 the accept was off screen);
+    - decoration keep-outs feathered, with the 8 dp gap and nothing under the status bar;
+    - the playground's effects go behind its text;
+    - the paste selection in orange;
+    - the tagline at Label 14;
+    - no keyboard on the end screen, so nothing jumps;
+    - the playground reference always fills two lines;
+    - key sublabels at least 13 dp;
+    - the 🤪 burst kept to the content area;
+    - a scrim on the leave pop-up;
+    - hanging bullets on the share screen.
+  - **F** (claude/ink-polish):
+    - Settings titles and setup rows wrap at font 2.0;
+    - no Ink flash on "Go type something";
+    - the boring guide doesn't end on a lone word;
+    - the home-focus check fixed (it looked for the old hint text).
+  - Not changed: Back from the end restarts the fun guide at slide 1 (fine).
+  - Not testable over adb: swipe, flick, held flick, steer, three-tap select, Alt+A, hold V, the clown hunt, hover after a press.
 - **The overnight phone run-through never ran (the Orchestrator's miss).** idle.sh read the frozen "state at time of last ANR"
   snapshot in dumpsys input, which always says 5218 ms. So it called the phone busy for 6 hours while nobody had touched it.
   Fixed: it now reads only the live dispatcher.

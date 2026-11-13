@@ -208,6 +208,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
+- **Alt + Backspace deletes forward, behind a switch** (owner, 2026-11-13, 11:40): "make that a toggle. I think no one really uses alt
+  backspace... as a pc user i'm used to control backspace. alt+backspace = forward delete too." (Owner)
+  - The switch is "Alt + Backspace deletes forward", on by default. Off, Alt + Backspace goes to Android, which deletes the line.
+  - Ctrl/fn + Backspace and held Shift + Backspace keep deleting a word.
+  - Held Shift + Backspace deletes only one letter on build #5 (owner's report). F builds the switch and finds and fixes that bug.
+  - Alt + Sym works only inside TitanKeys. Making it global would mean the accessibility service sees every key typed with
+    other keyboards, so it stays inside TitanKeys. The owner had not known; Key Mapper can cover other keyboards. (Discussed)
 - **Another dumb-phone line** (owner, 11:25: "many people are calling this phone a dumb phone. honestly it's split... some use it as
   a ultimate power house phone. some use it as a dumb phone so they scroll less"). (Owner) Written as "some of you bought this as a
   dumb phone to scroll less and some as a powerhouse and you are all still scrolling". (Orchestrator's wording)

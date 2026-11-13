@@ -279,8 +279,10 @@ all of them are unapproved.
     - Delete 1/3 shows the flat e with its strike.
     - The real bar: the small letters' middle sits on the new line, 61 px under the bar's top (11 dp under the old middle); a
       'g' tail ends about 10 px over the screen's edge.
-  - **Build #14, the release candidate,** started from e3cefc5 (adds only the release guard, the release notes and the audit
-    doc). After it passes, the WSL build copy holds the final tree with Ink patched, ready for the owner's tools/release.sh.
+  - **Build #14, the release candidate, passed every verify check** (from e3cefc5; debug APK c90e1827, not installed: the same
+    app as build #13 apart from the release notes). The WSL build copy ~/build/tk-overnight now holds this tree with compat.py
+    applied and Ink patched: the owner runs `cd ~/build/tk-overnight && bash tools/release.sh` there (as dev in atlas-build)
+    after their hands-on pass, then publishes the GitHub pre-release. Any later verify of another branch replaces that copy.
   - **Merged for build #13: W's 11 dp line** (claude/bar-line-11dp 52e6297, merge 2b7d234). StripFit.BORDER_DP = 22; everything
     with text in the bar on the line 39 dp down (within 0.47, 0.17 and 0.13 px at Smaller, Normal, Bigger); the simulated-border
     render puts the letters' middle 0.13 to 0.72 px from the black band's middle; corner_check (r 100, margin 4) gives 0 of 96

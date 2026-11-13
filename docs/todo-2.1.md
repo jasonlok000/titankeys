@@ -256,7 +256,10 @@ all of them are unapproved.
     - By design: the Saved word's faint book over the front page's drawn keys.
     - For the owner's hands: the touchpad (swipe, held flick and PAUSE height, steer, select), the real Sym key and held
       letters, haptic feel, pasting on the guide's slides, and Next on a really passed slide.
-  - **Then build #9:** the pre-release candidate.
+  - **Build #9, the pre-release candidate,** started at 13:15. It includes:
+    - A's demos (c9b6cb4): Backspace takes only the e, and the heart demo selects the target;
+    - C's end gap (cb22447): 48 dp under the wordmark;
+    - V's clown valance (462260b), with a check that reproduces the bug.
   - **Build #8: aaef6f81**, all checks passed, installed at 12:40 with no crash. A's pre-release pass is running on it.
   - **Build #8** started with the caps fix. A runs the pre-release phone pass on it, with strict guardrails: no share step, no reset
     confirms, settings restored, the owner's words untouched.

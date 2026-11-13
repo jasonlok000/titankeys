@@ -338,6 +338,7 @@ fun main() {
     resuming()
     theTrailFollowsTouchSize()
     demonstrationsTypePunctuation()
+    aPanelMovesNothing()
     // Drawings of the slides in the new layout, to look at without a phone. See SlideRenders.kt.
     System.getenv("SLIDES_PNG")?.let { drawSlides(it, NEW_LAYOUT + GuideChapter.End) }
     System.getenv("FRONT_PNG")?.let { drawFrontPage(it) }
@@ -346,6 +347,38 @@ fun main() {
 
 private fun same(actual: Any?, expected: Any?, message: String) {
     check(actual == expected) { "$message: expected $expected, got $actual" }
+}
+
+/**
+ * Opening a panel moves nothing on a slide (Master, 2026-11-13, build #10: as Sym opened on the clown slide, the title, the
+ * instruction and the field dropped 51 px, and rose back as it closed). The column is the Titan 2 Elite's: 1200 px tall, a 124 px
+ * status bar, the 48 dp top bar, the keyboard's bar 90 px, the drawing of the keys 304 px, and the panel about 202 px over the bar,
+ * every page the same. Build #10's layout, the drawing of the keys gone and the bottom padding the panel's, is here too, to show
+ * that the check sees its drop.
+ */
+private fun aPanelMovesNothing() {
+    val dp = 1076f / 688.6f
+    fun px(value: Int) = Math.round(value * dp)
+    fun column(block: Int, panelOver: Int) = GuideRoom.Column(height = 1200, top = 124, above = px(48) + px(24), block = block,
+        below = px(24), keys = 304, keyboard = 90, panel = if (panelOver > 0) 90 + panelOver else 0, gap = px(24))
+    for (block in 200..520 step 20) {
+        val closed = GuideRoom.blockTop(column(block, 0))
+        val c = column(block, 202)
+        val build10 = c.top + c.above + maxOf(0, c.height - c.top - c.panel - c.above - c.block - c.below) / 2
+        same(build10 - closed, 51, "Build #10's layout drops a $block px block as Sym opens")
+        for (over in listOf(150, 202, 260)) same(GuideRoom.blockTop(column(block, over)), closed, "A $block px block with a panel $over px over the bar")
+    }
+    // A panel taller than the drawing of the keys' room, which this phone's never is: the block rises only as far as it must to
+    // keep 24 dp over the panel, and never drops.
+    for (block in 200..520 step 20) for (over in 0..900 step 10) {
+        val c = column(block, over)
+        val top = GuideRoom.blockTop(c)
+        val closed = GuideRoom.blockTop(column(block, 0))
+        val panelTop = c.height - c.panel
+        check(top <= closed) { "A panel $over px over the bar drops a $block px block" }
+        if (over == 0 || closed + block + c.gap <= panelTop) same(top, closed, "A $block px block clear of a panel $over px over the bar")
+        else if (GuideRoom.over(c) > 0) same(top + block + c.gap, panelTop, "A $block px block over a panel $over px over the bar")
+    }
 }
 
 /** A verdict that finishes the slide: done, or a scenario that counts. */

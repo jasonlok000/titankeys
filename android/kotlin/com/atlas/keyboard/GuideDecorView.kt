@@ -40,6 +40,11 @@ class GuideDecorView(context: Context) : View(context) {
     private val here = IntArray(2)
     private val there = IntArray(2)
     private var tracked: List<View> = emptyList()
+    private var floorView: View? = null
+    /** The bottom of the floor view's place, while it keeps its room, or NaN. */
+    private var floorBottom = Float.NaN
+    /** The keyboard's top, panel open or not, in this view's pixels. */
+    private var keyboardTop = 0f
     private var screenOn = true
     private var shown = false
     private var running = false
@@ -89,9 +94,14 @@ class GuideDecorView(context: Context) : View(context) {
         invalidate()
     }
 
-    /** The views it keeps clear of, with [GuideDecor.CLEAR_DP] around each: the title, the instruction, the field, the keys. */
-    fun keepOutOf(views: List<View>) {
+    /**
+     * The views it keeps clear of, with [GuideDecor.CLEAR_DP] around each: the title, the instruction, the field, the keys. While
+     * [floor] (the drawing of the keys) keeps its room, shown or hidden under a panel, the slide's decoration is laid out down to
+     * it, so a panel coming or going moves nothing. See [GuideDecor.layoutBottom].
+     */
+    fun keepOutOf(views: List<View>, floor: View? = null) {
         tracked = views
+        floorView = floor
         invalidate()
     }
 
@@ -101,24 +111,37 @@ class GuideDecorView(context: Context) : View(context) {
         // Nothing draws under the status bar (Master, 2026-11-13: shredder tiles, sparkles and rays showed there).
         getLocationInWindow(here)
         val bar = rootWindowInsets?.getInsets(WindowInsets.Type.statusBars())?.top ?: 0
+        // Never behind the keyboard (Master, 2026-11-13, build #10: with Sym open, the decoration slid behind the panel): its top,
+        // a panel's when one is open, from the bottom of the window.
+        val keyboard = rootWindowInsets?.getInsets(WindowInsets.Type.ime())?.bottom ?: 0
+        keyboardTop = (rootView.height - keyboard - here[1]).toFloat()
         area.set(0f, max(0, bar - here[1]).toFloat(), width.toFloat(), height.toFloat())
         measureKeepOut()
         val dp = resources.displayMetrics.density
         if (!ValueAnimator.areAnimatorsEnabled()) {
-            if (slide != null) decor.draw(canvas, slide, GuideDecor.stillMillis(slide), area, rects, onOrange, dp)
+            if (slide != null) drawSlide(canvas, slide, GuideDecor.stillMillis(slide), dp, 1f)
             return
         }
         val since = now - changedAt
         val fadeIn = if (firstFade) FADE_IN_MILLIS else CROSSFADE_MILLIS
         val old = previous
         if (old != null && since < CROSSFADE_MILLIS)
-            decor.draw(canvas, old, now - previousFrom, area, rects, onOrange, dp, 1f - since / CROSSFADE_MILLIS.toFloat())
-        if (slide != null) decor.draw(canvas, slide, now - currentFrom, area, rects, onOrange, dp, ease(since / fadeIn.toFloat()))
+            drawSlide(canvas, old, now - previousFrom, dp, 1f - since / CROSSFADE_MILLIS.toFloat())
+        if (slide != null) drawSlide(canvas, slide, now - currentFrom, dp, ease(since / fadeIn.toFloat()))
         if (running) postInvalidateDelayed(FRAME_MILLIS)
+    }
+
+    /** [slide]'s decoration, laid out down to the floor and cut at the keyboard's top. */
+    private fun drawSlide(canvas: Canvas, slide: String, millis: Long, dp: Float, fade: Float) {
+        val viewBottom = height.toFloat()
+        val bottom = GuideDecor.layoutBottom(slide, viewBottom, keyboardTop, floorBottom.takeUnless { it.isNaN() })
+        area.bottom = max(area.top, bottom)
+        decor.draw(canvas, slide, millis, area, rects, onOrange, dp, fade, GuideDecor.clipBottom(slide, viewBottom, keyboardTop))
     }
 
     private fun measureKeepOut() {
         rects.clear()
+        floorBottom = Float.NaN
         area2?.let { rects += RectF(it) }
         if (tracked.isEmpty()) return
         getLocationInWindow(here)
@@ -143,6 +166,7 @@ class GuideDecorView(context: Context) : View(context) {
                 left += (inside + from) * scale
             }
             rects += RectF(left, top, right, top + view.height)
+            if (view === floorView) floorBottom = top + view.height
         }
     }
 

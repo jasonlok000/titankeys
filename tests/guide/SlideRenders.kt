@@ -380,14 +380,17 @@ private fun draw(frame: Frame, file: File, decorated: Boolean = true, bright: Fl
         g.color = V2.MUTED
         g.drawString("SKIP", WIDTH - side - wide + dp(16), y + (action + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)
     }
+    // The drawing of the keys keeps its room under an open panel, so nothing above moves and the decoration keeps its floor
+    // (Master, 2026-11-13, build #10).
+    keep += RectF(0f, keysTop.toFloat(), WIDTH.toFloat(), keysTop + V2.KEYS.height)
     frame.panel?.let { panel ->
-        // A panel is open: the drawing of the keys hides, so it never covers the real panel. Only a note, for review.
-        V2.note(g, "render note: $panel is open; the drawn keys hide under it", side, keysTop + dp(24))
+        // A panel is open: the drawing of the keys hides under it, so it never covers the real panel. A stand-in for the panel.
+        val panelTop = HEIGHT - V2.BAR - V2.PANEL
+        g.color = Color(0x1A1715)
+        g.fillRect(0, panelTop, WIDTH, V2.PANEL)
+        V2.note(g, "render note: $panel is open here; the drawn keys hide under it and keep their room", side, panelTop + dp(24))
     }
-    if (frame.panel == null) {
-        drawKeys(g, keysTop, side, frame)
-        keep += RectF(0f, keysTop.toFloat(), WIDTH.toFloat(), keysTop + V2.KEYS.height)
-    }
+    if (frame.panel == null) drawKeys(g, keysTop, side, frame)
     if (frame.wash > 0f) {
         g.color = rgb(Paint.ORANGE, .85f * frame.wash)
         g.fillRect(0, 0, WIDTH, HEIGHT)
@@ -395,7 +398,7 @@ private fun draw(frame: Frame, file: File, decorated: Boolean = true, bright: Fl
     V2.note(g, "render note: the keyboard's own bar is here", side, HEIGHT - V2.BAR / 2)
     g.dispose()
     val slide = frame.name.substringBefore('-')
-    if (decorated) base.drawImage(decorLayer(slide, GuideDecor.stillMillis(slide), keep, false, bright), 0, 0, null)
+    if (decorated) base.drawImage(decorLayer(slide, GuideDecor.stillMillis(slide), keep, false, bright, frame.panel != null), 0, 0, null)
     base.drawImage(content, 0, 0, null)
     base.dispose()
     ImageIO.write(image, "png", file)
@@ -721,14 +724,17 @@ private val DECOR by lazy {
 }
 
 /**
- * [slide]'s decoration at [millis], on a layer of its own, in the guide's root (the screen down to the keyboard's bar), clear of
- * [keep], in ink when [onOrange]. [bright] multiplies its strength, for a render that shows the drawing plainly.
+ * [slide]'s decoration at [millis], on a layer of its own, in the guide's root, clear of [keep], in ink when [onOrange]. [bright]
+ * multiplies its strength, for a render that shows the drawing plainly. With a [panel] open, it's cut at the panel's top.
  */
-private fun decorLayer(slide: String, millis: Long, keep: List<RectF>, onOrange: Boolean, bright: Float): BufferedImage {
+private fun decorLayer(slide: String, millis: Long, keep: List<RectF>, onOrange: Boolean, bright: Float, panel: Boolean = false): BufferedImage {
     val layer = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
-    // Nothing under the status bar, as GuideDecorView. The end has no keyboard, so its decoration reaches the bottom edge.
-    val bottom = if (slide == GuideDecor.FINALE) HEIGHT else HEIGHT - V2.BAR
-    DECOR.draw(Canvas(layer), slide, millis, RectF(0f, V2.STATUS.toFloat(), WIDTH.toFloat(), bottom.toFloat()), keep, onOrange, DP)
+    // Nothing under the status bar or behind the keyboard, as GuideDecorView: laid out down to the drawing of the keys' bottom,
+    // and cut at the keyboard's top. The end's grass reaches the bottom edge.
+    val keyboardTop = (HEIGHT - V2.BAR - if (panel) V2.PANEL else 0).toFloat()
+    val bottom = GuideDecor.layoutBottom(slide, HEIGHT.toFloat(), keyboardTop, (HEIGHT - V2.BAR).toFloat())
+    DECOR.draw(Canvas(layer), slide, millis, RectF(0f, V2.STATUS.toFloat(), WIDTH.toFloat(), bottom), keep, onOrange, DP, 1f,
+        GuideDecor.clipBottom(slide, HEIGHT.toFloat(), keyboardTop))
     if (bright != 1f) for (y in 0 until HEIGHT) for (x in 0 until WIDTH) {
         val argb = layer.getRGB(x, y)
         val alpha = argb ushr 24

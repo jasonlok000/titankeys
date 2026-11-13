@@ -205,6 +205,19 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **The ∞ slide's text** (owner, 2026-11-13, 10:05–10:15). (Owner)
+  - The field line: "How long I last in bed with your mother: ∞". It's built as "Seriously, how long I last in bed with your
+    mother: ∞", because the finale's GO TOUCH GRASS NOW needs this line to start with S. (Orchestrator) This reverses the
+    earlier "me @ your mom" skip, at the owner's own request.
+  - The hunt's instruction is "Find the one that never ends.", and it never names ∞.
+  - Done is "Sure you do." The "Love you too" theme is gone. (Orchestrator)
+  - A slow find says its seconds: "That took N seconds. Still longer than you claim to last."
+  - The clipboard digs now fit on one line. "As discussed, Next is not a personality." didn't land, so it's now "Looping in
+    your last brain cell." (Orchestrator)
+- **Finale and end screen** (owner, 10:10): the gathered phrase is too small; the end screen sits too low and its scaling is off;
+  grass should grow along the bottom of the screen, like the owner's reference (layered flat blades, matched to our minimal
+  style); the phrase should hold longer. (Owner) C does it, with grass as ink at three strengths on orange.
+- **Build #5** (b3d80476) was installed at 10:15 with no crash.
 - **Guide notes** (owner, 2026-11-13, 10:00): the decorations barely show; the held-delete slide's text box doesn't need a deleting
   animation; the held-delete zones are badly labelled (ASDF looks like the place to swipe); the pause zone should be full height.
   (Owner)

@@ -47,6 +47,9 @@
 - Rounded corners: Nothing on the Sym panel gets cut off by the screen's corners.
 - Shift chip: An automatic capital shows as a small arrow, and the words stay put.
 
+## Settings
+- Reset all settings: So many switches, so easy to wreck. Settings > Reset all settings puts every switch and choice back how it started. Your words, snippets, shorthand and app lists stay.
+
 ## Privacy and data
 - Record a bug: Something broke? Settings > Record a bug records up to three minutes, shows you what's in it, and you share it wherever you want. Nothing gets uploaded.
 - No more typing log: The full typing log is gone from public builds. A log left over from 2.0 is deleted.

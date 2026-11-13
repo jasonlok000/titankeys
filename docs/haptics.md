@@ -207,6 +207,7 @@ Ink's screens and plays nothing in its place.
 | The guide's Share my swipes, turned off | **Release** | It's a switch. Turning it on is agreeing on the policy page, which locks. |
 | Shorter or Longer on a stepper | **Texture** | Each step is a small move, as a cursor letter is. Texture can repeat, so fast presses each tick. |
 | An option picked in a list of choices: a preset, a spelling, the Enter key, a snippet start | **Confirm** | Done. It isn't Lock: Lock is kept for on and off. |
+| Reset all settings, once it's done | **Confirm** | Done. It puts choices back and wipes no data, so it isn't Gone. |
 | A confirmed delete: Remove all learned words, Delete the log, Delete my swipes, Delete waiting swipes, deleting a bug recording | **Gone** | Gone means gone, as the cleared clipboard. Only for wiping data. |
 | Something the app refuses: a word, a snippet or a shorthand it can't take | **No** | Nothing happened, and the page says why. |
 | The playground at 40 words a minute: the first confetti pops | **Celebrate** | The guide's celebration: you got going. |

@@ -205,6 +205,12 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Reset all settings** (owner, 2026-11-13, 10:50): "there's so many now its easy to mess up." (Owner) The Orchestrator's design
+  (unapproved), queued for F after the global accent:
+  - a row at the bottom of the Settings root;
+  - every switch, stepper and choice goes back to its default; Scroll assistant follows the phone again;
+  - words, snippets, shorthand, app lists, the clipboard, Share swipes consent and recordings stay;
+  - a confirm "Reset all settings?" with Reset and "Keep mine", and a note afterwards in the owner's tone.
 - **Decor review goes through the Orchestrator** (owner, 2026-11-13, 10:45): "for the decor do the mockups and then you review it for
   me." (Owner) V sends its preview page and screencaps to the Orchestrator, who approves them before anything is built.
 - **Bar words, bottom aligned?** (owner, 10:45). The Orchestrator's answer: at equal sizes they already share one baseline. Only a

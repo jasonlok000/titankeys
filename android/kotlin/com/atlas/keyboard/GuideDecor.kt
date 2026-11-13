@@ -1185,13 +1185,13 @@ class GuideDecor(private val font: Typeface? = null) {
         private const val GRASS_GROW = 2600f
         /** How much later than the first a blade may start to grow, so the band comes up unevenly, as grass does. */
         private const val GRASS_STAGGER = 700f
-        /** The tallest the grass grows, a flower's head and petals included, in dp: it fits the end's grass room, 96 dp, less [CLEAR_DP]. */
-        private const val GRASS_TALLEST = 88f
+        /** The tallest the grass grows, a flower's head and petals included, in dp: it fits the end's grass room, 150 dp, less [CLEAR_DP]. */
+        private const val GRASS_TALLEST = 142f
         /**
          * The longest blade, in dp; the flowers stand a little over it. Both stay under the soft edge round what's above (the
          * finale's words end [CLEAR_DP] + [FEATHER_DP] higher), so no tip fades.
          */
-        private const val BLADE_DP = 62f
+        private const val BLADE_DP = 104f
         private const val GRASS_SETTLED = 4500f
         private const val GRASS_LOOP = 8000f
         /** The three layers, back to front: the ink's strength on the orange, the blades' spacing in dp, and their heights as parts of [BLADE_DP]. */

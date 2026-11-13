@@ -256,6 +256,11 @@ all of them are unapproved.
     - By design: the Saved word's faint book over the front page's drawn keys.
     - For the owner's hands: the touchpad (swipe, held flick and PAUSE height, steer, select), the real Sym key and held
       letters, haptic feel, pasting on the guide's slides, and Next on a really passed slide.
+  - **Merged for build #11, round 2 (176b921):** W's colour-only status (6694e8c: Favourite in the accent, Saved white, Not saved
+    #99918A, Blocked #5E5853 with a strike, no marks; hover leans 60%; Strip.lit underlines a bar word), A's render fix for the
+    passed menu slide (2dc6e18), and V's flat e with a pen strike (claude/flat-e-strike; paper balls and sticky notes flattened).
+    Word-menu, guide, menu-render and guide-decor checks pass. Still to come before the build: A wires Strip.lit for TitanKeys
+    through the open menu; W's light-look favourite colour with a four-status render. The Sym fix waits on the owner's go.
   - **Merged for build #11 (A):** the menu slide on TitanKeys (8db62f7: "TitanKeys belongs in your favourites", marked in the
     box, only the hold unlocked, a chip for every off-track move, lock chips all say "blocked") and the held flick's trail (8f31e44:
     HoldTrail keeps the flick's points and the hold's, so the guide's drawing shows the whole path and fades it at the lift). Guide

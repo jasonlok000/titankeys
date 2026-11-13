@@ -74,7 +74,7 @@ export default function BoringGuide() {
       <Topic title="Hide the bar">{"Don't want the bar in some app? Pick the apps in Settings > Hide the bar in these apps. To hide it everywhere, turn off Show the bar in Settings. Either way, the keys, holds, Alt and the Sym panel still work."}</Topic>
     </Section>
     <Section title="Deleting">
-      <Topic title="Delete a word">{"Flick left, fast, from Backspace or the keys next to it. The interactive guide shades where to aim. Or press Backspace while you hold Shift. Keep Backspace down to go on, word by word. A Shift you only tapped, or one that came on by itself, leaves Backspace as it is. Ctrl and Backspace deletes a word too, as on any Android keyboard, and fn works as Ctrl."}</Topic>
+      <Topic title="Delete a word">{"Flick left, fast, from Backspace or the keys next to it. The interactive guide shades where to aim. Or press Backspace while you hold Shift. Keep Backspace down to go on, word by word. A Shift you only tapped, or one that came on by itself, leaves Backspace as it is. Ctrl and Backspace deletes a word too, as on any Android keyboard, and fn works as Ctrl. Alt and Backspace deletes forward instead, the letter after the cursor, like Delete on a PC, and holding it keeps going. Turn off Alt + Backspace deletes forward in Settings to get Android's own, which deletes the whole line."}</Topic>
       <Topic title="Delete lots of words">{"Flick and keep your finger down. TitanKeys keeps deleting, word after word. Slide further out to go faster, or back onto Backspace to pause. Lift your finger or press a key to stop."}</Topic>
     </Section>
     <Section title="Cursor and picking text">

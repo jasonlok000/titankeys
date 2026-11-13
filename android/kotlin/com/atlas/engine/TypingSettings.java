@@ -238,6 +238,18 @@ public final class TypingSettings {
         preferences(context).unregisterOnSharedPreferenceChangeListener(listener);
     }
 
+    /**
+     * Alt + Backspace deletes forward, the character after the cursor, like Delete on a PC. Off, it goes to the app as Android's
+     * own Alt + Backspace, which deletes the line. On to start (owner, 2026-11-13).
+     */
+    public static boolean altBackspaceForward(Context context) {
+        return preferences(context).getBoolean("alt_backspace_forward", true);
+    }
+
+    public static void altBackspaceForward(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("alt_backspace_forward", enabled).apply();
+    }
+
     /** A few small marks on the keyboard are orange, such as the key under a finger. Off, they take the colour of the text. */
     public static boolean orangeAccents(Context context) {
         return preferences(context).getBoolean("orange_accents", true);

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { barLabel, cursorLabel, scrollLabel } from "../../lib/setting-names";
+import { altBackspaceLabel, barLabel, cursorLabel, scrollLabel } from "../../lib/setting-names";
 
 // A setting has one name everywhere: Settings, the keyboard's quick settings and the fun guide's "Turn on" steps.
 const root = join(import.meta.dir, "../..");
@@ -30,6 +30,10 @@ test("the bar is turned off in one place, and the cursor setting uses its one na
   expect(read("app/settings/guide-boring.tsx")).toContain(cursorLabel);
   expect(read("app/settings/guide-boring.tsx")).toContain(`turn off ${barLabel}`);
   expect(settings).toContain("label={scrollLabel}");
+  // Alt + Backspace: the boring guide and the release notes name the switch as Settings shows it.
+  expect(settings).toContain("label={altBackspaceLabel}");
+  expect(read("app/settings/guide-boring.tsx")).toContain(`Turn off ${altBackspaceLabel} in Settings`);
+  expect(read("release-notes.txt")).toContain(`Turn off ${altBackspaceLabel} in Settings`);
   expect(read("app/settings/guide-boring.tsx")).toContain(`Turn it off with ${scrollLabel} in Settings`);
 });
 

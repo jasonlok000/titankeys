@@ -205,6 +205,10 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **The front page's text is one giant paragraph (owner, 2026-11-13, 07:50):** "I would want to join them without adding a new line
+  even though they're two different lines. So it's one giant paragraph not multiple." (Owner) It replaces the v5.3 rule "starts at
+  the sentence you're in". The reference is a two-line window on one continuous paragraph, scrolling a line at a time, with no break
+  or dimming between sentences.
 - **The front page gets a title and a description, like the guide (owner, 2026-11-13, 07:45):** "I'm expecting the format to be
   like the guide there a title and a description." (Owner) The title is "PRACTICE. YOU NEED IT." in the guide's title style
   (Orchestrator's pick, unapproved). The line under it stays the description, and the speed comments still take its place.

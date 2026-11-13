@@ -216,6 +216,15 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - the steps: hold, I to save, I again to favourite;
   - chips for the wrong moves;
   - done: "Favourited. Good taste."
+  - Off-track moves (owner, 14:40: "what about did not select the right word? or selected other stuff instead?"):
+    - the bar is locked to TitanKeys on this slide;
+    - text selected in the box snaps back: "Not the box. Hold TitanKeys on the bar.";
+    - an empty side place: "The one in the middle. TitanKeys.";
+    - typing or swiping is blocked: "Typing's off here. Hold TitanKeys.";
+    - other keys in the menu: "I or O. Nothing else does anything here.";
+    - closing halfway keeps the step: "Closed it. Hold TitanKeys again."
+
+    The wording is the Orchestrator's.
   - The line starts with TitanKeys, keeping the T for the finale: "TitanKeys belongs in your favourites" (Orchestrator's wording).
     TitanKeys stays highlighted the whole time, in the box and on the bar (owner, 14:35: "naturally we can make it start with
     TitanKeys in the box. also keep it highlighted").

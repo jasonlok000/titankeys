@@ -216,6 +216,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
     (owner: "how about by default if it detects the size being big, it'll select big, not biggest? I think big is a good spot for
     me personally"). Biggest is only ever picked. The resets go back to following it. The owner's phone (2.0) lands on Bigger by
     itself; the Orchestrator checks it once build #12 is installed. (Owner)
+- **The bar's contents: optically centred, lower** (owner, 2026-11-13: "cause its a smiled and it blends with the border of
+  the screen itself, I'm considering to make it actually sit lower… build the text and stuff to be visually aligned instead of
+  mathematically aligned"). Today the small letters' middle sits on the bar's middle line (StripFit, 44 px down an 88 px bar).
+  The bar's black runs into the black border below the screen, so its bottom edge can't be seen and its middle looks higher
+  than it is. The Orchestrator agrees: one shared optical line for everything in the bar (words, menu word, pills, icons, chips,
+  hints, clip offer), moved down together; touch areas and the bar's height unchanged. The owner picks how far on the phone
+  (cal-tool/bar-low.html, 1 dp steps, at Normal, Bigger and Biggest, light or dark app above). Then it gets built. Waiting.
 - **The menu word moves left of the widest pill** (W's 536a3a7, merged for build #12). The owner judges it on the phone first:
   "ill see if it looks good first." If not, the owner's fallbacks: leave the word where it is and make the pill's label shorter
   ("Favourited", "alr a fav" or similar), or let the pill overlap the word, semi-transparent with a blur underneath. (Owner)

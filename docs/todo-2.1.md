@@ -279,6 +279,13 @@ all of them are unapproved.
     - Delete 1/3 shows the flat e with its strike.
     - The real bar: the small letters' middle sits on the new line, 61 px under the bar's top (11 dp under the old middle); a
       'g' tail ends about 10 px over the screen's edge.
+  - **Merged: "TitanKeys Keyboard"** (F, claude/titankeys-keyboard-name 6cf799d): the launcher, app info, the keyboard list and
+    Accessibility; the app's own screens keep "TitanKeys"; the debug build stays "TitanKeys Debug". Guide and bun checks pass.
+  - **Smart Launcher's search box** (owner, 2026-11-13: "the shift backspace, some auto correct doesn't work on smart launcher's
+    search box perfectly… emojis and sym doesn't work properly (doesn't show up at all)… it also doesn't work well with my
+    swiftkey"). Home app ginlemon.flowerfree. From the code: TitanKeys treats a field as text only when it isn't TYPE_NULL
+    (`editing`), shows its window only while editing (onEvaluateInputViewShown), and with "Hide the bar on an empty home search"
+    on hides the bar in the home app's empty field. A passive watcher reads the field's settings while the owner opens it.
   - **Withdrawn: build #14 is no longer the release candidate** (owner's round 2 on the line, 2026-11-13). In progress: W (the
     modifier bar's cut chips, the menu effects' anchor and scale), C (the gesture display on the line), A (the idle games on the
     line). Each sends keyframe strips in the border-and-corner render; the Orchestrator reviews every frame, then the phone.

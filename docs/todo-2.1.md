@@ -260,7 +260,6 @@ all of them are unapproved.
     above the keyboard; F: Size grows only the bar's contents, follows the phone's font size until picked, moves to The bar; W:
     an immediate haptic on Save's press (and any late menu button); A: switches for Delete a word and Next keyboard. All from
     059caf3. Then: check the owner's phone lands on Biggest.
-  - **Build #11 started** from e4ea287.
   - **Build #11 started** from e4ea287. It adds A's TitanKeys underline on the bar for the whole menu slide (fad05f1; the wiggle
     is gone) and W's light-look accents-off favourite #35312E (b619011; all four statuses checked in both looks). Not in it: the
     Sym jump and decoration fix, which waits on the owner.

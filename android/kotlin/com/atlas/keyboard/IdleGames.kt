@@ -1076,7 +1076,7 @@ internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val
     }
 
     companion object {
-        /** How often an idle time starts a game at all; the rest of the time nothing plays, and the next wait starts. */
+        /** How often an idle period's one roll starts a game ("The chance of triggering is 1/4"); else nothing plays till input. */
         const val PLAY_CHANCE = .25f
         /** The longest a looping game plays before it goes home by itself. */
         const val LOOP_MILLIS = 30_000f
@@ -1114,34 +1114,72 @@ internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val
             return fitting.last()
         }
 
-        /** Whether this idle time starts a game at all. */
+        /** Whether this idle period's roll starts a game at all. */
         fun shouldPlay(random: Random) = random.nextFloat() < PLAY_CHANCE
     }
 }
 
 /**
- * The idle times so far, so that games stay a surprise: the idle time right after a game never plays one, and a game waits at
- * least [GAP] more idle times before it plays again. Only the real idle times count, not the debug build's trigger.
+ * An idle period's clock: input starts a period, and exactly [MILLIS] later it rolls once, and never again in that period, however
+ * long it lasts. The keyboard posts its roll for [MILLIS] from the input; this keeps the rule in one place the checks can run.
  */
-internal class IdleSchedule {
-    private var count = 0
-    private var lastGame = Int.MIN_VALUE / 2
-    private val last = HashMap<IdlePlayer.Kind, Int>()
+internal class IdleClock {
+    private var start: Long? = null
+    private var rolled = false
 
-    /** An idle time is reached. Returns whether it may play a game: not right after one, and only by [IdlePlayer.PLAY_CHANCE]. */
-    fun trigger(random: Random): Boolean {
-        count++
-        if (count - lastGame <= 1) return false
-        return IdlePlayer.shouldPlay(random)
+    /** Input at [now] (uptime millis) starts a new period. */
+    fun input(now: Long) {
+        start = now
+        rolled = false
     }
 
-    /** Whether [kind] may play at this idle time: at least [GAP] idle times have passed since it last played. */
-    fun allows(kind: IdlePlayer.Kind) = count - (last[kind] ?: (Int.MIN_VALUE / 2)) > GAP
+    /** The keyboard is hidden or the screen is off: no period runs until the next one starts. */
+    fun stop() {
+        start = null
+    }
 
-    /** [kind] plays at this idle time. */
-    fun played(kind: IdlePlayer.Kind) { lastGame = count; last[kind] = count }
+    /** Whether the period's one roll happens at [now]: true once, at or after its mark, and false after that until new input. */
+    fun roll(now: Long): Boolean {
+        val from = start ?: return false
+        if (rolled || now - from < MILLIS) return false
+        rolled = true
+        return true
+    }
 
     companion object {
-        const val GAP = 2
+        /** Three minutes, with no random extra. */
+        const val MILLIS = 3 * 60 * 1000L
+    }
+}
+
+/**
+ * The idle periods that reached their roll, so that games stay a surprise (owner, 2026-11-13): each such period rolls once, the
+ * one after a period that played a game never plays ("no two triggers in a row"), and a game is never the kind that played last
+ * ("no two same animations in a row"). A period that input ends before its roll doesn't count. Only the real idle periods count,
+ * not the debug build's trigger.
+ */
+internal class IdleSchedule {
+    private var lastPlayed = false
+    /** The kind that played last, or null before the first. */
+    var lastKind: IdlePlayer.Kind? = null
+        private set
+
+    /**
+     * An idle period reaches its roll, its only one. Returns whether it plays a game: never in the period right after one that
+     * played, else by [IdlePlayer.PLAY_CHANCE].
+     */
+    fun trigger(random: Random): Boolean {
+        val after = lastPlayed
+        lastPlayed = false
+        return !after && IdlePlayer.shouldPlay(random)
+    }
+
+    /** Whether [kind] may play now: any kind but the one that played last. */
+    fun allows(kind: IdlePlayer.Kind) = kind != lastKind
+
+    /** [kind] plays in this period. */
+    fun played(kind: IdlePlayer.Kind) {
+        lastPlayed = true
+        lastKind = kind
     }
 }

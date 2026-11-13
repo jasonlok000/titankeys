@@ -1121,8 +1121,6 @@ class Strip(
     private val idleScale get() = barHeight.toFloat() / Idle.H
     /** How far the game keeps from each side, in pixels, so that the screen's rounded corners cut nothing, down to its floor. */
     private var idleEdge = 0
-    /** A game ended by itself, and the bar shows its words again: the next idle wait starts. */
-    var idleEnded: () -> Unit = {}
 
     val idling get() = idle != null
 
@@ -1194,7 +1192,8 @@ class Strip(
         val dt = (now - idleFrameAt).coerceIn(0, IDLE_LONGEST_FRAME).toFloat()
         idleFrameAt = now
         if (speed <= 0f || !player.update(dt / speed)) {
-            post { if (idle === player) { stopIdle(); idleEnded() } }
+            // A game that ends by itself starts no new idle period: only input does, so nothing more plays until then.
+            post { if (idle === player) stopIdle() }
             return
         }
         canvas.save()

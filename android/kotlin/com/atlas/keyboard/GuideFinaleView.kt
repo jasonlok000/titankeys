@@ -15,6 +15,8 @@ import android.view.View
 internal class GuideFinaleView(context: Context) : View(context) {
     var lines: List<String> = emptyList()
     var box = 0f to 0f
+    /** The name's baseline at the end, where the end's block puts it ([GuideFinale.endBlock]). */
+    var nameBase = Float.NaN
     var beat: (() -> Unit)? = null
     var over: (() -> Unit)? = null
     private var start = -1L
@@ -48,7 +50,8 @@ internal class GuideFinaleView(context: Context) : View(context) {
         invalidate()
     }
 
-    private val measure = GuideFinale.Measure { words, size, bold ->
+    /** The measure the finale uses, for the screen to lay out the end's block by the same sizes. */
+    val measure = GuideFinale.Measure { words, size, bold ->
         text.typeface = if (bold) heavy else medium
         text.textSize = size
         text.letterSpacing = 0f
@@ -60,7 +63,7 @@ internal class GuideFinaleView(context: Context) : View(context) {
         val total = GuideFinale.total(lines)
         val at = if (!GuideMotion.enabled) total else ((GuideMotion.now() - start) / ValueAnimator.getDurationScale()).toLong()
         val (top, bottom) = box
-        for (piece in GuideFinale.frame(at, lines, width.toFloat(), top, bottom, measure, LABEL_DP * resources.displayMetrics.density)) when (piece) {
+        for (piece in GuideFinale.frame(at, lines, width.toFloat(), top, bottom, measure, resources.displayMetrics.density, nameBase)) when (piece) {
             is GuideFinale.Text -> {
                 text.typeface = if (piece.bold) heavy else medium
                 text.textSize = piece.size
@@ -116,10 +119,5 @@ internal class GuideFinaleView(context: Context) : View(context) {
             points.forEachIndexed { index, (x, y) -> if (index == 0) moveTo(x, y) else lineTo(x, y) }
             close()
         }
-    }
-
-    private companion object {
-        /** The Label style (design v2 §1), for "BUILT FOR TITAN 2 ELITE". */
-        const val LABEL_DP = 14f
     }
 }

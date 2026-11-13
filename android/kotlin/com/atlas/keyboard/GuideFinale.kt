@@ -51,7 +51,8 @@ internal object GuideFinale {
     /** The rest of the lines fade, then the letters slide together, and the phrase stays. */
     const val FADE = 450L
     const val GATHER = 950L
-    const val PHRASE_HOLD = 1900L
+    /** Long enough for the joke to land before the logo takes over (owner, 2026-11-13: "give it more time"). */
+    const val PHRASE_HOLD = 3600L
     /** The phrase goes, and the logo's parts come in. */
     const val PHRASE_OUT = 380L
     const val MARK_IN = 520L
@@ -64,6 +65,17 @@ internal object GuideFinale {
     /** What the logo grows into: its T and K become the name's, and the rest comes in between and after them. */
     const val NAME = "TitanKeys"
     const val BUILT_FOR = "BUILT FOR TITAN 2 ELITE"
+    /**
+     * The end's sizes, in dp (owner, 2026-11-13: "all text combined is a bit small"): the name as big as this, the line under it in
+     * capitals at the Body size, and the phrase's two lines up to [PHRASE_DP]. The block under the top bar is the name, [BUILT_FOR],
+     * [BLOCK_GAP] and the buttons, centred in the room above the grass.
+     */
+    const val NAME_DP = 64f
+    const val BUILT_DP = 19f
+    const val PHRASE_DP = 112f
+    const val BLOCK_GAP = 32f
+    /** The bottom of the end is the grass's, this tall: the finale and the end's block keep above it. */
+    const val GRASS_DP = 96f
     /** How much bigger a first letter grows as it lights. */
     const val LIT_GROWTH = 1.3f
 
@@ -105,16 +117,47 @@ internal object GuideFinale {
     /** The moments worth a haptic: the phrase locking together, and the name grown. */
     fun beats(lines: List<String>) = listOf(gatherStart(lines) + GATHER, growStart(lines) + GROW)
 
+    /** The name's size in pixels on a screen [width] wide: [NAME_DP], or less if that would crowd the sides. */
+    fun nameSize(width: Float, measure: Measure, dp: Float) = min(width * .88f / measure.width(NAME, 100f, true) * 100f * .82f, NAME_DP * dp)
+
+    /** How far the name's block reaches above its baseline (its capitals) and below it (to the bottom of [BUILT_FOR]). */
+    private fun nameAbove(nameSize: Float) = nameSize * CAP
+    private fun builtBase(nameSize: Float, dp: Float) = nameSize * .3f + BUILT_DP * dp * 1.2f
+    private fun nameBelow(nameSize: Float, dp: Float) = builtBase(nameSize, dp) + BUILT_DP * dp * .1f
+
+    /**
+     * The end as one block (owner, 2026-11-13: it sat too low): the name, [BUILT_FOR], [BLOCK_GAP], then the buttons, [buttons]
+     * tall, in the room from [top] to [bottom], a little above its middle. Returns the name's baseline and the buttons' top, which
+     * the screen and the renders both use, so the finale's last frame is where the end's block puts the name.
+     */
+    fun endBlock(top: Float, bottom: Float, buttons: Float, nameSize: Float, dp: Float): Pair<Float, Float> {
+        val above = nameAbove(nameSize)
+        val below = nameBelow(nameSize, dp)
+        val total = above + below + BLOCK_GAP * dp + buttons
+        val first = top + ((bottom - top - total) * .45f).coerceAtLeast(0f)
+        val base = first + above
+        return base to base + below + BLOCK_GAP * dp
+    }
+
+    /** The phrase in two balanced lines: split at the space that keeps the wider line narrowest. */
+    fun phraseLines(measure: Measure): List<String> {
+        val spaces = ACROSTIC.indices.filter { ACROSTIC[it] == ' ' }
+        val at = spaces.minByOrNull { maxOf(measure.width(ACROSTIC.substring(0, it), 100f, true), measure.width(ACROSTIC.substring(it + 1), 100f, true)) }
+            ?: return listOf(ACROSTIC)
+        return listOf(ACROSTIC.substring(0, at), ACROSTIC.substring(at + 1))
+    }
+
     private fun ease(t: Float) = 1f - (1f - t) * (1f - t) * (1f - t)
     private fun easeInOut(t: Float) = if (t < .5f) 4 * t * t * t else 1 - (-2 * t + 2).let { it * it * it } / 2
     private fun part(at: Long, from: Long, length: Long) = ((at - from).toFloat() / length).coerceIn(0f, 1f)
 
     /**
      * What to draw at [at] ms, in a box [width] wide from [top] to [bottom]. [lines] are the summary's lines, whose first letters
-     * spell [ACROSTIC]. [logoTop] is where the logo's part starts, so it can sit higher than the summary. [label] is the Label
-     * style's size in pixels (14 dp), for [BUILT_FOR].
+     * spell [ACROSTIC]. [dp] is a dp in pixels. [nameBase] is the name's baseline at the end, where the end's block puts it
+     * ([endBlock]); without it, the name sits a little under the box's middle.
      */
-    fun frame(at: Long, lines: List<String>, width: Float, top: Float, bottom: Float, measure: Measure, label: Float): List<Piece> {
+    fun frame(at: Long, lines: List<String>, width: Float, top: Float, bottom: Float, measure: Measure, dp: Float,
+              nameBase: Float = Float.NaN): List<Piece> {
         val pieces = ArrayList<Piece>()
         val side = width * .06f
         val room = width - 2 * side
@@ -124,13 +167,18 @@ internal object GuideFinale {
         val lineSize = min(room / widest * 100f, height / (lines.size * 1.42f)).coerceAtMost(height / 12f)
         val step = lineSize * 1.42f
         val first = top + (height - step * lines.size) / 2 + lineSize
-        // The phrase: the letters gathered, centred, as big as fits.
-        val phrase = ACROSTIC
-        val phraseSize = min(room / measure.width(phrase, 100f, true) * 100f, height * .16f)
-        val phraseLeft = (width - measure.width(phrase, phraseSize, true)) / 2
-        val phraseBase = top + height * .45f
-        // Where each line's first letter goes in the phrase: the letters of the phrase in order, spaces skipped.
-        val slots = phrase.indices.filter { phrase[it] != ' ' }
+        // The phrase: the letters gathered into the finale's headline, two balanced lines, each centred, as big as fits (owner,
+        // 2026-11-13: it was a bit small).
+        val phrase = phraseLines(measure)
+        val phraseSize = minOf(room / phrase.maxOf { measure.width(it, 100f, true) } * 100f, height * .2f, PHRASE_DP * dp)
+        val phraseStep = phraseSize * 1.08f
+        val phraseFirst = top + height * .45f - (phraseSize * CAP + phraseStep * (phrase.size - 1)) / 2 + phraseSize * CAP
+        // Where each line's first letter goes: the phrase's letters in order, spaces skipped, as a left edge and a baseline.
+        val slots = ArrayList<Pair<Float, Float>>()
+        for ((row, text) in phrase.withIndex()) {
+            val left = (width - measure.width(text, phraseSize, true)) / 2
+            for (i in text.indices) if (text[i] != ' ') slots += (left + measure.width(text.substring(0, i), phraseSize, true)) to (phraseFirst + row * phraseStep)
+        }
         val phraseOut = part(at, phraseEnd(lines), PHRASE_OUT)
         for ((index, line) in lines.withIndex()) {
             val landing = ease(part(at, index * LINE_GAP, LINE_IN))
@@ -148,9 +196,9 @@ internal object GuideFinale {
             // The first letter: lights up, then slides to its place in the phrase.
             val gather = easeInOut(part(at, gatherStart(lines), GATHER))
             val slot = slots.getOrNull(index)
-            val toX = if (slot == null) side else phraseLeft + measure.width(phrase.substring(0, slot), phraseSize, true)
+            val toX = slot?.first ?: side
             val x = side + (toX - side) * gather
-            val baseline = y + (phraseBase - y) * gather
+            val baseline = y + ((slot?.second ?: phraseFirst) - y) * gather
             val size = lineSize * (1f + (LIT_GROWTH - 1f) * lit) + (phraseSize - lineSize * LIT_GROWTH) * gather
             val colour = if (lit > 0f) CREAM else INK
             val alpha = landing * (1f - phraseOut)
@@ -165,8 +213,8 @@ internal object GuideFinale {
             val bigScale = markSide * (.7f + .3f * markIn) / (1080f * MARK_SHAPE)
             val bigX = width / 2
             val bigY = top + height * .45f
-            val nameSize = min(room / measure.width(NAME, 100f, true) * 100f * .82f, height * .13f)
-            val baseline = top + height * .55f
+            val nameSize = nameSize(width, measure, dp)
+            val baseline = if (nameBase.isNaN()) top + height * .55f else nameBase
             val grow = easeInOut(part(at, growStart(lines), GROW))
             fun w(text: String) = measure.width(text, nameSize, true)
             val left = (width - w(NAME)) / 2
@@ -201,11 +249,11 @@ internal object GuideFinale {
             }
             val built = ease(part(at, growStart(lines) + GROW, BUILT_IN))
             if (built > 0f) {
-                // In the Label style, 14 dp, whatever the name's size (Master, 2026-11-13: it was about 8 dp).
-                val size = label
+                // In capitals with the Label style's spacing, at the Body size, under the name (owner, 2026-11-13: too small).
+                val size = BUILT_DP * dp
                 val spacing = size * .08f
                 val wide = measure.width(BUILT_FOR, size, true) + spacing * (BUILT_FOR.length - 1)
-                pieces += Text(BUILT_FOR, (width - wide) / 2, baseline + nameSize * .3f + size * 1.2f + (1f - built) * size, size, INK, built * .8f,
+                pieces += Text(BUILT_FOR, (width - wide) / 2, baseline + builtBase(nameSize, dp) + (1f - built) * size, size, INK, built * .8f,
                     true, spacing)
             }
         }

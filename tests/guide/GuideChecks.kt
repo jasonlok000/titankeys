@@ -756,24 +756,35 @@ private fun slideTexts() {
 private fun theFinale() {
     val lines = SUMMARY_LINES
     val measure = GuideFinale.Measure { text, size, _ -> text.length * size * .55f }
-    fun texts(at: Long) = GuideFinale.frame(at, lines, 1076f, 120f, 760f, measure, 14f * 1076f / 688.6f).filterIsInstance<GuideFinale.Text>()
+    fun texts(at: Long) = GuideFinale.frame(at, lines, 1076f, 120f, 760f, measure, 1076f / 688.6f).filterIsInstance<GuideFinale.Text>()
     same(texts(GuideFinale.LINE_IN / 2).size, 2, "At the start, only the first line is coming in")
     val stacked = texts(GuideFinale.summaryEnd(lines))
     same(stacked.count { it.alpha >= .99f }, lines.size * 2, "Then every line, whole")
     val gathered = texts(GuideFinale.gatherStart(lines) + GuideFinale.GATHER + 10)
     same(gathered.map { it.text }.joinToString(""), ACROSTIC.replace(" ", ""), "Then only the first letters, which spell the phrase")
-    same(gathered.zipWithNext().all { (a, b) -> a.x < b.x }, true, "in order, left to right")
-    same(gathered.map { Math.round(it.y) }.distinct().size, 1, "on one line")
+    // The phrase is the finale's headline (owner, 2026-11-13: it was a bit small): two balanced lines, read in order.
+    val rows = gathered.map { Math.round(it.y) }.distinct()
+    same(rows.size, 2, "on two lines")
+    same(gathered.zipWithNext().all { (a, b) -> if (Math.round(a.y) == Math.round(b.y)) a.x < b.x else b.y > a.y }, true, "in order, left to right, top line first")
+    same(GuideFinale.phraseLines(measure), listOf("GO TOUCH", "GRASS NOW"), "split where the lines balance")
+    check(gathered.first().size >= 36f * 1076f / 688.6f) { "the phrase is at least the Display size" }
+    same(GuideFinale.PHRASE_HOLD >= 3400L, true, "and holds long enough to land")
+    // The end is one block: the name, then its line, then the buttons, above the grass.
+    val dp = 1076f / 688.6f
+    val nameSize = GuideFinale.nameSize(1076f, measure, dp)
+    val (base, buttonsTop) = GuideFinale.endBlock(120f, 1000f, 400f, nameSize, dp)
+    check(base - nameSize * GuideFinale.CAP >= 120f && buttonsTop > base && buttonsTop + 400f <= 1000f) { "the end's block fits above the grass, name first" }
+    same(Math.round(buttonsTop - base - nameSize * .3f - GuideFinale.BUILT_DP * dp * 1.3f), Math.round(GuideFinale.BLOCK_GAP * dp), "with the block's gap between the name's line and the buttons")
     // The logo itself becomes the name (owner): the real mark comes back whole, then walks apart into its T and its K, which land
     // on the name's T and K, and the name's own type takes over as they land.
-    val mark = GuideFinale.frame(GuideFinale.growStart(lines) - 10, lines, 1076f, 120f, 760f, measure, 14f * 1076f / 688.6f)
+    val mark = GuideFinale.frame(GuideFinale.growStart(lines) - 10, lines, 1076f, 120f, 760f, measure, 1076f / 688.6f)
     same(mark.filterIsInstance<GuideFinale.Mark>().map { it.part }, listOf(GuideFinale.MarkPart.Whole), "The logo's mark comes back whole")
     same(mark.none { it is GuideFinale.Text && it.text in listOf("T", "K") }, true, "with no stand-in letters beside it")
-    val walking = GuideFinale.frame(GuideFinale.growStart(lines) + GuideFinale.GROW / 2, lines, 1076f, 120f, 760f, measure, 14f * 1076f / 688.6f)
+    val walking = GuideFinale.frame(GuideFinale.growStart(lines) + GuideFinale.GROW / 2, lines, 1076f, 120f, 760f, measure, 1076f / 688.6f)
     val parts = walking.filterIsInstance<GuideFinale.Mark>().filter { it.alpha > 0f }
     same(parts.map { it.part }.sorted(), listOf(GuideFinale.MarkPart.T, GuideFinale.MarkPart.K), "Halfway, the mark is its own T and K")
     check(parts.first { it.part == GuideFinale.MarkPart.K }.x > parts.first { it.part == GuideFinale.MarkPart.T }.x) { "the K walks right of the T" }
-    val logo = GuideFinale.frame(GuideFinale.total(lines), lines, 1076f, 120f, 760f, measure, 14f * 1076f / 688.6f)
+    val logo = GuideFinale.frame(GuideFinale.total(lines), lines, 1076f, 120f, 760f, measure, 1076f / 688.6f)
     same(logo.none { it is GuideFinale.Mark }, true, "At the end the mark has become the name")
     val name = logo.filterIsInstance<GuideFinale.Text>().filter { it.text != GuideFinale.BUILT_FOR }.sortedBy { it.x }.joinToString("") { it.text }
     same(name, GuideFinale.NAME, "The mark grows into TitanKeys")

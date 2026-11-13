@@ -2,7 +2,7 @@
 
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
-[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 23:35.
+[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-13, 00:10.
 
 ## On the phone now (build a5416a0e, test-2.1h at 9b67678)
 
@@ -81,6 +81,10 @@ all of them are unapproved.
 - **Phone for overnight tests (owner, 23:50):** "Test it when u find my phone idle. It'll be charging and unlocked." Wake it with
   KEYCODE_WAKEUP. If it's locked anyway, never unlock it with credentials: stop the phone part and log what's left.
 - A (after GuideDecor): the flick glow's strength ramps from none at the right edge to full at the top-speed line (owner, 23:58).
+- C: **guide and playground v2 done and merged** (f3abe56). Renders checked by the Orchestrator: clean, designed, readable on orange.
+  C's own 18 calls are in guide-v2-built.md in the notes folder. Among them: titles in Inter Bold (the app ships no ExtraBold),
+  lesson keys stay steady orange, the leave pop-up offers Keep going / Start again / I already know everything, and the boring guide
+  button moved under the end's buttons. All unapproved.
 - Then: merge everything, one build, install, and a full run-through on the phone.
 - Release prep (Orchestrator):
   - Update release-notes.txt for everything new since it was written. One line is already wrong: steering taps now count

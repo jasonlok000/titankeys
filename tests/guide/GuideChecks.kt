@@ -456,7 +456,7 @@ private fun oneInstructionAtATime() {
     same(groups.event(PanelSwiped(0f, .4f, true)), GuideVerdict.Stage(1), "A page turned, so finding ∞ is next")
     same(groups.step.stages.size, 2, "Two steps: turn a page, then find ∞")
     same(groups.step.title.contains(WEIRD), false, "The title doesn't name the weird one")
-    same(GROUPS_LINE.startsWith("S") && GROUPS_LINE.endsWith("how long I last in bed with your mother: ∞"), true, "Its line sets up the joke, and starts with S for the finale")
+    same(GROUPS_LINE.startsWith("S") && GROUPS_LINE.endsWith("how long do I last in bed with your mother? ∞"), true, "Its line sets up the joke, and starts with S for the finale")
     same(groups.event(FieldChanged(GROUPS_LINE.replace(WEIRD, "¤"), 4, 4)).let { it is GuideVerdict.Hint && !it.passes }, true,
         "Another symbol isn't ∞")
     same(groups.event(keys(Panel.Closed)), GuideVerdict.Stage(0), "A wrong one closed the panel: Sym again, the chip stays")
@@ -1264,11 +1264,12 @@ private fun everyPassShowsNext() {
     same(source.contains("private val nextInView"), true, "and Next is put in full view after a pass whatever happens")
 }
 
-/** The ∞ is the owner's joke (owner, 2026-11-13): the title never names it, and the found-fast and took-long lines land as written. */
+/** The ∞ is the owner's joke (owner, 2026-11-13): answer honestly, add ∞, "Sure you do." The fast and slow lines land as written. */
 private fun theOwnersInfinityJoke() {
     val groups = GUIDE_STEPS.first { it.id == "symgroups" }
-    same(groups.title, "Add how long you last in bed.", "The ∞ slide's title")
-    same(groups.title.contains(WEIRD), false, "never names the symbol")
+    same(groups.title, "Answer honestly.", "The ∞ slide's title")
+    same(groups.title.contains(WEIRD), false, "leaves the ∞ to the hunt")
+    same(groups.done, "Sure you do.", "and the punchline")
     same(groups.hunt, WEIRD_HUNT, "It's a hunt")
     same(WEIRD_HUNT.fast, "Quick. Just like you in bed.", "Found fast")
     for (seconds in listOf(HUNT_DRAIN_SECONDS, 40, 300)) same(WEIRD_HUNT.slow(seconds), "That took $seconds seconds. Still longer than you claim to last.",
@@ -1349,17 +1350,15 @@ private fun runThroughFixes() {
     flow.start("backspace")
     same(flow.event(FieldChanged(deleted, BACKSPACE_LINE.length, BACKSPACE_LINE.length)), GuideVerdict.Done, "One Backspace passes")
 
-    // The ∞ slide never names the symbol: the title, its steps, its chips and its hunt.
+    // The ∞ slide is a symbol hunt, not a riddle (owner, 2026-11-13): the hunt, its chip and its hint say ∞ outright.
     val groups = step("symgroups")
-    for (line in listOf(groups.title, groups.done, groups.praise) + groups.stages.map { it.text }) {
-        same(line.contains(WEIRD), false, "\"$line\" doesn't name it")
-    }
-    same(groups.stages[1].text, "Find the one that never ends.", "The hunt's instruction")
-    for (line in listOf(WEIRD_HUNT.fast, WEIRD_HUNT.slow(HUNT_DRAIN_SECONDS))) same(line.contains(WEIRD), false, "\"$line\" doesn't name it")
+    same(groups.stages[1].text, "Find ∞ and press its key. It's further in.", "The hunt's instruction names it")
+    same(groups.stages[1].text.length <= LINE_MOST, true, "and fits its line")
     val steps = java.io.File("android/kotlin/com/atlas/keyboard/GuideSteps.kt").readText()
     val block = steps.substring(steps.indexOf("id = \"symgroups\""), steps.indexOf("id = \"clown\""))
-    val literals = Regex("\"([^\"\\n]*)\"").findAll(block).map { it.groupValues[1] }.toList()
-    same(literals.none { WEIRD in it }, true, "No line on the slide says the symbol")
+    same(block.contains("chip(\"Not that one. Find ∞.\")"), true, "A wrong symbol says which to find")
+    same(block.contains("Hint(\"Closed it. The ∞ is still in there.\""), true, "and so does closing Sym")
+    same(block.contains("never ends"), false, "No riddle left on the slide")
     // The owner's two lines, exactly.
     same(WEIRD_HUNT.fast, "Quick. Just like you in bed.", "The fast line")
     same(WEIRD_HUNT.slow(40), "That took 40 seconds. Still longer than you claim to last.", "The slow line")

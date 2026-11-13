@@ -560,7 +560,7 @@ private var finaleBottom = HEIGHT * .68f
 /** Draws the finale at [at] ms, on the end's orange, from [GuideFinale]: the same frames as the phone. */
 private fun drawFinale(g: Graphics2D, at: Long) {
     val measure = GuideFinale.Measure { text, size, bold -> g.getFontMetrics(Font(Font.SANS_SERIF, if (bold) Font.BOLD else Font.PLAIN, 1).deriveFont(size)).stringWidth(text).toFloat() }
-    for (piece in GuideFinale.frame(at, SUMMARY_LINES, WIDTH.toFloat(), FINALE_TOP, finaleBottom, measure)) when (piece) {
+    for (piece in GuideFinale.frame(at, SUMMARY_LINES, WIDTH.toFloat(), FINALE_TOP, finaleBottom, measure, 14f * DP)) when (piece) {
         is GuideFinale.Text -> {
             g.font = Font(Font.SANS_SERIF, if (piece.bold) Font.BOLD else Font.PLAIN, 1).deriveFont(piece.size)
             g.color = rgb(piece.colour, piece.alpha)
@@ -714,7 +714,8 @@ private val DECOR by lazy {
  */
 private fun decorLayer(slide: String, millis: Long, keep: List<RectF>, onOrange: Boolean, bright: Float): BufferedImage {
     val layer = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
-    DECOR.draw(Canvas(layer), slide, millis, RectF(0f, 0f, WIDTH.toFloat(), (HEIGHT - V2.BAR).toFloat()), keep, onOrange, DP)
+    // Nothing under the status bar, as GuideDecorView.
+    DECOR.draw(Canvas(layer), slide, millis, RectF(0f, V2.STATUS.toFloat(), WIDTH.toFloat(), (HEIGHT - V2.BAR).toFloat()), keep, onOrange, DP)
     if (bright != 1f) for (y in 0 until HEIGHT) for (x in 0 until WIDTH) {
         val argb = layer.getRGB(x, y)
         val alpha = argb ushr 24
@@ -735,7 +736,7 @@ private fun drawLeave(file: File, under: Frame) {
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
     g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
     g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
-    g.color = rgb(0xFF000000.toInt(), .62f)
+    g.color = rgb(0xFF000000.toInt(), .88f)
     g.fillRect(0, 0, WIDTH, HEIGHT)
     val margin = dp(V2.SIDE)
     val width = WIDTH - 2 * margin

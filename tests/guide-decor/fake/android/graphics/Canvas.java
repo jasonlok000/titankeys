@@ -128,11 +128,14 @@ public class Canvas {
         calls++;
         if (g == null) return;
         g.setPaint(new Color(paint.colour, true));
+        // DST_OUT takes away what's under the shape by its alpha, as GuideDecor's soft keep-outs do.
+        if (paint.xfermode != null) g.setComposite(AlphaComposite.DstOut);
         if (paint.style == Paint.Style.FILL || paint.style == Paint.Style.FILL_AND_STROKE) g.fill(shape);
         if (paint.style == Paint.Style.STROKE || paint.style == Paint.Style.FILL_AND_STROKE) {
             g.setStroke(stroke(paint));
             g.draw(shape);
         }
+        g.setComposite(AlphaComposite.SrcOver);
     }
 
     private static BasicStroke stroke(Paint paint) {
@@ -157,6 +160,10 @@ public class Canvas {
 
     public void drawRect(float left, float top, float right, float bottom, Paint paint) {
         shape(new Rectangle2D.Float(left, top, right - left, bottom - top), paint);
+    }
+
+    public void drawRoundRect(float left, float top, float right, float bottom, float rx, float ry, Paint paint) {
+        shape(new java.awt.geom.RoundRectangle2D.Float(left, top, right - left, bottom - top, rx * 2, ry * 2), paint);
     }
 
     public void drawText(String text, float x, float y, Paint paint) {

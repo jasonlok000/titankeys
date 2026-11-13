@@ -111,9 +111,10 @@ internal object GuideFinale {
 
     /**
      * What to draw at [at] ms, in a box [width] wide from [top] to [bottom]. [lines] are the summary's lines, whose first letters
-     * spell [ACROSTIC]. [logoTop] is where the logo's part starts, so it can sit higher than the summary.
+     * spell [ACROSTIC]. [logoTop] is where the logo's part starts, so it can sit higher than the summary. [label] is the Label
+     * style's size in pixels (14 dp), for [BUILT_FOR].
      */
-    fun frame(at: Long, lines: List<String>, width: Float, top: Float, bottom: Float, measure: Measure): List<Piece> {
+    fun frame(at: Long, lines: List<String>, width: Float, top: Float, bottom: Float, measure: Measure, label: Float): List<Piece> {
         val pieces = ArrayList<Piece>()
         val side = width * .06f
         val room = width - 2 * side
@@ -200,10 +201,11 @@ internal object GuideFinale {
             }
             val built = ease(part(at, growStart(lines) + GROW, BUILT_IN))
             if (built > 0f) {
-                val size = nameSize * .2f
-                val spacing = size * .14f
+                // In the Label style, 14 dp, whatever the name's size (Master, 2026-11-13: it was about 8 dp).
+                val size = label
+                val spacing = size * .08f
                 val wide = measure.width(BUILT_FOR, size, true) + spacing * (BUILT_FOR.length - 1)
-                pieces += Text(BUILT_FOR, (width - wide) / 2, baseline + nameSize * .55f + (1f - built) * size, size, INK, built * .8f,
+                pieces += Text(BUILT_FOR, (width - wide) / 2, baseline + nameSize * .3f + size * 1.2f + (1f - built) * size, size, INK, built * .8f,
                     true, spacing)
             }
         }

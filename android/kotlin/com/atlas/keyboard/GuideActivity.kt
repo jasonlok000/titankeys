@@ -1116,6 +1116,12 @@ class GuideActivity : Activity() {
         checkKeyboard()
         // During setup there is nothing to type yet, and another keyboard would cover the slide.
         if (settingUp) return
+        // The finale and the end have no field: the keyboard stays down, also back from the share screen, so its bar never shows
+        // there and nothing jumps when it goes (Master, 2026-11-13: the bar showed, and the buttons dropped 88 px as it hid).
+        if (atEnd()) {
+            keyboardShown(false)
+            return
+        }
         field.requestFocus()
         input.showSoftInput(field, InputMethodManager.SHOW_IMPLICIT)
     }
@@ -1498,6 +1504,14 @@ class GuideActivity : Activity() {
             insets
         }
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitKeys() }
+        // What falls passes behind the words and the field, so they always sit on top, and stays in the content between the top
+        // bar and the keys (Master, 2026-11-13: the 🌱 and the cheat rain on the field and the header; the paste lesson's burst
+        // over the title, the status bar and the keys). The plant grows between the field and the keys.
+        effects.behind = listOf(title, body, chip, hint, script, field, next, offer)
+        effects.below = topBar
+        effects.above = keys
+        effects.sproutOver = field
+        effects.sproutUnder = keys
         effects.shaking = { tip, dx, dy ->
             wpmView.rotation = tip
             column.translationX = dx
@@ -2237,15 +2251,29 @@ class GuideActivity : Activity() {
         val line = layout.getLineForOffset(passage.ranges[next].first)
         val styled = passageSpans(track, next, cycle)
         if (playground) {
-            // The front page shows the whole sentence you're in, wrapped by words, never cut (owner, v5.3).
+            // The front page starts at the sentence you're in, wrapped by words, never cut (owner, v5.3), and always fills both
+            // lines: a short sentence carries on into the next, and a long one never ends on a lone word (Master, 2026-11-13). Once
+            // the word you're on is past the second line, its line is the top one.
             val starts = sentenceStarts ?: PlaygroundText.sentenceStarts(passage.words).also { sentenceStarts = it }
-            val words = PlaygroundText.sentenceAround(starts, count, next)
-            val from = passage.ranges[words.first].first
-            val to = passage.ranges[words.last].last + 1
+            val first = PlaygroundText.sentenceAround(starts, count, next).first
+            // Enough words for the lines on show, not the whole passage, so each key stays cheap.
+            val from = passage.ranges[first].first
+            val shown = SpannableStringBuilder(styled.subSequence(from, minOf(text.length, from + PLAYGROUND_REACH)))
+            // After the passage's end, it starts over, as the typing does, in the quiet colour.
+            if (from + PLAYGROUND_REACH > text.length) {
+                val after = (0 until first).joinToString(" ") { passage.wordAt(it) }.take(PLAYGROUND_REACH)
+                if (after.isNotEmpty()) shown.append(" ").append(plain(after))
+            }
+            val wrapped = StaticLayout.Builder.obtain(shown, 0, shown.length, script.paint, width).setIncludePad(false).build()
+            val at = wrapped.getLineForOffset((passage.ranges[next].first - from).coerceIn(0, shown.length))
+            val top = if (at < PROMPT_LINES) 0 else at
+            val last = minOf(top + PROMPT_LINES, wrapped.lineCount) - 1
+            var end = wrapped.getLineEnd(last)
+            while (end > 0 && shown[end - 1].isWhitespace()) end--
             script.maxLines = PROMPT_LINES
             script.setLines(PROMPT_LINES)
             script.scrollTo(0, 0)
-            script.text = styled.subSequence(from, to)
+            script.text = shown.subSequence(wrapped.getLineStart(top), end)
             return
         }
         // The line after the last is the first again, as the script starts over.
@@ -2685,6 +2713,10 @@ class GuideActivity : Activity() {
             runCatching { clipboard.setPrimaryClip(android.content.ClipData.newPlainText("TitanKeys guide", text)) }
             main.postDelayed({ GuideHooks.dismissClip() }, CLIP_HIDE_MILLIS)
         }
+        // A selection is cream (owner, v5.3), except where it is the target: the paste slide says "Paste over the orange words", so
+        // its selection is washed in orange, light enough that the cream words still read on it (Master, 2026-11-13).
+        field.highlightColor = GuideMotion.faded(if (step.preselect) GuideColours.ORANGE else GuideColours.CREAM,
+            if (step.preselect) PASTE_SELECTION_ALPHA else SELECTION_ALPHA)
         if (step.preselect && field.selectionStart == field.selectionEnd) {
             // The words that the text's first sentence points at: "Paste over this word."
             val start = field.text.toString().indexOf(PASTE_OVER)
@@ -4316,8 +4348,11 @@ class GuideActivity : Activity() {
         private const val LEAVE_BODY = "You haven't finished the guide. Leave anyway?"
         private const val LEAVE_YES = "I already know everything"
         private const val LEAVE_NO = "Keep going"
-        /** The leaving pop-up's dimming, and how small its card starts before it pops in. */
-        private const val LEAVE_SCRIM = .62f
+        /**
+         * The leaving pop-up's dimming, and how small its card starts before it pops in. The slide all but goes behind it, so the
+         * card's edge never reads as slicing the title (Master, 2026-11-13).
+         */
+        private const val LEAVE_SCRIM = .88f
         private const val LEAVE_POP = .92f
         private const val COME_BACK_TITLE = "Oh, look who's back. Didn't know everything after all?"
         private const val COME_BACK_BODY = "Pick up where you left off."
@@ -4582,10 +4617,14 @@ class GuideActivity : Activity() {
         private const val HELP_RECHECK_MILLIS = 700L
         /** The line to type along to: two lines (design v2). */
         private const val PROMPT_LINES = 2
+        /** How much of the playground's passage it lays out at a time, in characters: far more than its lines show. */
+        private const val PLAYGROUND_REACH = 600
         /** How long the bar's words wait as a slide opens, so it shows the slide's words once. */
         private const val BAR_SETTLE_MILLIS = 450L
         /** How strong a selection's cream is in the field. */
         private const val SELECTION_ALPHA = .32f
+        /** The paste slide's orange selection: cream words on it read at about 6:1 over the field. */
+        private const val PASTE_SELECTION_ALPHA = .5f
         /** How long Alt or the panel must stay on before the guide says so. */
         private const val MODIFIER_HINT_MILLIS = 350L
         /** How strong the words after the next one are in that line. */

@@ -31,6 +31,21 @@ internal class WpmEffectsView(context: Context) : View(context) {
     private val number = RectF()
     private var effects = WpmEffects.NONE
     private var step = -1
+    /**
+     * The views the falling things and the plant pass behind, so their words always sit on top (Master, 2026-11-13: the 🌱 and
+     * the cheat rain sat on the field's text and the header).
+     */
+    var behind: List<View> = emptyList()
+    /** The view whose top and the view whose bottom bound where falling things show: the content between the top bar and the keys. */
+    var below: View? = null
+    var above: View? = null
+    /**
+     * The plant grows in the open room between the bottom of [sproutOver] and the top of [sproutUnder] (the field and the keys),
+     * in the middle, no taller than that room. Without them, in the screen's middle.
+     */
+    var sproutOver: View? = null
+    var sproutUnder: View? = null
+
     /** Told each frame how far to tip the number, in degrees, and how far to shake the screen, in pixels. */
     var shaking: ((wobble: Float, dx: Float, dy: Float) -> Unit)? = null
 
@@ -145,8 +160,12 @@ internal class WpmEffectsView(context: Context) : View(context) {
         if (edges > .01f) drawEdges(canvas)
         if (flames > .01f) drawFlames(canvas)
         if (glow > .01f) drawGlow(canvas, glow * (1f + pulse * PULSE_GLOW))
-        for (bit in bits) drawBit(canvas, bit)
+        for (bit in bits) if (bit.kind != Kind.Fall) drawBit(canvas, bit)
+        canvas.save()
+        clipToContent(canvas)
+        for (bit in bits) if (bit.kind == Kind.Fall) drawBit(canvas, bit)
         if (sprout > .01f) drawSprout(canvas)
+        canvas.restore()
         if (flash > .01f) {
             paint.color = GuideMotion.faded(Color.WHITE, flash * FLASH_ALPHA)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
@@ -351,14 +370,39 @@ internal class WpmEffectsView(context: Context) : View(context) {
         }
     }
 
-    /** One plant in the middle, growing out of the calm, swaying a little. */
+    /** Keeps what falls between [below] and [above], and behind every view in [behind]. */
+    private fun clipToContent(canvas: Canvas) {
+        getLocationInWindow(here)
+        below?.takeIf { it.isShown }?.let { canvas.clipRect(0f, place(it).bottom, width.toFloat(), height.toFloat()) }
+        above?.takeIf { it.isShown }?.let { canvas.clipRect(0f, 0f, width.toFloat(), place(it).top) }
+        for (view in behind) if (view.isShown && view.width > 0 && view.height > 0) canvas.clipOutRect(place(view))
+    }
+
+    /** Where [view] is, in this view's pixels. */
+    private fun place(view: View): RectF {
+        view.getLocationInWindow(there)
+        val left = (there[0] - here[0]).toFloat()
+        val top = (there[1] - here[1]).toFloat()
+        return spot.apply { set(left, top, left + view.width, top + view.height) }
+    }
+
+    private val here = IntArray(2)
+    private val there = IntArray(2)
+    private val spot = RectF()
+
+    /** One plant, growing out of the calm, swaying a little: in [sproutRoom], or in the middle. */
     private fun drawSprout(canvas: Canvas) {
         val bitmap = emojiBitmap("🌱")
         val grown = GuideMotion.easeOut(sprout)
-        val size = dp(SPROUT_DP) * grown
+        getLocationInWindow(here)
+        val over = sproutOver?.takeIf { it.isShown }?.let { place(it).bottom }
+        val under = sproutUnder?.takeIf { it.isShown }?.let { place(it).top }
+        val room = if (over != null && under != null && under > over) RectF(0f, over + dp(SPROUT_GAP_DP), width.toFloat(), under) else null
+        val full = if (room != null) min(dp(SPROUT_DP), room.height()) else dp(SPROUT_DP)
+        val size = full * grown
         if (size < 1f) return
         canvas.save()
-        canvas.translate(width / 2f, height / 2f + dp(SPROUT_DP) / 2)
+        if (room != null) canvas.translate(room.centerX(), room.bottom) else canvas.translate(width / 2f, height / 2f + dp(SPROUT_DP) / 2)
         canvas.rotate(sin(clock * 1.6f) * 4f)
         val scale = size / bitmap.width
         canvas.scale(scale, scale)
@@ -442,6 +486,8 @@ internal class WpmEffectsView(context: Context) : View(context) {
         const val WOBBLE_DEGREES = 3f
         const val SHAKE_DP = 1.6f
         const val SPROUT_DP = 72f
+        /** The room left between the plant's leaves and what's above it. */
+        const val SPROUT_GAP_DP = 8f
         const val EMOJI_BITMAP_DP = 40f
     }
 }

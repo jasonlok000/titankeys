@@ -208,6 +208,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
+- **Analytics: deferred until there are users** (owner, 2026-11-13, 14:00: "theres no user now it's just me honestly"). (Owner)
+  - With one user, the debug build's raw typing log and Record a bug already give richer data.
+  - When a public release brings other users, revisit, under #55's regulated internet rules, with:
+    - opt-in crash and ANR reports, never text;
+    - daily on-device accuracy totals: kept, chosen and corrected rates, and autocorrect undos;
+    - where people quit the guide, and which settings they change from the defaults.
+  - Never third-party SDKs, per-event logs, text, app names or precise times. (Orchestrator)
 - **"TL;DR Trust me bro."** replaces "Trust me bro." on the share screen, before the accept (owner, 2026-11-13, 13:35). (Owner)
 - **Release audit** (A, claude/release-audit-2 81da968, docs/release-audit-2.1.md). The release APK is 115.9 MB (engine 2.0's next-word
   model and onnxruntime), with 6 permissions. Dev screens and adb hooks are gated, and GuideFrameActivity is now unexported in

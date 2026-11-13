@@ -963,10 +963,10 @@ internal const val PASTE_TEXT = "can't type a thing myself"
 internal val CLIP_FIELD_KEYS = listOf("R", "I", "F", "K", "C")
 
 /** Slide 15's line: the clip that's nice to you pastes the end of it. */
-internal const val CLIP_LEAD = "What you copy is in Sym, then A. "
-// The nice clip pastes itself and one more word: the bait and switch lands at once (owner, 2026-11-13: the old "So is my whole
-// personality" didn't land).
-internal const val PRANK_PASTE = "You're doing great. Kidding"
+internal const val CLIP_LEAD = "Wanna paste? Sym, then A. "
+// After a thread of digs you expect one more roast, and the nice clip pastes something kind, and means it (owner, 2026-11-13: "make
+// this wholesome instead so its not what the user thought").
+internal const val PRANK_PASTE = "I hope you're doing great, genuinely"
 internal const val CLIP_LINE = CLIP_LEAD + PRANK_PASTE
 
 /** The clipboard lesson's clips, newest first: a thread of digs, and one nice one, which isn't what it pastes. */
@@ -976,7 +976,7 @@ internal val GUIDE_CLIPS = listOf(
     "Circling back: still can't read?",
     "Reminder: read the manual.",
     "Looping in your last brain cell.",
-    "You're doing great.",
+    "I'm doing great.",
 )
 internal val PRANK_CLIP = GUIDE_CLIPS.last()
 /** Every clip that a guide ever put in the user's clipboard, this one's and older ones', to clear from it. */
@@ -986,7 +986,7 @@ internal val OLD_GUIDE_CLIPS = GUIDE_CLIPS.toSet() + PASTE_TEXT + setOf(
     "Per my last four messages, please stop.", "Honestly, you're doing great.",
     "Per my last message, the grey words were the instructions.", "Circling back, since reading isn't your thing.",
     "Friendly reminder: nobody believes you read the manual.", "As discussed, Next is not a personality.",
-    "Next is not a personality.",
+    "Next is not a personality.", "You're doing great.",
 )
 
 /** The words that the steer slide aims at are at least this many words from the cursor's column. */
@@ -1701,15 +1701,15 @@ internal val GUIDE_STEPS = listOf(
                 }
             },
         ),
-        // The nice clip pastes the prank, and the slide owns up.
-        done = "Gotcha. You believed it.",
+        // The nice clip pastes something kind instead of the roast you expected.
+        done = "Didn't see that coming, did you?",
         praise = "It keeps what you copy. Sym, then A, any time.",
         line = CLIP_LINE,
         seed = CLIP_LEAD.trimEnd(),
         usesPanel = true,
         setup = Panel.Closed,
         sandboxClips = GUIDE_CLIPS,
-        rain = "🤪",
+        rain = "🫶",
         lessons = setOf(GuideLesson.Sym),
         demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""),
     ),

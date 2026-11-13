@@ -661,7 +661,7 @@ private fun oneInstructionAtATime() {
     same(clips.event(keys(Panel.Clipboard)), GuideVerdict.Stage(2), "The clipboard, straight away, is fine too")
     same(clips.event(FieldChanged(CLIP_LEAD + GUIDE_CLIPS.first(), 40, 40)), GuideVerdict.Wait, "A rude clip: the screen takes it back")
     same(clips.event(FieldChanged(CLIP_LINE, 60, 60)), GuideVerdict.Done, "The nice clip passes")
-    same(clips.step.done, "Gotcha. You believed it.", "and the slide owns up to the prank")
+    same(clips.step.done, "Didn't see that coming, did you?", "and the slide owns up to the kind surprise")
     same(GuideHooks.swapClip(PRANK_CLIP), PRANK_PASTE, "The nice clip pastes the prank in the guide")
     same(GuideHooks.swapClip(GUIDE_CLIPS.first()), GUIDE_CLIPS.first(), "Every other clip pastes as it is")
     same(OLD_GUIDE_CLIPS.containsAll(GUIDE_CLIPS), true, "The guide clears its own clips from the clipboard")

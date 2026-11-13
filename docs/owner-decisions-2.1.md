@@ -204,6 +204,12 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Unattended round (owner, 22:55):** build straight to "10/10" without mockups. The Orchestrator decides, marks every decision as unapproved, and the owner reviews them on the final product. The decisions are in [design-v2.md](design-v2.md). Mockups come back next round. (Owner)
+- The Orchestrator may take the phone any time without asking: "take my phone. do not ask for it again." (Owner, 2026-11-12)
+- **The WPM starts only once a real word is being typed.** (Owner, 2026-11-12)
+- The word menu's Save doesn't need a floppy disk: "I care mostly about the particle effect." (Owner, 2026-11-12)
+
+
 - No AI co-author lines in commits. No pull requests; the owner opens them. No force push. (Owner)
 - Phone tests are silent. Never force-stop TitanKeys. Don't take the phone while navigation is running. (Owner)
 - Pause the workers near the usage limit and resume after the reset. (Owner, 2026-11-12)

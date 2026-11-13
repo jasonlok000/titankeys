@@ -2,7 +2,7 @@
 
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
-[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 22:50.
+[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 23:05.
 
 ## On the phone now (build a5416a0e, test-2.1h at 9b67678)
 
@@ -42,11 +42,26 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 - The guide opens at font size 2.0: a title or instruction that can't shrink keeps its largest size (brought in ahead of the batch).
 - Earlier fixes: the keyboard crash on open (bar init order), and a lone "i" capitalised.
 
-## In progress
+## In progress: the unattended round (started 23:00)
 
-- Layout sample page: on the phone at http://localhost:8765/sample.html, served from the PC through adb reverse. It's scratchpad
-  cal-tool/sample.html, with the Guide and Playground screens, a Sizes button and Full screen. **Waiting for the owner's verdict** before the batch.
-- Playground tone sample: 22 lines in docs/playground-text-draft.md. **Waiting for the owner's verdict**, then the full ~3,000 words.
+The owner's go (22:55): "start working first... no mockups this round... do what you think is going to be 10/10... mark it as
+your decision that I did not approve... I review those decisions with the final product... finish everything end to end. Run
+through literally everything to confirm no bugs." The Orchestrator's design decisions are in [design-v2.md](design-v2.md), and
+all of them are unapproved.
+
+- Done by the Orchestrator: the playground text (162 lines in the owner's tone, no repeats until all are used, no "i am stupid"),
+  commit ab2ae31. The guide checks pass.
+- C: the guide and playground v2 (design-v2 §2–3):
+  - the top bar, the content block, Skip and Next, orange only for actions;
+  - the 60% keyboard, edge to edge, with no gap between keys;
+  - the playground header, the WPM starting only on a real word, and readable orange.
+- D: word menu v4 (§4):
+  - places, and hover that stays after a press;
+  - dictionary words count as Saved, and there's no Save for symbols or emoji;
+  - the sparkle burst for Save, a quieter Unsave, and a better heart break.
+- F: sizes that ignore the font size and display size (FixedScale), the Scroll assistant note and default, and the orange accents bug.
+- A: the bar jumping when the Sym panel closes. It's recorded: at frame 14 the bar sits at the top of the old panel-sized window.
+- Then: merge everything, one build, install, and a full run-through on the phone.
 
 ## Next, waiting on the owner's go (proposed order, 22:50)
 

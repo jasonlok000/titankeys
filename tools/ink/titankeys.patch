@@ -1,0 +1,557 @@
+diff --git a/crates/ink-compiler/src/theme-evaluate.js b/crates/ink-compiler/src/theme-evaluate.js
+index e5e9c50..c26b1ee 100644
+--- a/crates/ink-compiler/src/theme-evaluate.js
++++ b/crates/ink-compiler/src/theme-evaluate.js
+@@ -27,7 +27,7 @@ const inputStyle = Object.fromEntries([
+ ].map(key => [key, null]));
+ const shape = {
+   fonts: { body: null, display: null, input: null },
+-  colours: { background: null, foreground: null, muted: null, light: { background: null, foreground: null, muted: null } },
++  colours: { background: null, foreground: null, muted: null, accent: null, light: { background: null, foreground: null, muted: null, accent: null } },
+   text: { size: null },
+   spacing: { inset: null, gap: null },
+   header: { layout: null, size: null, top: null, bottom: null, cutout: null, back: { position: null, icon: null }, iconSize: null },
+@@ -119,8 +119,8 @@ const roles = (value = {}, path) => {
+     if (key === "light") continue;
+     if (typeof colour !== "string" || !colourPattern.test(colour)) fail(`\`${prefix}${path}${key}\` must be a hex colour such as "#8a8a8a", got ${JSON.stringify(colour)}`);
+   }
+-  const { background, foreground, muted } = value;
+-  return { background, foreground, muted };
++  const { background, foreground, muted, accent } = value;
++  return { background, foreground, muted, accent };
+ };
+ 
+ async function describe(theme) {
+diff --git a/crates/ink-core/src/lib.rs b/crates/ink-core/src/lib.rs
+index 3999e45..f8ee2e6 100644
+--- a/crates/ink-core/src/lib.rs
++++ b/crates/ink-core/src/lib.rs
+@@ -424,6 +424,8 @@ pub enum Tone {
+     #[default]
+     Primary,
+     Muted,
++    /// The theme's accent. Text only.
++    Accent,
+ }
+ 
+ #[derive(Clone, Debug, PartialEq, Eq)]
+@@ -678,9 +680,11 @@ enum NodeKind {
+         title: String,
+         upper: String,
+     },
+-    /// A row's one-line subtitle, sized and toned by the theme's `subtitle` setting.
++    /// A row's subtitle, sized and toned by the theme's `subtitle` setting: one line, or every
++    /// line with `wrap`.
+     RowSubtitle {
+         text: SmolStr,
++        wrap: bool,
+     },
+     Text {
+         links: Vec<(std::ops::Range<usize>, Action)>,
+@@ -690,6 +694,7 @@ enum NodeKind {
+         align: TextAlign,
+         max_lines: Option<u32>,
+         tabular_numbers: bool,
++        tone: Tone,
+     },
+     TextInput {
+         placeholder: String,
+@@ -849,6 +854,7 @@ impl Node {
+                 align,
+                 max_lines,
+                 tabular_numbers,
++                tone: Tone::Primary,
+             },
+         }
+     }
+@@ -1220,6 +1226,9 @@ pub struct Scene {
+     pub scroll_offset: f32,
+     pub scroll_max: f32,
+     pub scroll_clip: Option<Rect>,
++    /// A band above `scroll_clip` where scrolled content fades into the background as it goes under
++    /// the header, so nothing is cut at a hard edge. Renderers draw scrolling content into it.
++    pub scroll_fade: Option<Rect>,
+     pub scroll_bar: Option<ScrollBar>,
+     pub palette: Palette,
+ }
+@@ -1267,6 +1276,12 @@ impl Scene {
+     pub fn background(&self) -> Colour {
+         if self.light { self.palette.light.background } else { self.palette.dark.background }
+     }
++
++    /// The theme's accent, or `fallback` resolved through the palette when it sets none.
++    pub fn accent(&self, fallback: Colour) -> Colour {
++        let roles = if self.light { &self.palette.light } else { &self.palette.dark };
++        roles.accent.unwrap_or_else(|| self.colour(fallback))
++    }
+ }
+ 
+ #[derive(Clone, Debug)]
+@@ -3273,6 +3288,7 @@ impl Engine {
+         self.scene.scroll_origin = self.scroll_origin;
+         self.scene.scroll_offset = self.scroll_offset;
+         self.scene.scroll_clip = None;
++        self.scene.scroll_fade = None;
+         self.scene.scroll_bar = None;
+         self.hit_regions.clear();
+         self.text_inputs.clear();
+@@ -3541,6 +3557,7 @@ impl Engine {
+                 max_lines,
+                 tabular_numbers,
+                 links,
++                ..
+             } => {
+                 let size = font_size.unwrap_or(DEFAULT_TEXT_SIZE);
+                 let font_size = self.scaled_font(size);
+@@ -3586,8 +3603,8 @@ impl Engine {
+                     height: self.scaled(BUTTON_HEIGHT).min(available.height),
+                 }
+             }
+-            NodeKind::RowSubtitle { text } => {
+-                let text = Node::text(text.clone(), Some(self.toggle_subtitle_size()), TextAlign::Start, Some(1), true);
++            NodeKind::RowSubtitle { text, wrap } => {
++                let text = Node::text(text.clone(), Some(self.toggle_subtitle_size()), TextAlign::Start, (!*wrap).then_some(1), !*wrap);
+                 self.measure(&text, available)
+             }
+             // The rest of the content gap sits above the title, so titles group with their rows.
+@@ -3674,10 +3691,13 @@ impl Engine {
+             NodeKind::Toggle { label, subtitle, .. } => {
+                 let width = (available.width - self.scaled(self.toggle_control_width() + TOGGLE_LABEL_GAP)).max(0.0);
+                 let lines = self.wrap_text(label, self.scaled_font(DEFAULT_TEXT_SIZE), width, None, false);
++                let subtitle_lines = subtitle.as_ref().map_or(0, |subtitle| {
++                    self.wrap_text(subtitle, self.scaled_font(self.toggle_subtitle_size()), width, None, false).len()
++                });
+                 MeasuredSize {
+                     width: available.width,
+                     height: (self.text_line_height(DEFAULT_TEXT_SIZE) * lines.len() as f32
+-                        + if subtitle.is_some() { self.text_line_height(self.toggle_subtitle_size()) } else { 0.0 })
++                        + self.text_line_height(self.toggle_subtitle_size()) * subtitle_lines as f32)
+                         .max(self.scaled(TOGGLE_HEIGHT))
+                         .min(available.height),
+                 }
+@@ -4114,7 +4134,7 @@ impl Engine {
+                 align,
+                 max_lines,
+                 tabular_numbers,
+-                links, width,
++                links, width, tone,
+             } => {
+                 let size = font_size.unwrap_or(DEFAULT_TEXT_SIZE);
+                 let font = self.scaled_font(size);
+@@ -4149,6 +4169,12 @@ impl Engine {
+                 }
+                 let run = self.scene.text.len();
+                 self.layout_text_lines(&lines, size, *align, *tabular_numbers, rect);
++                if *tone != Tone::Primary {
++                    let colour = if *tone == Tone::Accent { self.scene.accent(Colour::WHITE) } else { self.scene.colour(Colour::MUTED) };
++                    for text_run in &mut self.scene.text[run..] {
++                        text_run.colour = colour;
++                    }
++                }
+                 if node.identity.0 != 0 && *max_lines == Some(1) && links.is_empty() && self.scene.text.len() == run + 1 {
+                     if let Some(width) = width { self.fixed_text_runs.insert(node.identity, FixedTextRun {
+                         run, width: *width, font_size: *font_size, align: *align, tabular_numbers: *tabular_numbers,
+@@ -4261,9 +4287,9 @@ impl Engine {
+                 );
+             }
+             NodeKind::Tabs { value, tabs } => self.layout_tabs(value, tabs, rect),
+-            NodeKind::RowSubtitle { text } => {
++            NodeKind::RowSubtitle { text, wrap } => {
+                 let start = self.scene.text.len();
+-                let text = Node::text(text.clone(), Some(self.toggle_subtitle_size()), TextAlign::Start, Some(1), true);
++                let text = Node::text(text.clone(), Some(self.toggle_subtitle_size()), TextAlign::Start, (!*wrap).then_some(1), !*wrap);
+                 self.layout(&text, rect);
+                 if self.theme.subtitle_muted == Some(true) {
+                     let muted = self.scene.colour(Colour::MUTED);
+@@ -4278,7 +4304,7 @@ impl Engine {
+                 let top = self.scaled((self.content_gap() - self.section_gap()).max(0.0));
+                 let start = self.scene.text.len();
+                 self.layout_text(text, Some(size), TextAlign::Start, Some(1), false, Rect { y: rect.y + top, height: (rect.height - top).max(0.0), ..rect });
+-                let colour = self.scene.colour(Colour::MUTED);
++                let colour = self.scene.accent(Colour::MUTED);
+                 for run in &mut self.scene.text[start..] {
+                     run.colour = colour;
+                 }
+@@ -4428,7 +4454,7 @@ impl Engine {
+                 rect: Rect { x, y: header_centre - line / 2.0, width, height: line },
+                 clip: self.clip,
+                 font_size,
+-                colour: self.scene.colour(Colour::WHITE),
++                colour: self.scene.accent(Colour::WHITE),
+                 align: TextAlign::Start,
+                 scrolling: self.scrolling,
+             });
+@@ -4469,7 +4495,7 @@ impl Engine {
+                 rect: title_rect,
+                 clip: self.clip,
+                 font_size,
+-                colour: self.scene.colour(Colour::WHITE),
++                colour: self.scene.accent(Colour::WHITE),
+                 align: TextAlign::Centre,
+                 scrolling: self.scrolling,
+             });
+@@ -4547,13 +4573,14 @@ impl Engine {
+         let rect = if let Some(note) = note {
+             let inset = self.scaled(self.content_inset());
+             let width = (rect.width - inset * 2.0).max(0.0);
+-            let font_size = self.scaled_font(SCREEN_NOTE_SIZE);
++            let note_size = self.theme.subtitle_size.unwrap_or(SCREEN_NOTE_SIZE).max(SCREEN_NOTE_SIZE);
++            let font_size = self.scaled_font(note_size);
+             let lines = self.wrap_text(note, font_size, width, None, false);
+-            let height = self.text_line_height(SCREEN_NOTE_SIZE) * lines.len() as f32;
++            let height = self.text_line_height(note_size) * lines.len() as f32;
+             let bottom = self.scaled(CONTENT_BOTTOM);
+             let note_rect = Rect { x: rect.x + inset, y: rect.y + rect.height - bottom - height, width, height };
+             let start = self.scene.text.len();
+-            self.layout_text_lines(&lines, SCREEN_NOTE_SIZE, TextAlign::Centre, false, note_rect);
++            self.layout_text_lines(&lines, note_size, TextAlign::Centre, false, note_rect);
+             let colour = self.scene.colour(Colour::MUTED);
+             for run in &mut self.scene.text[start..] {
+                 run.colour = colour;
+@@ -4675,6 +4702,12 @@ impl Engine {
+             height: content.height,
+         };
+         self.scene.scroll_clip = Some(scroll_clip);
++        // The fade covers the gap above the content and most of the header's bottom padding, which
++        // are empty at rest, so it only shows once content scrolls into it.
++        self.scene.scroll_fade = (has_header && !media_picker && !fills_remaining).then(|| {
++            let height = (content.y - rect.y - header_height).max(0.0) + self.scaled(header_bottom * 0.6);
++            Rect { x: rect.x, y: content.y - height, width: rect.width, height }
++        }).filter(|band| band.height > 0.0);
+         let previous_clip = self.clip;
+         self.clip = Rect {
+             y: scroll_clip.y - scroll_clip.height * SCROLL_OVERSCAN,
+@@ -5108,17 +5141,18 @@ impl Engine {
+         let first = Rect { y: rect.y + self.scaled(1.0), height: (line_height - self.scaled(1.0)).max(0.0), width: available, ..rect };
+         let primary = self.scene.colour(if disabled { Colour::MUTED } else { Colour::WHITE });
+         let muted = self.scene.colour(Colour::MUTED);
++        let value_colour = if disabled { muted } else { self.scene.accent(Colour::MUTED) };
+         let mut runs = Vec::new();
+         if let Some(lines) = self.inline_field_wrap(label, value, action.is_some(), rect.width) {
+             runs.push((self.ellipsize(label, font_size, available), first, primary, TextAlign::Start));
+             for (index, line) in lines.iter().enumerate() {
+-                runs.push((line.text.to_string(), Rect { y: first.y + line_height * (index + 1) as f32, ..first }, muted, TextAlign::Start));
++                runs.push((line.text.to_string(), Rect { y: first.y + line_height * (index + 1) as f32, ..first }, value_colour, TextAlign::Start));
+             }
+         } else {
+             let label_width = self.text_width(label, font_size).ceil().min(available);
+             let value_width = (available - label_width - self.scaled(BUTTON_ICON_GAP)).max(0.0);
+             runs.push((label.to_owned(), Rect { width: label_width, ..first }, primary, TextAlign::Start));
+-            runs.push((value.to_owned(), Rect { x: rect.x + available - value_width, width: value_width, ..first }, muted, TextAlign::End));
++            runs.push((value.to_owned(), Rect { x: rect.x + available - value_width, width: value_width, ..first }, value_colour, TextAlign::End));
+         }
+         for (text, run_rect, colour, align) in runs {
+             self.scene.text.push(TextRun { font: self.theme.body_font, text: text.into(), rect: run_rect, clip: self.clip, font_size, colour, align, tabular_numbers: false, scrolling: self.scrolling });
+@@ -5300,7 +5334,8 @@ impl Engine {
+         let lines = self.wrap_text(label, label_font_size, label_rect.width, None, false);
+         let text_height = self.text_line_height(DEFAULT_TEXT_SIZE) * lines.len() as f32;
+         let subtitle_size = self.toggle_subtitle_size();
+-        let subtitle_height = if subtitle.is_some() { self.text_line_height(subtitle_size) } else { 0.0 };
++        let subtitle_lines = subtitle.map_or(0, |subtitle| self.wrap_text(subtitle, self.scaled_font(subtitle_size), label_rect.width, None, false).len());
++        let subtitle_height = self.text_line_height(subtitle_size) * subtitle_lines as f32;
+         let text_y = rect.y + (rect.height - text_height - subtitle_height).max(0.0) / 2.0;
+         let start = self.scene.text.len();
+         self.layout_text(
+@@ -5313,7 +5348,7 @@ impl Engine {
+         );
+         let subtitle_start = self.scene.text.len();
+         if let Some(subtitle) = subtitle {
+-            self.layout_text(subtitle, Some(subtitle_size), TextAlign::Start, Some(1), true,
++            self.layout_text(subtitle, Some(subtitle_size), TextAlign::Start, None, false,
+                 Rect { y: text_y + text_height, height: subtitle_height, ..label_rect });
+         }
+         for run in &mut self.scene.text[start..] {
+@@ -6052,7 +6087,7 @@ fn invert_colour(colour: Colour) -> Colour {
+ 
+ fn tone_colour(tone: Tone) -> Colour {
+     match tone {
+-        Tone::Primary => Colour::WHITE,
++        Tone::Primary | Tone::Accent => Colour::WHITE,
+         Tone::Muted => Colour::MUTED,
+     }
+ }
+diff --git a/crates/ink-core/src/react.rs b/crates/ink-core/src/react.rs
+index ea746fc..8e67e05 100644
+--- a/crates/ink-core/src/react.rs
++++ b/crates/ink-core/src/react.rs
+@@ -56,6 +56,7 @@ enum HostProps {
+         align: TextAlign,
+         max_lines: Option<u32>,
+         tabular_numbers: bool,
++        tone: Tone,
+     },
+     List(Box<ListProps>),
+     Other(Map<String, Json>),
+@@ -104,6 +105,12 @@ impl HostProps {
+                 align,
+                 max_lines,
+                 tabular_numbers: props.get("tabularNumbers") == Some(&Json::Bool(true)),
++                tone: match string(&props, "tone").unwrap_or("primary") {
++                    "primary" => Tone::Primary,
++                    "muted" => Tone::Muted,
++                    "accent" => Tone::Accent,
++                    value => bail!("unsupported text tone {value}"),
++                },
+             });
+         }
+         Ok(props)
+@@ -665,6 +672,7 @@ impl ReactTree {
+             tabular_numbers,
+             text: content,
+             on_press,
++            tone,
+         } = &host.props
+         {
+             let mut text_links = Vec::new();
+@@ -679,9 +687,10 @@ impl ReactTree {
+                 text.into()
+             };
+             let mut node = Node::text(text, *size, *align, *max_lines, *tabular_numbers);
+-            if let NodeKind::Text { width: node_width, links, .. } = &mut node.kind {
++            if let NodeKind::Text { width: node_width, links, tone: node_tone, .. } = &mut node.kind {
+                 *node_width = *width;
+                 *links = text_links;
++                *node_tone = *tone;
+             }
+             node.identity = NodeIdentity(id);
+             return Ok(Some(node));
+@@ -1330,7 +1339,7 @@ impl Engine {
+         let mut result = Vec::with_capacity(patches.len());
+         for patch in patches {
+             let node = patch.as_ref()?;
+-            let NodeKind::Text { width: Some(width), text, font_size, align, max_lines: Some(1), tabular_numbers, links } = &node.kind else { return None; };
++            let NodeKind::Text { width: Some(width), text, font_size, align, max_lines: Some(1), tabular_numbers, links, .. } = &node.kind else { return None; };
+             let previous = self.fixed_text_runs.get(&node.identity)?;
+             if !links.is_empty() || *align == TextAlign::Justify || previous.width != *width || previous.font_size != *font_size
+                 || previous.align != *align || previous.tabular_numbers != *tabular_numbers { return None; }
+diff --git a/crates/ink-core/src/react/row.rs b/crates/ink-core/src/react/row.rs
+index 30adcfd..25baf60 100644
+--- a/crates/ink-core/src/react/row.rs
++++ b/crates/ink-core/src/react/row.rs
+@@ -15,7 +15,8 @@ impl ReactTree {
+         } else { Node::text(title.into(), Some(26.0), TextAlign::Start, max_lines, false) }];
+         let mut subtitle = Vec::new();
+         if let Some(name) = string(props, "subtitleIcon") { subtitle.push(icon(name, 16.0)?); }
+-        if let Some(text) = string(props, "subtitle") { subtitle.push(Node { identity: NodeIdentity(0), kind: NodeKind::RowSubtitle { text: text.into() } }); }
++        let wrap = props.get("wrapSubtitle") == Some(&Json::Bool(true));
++        if let Some(text) = string(props, "subtitle") { subtitle.push(Node { identity: NodeIdentity(0), kind: NodeKind::RowSubtitle { text: text.into(), wrap } }); }
+         if !subtitle.is_empty() { content.push(Node::stack(subtitle, Axis::Horizontal, Some(6.0), Alignment::Centre, Justification::Start)); }
+         let mut children = Vec::new();
+         let image = string(props, "image");
+diff --git a/crates/ink-core/src/theme.rs b/crates/ink-core/src/theme.rs
+index e13751e..300025d 100644
+--- a/crates/ink-core/src/theme.rs
++++ b/crates/ink-core/src/theme.rs
+@@ -22,12 +22,15 @@ pub struct Roles {
+     pub background: Colour,
+     pub foreground: Colour,
+     pub muted: Colour,
++    /// Screen titles, section titles and field values. The foreground (titles) or muted (the
++    /// rest) when the theme sets none.
++    pub accent: Option<Colour>,
+     /// The scroll bar's colour, when it differs from the foreground.
+     pub scroll_bar: Option<Colour>,
+ }
+ 
+ impl Roles {
+-    pub const DARK: Self = Self { background: Colour::BLACK, foreground: Colour::WHITE, muted: Colour::MUTED, scroll_bar: None };
++    pub const DARK: Self = Self { background: Colour::BLACK, foreground: Colour::WHITE, muted: Colour::MUTED, accent: None, scroll_bar: None };
+ 
+     fn inverted(self) -> Self {
+         Self {
+@@ -36,6 +39,7 @@ impl Roles {
+             // Inverting a mid-grey in linear light gives a near-white; inverting it in sRGB keeps
+             // muted text as far from the light background as it is from the dark one.
+             muted: invert_srgb(self.muted),
++            accent: self.accent.map(crate::invert_colour),
+             scroll_bar: self.scroll_bar.map(crate::invert_colour),
+         }
+     }
+@@ -254,6 +258,8 @@ pub struct SourceRoles {
+     pub background: Option<String>,
+     pub foreground: Option<String>,
+     pub muted: Option<String>,
++    #[serde(default)]
++    pub accent: Option<String>,
+ }
+ 
+ /// Blob indices for each font.
+@@ -512,6 +518,7 @@ fn resolve_roles(source: &SourceRoles, fallback: Roles) -> Result<Roles> {
+         background: colour(&source.background, fallback.background)?,
+         foreground: colour(&source.foreground, fallback.foreground)?,
+         muted: colour(&source.muted, fallback.muted)?,
++        accent: source.accent.as_deref().map(parse_colour).transpose()?.or(fallback.accent),
+         scroll_bar: fallback.scroll_bar,
+     })
+ }
+diff --git a/crates/ink-renderer-vulkan/src/compact.rs b/crates/ink-renderer-vulkan/src/compact.rs
+index 7a02cfd..5b2b2e1 100644
+--- a/crates/ink-renderer-vulkan/src/compact.rs
++++ b/crates/ink-renderer-vulkan/src/compact.rs
+@@ -968,6 +968,7 @@ impl Renderer {
+             }),
+         );
+         self.overlay_instances.clear();
++        push_scroll_fade_instances(scene, &mut self.overlay_instances);
+         push_scrollbar_instances(scene, &mut self.overlay_instances);
+         push_hitbox_instances(scene, &mut self.overlay_instances);
+         let overlay_end = self.overlay_instances.len() as u32;
+@@ -1797,10 +1798,35 @@ fn push_scrollbar_instances(scene: &Scene, instances: &mut Vec<QuadInstance>) {
+     }
+ }
+ 
++/// Strips of the background over the fade band, from opaque at the header to clear at the
++/// content, drawn over scrolled content. Nothing is drawn at rest, when the band is empty.
++fn push_scroll_fade_instances(scene: &Scene, instances: &mut Vec<QuadInstance>) {
++    let Some(band) = scene.scroll_fade else {
++        return;
++    };
++    if scene.scroll_offset <= 0.0 {
++        return;
++    }
++    let strips = (band.height / 2.0).ceil().clamp(1.0, 48.0) as usize;
++    let strip = band.height / strips as f32;
++    let background = scene.background();
++    for index in 0..strips {
++        // Ease out, so the content is mostly gone by the header's edge.
++        let position = (index as f32 + 0.5) / strips as f32;
++        let alpha = (1.0 - position) * (1.0 - position) * (3.0 - 2.0 * (1.0 - position));
++        let rect = Rect { y: band.y + strip * index as f32, height: strip + 0.5, ..band };
++        push_quad_instance(instances, scene, &ink_core::Quad { rect, clip: band, colour: Colour { alpha: background.alpha * alpha, ..background }, scrolling: false });
++    }
++}
++
+ fn set_scroll_scissor(pass: &mut gpu::RenderPass<'_>, scene: &Scene) {
+-    let Some(clip) = scene.scroll_clip else {
++    let Some(mut clip) = scene.scroll_clip else {
+         return;
+     };
++    // Scrolled content stays visible in the fade band above the clip.
++    if let Some(band) = scene.scroll_fade.filter(|band| band.y < clip.y) {
++        clip = Rect { y: band.y, height: clip.height + clip.y - band.y, ..clip };
++    }
+     let x = clip.x.max(0.0).floor() as u32;
+     let y = clip.y.max(0.0).floor() as u32;
+     let right = (clip.x + clip.width)
+diff --git a/packages/ink/src/index.ts b/packages/ink/src/index.ts
+index 1ceb202..74c219c 100644
+--- a/packages/ink/src/index.ts
++++ b/packages/ink/src/index.ts
+@@ -13,7 +13,7 @@ export { useSnapshot, type Snapshot, type SnapshotSource } from "./snapshot";
+ export { resource, type ResourceSnapshot, type ResourceSource } from "./resource";
+ export { useAction, type Action } from "./action";
+ export { NativeError } from "./native";
+-export { Tabs, Slot, navigate, replace, back, useRouteParams, type Destination } from "./navigation";
++export { Tabs, Slot, navigate, replace, back, setRouteParents, useRouteParams, type Destination } from "./navigation";
+ 
+ export function Screen({ header, children, leftAction, rightAction, ...props }: {
+   children?: ReactNode;
+@@ -61,6 +61,8 @@ export type TextProps<D extends Destination = Destination> = PressProps<D> & {
+   align?: "start" | "center" | "end" | "justify";
+   maxLines?: number;
+   tabularNumbers?: boolean;
++  /** `"muted"` for notes and explanations, `"accent"` for what stands out. Default: `"primary"`. */
++  tone?: "primary" | "muted" | "accent";
+ }
+ 
+ // Keep text as a host element while checking literal route parameters in JSX.
+diff --git a/packages/ink/src/navigation.ts b/packages/ink/src/navigation.ts
+index 6bfbfc8..6ce9836 100644
+--- a/packages/ink/src/navigation.ts
++++ b/packages/ink/src/navigation.ts
+@@ -42,6 +42,24 @@ export function back() { send({ type: "back" }); }
+ 
+ export function presentPage(page: ReactElement) { send({ type: "present", page }); }
+ 
++/**
++ * The parent of each page: a path, `null` for the top of a tree of pages, or `undefined` for a page in no tree. A link
++ * into a page in a tree, such as a notification's, then replaces the stack with the page's parents and the page, so Back
++ * goes up the tree and never leaves it. The top of a tree opens alone. Call it once, when a module loads.
++ */
++let parentOf: ((path: string) => string | null | undefined) | undefined;
++export function setRouteParents(parent: (path: string) => string | null | undefined) { parentOf = parent; }
++
++/** The page's parents, top first, or undefined for a page in no tree. */
++function parentsOf(routes: ReadonlySet<string>, path: string) {
++  if (!parentOf || parentOf(path) === undefined) return undefined;
++  const parents: { path: string; params: Params }[] = [];
++  for (let parent = parentOf(path); parent && parents.length < 16; parent = parentOf(parent)) {
++    parents.unshift(resolveDestination(routes, parent));
++  }
++  return parents;
++}
++
+ export function useRouteParams<Path extends string>(path: Path): PathParams<Path>;
+ export function useRouteParams(): Readonly<Partial<Params>>;
+ export function useRouteParams<T extends object>(decode: (value: unknown) => T): T;
+@@ -84,9 +102,11 @@ export function NavigationStack({ routes, renderEntries, initialDestination }: {
+     const start = { key: 0, path: "/", params: {} };
+     if (initialDestination === undefined) return [start];
+     const target = resolveDestination(routes, initialDestination);
++    const parents = parentsOf(routes, target.path);
++    if (parents) return [...parents, target].map((entry, key) => ({ key, ...entry }));
+     return target.path === "/" ? [{ ...start, ...target }] : [start, { key: 1, ...target }];
+   });
+-  const nextKey = useRef(initialDestination === undefined ? 1 : 2);
++  const nextKey = useRef(initialDestination === undefined ? 1 : 32);
+   // Tab membership belongs to the route table, even while its layout is covered or unmounted.
+   const tabGroups = useMemo(() => new Map<object, readonly string[]>(), [routes]);
+   const registerTabs = useMemo(() => (group: object, paths: readonly string[], ownsStart: boolean) => {
+@@ -125,12 +145,15 @@ export function NavigationStack({ routes, renderEntries, initialDestination }: {
+         return;
+       }
+       const target = resolve(action.destination);
++      // A link, or a page opened from somewhere other than its parent, gets its parents under it.
++      const parents = action.type === "open" || action.type === "push" ? parentsOf(routes, target.path)?.map(parent => ({ key: nextKey.current++, ...parent })) : undefined;
+       const entry = { key: nextKey.current++, ...target };
+       setEntries(current => {
+         const group = [...tabGroups].find(([, paths]) => paths.includes(target.path))?.[0];
+         const index = group ? current.findIndex(entry => entry.tabGroup === group) : -1;
+         if (index >= 0) return [...current.slice(0, index), { ...current[index], path: entry.path, params: entry.params }];
+         const next = { ...entry, tabGroup: group };
++        if (parents && (action.type === "open" || current.at(-1)?.path !== parents.at(-1)?.path)) return [...parents, next];
+         if (action.type === "open") return current[0].path === next.path ? [next] : [current[0], next];
+         return action.type === "replace" ? [...current.slice(0, -1), next] : [...current, next];
+       });
+diff --git a/packages/ink/src/row.ts b/packages/ink/src/row.ts
+index 34c93cf..435c532 100644
+--- a/packages/ink/src/row.ts
++++ b/packages/ink/src/row.ts
+@@ -3,12 +3,14 @@ import { createElement, memo } from "./react";
+ import type { Destination } from "./navigation";
+ import { pressHandler, type HitAreaProps, type PressProps } from "./press";
+ 
+-function RowComponent<const D extends Destination>({ image, title, titleMaxLines, titleIcon, subtitle, subtitleIcon, endIcon, endAction, href, url, onPress, onLongPress, hitSlop }: PressProps<D> & {
++function RowComponent<const D extends Destination>({ image, title, titleMaxLines, titleIcon, subtitle, wrapSubtitle, subtitleIcon, endIcon, endAction, href, url, onPress, onLongPress, hitSlop }: PressProps<D> & {
+   image?: string;
+   title: string;
+   titleMaxLines?: number;
+   titleIcon?: IconAsset;
+   subtitle?: string;
++  /** Wrap the subtitle onto as many lines as it needs, instead of one line. */
++  wrapSubtitle?: boolean;
+   subtitleIcon?: IconAsset;
+   /** A muted icon at the end of the row, such as an arrow for a link. Pressing it presses the row. */
+   endIcon?: IconAsset;
+@@ -17,7 +19,7 @@ function RowComponent<const D extends Destination>({ image, title, titleMaxLines
+   onLongPress?: () => void;
+ }) {
+   return createElement("RowContent", {
+-    image, title, titleMaxLines, titleIcon, subtitle, subtitleIcon,
++    image, title, titleMaxLines, titleIcon, subtitle, wrapSubtitle, subtitleIcon,
+     endIcon: endAction?.icon ?? endIcon,
+     onEndPress: endAction?.onPress,
+     onPress: pressHandler({ href, url, onPress }) ?? (onLongPress ? () => {} : undefined),
+diff --git a/packages/ink/src/theme.ts b/packages/ink/src/theme.ts
+index 5093d42..fc7df53 100644
+--- a/packages/ink/src/theme.ts
++++ b/packages/ink/src/theme.ts
+@@ -59,6 +59,8 @@ export interface Colours {
+   foreground?: Colour;
+   /** Secondary text, values and inactive controls. Default: `#898989`. */
+   muted?: Colour;
++  /** Screen titles, section titles and field values. Default: the foreground for titles, muted for the rest. */
++  accent?: Colour;
+ }
+ 
+ export interface ThemeColours extends Colours {

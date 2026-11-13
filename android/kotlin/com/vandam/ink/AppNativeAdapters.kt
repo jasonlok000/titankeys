@@ -30,6 +30,7 @@ import com.atlas.keyboard.HapticsLab
 import com.atlas.keyboard.KeyCalibrationActivity
 import com.atlas.keyboard.KeyCapture
 import com.atlas.keyboard.PhoneNameSource
+import com.atlas.keyboard.PhoneChecks
 import com.atlas.keyboard.PhoneSetup
 import com.atlas.keyboard.RawLog
 import com.atlas.keyboard.SetupPart
@@ -299,6 +300,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     PhoneSetup.chooseKeyboard(activity)
                     "null"
                 }
+                // Opens the phone's own page. TitanKeys never changes these settings itself.
+                "shortcutKeys" -> {
+                    activity.startActivity(PhoneChecks.shortcutKeysPage(activity))
+                    "null"
+                }
                 "watch" -> {
                     watchingRequested = true
                     syncPreview()
@@ -402,6 +408,9 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("overlay", PhoneSetup.overlay(activity))
             .put("scrollAssistant", PhoneSetup.scrollAssistant())
             .put("backService", BackService.enabled(activity))
+            .put("symKey", PhoneChecks.programmable(activity, PhoneChecks.Key.Sym))
+            .put("fnKey", PhoneChecks.programmable(activity, PhoneChecks.Key.Fn))
+            .put("outsideSlidingMode", JSONArray(PhoneChecks.outsideSlidingMode(activity)))
             .put("learning", typing.learningEnabled())
             .put("contactNames", PhoneNameSource.contactsAllowed(activity))
             .put("tapKeys", TypingSettings.tapKeys(activity))

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Canvas, CanvasIcon, CanvasText, Screen, Stack, Text, replace, useSnapshot } from "ink";
+import { Canvas, CanvasIcon, CanvasText, Screen, Stack, Text, navigate, replace, useSnapshot } from "ink";
 import { arrowOutward } from "ink/icons";
 import { cancelPlayground, markNotesSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
 import { INK, ORANGE } from "../lib/brand";
@@ -66,7 +66,8 @@ function FrontPage() {
         if (!here) return;
         if (action === "settings" || action === "guide") leaving = true;
         if (action === "settings") replace("/settings");
-        else if (action === "guide") replace({ path: "/settings/guide", params: { from: "home" } });
+        // The guide is a page in Settings, so Ink opens it over the top of Settings (lib/settings-tree.ts): ← goes up there.
+        else if (action === "guide") navigate("/settings/guide");
         // The playground closed from its setup slide, so this page shows setup again.
         else if (action === "setup") void state.refresh();
         // Something else closed it, perhaps while this window was already in front. A link into the app closes it too, so

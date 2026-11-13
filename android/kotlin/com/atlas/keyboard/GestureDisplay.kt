@@ -399,7 +399,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     /**
      * A stroke that is clearly a delete flick has its finger at [x], from 0 to 1 across the touchpad: the delete glow reaches
      * along the bottom from the right corner to the finger, and follows it while the stroke goes on (owner, 2026-11-12). It is
-     * the held delete's glow, in the same style. It fades at the lift, see [flickGlowEnded], and a hold takes it on.
+     * the held delete's glow, in the same style, but as strong as [flickGlowStrength] says for how far it reaches: none while
+     * the finger is still at the right, full from the top-speed line on (owner, 2026-11-13). It fades at the lift, see
+     * [flickGlowEnded], and a hold takes it on.
      */
     fun flickGlow(x: Float, now: Long) {
         if (!allowed || scene == Scene.DeleteHold) return
@@ -410,10 +412,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             // A flick is fast, so its glow is as strong as a hold's at a good pace, and stays so while the stroke goes on.
             deletePace = FLICK_GLOW_PACE
             shownPace = FLICK_GLOW_PACE
-            // It starts at the finger, so it never sweeps across the bar, and at full strength: a flick is over in about 100 ms,
-            // too soon for it to grow in.
+            // It starts at the finger, so it never sweeps across the bar, and at once as strong as its reach makes it: a flick is
+            // over in about 100 ms, too soon for it to grow in.
             glowWidth = reach
-            glowBase = heldAlpha
+            glowBase = heldAlpha * flickGlowStrength(reach)
             flickGlowAt = now
             flickFramed = false
         }
@@ -432,7 +434,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     /**
      * A delete flick lifted with its finger at [x]. Every flick shows its glow (owner, 2026-11-12): a very fast one can be over
      * before its glow had a frame, or before it was clearly a flick at all, so its glow then plays after the lift, from the
-     * corner to where the finger lifted. It stays at full strength until it has shown for [FLICK_GLOW_SEEN] in all, then fades
+     * corner to where the finger lifted, as strong as [flickGlowStrength] says for that reach, so a short flick that never left
+     * the right side shows little or nothing. It keeps that strength until it has shown for [FLICK_GLOW_SEEN] in all, then fades
      * as any flick's does. A hold's glow just fades, as it always did.
      */
     fun flickLifted(x: Float, now: Long) {
@@ -446,13 +449,13 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             glowDelete = true
             deletePace = FLICK_GLOW_PACE
             shownPace = FLICK_GLOW_PACE
-            glowBase = heldAlpha
+            glowBase = heldAlpha * flickGlowStrength(reach)
             glowWidth = reach
             flickGlowAt = now
         } else if (!flickFramed) {
             // Its glow never drew: it shows where the finger lifted, not where the stroke was first seen.
             shownPace = FLICK_GLOW_PACE
-            glowBase = heldAlpha
+            glowBase = heldAlpha * flickGlowStrength(reach)
             glowWidth = reach
         }
         fadeGlow(now)
@@ -1028,8 +1031,6 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         val elapsed = max(0L, now - glowFrame).toFloat()
         glowFrame = now
         shownPace = ease(shownPace, deletePace, elapsed, DELETE_GLOW_MILLIS, motion)
-        val target = if (deletePaused) 0f else heldAlpha
-        glowBase = ease(glowBase, target, elapsed, if (target < glowBase) DELETE_GLOW_FADE else DELETE_GLOW_MILLIS, motion)
         // A flick's reaches to the finger and follows it closely; a hold's reach follows its pace, and the change from one to
         // the other eases, so the glow never jumps as a flick becomes a hold.
         val flick = !flickReach.isNaN()
@@ -1039,6 +1040,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             glowWidth = ease(glowWidth, reach, elapsed, if (flick) EASE_MILLIS else DELETE_GLOW_MILLIS, motion)
             if (!flick && abs(glowWidth - reach) < .002f) reachEasing = false
         } else glowWidth = reach
+        // A flick's strength goes with where its glow reaches, so it grows as the finger goes left; a hold's eases to its own,
+        // from wherever the flick's was.
+        val target = if (deletePaused) 0f else if (flick) heldAlpha * flickGlowStrength(glowWidth) else heldAlpha
+        glowBase = if (flick) target else ease(glowBase, target, elapsed, if (target < glowBase) DELETE_GLOW_FADE else DELETE_GLOW_MILLIS, motion)
         return motion && (abs(shownPace - deletePace) > .002f || abs(glowBase - target) > .002f || abs(glowWidth - reach) > .002f)
     }
 

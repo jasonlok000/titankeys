@@ -14,6 +14,7 @@ private const val MIDDLE_STOP = .575f
 private const val LONG_STOP = .4f
 
 fun main() {
+    flickGlowRamp()
     aNormalFlickDeletesOneWordAndDoesNotRepeat()
     aHeldFlickRepeatsUntilTheLift()
     aShortFlickWaitsTheLongest()
@@ -699,4 +700,18 @@ private fun aFlickNeverShowsAsASwipeFirst() {
     isTrue(mayBe(stroke(.95f, .35f, .65f, 100), allowed = false).none { it }, "Where a flick doesn't count, the trail shows at once")
     val far = mayBe(stroke(.95f, .35f, .2f, 250))
     isTrue(!far.last(), "A stroke that broke off being a flick shows its trail")
+}
+
+/**
+ * The delete flick's glow strength (owner, 2026-11-13): none at the right edge, half way at mid reach, and full at the held
+ * delete's top-speed line, where the hold's pace stops growing, and past it.
+ */
+private fun flickGlowRamp() {
+    same(flickGlowStrength(0f), 0f, "None at the right edge")
+    same(flickGlowStrength(.03f), 0f, "nor still on Backspace")
+    isTrue(kotlin.math.abs(flickGlowStrength((FLICK_GLOW_NONE + FLICK_GLOW_FULL) / 2) - .5f) < .0001f, "Half way at mid reach")
+    same(flickGlowStrength(FLICK_GLOW_FULL), 1f, "Full at the top-speed line")
+    same(flickGlowStrength(1f), 1f, "and past it")
+    // The full line is the hold's top-speed line: a flick started on Backspace, .95 across, reaches it after REPEAT_LONG_KEYS keys.
+    isTrue(kotlin.math.abs((FLICK_GLOW_FULL - .05f) * 10 - REPEAT_LONG_KEYS) < .001f, "The full line is the top-speed line")
 }

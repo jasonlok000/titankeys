@@ -12,6 +12,7 @@ private const val ON_SPACE = 5.3f
 private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
+    aFlicksGlowRampsWithItsReach()
     aFlicksWayInStretchesToFitItsDots()
     aHeldDeleteGlowFollowsItsPace()
     aFlicksGlowFollowsTheFinger()
@@ -1599,22 +1600,29 @@ private fun aFlicksGlowFollowsTheFinger() {
     same(display.glowing, true, "and shows")
     near(display.glowWidth, .2f, "It starts at the finger, not sweeping across", .001f)
     display.run(1_000, 1_016)
-    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "at full strength at once: a flick is quick", .01f)
+    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA * flickGlowStrength(.2f), "as strong as its reach at once: a flick is quick", .01f)
     display.run(1_016, 1_600)
-    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "and stays so", .01f)
-    display.flickGlow(.5f, 1_600)
+    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA * flickGlowStrength(.2f), "and stays so while the finger stays", .01f)
+    val weak = display.glowAlpha
+    display.flickGlow(.3f, 1_600)
     display.run(1_616, 1_632)
-    isTrue(display.glowWidth > .2f && display.glowWidth < .5f, "It follows the finger smoothly: ${display.glowWidth}")
+    isTrue(display.glowWidth > .2f && display.glowWidth < .7f, "It follows the finger smoothly: ${display.glowWidth}")
+    isTrue(display.glowAlpha > weak && display.glowAlpha < GestureDisplay.GLOW_HELD_ALPHA, "and grows stronger with it: ${display.glowAlpha}")
     display.run(1_648, 1_900)
-    near(display.glowWidth, .5f, "and reaches it", .005f)
+    near(display.glowWidth, .7f, "and reaches it", .01f)
+    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "full past the top-speed line", .005f)
+    display.flickGlow(.5f, 1_900)
+    display.run(1_916, 2_200)
+    near(display.glowWidth, .5f, "Back to the right, it follows", .005f)
+    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA * flickGlowStrength(.5f), "and weakens again", .005f)
     // A swipe path that the stroke cancels leaves the glow with the stroke.
     display.swipePoint(.5f, .4f, 0, 1_900)
     display.swipeCancelled()
     same(display.glowing, true, "The glow stays with its stroke")
     // At the lift it stays where it reached and fades.
-    display.flickGlowEnded(1_900)
+    display.flickGlowEnded(2_200)
     near(display.glowWidth, .5f, "It fades where it was", .005f)
-    display.run(1_916, 1_916 + GestureDisplay.GLOW_FADE.toLong() + 100)
+    display.run(2_216, 2_216 + GestureDisplay.GLOW_FADE.toLong() + 100)
     same(display.glowing, false, "then goes")
     // A flick that becomes a hold: the glow carries on, and then follows the pace.
     val held = GestureDisplay()
@@ -1640,9 +1648,9 @@ private fun everyFlickShowsItsGlow() {
     // Never clear while it went: no glow before the lift, then one at the lift.
     val unseen = GestureDisplay()
     same(unseen.glowing, false, "Nothing glows while the stroke wasn't clear")
-    unseen.flickLifted(.6f, 1_000)
+    unseen.flickLifted(.3f, 1_000)
     same(unseen.glowDelete, true, "At the lift the delete glow shows")
-    near(unseen.glowWidth, .4f, "from the corner to where the finger lifted", .001f)
+    near(unseen.glowWidth, .7f, "from the corner to where the finger lifted", .001f)
     unseen.run(1_000, 1_000 + GestureDisplay.FLICK_GLOW_SEEN - 10)
     near(unseen.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "at full strength for a moment", .001f)
     unseen.run(1_000 + GestureDisplay.FLICK_GLOW_SEEN, 1_000 + GestureDisplay.FLICK_GLOW_SEEN + 100)
@@ -1652,8 +1660,8 @@ private fun everyFlickShowsItsGlow() {
     // Its glow started but lifted before a frame: it shows where the finger lifted, for the same moment.
     val early = GestureDisplay()
     early.flickGlow(.8f, 2_000)
-    early.flickLifted(.55f, 2_010)
-    near(early.glowWidth, .45f, "Where the finger lifted, not where the stroke was first clear", .001f)
+    early.flickLifted(.35f, 2_010)
+    near(early.glowWidth, .65f, "Where the finger lifted, not where the stroke was first clear", .001f)
     early.run(2_010, 2_000 + GestureDisplay.FLICK_GLOW_SEEN - 10)
     near(early.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "It stays at full until it has shown long enough", .001f)
     // A flick whose glow showed all along fades at once at its lift, as before.
@@ -1665,7 +1673,7 @@ private fun everyFlickShowsItsGlow() {
     isTrue(seen.glowAlpha < GestureDisplay.GLOW_HELD_ALPHA, "A glow that showed long enough fades at the lift: ${seen.glowAlpha}")
     // The flick's dots don't put out the late glow.
     val dots = GestureDisplay()
-    dots.flickLifted(.6f, 4_000)
+    dots.flickLifted(.3f, 4_000)
     dots.wordDeleted(4_020, 4)
     same(dots.scene, Scene.DeleteFlick, "The dots play")
     dots.run(4_020, 4_000 + GestureDisplay.FLICK_GLOW_SEEN - 10)
@@ -1774,4 +1782,59 @@ private fun theSelectionsEndMarkTurnsSmoothly() {
     still.wordStep(-1)
     still.advance(1_016, 0f)
     near(still.endLead, -1f, "With animations off it is at once at the end that moves", .001f)
+}
+
+/**
+ * A delete flick's glow is as strong as its reach makes it (owner, 2026-11-13): none at the right edge, where Backspace is, half
+ * way at mid reach, and full at the held delete's top-speed line and past it. The glow after a fast flick's lift takes its
+ * strength from where the finger lifted, and a hold that takes the glow on grows to its own strength from there, with no jump.
+ */
+private fun aFlicksGlowRampsWithItsReach() {
+    near(flickGlowStrength(0f), 0f, "None at the right edge", .0001f)
+    near(flickGlowStrength(FLICK_GLOW_NONE), 0f, "nor on Backspace", .0001f)
+    near(flickGlowStrength((FLICK_GLOW_NONE + FLICK_GLOW_FULL) / 2), .5f, "Half way at mid reach", .0001f)
+    near(flickGlowStrength(FLICK_GLOW_FULL), 1f, "Full at the top-speed line", .0001f)
+    near(flickGlowStrength(.9f), 1f, "and no stronger past it", .0001f)
+    near(FLICK_GLOW_FULL, .6f, "The line is about between F and G", .0001f)
+    var last = 0f
+    for (k in 1..20) {
+        val s = flickGlowStrength(k / 20f * FLICK_GLOW_FULL)
+        isTrue(s >= last, "It only grows as the finger goes left")
+        last = s
+    }
+    // Still at the right: nothing shows.
+    val right = GestureDisplay()
+    right.flickGlow(.97f, 1_000)
+    right.run(1_000, 1_100)
+    near(right.glowAlpha, 0f, "A flick still at the right shows no glow", .0001f)
+    // Moving left, it grows, and holds at full past the line.
+    var at = 1_100L
+    for ((x, strength) in listOf(.8f to flickGlowStrength(.2f), .6f to flickGlowStrength(.4f), .4f to 1f, .2f to 1f)) {
+        right.flickGlow(x, at)
+        right.run(at + 16, at + 400)
+        at += 400
+        near(right.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA * strength, "At ${1f - x} reach, ${strength * 100}% strength", .005f)
+    }
+    // A short, fast flick that lifted near the right: little or nothing after the lift.
+    val short = GestureDisplay()
+    short.flickLifted(.96f, 2_000)
+    short.run(2_000, 2_000 + GestureDisplay.FLICK_GLOW_SEEN - 10)
+    near(short.glowAlpha, 0f, "A fast flick lifted on Backspace shows nothing", .0001f)
+    val little = GestureDisplay()
+    little.flickLifted(.9f, 2_500)
+    little.run(2_500, 2_500 + GestureDisplay.FLICK_GLOW_SEEN - 10)
+    isTrue(little.glowAlpha < .03f * GestureDisplay.GLOW_HELD_ALPHA, "One lifted just left of it, very little: ${little.glowAlpha}")
+    val mid = GestureDisplay()
+    mid.flickLifted(1f - (FLICK_GLOW_NONE + FLICK_GLOW_FULL) / 2, 3_000)
+    mid.run(3_000, 3_000 + GestureDisplay.FLICK_GLOW_SEEN - 10)
+    near(mid.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA * .5f, "One lifted at mid reach, half", .002f)
+    // A weak flick glow that becomes a hold grows to the hold's own, with no jump.
+    val held = GestureDisplay()
+    held.flickGlow(.85f, 4_000)
+    held.run(4_016, 4_300)
+    val before = held.glowAlpha
+    held.deleteHeld(350, 4_300, pace = 1f)
+    near(held.glowAlpha, before, "The hold takes it on with no jump", .01f)
+    held.run(4_316, 5_200)
+    near(held.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "then grows to the hold's own strength", .01f)
 }

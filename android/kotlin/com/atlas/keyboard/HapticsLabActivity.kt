@@ -50,6 +50,9 @@ private object LabColours {
  * The notes and the patterns in use go in a file that adb can pull.
  */
 class HapticsLabActivity : Activity() {
+    /** The same sizes at any display size or font size (FixedScale). */
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
+
     private lateinit var lab: HapticsLab
     private lateinit var timeline: LiveTimeline
     private lateinit var list: LinearLayout

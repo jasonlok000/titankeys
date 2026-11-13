@@ -47,6 +47,9 @@ private object CalibrationColours {
  * drawing follows it ([KeyGeometry]).
  */
 class KeyCalibrationActivity : Activity() {
+    /** The same sizes at any display size or font size (FixedScale). */
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
+
     private lateinit var grid: KeyGrid
     private var alignment = KeyAlignment.DEFAULT
     private val sliders = ArrayList<Pair<SeekBar, (KeyAlignment) -> Int>>()

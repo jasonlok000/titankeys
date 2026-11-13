@@ -34,6 +34,9 @@ import android.widget.TextView
  * [STATE] picks the frame: "a" mid-task, "b" with a hint over the instruction, "c" passed.
  */
 class GuideFrameActivity : Activity() {
+    /** The same sizes at any display size or font size (FixedScale). */
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
+
     private val heavy: Typeface get() = GuideFonts.heavy(this)
     private val medium: Typeface get() = GuideFonts.medium(this)
 

@@ -2,6 +2,7 @@ package com.vandam.ink
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -11,6 +12,7 @@ import android.view.Gravity
 import android.widget.TextView
 import com.atlas.engine.SwipeTyping
 import com.atlas.keyboard.FavouriteWords
+import com.atlas.keyboard.FixedScale
 import com.atlas.keyboard.R
 import com.atlas.keyboard.Snippets
 import org.json.JSONArray
@@ -21,6 +23,9 @@ import org.json.JSONObject
  * or with [SNIPPETS] the snippets.
  */
 class LearningTransferActivity : Activity() {
+    /** The same sizes at any display size or font size (FixedScale). */
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
+
     private val exporting get() = intent.getBooleanExtra(EXPORTING, false)
     private val snippets get() = intent.getBooleanExtra(SNIPPETS, false)
 

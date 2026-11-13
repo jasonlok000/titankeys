@@ -201,11 +201,28 @@ public final class TypingSettings {
 
     /**
      * The touchpad overlay stays up when no field is active, so that the firmware gives the touchpad to it and not to the
-     * app under it. It is off until the user turns it on. Settings shows it the other way round, as Scroll assistant outside
-     * text fields, which is the phone's own name for the touchpad scrolling apps.
+     * app under it. Settings shows it the other way round, as Scroll assistant, the phone's own name for the touchpad
+     * scrolling apps. Until the user picks, it follows the phone's own Scroll assistant (owner, 2026-11-12): on if the
+     * phone's is on. A stored choice always wins and is never rewritten.
      */
     public static boolean touchpadOnlyInFields(Context context) {
-        return preferences(context).getBoolean(TOUCHPAD_ONLY_IN_FIELDS, false);
+        SharedPreferences preferences = preferences(context);
+        if (!preferences.contains(TOUCHPAD_ONLY_IN_FIELDS)) return !phoneScrollAssistant();
+        return preferences.getBoolean(TOUCHPAD_ONLY_IN_FIELDS, false);
+    }
+
+    /**
+     * The phone's own Scroll assistant, persist.sys.scroll_assistant. Read only: TitanKeys never changes it. Phones without the
+     * touchpad have none, so there it counts as on, and so does a phone whose properties can't be read.
+     */
+    public static boolean phoneScrollAssistant() {
+        try {
+            java.lang.reflect.Method get = Class.forName("android.os.SystemProperties").getMethod("get", String.class, String.class);
+            if (!"yes".equals(get.invoke(null, "ro.agui.touchpad_function", ""))) return true;
+            return "1".equals(get.invoke(null, "persist.sys.scroll_assistant", "0"));
+        } catch (ReflectiveOperationException | RuntimeException error) {
+            return true;
+        }
     }
 
     public static void touchpadOnlyInFields(Context context, boolean enabled) {

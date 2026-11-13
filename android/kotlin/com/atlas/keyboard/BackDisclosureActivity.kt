@@ -22,6 +22,9 @@ import android.widget.TextView
  * shows this screen again. The text is in strings.xml (docs/play/accessibility.md).
  */
 class BackDisclosureActivity : Activity() {
+    /** The same sizes at any display size or font size (FixedScale). */
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setFinishOnTouchOutside(false)

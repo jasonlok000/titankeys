@@ -2,6 +2,7 @@ package com.vandam.ink
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -9,10 +10,14 @@ import android.os.Looper
 import android.os.ResultReceiver
 import android.view.Gravity
 import android.widget.TextView
+import com.atlas.keyboard.FixedScale
 import com.atlas.keyboard.RawLog
 
 /** Owns the Android file picker's result, then copies the raw input log away from the main thread. */
 class RawLogExportActivity : Activity() {
+    /** The same sizes at any display size or font size (FixedScale). */
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
+
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

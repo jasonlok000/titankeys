@@ -27,6 +27,7 @@ import com.atlas.keyboard.BackDisclosureActivity
 import com.atlas.keyboard.BackService
 import com.atlas.keyboard.EnterKey
 import com.atlas.keyboard.ExactTyping
+import com.atlas.keyboard.FixedScale
 import com.atlas.keyboard.GuideActivity
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.HapticsLab
@@ -44,6 +45,9 @@ import com.atlas.keyboard.Trace
 import com.atlas.keyboard.TouchpadPreview
 import org.json.JSONArray
 import org.json.JSONObject
+
+/** Ink's activity keeps TitanKeys' sizes at any display size or font size, like every other TitanKeys window (FixedScale). */
+internal fun appBaseContext(base: Context): Context = FixedScale.wrap(base)
 
 internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> =
     mapOf("atlas" to AtlasAdapter(activity), "connected" to ConnectedAdapter(activity))

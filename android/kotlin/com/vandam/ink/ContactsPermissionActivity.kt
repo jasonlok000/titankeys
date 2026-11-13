@@ -2,6 +2,7 @@ package com.vandam.ink
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -9,6 +10,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import com.atlas.engine.TypingSettings
+import com.atlas.keyboard.FixedScale
 import com.atlas.keyboard.R
 
 /**
@@ -17,6 +19,9 @@ import com.atlas.keyboard.R
  * declined it before, the app's page in Android's settings opens instead, where the permission can be turned on.
  */
 class ContactsPermissionActivity : Activity() {
+    /** The same sizes at any display size or font size (FixedScale). */
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState != null) return

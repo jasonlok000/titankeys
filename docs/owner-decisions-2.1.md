@@ -208,6 +208,10 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
+- **Status marks sit inside the bar, just above the word; Saved's book is filled** (owner, 2026-11-13, 14:20: "I find the heart and
+  small book bad to be over the bar as a status. particles are fine. but statuses should be kept maybe just slightly on top of the
+  word. also the book should be filled"). (Owner) Particles and effects still rise over the app. Marks are about 12 dp, about 3 dp
+  above the letters: a filled book in white at about 60%, a filled heart in the accent at about 70%. (Orchestrator's numbers)
 - **Not saved is a solid grey word** (owner, 2026-11-13, 14:15). The outline didn't read at any width (1.1 to 0.32 dp were shown
   on the phone: "all are pretty not visible"). Of three alternatives (dotted underline, grey word, lighter weight), the owner chose
   "grey b". (Owner)

@@ -1910,6 +1910,8 @@ class GuideActivity : Activity() {
 
     private fun enter(step: GuideStep) {
         heldKeys.clear()
+        // A finger the touchpad last saw down, on the slide before, never holds back this slide's help: the next trace says again.
+        fingerDown = false
         // The field is set a few times as the slide opens: the bar shows only where it settles.
         GuideHooks.holdBar(BAR_SETTLE_MILLIS)
         guideLook(true)
@@ -3369,7 +3371,8 @@ class GuideActivity : Activity() {
         // The keyboard reports its modifiers whenever it redraws them, as when a slide opens a panel. That is not you acting.
         if (::phantom.isInitialized && event !is KeyboardEvent.ModifierState) {
             acted()
-            waitForHelp()
+            // The field changing is the keyboard settling it, or follows an input of its own: only real input puts help off.
+            if (event !is KeyboardEvent.FieldChanged) waitForHelp()
         }
         when (event) {
             is KeyboardEvent.Pushed -> keyName(event.code)?.let {

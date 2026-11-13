@@ -212,6 +212,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
     good height"), not the earlier "full real-size drawn keyboard".
   - The TOUCH ZONE brackets stay at the zone's real corners, which fall on the Q, P and Shift labels. Each bracket passes behind
     its label with a 4 dp gap, instead of striking through it.
+  - The playground is a real field: its word menu really saves and favourites, unlike the guide's show-only one.
+  - On the playground, the rain and reactions fall behind the header and the field, so the text is always on top.
+  - The playground's reference always fills two lines. It runs on into the next line, and never ends on a lone word.
+  - The guide's end screen and finale hide the keyboard, so the buttons never jump.
+  - Drawn-key sublabels are at least 13 dp, the same floor as all real text.
+  - On the Swipe and Steering slides, a lone Space that would type is refused with the slide's chip, and a steer's two taps still work.
+  - Back from the end restarts the fun guide at slide 1.
   - Release notes: "New look: Pure black, Inter everywhere, and way less orange." The old "orange only where it means do this now"
     stopped being true once the text box's orange bar and the brackets came back. New lines cover the app's haptics and the share
     screen.

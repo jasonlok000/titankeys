@@ -437,7 +437,7 @@ class Strip(
             // bolded is a nice touch"). A long word only shrinks in its own place.
             view.typeface = if (index == 0) bestTypeface else typeface
             view.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (fit?.scale ?: 1f))
-            centreLetters(view)
+            centreLetters(view, wordPixels())
             view.isEnabled = index < words.size && demo == null
             view.setTextColor(look.ink)
         }
@@ -483,7 +483,7 @@ class Strip(
         val selectedFit = if (room > 0 && !chosen.isNullOrEmpty()) StripFit.fit(listOf(chosen), room, wordRoomPadding(), ::measureWord).single() else null
         selectedView.text = selectedFit?.text ?: chosen.orEmpty()
         selectedView.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (selectedFit?.scale ?: 1f))
-        centreLetters(selectedView)
+        centreLetters(selectedView, wordPixels())
         selectedView.setTextColor(look.ink)
     }
 
@@ -491,14 +491,16 @@ class Strip(
     private fun wordPixels() = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, WORD_SIZE, resources.displayMetrics)
 
     /**
-     * Sets [view]'s one line truly in the middle of the bar: its small letters, not the font's box, on the centre line, so that
-     * words of any weight and size share one line. Keeps its padding at the sides.
+     * Sets [view]'s one line on the bar's line of words: the baseline that puts the small letters of words [lineSize] px big on
+     * the bar's centre line. The words give their full size, so a word shrunk to fit sits on the same line as its neighbours,
+     * not centred on its own smaller letters (owner, 2026-11-13: one bar baseline). A notice gives its own. Keeps its padding at
+     * the sides, and its gravity across.
      */
-    private fun centreLetters(view: TextView) {
+    private fun centreLetters(view: TextView, lineSize: Float = view.paint.textSize) {
         view.includeFontPadding = false
-        val paint = view.paint
-        val lift = Math.round(StripFit.lift(paint.ascent(), paint.descent(), paint.textSize))
-        if (view.paddingTop != 0 || view.paddingBottom != lift) view.setPadding(view.paddingLeft, 0, view.paddingRight, lift)
+        view.gravity = (view.gravity and Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK) or Gravity.TOP
+        val top = StripFit.top(barHeight, lineSize, view.paint.fontMetricsInt.ascent)
+        if (view.paddingTop != top || view.paddingBottom != 0) view.setPadding(view.paddingLeft, top, view.paddingRight, 0)
     }
 
     /** How wide a word is at the words' full size. */

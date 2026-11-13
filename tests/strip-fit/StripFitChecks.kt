@@ -77,14 +77,18 @@ fun main() {
 
     // The words sit truly in the middle of the bar: the middle of Inter's small letters on its centre line, not the font's box.
     val size = 31.25f
-    val ascent = -size * 1984 / 2048
-    val descent = size * 494 / 2048
     check(kotlin.math.abs(StripFit.baseline(44f, size) - size * StripFit.X_HEIGHT / 2 - 44f) < .001f, "The baseline puts the letters' middle on the line")
-    val lift = StripFit.lift(ascent, descent, size)
-    // A view that centres its box from ascent to descent, with the lift under it, puts that same baseline on its centre line.
-    val boxBaseline = (88f - lift - (descent - ascent)) / 2 - ascent
-    check(kotlin.math.abs(boxBaseline - StripFit.baseline(44f, size)) < .001f, "The lift puts a centred view's letters on the line: $lift")
-    check(lift in 5f..6.5f, "Inter's box sits its letters about 3 px low at 20 dp, so the lift is about 6 px: $lift")
+    // A view with its text at the top starts it at [StripFit.top]: its baseline is that, less its ascent as Android rounds it.
+    fun drawnBaseline(textSize: Float) = kotlin.math.floor(-textSize * 1984 / 2048).toInt().let { ascent -> StripFit.top(88, size, ascent) - ascent }
+    val full = drawnBaseline(size)
+    check(kotlin.math.abs(full - size * StripFit.X_HEIGHT / 2 - 44f) <= 1f, "A full-size word's letters are within 1 px of the centre: $full")
+    // "recommendations" shrunk to fit beside full-size words sits on their line (owner, 2026-11-13: one bar baseline).
+    val long = StripFit.fit(listOf("recommendations", "the", "you"), 300f, 5f, measure, lend = false)
+    check(long[0].scale < 1f && long[1].scale == 1f, "The long word shrinks and the others don't: $long")
+    for (scale in listOf(long[0].scale, StripFit.MIN_SCALE, .85f)) {
+        val shrunk = drawnBaseline(size * scale)
+        check(kotlin.math.abs(shrunk - full) <= .5f, "A word at $scale sits on the full-size line: $shrunk, not $full")
+    }
 
     // Settings > Size at Biggest: the bar's places are as wide as ever, but every letter is bigger. The three places stay even,
     // and long words shrink or lose a part to fit, as at Normal.

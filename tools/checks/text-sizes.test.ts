@@ -29,8 +29,10 @@ test("the bar's words are all one size, 20, and the best one in the middle is bo
   expect(strip).toContain("view.typeface = if (index == 0) bestTypeface else typeface");
   // StripFit measures in the best word's weight, the widest, so no fitted word runs over.
   expect(strip).toContain("measurePaint.typeface = bestTypeface");
-  // The words, the notices and the menu are centred on the middle of their small letters.
-  for (const centred of ["centreLetters(view)", "centreLetters(noticeLabel)", "centreLetters(button)",
+  // The words, the notices and the menu are centred on the middle of their small letters. The words all sit on the full-size
+  // words' line, a shrunk one too (owner, 2026-11-13: one bar baseline).
+  for (const centred of ["centreLetters(view, wordPixels())", "centreLetters(selectedView, wordPixels())",
+    "centreLetters(noticeLabel)", "centreLetters(button)", "StripFit.top(barHeight, lineSize, view.paint.fontMetricsInt.ascent)",
     "StripFit.baseline(height / 2f, menuWordText.textSize)", "StripFit.baseline(height / 2f, pillText.textSize)"])
     expect(strip).toContain(centred);
 });

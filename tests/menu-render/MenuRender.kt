@@ -504,24 +504,30 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
     data class BarRow(val caption: String, val draw: (Graphics2D, Color, Color, Color) -> Unit)
     val measured = ArrayList<Float>()
     /**
-     * Where Android puts the baseline of one line of Inter at [size] px, gravity centred in a view [height] px tall: with
-     * [fontPadding], centring the font's whole box from its lowest to its highest point ([box], in its 2048 units), as the words
-     * were; without, centring ascent to descent with Strip's [StripFit.lift] under it, as they are now.
+     * Where Android puts the baseline of one line of Inter at [size] px in Strip's view, [bar] px tall. With [fontPadding], gravity
+     * centred on the font's whole box from its lowest to its highest point ([box], in its 2048 units), as the words first were.
+     * With [ownLine], centred on its own small letters, as they were until a shrunk word floated up. Otherwise as now: on the line
+     * of words [lineSize] px big, at [StripFit.top].
      */
-    fun baseline(size: Float, fontPadding: Boolean, box: Pair<Int, Int>): Float {
+    fun baseline(size: Float, fontPadding: Boolean, box: Pair<Int, Int>, ownLine: Boolean = false, lineSize: Float = size): Float {
         val ascent = -size * 1984 / 2048f
         val descent = size * 494 / 2048f
+        if (!fontPadding && !ownLine) return (StripFit.top(bar, lineSize, floor(ascent).toInt()) - floor(ascent).toInt()).toFloat()
         val top = if (fontPadding) -size * box.second / 2048f else ascent
         val bottom = if (fontPadding) -size * box.first / 2048f else descent
-        val lift = if (fontPadding) 0 else Math.round(StripFit.lift(ascent, descent, size))
+        val lift = if (fontPadding) 0 else Math.round(-(ascent + descent) - size * StripFit.X_HEIGHT)
         val textTop = floor(top).toInt()
         val textHeight = ceil(bottom).toInt() - textTop
         return ((bar - lift - textHeight) shr 1) - textTop.toFloat()
     }
+    /** Every word's baseline in the rows as they are now, with its scale: a shrunk one must share the full-size words' line. */
+    val lines = ArrayList<Pair<Float, Float>>()
+    /** The words a row shrank to fit. */
+    val shrunk = ArrayList<String>()
     /** How far the middle of the small letters sits below the bar's centre line, in px. */
     fun off(baseline: Float, size: Float) = baseline - size * StripFit.X_HEIGHT / 2 - bar / 2f
     fun words(g: Graphics2D, ink: Color, shown: List<String>, sizes: List<Float>, fonts: List<Pair<Font, Pair<Int, Int>>>,
-              fontPadding: Boolean): List<Float> {
+              fontPadding: Boolean, ownLine: Boolean = false): List<Float> {
         val room = width - 2 * side
         val fits = StripFit.fit(shown, room, pad, { text ->
             g.font = best.deriveFont(20 * scale); g.fontMetrics.stringWidth(text).toFloat()
@@ -533,8 +539,11 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
             g.font = fonts[index].first.deriveFont(size)
             g.color = ink
             val textWidth = g.fontMetrics.stringWidth(slot.text)
-            val line = baseline(size, fontPadding, fonts[index].second)
-            if (slot.text.isNotEmpty()) offs += off(line, size)
+            val line = baseline(size, fontPadding, fonts[index].second, ownLine, sizes[index] * scale)
+            // Only a full-size word's letters must be centred: a shrunk one sits on their line, a little lower.
+            if (slot.text.isNotEmpty() && slot.scale == 1f) offs += off(line, size)
+            if (slot.text.isNotEmpty() && !fontPadding && !ownLine) lines += line to slot.scale
+            if (slot.scale < 1f) shrunk += slot.text
             g.drawString(slot.text, left + slot.width / 2 - textWidth / 2, line)
             left += slot.width
         }
@@ -546,6 +555,20 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
         return offs
     }
     fun said(offs: List<Float>) = offs.joinToString(", ") { "%+.1f".format(it) } + " px"
+    /** The baselines of a row's words, top to bottom, for its caption. */
+    fun baselines(g: Graphics2D, ink: Color, shown: List<String>, ownLine: Boolean): String {
+        val before = lines.size
+        val fonts = listOf(regular to regularBox, best to bestBox, regular to regularBox)
+        if (ownLine) {
+            val room = width - 2 * side
+            val fits = StripFit.fit(shown, room, pad, { text -> g.font = best.deriveFont(20 * scale); g.fontMetrics.stringWidth(text).toFloat() }, lend = false)
+            val drawn = fits.mapIndexed { index, slot -> baseline(20 * scale * slot.scale, false, fonts[index].second, ownLine = true) }
+            words(g, ink, shown, listOf(20f, 20f, 20f), fonts, false, ownLine = true)
+            return "baselines at " + drawn.joinToString(", ") { "%.0f".format(it) } + " px"
+        }
+        words(g, ink, shown, listOf(20f, 20f, 20f), fonts, false)
+        return "baselines at " + lines.drop(before).joinToString(", ") { "%.0f".format(it.first) } + " px"
+    }
     val orange = Color(ORANGE)
     val captions = ArrayList<String>()
     val rows = listOf(
@@ -563,6 +586,14 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
             captions += said(ladder(g, ink, listOf("recommendations", "recommend", "recommended")))
         },
         BarRow("A very long best word: ") { g, ink, _, _ -> captions += said(ladder(g, ink, listOf("a", "internationalization", "of"))) },
+        BarRow("Before: a shrunk best word centred on its own letters, ") { g, ink, _, _ ->
+            captions += baselines(g, ink, listOf("I", "antidisestablishmentarian", "is"), ownLine = true)
+        },
+        BarRow("Now: on the full-size words' line, ") { g, ink, _, _ -> captions += baselines(g, ink, listOf("I", "antidisestablishmentarian", "is"), false) },
+        BarRow("Before: a shrunk side word centred on its own letters, ") { g, ink, _, _ ->
+            captions += baselines(g, ink, listOf("counterrevolutionaries", "the", "you"), ownLine = true)
+        },
+        BarRow("Now: on the full-size words' line, ") { g, ink, _, _ -> captions += baselines(g, ink, listOf("counterrevolutionaries", "the", "you"), false) },
         BarRow("The clip offer, at the words' size, and its hint at 13 dp, both shrunk alike if the bar is too short") { g, ink, muted, _ ->
             captions += ""
             // As Strip's fitClipLines: the clip's line with Android's font padding, the hint's without, shrunk to fit the bar.
@@ -659,6 +690,12 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
         g.dispose()
         ImageIO.write(image, "png", File(folder, "bar-even-${bestName.lowercase()}${if (dark) "" else "-light"}.png"))
     }
+    // One bar baseline (owner, 2026-11-13): every word sits on the full-size words' line, to half a pixel.
+    val line = lines.first { it.second == 1f }.first
+    val apart = lines.maxOf { abs(it.first - line) }
+    println("Bar words in $bestName: every baseline within ${"%.2f".format(apart)} px of the full-size words' line; shrunk: ${shrunk.distinct()}")
+    check(shrunk.isNotEmpty()) { "The sheet must show a shrunk word beside full-size ones" }
+    check(apart <= .5f) { "Every word must sit on the full-size words' line, not $apart px off" }
     val worst = measured.maxOf { abs(it) }
     println("Bar words in $bestName: letters at most ${"%.2f".format(worst)} px off the bar's centre line")
     check(worst <= 1f) { "The bar's words must sit within 1 px of its centre line, not $worst" }

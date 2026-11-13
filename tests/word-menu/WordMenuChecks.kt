@@ -21,6 +21,7 @@ import java.io.File
  * - the six effects of the approved ladder v4 ([MenuScene]): each haptic on its own frame, the book wholly above the bar and
  *   opaque once shut, reduced motion, and a second press mid-effect;
  * - the heart resting where the book does, wholly above the bar, with the book faded out under it;
+ * - the word solid in each rung's colour, the previews 60% of the way to the next look, and each effect's letters on the way;
  * - the hover after a press, up and down, from I, O, K and L, in every order the touchpad's lift and the key came in on the
  *   owner's phone, and the quick settings page keeping its mark the same way.
  */
@@ -29,6 +30,7 @@ fun main() {
     theOpening()
     theEffects()
     theHeartRestsWhereTheBookDoes()
+    theGreyWord()
     theHover()
     theQuickSettingsHover()
     theKeyboardMakesTheseCalls()
@@ -288,8 +290,8 @@ private class Recorder : MenuCanvas {
     override fun stroke(path: MenuPath, width: Float, colour: Int) { ops += "stroke" to (path to colour) }
     override fun circle(x: Float, y: Float, radius: Float, colour: Int) { ops += "circle" to colour }
     override fun rect(left: Float, top: Float, right: Float, bottom: Float, colour: Int) { ops += "rect" to colour }
-    override fun text(text: String, x: Float, y: Float, size: Float, fill: Int, outline: Int, outlineWidth: Float, centred: Boolean) {
-        ops += (if (centred) "ink" else "letter") to text
+    override fun text(text: String, x: Float, y: Float, size: Float, colour: Int, centred: Boolean) {
+        ops += (if (centred) "ink" else "letter") to (text to colour)
     }
 }
 
@@ -329,6 +331,102 @@ private fun theHeartRestsWhereTheBookDoes() {
     favourite.press(MenuKeys.Button.Unfavourite)
     repeat(3 * 120) { favourite.step(1 / 120f); aboveTheBar(favourite, "Unfavourite's press") }
     check(favourite.rung == MenuKeys.Step.Saved && favourite.markShown() > .99f) { "Back on Saved, the faint book is back" }
+}
+
+/**
+ * Not saved is a solid grey word, not an outline (owner, 2026-11-13: the outline was "pretty not visible" at every width). Saved and
+ * Favourite are white, Not saved #99918A, Blocked #5E5853 under a #99918A strike: each letter drawn once, solid, in one colour.
+ * Grey can't mean a preview any more, so a resting finger's preview moves the word about 60% of the way to its next look, in v4's
+ * 170 ms, and back when it moves off; a heart's preview leaves the word be. Each effect takes the letters the rest of the way and
+ * never back first: Save brightens them to white left to right, Unsave drains them to grey right to left, Block darkens them to the
+ * dim grey left to right behind the pen, and Unblock lightens them to grey right to left as the strike pulls back.
+ */
+private fun theGreyWord() {
+    val p = MenuScene.Palette.DARK
+    same(listOf(p.ink, p.grey, p.dim), listOf(0xFFFFFF, 0x99918A, 0x5E5853), "The word's white, Not saved's grey and Blocked's dim grey")
+    fun drawn(scene: MenuScene): List<Int> = Recorder().also { scene.paintWord(it) }.ops.filter { it.first == "letter" }
+        .map { (it.second as Pair<*, *>).second as Int }
+    fun toward(from: Int, to: Int, t: Float): Int {
+        fun ch(shift: Int) = Math.round(((from shr shift) and 0xFF) + (((to shr shift) and 0xFF) - ((from shr shift) and 0xFF)) * t) shl shift
+        return ch(16) or ch(8) or ch(0)
+    }
+    fun near(a: Int, b: Int) = (0..16 step 8).all { kotlin.math.abs(((a shr it) and 0xFF) - ((b shr it) and 0xFF)) <= 2 }
+    fun hex(colours: List<Int>) = colours.joinToString { "#%06X".format(it and 0xFFFFFF) }
+    fun brightness(colour: Int) = (colour shr 16 and 0xFF) + (colour shr 8 and 0xFF) + (colour and 0xFF)
+    val look = mapOf(MenuKeys.Step.Blocked to p.dim, MenuKeys.Step.New to p.grey, MenuKeys.Step.Saved to p.ink, MenuKeys.Step.Favourite to p.ink)
+    val word = "whatever"
+    // At rest: each letter drawn once, solid and opaque, in its rung's colour; Blocked's strike in Not saved's grey.
+    for ((step, colour) in look) {
+        val letters = drawn(scene(word, step))
+        same(letters.size, word.length, "$step: each letter drawn once")
+        check(letters.all { it ushr 24 == 255 && it and 0xFFFFFF == colour }) { "$step: the word solid in ${hex(listOf(colour))}, not ${hex(letters)}" }
+    }
+    val strike = Recorder().also { scene(word, MenuKeys.Step.Blocked).paintWord(it) }.ops.filter { it.first == "fill" }
+        .map { (it.second as Pair<*, *>).second as Int }
+    same(strike.map { it and 0xFFFFFF }, listOf(p.grey), "Blocked's strike is Not saved's grey")
+    // The previews: about 60% of the way, in 170 ms, and back when the finger moves off.
+    data class Preview(val button: MenuKeys.Button, val from: MenuKeys.Step, val to: Int)
+    val previews = listOf(
+        Preview(MenuKeys.Button.Save, MenuKeys.Step.New, p.ink), Preview(MenuKeys.Button.Unsave, MenuKeys.Step.Saved, p.grey),
+        Preview(MenuKeys.Button.Block, MenuKeys.Step.New, p.dim), Preview(MenuKeys.Button.Unblock, MenuKeys.Step.Blocked, p.grey),
+        Preview(MenuKeys.Button.Favourite, MenuKeys.Step.Saved, p.ink), Preview(MenuKeys.Button.Unfavourite, MenuKeys.Step.Favourite, p.ink),
+    )
+    for (preview in previews) {
+        val rest = look.getValue(preview.from)
+        val leaned = toward(rest, preview.to, MenuScene.LEAN)
+        val hovered = scene(word, preview.from)
+        hovered.hover(preview.button)
+        repeat(10) { hovered.step(1 / 120f) }
+        if (rest != preview.to) check(drawn(hovered).all { !near(it, rest) && !near(it, leaned) }) {
+            "${preview.button}: 83 ms in, the preview is on its way, ${hex(drawn(hovered))}"
+        }
+        repeat(11) { hovered.step(1 / 120f) }
+        check(drawn(hovered).all { near(it, leaned) }) { "${preview.button}: 175 ms in, the word is 60% of the way to ${hex(listOf(preview.to))}: ${hex(listOf(leaned))}, not ${hex(drawn(hovered))}" }
+        hovered.unhover()
+        repeat(21) { hovered.step(1 / 120f) }
+        check(drawn(hovered).all { it and 0xFFFFFF == rest }) { "${preview.button}: off the button, the word is back as it was, ${hex(drawn(hovered))}" }
+    }
+    same(MenuScene.LEAN, .6f, "A preview goes about 60% of the way")
+    // The effects: from the preview, the rest of the way, letter by letter in the sweep's direction, and never back first.
+    data class Effect(val button: MenuKeys.Button, val from: MenuKeys.Step, val leftToRight: Boolean)
+    for (effect in listOf(Effect(MenuKeys.Button.Save, MenuKeys.Step.New, true), Effect(MenuKeys.Button.Unsave, MenuKeys.Step.Saved, false),
+        Effect(MenuKeys.Button.Block, MenuKeys.Step.New, true), Effect(MenuKeys.Button.Unblock, MenuKeys.Step.Blocked, false))) {
+        val end = look.getValue(MenuScene.next(effect.button)!!)
+        val up = brightness(end) > brightness(look.getValue(effect.from))
+        val played = scene(word, effect.from)
+        played.hover(effect.button)
+        repeat(24) { played.step(1 / 120f) }
+        var last = drawn(played)
+        played.press(effect.button)
+        val arrived = IntArray(word.length) { -1 }
+        for (frame in 0 until 3 * 120) {
+            played.step(1 / 120f)
+            val now = drawn(played)
+            for (i in now.indices) {
+                val back = if (up) brightness(now[i]) < brightness(last[i]) - 1 else brightness(now[i]) > brightness(last[i]) + 1
+                check(!back) { "${effect.button}: letter $i went back, from ${hex(listOf(last[i]))} to ${hex(listOf(now[i]))}, at frame $frame" }
+                if (arrived[i] < 0 && near(now[i], end)) arrived[i] = frame
+            }
+            last = now
+        }
+        check(arrived.all { it >= 0 }) { "${effect.button}: every letter ends ${hex(listOf(end))}, not ${hex(last)}" }
+        val order = if (effect.leftToRight) arrived.toList() else arrived.reversed()
+        check(order.zipWithNext().all { (a, b) -> a <= b } && order.first() < order.last()) {
+            "${effect.button}: the letters arrive ${if (effect.leftToRight) "left to right" else "right to left"}, frames ${arrived.toList()}"
+        }
+    }
+    // The hearts' presses leave the word white throughout, and a press with no preview first still ends in its look.
+    for ((button, from) in listOf(MenuKeys.Button.Favourite to MenuKeys.Step.Saved, MenuKeys.Button.Unfavourite to MenuKeys.Step.Favourite)) {
+        val played = scene(word, from)
+        played.hover(button)
+        repeat(24) { played.step(1 / 120f) }
+        played.press(button)
+        repeat(3 * 120) { played.step(1 / 120f); check(drawn(played).all { it and 0xFFFFFF == p.ink }) { "$button: the word stays white" } }
+    }
+    val unhovered = scene(word, MenuKeys.Step.New)
+    unhovered.press(MenuKeys.Button.Save)
+    repeat(3 * 120) { unhovered.step(1 / 120f) }
+    check(drawn(unhovered).all { near(it, p.ink) }) { "Save with no preview first: white, ${hex(drawn(unhovered))}" }
 }
 
 /**

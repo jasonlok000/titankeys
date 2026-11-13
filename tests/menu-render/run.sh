@@ -2,7 +2,8 @@
 # Draws the word menu of ladder v4 to PNGs, to look at without the phone: every rung at rest and hovered, frames of each of the six
 # effects, the hover before and after each press, and a favourite's quiet hearts. The word and its effects are the real MenuScene,
 # and the buttons are drawn with the real MenuKeys and SteadyKey, Strip's sizes and the app's own icons. It also checks, in pixels,
-# that a pill covers the buttons to its left and that Save's book is opaque once shut. Usage: bash tests/menu-render/run.sh [folder].
+# that a pill covers the buttons to its left, that Save's book is opaque once shut, and that every rung's word is solid in its own
+# colour, with each preview 60% of the way to the next. Usage: bash tests/menu-render/run.sh [folder].
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}

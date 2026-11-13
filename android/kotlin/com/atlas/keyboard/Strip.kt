@@ -980,9 +980,11 @@ class Strip(
         canvas.restore()
     }
 
-    /** The menu's colours, from the bar's look: the word's ink, grey, the accent, the bar's own colour and the quiet marks' cream. */
-    private fun palette() = MenuScene.Palette(look.ink and 0xFFFFFF, look.muted and 0xFFFFFF, look.accent and 0xFFFFFF,
-        look.paper and 0xFFFFFF, if (look.dark) MenuScene.Palette.DARK.cream else look.ink and 0xFFFFFF)
+    /**
+     * The menu's colours, for the bar's dark or light look, with its accent: the word's white, Not saved's and Blocked's greys, the
+     * bar's own colour and the quiet marks' cream.
+     */
+    private fun palette() = (if (look.dark) MenuScene.Palette.DARK else MenuScene.Palette.LIGHT).copy(accent = look.accent and 0xFFFFFF)
 
     /** One of a button's icons at [centre], scaled, [fill]ed from the bottom when less than 1, as [MenuMotion.icon] has it. */
     private fun drawIcon(canvas: Canvas, id: Int, centre: Float, top: Float, size: Int, scale: Float, turn: Float, alpha: Int,

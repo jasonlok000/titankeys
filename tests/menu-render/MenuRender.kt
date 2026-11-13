@@ -17,13 +17,14 @@ import kotlin.math.floor
 
 /**
  * Draws the word menu of the approved ladder v4 (owner, 2026-11-13) to look at without the phone: every rung at rest and hovered,
- * frames of each of the six effects, the hover before and after each press, and a favourite's quiet hearts. The word, its grey
+ * frames of each of the six effects, the hover before and after each press, and a favourite's quiet hearts. The word, its
  * previews and every effect are the real [MenuScene], drawn on [AwtMenuCanvas] in Inter Bold; the buttons, the pills and the icons
  * are drawn as Strip draws them, with the real [MenuKeys] placing them over the calibrated keys, its sizes and the app's own vector
  * drawables. The app shows above the bar, where the effects rise. Each sheet is a PNG in the folder given, dark and light.
  *
- * It checks two of the owner's corrections in pixels too, and fails if either breaks: a hovered button's pill covers the buttons to
- * its left (hovering Unsave covers Favourite), and the book is opaque once it shuts, so the word's ink can't be seen through it.
+ * It checks three of the owner's corrections in pixels too, and fails if any breaks: a hovered button's pill covers the buttons to
+ * its left (hovering Unsave covers Favourite), the book is opaque once it shuts, so the word's ink can't be seen through it, and
+ * every rung's word is solid in its own colour, with each preview about 60% of the way to the next.
  */
 fun main(args: Array<String>) {
     // ACCENT=off draws everything as with Settings > Orange accents off: Accent's cream in place of orange.
@@ -43,15 +44,15 @@ fun main(args: Array<String>) {
     val moved = KeyAlignment(.05f, .93f)
     val word = "whatever"
     val states = listOf(
-        Still("1-blocked", "Blocked: the outline in grey, struck through. I unblocks; O has nothing", word, blocked),
-        Still("2-blocked-hover-i", "Blocked, hovering I: Unblock fades the strike", word, blocked, up),
-        Still("3-not-saved", "Not saved: a plain outline, no fill, no dots. I saves, O blocks", word, new),
-        Still("4-not-saved-hover-i", "Not saved, hovering I: Save shows the word solid, in grey", word, new, up),
-        Still("5-not-saved-hover-o", "Not saved, hovering O: Block shows a grey strike", word, new, down),
-        Still("6-saved", "Saved: solid, with a faint book above the bar. I favourites, O unsaves", word, saved),
+        Still("1-blocked", "Blocked: the word in the dim grey, struck through in the muted grey. I unblocks; O has nothing", word, blocked),
+        Still("2-blocked-hover-i", "Blocked, hovering I: Unblock fades the strike to 30% and lightens the word 60% toward grey", word, blocked, up),
+        Still("3-not-saved", "Not saved: the word solid, in the muted grey. I saves, O blocks", word, new),
+        Still("4-not-saved-hover-i", "Not saved, hovering I: Save brightens the word 60% toward white", word, new, up),
+        Still("5-not-saved-hover-o", "Not saved, hovering O: Block shows a grey strike and darkens the word 60% toward the dim grey", word, new, down),
+        Still("6-saved", "Saved: solid white, with a faint book above the bar. I favourites, O unsaves", word, saved),
         Still("7-saved-hover-i", "Saved, hovering I: a grey heart in the book's place, 8 dp over the bar; the book fades out", word, saved, up),
-        Still("8-saved-hover-o", "Saved, hovering O: Unsave shows the outline, and its pill covers Favourite", word, saved, down),
-        Still("9-favourite", "Favourite: solid, the filled heart orange, I spent", word, favourite),
+        Still("8-saved-hover-o", "Saved, hovering O: Unsave dims the word 60% toward grey, and its pill covers Favourite", word, saved, down),
+        Still("9-favourite", "Favourite: solid white, the filled heart orange, I spent", word, favourite),
         Still("10-favourite-hover-i", "Favourite, hovering I: already a favourite", word, favourite, up),
         Still("11-favourite-hover-o", "Favourite, hovering O: Unfavourite shows the heart cracked, in the same place", word, favourite, down),
         Still("12-hover-p", "Hovering P (or Backspace): Back has no pill", word, saved, back),
@@ -111,6 +112,7 @@ fun main(args: Array<String>) {
     }
     thePillCoversTheButtonsToItsLeft(looks)
     theShutBookHidesTheWord(looks, folder)
+    theWordIsSolid(looks)
     // The best word in each weight the owner could have, to pick the one that reads as bold without looking heavy.
     barSheet(folder, regular, medium, "Medium", -668 to 2272, drawables)
     barSheet(folder, regular, bold, "Bold", -685 to 2279, drawables)
@@ -143,8 +145,8 @@ private class Snapshot(val darkWord: Recording, val darkEffects: Recording, val 
         (if (dark) (if (word) darkWord else darkEffects) else (if (word) lightWord else lightEffects)).replay(canvas)
 }
 
-/** The bar's light look, as the scene's colours, with Accent's colour: orange, or cream with Orange accents off. */
-private val LIGHT get() = MenuScene.Palette(0x000000, 0x444444, ORANGE, 0xFFFFFF, 0x000000)
+/** The bar's light look, with Accent's colour: orange, or cream with Orange accents off. */
+private val LIGHT get() = MenuScene.Palette.LIGHT
 /** The bar's dark look, with Accent's colour. */
 private val DARK get() = MenuScene.Palette.DARK
 
@@ -175,8 +177,8 @@ private class Recording : MenuCanvas {
     override fun stroke(path: MenuPath, width: Float, colour: Int) { calls += { it.stroke(path, width, colour) } }
     override fun circle(x: Float, y: Float, radius: Float, colour: Int) { calls += { it.circle(x, y, radius, colour) } }
     override fun rect(left: Float, top: Float, right: Float, bottom: Float, colour: Int) { calls += { it.rect(left, top, right, bottom, colour) } }
-    override fun text(text: String, x: Float, y: Float, size: Float, fill: Int, outline: Int, outlineWidth: Float, centred: Boolean) {
-        calls += { it.text(text, x, y, size, fill, outline, outlineWidth, centred) }
+    override fun text(text: String, x: Float, y: Float, size: Float, colour: Int, centred: Boolean) {
+        calls += { it.text(text, x, y, size, colour, centred) }
     }
 }
 
@@ -398,6 +400,68 @@ private fun theShutBookHidesTheWord(looks: Looks, folder: File) {
     val pixel = Color(image.getRGB(x, y))
     check(pixel.red + pixel.green + pixel.blue < 200) { "The shut book is opaque: its page is $pixel over a light app" }
     println("The shut book is opaque: its page is ${pixel.red}, ${pixel.green}, ${pixel.blue} over a light app")
+}
+
+/**
+ * Every rung's word is solid in its own colour, in the dark look and the light one (owner, 2026-11-13: the outline was "pretty not
+ * visible" at every width, so Not saved is a solid grey word). Saved and Favourite are the ink, Not saved the muted grey, Blocked the
+ * dim grey; a resting finger's preview moves the word 60% of the way to the next look, and a heart's leaves it be. The word is
+ * drawn without smoothing, so each letter's pixels are its one colour: away from the strike, every pixel of the word must be the
+ * expected colour, to within 2 a channel, and there must be a word's worth of them.
+ */
+private fun theWordIsSolid(looks: Looks) {
+    fun toward(from: Int, to: Int, t: Float): Int {
+        fun ch(shift: Int) = Math.round(((from shr shift) and 0xFF) + (((to shr shift) and 0xFF) - ((from shr shift) and 0xFF)) * t) shl shift
+        return ch(16) or ch(8) or ch(0)
+    }
+    fun near(a: Int, b: Int) = (0..16 step 8).all { abs(((a shr it) and 0xFF) - ((b shr it) and 0xFF)) <= 2 }
+    val (blocked, new, saved, favourite) = MenuKeys.Step.entries
+    for ((look, palette) in listOf("dark" to MenuScene.Palette.DARK, "light" to MenuScene.Palette.LIGHT)) {
+        val p = palette
+        val cases = listOf(
+            Triple(blocked, null, p.dim), Triple(new, null, p.grey), Triple(saved, null, p.ink), Triple(favourite, null, p.ink),
+            Triple(blocked, MenuKeys.Button.Unblock, toward(p.dim, p.grey, .6f)),
+            Triple(new, MenuKeys.Button.Save, toward(p.grey, p.ink, .6f)),
+            Triple(new, MenuKeys.Button.Block, toward(p.grey, p.dim, .6f)),
+            Triple(saved, MenuKeys.Button.Unsave, toward(p.ink, p.grey, .6f)),
+            Triple(saved, MenuKeys.Button.Favourite, p.ink),
+            Triple(favourite, MenuKeys.Button.Unfavourite, p.ink),
+        )
+        for ((step, hover, expected) in cases) {
+            val scene = looks.scene("whatever", step, KeyAlignment.DEFAULT)
+            scene.palette = palette
+            hover?.let { scene.hover(it) }
+            repeat(60) { scene.step(1 / 120f) }
+            val scale = 4f
+            val left = scene.wordLeft - 6f
+            val image = BufferedImage(((scene.wordWidth + 12f) * scale).toInt(), (MenuScene.BAR * scale).toInt(), BufferedImage.TYPE_INT_RGB)
+            val g = image.createGraphics()
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+            g.color = Color(palette.paper)
+            g.fillRect(0, 0, image.width, image.height)
+            g.scale(scale.toDouble(), scale.toDouble())
+            g.translate(-left.toDouble(), 0.0)
+            scene.paintWord(AwtMenuCanvas(g, looks.bold))
+            g.dispose()
+            // The strike runs 5.6 dp over the baseline, 2.1 dp thick: its rows are left out.
+            val strike = (scene.baseline - 5.6f - 1.6f) * scale..(scene.baseline - 5.6f + 1.6f) * scale
+            var count = 0
+            val wrong = HashSet<Int>()
+            for (y in 0 until image.height) {
+                if (y.toFloat() in strike) continue
+                for (x in 0 until image.width) {
+                    val rgb = image.getRGB(x, y) and 0xFFFFFF
+                    if (rgb == palette.paper) continue
+                    count++
+                    if (!near(rgb, expected)) wrong += rgb
+                }
+            }
+            val how = "$look, $step${hover?.let { ", hovering $it" } ?: ""}"
+            check(wrong.isEmpty()) { "$how: the word must be solid #%06X, but has %s".format(expected, wrong.take(6).joinToString { "#%06X".format(it) }) }
+            check(count > scene.wordWidth * scale * scale) { "$how: a word's worth of solid letters, not $count px" }
+        }
+    }
+    println("Every rung's word is solid in its own colour, each preview 60% of the way to the next, dark and light")
 }
 
 /** A vector drawable's paths, filled or stroked as it says, in [colour], scaled from its 24 by 24 viewport into [size]. */

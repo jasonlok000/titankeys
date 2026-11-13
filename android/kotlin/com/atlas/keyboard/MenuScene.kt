@@ -13,7 +13,9 @@ import kotlin.math.sin
 /**
  * The word menu's word and its effects, ported from the owner's approved mockup (.dev/mockups/ladder-v4.html, 2026-11-13) one to
  * one: its springs and air, its six effects, its timing and its haptic frames. The owner's corrections on top:
- * - Not saved is a plain outline, a thin even stroke with no fill and no dots, which reads at 20 dp ("dotted doesn't read").
+ * - Every look is a solid word: Saved and Favourite white, Not saved a muted grey, Blocked a darker grey under a strike. No outline:
+ *   none read on the phone, at any width (owner, 2026-11-13: "all are pretty not visible").
+ * - Grey is Not saved's own look, so a resting finger's preview moves the word about [LEAN] of the way to its next look instead.
  * - Save's book is opaque: its pages are filled with the bar's own colour under the orange line, so the letters that fly into
  *   it can't be seen through it once it shuts. The ink is drawn under the book for the same reason.
  * - The book sits wholly above the bar, its bottom well over the bar's top edge, never across it.
@@ -46,11 +48,20 @@ class MenuScene(
         }
     }
 
-    /** The colours, as RGB: the word's ink, grey, the accent, the bar's own colour, and the cream of the quiet marks. */
-    data class Palette(val ink: Int, val grey: Int, val accent: Int, val paper: Int, val cream: Int) {
+    /**
+     * The colours, as RGB: the word's ink, for Saved and Favourite; Not saved's grey, which is the strike's and the previews' too;
+     * Blocked's dimmer grey; the accent; the bar's own colour; and the cream of the quiet marks. The greys stay the same with
+     * Settings > Orange accents off.
+     */
+    data class Palette(val ink: Int, val grey: Int, val dim: Int, val accent: Int, val paper: Int, val cream: Int) {
         companion object {
-            /** The bar's dark look, with Accent's colour: orange, or cream with Settings > Orange accents off. */
-            val DARK get() = Palette(0xFFFFFF, 0x99918A, Accent.colour and 0xFFFFFF, 0x000000, 0xFFF1E6)
+            /**
+             * The bar's dark look, with Accent's colour: orange, or cream with Orange accents off. Not saved is the muted #99918A
+             * and Blocked #5E5853 (owner, 2026-11-13).
+             */
+            val DARK get() = Palette(0xFFFFFF, 0x99918A, 0x5E5853, Accent.colour and 0xFFFFFF, 0x000000, 0xFFF1E6)
+            /** The bar's light look: black ink, and the same warm greys mirrored, as far from black as the dark look's are from white. */
+            val LIGHT get() = Palette(0x000000, 0x66615C, 0xA1978E, Accent.colour and 0xFFFFFF, 0xFFFFFF, 0x000000)
         }
     }
 
@@ -199,14 +210,14 @@ class MenuScene(
     var time = 0f
         private set
 
-    private val solid = Array(letters.size) { Spring(0f, SNAP) }
-    private val grey = Array(letters.size) { Spring(0f, SNAP) }
-    private val hot = Array(letters.size) { Tween(0f) }
-    private val greyPreview = Array(letters.size) { Tween(0f) }
+    /** Each letter's look, as a [tone]: 0 Blocked's dim grey, 1 Not saved's grey, 2 white, for Saved and Favourite. */
+    private val tones = Array(letters.size) { Spring(0f, SNAP) }
+    /** How far a resting finger's preview has moved each letter toward its next look, in the same steps: [LEAN] of one, up or down. */
+    private val leans = Array(letters.size) { Tween(0f) }
     private val markPreview = Tween(0f)
     /** How far a heart's grey preview hides Saved's faint book, which rests in the heart's place: they never overlap. */
     private val markHide = Tween(0f)
-    /** What the resting finger's press would do, shown in grey on the word. */
+    /** What the resting finger's press would do, previewed on the word. */
     var ghost: MenuKeys.Button? = null
         private set
     private var ghostOwned = false
@@ -242,19 +253,16 @@ class MenuScene(
     /** The word at rest at [step], with nothing playing. */
     fun setLook(step: MenuKeys.Step) {
         rung = step
-        val isSolid = if (step == MenuKeys.Step.Saved || step == MenuKeys.Step.Favourite) 1f else 0f
-        val isGrey = if (step == MenuKeys.Step.Blocked) 1f else 0f
-        solid.forEach { it.set(isSolid) }
-        grey.forEach { it.set(isGrey) }
-        hot.forEach { it.set(0f) }
-        greyPreview.forEach { it.set(0f) }
+        val struck = if (step == MenuKeys.Step.Blocked) 1f else 0f
+        tones.forEach { it.set(tone(step)) }
+        leans.forEach { it.set(0f) }
         markPreview.set(0f)
         markHide.set(0f)
         ghost = null
         ghostOwned = false
         penOn = false
         sx.set(1f); sy.set(1f); dy.set(0f)
-        strikeEnd.set(isGrey); strikeHot.set(0f); strikeAlpha.set(1f)
+        strikeEnd.set(struck); strikeHot.set(0f); strikeAlpha.set(1f)
         mark.set(if (step == MenuKeys.Step.Saved) 1f else 0f)
         heartAlpha.set(0f); heartCrack.set(0f); heartHot.set(0f); heartScale.set(1f)
         book = null
@@ -264,20 +272,19 @@ class MenuScene(
         ambientNext = time + AMBIENT_FIRST
     }
 
-    // The resting finger: the grey preview of what the press will do.
+    // The resting finger: the preview of what the press will do.
 
     /** A finger rests on the button that does [button] now, or on none ([unhover]). */
     fun hover(button: MenuKeys.Button) {
         if (button == MenuKeys.Button.Favourited) return unhover()
         val current = ghost
-        if (current != null && current != button && !(onLetters(current) && onLetters(button))) {
-            greyPreview.forEach { it.to(0f, PREVIEW) }
-            markPreview.set(0f)
-        }
+        if (current != null && current != button) markPreview.set(0f)
         if (current == MenuKeys.Button.Unblock && button != MenuKeys.Button.Unblock) strikeAlpha.to(1f, PREVIEW)
         ghost = button
         ghostOwned = false
-        if (onLetters(button)) greyPreview.forEach { it.to(1f, PREVIEW) } else markPreview.to(1f, PREVIEW)
+        // The letters lean toward the look the press would give them. Another button's lean turns into this one's, never a jump.
+        leans.forEach { it.to(lean(button), PREVIEW) }
+        if (!withBook(button)) markPreview.to(1f, PREVIEW)
         markHide.to(if (onHeart(button)) 1f else 0f, PREVIEW)
         if (button == MenuKeys.Button.Unblock) strikeAlpha.to(.3f, PREVIEW)
     }
@@ -285,13 +292,20 @@ class MenuScene(
     fun unhover() {
         // The press has taken the preview over; its effect fades it.
         if (ghostOwned) return
-        greyPreview.forEach { it.to(0f, PREVIEW) }
+        leans.forEach { it.to(0f, PREVIEW) }
         markPreview.to(0f, PREVIEW)
         markHide.to(0f, PREVIEW)
         if (ghost == MenuKeys.Button.Unblock && rung == MenuKeys.Step.Blocked) strikeAlpha.to(1f, PREVIEW)
     }
 
-    private fun onLetters(button: MenuKeys.Button) = button == MenuKeys.Button.Save || button == MenuKeys.Button.Unsave
+    /** Save and Unsave: the steps with the book. */
+    private fun withBook(button: MenuKeys.Button) = button == MenuKeys.Button.Save || button == MenuKeys.Button.Unsave
+    /** How far [button]'s preview leans the letters: up toward white or Not saved's grey, down toward grey or Blocked's, or not at all. */
+    private fun lean(button: MenuKeys.Button) = when (button) {
+        MenuKeys.Button.Save, MenuKeys.Button.Unblock -> LEAN
+        MenuKeys.Button.Unsave, MenuKeys.Button.Block -> -LEAN
+        else -> 0f
+    }
     private fun onHeart(button: MenuKeys.Button?) = button == MenuKeys.Button.Favourite || button == MenuKeys.Button.Unfavourite
 
     // The press.
@@ -313,8 +327,11 @@ class MenuScene(
         }
         // A preview for some other step fades; the press's own preview is handed to its effect.
         if (ghost != button) {
-            greyPreview.forEach { it.to(0f, FADE) }
+            leans.forEach { it.to(0f, FADE) }
             markPreview.to(0f, FADE)
+        } else for (i in letters.indices) {
+            // The letters stay where the preview leaned them, and the effect takes them on from there, never back first.
+            tones[i].x += leans[i].x; tones[i].t += leans[i].x; leans[i].set(0f)
         }
         if (ghost == MenuKeys.Button.Unblock && button != MenuKeys.Button.Unblock) strikeAlpha.to(1f, FADE)
         // The book stays as hidden as a heart's preview left it, and the effect takes it from there.
@@ -323,7 +340,7 @@ class MenuScene(
         penOn = false
         // Props the new step doesn't use leave cleanly: they rise and fade.
         val b = book
-        if (b != null && !onLetters(button)) {
+        if (b != null && !withBook(button)) {
             b.onLand = null; b.gone = true; b.a.to(0f, EXIT, ::easeInOut); b.y.to(b.y.x - 20f)
         }
         if (button != MenuKeys.Button.Favourite && button != MenuKeys.Button.Unfavourite && heartAlpha.b > 0f) heartAlpha.to(0f, FADE)
@@ -385,7 +402,8 @@ class MenuScene(
         b.s.to(1f, POP)
         at(110f) {
             sweep(1) { i ->
-                solid[i].to(1f); grey[i].to(0f); hot[i].set(1f).to(0f, SETTLE, ::easeInOut); greyPreview[i].to(0f, FADE)
+                // The letter goes from grey to white as its ink flies up into the book.
+                tones[i].to(2f)
                 val x = wordLeft + cs[i]
                 val y = baseline - 7f
                 val p = Ink({ book?.x ?: x }, { book?.let { it.y.x + 1f } ?: (y - 80f) }).apply {
@@ -431,7 +449,8 @@ class MenuScene(
                 x = b.x + 5f * s + tug * 1.3f; y = b.y.x - tug * 1.2f; vx = 70f; vy = -90f; th = -.1f * tug; thw = 4f
                 size = b.size * b.s.x; life = 2.3f; fadeIn = .001f; fadeOut = .6f
             }
-            sweep(-1) { i -> solid[i].to(0f); greyPreview[i].to(0f, FADE) }
+            // The letters drain from white to grey, right to left, as the page tears.
+            sweep(-1) { i -> tones[i].to(1f) }
             at(280f) { b.y.to(CY - 112f); b.a.to(0f, EXIT, ::easeInOut); b.gone = true }
         }
     }
@@ -503,7 +522,8 @@ class MenuScene(
             var acc = 0f
             tracks += { dt ->
                 val x = x0 + span * strikeEnd.x
-                for (i in 0 until n) if (wordLeft + cs[i] <= x && grey[i].t < 1f) grey[i].to(1f)
+                // Each letter darkens to Blocked's grey as the pen passes it.
+                for (i in 0 until n) if (wordLeft + cs[i] <= x && tones[i].t > 0f) tones[i].to(0f)
                 acc += max(0f, x - lastX)
                 val v = (x - lastX) / max(dt, 1e-4f)
                 lastX = x
@@ -521,7 +541,7 @@ class MenuScene(
             }
             whenever({ strikeEnd.x >= .985f }) {
                 haptic(MenuKeys.Button.Block, "the strike lands"); penOn = false; dy.kick(26f)
-                tracks = ArrayList(); grey.forEach { it.to(1f) }
+                tracks = ArrayList(); tones.forEach { it.to(0f) }
                 markPreview.set(0f); ghost = null
                 at(300f) { strikeHot.to(0f, SETTLE, ::easeInOut) }
             }
@@ -541,7 +561,8 @@ class MenuScene(
             var acc = 0f
             tracks += {
                 val x = x0 + span * strikeEnd.x
-                for (i in 0 until n) if (wordLeft + cs[i] >= x && grey[i].t > 0f) grey[i].to(0f)
+                // Each letter lightens to Not saved's grey as the strike pulls back off it.
+                for (i in 0 until n) if (wordLeft + cs[i] >= x && tones[i].t < 1f) tones[i].to(1f)
                 acc += max(0f, lastX - x)
                 lastX = x
                 while (acc > 10f) {
@@ -555,7 +576,7 @@ class MenuScene(
             }
             whenever({ strikeEnd.x <= .015f }) {
                 haptic(MenuKeys.Button.Unblock, "the strike is gone"); penOn = false; strikeEnd.set(0f); strikeHot.set(0f); strikeAlpha.set(1f)
-                tracks = ArrayList(); grey.forEach { it.to(0f) }; ghost = null
+                tracks = ArrayList(); tones.forEach { it.to(1f) }; ghost = null
                 pop(KICK * .5f)
             }
         }
@@ -578,7 +599,7 @@ class MenuScene(
         val sub = max(1, ceil(dt / (1f / 480f)).toInt())
         val h = dt / sub
         repeat(sub) {
-            solid.forEach { it.step(h) }; grey.forEach { it.step(h) }
+            tones.forEach { it.step(h) }
             sx.step(h); sy.step(h); dy.step(h); strikeEnd.step(h); heartScale.step(h)
             book?.let { b ->
                 b.y.step(h); b.s.step(h); b.rot.step(h); b.sx.step(h); b.tug.step(h)
@@ -598,7 +619,7 @@ class MenuScene(
             }
             for (k in 0 until parts.size) parts[k].step(h)
         }
-        hot.forEach { it.step(dt) }; greyPreview.forEach { it.step(dt) }
+        leans.forEach { it.step(dt) }
         markPreview.step(dt); markHide.step(dt); strikeHot.step(dt); strikeAlpha.step(dt); mark.step(dt)
         heartAlpha.step(dt); heartHot.step(dt); heartCrack.step(dt)
         book?.let { b ->
@@ -625,7 +646,7 @@ class MenuScene(
     /** Whether anything still moves, so the bar must draw again. Ambient hearts count while they show. */
     val busy: Boolean
         get() = cues.isNotEmpty() || tracks.isNotEmpty() || parts.isNotEmpty() || crossfade != null || book != null ||
-            solid.any { it.busy } || grey.any { it.busy } || hot.any { it.busy } || greyPreview.any { it.busy } || markPreview.busy || markHide.busy ||
+            tones.any { it.busy } || leans.any { it.busy } || markPreview.busy || markHide.busy ||
             sx.busy || sy.busy || dy.busy || strikeEnd.busy || strikeHot.busy || strikeAlpha.busy || mark.busy ||
             heartAlpha.busy || heartScale.busy || heartHot.busy || heartCrack.busy
 
@@ -637,7 +658,7 @@ class MenuScene(
     private var fade = 1f
     private fun rgba(rgb: Int, a: Float) = (clamp(a * fade) * 255).toInt().coerceIn(0, 255) shl 24 or (rgb and 0xFFFFFF)
 
-    /** The word, its strike and its grey previews: on the bar, under the pill. */
+    /** The word, its strike and its previews: on the bar, under the pill. */
     fun paintWord(c: MenuCanvas) {
         val from = fadeFrom
         val p = crossfade?.x
@@ -660,15 +681,8 @@ class MenuScene(
     private fun paintWordOnly(c: MenuCanvas) {
         c.save()
         c.translate(cx, baseline + dy.x); c.scale(sx.x, sy.x); c.translate(-cx, -baseline)
-        val letterPreview = ghost == MenuKeys.Button.Save || ghost == MenuKeys.Button.Unsave
-        for (i in letters.indices) {
-            val x = wordLeft + xs[i]
-            val ga = if (letterPreview) greyPreview[i].x else 0f
-            val colour = mix(mix(palette.ink, palette.grey, clamp(grey[i].x)), palette.accent, hot[i].x)
-            letter(c, letters[i], x, colour, clamp(solid[i].x), 1f - ga)
-            // The letter as the press will leave it, in grey.
-            if (ga > 0f) letter(c, letters[i], x, palette.grey, if (ghost == MenuKeys.Button.Save) 1f else 0f, ga)
-        }
+        // Every letter solid, in its look's colour, leaned toward the next look while a finger rests on a button.
+        for (i in letters.indices) c.text(letters[i], wordLeft + xs[i], baseline, FONT_DP, rgba(letterColour(i), 1f))
         val x0 = wordLeft - 3f
         val x1 = wordLeft + wordWidth + 3f
         val sy = baseline - 5.6f
@@ -703,10 +717,10 @@ class MenuScene(
         for (p in parts) if (!p.back && p.kind != Kind.Ink) part(c, p)
     }
 
-    /** A letter: filled as it is [solid], and outlined, thin and even, as it isn't. */
-    private fun letter(c: MenuCanvas, ch: String, x: Float, colour: Int, solid: Float, a: Float) {
-        if (a <= .002f) return
-        c.text(ch, x, baseline, FONT_DP, rgba(colour, a * solid), rgba(colour, a * (1f - solid)), OUTLINE_DP)
+    /** Letter [i]'s colour now: Blocked's dim grey at tone 0, Not saved's grey at 1, white at 2, and in between on the way. */
+    fun letterColour(i: Int): Int {
+        val tone = tones[i].x + leans[i].x
+        return if (tone <= 1f) mix(palette.dim, palette.grey, clamp(tone)) else mix(palette.grey, palette.ink, clamp(tone - 1f))
     }
 
     private fun drawHeart(c: MenuCanvas, x: Float, y: Float, s: Float, rot: Float, colour: Int, a: Float) {
@@ -807,7 +821,7 @@ class MenuScene(
             Kind.Ink -> {
                 val ink = p as Ink
                 val k = .2f + .5f * clamp(hypot(p.x - ink.targetX(), p.y - ink.targetY()) / ink.d0)
-                c.text(p.ch, p.x, p.y, FONT_DP * k, rgba(accent, a * (.3f + .5f * k)), 0, 0f, centred = true)
+                c.text(p.ch, p.x, p.y, FONT_DP * k, rgba(accent, a * (.3f + .5f * k)), centred = true)
             }
             Kind.Leaf -> {
                 val leaf = p as Leaf
@@ -862,8 +876,8 @@ class MenuScene(
     companion object {
         /** The menu word's size: as the mockup, 20 dp in Inter Bold. */
         const val FONT_DP = 20f
-        /** Not saved's outline, thin and even. */
-        const val OUTLINE_DP = 1.1f
+        /** How far a resting finger's preview moves the word toward its next look: about 60% of the way (owner, 2026-11-13). */
+        const val LEAN = .6f
         /** The bar's height, and how far over it the effects may rise. */
         const val BAR = 56f
         const val ABOVE = 200f
@@ -905,6 +919,13 @@ class MenuScene(
         val SWEEP = Spring.Cfg(1f, 150f, 24.5f)
         val WOBBLE = Spring.Cfg(1f, 180f, 7f)
         val DRIFT = Spring.Cfg(1f, 40f, 12.6f)
+
+        /** A rung's look, as a letter's tone: Blocked 0, Not saved 1, Saved and Favourite 2. */
+        fun tone(step: MenuKeys.Step): Float = when (step) {
+            MenuKeys.Step.Blocked -> 0f
+            MenuKeys.Step.New -> 1f
+            MenuKeys.Step.Saved, MenuKeys.Step.Favourite -> 2f
+        }
 
         /** The rung that [button] takes a word to. */
         fun next(button: MenuKeys.Button): MenuKeys.Step? = when (button) {

@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Button, Screen, Stack, Text, TextInput, back, useAction, useRouteParams, useSnapshot } from "ink";
+import { Button, Screen, Stack, TextInput, back, useAction, useRouteParams, useSnapshot } from "ink";
 import { putShorthand, state } from "../../../lib/atlas";
+import { refusedOnError } from "../../../lib/app-haptics";
+import { Note } from "../../../lib/note";
 
 /** Adds the user's own shorthand, or changes the one in the route's `shorthand` parameter. */
 export default function EditShorthand() {
@@ -22,7 +24,7 @@ function ShorthandForm({ title, previous, ...initial }: {
   const [shorthand, setShorthand] = useState(initial.shorthand);
   const [full, setFull] = useState(initial.full);
   const save = useAction(async () => {
-    await putShorthand(shorthand.trim(), full.trim(), previous);
+    await refusedOnError(() => putShorthand(shorthand.trim(), full.trim(), previous));
     back();
   });
   const ready = shorthand.trim().length > 0 && full.trim().length > 0;
@@ -31,7 +33,7 @@ function ShorthandForm({ title, previous, ...initial }: {
       <TextInput label="Shorthand" value={shorthand} onChange={setShorthand} placeholder="hw"
         autoFocus={!previous} autoCapitalise={false} action="done" />
       <TextInput label="Turns into" value={full} onChange={setFull} placeholder="homework" autoCapitalise={false} action="done" />
-      {save.status === "error" && <Text size={18}>{save.error.message}</Text>}
+      {save.status === "error" && <Note>{save.error.message}</Note>}
       <Button disabled={!ready || save.status === "pending"} onPress={() => save.run()}>Save</Button>
     </Stack>
   </Screen>;

@@ -16,3 +16,4 @@ It adds:
 - `setRouteParents`, so a link into a Settings page lands with its parent pages under it, and ← goes up.
 - `appBaseContext`, which the app defines beside `createAppNativeAdapters`: the activity's base context, so TitanKeys can keep
   Ink's activity at fixed sizes whatever the phone's display size or font size.
+- `appPressHaptic`, beside it: the app can play its own haptic for a press, or none, in place of Android's stock click.

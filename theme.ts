@@ -23,8 +23,10 @@ export default defineTheme({
   hitSlop: { top: 16, right: 18, bottom: 30, left: 18 },
   header: { layout: "large", size: 84, top: 21, bottom: 51, cutout: "below", back: { position: "end", icon: "arrow" }, iconSize: 60 },
   section: { uppercase: true, size: 31, gap: 48 },
-  // Subtitles, row and switch descriptions and a screen's fine print share one size: 39 pixels, 14 sp on the Titan 2
-  // Elite. Rows are 45. lib/note.tsx's Note draws explanations at the same size.
+  // Subtitles, row and switch descriptions and a screen's fine print share one size: 39 pixels. Rows are 45. lib/note.tsx's
+  // Note draws explanations at the same size. A theme pixel is a screen pixel on the Titan 2 Elite (1076 / 1080), and a dp is
+  // 1.5625 of them (FixedScale), so: titles 54 dp, rows 29, notes 25, section labels 20. tools/checks/ink-sizes.test.ts keeps
+  // them at or above the owner's floor: rows 18 dp, notes 15, section labels 14.
   subtitle: { size: 39, tone: "muted" },
   scrollBar: { colour: muted, visibility: "scrolling", track: false, width: 8, inset: 30 },
   field: "inline",

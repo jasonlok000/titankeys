@@ -1,4 +1,5 @@
-import { Field, Screen, Section, Toggle, replace, setRouteParents, useAction, useSnapshot } from "ink";
+import { Field, Screen, Section, replace, setRouteParents, useAction, useSnapshot } from "ink";
+import { Toggle } from "../../lib/app-haptics";
 import { close } from "ink/icons";
 import { showKeyCalibration, state, update } from "../../lib/atlas";
 import { connectedState } from "../../lib/connected";

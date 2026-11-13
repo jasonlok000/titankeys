@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Row, Screen, TextInput, useAction } from "ink";
 import { add, close } from "ink/icons";
 import { Note } from "./note";
+import { refusedOnError } from "./app-haptics";
 
 export function WordList({ title, words, empty, placeholder, addWord, removeWord }: {
   title: string;
@@ -15,7 +16,7 @@ export function WordList({ title, words, empty, placeholder, addWord, removeWord
   const [adding, setAdding] = useState(false);
   const [word, setWord] = useState("");
   const insert = useAction(async (value: string) => {
-    await addWord(value.trim());
+    await refusedOnError(() => addWord(value.trim()));
     setWord("");
     setAdding(false);
   });

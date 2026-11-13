@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Screen, Section, Toggle, useAction, useSnapshot } from "ink";
+import { Screen, Section, useAction, useSnapshot } from "ink";
+import { Toggle } from "../../lib/app-haptics";
 import { type State, previewTouchpad, state, update } from "../../lib/atlas";
 import { hapticGroups } from "../../lib/haptics";
 

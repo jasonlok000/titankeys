@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button, Screen, Stack, TextInput, back, useAction, useRouteParams, useSnapshot } from "ink";
 import { putSnippet, state } from "../../../lib/atlas";
 import { Note } from "../../../lib/note";
+import { refusedOnError } from "../../../lib/app-haptics";
 
 /** Adds a snippet, or changes the one whose shortcut is in the route's `shortcut` parameter. */
 export default function EditSnippet() {
@@ -25,7 +26,7 @@ function SnippetForm({ title, start, previous, ...initial }: {
   const [shortcut, setShortcut] = useState(initial.shortcut);
   const [text, setText] = useState(initial.text);
   const save = useAction(async () => {
-    await putSnippet(shortcut.trim(), text, previous);
+    await refusedOnError(() => putSnippet(shortcut.trim(), text, previous));
     back();
   });
   const ready = shortcut.trim().length > 0 && text.length > 0;

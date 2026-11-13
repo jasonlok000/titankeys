@@ -1,4 +1,5 @@
-import { Field, Screen, Section, Toggle, useAction, useSnapshot } from "ink";
+import { Field, Screen, Section, useAction, useSnapshot } from "ink";
+import { Toggle } from "../../../lib/app-haptics";
 import { state, update } from "../../../lib/atlas";
 import { transfer } from "../../../lib/transfer";
 

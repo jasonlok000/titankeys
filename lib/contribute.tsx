@@ -2,6 +2,7 @@ import { Canvas, CanvasText, Field, Row, Screen, Section, openURL } from "ink";
 import { arrowOutward } from "ink/icons";
 import { contributeText as text, sharePolicyText as policy } from "./connected-text";
 import { PRIVACY_URL } from "./connected";
+import { switched } from "./app-haptics";
 import { Note, Notes } from "./note";
 
 /** The width of a screen's content, as the About page and the front page draw it. */
@@ -16,7 +17,11 @@ export function Disclosure({ onAgree, onDecline }: { onAgree: () => void; onDecl
     <Points title={policy.sentTitle} points={policy.sent} />
     <Points title={policy.neverTitle} points={policy.never} />
     <Note>{policy.how}</Note>
-    <Field label={policy.agree} onPress={onAgree}>{""}</Field>
+    {/* Agreeing turns Share swipes on, so it locks in like a switch. Declining changes nothing, so it stays quiet. */}
+    <Field label={policy.agree} onPress={() => {
+      switched(true);
+      onAgree();
+    }}>{""}</Field>
     <Field label={policy.decline} onPress={onDecline}>{""}</Field>
     <Row title={policy.policy} endIcon={arrowOutward} onPress={() => void openURL(PRIVACY_URL)} />
   </Screen>;

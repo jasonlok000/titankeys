@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Field, Row, Screen, Section, Toggle, navigate, openURL, useAction, useSnapshot } from "ink";
+import { Field, Row, Screen, Section, navigate, openURL, useAction, useSnapshot } from "ink";
+import { Toggle, playHaptic } from "../../lib/app-haptics";
 import { arrowOutward, chevronRight } from "ink/icons";
 import { MUTED, ORANGE } from "../../lib/brand";
 import { connectedState, copyContributorId, deleteQueued, kilobytes, PRIVACY_URL, setContribute } from "../../lib/connected";
@@ -41,7 +42,7 @@ export default function Contribute() {
       <Toggle label={text.toggle} value={state.contribute} onChange={turn} />
     </Section>
     <Section title={text.deleteTitle}>
-      <Field label={text.deleteWaiting} disabled={state.queued === 0} onPress={() => void deleteQueued()}>{""}</Field>
+      <Field label={text.deleteWaiting} disabled={state.queued === 0} onPress={() => void deleteQueued().then(() => playHaptic("app_deleted"))}>{""}</Field>
       <Field label={text.deleteAll} href="/settings/contribute-delete" />
     </Section>
     {idSection}

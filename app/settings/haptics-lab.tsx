@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Field, Screen, Section, SettingsChoices, TextInput, Toggle, useSnapshot } from "ink";
+import { Field, Screen, Section, SettingsChoices, TextInput, useSnapshot } from "ink";
+import { Toggle, playHaptic } from "../../lib/app-haptics";
 import { type HapticsLab, playLabFlick, setLabExperiment, setLabFlickHold, setLabSelectionEnd, showHapticsGraph, state } from "../../lib/atlas";
 import { hapticGroups } from "../../lib/haptics";
 
@@ -61,7 +62,10 @@ function Lab({ lab }: { lab: HapticsLab }) {
     {/* What marks the end of the selection that grows as you slide after a triple press. The next selection shows it. */}
     <Section title="Triple press selection end">
       <SettingsChoices value={lab.selectionEnd} options={lab.selectionEnds.map(end => ({ value: end.id, label: end.label }))}
-        onChange={id => void setLabSelectionEnd(id)} />
+        onChange={id => {
+          playHaptic("app_picked");
+          void setLabSelectionEnd(id);
+        }} />
     </Section>
     <Section title="Patterns">
       {Object.entries(lab.families).map(([id, family]) =>

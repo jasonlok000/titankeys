@@ -556,7 +556,7 @@ index 5093d42..fc7df53 100644
  
  export interface ThemeColours extends Colours {
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
-index 46ad203..3503099 100644
+index 46ad203..0990c25 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
 +++ b/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
 @@ -1,6 +1,7 @@
@@ -579,20 +579,41 @@ index 46ad203..3503099 100644
      @Suppress("DEPRECATION")
      override fun onBackPressed() {
          handleBack()
+@@ -136,7 +142,7 @@ class MainActivity : Activity(), InkJavaScriptHost {
+                 if (textInputAdapter.hasEditor) syncTextInput()
+             }
+             override fun presented() = textInputAdapter.framePresented()
+-            override fun haptic(view: android.view.View) = lightSdkAdapter.performHaptic(view)
++            override fun haptic(view: android.view.View) { if (!appPressHaptic(view)) lightSdkAdapter.performHaptic(view) }
+         })
+         root = FrameLayout(this).apply {
+             addView(
+@@ -422,7 +428,7 @@ class MainActivity : Activity(), InkJavaScriptHost {
+     }
+ 
+     internal fun performInteractionHaptic() {
+-        lightSdkAdapter.performHaptic(inkView)
++        if (!appPressHaptic(inkView)) lightSdkAdapter.performHaptic(inkView)
+     }
+ 
+     private fun executeJavaScriptCall(call: JSONObject) {
 diff --git a/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt b/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
-index c882a51..eff7da7 100644
+index c882a51..5848770 100644
 --- a/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
 +++ b/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,10 @@
  package com.vandam.ink
  
 +import android.content.Context
 +
 +internal fun appBaseContext(base: Context): Context = base
 +
++/** The app's own haptic for a press, in place of the system's click: true if it took the press. */
++internal fun appPressHaptic(view: android.view.View): Boolean = false
++
  internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> = emptyMap()
 diff --git a/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt b/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
-index 2b6b330..6903e55 100644
+index 2b6b330..5c2e65d 100644
 --- a/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
 +++ b/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
 @@ -1,5 +1,6 @@
@@ -602,11 +623,14 @@ index 2b6b330..6903e55 100644
  import android.graphics.BitmapFactory
  import android.os.SystemClock
  import android.util.Log
-@@ -8,6 +9,8 @@ import java.security.MessageDigest
+@@ -8,6 +9,11 @@ import java.security.MessageDigest
  import org.json.JSONArray
  import org.json.JSONObject
  
 +internal fun appBaseContext(base: Context): Context = base
++
++/** The app's own haptic for a press, in place of the system's click: true if it took the press. */
++internal fun appPressHaptic(view: android.view.View): Boolean = false
 +
  internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> =
      mapOf("device-benchmark" to DeviceBenchmark(activity))

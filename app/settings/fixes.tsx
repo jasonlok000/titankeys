@@ -1,4 +1,5 @@
-import { Field, Screen, Section, Toggle, useAction, useSnapshot } from "ink";
+import { Field, Screen, Section, useAction, useSnapshot } from "ink";
+import { Toggle } from "../../lib/app-haptics";
 import { type State, state, update } from "../../lib/atlas";
 import { fixKinds } from "../../lib/fixes";
 import { shorthandLabel } from "./shorthand/index";

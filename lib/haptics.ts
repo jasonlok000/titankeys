@@ -80,4 +80,12 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "guide_blocked", label: "Guide blocks", about: "When the guide blocks something a slide doesn't teach yet." },
     { id: "guide_hint", label: "Guide hints", about: "When the guide shows a hint." },
   ] },
+  { title: "TitanKeys' own screens", haptics: [
+    { id: "app_switch_on", label: "A switch turns on", about: "When you turn a switch on in Settings or the guide." },
+    { id: "app_switch_off", label: "A switch turns off", about: "When you turn a switch off in Settings or the guide." },
+    { id: "app_step", label: "A step", about: "Each press of Shorter or Longer, a tick." },
+    { id: "app_picked", label: "An option picked", about: "When you pick one of a list of choices, such as a preset." },
+    { id: "app_deleted", label: "A confirmed delete", about: "When you confirm a delete, such as Remove all learned words." },
+    { id: "app_refused", label: "Something refused", about: "When the app can't take what you asked, such as a shortcut with the wrong characters." },
+  ] },
 ];

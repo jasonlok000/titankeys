@@ -1,4 +1,5 @@
-import { Row, Screen, Section, Toggle, navigate, useAction, useSnapshot } from "ink";
+import { Row, Screen, Section, navigate, useAction, useSnapshot } from "ink";
+import { Toggle } from "../../../lib/app-haptics";
 import { add, close } from "ink/icons";
 import { type State, removeShorthand, state, update } from "../../../lib/atlas";
 

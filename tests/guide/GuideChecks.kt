@@ -568,6 +568,7 @@ private fun theLadderOnTitanKeys() {
     for (stage in step.stages) same(stage.text.length <= 50, true, "Stage within 50: ${stage.text}")
     same(step.title.length <= 38, true, "Title within 38")
     theMenuSlidesOffTrackMoves(step)
+    titanKeysStaysLit(step)
 }
 
 /**
@@ -1523,4 +1524,25 @@ private fun demosEndWhereAPassDoes() {
     // The other demos that delete or select still take the last word.
     same(demoRange(GuideDemo.DeleteLast, seed, null)?.let { seed.substring(it.first, it.last + 1) }, "Backspacee", "A flick's demo takes the word")
     same(demoRange(GuideDemo.SelectTarget, "a word ", null), 2 until 6, "With nothing marked, the select demo takes the last word")
+}
+
+/**
+ * The bar's TitanKeys is underlined in the accent the whole menu slide, with its menu open and after the pass, and nowhere else
+ * (owner, 2026-11-13: "keep it highlighted the whole time"). It replaces the wiggle. GuideActivity and AtlasIme aren't compiled for
+ * these checks, so their wiring is read from the source.
+ */
+private fun titanKeysStaysLit(step: GuideStep) {
+    same(litPlace(step), 0, "The menu slide lights TitanKeys, in the middle")
+    for (other in GUIDE_STEPS.filter { it.id != step.id }) same(litPlace(other), null, "${other.id} lights nothing on the bar")
+    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    // Set with the bar word on every way onto a slide, cleared with it whenever the guide lets the keyboard go.
+    same(Regex("""GuideHooks\.barWord\(([^)]*)\)\s+GuideHooks\.barLit\(""").findAll(guide).count(), 3, "Lit with the bar word, three times")
+    same(Regex("""GuideHooks\.barWord\(null\)\s+GuideHooks\.barLit\(null\)""").containsMatchIn(guide), true, "and cleared with it")
+    // Nothing on the slide takes it off: no stage, the menu or the pass.
+    same(Regex("""GuideHooks\.barLit\(""").findAll(guide).count(), 3, "and only set or cleared there")
+    same(guide.contains("pointAtBarWord"), false, "The wiggle is gone: the line replaces it")
+    val ime = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    same(ime.contains("private fun shownGuideLit() = guideLit?.takeIf { inGuide }"), true, "Lit only in the guide's own field")
+    same(ime.contains("strip?.lit(shownGuideLit())") && ime.contains("words.lit(shownGuideLit())"), true,
+        "and the bar takes it whenever its words change, or the bar is made again")
 }

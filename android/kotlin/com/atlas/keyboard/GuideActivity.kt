@@ -1062,6 +1062,7 @@ class GuideActivity : Activity() {
             GuideHooks.lessons = flow.step.lessons
             GuideHooks.barSides(flow.step.sides)
             GuideHooks.barWord(flow.step.barWord)
+            GuideHooks.barLit(litPlace(flow.step))
         }
     }
 
@@ -1070,6 +1071,7 @@ class GuideActivity : Activity() {
         GuideHooks.lessons = null
         GuideHooks.barSides(true)
         GuideHooks.barWord(null)
+        GuideHooks.barLit(null)
     }
 
     override fun onPause() {
@@ -2027,7 +2029,7 @@ class GuideActivity : Activity() {
         field.underlineOnly = step.id == "steer"
         GuideHooks.barSides(step.sides)
         GuideHooks.barWord(step.barWord)
-        pointAtBarWord()
+        GuideHooks.barLit(litPlace(step))
         setUpLesson(step)
         flow.seed(field.text.toString(), field.selectionStart)
         aim()
@@ -3673,7 +3675,7 @@ class GuideActivity : Activity() {
             GuideHooks.lessons = flow.lessons
             startHunt()
             showScript()
-            if (flow.step.nearMiss && flow.stage == 1) pointAtRightWord() else pointAtBarWord()
+            if (flow.step.nearMiss && flow.stage == 1) pointAtRightWord() else GuideHooks.stripPointWord(null)
         }
         hinted(verdict.title ?: verdict.text)
     }
@@ -3686,16 +3688,6 @@ class GuideActivity : Activity() {
         main.postDelayed({ if (!changing) GuideHooks.stripPointWord(GuideHooks.rightWord) }, POINT_AFTER_MILLIS)
     }
 
-    /**
-     * The slide's own bar word, alone in the middle, wiggles through every step of the slide, until it passes (owner, 2026-11-13:
-     * "keep it highlighted the whole time"). It waits for the bar to settle after a slide change. Nothing points on other slides.
-     */
-    private fun pointAtBarWord() {
-        val word = flow.step.barWord?.takeIf { !passed }
-        GuideHooks.stripPointWord(null)
-        if (word == null) return
-        main.postDelayed({ if (!changing && !passed) GuideHooks.stripPointWord(word) }, BAR_SETTLE_MILLIS + POINT_AFTER_MILLIS)
-    }
 
     /** A scenario about Alt or the panel, waiting to be sure, and the one that shows, which goes as soon as it is no longer true. */
     private var pendingModifierHint: GuideVerdict.Hint? = null
@@ -3736,7 +3728,7 @@ class GuideActivity : Activity() {
         startHunt()
         showScript()
         // The word came out wrong on purpose: the right word, wherever it is on the bar, dances to show where to tap.
-        if (flow.step.nearMiss && flow.stage == 1) pointAtRightWord() else pointAtBarWord()
+        if (flow.step.nearMiss && flow.stage == 1) pointAtRightWord() else GuideHooks.stripPointWord(null)
         // A stage can lock more than its slide does, as the bar slide's tap does.
         GuideHooks.lessons = flow.lessons
         main.removeCallbacks(showHelp)

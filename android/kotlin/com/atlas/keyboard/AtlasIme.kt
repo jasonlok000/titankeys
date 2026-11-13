@@ -753,6 +753,11 @@ class AtlasIme : InputMethodService() {
             guideBarWord = word
             showBarWords()
         } }
+        // The word menu slide's word, underlined the whole slide. Posted after the word, so the light finds it on the bar.
+        GuideHooks.barLitRequests = { index -> main.post {
+            guideLit = index
+            showBarWords()
+        } }
         composer.onRestored = {
             haptics.play(Haptic.AutocorrectUndone)
             KeyboardEvents.publish { KeyboardEvent.Restored }
@@ -1179,6 +1184,7 @@ class AtlasIme : InputMethodService() {
         keys.emoji = emoji
         // Android can make this view after the field has started, and again when the screen settings change.
         words.words = barWords
+        words.lit(shownGuideLit())
         // Exact typing's bar starts hidden and is made before the first check, so a normal field never shows it.
         val exact = ExactBar(ui, ::exactChip, ::exactBarKey).apply { visibility = View.GONE }
         exactBar = exact
@@ -1812,8 +1818,14 @@ class AtlasIme : InputMethodService() {
     private var ownBarWords = emptyList<String>()
     private var guideBarWord: String? = null
 
+    /** The place on the bar that the guide lights, or null. See [GuideHooks.barLit]. */
+    private var guideLit: Int? = null
+
     /** The guide's word, while it shows: only in the guide's own field. */
     private fun shownGuideWord() = guideBarWord?.takeIf { inGuide }
+
+    /** The guide's lit place, while it shows: only in the guide's own field, so no other app's bar is ever underlined. */
+    private fun shownGuideLit() = guideLit?.takeIf { inGuide }
 
     /**
      * The bar shows the composer's words, or only the guide's word, in the middle place, with its side places empty but there, so
@@ -1822,6 +1834,7 @@ class AtlasIme : InputMethodService() {
     private fun showBarWords() {
         barWords = shownGuideWord()?.let { listOf(it, "", "") } ?: ownBarWords
         strip?.words = barWords
+        strip?.lit(shownGuideLit())
     }
 
     /** Where each word stands in the guide's for-show menu, until the slide changes. Nothing reaches the word lists. */
@@ -3664,6 +3677,7 @@ class AtlasIme : InputMethodService() {
         GuideHooks.barSideRequests = null
         GuideHooks.stripPointWords = null
         GuideHooks.barWordRequests = null
+        GuideHooks.barLitRequests = null
         GuideHooks.clipSeeds = null
         GuideHooks.barCount = null
         GuideHooks.barHolds = null

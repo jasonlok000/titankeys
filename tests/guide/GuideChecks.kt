@@ -750,6 +750,15 @@ private fun slideTexts() {
     val fast = PlaygroundText.make(kotlin.random.Random(7))
     same(fast.any { it.isUpperCase() || it.isDigit() || it in ".,:;!?" }, false, "The playground's text is all plain, fast words")
     same(fast.contains("titankeys"), true, "The playground's text is about TitanKeys (v5)")
+    // One paragraph with no stutter where two lines meet: "your messages your messages" (owner, 2026-11-13).
+    val sentences = PlaygroundText.SENTENCES
+    val stutterPairs = sentences.flatMap { a -> sentences.filter { b -> PlaygroundText.stutters(a, b) }.map { a to it } }
+    same(stutterPairs.isNotEmpty(), true, "Some lines could stutter, so the rule matters")
+    for (seed in 0 until 200) {
+        val text = PlaygroundText.make(kotlin.random.Random(seed))
+        for ((a, b) in stutterPairs)
+            same(text.contains("$a $b"), false, "Seed $seed puts \"$b\" straight after \"$a\"")
+    }
 }
 
 /** The finale: the summary lands, the letters light and gather into the phrase, then the logo grows from TK. */

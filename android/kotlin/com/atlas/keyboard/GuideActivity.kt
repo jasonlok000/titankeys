@@ -722,6 +722,12 @@ class GuideActivity : Activity() {
     private lateinit var block: LinearLayout
     /** The end's quiet way to the boring guide. */
     private lateinit var boringLink: TextView
+    /** The slide's decoration, behind the content (design v2 §7). Never on the playground. */
+    private lateinit var decor: GuideDecorView
+    /** The decoration that waits for the slide to settle, and the one hidden under the leaving pop-up. */
+    private var decorWaiting: String? = null
+    private var decorUnderPopup: String? = null
+    private val decorSettled = Runnable { if (leavePopup == null) decor.slide = decorWaiting else decorUnderPopup = decorWaiting }
     /** The line above the field that suggests what to type. */
     private lateinit var script: TextView
     /** Over the field: what a demonstration would do, in grey, without typing it. */
@@ -1398,6 +1404,14 @@ class GuideActivity : Activity() {
         }
         root.clipChildren = false
         root.addView(backdrop, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        // The slide's decoration (design v2 §7): above the background, behind everything else, clear of everything we draw. It reads
+        // their places on every frame, so it follows the layout, a chip in the instruction's place and Next as it appears. None on
+        // the playground.
+        decor = GuideDecorView(this).apply {
+            visibility = if (playground) View.GONE else View.VISIBLE
+            keepOutOf(listOf(topBar, title, body, chip, hint, script, field, next, offer, keys, endButtons))
+        }
+        root.addView(decor, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(effects, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(finaleView, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(roastView, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
@@ -1655,6 +1669,8 @@ class GuideActivity : Activity() {
         paintChapter()
         paintWpm()
         keys.tone = next
+        // On the orange screens the decoration turns ink and keeps moving; it never marks the pass.
+        if (::decor.isInitialized) decor.onOrange = next == GuideTone.Orange
         if (::field.isInitialized) paintField()
         paintNext()
         paintSegments(flow.stepIndex)
@@ -1988,7 +2004,7 @@ class GuideActivity : Activity() {
             overlay.sweep()
             main.postDelayed({ if (passed) applyTone(GuideTone.Orange) }, WIPE_MILLIS)
         }
-        if (step.chapter == GuideChapter.End) showEnd(step)
+        if (step.chapter == GuideChapter.End) showEnd(step) else decorate(step.id)
     }
 
     /**
@@ -2018,6 +2034,8 @@ class GuideActivity : Activity() {
             val top = (column.paddingTop + dp(TOP_BAR + 16)).toFloat()
             val bottom = if (endButtons.height > 0) endButtons.top - dp(FINALE_ROOM).toFloat() else root.height * FINALE_SHARE
             finaleView.box = top to maxOf(top + dp(160), bottom)
+            // The finale's words are the decoration's to keep clear of: the grass grows in the room under them, on the buttons.
+            decor.keepOutArea(RectF(0f, top, root.width.toFloat(), maxOf(top + dp(160), bottom)))
             finaleView.play()
         }
     }
@@ -2787,6 +2805,7 @@ class GuideActivity : Activity() {
             for (view in listOf(chapter, close)) view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         }
         setupPart = part
+        decorate(GuideDecor.SETUP)
         guideLook(false)
         unlockKeyboard()
         showChapter(SetupPart.LABEL)
@@ -3956,6 +3975,9 @@ class GuideActivity : Activity() {
             })
         }
         leavePopup = scrim
+        // No decoration under the pop-up: it fades away, and comes back as it closes.
+        decorUnderPopup = decor.slide
+        decor.slide = null
         root.addView(scrim, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         appear(scrim)
     }
@@ -3965,6 +3987,19 @@ class GuideActivity : Activity() {
         leavePopup = null
         popup.animate().cancel()
         root.removeView(popup)
+        decor.slide = decorUnderPopup
+        decorUnderPopup = null
+    }
+
+    /**
+     * Shows [slide]'s decoration once the slide has settled: after the content's own move ([DECOR_SETTLE_MILLIS]), so the two never
+     * move at once. The decoration then fades in over 600 ms, or crossfades from the last over 400 ms ([GuideDecorView]).
+     */
+    private fun decorate(slide: String?, after: Long = DECOR_SETTLE_MILLIS) {
+        if (playground) return
+        main.removeCallbacks(decorSettled)
+        decorWaiting = slide
+        if (after <= 0L) decorSettled.run() else main.postDelayed(decorSettled, after)
     }
 
     /**
@@ -3973,6 +4008,8 @@ class GuideActivity : Activity() {
      */
     private fun finale(end: GuideStep) {
         haptics.celebrate()
+        // The grass grows as the finale plays (owner: "go touch grass now is good").
+        decorate(GuideDecor.FINALE, 0)
         for (sweep in 0 until FINALE_SWEEPS) overlay.sweep(delay = sweep * FINALE_STAGGER_MILLIS, thickness = BEAT_LINE + sweep * 2f)
         enter(end)
     }
@@ -4068,6 +4105,7 @@ class GuideActivity : Activity() {
 
     private fun startAgain() {
         main.removeCallbacksAndMessages(null)
+        decor.keepOutArea(null)
         finaleView.stop()
         finaleView.visibility = View.GONE
         for (view in listOf<View>(title, instruction, chapter, block)) view.visibility = View.VISIBLE
@@ -4223,6 +4261,8 @@ class GuideActivity : Activity() {
         /** The guide's one move (design v2): a fade and a rise of 8 dp in 220 ms, easing out. */
         private const val MOVE_MILLIS = 220L
         private const val MOVE_RISE = 8
+        /** The decoration waits for the content's move, and the instruction's stagger after it, to end. */
+        private const val DECOR_SETTLE_MILLIS = MOVE_MILLIS + 60L + 40L
         private val EASE_OUT = android.view.animation.DecelerateInterpolator(1.5f)
         private const val LEAVE_AGAIN = "Start again"
         private const val CHIP_MILLIS = 3000L
@@ -4280,7 +4320,7 @@ class GuideActivity : Activity() {
         /** The finale's part of the end screen, from the top: the buttons have the rest. */
         private const val FINALE_SHARE = .68f
         /** The room between the finale and the end's buttons. */
-        private const val FINALE_ROOM = 20
+        private const val FINALE_ROOM = 56
 
         // Setup, in ms. These are safe to change.
         private const val SETUP_REQUEST = 7

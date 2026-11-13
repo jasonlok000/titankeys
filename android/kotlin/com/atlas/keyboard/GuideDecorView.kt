@@ -6,6 +6,8 @@ import android.graphics.Canvas
 import android.graphics.RectF
 import android.os.SystemClock
 import android.view.View
+import android.widget.EditText
+import android.widget.TextView
 
 /**
  * Hosts [GuideDecor]: the slide's decoration behind the guide's content, with its fades and its frame rate.
@@ -21,8 +23,9 @@ import android.view.View
  *    drawing and above the black background: `root.addView(decor, 0, LayoutParams(MATCH_PARENT, MATCH_PARENT))`, in a FrameLayout
  *    or an equivalent that lets it fill the content.
  * 2. Tell it what to keep clear: `decor.keepOutOf(listOf(chapterRow, title, instruction, field, nextButton, keyboardDrawing))`.
- *    It reads their places on every frame, so a field that grows or a button that shows needs nothing more. A hidden view keeps
- *    nothing out.
+ *    It reads their places on every frame, so a field that grows or a button that shows needs nothing more. A view that is gone
+ *    keeps nothing out; one that is only invisible keeps its room, so nothing is drawn where it is about to appear. A plain text
+ *    keeps out only its words, not the rest of its full-width box.
  * 3. When a slide has settled, set `decor.slide = step.id` (GuideSteps' ids), `GuideDecor.FINALE` when the finale plays and
  *    `GuideDecor.SETUP` for slide zero. Set it to null to fade the decoration away.
  * 4. Set `decor.onOrange = true` while the orange pass screen shows, and back to false after. It turns ink and keeps moving; it
@@ -76,6 +79,14 @@ class GuideDecorView(context: Context) : View(context) {
             invalidate()
         }
 
+    /** An area it keeps clear of besides the views, in its own pixels, such as the finale's words, which have no view of their own. */
+    private var area2: RectF? = null
+
+    fun keepOutArea(rect: RectF?) {
+        area2 = rect
+        invalidate()
+    }
+
     /** The views it keeps clear of, with [GuideDecor.CLEAR_DP] around each: the title, the instruction, the field, the keys. */
     fun keepOutOf(views: List<View>) {
         tracked = views
@@ -103,15 +114,42 @@ class GuideDecorView(context: Context) : View(context) {
 
     private fun measureKeepOut() {
         rects.clear()
+        area2?.let { rects += RectF(it) }
         if (tracked.isEmpty()) return
         getLocationInWindow(here)
         for (view in tracked) {
-            if (!view.isShown || view.width == 0 || view.height == 0) continue
+            if (!holdsRoom(view) || view.width == 0 || view.height == 0) continue
             view.getLocationInWindow(there)
-            val left = (there[0] - here[0]).toFloat()
+            var left = (there[0] - here[0]).toFloat()
             val top = (there[1] - here[1]).toFloat()
-            rects += RectF(left, top, left + view.width, top + view.height)
+            var right = left + view.width
+            // A plain text in a full-width box keeps out only its words: a one-line title leaves the rest of its line free.
+            val layout = (view as? TextView)?.takeIf { it !is EditText && it.background == null && it.text.isNotEmpty() }?.layout
+            if (layout != null && layout.lineCount > 0) {
+                var from = Float.MAX_VALUE
+                var to = 0f
+                for (line in 0 until layout.lineCount) {
+                    from = minOf(from, layout.getLineLeft(line))
+                    to = maxOf(to, layout.getLineRight(line))
+                }
+                val inside = (view as TextView).totalPaddingLeft
+                val scale = view.scaleX
+                right = left + (inside + to) * scale
+                left += (inside + from) * scale
+            }
+            rects += RectF(left, top, right, top + view.height)
         }
+    }
+
+    /** Whether [view] holds a place on the screen: attached, and neither it nor anything it is in is gone. */
+    private fun holdsRoom(view: View): Boolean {
+        if (!view.isAttachedToWindow) return false
+        var at: View? = view
+        while (at != null) {
+            if (at.visibility == GONE) return false
+            at = at.parent as? View
+        }
+        return true
     }
 
     override fun onAttachedToWindow() {

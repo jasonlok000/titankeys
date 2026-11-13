@@ -59,6 +59,8 @@ export default function RecordBug() {
   return <Screen title={text.title} subtitle={text.subtitle}>
     <Section title={text.howTitle}>
       <Notes lines={text.how} />
+      {/* What a recording can show, before you start one, as the privacy policy says. */}
+      <Note>{text.beforeRecord}</Note>
     </Section>
     <Field label={text.record} onPress={() => void startBug()}>{""}</Field>
     {!state.notificationsAllowed && <>

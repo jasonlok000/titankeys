@@ -14,6 +14,8 @@ export const bugText = {
     "Come back here and press Stop. It stops by itself after 3 minutes.",
     "Check what's in it, then share it wherever you like.",
   ],
+  // Clean zone: plain, no jokes. The privacy policy says the same (site/privacy/index.html).
+  beforeRecord: "It doesn't save your text, but the keys and word choices it records can show most of what you typed while it ran. Only share it with people you'd show that to.",
   record: "Record a bug",
   recordingTitle: "Recording",
   left: (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")} left`,

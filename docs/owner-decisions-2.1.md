@@ -206,6 +206,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 ## Process
 
 - **"me @ your mom" is out:** "is bad let's skip it." Any @ line gets something better, or no joke at all. The slide may use another symbol if the line lands better (owner, 23:50). (Owner, 23:45)
+- **Before bed (owner, 01:35):** "Ok continue working and make decisions good night." (Owner)
+  - **"Trust me bro." moves** from the end screen to the share step, right before you accept. You still return to the end screen after. (Owner) C does it.
+  - **Some slides lose their Next** after they're passed. Every passed slide shows Next. (Owner bug) A does it.
+  - **The ∞ slide is the owner's sex joke** about how long you last in bed. The Orchestrator's title (unapproved): "Add how long you last in bed." The symbol is never named, and the fast line ("Quick. Just like you in bed.") and slow line ("That took forever. Still shorter than you claim to last.") are kept exactly. A does it.
+  - **The paste slide:** the right clip, the last one, blinks: a gentle orange pulse until it's picked. (Owner) A does it.
 - **"Touchpad call it touch zone"** (owner, 01:28). The outlined area the touchpad reads is the **touch zone**: the label on the playground's drawing says TOUCH ZONE, and so does the text about that area. The Orchestrator's reading (unapproved): the hardware and Settings' "Touchpad" section keep their name. C does the label, F the text.
 - **Typing 3/3 (the save slide):** "the tap hint still needs to be sooner and more frequent." (Owner, 01:25) The Orchestrator's call (unapproved): first hint after 3 s, repeated every 6 s while waiting, each repeat visible, never over an open menu. A does it, and checks the other slides' timings too.
 - **Reviews must not violate the owner's decisions** (owner, 01:20): "check aesthetically and readability but also you should not violate my decisions." Where design-v2 or any Orchestrator or worker call conflicts with this log, the owner's decision wins, unless a later owner message replaced it. Conflicts found so far and sent back to C:

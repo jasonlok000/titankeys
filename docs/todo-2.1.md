@@ -62,6 +62,12 @@ all of them are unapproved.
 - F: sizes that ignore the font size and display size (FixedScale), the Scroll assistant note and default, and the orange accents bug.
 - A: the bar jumping when the Sym panel closes. It's recorded: at frame 14 the bar sits at the top of the old panel-sized window.
 - Then: merge everything, one build, install, and a full run-through on the phone.
+- Release prep (Orchestrator):
+  - Update release-notes.txt for everything new since it was written. One line is already wrong: steering taps now count
+    only on Space's width, not "anywhere on the C V B N row". New since then: the gestures rounds, Space at 150 ms, the word
+    menu, Shift + Backspace and Alt + Sym, the quiet swell, Canadian spelling, fixed sizes, guide v2, the playground text and the
+    Scroll assistant default.
+  - The signed release build (tools/release.sh needs the owner's signing credentials) and publishing stay with the owner.
 
 ## Next, waiting on the owner's go (proposed order, 22:50)
 

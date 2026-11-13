@@ -39,16 +39,21 @@ class Strip(
     sealed interface Notice {
         val word: String
         /**
-         * The menu of a held word, at [step]: see [MenuKeys.Step]. [forget] is true for a word the keyboard learned from your
-         * typing, which O can forget while it isn't saved. Its I and O buttons are [first] and [second], and P is Back.
+         * The menu of a held word, at [step]: see [MenuKeys.State]. [forget] is true for a word the keyboard learned from your
+         * typing, which O can forget while it isn't saved; [builtIn] for a dictionary word, which counts as saved; [savable] is
+         * false for a word the store can't hold, such as an emoji. Its I and O buttons are [first] and [second], and P is Back.
          */
         data class Menu(
             override val word: String,
             val forget: Boolean,
             val step: MenuKeys.Step = MenuKeys.Step.New,
+            val builtIn: Boolean = false,
+            val savable: Boolean = true,
+            val oneLetter: Boolean = false,
         ) : Notice {
-            val first get() = MenuKeys.first(step).action
-            val second get() = MenuKeys.second(step, forget)?.action
+            val state get() = MenuKeys.State(step, forget, builtIn, savable, oneLetter)
+            val first get() = MenuKeys.choices(state).i?.action
+            val second get() = MenuKeys.choices(state).o?.action
         }
         data class Forgot(override val word: String) : Notice
         /** A second of fun when the keyboard has had to hide and show itself for Microsoft Teams. It has no buttons. */
@@ -704,7 +709,7 @@ class Strip(
             motionStart = now
             ambientStart = -1L
             shownStep = menu.step
-            val buttons = arrayOf(MenuKeys.first(menu.step), MenuKeys.second(menu.step, menu.forget))
+            val buttons = MenuKeys.choices(menu.state).let { arrayOf(it.i, it.o) }
             for (index in 0..1) {
                 if (!opened && slotIcons[index] != buttons[index]) {
                     slotFrom[index] = slotIcons[index]
@@ -714,7 +719,7 @@ class Strip(
             }
         } else {
             // The same step: only O's Forget can come or go, as Save and Unsave change what is left to forget.
-            val second = MenuKeys.second(menu.step, menu.forget)
+            val second = MenuKeys.choices(menu.state).o
             if (slotIcons[1] != second) {
                 slotFrom[1] = slotIcons[1]
                 slotChanged[1] = SystemClock.uptimeMillis()
@@ -789,7 +794,7 @@ class Strip(
         var more = false
         // The pill shows the action that the hovered button does now. After a press under a finger that stays, it shows the
         // next step's action in place, at once: no shrinking and growing again.
-        val hovered = menuMark.takeIf { MenuKeys.pills(it, menu.step, menu.forget) } ?: -1
+        val hovered = menuMark.takeIf { MenuKeys.pills(it, menu.state) } ?: -1
         if (hovered >= 0) {
             val action = slots[hovered - MenuKeys.SAVE]
             if (hovered == pillShown && action != pillAction) pillSnap = true
@@ -848,13 +853,16 @@ class Strip(
         frame?.sprites?.filter { it.behind }?.forEach { drawSprite(canvas, it, density) }
         canvas.save()
         if (frame != null) {
-            canvas.translate(frame.wordShift * density, 0f)
+            canvas.translate(frame.wordShift * density, frame.wordDrop * density)
             canvas.scale(frame.wordScale, frame.wordScale, menuWordCentre, baseline + (menuWordText.ascent() + menuWordText.descent()) / 2)
+            // Unsave dims the word for a moment; it stays the text's colour.
+            menuWordText.alpha = (frame.wordAlpha * 255).toInt().coerceIn(0, 255)
         }
         canvas.drawText(text, textLeft, baseline, menuWordText)
+        menuWordText.alpha = 255
         canvas.restore()
         frame?.sprites?.filterNot { it.behind }?.forEach { drawSprite(canvas, it, density) }
-        // At rest, the ambient status: a faint heart now and then by a favourite, a faint ribbon by a saved word. It waits while a
+        // At rest, the ambient status: a faint heart now and then by a favourite, a faint sparkle by a saved word. It waits while a
         // button is hovered, and starts over after.
         var ambientWait = Long.MAX_VALUE
         if (menuMotion == null) {
@@ -896,14 +904,13 @@ class Strip(
         val alpha = (menuShown * 255).toInt().coerceIn(0, 255)
         val top = (height - icon) / 2
         for ((index, slotAction) in slots.withIndex()) {
-            if (slotAction == null) continue
+            // A button that just went still fades out: nothing snaps away.
+            if (slotAction == null && !(index < 2 && slotChanged[index] > 0L)) continue
             val column = MenuKeys.SAVE + index
             val (left, end) = menuColumn(column)
-            var centre = (left + end) / 2 + slide
-            // The screen's rounded corner comes in near the bottom right: the icon, and its pill, keep clear of it.
-            val foot = navigationInset + height - (height + pillHeight) / 2
-            val most = width - corners.inset(foot) - dp(MENU_CORNER_GAP) - icon / 2f - dp(MENU_PILL_RIGHT)
-            if (centre > most) centre = most
+            // On its key's centre, a key apart (owner, 2026-11-12): Back sits on Backspace's centre and no longer dodges the
+            // rounded corner. Back has no pill, and I's and O's pills end well clear of it.
+            val centre = (left + end) / 2 + slide
             val inPill = pill != null && column == pillShown
             // The pill covers the buttons to its left while it shows.
             if (pill != null && !inPill && centre in pill.first..pill.second) continue
@@ -915,9 +922,11 @@ class Strip(
                 if (elapsed < MenuMotion.ICON_MILLIS) more = true else slotChanged[index] = 0L
                 MenuMotion.icon(slotFrom[index], slotIcons[index], elapsed, GuideMotion.enabled)
             } else null
-            if (layers == null) drawIcon(canvas, icon(slotAction), centre, top, icon, 1f, 0f, alpha,
-                if (inPill || slotAction == Action.Favourited) look.accent else if (pill != null) look.muted else look.ink, 1f)
-            else for (layer in layers) {
+            if (layers == null) {
+                val action = slotAction ?: continue
+                drawIcon(canvas, icon(action), centre, top, icon, 1f, 0f, alpha,
+                    if (inPill || action == Action.Favourited) look.accent else if (pill != null) look.muted else look.ink, 1f)
+            } else for (layer in layers) {
                 val button = layer.button ?: continue
                 val rest = if (pill != null && !inPill) look.muted else look.ink
                 val tint = if (inPill) look.accent else blend(rest, look.accent, layer.orange)
@@ -960,7 +969,8 @@ class Strip(
     }
 
     /**
-     * One particle of an animation, always orange (owner, 2026-11-12): a heart, a bookmark ribbon, or a speck of dust. A half is
+     * One particle of an animation, always orange (owner, 2026-11-12): a heart, a bookmark, a sparkle, a shard or a speck of dust; the crack is
+     * a gap in the bar's own colour, drawn down a heart as it breaks. A half is
      * the shape cut along the broken heart's crack, the same zigzag as Unfavourite's and Unsave's icons.
      */
     private fun drawSprite(canvas: Canvas, sprite: MenuMotion.Sprite, density: Float) {
@@ -976,8 +986,54 @@ class Strip(
             menuPaint.alpha = 255
             return
         }
-        val heart = sprite.shape == MenuMotion.Shape.Heart || sprite.shape == MenuMotion.Shape.HeartLeft || sprite.shape == MenuMotion.Shape.HeartRight
-        val drawable = context.getDrawable(if (heart) R.drawable.menu_favourited else R.drawable.menu_mark_saved)?.mutate() ?: return
+        if (sprite.shape == MenuMotion.Shape.Crack) {
+            // The zigzag drawn down the heart as it breaks, as far as the sprite says: a gap in the bar's own colour.
+            val left = x - size / 2
+            val top = y - size / 2
+            crackPath.reset()
+            val points = CRACK.map { (px, py) -> left + px / 24f * size to top + py / 24f * size }
+            val bottom = top + size * sprite.amount
+            crackPath.moveTo(points[0].first, points[0].second)
+            for ((index, point) in points.withIndex().drop(1)) {
+                val (px, py) = point
+                val (qx, qy) = points[index - 1]
+                if (py <= bottom) crackPath.lineTo(px, py)
+                else {
+                    if (bottom > qy) crackPath.lineTo(qx + (px - qx) * (bottom - qy) / (py - qy), bottom)
+                    break
+                }
+            }
+            menuPaint.shader = null
+            menuPaint.style = android.graphics.Paint.Style.STROKE
+            menuPaint.strokeWidth = size * .1f
+            menuPaint.strokeJoin = android.graphics.Paint.Join.ROUND
+            menuPaint.color = look.paper
+            canvas.drawPath(crackPath, menuPaint)
+            menuPaint.style = android.graphics.Paint.Style.FILL
+            return
+        }
+        if (sprite.shape == MenuMotion.Shape.Shard) {
+            // A tiny splinter of the heart: a sharp orange triangle, turning as it falls.
+            canvas.save()
+            canvas.rotate(sprite.turn, x, y)
+            crackPath.reset()
+            crackPath.moveTo(x, y - size * .7f)
+            crackPath.lineTo(x + size * .45f, y + size * .4f)
+            crackPath.lineTo(x - size * .45f, y + size * .3f)
+            crackPath.close()
+            menuPaint.shader = null
+            menuPaint.color = look.accent
+            menuPaint.alpha = alpha
+            canvas.drawPath(crackPath, menuPaint)
+            menuPaint.alpha = 255
+            canvas.restore()
+            return
+        }
+        val drawable = context.getDrawable(when (sprite.shape) {
+            MenuMotion.Shape.Heart, MenuMotion.Shape.HeartLeft, MenuMotion.Shape.HeartRight -> R.drawable.menu_favourited
+            MenuMotion.Shape.Bookmark, MenuMotion.Shape.BookmarkLeft, MenuMotion.Shape.BookmarkRight -> R.drawable.menu_mark_saved
+            else -> R.drawable.menu_sparkle
+        })?.mutate() ?: return
         drawable.setTint(look.accent)
         drawable.alpha = alpha
         canvas.save()
@@ -986,8 +1042,8 @@ class Strip(
         val top = y - size / 2
         drawable.setBounds(Math.round(left), Math.round(top), Math.round(left + size), Math.round(top + size))
         val half = when (sprite.shape) {
-            MenuMotion.Shape.HeartLeft, MenuMotion.Shape.RibbonLeft -> CRACK_LEFT
-            MenuMotion.Shape.HeartRight, MenuMotion.Shape.RibbonRight -> CRACK_RIGHT
+            MenuMotion.Shape.HeartLeft, MenuMotion.Shape.BookmarkLeft -> CRACK_LEFT
+            MenuMotion.Shape.HeartRight, MenuMotion.Shape.BookmarkRight -> CRACK_RIGHT
             else -> null
         }
         if (half != null) {

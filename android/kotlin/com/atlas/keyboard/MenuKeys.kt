@@ -64,43 +64,64 @@ object MenuKeys {
      */
     enum class Button { Save, Favourite, Favourited, Unfavourite, Unsave, Forget }
 
-    /** Where a word stands for the menu, and whether the keyboard [learned] it from your typing, which O can forget at the bottom. */
-    data class State(val step: Step, val learned: Boolean)
+    /**
+     * Where a word stands for the menu: its [step]; whether the keyboard [learned] it from your typing, which O can forget at the
+     * bottom; whether the dictionary has it ([builtIn]), so it counts as saved and O takes it out of the dictionary; whether the
+     * word store can hold it at all ([savable]: symbols and emoji can't be saved); and whether it is a single letter, which is
+     * never forgotten.
+     */
+    data class State(val step: Step, val learned: Boolean, val builtIn: Boolean = false, val savable: Boolean = true,
+                     val oneLetter: Boolean = false)
 
-    /** What I and O show at a [State], and where each press takes the word: null for O when it has nothing, or after Forget. */
-    data class Choices(val i: Button, val iNext: State, val o: Button?, val oNext: State?)
+    /** What I and O show at a [State], and where each press takes the word: null for a button with nothing, or after Forget. */
+    data class Choices(val i: Button?, val iNext: State?, val o: Button?, val oNext: State?)
 
     /**
-     * Where a word stands as the menu opens: a favourite, then a word you saved (you pressed Save: a word learned from typing isn't
-     * saved), then not saved. A [blocked] word, one you forgot, is not saved and no favourite, whatever the lists still say. Only a
-     * learned word can be forgotten, and never a single letter.
+     * Where a word stands as the menu opens (owner, 2026-11-12): a favourite; then saved, a word you saved or one the dictionary
+     * has ("saving is adding to the dictionary, so a dictionary word is saved"); then not saved. A [blocked] word, one you forgot,
+     * is not saved and no favourite, whatever the lists still say. Only a learned word that isn't in the dictionary can be
+     * forgotten at the bottom, and never a single letter.
      */
-    fun state(saved: Boolean, favourite: Boolean, blocked: Boolean, learned: Boolean, oneLetter: Boolean) = State(
+    fun state(saved: Boolean, favourite: Boolean, blocked: Boolean, learned: Boolean, oneLetter: Boolean,
+              builtIn: Boolean = false, savable: Boolean = true) = State(
         when {
             blocked -> Step.New
             favourite -> Step.Favourite
-            saved -> Step.Saved
+            saved || builtIn -> Step.Saved
             else -> Step.New
         },
-        learned && !oneLetter && !blocked)
+        learned && !oneLetter && !blocked && !builtIn, builtIn, savable, oneLetter)
+
+    /**
+     * Whether the word store can hold [word]: 2 to 24 letters, with apostrophes. Anything else, symbols, emoji, numbers, can't be
+     * saved, so its menu has no Save (owner, 2026-11-12: Save failed silently for them).
+     */
+    fun savable(word: String): Boolean {
+        val letters = word.count(Char::isLetter)
+        return letters in 2..24 && word.all { it.isLetter() || it == '\'' || it == '’' }
+    }
 
     /**
      * The ladder itself, the only place it lives: the keyboard, the guide and the checks all use it.
-     * - NOT SAVED: I is Save, to SAVED. O is Forget, only for a word the keyboard learned, and closes the menu.
-     * - SAVED: I is Favourite, to FAVOURITE. O is Unsave, to NOT SAVED, with nothing learned left to forget.
+     * - NOT SAVED: I is Save, to SAVED, for a word the store can hold. O is Forget, only for a word the keyboard learned, and
+     *   closes the menu.
+     * - SAVED: I is Favourite, to FAVOURITE. O is Unsave, to NOT SAVED, with nothing learned left to forget; for a dictionary
+     *   word O is Forget, which takes it out of the dictionary with an Undo and closes the menu, except for a single letter.
      * - FAVOURITE: I is spent and stays. O is Unfavourite, to SAVED, always.
      */
     fun choices(state: State): Choices = when (state.step) {
-        Step.New -> Choices(Button.Save, State(Step.Saved, state.learned),
+        Step.New -> Choices(Button.Save.takeIf { state.savable }, state.copy(step = Step.Saved),
             Button.Forget.takeIf { state.learned }, null)
-        Step.Saved -> Choices(Button.Favourite, State(Step.Favourite, state.learned), Button.Unsave, State(Step.New, false))
-        Step.Favourite -> Choices(Button.Favourited, state, Button.Unfavourite, State(Step.Saved, state.learned))
+        Step.Saved -> if (state.builtIn) Choices(Button.Favourite, state.copy(step = Step.Favourite),
+            Button.Forget.takeUnless { state.oneLetter }, null)
+        else Choices(Button.Favourite, state.copy(step = Step.Favourite), Button.Unsave, state.copy(step = Step.New, learned = false))
+        Step.Favourite -> Choices(Button.Favourited, state, Button.Unfavourite, state.copy(step = Step.Saved))
     }
 
-    /** I's button at [step]. */
+    /** I's button at [step], for an ordinary word. */
     fun first(step: Step) = choices(State(step, false)).i
 
-    /** O's button at [step], where O can forget only a [learned] word. */
+    /** O's button at [step], for an ordinary word that the keyboard [learned] or not. */
     fun second(step: Step, learned: Boolean) = choices(State(step, learned)).o
 
     /** The state after [button] at [state], or null when the menu closes, after Forget. */
@@ -127,9 +148,9 @@ object MenuKeys {
      * Whether a finger hovering [column] shows a pill: I's and O's buttons do, where they have one. Back has none, no name and
      * no highlight: just its arrow, which works on a press (owner, 2026-11-12).
      */
-    fun pills(column: Int, step: Step, learned: Boolean) = when (column) {
-        SAVE -> true
-        FORGET -> second(step, learned) != null
+    fun pills(column: Int, state: State) = when (column) {
+        SAVE -> choices(state).i != null
+        FORGET -> choices(state).o != null
         else -> false
     }
 

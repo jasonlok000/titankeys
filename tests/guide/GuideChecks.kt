@@ -94,42 +94,53 @@ private fun theMenuKeys() {
 private fun theMenuLadder() {
     val (new, saved, favourite) = Triple(MenuKeys.Step.New, MenuKeys.Step.Saved, MenuKeys.Step.Favourite)
     fun state(saved: Boolean = false, favourite: Boolean = false, blocked: Boolean = false, learned: Boolean = false,
-              oneLetter: Boolean = false) = MenuKeys.state(saved, favourite, blocked, learned, oneLetter)
-    // Where each kind of word opens. A dictionary word is any word here: it starts at Save like the rest.
-    same(state(), MenuKeys.State(new, false), "A word nobody saved, the dictionary's included: not saved, nothing to forget")
+              oneLetter: Boolean = false, builtIn: Boolean = false, savable: Boolean = true) =
+        MenuKeys.state(saved, favourite, blocked, learned, oneLetter, builtIn, savable)
+    // Where each kind of word opens (owner, 2026-11-12): a dictionary word counts as saved; a word the store can't hold has no Save.
+    same(state().step, new, "A word nobody saved: not saved")
     same(state(learned = true), MenuKeys.State(new, true), "A word learned from typing isn't saved, and O forgets it")
-    same(state(saved = true), MenuKeys.State(saved, false), "A word you saved")
-    same(state(saved = true, favourite = true), MenuKeys.State(favourite, false), "A favourite")
-    same(state(favourite = true), MenuKeys.State(favourite, false), "An imported favourite is a favourite")
-    same(state(saved = true, favourite = true, blocked = true), MenuKeys.State(new, false), "A forgotten word is not saved, and no favourite")
-    same(state(learned = true, oneLetter = true), MenuKeys.State(new, false), "A single letter is never forgotten")
-    // Every state, every press.
+    same(state(saved = true).step, saved, "A word you saved")
+    same(state(builtIn = true).step, saved, "A dictionary word counts as saved")
+    same(state(builtIn = true, learned = true).learned, false, "and is never 'learned': O takes it out of the dictionary instead")
+    same(state(saved = true, favourite = true).step, favourite, "A favourite")
+    same(state(saved = true, favourite = true, blocked = true).step, new, "A forgotten word is not saved, and no favourite")
+    same(state(builtIn = true, blocked = true).step, new, "A dictionary word you forgot is not saved: Save lets it back in")
+    same(state(learned = true, oneLetter = true).learned, false, "A single letter is never forgotten")
+    for (word in listOf("hello", "don't", "Titankeys", "it’s")) same(MenuKeys.savable(word), true, "$word can be saved")
+    for (word in listOf("x", "😀", ":)", "#tag", "2nd", "a-b", "")) same(MenuKeys.savable(word), false, "\"$word\" can't be saved")
+    // Every kind of word, every state, every press.
     val (save, fav, spent) = Triple(MenuKeys.Button.Save, MenuKeys.Button.Favourite, MenuKeys.Button.Favourited)
     val (unfav, unsave, forget) = Triple(MenuKeys.Button.Unfavourite, MenuKeys.Button.Unsave, MenuKeys.Button.Forget)
     val table = StringBuilder("| Word | State | I shows | I → | O shows | O → |\n|---|---|---|---|---|---|\n")
     val kinds = listOf(
-        "any word, never learned (\"hello\", \"Titankeys\")" to false,
-        "learned from typing" to true,
-        "one letter (\"I\")" to false,
+        "a word you never saved (\"Titankeys\")" to MenuKeys.State(new, false),
+        "learned from typing (a typo it picked up)" to MenuKeys.State(new, true),
+        "a dictionary word (\"and\")" to MenuKeys.State(new, false, builtIn = true),
+        "one letter in the dictionary (\"I\")" to MenuKeys.State(new, false, builtIn = true, oneLetter = true),
+        "a symbol or emoji (\"😀\")" to MenuKeys.State(new, false, savable = false),
     )
-    for ((kind, learned) in kinds) for (step in MenuKeys.Step.entries) {
-        val at = MenuKeys.State(step, learned && step == new || learned)
+    fun name(state: MenuKeys.State?) = state?.let { "${it.step}" + if (it.step == new && it.learned) " (learned)" else "" } ?: "closes: Forgot · Undo"
+    for ((kind, base) in kinds) for (step in MenuKeys.Step.entries) {
+        // A dictionary word is never at New unless forgotten, nor is a symbol ever saved: skip the states it can't be in.
+        if (base.builtIn && step == new || !base.savable && step != new) continue
+        val at = base.copy(step = step, learned = base.learned && step == new)
         val choices = MenuKeys.choices(at)
-        fun name(state: MenuKeys.State?) = state?.let { "${it.step}" + if (it.step == new && it.learned) " (learned)" else "" } ?: "closes: Forgot · Undo"
-        table.append("| $kind | ${step} | ${choices.i} | ${name(choices.iNext)} | ${choices.o ?: "–"} | " +
+        table.append("| $kind | $step | ${choices.i ?: "–"} | ${if (choices.i == null) "–" else name(choices.iNext)} | ${choices.o ?: "–"} | " +
             "${if (choices.o == null) "–" else name(choices.oNext)} |\n")
-        // The ladder's rules, at every state.
-        same(MenuKeys.press(at, choices.i), choices.iNext, "$kind at $step: I goes where choices says")
+        if (choices.i != null) same(MenuKeys.press(at, choices.i!!), choices.iNext, "$kind at $step: I goes where choices says")
         if (choices.o != null) same(MenuKeys.press(at, choices.o!!), choices.oNext, "$kind at $step: O goes where choices says")
         when (step) {
             new -> {
-                same(choices.i to choices.iNext.step, save to saved, "$kind: not saved, I saves")
-                same(choices.o, if (learned) forget else null, "$kind: not saved, O forgets only a learned word")
-                if (learned) same(choices.oNext, null, "$kind: Forget closes the menu")
+                same(choices.i, if (base.savable) save else null, "$kind: not saved, I saves if the store can hold it")
+                same(choices.o, if (at.learned) forget else null, "$kind: not saved, O forgets only a learned word")
             }
             saved -> {
-                same(choices.i to choices.iNext.step, fav to favourite, "$kind: saved, I favourites")
-                same(choices.o to choices.oNext?.step, unsave to new, "$kind: saved, O unsaves")
+                same(choices.i to choices.iNext?.step, fav to favourite, "$kind: saved, I favourites")
+                when {
+                    base.builtIn && base.oneLetter -> same(choices.o, null, "$kind: a single letter is never taken out")
+                    base.builtIn -> same(choices.o to choices.oNext, forget to null, "$kind: O takes it out of the dictionary, with Undo")
+                    else -> same(choices.o to choices.oNext?.step, unsave to new, "$kind: saved, O unsaves")
+                }
             }
             favourite -> {
                 same(choices.i to choices.iNext, spent to at, "$kind: a favourite's I is spent")
@@ -142,24 +153,25 @@ private fun theMenuLadder() {
             check(kotlin.math.abs(next.ordinal - step.ordinal) == 1) { "$kind: $button moves one step, never two" }
         }
     }
-    // A single letter's menu opens as never learned: one-letter words never offer Forget.
-    same(MenuKeys.choices(state(learned = true, oneLetter = true)).o, null, "\"I\" has no Forget")
+    // A symbol's menu has nothing to do, so it never opens.
+    same(MenuKeys.choices(state(savable = false)).let { it.i to it.o }, null to null, "A symbol has no buttons, so no menu")
     // A walk under one finger: up the whole ladder and down again, each press one step.
     var walk = state(learned = true)
     val seen = mutableListOf<String>()
     for (key in "IIIOO") {
         val choices = MenuKeys.choices(walk)
-        val button = if (key == 'I') choices.i else choices.o!!
+        val button = (if (key == 'I') choices.i else choices.o)!!
         walk = MenuKeys.press(walk, button)!!
         seen += "$key:$button→${walk.step}"
     }
     same(seen, listOf("I:Save→Saved", "I:Favourite→Favourite", "I:Favourited→Favourite", "O:Unfavourite→Saved", "O:Unsave→New"), "The walk")
     println("The word menu, every state and every press:\n$table")
     for (button in MenuKeys.Button.entries) check(MenuKeys.move(button) in -3..2) { "$button moves ${MenuKeys.move(button)}" }
-    // The guide uses the same ladder.
+    // The keyboard and the guide press through the same ladder, and a menu with nothing to do never opens.
     val ime = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
-    check("MenuKeys.press(MenuKeys.State(menu.step, menu.forget), button)" in ime) { "The keyboard and the guide press through the ladder" }
-    check("builtIn" !in ime.substringAfter("private fun menuFor(").substringBefore("\n    }\n")) { "No shortcut for dictionary words" }
+    check("MenuKeys.press(menu.state, button)" in ime) { "The keyboard and the guide press through the ladder" }
+    check("builtIn = typing.builtInWord(word)" in ime && "savable = MenuKeys.savable(word)" in ime) { "The menu knows dictionary words and symbols" }
+    check("if (menu.first == null && menu.second == null) return false" in ime) { "A menu with nothing to do never opens" }
     theMenuHover()
     theMenuWord()
     theMenuMotion()
@@ -174,10 +186,23 @@ private fun theMenuHover() {
         listOf(MenuKeys.SAVE, MenuKeys.SAVE, MenuKeys.FORGET, MenuKeys.FORGET, MenuKeys.BACK, MenuKeys.BACK), "The hover's keys")
     for (key in listOf("U", "J", "M", "Q", Layout.ENTER, "")) same(MenuKeys.hovered(key), -1, "$key hovers nothing")
     for (step in MenuKeys.Step.entries) {
-        same(MenuKeys.pills(MenuKeys.BACK, step, true), false, "Back has no pill at $step")
-        same(MenuKeys.pills(MenuKeys.SAVE, step, false), true, "I always has one at $step")
-        same(MenuKeys.pills(MenuKeys.FORGET, step, true), MenuKeys.second(step, true) != null, "O has one where it has a button at $step")
+        val at = MenuKeys.State(step, true)
+        same(MenuKeys.pills(MenuKeys.BACK, at), false, "Back has no pill at $step")
+        same(MenuKeys.pills(MenuKeys.SAVE, at), true, "I has one at $step")
+        same(MenuKeys.pills(MenuKeys.FORGET, at), MenuKeys.second(step, true) != null, "O has one where it has a button at $step")
     }
+    same(MenuKeys.pills(MenuKeys.SAVE, MenuKeys.State(MenuKeys.Step.New, false, savable = false)), false, "A symbol has no Save to hover")
+    // After a press the finger stays on the key: letting the key go keeps the hover until the touchpad shows a lift or a move
+    // (owner, 2026-11-12: the hover was lost when the state changed).
+    val kept = SteadyKey(Layout::keyAt)
+    kept.touch(.75f, .1f)
+    kept.keyDown(37)
+    kept.lift(1000)
+    kept.release(37)
+    same(kept.expire(1000 + 20 * SteadyKey.LIFT_MILLIS), false, "The pressed key's hover stays after the press")
+    same(kept.key, "I", "on I")
+    kept.lift(9000)
+    same(kept.expire(9000 + SteadyKey.LIFT_MILLIS), true, "and goes when the finger lifts")
     val hover = SteadyKey(Layout::keyAt)
     hover.touch(.75f, .1f)
     same(MenuKeys.hovered(hover.key), MenuKeys.SAVE, "A finger on I hovers I's button")
@@ -233,6 +258,58 @@ private fun theMenuWord() {
 }
 
 /**
+ * Word menu v4's animations (design v2, section 4; owner, 2026-11-12): Save's sparkles, Unsave's dim and falling sparkles, and the
+ * heart breaking with a crack, shards and a dip, with Favourite's burst beside them.
+ */
+private fun theV4Motions(word: MenuMotion.Word) {
+    val favourite = MenuMotion.frame(MenuKeys.Motion.Favourite, 200, word)
+    check(favourite.sprites.size in 6..8 && favourite.sprites.map { it.size }.toSet().size >= 2) { "6 to 8 hearts of different sizes" }
+    check(MenuMotion.frame(MenuKeys.Motion.Favourite, 90, word).wordScale > 1.03f) { "The word pops as they burst" }
+    check(MenuMotion.peak(MenuKeys.Motion.Favourite) == 0L) { "Favourite's haptic hits on the burst" }
+    check(MenuMotion.frame(MenuKeys.Motion.Forget, 300, word).wordAlpha < 1f) { "Forget dissolves the word" }
+    check(MenuMotion.frame(MenuKeys.Motion.Favourite, 200, MenuMotion.Word(120f, 220f, 27f, MenuMotion.Word.seed("hello")))
+        != favourite) { "Another word gets another layout" }
+    // The heart breaking (owner: "slightly bad"; design v2, section 4): a zigzag crack draws down it in 120 ms, the halves tilt
+    // apart with 4 tiny shards, fall and fade; the word dips 2 dp and comes back, with no shake. The haptic lands on the crack.
+    same(MenuMotion.peak(MenuKeys.Motion.Unfavourite), MenuMotion.CRACK_MILLIS, "The haptic lands as the crack is done")
+    check(MenuMotion.CRACK_MILLIS == 120L) { "The crack takes 120 ms" }
+    val cracks = listOf(10L, 60L, 110L).map { millis -> MenuMotion.frame(MenuKeys.Motion.Unfavourite, millis, word).sprites.single { it.shape == MenuMotion.Shape.Crack }.amount }
+    check(cracks.zipWithNext().all { (a, b) -> b > a } && cracks.last() > .85f) { "The crack draws down: $cracks" }
+    val broken = MenuMotion.frame(MenuKeys.Motion.Unfavourite, 260, word).sprites
+    same(broken.count { it.shape == MenuMotion.Shape.Shard }, 4, "Four tiny shards")
+    check(broken.any { it.shape == MenuMotion.Shape.HeartLeft } && broken.any { it.shape == MenuMotion.Shape.HeartRight }) { "Two halves" }
+    val falling = listOf(260L, 450L, 620L).map { millis -> MenuMotion.frame(MenuKeys.Motion.Unfavourite, millis, word).sprites.first { it.shape == MenuMotion.Shape.HeartLeft }.y }
+    check(falling.zipWithNext().all { (a, b) -> b > a }) { "The halves fall: $falling" }
+    val dips = (0 until MenuMotion.millis(MenuKeys.Motion.Unfavourite) step 10).map { MenuMotion.frame(MenuKeys.Motion.Unfavourite, it, word) }
+    check(dips.maxOf { it.wordDrop } in 1.9f..2.01f && dips.all { it.wordShift == 0f } && dips.last().wordDrop < .1f) { "The word dips 2 dp and back, no shake" }
+    // Save (design v2, section 4): 8 to 10 bold sparkles burst out in a ring, a little bigger at first, then drift up; the word pops.
+    val save = MenuMotion.frame(MenuKeys.Motion.Save, 150, word)
+    check(save.sprites.size in 8..10 && save.sprites.all { it.shape == MenuMotion.Shape.Sparkle && it.behind }) { "8 to 10 sparkles: ${save.sprites.size}" }
+    check(save.sprites.any { it.y > word.middle + 3f } && save.sprites.any { it.y < word.middle - 3f }) { "in a ring, above and below the word" }
+    val early = MenuMotion.frame(MenuKeys.Motion.Save, 40, word).sprites.map { it.size }.average()
+    val late = MenuMotion.frame(MenuKeys.Motion.Save, 400, word).sprites.map { it.size }.average()
+    check(early > late) { "bigger at first: $early, then $late" }
+    val rising = listOf(300L, 500L).map { millis -> MenuMotion.frame(MenuKeys.Motion.Save, millis, word).sprites.map { it.y }.average() }
+    check(rising[0] > rising[1]) { "then drifting up: $rising" }
+    same(MenuMotion.millis(MenuKeys.Motion.Save), MenuMotion.millis(MenuKeys.Motion.Favourite), "Save takes as long as Favourite")
+    check(MenuMotion.frame(MenuKeys.Motion.Save, 90, word).wordScale > 1.03f) { "The word pops as the sparkles burst" }
+    same(MenuMotion.peak(MenuKeys.Motion.Save), 0L, "Save's haptic hits on the burst")
+    // Unsave (owner, 2026-11-12: "what does unsave have to do with sparkles?"): a bookmark breaks over the word as the heart does,
+    // more quietly: 2 shards, and no dip of the word. The haptic lands as its crack is done.
+    val unsaveMotion = MenuKeys.Motion.Unsave
+    same(MenuMotion.peak(unsaveMotion), MenuMotion.CRACK_MILLIS, "Unsave's haptic lands on its crack")
+    val cracking = MenuMotion.frame(unsaveMotion, 60L, word).sprites
+    check(cracking.any { it.shape == MenuMotion.Shape.Bookmark } && cracking.any { it.shape == MenuMotion.Shape.Crack }) { "A bookmark cracks: $cracking" }
+    val torn = MenuMotion.frame(unsaveMotion, 260L, word).sprites
+    check(torn.any { it.shape == MenuMotion.Shape.BookmarkLeft } && torn.any { it.shape == MenuMotion.Shape.BookmarkRight }) { "into two halves" }
+    same(torn.count { it.shape == MenuMotion.Shape.Shard }, 2, "with 2 shards, quieter than the heart's 4")
+    check(torn.none { it.shape == MenuMotion.Shape.Sparkle }) { "No sparkles" }
+    val unsaving = ArrayList<MenuMotion.Frame>()
+    for (millis in 0L until MenuMotion.millis(unsaveMotion) step 10L) unsaving += MenuMotion.frame(unsaveMotion, millis, word)
+    check(unsaving.all { it.wordDrop == 0f && it.wordShift == 0f && it.wordAlpha == 1f }) { "The word stays still" }
+}
+
+/**
  * The animations (owner, 2026-11-12): quick, inside the bar, seeded by the word so a word always gets the same layout, roughly
  * symmetric on both sides, all orange, and none with motion off. No icon snaps to another.
  */
@@ -260,26 +337,13 @@ private fun theMenuMotion() {
                 check(sprite.alpha in 0f..1f) { "$motion's strength: $sprite" }
                 if (sprite.x < word.centre) left = true else right = true
             }
-            check(frame.wordScale in 1f..1.07f && kotlin.math.abs(frame.wordShift) <= 1.5f) { "$motion only pops or shakes the word a little" }
+            check(frame.wordScale in 1f..1.07f && kotlin.math.abs(frame.wordShift) <= 1.5f && kotlin.math.abs(frame.wordDrop) <= 2.01f) {
+                "$motion only pops, dips or shakes the word a little"
+            }
         }
-        if (motion != MenuKeys.Motion.Unsave) check(left && right) { "$motion plays on both sides of the word" }
+        check(left && right) { "$motion plays on both sides of the word" }
     }
-    val favourite = MenuMotion.frame(MenuKeys.Motion.Favourite, 200, word)
-    check(favourite.sprites.size in 6..8 && favourite.sprites.map { it.size }.toSet().size >= 2) { "6 to 8 hearts of different sizes" }
-    check(MenuMotion.frame(MenuKeys.Motion.Favourite, 90, word).wordScale > 1.03f) { "The word pops as they burst" }
-    check(MenuMotion.peak(MenuKeys.Motion.Favourite) == 0L) { "Favourite's haptic hits on the burst" }
-    val unfavourite = MenuMotion.peak(MenuKeys.Motion.Unfavourite)
-    check(kotlin.math.abs(MenuMotion.frame(MenuKeys.Motion.Unfavourite, unfavourite + 30, word).wordShift) > .1f) { "The word shakes with the crack's haptic" }
-    // Save is Favourite's burst in ribbons (owner, 2026-11-12): the same count, sizes, timing, pop and haptic, only the shape differs.
-    val save = MenuMotion.frame(MenuKeys.Motion.Save, 200, word)
-    check(save.sprites.size in 6..8 && save.sprites.all { it.shape == MenuMotion.Shape.Ribbon && it.behind }) { "6 to 8 ribbons burst from behind the word" }
-    check(save.sprites.map { it.size }.toSet().size >= 2) { "of different sizes" }
-    same(MenuMotion.millis(MenuKeys.Motion.Save), MenuMotion.millis(MenuKeys.Motion.Favourite), "Save takes as long as Favourite")
-    check(MenuMotion.frame(MenuKeys.Motion.Save, 90, word).wordScale > 1.03f) { "The word pops as the ribbons burst" }
-    same(MenuMotion.peak(MenuKeys.Motion.Save), 0L, "Save's haptic hits on the burst")
-    check(MenuMotion.frame(MenuKeys.Motion.Forget, 300, word).wordAlpha < 1f) { "Forget dissolves the word" }
-    check(MenuMotion.frame(MenuKeys.Motion.Favourite, 200, MenuMotion.Word(120f, 220f, 27f, MenuMotion.Word.seed("hello")))
-        != favourite) { "Another word gets another layout" }
+    theV4Motions(word)
     // No icon snaps: every change is a few frames long, and the heart fills from the bottom as it warms.
     val heart = MenuKeys.Button.Favourite
     val full = MenuKeys.Button.Favourited
@@ -296,7 +360,7 @@ private fun theMenuMotion() {
     val draining = MenuMotion.icon(full, heart, MenuMotion.ICON_MILLIS / 3).first { it.button == full }
     check(draining.orange in .1f..0.9f) { "The orange drains: $draining" }
     check(MenuMotion.ICON_MILLIS in 200L..350L) { "Icon changes take 200 to 350 ms" }
-    // The ambient status, at rest: a faint heart now and then from alternating sides of a favourite, a faint ribbon swaying now
+    // The ambient status, at rest: a faint heart now and then from alternating sides of a favourite, a faint sparkle twinkling now
     // and then by a saved word, nothing by a word that isn't saved; still where motion is off.
     same(MenuMotion.ambient(MenuKeys.Step.New, 500, word, false), emptyList<MenuMotion.Sprite>(), "Nothing by a word that isn't saved")
     val sides = (0 until 4).map { cycle ->
@@ -307,14 +371,20 @@ private fun theMenuMotion() {
     same(sides, listOf(sides[0], !sides[0], sides[0], !sides[0]), "The hearts come from alternating sides")
     same(MenuMotion.ambient(MenuKeys.Step.Favourite, MenuMotion.AMBIENT_HEART_MILLIS + 100, word, false), emptyList<MenuMotion.Sprite>(),
         "and rest between")
-    check(MenuMotion.AMBIENT_HEART_EVERY in 2000L..3000L && MenuMotion.AMBIENT_SWAY_EVERY in 3500L..4500L) { "Every 2.5 s and every 4 s" }
-    val ribbon = MenuMotion.ambient(MenuKeys.Step.Saved, 300, word, false).single()
-    check(ribbon.shape == MenuMotion.Shape.Ribbon && ribbon.x < word.left && ribbon.turn != 0f && ribbon.alpha <= .36f) { "The ribbon sways: $ribbon" }
-    same(MenuMotion.ambient(MenuKeys.Step.Saved, 2000, word, false).single().turn, 0f, "and rests between sways")
-    same(MenuMotion.ambient(MenuKeys.Step.Saved, 300, word, true).single().turn, 0f, "With motion off the ribbon sits still")
+    check(MenuMotion.AMBIENT_HEART_EVERY in 2000L..3000L && MenuMotion.AMBIENT_TWINKLE_EVERY in 3000L..4000L) { "Every 2.5 s and every 3.5 s" }
+    val twinkle = MenuMotion.ambient(MenuKeys.Step.Saved, 350, word, false).single()
+    check(twinkle.shape == MenuMotion.Shape.Sparkle && twinkle.alpha in .3f..0.36f && twinkle.size > 8f) { "A faint sparkle twinkles: $twinkle" }
+    val twinkles = (0 until 4).map { cycle -> MenuMotion.ambient(MenuKeys.Step.Saved, cycle * MenuMotion.AMBIENT_TWINKLE_EVERY + 350, word, false).single().x > word.centre }
+    same(twinkles, listOf(twinkles[0], !twinkles[0], twinkles[0], !twinkles[0]), "at alternating ends")
+    same(MenuMotion.ambient(MenuKeys.Step.Saved, 2000, word, false), emptyList<MenuMotion.Sprite>(), "and rests between")
+    same(MenuMotion.ambient(MenuKeys.Step.Saved, 300, word, true).single().let { it.shape to it.turn }, MenuMotion.Shape.Sparkle to 0f,
+        "With motion off a faint sparkle sits still by a saved word")
     same(MenuMotion.ambient(MenuKeys.Step.Favourite, 300, word, true).size, 1, "and a faint heart sits still by a favourite")
-    same(MenuMotion.ambientWait(MenuKeys.Step.Saved, 2000, false), MenuMotion.AMBIENT_SWAY_EVERY - 2000, "It redraws only when it moves")
+    same(MenuMotion.ambientWait(MenuKeys.Step.Saved, 2000, false), MenuMotion.AMBIENT_TWINKLE_EVERY - 2000, "It redraws only when it moves")
     val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    // Places (owner, 2026-11-12): I, O and Back on the centres of their columns, a key apart; Back no longer dodges the corner.
+    check("if (centre > most) centre = most" !in strip) { "Back no longer dodges the rounded corner" }
+    check("barHover.release(keyCode)" in java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()) { "A picking key keeps the hover" }
     check("if (pillShown >= 0) ambientStart = -1L" in strip) { "The ambient status waits while a button is hovered" }
     check("MenuKeys.motion(if (opened) null else shownStep, menu.step)?.takeIf { GuideMotion.enabled }" in strip) { "Motion off, no animations" }
     check("drawable.setTint(look.accent)" in strip.substringAfter("private fun drawSprite(")) { "Every particle is orange" }

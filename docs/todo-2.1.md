@@ -2,9 +2,9 @@
 
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
-[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 22:00.
+[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 22:10.
 
-## On the phone now (build 3968470a, test-2.1h at f68044d)
+## On the phone now (build 26dabd27, test-2.1h at a7cb9b9)
 
 - Gestures:
   - The held delete: corner glow, pause zone, zone ticks, a firm hit per word, and a thin caret that blinks only when paused.
@@ -38,11 +38,11 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 - Calibration:
   - One-pixel centred lines.
   - The owner's calibration (107.5 px, centred) is the default for the Sym/emoji panels, clipboard, word menu buttons and hover marks.
+- The guide opens at font size 2.0: a title or instruction that can't shrink keeps its largest size (brought in ahead of the batch).
 - Earlier fixes: the keyboard crash on open (bar init order), and a lone "i" capitalised.
 
 ## In progress
 
-- Build of a7cb9b9: the guide crash fix at font size 2.0, brought in ahead of the batch (owner: "bring the crash fix in now"). Install when it passes.
 - D: Save gets a particle burst like Favourite's heart burst, with orange bookmark shapes on both sides (owner: Favourite "done perfectly", Save "not done nicely"). Only Save changes.
 - Layout sample page: on the phone at http://localhost:8765/sample.html, served from the PC through adb reverse. It's scratchpad
   cal-tool/sample.html, with the Guide and Playground screens, a Sizes button and Full screen. **Waiting for the owner's verdict** before the batch.

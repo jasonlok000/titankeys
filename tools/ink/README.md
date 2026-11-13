@@ -18,6 +18,8 @@ It adds:
 - `setRouteParents`, so a link into a Settings page lands with its parent pages under it, and ← goes up.
 - `appBaseContext`, which the app defines beside `createAppNativeAdapters`: the activity's base context, so TitanKeys can keep
   Ink's activity at fixed sizes whatever the phone's display size or font size.
+- `autoCapitalise={false}` on `TextInput`: the field asks the keyboard for no capitals. Ink always asked for a capital at each
+  sentence, so the prop did nothing before.
 - `appPressHaptic`, beside it: the app can play its own haptic for a press, or none, in place of Android's stock click.
 - No Light Phone receiver: Ink adds `InkLightSdkReceiver`, the Light Phone SDK's marker, exported behind a permission named
   "normal" that nothing defines. TitanKeys runs on the Titan, not a Light Phone, so the patch takes it out of the manifest.

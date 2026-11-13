@@ -260,6 +260,17 @@ all of them are unapproved.
     above the keyboard; F: Size grows only the bar's contents, follows the phone's font size until picked, moves to The bar; W:
     an immediate haptic on Save's press (and any late menu button); A: switches for Delete a word and Next keyboard. All from
     059caf3. Then: check the owner's phone lands on Biggest.
+  - **Merged for build #13 (a5ceca7):**
+    - A's idle rule (claude/idle-once 63954f2): one 25% roll exactly 3:00 after the last input, none after it in that period;
+      the period after a game never plays; never the same game twice running; a new field, the keyboard reopening or the screen
+      coming back on starts a new period; the debug broadcast doesn't count.
+    - D's lowercase shorthand (claude/shorthand-lowercase 70a4d76): stored and matched lowercase, existing entries repaired once
+      (an already-lowercase entry wins a clash). Cause: the build's compat.py stripped autoCapitalise={false} and public Ink
+      always asked for sentence capitals; D patched Ink (tools/ink/titankeys.patch) and compat.py (outside the repo, old copy
+      kept). TitanKeys itself follows each field's own capital flags; no wider bug.
+    - Idle, autocorrect and guide checks pass; bun 169 of 171 (the two that need the ink package).
+    - Still to come: W's 11 dp line and its renders, then build #13.
+  - **Languages wait until 2.1 is out** (owner, 2026-11-13: "Lets finis up 2.1 first.").
   - **Path to the 2.1 pre-release (asked by the owner, 2026-11-13):**
     1. W's, A's and D's work lands; the Orchestrator reviews W's corner and border renders; build #13; phone check.
     2. The owner's hands-only pass: the touchpad (swipe, held flick and its trail, PAUSE height, steer, select), the real Sym key

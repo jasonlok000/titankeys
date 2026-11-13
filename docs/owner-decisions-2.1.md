@@ -115,6 +115,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - **Shift + Backspace** deletes a word.
   - **Alt + Sym** switches to the next keyboard. The owner suggested Alt + Sym rather than Shift + Sym.
   - Both count only while the modifier is held down. A tapped or automatic Shift doesn't count, so Backspace at the start of a sentence stays a plain Backspace. Switching goes to the next keyboard, as Key Mapper's switch did, not to the picker. (Orchestrator)
+- Key Mapper: key_maps_titankeys_v2.zip removes Shift + Sym and Shift + Backspace, which TitanKeys now does itself. Sym + S, P and E and Space + Alt stay switched off, because they double Sym or hold back Space. (Owner asked, 2026-11-12)
 - Found: a Key Mapper combo that starts with Shift or Sym makes Key Mapper send that key a second time whenever the combo doesn't complete. TitanKeys then reads one push of Shift as two, and one push of Sym as two. A combo that starts with Space holds back every Space press until it's let go. The owner's working copy of the export turns those combos off. (Orchestrator, from Key Mapper's source, 2026-11-12)
 
 ## Setup and settings scope
@@ -131,7 +132,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - Later: accented letters in Sym, voice input, a per-app modes page, bar size. (Owner, 2026-11-12)
 - No: a letter-shortcuts row. (Owner, 2026-11-12)
 - Rename "Scroll assistant outside text fields" to "Scroll assistant". Inside text fields TitanKeys' own touchpad takes over, so the switch really turns app scrolling on or off. (Owner, 2026-11-12)
-- Bug: with that switch off, the keys still scroll Reddit (its full-screen viewer). A is investigating. (Owner report, 2026-11-12)
+- Bug: with that switch off, the keys still scroll apps outside text fields: first Reddit, then many apps ("it's scrolling many diff things now"). The block fails when the keyboard isn't in focus. The owner rejected the quick theories (Back service off, Atlas' service) and asked to find the last build that worked and compare the code. Status: A's hold-trace build is ready, and the bisect list of old builds is ready, but neither has been run yet. (Owner, 2026-11-12)
 - No "Set it up for me" through Accessibility: Google Play's policy forbids it. (Owner's rule "only if it passes Google Play"; the Orchestrator checked the policy.)
 
 - No: password and 2FA codes on the bar (autofill chips). No: back up everything in one file. No: changing the defaults to match stock and BlackBerry (Caps Lock on double Shift, hold for a capital, spelling from the phone's language). (Owner, 2026-11-12)
@@ -143,6 +144,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - The lines are **one pixel**, at the **centre** of each gap, with one at each outer edge. There are two sliders, Spacing (key plus gap) and Shift. This replaces the bands and the separate key and gap sliders. (Owner, 2026-11-12)
 - Calibrated by the owner on a quick page served to the phone (2026-11-12): a key and a gap every 107.5 px on the 1076 px screen, centred. This is now the default for everyone, and values stored against the old default are dropped.
 - The real keys, 1:1 (owner, tuned on the quick page, 2026-11-12): **square**, with **no gap between keys** in a row and **10.5 px between rows**. At 1:1 the four rows are about 461 px tall, nearly half the screen.
+- The overlays must line up exactly with the calibration, at least from Q (top left) to Sym (bottom right). (Owner, 2026-11-12)
 - Key calibration is for the overlays tied to keys: the Sym and emoji panels, the clipboard, the word menu buttons, and the guide's hints and trail. It has two sliders, Q's left edge and P's right edge, over the three letter rows. The defaults come from the phone's real geometry, and the owner fine-tunes it on the phone. (Owner, 2026-11-12)
 ### Open
 - The guide's keyboard: **same width, 60% of the real height**, with the bars below counted in the overall height. Same shape but smaller was rejected. (Owner, 2026-11-12)
@@ -155,6 +157,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Launch
 
+### Open
+- Launch 2.1 as a public beta? The Orchestrator recommends yes, after a stability gate: about 3 days of daily driving with no crash or broken basics, a clean fresh install, a known-issues list and the News feed working. Testers on GitHub are unlimited. Play closed testing can use a Google Group, but new personal accounts need 12 testers for 14 days. The owner hasn't decided.
+- Languages: the Orchestrator suggested two levels. Basic would be open to anyone, with autocorrect off by default and the label "help us make it great". Full would come only after a native speaker has worked on it, which is the owner's rule. The owner hasn't decided. 3.0 is languages (#56).
+
+### Decided
 - For the promo launch, build a **megathread** listing all the current tools developers have built for the Titan 2 Elite: keyboards, key mappers, launchers, light and backlight tools, layout projects and so on, with TitanKeys among them. (Owner's note to self, 2026-11-12)
 
 ## Process

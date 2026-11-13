@@ -151,9 +151,11 @@ class AtlasIme : InputMethodService() {
     private val holdEngine = HoldEngine(HoldEngine.Output { replaceHeldLetter() })
     /** The press that can still become its symbol. Its letter is already typed. */
     private var heldLetter: KeyEvent? = null
-    /** In this app the Back service hears the keys first, because the app takes key presses before the keyboard. */
+    /** In Smart Launcher's search field the Back service hears the keys first and takes them for the keyboard. See [updateKeyWatch]. */
     private var watchingKeys = false
     private val panelKeys = PanelKeyFilter()
+    /** The keys taken from Smart Launcher's search field for the keyboard. See [updateKeyWatch]. */
+    private val takenKeys = TakenKeys()
     /** The key under a finger on the touchpad, for the modifier bar, or an empty string. */
     private var restingKey = ""
     private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
@@ -336,8 +338,6 @@ class AtlasIme : InputMethodService() {
         if (!panelOpen || isInputViewShown) return@Runnable
         if (canShowStrip()) showStrip.run() else closePanel()
     }
-
-    private val refreshModifiers = Runnable { showModifiers() }
 
     // Apps on Android's newer back handling ignore a back key from a keyboard, so a system back goes first.
     private val sendBack = Runnable { if (!BackService.back() && editing) sendDownUpKeyEvents(KeyEvent.KEYCODE_BACK) }
@@ -1376,29 +1376,33 @@ class AtlasIme : InputMethodService() {
     }
 
     /**
-     * Smart Launcher takes every key press in its search field before the keyboard hears it, so a press there cannot start a
-     * hold or count towards Shift and Alt. The Back service hears them first, only in this one app and only when a setting needs them.
+     * Smart Launcher takes every key press in its search field before the keyboard hears it, so the launcher typed its own letters
+     * there and nothing of TitanKeys ran: no fixes, no Shift + Backspace, no Sym panel (owner, 2026-11-13). The Back service hears
+     * the keys first in that field and takes them from the app, so the keyboard types there as in any other field. See [TakenKeys].
      * It also hears them while the Sym panel is open, and until the release of a key that the panel took. See [PanelKeyFilter].
      * After a first push of Back let go of the touchpad, it hears the second push go through. See [TouchpadHold].
      */
     private fun updateKeyWatch() {
-        val launcher = editing && currentInputEditorInfo?.packageName == SMART_LAUNCHER && (holdSymbols || !modifiers.doublePressLocks)
+        val launcher = editing && currentInputEditorInfo?.packageName == SMART_LAUNCHER
         val forPanel = panelOpen || panelKeys.holding
-        val running = BackService.watchKeys(if (launcher || forPanel || hold.lettingGo) ::watchedKey else null)
+        val running = BackService.watchKeys(if (launcher || forPanel || takenKeys.holding || hold.lettingGo) ::watchedKey else null)
         watchingKeys = running && launcher
-        if (!running) panelKeys.clear()
+        if (!running) {
+            panelKeys.clear()
+            takenKeys.clear()
+        }
     }
 
     /**
-     * Hears a key before Smart Launcher does. The launcher still types its own letters, so this only times holds and
-     * follows Shift and Alt. True takes the key from the app, which is only ever a repeat of a letter that can become a symbol,
-     * or a second push of Shift or Alt. Every key waits for this answer, so slow work goes to the main looper.
+     * Hears a key before Smart Launcher does, and takes it from the launcher for the keyboard: [onKeyDown] and [onKeyUp] get it, as
+     * they get a key in any other field. Every key waits for this answer.
      *
      * While the Sym panel is open, Enter and Backspace are kept from every app and go to the panel, the same as a key that the app
      * passed on to the keyboard.
      */
     private fun watchedKey(event: KeyEvent): Boolean {
         val down = event.action == KeyEvent.ACTION_DOWN
+        if (event.keyCode == KeyEvent.KEYCODE_SYM) symLog("service heard Sym ${if (down) "down" else "up"}: watching $watchingKeys, panel ${modifiers.panel}")
         // The second push of Back goes on to the app. Its release says that the app has it.
         if (event.keyCode == KeyEvent.KEYCODE_BACK && hold.lettingGo && !editing) {
             if (!down) main.post(backWentThrough)
@@ -1410,28 +1414,26 @@ class AtlasIme : InputMethodService() {
             updateKeyWatch()
             return true
         }
-        if (!watchingKeys) return false
-        main.post(refreshModifiers)
         val code = event.keyCode
         // The app takes Back before the keyboard, so an open panel must close here.
-        if (code == KeyEvent.KEYCODE_BACK && isInputViewShown && backKey(event, event.action == KeyEvent.ACTION_DOWN)) return true
-        if (event.action != KeyEvent.ACTION_DOWN) {
-            holdEngine.up(code, event.deviceId, event.eventTime)
-            return Modifiers.isShiftOrAlt(code) && modifiers.appRelease(code, event.eventTime)
+        if (watchingKeys && code == KeyEvent.KEYCODE_BACK && isInputViewShown && backKey(event, down)) return true
+        if (!takenKeys.takes(code, down, watchingKeys, event.isSystem)) {
+            if (code == KeyEvent.KEYCODE_SYM) symLog("Sym went on to the app")
+            return false
         }
-        if (Modifiers.isShiftOrAlt(code)) {
-            val push = modifiers.appPush(code, event.eventTime, event.repeatCount)
-            if (push == Modifiers.AppPush.HideAndClear) {
-                val meta = if (code == KeyEvent.KEYCODE_SHIFT_LEFT || code == KeyEvent.KEYCODE_SHIFT_RIGHT) KeyEvent.META_SHIFT_ON else KeyEvent.META_ALT_ON
-                main.post { currentInputConnection?.clearMetaKeyStates(meta) }
-            }
-            return push != Modifiers.AppPush.Pass
-        }
-        val repeatOfHold = trackHold(event)
-        // A shortcut types nothing, so like the keyboard's own typing, only a character uses up a press of Shift or Alt.
-        if (event.repeatCount == 0 && !event.isSystem && !KeyEvent.isModifierKey(code)
-            && !event.isCtrlPressed && !event.isMetaPressed) modifiers.consume()
-        return repeatOfHold
+        if (code == KeyEvent.KEYCODE_SYM) symLog("Sym taken from the app for the keyboard")
+        if (down) onKeyDown(code, event) else onKeyUp(code, event)
+        // A key let go after its field closed: nothing is taken any more, so the service stops hearing keys.
+        if (!watchingKeys && !takenKeys.holding) updateKeyWatch()
+        return true
+    }
+
+    /**
+     * TitanKeys Debug only: what happened to a press of Sym, for an app where the panel doesn't open. Never any text, only where the
+     * press got to.
+     */
+    private fun symLog(line: String) {
+        if (AppBuild.kind(this) == "debug") Log.i("TitanKeysSym", "$line (app ${currentInputEditorInfo?.packageName}, editing $editing)")
     }
 
     /** Only the package is kept, so the Enter key setting can offer apps without asking to see every installed app. */
@@ -3125,22 +3127,12 @@ class AtlasIme : InputMethodService() {
             logExact("hold ${letter.keyCode} gives its symbol")
             sendExact(letter, ExactTyping.takeBack)
             commitExact(text)
-        } else if (watchingKeys) {
-            val typed = letter.getUnicodeChar(letter.metaState)
-            main.post { replaceAppLetter(typed, text) }
         } else if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(text) } else composer.replaceLetter(text)
     }
 
-    /** The app typed the letter itself, so the composer does not know it. It stays as it is unless it is still the last thing typed. */
-    private fun replaceAppLetter(letter: Int, symbol: String) {
-        if (!editing || !watchingKeys) return
-        composer.command(destructive = true, fieldLocal = true) {
-            val before = currentInputConnection?.getTextBeforeCursor(1, 0) ?: return@command false
-            before.length != 1 || before[0].code != letter || editor.replace(1, symbol, 0)
-        }
-    }
-
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym down, repeat ${event.repeatCount}: shown $isInputViewShown, " +
+            "panel ${modifiers.panel}, guide $inGuide, menu $menuOpen, waiting ${pendingInput.size}")
         // The panel's mark of the key under a resting finger stays while a key is down, as when it toggles a quick setting.
         if (!touchpad.isGestureKey(event)) {
             panelHover.keyDown(keyCode)
@@ -3155,6 +3147,7 @@ class AtlasIme : InputMethodService() {
         // With the word menu open, the keys press its buttons, never type: the menu's own handling below decides.
         val locked = if (editing && inGuide && !event.isSystem && !menuOpen) guideLesson(event) else null
         if (locked != null && !guideAllows(locked)) {
+            if (keyCode == KeyEvent.KEYCODE_SYM) symLog("Sym kept by the guide's slide")
             if (event.repeatCount == 0) guideBlocked(locked)
             lockedKeys += keyCode
             return true
@@ -3178,7 +3171,10 @@ class AtlasIme : InputMethodService() {
             backKey(event, down = true)
             return true
         }
-        if (!editing || keyCode == KeyEvent.KEYCODE_BACK) return super.onKeyDown(keyCode, event)
+        if (!editing || keyCode == KeyEvent.KEYCODE_BACK) {
+            if (keyCode == KeyEvent.KEYCODE_SYM) symLog("Sym outside a field went on to Android")
+            return super.onKeyDown(keyCode, event)
+        }
         typedInField = true
         if (touchpad.isGestureKey(event)) return true
         // Keys like volume reach the keyboard too, but they are not typing.
@@ -3222,8 +3218,7 @@ class AtlasIme : InputMethodService() {
         // The touchpad hears the physical press now, before the key is typed.
         contact.key(keyCode, true, event.eventTime)
         val carried = carryCtrl(event)
-        // A key that gets here while the keys are watched has already told the hold timer about its press.
-        val repeatOfHold = !watchingKeys && trackHold(carried)
+        val repeatOfHold = trackHold(carried)
         // A key press means the finger was pressing, not resting on the touchpad.
         endCursor()
         if (repeatOfHold) {
@@ -3269,6 +3264,7 @@ class AtlasIme : InputMethodService() {
             main.removeCallbacks(expireHover)
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
         }
+        if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym up: panel ${modifiers.panel}")
         if (lockedKeys.remove(keyCode)) return true
         // Published before the take-back, so the guide hears the letter let go too soon.
         val takeBack = inGuide && editing && heldLetter?.keyCode == keyCode
@@ -3353,6 +3349,8 @@ class AtlasIme : InputMethodService() {
     private fun key(event: KeyEvent): Boolean {
         if (Modifiers.isModifier(event.keyCode)) {
             modifiers.key(event)
+            if (event.keyCode == KeyEvent.KEYCODE_SYM && event.action == KeyEvent.ACTION_DOWN)
+                symLog("Sym handled: panel now ${modifiers.panel}, shown $isInputViewShown")
             switchKeyboardIfAsked()
             if (field.exact) logModifiers(event)
             if (panelOpen && !isInputViewShown) main.post(showPanel)

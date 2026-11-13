@@ -1464,6 +1464,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onWindowHidden() {
         panelHover.keysReleased()
+        panelPress = -1
         barHover.keysReleased()
         super.onWindowHidden()
         sleepIdleBar()
@@ -2813,6 +2814,22 @@ class AtlasIme : InputMethodService() {
         QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard, QuickSetting.Clipboard -> Unit
     }
 
+    /** The key that toggled a quick setting, whose release must not start the mark's wait: see [keepPanelHover]. */
+    private var panelPress = -1
+
+    /**
+     * A key that toggled a quick setting under the finger: the finger is on it, so the page's mark stays there, whatever the touchpad
+     * reports around the press, as the word menu's hover does (owner, 2026-11-13: the page was the model, so it must really stay).
+     * The press's own lift comes after the key on the phone, and the plain wait after it cleared the mark. See [SteadyKey.press].
+     * Only a page that stays open keeps it: Open, Kbd and Clip leave it.
+     */
+    private fun keepPanelHover(key: String, keyCode: Int) {
+        if (modifiers.panel != Modifiers.Panel.Settings) return
+        panelHover.press(key)
+        panelPress = keyCode
+        panel?.hover = panelHover.key
+    }
+
     /** Pushing a key on the quick settings page. The change applies at once and the page stays open. Only the key that opens Settings leaves. */
     private fun useQuickSetting(item: QuickSetting) {
         // In the guide, O is off limits. The slide says so, and a key press plays no haptic.
@@ -3215,8 +3232,14 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        // The last key let go: a resting finger is reported again at once, and if none is, the mark goes as after a lift.
-        val panelLast = panelHover.keyUp(keyCode, event.eventTime) && panelOpen
+        // The last key let go: the mark goes as after a lift, unless the touchpad shows the finger again. A key that toggled a quick
+        // setting keeps it: the touchpad's lift for the press comes after the key, and is the press's own. See [keepPanelHover].
+        val panelRelease = keyCode == panelPress
+        if (panelRelease) {
+            panelHover.release(keyCode, event.eventTime)
+            panelPress = -1
+        }
+        val panelLast = !panelRelease && panelHover.keyUp(keyCode, event.eventTime) && panelOpen
         // A key that picked a word menu button keeps the hover when it is let go: the finger is still on it, and its pill now
         // names the button's next step (owner, 2026-11-12). The touchpad's lift for the press mostly comes after the key, and is
         // the press's own: the hover goes only when the touchpad shows the finger on another key, or lifting after that. See
@@ -3404,6 +3427,7 @@ class AtlasIme : InputMethodService() {
         if (modifiers.panel == Modifiers.Panel.Settings) QuickSetting.on(letter)?.let { item ->
             pickedKey = event.keyCode
             useQuickSetting(item)
+            keepPanelHover(letter, event.keyCode)
         } else if (modifiers.panel == Modifiers.Panel.Clipboard) {
             pickedKey = event.keyCode
             clipKey(letter)

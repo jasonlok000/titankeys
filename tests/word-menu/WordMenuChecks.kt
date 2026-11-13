@@ -1,9 +1,12 @@
 package com.atlas.engine
 
+import com.atlas.keyboard.Fingers
 import com.atlas.keyboard.Layout
 import com.atlas.keyboard.MenuBar
 import com.atlas.keyboard.MenuKeys
 import com.atlas.keyboard.MenuMotion
+import com.atlas.keyboard.QuickSetting
+import com.atlas.keyboard.QuickSettingsPage
 import com.atlas.keyboard.SteadyKey
 import java.io.File
 
@@ -15,6 +18,7 @@ import java.io.File
 fun main() {
     theOpening()
     theHover()
+    theQuickSettingsHover()
     theKeyboardMakesTheseCalls()
     println("Word menu checks passed")
 }
@@ -101,7 +105,7 @@ private enum class Order(val describe: String) {
  * A press of [key] at [time] under the finger, in [order]. The touchpad then reports the finger again [back] ms after the press's
  * lift, on [rest], or, when [back] is null, as the phone mostly does: never, while the finger stays still.
  */
-private fun MenuBar.pressUnderFinger(key: String, time: Long, order: Order, back: Long? = null, rest: String = key) {
+private fun Fingers.pressUnderFinger(key: String, time: Long, order: Order, back: Long? = null, rest: String = key) {
     val lifted = when (order) {
         Order.Typical -> { keyDown(key, time); keyUp(key, time + 86); lift(time + 210); time + 210 }
         Order.Together -> { press(key, time); lift(time + 115); time + 115 }
@@ -219,6 +223,71 @@ private fun theHover() {
     same(plain.at(1_000 + SteadyKey.LIFT_MILLIS).pill, null, "A real lift ends it after the usual wait")
 }
 
+// The quick settings page ---------------------------------------------------------------------------------------------------------
+
+/**
+ * The quick settings page keeps its mark through a toggle, as the word menu keeps its hover (owner, 2026-11-13: the page was the
+ * word menu's model, so it must really keep it). Same touchpad, same event orders: before, its mark went about 0.3 s after a
+ * toggle under a still finger, when the press's own lift had waited out the plain 150 ms.
+ */
+private fun theQuickSettingsHover() {
+    for (order in Order.entries) for (back in listOf(null, 60L)) for (key in listOf("F", "L", "M", "S")) {
+        val item = QuickSetting.on(key)!!
+        val how = "Quick settings, ${order.describe}, the finger ${if (back == null) "still and unreported" else "reported again"}, $key"
+        val page = QuickSettingsPage()
+        page.touch(key, 0)
+        same(page.mark, key, "$how: resting on $key marks it")
+        var time = 1_000L
+        for (toggle in 1..3) {
+            page.pressUnderFinger(key, time, order, back)
+            for (later in listOf(1L, 300L, 1_200L, 2_900L)) {
+                page.at(time + later)
+                same(page.mark, key, "$how: $later ms after toggle $toggle, the mark stays on $key")
+                same(page.on[item], toggle % 2 == 1, "$how: toggle $toggle switched $item")
+            }
+            time += 3_000
+        }
+        same(page.marks.map { it.second }, listOf(key), "$how: the mark never went away, ${page.marks}")
+    }
+    for (order in Order.entries) {
+        val how = "Quick settings, ${order.describe}"
+        // A finger that moves to another key after a toggle takes the mark with it at once.
+        val moved = QuickSettingsPage()
+        moved.touch("F", 0)
+        moved.pressUnderFinger("F", 1_000, order)
+        moved.touch("V", 2_500)
+        same(moved.mark, "V", "$how: moving to V marks V at once")
+        // A finger the touchpad shows again, then lifting: the mark goes after the plain wait, as for any lift.
+        val lifted = QuickSettingsPage()
+        lifted.touch("F", 0)
+        lifted.pressUnderFinger("F", 1_000, order, back = 60)
+        lifted.lift(3_000)
+        same(lifted.at(3_000 + SteadyKey.LIFT_MILLIS - 1).mark, "F", "$how: a short lift keeps it")
+        same(lifted.at(3_000 + SteadyKey.LIFT_MILLIS).mark, "", "$how: a real lift ends it")
+        // A finger that lifts while the touchpad is quiet can't be seen: the mark stays until the finger lands again.
+        val unseen = QuickSettingsPage()
+        unseen.touch("F", 0)
+        unseen.pressUnderFinger("F", 1_000, order)
+        same(unseen.at(10_000).mark, "F", "$how: no touchpad event, no change")
+        unseen.touch("V", 10_500)
+        same(unseen.mark, "V", "$how: the finger landing on V marks V")
+    }
+    // Open and Kbd close the panel, and X turns to the clipboard page: the mark doesn't carry over.
+    for (key in listOf("O", "K", "X")) {
+        val page = QuickSettingsPage()
+        page.touch(key, 0)
+        same(page.mark, key, "Resting on $key marks it")
+        page.pressUnderFinger(key, 1_000, Order.Typical)
+        same(page.at(3_000).let { it.page != QuickSettingsPage.Page.Settings && it.mark == "" }, true, "$key leaves the page, with no mark")
+    }
+    // A mark with no press goes after the usual wait, as before.
+    val plain = QuickSettingsPage()
+    plain.touch("F", 0)
+    plain.lift(1_000)
+    same(plain.at(1_000 + SteadyKey.LIFT_MILLIS - 1).mark, "F", "A short lift keeps the mark")
+    same(plain.at(1_000 + SteadyKey.LIFT_MILLIS).mark, "", "A real lift ends it after the usual wait")
+}
+
 /**
  * [MenuBar] makes AtlasIme's calls in AtlasIme's order. These are the lines it copies; a change to one of them must be made in
  * [MenuBar] too, or this check fails.
@@ -238,6 +307,19 @@ private fun theKeyboardMakesTheseCalls() {
         "barHover.lift(event.eventTime)",
         "if (last == null || !barHover.touch(last.x, last.y)) return",
         "if (column == MenuKeys.SAVE || column == MenuKeys.FORGET) column else -1",
+        // The quick settings page, as [QuickSettingsPage] copies it.
+        "if (modifiers.panel == Modifiers.Panel.Settings) Layout.restingKeyAt(x, y) else Layout.keyAt(x, y)",
+        "panelHover.keyDown(keyCode)",
+        "keepPanelHover(letter, event.keyCode)",
+        "if (modifiers.panel != Modifiers.Panel.Settings) return",
+        "panelHover.press(key)",
+        "val panelRelease = keyCode == panelPress",
+        "panelHover.release(keyCode, event.eventTime)",
+        "val panelLast = !panelRelease && panelHover.keyUp(keyCode, event.eventTime) && panelOpen",
+        "panelHover.lift(event.eventTime)",
+        "panelHover.touch(last.x, last.y)",
+        "panel?.hover = panelHover.key",
+        "if (panelHover.expire(now)) panel?.hover = \"\"",
     )) check(line in ime) { "AtlasIme no longer has: $line" }
     // The strip keeps the hover through a new state: a new menu notice for the same word never resets the mark or the pill.
     val strip = File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()

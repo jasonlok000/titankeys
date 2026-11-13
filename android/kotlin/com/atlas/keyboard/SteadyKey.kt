@@ -10,12 +10,9 @@ class SteadyKey(private val keyAt: (Float, Float) -> String) {
     var key = ""
         private set
     private var liftedAt: Long? = null
-    /**
-     * The physical keys down now. The touchpad reports a lift when a key goes down and then nothing until it is let go, so the
-     * key stays while a key is down, as when a key toggles a quick setting under a resting finger.
-     */
+    /** The physical keys down now. The key stays while a key is down: a lift then is the press's. */
     private val keysDown = HashSet<Int>()
-    /** A word menu key was pressed under the finger, and the touchpad hasn't reported the press's own lift yet: see [press]. */
+    /** A key was pressed under the finger, and the touchpad hasn't reported the press's own lift yet: see [press]. */
     private var pressLift = false
     /** When that key was let go, for [PRESS_LIFT_MILLIS], or null while it is down. */
     private var releasedAt: Long? = null
@@ -36,9 +33,9 @@ class SteadyKey(private val keyAt: (Float, Float) -> String) {
     }
 
     /**
-     * The finger pressed [pressed], and the press picked a word menu button: the finger is on that key, whatever the touchpad said
-     * last, so the mark goes there and stays (owner, 2026-11-12: after a press, the pill stays on the pressed key). Returns true
-     * if [key] changed.
+     * The finger pressed [pressed], and the press picked a word menu button or toggled a quick setting: the finger is on that key,
+     * whatever the touchpad said last, so the mark goes there and stays (owner, 2026-11-12: after a press, the pill stays on the
+     * pressed key, as on the quick settings page). Returns true if [key] changed.
      *
      * On the phone, a press under a resting finger ends that touch: the touchpad reports a lift, nearly always after the key is
      * let go (the owner's raw log, 2026-11-11: 1,808 of 1,907 presses, a median 124 ms after the key, at most 0.9 s), and then
@@ -55,7 +52,7 @@ class SteadyKey(private val keyAt: (Float, Float) -> String) {
         return true
     }
 
-    /** The key that picked a word menu button was let go at [time]. Its lift can still come: see [press]. */
+    /** The key that picked a word menu button or toggled a quick setting was let go at [time]. Its lift can still come: see [press]. */
     fun release(code: Int, time: Long) {
         keysDown.remove(code)
         releasedAt = time
@@ -76,8 +73,8 @@ class SteadyKey(private val keyAt: (Float, Float) -> String) {
     }
 
     /**
-     * The finger lifted at [time]. The key stays until [expire] finds that no touch came back. The lift of a word menu press,
-     * while its key is down or within [PRESS_LIFT_MILLIS] after it, is the press's own: the finger is still there. See [press].
+     * The finger lifted at [time]. The key stays until [expire] finds that no touch came back. The lift of a [press], while its
+     * key is down or within [PRESS_LIFT_MILLIS] after it, is the press's own: the finger is still there.
      */
     fun lift(time: Long) {
         val released = releasedAt
@@ -109,7 +106,7 @@ class SteadyKey(private val keyAt: (Float, Float) -> String) {
     companion object {
         /** A resting finger's touches came back within 60 ms of each lift. */
         const val LIFT_MILLIS = 150L
-        /** How long after a word menu key is let go its press's lift can still come: at most 0.9 s in the owner's raw log. */
+        /** How long after a pressed key is let go its press's lift can still come: at most 0.9 s in the owner's raw log. */
         const val PRESS_LIFT_MILLIS = 1000L
         /** An eighth of a key across, and a tenth of a row down. */
         private const val MARGIN_ACROSS = .0125f

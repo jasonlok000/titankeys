@@ -278,7 +278,19 @@ all of them are unapproved.
     wiggle bobs upward only; Exact typing's chips hug their labels. Left on the old middle: the gesture display's shapes and the
     guide's ghost finger. Strip-fit, word-menu, fixed-scale, guide, idle, words and menu-render checks pass. Reviewed by the
     Orchestrator from the regenerated renders (border.png, before-after.png).
-  - **Release re-audit (A)** on 2b7d234: throwaway keystore, the Ink patch, debug-only code, permissions, release-notes gaps.
+  - **Release re-audit (A), merged** (claude/release-reaudit 16a7587; docs/release-audit-2.1.md): 116.0 MB, not debuggable,
+    allowBackup off, the same six permissions; Ink's InkLightSdkReceiver is gone (the patch removes it), 17 components, 3 exported
+    (MainActivity, AtlasIme behind BIND_INPUT_METHOD, BackService behind BIND_ACCESSIBILITY_SERVICE); autoCapitalise carried
+    through; the PANEL and IDLE_BAR broadcasts register only in .debug; no render or preview code ships.
+    - Found: tools/release.sh didn't apply tools/ink/titankeys.patch, so a release on clean Ink would quietly lose the accent,
+      autoCapitalise, the press haptic and the receiver's removal. Fixed by the Orchestrator: release.sh now refuses unless
+      ../ink carries the whole patch (git apply --reverse --check), and says how to apply it. Tested on the patched shared Ink
+      (passes) and a clean clone (refuses).
+    - Release notes gaps filled by the Orchestrator: shortcut switches, the idle rule, lowercase shorthand, panels moving
+      nothing, the word colours, everyone on Normal. The stale InkLightSdkReceiver comment in debug-only.test.ts fixed.
+    - Next: after build #13's phone check, one last verify of the tip as the release candidate (build #14). It leaves the WSL
+      build copy holding the final tree with Ink patched, where the owner runs tools/release.sh.
+
   - **The old "bar drops to zero height while cycling Sym", rechecked (build #12):** a screen recording of the playground while
     10 panel changes ran by the debug broadcast (370 frames). The keyboard never collapsed. What does jump is the playground's
     own layout: 51 px lower with a panel open, and one frame a further 139 px lower at each open and close (the drawn keys hide

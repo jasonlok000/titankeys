@@ -6,7 +6,6 @@ import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.inputmethod.EditorInfo
-import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeRecognizer
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
@@ -148,7 +147,7 @@ object RawLog {
         "orangeAccents" to TypingSettings.orangeAccents(context),
         "enterKey" to TypingSettings.enterKey(context),
         "enterApps" to TypingSettings.enterApps(context).sorted().joinToString(","),
-        "spelling" to if (TypingSettings.spelling(context) == EnglishSpelling.Variant.AMERICAN) "american" else "british",
+        "spelling" to TypingSettings.spelling(context).value(),
         "learning" to SwipeTyping.get(context).learningEnabled(),
     )
 

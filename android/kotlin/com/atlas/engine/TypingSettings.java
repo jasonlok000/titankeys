@@ -7,7 +7,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 public final class TypingSettings {
     public static final int MIN_LIFT_OFF_MILLIS = 50, MAX_LIFT_OFF_MILLIS = 200, DEFAULT_LIFT_OFF_MILLIS = 90;
@@ -247,18 +249,75 @@ public final class TypingSettings {
         preferences(context).edit().putString("recent_enter_apps", String.join(",", apps)).apply();
     }
 
-    /** The characters that a snippet's shortcut can start with. Words do not use them, so a shortcut never clashes with one. */
-    public static final String SNIPPET_STARTS = ";/\\,";
+    /**
+     * The characters that Settings offers to start a snippet's shortcut, the default first. Each is a symbol that Alt types on
+     * the Titan's keys, and none can be part of a shortcut or start a code of its own, as : does for emoji.
+     */
+    public static final String SNIPPET_STARTS = "/#!?*";
+    /** Starts from before 2.1. Someone who picked one keeps it, but Settings offers it to no one else. */
+    public static final String OLD_SNIPPET_STARTS = ";\\,";
+    private static final String SNIPPET_START = "snippet_start";
+    /** Set once the start has been settled after the update to 2.1. See snippetStartAfterUpdate. */
+    private static final String SNIPPET_START_SETTLED = "snippet_start_settled";
 
-    /** The character that starts a snippet's shortcut, such as ; in ;addr. */
+    /**
+     * The character that starts a snippet's shortcut, such as / in /addr. The first read after the update to 2.1 settles it
+     * once, by snippetStartAfterUpdate, and saves it.
+     */
     public static char snippetStart(Context context) {
-        String start = preferences(context).getString("snippet_start", ";");
-        return start.length() == 1 && SNIPPET_STARTS.contains(start) ? start.charAt(0) : ';';
+        SharedPreferences preferences = preferences(context);
+        String start = preferences.getString(SNIPPET_START, null);
+        if (!preferences.getBoolean(SNIPPET_START_SETTLED, false)) {
+            start = snippetStartAfterUpdate(start, madeSnippets(context));
+            preferences.edit().putString(SNIPPET_START, start).putBoolean(SNIPPET_START_SETTLED, true).apply();
+        }
+        return validSnippetStart(start) ? start.charAt(0) : SNIPPET_STARTS.charAt(0);
     }
 
     public static void snippetStart(Context context, String start) {
-        if (start.length() != 1 || !SNIPPET_STARTS.contains(start)) throw new IllegalArgumentException("Not a snippet start");
-        preferences(context).edit().putString("snippet_start", start).apply();
+        if (!validSnippetStart(start)) throw new IllegalArgumentException("Not a snippet start");
+        preferences(context).edit().putString(SNIPPET_START, start).putBoolean(SNIPPET_START_SETTLED, true).apply();
+    }
+
+    /** Whether a start can begin a snippet's shortcut: one that Settings offers, or one from before 2.1. */
+    public static boolean validSnippetStart(String start) {
+        return start != null && start.length() == 1 && (SNIPPET_STARTS.contains(start) || OLD_SNIPPET_STARTS.contains(start));
+    }
+
+    /**
+     * The start once 2.1 is installed, decided once. stored is the saved start, or null if the user never picked one, which
+     * meant ; before 2.1. Someone who ever made a snippet keeps their start. Someone with ; who never made one gets /, the new
+     * default, and so does a new install. No Android here, so the tests can reach it.
+     */
+    public static String snippetStartAfterUpdate(String stored, boolean madeSnippets) {
+        String start = validSnippetStart(stored) ? stored : ";";
+        return start.equals(";") && !madeSnippets ? SNIPPET_STARTS.substring(0, 1) : start;
+    }
+
+    /** Whether the user ever saved, removed or imported a snippet: Snippets.kt writes its list in "snippets" each time. */
+    private static boolean madeSnippets(Context context) {
+        return context.getSharedPreferences("snippets", Context.MODE_PRIVATE).contains("list");
+    }
+
+    /**
+     * Whether one kind of autocorrect fix is on, by its id (FixKind in the autocorrect): Settings > Fix typos as you type > What gets
+     * fixed. All are on by default, which is autocorrect as it always was.
+     */
+    public static boolean fixOn(Context context, String id) {
+        return preferences(context).getBoolean("fix_" + id, true);
+    }
+
+    public static void fixOn(Context context, String id, boolean on) {
+        preferences(context).edit().putBoolean("fix_" + id, on).apply();
+    }
+
+    /** A fix must be clearly right before it goes in: fewer fixes, and fewer wrong ones. Off by default. */
+    public static boolean fixOnlyWhenSure(Context context) {
+        return preferences(context).getBoolean("fix_only_when_sure", false);
+    }
+
+    public static void fixOnlyWhenSure(Context context, boolean on) {
+        preferences(context).edit().putBoolean("fix_only_when_sure", on).apply();
     }
 
     /** Chat shorthand such as "shd" becomes its full word, "should" (issue 63). Off by default: then it stays as typed. */
@@ -268,6 +327,47 @@ public final class TypingSettings {
 
     public static void expandShorthand(Context context, boolean enabled) {
         preferences(context).edit().putBoolean("expand_shorthand", enabled).apply();
+    }
+
+    /** Listed shorthand, in lowercase, that the user switched off in Settings: it stays as typed. None at first. */
+    public static Set<String> shorthandOff(Context context) {
+        return preferences(context).getStringSet("shorthand_off", Collections.emptySet());
+    }
+
+    public static void shorthandOn(Context context, String shorthand, boolean on) {
+        Set<String> off = new HashSet<>(shorthandOff(context));
+        if (on) off.remove(shorthand); else off.add(shorthand);
+        preferences(context).edit().putStringSet("shorthand_off", off).apply();
+    }
+
+    private static final String OWN_SHORTHAND = "own_shorthand";
+    private static Set<String> ownShorthandRead;
+    private static Map<String, String> ownShorthandCache = Collections.emptyMap();
+
+    /**
+     * The user's own shorthand: each full word by its shorthand in lowercase, sorted. Kept as "shorthand, tab, full word"
+     * entries, read again only when they change, as autocorrect asks for them at each word.
+     */
+    public static synchronized Map<String, String> ownShorthand(Context context) {
+        Set<String> entries = preferences(context).getStringSet(OWN_SHORTHAND, Collections.emptySet());
+        if (entries == ownShorthandRead) return ownShorthandCache;
+        Map<String, String> own = new TreeMap<>();
+        for (String entry : entries) {
+            int tab = entry.indexOf('\t');
+            if (tab > 0 && tab < entry.length() - 1) own.put(entry.substring(0, tab), entry.substring(tab + 1));
+        }
+        ownShorthandRead = entries;
+        ownShorthandCache = Collections.unmodifiableMap(own);
+        return ownShorthandCache;
+    }
+
+    /** Saves the user's own shorthand, which the caller has checked. [full] null removes it. */
+    public static synchronized void ownShorthand(Context context, String shorthand, String full) {
+        Map<String, String> own = new TreeMap<>(ownShorthand(context));
+        if (full == null) own.remove(shorthand); else own.put(shorthand, full);
+        Set<String> entries = new HashSet<>();
+        for (Map.Entry<String, String> entry : own.entrySet()) entries.add(entry.getKey() + "\t" + entry.getValue());
+        preferences(context).edit().putStringSet(OWN_SHORTHAND, entries).apply();
     }
 
     /** A name between two colons, such as :smile:, types its emoji. */
@@ -315,13 +415,11 @@ public final class TypingSettings {
     }
 
     public static EnglishSpelling.Variant spelling(Context context) {
-        return "american".equals(preferences(context).getString("spelling", "american"))
-                ? EnglishSpelling.Variant.AMERICAN : EnglishSpelling.Variant.BRITISH;
+        return EnglishSpelling.Variant.of(preferences(context).getString("spelling", "american"));
     }
 
     public static void spelling(Context context, EnglishSpelling.Variant variant) {
-        preferences(context).edit().putString("spelling",
-                variant == EnglishSpelling.Variant.AMERICAN ? "american" : "british").apply();
+        preferences(context).edit().putString("spelling", variant.value()).apply();
     }
 
     private TypingSettings() {}

@@ -1,7 +1,7 @@
 import { Canvas, CanvasIcon, CanvasPath, CanvasText, type IconAsset } from "ink";
 import { arrowBack, backspace, circle, keyboardReturn, shift, spaceBar, square } from "ink/icons";
 import type { Point } from "./atlas";
-import { MUTED, ORANGE } from "./brand";
+import { CREAM, MUTED, ORANGE } from "./brand";
 import { RADIUS } from "./radii";
 import { RoundedOutline } from "./rounded";
 
@@ -67,4 +67,46 @@ function pieces(trail: Point[]) {
     else result.push({ thickness, points: last ? [last.points.at(-1)!, point] : [point] });
   }
   return result;
+}
+
+/** How a key cap is drawn: the size of its label and how tall it is, in canvas units. */
+const CAP = { height: 44, letter: 44, padding: 14, text: 22, plus: 30 };
+
+/** How wide [KeyCaps] draws [keys]. */
+export function keyCapsWidth(keys: readonly string[]) {
+  return keys.reduce((width, key, index) => width + capWidth(key) + (index > 0 ? CAP.plus : 0), 0);
+}
+
+function capWidth(key: string) {
+  return key.length === 1 ? CAP.letter : CAP.padding * 2 + key.length * CAP.text * .6;
+}
+
+/**
+ * Keys to press together, drawn as caps like the keys in the drawings, with a + between them: "Alt + G". For a canvas, from
+ * [x], centred on [y] + [height] / 2.
+ */
+export function KeyCaps({ keys, x, y, height, keyPrefix = "cap" }: {
+  keys: readonly string[];
+  x: number;
+  y: number;
+  height: number;
+  keyPrefix?: string;
+}) {
+  const top = y + (height - CAP.height) / 2;
+  const parts = [];
+  let left = x;
+  for (const [index, key] of keys.entries()) {
+    if (index > 0) {
+      parts.push(<CanvasText key={`${keyPrefix}-plus-${index}`} x={left} y={top} width={CAP.plus} height={CAP.height} size={CAP.text}
+        colour={MUTED} align="center">+</CanvasText>);
+      left += CAP.plus;
+    }
+    const width = capWidth(key);
+    parts.push(<RoundedOutline key={`${keyPrefix}-key-${index}`} x={left} y={top} width={width} height={CAP.height}
+      radius={RADIUS.small} stroke={MUTED} strokeWidth={1.5} />);
+    parts.push(<CanvasText key={`${keyPrefix}-label-${index}`} x={left} y={top} width={width} height={CAP.height} size={CAP.text}
+      colour={CREAM} align="center">{key}</CanvasText>);
+    left += width;
+  }
+  return parts;
 }

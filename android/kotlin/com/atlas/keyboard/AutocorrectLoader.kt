@@ -5,7 +5,9 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.atlas.autocorrect.Autocorrect
+import com.atlas.autocorrect.ContinuationScorer
 import com.atlas.autocorrect.CorrectionData
+import com.atlas.autocorrect.FixKind
 import com.atlas.autocorrect.KeptOnceStore
 import com.atlas.autocorrect.Lexicon
 import com.atlas.autocorrect.TypedCorrector
@@ -75,7 +77,9 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
             loading = false
             if (data == null) failed = true
             else if (request == generation) autocorrect.corrector = TypedCorrector(lexicon, data, autocorrect.rejected, autocorrect.recent,
-                nextWordChance = typing::nextWordChance)
+                nextWordChance = typing::nextWordChance,
+                // Only ever run on the engine's thread: see Composer's apostrophe check.
+                continuation = ContinuationScorer { before, texts -> typing.continuations(before, texts.toTypedArray()) })
         }
     }
 
@@ -94,7 +98,11 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
         override fun preferredSpelling(word: String): String = typing.preferredSpelling(word)
         override fun acronym(word: String) = words.acronym(word)
         override fun expandShorthand() = typing.expandShorthand()
+        override fun shorthandOff(shorthand: String) = typing.shorthandOff(shorthand)
+        override fun ownShorthand(shorthand: String): String? = typing.ownShorthand(shorthand)
         override fun favourite(word: String) = favourites.contains(word)
+        override fun fixes(kind: FixKind) = typing.fixOn(kind.id)
+        override fun onlyWhenSure() = typing.fixOnlyWhenSure()
         override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
     }
 

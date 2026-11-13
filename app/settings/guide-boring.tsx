@@ -32,6 +32,12 @@ export default function BoringGuide() {
       <Text size={SPLASH_SMALL} align="center">{"It's fine. Somebody has to read the manual."}</Text>
     </Stack>
   </Screen>;
+  // The snippet start is the user's own: / unless they picked another.
+  const settings = result.status === "ready" ? result.data : undefined;
+  const start = settings?.snippetStart ?? "/";
+  const startKey = settings ? settings.altKeys[start] : "G";
+  const typeStart = !startKey ? `${start} is on the Sym panel.`
+    : settings?.holdSymbols === false ? `${start} is Alt and ${startKey}.` : `${start} is Alt and ${startKey}, or hold ${startKey}.`;
   return <Screen title="The boring guide" subtitle="Every feature, every setting, in words. Enjoy, nerd.">
     <Section title="Start here">
       <Topic title="The fun guide">{"The fun guide teaches the main stuff right on the keys, a chapter at a time. Open it from Settings > Guide. This one is for everything else."}</Topic>
@@ -45,7 +51,7 @@ export default function BoringGuide() {
       <Topic title="Space after punctuation">{"Type a full stop and go straight on to the next word. The space goes in when you type its first letter. Same after , ; and :. Numbers, links and ... stay as you type them. Press Backspace right after to take the space back out. Pick one space, two or none in Settings > Space after a sentence, and turn off Space after , ; : there too."}</Topic>
       <Topic title="Shift and Alt">{"Press once for the next letter only. To cancel, press again after a pause. Want two quick presses to lock them? Turn on Press twice to lock Shift and Alt in Settings. When Shift is locked, the bar says Caps."}</Topic>
       <Topic title="Hold a letter for its symbol">{"Hold a letter and it turns into the symbol printed in its corner. Pick how long you hold in Settings > Hold a letter for its symbol, or turn it off there."}</Topic>
-      <Topic title="English spelling">{"Colour or color? Pick British or American spelling for suggestions and typo fixes in Settings > English spelling."}</Topic>
+      <Topic title="English spelling">{"Colour or color? Pick British, American or Canadian spelling for suggestions and typo fixes in Settings > English spelling."}</Topic>
       <Topic title="Password, email and number fields">{"These fields get no suggestions and no fixes, and swipes don't type there. The touchpad still moves the cursor, and the bar still shows Shift, Alt and Ctrl."}</Topic>
     </Section>
     <Section title="Touchpad">
@@ -88,7 +94,7 @@ export default function BoringGuide() {
       <Topic title="The clipboard">{"Press Sym, then A. Your last copies are there, newest first, a few to a page. Press a key to paste its clip. Enter pins clips so they stay. Backspace clears the ones that aren't pinned. Alt goes back to the symbols."}</Topic>
     </Section>
     <Section title="Shortcuts">
-      <Topic title="Snippets">{"Type a shortcut like ;addr and press Space. It turns into your address, or whatever you saved for it. Press Backspace right after to get the shortcut back. Make them in Settings > Snippets, where you can also change the ; at the start and back them up."}</Topic>
+      <Topic title="Snippets">{`Type a shortcut like ${start}addr and press Space. It turns into your address, or whatever you saved for it. Press Backspace right after to get the shortcut back. ${typeStart} Make snippets in Settings > Snippets, where you can also pick another symbol for the start and back them up.`}</Topic>
       <Topic title="Next keyboard">{"Hold Alt and press Sym to switch to your next keyboard, as the globe key does on other phones. With the Sym panel open, Alt and Sym do their usual thing. The guide keeps its keyboard, so it does nothing there."}</Topic>
       <Topic title="Exact typing (experimental)">{"In terminals, remote desktops and game streaming, like Termux, AnyDesk and Moonlight, every key goes straight to the app, exactly as you press it. TitanKeys doesn't fix or suggest anything there, and the touchpad stays out of it. Add or remove apps in Settings > Exact typing (experimental)."}</Topic>
       <Topic title="Exact typing bar (experimental)">{"In those apps the bar shows Shift, Alt, Ctrl, Esc, Tab and More. Tap Shift, Alt or Ctrl to hold it for your next key, press and hold to lock it, and tap again to let go. They add to the keys you press: Shift on the keys and Esc on the bar sends Shift and Esc. More has the arrows, Home, End, PgUp, PgDn and F1 to F12. With Alt sends Alt on, Alt, Shift and Ctrl go to the app as real modifiers, and symbols come from Sym or from holding a key."}</Topic>

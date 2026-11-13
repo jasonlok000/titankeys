@@ -1,7 +1,7 @@
 import { resource } from "ink";
 import { callNative, onNativeMessage } from "ink/native";
 
-export type Spelling = "british" | "american";
+export type Spelling = "british" | "american" | "canadian";
 /** How many spaces go in after a full stop, a question mark or an exclamation mark. */
 export type SentenceSpaces = "one" | "two" | "none";
 export type EnterKey = "send" | "newline" | "app";
@@ -12,9 +12,13 @@ export type EnterApp = { app: string; name: string; method: SendMethod };
 export type App = { app: string; name: string; installed?: boolean };
 /** A snippet's shortcut is written without its start character. */
 export type Snippet = { shortcut: string; text: string };
-/** The characters that a snippet's shortcut can start with. Words do not use them. */
-export const snippetStarts = [";", "/", "\\", ","] as const;
-export type SnippetStart = typeof snippetStarts[number];
+/** Chat shorthand in lowercase and the full word it's spelled out as. */
+export type Shorthand = { shorthand: string; full: string };
+/** The starts that Settings offers for a snippet's shortcut, the default first: symbols that Alt types. TypingSettings has the same. */
+export const snippetStarts = ["/", "#", "!", "?", "*"] as const;
+/** Starts from before 2.1, kept by someone who picked one. */
+export const oldSnippetStarts = [";", "\\", ","] as const;
+export type SnippetStart = typeof snippetStarts[number] | typeof oldSnippetStarts[number];
 
 export type State = {
   version: string;
@@ -59,6 +63,10 @@ export type State = {
   commaSpace: boolean;
   /** Fixes slips in typed words when they end. Swiped words never change. */
   autocorrect: boolean;
+  /** Each kind of fix's own switch, by its id in FixKind.kt. All are on at first. A write may send only the ones that changed. */
+  fixToggles: Record<string, boolean>;
+  /** A fix goes in only when it's clearly right: fewer fixes, and fewer wrong ones. Off at first. */
+  fixOnlyWhenSure: boolean;
   suggestionBar: boolean;
   /** A home screen's search field has no suggestion bar until you type in it. */
   launcherHidesBar: boolean;
@@ -91,10 +99,16 @@ export type State = {
   recentApps: App[];
   /** The character that starts a snippet's shortcut. */
   snippetStart: SnippetStart;
+  /** The letter key that types each symbol with Alt, read from the phone's own keyboard, such as "/" to "G". */
+  altKeys: Record<string, string>;
   /** A name between two colons, such as :smile:, types its emoji. */
   shortcodes: boolean;
   /** Chat shorthand such as "shd" becomes its full word, "should". */
   expandShorthand: boolean;
+  /** The listed shorthand that has a full word, in the list's order, and whether the user left it on. */
+  shorthand: (Shorthand & { on: boolean })[];
+  /** The user's own shorthand, sorted. It comes before a listed one with the same shorthand. */
+  ownShorthand: Shorthand[];
   snippets: Snippet[];
   liftOff: boolean;
   liftOffMillis: number;
@@ -134,7 +148,10 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog">;
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog"> & {
+  /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
+  shorthandToggles: Record<string, boolean>;
+};
 
 /**
  * Touchpad points from 0 to 1 across the keyboard and down its four rows, with how thick to draw the trail there: 1 for a
@@ -190,6 +207,20 @@ export async function putSnippet(shortcut: string, text: string, previous?: stri
   } finally {
     await state.refresh();
   }
+}
+
+/** Adds the user's own shorthand, or changes the one that was [previous]. Fails with a message if it isn't valid. */
+export async function putShorthand(shorthand: string, full: string, previous?: string) {
+  try {
+    await atlas("putShorthand", { shorthand, full, previous: previous ?? "" });
+  } finally {
+    await state.refresh();
+  }
+}
+
+export async function removeShorthand(shorthand: string) {
+  await atlas("removeShorthand", { shorthand });
+  await state.refresh();
 }
 
 export async function removeSnippet(shortcut: string) {

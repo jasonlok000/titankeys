@@ -20,7 +20,11 @@ class NoisyChannel(
     private val contextWeight: Double = CONTEXT_WEIGHT,
     /** Whether the user made a word a favourite. A favourite wins a tie: see [favouriteFirst]. */
     private val favourite: (String) -> Boolean = { false },
+    /** Whether the user wants a fix only when it's clearly right: then a fix must beat the rest by more. */
+    private val sure: () -> Boolean = { false },
 ) {
+    private fun margin() = if (sure()) SURE_MIN_MARGIN else MIN_MARGIN
+
     data class Pick(val word: String, val score: Double, val runnerUp: Double, val typedScore: Double)
 
     /** Candidates for [typed]; a real word is never swapped for a contraction ("were" -> "we're"). */
@@ -98,7 +102,7 @@ class NoisyChannel(
 
     /** The pick's word when it is a confident fix for a made-up word, else null. */
     fun confidentFix(pick: Pick): String? =
-        pick.word.takeIf { pick.score > UNKNOWN_WORD_SCORE && pick.score - pick.runnerUp >= MIN_MARGIN }
+        pick.word.takeIf { pick.score > UNKNOWN_WORD_SCORE && pick.score - pick.runnerUp >= margin() }
 
     /** A real word that may be a slip: the pick if it fits clearly better than the typed word. */
     fun fixForRealWord(
@@ -109,7 +113,7 @@ class NoisyChannel(
         bias: Double = REAL_WORD_BIAS
     ): String? =
         pick(typed, previous, beforePrevious, next, allowContractions = false)?.takeIf {
-            it.score - (it.typedScore + bias) > 0 && it.score - it.runnerUp >= MIN_MARGIN
+            it.score - (it.typedScore + bias + if (sure()) SURE_EXTRA_BIAS else 0.0) > 0 && it.score - it.runnerUp >= margin()
         }?.word
 
     /**
@@ -118,7 +122,7 @@ class NoisyChannel(
      */
     fun reconsider(typed: String, current: String, previous: String?, next: String): String? {
         val pick = pick(typed, previous, null, next) ?: return null
-        if (pick.word == current || pick.score <= UNKNOWN_WORD_SCORE || pick.score - pick.runnerUp < MIN_MARGIN) return null
+        if (pick.word == current || pick.score <= UNKNOWN_WORD_SCORE || pick.score - pick.runnerUp < margin()) return null
         val currentScore = score(current, cost(typed, current, isNeighborKey), previous, null, next)
         return pick.word.takeIf { pick.score - currentScore >= RECONSIDER_MARGIN }
     }
@@ -144,6 +148,9 @@ class NoisyChannel(
         private const val CONTEXT_FLOOR = -12.0
         private const val MAX_COST = 1.4
         private const val MIN_MARGIN = 2.0
+        // Fix only when sure: the best must lead the next by half as much again, and a real word must lose by more to change.
+        private const val SURE_MIN_MARGIN = 3.0
+        private const val SURE_EXTRA_BIAS = 1.0
         private const val REAL_WORD_BIAS = 3.0
         // How much better a word must fit to replace an earlier fix.
         private const val RECONSIDER_MARGIN = 3.5
@@ -166,15 +173,22 @@ class NoisyChannel(
         private const val SWAPPED = 0.5
         private const val VOWELS = "aeiou"
 
-        /** Contractions whose form without the apostrophe is no word ("doesnt", unlike "cant" or "well"). */
+        /**
+         * Contractions whose form without the apostrophe nobody means ("doesnt"), so it's always fixed. "cant", "wont", "whats", "hes"
+         * and "shes" are in the word lists, but in the owner's typing they were always meant with it (apostrophe study, 2026-11-11).
+         * "lets", "its", "well" and the like are real words: only the words around them can tell, see [ApostropheContext].
+         */
         private val UNAMBIGUOUS_CONTRACTIONS = setOf(
             "don't", "doesn't", "didn't", "isn't", "aren't", "wasn't", "weren't", "haven't", "hasn't",
             "hadn't", "couldn't", "wouldn't", "shouldn't", "mustn't", "needn't", "you're", "they're",
             "you've", "we've", "they've", "you'll", "they'll", "it'll", "that'll", "you'd", "they'd",
-            "that's", "what's", "there's", "here's", "who's", "where's", "let's", "i'm", "i've"
+            "that's", "what's", "there's", "here's", "who's", "where's", "i'm", "i've",
+            "can't", "won't", "he's", "she's", "he'd", "who'd", "who'll"
         )
 
         fun isUnambiguousContraction(word: String): Boolean = word in UNAMBIGUOUS_CONTRACTIONS
+
+        fun unambiguousContractions(): Set<String> = UNAMBIGUOUS_CONTRACTIONS
 
         /** Weighted edit cost of [typed] against [word]: how unlikely a slip it is. */
         internal fun cost(typed: String, word: String, isNeighborKey: (Char, Char) -> Boolean): Double {

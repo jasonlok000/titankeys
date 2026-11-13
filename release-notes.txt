@@ -9,11 +9,14 @@
 
 ## Typing
 - Middle means Space: The middle word on the bar is always exactly what Space will type. Tap it or push Space, same thing.
-- Missing apostrophes: todays becomes today's, whats becomes what's. Plurals stay plurals.
-- Your shorthand stays: shd, sth, idk, cuz and friends never get "fixed". Want them spelled out instead? Turn on Spell out shorthand in Settings.
+- Missing apostrophes: dont, whats, cant and todays get theirs. Plurals stay plurals.
+- Its or it's: its, lets, your and friends wait for the next two words, then get an apostrophe only if it clearly fits. It never takes one out.
+- Pick your fixes: Settings > What gets fixed has a switch for every kind of fix. All on to start.
+- Your shorthand stays: shd, sth, idk, cuz and friends never get "fixed". Want them spelled out instead? Turn on Spell out shorthand in Settings, switch off the ones you hate, and add your own.
 - Fewer dumb fixes: Typos like defalt, receieve and bckspace get fixed now.
 - Capital at the start: Shift turns on by itself at the start of a sentence. Push Shift once if you want lowercase.
 - Long words fit: Long suggestions fit in their spot, and the three spots never move.
+- Snippets start with /: Alt+G or hold G, so no more digging for ; on the Sym panel. Already have snippets with ;? You keep it. Pick another in Settings > Snippets.
 
 ## Touchpad
 - Steer and select: Taps for steering and selecting count anywhere on the C V B N row. A triple tap with no slide selects the word.

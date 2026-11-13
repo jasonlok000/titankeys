@@ -138,6 +138,27 @@ private fun otherStarts() {
     same(expansions.snippet("go /addr")?.code, "/addr", "another start character")
     same(expansions.snippet("go ;addr"), null, "the old one no longer works")
     same(Expansions(snippets, '\\', emoji).snippet("\\sig")?.code, "\\sig", "a backslash")
+    slashTypesAsBefore()
+}
+
+/** With / as the start, the default since 2.1, a / that is no shortcut stays plain text: only a saved shortcut after a space expands. */
+private fun slashTypesAsBefore() {
+    val slash = Expansions(snippets + ("or" to "OR") + ("2" to "two") + ("com" to "COM"), '/', emoji)
+    same(slash.snippet("go /addr")?.text, "1 Main Street\nSpringfield ", "a saved shortcut")
+    same(slash.snippet("/sig")?.code, "/sig", "at the start of the text")
+    same(slash.snippet("this and/or"), null, "and/or, even with a snippet called or")
+    same(slash.snippet("see http://x.com"), null, "a link")
+    same(slash.snippet("see http:/"), null, "a link's first slash")
+    same(slash.snippet("on 1/2"), null, "a date or a fraction, even with a snippet called 2")
+    same(slash.snippet("at 12/25/2026"), null, "a full date")
+    same(slash.snippet("in /usr"), null, "a path that is no shortcut")
+    same(slash.snippet("in /"), null, "a / alone")
+    same(slash.snippet("x.com/com"), null, "a path in a link")
+    same(slash.snippet("r/android"), null, "a subreddit")
+    same(slash.choices("this and/", 3), emptyList<Expansions.Choice>(), "no strip of snippets inside a word")
+    same(slash.choices("see http://", 3), emptyList<Expansions.Choice>(), "nor in a link")
+    same(slash.choices("in /zz", 3), emptyList<Expansions.Choice>(), "nor for a shortcut that is not saved")
+    same(slash.choices("go /", 3).size, 3, "a / after a space offers the snippets")
 }
 
 private fun labels() {

@@ -1,6 +1,8 @@
-# Chat shorthand (issue 63). Autocorrect never changes these. With Settings > Expand shorthand on, each one with a
-# full word after a tab becomes that word, and Backspace right after puts the shorthand back. One with no full word stays
-# as typed either way. Shorthand that is also a common word or acronym (cd, ur, u) is left out.
+# Chat shorthand (issue 63). Autocorrect never changes these. With Settings > Spell out shorthand on, each one with a
+# full word after a tab becomes that word, unless the user switched it off there, and Backspace right after puts the
+# shorthand back. One with no full word stays as typed either way. Shorthand that is also a word in en_known.txt (nth), a
+# common acronym (cd, np, idc), a name (ty) or two things at once (u, ur, probs) is left out. A full word with two
+# spellings (fav) is left out too, as the full word doesn't follow the English spelling setting.
 shd	should
 shdnt	shouldn't
 wd	would
@@ -21,6 +23,43 @@ tbh	to be honest
 imo	in my opinion
 btw	by the way
 ngl	not gonna lie
+prob	probably
+prolly	probably
+esp	especially
+diff	different
+tho	though
+thru	through
+tmr	tomorrow
+tmrw	tomorrow
+ppl	people
+msg	message
+b4	before
+def	definitely
+defo	definitely
+ofc	of course
+nvm	never mind
+bcs	because
+rly	really
+obv	obviously
+obvs	obviously
+srsly	seriously
+wknd	weekend
+sry	sorry
+thnx	thanks
+tysm	thank you so much
+yw	you're welcome
+lmk	let me know
+brb	be right back
+omw	on my way
+ikr	I know, right
+hbu	how about you
+wbu	what about you
+tbf	to be fair
+iirc	if I remember correctly
+afaik	as far as I know
+ttyl	talk to you later
+gtg	got to go
+jk	just kidding
 wfh
 lol
 gf

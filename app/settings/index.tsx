@@ -8,6 +8,7 @@ import { barLabel, cursorLabel, scrollLabel, scrollNote } from "../../lib/settin
 import { parentOf } from "../../lib/settings-tree";
 import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
+import { fixesLabel } from "./fixes";
 import { hapticsLabel } from "./haptics";
 import { hiddenBarLabel, hiddenBarTitle } from "./hidden-bar";
 import { holdLabel } from "./hold";
@@ -15,6 +16,7 @@ import { liftLabel } from "./lift";
 import { rawLogLabel } from "./rawlog";
 import { sentenceSpacesLabel } from "./sentence-spaces";
 import { setupLabel } from "./setup";
+import { shorthandLabel } from "./shorthand/index";
 import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
 import { tapKeysLabel } from "./tap-keys";
@@ -34,6 +36,7 @@ export default function Settings() {
     <Section title="Typing">
       <Toggle label="Fix typos as you type" value={settings.autocorrect}
         onChange={autocorrect => save.run({ autocorrect })} />
+      {settings.autocorrect && <Field label="What gets fixed" href="/settings/fixes">{fixesLabel(settings)}</Field>}
       <Toggle label="Capital letter to start a sentence" value={settings.autoCapitalise}
         onChange={autoCapitalise => save.run({ autoCapitalise })} />
       <Field label="Space after a sentence" href="/settings/sentence-spaces">{sentenceSpacesLabel(settings)}</Field>
@@ -49,8 +52,7 @@ export default function Settings() {
       <Field label="Snippets" href="/settings/snippets">{snippetsLabel(settings)}</Field>
       <Toggle label="Type :name: for an emoji" value={settings.shortcodes}
         onChange={shortcodes => save.run({ shortcodes })} />
-      <Toggle label="Spell out shorthand, like shd as should" value={settings.expandShorthand}
-        onChange={expandShorthand => save.run({ expandShorthand })} />
+      <Field label="Spell out shorthand" href="/settings/shorthand">{shorthandLabel(settings)}</Field>
       <Field label="Exact typing (experimental)" href="/settings/exact-apps">{exactAppsLabel(settings)}</Field>
       {/* Built in, with nothing to set: shown so you know they're there. They count only while the first key is held. */}
       <Field label="Delete a word">Hold Shift + Backspace</Field>

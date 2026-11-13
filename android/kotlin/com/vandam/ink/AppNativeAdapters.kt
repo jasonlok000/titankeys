@@ -11,11 +11,14 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import com.atlas.autocorrect.FixKind
+import com.atlas.autocorrect.Shorthand
 import com.atlas.engine.EnglishSpelling
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
@@ -29,6 +32,8 @@ import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.HapticsLab
 import com.atlas.keyboard.KeyCalibrationActivity
 import com.atlas.keyboard.KeyCapture
+import com.atlas.keyboard.Keys
+import com.atlas.keyboard.Layout
 import com.atlas.keyboard.PhoneNameSource
 import com.atlas.keyboard.PhoneChecks
 import com.atlas.keyboard.PhoneSetup
@@ -56,6 +61,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private var keyCaptureRequested = false
     private val appNames = HashMap<String, String>()
     private val hapticsLab = lazy { HapticsLab(activity) }
+    /** The listed shorthand that has a full word, with that word, in the list's order, for its switches in Settings. */
+    private val listedShorthand by lazy {
+        activity.assets.open("autocorrect/en_shorthand.txt").bufferedReader().useLines(Shorthand::parse)
+            .mapNotNull { (shorthand, full) -> full?.let { shorthand to it } }
+    }
     private val windowFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
         if (hasFocus) activity.window.decorView.post {
             // The front page opens the playground whenever the app's own window is in front, as when the playground was closed.
@@ -182,6 +192,18 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 "putSnippet" -> {
                     Snippets.put(activity, data.getString("shortcut").trim(), data.getString("text"),
                         data.optString("previous").takeIf { it.isNotEmpty() })
+                    "null"
+                }
+                "putShorthand" -> {
+                    val shorthand = data.getString("shorthand").trim()
+                    val full = data.getString("full").trim()
+                    Shorthand.problem(shorthand, full)?.let { throw IllegalArgumentException(it) }
+                    data.optString("previous").takeIf { it.isNotEmpty() }?.let { TypingSettings.ownShorthand(activity, Shorthand.key(it), null) }
+                    TypingSettings.ownShorthand(activity, Shorthand.key(shorthand), full)
+                    "null"
+                }
+                "removeShorthand" -> {
+                    TypingSettings.ownShorthand(activity, Shorthand.key(data.getString("shorthand")), null)
                     "null"
                 }
                 "removeSnippet" -> {
@@ -423,6 +445,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("sentenceSpaces", TypingSettings.sentenceSpaces(activity))
             .put("commaSpace", TypingSettings.commaSpace(activity))
             .put("autocorrect", TypingSettings.autocorrect(activity))
+            .put("fixToggles", JSONObject(FixKind.entries.associate { it.id to TypingSettings.fixOn(activity, it.id) }))
+            .put("fixOnlyWhenSure", TypingSettings.fixOnlyWhenSure(activity))
             .put("suggestionBar", TypingSettings.suggestionBar(activity))
             .put("launcherHidesBar", TypingSettings.launcherHidesBar(activity))
             .put("cursorControl", TypingSettings.cursorControl(activity))
@@ -433,8 +457,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .also(::putEnterApps)
             .also(::putExactApps)
             .put("snippetStart", TypingSettings.snippetStart(activity).toString())
+            .put("altKeys", altKeys())
             .put("shortcodes", TypingSettings.shortcodes(activity))
             .put("expandShorthand", TypingSettings.expandShorthand(activity))
+            .also(::putShorthand)
             .put("snippets", JSONArray(Snippets.load(activity).map { (shortcut, text) ->
                 JSONObject().put("shortcut", shortcut).put("text", text)
             }))
@@ -443,13 +469,28 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("haptics", Haptics.enabled(activity))
             .put("hapticToggles", JSONObject(Haptics.toggles(activity)))
             .put("hapticsLab", if (HapticsLab.available(activity)) hapticsLab.value.state() else JSONObject.NULL)
-            .put("spelling", if (TypingSettings.spelling(activity) == EnglishSpelling.Variant.AMERICAN) "american" else "british")
+            .put("spelling", TypingSettings.spelling(activity).value())
             .put("rawLogAvailable", RawLog.available(activity))
             .put("rawLog", RawLog.on(activity))
             .put("build", AppBuild.kind(activity))
             .put("rawLogBytes", RawLog.size(activity))
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
+    }
+
+    private fun putShorthand(state: JSONObject) {
+        val off = TypingSettings.shorthandOff(activity)
+        state.put("shorthand", JSONArray(listedShorthand.map { (shorthand, full) ->
+            JSONObject().put("shorthand", shorthand).put("full", full).put("on", shorthand !in off)
+        }))
+        state.put("ownShorthand", JSONArray(TypingSettings.ownShorthand(activity).map { (shorthand, full) ->
+            JSONObject().put("shorthand", shorthand).put("full", full)
+        }))
+    }
+
+    /** The letter key that types each symbol with Alt, read from the phone's own keyboard, such as "/" to "G". */
+    private fun altKeys() = JSONObject().also { keys ->
+        for (key in Layout.letterKeys) Keys.letter(key, KeyEvent.META_ALT_ON)?.let { if (!keys.has(it)) keys.put(it, key) }
     }
 
     private fun putEnterApps(state: JSONObject) {
@@ -546,6 +587,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "sentenceSpaces" -> TypingSettings.sentenceSpaces(activity, value as String)
             "commaSpace" -> TypingSettings.commaSpace(activity, value as Boolean)
             "autocorrect" -> TypingSettings.autocorrect(activity, value as Boolean)
+            // Only the switches that came, as for haptics.
+            "fixToggles" -> (value as JSONObject).let { toggles ->
+                for (id in toggles.keys()) FixKind.of(id)?.let { TypingSettings.fixOn(activity, it.id, toggles.getBoolean(id)) }
+            }
+            "fixOnlyWhenSure" -> TypingSettings.fixOnlyWhenSure(activity, value as Boolean)
             "suggestionBar" -> TypingSettings.suggestionBar(activity, value as Boolean)
             "launcherHidesBar" -> TypingSettings.launcherHidesBar(activity, value as Boolean)
             "cursorControl" -> TypingSettings.cursorControl(activity, value as Boolean)
@@ -557,6 +603,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "shortcodes" -> TypingSettings.shortcodes(activity, value as Boolean)
             "exactRealAlt" -> ExactTyping.realAlt(activity, value as Boolean)
             "expandShorthand" -> TypingSettings.expandShorthand(activity, value as Boolean)
+            // Only the switches that came, as for haptics.
+            "shorthandToggles" -> (value as JSONObject).let { toggles ->
+                for (shorthand in toggles.keys()) TypingSettings.shorthandOn(activity, Shorthand.key(shorthand), toggles.getBoolean(shorthand))
+            }
             "liftOff" -> TypingSettings.liftOffGrace(activity, value as Boolean)
             "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())
             "haptics" -> Haptics.enabled(activity, value as Boolean)
@@ -564,8 +614,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             "hapticToggles" -> (value as JSONObject).let { toggles ->
                 for (id in toggles.keys()) Haptics.toggle(activity, id, toggles.getBoolean(id))
             }
-            "spelling" -> TypingSettings.spelling(activity,
-                if (value == "american") EnglishSpelling.Variant.AMERICAN else EnglishSpelling.Variant.BRITISH)
+            "spelling" -> TypingSettings.spelling(activity, EnglishSpelling.Variant.of(value as String))
             "rawLog" -> RawLog.enabled(activity, value as Boolean)
             else -> throw IllegalArgumentException("Unknown setting: $key")
         }

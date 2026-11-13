@@ -83,7 +83,7 @@ class ReplayRunner : Instrumentation() {
             // Written at once: Android ends the app soon after a replay, before a write in the background would land, and the
             // user's spelling would stay British.
             targetContext.getSharedPreferences("typing_settings", Context.MODE_PRIVATE).edit()
-                .putString("spelling", if (spelling == EnglishSpelling.Variant.AMERICAN) "american" else "british").commit()
+                .putString("spelling", spelling.value()).commit()
         }
     }
 

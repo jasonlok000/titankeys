@@ -492,9 +492,54 @@ public final class SwipeTyping {
         return spelling.equals(word) ? null : spelling;
     }
 
+    /**
+     * The next-word model's summed log chance of each of {@code texts} after {@code before}, or null while it isn't loaded. It runs
+     * the model once for each token, so it must run on {@link #background}'s thread, never on the main thread.
+     */
+    public double[] continuations(String before, String[] texts) {
+        SwipeModels loaded = models;
+        if (loaded == null) return null;
+        try { return loaded.continuations(before, texts); }
+        catch (Exception | LinkageError error) {
+            Log.w("TouchpadSwipe", "Next-word model skipped", error);
+            return null;
+        }
+    }
+
+    /** Runs {@code work} on the engine's own thread, after the work already waiting there, and hands its answer to the main thread. */
+    public void background(java.util.function.Supplier<String> work, java.util.function.Consumer<String> result) {
+        worker.execute(() -> {
+            String answer = null;
+            try { answer = work.get(); }
+            catch (RuntimeException | LinkageError error) { Log.w("TouchpadSwipe", "Background work failed", error); }
+            final String done = answer;
+            main.post(() -> result.accept(done));
+        });
+    }
+
+    /** Whether this kind of autocorrect fix is on, by its id: Settings > What gets fixed. */
+    public boolean fixOn(String id) {
+        return TypingSettings.fixOn(context, id);
+    }
+
+    /** Whether autocorrect fixes a word only when it's sure, as Settings asks. */
+    public boolean fixOnlyWhenSure() {
+        return TypingSettings.fixOnlyWhenSure(context);
+    }
+
     /** Whether chat shorthand such as "shd" becomes its full word, as Settings asks. */
     public boolean expandShorthand() {
         return TypingSettings.expandShorthand(context);
+    }
+
+    /** Whether the user switched off the listed shorthand, in lowercase, so it stays as typed. */
+    public boolean shorthandOff(String shorthand) {
+        return TypingSettings.shorthandOff(context).contains(shorthand);
+    }
+
+    /** The full word of the user's own shorthand, in lowercase, or null if it isn't one of theirs. */
+    public String ownShorthand(String shorthand) {
+        return TypingSettings.ownShorthand(context).get(shorthand);
     }
 
     /** The word in the English spelling that the settings ask for. */

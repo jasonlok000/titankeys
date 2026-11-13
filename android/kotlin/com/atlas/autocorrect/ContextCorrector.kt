@@ -57,6 +57,8 @@ class ContextCorrector(
     ): String? {
         // A single letter is meant as typed, whatever comes after it ("p might" stays).
         if (word.length == 1) return null
+        // These were apostrophe swaps here. The next-word model has them now, and nothing else here may change them.
+        if (word.lowercase().replace('’', '\'') in APOSTROPHE_WORDS) return null
         CONFUSABLES[word.lowercase().replace('’', '\'')]?.let { other ->
             return reviewConfusable(before, word, after, other)
         }
@@ -191,8 +193,8 @@ class ContextCorrector(
     }
 
     /**
-     * Swaps a confusable pair ("its" / "it's", "butt" / "but") when real text clearly prefers
-     * the other form between these neighbours.
+     * Swaps a confusable pair ("butt" / "but") when real text clearly prefers the other form between these neighbours.
+     * Apostrophes are left to the next-word model (see [ApostropheContext]), which only ever adds one.
      */
     private fun reviewConfusable(before: String, word: String, after: String, other: String): String? {
         val typed = word.lowercase().replace('’', '\'')
@@ -200,12 +202,9 @@ class ContextCorrector(
         if (word.first().isUpperCase() && before != PairCounts.SENTENCE_START) return null
         val previous = before.lowercase()
         val next = after.lowercase()
-        // A contraction's next word is often only counted after its subject ("I quit", not "I'll quit").
-        fun usage(form: String) =
-            (pairCount(previous, form) + 1L) *
-                (maxOf(pairCount(form, next), CONTRACTION_SUBJECTS[form]?.let { pairCount(it, next) } ?: 0) + 1L)
+        fun usage(form: String) = (pairCount(previous, form) + 1L) * (pairCount(form, next) + 1L)
         val otherUsage = usage(other)
-        // Never seen before the next word, while the other form often is ("its mostly").
+        // Never seen before the next word, while the other form often is.
         val nextOnly = pairCount(typed, next) == 0 && pairCount(other, next) >= CONFUSABLE_NEXT_ONLY_MIN
         if (!nextOnly && (otherUsage < CONFUSABLE_MIN_USAGE || otherUsage < usage(typed) * CONFUSABLE_RATIO)) return null
         // A noun stays after words that introduce one ("kick his butt").
@@ -214,7 +213,7 @@ class ContextCorrector(
         ) {
             return null
         }
-        return if (word.first().isUpperCase() || other.startsWith("i'")) other.replaceFirstChar { it.uppercase() } else other
+        return if (word.first().isUpperCase()) other.replaceFirstChar { it.uppercase() } else other
     }
 
     /** The one common word, a slip away, that clearly fits between both neighbours. */
@@ -285,11 +284,12 @@ class ContextCorrector(
         private const val SHORT_WORD_CHANNEL_WEIGHT = 3.0
         private const val SHORT_WORD_MIN_MARGIN = 3.0
         private const val STARTS_SMOOTHING = 50.0
-        /** Typed form -> the form it is often a mistake for; "but" never becomes "butt". */
-        private val CONFUSABLES = mapOf(
-            "its" to "it's", "it's" to "its", "butt" to "but", "ill" to "i'll", "id" to "i'd"
-        )
-        private val CONTRACTION_SUBJECTS = mapOf("i'll" to "i", "i'd" to "i")
+        /**
+         * Typed form -> the form it is often a mistake for; "but" never becomes "butt". No apostrophes: "its" and "ill" are for the
+         * next-word model, and an apostrophe is never taken out ("it's" stays, apostrophe study, 2026-11-11).
+         */
+        private val CONFUSABLES = mapOf("butt" to "but")
+        private val APOSTROPHE_WORDS = setOf("its", "it's", "ill", "id")
         /** Confusables that are nouns in their own right, kept wherever a noun fits. */
         private val NOUN_CONFUSABLES = setOf("butt")
         private val NOUN_MARKERS = setOf(

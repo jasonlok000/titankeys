@@ -205,6 +205,19 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 ## Process
 
+- **Ladder review, round 2** (owner, 2026-11-13, 09:05). (Owner)
+  - Not saved shows as dotted outline letters.
+  - The book effect is OK, but the book icon looked bad, and mixing a ribbon icon with a book effect is inconsistent: one metaphor.
+  - One-letter words don't open the menu at all.
+  - Refine the animations.
+  - The mockup must use what would ship: the final icons and animation.
+
+  The Orchestrator's v3 page (cal-tool/ladder.html) uses:
+  - the app's own heart, filled heart, broken heart and Back drawables;
+  - a new open book for Save and the same book with a zigzag tear for Unsave, on the same 24 grid and 2-unit line as the heart;
+  - Material's block and its ring for Block and Unblock;
+  - particles drawn from the same paths, and the text in the app's Inter;
+  - Save filling the dotted letters solid as the book claps shut, and Unsave tearing a page and draining the letters back to dots.
 - **Forget keeps the menu open** (owner, 2026-11-13, 08:55): "instead of showing the undo when forgetting a word, keep it on the bar
   and just show a new status." (Owner) There's no Undo notice. The word stays in the menu at Not saved, and I (Save) brings it back.
   Sent to W.

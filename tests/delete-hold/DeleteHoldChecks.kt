@@ -24,6 +24,7 @@ fun main() {
     theWaitCountsToWhereTheFingerStopped()
     backAtTheStartTheHoldPauses()
     thePauseZoneIsFullHeight()
+    theHeldFlicksTrailFollowsTheFinger()
     aFlickNeverEndsInThePauseZone()
     thePaceTopsOutAtTheTopSpeedLine()
     eachZoneTicksOncePerCrossing()
@@ -745,4 +746,49 @@ private fun thePauseZoneIsFullHeight() {
     rig.runTo(started)
     rig.move(at(SHORT_STOP, .85f, started + 10))
     same(rig.hold.paused, false, "Down the keys, still left of the column, the hold goes on")
+}
+
+/**
+ * The guide's drawing shows a held flick's trail all the way (owner, build #10: "long flick delete it shd show my swipe. it did not
+ * show"). A deleting contact keeps no points, so the trail comes from [HoldTrail]: the flick's points, then every sample through the
+ * slide left, the pause and back out, never empty once the hold starts; and the lift ends it with all of them.
+ */
+private fun theHeldFlicksTrailFollowsTheFinger() {
+    val rig = Rig()
+    val trail = HoldTrail()
+    rig.land(at(.95f, .35f, 1_000))
+    trail.clear()
+    var shown = trail.follow(rig.contact, emptyList())
+    for (step in 1..4) {
+        val sample = at(.95f + (SHORT_STOP - .95f) * step / 4, .35f, 1_000L + 15 * step)
+        rig.move(sample)
+        shown = trail.follow(rig.contact, listOf(sample))
+    }
+    same(shown.size, 5, "While it's a stroke, the trail is the stroke's own points")
+    same(trail.held, false, "and nothing is held yet")
+    val started = 1_000L + 60 + holdMillis
+    rig.runTo(started)
+    same(rig.contact.deleting, true, "The hold has started")
+    same(rig.contact.points.isEmpty(), true, "and the contact keeps no points now, which emptied the trail before")
+    // Slide further left, back into the pause, and out again: each step adds to the trail.
+    val path = listOf(at(.6f, .35f, started + 50), at(.5f, .4f, started + 100), at(.9f, .7f, started + 600), at(.6f, .2f, started + 900))
+    var last = shown.size
+    for (sample in path) {
+        rig.move(sample)
+        shown = trail.follow(rig.contact, listOf(sample))
+        same(shown.isNotEmpty(), true, "The trail never empties while the hold goes on")
+        same(shown.size, last + 1, "and each move adds the finger's point")
+        same(shown.last(), sample, "ending where the finger is")
+        last = shown.size
+    }
+    same(shown.first(), at(.95f, .35f, 1_000), "It starts where the flick started, on Backspace")
+    same(trail.held to trail.points.size, true to 9, "At the lift it has the flick and the hold together, to fade as one")
+    trail.clear()
+    same(trail.held, false, "A new touch starts a new trail")
+    // A short flick, lifted at once, is never held: its trail is its own points, as before.
+    val quick = Rig()
+    val quickTrail = HoldTrail()
+    quick.flick(5_000)
+    same(quickTrail.follow(quick.contact, emptyList()).size, 5, "A short flick's trail is its own points")
+    same(quickTrail.held, false, "and it's never held")
 }

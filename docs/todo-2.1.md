@@ -116,6 +116,12 @@ all of them are unapproved.
   - The ∞ title is "Add how long you last in bed.", with the owner's two lines pinned.
   - The paste slide's nice clip pulses gently until pasted.
   - The Space and flick refusals live in AtlasIme, so they need the phone pass.
+- F: **app haptics and Ink sizes done and merged** (72b9d1b).
+  - App controls follow the rulebook: switch on is Lock, off is Release, a stepper ticks, a refused action is No, and plain
+    buttons stay quiet.
+  - The boring guide says "touch zone".
+  - F reports Ink's text was already above the size floor, so nothing was enlarged. Check that on the phone, since the owner
+    found some elements too small.
 - **Plan for the rest of the night (Orchestrator):**
   1. Merge C's decoration wiring.
   2. Apply F's two GuideActivity strings, and fix the release-notes Save line (sparkles, not bookmarks).

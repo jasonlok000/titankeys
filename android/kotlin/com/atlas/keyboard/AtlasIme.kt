@@ -1620,20 +1620,26 @@ class AtlasIme : InputMethodService() {
         // A guide slide that doesn't teach the menu yet: the hold does nothing, not even a haptic.
         if (guideBlocked(GuideLesson.BarHold)) return false
         val (word, typed) = composer.shownWord(index) ?: return false
-        openMenu(HeldWord(word, typed))
-        return true
+        return openMenu(HeldWord(word, typed))
     }
 
-    private fun openMenu(held: HeldWord) {
+    /**
+     * Opens [held]'s menu. A word with nothing to do, such as an emoji, which can't be saved and was never learned, opens none:
+     * a menu of only Back would do nothing (owner, 2026-11-12). Returns whether it opened.
+     */
+    private fun openMenu(held: HeldWord): Boolean {
+        // The guide's menu is only for show, but it is the real menu: a word starts unsaved, with nothing to forget, as a word the
+        // keyboard never learned is, and a word it just saved opens saved again, never back at Save (owner, v5.3).
+        val menu = if (inGuide) guideMenus[held.word.lowercase()]?.copy(word = held.word) ?: Strip.Notice.Menu(held.word, false)
+            else menuFor(held.word)
+        if (menu.first == null && menu.second == null) return false
         commitForget()
         menuWord = held
         strip?.menuMark = -1
         haptics.play(Haptic.MenuOpen)
-        // The guide's menu is only for show, but it is the real menu: a word starts unsaved, with nothing to forget, as a word the
-        // keyboard never learned is, and a word it just saved opens saved again, never back at Save (owner, v5.3).
-        strip?.notice = if (inGuide) guideMenus[held.word.lowercase()]?.copy(word = held.word) ?: Strip.Notice.Menu(held.word, false)
-            else menuFor(held.word)
+        strip?.notice = menu
         KeyboardEvents.publish { KeyboardEvent.WordMenu(held.word) }
+        return true
     }
 
     /**
@@ -1653,8 +1659,10 @@ class AtlasIme : InputMethodService() {
             favourite = FavouriteWords.get(this).contains(word),
             blocked = key in forgetting || pending == null && !typing.wordAllowed(word),
             learned = pending == null && key !in forgetting && typing.learnedWord(word),
-            oneLetter = ForgetWords.oneLetter(word))
-        return Strip.Notice.Menu(word, state.learned, state.step)
+            oneLetter = ForgetWords.oneLetter(word),
+            builtIn = typing.builtInWord(word),
+            savable = MenuKeys.savable(word))
+        return Strip.Notice.Menu(word, state.learned, state.step, state.builtIn, state.savable, state.oneLetter)
     }
 
     /** Words that Forget is still taking out of the lists, in lowercase: the menu shows them as forgotten already. */
@@ -1675,7 +1683,7 @@ class AtlasIme : InputMethodService() {
     private fun menuPressed(held: HeldWord, button: MenuKeys.Button) {
         val menu = strip?.notice as? Strip.Notice.Menu ?: return
         if (menuWord !== held) return
-        val next = MenuKeys.press(MenuKeys.State(menu.step, menu.forget), button) ?: return
+        val next = MenuKeys.press(menu.state, button) ?: return
         val pressed = menu.copy(step = next.step, forget = next.learned)
         strip?.notice = pressed
         if (inGuide) guideMenus[held.word.lowercase()] = pressed
@@ -1828,7 +1836,7 @@ class AtlasIme : InputMethodService() {
             Strip.Action.Favourited -> if (held != null) haptics.play(Haptic.MenuSpent)
             Strip.Action.Unfavourite -> if (held != null) unfavouriteWord(held)
             Strip.Action.Unsave -> if (held != null) unsaveWord(held)
-            Strip.Action.Forget -> if (held != null && (strip?.notice as? Strip.Notice.Menu)?.forget == true) forgetWord(held)
+            Strip.Action.Forget -> if (held != null && (strip?.notice as? Strip.Notice.Menu)?.second == Strip.Action.Forget) forgetWord(held)
         }
     }
 
@@ -3069,7 +3077,9 @@ class AtlasIme : InputMethodService() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         // The last key let go: a resting finger is reported again at once, and if none is, the mark goes as after a lift.
         val panelLast = panelHover.keyUp(keyCode, event.eventTime) && panelOpen
-        val barLast = barHover.keyUp(keyCode, event.eventTime) && !panelOpen
+        // A key that picked a word menu button keeps the hover when it is let go: the finger is still on it, and its pill now
+        // names the button's next step (owner, 2026-11-12). The hover goes when the touchpad says the finger lifted or moved.
+        val barLast = if (keyCode == menuKey && menuOpen) barHover.release(keyCode).let { false } else barHover.keyUp(keyCode, event.eventTime) && !panelOpen
         if (panelLast || barLast) {
             main.removeCallbacks(expireHover)
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)

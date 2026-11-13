@@ -8,11 +8,14 @@ import kotlin.random.Random
  * The word menu's animations (owner, 2026-11-12), all inside the bar's height, roughly symmetric on both sides of the word:
  * - Favourite: the word pops about 6% as 6 to 8 hearts of three sizes burst from behind it, mostly up and out to both sides,
  *   swaying and fading. The haptic lands on the burst.
- * - Unfavourite: a heart cracks over the word, and its halves fall and spin away with gravity. The word gives a tiny shake in time
- *   with the haptic.
- * - Save: the same burst as Favourite's, in small bookmark ribbons instead of hearts (owner, 2026-11-12: "not done nicely" as
- *   a single ribbon dropping in). The haptic lands on the burst. Unsave: the ribbon tears, and its halves drift down.
+ * - Unfavourite: a zigzag crack draws down a heart over the word in 120 ms; the halves tilt apart as 4 tiny shards spray out,
+ *   then fall with gravity, spinning a little, and fade. The word dips 2 dp and comes back, with the haptic on the crack.
+ * - Save: the word pops as 8 to 10 bold four-point sparkles burst out from it in a ring, a little bigger at first, then drift up
+ *   and fade: Favourite's physics, in the "kept, it shines" shape (design v2, section 4). The haptic lands on the burst.
+ * - Unsave: a bookmark breaks over the word as the heart does, quieter (owner, 2026-11-12: sparkles have nothing to do with
+ *   unsaving): its crack draws down, the halves tilt apart with 2 shards and fall, with no dip of the word.
  * - Forget: the word dissolves into a little dust. Opening on a saved word or a favourite: two or three hearts drift up, once.
+ * - At rest, the ambient status: a faint heart drifts up now and then by a favourite, a faint sparkle twinkles by a saved word.
  *
  * Every particle and mark is orange; the word itself never changes colour. Each word always gets the same layout, seeded by the
  * word. And no button snaps from one icon to another: [icon] morphs them. It is plain numbers, so the checks and the renders draw
@@ -23,14 +26,25 @@ import kotlin.random.Random
 object MenuMotion {
     const val BAR = 56f
 
-    enum class Shape { Heart, HeartLeft, HeartRight, Ribbon, RibbonLeft, RibbonRight, Dust }
+    /**
+     * The particles' shapes. [Crack] is the zigzag drawn down a heart as it breaks, as far down as its [Sprite.amount]; a
+     * [Shard] is a tiny splinter of the broken heart.
+     */
+    enum class Shape { Heart, HeartLeft, HeartRight, Bookmark, BookmarkLeft, BookmarkRight, Dust, Sparkle, Crack, Shard }
 
-    /** One particle: its centre, size and turn in degrees, how strongly it shows, and whether it is behind the word. */
+    /**
+     * One particle: its centre, size and turn in degrees, how strongly it shows, whether it is behind the word, and for a
+     * [Shape.Crack] how much of it is drawn, from 0 to 1.
+     */
     data class Sprite(val shape: Shape, val x: Float, val y: Float, val size: Float, val turn: Float, val alpha: Float,
-                      val behind: Boolean = false)
+                      val behind: Boolean = false, val amount: Float = 1f)
 
-    /** What a moment of an animation draws, and what it does to the word: its size, a small sideways shake, and how much shows. */
-    data class Frame(val sprites: List<Sprite>, val wordScale: Float = 1f, val wordShift: Float = 0f, val wordAlpha: Float = 1f)
+    /**
+     * What a moment of an animation draws, and what it does to the word: its size, a small sideways shake, how much shows, and
+     * how far it dips, in dp. The word itself never changes colour.
+     */
+    data class Frame(val sprites: List<Sprite>, val wordScale: Float = 1f, val wordShift: Float = 0f, val wordAlpha: Float = 1f,
+                     val wordDrop: Float = 0f)
 
     /** The word on the bar: its left and right ends, the middle of its letters, and the seed of its layout. */
     data class Word(val left: Float, val right: Float, val middle: Float, val seed: Int) {
@@ -44,16 +58,16 @@ object MenuMotion {
     fun millis(motion: MenuKeys.Motion) = when (motion) {
         MenuKeys.Motion.Save -> 620L
         MenuKeys.Motion.Favourite -> 620L
-        MenuKeys.Motion.Unfavourite -> 640L
-        MenuKeys.Motion.Unsave -> 520L
+        MenuKeys.Motion.Unfavourite -> 700L
+        MenuKeys.Motion.Unsave -> 560L
         MenuKeys.Motion.Forget -> 420L
         MenuKeys.Motion.Echo -> 520L
     }
 
     /** When the animation peaks, in ms from its start: its haptic plays then, so what you feel lands with what you see. */
     fun peak(motion: MenuKeys.Motion) = when (motion) {
-        MenuKeys.Motion.Unfavourite -> (millis(motion) * CRACK).toLong()
-        MenuKeys.Motion.Unsave -> (millis(motion) * TEAR).toLong()
+        MenuKeys.Motion.Unfavourite -> CRACK_MILLIS
+        MenuKeys.Motion.Unsave -> CRACK_MILLIS
         else -> 0L
     }
 
@@ -65,9 +79,11 @@ object MenuMotion {
         val random = Random(word.seed * 31 + motion.ordinal)
         val frame = when (motion) {
             MenuKeys.Motion.Favourite -> burst(t, word, random, Shape.Heart, HEART_TURN)
-            MenuKeys.Motion.Unfavourite -> unfavourite(t, word, random)
-            MenuKeys.Motion.Save -> burst(t, word, random, Shape.Ribbon, RIBBON_TURN)
-            MenuKeys.Motion.Unsave -> unsave(t, word, random)
+            MenuKeys.Motion.Unfavourite -> breaking(elapsed, t, word, random, Shape.Heart, Shape.HeartLeft, Shape.HeartRight,
+                shards = 4, dips = true, total = total)
+            MenuKeys.Motion.Save -> sparkles(t, word, random)
+            MenuKeys.Motion.Unsave -> breaking(elapsed, t, word, random, Shape.Bookmark, Shape.BookmarkLeft, Shape.BookmarkRight,
+                shards = 2, dips = false, total = total)
             MenuKeys.Motion.Forget -> dust(t, word, random)
             MenuKeys.Motion.Echo -> echo(t, word, random)
         }
@@ -96,36 +112,70 @@ object MenuMotion {
         return Frame(hearts, wordScale = if (t < POP) 1f + .06f * sin(PI.toFloat() * t / POP) else 1f)
     }
 
-    /** A heart over the word cracks, and its halves fall and spin away. The word shakes a little as it cracks. */
-    private fun unfavourite(t: Float, word: Word, random: Random): Frame {
-        val x = word.centre
-        val y = word.middle - 13f
-        if (t < CRACK) return Frame(listOf(Sprite(Shape.Heart, x, y, HEART, 0f, (t / .08f).coerceAtMost(1f))))
-        val s = (t - CRACK) / (1f - CRACK)
-        val spinLeft = 40f + 25f * random.nextFloat()
-        val spinRight = 40f + 25f * random.nextFloat()
-        val fall = 30f * s * s
-        val alpha = fade(s, .5f)
-        val halves = listOf(
-            Sprite(Shape.HeartLeft, x - 2f - 9f * s, y + fall, HEART, -spinLeft * s, alpha),
-            Sprite(Shape.HeartRight, x + 2f + 10f * s, y + fall * .92f, HEART, spinRight * s, alpha),
-        )
-        val shake = if (s < SHAKE) 1.4f * sin(s / SHAKE * 4 * PI.toFloat()) * (1f - s / SHAKE) else 0f
-        return Frame(halves, wordShift = shake)
+    /**
+     * Save: the word pops like Favourite's as bold sparkles burst out from it in a ring, an ellipse round the word, a little bigger
+     * at first, then drift up and fade. Every other one goes the other way round, so the ring is even on both sides.
+     */
+    private fun sparkles(t: Float, word: Word, random: Random): Frame {
+        val count = 8 + random.nextInt(3)
+        val across = (word.right - word.left) / 2 + 16f
+        val sparks = (0 until count).mapNotNull { index ->
+            // Evenly round the ring, nudged a little so no two words look the same.
+            val angle = (index + .5f + (random.nextFloat() - .5f) * .4f) / count * 2 * PI.toFloat()
+            val reach = .85f + .3f * random.nextFloat()
+            val size = SPARKLE_SIZES[random.nextInt(SPARKLE_SIZES.size)]
+            val delay = random.nextFloat() * .08f
+            val drift = 8f + 6f * random.nextFloat()
+            val own = ((t - delay) / (1f - delay)).takeIf { it in 0f..1f } ?: return@mapNotNull null
+            // Out fast, in the first 35%, then a slow drift up as it fades.
+            val out = (own / .35f).coerceAtMost(1f).let { 1f - (1f - it) * (1f - it) }
+            val up = ((own - .35f) / .65f).coerceIn(0f, 1f)
+            val x = word.centre + kotlin.math.cos(angle) * across * reach * out
+            val y = word.middle + kotlin.math.sin(angle) * RING_DOWN * reach * out - drift * up
+            Sprite(Shape.Sparkle, x, y, size * (1.25f - .25f * out), 20f * own * (if (index % 2 == 0) 1 else -1),
+                (own / .08f).coerceAtMost(1f) * fade(own, .5f), behind = true)
+        }
+        return Frame(sparks, wordScale = if (t < POP) 1f + .06f * sin(PI.toFloat() * t / POP) else 1f)
     }
 
-    /** The ribbon at the word's left edge tears, and its halves drift down and fade. */
-    private fun unsave(t: Float, word: Word, random: Random): Frame {
-        val x = word.left - RIBBON_OFF
-        val y = word.middle - 4f
-        if (t < TEAR) return Frame(listOf(Sprite(Shape.Ribbon, x, y, RIBBON, 0f, (t / .1f).coerceAtMost(1f))))
-        val s = (t - TEAR) / (1f - TEAR)
-        val drift = 14f * s * s + 4f * s
+    /**
+     * A [whole] shape over the word breaks: a zigzag crack draws down it in 120 ms; its halves tilt apart as tiny [shards] spray
+     * out, then fall with gravity, spinning a little, and fade, behind the word. Unfavourite breaks a heart and the word [dips]
+     * 2 dp and comes back; Unsave breaks a bookmark, more quietly.
+     */
+    private fun breaking(elapsed: Long, t: Float, word: Word, random: Random, whole: Shape, left: Shape, right: Shape, shards: Int,
+                         dips: Boolean, total: Long): Frame {
+        val x = word.centre
+        val y = word.middle - 15f
+        val crack = CRACK_MILLIS.toFloat() / total
+        val dip = if (dips && t in crack - .05f..crack + .3f) DIP * sin(PI.toFloat() * (t - crack + .05f) / .35f) else 0f
+        if (elapsed < CRACK_MILLIS) {
+            val drawn = elapsed.toFloat() / CRACK_MILLIS
+            return Frame(listOf(Sprite(whole, x, y, BROKEN_HEART, 0f, (t / .05f).coerceAtMost(1f)),
+                Sprite(Shape.Crack, x, y, BROKEN_HEART, 0f, 1f, amount = drawn)), wordDrop = dip)
+        }
+        val s = (t - crack) / (1f - crack)
+        // A moment of tilting apart, then gravity.
+        val tilt = (s / .2f).coerceAtMost(1f)
+        val fall = 34f * ((s - .15f) / .85f).coerceAtLeast(0f).let { it * it }
+        val spinLeft = 14f + 10f * random.nextFloat()
+        val spinRight = 14f + 10f * random.nextFloat()
         val alpha = fade(s, .45f)
-        return Frame(listOf(
-            Sprite(Shape.RibbonLeft, x - 2f - 4f * s, y + drift, RIBBON, -(14f + 8f * random.nextFloat()) * s, alpha),
-            Sprite(Shape.RibbonRight, x + 2f + 4f * s, y + drift * .9f, RIBBON, (14f + 8f * random.nextFloat()) * s, alpha),
-        ))
+        val halves = listOf(
+            // Behind the word, so its letters stay clean as the halves fall past them.
+            Sprite(left, x - 1.5f - 3f * tilt - 6f * s, y + fall, BROKEN_HEART, -12f * tilt - spinLeft * s, alpha, behind = true),
+            Sprite(right, x + 1.5f + 3f * tilt + 6.5f * s, y + fall * .94f, BROKEN_HEART, 12f * tilt + spinRight * s, alpha, behind = true),
+        )
+        // Tiny shards spray out of the crack, as many to each side, and fall faster than the halves.
+        val splinters = (0 until shards).map { index ->
+            val side = if (index % 2 == 0) 1f else -1f
+            val out = (5f + 5f * random.nextFloat()) * side
+            val upward = 4f + 4f * random.nextFloat()
+            val gravity = 40f
+            Sprite(Shape.Shard, x + out * (s / .6f).coerceAtMost(1f), y - 2f - upward * s + gravity * s * s, 3f, 90f * s * side,
+                fade(s, .2f) * .95f, behind = true)
+        }
+        return Frame(halves + splinters, wordDrop = dip)
     }
 
     /** The word dissolves into a little dust, drifting up and out from where its letters were. */
@@ -161,8 +211,8 @@ object MenuMotion {
     /** How often a favourite's heart drifts up, how long each drift takes, how often the saved ribbon sways, and for how long. */
     const val AMBIENT_HEART_EVERY = 2500L
     const val AMBIENT_HEART_MILLIS = 1600L
-    const val AMBIENT_SWAY_EVERY = 4000L
-    const val AMBIENT_SWAY_MILLIS = 900L
+    const val AMBIENT_TWINKLE_EVERY = 3500L
+    const val AMBIENT_TWINKLE_MILLIS = 700L
     /** How strongly the ambient marks show: faint. */
     const val AMBIENT_ALPHA = .35f
 
@@ -173,12 +223,18 @@ object MenuMotion {
     fun ambient(step: MenuKeys.Step, elapsed: Long, word: Word, still: Boolean): List<Sprite> = when (step) {
         MenuKeys.Step.New -> emptyList()
         MenuKeys.Step.Saved -> {
-            val into = elapsed % AMBIENT_SWAY_EVERY
-            val sway = if (still || into >= AMBIENT_SWAY_MILLIS) 0f else {
-                val p = into.toFloat() / AMBIENT_SWAY_MILLIS
-                8f * sin(2 * PI.toFloat() * p) * (1f - p)
+            // A faint sparkle twinkles by the word now and then, at alternating ends: it swells, turns a little, and shrinks away.
+            if (still) listOf(Sprite(Shape.Sparkle, word.right + 7f, word.middle - 7f, 8f, 0f, AMBIENT_ALPHA))
+            else {
+                val cycle = elapsed / AMBIENT_TWINKLE_EVERY
+                val into = elapsed % AMBIENT_TWINKLE_EVERY
+                if (into >= AMBIENT_TWINKLE_MILLIS) emptyList() else {
+                    val p = into.toFloat() / AMBIENT_TWINKLE_MILLIS
+                    val right = (cycle + word.seed).mod(2L) == 0L
+                    listOf(Sprite(Shape.Sparkle, if (right) word.right + 7f else word.left - 7f, word.middle - 7f, 9f * sin(PI.toFloat() * p),
+                        30f * p, AMBIENT_ALPHA * sin(PI.toFloat() * p)))
+                }
             }
-            listOf(Sprite(Shape.Ribbon, word.left - RIBBON_OFF, word.middle - 4f, RIBBON, sway, AMBIENT_ALPHA))
         }
         MenuKeys.Step.Favourite -> {
             if (still) listOf(Sprite(Shape.Heart, word.right + 7f, word.middle - 6f, 8f, 0f, AMBIENT_ALPHA))
@@ -199,7 +255,7 @@ object MenuMotion {
     /** How long until the ambient marks next move, in ms: 0 while they move, so the bar redraws only then. */
     fun ambientWait(step: MenuKeys.Step, elapsed: Long, still: Boolean): Long = when {
         still || step == MenuKeys.Step.New -> Long.MAX_VALUE
-        step == MenuKeys.Step.Saved -> (elapsed % AMBIENT_SWAY_EVERY).let { if (it < AMBIENT_SWAY_MILLIS) 0L else AMBIENT_SWAY_EVERY - it }
+        step == MenuKeys.Step.Saved -> (elapsed % AMBIENT_TWINKLE_EVERY).let { if (it < AMBIENT_TWINKLE_MILLIS) 0L else AMBIENT_TWINKLE_EVERY - it }
         else -> (elapsed % AMBIENT_HEART_EVERY).let { if (it < AMBIENT_HEART_MILLIS) 0L else AMBIENT_HEART_EVERY - it }
     }
 
@@ -252,16 +308,18 @@ object MenuMotion {
     /** Full until [from], then fading to nothing at 1. */
     private fun fade(t: Float, from: Float) = if (t <= from) 1f else (1f - (t - from) / (1f - from)).coerceIn(0f, 1f)
 
-    /** The ribbon's size and how far left of the word it sits, the hearts', and when each animation peaks, as a part of it. */
-    private const val RIBBON = 13f
-    private const val RIBBON_OFF = 7f
+    /** The hearts' sizes, and how long Favourite's pop lasts, as a part of it. */
     private const val HEART = 15f
     private val HEART_SIZES = floatArrayOf(7f, 10f, 13f)
     private const val POP = .3f
-    private const val CRACK = .2f
-    private const val SHAKE = .3f
-    /** How far a burst's hearts and ribbons turn as they fly, in degrees. */
+    /** The heart's crack draws down it in this long, in ms, and the haptic lands as it's done. The word dips this far, in dp. */
+    const val CRACK_MILLIS = 120L
+    private const val DIP = 2f
+    /** Save's sparkles: their sizes, and how far below and above the word their ring reaches, in dp. */
+    private val SPARKLE_SIZES = floatArrayOf(10f, 12f, 14f)
+    /** The heart or bookmark that breaks over the word: bigger than Favourite's hearts, so its crack reads. */
+    private const val BROKEN_HEART = 18f
+    private const val RING_DOWN = 15f
+    /** How far Favourite's hearts turn as they fly, in degrees. */
     private const val HEART_TURN = 8f
-    private const val RIBBON_TURN = 14f
-    private const val TEAR = .18f
 }

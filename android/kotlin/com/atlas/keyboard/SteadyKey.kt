@@ -31,6 +31,15 @@ class SteadyKey(private val keyAt: (Float, Float) -> String) {
         return true
     }
 
+    /**
+     * A physical key was let go under a finger that stays on it, as after picking a word menu button: the key stays until the
+     * touchpad itself shows the finger lifting or moving, however long that takes.
+     */
+    fun release(code: Int) {
+        keysDown.remove(code)
+        liftedAt = null
+    }
+
     /** No key is down any more, as when the keyboard hides. */
     fun keysReleased() = keysDown.clear()
 

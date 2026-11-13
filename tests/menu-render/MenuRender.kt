@@ -27,12 +27,12 @@ fun main(args: Array<String>) {
     fun font(name: String) = runCatching { Font.createFont(Font.TRUETYPE_FONT, File(fonts, name)) }.getOrElse { Font(Font.SANS_SERIF, Font.PLAIN, 1) }
     val regular = font("inter_regular.otf")
     val medium = font("inter_medium.otf")
-    fun state(saved: Boolean = false, favourite: Boolean = false, learned: Boolean = false) =
-        MenuKeys.state(saved, favourite, false, learned, false)
+    fun state(saved: Boolean = false, favourite: Boolean = false, learned: Boolean = false, builtIn: Boolean = false,
+              oneLetter: Boolean = false) = MenuKeys.state(saved, favourite, false, learned, oneLetter, builtIn)
     val (i, o, p) = Triple(MenuKeys.SAVE, MenuKeys.FORGET, MenuKeys.BACK)
     val moved = KeyAlignment(.05f, .93f)
     val states = listOf(
-        Row("1-not-saved", "Not saved (any word, \"hello\" too): I saves, O has nothing", "Titankeys", state()),
+        Row("1-not-saved", "Not saved, never learned: I saves, O has nothing", "Titankeys", state()),
         Row("2-not-saved-hover-i", "Not saved, hovering I (or K)", "Titankeys", state(), i),
         Row("3-learned", "Learned from typing, not saved: O forgets it", "Titankeys", state(learned = true)),
         Row("4-learned-hover-o", "Learned, hovering O (or L)", "Titankeys", state(learned = true), o),
@@ -43,7 +43,9 @@ fun main(args: Array<String>) {
         Row("9-favourite", "Favourite: the filled heart is orange, I spent", "Titankeys", state(saved = true, favourite = true)),
         Row("10-favourite-hover-i", "Favourite, hovering I: already a favourite", "Titankeys", state(saved = true, favourite = true), i),
         Row("11-favourite-hover-o", "Favourite, hovering O: Unfavourite, back to saved", "Titankeys", state(saved = true, favourite = true), o),
-        Row("12-one-letter", "One letter: the same ladder, never Forget", "I", state(learned = true).copy(learned = false)),
+        Row("12-one-letter", "One letter in the dictionary: saved, never taken out", "I", state(builtIn = true, oneLetter = true)),
+        Row("12b-dictionary", "A dictionary word counts as saved: O takes it out of the dictionary", "and", state(builtIn = true)),
+        Row("12c-dictionary-hover-o", "Dictionary word, hovering O: Forget, with Undo", "and", state(builtIn = true), o),
         Row("13-long-hover-o", "Long word, hovering O: the pill slides over its fading end", "pneumonoultramicroscopicsilicovolcanoconiosis",
             state(saved = true), o),
         Row("14-moved-calibration", "A moved calibration (Q at 5%, P at 93%): the buttons follow the keys", "Titankeys",
@@ -61,7 +63,7 @@ fun main(args: Array<String>) {
             MenuKeys.Motion.Forget -> state(learned = true) to state(learned = true)
             MenuKeys.Motion.Echo -> state(saved = true, favourite = true) to state(saved = true, favourite = true)
         }
-        val frames = if (motion == MenuKeys.Motion.Unfavourite) 10 else 8
+        val frames = 10
         (0 until frames).map { index ->
             val millis = total * index / frames
             Row("$motion-${millis}ms", "$motion at $millis of $total ms", "Titankeys", to, motion = motion to millis, from = from)
@@ -111,9 +113,9 @@ private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: 
     g.translate(0, CAPTION)
     val icon = 22 * DENSITY
     val step = row.state.step
-    val slots = listOf(MenuKeys.first(step), MenuKeys.second(step, row.state.learned), null)
+    val slots = MenuKeys.choices(row.state).let { listOf(it.i, it.o, null) }
     fun buttonAt(column: Int) = slots[column - MenuKeys.SAVE]
-    val hovered = row.hover.takeIf { MenuKeys.pills(it, step, row.state.learned) } ?: -1
+    val hovered = row.hover.takeIf { MenuKeys.pills(it, row.state) } ?: -1
     // The real keys' left edge, then the word placed once in the room left of the buttons, in Ink's font, never another colour.
     g.font = regular.deriveFont(17 * DENSITY)
     val wordLeft = MenuKeys.slot(WIDTH.toFloat(), 0, row.alignment).first.coerceAtLeast(8 * DENSITY)
@@ -131,7 +133,7 @@ private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: 
     frame?.sprites?.filter { it.behind }?.forEach { drawSprite(g, drawables, it, orange, paper) }
     val saved = g.transform
     frame?.let {
-        g.translate((it.wordShift * DENSITY).toDouble(), 0.0)
+        g.translate((it.wordShift * DENSITY).toDouble(), (it.wordDrop * DENSITY).toDouble())
         g.translate(centre.toDouble(), middle.toDouble())
         g.scale(it.wordScale.toDouble(), it.wordScale.toDouble())
         g.translate(-centre.toDouble(), -middle.toDouble())
@@ -170,7 +172,7 @@ private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: 
     }
     // The icons over their keys: white at rest, the filled heart orange, orange in a pill, grey beside one. While the word's
     // step changes they morph from the last step's icons.
-    val fromSlots = row.from?.let { listOf(MenuKeys.first(it.step), MenuKeys.second(it.step, it.learned), null) }
+    val fromSlots = row.from?.let { from -> MenuKeys.choices(from).let { listOf(it.i, it.o, null) } }
     for ((index, button) in slots.withIndex()) {
         val column = MenuKeys.SAVE + index
         val (l, r) = MenuKeys.slot(WIDTH.toFloat(), column, row.alignment)
@@ -210,6 +212,42 @@ private fun drawSprite(g: Graphics2D, drawables: File, sprite: MenuMotion.Sprite
     val x = sprite.x * DENSITY
     val y = sprite.y * DENSITY
     val shown = mix(paper, colour, sprite.alpha)
+    if (sprite.shape == MenuMotion.Shape.Crack) {
+        // The crack drawn down the heart, as far as it has got: a gap in the bar's colour.
+        val crack = listOf(12.3f to 0f, 12.3f to 6.6f, 10.4f to 10.4f, 13.6f to 12.6f, 11.6f to 17.4f, 11.6f to 24f)
+        val left = x - size / 2
+        val top = y - size / 2
+        val bottom = top + size * sprite.amount
+        val path = Path2D.Float()
+        val points = crack.map { (px, py) -> left + px / 24f * size to top + py / 24f * size }
+        path.moveTo(points[0].first, points[0].second)
+        for (index in 1 until points.size) {
+            val (px, py) = points[index]
+            val (qx, qy) = points[index - 1]
+            if (py <= bottom) path.lineTo(px, py)
+            else {
+                if (bottom > qy) path.lineTo(qx + (px - qx) * (bottom - qy) / (py - qy), bottom)
+                break
+            }
+        }
+        g.color = paper
+        g.stroke = BasicStroke(size * .1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+        g.draw(path)
+        return
+    }
+    if (sprite.shape == MenuMotion.Shape.Shard) {
+        val saved = g.transform
+        g.rotate(Math.toRadians(sprite.turn.toDouble()), x.toDouble(), y.toDouble())
+        val path = Path2D.Float()
+        path.moveTo(x, y - size * .7f)
+        path.lineTo(x + size * .45f, y + size * .4f)
+        path.lineTo(x - size * .45f, y + size * .3f)
+        path.closePath()
+        g.color = shown
+        g.fill(path)
+        g.transform = saved
+        return
+    }
     if (sprite.shape == MenuMotion.Shape.Dust) {
         g.color = shown
         g.fill(java.awt.geom.Ellipse2D.Float(x - size / 2, y - size / 2, size, size))
@@ -235,7 +273,12 @@ private fun drawSprite(g: Graphics2D, drawables: File, sprite: MenuMotion.Sprite
         path.closePath()
         g.clip(path)
     }
-    drawVector(g, File(drawables, (if (heart) "menu_favourited" else "menu_mark_saved") + ".xml").readText(), left, top, size, shown)
+    val file = when {
+        heart -> "menu_favourited"
+        sprite.shape.name.startsWith("Bookmark") -> "menu_mark_saved"
+        else -> "menu_sparkle"
+    }
+    drawVector(g, File(drawables, "$file.xml").readText(), left, top, size, shown)
     g.clip = clip
     g.transform = saved
 }

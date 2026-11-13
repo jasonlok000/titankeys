@@ -1704,9 +1704,6 @@ class AtlasIme : InputMethodService() {
     /** A word whose menu is open: [typed] is the letters it would replace on the bar, and empty for a selected word. */
     private class HeldWord(val word: String, val typed: String)
     private var menuWord: HeldWord? = null
-    /** A forgotten word, which waits out its Undo before the engine forgets it. */
-    private var pendingForget: HeldWord? = null
-    private val forgetNow = Runnable { commitForget() }
 
     /** Holding a word on the strip opens its menu. */
     private fun holdWord(index: Int): Boolean {
@@ -1726,7 +1723,6 @@ class AtlasIme : InputMethodService() {
         val menu = if (inGuide) guideMenus[held.word.lowercase()]?.copy(word = held.word) ?: Strip.Notice.Menu(held.word, false)
             else menuFor(held.word)
         if (menu.first == null && menu.second == null) return false
-        commitForget()
         menuWord = held
         strip?.menuMark = -1
         haptics.play(Haptic.MenuOpen)
@@ -1737,8 +1733,9 @@ class AtlasIme : InputMethodService() {
 
     /**
      * The menu for [word], where it stands now (owner, 2026-11-12): a favourite, a word the dictionary has, a word you saved, or
-     * none of them; and whether O can forget it, which only a word the keyboard learned from your typing has. Saved means you
-     * pressed Save: a word the keyboard learned is not saved. One letter is never forgotten, and a dictionary word never is.
+     * none of them; and whether O can forget it, which only a word the keyboard learned from your typing has. Learned means
+     * TitanKeys knows it and suggests it: a word still gathering evidence, such as gibberish typed once, has no Forget (owner,
+     * 2026-11-13). Saved means you pressed Save: a word the keyboard learned is not saved. One letter is never forgotten.
      *
      * The engine saves and forgets in the background, so [pendingWords] keeps what the menu last did to each word until the
      * engine has done it too. A menu opened again straight away shows the step you left it at, never an older one.
@@ -1776,7 +1773,7 @@ class AtlasIme : InputMethodService() {
     private fun menuPressed(held: HeldWord, button: MenuKeys.Button) {
         val menu = strip?.notice as? Strip.Notice.Menu ?: return
         if (menuWord !== held) return
-        val next = MenuKeys.press(menu.state, button) ?: return
+        val next = MenuKeys.press(menu.state, button)
         val pressed = menu.copy(step = next.step, forget = next.learned)
         strip?.notice = pressed
         if (inGuide) guideMenus[held.word.lowercase()] = pressed
@@ -1896,13 +1893,13 @@ class AtlasIme : InputMethodService() {
     /**
      * A resting finger hovers the button over its key, or over the key above it: its pill shows the button's name. The mark keeps
      * its column while the finger stays, so after a press the pill shows that button's new action. Back has no pill and no mark:
-     * P and Backspace only pick it (owner, 2026-11-12).
+     * P and Backspace only pick it (owner, 2026-11-12). A [quiet] mark plays nothing, as after a press, which has its own haptic.
      */
-    private fun markMenu(key: String) {
+    private fun markMenu(key: String, quiet: Boolean = false) {
         val strip = strip ?: return
         val column = if (menuOpen) MenuKeys.hovered(key) else -1
         val mark = if (column == MenuKeys.SAVE || column == MenuKeys.FORGET) column else -1
-        if (mark >= 0 && mark != strip.menuMark) haptics.play(Haptic.MenuMark)
+        if (!quiet && mark >= 0 && mark != strip.menuMark) haptics.play(Haptic.MenuMark)
         strip.menuMark = mark
     }
 
@@ -1929,9 +1926,12 @@ class AtlasIme : InputMethodService() {
                     menuHaptic(Haptic.WordUnsaved, MenuKeys.Motion.Unsave)
                     menuPressed(held, MenuKeys.Button.Unsave)
                 }
-                // Forget only shows for a word the keyboard learned, which no guide word is; if it ever shows, it forgets for show:
-                // Forget's own notice and haptic, for as long as the real Undo would, and nothing is forgotten.
-                Strip.Action.Forget -> showGuideForget(held)
+                // Forget only shows for a word the keyboard learned, which no guide word is; if it ever shows, it steps down for
+                // show, with Forget's own haptic, and nothing is forgotten.
+                Strip.Action.Forget -> {
+                    haptics.play(Haptic.WordForgotten)
+                    menuPressed(held, MenuKeys.Button.Forget)
+                }
                 else -> Unit
             }
             return
@@ -1944,11 +1944,8 @@ class AtlasIme : InputMethodService() {
                 if (held != null) haptics.play(Haptic.MenuClosed)
                 closeMenu()
             }
-            // The guide's Forget forgot nothing, so its Undo only takes the notice away, with the real Undo's haptic.
-            Strip.Action.Undo -> if (inGuide && pendingForget == null && strip?.notice is Strip.Notice.Forgot) {
-                haptics.play(Haptic.ForgetUndone)
-                strip?.notice = null
-            } else undoForget()
+            // Forget has no Undo any more: Save brings a forgotten word back (owner, 2026-11-13).
+            Strip.Action.Undo -> Unit
             Strip.Action.Save -> if (held != null) saveWord(held)
             Strip.Action.Favourite -> if (held != null) favouriteWord(held)
             // I on a favourite, the top step, is spent: it says no, and does nothing.
@@ -1981,9 +1978,11 @@ class AtlasIme : InputMethodService() {
         // Saved plays at the press, as Forget's Removed does. The save itself runs in the background, and a save that fails
         // plays no after it.
         menuHaptic(Haptic.WordSaved, MenuKeys.Motion.Save)
-        forgetting -= key
+        // Save right after Forget: the engine may not have blocked the word yet, but it does its work in order, so it lets the word
+        // back in after blocking it, then saves it.
+        val forgotten = forgetting.remove(key)
         pendingWords[key] = true
-        if (!typing.wordAllowed(held.word)) typing.setWordBlocked(held.word, false) { add() } else add()
+        if (forgotten || !typing.wordAllowed(held.word)) typing.setWordBlocked(held.word, false) { add() } else add()
         composer.unhide(held.word)
         menuPressed(held, MenuKeys.Button.Save)
     }
@@ -2057,51 +2056,25 @@ class AtlasIme : InputMethodService() {
         if (peak <= 0L || !GuideMotion.enabled) haptics.play(haptic) else main.postDelayed({ haptics.play(haptic) }, peak)
     }
 
-    /** The guide's Forget: the real one's notice and haptic, then the bar as it was. Nothing is forgotten or hidden. */
-    private fun showGuideForget(held: HeldWord) {
-        haptics.play(Haptic.WordForgotten)
-        menuWord = null
-        strip?.menuMark = -1
-        strip?.notice = Strip.Notice.Forgot(held.word)
-        main.postDelayed({ if ((strip?.notice as? Strip.Notice.Forgot)?.word == held.word && pendingForget == null) strip?.notice = null },
-            FORGET_UNDO_MILLIS)
-    }
-
-    /** Forget leaves the word off the bar at once, and the engine forgets it once the Undo has had its time. */
+    /**
+     * Forget is a step down (owner, 2026-11-13: "instead of showing the undo when forgetting a word, keep it on the bar and just
+     * show a new status"). The menu stays open on the word, not saved, with nothing learned left, and Save brings it back. The
+     * lists let it go at once: a learned word leaves your words, a dictionary word the dictionary, and it is blocked, so typing
+     * can't learn it back. It stays off the bar's suggestions in this field, since the bar can still hold words from before.
+     */
     private fun forgetWord(held: HeldWord) {
-        menuWord = null
-        pendingForget = held
-        composer.hide(held.word)
-        // The word stays selected in the field, so the bar keeps showing it alone, under Undo (owner, 2026-11-12).
-        strip?.notice = Strip.Notice.Forgot(held.word)
         haptics.play(Haptic.WordForgotten)
-        main.postDelayed(forgetNow, FORGET_UNDO_MILLIS)
-    }
-
-    private fun undoForget() {
-        val pending = pendingForget ?: return
-        pendingForget = null
-        haptics.play(Haptic.ForgetUndone)
-        main.removeCallbacks(forgetNow)
-        strip?.notice = null
-        composer.unhide(pending.word)
-    }
-
-    /** The word stays off the bar in this field, since the bar can still hold words from before. */
-    private fun commitForget() {
-        val pending = pendingForget ?: return
-        pendingForget = null
-        main.removeCallbacks(forgetNow)
-        if (strip?.notice is Strip.Notice.Forgot) strip?.notice = null
+        composer.hide(held.word)
         // A forgotten word is no favourite either. Until the lists have let it go, the menu shows it as forgotten already.
-        FavouriteWords.get(this).remove(pending.word)
-        val key = pending.word.lowercase()
+        FavouriteWords.get(this).remove(held.word)
+        val key = held.word.lowercase()
         forgetting += key
         pendingWords.remove(key)
-        SwipeTyping.get(this).forgetWord(pending.word, pending.typed) { error ->
+        SwipeTyping.get(this).forgetWord(held.word, held.typed) { error ->
             if (error != null) Log.w("Atlas", "Could not forget a word: $error")
             main.post { forgetting -= key }
         }
+        menuPressed(held, MenuKeys.Button.Forget)
     }
 
     /** One word selected in the field shows alone on the strip, so that its menu can save or forget it. */
@@ -2122,8 +2095,6 @@ class AtlasIme : InputMethodService() {
     private var selectedWord: String? = null
 
     override fun onFinishInput() {
-        // A word waiting to be forgotten is forgotten now, before the next field can offer it.
-        commitForget()
         closeMenu()
         strip?.selected = null
         // The letter is already typed, so a press that is still down can only stay a letter.
@@ -3161,19 +3132,26 @@ class AtlasIme : InputMethodService() {
         // Backspace, under P, goes back.
         if (keyCode == menuKey && event.repeatCount > 0) return true
         if (!event.isSystem && menuOpen && (keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z || keyCode == KeyEvent.KEYCODE_DEL)) {
-            val action = menuAction(if (keyCode == KeyEvent.KEYCODE_DEL) Layout.BACKSPACE else ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString())
+            val pressed = if (keyCode == KeyEvent.KEYCODE_DEL) Layout.BACKSPACE else ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString()
+            val action = menuAction(pressed)
             if (action != null) {
                 if (event.repeatCount == 0) {
                     menuKey = keyCode
                     stripAction(action)
+                    // The finger that pressed the key is on it, so its pill stays there and shows the button's next step, whatever
+                    // the touchpad reports around the press (owner, 2026-11-12). See [SteadyKey.press].
+                    if (menuOpen) {
+                        barHover.press(pressed)
+                        restingKey = barHover.key
+                        markMenu(restingKey, quiet = true)
+                    }
                 }
                 return true
             }
         }
-        // Typing on means the forgotten word can go, and the strip shows words again. The newest clip goes from the strip too.
+        // Typing on closes the menu, and the strip shows words again. The newest clip goes from the strip too.
         if (!event.isSystem && !Modifiers.isModifier(keyCode)) {
             closeMenu()
-            commitForget()
             dismissClipOffer()
         }
         // The touchpad hears the physical press now, before the key is typed.
@@ -3210,8 +3188,12 @@ class AtlasIme : InputMethodService() {
         // The last key let go: a resting finger is reported again at once, and if none is, the mark goes as after a lift.
         val panelLast = panelHover.keyUp(keyCode, event.eventTime) && panelOpen
         // A key that picked a word menu button keeps the hover when it is let go: the finger is still on it, and its pill now
-        // names the button's next step (owner, 2026-11-12). The hover goes when the touchpad says the finger lifted or moved.
-        val barLast = if (keyCode == menuKey && menuOpen) barHover.release(keyCode).let { false } else barHover.keyUp(keyCode, event.eventTime) && !panelOpen
+        // names the button's next step (owner, 2026-11-12). The touchpad's lift for the press mostly comes after the key, and is
+        // the press's own: the hover goes only when the touchpad shows the finger on another key, or lifting after that. See
+        // [SteadyKey.press].
+        val menuRelease = keyCode == menuKey && menuOpen
+        if (menuRelease) barHover.release(keyCode, event.eventTime)
+        val barLast = !menuRelease && barHover.keyUp(keyCode, event.eventTime) && !panelOpen
         if (panelLast || barLast) {
             main.removeCallbacks(expireHover)
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
@@ -3611,7 +3593,6 @@ class AtlasIme : InputMethodService() {
     }
 
     override fun onDestroy() {
-        commitForget()
         editing = false
         GuideHooks.panelRequests = null
         GuideHooks.stripDemos = null
@@ -3719,8 +3700,6 @@ class AtlasIme : InputMethodService() {
         /** The word menu's choices, which the guide only shows. */
         private val MENU_CHOICES = setOf(Strip.Action.Save, Strip.Action.Favourite, Strip.Action.Favourited, Strip.Action.Unfavourite,
             Strip.Action.Unsave, Strip.Action.Forget)
-        /** How long the strip offers Undo after you hold a word to forget it. */
-        private const val FORGET_UNDO_MILLIS = 4000L
         /** The field of a returning window started within 30 ms of its empty start. */
         private const val NO_FIELD_HIDE_MILLIS = 200L
         private const val FRAME_MILLIS = 16L

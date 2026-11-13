@@ -312,8 +312,8 @@ class Strip(
     private var pillSnap = false
     /** Where the word's centre is, set once as the menu opens: it never moves. NaN until then. */
     private var menuWordCentre = Float.NaN
-    /** The step the menu shows, and the animation that its last change plays, from when. See [MenuKeys.motion]. */
-    private var shownStep: MenuKeys.Step? = null
+    /** Where the word the menu shows stands, and the animation that its last change plays, from when. See [MenuKeys.motion]. */
+    private var shownState: MenuKeys.State? = null
     private var menuMotion: MenuKeys.Motion? = null
     /**
      * I's and O's icons, and the icons they are changing from, since when: no icon snaps to another, see [MenuMotion.icon]. Each
@@ -703,20 +703,21 @@ class Strip(
             }
             pillShown = -1
             menuWordCentre = Float.NaN
-            shownStep = null
+            shownState = null
             menuMotion = null
             drawnWord = null
             slotIcons.fill(null)
-        } else if (shownMenu != menu.word || shownStep != menu.step) {
-            // A new menu, or a new step: its animation plays once, unless motion is off. A new word gets a new place, and its
-            // icons come as they are; a new step changes them gently.
+        } else if (shownMenu != menu.word || shownState?.step != menu.step ||
+            MenuKeys.motion(shownState, menu.state) == MenuKeys.Motion.Forget) {
+            // A new menu, a new step, or Forget, which can leave the step as it was: its animation plays once, unless motion is
+            // off. A new word gets a new place, and its icons come as they are; a new step changes them gently.
             val opened = shownMenu != menu.word
             if (opened) menuWordCentre = Float.NaN
-            menuMotion = MenuKeys.motion(if (opened) null else shownStep, menu.step)?.takeIf { GuideMotion.enabled }
+            menuMotion = MenuKeys.motion(if (opened) null else shownState, menu.state)?.takeIf { GuideMotion.enabled }
             val now = SystemClock.uptimeMillis()
             motionStart = now
             ambientStart = -1L
-            shownStep = menu.step
+            shownState = menu.state
             val buttons = MenuKeys.choices(menu.state).let { arrayOf(it.i, it.o) }
             for (index in 0..1) {
                 if (!opened && slotIcons[index] != buttons[index]) {
@@ -727,6 +728,7 @@ class Strip(
             }
         } else {
             // The same step: only O's Forget can come or go, as Save and Unsave change what is left to forget.
+            shownState = menu.state
             val second = MenuKeys.choices(menu.state).o
             if (slotIcons[1] != second) {
                 slotFrom[1] = slotIcons[1]

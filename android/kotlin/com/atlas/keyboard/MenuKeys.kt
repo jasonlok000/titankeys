@@ -60,20 +60,20 @@ object MenuKeys {
     /**
      * What I and O can do. [Favourited] is I on a favourite: the top of the ladder, a spent heart that says no. [Unsave] takes your
      * save away, and nothing else: a dictionary word stays in the dictionary and is never blocked. [Forget] removes what the
-     * keyboard learned from your typing, such as a typo it picked up.
+     * keyboard learned from your typing, such as a typo it picked up and now suggests.
      */
     enum class Button { Save, Favourite, Favourited, Unfavourite, Unsave, Forget }
 
     /**
-     * Where a word stands for the menu: its [step]; whether the keyboard [learned] it from your typing, which O can forget at the
-     * bottom; whether the dictionary has it ([builtIn]), so it counts as saved and O takes it out of the dictionary; whether the
-     * word store can hold it at all ([savable]: symbols and emoji can't be saved); and whether it is a single letter, which is
-     * never forgotten.
+     * Where a word stands for the menu: its [step]; whether the keyboard [learned] it from your typing, so that it suggests it,
+     * which O can forget at the bottom (a word still gathering evidence isn't learned: owner, 2026-11-13); whether the dictionary
+     * has it ([builtIn]), so it counts as saved and O takes it out of the dictionary; whether the word store can hold it at all
+     * ([savable]: symbols and emoji can't be saved); and whether it is a single letter, which is never forgotten.
      */
     data class State(val step: Step, val learned: Boolean, val builtIn: Boolean = false, val savable: Boolean = true,
                      val oneLetter: Boolean = false)
 
-    /** What I and O show at a [State], and where each press takes the word: null for a button with nothing, or after Forget. */
+    /** What I and O show at a [State], and where each press takes the word: null for a button with nothing. */
     data class Choices(val i: Button?, val iNext: State?, val o: Button?, val oNext: State?)
 
     /**
@@ -102,18 +102,20 @@ object MenuKeys {
     }
 
     /**
-     * The ladder itself, the only place it lives: the keyboard, the guide and the checks all use it.
-     * - NOT SAVED: I is Save, to SAVED, for a word the store can hold. O is Forget, only for a word the keyboard learned, and
-     *   closes the menu.
+     * The ladder itself, the only place it lives: the keyboard, the guide and the checks all use it. Every press is a step and the
+     * menu stays open on the word, Forget too (owner, 2026-11-13: "keep it on the bar and just show a new status").
+     * - NOT SAVED: I is Save, to SAVED, for a word the store can hold. O is Forget, only for a word the keyboard learned: it stays
+     *   NOT SAVED, with nothing learned left, so O then has nothing.
      * - SAVED: I is Favourite, to FAVOURITE. O is Unsave, to NOT SAVED, with nothing learned left to forget; for a dictionary
-     *   word O is Forget, which takes it out of the dictionary with an Undo and closes the menu, except for a single letter.
+     *   word O is Forget, which takes it out of the dictionary, to NOT SAVED, except for a single letter.
      * - FAVOURITE: I is spent and stays. O is Unfavourite, to SAVED, always.
+     * After Forget, I is Save, which brings the word back.
      */
     fun choices(state: State): Choices = when (state.step) {
         Step.New -> Choices(Button.Save.takeIf { state.savable }, state.copy(step = Step.Saved),
-            Button.Forget.takeIf { state.learned }, null)
+            Button.Forget.takeIf { state.learned }, state.copy(learned = false))
         Step.Saved -> if (state.builtIn) Choices(Button.Favourite, state.copy(step = Step.Favourite),
-            Button.Forget.takeUnless { state.oneLetter }, null)
+            Button.Forget.takeUnless { state.oneLetter }, state.copy(step = Step.New, learned = false))
         else Choices(Button.Favourite, state.copy(step = Step.Favourite), Button.Unsave, state.copy(step = Step.New, learned = false))
         Step.Favourite -> Choices(Button.Favourited, state, Button.Unfavourite, state.copy(step = Step.Saved))
     }
@@ -124,12 +126,12 @@ object MenuKeys {
     /** O's button at [step], for an ordinary word that the keyboard [learned] or not. */
     fun second(step: Step, learned: Boolean) = choices(State(step, learned)).o
 
-    /** The state after [button] at [state], or null when the menu closes, after Forget. */
-    fun press(state: State, button: Button): State? {
+    /** The state after [button] at [state]: the menu always stays open. A button the state doesn't show changes nothing. */
+    fun press(state: State, button: Button): State {
         val choices = choices(state)
         return when (button) {
-            choices.i -> choices.iNext
-            choices.o -> choices.oNext
+            choices.i -> choices.iNext ?: state
+            choices.o -> choices.oNext ?: state
             else -> state
         }
     }
@@ -154,21 +156,36 @@ object MenuKeys {
         else -> false
     }
 
-    /** The animations of the word menu: see [MenuMotion]. Each change of step plays one, and so do opening and Forget. */
-    enum class Motion { Save, Favourite, Unfavourite, Unsave, Forget, Echo }
+    /**
+     * The animations of the word menu: see [MenuMotion]. Each change of step plays one, and so does Forget. Opening plays only a
+     * soft echo of where the word stands: [Echo] by a favourite, [SavedEcho] by a saved word.
+     */
+    enum class Motion { Save, Favourite, Unfavourite, Unsave, Forget, Echo, SavedEcho }
 
     /**
      * What plays as the word goes from [from] to [to], or as the menu opens on it when [from] is null: a soft echo for a saved word
-     * or a favourite, and nothing for one that isn't saved.
+     * or a favourite, in its own mark, and nothing for one that isn't saved. Never a step's burst (owner, 2026-11-13: opening once
+     * showed hearts and then glitter, as if it replayed the steps).
      */
     fun motion(from: Step?, to: Step): Motion? = when {
-        from == null -> if (to == Step.New) null else Motion.Echo
+        from == null -> when (to) {
+            Step.New -> null
+            Step.Saved -> Motion.SavedEcho
+            Step.Favourite -> Motion.Echo
+        }
         from == to -> null
         to == Step.Favourite -> Motion.Favourite
         from == Step.Favourite -> Motion.Unfavourite
         to == Step.Saved -> Motion.Save
         else -> Motion.Unsave
     }
+
+    /**
+     * What plays as the menu goes from [from] to [to], or opens on [to] when [from] is null: as for their steps, and Forget for
+     * O's Forget, which can leave the step as it was. See [motion].
+     */
+    fun motion(from: State?, to: State): Motion? =
+        if (from != null && choices(from).let { it.o == Button.Forget && it.oNext == to }) Motion.Forget else motion(from?.step, to.step)
 
     /**
      * The hovered button's pill: it grows left from its key's column to hold the action's name, and covers the buttons to its

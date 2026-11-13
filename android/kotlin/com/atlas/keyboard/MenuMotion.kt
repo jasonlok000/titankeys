@@ -61,7 +61,7 @@ object MenuMotion {
         MenuKeys.Motion.Unfavourite -> 700L
         MenuKeys.Motion.Unsave -> 560L
         MenuKeys.Motion.Forget -> 420L
-        MenuKeys.Motion.Echo -> 520L
+        MenuKeys.Motion.Echo, MenuKeys.Motion.SavedEcho -> 520L
     }
 
     /** When the animation peaks, in ms from its start: its haptic plays then, so what you feel lands with what you see. */
@@ -85,7 +85,8 @@ object MenuMotion {
             MenuKeys.Motion.Unsave -> breaking(elapsed, t, word, random, Shape.Bookmark, Shape.BookmarkLeft, Shape.BookmarkRight,
                 shards = 2, dips = false, total = total)
             MenuKeys.Motion.Forget -> dust(t, word, random)
-            MenuKeys.Motion.Echo -> echo(t, word, random)
+            MenuKeys.Motion.Echo -> echo(t, word, random, Shape.Heart)
+            MenuKeys.Motion.SavedEcho -> echo(t, word, random, Shape.Sparkle)
         }
         return frame.copy(sprites = frame.sprites.map { it.copy(y = it.y.coerceIn(it.size / 2, BAR - it.size / 2)) })
     }
@@ -178,7 +179,10 @@ object MenuMotion {
         return Frame(halves + splinters, wordDrop = dip)
     }
 
-    /** The word dissolves into a little dust, drifting up and out from where its letters were. */
+    /**
+     * A little dust drifts up and out from the word's letters, and the word dims and comes back: Forget takes what was learned,
+     * and the word stays in the menu, not saved (owner, 2026-11-13).
+     */
     private fun dust(t: Float, word: Word, random: Random): Frame {
         val count = 10 + random.nextInt(5)
         val specks = (0 until count).map { index ->
@@ -187,18 +191,21 @@ object MenuMotion {
             val away = (x - word.centre) / (word.right - word.left + 1f) * 10f
             Sprite(Shape.Dust, x + away * t, y - (5f + 6f * random.nextFloat()) * t, 2f + random.nextFloat() * 1.5f, 0f, fade(t, .3f) * .9f)
         }
-        return Frame(specks, wordAlpha = (1f - t / .5f).coerceIn(0f, 1f))
+        return Frame(specks, wordAlpha = 1f - .65f * sin(PI.toFloat() * t))
     }
 
-    /** As the menu opens on a saved word or a favourite: two or three small hearts drift up from its ends, once, softly. */
-    private fun echo(t: Float, word: Word, random: Random): Frame {
+    /**
+     * As the menu opens on a saved word or a favourite: two or three small [shape]s, the mark of where the word stands, drift up
+     * from its ends, once, softly. A heart only by a favourite.
+     */
+    private fun echo(t: Float, word: Word, random: Random, shape: Shape): Frame {
         val count = 2 + random.nextInt(2)
         val hearts = (0 until count).mapNotNull { index ->
             val right = index % 2 == 0
             val delay = index * .12f + random.nextFloat() * .06f
             val own = ((t - delay) / (1f - delay)).takeIf { it in 0f..1f } ?: return@mapNotNull null
             val x = (if (right) word.right + 6f else word.left - 6f) + (if (right) 1 else -1) * 3f * own
-            Sprite(Shape.Heart, x, word.middle - 4f - (8f + 4f * random.nextFloat()) * own, 7f + 2f * random.nextFloat(), 0f,
+            Sprite(shape, x, word.middle - 4f - (8f + 4f * random.nextFloat()) * own, 7f + 2f * random.nextFloat(), 0f,
                 (own / .2f).coerceAtMost(1f) * fade(own, .4f) * .75f)
         }
         return Frame(hearts)
@@ -217,10 +224,22 @@ object MenuMotion {
     const val AMBIENT_ALPHA = .35f
 
     /**
-     * The ambient marks at [elapsed] ms since the menu came to rest at [step] over [word]. With motion off ([still]) they sit
-     * still: a faint heart by a favourite, the faint ribbon by a saved word.
+     * The ambient marks at [elapsed] ms since the menu came to rest at [step] over [word]. The first comes a whole cycle after
+     * that, so nothing plays straight after the open's echo or a step's burst: never two in a row (owner, 2026-11-13). With motion
+     * off ([still]) they sit still: a faint heart by a favourite, a faint sparkle by a saved word.
      */
-    fun ambient(step: MenuKeys.Step, elapsed: Long, word: Word, still: Boolean): List<Sprite> = when (step) {
+    fun ambient(step: MenuKeys.Step, elapsed: Long, word: Word, still: Boolean): List<Sprite> =
+        if (!still && elapsed < every(step)) emptyList() else cycles(step, elapsed - every(step), word, still)
+
+    /** How often [step]'s ambient mark comes: never for a word that isn't saved. */
+    private fun every(step: MenuKeys.Step) = when (step) {
+        MenuKeys.Step.New -> 0L
+        MenuKeys.Step.Saved -> AMBIENT_TWINKLE_EVERY
+        MenuKeys.Step.Favourite -> AMBIENT_HEART_EVERY
+    }
+
+    /** The ambient marks [elapsed] ms into their cycles. */
+    private fun cycles(step: MenuKeys.Step, elapsed: Long, word: Word, still: Boolean): List<Sprite> = when (step) {
         MenuKeys.Step.New -> emptyList()
         MenuKeys.Step.Saved -> {
             // A faint sparkle twinkles by the word now and then, at alternating ends: it swells, turns a little, and shrinks away.
@@ -252,9 +271,14 @@ object MenuMotion {
         }
     }
 
-    /** How long until the ambient marks next move, in ms: 0 while they move, so the bar redraws only then. */
+    /** How long until the ambient marks next move, in ms: 0 while they move, so the bar redraws only then. See [ambient]. */
     fun ambientWait(step: MenuKeys.Step, elapsed: Long, still: Boolean): Long = when {
         still || step == MenuKeys.Step.New -> Long.MAX_VALUE
+        elapsed < every(step) -> every(step) - elapsed
+        else -> cycleWait(step, elapsed - every(step))
+    }
+
+    private fun cycleWait(step: MenuKeys.Step, elapsed: Long): Long = when {
         step == MenuKeys.Step.Saved -> (elapsed % AMBIENT_TWINKLE_EVERY).let { if (it < AMBIENT_TWINKLE_MILLIS) 0L else AMBIENT_TWINKLE_EVERY - it }
         else -> (elapsed % AMBIENT_HEART_EVERY).let { if (it < AMBIENT_HEART_MILLIS) 0L else AMBIENT_HEART_EVERY - it }
     }

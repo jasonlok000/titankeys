@@ -208,6 +208,14 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
+- **Not saved is a solid grey word** (owner, 2026-11-13, 14:15). The outline didn't read at any width (1.1 to 0.32 dp were shown
+  on the phone: "all are pretty not visible"). Of three alternatives (dotted underline, grey word, lighter weight), the owner chose
+  "grey b". (Owner)
+  - Not saved is #99918A, Saved and Favourite are white, and Blocked is #5E5853 with a #99918A strike.
+  - Hover previews move the word about 60% toward its next look, since grey can no longer mean "preview".
+  - The effects turn the letters grey to white (Save) and back (Unsave).
+
+  These details are the Orchestrator's. W builds it.
 - **Analytics: in 3.0, the launch build** (owner, 2026-11-13, 14:05: "do it in 3.0? 3.0 is the build I would acc promote and launch"; before that, "theres no user now it's just me honestly"). (Owner) It must be ready at launch, since that's when other users arrive. Until then, the owner's raw log is the baseline.
   - With one user, the debug build's raw typing log and Record a bug already give richer data.
   - When a public release brings other users, revisit, under #55's regulated internet rules, with:

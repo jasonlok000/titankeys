@@ -223,6 +223,10 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   than it is. The Orchestrator agrees: one shared optical line for everything in the bar (words, menu word, pills, icons, chips,
   hints, clip offer), moved down together; touch areas and the bar's height unchanged. The owner picks how far on the phone
   (cal-tool/bar-low.html, 1 dp steps, at Normal, Bigger and Biggest, light or dark app above). Then it gets built. Waiting.
+  - The owner's first try: 8 dp lower at Normal ("I think it's close now"), which leaves 30.5 dp over the small letters and
+    14.5 dp under the baseline. On request ("can we do sth like drawing some guidelines"), the page now draws guides (the bar's
+    middle, the letters' middle, the small letters' top and the baseline, with the gaps in dp) and saves every change to
+    cal-values.log, so the Orchestrator reads the final pick from there.
 - **The menu word moves left of the widest pill** (W's 536a3a7, merged for build #12). The owner judges it on the phone first:
   "ill see if it looks good first." If not, the owner's fallbacks: leave the word where it is and make the pill's label shorter
   ("Favourited", "alr a fav" or similar), or let the pill overlap the word, semi-transparent with a blur underneath. (Owner)

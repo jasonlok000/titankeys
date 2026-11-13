@@ -132,7 +132,8 @@ decoration below. None of it is approved by the owner.
 - It's pure decoration. It never reacts to typing, a mistake, a hint or a pass, and never tells you anything. It only follows the slide's theme.
 - **Where:** a layer behind the title, instruction and field, above the black. It lives in the empty space. It's never drawn
   inside the field, over the keyboard drawing, or on the bar, and it keeps 8 dp clear of text.
-- **How faint:** orange at 6–12% opacity, or cream at 5%. On the orange pass screen it turns ink at 8% and keeps moving.
+- **How faint:** orange at 14–24% opacity, or cream at 10–14%, tuned per slide so it reads at a glance on the phone but stays
+  behind everything (owner, 2026-11-13: at 6–12% it mostly vanished). On the orange pass screen it turns ink at 8% and keeps moving.
 - **Motion:** slow loops of 6–20 s, eased, with at most 12 shapes at once. Drawn at up to 30 fps, and stopped when the screen is off.
   - With Android's animations off, it shows as a still picture.
   - It fades in 600 ms after the slide settles. Between slides it crossfades over 400 ms. The keyboard never moves for it.

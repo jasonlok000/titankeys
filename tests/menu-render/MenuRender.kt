@@ -23,6 +23,8 @@ import kotlin.math.floor
  * the density of the owner's screenshots. Each sheet is a PNG in the folder given, dark and light.
  */
 fun main(args: Array<String>) {
+    // ACCENT=off draws everything as with Settings > Orange accents off: Accent's cream in place of orange.
+    if (System.getenv("ACCENT") == "off") Accent.on = false
     val folder = File(args.getOrElse(0) { "menu-render" }).apply { mkdirs() }
     val drawables = File(args.getOrElse(1) { "android/src/main/res/drawable" })
     val strings = File(args.getOrElse(2) { "android/src/main/res/values/strings.xml" }).readText()
@@ -208,7 +210,8 @@ private fun draw(row: Row, dark: Boolean, regular: Font, medium: Font, strings: 
         g.font = medium.deriveFont(20 * DENSITY * .88f)
         val label = g.fontMetrics.stringWidth(name).toFloat()
         pill = MenuKeys.pill(WIDTH.toFloat(), hovered, label, icon, 18 * DENSITY, 12 * DENSITY, 11 * DENSITY, row.alignment)
-        val height = 42 * DENSITY
+        // As Strip: the pill grows with Settings > Size, but never past its share of the bar, which keeps its height.
+        val height = minOf(42 * DENSITY, ROW * 42f / 56f)
         val shape = RoundRectangle2D.Float(pill.first, (ROW - height) / 2, pill.second - pill.first, height, height, height)
         if (left + textWidth > pill.first - 20 * DENSITY) {
             val fade = 20 * DENSITY
@@ -431,12 +434,18 @@ private fun parsePath(data: String): Path2D.Float {
 }
 
 /** As on the owner's screenshots: 1076 px across at about 1.55 px to a dp. The bar is 56 dp. */
-private const val DENSITY = 1.55f
+/** The owner's screenshots' density, times Settings > Size's factor when one is given (MENU_SIZE: normal, bigger, biggest). */
+private val DENSITY = 1.55f * when (System.getenv("MENU_SIZE")) {
+    "bigger" -> FixedScale.BIGGER
+    "biggest" -> FixedScale.BIGGEST
+    else -> FixedScale.NORMAL
+}
 private const val WIDTH = 1076
-private val ROW = (56 * DENSITY).toInt()
+/** The bar: 56 dp at Normal, the same height at every Settings > Size (Strip.BAR_DP). */
+private val ROW = (56 * 1.55f).toInt()
 private const val CAPTION = 44
-/** The orange accent, GuideColours.ORANGE. */
-private const val ORANGE = 0xEF804E
+/** The accent, from Accent: orange, or cream with Orange accents off (ACCENT=off). */
+private val ORANGE get() = Accent.colour and 0xFFFFFF
 
 /**
  * The bar's own texts, at TitanKeys' fixed scale: the three words, all 20 dp with the best one in the middle in [best]'s weight
@@ -446,9 +455,10 @@ private const val ORANGE = 0xEF804E
  * bar's centre line, which the short marks at each side show: it must be within 1 px. Sizes in dp, at 1.5625 px to a dp.
  */
 private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, bestBox: Pair<Int, Int>, drawables: File) {
-    val scale = 1.5625f
+    // The text grows with Settings > Size (MENU_SIZE), and the bar keeps Normal's height (Strip.BAR_DP).
+    val scale = 1.5625f * DENSITY / 1.55f
     val width = 1076
-    val bar = Math.round(56 * scale)
+    val bar = Math.round(56 * 1.5625f)
     val caption = 44
     val side = 8 * scale
     val pad = (6 + 2) * scale
@@ -515,22 +525,29 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
             captions += said(ladder(g, ink, listOf("recommendations", "recommend", "recommended")))
         },
         BarRow("A very long best word: ") { g, ink, _, _ -> captions += said(ladder(g, ink, listOf("a", "internationalization", "of"))) },
-        BarRow("The clip offer, at the words' size, and its hint at 13 dp") { g, ink, muted, _ ->
+        BarRow("The clip offer, at the words' size, and its hint at 13 dp, both shrunk alike if the bar is too short") { g, ink, muted, _ ->
             captions += ""
-            val icon = (20 * scale * 1.1f)
-            g.font = regular.deriveFont(20 * scale)
+            // As Strip's fitClipLines: the clip's line with Android's font padding, the hint's without, shrunk to fit the bar.
+            val clipFont = regular.deriveFont(20 * scale)
+            val hintFont = regular.deriveFont(13 * scale)
+            val clipLine = g.getFontMetrics(clipFont).let { it.maxAscent + it.maxDescent }.toFloat()
+            val hintLine = g.getFontMetrics(hintFont).let { it.ascent + it.descent }.toFloat()
+            val fit = minOf(1f, bar / (clipLine + hintLine))
+            val top = (bar - (clipLine + hintLine) * fit) / 2
+            g.font = clipFont.deriveFont(20 * scale * fit)
+            val icon = (20 * scale * fit * 1.1f)
             val text = "Meet at the corner of King and Bay at 6"
             val textWidth = g.fontMetrics.stringWidth(text)
             val gap = 8 * scale
             val start = width / 2f - (icon + gap + textWidth) / 2
-            val top = bar / 2f - 10 * scale
-            drawVector(g, File(drawables, "clipboard.xml").readText(), start, top - icon / 2 + 6 * scale, icon, orange)
+            val clipMiddle = top + clipLine * fit / 2
+            drawVector(g, File(drawables, "clipboard.xml").readText(), start, clipMiddle - icon / 2, icon, orange)
             g.color = ink
-            g.drawString(text, start + icon + gap, top + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f + 6 * scale)
-            g.font = regular.deriveFont(13 * scale)
+            g.drawString(text, start + icon + gap, clipMiddle + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+            g.font = hintFont.deriveFont(13 * scale * fit)
             g.color = muted
             val hint = "Older clips: press Sym, then A"
-            g.drawString(hint, width / 2f - g.fontMetrics.stringWidth(hint) / 2, top + 6 * scale + 22 * scale)
+            g.drawString(hint, width / 2f - g.fontMetrics.stringWidth(hint) / 2, top + clipLine * fit + g.fontMetrics.ascent)
         },
         BarRow("Ctrl held: its chip at 14 dp, and what each key does at 18 dp") { g, ink, _, _ ->
             captions += ""

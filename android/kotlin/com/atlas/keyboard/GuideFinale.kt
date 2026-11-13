@@ -37,7 +37,6 @@ internal object GuideFinale {
 
     const val INK = 0xFF160A04.toInt()
     const val CREAM = 0xFFFFF1E6.toInt()
-    const val ORANGE = 0xFFEF804E.toInt()
 
     // The parts, in ms. These are safe to change.
     /** Each line of the summary comes in this long after the one before, and takes [LINE_IN] to land. */

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Field, Row, Screen, Section, navigate, openURL, useAction, useSnapshot } from "ink";
 import { Toggle, playHaptic } from "../../lib/app-haptics";
 import { arrowOutward, chevronRight } from "ink/icons";
-import { MUTED, ORANGE } from "../../lib/brand";
+import { MUTED, useAccent } from "../../lib/brand";
 import { connectedState, copyContributorId, deleteQueued, kilobytes, PRIVACY_URL, setContribute } from "../../lib/connected";
 import { contributeText as text, swipes } from "../../lib/connected-text";
 import { StatusLine } from "../../lib/contribute";
@@ -11,6 +11,7 @@ import { Note } from "../../lib/note";
 export const contributeLabel = (on: boolean) => on ? "On" : "Off";
 
 export default function Contribute() {
+  const accent = useAccent();
   const result = useSnapshot(connectedState);
   const save = useAction(setContribute);
   const [copied, setCopied] = useState(false);
@@ -37,7 +38,7 @@ export default function Contribute() {
   return <Screen title={text.title} subtitle={text.onSubtitle} note={notes || undefined}>
     <Section title={text.statusTitle}>
       {/* One accent for what was sent, muted for what still waits. */}
-      <StatusLine label={text.sentLine} value={swipes(state.sent)} colour={ORANGE} />
+      <StatusLine label={text.sentLine} value={swipes(state.sent)} colour={accent} />
       <StatusLine label={text.waitingLine} value={`${swipes(state.queued)} · ${kilobytes(state.queuedBytes)}`} colour={MUTED} />
       <Toggle label={text.toggle} value={state.contribute} onChange={turn} />
     </Section>

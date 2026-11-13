@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Field, Screen, Section, useSnapshot } from "ink";
-import { MUTED, ORANGE } from "../../lib/brand";
+import { MUTED, useAccent } from "../../lib/brand";
 import { bugState, deleteBug, shareBug, startBug, stopBug } from "../../lib/bug";
 import { bugText as text, duration } from "../../lib/bug-text";
 import { allowNotifications } from "../../lib/connected";
@@ -10,6 +10,7 @@ import { playHaptic } from "../../lib/app-haptics";
 
 /** Record a bug (#64): record, stop, look at what's in it, then share it through Android's share sheet. */
 export default function RecordBug() {
+  const accent = useAccent();
   const result = useSnapshot(bugState);
   // While it records, the time left counts down here too, as the notification may be off.
   const [now, setNow] = useState(0);
@@ -30,7 +31,7 @@ export default function RecordBug() {
     const left = Math.max(0, Math.round((state.maxMillis - state.elapsed - now) / 1000));
     return <Screen title={text.title} subtitle={text.subtitle}>
       <Section title={text.recordingTitle}>
-        <StatusLine label={text.recordingTitle} value={text.left(left)} colour={ORANGE} />
+        <StatusLine label={text.recordingTitle} value={text.left(left)} colour={accent} />
         <Field label={text.stop} onPress={() => void stopBug()}>{""}</Field>
       </Section>
     </Screen>;

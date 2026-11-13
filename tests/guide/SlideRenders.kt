@@ -219,7 +219,7 @@ private fun framesFor(step: GuideStep): List<Frame> {
 
 /** The guide's colours, as GuideColours has them (it isn't compiled for these checks). */
 private object Paint {
-    const val ORANGE = 0xFFEF804E.toInt()
+    val ORANGE get() = Accent.colour
     const val INK = 0xFF160A04.toInt()
     const val CREAM = 0xFFFFF1E6.toInt()
 }
@@ -234,7 +234,7 @@ private fun dp(value: Number) = Math.round(value.toFloat() * DP)
 private fun rgb(argb: Int, alpha: Float = 1f) = Color((argb shr 16) and 0xFF, (argb shr 8) and 0xFF, argb and 0xFF, (alpha.coerceIn(0f, 1f) * 255).toInt())
 private val ink = rgb(Paint.INK)
 private val cream = rgb(Paint.CREAM)
-private val orange = rgb(Paint.ORANGE)
+private val orange get() = rgb(Paint.ORANGE)
 
 private fun image(): Pair<BufferedImage, Graphics2D> {
     val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB)
@@ -649,9 +649,10 @@ private fun drawEnd(file: File, answered: Boolean, bright: Float = 1f) {
     var y = endTop(g, answered)
     drawFinale(g, GuideFinale.total(SUMMARY_LINES), answered)
     if (y + endButtonsHeight(g, answered) > FINALE_BOTTOM) mark(g, "BUTTONS IN THE GRASS", y)
-    // Every text on the end's orange is ink (design v2): the filled button is cream, with ink words.
+    // Every text on the end's orange is ink (design v2): the filled button is cream, with ink words. With Orange accents off the
+    // end is cream, and the button is Accent's raised cream, so it still shows.
     g.font = V2.title()
-    g.color = cream
+    g.color = rgb(Accent.raised)
     g.fill(RoundRectangle2D.Float(side.toFloat(), y.toFloat(), inner.toFloat(), goHeight.toFloat(), goHeight.toFloat(), goHeight.toFloat()))
     g.color = ink
     g.drawString("Go type something", WIDTH / 2 - g.fontMetrics.stringWidth("Go type something") / 2, y + (goHeight + g.fontMetrics.ascent - g.fontMetrics.descent) / 2)

@@ -1,7 +1,7 @@
 import { Canvas, CanvasIcon, CanvasPath, CanvasText, type IconAsset } from "ink";
 import { arrowBack, backspace, circle, keyboardReturn, shift, spaceBar, square } from "ink/icons";
 import type { Point } from "./atlas";
-import { CREAM, MUTED, ORANGE } from "./brand";
+import { CREAM, MUTED, useAccent } from "./brand";
 import { RADIUS } from "./radii";
 import { RoundedOutline } from "./rounded";
 
@@ -31,7 +31,7 @@ const icon = 22;
 export function KeyboardDiagram({ trail }: { trail: Point[] }) {
   const line = MUTED;
   const label = MUTED;
-  const ink = ORANGE;
+  const ink = useAccent();
   const keys: { label: Label; x: number; y: number; width: number }[] = rows.flatMap((labels, r) =>
     labels.map((label, c) => ({ label, x: c * key, y: r * row, width: key })));
   let left = 0;

@@ -1519,6 +1519,9 @@ class GuideActivity : Activity() {
             insets
         }
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitKeys() }
+        // The end's buttons hang from the column's bottom padding, which the keyboard's bar can change after the end was laid out:
+        // left alone, they rose by that much over BUILT FOR TITAN 2 ELITE (pre-release, build #8). Any new layout places them again.
+        column.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> if (atEnd()) column.post { placeEnd() } }
         // What falls passes behind the words and the field, so they always sit on top, and stays in the content between the top
         // bar and the keys (Master, 2026-11-13: the 🌱 and the cheat rain on the field and the header; the paste lesson's burst
         // over the title, the status bar and the keys). The plant grows between the field and the keys.
@@ -2622,17 +2625,19 @@ class GuideActivity : Activity() {
                 t > SWIPE_LANDS / 2 -> add(gap + GuideScript.slip(next))
             }
             // One flick, one word, gone at once. The held flick's slide has no demo in the field.
-            GuideDemo.DeleteLast -> if (lastEnd > lastStart && t > FLICK_GONE) {
-                built.setSpan(BackgroundColorSpan(fieldFill()), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            // What goes, as the real delete takes it: the last word for a flick, the last letter for one Backspace.
+            GuideDemo.DeleteLast, GuideDemo.DeleteLetter -> demoRange(demo, text, null)?.takeIf { t > FLICK_GONE }?.let { gone ->
+                built.setSpan(BackgroundColorSpan(fieldFill()), gone.first, gone.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             GuideDemo.MoveCursor -> if (lastEnd > 0) {
                 val back = ((t - TAPS_SHARE).coerceAtLeast(0f) / (1f - TAPS_SHARE) * (lastEnd - lastStart + 1)).toInt()
                 val at = (lastEnd - back).coerceIn(1, lastEnd)
                 built.setSpan(BackgroundColorSpan(GuideMotion.faded(Accent.colour, CARET_ALPHA)), at - 1, at, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            GuideDemo.SelectLast -> if (lastEnd > lastStart && t > TAPS_SHARE) {
+            // What the taps select: the last word, or the words the slide marks, as a real select takes them.
+            GuideDemo.SelectLast, GuideDemo.SelectTarget -> demoRange(demo, text, field.target)?.takeIf { t > TAPS_SHARE }?.let { picked ->
                 val wash = ((t - TAPS_SHARE) / .2f).coerceIn(0f, 1f) * SELECT_ALPHA
-                built.setSpan(BackgroundColorSpan(GuideMotion.faded(Accent.colour, wash)), lastStart, lastEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                built.setSpan(BackgroundColorSpan(GuideMotion.faded(Accent.colour, wash)), picked.first, picked.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             is GuideDemo.HoldLetter -> {
                 val key = keyFor(demo.key)

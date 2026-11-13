@@ -233,6 +233,11 @@ all of them are unapproved.
       GuideDecorRender.kt whole). guide-decor and guide pass on the merge.
     - **D's press haptics** (27bdc2e; merge adcd3c5): a Press tick for every plain press, routed through one place (AppPress, plus
       Ink), with docs/haptics-audit.md and a check.
+  - **To merge after build #6:**
+    - W's 2671bb0: the heart previews sit at the book's place, 8 dp over the bar; the book fades out under them; the pill is
+      unchanged, a 24% accent tint since v3;
+    - A's audit, claude/release-audit-2 81da968;
+    - then F's receiver drop and Record a bug wording, and D's baseline.
   - **Build #6 started (12:25)** from adcd3c5. Still to come: W's heart-preview and pill follow-up, D's bar baseline, and A's release
     audit.
 

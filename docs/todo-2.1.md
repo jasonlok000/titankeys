@@ -163,8 +163,8 @@ all of them are unapproved.
     - Follow-up sent: on black, the playground's next line had the same grey as the current line, so the two ran together.
       It's dimmed to half, with a wider gap.
 - **Front page title and one-paragraph text: done and merged** (e7acb0d, df8a6ce; merge fc2c23c). Renders checked: the title is on one line, ink on orange, and the text scrolls as one paragraph. Build #4 started.
-- **Build #4: 91b08c1c** (test-2.1h at bcaf215), all checks passed. Installed at 08:30 with no crash. This is the candidate for the owner's review.
-- **Asked the owner (08:25): haptics for the playground's effects?** Today they're silent. The Orchestrator's proposal is five big moments
+- **Build #4: 91b08c1c** (test-2.1h at bcaf215), all checks passed. Installed at 08:00 with no crash. This is the candidate for the owner's review.
+- **Asked the owner (07:58): haptics for the playground's effects?** Today they're silent. The Orchestrator's proposal is five big moments
   and nothing per step:
   - 40 wpm, the first confetti: Celebrate;
   - 100, the rain: No;

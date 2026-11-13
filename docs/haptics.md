@@ -9,7 +9,7 @@
    - Rising (short then long) means confirm, or done.
    - Falling (long then short) means undo, or back.
    - Two equal firm pulses mean lock: it stays.
-   - Two quick light pulses mean changed.
+   - A quiet swell, light, fuller, light, means it changed by itself. Just an acknowledgement, nothing to do.
    - One long pulse means gone.
    - Three quick hard pulses mean no: nothing happened at all.
    - A hit that bounces and settles, each pulse shorter, means a wall: the gesture reached the end of what it can do.
@@ -19,7 +19,7 @@
 3. **Strength is length only.** More important or more destructive means longer.
 4. **Gaps.** At least 35 ms between pulses, so each one reads on its own. Crunch is the one exception: its two pulses are meant to be felt as one gritty tick.
 5. **No prebaked effects at all.** Everything is our own waveform, `VibrationEffect.createWaveform` with timings. The Titan has no strength control, so every pulse is at the default strength. A single pulse may be a one-shot.
-6. **Repeats.** A message can't repeat within 300 ms. Texture can.
+6. **Repeats.** A message can't repeat within 300 ms. Texture can. So can Change's quiet swell: it's only an acknowledgement, so the gate takes it as texture, and it never blocks or delays another haptic (its gaps are still 35, so rule 4 holds).
 7. **Boundaries.** A space, or a selection grabbing a word, gets one stronger pulse of about 30 ms instead of a texture tick.
 
 The owner's lab notes led here: swipe and cursor ticks at 17 ms felt very good, every prebaked effect felt generic, messages were too subtle, and "can't save" didn't feel like an error.
@@ -36,7 +36,7 @@ Patterns are on and off in ms, starting with on.
 | **Crunch** | 9, 12, 9 | Keys crossed while a stroke is clearly a delete flick |
 | **Boundary** | 30 | A stroke that crunched stops being a flick, the cursor passes a space, the selection grows or shrinks by a word, a new page or group on a panel, a long delete's finger going into the pause zone or reaching the top-speed line |
 | **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, steering starts, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar |
-| **Change** | 20, 35, 20 | Autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol |
+| **Change** | 12, 35, 22, 35, 12 | The quiet swell: autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol, a hint in the guide. Texture for the gate |
 | **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar, a quick setting switched on, Record a bug starts |
 | **Release** | 30 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked, Back closing the word menu, a quick setting switched off, Record a bug stops |
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
@@ -69,7 +69,7 @@ The word menu is a ladder, and its haptics are one system (owner, 2026-11-12). I
 
 Going up rises: each pattern ends on its strongest pulse, and Favourite's last hit is the strongest of all. Going down falls: each starts on its strongest pulse, and the further down a step goes, the harder it starts and the more it weighs in all (62, 75 and 90 ms of pulses). Every gap is 40 ms, so each pulse reads on its own. A word that is a dictionary word starts at Favourite, and Unfavourite takes it back there. The spent heart plays No, not nothing, so a press that does nothing still answers. tests/haptics checks the directions and that each step feels like no other family.
 
-Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single 30 ms pulse too, but it comes once, so it's a message. Hit is as firm as a message, but it's texture for the gate too: a long delete's words can come every 80 ms, and the repeat rule would drop them.
+Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single 30 ms pulse too, but it comes once, so it's a message. Hit is as firm as a message, but it's texture for the gate too: a long delete's words can come every 80 ms, and the repeat rule would drop them. Change's quiet swell is texture for the gate as well: it says something changed by itself, which needs nothing from you, so it never holds up or delays another haptic and may come again at once.
 
 The owner's table had the delete flick at 50, 30, 20. Its gap is 35 instead, so it keeps rule 4.
 
@@ -210,7 +210,7 @@ Back within 0.8 keys of where the flick started, a long delete pauses, and 5.5 k
 
 1. **Nothing cuts a playing message.** Until it ends, nothing else plays, and the next message waits 35 ms more, so the two read apart.
 2. **A message can't repeat.** A message of the same family doesn't play within 300 ms of the last one that played. The rule is by family, not by haptic: two of the same rhythm that close run together into one longer pattern, whichever haptics they came from.
-3. **Texture keeps its own pace.** Texture and boundaries aren't held to the repeat rule, and they never block a message.
+3. **Texture keeps its own pace.** Texture, boundaries and Change's quiet swell aren't held to the repeat rule, and they never block a message.
 4. **Messages beat texture.** A message plays even right on top of a tick, and texture waits while a message plays.
 5. **A wall has room.** No texture plays for 100 ms after any wall. A delete's wall also waits until 100 ms after the last texture, and no texture plays while it waits.
 

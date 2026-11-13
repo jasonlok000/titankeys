@@ -213,6 +213,9 @@ all of them are unapproved.
     - **Open:** the echo uses the word's own mark, and the ambient waits a full cycle, so there are no hearts and then glitter.
     - **Next for W:** the quick settings page has the same late lift (its mark clears about 0.3 s after a toggle), so it gets the
       same fix. The ladder work stays held until v4 is approved.
+  - **Faster finish (11:55):** the verify queue was six runs deep, about 90 minutes of duplicates. Every worker now pushes once its
+    targeted checks pass and cancels its own queued verify. The Orchestrator merges C, V, W, D, A and F, then runs one full verify
+    on the combined test-2.1h as build #6.
   - **V's decorations are built** (312f54f, branch at 7571f2c): the approved levels (accent 36–46%, the e at 40%, grass ink at
     24/40/60%), the lighter big top with real juggling balls, and grass drawn for 150 dp. The Orchestrator checked the renders:
     the clown and the end screen look right.

@@ -131,6 +131,8 @@ fun main(args: Array<String>) {
     barSheet(folder, regular, medium, "Medium", -668 to 2272, drawables)
     barSheet(folder, regular, bold, "Bold", -685 to 2279, drawables)
     barFits()
+    // The bar on its line, at the phone's own size: every state at every Bar text size, before and after (tests/menu-render/BarLine.kt).
+    BarLine.render(folder, fonts, drawables, strings)
     println("Drawn to $folder")
 }
 
@@ -297,7 +299,7 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
     fun scene(word: String, step: MenuKeys.Step, alignment: KeyAlignment): MenuScene {
         val (text, left, right) = placed(word, alignment)
         return MenuScene(text, MenuScene.WordLayout.of(text, measure.top(text)) { measure.measure(it) }, (left + right) / 2 / DENSITY,
-            StripFit.baseline(ROW / 2f, MenuScene.FONT_DP * DENSITY) / DENSITY, step)
+            StripFit.baseline(LINE, MenuScene.FONT_DP * DENSITY, FLOOR) / DENSITY, step)
     }
 
     fun label(button: MenuKeys.Button) = string(strings, "strip_" + button.name.lowercase())
@@ -335,7 +337,7 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
             g.font = bold.deriveFont(MenuScene.FONT_DP * DENSITY)
             g.color = ink
             val wide = g.fontMetrics.stringWidth(alone).toFloat()
-            val baseline = StripFit.baseline(ROW / 2f, MenuScene.FONT_DP * DENSITY)
+            val baseline = StripFit.baseline(LINE, MenuScene.FONT_DP * DENSITY, FLOOR)
             g.drawString(alone, (WIDTH - wide) / 2, baseline)
             if (frame.lit != null) lit((WIDTH - wide) / 2, (WIDTH + wide) / 2, baseline)
             g.dispose()
@@ -364,15 +366,15 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
             g.font = medium.deriveFont(20 * DENSITY * MENU_PILL_TEXT)
             val width = g.fontMetrics.stringWidth(name).toFloat()
             pill = MenuKeys.pill(WIDTH.toFloat(), hovered, width, icon, MENU_PILL_LEFT * DENSITY, MENU_PILL_GAP * DENSITY, MENU_PILL_RIGHT * DENSITY, frame.alignment)
-            // As Strip: the pill grows with Bar text size, but never past its share of the bar, which keeps its height.
-            val height = minOf(MENU_PILL_DP * DENSITY, ROW * MENU_PILL_DP / 56f)
-            val shape = RoundRectangle2D.Float(pill.first, (ROW - height) / 2, pill.second - pill.first, height, height, height)
+            // As Strip: the pill's middle is on the bar's line, and it grows with Bar text size only as far as fits round the line.
+            val height = minOf(MENU_PILL_DP * DENSITY, StripFit.around(LINE, ROW.toFloat(), INSIDE))
+            val shape = RoundRectangle2D.Float(pill.first, LINE - height / 2, pill.second - pill.first, height, height, height)
             val spent = button == MenuKeys.Button.Favourited
             g.color = faded(ORANGE, if (spent) .12f else .24f, paper)
             g.fill(shape)
             g.color = faded(ORANGE, if (spent) .6f else 1f, paper)
             g.drawString(name, MenuKeys.pillLabel(pill.second, width, icon, MENU_PILL_GAP * DENSITY, MENU_PILL_RIGHT * DENSITY),
-                StripFit.baseline(ROW / 2f, 20 * DENSITY * MENU_PILL_TEXT))
+                StripFit.baseline(LINE, 20 * DENSITY * MENU_PILL_TEXT, FLOOR))
         }
         // The icons over their keys: white at rest, the filled heart orange, orange in a pill, grey beside one. A pill covers the
         // buttons to its left. Back is panel_back.
@@ -389,7 +391,13 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
                 pill != null -> muted
                 else -> ink
             }
-            drawVector(g, File(drawables, "$name.xml").readText(), middle - icon / 2, (ROW - icon) / 2, icon, colour)
+            // On the line, and Back rises as Strip lifts it, to keep its arrow clear of the screen's corner.
+            val top = minOf(LINE - icon / 2, ROW - INSIDE - icon).let { top ->
+                if (button != null) top else top - MenuKeys.rise(MenuKeys.BACK_ARROW, icon, middle, top) { x, y ->
+                    Corners.clear(100f, x, ROW - y, WIDTH.toFloat(), StripFit.EDGE_DP * 1.55f)
+                }
+            }
+            drawVector(g, File(drawables, "$name.xml").readText(), middle - icon / 2, top, icon, colour)
         }
         scene(false)
         g.dispose()
@@ -644,7 +652,7 @@ private fun theStatusesStandApart(looks: Looks, folder: File) {
 }
 
 /** A vector drawable's paths, filled or stroked as it says, in [colour], scaled from its 24 by 24 viewport into [size]. */
-private fun drawVector(g: Graphics2D, xml: String, x: Float, y: Float, size: Float, colour: Color) {
+internal fun drawVector(g: Graphics2D, xml: String, x: Float, y: Float, size: Float, colour: Color) {
     val scale = size / 24f
     val transform = AffineTransform(scale.toDouble(), 0.0, 0.0, scale.toDouble(), x.toDouble(), y.toDouble())
     g.color = colour
@@ -661,7 +669,7 @@ private fun drawVector(g: Graphics2D, xml: String, x: Float, y: Float, size: Flo
 }
 
 /** Android's path data: the commands the app's icons use, absolute and relative, with repeated arguments. */
-private fun parsePath(data: String): Path2D.Float {
+internal fun parsePath(data: String): Path2D.Float {
     val path = Path2D.Float(Path2D.WIND_NON_ZERO)
     val tokens = Regex("[MmLlHhVvCcSsZz]|-?[0-9]*\\.?[0-9]+(?:e-?[0-9]+)?").findAll(data).map { it.value }.toList()
     var i = 0
@@ -707,52 +715,63 @@ private fun parsePath(data: String): Path2D.Float {
 
 /**
  * Everything in the bar fits inside its 56 dp at this MENU_SIZE (owner, 2026-11-13: Bar text size grows what's in the bar, not
- * its height). Each element's height comes from Strip's own sizes, grown by the size's factor, with Inter's lines as Android lays
- * them out: a TextView with its font padding spans Inter's whole box, -685 to 2279 of 2048, and one without it, or drawn text,
- * its ascent and descent, 1984 and 494. Sizes in unscaled dp, as the bar's 56 is.
+ * its height), on the bar's line, 39 dp under its top ([StripFit.LINE_DP]). Each element's height comes from Strip's own sizes,
+ * grown by the size's factor, with Inter's lines as Android lays them out: a TextView with its font padding spans Inter's whole box,
+ * -685 to 2279 of 2048, and one without it, or drawn text, its ascent and descent, 1984 and 494. What shows clearly keeps
+ * [StripFit.EDGE_DP] over the bar's bottom, the screen's edge; the pill and the icons' boxes at least [StripFit.INSIDE_DP]. Sizes
+ * in unscaled dp, as the bar's 56 is.
  */
 private fun barFits() {
     val factor = DENSITY / 1.55f
-    val bar = 56f
+    val bar = StripFit.BAR_DP
+    val line = StripFit.LINE_DP
+    val floor = bar - StripFit.EDGE_DP
     val padded = (2279 + 685) / 2048f
     val tight = (1984 + 494) / 2048f
     val fits = ArrayList<String>()
-    fun fits(what: String, top: Float, bottom: Float) {
-        check(top >= -.01f && bottom <= bar + .01f) { "At ${"%.1f".format(factor)}, $what reaches %.1f to %.1f dp in a %.0f dp bar".format(top, bottom, bar) }
-        fits += "$what %.1f".format(bottom - top)
+    fun fits(what: String, top: Float, bottom: Float, lowest: Float = floor) {
+        check(top >= -.01f && bottom <= lowest + .01f) {
+            "At ${"%.1f".format(factor)}, $what reaches %.1f to %.1f dp in a %.0f dp bar, past %.1f".format(top, bottom, bar, lowest)
+        }
+        fits += "$what %.1f to %.1f".format(top, bottom)
     }
-    fun centred(what: String, height: Float) = fits(what, (bar - height) / 2, (bar + height) / 2)
-    // The three words, 20 sp, placed by StripFit on the bar's centre line, and the menu's word, MenuScene.FONT_DP.
-    val word = 20f * factor
-    val line = StripFit.baseline(bar / 2, word)
-    fits("the words", line - word * 1984 / 2048f, line + word * 494 / 2048f)
-    val menuWord = MenuScene.FONT_DP * factor
-    val menuLine = StripFit.baseline(bar / 2, menuWord)
-    fits("the menu's word", menuLine - menuWord * 1984 / 2048f, menuLine + menuWord * 494 / 2048f)
-    // The pill keeps to its share of the bar (Strip: minOf(dp(MENU_PILL_DP), barHeight * MENU_PILL_DP / BAR_DP)); its icon and
-    // label sit inside it.
-    val pill = minOf(MENU_PILL_DP * factor, bar * MENU_PILL_DP / 56f)
-    centred("the menu's pill", pill)
+    /** One line of text at [size] dp, its small letters on the line: from its ascent to its descent. */
+    fun text(what: String, size: Float): Float {
+        val baseline = StripFit.baseline(line, size, floor)
+        fits(what, baseline - size * 1984 / 2048f, baseline + size * 494 / 2048f)
+        return baseline
+    }
+    // The three words, 20 sp, and the menu's word, MenuScene.FONT_DP, their small letters on the line.
+    text("the words", 20f * factor)
+    text("the menu's word", MenuScene.FONT_DP * factor)
+    // The pill: its middle on the line, as tall as fits round it (Strip: StripFit.around), its icon and label inside it.
+    val pill = minOf(MENU_PILL_DP * factor, StripFit.around(line, bar, StripFit.INSIDE_DP))
+    fits("the menu's pill", line - pill / 2, line + pill / 2, bar - StripFit.INSIDE_DP)
     val icon = MENU_ICON_DP * factor
     check(icon <= pill) { "At $factor the menu's icons, $icon dp, are taller than its pill, $pill dp" }
-    centred("the menu's icons", icon)
+    val iconTop = minOf(line - icon / 2, bar - StripFit.INSIDE_DP - icon)
+    fits("the menu's icons", iconTop, iconTop + icon, bar - StripFit.INSIDE_DP)
     val label = 20f * MENU_PILL_TEXT * factor
-    val labelLine = StripFit.baseline(bar / 2, label)
-    check(labelLine - label * 1984 / 2048f >= (bar - pill) / 2 && labelLine + label * 494 / 2048f <= (bar + pill) / 2) {
+    val labelLine = text("the pill's label", label)
+    // Its capitals' tops (1490 of 2048) and its descent stay inside the pill, which clips it.
+    check(labelLine - label * 1490 / 2048f >= line - pill / 2 && labelLine + label * 494 / 2048f <= line + pill / 2) {
         "At $factor the pill's label leaves its pill"
     }
-    fits("the pill's label", labelLine - label * 1984 / 2048f, labelLine + label * 494 / 2048f)
-    // The Shift, Alt and Ctrl chips: 14 dp, no font padding, 3 dp above and below. Automatic capital's arrow is as tall.
-    centred("the chips", 14f * factor * tight + 2 * 3 * factor)
-    // A notice's label and buttons, 18 sp with font padding, and the modifiers' hint, at most 18 sp, without.
-    centred("a notice", 18f * factor * padded)
-    centred("the hint", 18f * factor * tight)
-    // The clip offer and its hint stack, and both shrink alike to fit when they'd be taller (Strip.fitClipLines).
-    val clip = word * padded
+    // The Shift, Alt and Ctrl chips: 14 dp, no font padding, 3 dp above and below, their text on the line, rising only if their
+    // box would reach under the floor. Automatic capital's arrow is as tall, in the same place.
+    val chip = 14f * factor
+    val chipHeight = chip * tight + 2 * 3 * factor
+    val chipTop = StripFit.boxTop(line, 3 * factor + chip * 1984 / 2048f - chip * StripFit.X_HEIGHT / 2, chipHeight, floor)
+    fits("the chips", chipTop, chipTop + chipHeight)
+    // A notice's label, 18 sp, without font padding (centreLetters), and the modifiers' hint, at most 18 sp, drawn on the line.
+    text("a notice", 18f * factor)
+    text("the hint", 18f * factor)
+    // The clip offer and its hint stack over the floor, and both shrink alike to fit when they'd be taller (Strip.fitClipLines).
+    val clip = 20f * factor * padded
     val clipHint = 13f * factor * tight
-    val shrink = minOf(1f, bar / (clip + clipHint))
-    centred("the clip and its hint", (clip + clipHint) * shrink)
-    println("Bar text size ${"%.1f".format(factor)}: everything fits the 56 dp bar, heights in dp: ${fits.joinToString(", ")}")
+    val shrink = minOf(1f, floor / (clip + clipHint))
+    fits("the clip and its hint", (floor - (clip + clipHint) * shrink) / 2, (floor + (clip + clipHint) * shrink) / 2)
+    println("Bar text size ${"%.1f".format(factor)}: everything fits the 56 dp bar on its line, in dp: ${fits.joinToString(", ")}")
 }
 
 /** As on the owner's screenshots: 1076 px across at about 1.55 px to a dp. The bar is 56 dp. */
@@ -768,6 +787,11 @@ private val DENSITY = 1.55f * when (System.getenv("MENU_SIZE")) {
 private const val WIDTH = 1076
 /** The bar: 56 dp at Normal, the same height at every Bar text size (Strip.BAR_DP). */
 private val ROW = (56 * 1.55f).toInt()
+/** The bar's line at this density: its small letters' middle, 39 dp under its top (StripFit.LINE_DP). */
+private val LINE = StripFit.LINE_DP * 1.55f
+/** How low what shows may reach, and how far the pill and the icons keep inside the bar, as Strip has them. */
+private val FLOOR = ROW - StripFit.EDGE_DP * 1.55f
+private val INSIDE = StripFit.INSIDE_DP * 1.55f
 private const val CAPTION = 44
 /** The accent, from Accent: orange, or cream with Orange accents off (ACCENT=off). */
 private val ORANGE get() = Accent.colour and 0xFFFFFF
@@ -788,13 +812,16 @@ private const val LIT_GAP_DP = 3f
  * (owner, 2026-11-13: "I want it consistent but bolded is a nice touch"), long words fitted by the real [StripFit], the clip
  * offer and its hint, the modifier bar's chip and hint, the automatic capital's arrow, the Forget notice, and the panel's labels.
  * Each word is placed where Android puts it in Strip's 56 dp view, and the middle of its small letters is measured against the
- * bar's centre line, which the short marks at each side show: it must be within 1 px. Sizes in dp, at 1.5625 px to a dp.
+ * bar's line, 39 dp under its top (StripFit.LINE_DP), which the short marks at each side show: it must be within half a pixel.
+ * Sizes in dp, at 1.5625 px to a dp.
  */
 private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, bestBox: Pair<Int, Int>, drawables: File) {
     // The text grows with Bar text size (MENU_SIZE), and the bar keeps its unscaled height (Strip.BAR_DP).
     val scale = 1.5625f * DENSITY / 1.55f
     val width = 1076
     val bar = Math.round(56 * 1.5625f)
+    /** The bar's line: its small letters' middle, 39 dp under its top (StripFit.LINE_DP). */
+    val line = StripFit.LINE_DP * 1.5625f
     val caption = 44
     val side = 8 * scale
     val pad = (6 + 2) * scale
@@ -810,7 +837,8 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
     fun baseline(size: Float, fontPadding: Boolean, box: Pair<Int, Int>, ownLine: Boolean = false, lineSize: Float = size): Float {
         val ascent = -size * 1984 / 2048f
         val descent = size * 494 / 2048f
-        if (!fontPadding && !ownLine) return (StripFit.top(bar, lineSize, floor(ascent).toInt()) - floor(ascent).toInt()).toFloat()
+        if (!fontPadding && !ownLine) return (StripFit.top(line, lineSize, floor(ascent).toInt(), bar - StripFit.EDGE_DP * 1.5625f) -
+            floor(ascent).toInt()).toFloat()
         val top = if (fontPadding) -size * box.second / 2048f else ascent
         val bottom = if (fontPadding) -size * box.first / 2048f else descent
         val lift = if (fontPadding) 0 else Math.round(-(ascent + descent) - size * StripFit.X_HEIGHT)
@@ -822,8 +850,8 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
     val lines = ArrayList<Pair<Float, Float>>()
     /** The words a row shrank to fit. */
     val shrunk = ArrayList<String>()
-    /** How far the middle of the small letters sits below the bar's centre line, in px. */
-    fun off(baseline: Float, size: Float) = baseline - size * StripFit.X_HEIGHT / 2 - bar / 2f
+    /** How far the middle of the small letters sits below the bar's line, in px. */
+    fun off(baseline: Float, size: Float) = baseline - size * StripFit.X_HEIGHT / 2 - line
     fun words(g: Graphics2D, ink: Color, shown: List<String>, sizes: List<Float>, fonts: List<Pair<Font, Pair<Int, Int>>>,
               fontPadding: Boolean, ownLine: Boolean = false): List<Float> {
         val room = width - 2 * side
@@ -932,7 +960,7 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
             g.color = ink
             val hint = "A all  C copy  X cut  V paste  Z undo  Y redo"
             val room = width - x - chipWidth - 6 * scale - side
-            g.drawString(hint, x + chipWidth + 6 * scale + (room - g.fontMetrics.stringWidth(hint)) / 2, bar / 2f + (g.fontMetrics.ascent - g.fontMetrics.descent) / 2f)
+            g.drawString(hint, x + chipWidth + 6 * scale + (room - g.fontMetrics.stringWidth(hint)) / 2, StripFit.baseline(line, 18 * scale))
         },
         BarRow("A sentence starts: Shift's arrow at the left, clear of the left word") { g, ink, _, _ ->
             captions += ""
@@ -974,10 +1002,10 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
             val saved = g.transform
             g.translate(0, top + caption)
             row.draw(g, ink, muted, paper)
-            // The bar's centre line, as short marks at each side, to judge the letters against.
+            // The bar's line, as short marks at each side, to judge the letters against.
             g.color = orange
-            g.fillRect(0, bar / 2, (side / 2).toInt(), 1)
-            g.fillRect(width - (side / 2).toInt(), bar / 2, (side / 2).toInt(), 1)
+            g.fillRect(0, line.toInt(), (side / 2).toInt(), 1)
+            g.fillRect(width - (side / 2).toInt(), line.toInt(), (side / 2).toInt(), 1)
             g.transform = saved
             g.color = if (dark) Color(0x22, 0x22, 0x22) else Color(0xEE, 0xEE, 0xEE)
             g.fillRect(0, top, width, caption)
@@ -989,14 +1017,14 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
         ImageIO.write(image, "png", File(folder, "bar-even-${bestName.lowercase()}${if (dark) "" else "-light"}.png"))
     }
     // One bar baseline (owner, 2026-11-13): every word sits on the full-size words' line, to half a pixel.
-    val line = lines.first { it.second == 1f }.first
-    val apart = lines.maxOf { abs(it.first - line) }
+    val full = lines.first { it.second == 1f }.first
+    val apart = lines.maxOf { abs(it.first - full) }
     println("Bar words in $bestName: every baseline within ${"%.2f".format(apart)} px of the full-size words' line; shrunk: ${shrunk.distinct()}")
     check(shrunk.isNotEmpty()) { "The sheet must show a shrunk word beside full-size ones" }
     check(apart <= .5f) { "Every word must sit on the full-size words' line, not $apart px off" }
     val worst = measured.maxOf { abs(it) }
-    println("Bar words in $bestName: letters at most ${"%.2f".format(worst)} px off the bar's centre line")
-    check(worst <= 1f) { "The bar's words must sit within 1 px of its centre line, not $worst" }
+    println("Bar words in $bestName: letters at most ${"%.2f".format(worst)} px off the bar's line, 39 dp under its top")
+    check(worst <= .5f) { "The bar's words must sit within half a pixel of its line, 39 dp under its top, not $worst" }
 }
 
 /** Inter Medium, for the "before" row. */

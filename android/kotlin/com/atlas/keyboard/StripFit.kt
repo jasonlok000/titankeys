@@ -21,21 +21,76 @@ internal object StripFit {
     /** Inter's x-height, the height of its small letters, as a part of its size: 1118 of its 2048 units, in every weight. */
     const val X_HEIGHT = 1118f / 2048f
 
-    /**
-     * Where a line of Inter at [size] pixels has its baseline so that its small letters sit in the middle of a bar whose centre
-     * line is at [centre]: the middle of the x-height on it. Centring the font's box instead sets the letters about 3 px low, as
-     * Inter's box reaches far above its capitals for accents.
-     */
-    fun baseline(centre: Float, size: Float) = centre + size * X_HEIGHT / 2
+    /** Inter's descent, how far its tails reach under the baseline, as a part of its size: 494 of its 2048 units, in every weight. */
+    const val DESCENT = 494f / 2048f
+
+    /** The bar's height in dp, at every Bar text size: the words, chips and menu in it grow, the bar doesn't. */
+    const val BAR_DP = 56f
 
     /**
-     * Where a one-line text view [height] px tall starts its text, as its top padding with its gravity at the top, so that its
-     * baseline is the line of words [lineSize] px big centred on the bar ([baseline]), in whole pixels. Every word sits on that
-     * one line, a long word shrunk to fit too, and never floats up from its neighbours (owner, 2026-11-13: one bar baseline).
-     * [ascent] is the text's own ascent as Android rounds it (Paint.FontMetricsInt, negative): its baseline is that far below
-     * the top of its text.
+     * The black border under the screen's bottom edge, in dp: the owner measured it with a ruler on the Titan 2 Elite, about 22 dp
+     * (2026-11-13). Under the bar you see one band of black, the bar and this border, and the bar's text sits in its middle.
      */
-    fun top(height: Int, lineSize: Float, ascent: Int) = Math.round(baseline(height / 2f, lineSize)) + ascent
+    const val BORDER_DP = 22f
+
+    /**
+     * The bar's one line, in dp under its top: the middle of the black you see, the bar and the border under it. Everything with
+     * text in the bar has the middle of its small letters on it: 39 dp, 11 dp under the bar's own middle (owner, 2026-11-13: "I
+     * measured with a ruler and I think 11dp lower is right… the letter's middle is right in the middle").
+     */
+    const val LINE_DP = (BAR_DP + BORDER_DP) / 2
+
+    /** The same line over the screen's bottom edge, in dp: 17 dp. Exact typing's bar and the Sym panel's band sit there too. */
+    const val LINE_ABOVE_DP = BAR_DP - LINE_DP
+
+    /** How far a box (a pill, a chip, a highlight) keeps inside the bar, at least, in dp, so the screen's edge never cuts it. */
+    const val INSIDE_DP = 1f
+
+    /**
+     * How far anything that shows clearly (letters and their tails, outlines, icons, the guide's light) keeps from the screen's
+     * outline, its bottom edge and its curved corners, in dp: 4 px on the Titan 2 Elite, the margin tools/corner_check.py checks.
+     * The menu's pill is a faint wash and only keeps [INSIDE_DP].
+     */
+    const val EDGE_DP = 2.56f
+
+    /**
+     * Where a line of Inter at [size] pixels has its baseline so that its small letters sit on a [line]: the middle of the x-height
+     * on it. Centring the font's box instead sets the letters about 3 px low, as Inter's box reaches far above its capitals for
+     * accents.
+     */
+    fun baseline(line: Float, size: Float) = line + size * X_HEIGHT / 2
+
+    /**
+     * The baseline on the [line], as [baseline] has it, unless the text's tails would then reach under [floor]: then it rises just
+     * enough. At the bar's sizes nothing rises; it keeps text whole at a size the bar wasn't made for.
+     */
+    fun baseline(line: Float, size: Float, floor: Float) = minOf(baseline(line, size), floor - size * DESCENT)
+
+    /**
+     * Where a one-line text view starts its text, as its top padding with its gravity at the top, so that its baseline is the
+     * line of words [lineSize] px big on the bar's [line] ([baseline], kept over [floor]), in whole pixels. Every word sits on
+     * that one line, a long word shrunk to fit too, and never floats up from its neighbours (owner, 2026-11-13: one bar
+     * baseline). [ascent] is the text's own ascent as Android rounds it (Paint.FontMetricsInt, negative): its baseline is that far
+     * below the top of its text.
+     */
+    fun top(line: Float, lineSize: Float, ascent: Int, floor: Float = Float.MAX_VALUE) =
+        Math.round(baseline(line, lineSize, floor)) + ascent
+
+    /**
+     * The top of a box [height] tall whose small letters' middle is [middle] under its top, so that they sit on the [line]: unless
+     * that would take the box's bottom under [floor], and then it rises just enough.
+     */
+    fun boxTop(line: Float, middle: Float, height: Float, floor: Float) = minOf(line - middle, floor - height)
+
+    /** [boxTop] in whole px, for a view's place: the nearest to the line, but never lower than [floor] allows. */
+    fun boxTopPx(line: Float, middle: Float, height: Float, floor: Float) =
+        minOf(Math.round(line - middle), kotlin.math.floor(floor - height).toInt())
+
+    /**
+     * The tallest box that fits round the [line], its middle on it, in a bar [bar] tall and at least [inside] within it: the word
+     * menu's pill, and the boxes of Exact typing's bar.
+     */
+    fun around(line: Float, bar: Float, inside: Float) = 2 * minOf(bar - inside - line, line - inside)
 
     /**
      * Lays out [words], left to right, across [total], with [padding] on each side of each word. With [lend], a word that does not

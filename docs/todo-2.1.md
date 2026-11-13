@@ -2,7 +2,7 @@
 
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
-[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 22:30.
+[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 22:40.
 
 ## On the phone now (build a5416a0e, test-2.1h at 9b67678)
 
@@ -62,7 +62,9 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 - Feel and judge on the phone:
   - Round 7 haptics and the quiet swell.
   - Exact-typing bar texture against confirm (lab switch).
-  - Word menu v3.1: Favourite approved ("done perfectly"). The new Save burst is on the phone for the owner to judge.
+  - Word menu: the owner reviewed it (22:25). Favourite is approved. Pending the owner's pick on the mockup page: Save and Unsave
+    (option A, B or C), the answers on dictionary words, and symbols and emoji. Then D builds Back at Backspace's centre, hover that
+    stays after a press, the chosen Save and Unsave, and the state fixes.
 - Key Mapper: v2 is imported. Importing can't delete key maps, so the owner deletes the three switched-off Sym + S, P and E maps by hand
   (owner: "the $%= shd be removed"). key_maps_titankeys_v3.zip in Downloads is the clean backup without them.
 - Launch: whether to launch at 3.0 with languages instead of 2.1 (the owner is leaning that way; see the decisions log).
@@ -81,7 +83,8 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 
 ## Waiting on the phone being free (the Orchestrator does these)
 
-- Measure the Sym panel's columns against the calibration lines from a screenshot, from Q to Sym.
+- Measure the Sym and emoji panel's columns against the calibration lines from a screenshot, from Q to Sym. The owner thinks
+  they aren't calibrated in the build (22:25). By the code they should be, so measure before changing anything.
 - Sym cycling: record the bar dropping to zero height for a moment, frame by frame, and find the cause.
 
 ## Blocked

@@ -80,6 +80,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - Opening the menu on a saved word plays a soft echo.
   (Owner, 2026-11-12)
 - Favourite's heart burst is "done perfectly". **Save becomes a particle effect like it**, with orange bookmark shapes on both sides, replacing the ribbon drop. (Owner, 2026-11-12)
+- Review of v3.1 (owner, 2026-11-12, 22:25): the ladder logic is fine, but the state isn't shown properly.
+  - **Back moves to Backspace's centre**, so I, O and Back are evenly spaced, a key apart. It no longer dodges the rounded corner.
+  - **Hover stays when the state changes**, as on the Sym panel: after a press, the pill stays on that key and shows its next step.
+  - Save and Unsave: the owner still doesn't like anything about the animation, and maybe not the ribbon icon either. Three ideas are on the mockup page: A, a check in a ring; B, a pin; C, an underline. The owner picks one.
+  - Symbols and emoji can't be saved: the word store only takes 2 to 24 letters, so Save fails silently. Open: hide Save for them, or keep them somewhere else.
+  - "and" shows as not saved: by the one-ladder rule, Saved means you pressed Save, and a dictionary word starts at Not saved. Open: should dictionary words start at Saved?
+  - A visual mockup comes first (owner): scratchpad cal-tool/menu.html, on the phone at http://localhost:8765/menu.html.
 - A quiet ambient status: a favourite has a faint heart drifting up now and then, and a saved word has a faint resting ribbon. It pauses while hovering. (Owner, 2026-11-12)
 
 ## Guide

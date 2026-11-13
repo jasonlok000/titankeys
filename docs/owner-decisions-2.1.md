@@ -210,6 +210,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   words were 17 sp, which the phone's font size 2.0 made about 29 dp; since fixed sizes (11-12) they're 20 dp at Normal, about a
   third smaller. Settings > Look and feel > Size > Biggest (1.4) makes them 28 dp, close to before, and the bar keeps its height.
   The default stays Normal unless the owner says otherwise. (Orchestrator)
+  - **Is Normal big enough?** (owner, 2026-11-13: "usually my text is pretty big… is that typical for other people?") Measured: the
+    Titan 2 Elite's own density is 300; the owner set Display size to 250 and Font size to the largest, 2.0. On a stock phone
+    (300, font 1.0), the bar's 20 dp words are 31 px, Android's 16 sp body text 30 px: Normal is standard-sized. On the owner's
+    phone, other apps' body text is about 44 px (16 sp at 2.0), and Biggest makes the bar's words 44 px. About a quarter of Android
+    users make text larger (Appt, Dutch users; iOS about a third, Q42). The largest setting is the far end. (Orchestrator)
+  - Proposed, waiting on the owner: TitanKeys picks its starting Size from the phone's font size (under 1.15 Normal, up to 1.5
+    Bigger, above Biggest) until the user picks one, so people with big text don't get small words the way the owner did.
 - **The decoration with Sym open** (owner, 2026-11-13: "The background decor probably bugs visually when sym is open"). From the
   code: with a panel open, the keys drawing hides, so the decoration's lower band runs to the screen's bottom, behind the panel;
   the ∞ is centred in that band, so it jumps down, grows and is cut by the panel's top. A phone capture is queued. Proposed fix

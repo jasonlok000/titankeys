@@ -47,7 +47,7 @@ object FixedScale {
         preferences(context).edit().putString(SIZE, size.id).apply()
     }
 
-    /** Settings > Reset all settings: Size goes back to its default. */
+    /** Settings > Reset most things: Size goes back to its default. */
     fun resetSize(context: Context) {
         preferences(context).edit().remove(SIZE).apply()
     }

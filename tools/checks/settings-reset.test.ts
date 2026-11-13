@@ -1,20 +1,28 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// Settings > Reset all settings (owner, 2026-11-13): every switch, stepper and choice goes back to how it started, and what's
-// yours stays. SettingsReset.kt lists every key of the settings files as reset or kept. A new key must be one or the other.
+// Two resets (owner, 2026-11-13: "Reset most things and reset literally everything"). Reset most things puts every switch,
+// stepper and choice back (SettingsReset.kt) and keeps what's yours. Reset literally everything wipes that too, like a fresh
+// install (FreshStart.kt). Every key and every store says which reset clears it, so a new one has to choose.
 const root = join(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 const reset = read("android/kotlin/com/atlas/keyboard/SettingsReset.kt");
+const fresh = read("android/kotlin/com/atlas/keyboard/FreshStart.kt");
 
-/** The strings in SettingsReset's set [name]. */
-function listed(name: string): string[] {
-  const body = reset.match(new RegExp(`val ${name} = setOf\\(([^)]*)\\)`))![1];
+function files(folder: string): string[] {
+  return readdirSync(join(root, folder), { withFileTypes: true }).flatMap(entry =>
+    entry.isDirectory() ? files(join(folder, entry.name)) : /\.(kt|java)$/.test(entry.name) ? [join(folder, entry.name)] : []);
+}
+const sources = files("android/kotlin").map(path => ({ path, source: read(path) }));
+
+/** The strings in [source]'s set [name]. */
+function listed(source: string, name: string): string[] {
+  const body = source.match(new RegExp(`val ${name} = setOf\\(([^)]*)\\)`))![1];
   return [...body.matchAll(/"([a-z_]+)"/g)].map(match => match[1]);
 }
-const settings = listed("TYPING_SETTINGS");
-const data = listed("TYPING_DATA");
+const settings = listed(reset, "TYPING_SETTINGS");
+const data = listed(reset, "TYPING_DATA");
 
 /** Every key TypingSettings and ExactTyping keep in typing_settings. A fix's "fix_" + id comes out as "fix_". */
 function typingKeys(): string[] {
@@ -26,58 +34,104 @@ function typingKeys(): string[] {
   return [...new Set([...literal, ...constants, ...exactKeys])];
 }
 
-test("every key in typing_settings is a setting that resets or something of yours that stays", () => {
+/** Every SharedPreferences file the code opens, by name: literal, or a constant from the same file or the one it names. */
+function storeNames(): string[] {
+  const names = new Set<string>();
+  const constant = (source: string, name: string) =>
+    source.match(new RegExp(`(?:const val|static final String) ${name} = "([a-z_]+)"`))?.[1];
+  for (const { source } of sources) {
+    for (const [, literal] of source.matchAll(/getSharedPreferences\("([a-z_]+)"/g)) names.add(literal);
+    for (const [, reference] of source.matchAll(/getSharedPreferences\(([A-Za-z_.]*[A-Z_]{3,})\s*,/g)) {
+      const [owner, name] = reference.includes(".") ? reference.split(".").slice(-2) : [null, reference];
+      const home = owner ? sources.find(file => file.path.endsWith(`${owner}.kt`) || file.path.endsWith(`${owner}.java`))!.source : source;
+      const value = constant(home, name);
+      expect({ reference, resolved: value !== undefined }).toEqual({ reference, resolved: true });
+      names.add(value!);
+    }
+  }
+  return [...names];
+}
+
+test("every key in typing_settings is a setting both resets clear, or something of yours only the full wipe clears", () => {
   const keys = typingKeys();
   expect(keys.length).toBeGreaterThan(30);
   for (const key of keys) {
     const known = settings.includes(key) || data.includes(key) || key === "fix_";
     expect({ key, known }).toEqual({ key, known: true });
   }
-  // Nothing is both, and nothing listed is gone from the code.
   expect(settings.filter(key => data.includes(key))).toEqual([]);
   for (const key of [...settings, ...data]) expect({ key, used: keys.includes(key) }).toEqual({ key, used: true });
+  // Reset most things removes only the settings; the full wipe deletes the whole file.
+  expect(reset).toContain("(TYPING_SETTINGS + fixes).forEach { remove(it) }");
+  expect(fresh).toMatch(/val WIPED = setOf\(\s*SettingsReset\.TYPING, SettingsReset\.HAPTICS, "fixed_scale"/);
+  // The full wipe resets every setting the way Reset most things does, first.
+  expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt"))
+    .toMatch(/"wipeEverything" -> \{\s*SettingsReset\.reset\(activity\)\s*FreshStart\.wipe\(activity\)/);
 });
 
-test("what's yours stays: the reset touches only the settings files, and only their settings", () => {
-  expect(data).toEqual(expect.arrayContaining(["enter_apps", "exact_apps", "hidden_bar_apps", "own_shorthand", "snippet_start"]));
-  const files = [...reset.matchAll(/getSharedPreferences\((\w+)/g)].map(m => m[1]);
-  expect(files.sort()).toEqual(["HAPTICS", "TYPING"]);
+test("every store is wiped, kept, or kept in part by the full wipe, and Reset most things touches only the settings files", () => {
+  const wiped = listed(fresh, "WIPED").concat(["typing_settings", "swipe_haptics"]);
+  const kept = listed(fresh, "KEPT");
+  const partly = [...fresh.matchAll(/"([a-z_]+)" to setOf\(/g)].map(m => m[1]);
+  for (const name of storeNames()) {
+    const known = wiped.includes(name) || kept.includes(name) || partly.includes(name);
+    expect({ name, known }).toEqual({ name, known: true });
+  }
+  expect(kept.sort()).toEqual(["back_disclosure", "key_calibration"]);
+  expect(partly.sort()).toEqual(["app", "connected"]);
+  const resetFiles = [...reset.matchAll(/getSharedPreferences\((\w+)/g)].map(m => m[1]);
+  expect(resetFiles.sort()).toEqual(["HAPTICS", "TYPING"]);
   expect(reset).toContain('const val TYPING = "typing_settings"');
-  expect(read("android/kotlin/com/atlas/engine/TypingSettings.java")).toContain('getSharedPreferences("typing_settings"');
-  // Haptics: All haptics and each haptic's switch, by the names Haptics.kt gives them. The lab's tuning stays.
-  const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
   expect(reset).toContain('const val HAPTICS = "swipe_haptics"');
-  expect(haptics).toContain('getSharedPreferences("swipe_haptics"');
-  expect(reset).toContain('const val HAPTIC_PREFIX = "haptic_"');
-  expect(haptics).toContain('val key get() = "haptic_$switch"');
-  // Size, and Learn new words' switch alone: the words stay.
-  expect(read("android/kotlin/com/atlas/keyboard/FixedScale.kt")).toContain("preferences(context).edit().remove(SIZE).apply()");
-  const engine = read("android/kotlin/com/atlas/engine/SwipeTyping.java");
-  const learning = engine.slice(engine.indexOf("public void resetLearning()"), engine.indexOf("public void resetLearning()") + 300);
-  expect(learning).toContain('getSharedPreferences("word_learning", 0).edit().remove("enabled").apply()');
-  expect(learning).not.toMatch(/clear\(\)/);
+  expect(read("android/kotlin/com/atlas/keyboard/Haptics.kt")).toContain('val key get() = "haptic_$switch"');
+});
+
+test("the full wipe keeps Share swipes' ID and what was sent, so shared swipes can still be deleted", () => {
+  const contributions = read("android/kotlin/com/atlas/connected/Contributions.kt");
+  const keptConnected = fresh.match(/"connected" to setOf\(([^)]*)\)/)![1];
+  for (const name of ["CONTRIBUTOR", "PENDING_DELETE", "SENT", "SENT_AT"]) {
+    const key = contributions.match(new RegExp(`const val ${name} = "([a-z_]+)"`))![1];
+    expect(keptConnected).toContain(`"${key}"`);
+  }
+  // Share swipes itself is not kept, so it goes back to off.
+  expect(keptConnected).not.toContain('"contribute"');
+  // It restarts the process as a crash would, never a force-stop, which would turn the Accessibility service off.
+  expect(fresh + read("android/kotlin/com/atlas/keyboard/FreshStartActivity.kt")).not.toMatch(/forceStopPackage|killBackgroundProcesses|clearApplicationUserData/);
+  expect(read("android/src/main/AndroidManifest.xml")).toMatch(/FreshStartActivity"[^>]*android:process=":restart"/);
 });
 
 test("a reset removes values, so every default stays where its setting defines it", () => {
   expect(reset).not.toMatch(/\.put(Boolean|String|Int|Long|Float|StringSet)\(/);
   expect(reset).not.toMatch(/\.clear\(\)/);
+  const engine = read("android/kotlin/com/atlas/engine/SwipeTyping.java");
+  const learning = engine.slice(engine.indexOf("public void resetLearning()"), engine.indexOf("public void resetLearning()") + 300);
+  expect(learning).toContain('getSharedPreferences("word_learning", 0).edit().remove("enabled").apply()');
 });
 
-test("Settings asks first, on the app's own confirm page, and confirms with Confirm", () => {
+test("Settings has both, each asking first on the app's own confirm page, with the rulebook's haptic", () => {
   const index = read("app/settings/index.tsx");
-  expect(index).toContain('<Field label="Reset all settings" href="/settings/reset-all" />');
-  const page = read("app/settings/reset-all.tsx");
-  expect(page).toContain('<Screen title="Reset all settings?"');
-  expect(page).toContain('subtitle="Every switch and choice goes back to how it started. Your words, snippets and app lists stay."');
-  expect(page).toContain(">Reset</CanvasText>");
-  expect(page).toContain('<Field label="Keep mine" onPress={back} />');
-  expect(page).toContain('playHaptic("app_picked")');
-  expect(page).not.toContain("app_deleted");
-  expect(page).toContain('"Back to factory. Try not to break it again."');
-  expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt")).toContain("SettingsReset.reset(activity)");
+  expect(index).toContain('<Field label="Reset most things" href="/settings/reset-most" />');
+  expect(index).toContain('<Field label="Reset literally everything" href="/settings/reset-everything" />');
+  const most = read("app/settings/reset-most.tsx");
+  expect(most).toContain('title="Reset most things?"');
+  expect(most).toContain('body="Every switch and choice goes back to how it started. Your words, snippets and app lists stay."');
+  expect(most).toContain('action="Reset" cancel="Keep mine"');
+  expect(most).toContain('playHaptic("app_picked")');
+  expect(most).not.toContain("app_deleted");
+  expect(most).toContain('"Back to factory. Try not to break it again."');
+  const all = read("app/settings/reset-everything.tsx");
+  expect(all).toContain('title="Reset literally everything?"');
+  expect(all).toContain('"Settings, your words, snippets, shorthand, app lists and clipboard. All gone, like a fresh install. It can\'t be undone. "');
+  expect(all).toContain('+ "Swipes you already shared are deleted on the Share swipes page."');
+  expect(all).toContain('action="Wipe it all" cancel="Never mind"');
+  expect(all).toContain('playHaptic("app_deleted")');
+  expect(fresh).toContain('const val NOTE_TEXT = "Fresh start. Don\'t waste it."');
+  expect(read("android/kotlin/com/atlas/keyboard/GuideActivity.kt")).toContain("swapIn(body, FreshStart.take(this) ?: PLAYGROUND_BODY, 0)");
 });
 
-test("the boring guide and the release notes say where it is", () => {
-  expect(read("app/settings/guide-boring.tsx")).toContain("Settings > Reset all settings");
-  expect(read("release-notes.txt")).toContain("- Reset all settings:");
+test("the boring guide and the release notes say where they are", () => {
+  const guide = read("app/settings/guide-boring.tsx");
+  expect(guide).toContain("Reset most things");
+  expect(guide).toContain("Reset literally everything");
+  expect(read("release-notes.txt")).toContain("- Two resets:");
 });

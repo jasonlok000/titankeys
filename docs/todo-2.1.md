@@ -213,6 +213,10 @@ all of them are unapproved.
     - **Open:** the echo uses the word's own mark, and the ambient waits a full cycle, so there are no hearts and then glitter.
     - **Next for W:** the quick settings page has the same late lift (its mark clears about 0.3 s after a toggle), so it gets the
       same fix. The ladder work stays held until v4 is approved.
+  - **V's decorations are built** (312f54f, branch at 7571f2c): the approved levels (accent 36–46%, the e at 40%, grass ink at
+    24/40/60%), the lighter big top with real juggling balls, and grass drawn for 150 dp. The Orchestrator checked the renders:
+    the clown and the end screen look right.
+    - Merge C first, then V, taking V's GuideDecor.kt and GuideDecorRender.kt whole. V's verify is still queued.
   - **Usage limit hit, about 10:55 to 11:10.** On resuming, each worker continued from its branch:
     - W: claude/word-ladder-v4 f112d60, the ladder;
     - C: claude/finale-grass cddc991, the finale;

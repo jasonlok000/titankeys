@@ -199,6 +199,13 @@ all of them are unapproved.
   - **Under discussion (08:50):** the owner finds Save's glitter generic, and Save could become another word if that's easier to
     animate. The Orchestrator proposed "Add" and "Remove" with a book: the word drops into a book that claps shut, and on Remove a
     page tears out. Waiting on the owner.
+  - **Ladder review page (09:00):** cal-tool/ladder.html is open on the phone. It shows four rungs (Blocked, Not saved, Saved,
+    Favourite), with learned words counting as Saved, Unsave for every word and a Block step. It has bar mockups for each status
+    and its hover, plus Play mockups for each step's effect: Save as a book, Unsave as a torn page, Block as a ring and slash.
+    W ships the hover and open-burst fixes first, and holds the state changes until the owner confirms.
+  - Owner's report: on the home screen the keyboard is cut off by the bar. It isn't on screen now, so the owner's screenshot is
+    needed.
+  - F's Size setting is pushed (4af0690, verify passed). F kept the guide and front page at Normal. Review before merging.
   - **The plan from 08:45:**
     1. F's Size setting (its verify is running) and W's word menu fix land, and get reviewed and merged.
     2. Build #5 and install.

@@ -153,6 +153,8 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - the guide crash with the phone's font size at its largest (2.0): the fix is ready on claude/guide-font-crash;
   - the app's scaling at large font sizes ("pretty awful");
   - on the playground, when the screen is fully orange, the words can't be read.
+  - the guide's text field always shows two lines (owner, 2026-11-12: "it shd always show two lines, just bugged rn");
+  - the playground's text is rewritten in the owner's offensive, fun, casual tone, and long enough to type for a long time without looping (owner, 2026-11-12).
 - Built so far: the calibration as the default, and in-app calibration centred. This is look-only; the touchpad code is unchanged.
 
 ## Launch

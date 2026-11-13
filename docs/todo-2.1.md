@@ -2,7 +2,7 @@
 
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
-[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 21:30.
+[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 21:45.
 
 ## On the phone now (build 3968470a, test-2.1h at f68044d)
 
@@ -49,9 +49,14 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 - **Review of the current build**, then one batch for the whole app (owner's call):
   - Guide and playground keyboard: same width, 60% height, no gap between keys, 10.5 px between rows.
   - The guide crash with the font size at 2.0: the fix is ready on claude/guide-font-crash.
-  - The app's scaling at large font sizes.
+  - The app's scaling at large font sizes. The owner says the scaling in the current build "is better" (21:40).
   - Playground words unreadable when the screen is fully orange.
+  - Guide: the text field must always show **two lines**. It's buggy now: the code asks for 3 and drops to 2 when tight.
+  - Playground text: rewrite it in the owner's tone ("offensive fun casual") and make it **long enough to type for a long time
+    without looping**. Today it's 10 short, tame sentences that repeat. A sample goes to the owner for tone before the full text.
   - Question: should the Sym panel's rows also take the keys' shape? (asked, no answer yet)
+  - The owner can't open the guide right now (21:40). The phone's font size is 2.0, which hits the guide crash. The fix is
+    ready; ask whether to bring it in ahead of the batch, so the guide can be reviewed.
 - Feel and judge on the phone:
   - Round 7 haptics and the quiet swell.
   - Exact-typing bar texture against confirm (lab switch).

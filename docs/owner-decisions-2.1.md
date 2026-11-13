@@ -248,6 +248,21 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   needs the keyboard open on a field that shows words, 3 to 4.5 minutes with no key, touch or swipe, the screen on, then a 25%
   chance, and never twice in a row: about 15 untouched minutes before the first game, so it's almost never seen. The
   Orchestrator's proposal, unapproved: wait 60 to 90 s and a 50% chance, about 2.5 minutes on average; any input still ends it.
+- **The 11 dp line: build it** (owner, 2026-11-13: "For the 11dp lower, implement it. Do visual checks with the corner overlays
+  that we used before. Check the visuals if they're aligned properly with a simulated border too. Do it"). (Owner) W builds it
+  with the Orchestrator's mitigations below: the middle of the bar plus a 22 dp border; boxes at least 1 dp inside the edge (the
+  pill slims to about 32 dp); side items take their margin from the curve; Exact typing's bar and the Sym panel's bottom row on
+  the same line. Renders go through tools/corner_check.py (radius 100, margin 4) plus a simulated-border render, and the
+  Orchestrator reviews them before the build.
+- **The idle games: one roll at the 3-minute mark** (owner: "I think the probability is misunderstood. I meant like it triggers
+  only on the 3 min mark of idle. Not resetting. The chance of triggering is 1/4. Meaning it won't trigger if I go afk for
+  longer… And no two same animations in a row. Also no two triggers in a row."). (Owner) This replaces the Orchestrator's 60 to
+  90 s, 50% proposal. Exactly 3:00 after the last input, one 25% roll per idle period, none after it; the period after a game
+  can't play; never the same game twice running. A builds it.
+- **Shorthand is saved in lowercase** (owner: "For short hands lets make sure that it doesn't get saved as with uppercase. So I
+  won't mistakenly saved the uppercase version of it when setting up."). (Owner) The shorthand is stored lowercase, existing
+  ones are repaired once, and D finds why capitals got in although its fields ask for none (and fixes TitanKeys if it
+  capitalises fields that don't ask for it). D builds it.
 - **Evaluations for the owner (2026-11-13):**
   - **Idle game odds, simulated** from the real rules (a wait of W to 1.5 W, then the chance, never twice running). Average
     untouched, keyboard-open time to the first game: 15 min today (W 3 min, 25%), 2.5 min proposed (W 60 s, 50%). Chance in one

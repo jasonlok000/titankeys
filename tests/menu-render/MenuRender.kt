@@ -126,6 +126,7 @@ fun main(args: Array<String>) {
     // The best word in each weight the owner could have, to pick the one that reads as bold without looking heavy.
     barSheet(folder, regular, medium, "Medium", -668 to 2272, drawables)
     barSheet(folder, regular, bold, "Bold", -685 to 2279, drawables)
+    barFits()
     println("Drawn to $folder")
 }
 
@@ -264,7 +265,7 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
 
     /**
      * The scene for [word] at [step], placed and shortened as Strip.drawMenu does it: on the baseline of the bar's own height, which
-     * keeps Normal's at every Settings > Size.
+     * keeps Normal's at every Bar text size.
      */
     fun scene(word: String, step: MenuKeys.Step, alignment: KeyAlignment): MenuScene {
         val (left, right) = room(alignment)
@@ -337,7 +338,7 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
             g.font = medium.deriveFont(20 * DENSITY * MENU_PILL_TEXT)
             val width = g.fontMetrics.stringWidth(name).toFloat()
             pill = MenuKeys.pill(WIDTH.toFloat(), hovered, width, icon, MENU_PILL_LEFT * DENSITY, MENU_PILL_GAP * DENSITY, MENU_PILL_RIGHT * DENSITY, frame.alignment)
-            // As Strip: the pill grows with Settings > Size, but never past its share of the bar, which keeps its height.
+            // As Strip: the pill grows with Bar text size, but never past its share of the bar, which keeps its height.
             val height = minOf(MENU_PILL_DP * DENSITY, ROW * MENU_PILL_DP / 56f)
             val shape = RoundRectangle2D.Float(pill.first, (ROW - height) / 2, pill.second - pill.first, height, height, height)
             val fade = MENU_PILL_FADE * DENSITY
@@ -642,15 +643,65 @@ private fun parsePath(data: String): Path2D.Float {
     return path
 }
 
+/**
+ * Everything in the bar fits inside its 56 dp at this MENU_SIZE (owner, 2026-11-13: Bar text size grows what's in the bar, not
+ * its height). Each element's height comes from Strip's own sizes, grown by the size's factor, with Inter's lines as Android lays
+ * them out: a TextView with its font padding spans Inter's whole box, -685 to 2279 of 2048, and one without it, or drawn text,
+ * its ascent and descent, 1984 and 494. Sizes in Normal's dp, as the bar's 56 is.
+ */
+private fun barFits() {
+    val factor = DENSITY / 1.55f
+    val bar = 56f
+    val padded = (2279 + 685) / 2048f
+    val tight = (1984 + 494) / 2048f
+    val fits = ArrayList<String>()
+    fun fits(what: String, top: Float, bottom: Float) {
+        check(top >= -.01f && bottom <= bar + .01f) { "At ${"%.1f".format(factor)}, $what reaches %.1f to %.1f dp in a %.0f dp bar".format(top, bottom, bar) }
+        fits += "$what %.1f".format(bottom - top)
+    }
+    fun centred(what: String, height: Float) = fits(what, (bar - height) / 2, (bar + height) / 2)
+    // The three words, 20 sp, placed by StripFit on the bar's centre line, and the menu's word, MenuScene.FONT_DP.
+    val word = 20f * factor
+    val line = StripFit.baseline(bar / 2, word)
+    fits("the words", line - word * 1984 / 2048f, line + word * 494 / 2048f)
+    val menuWord = MenuScene.FONT_DP * factor
+    val menuLine = StripFit.baseline(bar / 2, menuWord)
+    fits("the menu's word", menuLine - menuWord * 1984 / 2048f, menuLine + menuWord * 494 / 2048f)
+    // The pill keeps to its share of the bar (Strip: minOf(dp(MENU_PILL_DP), barHeight * MENU_PILL_DP / BAR_DP)); its icon and
+    // label sit inside it.
+    val pill = minOf(MENU_PILL_DP * factor, bar * MENU_PILL_DP / 56f)
+    centred("the menu's pill", pill)
+    val icon = MENU_ICON_DP * factor
+    check(icon <= pill) { "At $factor the menu's icons, $icon dp, are taller than its pill, $pill dp" }
+    centred("the menu's icons", icon)
+    val label = 20f * MENU_PILL_TEXT * factor
+    val labelLine = StripFit.baseline(bar / 2, label)
+    check(labelLine - label * 1984 / 2048f >= (bar - pill) / 2 && labelLine + label * 494 / 2048f <= (bar + pill) / 2) {
+        "At $factor the pill's label leaves its pill"
+    }
+    fits("the pill's label", labelLine - label * 1984 / 2048f, labelLine + label * 494 / 2048f)
+    // The Shift, Alt and Ctrl chips: 14 dp, no font padding, 3 dp above and below. Automatic capital's arrow is as tall.
+    centred("the chips", 14f * factor * tight + 2 * 3 * factor)
+    // A notice's label and buttons, 18 sp with font padding, and the modifiers' hint, at most 18 sp, without.
+    centred("a notice", 18f * factor * padded)
+    centred("the hint", 18f * factor * tight)
+    // The clip offer and its hint stack, and both shrink alike to fit when they'd be taller (Strip.fitClipLines).
+    val clip = word * padded
+    val clipHint = 13f * factor * tight
+    val shrink = minOf(1f, bar / (clip + clipHint))
+    centred("the clip and its hint", (clip + clipHint) * shrink)
+    println("Bar text size ${"%.1f".format(factor)}: everything fits the 56 dp bar, heights in dp: ${fits.joinToString(", ")}")
+}
+
 /** As on the owner's screenshots: 1076 px across at about 1.55 px to a dp. The bar is 56 dp. */
-/** The owner's screenshots' density, times Settings > Size's factor when one is given (MENU_SIZE: normal, bigger, biggest). */
+/** The owner's screenshots' density, times Bar text size's factor when one is given (MENU_SIZE: normal, bigger, biggest). */
 private val DENSITY = 1.55f * when (System.getenv("MENU_SIZE")) {
     "bigger" -> FixedScale.BIGGER
     "biggest" -> FixedScale.BIGGEST
     else -> FixedScale.NORMAL
 }
 private const val WIDTH = 1076
-/** The bar: 56 dp at Normal, the same height at every Settings > Size (Strip.BAR_DP). */
+/** The bar: 56 dp at Normal, the same height at every Bar text size (Strip.BAR_DP). */
 private val ROW = (56 * 1.55f).toInt()
 private const val CAPTION = 44
 /** The accent, from Accent: orange, or cream with Orange accents off (ACCENT=off). */
@@ -676,7 +727,7 @@ private const val LIT_GAP_DP = 3f
  * bar's centre line, which the short marks at each side show: it must be within 1 px. Sizes in dp, at 1.5625 px to a dp.
  */
 private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, bestBox: Pair<Int, Int>, drawables: File) {
-    // The text grows with Settings > Size (MENU_SIZE), and the bar keeps Normal's height (Strip.BAR_DP).
+    // The text grows with Bar text size (MENU_SIZE), and the bar keeps Normal's height (Strip.BAR_DP).
     val scale = 1.5625f * DENSITY / 1.55f
     val width = 1076
     val bar = Math.round(56 * 1.5625f)

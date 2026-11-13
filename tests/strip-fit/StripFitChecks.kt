@@ -90,7 +90,7 @@ fun main() {
         check(kotlin.math.abs(shrunk - full) <= .5f, "A word at $scale sits on the full-size line: $shrunk, not $full")
     }
 
-    // Settings > Size at Biggest: the bar's places are as wide as ever, but every letter is bigger. The three places stay even,
+    // Bar text size at Biggest: the bar's places are as wide as ever, but every letter is bigger. The three places stay even,
     // and long words shrink or lose a part to fit, as at Normal.
     val biggest: (String) -> Float = { measure(it) * FixedScale.BIGGEST }
     fun fitsBiggest(slots: List<StripFit.Slot>) = slots.all { biggest(it.text) * it.scale <= it.width - 10f + .01f }

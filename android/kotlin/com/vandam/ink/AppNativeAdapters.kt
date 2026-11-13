@@ -55,8 +55,11 @@ import org.json.JSONObject
 /** Ink's activity keeps TitanKeys' sizes at any display size or font size, like every other TitanKeys window (FixedScale). */
 internal fun appBaseContext(base: Context): Context = FixedScale.wrap(base)
 
-/** Settings > Size: Ink's screens grow by the same factor as every other window TitanKeys draws (FixedScale). */
-internal fun appUserScale(context: Context): Float = FixedScale.size(context).factor
+/**
+ * Ink's screens stay at Normal: Bar text size grows only the keyboard's bar (owner, 2026-11-13: "the settings become a bit
+ * unusable after making it bigger"). The patch's hook stays, for Ink's own scale, at 1.
+ */
+internal fun appUserScale(@Suppress("UNUSED_PARAMETER") context: Context): Float = FixedScale.NORMAL
 
 /** Settings > Orange accents: with it off, Ink's screens take the cream that stands in for orange everywhere (Accent). */
 internal fun appAccent(context: Context): Int = if (Accent.on) 0 else Accent.colour
@@ -333,7 +336,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 "resetSettings" -> {
                     SettingsReset.reset(activity)
                     activity.applyAccent()
-                    activity.applyUserScale()
                     publishState()
                     "null"
                 }
@@ -516,7 +518,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("swipeTyping", TypingSettings.swipeTyping(activity))
             .put("touchpadOnlyInFields", TypingSettings.touchpadOnlyInFields(activity))
             .put("orangeAccents", TypingSettings.orangeAccents(activity))
-            .put("size", FixedScale.size(activity).id)
+            .put("barTextSize", FixedScale.size(activity).id)
+            .put("barTextSizePicked", FixedScale.picked(activity) != null)
             .put("enterKey", TypingSettings.enterKey(activity))
             .also(::putEnterApps)
             .also(::putExactApps)
@@ -668,11 +671,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 Accent.on = value
                 activity.applyAccent()
             }
-            // Settings grows at once. The keyboard, the guide and the front page take it the next time they show.
-            "size" -> {
-                FixedScale.size(activity, FixedScale.Size.of(value as String))
-                activity.applyUserScale()
-            }
+            // A pick sticks, even one that matches the phone's text size. The bar takes it the next time it shows.
+            "barTextSize" -> FixedScale.size(activity, FixedScale.Size.of(value as String))
             "enterKey" -> TypingSettings.enterKey(activity, value as String)
             "snippetStart" -> TypingSettings.snippetStart(activity, value as String)
             "shortcodes" -> TypingSettings.shortcodes(activity, value as Boolean)

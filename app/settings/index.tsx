@@ -6,6 +6,7 @@ import { showKeyCalibration, state, update } from "../../lib/atlas";
 import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
+import { barTextSizeLabel, barTextSizeTitle } from "./bar-text-size";
 import { accentsNote, altBackspaceLabel, altBackspaceNote, barLabel, cursorLabel, scrollLabel } from "../../lib/setting-names";
 import { parentOf } from "../../lib/settings-tree";
 import { contributeLabel } from "./contribute";
@@ -18,7 +19,6 @@ import { liftLabel } from "./lift";
 import { rawLogLabel } from "./rawlog";
 import { sentenceSpacesLabel } from "./sentence-spaces";
 import { setupLabel } from "./setup";
-import { sizeLabel } from "./size";
 import { shorthandLabel } from "./shorthand/index";
 import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
@@ -73,6 +73,7 @@ export default function Settings() {
       {settings.suggestionBar && <Toggle label="Hide the bar on an empty home search" value={settings.launcherHidesBar}
         onChange={launcherHidesBar => save.run({ launcherHidesBar })} />}
       {settings.suggestionBar && <Field label={hiddenBarTitle} href="/settings/hidden-bar">{hiddenBarLabel(settings)}</Field>}
+      {settings.suggestionBar && <Field label={barTextSizeTitle} href="/settings/bar-text-size">{barTextSizeLabel(settings)}</Field>}
     </Section>
     <Section title="Touchpad">
       <Toggle label="Swipe to type words" value={settings.swipeTyping}
@@ -101,7 +102,6 @@ export default function Settings() {
       {settings.hapticsLab && <Field label="Haptics lab" href="/settings/haptics-lab" />}
       <Toggle label="Orange accents" subtitle={accentsNote(settings.orangeAccents)} value={settings.orangeAccents}
         onChange={orangeAccents => save.run({ orangeAccents })} />
-      <Field label="Size" href="/settings/size">{sizeLabel(settings)}</Field>
     </Section>
     <Section title="Your data">
       <Field label="Your words" href="/settings/data" />

@@ -1504,20 +1504,20 @@ class GuideActivity : Activity() {
             // gives back would drop the keys by its height (owner, 2026-11-11). They keep the most room the keyboard took.
             // Only the keyboard's own height counts: an open panel is much taller, and keeping its room after it closed squashed the
             // keys and left a gap for the rest of the guide (owner, v5: slide 12). The panel's room counts only while it's open.
-            val panelSized = steadyBottom > 0 && bars.bottom > steadyBottom + dp(PANEL_EXTRA)
+            val room = GuideRoom.room(bars.bottom, panelOpen, steadyBottom, dp(PANEL_EXTRA), keep = guideLooks == true || playground)
             // A panel's room arrives before the keyboard says the panel is open: the drawing hides at once, so its rows never peek
             // above the panel or get cut by it (owner, v5.3).
-            panelRoom = panelSized
-            if (panelSized && ::keys.isInitialized) keys.visibility = keysVisibility(keys.layoutParams.height)
-            if (guideLooks != true && !playground) steadyBottom = 0
-            else if (!panelOpen && !panelSized) steadyBottom = maxOf(steadyBottom, bars.bottom)
+            panelRoom = room.sized
+            if (room.sized && ::keys.isInitialized) keys.visibility = keysVisibility(keys.layoutParams.height)
+            steadyBottom = room.steady
             // The keys sit right on the keyboard's bar, edge to edge, as the real keys sit right under the screen.
-            keyboardBottom = maxOf(steadyBottom, if (panelOpen || panelSized) 0 else bars.bottom)
-            panelBottom = if (panelOpen || panelSized) maxOf(bars.bottom, steadyBottom) else 0
-            // On a slide a panel moves nothing (Master, 2026-11-13, build #10: the title, the instruction and the field dropped 33 dp
-            // as Sym opened): the padding stays the keyboard's own, and the drawing of the keys keeps its room under the panel.
-            // See GuideRoom.
-            val bottom = if (onSlide()) keyboardBottom else if (panelOpen) panelBottom else keyboardBottom
+            keyboardBottom = room.keyboard
+            panelBottom = room.panel
+            // On a slide and on the playground a panel moves nothing (Master, 2026-11-13: on build #10 a slide's title, instruction
+            // and field dropped 33 dp as Sym opened; on build #12 the playground's did too, and flashed lower still for a frame at
+            // every opening and closing): the padding stays the keyboard's own, and the drawing of the keys keeps its room under the
+            // panel, whether the panel's room or the keyboard's word comes first. See GuideRoom.
+            val bottom = GuideRoom.padding(still(), panelOpen, keyboardBottom, panelBottom)
             val corners = Corners.of(insets, display)
             val corner = corners.topInset(top.toFloat())
             // 24 dp side margins (design v2), or more where the screen's rounded corners need it.
@@ -1719,8 +1719,8 @@ class GuideActivity : Activity() {
     /**
      * The drawing of the keys is the real keyboard's width, edge to edge past the column's sides, at 60% of its height (owner,
      * 2026-11-12). The rest of the room goes to the words, the content block centred in it. The field keeps its lines always (owner:
-     * exactly two): with the screen too short, the keys drop their bottom row, and shorter still, as with a panel open, they go
-     * away, as the panel shows the same keys, right above your finger.
+     * exactly two): with the screen too short, the keys drop their bottom row, and shorter still, they go away. Under an open
+     * panel they hide, keeping their room, as the panel shows the same keys, right above your finger.
      */
     private fun fitKeys() {
         val free = root.height - column.paddingTop - column.paddingBottom
@@ -1746,30 +1746,32 @@ class GuideActivity : Activity() {
         root.post { keys.requestLayout() }
     }
 
-    /** A slide of the guide is showing: not the playground, setup or the end. */
-    private fun onSlide() = !playground && guideLooks == true && !atEnd()
+    /**
+     * A panel opening moves nothing here: a slide of the guide or the playground shows, not setup or the end. See [GuideRoom].
+     */
+    private fun still() = !atEnd() && !settingUp && (playground || guideLooks == true)
 
     /**
      * The drawing of the keys, [height] tall: shown, or hidden while a panel is open, as the panel shows the same keys itself
-     * (owner, v5.2). On a slide it keeps its room under the panel, so nothing above it moves and the decoration keeps its floor.
+     * (owner, v5.2). On a slide and on the playground it keeps its room under the panel, so nothing above it moves and the
+     * decoration keeps its floor. See [GuideRoom.keys].
      */
-    private fun keysVisibility(height: Int) = when {
-        height == 0 || atEnd() -> View.GONE
-        !panelOpen && !panelRoom -> View.VISIBLE
-        onSlide() -> View.INVISIBLE
-        else -> View.GONE
+    private fun keysVisibility(height: Int) = when (GuideRoom.keys(height, still(), panelOpen || panelRoom, atEnd())) {
+        GuideRoom.Keys.Shown -> View.VISIBLE
+        GuideRoom.Keys.Hidden -> View.INVISIBLE
+        GuideRoom.Keys.Gone -> View.GONE
     }
 
     /**
      * The block stays where it is with a panel open: the rooms over and under it share what's free as with the panel closed.
      * Only a panel whose top would come within 24 dp of the block makes the room over it smaller, by as much as the block must
-     * rise to stay clear, which no panel on the Titan 2 Elite does. See [GuideRoom].
+     * rise to stay clear, which no panel on the Titan 2 Elite does, on a slide or on the playground. See [GuideRoom].
      */
     private fun holdBlock() {
         val upper = spacer.layoutParams as? LinearLayout.LayoutParams ?: return
         val lower = lowerSpacer.layoutParams as? LinearLayout.LayoutParams ?: return
         var over = -1
-        if (onSlide() && panelBottom > keyboardBottom && block.height > 0) {
+        if (still() && panelBottom > keyboardBottom && block.height > 0) {
             val children = (0 until column.childCount).map(column::getChildAt)
             fun size(view: View): Int {
                 val margins = (view.layoutParams as? LinearLayout.LayoutParams)?.let { it.topMargin + it.bottomMargin } ?: 0

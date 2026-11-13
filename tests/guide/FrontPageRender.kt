@@ -85,9 +85,11 @@ internal object V2 {
     const val HEADER = 56
     /**
      * How far an open panel reaches over the keyboard's bar, in px: every page of it (symbols, emoji, clipboard, quick settings)
-     * the same. On build #10 the slide dropped 51 px as Sym opened and the drawing of the keys' 304 px went: (304 − 202) / 2.
+     * the same. On build #12's playground the frame with the drawing of the keys gone and the padding still the keyboard's showed
+     * the block 139 px lower, half the phone's drawing, 278 px with the owner's calibration; with the panel settled it was 51 px
+     * lower, as on build #10's slide: (278 − 176) / 2. The renders draw the keys at the default calibration, 304 px.
      */
-    const val PANEL = 202
+    const val PANEL = 176
 
     /** The drawn keys (owner): the real keys' width and columns, 60% of their height. */
     val KEYS = KeyGeometry(W.toFloat(), KeyAlignment.DEFAULT, KeyGeometry.DRAWN)
@@ -345,7 +347,7 @@ private fun problem(what: String) {
  * [heat] how warm the background is, from 0 to 1; [comment] the line under the header; [passage] the line to type along to, with
  * [done] words typed.
  */
-private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment: String, passage: String, done: Int) {
+private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment: String, passage: String, done: Int, panel: Boolean = false) {
     val (image, g) = V2.image()
     val warmth = V2.blend(V2.BLACK, V2.ORANGE, heat * .85f)
     val warmthArgb = (0xFF shl 24) or (warmth.red shl 16) or (warmth.green shl 8) or warmth.blue
@@ -472,9 +474,18 @@ private fun drawFront(file: File, typed: String, wpm: Int?, heat: Float, comment
 
     // As GuideActivity's fitKeys: with no room for all four rows, the bottom row goes and the letters sit on the bar.
     val fits = room >= blockHeight + 2 * V2.dp(24)
-    g.clip = java.awt.Rectangle(0, 0, V2.W, V2.H - V2.BAR)
-    V2.keys(g, if (fits) keysTop else V2.H - V2.BAR - Math.ceil(V2.KEYS.letterHeight.toDouble()).toInt(), onOrange = ink, shade = warmth, marks = true)
-    g.clip = null
+    if (panel) {
+        // A panel is open: the drawing of the keys hides under it and keeps its room, so nothing above moves (Master, 2026-11-13,
+        // build #12). A stand-in for the panel.
+        val panelTop = V2.H - V2.BAR - V2.PANEL
+        g.color = Color(0x1A1715)
+        g.fillRect(0, panelTop, V2.W, V2.PANEL)
+        V2.note(g, "render note: the emoji panel is open here; the drawn keys hide under it and keep their room", side, panelTop + V2.dp(24))
+    } else {
+        g.clip = java.awt.Rectangle(0, 0, V2.W, V2.H - V2.BAR)
+        V2.keys(g, if (fits) keysTop else V2.H - V2.BAR - Math.ceil(V2.KEYS.letterHeight.toDouble()).toInt(), onOrange = ink, shade = warmth, marks = true)
+        g.clip = null
+    }
     V2.note(g, "render note: the keyboard's own bar is here", side, V2.H - V2.BAR / 2)
     g.dispose()
     ImageIO.write(image, "png", file)
@@ -503,5 +514,6 @@ internal fun drawFrontPage(folder: String) {
         comment(62), passage, 9)
     drawFront(File(out, "front-4-orange.png"), "titankeys fixes your typos so you can keep pretending you never make any", 96,
         WpmMeter.heat(96), comment(96), passage, 12)
+    drawFront(File(out, "front-5-panel.png"), "titankeys fixes your typos so", 34, WpmMeter.heat(34), comment(34), passage, 5, panel = true)
     println("front page drawn to $folder" + if (frontProblems > 0) " with $frontProblems problems" else "")
 }

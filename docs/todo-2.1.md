@@ -233,6 +233,12 @@ all of them are unapproved.
       GuideDecorRender.kt whole). guide-decor and guide pass on the merge.
     - **D's press haptics** (27bdc2e; merge adcd3c5): a Press tick for every plain press, routed through one place (AppPress, plus
       Ink), with docs/haptics-audit.md and a check.
+  - **Build #6 (7570ac85) passed, and is on the phone (12:50).**
+    - run1: no crash, no new ANR, and every page renders.
+    - The run's word menu test unfavourited the owner's "what's" (it held the bar's middle word). The Orchestrator restored it to
+      Favourite on the phone, and run1 now only opens and closes the menu.
+  - **Build #7, the release candidate,** started from 098c159, after merging W's 2671bb0, A's audit (81da968), D's baseline
+    (780dbe5) and F's release fixes (fed4129). debug-only passes on the merge.
   - **To merge after build #6:**
     - W's 2671bb0: the heart previews sit at the book's place, 8 dp over the bar; the book fades out under them; the pill is
       unchanged, a 24% accent tint since v3;

@@ -860,13 +860,17 @@ class Strip(
         val text = MenuKeys.shorten(menu.word) { menuCanvas.measure(it) * density <= (wordRight - wordLeft).coerceAtLeast(0f) }
         val textWidth = menuCanvas.measure(text) * density
         val textLeft = menuWordCentre - textWidth / 2
-        val shown = scene?.takeIf { it.word == text } ?: MenuScene(text, MenuScene.WordLayout.of(text) { menuCanvas.measure(it) },
+        val shown = scene?.takeIf { it.word == text } ?: MenuScene(text, MenuScene.WordLayout.of(text, menuCanvas.top(text)) { menuCanvas.measure(it) },
             menuWordCentre / density, baseline / density, menu.step).also {
             scene = it
             sceneNotice = menu
             frameAt = now
         }
         shown.cx = menuWordCentre / density
+        // The status marks stay in the bar, over the word and inside its room, at any Settings > Size.
+        shown.barDp = height / density
+        shown.roomLeft = wordLeft / density
+        shown.roomRight = wordRight / density
         shown.reducedMotion = !GuideMotion.enabled
         shown.palette = palette()
         shown.onHaptic = { button, _ -> menuBeat(button) }

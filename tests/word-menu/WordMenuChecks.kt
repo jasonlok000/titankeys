@@ -20,7 +20,7 @@ import java.io.File
  * - opening the menu plays no burst;
  * - the six effects of the approved ladder v4 ([MenuScene]): each haptic on its own frame, the book wholly above the bar and
  *   opaque once shut, reduced motion, and a second press mid-effect;
- * - the heart resting where the book does, wholly above the bar, with the book faded out under it;
+ * - the status marks in the bar just over the word, in every frame, shrinking to fit or hiding when there's no room;
  * - the word solid in each rung's colour, the previews 60% of the way to the next look, and each effect's letters on the way;
  * - the hover after a press, up and down, from I, O, K and L, in every order the touchpad's lift and the key came in on the
  *   owner's phone, and the quick settings page keeping its mark the same way.
@@ -29,7 +29,7 @@ fun main() {
     theLadder()
     theOpening()
     theEffects()
-    theHeartRestsWhereTheBookDoes()
+    theMarksSitInTheBar()
     theGreyWord()
     theHover()
     theQuickSettingsHover()
@@ -249,25 +249,25 @@ private fun scene(word: String, step: MenuKeys.Step, onHaptic: (MenuKeys.Button,
 
 /**
  * Opening the menu plays no step's burst, and never two things in a row (owner, 2026-11-13: "when selecting a word, it first shows
- * the heart particles, then the glitter"). As v4 has it, a word opens at rest: a saved word shows its faint book, a favourite gets a
- * faint heart now and then, the first a little after the menu opens, and nothing else moves. The strip makes the scene at the
- * word's rung and plays no press for it.
+ * the heart particles, then the glitter"). A word opens at rest: a saved word shows its book, a favourite its heart, which beats
+ * now and then, the first a little after the menu opens, and nothing else moves. The strip makes the scene at the word's rung and
+ * plays no press for it.
  */
 private fun theOpening() {
     for (step in MenuKeys.Step.entries) {
         val haptics = ArrayList<String>()
         val opened = scene("whatever", step) { b, label -> haptics += "$b $label" }
-        var firstHeart = Float.NaN
+        var firstBeat = Float.NaN
         repeat(6 * 120) {
             opened.step(1 / 120f)
-            check(opened.parts.all { it.ambient && it.alpha <= .33f }) { "$step: opening plays only faint ambient marks, ${opened.parts.map { it.kind }}" }
+            check(opened.parts.isEmpty()) { "$step: opening plays no particle, ${opened.parts.map { it.kind }}" }
             check(opened.book == null && opened.ghost == null) { "$step: no book, no preview" }
-            if (opened.parts.isNotEmpty() && firstHeart.isNaN()) firstHeart = opened.time
+            if (opened.beats > 0 && firstBeat.isNaN()) firstBeat = opened.time
         }
         same(haptics, emptyList<String>(), "$step: opening plays no haptic of a step")
         same(opened.rung, step, "$step: and stays where it opened")
-        if (step == MenuKeys.Step.Favourite) check(firstHeart >= MenuScene.AMBIENT_FIRST) { "The first faint heart waits a moment: $firstHeart s" }
-        else check(firstHeart.isNaN()) { "$step: no ambient particle" }
+        if (step == MenuKeys.Step.Favourite) check(firstBeat >= MenuScene.AMBIENT_FIRST) { "The heart's first beat waits a moment: $firstBeat s" }
+        else check(firstBeat.isNaN()) { "$step: no beat" }
     }
     val strip = File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
     check("menuWordCentre / density, baseline / density, menu.step).also {\n            scene = it\n            sceneNotice = menu" in strip) {
@@ -296,41 +296,103 @@ private class Recorder : MenuCanvas {
 }
 
 /**
- * The heart's grey preview, and the pressed heart, sit where Saved's faint book rests, their tip 8 dp over the bar: no heart across
- * the bar's top edge, and none on the book, which fades out while a heart's preview shows (owner, 2026-11-13, as for the book).
+ * The status marks live in the bar, just over the word (owner, 2026-11-13: "I find the heart and small book bad to be over the bar
+ * as a status. particles are fine. but statuses should be kept maybe just slightly on top of the word"): Saved's filled book,
+ * Favourite's heart, beating now and then, and the heart previews in their place. In every frame of every rung, hover and effect,
+ * each is centred on the word, over its tallest letter with room to spare, wholly inside the bar and inside the word's room. A
+ * preview hides the resting mark under it, and the burst and the crack start from the mark's place. They're about 12 dp across at
+ * Normal, and shrink to fit, or hide, when Settings > Size shortens the bar or the word's room is narrow.
  */
-private fun theHeartRestsWhereTheBookDoes() {
-    fun aboveTheBar(scene: MenuScene, how: String) = scene.heartBox()?.let { box ->
-        check(box[3] <= -MenuScene.CLEAR + .01f) { "$how: the heart sits above the bar, its tip at ${box[3]} dp" }
+private fun theMarksSitInTheBar() {
+    /** Inter's x-height, as StripFit has it. */
+    val xHeight = 1118f / 2048f
+    fun inTheBar(scene: MenuScene, how: String) {
+        val letters = scene.baseline - maxOf(MenuScene.TALL * MenuScene.FONT_DP, scene.layout.top)
+        for ((name, box) in scene.statusMarks()) {
+            check(box[1] >= 0f && box[3] <= scene.barDp) { "$how: the $name sits inside the bar, ${box.toList()}" }
+            check(kotlin.math.abs((box[0] + box[2]) / 2 - scene.cx) < .01f) { "$how: the $name is centred on the word" }
+            check(box[3] <= letters - 2f) { "$how: the $name clears the letters: its bottom at ${box[3]} dp, the letters' top at $letters" }
+            check(box[0] >= scene.roomLeft && box[2] <= scene.roomRight) { "$how: the $name stays in the word's room" }
+        }
     }
-    // Saved, hovering I: the grey heart comes in as the book goes, and the book comes back when the finger moves off.
-    val saved = scene("whatever", MenuKeys.Step.Saved)
-    same(saved.markShown(), 1f, "Saved shows its faint book")
-    saved.hover(MenuKeys.Button.Favourite)
-    repeat(48) { saved.step(1 / 120f); aboveTheBar(saved, "Favourite's preview") }
-    val box = saved.heartBox()!!
-    same(Math.round(box[3] * 100) / 100f, -MenuScene.CLEAR, "The grey heart's tip rests 8 dp over the bar, as the book's foot does")
-    check(saved.markShown() < .01f) { "and the book has faded out under it: ${saved.markShown()}" }
-    saved.unhover()
-    repeat(48) { saved.step(1 / 120f) }
-    check(saved.heartBox() == null && saved.markShown() > .99f) { "Off the button, the heart goes and the book is back" }
-    // The press takes the preview over: the book never comes back through the heart, which pops about its tip.
-    saved.hover(MenuKeys.Button.Favourite)
-    repeat(48) { saved.step(1 / 120f) }
-    saved.press(MenuKeys.Button.Favourite)
-    repeat(3 * 120) {
-        saved.step(1 / 120f)
-        aboveTheBar(saved, "Favourite's press")
-        check(saved.markShown() < .01f) { "Favourite's press: the book stays gone, ${saved.markShown()}" }
+    fun names(scene: MenuScene) = scene.statusMarks().map { it.first }
+    fun run(scene: MenuScene, how: String, frames: Int) = repeat(frames) { scene.step(1 / 120f); inTheBar(scene, how) }
+    // At rest: Saved's book and Favourite's heart, about 12 dp across; nothing on the others.
+    for (step in MenuKeys.Step.entries) {
+        val rest = scene("whatever", step)
+        run(rest, "$step at rest", 8 * 120)
+        same(names(rest), when (step) {
+            MenuKeys.Step.Saved -> listOf("book")
+            MenuKeys.Step.Favourite -> listOf("heart")
+            else -> emptyList()
+        }, "$step's status mark")
+        rest.statusMarks().forEach { (name, box) -> check(box[2] - box[0] in 11.5f..13.5f) { "$step's $name is about 12 dp across: ${box[2] - box[0]}" } }
+        check(rest.parts.isEmpty()) { "$step at rest: nothing rises over the app" }
     }
-    // Favourite, hovering O: the cracked heart in the same place; Unfavourite's press cracks it there, and the book comes back.
-    val favourite = scene("whatever", MenuKeys.Step.Favourite)
-    favourite.hover(MenuKeys.Button.Unfavourite)
-    repeat(48) { favourite.step(1 / 120f); aboveTheBar(favourite, "Unfavourite's preview") }
-    same(Math.round(favourite.heartBox()!![3] * 100) / 100f, -MenuScene.CLEAR, "The cracked heart rests in the book's place too")
-    favourite.press(MenuKeys.Button.Unfavourite)
-    repeat(3 * 120) { favourite.step(1 / 120f); aboveTheBar(favourite, "Unfavourite's press") }
-    check(favourite.rung == MenuKeys.Step.Saved && favourite.markShown() > .99f) { "Back on Saved, the faint book is back" }
+    // A heart's preview in the mark's place hides the resting mark, which comes back when the finger moves off.
+    for ((step, button) in listOf(MenuKeys.Step.Saved to MenuKeys.Button.Favourite, MenuKeys.Step.Favourite to MenuKeys.Button.Unfavourite)) {
+        val hovered = scene("whatever", step)
+        hovered.hover(button)
+        run(hovered, "$step, hovering $button", 30)
+        same(names(hovered), listOf("preview"), "$step, hovering $button: the grey heart alone, in the mark's place")
+        hovered.unhover()
+        run(hovered, "$step, off $button", 30)
+        same(names(hovered), if (step == MenuKeys.Step.Saved) listOf("book") else listOf("heart"), "$step, off $button: the mark is back")
+    }
+    // Every frame of every effect, from its preview; where each ends; and the burst and the crack start from the mark in the bar.
+    for ((button, from) in listOf(MenuKeys.Button.Save to MenuKeys.Step.New, MenuKeys.Button.Unsave to MenuKeys.Step.Saved,
+        MenuKeys.Button.Favourite to MenuKeys.Step.Saved, MenuKeys.Button.Unfavourite to MenuKeys.Step.Favourite,
+        MenuKeys.Button.Block to MenuKeys.Step.New, MenuKeys.Button.Unblock to MenuKeys.Step.Blocked)) {
+        val played = scene("whatever", from)
+        played.hover(button)
+        run(played, "$button's preview", 24)
+        val place = played.statusPlace()
+        val middle = place[1] - MenuScene.HEART_BELOW * place[2]
+        check(middle > 0f) { "The heart mark's middle is in the bar: $middle dp" }
+        played.press(button)
+        var started = false
+        repeat(3 * 120) {
+            played.step(1 / 120f)
+            inTheBar(played, "$button +${played.time}")
+            val burst = played.parts.filter { it.kind == MenuScene.Kind.Heart || it.kind == MenuScene.Kind.Half }
+            if (!started && burst.isNotEmpty()) {
+                started = true
+                check(burst.all { kotlin.math.hypot(it.x - played.cx, it.y - middle) < 9f }) {
+                    "$button: the burst starts from the mark in the bar, at ${burst.map { it.x to it.y }}"
+                }
+            }
+        }
+        if (button == MenuKeys.Button.Favourite || button == MenuKeys.Button.Unfavourite) check(started) { "$button bursts" }
+        same(names(played), when (MenuScene.next(button)) {
+            MenuKeys.Step.Saved -> listOf("book")
+            MenuKeys.Step.Favourite -> listOf("heart")
+            else -> emptyList()
+        }, "$button: the new rung's mark rests in the bar")
+    }
+    // A favourite's heart beats now and then, in its place: never a heart rising over the app.
+    val beating = scene("whatever", MenuKeys.Step.Favourite)
+    run(beating, "Favourite at rest", 12 * 120)
+    check(beating.beats >= 2 && beating.parts.isEmpty()) { "The resting heart beats now and then: ${beating.beats} beats, ${beating.parts.size} particles" }
+    // Settings > Size: at Biggest, the bar is 40 dp in the menu's dp, the word on its baseline as StripFit puts it, its small letters'
+    // middle on the bar's centre line; the marks shrink and stay inside.
+    for ((size, factor) in listOf("Bigger" to 1.2f, "Biggest" to 1.4f)) {
+        val bar = MenuScene.BAR / factor
+        val sized = MenuScene("whatever", MenuScene.WordLayout.of("whatever") { it.length * 11f }, 160f, bar / 2 + MenuScene.FONT_DP * xHeight / 2,
+            MenuKeys.Step.Saved)
+        sized.barDp = bar
+        run(sized, "Saved at $size", 10)
+        val book = sized.statusMarks().single().second
+        check(book[2] - book[0] in 7f..12f) { "At $size the book shrinks to fit the bar, still readable: ${book[2] - book[0]} dp" }
+    }
+    // A narrow room: the mark stays centred on the word and shrinks to fit, or hides.
+    val narrow = scene("whatever", MenuKeys.Step.Saved)
+    narrow.roomLeft = narrow.cx - 5f; narrow.roomRight = narrow.cx + 5f
+    run(narrow, "Saved in a 10 dp room", 10)
+    check(narrow.statusMarks().single().second.let { it[2] - it[0] } <= 10.01f) { "In a 10 dp room the book shrinks to fit" }
+    narrow.roomLeft = narrow.cx - 3f; narrow.roomRight = narrow.cx + 3f
+    same(names(narrow), emptyList<String>(), "In a 6 dp room the book hides")
+    // The marks' look: the book white at 60%, the heart the accent at 70%.
+    same(listOf(MenuScene.BOOK_ALPHA, MenuScene.HEART_ALPHA, MenuScene.STATUS_GAP), listOf(.6f, .7f, 3f), "The marks' strengths, and their gap over the word")
 }
 
 /**
@@ -458,7 +520,6 @@ private fun theEffects() {
         repeat(3 * 120) {
             played.step(1 / 120f)
             played.bookBox()?.let { box -> check(box[3] <= -MenuScene.CLEAR) { "${move.button}: the book sits above the bar, bottom at ${box[3]} dp" } }
-            played.markBox()?.let { box -> check(box[3] <= -MenuScene.CLEAR + .01f) { "${move.button}: the resting book sits above the bar, bottom at ${box[3]} dp" } }
             if (!shutChecked && played.bookShut() >= .99f) {
                 // The book shut: its pages are filled with the bar's own colour, after the ink, so the ink is hidden.
                 val drawn = Recorder()
@@ -475,7 +536,7 @@ private fun theEffects() {
         same(haptics.map { it.first to it.second }, listOf(move.button to move.haptic), "${move.button}: one haptic, on its frame")
         check(haptics.single().third in move.millis) { "${move.button}'s haptic at ${haptics.single().third} ms" }
         same(played.rung, MenuScene.next(move.button), "${move.button}: the word ends on its rung")
-        check(played.parts.all { it.ambient } && played.book == null) { "${move.button}: it's all over in 3 s" }
+        check(played.parts.isEmpty() && played.book == null) { "${move.button}: it's all over in 3 s" }
         if (move.button == MenuKeys.Button.Save) check(shutChecked) { "Save's book shut" }
     }
     // Reduced motion: one crossfade to the end, no particles, and the haptic at once.
@@ -497,7 +558,7 @@ private fun theEffects() {
         repeat(3 * 120) { twice.step(1 / 120f) }
         same(twice.rung, MenuKeys.Step.New, "$first, then $second mid-effect: back to not saved")
         same(heard.last(), second, "and the second press's haptic plays")
-        check(twice.book == null && twice.parts.all { it.ambient }) { "and it all settles" }
+        check(twice.book == null && twice.parts.isEmpty()) { "and it all settles" }
     }
     // The tokens are v4's.
     same(listOf(MenuScene.PREVIEW, MenuScene.SQUASH, MenuScene.FADE, MenuScene.SETTLE, MenuScene.EXIT, MenuScene.REDUCED),

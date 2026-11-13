@@ -70,6 +70,10 @@ class AwtMenuCanvas(private val g: Graphics2D, private val font: Font) : MenuCan
         g.fill(glyphs.getOutline(left, baseline))
     }
 
+    /** How high [text] reaches over its baseline in the menu's font at [size] dp. */
+    fun top(text: String, size: Float = MenuScene.FONT_DP): Float =
+        -font.deriveFont(size).createGlyphVector(g.fontRenderContext, text).visualBounds.y.toFloat()
+
     /** The width of [text] in the menu's font at [size] dp. */
     fun measure(text: String, size: Float = MenuScene.FONT_DP): Float =
         font.deriveFont(size).createGlyphVector(g.fontRenderContext, text).logicalBounds.width.toFloat()

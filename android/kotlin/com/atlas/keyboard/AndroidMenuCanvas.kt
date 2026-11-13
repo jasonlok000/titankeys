@@ -3,6 +3,7 @@ package com.atlas.keyboard
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
 import android.graphics.Typeface
 
 /** The word menu's [MenuCanvas] on an Android [Canvas], in dp: the strip scales the canvas by the density first. */
@@ -18,6 +19,7 @@ class AndroidMenuCanvas(typeface: Typeface) : MenuCanvas {
         this.typeface = typeface
         textAlign = Paint.Align.LEFT
     }
+    private val bounds = Rect()
 
     override fun save() {
         canvas.save()
@@ -68,6 +70,13 @@ class AndroidMenuCanvas(typeface: Typeface) : MenuCanvas {
         }
         textPaint.color = colour
         canvas.drawText(text, left, baseline, textPaint)
+    }
+
+    /** How high [text] reaches over its baseline in the menu's font at [size] dp, measured ten times as big for its fractions. */
+    fun top(text: String, size: Float = MenuScene.FONT_DP): Float {
+        textPaint.textSize = size * 10f
+        textPaint.getTextBounds(text, 0, text.length, bounds)
+        return -bounds.top / 10f
     }
 
     /** The width of [text] in the menu's font at [size] dp. */

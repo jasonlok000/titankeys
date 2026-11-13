@@ -97,6 +97,12 @@ all of them are unapproved.
     not behind the title; the starfield keeps four-point sparkles; the e is cream, all others orange at 7–12%.
 - C (now): wiring the decorations into the v2 guide, with live keep-outs; then check them in the renders.
 - A (now): the flick glow ramp.
+- F: **text audit done and merged** (86a0412). The table for the owner is text-audit-2.1.md in the notes folder.
+  - The owner's lines are kept; three were touched lightly ("Both. Eh." exact, the plagiarist and clown roasts tightened).
+  - Still to apply after C's wiring merges: two GuideActivity strings, GOING_BACK → "Missed something? Go on then." and
+    BACK_FROM_END → "Miss us already? That's a bit sad."
+  - Fix in the final release-notes pass: "bookmarks for a save" is out of date; Save bursts sparkles now (D's v4).
+- Swipe suite on the phone (build 2ec5f751): **passed** (saved-word swipes, context swipes).
 - Then: merge everything, one build, install, and a full run-through on the phone.
 - Release prep (Orchestrator):
   - Update release-notes.txt for everything new since it was written. One line is already wrong: steering taps now count

@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
@@ -30,6 +31,8 @@ import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.HapticsLab
 import com.atlas.keyboard.KeyCalibrationActivity
 import com.atlas.keyboard.KeyCapture
+import com.atlas.keyboard.Keys
+import com.atlas.keyboard.Layout
 import com.atlas.keyboard.PhoneNameSource
 import com.atlas.keyboard.PhoneSetup
 import com.atlas.keyboard.RawLog
@@ -442,6 +445,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .also(::putEnterApps)
             .also(::putExactApps)
             .put("snippetStart", TypingSettings.snippetStart(activity).toString())
+            .put("altKeys", altKeys())
             .put("shortcodes", TypingSettings.shortcodes(activity))
             .put("expandShorthand", TypingSettings.expandShorthand(activity))
             .also(::putShorthand)
@@ -470,6 +474,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         state.put("ownShorthand", JSONArray(TypingSettings.ownShorthand(activity).map { (shorthand, full) ->
             JSONObject().put("shorthand", shorthand).put("full", full)
         }))
+    }
+
+    /** The letter key that types each symbol with Alt, read from the phone's own keyboard, such as "/" to "G". */
+    private fun altKeys() = JSONObject().also { keys ->
+        for (key in Layout.letterKeys) Keys.letter(key, KeyEvent.META_ALT_ON)?.let { if (!keys.has(it)) keys.put(it, key) }
     }
 
     private fun putEnterApps(state: JSONObject) {

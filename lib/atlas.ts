@@ -14,9 +14,11 @@ export type App = { app: string; name: string; installed?: boolean };
 export type Snippet = { shortcut: string; text: string };
 /** Chat shorthand in lowercase and the full word it's spelled out as. */
 export type Shorthand = { shorthand: string; full: string };
-/** The characters that a snippet's shortcut can start with. Words do not use them. */
-export const snippetStarts = [";", "/", "\\", ","] as const;
-export type SnippetStart = typeof snippetStarts[number];
+/** The starts that Settings offers for a snippet's shortcut, the default first: symbols that Alt types. TypingSettings has the same. */
+export const snippetStarts = ["/", "#", "!", "?", "*"] as const;
+/** Starts from before 2.1, kept by someone who picked one. */
+export const oldSnippetStarts = [";", "\\", ","] as const;
+export type SnippetStart = typeof snippetStarts[number] | typeof oldSnippetStarts[number];
 
 export type State = {
   version: string;
@@ -87,6 +89,8 @@ export type State = {
   recentApps: App[];
   /** The character that starts a snippet's shortcut. */
   snippetStart: SnippetStart;
+  /** The letter key that types each symbol with Alt, read from the phone's own keyboard, such as "/" to "G". */
+  altKeys: Record<string, string>;
   /** A name between two colons, such as :smile:, types its emoji. */
   shortcodes: boolean;
   /** Chat shorthand such as "shd" becomes its full word, "should". */

@@ -74,7 +74,7 @@ Right after you copy text, the strip shows it: touch it to paste. For older clip
 
 ### Snippets and emoji by name
 
-Type `;addr` and press Space, and your address shows up. Type `:smile:` and you get 😄. Changed your mind? Backspace right after puts the shortcut back. The strip shows matching snippets and emoji as you type. Snippets live on your phone, you can import and export them, and they never fire in password fields.
+Type `/addr` and press Space, and your address shows up. The `/` is Alt+G, or hold G. Want another start? Pick one in Settings > Snippets. Type `:smile:` and you get 😄. Changed your mind? Backspace right after puts the shortcut back. The strip shows matching snippets and emoji as you type. Snippets live on your phone, you can import and export them, and they never fire in password fields.
 
 ### Exact typing for terminals and remote computers
 

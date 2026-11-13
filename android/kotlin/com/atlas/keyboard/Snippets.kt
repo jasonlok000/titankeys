@@ -2,6 +2,7 @@ package com.atlas.keyboard
 
 import android.content.Context
 import android.net.Uri
+import com.atlas.engine.TypingSettings
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -11,11 +12,12 @@ import org.json.JSONObject
  * `{"snippets":[{"shortcut":"addr","text":"..."}]}`, with each shortcut written without its start character.
  */
 object Snippets {
+    // TypingSettings looks for this list to tell whether the user ever made a snippet.
     private const val PREFERENCES = "snippets"
     private const val LIST = "list"
     const val MAX_TEXT = 4000
-    /** A file may have its shortcuts written with a start character. */
-    private val START_MARKS = charArrayOf(';', '/', '\\', ',')
+    /** A file may have its shortcuts written with a start character, of now or from before 2.1. */
+    private val START_MARKS = (TypingSettings.SNIPPET_STARTS + TypingSettings.OLD_SNIPPET_STARTS).toCharArray()
 
     /** Each snippet's text by its shortcut, in the order of the shortcuts. */
     fun load(context: Context): Map<String, String> =

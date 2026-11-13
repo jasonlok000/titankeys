@@ -14,6 +14,7 @@
 - Fewer dumb fixes: Typos like defalt, receieve and bckspace get fixed now.
 - Capital at the start: Shift turns on by itself at the start of a sentence. Push Shift once if you want lowercase.
 - Long words fit: Long suggestions fit in their spot, and the three spots never move.
+- Snippets start with /: Alt+G or hold G, so no more digging for ; on the Sym panel. Already have snippets with ;? You keep it. Pick another in Settings > Snippets.
 
 ## Touchpad
 - Steer and select: Taps for steering and selecting count anywhere on the C V B N row. A triple tap with no slide selects the word.

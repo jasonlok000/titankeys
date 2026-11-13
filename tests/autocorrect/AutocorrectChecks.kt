@@ -5,6 +5,7 @@ import android.view.inputmethod.EditorInfo
 import com.atlas.engine.PhoneWords
 import com.atlas.engine.Swipe
 import com.atlas.engine.SwipeTyping
+import com.atlas.engine.TypingSettings
 import com.atlas.keyboard.Composer
 import com.atlas.keyboard.Editor
 import com.atlas.keyboard.EnterKey
@@ -1166,6 +1167,30 @@ private fun expansions(world: Realistic) {
     }
     same(Typist(world).also { it.composer.commaSpace = { false } }.type("at ;addr ").text, "at;addr ",
         "Nothing expands when there are no snippets")
+
+    // With / as the start, the default since 2.1: a saved shortcut expands, and every other / types exactly as with no snippets.
+    fun slash() = Typist(world).also { it.composer.expansions = Expansions(snippets + ("or" to "OR") + ("2" to "two"), '/', emoji) }
+    same(slash().type("at /addr ").text, "at 1 Main Street ", "Space after a / shortcut puts in the snippet")
+    same(slash().type("at /addr ").backspace().text, "at /addr ", "Backspace straight after puts the / shortcut back")
+    same(slash().type("/hi ").text, "Hello there ", "A / shortcut at the start of the text")
+    same(slash().type("at /adr ").text, "at /adr ", "A / with no saved shortcut stays, with its space where it was typed")
+    for (typed in listOf("this and/or that ", "see http://example.com/addr ", "on 1/2 and 12/25/2026 ", "in /usr/bin ", "r/android ",
+        "a/addr ", "50/50 ", "/ ", "w/o ", "he/she ")) {
+        same(slash().type(typed).text, Typist(world).type(typed).text, "\"$typed\" types as with no snippets")
+    }
+
+    // The start once 2.1 is installed: / for a new install and for whoever had ; and never made a snippet. Anyone else keeps theirs.
+    same(TypingSettings.snippetStartAfterUpdate(null, false), "/", "A new install gets /")
+    same(TypingSettings.snippetStartAfterUpdate(null, true), ";", "The old default stays for someone with snippets")
+    same(TypingSettings.snippetStartAfterUpdate(";", false), "/", "A ; with no snippet ever made becomes /")
+    same(TypingSettings.snippetStartAfterUpdate(";", true), ";", "A ; with snippets stays")
+    same(TypingSettings.snippetStartAfterUpdate(",", false), ",", "Another old start stays, snippets or not")
+    same(TypingSettings.snippetStartAfterUpdate("\\", true), "\\", "A backslash stays")
+    same(TypingSettings.snippetStartAfterUpdate("/", true), "/", "A / stays")
+    same(TypingSettings.snippetStartAfterUpdate("x", false), "/", "Something broken counts as the old default")
+    same(TypingSettings.snippetStartAfterUpdate("x", true), ";", "and stays ; for someone with snippets")
+    must(TypingSettings.SNIPPET_STARTS.none { Expansions.nameChar(it) || it == ':' || it.isWhitespace() },
+        "No offered start can be part of a shortcut or start an emoji name")
 
     // Fields with no suggestions (issue 45): keys type as they are, and the touchpad types no words.
     val email = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, 0)

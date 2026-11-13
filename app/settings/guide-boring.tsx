@@ -36,6 +36,12 @@ export default function BoringGuide() {
       <Text size={SPLASH_SMALL} align="center">{"It's fine. Somebody has to read the manual."}</Text>
     </Stack>
   </Screen>;
+  // The snippet start is the user's own: / unless they picked another.
+  const settings = result.status === "ready" ? result.data : undefined;
+  const start = settings?.snippetStart ?? "/";
+  const startKey = settings ? settings.altKeys[start] : "G";
+  const typeStart = !startKey ? `${start} is on the Sym panel.`
+    : settings?.holdSymbols === false ? `${start} is Alt and ${startKey}.` : `${start} is Alt and ${startKey}, or hold ${startKey}.`;
   return <Screen title="The boring guide" subtitle="Every feature, every setting, in words. Enjoy, nerd." rightAction={closeAction}>
     <Section title="Start here">
       <Topic title="The fun guide">{"The fun guide teaches the main stuff right on the keys, a chapter at a time. Open it from Settings > Guide. This one is for everything else."}</Topic>
@@ -93,7 +99,7 @@ export default function BoringGuide() {
       <Topic title="The clipboard">{"Press Sym, then A. Your last copies are there, newest first, a few to a page. Press a key to paste its clip. Enter pins clips so they stay. Backspace clears the ones that aren't pinned. Alt goes back to the symbols."}</Topic>
     </Section>
     <Section title="Shortcuts">
-      <Topic title="Snippets">{"Type a shortcut like ;addr and press Space. It turns into your address, or whatever you saved for it. Press Backspace right after to get the shortcut back. Make them in Settings > Snippets, where you can also change the ; at the start and back them up."}</Topic>
+      <Topic title="Snippets">{`Type a shortcut like ${start}addr and press Space. It turns into your address, or whatever you saved for it. Press Backspace right after to get the shortcut back. ${typeStart} Make snippets in Settings > Snippets, where you can also pick another symbol for the start and back them up.`}</Topic>
       <Topic title="The Enter key">{"In message apps, Enter can send, or add a new line. Pick which in Settings > Enter key, app by app. Shift and Enter does the other one. Search and other one-line fields stay as they are."}</Topic>
       <Topic title="Exact typing (experimental)">{"In terminals, remote desktops and game streaming, like Termux, AnyDesk and Moonlight, every key goes straight to the app, exactly as you press it. TitanKeys doesn't fix or suggest anything there, and the touchpad stays out of it. Add or remove apps in Settings > Exact typing."}</Topic>
       <Topic title="Exact typing bar (experimental)">{"In those apps the bar shows Shift, Alt, Ctrl, Esc, Tab and More. Tap Shift, Alt or Ctrl to hold it for your next key, press and hold to lock it, and tap again to let go. They add to the keys you press: Shift on the keys and Esc on the bar sends Shift and Esc. More has the arrows, Home, End, PgUp, PgDn and F1 to F12. With Alt sends Alt on, Alt, Shift and Ctrl go to the app as real modifiers, and symbols come from Sym or from holding a key."}</Topic>

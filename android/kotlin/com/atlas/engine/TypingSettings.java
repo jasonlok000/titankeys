@@ -249,18 +249,54 @@ public final class TypingSettings {
         preferences(context).edit().putString("recent_enter_apps", String.join(",", apps)).apply();
     }
 
-    /** The characters that a snippet's shortcut can start with. Words do not use them, so a shortcut never clashes with one. */
-    public static final String SNIPPET_STARTS = ";/\\,";
+    /**
+     * The characters that Settings offers to start a snippet's shortcut, the default first. Each is a symbol that Alt types on
+     * the Titan's keys, and none can be part of a shortcut or start a code of its own, as : does for emoji.
+     */
+    public static final String SNIPPET_STARTS = "/#!?*";
+    /** Starts from before 2.1. Someone who picked one keeps it, but Settings offers it to no one else. */
+    public static final String OLD_SNIPPET_STARTS = ";\\,";
+    private static final String SNIPPET_START = "snippet_start";
+    /** Set once the start has been settled after the update to 2.1. See snippetStartAfterUpdate. */
+    private static final String SNIPPET_START_SETTLED = "snippet_start_settled";
 
-    /** The character that starts a snippet's shortcut, such as ; in ;addr. */
+    /**
+     * The character that starts a snippet's shortcut, such as / in /addr. The first read after the update to 2.1 settles it
+     * once, by snippetStartAfterUpdate, and saves it.
+     */
     public static char snippetStart(Context context) {
-        String start = preferences(context).getString("snippet_start", ";");
-        return start.length() == 1 && SNIPPET_STARTS.contains(start) ? start.charAt(0) : ';';
+        SharedPreferences preferences = preferences(context);
+        String start = preferences.getString(SNIPPET_START, null);
+        if (!preferences.getBoolean(SNIPPET_START_SETTLED, false)) {
+            start = snippetStartAfterUpdate(start, madeSnippets(context));
+            preferences.edit().putString(SNIPPET_START, start).putBoolean(SNIPPET_START_SETTLED, true).apply();
+        }
+        return validSnippetStart(start) ? start.charAt(0) : SNIPPET_STARTS.charAt(0);
     }
 
     public static void snippetStart(Context context, String start) {
-        if (start.length() != 1 || !SNIPPET_STARTS.contains(start)) throw new IllegalArgumentException("Not a snippet start");
-        preferences(context).edit().putString("snippet_start", start).apply();
+        if (!validSnippetStart(start)) throw new IllegalArgumentException("Not a snippet start");
+        preferences(context).edit().putString(SNIPPET_START, start).putBoolean(SNIPPET_START_SETTLED, true).apply();
+    }
+
+    /** Whether a start can begin a snippet's shortcut: one that Settings offers, or one from before 2.1. */
+    public static boolean validSnippetStart(String start) {
+        return start != null && start.length() == 1 && (SNIPPET_STARTS.contains(start) || OLD_SNIPPET_STARTS.contains(start));
+    }
+
+    /**
+     * The start once 2.1 is installed, decided once. stored is the saved start, or null if the user never picked one, which
+     * meant ; before 2.1. Someone who ever made a snippet keeps their start. Someone with ; who never made one gets /, the new
+     * default, and so does a new install. No Android here, so the tests can reach it.
+     */
+    public static String snippetStartAfterUpdate(String stored, boolean madeSnippets) {
+        String start = validSnippetStart(stored) ? stored : ";";
+        return start.equals(";") && !madeSnippets ? SNIPPET_STARTS.substring(0, 1) : start;
+    }
+
+    /** Whether the user ever saved, removed or imported a snippet: Snippets.kt writes its list in "snippets" each time. */
+    private static boolean madeSnippets(Context context) {
+        return context.getSharedPreferences("snippets", Context.MODE_PRIVATE).contains("list");
     }
 
     /** Chat shorthand such as "shd" becomes its full word, "should" (issue 63). Off by default: then it stays as typed. */

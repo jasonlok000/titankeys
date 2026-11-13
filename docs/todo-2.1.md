@@ -154,7 +154,15 @@ all of them are unapproved.
     - a lone Space is refused on the Swipe and Steering slides, with a Space-appropriate chip on the Alt slide;
     - no stray space after Next with the menu open;
     - the ∞ instruction stops naming ∞.
-  - **C** (claude/guide-visual-polish, with the brackets): brackets pushed (707f28f); the rest is in C's verify, as of 07:35.
+  - **C** (claude/guide-visual-polish, with the brackets): **done and merged** (707f28f, aa021de; merge 7db5c06).
+    - The brackets pass behind the labels with a 4 dp gap.
+    - Keep-outs fade softly, with nothing under the status bar.
+    - The share screen's answers are pinned at the bottom.
+    - The paste selection is orange at 50%, matching the owner's solid orange triple-space selection.
+    - Not in the renders: the share screen and the paste selection. Check both on the phone.
+    - Follow-up sent: on black, the playground's next line had the same grey as the current line, so the two ran together.
+      It's dimmed to half, with a wider gap.
+- **Build #3** started from 7db5c06, with everything from the run-through except that follow-up.
     - the share screen gets FixedScale, with its buttons pinned (at font 2.0 the accept was off screen);
     - decoration keep-outs feathered, with the 8 dp gap and nothing under the status bar;
     - the playground's effects go behind its text;

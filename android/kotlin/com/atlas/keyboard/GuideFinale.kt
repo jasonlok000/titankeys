@@ -74,8 +74,8 @@ internal object GuideFinale {
     const val BUILT_DP = 19f
     const val PHRASE_DP = 112f
     const val BLOCK_GAP = 32f
-    /** The bottom of the end is the grass's, this tall: the finale and the end's block keep above it. */
-    const val GRASS_DP = 96f
+    /** The bottom of the end is the grass's, this tall, a real band (owner's reference): the finale and the end's block keep above it. */
+    const val GRASS_DP = 150f
     /** How much bigger a first letter grows as it lights. */
     const val LIT_GROWTH = 1.3f
 

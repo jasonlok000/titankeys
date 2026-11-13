@@ -38,19 +38,19 @@ TitanKeys has one goal: to be the keyboard the Titan 2 Elite deserves.
 
 EVERYTHING FROM THE KEYS
 
-• Nothing to unlearn. Type with two hands or one. When you push Space, TitanKeys fixes a typo in the word you just typed. A small language model on your phone helps it pick the fix that fits the sentence, and typing never waits for it.
+• Nothing to unlearn. Type with two hands or one. When you press Space, TitanKeys fixes a typo in the word you just typed. A small language model on your phone helps it pick the fix that fits the sentence, and typing never waits for it.
 
-• Swipe on the same keys. Slide across the letters of a word without pushing, then lift. If your thumb slips off the top of the keys and comes back, it's still the same word.
+• Swipe on the same keys. Slide across the letters of a word without pressing, then lift. If your thumb slips off the top of the keys and comes back, it's still the same word.
 
 • Missed? One touch fixes it. The strip above the keys shows the other words a swipe could be. Touch one to put it in. Before you type, the strip suggests the next word.
 
-• Delete without reaching up. Flick left from Backspace to delete a word. Keep your finger down to delete more.
+• Delete without reaching up. Flick left from Backspace to delete a word. Keep your finger down to delete more, faster the further you slide.
 
-• Steer and select from Space. Touch Space twice, hold, and lean left or right to move the cursor. You feel a tick for each letter, so you can count without looking. Touch Space three times to select words instead.
+• Steer and select from Space. Tap Space twice, hold the second tap, and slide left or right to move the cursor. You feel a tick for each letter, so you can count without looking. Tap Space three times to select words instead.
 
-• Every symbol within reach. Hold a letter for the symbol printed on it. Push Sym for every other symbol.
+• Every symbol within reach. Hold a letter for the symbol printed on it. Press Sym for every other symbol.
 
-• Emoji and settings, no screen. Push Sym twice for emoji. In the panel, Alt opens quick settings, with a letter for each one.
+• Emoji and settings, no screen. Press Sym twice for emoji. In the panel, Alt opens quick settings, with a letter for each one.
 
 SET UP IN A MINUTE
 
@@ -68,7 +68,7 @@ WHY IT ASKS FOR PERMISSIONS
 
 • Display over other apps: the Titan sends touchpad input to the window on top, so this keeps your swipes on the keys when an app shows its own pop-ups.
 
-• Accessibility (optional): lets one push of Back close the keyboard and go back. At a few set times, such as while the Sym panel is open, it also sees which keys you push. It can't read your screen.
+• Accessibility (optional): lets one press of Back close the keyboard and go back. At a few set times, such as while the Sym panel is open, it also sees which keys you press. It can't read your screen.
 
 • Notifications: for TitanKeys news. They're silent and never show while you type.
 

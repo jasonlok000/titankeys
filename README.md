@@ -32,7 +32,7 @@ The first slide of the guide is setup. It opens each Settings page for you, sees
 2. **Make it your keyboard.**
 3. **Allow it over other apps.** The Titan sends touchpad input to the window on top, so this keeps the touchpad on the keys when an app shows its own buttons.
 4. **Turn on Scroll assistant,** the phone's own switch that the touchpad needs.
-5. **Let TitanKeys handle Back** in Accessibility, so one push of Back closes the keyboard and goes back. TitanKeys never reads your screen.
+5. **Let TitanKeys handle Back** in Accessibility, so one press of Back closes the keyboard and goes back. TitanKeys never reads your screen.
 
 Then the guide teaches everything below, one slide each, on the real keys. Each slide shows its gesture in grey as soon as it opens, then waits for you to do it on the keys. After the guide, the app opens on a playground with the same look, to try anything.
 
@@ -40,37 +40,37 @@ Then the guide teaches everything below, one slide each, on the real keys. Each 
 
 ### Nothing to unlearn
 
-Type with two hands or one, as on any keyboard. When you push Space, TitanKeys fixes the typo in the word you just typed. A small language model helps it pick the fix that fits the sentence, and typing never waits for it.
+Type with two hands or one, as on any keyboard. When you press Space, TitanKeys fixes the typo in the word you just typed. A small language model helps it pick the fix that fits the sentence, and typing never waits for it.
 
 ### Now swipe on the same keys
 
-The Titan's keys are a touchpad too. Slide across the letters of a word without pushing, then lift. A thumb that slips off the top of the sensor and comes back keeps the same word, and a resting thumb or a quick brush between key presses types nothing. TitanKeys knows its own name: swipe it and see.
+The Titan's keys are a touchpad too. Slide across the letters of a word without pressing, then lift. A thumb that slips off the top of the sensor and comes back keeps the same word, and a resting thumb or a quick brush between key presses types nothing. TitanKeys knows its own name: swipe it and see.
 
 ### Missed? One touch fixes it
 
 The strip above the keys shows the other words that a swipe could be. Touch one to put it in. Before you type, the strip suggests the next word.
 
-Touch and hold a word on the strip for its menu. **Save** keeps it in your words. **Forget** stops it as a suggestion and as a fix, with Undo for a moment, and **Settings > Your words** gives it back. Select one word in the text, such as a name that never swipes right, and the strip shows it with the same menu.
+Touch and hold a word on the strip for its menu. **I** moves it up: Save, then Favourite. **O** moves it back down, one step at a time. A word TitanKeys only learned from your typing gets **Forget**, with Undo for a moment, and **Settings > Your words** gives it back. Select one word in the text, such as a name that never swipes right, and the strip shows it with the same menu.
 
 ### Delete without reaching up
 
-Flick left from Backspace to delete a word. Keep your finger down to delete more: the longer the flick, the faster it goes.
+Flick left from Backspace to delete a word. Keep your finger down to delete more: slide further out to go faster, or back onto Backspace to pause.
 
 ### Steer and select from Space
 
-Touch Space two times, keep the second touch down, swipe up onto the letters, then lean left or right. The cursor moves slowly near the middle and quickly near the edge. You feel a tick for each letter and a stronger one at each space, so you can count words without looking. Touch Space three times to select words instead, and lean the other way to give them back one at a time.
+Tap Space twice and keep your finger down on the second tap, then slide left or right. The cursor moves slowly near the middle and quickly near the edge. You feel a tick for each letter and a stronger one at each space, so you can count words without looking. Tap Space three times to select words instead, and slide back the other way to give them back one at a time.
 
 ### Every symbol within reach
 
-Hold a letter for the symbol printed in its corner. Push Sym for every other symbol, in groups: swipe up or down for more, or rest a finger on the bottom row to pick a group.
+Hold a letter for the symbol printed in its corner. Press Sym for every other symbol, in groups: swipe up or down for more, or rest a finger on the bottom row to pick a group.
 
 ### Emoji and settings, no screen
 
-Push Sym two times for emoji. In the panel, Alt opens quick settings, with a letter for each setting, such as S for swiping and V for vibration, without leaving the app you are in.
+Press Sym twice for emoji. In the panel, Alt opens quick settings, with a letter for each setting, such as S for swiping and V for vibration, without leaving the app you are in.
 
 ### Paste what you copied
 
-Right after you copy text, the strip shows it: touch it to paste. For older clips, push Sym, then A for the clipboard. It works like the symbols: six clips to a page, two to a row, each in a wide field over half a row of keys. Push any key under a clip to paste it, swipe up or down for more, and swipe sideways or rest a finger on the bottom row for **Pinned**. Clips go after an hour, unless you pin them: push Enter, then a key under the clip. Push Backspace two times to clear all but the pinned clips. TitanKeys keeps no text that an app marks as sensitive, nothing copied from a password field, and nothing leaves the phone.
+Right after you copy text, the strip shows it: touch it to paste. For older clips, press Sym, then A for the clipboard. It works like the symbols: six clips to a page, two to a row, each in a wide field over half a row of keys. Press any key under a clip to paste it, swipe up or down for more, and swipe sideways or rest a finger on the bottom row for **Pinned**. Clips go after an hour, unless you pin them: press Enter, then a key under the clip. Press Backspace twice to clear all but the pinned clips. TitanKeys keeps no text that an app marks as sensitive, nothing copied from a password field, and nothing leaves the phone.
 
 ### Snippets and emoji by name
 
@@ -236,7 +236,7 @@ The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exac
 
 TitanKeys doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
 
-TitanKeys asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "TitanKeys is displaying over other apps" notification while it's there, which you can turn off. Its Accessibility service only sends Back and, while the Sym panel is open or in a launcher search, reads the keys you push. While you type, it also keeps a 1-pixel window above the notification shade, so that a notification can't take the touchpad.
+TitanKeys asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "TitanKeys is displaying over other apps" notification while it's there, which you can turn off. Its Accessibility service only sends Back and, while the Sym panel is open or in a launcher search, reads the keys you press. While you type, it also keeps a 1-pixel window above the notification shade, so that a notification can't take the touchpad.
 
 **Settings > Record a bug** records your touches, keys and what the keyboard did, only while you ask it to and for 3 minutes at most, never in password or private fields. You see what's in the file before you share it, and TitanKeys never uploads it: you send it where you like.
 

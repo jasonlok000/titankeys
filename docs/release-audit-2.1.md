@@ -95,3 +95,67 @@ say only what state the UI was in:
 
 The phone checks for the pre-release (install the release build over the last one, the guide, the front page, Record a bug and a
 backup) are the owner's three days of use. This audit didn't run any.
+
+## Re-audit, 2026-11-13 (evening)
+
+The near-final 2.1 tree, `test-2.1h` at 2b7d234: everything but V's playground layout fix, which touches only GuideActivity's
+layout. Same method as above: the release variant built with `tools/release.sh` in a copy of its own, after the same
+`compat.py` and Ink patch the full verify uses, signed with a new throwaway keystore made for this and nothing else. The owner's
+signing folder was never read, and the APK is not shared. Read with `aapt2`, `dexdump` and `unzip`. No phone.
+
+**The APK:** `com.titankeys` 2.1.0 (57), SDK 34 to 36, arm64 only, 116.0 MB (151 MB unpacked, 87 files). Not debuggable, not
+test-only, `allowBackup` off. The release-notes check passed as part of the build, and `bun test tools/checks` passed on the tree
+(175 tests, the debug-only ones included).
+
+### What changed since the first audit
+
+- **Permissions:** none. Still exactly the six above.
+- **Components:** one fewer. Ink's `InkLightSdkReceiver` is gone: the Ink patch now takes it out of the manifest, which settles
+  [For the owner](#for-the-owner) item 1. 17 components remain, and only three are exported: `MainActivity` (the launcher),
+  `AtlasIme` (behind BIND_INPUT_METHOD) and `BackService` (behind BIND_ACCESSIBILITY_SERVICE). `GuideFrameActivity` stays not
+  exported, as this audit first set it. Nothing else was added, removed or changed.
+- **Correction to item 5 above:** the release is shrunk and renamed by R8 (classes such as `f.H6`), so it is minified. Its
+  debug-level log lines stay because no rule strips `Log` calls, not because nothing is minified. The advice is the same: leave
+  them.
+- **New log lines:** two, neither with text. One counts the shorthand entries put back in lowercase. The other says a word
+  menu step failed, with the engine's fixed message, never the word.
+
+### Checked especially
+
+- **D's Ink patch carries `autoCapitalise` through.** The ignored `compat.py` keeps `autoCapitalise={false}` because the patch
+  defines it. In the APK, the settings bundle (`assets/app.jsbc`) passes it on the shorthand field, beside its "saved in
+  lowercase" line. Ink's library (`libink_android.so`) reads it and sends `capitalise` to the native editor. The keyboard
+  adapter, compiled into `MainActivity`'s code, reads `capitalise` to set the field's input type.
+- **Debug broadcasts:** `com.titankeys.debug.IDLE_BAR` and `com.titankeys.debug.PANEL` are in the code as strings. The
+  release's `AtlasIme.onCreate` registers them only after `packageName.endsWith(".debug")`, read from its compiled code, so they
+  never register in `com.titankeys`. The other two receivers are the system's screen on and off, not exported.
+- **Other debug-only parts:** as in the first audit. The recorder isn't compiled in. The Haptics lab, Key calibration, the guide's
+  still frames and the raw log export are compiled in but inert, not exported, and close at once outside `.debug`.
+- **No debug-only drawing ships.** W's bar-line renders and guides (`tests/menu-render`, including `BarLine.kt`) and
+  `tools/corner_check.py` are outside the Android source. No render, preview or overlay class is among the APK's 912 classes,
+  and no file is HTML, Python or a render. The fast-preview pages and any `localhost` or `adb reverse` hooks are absent from the
+  code and the settings bundle. The bar line's code that does ship (`Corners`, `LineText`, `StripFit`) is the feature itself.
+
+### release-notes.txt against today's changes
+
+The notes aren't edited here: Master writes the wording.
+
+| Change | In the notes? |
+|---|---|
+| Bar text sizes | Partly. "Same size at any setting" names Smaller, Normal and Bigger, and says the text is a bit bigger. It doesn't say everyone starts at Normal. |
+| The bar's lower line | Yes. "One size": everything on the bar sits dead centre of the black, the bar and the border under the screen. |
+| The shortcut switches | **Missing.** "Two new shortcuts" says they're built in, but not that each can be turned off in Settings > Shortcuts. |
+| The idle games' 3-minute rule | **Missing, and the line misleads.** "Leave the bar alone and it starts playing" reads as every time. The rule: one roll, a 1 in 4 chance, exactly 3 minutes after you stop. Never twice in a row, and never the same game twice running. |
+| Lowercase shorthand | **Missing.** "Your shorthand stays" doesn't say shorthand is saved in lowercase, or that old entries are fixed. |
+| A panel moves nothing on the guide | **Missing.** Opening Sym on a guide slide no longer drops the title, instruction and field, or slides the decoration. It fits under Fixed. |
+| The menu's press tick | Yes. "Word menu presses", with its switch named as in Settings (Press a word menu button). |
+| The word colours | **Missing.** "Word menu" lists the steps and the effects but not that the word's colour is its status: favourite orange, saved white, not saved grey, blocked grey and struck through. |
+
+### For the owner, new
+
+6. **The release needs the patched Ink.** `tools/release.sh` doesn't apply `tools/ink/titankeys.patch` or run `compat.py`; the
+   full verify does both, in the shared Ink checkout. A release built against clean Ink loses the patch's parts: the theme accent,
+   `autoCapitalise` (the shorthand field would capitalise again), the app press haptic and the Light Phone receiver's removal.
+   Build the release where the verify builds, or make `release.sh` check the patch's mark first.
+7. **A stale comment.** `tools/checks/debug-only.test.ts` still says Ink adds `InkLightSdkReceiver` when it builds. It no longer
+   does. The test itself is right.

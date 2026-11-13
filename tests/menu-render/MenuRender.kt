@@ -22,10 +22,11 @@ import kotlin.math.floor
  * are drawn as Strip draws them, with the real [MenuKeys] placing them over the calibrated keys, its sizes and the app's own vector
  * drawables. The app shows above the bar, where the effects rise. Each sheet is a PNG in the folder given, dark and light.
  *
- * It checks four of the owner's corrections in pixels too, and fails if any breaks: a hovered button's pill covers the buttons to
- * its left (hovering Unsave covers Favourite), the book is opaque once it shuts, so the word's ink can't be seen through it, every
- * rung's word is solid in its own colour, with each preview about 60% of the way to the next, and the status marks sit filled in
- * the bar, just over the word's real letters.
+ * It checks three of the owner's corrections in pixels too, and fails if any breaks: a hovered button's pill covers the buttons to
+ * its left (hovering Unsave covers Favourite), the book is opaque once it shuts, so the word's ink can't be seen through it, and
+ * every rung's word is solid in its own colour, the status, with each preview about 60% of the way to the next, with Orange accents
+ * on and off. The rungs at rest and hovered are drawn with accents off too (menu-all-accent-off), and the guide's light under its
+ * word (Strip.lit) on the bar and through the word's menu.
  */
 fun main(args: Array<String>) {
     // ACCENT=off draws everything as with Settings > Orange accents off: Accent's cream in place of orange.
@@ -44,25 +45,31 @@ fun main(args: Array<String>) {
     val (up, down, back) = Triple(MenuKeys.UP, MenuKeys.DOWN, MenuKeys.BACK)
     val moved = KeyAlignment(.05f, .93f)
     val word = "whatever"
-    val states = listOf(
+    fun stills() = listOf(
         Still("1-blocked", "Blocked: the word in the dim grey, struck through in the muted grey. I unblocks; O has nothing", word, blocked),
         Still("2-blocked-hover-i", "Blocked, hovering I: Unblock fades the strike to 30% and lightens the word 60% toward grey", word, blocked, up),
         Still("3-not-saved", "Not saved: the word solid, in the muted grey. I saves, O blocks", word, new),
         Still("4-not-saved-hover-i", "Not saved, hovering I: Save brightens the word 60% toward white", word, new, up),
         Still("5-not-saved-hover-o", "Not saved, hovering O: Block shows a grey strike and darkens the word 60% toward the dim grey", word, new, down),
-        Still("6-saved", "Saved: solid white, its filled book in the bar just over the word. I favourites, O unsaves", word, saved),
-        Still("7-saved-hover-i", "Saved, hovering I: a grey heart in the book's place over the word; the book fades out", word, saved, up),
+        Still("6-saved", "Saved: solid white, and nothing else. I favourites, O unsaves", word, saved),
+        Still("7-saved-hover-i", "Saved, hovering I: Favourite tints the word 60% toward the accent", word, saved, up),
         Still("8-saved-hover-o", "Saved, hovering O: Unsave dims the word 60% toward grey, and its pill covers Favourite", word, saved, down),
-        Still("9-favourite", "Favourite: solid white, its heart in the bar over the word, I spent", word, favourite),
-        Still("10-favourite-hover-i", "Favourite, hovering I: already a favourite", word, favourite, up),
-        Still("11-favourite-hover-o", "Favourite, hovering O: Unfavourite shows the heart cracked, in its place", word, favourite, down),
+        Still("9-favourite", "Favourite: the word in the accent, and nothing else. I spent", word, favourite),
+        Still("10-favourite-hover-i", "Favourite, hovering I: already a favourite, so the word stays", word, favourite, up),
+        Still("11-favourite-hover-o", "Favourite, hovering O: Unfavourite fades the word 60% toward white", word, favourite, down),
         Still("12-hover-p", "Hovering P (or Backspace): Back has no pill", word, saved, back),
         Still("13-long-hover-o", "Long word, hovering O: the pill slides over its fading end", "pneumonoultramicroscopicsilicovolcanoconiosis", saved, down),
         Still("14-moved-calibration", "A moved calibration (Q at 5%, P at 93%): the buttons follow the keys", word, saved, alignment = moved),
         Still("15-moved-hover-o", "Moved calibration, hovering O", word, saved, down, alignment = moved),
-        Still("16-tall-letters", "Tall letters and an accented capital: the mark stays clear of them", "Éclairs", favourite),
-        Still("17-long-favourite", "A long favourite: its heart centred on the word", "pneumonoultramicroscopicsilicovolcanoconiosis", favourite),
+        Still("16-long-favourite", "A long favourite, hovering O", "pneumonoultramicroscopicsilicovolcanoconiosis", favourite, down),
+        Still("17-lit-bar", "The guide's light (Strip.lit): TitanKeys alone on the bar, underlined in the accent", "TitanKeys", new, lit = true,
+            bar = true),
+        Still("18-lit-not-saved", "Lit, its menu open: the line stays under the word", "TitanKeys", new, lit = true),
+        Still("19-lit-hover-i", "Lit, hovering I: Save's preview", "TitanKeys", new, up, lit = true),
+        Still("20-lit-saved", "Lit, saved: white", "TitanKeys", saved, lit = true),
+        Still("21-lit-favourite", "Lit, a favourite: the accent", "TitanKeys", favourite, lit = true),
     ).map { it.frame(looks) }
+    val states = stills()
     // Each effect: the resting finger's preview, then the press and its frames, with the haptic's frame marked in the caption.
     val moves = listOf(
         Triple(MenuKeys.Button.Save, new, up), Triple(MenuKeys.Button.Favourite, saved, up), Triple(MenuKeys.Button.Unfavourite, favourite, down),
@@ -89,19 +96,16 @@ fun main(args: Array<String>) {
         }
         frames
     }
-    // A favourite at rest: now and then its heart beats, twice, in its place in the bar.
-    val ambient = run {
-        val scene = looks.scene(word, favourite, KeyAlignment.DEFAULT)
-        var now = 0
-        listOf(0, 1150, 1260, 1330, 1440, 1700).map { t ->
-            while (now < t) { scene.step(1 / 120f); now += 1000 / 120 }
-            Frame("ambient-$t", "Favourite at rest, $t ms: its heart beats now and then (the first at 1.2 s), in the bar", scene.snapshot(), favourite, -1, above = 20)
-        }
-    }
-    val sheets = listOf("menu-all" to states, "menu-effects" to effects, "menu-ambient" to ambient, "menu-press" to pressRows(looks))
+    val sheets = mutableListOf("menu-all" to states, "menu-effects" to effects, "menu-press" to pressRows(looks))
+    // With Orange accents off: a favourite in the darker cream, apart from the white and the grey.
+    val accents = Accent.on
+    Accent.on = false
+    val off = stills()
+    Accent.on = accents
     for (dark in listOf(true, false)) {
         val suffix = if (dark) "" else "-light"
-        for ((sheet, frames) in sheets) {
+        for ((sheet, frames) in sheets + ("menu-all-accent-off" to off)) {
+            if (sheet == "menu-all-accent-off") Accent.on = false
             val drawn = frames.map { looks.draw(it, dark) }
             val image = BufferedImage(WIDTH, drawn.sumOf { it.height }, BufferedImage.TYPE_INT_RGB)
             var y = 0
@@ -111,12 +115,12 @@ fun main(args: Array<String>) {
                 if (sheet == "menu-all" || sheet == "menu-press") ImageIO.write(single, "png", File(folder, "menu-${frames[index].name}$suffix.png"))
             }
             ImageIO.write(image, "png", File(folder, "$sheet$suffix.png"))
+            Accent.on = accents
         }
     }
     thePillCoversTheButtonsToItsLeft(looks)
     theShutBookHidesTheWord(looks, folder)
     theWordIsSolid(looks)
-    theMarksSitOverTheWord(looks)
     // The best word in each weight the owner could have, to pick the one that reads as bold without looking heavy.
     barSheet(folder, regular, medium, "Medium", -668 to 2272, drawables)
     barSheet(folder, regular, bold, "Bold", -685 to 2279, drawables)
@@ -125,14 +129,18 @@ fun main(args: Array<String>) {
 
 private var lastHaptic = ""
 
-/** A rung at rest, hovered on [hover] or not, as a frame: the preview has faded in. */
+/**
+ * A rung at rest, hovered on [hover] or not, as a frame: the preview has faded in. [lit] underlines the word as Strip.lit does, and
+ * [bar] shows the word alone on the bar, before its menu opens.
+ */
 private class Still(val name: String, val caption: String, val word: String, val step: MenuKeys.Step, val hover: Int = -1,
-                    val alignment: KeyAlignment = KeyAlignment.DEFAULT) {
+                    val alignment: KeyAlignment = KeyAlignment.DEFAULT, val lit: Boolean = false, val bar: Boolean = false) {
     fun frame(looks: Looks): Frame {
         val scene = looks.scene(word, step, alignment)
         MenuKeys.choices(step).let { if (hover == MenuKeys.UP) it.i else if (hover == MenuKeys.DOWN) it.o else null }?.let { scene.hover(it) }
         repeat(60) { scene.step(1 / 120f) }
-        return Frame(name, caption, scene.snapshot(), step, hover, alignment, above = 40)
+        val line = if (lit) floatArrayOf(scene.wordLeft * DENSITY, (scene.wordLeft + scene.wordWidth) * DENSITY, scene.baseline * DENSITY) else null
+        return Frame(name, caption, scene.snapshot(), step, hover, alignment, above = 40, lit = line, barWord = if (bar) word else null)
     }
 }
 
@@ -141,7 +149,8 @@ private class Still(val name: String, val caption: String, val word: String, val
  * how much of the app shows above the bar, in dp.
  */
 private class Frame(val name: String, val caption: String, val scene: Snapshot, val step: MenuKeys.Step, val hover: Int,
-                    val alignment: KeyAlignment = KeyAlignment.DEFAULT, val above: Int = 40)
+                    val alignment: KeyAlignment = KeyAlignment.DEFAULT, val above: Int = 40, val lit: FloatArray? = null,
+                    val barWord: String? = null)
 
 /** The scene's drawing as it was, in the dark look and the light one: its word, and its effects. */
 private class Snapshot(val darkWord: Recording, val darkEffects: Recording, val lightWord: Recording, val lightEffects: Recording) {
@@ -253,17 +262,13 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
 
     /**
      * The scene for [word] at [step], placed and shortened as Strip.drawMenu does it: on the baseline of the bar's own height, which
-     * keeps Normal's at every Settings > Size, with the bar's height and the word's room in the menu's dp.
+     * keeps Normal's at every Settings > Size.
      */
     fun scene(word: String, step: MenuKeys.Step, alignment: KeyAlignment): MenuScene {
         val (left, right) = room(alignment)
         val text = MenuKeys.shorten(word) { measure.measure(it) * DENSITY <= right - left }
         return MenuScene(text, MenuScene.WordLayout.of(text, measure.top(text)) { measure.measure(it) }, MenuKeys.wordCentre(left, right) / DENSITY,
-            StripFit.baseline(ROW / 2f, MenuScene.FONT_DP * DENSITY) / DENSITY, step).apply {
-            barDp = ROW / DENSITY
-            roomLeft = left / DENSITY
-            roomRight = right / DENSITY
-        }
+            StripFit.baseline(ROW / 2f, MenuScene.FONT_DP * DENSITY) / DENSITY, step)
     }
 
     fun label(button: MenuKeys.Button) = string(strings, "strip_" + button.name.lowercase())
@@ -290,6 +295,23 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
         g.color = paper
         g.fillRect(0, top, WIDTH, ROW)
         g.translate(0, top)
+        // The guide's light, as Strip.underline draws it: the accent, or the ink with Orange accents off, as the bar's look has it.
+        fun lit(left: Float, right: Float, baseline: Float) {
+            g.color = if (Accent.on) Color(ORANGE) else ink
+            val top = baseline + LIT_GAP_DP * DENSITY
+            g.fill(java.awt.geom.Rectangle2D.Float(left, top, right - left, LIT_DP * DENSITY))
+        }
+        // The word alone on the bar, in its middle place, before its menu opens: bold, the bar's ink.
+        frame.barWord?.let { alone ->
+            g.font = bold.deriveFont(MenuScene.FONT_DP * DENSITY)
+            g.color = ink
+            val wide = g.fontMetrics.stringWidth(alone).toFloat()
+            val baseline = StripFit.baseline(ROW / 2f, MenuScene.FONT_DP * DENSITY)
+            g.drawString(alone, (WIDTH - wide) / 2, baseline)
+            if (frame.lit != null) lit((WIDTH - wide) / 2, (WIDTH + wide) / 2, baseline)
+            g.dispose()
+            return image
+        }
         val canvas = AwtMenuCanvas(g, bold)
         // The scene draws in dp, in the frame's colours.
         fun scene(word: Boolean) {
@@ -299,6 +321,7 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
             g.transform = saved
         }
         scene(true)
+        frame.lit?.let { (left, right, baseline) -> lit(left, right, baseline) }
         // The pill, as Strip draws it: it grows left from its key's column and covers what it slides over.
         val icon = MENU_ICON_DP * DENSITY
         val step = frame.step
@@ -414,11 +437,11 @@ private fun theShutBookHidesTheWord(looks: Looks, folder: File) {
 }
 
 /**
- * Every rung's word is solid in its own colour, in the dark look and the light one (owner, 2026-11-13: the outline was "pretty not
- * visible" at every width, so Not saved is a solid grey word). Saved and Favourite are the ink, Not saved the muted grey, Blocked the
- * dim grey; a resting finger's preview moves the word 60% of the way to the next look, and a heart's leaves it be. The word is
- * drawn without smoothing, so each letter's pixels are its one colour: away from the strike and under the status marks, every pixel
- * of the word must be the expected colour, to within 2 a channel, and there must be a word's worth of them.
+ * Every rung's word is solid in its own colour, the status, in the dark look and the light one, with Orange accents on and off
+ * (owner, 2026-11-13: "favourited = orange. saved = white. neutral = grey. blocked = grey + striked through"). Saved is the ink,
+ * Favourite its own colour, Not saved the muted grey, Blocked the dim grey; a resting finger's preview moves the word 60% of the
+ * way to the next. The word is drawn without smoothing, so each letter's pixels are its one colour: away from the strike, every
+ * pixel of the word must be the expected colour, to within 2 a channel, and there must be a word's worth of them.
  */
 private fun theWordIsSolid(looks: Looks) {
     fun toward(from: Int, to: Int, t: Float): Int {
@@ -427,16 +450,21 @@ private fun theWordIsSolid(looks: Looks) {
     }
     fun near(a: Int, b: Int) = (0..16 step 8).all { abs(((a shr it) and 0xFF) - ((b shr it) and 0xFF)) <= 2 }
     val (blocked, new, saved, favourite) = MenuKeys.Step.entries
-    for ((look, palette) in listOf("dark" to MenuScene.Palette.DARK, "light" to MenuScene.Palette.LIGHT)) {
+    val accents = Accent.on
+    for ((look, palette) in listOf(true, false).flatMap { on ->
+        Accent.on = on
+        val with = if (on) "accents on" else "accents off"
+        listOf("dark, $with" to MenuScene.Palette.DARK, "light, $with" to MenuScene.Palette.LIGHT)
+    }) {
         val p = palette
         val cases = listOf(
-            Triple(blocked, null, p.dim), Triple(new, null, p.grey), Triple(saved, null, p.ink), Triple(favourite, null, p.ink),
+            Triple(blocked, null, p.dim), Triple(new, null, p.grey), Triple(saved, null, p.ink), Triple(favourite, null, p.favourite),
             Triple(blocked, MenuKeys.Button.Unblock, toward(p.dim, p.grey, .6f)),
             Triple(new, MenuKeys.Button.Save, toward(p.grey, p.ink, .6f)),
             Triple(new, MenuKeys.Button.Block, toward(p.grey, p.dim, .6f)),
             Triple(saved, MenuKeys.Button.Unsave, toward(p.ink, p.grey, .6f)),
-            Triple(saved, MenuKeys.Button.Favourite, p.ink),
-            Triple(favourite, MenuKeys.Button.Unfavourite, p.ink),
+            Triple(saved, MenuKeys.Button.Favourite, toward(p.ink, p.favourite, .6f)),
+            Triple(favourite, MenuKeys.Button.Unfavourite, toward(p.favourite, p.ink, .6f)),
         )
         for ((step, hover, expected) in cases) {
             val scene = looks.scene("whatever", step, KeyAlignment.DEFAULT)
@@ -454,13 +482,12 @@ private fun theWordIsSolid(looks: Looks) {
             g.translate(-left.toDouble(), 0.0)
             scene.paintWord(AwtMenuCanvas(g, looks.bold))
             g.dispose()
-            // The strike runs 5.6 dp over the baseline, 2.1 dp thick, and the status marks stand over the word: their rows are left out.
+            // The strike runs 5.6 dp over the baseline, 2.1 dp thick: its rows are left out.
             val strike = (scene.baseline - 5.6f - 1.6f) * scale..(scene.baseline - 5.6f + 1.6f) * scale
-            val marks = (scene.statusPlace()[1] + 1f) * scale
             var count = 0
             val wrong = HashSet<Int>()
             for (y in 0 until image.height) {
-                if (y.toFloat() in strike || y < marks) continue
+                if (y.toFloat() in strike) continue
                 for (x in 0 until image.width) {
                     val rgb = image.getRGB(x, y) and 0xFFFFFF
                     if (rgb == palette.paper) continue
@@ -473,67 +500,8 @@ private fun theWordIsSolid(looks: Looks) {
             check(count > scene.wordWidth * scale * scale) { "$how: a word's worth of solid letters, not $count px" }
         }
     }
-    println("Every rung's word is solid in its own colour, each preview 60% of the way to the next, dark and light")
-}
-
-/**
- * The status marks sit in the bar just over the word, never on its letters (owner, 2026-11-13: "statuses should be kept maybe just
- * slightly on top of the word"). For words with tall letters, dots and an accented capital, placed as Strip places them in the real
- * font, every mark at rest and every heart preview is inside the bar and at least 2 dp over the word's real glyphs. And the marks are
- * filled ("the book should be filled I think"): drawn without smoothing, most of the book's box is its white at 60% over the bar, and
- * most of the heart's is the accent at 70%.
- */
-private fun theMarksSitOverTheWord(looks: Looks) {
-    val (_, _, saved, favourite) = MenuKeys.Step.entries
-    val frc = BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB).createGraphics().fontRenderContext
-    for (word in listOf("whatever", "officially", "Éclairs", "jiffy", "pneumonoultramicroscopicsilicovolcanoconiosis")) {
-        for ((step, hover) in listOf(saved to null, favourite to null, saved to MenuKeys.Button.Favourite, favourite to MenuKeys.Button.Unfavourite)) {
-            val scene = looks.scene(word, step, KeyAlignment.DEFAULT)
-            hover?.let { scene.hover(it) }
-            repeat(60) { scene.step(1 / 120f) }
-            val glyphs = looks.bold.deriveFont(MenuScene.FONT_DP).createGlyphVector(frc, scene.word).visualBounds
-            val letters = scene.baseline + glyphs.y.toFloat()
-            val marks = scene.statusMarks()
-            // At a bigger Size the bar has less room over the word, and a mark with no room to read hides.
-            check(marks.size == 1 || (DENSITY > 1.55f && marks.isEmpty() && scene.statusPlace()[2] == 0f)) {
-                "$word, $step${hover?.let { ", hovering $it" } ?: ""}: one mark, not ${marks.map { it.first }}"
-            }
-            for ((name, box) in marks) {
-                check(box[1] >= 0f && box[3] <= scene.barDp) { "$word's $name sits inside the bar: ${box.toList()}" }
-                check(box[3] <= letters - 2f) { "$word's $name clears its letters by 2 dp: its bottom at ${box[3]}, the letters' top at $letters" }
-            }
-        }
-    }
-    fun toward(from: Int, to: Int, alpha: Float): Int {
-        val a = (alpha * 255).toInt() / 255f
-        fun ch(shift: Int) = Math.round(((from shr shift) and 0xFF) * (1 - a) + ((to shr shift) and 0xFF) * a) shl shift
-        return ch(16) or ch(8) or ch(0)
-    }
-    fun near(a: Int, b: Int) = (0..16 step 8).all { abs(((a shr it) and 0xFF) - ((b shr it) and 0xFF)) <= 3 }
-    val palette = MenuScene.Palette.DARK
-    for ((step, colour) in listOf(saved to toward(palette.paper, palette.ink, MenuScene.BOOK_ALPHA),
-        favourite to toward(palette.paper, palette.accent, MenuScene.HEART_ALPHA))) {
-        val scene = looks.scene("whatever", step, KeyAlignment.DEFAULT)
-        val box = scene.statusMarks().single().second
-        val scale = 8f
-        val image = BufferedImage((MenuScene.BAR * 8 * scale).toInt(), (scene.barDp * scale).toInt(), BufferedImage.TYPE_INT_RGB)
-        val g = image.createGraphics()
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
-        g.scale(scale.toDouble(), scale.toDouble())
-        g.translate((-box[0] + 4f).toDouble(), 0.0)
-        scene.paintWord(AwtMenuCanvas(g, looks.bold))
-        g.dispose()
-        var inside = 0
-        var filled = 0
-        for (y in (box[1] * scale).toInt() until (box[3] * scale).toInt()) for (x in (4 * scale).toInt() until ((box[2] - box[0] + 4) * scale).toInt()) {
-            inside++
-            if (near(image.getRGB(x, y) and 0xFFFFFF, colour)) filled++
-        }
-        val share = filled.toFloat() / inside
-        check(share >= .5f) { "$step's mark is filled, #%06X over most of its box, not %.0f%%".format(colour, share * 100) }
-        println("$step's mark is filled: %.0f%% of its box, %.1f by %.1f dp".format(share * 100, box[2] - box[0], box[3] - box[1]))
-    }
-    println("The status marks sit in the bar, at least 2 dp over the real letters, for tall letters, dots and an accented capital")
+    Accent.on = accents
+    println("Every rung's word is solid in its own colour, each preview 60% of the way to the next, dark and light, accents on and off")
 }
 
 /** A vector drawable's paths, filled or stroked as it says, in [colour], scaled from its 24 by 24 viewport into [size]. */
@@ -620,6 +588,9 @@ private const val MENU_PILL_RIGHT = 11
 private const val MENU_PILL_GAP = 12
 private const val MENU_PILL_FADE = 20
 private const val MENU_WORD_GAP = 8
+/** Strip's light under a word for the guide (Strip.lit), in dp: its thickness, and its gap under the baseline. */
+private const val LIT_DP = 2f
+private const val LIT_GAP_DP = 3f
 
 /**
  * The bar's own texts, at TitanKeys' fixed scale: the three words, all 20 dp with the best one in the middle in [best]'s weight

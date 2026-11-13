@@ -231,9 +231,51 @@ class Strip(
         pointer = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
             duration = POINT_MILLIS
             repeatCount = android.animation.ValueAnimator.INFINITE
-            addUpdateListener { view.translationY = -reach * kotlin.math.sin(it.animatedFraction * 2 * Math.PI).toFloat() }
+            addUpdateListener {
+                view.translationY = -reach * kotlin.math.sin(it.animatedFraction * 2 * Math.PI).toFloat()
+                // A lit word's line moves with it.
+                if (litIndex >= 0) invalidate()
+            }
             start()
         }
+    }
+
+    // The guide lights a word: an accent line under it, which follows the word into its menu and stays through every step.
+
+    private var litIndex = -1
+    /** The word that the light was last under on the bar, so that it follows that word into its menu. */
+    private var litWord: String? = null
+    private val litPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+
+    /**
+     * Underlines the word at [index], as the keyboard ranks them (0 is the middle one), in the accent, as the guide underlines the
+     * word to act on: [LIT_DP] dp thick, [LIT_GAP_DP] dp under the baseline, as wide as the word. While that word's menu is open
+     * the line stays under the menu's word, in whatever colour the ladder gives it, through every step. Null clears it. Only the
+     * guide uses it: its word menu slide keeps TitanKeys lit the whole time (owner, 2026-11-13: "keep it highlighted").
+     */
+    fun lit(index: Int?) {
+        litIndex = index ?: -1
+        litWord = index?.let { words.getOrNull(it) }
+        invalidate()
+    }
+
+    /** The lit word's line on the bar, under the word as drawn, wherever it is. */
+    private fun drawLit(canvas: Canvas) {
+        if (litIndex < 0 || notice != null) return
+        val view = wordViews.getOrNull(WORD_ORDER.indexOf(litIndex)) ?: return
+        val layout = view.layout ?: return
+        if (view.visibility != VISIBLE || view.text.isEmpty()) return
+        litWord = words.getOrNull(litIndex) ?: litWord
+        val left = view.left + view.totalPaddingLeft + layout.getLineLeft(0) - view.scrollX + view.translationX
+        underline(canvas, left, left + layout.getLineWidth(0), view.top + view.baseline + view.translationY)
+    }
+
+    /** The guide's light under a word from [left] to [right], on the [baseline], in px. */
+    private fun underline(canvas: Canvas, left: Float, right: Float, baseline: Float) {
+        val density = resources.displayMetrics.density
+        litPaint.color = look.accent
+        val top = baseline + LIT_GAP_DP * density
+        canvas.drawRect(left, top, right, top + LIT_DP * density, litPaint)
     }
 
     /** A word's menu or a notice about a word, in the place of everything else. */
@@ -623,6 +665,7 @@ class Strip(
 
     override fun dispatchDraw(canvas: Canvas) {
         super.dispatchDraw(canvas)
+        drawLit(canvas)
         drawMenuWord(canvas)
         drawMenu(canvas)
         drawAutoCapital(canvas)
@@ -867,10 +910,6 @@ class Strip(
             frameAt = now
         }
         shown.cx = menuWordCentre / density
-        // The status marks stay in the bar, over the word and inside its room, at any Settings > Size.
-        shown.barDp = height / density
-        shown.roomLeft = wordLeft / density
-        shown.roomRight = wordRight / density
         shown.reducedMotion = !GuideMotion.enabled
         shown.palette = palette()
         shown.onHaptic = { button, _ -> menuBeat(button) }
@@ -898,6 +937,8 @@ class Strip(
         menuCanvas.canvas = canvas
         shown.paintWord(menuCanvas)
         canvas.restore()
+        // The guide's light stays under its word through the word's menu, under the pill: see [lit].
+        if (litIndex >= 0 && menu.word.equals(litWord, ignoreCase = true)) underline(canvas, textLeft, textLeft + textWidth, baseline)
         effects?.invalidate()
         // The pill, under its icon, with the action's name. It covers what it slides over: a long word's end fades under it.
         val spent = action == Action.Favourited
@@ -960,7 +1001,6 @@ class Strip(
         }
         if (more || shown.busy || pillOpen.moving(now, glide) || pillLeft.moving(now, glide) || pillRight.moving(now, glide))
             postInvalidateOnAnimation()
-        else shown.restingWait().takeIf { it != Float.MAX_VALUE }?.let { postInvalidateDelayed((it * 1000).toLong().coerceAtLeast(16L)) }
     }
 
     private val stripAt = IntArray(2)
@@ -1290,6 +1330,9 @@ class Strip(
         private val WORD_ORDER = listOf(1, 0, 2)
         /** How far, in dp, and how quickly a word that the guide points at wiggles. */
         private const val POINT_DP = 3
+        /** The guide's light under a word: its thickness, and its gap under the baseline, in dp. */
+        private const val LIT_DP = 2f
+        private const val LIT_GAP_DP = 3f
         private const val POINT_MILLIS = 650L
         /**
          * The words' size, in sp, which is dp at TitanKeys' fixed scale, the same for all three, so every one reads on a 9 cm

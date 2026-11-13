@@ -13,18 +13,18 @@ import kotlin.math.sin
 /**
  * The word menu's word and its effects, ported from the owner's approved mockup (.dev/mockups/ladder-v4.html, 2026-11-13) one to
  * one: its springs and air, its six effects, its timing and its haptic frames. The owner's corrections on top:
- * - Every look is a solid word: Saved and Favourite white, Not saved a muted grey, Blocked a darker grey under a strike. No outline:
- *   none read on the phone, at any width (owner, 2026-11-13: "all are pretty not visible").
- * - Grey is Not saved's own look, so a resting finger's preview moves the word about [LEAN] of the way to its next look instead.
+ * - A word's rung is only its colour (owner, 2026-11-13: "remove the statuses for the heart and book etc. keep it simple.
+ *   favourited = orange. saved = white. neutral = grey. blocked = grey + striked through"). Every look is a solid word, with no
+ *   outline (none read on the phone, at any width) and no mark over it, at rest or over the bar.
+ * - A resting finger's preview moves the word about [LEAN] of the way to its next colour, and each effect's letters go the rest of
+ *   the way as it plays.
  * - Save's book is opaque: its pages are filled with the bar's own colour under the orange line, so the letters that fly into
  *   it can't be seen through it once it shuts. The ink is drawn under the book for the same reason.
  * - Save's flying book sits wholly above the bar, its bottom well over the bar's top edge, never across it.
- * - The status marks live in the bar, just over the word: Saved's filled book, Favourite's heart, and the heart previews in their
- *   place. Only the effects rise over the app (owner, 2026-11-13: "statuses should be kept maybe just slightly on top of the word").
  *
  * Places are in dp: x from the bar's left, y from the bar's top, so that effects above the bar have a negative y. The strip draws
- * [paintWord] on the bar, with the status marks, under the hovered button's pill, and its effects layer draws [paintEffects] over
- * the bar and up to [ABOVE] dp over the app. The scene is plain Kotlin, so the checks drive and draw the very same thing without a phone.
+ * [paintWord] on the bar, under the hovered button's pill, and its effects layer draws [paintEffects] over the bar and up to
+ * [ABOVE] dp over the app. The scene is plain Kotlin, so the checks drive and draw the very same thing without a phone.
  *
  * [word] is the word as shown, and [layout] where its letters are in the menu's font at [FONT_DP]. The word is centred on [cx],
  * on the baseline [baseline]. [onHaptic] is called on each effect's one haptic frame, with the step that played it.
@@ -54,19 +54,23 @@ class MenuScene(
     }
 
     /**
-     * The colours, as RGB: the word's ink, for Saved and Favourite; Not saved's grey, which is the strike's and the previews' too;
-     * Blocked's dimmer grey; the accent; the bar's own colour; and the cream of the quiet marks. The greys stay the same with
-     * Settings > Orange accents off.
+     * The colours, as RGB: the word's ink, for Saved; Not saved's grey, which is the strike's too; Blocked's dimmer grey; the accent;
+     * the bar's own colour; the cream of the quiet marks; and a favourite's colour. The greys stay the same with Settings > Orange
+     * accents off, and the favourite's colour stays apart from the white and the grey.
      */
-    data class Palette(val ink: Int, val grey: Int, val dim: Int, val accent: Int, val paper: Int, val cream: Int) {
+    data class Palette(val ink: Int, val grey: Int, val dim: Int, val accent: Int, val paper: Int, val cream: Int, val favourite: Int) {
         companion object {
             /**
-             * The bar's dark look, with Accent's colour: orange, or cream with Orange accents off. Not saved is the muted #99918A
-             * and Blocked #5E5853 (owner, 2026-11-13).
+             * The bar's dark look, with Accent's colour: orange, or cream with Orange accents off. Saved is white, Not saved the muted
+             * #99918A, Blocked #5E5853 and Favourite [Accent.favourite] (owner, 2026-11-13).
              */
-            val DARK get() = Palette(0xFFFFFF, 0x99918A, 0x5E5853, Accent.colour and 0xFFFFFF, 0x000000, 0xFFF1E6)
-            /** The bar's light look: black ink, and the same warm greys mirrored, as far from black as the dark look's are from white. */
-            val LIGHT get() = Palette(0x000000, 0x66615C, 0xA1978E, Accent.colour and 0xFFFFFF, 0xFFFFFF, 0x000000)
+            val DARK get() = Palette(0xFFFFFF, 0x99918A, 0x5E5853, Accent.colour and 0xFFFFFF, 0x000000, 0xFFF1E6, Accent.favourite and 0xFFFFFF)
+            /**
+             * The bar's light look: black ink, and the same warm greys mirrored, as far from black as the dark look's are from white.
+             * A favourite is orange, or with Orange accents off, a warm near-black, as far from black as the dark look's cream is from white.
+             */
+            val LIGHT get() = Palette(0x000000, 0x66615C, 0xA1978E, Accent.colour and 0xFFFFFF, 0xFFFFFF, 0x000000,
+                if (Accent.on) Accent.colour and 0xFFFFFF else 0x292725)
         }
     }
 
@@ -215,25 +219,12 @@ class MenuScene(
     var time = 0f
         private set
 
-    /** Each letter's look, as a [tone]: 0 Blocked's dim grey, 1 Not saved's grey, 2 white, for Saved and Favourite. */
+    /** Each letter's look, as a [tone]: 0 Blocked's dim grey, 1 Not saved's grey, 2 Saved's white, 3 Favourite's colour. */
     private val tones = Array(letters.size) { Spring(0f, SNAP) }
     /** How far a resting finger's preview has moved each letter toward its next look, in the same steps: [LEAN] of one, up or down. */
     private val leans = Array(letters.size) { Tween(0f) }
-    private val markPreview = Tween(0f)
-    /** How far a heart's grey preview hides the resting mark, Saved's book or Favourite's heart, in its place: they never overlap. */
-    private val markHide = Tween(0f)
-    /** Favourite's heart, resting in the bar over the word. */
-    private val heartMark = Tween(0f)
-    /** The resting heart's beat, now and then: how much it swells. */
-    private val beat = Spring(0f, POP)
-    /** How many times the resting heart has beaten, for the checks. */
-    var beats = 0
-        private set
-    /** The bar's height in the scene's dp: [BAR] at Normal, less as Settings > Size grows the menu's dp in a bar that keeps its height. */
-    var barDp = BAR
-    /** The word's room on the bar, in dp: a status mark never reaches past it, toward the buttons. */
-    var roomLeft = -Float.MAX_VALUE
-    var roomRight = Float.MAX_VALUE
+    /** Block's preview: its grey strike. */
+    private val strikePreview = Tween(0f)
     /** What the resting finger's press would do, previewed on the word. */
     var ghost: MenuKeys.Button? = null
         private set
@@ -245,8 +236,6 @@ class MenuScene(
     private val strikeEnd = Spring(0f, PEN)
     private val strikeHot = Tween(0f)
     private val strikeAlpha = Tween(1f)
-    /** Saved's filled book, resting in the bar over the word. */
-    private val mark = Tween(0f)
     private val heartAlpha = Tween(0f)
     private val heartScale = Spring(1f, POP)
     private val heartHot = Tween(0f)
@@ -257,7 +246,6 @@ class MenuScene(
     private class Cue(val at: Float?, val pred: (() -> Boolean)?, val fn: () -> Unit)
     private var cues = ArrayList<Cue>()
     private var tracks = ArrayList<(Float) -> Boolean>()
-    private var ambientNext = 0f
     private var pressedAt = 0f
     /** Reduced motion: the look as it was, fading out over [crossfade]. */
     private var fadeFrom: MenuScene? = null
@@ -273,21 +261,17 @@ class MenuScene(
         val struck = if (step == MenuKeys.Step.Blocked) 1f else 0f
         tones.forEach { it.set(tone(step)) }
         leans.forEach { it.set(0f) }
-        markPreview.set(0f)
-        markHide.set(0f)
+        strikePreview.set(0f)
         ghost = null
         ghostOwned = false
         penOn = false
         sx.set(1f); sy.set(1f); dy.set(0f)
         strikeEnd.set(struck); strikeHot.set(0f); strikeAlpha.set(1f)
-        mark.set(if (step == MenuKeys.Step.Saved) 1f else 0f)
-        heartMark.set(if (step == MenuKeys.Step.Favourite) 1f else 0f); beat.set(0f)
         heartAlpha.set(0f); heartCrack.set(0f); heartHot.set(0f); heartScale.set(1f)
         book = null
         parts.clear()
         cues = ArrayList()
         tracks = ArrayList()
-        ambientNext = time + AMBIENT_FIRST
     }
 
     // The resting finger: the preview of what the press will do.
@@ -296,14 +280,12 @@ class MenuScene(
     fun hover(button: MenuKeys.Button) {
         if (button == MenuKeys.Button.Favourited) return unhover()
         val current = ghost
-        if (current != null && current != button) markPreview.set(0f)
         if (current == MenuKeys.Button.Unblock && button != MenuKeys.Button.Unblock) strikeAlpha.to(1f, PREVIEW)
         ghost = button
         ghostOwned = false
-        // The letters lean toward the look the press would give them. Another button's lean turns into this one's, never a jump.
+        // The letters lean toward the colour the press would give them. Another button's lean turns into this one's, never a jump.
         leans.forEach { it.to(lean(button), PREVIEW) }
-        if (!withBook(button)) markPreview.to(1f, PREVIEW)
-        markHide.to(if (onHeart(button)) 1f else 0f, PREVIEW)
+        strikePreview.to(if (button == MenuKeys.Button.Block) 1f else 0f, PREVIEW)
         if (button == MenuKeys.Button.Unblock) strikeAlpha.to(.3f, PREVIEW)
     }
 
@@ -311,20 +293,18 @@ class MenuScene(
         // The press has taken the preview over; its effect fades it.
         if (ghostOwned) return
         leans.forEach { it.to(0f, PREVIEW) }
-        markPreview.to(0f, PREVIEW)
-        markHide.to(0f, PREVIEW)
+        strikePreview.to(0f, PREVIEW)
         if (ghost == MenuKeys.Button.Unblock && rung == MenuKeys.Step.Blocked) strikeAlpha.to(1f, PREVIEW)
     }
 
     /** Save and Unsave: the steps with the book. */
     private fun withBook(button: MenuKeys.Button) = button == MenuKeys.Button.Save || button == MenuKeys.Button.Unsave
-    /** How far [button]'s preview leans the letters: up toward white or Not saved's grey, down toward grey or Blocked's, or not at all. */
+    /** How far [button]'s preview leans the letters: a step up the ladder's colours, a step down, or, for the spent heart, not at all. */
     private fun lean(button: MenuKeys.Button) = when (button) {
-        MenuKeys.Button.Save, MenuKeys.Button.Unblock -> LEAN
-        MenuKeys.Button.Unsave, MenuKeys.Button.Block -> -LEAN
-        else -> 0f
+        MenuKeys.Button.Save, MenuKeys.Button.Unblock, MenuKeys.Button.Favourite -> LEAN
+        MenuKeys.Button.Unsave, MenuKeys.Button.Block, MenuKeys.Button.Unfavourite -> -LEAN
+        MenuKeys.Button.Favourited -> 0f
     }
-    private fun onHeart(button: MenuKeys.Button?) = button == MenuKeys.Button.Favourite || button == MenuKeys.Button.Unfavourite
 
     // The press.
 
@@ -346,14 +326,11 @@ class MenuScene(
         // A preview for some other step fades; the press's own preview is handed to its effect.
         if (ghost != button) {
             leans.forEach { it.to(0f, FADE) }
-            markPreview.to(0f, FADE)
         } else for (i in letters.indices) {
             // The letters stay where the preview leaned them, and the effect takes them on from there, never back first.
             tones[i].x += leans[i].x; tones[i].t += leans[i].x; leans[i].set(0f)
         }
         if (ghost == MenuKeys.Button.Unblock && button != MenuKeys.Button.Unblock) strikeAlpha.to(1f, FADE)
-        // The resting marks stay as hidden as a heart's preview left them, and the effect takes them from there.
-        mark.set(mark.x * (1f - markHide.x)); heartMark.set(heartMark.x * (1f - markHide.x)); markHide.set(0f)
         ghostOwned = true
         penOn = false
         // Props the new step doesn't use leave cleanly: they rise and fade.
@@ -413,7 +390,7 @@ class MenuScene(
     private fun save(r: () -> Float) {
         val n = letters.size
         val b = ensureBook()
-        squash(); mark.to(0f, FADE)
+        squash()
         b.gone = false; b.landed = false; b.torn = false; b.onLand = null; b.tear.set(0f); b.tug.set(0f)
         b.falling = false; b.phiS.set(b.phi).to(0f); b.a.to(1f, FADE); b.y.to(CY - 92f)
         if (b.s.x < .05f) b.s.set(.3f)
@@ -446,13 +423,12 @@ class MenuScene(
             }
             pop(KICK * .6f)
             at(240f) { b.y.to(CY - 118f); b.a.to(0f, EXIT, ::easeInOut); b.gone = true }
-            at(560f) { mark.to(1f, SETTLE, ::easeInOut) }
         }
     }
 
     private fun unsave(r: () -> Float) {
         val b = ensureBook()
-        squash(); mark.to(0f, FADE)
+        squash()
         b.gone = false; b.torn = false; b.landed = false; b.onLand = null; b.tear.set(0f); b.tug.set(0f)
         b.falling = false; b.phiS.set(b.phi).to(0f); b.a.to(1f, FADE); b.y.to(CY - 92f)
         if (b.s.x < .05f) b.s.set(.3f)
@@ -474,17 +450,18 @@ class MenuScene(
     }
 
     private fun favourite(r: () -> Float) {
-        squash(); mark.to(0f, FADE)
-        heartAlpha.set(max(heartAlpha.x, markPreview.x)).to(1f, 60f); heartHot.to(1f, 90f); heartCrack.set(0f)
-        markPreview.set(0f); ghost = null
+        squash()
+        heartAlpha.to(1f, 60f); heartHot.to(1f, 90f); heartCrack.set(0f)
+        ghost = null
         heartScale.to(ANTICIPATE, SNAP)
         at(SQUASH) { heartScale.to(1f, POP).kick(7f); pop(KICK) }
         at(160f) {
             haptic(MenuKeys.Button.Favourite, "the hearts release")
             heartScale.kick(9f); heartAlpha.to(0f, 90f, ::easeOut)
-            // The hearts burst from the mark's place in the bar, and rise over the app.
+            // The hearts burst from just over the word and rise over the app, as a warm wash goes over the letters, left to right.
             val hx = cx
             val hy = heartMiddle()
+            sweep(1) { i -> tones[i].to(3f) }
             for (i in 0 until 14) {
                 val isBack = i >= 10
                 val d = if (isBack) .55f else 1f
@@ -498,24 +475,22 @@ class MenuScene(
                 }
             }
         }
-        // Now a favourite: its heart comes to rest in the bar over the word, once the burst has left it.
-        at(FAVOURITE_MARK) { heartMark.to(1f, SETTLE, ::easeInOut) }
     }
 
     private fun unfavourite(r: () -> Float) {
         squash()
-        heartAlpha.set(max(heartAlpha.x, markPreview.x)).to(1f, 60f); heartHot.to(1f, 90f); heartCrack.set(0f); heartScale.set(1f)
-        // The pressed heart takes the resting heart's place, and cracks there.
-        markPreview.to(0f, 90f); heartMark.to(0f, 60f)
+        heartAlpha.to(1f, 60f); heartHot.to(1f, 90f); heartCrack.set(0f); heartScale.set(1f)
         at(60f) { heartCrack.to(1f, 120f, ::linear) }
         whenever({ heartCrack.x >= 1f }) {
             haptic(MenuKeys.Button.Unfavourite, "the heart cracks")
             heartAlpha.set(0f); ghost = null
             val hx = cx
             val hy = heartMiddle()
+            // The favourite's colour drains back to white, right to left, as the heart breaks.
+            sweep(-1) { i -> tones[i].to(2f) }
             for (side in intArrayOf(-1, 1)) parts += Part(Kind.Half).apply {
                 this.side = side; x = hx + side * .5f; y = hy; vx = side * (46f + r() * 14f); vy = -(70f + r() * 15f); ay = 620f; drag = .8f
-                w = side * (1.6f + r() * .6f); wdrag = .4f; size = 24f * statusPlace()[2]; life = .95f; fadeIn = .001f; fadeOut = .5f
+                w = side * (1.6f + r() * .6f); wdrag = .4f; size = 24f * HEART_SCALE; life = .95f; fadeIn = .001f; fadeOut = .5f
             }
             for (j in 0 until 4) {
                 val side = if (j % 2 == 1) 1 else -1
@@ -527,8 +502,6 @@ class MenuScene(
             }
             dy.to(0f, POP).kick(80f)
         }
-        // Back on Saved: its book comes back to its place in the bar once the heart's halves have fallen.
-        at(UNFAVOURITE_MARK) { mark.to(1f, SETTLE, ::easeInOut) }
     }
 
     private fun block(r: () -> Float) {
@@ -564,7 +537,7 @@ class MenuScene(
             whenever({ strikeEnd.x >= .985f }) {
                 haptic(MenuKeys.Button.Block, "the strike lands"); penOn = false; dy.kick(26f)
                 tracks = ArrayList(); tones.forEach { it.to(0f) }
-                markPreview.set(0f); ghost = null
+                strikePreview.set(0f); ghost = null
                 at(300f) { strikeHot.to(0f, SETTLE, ::easeInOut) }
             }
         }
@@ -572,7 +545,7 @@ class MenuScene(
 
     private fun unblock(r: () -> Float) {
         squash(.3f)
-        strikeHot.to(1f, 90f); strikeAlpha.to(1f, 120f); markPreview.to(0f, 90f)
+        strikeHot.to(1f, 90f); strikeAlpha.to(1f, 120f)
         penOn = true
         val x0 = wordLeft - 3f
         val span = wordWidth + 6f
@@ -622,7 +595,7 @@ class MenuScene(
         val h = dt / sub
         repeat(sub) {
             tones.forEach { it.step(h) }
-            sx.step(h); sy.step(h); dy.step(h); strikeEnd.step(h); heartScale.step(h); beat.step(h)
+            sx.step(h); sy.step(h); dy.step(h); strikeEnd.step(h); heartScale.step(h)
             book?.let { b ->
                 b.y.step(h); b.s.step(h); b.rot.step(h); b.sx.step(h); b.tug.step(h)
                 if (b.falling) {
@@ -642,7 +615,7 @@ class MenuScene(
             for (k in 0 until parts.size) parts[k].step(h)
         }
         leans.forEach { it.step(dt) }
-        markPreview.step(dt); markHide.step(dt); strikeHot.step(dt); strikeAlpha.step(dt); mark.step(dt); heartMark.step(dt)
+        strikePreview.step(dt); strikeHot.step(dt); strikeAlpha.step(dt)
         heartAlpha.step(dt); heartHot.step(dt); heartCrack.step(dt)
         book?.let { b ->
             b.a.step(dt); b.tear.step(dt)
@@ -653,26 +626,14 @@ class MenuScene(
             fade.step(dt)
             if (!fade.busy) { crossfade = null; fadeFrom = null }
         }
-        // A favourite at rest: now and then its heart beats, twice, in its place in the bar. Nothing of a status rises over the app.
-        if (rung == MenuKeys.Step.Favourite && cues.isEmpty() && parts.isEmpty() && !reducedMotion && time >= ambientNext &&
-            heartMark.x > .99f && markHide.x < .01f) {
-            val r = random(seedOf((time * 10).toInt().toString()))
-            beat.kick(BEAT)
-            at(BEAT_GAP) { beat.kick(BEAT * .6f) }
-            beats++
-            ambientNext = time + 4f + r() * 3f
-        }
     }
 
-    /** Whether anything still moves, so the bar must draw again. The resting heart's beat counts while it swells. */
+    /** Whether anything still moves, so the bar must draw again. At rest nothing does: the word's colour is its status. */
     val busy: Boolean
         get() = cues.isNotEmpty() || tracks.isNotEmpty() || parts.isNotEmpty() || crossfade != null || book != null ||
-            tones.any { it.busy } || leans.any { it.busy } || markPreview.busy || markHide.busy ||
-            sx.busy || sy.busy || dy.busy || strikeEnd.busy || strikeHot.busy || strikeAlpha.busy || mark.busy || heartMark.busy ||
-            beat.busy || heartAlpha.busy || heartScale.busy || heartHot.busy || heartCrack.busy
-
-    /** How long until the resting heart's next beat, in seconds, while nothing moves: 0 when it's due. */
-    fun restingWait(): Float = if (rung != MenuKeys.Step.Favourite || reducedMotion) Float.MAX_VALUE else max(0f, ambientNext - time)
+            tones.any { it.busy } || leans.any { it.busy } || strikePreview.busy ||
+            sx.busy || sy.busy || dy.busy || strikeEnd.busy || strikeHot.busy || strikeAlpha.busy ||
+            heartAlpha.busy || heartScale.busy || heartHot.busy || heartCrack.busy
 
     // Drawing.
 
@@ -689,7 +650,7 @@ class MenuScene(
         } else paintWordOnly(c)
     }
 
-    /** Everything over the word, up to [ABOVE] dp over the bar: the marks, the book and the particles. */
+    /** Everything over the word, up to [ABOVE] dp over the bar: the pressed heart, the book and the particles. */
     fun paintEffects(c: MenuCanvas) {
         val from = fadeFrom
         val p = crossfade?.x
@@ -708,50 +669,39 @@ class MenuScene(
         val x1 = wordLeft + wordWidth + 3f
         val sy = baseline - 5.6f
         val e = strikeEnd.x
-        if (markPreview.x > 0f && ghost == MenuKeys.Button.Block) strokeLine(c, x0 + (x1 - x0) * clamp(e), x1, sy, palette.grey, markPreview.x, false)
+        if (strikePreview.x > 0f) strokeLine(c, x0 + (x1 - x0) * clamp(e), x1, sy, palette.grey, strikePreview.x, false)
         if (e > .002f) {
             val xe = x0 + (x1 - x0) * clamp(e, 0f, 1.02f)
             strokeLine(c, x0, xe, sy, mix(palette.grey, palette.accent, strikeHot.x), strikeAlpha.x, true)
             if (penOn) c.circle(xe, sy, 1.8f, rgba(palette.accent, strikeAlpha.x))
         }
         c.restore()
-        paintMarks(c)
-    }
-
-    /**
-     * The status marks, in the bar over the word: Saved's filled book in white at [BOOK_ALPHA], Favourite's heart in the accent at
-     * [HEART_ALPHA], beating now and then, and a heart's grey preview in their place, which hides them while it shows.
-     */
-    private fun paintMarks(c: MenuCanvas) {
-        val (x, bottom, s) = statusPlace()
-        if (s <= 0f) return
-        val shown = 1f - markHide.x
-        drawStatusBook(c, x, bottom, s, palette.ink, BOOK_ALPHA * mark.x * shown)
-        drawHeartOn(c, x, bottom, s * fit(bottom, s, 1f + beat.x), palette.accent, HEART_ALPHA * heartMark.x * shown)
-        if (markPreview.x > 0f && onHeart(ghost)) {
-            drawHeartOn(c, x, bottom, s, palette.grey, markPreview.x)
-            if (ghost == MenuKeys.Button.Unfavourite) drawCrackOn(c, x, bottom, s, 1f, palette.paper, markPreview.x)
-        }
     }
 
     private fun paintEffectsOnly(c: MenuCanvas) {
         // Depth: the small, faint ones behind, and the ink under the book, which hides it once it shuts.
         for (p in parts) if (p.back || p.kind == Kind.Ink) part(c, p)
         if (heartAlpha.x > 0f) {
-            // The pressed heart, in the mark's place: it pops about its tip, which stays put, and never past the bar's top.
-            val (x, bottom, s) = statusPlace()
-            val k = s * fit(bottom, s, max(0f, heartScale.x))
-            drawHeartOn(c, x, bottom, k, mix(palette.grey, palette.accent, heartHot.x), heartAlpha.x)
-            drawCrackOn(c, x, bottom, k, heartCrack.x, palette.paper, heartAlpha.x)
+            // The pressed heart, just over the word: it pops about its tip, which stays put.
+            val k = HEART_SCALE * max(0f, heartScale.x)
+            drawHeartOn(c, cx, heartFoot(), k, mix(palette.grey, palette.accent, heartHot.x), heartAlpha.x)
+            drawCrackOn(c, cx, heartFoot(), k, heartCrack.x, palette.paper, heartAlpha.x)
         }
         book?.let { drawBook(c, it, palette.accent) }
         for (p in parts) if (!p.back && p.kind != Kind.Ink) part(c, p)
     }
 
-    /** Letter [i]'s colour now: Blocked's dim grey at tone 0, Not saved's grey at 1, white at 2, and in between on the way. */
+    /**
+     * Letter [i]'s colour now: Blocked's dim grey at tone 0, Not saved's grey at 1, Saved's white at 2, Favourite's colour at 3, and
+     * in between on the way.
+     */
     fun letterColour(i: Int): Int {
         val tone = tones[i].x + leans[i].x
-        return if (tone <= 1f) mix(palette.dim, palette.grey, clamp(tone)) else mix(palette.grey, palette.ink, clamp(tone - 1f))
+        return when {
+            tone <= 1f -> mix(palette.dim, palette.grey, clamp(tone))
+            tone <= 2f -> mix(palette.grey, palette.ink, clamp(tone - 1f))
+            else -> mix(palette.ink, palette.favourite, clamp(tone - 2f))
+        }
     }
 
     private fun drawHeart(c: MenuCanvas, x: Float, y: Float, s: Float, rot: Float, colour: Int, a: Float) {
@@ -773,36 +723,11 @@ class MenuScene(
     private fun drawCrackOn(c: MenuCanvas, x: Float, bottom: Float, s: Float, p: Float, colour: Int, a: Float) =
         drawCrack(c, x, bottom - HEART_BELOW * s, 24f * s, p, colour, a)
 
-    /** Saved's mark: the icon's open book, filled solid, its pages [SPINE_GAP] apart at the spine, standing on [bottom]. */
-    private fun drawStatusBook(c: MenuCanvas, x: Float, bottom: Float, s: Float, colour: Int, a: Float) {
-        if (a <= .002f || s <= 0f) return
-        val fill = rgba(colour, a)
-        c.save(); c.translate(x, bottom); c.scale(s, s); c.translate(-12f, -20.4f)
-        c.save(); c.translate(-SPINE_GAP / 2, 0f); c.fill(PAGE_L, fill); c.restore()
-        c.save(); c.translate(SPINE_GAP / 2, 0f); c.fill(PAGE_R, fill); c.restore()
-        c.restore()
-    }
+    /** Where the pressed heart stands, its tip [HEART_GAP] dp over the word's tallest letter, centred on the word. */
+    fun heartFoot(): Float = baseline - max(TALL * FONT_DP, layout.top) - HEART_GAP
 
-    /**
-     * Where the status marks stand now: x, their bottom and their scale, in dp, the scale in dp to a unit of the icons' 24 grid.
-     * They're centred on the word, [STATUS_GAP] over its tallest letter, wholly inside the bar with [STATUS_EDGE] to spare at its
-     * top, and never past the word's room toward the buttons. Settings > Size shrinks the bar in the menu's dp, and the gaps with
-     * it, and the marks fit what's left. A mark too small to read there isn't drawn: scale 0.
-     */
-    fun statusPlace(): FloatArray {
-        val k = barDp / BAR
-        val bottom = baseline - max(TALL * FONT_DP, layout.top) - STATUS_GAP * k
-        val tall = (bottom - STATUS_EDGE * k) / HEART_TALL
-        val wide = min(cx - roomLeft, roomRight - cx) / (10f + SPINE_GAP / 2)
-        val s = min(STATUS_SCALE, min(tall, wide))
-        return floatArrayOf(cx, bottom, if (s * 20f < STATUS_MIN * k) 0f else s)
-    }
-
-    /** The heart mark's middle, where a favourite's burst and an unfavourite's crack start from. */
-    private fun heartMiddle(): Float = statusPlace().let { it[1] - HEART_BELOW * it[2] }
-
-    /** A heart's scale [k] on a mark standing on [bottom] at scale [s], kept small enough that it never reaches past the bar's top. */
-    private fun fit(bottom: Float, s: Float, k: Float) = if (s <= 0f) k else min(k, bottom / (HEART_TALL * s))
+    /** The pressed heart's middle, where a favourite's burst and an unfavourite's crack start from. */
+    fun heartMiddle(): Float = heartFoot() - HEART_BELOW * HEART_SCALE
 
     private fun pageLines(c: MenuCanvas, side: Int, a: Float, colour: Int) {
         val lines = MenuPath()
@@ -910,28 +835,8 @@ class MenuScene(
         return floatArrayOf(b.x - 12f * s * b.sx.x, top - 2f, b.x + 12f * s * b.sx.x, bottom + 2f)
     }
 
-    /** How much of Saved's book shows now, 0 to 1 of its resting strength. */
-    fun markShown(): Float = mark.x * (1f - markHide.x) * fade
-
-    /** How much of Favourite's resting heart shows now, 0 to 1 of its resting strength. */
-    fun heartShown(): Float = heartMark.x * (1f - markHide.x) * fade
-
-    /**
-     * The status marks showing now, by name, each with its box in dp: Saved's "book", Favourite's resting "heart", a heart's
-     * "preview", and the "pressed" heart before it bursts or cracks. For the checks that they sit in the bar over the word. The book
-     * runs from 2 to 22 across its grid and 4.6 to 20.4 down, the heart 2 to 22 and 3 to 21.35.
-     */
-    fun statusMarks(): List<Pair<String, FloatArray>> {
-        val (x, bottom, s) = statusPlace()
-        if (s <= 0f) return emptyList()
-        val marks = ArrayList<Pair<String, FloatArray>>()
-        fun heart(name: String, k: Float) { val h = s * k; marks += name to floatArrayOf(x - 10f * h, bottom - HEART_TALL * h, x + 10f * h, bottom) }
-        if (markShown() > .002f) marks += "book" to floatArrayOf(x - (10f + SPINE_GAP / 2) * s, bottom - (20.4f - 4.6f) * s, x + (10f + SPINE_GAP / 2) * s, bottom)
-        if (heartShown() > .002f) heart("heart", fit(bottom, s, 1f + beat.x))
-        if (onHeart(ghost) && markPreview.x > .002f) heart("preview", 1f)
-        if (heartAlpha.x > .002f) heart("pressed", fit(bottom, s, max(0f, heartScale.x)))
-        return marks
-    }
+    /** Whether the pressed heart shows now: only while Favourite's or Unfavourite's effect plays, never at rest or in a preview. */
+    fun heartShown(): Boolean = heartAlpha.x * fade > .002f
 
     /** How far the book's cover has turned shut, 0 open to 1 shut. */
     fun bookShut(): Float = book?.let { (it.phi / PI.toFloat()).coerceIn(0f, 1f) } ?: 0f
@@ -950,30 +855,15 @@ class MenuScene(
         /** How high the menu font's tallest small letters reach over the baseline, in em: Inter's i and j dots, 1572 of 2048. Capitals reach 1490. */
         const val TALL = 1572f / 2048f
         /**
-         * The status marks (owner, 2026-11-13): [STATUS_SCALE] dp to a unit of the icons' 24 grid, so the book and the heart are
-         * about 12 dp across; [STATUS_GAP] dp over the word's tallest letter; at least [STATUS_EDGE] dp under the bar's top; and not
-         * drawn at all when they'd be under [STATUS_MIN] dp across. The gaps shrink with the bar in the menu's dp at a bigger Size.
+         * Favourite's and Unfavourite's pressed heart, part of their effects only: [HEART_SCALE] dp to a unit of its 24 grid, about
+         * 12 dp across, its tip [HEART_GAP] dp over the word's tallest letter.
          */
-        const val STATUS_SCALE = .6f
-        const val STATUS_GAP = 3f
-        const val STATUS_EDGE = 2f
-        const val STATUS_MIN = 7f
-        /** Saved's book, white at 60%, and Favourite's heart, the accent at 70% (owner, 2026-11-13: "the book should be filled"). */
-        const val BOOK_ALPHA = .6f
-        const val HEART_ALPHA = .7f
-        /** How far apart the status book's pages stand at the spine, on its grid, so it reads as an open book. */
-        const val SPINE_GAP = 1.6f
+        const val HEART_SCALE = .6f
+        const val HEART_GAP = 3f
         /** How far the heart reaches below its middle on its 24 grid: 21.35, its tip, less 12.4. */
         const val HEART_BELOW = 21.35f - 12.4f
         /** How tall the heart is on its grid: from its top at 3 to its tip at 21.35. */
         const val HEART_TALL = 21.35f - 3f
-        /** When Saved's book comes back after Unfavourite, in ms after the press: once the heart's halves have fallen. */
-        const val UNFAVOURITE_MARK = 900f
-        /** When Favourite's heart comes to rest after the press, in ms: once the burst has left it. */
-        const val FAVOURITE_MARK = 560f
-        /** The resting heart's beat: its first kick, and when the second, smaller one comes, in ms. */
-        const val BEAT = 3.5f
-        const val BEAT_GAP = 180f
 
         // The motion language, as v4's tokens (ms; springs as mass, stiffness, damping).
         const val PREVIEW = 170f
@@ -986,8 +876,6 @@ class MenuScene(
         const val KICK = 2f
         const val AIR_LIGHT = 3.2f
         const val BUOYANT = -240f
-        /** The resting heart's first beat comes this long after the menu comes to rest on a favourite, in seconds. */
-        const val AMBIENT_FIRST = 1.2f
         val POP = Spring.Cfg(1f, 520f, 16f)
         val SNAP = Spring.Cfg(1f, 600f, 49f)
         val PEN = Spring.Cfg(1f, 420f, 41f)
@@ -995,11 +883,12 @@ class MenuScene(
         val WOBBLE = Spring.Cfg(1f, 180f, 7f)
         val DRIFT = Spring.Cfg(1f, 40f, 12.6f)
 
-        /** A rung's look, as a letter's tone: Blocked 0, Not saved 1, Saved and Favourite 2. */
+        /** A rung's look, as a letter's tone: Blocked 0, Not saved 1, Saved 2, Favourite 3. */
         fun tone(step: MenuKeys.Step): Float = when (step) {
             MenuKeys.Step.Blocked -> 0f
             MenuKeys.Step.New -> 1f
-            MenuKeys.Step.Saved, MenuKeys.Step.Favourite -> 2f
+            MenuKeys.Step.Saved -> 2f
+            MenuKeys.Step.Favourite -> 3f
         }
 
         /** The rung that [button] takes a word to. */

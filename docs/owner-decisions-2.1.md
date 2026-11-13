@@ -59,6 +59,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - Status: No against Wall, the quick-settings and Record-a-bug haptics, and the exact-typing lab switch are built in round 7 (merged at 418daaa). Not yet felt on the phone.
 - Haptics for shortcuts (Alt symbols, Sym panel, Ctrl) were tried and removed as annoying. Ctrl+C with nothing selected still plays No. (Owner, 2026-11-12)
 - Lab defaults: dots speed up when long, held delete fade (since retired), zone ticks on. (Owner, 2026-11-12)
+- Changes that happen by themselves (autocorrect, shorthand, snippets, :name: emoji, a held symbol) play a **quiet swell**, 12, 35, 22, 35, 12. It's a subtle acknowledgement with nothing to do, and the gate treats it as texture. The undo of a fix stays Back. Designed by the Orchestrator to the owner's brief ("subtle, just an acknowledgement"). (Owner approved, 2026-11-12)
 - No haptic strength setting: only on or off, because the patterns are tuned carefully. (Owner, 2026-11-12)
 
 ## Word menu

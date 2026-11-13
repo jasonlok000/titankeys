@@ -71,8 +71,10 @@ are already settled are marked (Owner).
   and never changes as you type.
 - **Description:** 12 dp under the title, in Body, muted: "Type or swipe whatever you like. Follow the line below, or ignore it."
   The comments on your speed take its place as now.
-- **The line to type along to:** 24 dp under the description, Body, two lines, always full. Typed words in cream, the rest muted,
-  and the current word underlined in orange. What follows the sentence sits an en space away, at half the muted strength on black.
+- **The line to type along to:** 24 dp under the description, Body, two lines. The text is one paragraph, wrapped by words, with
+  no break between its lines (Owner, replacing v5.3's "the sentence you're in"): the line with the current word and the line after
+  it, scrolling up a line as you reach the next, and on round as it loops. Typed words in cream, the rest muted, and the current
+  word underlined in orange.
 - **The text box:** the same as the guide's field, three lines.
 - **Words a minute:** a small Label counter in the header's empty middle. It **starts only once a real word is being typed** (a
   letter key or a swipe), not on a touch, Space, Backspace or a modifier (Owner).

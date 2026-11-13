@@ -2213,7 +2213,6 @@ class GuideActivity : Activity() {
     private fun startPassage(text: String) {
         if (text.isEmpty()) return
         passage = Passage(text)
-        sentenceStarts = null
         passageFrom = field.length()
         passageLayout = null
         passageLine = -1
@@ -2263,41 +2262,8 @@ class GuideActivity : Activity() {
         val cycle = track.next - next
         val line = layout.getLineForOffset(passage.ranges[next].first)
         val styled = passageSpans(track, next, cycle)
-        if (playground) {
-            // The front page starts at the sentence you're in, wrapped by words, never cut (owner, v5.3), and always fills both
-            // lines: a short sentence carries on into the next, and a long one never ends on a lone word (Master, 2026-11-13). Once
-            // the word you're on is past the second line, its line is the top one.
-            val starts = sentenceStarts ?: PlaygroundText.sentenceStarts(passage.words).also { sentenceStarts = it }
-            val sentence = PlaygroundText.sentenceAround(starts, count, next)
-            val first = sentence.first
-            val from = passage.ranges[first].first
-            val shown = SpannableStringBuilder(styled.subSequence(from, passage.ranges[sentence.last].last + 1))
-            // What follows the sentence, on round past the passage's end as the typing goes: enough words for the lines on show,
-            // not the whole passage, so each key stays cheap. It sits a wider gap away and, on black, at half the muted strength,
-            // so the join reads as a break with no mark added to the owner's text (Master, 2026-11-13).
-            val following = StringBuilder()
-            var word = sentence.last + 1
-            while (following.length < PLAYGROUND_REACH && word - sentence.last <= count) {
-                if (following.isNotEmpty()) following.append(' ')
-                following.append(passage.wordAt(word++))
-            }
-            if (following.isNotEmpty()) shown.append(SENTENCE_GAP).append(SpannableStringBuilder(following).apply {
-                val colour = if (tone == GuideTone.Ink) GuideMotion.faded(quietColour(), NEXT_SENTENCE)
-                    else GuideMotion.faded(GuideColours.INK, PASSAGE_AHEAD_ON_ORANGE)
-                setSpan(ForegroundColorSpan(colour), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            })
-            val wrapped = StaticLayout.Builder.obtain(shown, 0, shown.length, script.paint, width).setIncludePad(false).build()
-            val at = wrapped.getLineForOffset((passage.ranges[next].first - from).coerceIn(0, shown.length))
-            val top = if (at < PROMPT_LINES) 0 else at
-            val last = minOf(top + PROMPT_LINES, wrapped.lineCount) - 1
-            var end = wrapped.getLineEnd(last)
-            while (end > 0 && shown[end - 1].isWhitespace()) end--
-            script.maxLines = PROMPT_LINES
-            script.setLines(PROMPT_LINES)
-            script.scrollTo(0, 0)
-            script.text = shown.subSequence(wrapped.getLineStart(top), end)
-            return
-        }
+        // The front page's text is one paragraph, as the guide's is (owner, 2026-11-13: "one giant paragraph not multiple"): the
+        // line with the word you're on and the line after it, scrolling up a line as you reach the next, and on round the loop.
         // The line after the last is the first again, as the script starts over.
         fun lineText(at: Int): CharSequence {
             val wrapped = at.mod(layout.lineCount)
@@ -2336,9 +2302,6 @@ class GuideActivity : Activity() {
             start()
         }
     }
-
-    /** The front page's sentences, by the word each starts at, for its passage. */
-    private var sentenceStarts: List<Int>? = null
 
     /** The whole passage, coloured for where typing is: right words grey, skipped ones boxed, the word you're on underlined. */
     private fun passageSpans(track: Passage.Track, next: Int, cycle: Int): SpannableStringBuilder {
@@ -4643,12 +4606,6 @@ class GuideActivity : Activity() {
         private const val HELP_RECHECK_MILLIS = 700L
         /** The line to type along to: two lines (design v2). */
         private const val PROMPT_LINES = 2
-        /** How much of the playground's passage it lays out at a time, in characters: far more than its lines show. */
-        private const val PLAYGROUND_REACH = 600
-        /** Between the playground's sentence and what follows it: an en space, about two spaces' width, where lines may still break. */
-        private const val SENTENCE_GAP = "\u2002"
-        /** How strong what follows the sentence is, of the muted colour, on black. */
-        private const val NEXT_SENTENCE = .5f
         /** How long the bar's words wait as a slide opens, so it shows the slide's words once. */
         private const val BAR_SETTLE_MILLIS = 450L
         /** How strong a selection's cream is in the field. */

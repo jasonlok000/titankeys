@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Checks FixedScale's sizes: the same dp and sp in pixels at every font size and display size, each Settings > Size factor
+# Checks FixedScale's sizes: the same dp and sp in pixels at every font size and display size, each Bar text size factor
 # growing them alike, and the keys' places never moving. It doesn't need the phone.
 set -euo pipefail
 cd "$(dirname "$0")/../.."

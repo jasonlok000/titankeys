@@ -60,7 +60,7 @@ import kotlin.random.Random
 class AtlasIme : InputMethodService() {
     private val main = Handler(Looper.getMainLooper())
     private lateinit var touchpad: Touchpad
-    /** Settings > Size when the bar and the panels were made. */
+    /** Bar text size when the bar was made. */
     private var viewSize = FixedScale.Size.Normal
     private lateinit var haptics: Haptics
     /** The cursor plays gone once each time it reaches an end of the text. */
@@ -1156,7 +1156,9 @@ class AtlasIme : InputMethodService() {
         // makes this view again when those settings change, so each time takes the screen as it is now.
         viewSize = FixedScale.size(this)
         val ui = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod)
-        val words = Strip(ui, { index ->
+        // Bar text size grows only what's in the bar, and the word menu's effects with it. The bar keeps Normal's height.
+        val barUi = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod, viewSize.factor)
+        val words = Strip(barUi, { index ->
             // The guide's own word only opens its menu: a tap never types a word that the bar doesn't show.
             if (!guideBlocked(GuideLesson.BarTap) && shownGuideWord() == null) {
                 haptics.play(Haptic.BarWord)
@@ -1199,7 +1201,7 @@ class AtlasIme : InputMethodService() {
             roundTopCorners(this)
         }
         // The word menu's effects rise above the bar, over the app, in a see-through layer that takes no touch (ladder v4).
-        val effects = MenuEffects(ui, words)
+        val effects = MenuEffects(barUi, words)
         words.effects = effects
         words.menuBeat = ::menuBeat
         words.menuPress = { haptics.play(Haptic.MenuPress) }
@@ -1459,7 +1461,7 @@ class AtlasIme : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        // Settings > Size changed since the bar and the panels were made, so they're made again at the new size.
+        // Bar text size changed since the bar was made, by a pick or the phone's text size, so it's made again at the new size.
         if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())
         // The bar may only now be set up for this field, so the wait starts once it is.
         main.post { wakeIdleBar() }

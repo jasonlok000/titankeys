@@ -18,8 +18,10 @@
 - Fewer dumb fixes: Typos like defalt, receieve and bckspace get fixed now.
 - Capital at the start: Shift turns on by itself at the start of a sentence. Press Shift once if you want lowercase.
 - Long words fit: Long suggestions fit in their spot, and the three spots never move.
+- One size: The bar's three words are the same size and sit dead centre. The best one's in bold.
 - Canadian spelling: Settings > English spelling has Canadian now. Colour and realize. Both. Eh.
-- Two new shortcuts: Shift + Backspace deletes a word, and Alt + Sym switches to your next keyboard. They're built in, so Key Mapper can sit this one out.
+- Two new shortcuts: Hold Shift and press Backspace to delete a word, and Alt + Sym switches to your next keyboard. They're built in, so Key Mapper can sit this one out.
+- Alt + Backspace: It now does what Android does and deletes the line. For a word, hold Shift with Backspace, or use Ctrl.
 - Same size at any setting: TitanKeys ignores the phone's font size and display size, so a huge font doesn't blow it up anymore.
 - Snippets start with /: Alt+G or hold G, so no more digging for ; on the Sym panel. Already have snippets with ;? You keep it. Pick another in Settings > Snippets.
 
@@ -35,6 +37,7 @@
 - Your switches: Settings > Haptics has one switch for all of it and one for every single haptic.
 - Quiet swell: When something changes by itself, like autocorrect, a snippet or a held symbol, you get a soft swell. Just a nod. Nothing to do.
 - Quiet when it should be: Key presses never buzz, and a fast run of buzzes doesn't turn into a rattle.
+- Playground: Its big moments buzz too: the confetti, the rain, the shake, the lightning and the plant. Settings > Haptics > Playground effects turns them off.
 - The app too: Switches and steppers in Settings have their own feel, and anything the app won't do says nope.
 
 ## Bar and panels

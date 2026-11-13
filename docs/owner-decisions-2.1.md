@@ -206,6 +206,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 ## Process
 
 - **"me @ your mom" is out:** "is bad let's skip it." Any @ line gets something better, or no joke at all. The slide may use another symbol if the line lands better (owner, 23:50). (Owner, 23:45)
+- **Reviews must not violate the owner's decisions** (owner, 01:20): "check aesthetically and readability but also you should not violate my decisions." Where design-v2 or any Orchestrator or worker call conflicts with this log, the owner's decision wins, unless a later owner message replaced it. Conflicts found so far and sent back to C:
+  - the front page text box's orange accent;
+  - the TOUCHPAD corner brackets on the drawing;
+  - the end screen's bigger × on the right, "Start the guide again" and "Trust me bro.";
+  - the guide's own animation timings, which stay as they are: the 220 ms move is for content swaps only. (Owner)
 - **Review of build 2ec5f751 (owner, 01:15):** "Looks much nicer now to be honest. Just review the readability." (Owner)
   - Titles too small; the reference text should be two lines; the bar's text is a bit too small. "Text size should convey hierarchy and they should also be readable. You need to consider the size of my screen like physically." "Some elements are too small... Don't overdo it but review the sizes."
     - The Orchestrator's sizes (unapproved): Display 36, Title 24, Body 19, Field 24, Label 14; bar words 20; Ink body at least 18, secondary at least 15, labels at least 14; no real text below 13 dp.

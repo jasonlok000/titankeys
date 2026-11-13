@@ -124,7 +124,9 @@ private fun steeringText(step: GuideStep) =
 
 /** The field once the slide is passed: its line, finished. */
 private fun passedField(step: GuideStep, before: Frame): Frame = when (step.id) {
-    "type", "swipe", "menu", "backspace", "clipboard" -> at(step, step.line + " ")
+    "type", "swipe", "backspace", "clipboard" -> at(step, step.line + " ")
+    // The menu slide's TitanKeys stays marked after the pass, as GuideActivity's aim keeps it.
+    "menu" -> at(step, step.line + " ").copy(target = menuTarget(step.line + " "))
     "flick" -> at(step, "$FLICK_LINE ", FLICK_LINE.length - " word".length)
     "hold" -> at(step, "$HOLD_LINE ", "Delete ".length)
     "steer" -> before.copy(start = before.start - 40, end = before.start - 40)
@@ -460,7 +462,8 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
         if (frame.steer == SteerAim.Entered && target != null) start = target.first + 2
     }
     val shown = frame.copy(start = if (frame.passed && frame.steer == SteerAim.None) frame.start else start,
-        end = if (frame.passed && frame.steer == SteerAim.None) frame.end else start, target = if (frame.passed) null else target)
+        end = if (frame.passed && frame.steer == SteerAim.None) frame.end else start,
+        target = if (frame.passed && !frame.name.startsWith("menu-")) null else target)
     for (row in 0 until FIELD_LINES) {
         val index = first + row
         if (index >= starts.size) break

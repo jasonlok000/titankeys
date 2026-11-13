@@ -246,6 +246,17 @@ all of them are unapproved.
     swipes are only collected while it's on and none were made. The driver now stops at any orange screen without tapping.
   - **Found on the phone:** guide titles showed in sentence case. setSingleLine wiped isAllCaps; this was never visible in the
     renders. Fixed in 9f15383, with the check guide-title-caps.test.ts.
+  - **A's pre-release pass on build #8 is done:** 0 crashes, no new ANR, every setting restored, and Share swipes still off.
+    - Titles are upper case, the four drawn rows show, Size and Orange off work, both reset confirms were cancelled, and the new
+      Settings items are all there.
+    - Fixes out:
+      - A: the Backspace demo should take only the extra e, and the heart demo should select its target;
+      - V: the clown valance's hard keep-out;
+      - C: about 16 dp more under the end wordmark.
+    - By design: the Saved word's faint book over the front page's drawn keys.
+    - For the owner's hands: the touchpad (swipe, held flick and PAUSE height, steer, select), the real Sym key and held
+      letters, haptic feel, pasting on the guide's slides, and Next on a really passed slide.
+  - **Then build #9:** the pre-release candidate.
   - **Build #8: aaef6f81**, all checks passed, installed at 12:40 with no crash. A's pre-release pass is running on it.
   - **Build #8** started with the caps fix. A runs the pre-release phone pass on it, with strict guardrails: no share step, no reset
     confirms, settings restored, the owner's words untouched.

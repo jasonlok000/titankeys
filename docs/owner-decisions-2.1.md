@@ -208,6 +208,15 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **A new playground line, from the owner's idea** (2026-11-13, 11:20: "if you are not dumb why did you buy a dumb thing thats
   because..."). (Owner) It's written as "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb
   and proud of it". (Orchestrator's wording)
+- **Release audit** (A, claude/release-audit-2 81da968, docs/release-audit-2.1.md). The release APK is 115.9 MB (engine 2.0's next-word
+  model and onnxruntime), with 6 permissions. Dev screens and adb hooks are gated, and GuideFrameActivity is now unexported in
+  release. Seven new checks were added. The Orchestrator's calls on A's open points, unapproved:
+  1. Drop Ink's InkLightSdkReceiver: an exported receiver behind an undefined "normal" permission. F does it.
+  2. 116 MB is fine for GitHub and under Play's 200 MB limit. No change.
+  3. Record a bug: the screen and the privacy policy say plainly that its key presses and word choices can show most of what
+     was typed. F does it.
+  4. The inert debug screens compiled into release stay as they are for 2.1. Moving them into android/debug is later.
+  5. The four harmless debug-level log lines stay.
 - **Release rule** (owner, 2026-11-13, 11:50): "my rule is i'll use a pre-release for 3 days and only after 3 days no bug will i push it
   for a real release." The build for it must have no dev stuff and be tested thoroughly. (Owner) A audits the release build for
   dev-only features (docs/release-audit-2.1.md, extending debug-only.test.ts). The Orchestrator tests the final build on the

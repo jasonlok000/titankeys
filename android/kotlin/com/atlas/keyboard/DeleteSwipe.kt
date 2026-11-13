@@ -91,6 +91,25 @@ private const val REPEAT_SHORT_KEYS = 2f
  * lies about between F and G.
  */
 internal const val REPEAT_LONG_KEYS = 5.5f
+
+/** Up to this reach from the right edge, about Backspace's own half of the zone, a delete flick shows no glow. */
+internal const val FLICK_GLOW_NONE = .05f
+
+/**
+ * The reach of the held delete's top-speed line, where a delete flick's glow is full: Backspace's middle is .05 in from the right
+ * edge, as the guide's drawing has it, and the line is [REPEAT_LONG_KEYS] key widths left of it, a key a tenth of the touchpad.
+ */
+internal const val FLICK_GLOW_FULL = .05f + REPEAT_LONG_KEYS / 10f
+
+/**
+ * How strong a delete flick's glow is, 0 to 1, with its finger [reach] from the right edge, 0 to 1 across the touchpad (owner,
+ * 2026-11-13): none at the right edge, where Backspace is, so a flick still there shows nothing; growing smoothly as the finger
+ * moves left; full at the top-speed line, [FLICK_GLOW_FULL], and no stronger past it.
+ */
+internal fun flickGlowStrength(reach: Float): Float {
+    val u = ((reach - FLICK_GLOW_NONE) / (FLICK_GLOW_FULL - FLICK_GLOW_NONE)).coerceIn(0f, 1f)
+    return u * u * (3 - 2 * u)
+}
 /**
  * While a hold deletes, a finger back within this many key widths of where the flick started pauses it: no words go until it
  * slides out again, by [PAUSE_LEAVE_KEYS] more, so a finger resting on the edge does not stutter. A flick travels a whole key at

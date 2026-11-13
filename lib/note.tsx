@@ -1,5 +1,5 @@
 import { Canvas, CanvasPath, CanvasText, Stack, Text } from "ink";
-import { MUTED, ORANGE } from "./brand";
+import { MUTED, useAccent } from "./brand";
 import { RADIUS } from "./radii";
 import { RoundedOutline } from "./rounded";
 
@@ -33,6 +33,7 @@ const CHEVRON = 18;
  * cap, so a lone mark like ; reads as a key and not as a stray dot. Pressing anywhere on the row opens [onPress].
  */
 export function KeyCapField({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
+  const accent = useAccent();
   const capX = WIDTH - CHEVRON - 16 - CAP;
   const top = (ROW_HEIGHT - CAP) / 2;
   const centre = ROW_HEIGHT / 2;
@@ -40,7 +41,7 @@ export function KeyCapField({ label, value, onPress }: { label: string; value: s
     <Canvas width={WIDTH} height={ROW_HEIGHT}>
       <CanvasText x={0} y={0} width={capX - 16} height={ROW_HEIGHT} size={30} align="start">{label}</CanvasText>
       <RoundedOutline x={capX} y={top} width={CAP} height={CAP} radius={RADIUS.small} stroke={MUTED} strokeWidth={1.5} />
-      <CanvasText x={capX} y={top} width={CAP} height={CAP} size={30} colour={ORANGE} align="center">{value}</CanvasText>
+      <CanvasText x={capX} y={top} width={CAP} height={CAP} size={30} colour={accent} align="center">{value}</CanvasText>
       {/* The same chevron as an inline field that opens a page. */}
       <CanvasPath points={[[WIDTH - 7, centre - 9], [WIDTH, centre], [WIDTH - 7, centre + 9]]} stroke={MUTED} strokeWidth={2} />
     </Canvas>

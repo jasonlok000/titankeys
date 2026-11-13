@@ -86,6 +86,18 @@ fun main() {
     check(kotlin.math.abs(boxBaseline - StripFit.baseline(44f, size)) < .001f, "The lift puts a centred view's letters on the line: $lift")
     check(lift in 5f..6.5f, "Inter's box sits its letters about 3 px low at 20 dp, so the lift is about 6 px: $lift")
 
+    // Settings > Size at Biggest: the bar's places are as wide as ever, but every letter is bigger. The three places stay even,
+    // and long words shrink or lose a part to fit, as at Normal.
+    val biggest: (String) -> Float = { measure(it) * FixedScale.BIGGEST }
+    fun fitsBiggest(slots: List<StripFit.Slot>) = slots.all { biggest(it.text) * it.scale <= it.width - 10f + .01f }
+    for (words in listOf(listOf("the", "and", "you"), listOf("the", "something", "you"), listOf("a", "internationalization", "of"),
+        listOf("recommendation's", "recommendations", "recommendation"))) {
+        val big = StripFit.fit(words, 300f, 5f, biggest, lend = false)
+        same(big.map { it.width }, List(3) { 100f }, "At Biggest the three places stay even for $words")
+        check(fitsBiggest(big), "At Biggest every word fits its place: $big")
+        check(big.all { it.scale >= StripFit.MIN_SCALE }, "At Biggest no word goes below the smallest size: $big")
+    }
+
     if (failures.isNotEmpty()) {
         failures.forEach(::println)
         throw AssertionError("${failures.size} strip fit check(s) failed")

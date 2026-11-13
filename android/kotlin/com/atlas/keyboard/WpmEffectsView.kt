@@ -447,13 +447,13 @@ internal class WpmEffectsView(context: Context) : View(context) {
     private fun dp(value: Float) = value * density
 
     private companion object {
-        const val GLOW = 0xFFFFB27A.toInt()
-        const val EDGE = 0xFFEF804E.toInt()
-        const val SPARK = 0xFFFFE0B2.toInt()
-        const val FLAME_OUTER = 0xFFEF804E.toInt()
-        const val FLAME_INNER = 0xFFFFD27A.toInt()
+        val GLOW get() = Accent.warm(0xFFFFB27A.toInt())
+        val EDGE get() = Accent.colour
+        val SPARK get() = Accent.warm(0xFFFFE0B2.toInt())
+        val FLAME_OUTER get() = Accent.colour
+        val FLAME_INNER get() = Accent.warm(0xFFFFD27A.toInt())
         const val BROWN = 0xFF7A4A21.toInt()
-        val CONFETTI = intArrayOf(0xFFEF804E.toInt(), 0xFFFFF1E6.toInt(), 0xFFFFD54F.toInt(), 0xFFFF8FB1.toInt(), 0xFF6ED3CF.toInt())
+        val CONFETTI get() = intArrayOf(Accent.colour, 0xFFFFF1E6.toInt(), Accent.warm(0xFFFFD54F.toInt()), 0xFFFF8FB1.toInt(), 0xFF6ED3CF.toInt())
 
         // Time, in seconds. Android's animator duration setting does not change these: with it off nothing moves at all.
         const val FRAME_SECONDS = 1 / 60f

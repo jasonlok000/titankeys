@@ -2995,7 +2995,8 @@ class GuideActivity : Activity() {
         keys.zoneMarks = true
         // The playground's own text, made for speed, in a new order each time.
         startPassage(PlaygroundText.make(kotlin.random.Random(SystemClock.uptimeMillis())))
-        swapIn(body, PLAYGROUND_BODY, 0)
+        // After Reset literally everything, the front page says so once (FreshStart).
+        swapIn(body, FreshStart.take(this) ?: PLAYGROUND_BODY, 0)
         for (view in listOf(title, field, keys, chapter, script, guideAction, settingsAction))
             view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         showScript()

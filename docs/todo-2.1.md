@@ -213,6 +213,21 @@ all of them are unapproved.
     - **Open:** the echo uses the word's own mark, and the ambient waits a full cycle, so there are no hearts and then glitter.
     - **Next for W:** the quick settings page has the same late lift (its mark clears about 0.3 s after a toggle), so it gets the
       same fix. The ladder work stays held until v4 is approved.
+  - **Usage limit hit, about 10:55 to 11:10.** On resuming, each worker continued from its branch:
+    - W: claude/word-ladder-v4 f112d60, the ladder;
+    - C: claude/finale-grass cddc991, the finale;
+    - D: claude/press-haptics 59e7e01, then the bar baseline;
+    - A: the front page bar overlap;
+    - V: the GuideDecor port, from guide-decor-v3-handover.md.
+
+    F kept running: its resets are on fork/claude/resets (f6f6d87), waiting for its report. Merge order: C, then V; the rest
+    as they report. Then build #6.
+  - **Decor v3 review (Orchestrator, 11:05).** Approved: strengths of 36–46%, grass ink at 24/40/60%, and every design.
+    Changes:
+    - the clown valance about half as deep at about 30%, with juggling balls that read as balls;
+    - grass about 150 dp tall. C makes the room 150 dp (GRASS_DP was 96).
+
+    Merge C's finale branch first, then V's GuideDecor build.
   - **A's guide zones: merged** (325e623, ebe561e; merge 7405e10).
     - Decorations are about twice as strong.
     - The hold slide has no field demo.

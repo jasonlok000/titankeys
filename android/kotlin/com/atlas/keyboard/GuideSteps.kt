@@ -405,6 +405,8 @@ internal object PlaygroundText {
         "this keyboard fixes your typos so your boss keeps thinking you went to school",
         "somewhere a blackberry is crying because you finally moved on",
         "you type faster than you think which explains a lot of your messages",
+        "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb and proud of it",
+        "some of you bought this as a dumb phone to scroll less and some as a powerhouse and you are all still scrolling",
         "swipe like you mean it and stop poking the keys like they owe you money",
         "if you can read this you are already smarter than half your group chat",
         "your ex had a touchscreen and look how that turned out",

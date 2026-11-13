@@ -1896,13 +1896,13 @@ class AtlasIme : InputMethodService() {
     /**
      * A resting finger hovers the button over its key, or over the key above it: its pill shows the button's name. The mark keeps
      * its column while the finger stays, so after a press the pill shows that button's new action. Back has no pill and no mark:
-     * P and Backspace only pick it (owner, 2026-11-12).
+     * P and Backspace only pick it (owner, 2026-11-12). A [quiet] mark plays nothing, as after a press, which has its own haptic.
      */
-    private fun markMenu(key: String) {
+    private fun markMenu(key: String, quiet: Boolean = false) {
         val strip = strip ?: return
         val column = if (menuOpen) MenuKeys.hovered(key) else -1
         val mark = if (column == MenuKeys.SAVE || column == MenuKeys.FORGET) column else -1
-        if (mark >= 0 && mark != strip.menuMark) haptics.play(Haptic.MenuMark)
+        if (!quiet && mark >= 0 && mark != strip.menuMark) haptics.play(Haptic.MenuMark)
         strip.menuMark = mark
     }
 
@@ -3161,11 +3161,19 @@ class AtlasIme : InputMethodService() {
         // Backspace, under P, goes back.
         if (keyCode == menuKey && event.repeatCount > 0) return true
         if (!event.isSystem && menuOpen && (keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z || keyCode == KeyEvent.KEYCODE_DEL)) {
-            val action = menuAction(if (keyCode == KeyEvent.KEYCODE_DEL) Layout.BACKSPACE else ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString())
+            val pressed = if (keyCode == KeyEvent.KEYCODE_DEL) Layout.BACKSPACE else ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString()
+            val action = menuAction(pressed)
             if (action != null) {
                 if (event.repeatCount == 0) {
                     menuKey = keyCode
                     stripAction(action)
+                    // The finger that pressed the key is on it, so its pill stays there and shows the button's next step, whatever
+                    // the touchpad reports around the press (owner, 2026-11-12). See [SteadyKey.press].
+                    if (menuOpen) {
+                        barHover.press(pressed)
+                        restingKey = barHover.key
+                        markMenu(restingKey, quiet = true)
+                    }
                 }
                 return true
             }
@@ -3210,8 +3218,12 @@ class AtlasIme : InputMethodService() {
         // The last key let go: a resting finger is reported again at once, and if none is, the mark goes as after a lift.
         val panelLast = panelHover.keyUp(keyCode, event.eventTime) && panelOpen
         // A key that picked a word menu button keeps the hover when it is let go: the finger is still on it, and its pill now
-        // names the button's next step (owner, 2026-11-12). The hover goes when the touchpad says the finger lifted or moved.
-        val barLast = if (keyCode == menuKey && menuOpen) barHover.release(keyCode).let { false } else barHover.keyUp(keyCode, event.eventTime) && !panelOpen
+        // names the button's next step (owner, 2026-11-12). The touchpad's lift for the press mostly comes after the key, and is
+        // the press's own: the hover goes only when the touchpad shows the finger on another key, or lifting after that. See
+        // [SteadyKey.press].
+        val menuRelease = keyCode == menuKey && menuOpen
+        if (menuRelease) barHover.release(keyCode, event.eventTime)
+        val barLast = !menuRelease && barHover.keyUp(keyCode, event.eventTime) && !panelOpen
         if (panelLast || barLast) {
             main.removeCallbacks(expireHover)
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)

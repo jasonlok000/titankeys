@@ -192,17 +192,20 @@ private fun theMenuHover() {
         same(MenuKeys.pills(MenuKeys.FORGET, at), MenuKeys.second(step, true) != null, "O has one where it has a button at $step")
     }
     same(MenuKeys.pills(MenuKeys.SAVE, MenuKeys.State(MenuKeys.Step.New, false, savable = false)), false, "A symbol has no Save to hover")
-    // After a press the finger stays on the key: letting the key go keeps the hover until the touchpad shows a lift or a move
-    // (owner, 2026-11-12: the hover was lost when the state changed).
+    // After a press the finger stays on the key: the touchpad's lift for the press, which on the phone comes after the key is let
+    // go, is the press's own and keeps the hover, and so does the quiet after it (owner, 2026-11-12 and 2026-11-13: the hover was
+    // lost when the state changed). tests/word-menu walks every order the lift and the key came in.
     val kept = SteadyKey(Layout::keyAt)
     kept.touch(.75f, .1f)
     kept.keyDown(37)
-    kept.lift(1000)
-    kept.release(37)
-    same(kept.expire(1000 + 20 * SteadyKey.LIFT_MILLIS), false, "The pressed key's hover stays after the press")
+    kept.press("I")
+    kept.release(37, 1086)
+    kept.lift(1210)
+    same(kept.expire(1210 + 20 * SteadyKey.LIFT_MILLIS), false, "The pressed key's hover outlasts the press's own lift")
     same(kept.key, "I", "on I")
+    kept.touch(.75f, .1f)
     kept.lift(9000)
-    same(kept.expire(9000 + SteadyKey.LIFT_MILLIS), true, "and goes when the finger lifts")
+    same(kept.expire(9000 + SteadyKey.LIFT_MILLIS), true, "and goes when the finger, seen again, lifts")
     val hover = SteadyKey(Layout::keyAt)
     hover.touch(.75f, .1f)
     same(MenuKeys.hovered(hover.key), MenuKeys.SAVE, "A finger on I hovers I's button")
@@ -384,7 +387,7 @@ private fun theMenuMotion() {
     val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
     // Places (owner, 2026-11-12): I, O and Back on the centres of their columns, a key apart; Back no longer dodges the corner.
     check("if (centre > most) centre = most" !in strip) { "Back no longer dodges the rounded corner" }
-    check("barHover.release(keyCode)" in java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()) { "A picking key keeps the hover" }
+    check("barHover.press(pressed)" in java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()) { "A picking key keeps the hover" }
     check("if (pillShown >= 0) ambientStart = -1L" in strip) { "The ambient status waits while a button is hovered" }
     check("MenuKeys.motion(if (opened) null else shownStep, menu.step)?.takeIf { GuideMotion.enabled }" in strip) { "Motion off, no animations" }
     check("drawable.setTint(look.accent)" in strip.substringAfter("private fun drawSprite(")) { "Every particle is orange" }

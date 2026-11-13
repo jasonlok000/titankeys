@@ -77,18 +77,60 @@ fun main(args: Array<String>) {
     }
     for (dark in listOf(true, false)) {
         val suffix = if (dark) "" else "-light"
-        for ((sheet, rows) in listOf("menu-all" to states, "menu-motion" to motions, "menu-ambient" to ambient)) {
+        for ((sheet, rows) in listOf("menu-all" to states, "menu-motion" to motions, "menu-ambient" to ambient, "menu-press" to pressRows())) {
             val image = BufferedImage(WIDTH, rows.size * (ROW + CAPTION), BufferedImage.TYPE_INT_RGB)
             for ((index, row) in rows.withIndex()) {
                 val single = draw(row, dark, regular, medium, strings, drawables)
                 image.createGraphics().apply { drawImage(single, 0, index * (ROW + CAPTION), null); dispose() }
-                if (sheet == "menu-all") ImageIO.write(single, "png", File(folder, "menu-${row.name}$suffix.png"))
+                if (sheet == "menu-all" || sheet == "menu-press") ImageIO.write(single, "png", File(folder, "menu-${row.name}$suffix.png"))
             }
             ImageIO.write(image, "png", File(folder, "$sheet$suffix.png"))
         }
     }
     barSheet(folder, regular, medium, drawables)
     println("Drawn to $folder")
+}
+
+/**
+ * The hover before and after each press, up the ladder on I (and K) and down it on O (and L), as the real [SteadyKey] keeps it
+ * through the touchpad's events in the order the owner's phone sends them (tests/word-menu, [MenuBar]): the key down, up 86 ms
+ * later, the touchpad's lift for the press 124 ms after that, and then nothing while the finger stays still. Each frame's pill
+ * is the one the strip draws from the mark that the events leave.
+ */
+private fun pressRows(): List<Row> {
+    val rows = mutableListOf<Row>()
+    var count = 0
+    fun frame(bar: MenuBar, caption: String, from: MenuKeys.State? = null, motion: Pair<MenuKeys.Motion, Long>? = null) {
+        count++
+        rows += Row("press-%02d".format(count), caption, "Titankeys", bar.state, bar.mark, motion, from)
+    }
+    fun press(bar: MenuBar, key: String, time: Long) {
+        val from = bar.state
+        bar.keyDown(key, time)
+        bar.keyUp(key, time + 86)
+        val motion = MenuKeys.motion(from.step, bar.state.step)
+        fun playing(later: Long) = motion?.takeIf { later < MenuMotion.millis(it) }?.let { it to later }
+        bar.at(time + 1)
+        frame(bar, "$key pressed, 1 ms: ${bar.state.step}", from, playing(1))
+        bar.lift(time + 210)
+        bar.at(time + 400)
+        frame(bar, "$key, 400 ms: the touchpad lifted at 210 ms (before the fix, the pill went at 360)", from, playing(400))
+        bar.at(time + 1_500)
+        frame(bar, "$key, 1.5 s: the finger still on $key, the touchpad quiet")
+    }
+    for ((up, down) in listOf("I" to "O", "K" to "L")) {
+        val bar = MenuBar(MenuKeys.State(MenuKeys.Step.New, true))
+        bar.touch(up, 0)
+        frame(bar, "Resting on $up: learned, not saved")
+        press(bar, up, 1_000)
+        press(bar, up, 3_000)
+        press(bar, up, 5_000)
+        bar.touch(down, 7_000)
+        frame(bar, "Moved to $down")
+        press(bar, down, 8_000)
+        press(bar, down, 10_000)
+    }
+    return rows
 }
 
 private class Row(val name: String, val caption: String, val word: String, val state: MenuKeys.State, val hover: Int = -1,

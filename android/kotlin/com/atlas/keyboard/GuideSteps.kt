@@ -968,12 +968,12 @@ internal const val PRANK_PASTE = "So is my whole personality"
 internal const val CLIP_LINE = CLIP_LEAD + PRANK_PASTE
 
 /** The clipboard lesson's clips, newest first: a thread of digs, and one nice one, which isn't what it pastes. */
-// Each fits its field on one line, so no dig ends in "…" (owner, 2026-11-13: the personality one didn't end).
+// Each fits its field on one line, so no dig ends in "…". The Next-is-not-a-personality one didn't land (owner, 2026-11-13).
 internal val GUIDE_CLIPS = listOf(
     "Per my last message: just read.",
     "Circling back: still can't read?",
     "Reminder: read the manual.",
-    "Next is not a personality.",
+    "Looping in your last brain cell.",
     "Honestly, you're doing great.",
 )
 internal val PRANK_CLIP = GUIDE_CLIPS.last()
@@ -984,6 +984,7 @@ internal val OLD_GUIDE_CLIPS = GUIDE_CLIPS.toSet() + PASTE_TEXT + setOf(
     "Per my last four messages, please stop.", "Honestly, you're doing great.",
     "Per my last message, the grey words were the instructions.", "Circling back, since reading isn't your thing.",
     "Friendly reminder: nobody believes you read the manual.", "As discussed, Next is not a personality.",
+    "Next is not a personality.",
 )
 
 /** The words that the steer slide aims at are at least this many words from the cursor's column. */

@@ -204,6 +204,8 @@ class MenuScene(
     private val hot = Array(letters.size) { Tween(0f) }
     private val greyPreview = Array(letters.size) { Tween(0f) }
     private val markPreview = Tween(0f)
+    /** How far a heart's grey preview hides Saved's faint book, which rests in the heart's place: they never overlap. */
+    private val markHide = Tween(0f)
     /** What the resting finger's press would do, shown in grey on the word. */
     var ghost: MenuKeys.Button? = null
         private set
@@ -247,6 +249,7 @@ class MenuScene(
         hot.forEach { it.set(0f) }
         greyPreview.forEach { it.set(0f) }
         markPreview.set(0f)
+        markHide.set(0f)
         ghost = null
         ghostOwned = false
         penOn = false
@@ -275,6 +278,7 @@ class MenuScene(
         ghost = button
         ghostOwned = false
         if (onLetters(button)) greyPreview.forEach { it.to(1f, PREVIEW) } else markPreview.to(1f, PREVIEW)
+        markHide.to(if (onHeart(button)) 1f else 0f, PREVIEW)
         if (button == MenuKeys.Button.Unblock) strikeAlpha.to(.3f, PREVIEW)
     }
 
@@ -283,10 +287,12 @@ class MenuScene(
         if (ghostOwned) return
         greyPreview.forEach { it.to(0f, PREVIEW) }
         markPreview.to(0f, PREVIEW)
+        markHide.to(0f, PREVIEW)
         if (ghost == MenuKeys.Button.Unblock && rung == MenuKeys.Step.Blocked) strikeAlpha.to(1f, PREVIEW)
     }
 
     private fun onLetters(button: MenuKeys.Button) = button == MenuKeys.Button.Save || button == MenuKeys.Button.Unsave
+    private fun onHeart(button: MenuKeys.Button?) = button == MenuKeys.Button.Favourite || button == MenuKeys.Button.Unfavourite
 
     // The press.
 
@@ -311,6 +317,8 @@ class MenuScene(
             markPreview.to(0f, FADE)
         }
         if (ghost == MenuKeys.Button.Unblock && button != MenuKeys.Button.Unblock) strikeAlpha.to(1f, FADE)
+        // The book stays as hidden as a heart's preview left it, and the effect takes it from there.
+        mark.set(mark.x * (1f - markHide.x)); markHide.set(0f)
         ghostOwned = true
         penOn = false
         // Props the new step doesn't use leave cleanly: they rise and fade.
@@ -438,7 +446,7 @@ class MenuScene(
             haptic(MenuKeys.Button.Favourite, "the hearts release")
             heartScale.kick(9f); heartAlpha.to(0f, 90f, ::easeOut)
             val hx = cx
-            val hy = CY - 26f
+            val hy = HEART_Y
             for (i in 0 until 14) {
                 val isBack = i >= 10
                 val d = if (isBack) .55f else 1f
@@ -463,7 +471,7 @@ class MenuScene(
             haptic(MenuKeys.Button.Unfavourite, "the heart cracks")
             heartAlpha.set(0f); ghost = null
             val hx = cx
-            val hy = CY - 26f
+            val hy = HEART_Y
             for (side in intArrayOf(-1, 1)) parts += Part(Kind.Half).apply {
                 this.side = side; x = hx + side * .5f; y = hy; vx = side * (46f + r() * 14f); vy = -(70f + r() * 15f); ay = 620f; drag = .8f
                 w = side * (1.6f + r() * .6f); wdrag = .4f; size = HEART_DP; life = .95f; fadeIn = .001f; fadeOut = .5f
@@ -478,6 +486,8 @@ class MenuScene(
             }
             dy.to(0f, POP).kick(80f)
         }
+        // Back on Saved: its faint book comes back to its place once the heart's halves have fallen out of it.
+        at(UNFAVOURITE_MARK) { mark.to(1f, SETTLE, ::easeInOut) }
     }
 
     private fun block(r: () -> Float) {
@@ -589,7 +599,7 @@ class MenuScene(
             for (k in 0 until parts.size) parts[k].step(h)
         }
         hot.forEach { it.step(dt) }; greyPreview.forEach { it.step(dt) }
-        markPreview.step(dt); strikeHot.step(dt); strikeAlpha.step(dt); mark.step(dt)
+        markPreview.step(dt); markHide.step(dt); strikeHot.step(dt); strikeAlpha.step(dt); mark.step(dt)
         heartAlpha.step(dt); heartHot.step(dt); heartCrack.step(dt)
         book?.let { b ->
             b.a.step(dt); b.tear.step(dt)
@@ -615,7 +625,7 @@ class MenuScene(
     /** Whether anything still moves, so the bar must draw again. Ambient hearts count while they show. */
     val busy: Boolean
         get() = cues.isNotEmpty() || tracks.isNotEmpty() || parts.isNotEmpty() || crossfade != null || book != null ||
-            solid.any { it.busy } || grey.any { it.busy } || hot.any { it.busy } || greyPreview.any { it.busy } || markPreview.busy ||
+            solid.any { it.busy } || grey.any { it.busy } || hot.any { it.busy } || greyPreview.any { it.busy } || markPreview.busy || markHide.busy ||
             sx.busy || sy.busy || dy.busy || strikeEnd.busy || strikeHot.busy || strikeAlpha.busy || mark.busy ||
             heartAlpha.busy || heartScale.busy || heartHot.busy || heartCrack.busy
 
@@ -675,16 +685,17 @@ class MenuScene(
     private fun paintEffectsOnly(c: MenuCanvas) {
         // Depth: the small, faint ones behind, and the ink under the book, which hides it once it shuts.
         for (p in parts) if (p.back || p.kind == Kind.Ink) part(c, p)
-        drawSmallBook(c, cx, MARK_Y, MARK_DP, palette.cream, .24f * mark.x)
+        drawSmallBook(c, cx, MARK_Y, MARK_DP, palette.cream, .24f * mark.x * (1f - markHide.x))
         val hx = cx
-        val hy = CY - 26f
-        if (markPreview.x > 0f && (ghost == MenuKeys.Button.Favourite || ghost == MenuKeys.Button.Unfavourite)) {
+        val hy = HEART_Y
+        if (markPreview.x > 0f && onHeart(ghost)) {
             drawHeart(c, hx, hy, HEART_DP, 0f, palette.grey, markPreview.x)
             if (ghost == MenuKeys.Button.Unfavourite) drawCrack(c, hx, hy, HEART_DP, 1f, palette.paper, markPreview.x)
         }
         if (heartAlpha.x > 0f) {
             val s = HEART_DP * heartScale.x
-            val y = hy + (1f - heartScale.x) * 4f
+            // It pops about its bottom, which stays put, [CLEAR] dp over the bar.
+            val y = hy + (1f - heartScale.x) * HEART_BELOW * HEART_DP / 24f
             drawHeart(c, hx, y, s, 0f, mix(palette.grey, palette.accent, heartHot.x), heartAlpha.x)
             drawCrack(c, hx, y, s, heartCrack.x, palette.paper, heartAlpha.x)
         }
@@ -824,6 +835,23 @@ class MenuScene(
         return floatArrayOf(b.x - 12f * s * b.sx.x, top - 2f, b.x + 12f * s * b.sx.x, bottom + 2f)
     }
 
+    /**
+     * The heart's box in dp, while its grey preview or the pressed heart shows, or null: for the check that it rests where the
+     * book does, wholly above the bar. The heart runs from 2 to 22 across its grid and 3 to 21.35 down, about 12 and 12.4.
+     */
+    fun heartBox(): FloatArray? {
+        val previewing = onHeart(ghost) && markPreview.x > .002f
+        val pressed = heartAlpha.x > .002f
+        if (!previewing && !pressed) return null
+        val k = if (pressed) max(0f, heartScale.x) else 1f
+        val s = HEART_DP * k / 24f
+        val y = HEART_Y + (1f - k) * HEART_BELOW * HEART_DP / 24f
+        return floatArrayOf(cx - 10f * s, y - (12.4f - 3f) * s, cx + 10f * s, y + HEART_BELOW * s)
+    }
+
+    /** How much of Saved's faint book shows now, 0 to 1 of its resting faintness. */
+    fun markShown(): Float = mark.x * (1f - markHide.x) * fade
+
     /** The resting book's box, while it shows: see [MARK_Y]. */
     fun markBox(): FloatArray? = if (mark.x * fade <= .002f) null else floatArrayOf(
         cx - 12f * MARK_DP / 24f, MARK_Y + (4.6f - 12.5f - 1f) * MARK_DP / 24f, cx + 12f * MARK_DP / 24f, MARK_Y + (20.4f - 12.5f + 1f) * MARK_DP / 24f)
@@ -848,6 +876,15 @@ class MenuScene(
         const val MARK_DP = 14f
         const val CLEAR = 8f
         const val MARK_Y = -CLEAR - (20.4f - 12.5f + 1f) * MARK_DP / 24f
+        /** How far the heart reaches below its middle on its 24 grid: 21.35, its tip, less 12.4. */
+        const val HEART_BELOW = 21.35f - 12.4f
+        /**
+         * The heart's middle, for its grey preview, the pressed heart and its burst or crack: in the book's resting place, its tip
+         * [CLEAR] dp over the bar's top. No heart sits across the bar's top edge, or on the book (owner, 2026-11-13).
+         */
+        const val HEART_Y = -CLEAR - HEART_BELOW * HEART_DP / 24f
+        /** When Saved's faint book comes back after Unfavourite, in ms after the press: once the heart's halves have fallen. */
+        const val UNFAVOURITE_MARK = 900f
 
         // The motion language, as v4's tokens (ms; springs as mass, stiffness, damping).
         const val PREVIEW = 170f

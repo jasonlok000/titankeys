@@ -20,6 +20,7 @@ import java.io.File
  * - opening the menu plays no burst;
  * - the six effects of the approved ladder v4 ([MenuScene]): each haptic on its own frame, the book wholly above the bar and
  *   opaque once shut, reduced motion, and a second press mid-effect;
+ * - the heart resting where the book does, wholly above the bar, with the book faded out under it;
  * - the hover after a press, up and down, from I, O, K and L, in every order the touchpad's lift and the key came in on the
  *   owner's phone, and the quick settings page keeping its mark the same way.
  */
@@ -27,6 +28,7 @@ fun main() {
     theLadder()
     theOpening()
     theEffects()
+    theHeartRestsWhereTheBookDoes()
     theHover()
     theQuickSettingsHover()
     theKeyboardMakesTheseCalls()
@@ -289,6 +291,44 @@ private class Recorder : MenuCanvas {
     override fun text(text: String, x: Float, y: Float, size: Float, fill: Int, outline: Int, outlineWidth: Float, centred: Boolean) {
         ops += (if (centred) "ink" else "letter") to text
     }
+}
+
+/**
+ * The heart's grey preview, and the pressed heart, sit where Saved's faint book rests, their tip 8 dp over the bar: no heart across
+ * the bar's top edge, and none on the book, which fades out while a heart's preview shows (owner, 2026-11-13, as for the book).
+ */
+private fun theHeartRestsWhereTheBookDoes() {
+    fun aboveTheBar(scene: MenuScene, how: String) = scene.heartBox()?.let { box ->
+        check(box[3] <= -MenuScene.CLEAR + .01f) { "$how: the heart sits above the bar, its tip at ${box[3]} dp" }
+    }
+    // Saved, hovering I: the grey heart comes in as the book goes, and the book comes back when the finger moves off.
+    val saved = scene("whatever", MenuKeys.Step.Saved)
+    same(saved.markShown(), 1f, "Saved shows its faint book")
+    saved.hover(MenuKeys.Button.Favourite)
+    repeat(48) { saved.step(1 / 120f); aboveTheBar(saved, "Favourite's preview") }
+    val box = saved.heartBox()!!
+    same(Math.round(box[3] * 100) / 100f, -MenuScene.CLEAR, "The grey heart's tip rests 8 dp over the bar, as the book's foot does")
+    check(saved.markShown() < .01f) { "and the book has faded out under it: ${saved.markShown()}" }
+    saved.unhover()
+    repeat(48) { saved.step(1 / 120f) }
+    check(saved.heartBox() == null && saved.markShown() > .99f) { "Off the button, the heart goes and the book is back" }
+    // The press takes the preview over: the book never comes back through the heart, which pops about its tip.
+    saved.hover(MenuKeys.Button.Favourite)
+    repeat(48) { saved.step(1 / 120f) }
+    saved.press(MenuKeys.Button.Favourite)
+    repeat(3 * 120) {
+        saved.step(1 / 120f)
+        aboveTheBar(saved, "Favourite's press")
+        check(saved.markShown() < .01f) { "Favourite's press: the book stays gone, ${saved.markShown()}" }
+    }
+    // Favourite, hovering O: the cracked heart in the same place; Unfavourite's press cracks it there, and the book comes back.
+    val favourite = scene("whatever", MenuKeys.Step.Favourite)
+    favourite.hover(MenuKeys.Button.Unfavourite)
+    repeat(48) { favourite.step(1 / 120f); aboveTheBar(favourite, "Unfavourite's preview") }
+    same(Math.round(favourite.heartBox()!![3] * 100) / 100f, -MenuScene.CLEAR, "The cracked heart rests in the book's place too")
+    favourite.press(MenuKeys.Button.Unfavourite)
+    repeat(3 * 120) { favourite.step(1 / 120f); aboveTheBar(favourite, "Unfavourite's press") }
+    check(favourite.rung == MenuKeys.Step.Saved && favourite.markShown() > .99f) { "Back on Saved, the faint book is back" }
 }
 
 /**

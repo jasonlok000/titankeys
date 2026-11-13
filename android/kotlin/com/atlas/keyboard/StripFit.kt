@@ -12,7 +12,7 @@ package com.atlas.keyboard
  * It needs no Android: [measure] gives the width of a text at full size, in the same units as the widths.
  */
 internal object StripFit {
-    /** What a place shows: [text], at [scale] of the normal size, in a place [width] wide. */
+    /** What a place shows: [text], at [scale] of its own size, in a place [width] wide. */
     data class Slot(val text: String, val scale: Float, val width: Float)
 
     const val MIN_SCALE = .7f
@@ -23,10 +23,11 @@ internal object StripFit {
      * fit takes room from the others, and an empty word lends its place. Without, every place is the same width.
      */
     fun fit(words: List<String>, total: Float, padding: Float, measure: (String) -> Float, minScale: Float = MIN_SCALE,
-            lend: Boolean = true): List<Slot> {
+            lend: Boolean = true, sizes: List<Float> = List(words.size) { 1f }): List<Slot> {
         if (words.isEmpty()) return emptyList()
         val share = total / words.size
-        val natural = words.map { if (it.isEmpty()) 0f else measure(it) }
+        // Each place's own size, as a part of the full size that [measure] measures at: the bar's side words are smaller.
+        val natural = words.mapIndexed { index, word -> if (word.isEmpty()) 0f else measure(word) * sizes[index] }
         val full = natural.map { it + 2 * padding }
         val smallest = natural.map { it * minScale + 2 * padding }
         // Words that fit at full size can lend what they do not use. Words that do not fit even when small want more room.
@@ -54,7 +55,8 @@ internal object StripFit {
             when {
                 word.isEmpty() || natural[index] <= room -> Slot(word, 1f, widths[index])
                 natural[index] * minScale <= room -> Slot(word, room / natural[index], widths[index])
-                else -> Slot(cut(word, words.filterIndexed { other, _ -> other != index }, room / minScale, measure), minScale, widths[index])
+                else -> Slot(cut(word, words.filterIndexed { other, _ -> other != index }, room / minScale / sizes[index], measure), minScale,
+                    widths[index])
             }
         }
     }

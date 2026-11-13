@@ -47,8 +47,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 
 - The held delete has no fade: each word is one firm hit, 50 ms at the slow pace down to 30 ms at top speed. That's the version the owner has on the phone, and the owner keeps it. (Owner, 2026-11-12)
 
-### Open
-- The space "first tap alone" wait: change 200 → 150 ms? It recovers 7 failed steers and adds about 0.09 false triggers per 1,000 words. The owner asked what it is; explained 2026-11-12.
+- The space gestures' "first tap alone" wait goes from 200 ms to **150 ms**. It recovers 7 failed steers in the logs and adds about 0.09 false triggers per 1,000 words. The hold wait stays at 200 ms. (Owner, 2026-11-12)
 
 ## Haptics
 

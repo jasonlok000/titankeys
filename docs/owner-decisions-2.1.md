@@ -248,6 +248,21 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   needs the keyboard open on a field that shows words, 3 to 4.5 minutes with no key, touch or swipe, the screen on, then a 25%
   chance, and never twice in a row: about 15 untouched minutes before the first game, so it's almost never seen. The
   Orchestrator's proposal, unapproved: wait 60 to 90 s and a 50% chance, about 2.5 minutes on average; any input still ends it.
+- **The 11 dp line, round 2** (owner, 2026-11-13, on build #13: "With the illusion shift, the modifier bar is not done well. The
+  delete cursor looks visibly too far up not vertically center aligned. Space gestures seems also not be optimized… The position
+  and scaling of the word menu effects seems inconsistent. Like the book seems to be much higher up than the heart animation. I
+  didn't check the idle animations but make sure that its perfect with the new updated visual border rule. I though you're
+  checking all visually especially with one more version with a simulated curve corner and border on your end?"). (Owner)
+  - Reproduced by the Orchestrator on the phone: Shift once, and Ctrl, put their chips at the bar's very bottom, cut by the
+    screen's edge, while Ctrl's shortcut text sits right; the renders had shown them whole, so the render's chip layout doesn't
+    match the phone's.
+  - The Orchestrator's miss: only static frames were reviewed. The gesture display was knowingly left on the old middle, and
+    the menu effects, the modifier bar and the idle games weren't checked in motion or on the phone.
+  - Assigned: W, the modifier bar and the menu effects' one anchor and scale; C, the gesture display (delete caret, flick dots,
+    double and triple Space) on the line; A, the seven idle games and their ways home on the line. Each sends keyframe strips at
+    Smaller, Normal and Bigger in W's border-and-corner render through corner_check, which the Orchestrator reviews frame by frame,
+    then checks on the phone (Shift, the PANEL and IDLE_BAR broadcasts, a held bar word) before any build goes to the owner.
+  - The release candidate (build #14) is withdrawn: don't sign it.
 - **No AI-use declaration** (owner, 2026-11-13: "We don't care about ai use declaration remember?"). (Owner) Pre-release and PR
   handovers carry no AI-use line, whatever AGENTS.md says.
 - **Languages in parallel?** (owner, 2026-11-13: "if I already want to start working on the other languages support, can I do it

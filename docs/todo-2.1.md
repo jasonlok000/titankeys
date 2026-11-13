@@ -279,6 +279,9 @@ all of them are unapproved.
     - Delete 1/3 shows the flat e with its strike.
     - The real bar: the small letters' middle sits on the new line, 61 px under the bar's top (11 dp under the old middle); a
       'g' tail ends about 10 px over the screen's edge.
+  - **Withdrawn: build #14 is no longer the release candidate** (owner's round 2 on the line, 2026-11-13). In progress: W (the
+    modifier bar's cut chips, the menu effects' anchor and scale), C (the gesture display on the line), A (the idle games on the
+    line). Each sends keyframe strips in the border-and-corner render; the Orchestrator reviews every frame, then the phone.
   - **Build #14, the release candidate, passed every verify check** (from e3cefc5; debug APK c90e1827, not installed: the same
     app as build #13 apart from the release notes). The WSL build copy ~/build/tk-overnight now holds this tree with compat.py
     applied and Ink patched: the owner runs `cd ~/build/tk-overnight && bash tools/release.sh` there (as dev in atlas-build)

@@ -51,6 +51,7 @@
 - Shift chip: An automatic capital shows as a small arrow, and the words stay put.
 
 ## Settings
+- New name: It's TitanKeys Keyboard in your launcher, the keyboard list and Accessibility now, so searching "keyboard" finds it.
 - Two resets: So many switches, so easy to wreck. Settings > Reset most things puts every switch and choice back how it started, and your words, snippets, shorthand and app lists stay. Reset literally everything wipes all of it too, like a fresh install.
 
 ## Privacy and data

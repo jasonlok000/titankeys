@@ -22,11 +22,11 @@ export default function Setup() {
   const outside = settings.outsideSlidingMode;
   return <Screen title="Setup" subtitle="Make every step say Done. Each one opens the right page.">
     <Section title="Steps">
-      <Field label="Turn on TitanKeys" onPress={enableKeyboard}>{status(settings.enabled)}</Field>
+      <Field label="Turn on TitanKeys Keyboard" onPress={enableKeyboard}>{status(settings.enabled)}</Field>
       <Field label="Make TitanKeys your keyboard" onPress={chooseKeyboard}>{status(settings.selected)}</Field>
       <Field label="Allow display over other apps" onPress={allowOverlay}>{status(settings.overlay)}</Field>
       <Field label="Turn on Scroll assistant" onPress={openScrollAssistant}>{status(settings.scrollAssistant)}</Field>
-      <Field label="Turn on TitanKeys in Accessibility" onPress={allowBack}>{status(settings.backService)}</Field>
+      <Field label="Turn on TitanKeys Keyboard in Accessibility" onPress={allowBack}>{status(settings.backService)}</Field>
     </Section>
     {/* The phone's own settings. TitanKeys only reads them, so each step opens the phone's page for you to change it. */}
     <Section title="Phone settings">

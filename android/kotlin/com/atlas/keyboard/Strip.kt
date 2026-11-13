@@ -143,8 +143,11 @@ class Strip(
             1, TypedValue.COMPLEX_UNIT_PX)
     }
     private val modifierRow = LinearLayout(context).apply {
-        // Each chip's top is set so that its text sits on the bar's line: see [chipBox].
+        // Each chip's top is set so that its text sits on the bar's line: see [chipBox]. Nothing else may move it: a row with its
+        // children at the top lines up their baselines, which put the chips' text on the hint's and their boxes off the bottom of
+        // the screen (build #13). tests/menu-render's BarLine lays this row out as Android does.
         gravity = Gravity.TOP
+        isBaselineAligned = false
         for (chip in chips.values) addView(chip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(CHIP_GAP) })
         addView(hint, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
     }
@@ -395,6 +398,8 @@ class Strip(
     private var chipSide = 0
 
     init {
+        // Every place in the bar is the bar's height and puts its own text on the line, so none is moved to another's baseline.
+        isBaselineAligned = false
         // The modifiers come first, so that their chips sit at the start of the words.
         addView(modifierRow, LayoutParams(0, barHeight, 1f))
         for (view in wordViews) addView(view, LayoutParams(0, barHeight, 1f))
@@ -988,6 +993,8 @@ class Strip(
             frameAt = now
         }
         shown.cx = menuWordCentre / density
+        // The bar in the scene's dp, which grow with Bar text size while the bar doesn't: falling pieces fade where it really ends.
+        shown.bar = height / density
         shown.reducedMotion = !GuideMotion.enabled
         shown.palette = palette()
         shown.onHaptic = { button, label -> if (label == MenuScene.PRESS) menuPress() else menuBeat(button) }

@@ -44,6 +44,8 @@ internal object BarLine {
     /** The screen above the bar in each picture: more than a corner's radius, so the picture's top corners stay empty. */
     const val ABOVE = 112
     val BAR = Math.round(StripFit.BAR_DP * UNIT)
+    /** The Titan 2 Elite's screen, 1200 px tall: a picture this tall is the whole screen, for the effects that rise over the app. */
+    const val SCREEN = 1200
     val HEIGHT = ABOVE + BAR
     /** The black border under the screen, in px. */
     val BORDER = StripFit.BORDER_DP * UNIT
@@ -56,6 +58,8 @@ internal object BarLine {
     private lateinit var bold: Font
     private lateinit var drawables: File
     private lateinit var strings: String
+    /** Strip.kt, where the render reads how the modifier row is set up: see [AndroidRow.modifierRow]. */
+    private var strip = File("android/kotlin/com/atlas/keyboard/Strip.kt")
 
     private val INK = Color.WHITE
     private val PAPER = Color.BLACK
@@ -102,14 +106,17 @@ internal object BarLine {
             else (BAR - chipHeight) / 2
         val chipSide = if (after) maxOf(side, sideFor((BAR - (chipTop + chipHeight)).toFloat())) else side
         val marks = ArrayList<Mark>()
+        /** How the modifier row is set up, to lay it out another way than Strip.kt's: build #13's, to show what the phone did. */
+        var row: AndroidRow.Setup? = null
         val boxes = ArrayList<Box>()
     }
 
     /** A bar state: [draw] draws it at [Look]'s size and rules on a picture of the screen's bottom, the bar's top at [ABOVE]. */
     class State(val name: String, val caption: String, val draw: (Look, Graphics2D) -> Unit)
 
-    fun render(folder: File, fonts: File, drawables: File, strings: String) {
+    fun render(folder: File, fonts: File, drawables: File, strings: String, strip: File = this.strip) {
         fun font(name: String) = Font.createFont(Font.TRUETYPE_FONT, File(fonts, name))
+        this.strip = strip
         regular = font("inter_regular.otf")
         medium = font("inter_medium.otf")
         bold = font("inter_bold.otf")
@@ -120,7 +127,7 @@ internal object BarLine {
         val pictures = HashMap<String, BufferedImage>()
         for (era in Era.entries) for (size in FixedScale.Size.entries) {
             val dir = File(out, "${era.name.lowercase()}/${size.name.lowercase()}").apply { mkdirs() }
-            for (state in states()) {
+            for (state in all()) {
                 val look = Look(size, era)
                 val image = picture(look, state)
                 ImageIO.write(image, "png", File(dir, "${state.name}.png"))
@@ -139,21 +146,27 @@ internal object BarLine {
         border(out)
         beforeAfter(out, pictures)
         line(out, pictures)
+        // The modifier row laid out as build #13 had it must break the check, as it broke on the phone; and the effects' keyframes.
+        BarFrames.build13(out).forEach(::println)
+        BarFrames.effects(out)
         kotlin.check(problems.isEmpty()) { "The bar's line breaks:\n" + problems.joinToString("\n") }
         println("Every bar state at every size: its text on the line to half a pixel, its boxes inside the bar, nothing within 4 px of the screen's outline")
     }
 
-    /** The screen's bottom with the bar of [state] drawn at its bottom edge. */
-    private fun picture(look: Look, state: State): BufferedImage {
-        val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB)
+    /**
+     * The screen's bottom with the bar of [state] drawn at its bottom edge, [above] px of the screen over the bar: [ABOVE], or the
+     * whole screen ([SCREEN] less the bar) for what rises over the app.
+     */
+    internal fun picture(look: Look, state: State, above: Int = ABOVE): BufferedImage {
+        val image = BufferedImage(WIDTH, above + BAR, BufferedImage.TYPE_INT_RGB)
         val g = image.createGraphics()
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
         g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
         g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE)
         g.color = PAPER
-        g.fillRect(0, 0, WIDTH, HEIGHT)
-        g.translate(0, ABOVE)
+        g.fillRect(0, 0, WIDTH, image.height)
+        g.translate(0, above)
         state.draw(look, g)
         g.dispose()
         return image
@@ -206,12 +219,33 @@ internal object BarLine {
     }
 
     /** The Shift, Alt and Ctrl chips, filled for a held key and an outline for a pushed one, with the hint beside them. */
-    private fun chips(look: Look, g: Graphics2D, chips: List<Pair<String, Boolean>>, hint: String) {
-        var x = look.chipSide.toFloat()
-        val top = look.chipTop.toFloat()
+    /**
+     * The Shift, Alt and Ctrl chips, filled for a held key and an outline for a pushed one, with the hint beside them, laid out as
+     * Android lays out Strip's modifier row ([AndroidRow], set up as Strip.kt sets it up, or as [Look.row] says): each chip's
+     * place is where the row puts it, not where the chip asks to be.
+     */
+    internal fun chips(look: Look, g: Graphics2D, chips: List<Pair<String, Boolean>>, hint: String) {
         val radius = 16f * WIDTH / 1080f
-        for ((name, held) in chips) {
-            val wide = width(regular, look.chipPx, name) + 2 * look.dp(8)
+        val widths = chips.map { (name, _) -> width(regular, look.chipPx, name) + 2 * look.dp(8) }
+        // The hint fills the rest, shrinking to fit, its text centred across it and, after, drawn on the line (LineText).
+        val start = look.chipSide.toFloat() + widths.sumOf { (it + look.dp(6)).toDouble() }.toFloat()
+        val right = WIDTH - look.side.toFloat()
+        var size = Math.round(18 * look.density).toFloat()
+        while (size > Math.round(13 * look.density) && width(regular, size, hint) > right - start) size--
+        val voffset = (BAR - (descent(size) - ascent(size))) / 2
+        val laid = (voffset - ascent(size)).toFloat()
+        // Up and down, the row lays out the chips and the hint as Android does: the chips with their top margin, the hint the
+        // row's height; before the line, centred.
+        val setup = look.row ?: if (look.after) AndroidRow.modifierRow(strip) else AndroidRow.Setup(AndroidRow.Gravity.CenterVertical, true)
+        val chipBaseline = look.dp(3) - ascent(look.chipPx)
+        val margin = if (look.after) look.chipTop else 0
+        val tops = AndroidRow.tops(BAR, setup, chips.map { AndroidRow.Child(look.chipHeight, chipBaseline, margin) } +
+            AndroidRow.Child(BAR, laid.toInt(), matchParent = true))
+        var x = look.chipSide.toFloat()
+        for ((index, chip) in chips.withIndex()) {
+            val (name, held) = chip
+            val wide = widths[index]
+            val top = tops[index].toFloat()
             val shape = RoundRectangle2D.Float(x, top, wide, look.chipHeight.toFloat(), 2 * radius, 2 * radius)
             if (held) {
                 g.color = ACCENT
@@ -222,21 +256,16 @@ internal object BarLine {
                 g.stroke = BasicStroke(stroke)
                 g.draw(RoundRectangle2D.Float(x + stroke / 2, top + stroke / 2, wide - stroke, look.chipHeight - stroke, 2 * radius, 2 * radius))
             }
-            val baseline = top + look.dp(3) - ascent(look.chipPx)
+            val baseline = top + chipBaseline
             text(g, regular, look.chipPx, name, x + look.dp(8), baseline, if (held) ON_ACCENT else ACCENT)
             mark(look, "the $name chip", baseline, look.chipPx)
             look.boxes += Box("the $name chip", top + look.chipHeight, look.edge)
             x += wide + look.dp(6)
         }
-        // The hint fills the rest, shrinking to fit, its text centred across it and, after, drawn on the line (LineText).
-        val right = WIDTH - look.side.toFloat()
-        var size = Math.round(18 * look.density).toFloat()
-        while (size > Math.round(13 * look.density) && width(regular, size, hint) > right - x) size--
-        val voffset = (BAR - (descent(size) - ascent(size))) / 2
-        val laid = (voffset - ascent(size)).toFloat()
-        val baseline = if (look.after) laid + Math.round(StripFit.baseline(look.line, size, look.floor) - laid) else laid
-        text(g, regular, size, hint, x + (right - x) / 2 - width(regular, size, hint) / 2, baseline, INK)
-        mark(look, "the hint", baseline, size)
+        val hintTop = tops.last()
+        val baseline = hintTop + if (look.after) laid + Math.round(StripFit.baseline(look.line - hintTop, size, look.floor - hintTop) - laid) else laid
+        text(g, regular, size, hint, start + (right - start) / 2 - width(regular, size, hint) / 2, baseline, INK)
+        if (hint.isNotEmpty()) mark(look, "the hint", baseline, size)
     }
 
     /** Shift's arrow for an automatic capital, where Shift's chip would be, beside the words. */
@@ -324,8 +353,13 @@ internal object BarLine {
 
     private fun label(button: MenuKeys.Button) = string("strip_" + button.name.lowercase())
 
-    /** The word's menu, as Strip.drawMenu draws it: the word, the hovered button's pill, and the icons over I, O and Back. */
-    private fun menu(look: Look, g: Graphics2D, word: String, step: MenuKeys.Step, hover: Int = -1, lit: Boolean = false) {
+    /**
+     * The word's menu, as Strip.drawMenu draws it: the word, the hovered button's pill, and the icons over I, O and Back. With
+     * [play], the scene is played as it says (a press and its frames) instead of resting on the hover, and its effects are drawn
+     * over everything, as the strip's effects layer draws them, up over the app.
+     */
+    internal fun menu(look: Look, g: Graphics2D, word: String, step: MenuKeys.Step, hover: Int = -1, lit: Boolean = false,
+                      play: ((MenuScene) -> Unit)? = null) {
         val density = look.density
         val canvas = AwtMenuCanvas(g, bold)
         val icon = look.dp(22)
@@ -346,8 +380,12 @@ internal object BarLine {
         val scene = MenuScene(shown, MenuScene.WordLayout.of(shown, canvas.top(shown)) { canvas.measure(it) }, centre / density, baseline / density, step)
         val choices = MenuKeys.choices(step)
         val hovered = hover.takeIf { MenuKeys.pills(it, step) } ?: -1
-        (if (hovered == MenuKeys.UP) choices.i else if (hovered == MenuKeys.DOWN) choices.o else null)?.let(scene::hover)
-        repeat(60) { scene.step(1 / 120f) }
+        // As Strip: the bar in the scene's dp, which grow with Bar text size while the bar doesn't.
+        if (look.after) scene.bar = BAR / density
+        if (play != null) play(scene) else {
+            (if (hovered == MenuKeys.UP) choices.i else if (hovered == MenuKeys.DOWN) choices.o else null)?.let(scene::hover)
+            repeat(60) { scene.step(1 / 120f) }
+        }
         val saved = g.transform
         g.scale(density.toDouble(), density.toDouble())
         scene.paintWord(canvas)
@@ -396,6 +434,12 @@ internal object BarLine {
             drawVector(g, File(drawables, "${button?.let { "menu_" + it.name.lowercase() } ?: "panel_back"}.xml").readText(), centreX - icon / 2f, top,
                 icon.toFloat(), colour)
             look.boxes += Box("the ${button?.name ?: "Back"} icon", top + icon, look.inside)
+        }
+        if (play != null) {
+            val before = g.transform
+            g.scale(density.toDouble(), density.toDouble())
+            scene.paintEffects(canvas)
+            g.transform = before
         }
     }
 
@@ -504,6 +548,9 @@ internal object BarLine {
     /** Ctrl's shortcuts as ModifierBar.SHORTCUTS says them, which needs Android's key codes to build. */
     private const val SHORTCUTS = "A all  C copy  X cut  V paste  Z undo  Y redo"
 
+    /** Every state the render draws and checks: [states], and the modifier bar's in [BarFrames]. */
+    private fun all() = states() + BarFrames.modifierStates()
+
     fun states(): List<State> {
         val (blocked, new, saved, favourite) = MenuKeys.Step.entries
         val (up, down, back) = Triple(MenuKeys.UP, MenuKeys.DOWN, MenuKeys.BACK)
@@ -556,15 +603,15 @@ internal object BarLine {
      * them: content is any pixel whose grey differs from the bar's colour by more than 40, and the outline is the screen's bottom
      * edge, its sides and its corners' curve, drawn [MARGIN] in.
      */
-    fun risky(image: BufferedImage): List<String> {
+    fun risky(image: BufferedImage, from: Int = ABOVE): List<String> {
         val found = ArrayList<String>()
         val background = image.getRGB(image.width / 2, image.height - 2)
         val h = image.height
-        for (y in ABOVE until h) for (x in 0 until image.width) {
+        for (y in from until h) for (x in 0 until image.width) {
             val rgb = image.getRGB(x, y)
             fun ch(shift: Int) = abs(((rgb shr shift) and 0xFF) - ((background shr shift) and 0xFF))
             if (ch(16) * 299 / 1000 + ch(8) * 587 / 1000 + ch(0) * 114 / 1000 <= 40) continue
-            if (!Corners.clear(RADIUS, x + .5f, h - (y + .5f), image.width.toFloat(), MARGIN)) found += "($x, ${y - ABOVE})"
+            if (!Corners.clear(RADIUS, x + .5f, h - (y + .5f), image.width.toFloat(), MARGIN)) found += "($x, ${y - (h - BAR)})"
         }
         return found
     }
@@ -734,7 +781,7 @@ internal object BarLine {
     /** Every state after, at the three sizes, as corner_check.py shows it, one sheet a size, and before, for comparison. */
     private fun line(out: File, pictures: Map<String, BufferedImage>) {
         for (era in Era.entries) for (size in FixedScale.Size.entries) {
-            val rows = states().map { state ->
+            val rows = all().map { state ->
                 val image = BufferedImage(WIDTH, 34 + HEIGHT - 60, BufferedImage.TYPE_INT_RGB)
                 val g = image.createGraphics()
                 g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)

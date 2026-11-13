@@ -53,6 +53,9 @@ test("everything with text in the bar sits on one line, the middle of the bar an
   expect(strip).toContain("private val hint = LineText(context)");
   expect(strip).toContain("private val clipText = LineText(context)");
   expect(strip).toContain("onLine(hint, modifierRow.top + hint.top)");
+  // Nothing in the bar is moved to another's baseline: the modifier row lined the chips up with its hint's and cut them off the
+  // screen on build #13, and the bar's own places all put their text on the line themselves.
+  expect(strip.match(/isBaselineAligned = false/g)?.length).toBe(2);
   // The chips and the automatic capital's arrow, the pill and the icons, all round the line.
   expect(strip).toContain("return StripFit.boxTopPx(line, middle, height, floor).toFloat() to height");
   expect(strip).toContain("menuBox.set(pill.first, line - pillHeight / 2, pill.second, line + pillHeight / 2)");

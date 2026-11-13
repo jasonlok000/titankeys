@@ -2,7 +2,7 @@
 
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
-[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-13, 06:45.
+[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-13, 07:35.
 
 ## On the phone now (build 2ec5f751, test-2.1h at 0f88ab9: v2 guide, menu v4, fixed sizes, bar fix)
 
@@ -139,10 +139,10 @@ all of them are unapproved.
     playground keeps the 60% drawing (the owner's own v2 call, later than "full real-size").
 - Orchestrator (06:40, 70f4f38): F's two guide lines applied; release notes: sparkles for a save, "way less orange", a line for
   the app's haptics, and one for the share screen.
-- **Build #2: 150cd978** (test-2.1h at 70f4f38 plus docs), all checks passed. Installed 07:05, no crash. A runs the full phone run-through (07:07).
-- **A's run-through of build #2 (07:40): no blocker, 12 ugly, 9 nits, no crash, no new ANR.** Notes: run-through-build2.md in the
-  notes folder. Fixes assigned at 07:45, all from 29c411a, none on the phone:
-  - **D** (claude/playground-menu): the playground used the guide's show-only word menu (its field carries the guide's tag), so
+- **Build #2: 150cd978** (test-2.1h at 70f4f38 plus docs), all checks passed. Installed with no crash, then A ran the full phone run-through.
+- **A's run-through of build #2: no blocker, 12 ugly, 9 nits, no crash, no new ANR.** Notes: run-through-build2.md in the
+  notes folder. Fixes assigned, all from 29c411a, none on the phone:
+  - **D** (claude/playground-menu): **done and merged** (505e777): the playground has its own field mark. the playground used the guide's show-only word menu (its field carries the guide's tag), so
     "then" showed Not saved and Save did nothing real. It now gets the real menu. That likely explains the owner's "why are words
     like 'and' not even saved?".
   - **A** (claude/guide-polish): **done and merged** (1d0f715, merge 1f98259). New chips: Swipe "Spaces are blocked here. Swipes
@@ -154,7 +154,7 @@ all of them are unapproved.
     - a lone Space is refused on the Swipe and Steering slides, with a Space-appropriate chip on the Alt slide;
     - no stray space after Next with the menu open;
     - the ∞ instruction stops naming ∞.
-  - **C** (claude/guide-visual-polish, with the brackets):
+  - **C** (claude/guide-visual-polish, with the brackets): brackets pushed (707f28f); the rest is in C's verify, as of 07:35.
     - the share screen gets FixedScale, with its buttons pinned (at font 2.0 the accept was off screen);
     - decoration keep-outs feathered, with the 8 dp gap and nothing under the status bar;
     - the playground's effects go behind its text;
@@ -166,7 +166,7 @@ all of them are unapproved.
     - the 🤪 burst kept to the content area;
     - a scrim on the leave pop-up;
     - hanging bullets on the share screen.
-  - **F** (claude/ink-polish):
+  - **F** (claude/ink-polish): **done and merged** (b817409).
     - Settings titles and setup rows wrap at font 2.0;
     - no Ink flash on "Go type something";
     - the boring guide doesn't end on a lone word;

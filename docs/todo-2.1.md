@@ -139,7 +139,7 @@ all of them are unapproved.
     playground keeps the 60% drawing (the owner's own v2 call, later than "full real-size").
 - Orchestrator (06:40, 70f4f38): F's two guide lines applied; release notes: sparkles for a save, "way less orange", a line for
   the app's haptics, and one for the share screen.
-- Build #2 started 06:45.
+- **Build #2: 150cd978** (test-2.1h at 70f4f38 plus docs), all checks passed. Installed 07:05, no crash. A runs the full phone run-through (07:07).
 - **The overnight phone run-through never ran (the Orchestrator's miss).** idle.sh read the frozen "state at time of last ANR"
   snapshot in dumpsys input, which always says 5218 ms. So it called the phone busy for 6 hours while nobody had touched it.
   Fixed: it now reads only the live dispatcher.

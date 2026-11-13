@@ -105,6 +105,7 @@ all of them are unapproved.
     BACK_FROM_END → "Miss us already? That's a bit sad."
   - Fix in the final release-notes pass: "bookmarks for a save" is out of date; Save bursts sparkles now (D's v4).
 - Swipe suite on the phone (build 2ec5f751): **passed** (saved-word swipes, context swipes).
+- D: **bigger bar text done and merged** (d89e536). Bar words at 20 dp, ranked by size, with the word menu scaled to match. A source check keeps bar and panel text at 13 dp or more. Nothing in it breaks an owner decision (D checked).
 - **Plan for the rest of the night (Orchestrator):**
   1. Merge C's decoration wiring.
   2. Apply F's two GuideActivity strings, and fix the release-notes Save line (sparkles, not bookmarks).

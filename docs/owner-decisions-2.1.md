@@ -184,7 +184,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   - the app's scaling at large font sizes ("pretty awful");
   - on the playground, when the screen is fully orange, the words can't be read.
   - the guide's text field always shows two lines (owner, 2026-11-12: "it shd always show two lines, just bugged rn");
-  - the playground's text is rewritten in the owner's offensive, fun, casual tone, **lowercase with no punctuation, nothing off limits**. The tone sample is approved except the touchpad line, and "i am stupid" goes (owner, 22:45). The text is and long enough to type for a long time without looping. A sample of about 20 lines comes first, for tone (owner, 2026-11-12).
+  - the playground's text is rewritten in the owner's offensive, fun, casual tone, **lowercase with no punctuation, nothing off limits**. The tone sample is approved except the touchpad line, and "i am stupid" goes (owner, 22:45). The full text is long enough to type for a long time without looping (owner, 2026-11-12).
   - Before the batch is built, the owner sees the layout on a sample page with the real text and real elements (owner: "show me the layout first").
 - Built so far: the calibration as the default, and in-app calibration centred. This is look-only; the touchpad code is unchanged.
 

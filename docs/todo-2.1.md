@@ -2,7 +2,7 @@
 
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
-[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 22:40.
+[owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-12, 22:50.
 
 ## On the phone now (build a5416a0e, test-2.1h at 9b67678)
 
@@ -48,26 +48,31 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
   cal-tool/sample.html, with the Guide and Playground screens, a Sizes button and Full screen. **Waiting for the owner's verdict** before the batch.
 - Playground tone sample: 22 lines in docs/playground-text-draft.md. **Waiting for the owner's verdict**, then the full ~3,000 words.
 
+## Next, waiting on the owner's go (proposed order, 22:50)
+
+1. **Guide and app redesign (the batch).** The owner rates the guide 5/10 visually ("feels like there's no design").
+   - The Orchestrator mocks a v2 on the quick page with the real text and elements.
+   - The owner approves it.
+   - Then one batch: the redesign, the 60% keyboard (no gap between keys, 10.5 px between rows), the same sizes at any display or
+     font size, the field always 2 lines, readable orange on the playground, the playground keyboard no longer clipped at its edges,
+     and the new playground text.
+2. **Word menu (D):**
+   - Back on Backspace's centre, and hover that stays after a press, as on the Sym panel.
+   - A floppy icon for Save, with a new effect that lands. A mock comes first.
+   - A better heart break.
+   - Save hidden for symbols and emoji.
+   - Dictionary words count as Saved, and going down from Saved takes the word out of the dictionary.
+3. **Playground text (Orchestrator):** the full ~3,000 words in the approved tone, without the touchpad line and without "i am stupid".
+4. **Scroll assistant (F):** remove the note under the switch. The default follows the phone's own Scroll assistant.
+5. **Orange accents setting (F):** it doesn't work everywhere. Find where it's ignored.
+6. **Sym cycling (Orchestrator, on the phone):** record the bar dropping to zero height, frame by frame, and find the cause.
+
 ## Waiting on the owner
 
-- **Review of the current build**, then one batch for the whole app (owner's call):
-  - Guide and playground keyboard: same width, 60% height, no gap between keys, 10.5 px between rows.
-  - Scaling: keep every size the same whatever the display size (DPI) or font size setting (owner, 21:45). The owner says the
-    scaling in the current build "is better" (21:40), but the rule covers every setting.
-  - Playground words unreadable when the screen is fully orange.
-  - Guide: the text field must always show **two lines**. It's buggy now: the code asks for 3 and drops to 2 when tight.
-  - Playground text: rewrite it in the owner's tone ("offensive fun casual"), lowercase with no punctuation, nothing off limits,
-    and **long enough to type for a long time without looping**. Today it's 10 short, tame sentences that repeat.
-  - The batch waits for the owner to approve the layout sample page.
-- Feel and judge on the phone:
-  - Round 7 haptics and the quiet swell.
-  - Exact-typing bar texture against confirm (lab switch).
-  - Word menu: the owner reviewed it (22:25). Favourite is approved. Pending the owner's pick on the mockup page: Save and Unsave
-    (option A, B or C), the answers on dictionary words, and symbols and emoji. Then D builds Back at Backspace's centre, hover that
-    stays after a press, the chosen Save and Unsave, and the state fixes.
-- Key Mapper: v2 is imported. Importing can't delete key maps, so the owner deletes the three switched-off Sym + S, P and E maps by hand
-  (owner: "the $%= shd be removed"). key_maps_titankeys_v3.zip in Downloads is the clean backup without them.
-- Launch: whether to launch at 3.0 with languages instead of 2.1 (the owner is leaning that way; see the decisions log).
+- Their go on the order above, or changes to it.
+- Feel and judge on the phone: round 7 haptics, the quiet swell, and the exact-typing lab switch (texture against confirm).
+- Key Mapper: delete the three switched-off Sym + S, P and E maps by hand. key_maps_titankeys_v3.zip in Downloads is the clean backup.
+- Launch: whether to launch at 3.0 with languages instead of 2.1.
 
 ## Scroll assistant (traced 21:53)
 
@@ -75,21 +80,20 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
   assistant on**: the keys scroll apps outside text fields. So it never wanted the block, and hid as designed.
 - Every exported typing log since 11-09 has the same value, false. So the setting has been "on" all along, and no code changed
   that. The phone's own props are the same as when first read: scroll_assistant=1, touchpad_forcescroll=yes.
-- **Owner to check:** Settings > Touchpad > Scroll assistant.
-  - If it shows on, turn it off and the block should come back.
-  - If it shows off while TitanKeys reads on, that's a display or save bug for A.
+- **Resolved (owner, 22:45):** the switch was on, and the owner had read it the other way round. No code bug. Follow-ups are in
+  item 4 above.
 - Also on the phone, with Accessibility on: TitanHold (com.jasonlok.titanhold HoldService) and DisplayExtend's touchpad service.
   Either could affect scrolling.
 
-## Waiting on the phone being free (the Orchestrator does these)
+## Phone checks (the Orchestrator may take the phone any time; owner, 22:45)
 
-- Measure the Sym and emoji panel's columns against the calibration lines from a screenshot, from Q to Sym. The owner thinks
-  they aren't calibrated in the build (22:25). By the code they should be, so measure before changing anything.
+- Measured 22:42: the Sym panel's columns are on the calibration, within 2 px from Q's column (54 px) to Backspace's
+  (1,022 px). What looks off is the playground's and the guide's drawn keyboard: it's clipped at both sides by the page margin
+  (batch item).
 - Sym cycling: record the bar dropping to zero height for a moment, frame by frame, and find the cause.
 
 ## Blocked
 
-- Scroll assistant: the trace ran at 21:53. The finding is in Waiting on the owner. No bisect until the owner has checked the switch.
 - Google Play: FUTO's licence must be settled first. Then 12 testers for 14 days in closed testing.
 
 ## Small things

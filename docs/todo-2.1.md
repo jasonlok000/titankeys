@@ -44,8 +44,9 @@ test-2.1h's history and the workers' branches, not from memory. Decisions and th
 
 - Build of a7cb9b9: the guide crash fix at font size 2.0, brought in ahead of the batch (owner: "bring the crash fix in now"). Install when it passes.
 - D: Save gets a particle burst like Favourite's heart burst, with orange bookmark shapes on both sides (owner: Favourite "done perfectly", Save "not done nicely"). Only Save changes.
-- Orchestrator: the layout sample page, with the real guide and playground text and elements, at 60% keys, for the owner before the batch is built (owner: "show me the layout first").
-- Orchestrator: about 20 sample lines of playground text in the owner's tone, lowercase with no punctuation and nothing off limits. The full text, enough for 15+ minutes without a repeat, follows once the tone is approved.
+- Layout sample page: on the phone at http://localhost:8765/sample.html, served from the PC through adb reverse. It's scratchpad
+  cal-tool/sample.html, with the Guide and Playground screens, a Sizes button and Full screen. **Waiting for the owner's verdict** before the batch.
+- Playground tone sample: 22 lines in docs/playground-text-draft.md. **Waiting for the owner's verdict**, then the full ~3,000 words.
 
 ## Waiting on the owner
 

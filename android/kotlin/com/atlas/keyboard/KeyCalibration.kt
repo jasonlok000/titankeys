@@ -4,15 +4,19 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * The stored [KeyAlignment]: where Q's left edge and P's right edge sit, which the Key calibration screen in TitanKeys Debug sets.
- * Only that screen writes it, so in every other build it stays at the defaults, the measured keyboard.
+ * The stored [KeyAlignment]: where Q's left edge sits, a key's width and a gap's, which the Key calibration screen in TitanKeys Debug
+ * sets. Only that screen writes it, so in every other build it stays at the defaults, the measured keyboard.
  */
 object KeyCalibration {
     private const val FILE = "key_calibration"
     const val LEFT = "left_edge"
-    const val RIGHT = "right_edge"
-    /** What the screen stored before it had two edges: a scale, a shift and a shift for each row. They mean nothing now. */
-    private val OLD = listOf("scale", "offset", "row0", "row1", "row2", "row3")
+    const val KEY = "key_width"
+    const val GAP = "gap_width"
+    /**
+     * What the screen stored before it calibrated by the gaps: a scale, a shift and a shift for each row, then P's right edge. They
+     * mean nothing now.
+     */
+    private val OLD = listOf("scale", "offset", "row0", "row1", "row2", "row3", "right_edge")
 
     private var prefs: SharedPreferences? = null
     /** Kept here, as SharedPreferences holds its listeners only weakly. */
@@ -34,7 +38,7 @@ object KeyCalibration {
 
     fun save(context: Context, alignment: KeyAlignment) {
         load(context)
-        prefs!!.edit().putFloat(LEFT, alignment.left).putFloat(RIGHT, alignment.right).apply()
+        prefs!!.edit().putFloat(LEFT, alignment.left).putFloat(KEY, alignment.key).putFloat(GAP, alignment.gap).apply()
         KeyAlignment.current = alignment
     }
 
@@ -44,8 +48,8 @@ object KeyCalibration {
         KeyAlignment.current = KeyAlignment.DEFAULT
     }
 
-    private fun read(stored: SharedPreferences) =
-        KeyAlignment(stored.getFloat(LEFT, KeyAlignment.DEFAULT_LEFT), stored.getFloat(RIGHT, KeyAlignment.DEFAULT_RIGHT))
+    private fun read(stored: SharedPreferences) = KeyAlignment(stored.getFloat(LEFT, KeyAlignment.DEFAULT.left),
+        stored.getFloat(KEY, KeyAlignment.DEFAULT.key), stored.getFloat(GAP, KeyAlignment.DEFAULT.gap))
 
     /** The keys on a screen [width] pixels wide, as calibrated now. */
     fun geometry(context: Context, width: Float) = KeyGeometry(width, load(context))

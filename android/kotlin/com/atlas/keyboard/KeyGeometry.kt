@@ -5,23 +5,23 @@ package com.atlas.keyboard
  * key sits over its real key. It is built without Android, so the checks can use it too.
  *
  * The shape is the Titan 2 Elite's, measured from Unihertz's own face-on drawing at 1080 px wide: keys 84 wide with gaps of 24,
- * 107 tall with a row every 123, and the three letter rows in the same columns. Q's left edge and P's right edge come from
- * [alignment], and the rest scales with the span between them, so a calibrated keyboard is the real one, scaled.
+ * 107 tall with a row every 123, and the three letter rows in the same columns. Q's left edge, a key's width and a gap's come
+ * from [alignment], and the heights scale with a column (a key and a gap), so a calibrated keyboard is the real one, scaled.
  *
  * The touchpad's coordinates run from 0 to 1 across the ten columns, with column c's middle at (c + .5) / 10, and from 0 to 1 down
  * the four rows, with row r's middle at (r + .5) / 4. [x] and [y] map them so those middles land on the middles of the keys.
  */
 class KeyGeometry(val width: Float, val alignment: KeyAlignment = KeyAlignment.current) {
-    /** Q's left edge and P's right edge, in pixels. */
+    /** Q's left edge, one key's width, the gap between two keys, and a column: a key and a gap, all in pixels. */
     val left = alignment.left * width
-    val right = alignment.right * width
-    /** One key's width, the gap between two keys, and a column: a key and a gap. */
-    val key = (right - left) * KEY / SPAN
-    val gap = (right - left) * GAP / SPAN
+    val key = alignment.key * width
+    val gap = alignment.gap * width
     val pitch = key + gap
-    /** A key's height and a row: a key and the gap below it. */
-    val keyHeight = key * KEY_HEIGHT / KEY
-    val rowPitch = key * ROW / KEY
+    /** P's right edge. */
+    val right = left + COLUMNS * key + (COLUMNS - 1) * gap
+    /** A key's height and a row: a key and the gap below it, in proportion to a column. */
+    val keyHeight = pitch * KEY_HEIGHT / (KEY + GAP)
+    val rowPitch = pitch * ROW / (KEY + GAP)
     /** From the top of the top row to the bottom of the bottom row. */
     val height = (ROWS - 1) * rowPitch + keyHeight
     /** The three letter rows alone. */

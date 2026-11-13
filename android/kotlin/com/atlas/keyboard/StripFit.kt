@@ -29,10 +29,13 @@ internal object StripFit {
     fun baseline(centre: Float, size: Float) = centre + size * X_HEIGHT / 2
 
     /**
-     * How much more room a one-line text view needs under its text than over it, in pixels, so that centring its box from [ascent]
-     * (negative) to [descent] puts its small letters on the view's centre line: the box's middle is that far above the letters'.
+     * Where a one-line text view [height] px tall starts its text, as its top padding with its gravity at the top, so that its
+     * baseline is the line of words [lineSize] px big centred on the bar ([baseline]), in whole pixels. Every word sits on that
+     * one line, a long word shrunk to fit too, and never floats up from its neighbours (owner, 2026-11-13: one bar baseline).
+     * [ascent] is the text's own ascent as Android rounds it (Paint.FontMetricsInt, negative): its baseline is that far below
+     * the top of its text.
      */
-    fun lift(ascent: Float, descent: Float, size: Float) = -(ascent + descent) - size * X_HEIGHT
+    fun top(height: Int, lineSize: Float, ascent: Int) = Math.round(baseline(height / 2f, lineSize)) + ascent
 
     /**
      * Lays out [words], left to right, across [total], with [padding] on each side of each word. With [lend], a word that does not

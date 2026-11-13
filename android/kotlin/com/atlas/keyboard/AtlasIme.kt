@@ -1156,7 +1156,7 @@ class AtlasIme : InputMethodService() {
         // makes this view again when those settings change, so each time takes the screen as it is now.
         viewSize = FixedScale.size(this)
         val ui = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod)
-        // Bar text size grows only what's in the bar, and the word menu's effects with it. The bar keeps Normal's height.
+        // Bar text size grows only what's in the bar, and the word menu's effects with it. The bar keeps its height.
         val barUi = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod, viewSize.factor)
         val words = Strip(barUi, { index ->
             // The guide's own word only opens its menu: a tap never types a word that the bar doesn't show.

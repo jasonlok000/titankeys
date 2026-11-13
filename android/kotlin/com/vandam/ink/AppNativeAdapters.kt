@@ -59,7 +59,7 @@ internal fun appBaseContext(base: Context): Context = FixedScale.wrap(base)
  * Ink's screens stay at Normal: Bar text size grows only the keyboard's bar (owner, 2026-11-13: "the settings become a bit
  * unusable after making it bigger"). The patch's hook stays, for Ink's own scale, at 1.
  */
-internal fun appUserScale(@Suppress("UNUSED_PARAMETER") context: Context): Float = FixedScale.NORMAL
+internal fun appUserScale(@Suppress("UNUSED_PARAMETER") context: Context): Float = FixedScale.UNSCALED
 
 /** Settings > Orange accents: with it off, Ink's screens take the cream that stands in for orange everywhere (Accent). */
 internal fun appAccent(context: Context): Int = if (Accent.on) 0 else Accent.colour
@@ -521,7 +521,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("touchpadOnlyInFields", TypingSettings.touchpadOnlyInFields(activity))
             .put("orangeAccents", TypingSettings.orangeAccents(activity))
             .put("barTextSize", FixedScale.size(activity).id)
-            .put("barTextSizePicked", FixedScale.picked(activity) != null)
             .put("enterKey", TypingSettings.enterKey(activity))
             .also(::putEnterApps)
             .also(::putExactApps)

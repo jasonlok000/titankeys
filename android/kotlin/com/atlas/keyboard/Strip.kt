@@ -373,8 +373,8 @@ class Strip(
     private val slotIcons = arrayOfNulls<MenuKeys.Button>(2)
     private val slotFrom = arrayOfNulls<MenuKeys.Button>(2)
     private val slotChanged = LongArray(2)
-    /** The bar's height: Normal's at every Bar text size, while the words, chips, marks and menu in it grow (FixedScale). */
-    private val barHeight = Math.round(FixedScale.normalPx(context, BAR_DP))
+    /** The bar's height: the same at every Bar text size, while the words, chips, marks and menu in it grow (FixedScale). */
+    private val barHeight = Math.round(FixedScale.fixedPx(context, BAR_DP))
 
     init {
         // The modifiers come first, so that their chips sit at the start of the words.
@@ -573,7 +573,7 @@ class Strip(
         }
     /** The height of Shift's chip: its text size and padding. The arrow's place is that tall. */
     /**
-     * The clip and its hint stack in the bar, which keeps Normal's height at every Bar text size. At Biggest the two lines would
+     * The clip and its hint stack in the bar, which keeps its height at every Bar text size. At Bigger the two lines would
      * be taller than it, so both shrink alike, just enough to fit. At Normal and Bigger they fit as they are.
      */
     private fun fitClipLines(clipPixels: Float) {
@@ -852,7 +852,7 @@ class Strip(
         val now = SystemClock.uptimeMillis()
         val glide = if (GuideMotion.enabled) MENU_GLIDE_MILLIS else 0L
         val height = barHeight.toFloat()
-        // The menu's dp grow with Bar text size, as the words do; the bar keeps Normal's height.
+        // The menu's dp grow with Bar text size, as the words do; the bar keeps its height.
         val density = resources.displayMetrics.density
         // The real keys' left edge, as calibrated: the word keeps over the keys, as the buttons do.
         val keySide = MenuKeys.slot(width.toFloat(), 0).first

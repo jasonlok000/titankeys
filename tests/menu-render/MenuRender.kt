@@ -292,7 +292,7 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
 
     /**
      * The scene for [word] at [step], placed and shortened as Strip.drawMenu does it: on the baseline of the bar's own height, which
-     * keeps Normal's at every Bar text size.
+     * keeps its unscaled height at every Bar text size.
      */
     fun scene(word: String, step: MenuKeys.Step, alignment: KeyAlignment): MenuScene {
         val (text, left, right) = placed(word, alignment)
@@ -437,7 +437,7 @@ private fun theWordIsNeverCovered(looks: Looks) {
     // Every problem, so a failure shows them all.
     val problems = ArrayList<String>()
     fun check(ok: Boolean, problem: () -> String) { if (!ok) problems += problem() }
-    for ((size, factor) in listOf("Normal" to FixedScale.NORMAL, "Bigger" to FixedScale.BIGGER, "Biggest" to FixedScale.BIGGEST)) {
+    for ((size, factor) in listOf("Smaller" to FixedScale.SMALLER, "Normal" to FixedScale.NORMAL, "Bigger" to FixedScale.BIGGER)) {
         val density = 1.55f * factor
         val gap = MENU_WORD_GAP * density
         val icon = MENU_ICON_DP * density
@@ -709,7 +709,7 @@ private fun parsePath(data: String): Path2D.Float {
  * Everything in the bar fits inside its 56 dp at this MENU_SIZE (owner, 2026-11-13: Bar text size grows what's in the bar, not
  * its height). Each element's height comes from Strip's own sizes, grown by the size's factor, with Inter's lines as Android lays
  * them out: a TextView with its font padding spans Inter's whole box, -685 to 2279 of 2048, and one without it, or drawn text,
- * its ascent and descent, 1984 and 494. Sizes in Normal's dp, as the bar's 56 is.
+ * its ascent and descent, 1984 and 494. Sizes in unscaled dp, as the bar's 56 is.
  */
 private fun barFits() {
     val factor = DENSITY / 1.55f
@@ -756,10 +756,13 @@ private fun barFits() {
 }
 
 /** As on the owner's screenshots: 1076 px across at about 1.55 px to a dp. The bar is 56 dp. */
-/** The owner's screenshots' density, times Bar text size's factor when one is given (MENU_SIZE: normal, bigger, biggest). */
+/**
+ * The owner's screenshots' density, times Bar text size's factor: MENU_SIZE smaller, normal or bigger, and Normal, which everyone
+ * starts at, when none is given.
+ */
 private val DENSITY = 1.55f * when (System.getenv("MENU_SIZE")) {
+    "smaller" -> FixedScale.SMALLER
     "bigger" -> FixedScale.BIGGER
-    "biggest" -> FixedScale.BIGGEST
     else -> FixedScale.NORMAL
 }
 private const val WIDTH = 1076
@@ -788,7 +791,7 @@ private const val LIT_GAP_DP = 3f
  * bar's centre line, which the short marks at each side show: it must be within 1 px. Sizes in dp, at 1.5625 px to a dp.
  */
 private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, bestBox: Pair<Int, Int>, drawables: File) {
-    // The text grows with Bar text size (MENU_SIZE), and the bar keeps Normal's height (Strip.BAR_DP).
+    // The text grows with Bar text size (MENU_SIZE), and the bar keeps its unscaled height (Strip.BAR_DP).
     val scale = 1.5625f * DENSITY / 1.55f
     val width = 1076
     val bar = Math.round(56 * 1.5625f)

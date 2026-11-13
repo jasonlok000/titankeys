@@ -24,19 +24,25 @@ test("every activity wraps its base context in FixedScale, at Normal", () => {
 });
 
 test("Bar text size grows only the keyboard's bar, the next time it shows", () => {
-  // Settings, the boring guide and every other Ink screen stay at Normal: the patch's user scale stays 1.
+  // Settings, the boring guide and every other Ink screen stay unscaled: the patch's user scale stays 1.
   const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
-  expect(adapter).toContain('internal fun appUserScale(@Suppress("UNUSED_PARAMETER") context: Context): Float = FixedScale.NORMAL');
+  expect(adapter).toContain('internal fun appUserScale(@Suppress("UNUSED_PARAMETER") context: Context): Float = FixedScale.UNSCALED');
   expect(adapter).not.toContain("activity.applyUserScale()");
   expect(adapter).toContain('"barTextSize" -> FixedScale.size(activity, FixedScale.Size.of(value as String))');
-  expect(adapter).toContain('.put("barTextSizePicked", FixedScale.picked(activity) != null)');
   const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
   expect(ime).toContain("if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())");
-  // The page lists the sizes FixedScale knows, Normal first.
+  // The page lists the sizes FixedScale knows, smallest first, by the same fresh ids.
   const kotlin = read("android/kotlin/com/atlas/keyboard/FixedScale.kt");
-  const ids = [...kotlin.matchAll(/^\s+\w+\("(\w+)", (NORMAL|BIGGER|BIGGEST)\)/gm)].map(match => match[1]);
-  expect(ids).toEqual(["normal", "bigger", "biggest"]);
-  expect(read("app/settings/bar-text-size.tsx")).toContain('(["normal", "bigger", "biggest"] as const)');
+  const sizes = [...kotlin.matchAll(/^\s+(\w+)\("(\w+)", (SMALLER|NORMAL|BIGGER)\)/gm)].map(match => [match[1], match[2], match[3]]);
+  expect(sizes).toEqual([["Smaller", "small", "SMALLER"], ["Normal", "medium", "NORMAL"], ["Bigger", "large", "BIGGER"]]);
+  expect(kotlin).toContain("const val SMALLER = 1f");
+  expect(kotlin).toContain("const val NORMAL = 1.2f");
+  expect(kotlin).toContain("const val BIGGER = 1.4f");
+  expect(kotlin).toContain("const val UNSCALED = 1f");
+  const page = read("app/settings/bar-text-size.tsx");
+  expect(page).toContain('(["small", "medium", "large"] as const)');
+  expect(page).toContain('{ small: "Smaller", medium: "Normal", large: "Bigger" }');
+  expect(read("lib/atlas.ts")).toContain('export type BarTextSize = "small" | "medium" | "large";');
 });
 
 /** A section of Settings' top page, by its title. */
@@ -55,17 +61,20 @@ test("Bar text size lives in Settings > The bar, and no Size is left in Look and
   const page = read("app/settings/bar-text-size.tsx");
   expect(page).toContain('export const barTextSizeTitle = "Bar text size";');
   expect(page).toContain('export const barTextSizeNote = "Words, menu and chips. The bar keeps its height.";');
-  // Until you pick, the page says it follows the phone, and the row says so too.
-  expect(page).toContain('export const followsPhoneNote = "Follows your phone\'s text size until you pick one.";');
-  expect(page).toContain("subtitle={following ? `${barTextSizeNote}\\n${followsPhoneNote}` : barTextSizeNote}");
-  expect(page).toContain('(barTextSizePicked ? "" : " (phone)")');
-  expect(read("app/settings/guide-boring.tsx")).toContain('<Topic title="Bar text size">');
+  // Everyone starts at Normal, so nothing says the phone's text size any more.
+  expect(page).toContain("subtitle={barTextSizeNote}");
+  expect(page).not.toMatch(/phone|Picked/);
+  const guide = read("app/settings/guide-boring.tsx");
+  expect(guide).toContain("Settings > Bar text size has Smaller, Normal and Bigger.");
+  expect(guide).toContain("Everyone starts at Normal.");
   const notes = read("release-notes.txt");
   expect(notes).toContain("Settings > Bar text size");
   expect(notes).not.toContain("Settings > Size");
+  expect(notes).toContain("Settings > Bar text size has Smaller, Normal and Bigger.");
+  expect(notes).not.toMatch(/Biggest|follows your phone's text size/);
 });
 
-test("only the bar and the menu's effects are made at Bar text size; the panels and exact typing's bar stay at Normal", () => {
+test("only the bar and the menu's effects are made at Bar text size; the panels and exact typing's bar stay unscaled", () => {
   const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
   const start = ime.indexOf("override fun onCreateInputView(): View {");
   const body = ime.slice(start, ime.indexOf("\n    }\n", start));
@@ -77,30 +86,30 @@ test("only the bar and the menu's effects are made at Bar text size; the panels 
   expect(body.match(/barUi/g)?.length).toBe(3);
 });
 
-test("the bar keeps Normal's height at every size, and the menu's pill stays inside it", () => {
+test("the bar keeps its height at every size, and the menu's pill stays inside it", () => {
   const strip = read("android/kotlin/com/atlas/keyboard/Strip.kt");
-  expect(strip).toContain("private val barHeight = Math.round(FixedScale.normalPx(context, BAR_DP))");
+  expect(strip).toContain("private val barHeight = Math.round(FixedScale.fixedPx(context, BAR_DP))");
   expect(strip).not.toContain("dp(56)");
   expect(strip).toContain("val pillHeight = minOf(dp(MENU_PILL_DP), barHeight * MENU_PILL_DP / BAR_DP.toInt()).toFloat()");
   expect(strip).toContain("fitClipLines(wordPixels() * clipScale)");
-  // normalPx works from the screen, not the window's own density, so it's right from a window at any size.
+  // fixedPx works from the screen, not the window's own density, so it's right from a window at any size.
   expect(read("android/kotlin/com/atlas/keyboard/FixedScale.kt"))
     .toContain("return dp * densityDpi(metrics.widthPixels, metrics.heightPixels) / DisplayMetrics.DENSITY_DEFAULT");
   expect(read("android/kotlin/com/atlas/keyboard/ExactBar.kt")).toContain("minimumHeight = dp(HEIGHT).toInt() + navigationInset");
 });
 
-test("Bar text size starts from the phone's text size until you pick one, and a reset goes back to it", () => {
+test("everyone starts at Normal, whatever the phone's text size, and both resets go back to it", () => {
   const kotlin = read("android/kotlin/com/atlas/keyboard/FixedScale.kt");
-  expect(kotlin).toContain("const val BIGGER_FROM = 1.15f");
-  // Big text starts at Bigger, never Biggest, which is only ever picked (owner, 2026-11-13).
-  expect(kotlin).toContain("fun forFontScale(fontScale: Float): Size = if (fontScale < BIGGER_FROM) Size.Normal else Size.Bigger");
-  expect(kotlin).not.toContain("BIGGEST_ABOVE");
-  expect(kotlin).toContain("fun size(context: Context): Size = picked(context) ?: forFontScale(phoneFontScale())");
-  expect(kotlin).toContain("private fun phoneFontScale(): Float = Resources.getSystem().configuration.fontScale");
+  expect(kotlin).toContain("fun size(context: Context): Size = Size.of(preferences(context).getString(SIZE, null))");
+  expect(kotlin).toContain("fun of(id: String?): Size = entries.firstOrNull { it.id == id } ?: Normal");
+  expect(kotlin).not.toMatch(/forFontScale|phoneFontScale|Resources\.getSystem|fun picked/);
   expect(kotlin).toContain("preferences(context).edit().remove(SIZE).remove(OLD_SIZE).apply()");
   expect(read("android/kotlin/com/atlas/keyboard/SettingsReset.kt")).toContain("FixedScale.resetSize(context)");
   // Reset literally everything wipes FixedScale's whole file, the pick with it.
   expect(read("android/kotlin/com/atlas/keyboard/FreshStart.kt")).toContain('"fixed_scale"');
+  for (const path of ["android/kotlin/com/vandam/ink/AppNativeAdapters.kt", "android/kotlin/com/atlas/keyboard/RawLog.kt", "lib/atlas.ts"]) {
+    expect({ path, picked: read(path).includes("barTextSizePicked") }).toEqual({ path, picked: false });
+  }
 });
 
 test("every activity in the manifest is one that's checked, or Ink's own", () => {
@@ -127,10 +136,8 @@ test("Ink's activity takes TitanKeys' fixed-scale context through the patch's ho
 });
 
 test("nothing TitanKeys draws reads the system font scale directly", () => {
-  // Bar text size's starting size reads the phone's own text size, on purpose, in this one line.
-  const allowed = "private fun phoneFontScale(): Float = Resources.getSystem().configuration.fontScale";
   for (const path of kotlinFiles("android/kotlin")) {
-    const source = read(path).replace(/^\s*(\/\/|\*).*$/gm, "").replace(allowed, "");
+    const source = read(path).replace(/^\s*(\/\/|\*).*$/gm, "");
     expect({ path, fontScale: /configuration\.fontScale|\.scaledDensity/.test(source) }).toEqual({ path, fontScale: false });
   }
 });

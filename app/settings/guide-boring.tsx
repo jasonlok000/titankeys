@@ -71,7 +71,7 @@ export default function BoringGuide() {
       <Topic title="Your newest copy">{"Right after you copy something, the bar offers it. Touch it to paste. It goes away once you type on. Older copies are in the clipboard: press Sym, then A."}</Topic>
       <Topic title="Shift, Alt and Ctrl">{"When you press or hold Shift, Alt or Ctrl, the bar shows it in place of your words. Filled means you're holding the key, an outline means you pressed it once, and Caps means Shift is locked. Rest your finger on a key to see what it types. The only exception is the capital at the start of a sentence: that one keeps your words."}</Topic>
       <Topic title="Ctrl shortcuts">{"Hold Ctrl and the bar shows what each shortcut does. Press a key while you hold Ctrl to use it."}</Topic>
-      <Topic title="Bar text size">{"Want the bar's words bigger? Settings > Bar text size has Normal, Bigger and Biggest. It grows the words, the word menu and the Shift, Alt and Ctrl chips, and the bar keeps its height. Until you pick one, it follows your phone's text size."}</Topic>
+      <Topic title="Bar text size">{"Want the bar's words bigger or smaller? Settings > Bar text size has Smaller, Normal and Bigger. It changes the words, the word menu and the Shift, Alt and Ctrl chips, and the bar keeps its height. Everyone starts at Normal."}</Topic>
       <Topic title="Hide the bar">{"Don't want the bar in some app? Pick the apps in Settings > Hide the bar in these apps. To hide it everywhere, turn off Show the bar in Settings. Either way, the keys, holds, Alt and the Sym panel still work."}</Topic>
     </Section>
     <Section title="Deleting">

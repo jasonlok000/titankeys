@@ -333,7 +333,12 @@ enders\gesture-line
     land within the line's ends; the line only during floor games) and A's nine typing and idle fixes (claude/bug-hunt-typing
     a35aa1c: #5, #8, #9, #10, #29, #39, #19, #33, #34); W's arrow at 0.63 of the words' capitals (77d8e44). Conflicts: Accent and
     Look combined always-dark with the floor's cream; A's two check blocks kept; the floor check updated for always-dark. All
-    targeted suites pass; bun 184 of 186. Still out: V (#20, #21, #31, #32, the end screen's Back, the border pass).
+    targeted suites pass; bun 184 of 186.
+  - **Merged: V's #20, #21, #31, #32** (claude/menu-selected, merge 0b0f482): the guide no longer reopens after an abandoned
+    Accessibility step; playground WPM ignores pastes, shortcuts and menu or panel keys; a late slide change waits for the guide's
+    return; the paste slide saves and restores the user's clipboard and never leaves its clip in the history. Guide, clipboard,
+    guide-decor checks pass. The border pass on the guide and playground found nothing against the edge on black. The end
+    screen's Back: V's plan approved by the Orchestrator (the guide stays open under the page; the app opens linked pages alone).
   - **Owner's review of build 0a6d754e (2026-11-14), noted, not started yet:**
     - Guide end screen, Back (owner: "When going back from the boring guide triggered from the end screen it should go back to the
       end screen. Applies to everything else for end screen"). Every page the end screen opens (the boring guide, Settings

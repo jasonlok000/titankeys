@@ -714,3 +714,4 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **Everything in one place** (owner, 2026-11-14: "I want everything in one place"). (Owner) Dev tools live in the repo, not outside it, reversing Atlas's clean-repo habit.
 - **3.0 backs up the whole app** (owner, 2026-11-14). (Owner) One export and import for everything, not just words and snippets.
 - **The keyboard's "English (United Kingdom)" label changes later** (owner, 2026-11-14). (Owner) To something not tied to the UK; the Orchestrator proposes "English" now and one entry per language with 3.0.
+- **The Orchestrator's words, approved** (owner, 2026-11-14: "Your word suggestions are good. Use yours"). (Owner) The paste slide's last line becomes "No, seriously. I mean it." in 3.0; the keyboard's language label becomes "English" after the pre-release, and one entry per language with 3.0.

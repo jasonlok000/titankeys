@@ -930,7 +930,7 @@ enders\gesture-line
   later. Is there a diff one cuz our kb is international"). android/src/main/res/xml/input_method.xml declares one subtype,
   imeSubtypeLocale="en_GB", which Android shows as "English (United Kingdom)". The Orchestrator's proposal: "en" (English, no
   country) now, as the spelling (UK, US, Canadian) is TitanKeys' own setting; with 3.0's languages, one subtype per language
-  the user turns on, decided in the languages design (#56).
+  the user turns on, decided in the languages design (#56). Approved with the owner's "Use yours": "English" after the pre-release.
 - **Worktrees cleaned up (owner: "Yes remove those.")**: 40 removed. 3 had unsaved changes, kept as commits under
   archive tags (benchmark's newer copy as archive/wip-benchmark, as the owner rules out force pushes). Every unmerged branch
   is an archive/ tag on GitHub (41 tags). V's and W's review renders were copied to X:\Atlas\.dev\worktree-leftovers.
@@ -959,7 +959,7 @@ enders\gesture-line
 - **3.0: the paste slide's last line** (owner, 2026-11-14: "Change didn't expect that did you? To sth like no, seriously, u
   think for me, in case the user didn't really expect me to prank"). After the nice clip pastes "I hope you're doing great,
   genuinely", the slide says "Didn't see that coming, did you?" (GuideSteps.kt, done), which falls flat for anyone who did
-  see it coming. New line along the owner's "No, seriously..." so it works either way; the exact words to settle in 3.0.
+  see it coming. New line: "No, seriously. I mean it." (the Orchestrator's words; owner, 2026-11-14: "Your word suggestions are good. Use yours").
 - **3.0: "I already know everything" goes to the playground** (owner, 2026-11-14: "I alrd know everything puts me at the setup
   screen. It shd be playground. Setup screen shd only show when there's sth left to be setup or at the beginning."). Today
   the guide's leave pop-up (GuideActivity.kt, LEAVE_YES) just closes the guide, and the app's page under it shows Setup. In

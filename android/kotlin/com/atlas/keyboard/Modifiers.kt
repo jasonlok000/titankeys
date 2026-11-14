@@ -110,6 +110,22 @@ class Modifiers {
             return KeyEvent.normalizeMetaState(meta)
         }
 
+    /**
+     * The modifiers that go with a key that the app handles: a shortcut, Tab, an arrow, or a steer of the cursor. A [textKey]
+     * types, so it takes them all. Otherwise a Shift that came on by itself, Caps, or a tapped Shift on a [steer] is for the next
+     * letter: an arrow must not become a selection that the letter then replaces, nor Ctrl + Z a redo (bug hunt #4). A Shift held
+     * down still goes with any key, as on a PC, and a tapped Shift still goes with the next shortcut, as Ctrl + Shift + Z.
+     */
+    fun commandMeta(textKey: Boolean, steer: Boolean = false): Int {
+        val shifted = shift != Level.Off && !autoShiftWaits
+        val keepShift = textKey || holding(Key.Shift) || shift == Level.Once && !autoShifted && !steer
+        var meta = 0
+        if (shifted && keepShift) meta = meta or KeyEvent.META_SHIFT_ON
+        if (shift == Level.Locked && textKey) meta = meta or KeyEvent.META_CAPS_LOCK_ON
+        if (alt != Level.Off) meta = meta or KeyEvent.META_ALT_ON
+        return meta
+    }
+
     private fun level(key: Key) = when (key) {
         Key.Shift -> shift
         Key.Alt -> alt

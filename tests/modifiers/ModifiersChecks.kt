@@ -22,6 +22,7 @@ private const val GAP = 100L
 private const val WORD = 900L
 
 fun main() {
+    tappedShiftOrCapsLeavesSteeringAndShortcutsAlone()
     heldShiftBackspaceDeletesWords()
     tappedOrAutomaticShiftLeavesBackspacePlain()
     heldShiftBackspaceAsTheOwnersPhoneSentIt()
@@ -210,6 +211,43 @@ private class Keyboard {
     /** Backspace as the keyboard handles it: true when it deletes a word. [ctrl] is the key's own Ctrl. */
     fun backspace(ctrl: Boolean = false) =
         (backspaceDoes(if (ctrl) KeyEvent.META_CTRL_ON else 0, altForward = false) == Modifiers.Backspace.Word)
+}
+
+/**
+ * Bug hunt #4: in "hello world|", a tapped Shift then a steer selected text, and the next letter replaced it; Caps did it on every
+ * steer and turned Ctrl + Z into redo. A steer or a shortcut takes no Shift that is only waiting for a letter.
+ */
+private fun tappedShiftOrCapsLeavesSteeringAndShortcutsAlone() {
+    val shiftMeta = KeyEvent.META_SHIFT_MASK or KeyEvent.META_CAPS_LOCK_ON
+    fun shifted(meta: Int) = meta and shiftMeta != 0
+    Keyboard().run {
+        press(SHIFT)
+        same(shift, Level.Once, "A tap turns Shift on for one letter")
+        same(shifted(modifiers.commandMeta(textKey = false, steer = true)), false, "A steer after a tapped Shift must not select")
+        same(shift, Level.Once, "The steer leaves Shift on for the next letter")
+        same(shifted(modifiers.commandMeta(textKey = true)), true, "The next letter still gets its capital")
+        same(shifted(modifiers.commandMeta(textKey = false)), true, "A tapped Shift still goes with a shortcut, as Ctrl + Shift + Z")
+    }
+    Keyboard().run {
+        press(SHIFT)
+        idle(GAP)
+        press(SHIFT)
+        same(shift, Level.Locked, "A double press locks Shift")
+        same(shifted(modifiers.commandMeta(textKey = false, steer = true)), false, "Caps must not turn a steer into a selection")
+        same(shifted(modifiers.commandMeta(textKey = false)), false, "Caps must not turn Ctrl + Z into redo, nor Tab into Shift + Tab")
+        same(shifted(modifiers.commandMeta(textKey = true)), true, "Caps still gives capitals")
+    }
+    Keyboard().run {
+        down(SHIFT)
+        idle(WORD)
+        same(shifted(modifiers.commandMeta(textKey = false, steer = true)), true, "A Shift held down still selects as you steer")
+        same(shifted(modifiers.commandMeta(textKey = false)), true, "A Shift held down still goes with a shortcut")
+        up(SHIFT)
+    }
+    Keyboard().run {
+        modifiers.autoShift(sentenceStart = true)
+        same(shifted(modifiers.commandMeta(textKey = false)), false, "The automatic Shift still never goes with a command")
+    }
 }
 
 private fun heldShiftBackspaceDeletesWords() = Keyboard().run {

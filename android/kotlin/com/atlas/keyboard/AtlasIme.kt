@@ -2649,7 +2649,7 @@ class AtlasIme : InputMethodService() {
             // An app that does not answer still gets the light tick.
             cursorSteps.step(if (next == null) 'a' else next.firstOrNull())?.let(haptics::play)
             if (rereadCursorText) readCursorText()
-            command(arrow)
+            command(arrow, steer = true)
             if (next?.isEmpty() != true) rereadCursorText = strip?.gesture?.cursorStepped(direction) == true
         }
     }
@@ -3545,9 +3545,10 @@ class AtlasIme : InputMethodService() {
     private fun logModifiers(event: KeyEvent) = logExact("modifier ${event.keyCode} ${if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"}" +
         " kept: shift ${modifiers.shift} alt ${modifiers.alt} panel ${modifiers.panel}")
 
-    private fun command(event: KeyEvent, textKey: Boolean = false, dropMeta: Int = 0) {
-        // A Shift that came on by itself is for a letter. Ctrl + C, Tab or an arrow must not become Ctrl + Shift + C or a selection.
-        val sticky = if (modifiers.autoShifted && !textKey) modifiers.metaState and KeyEvent.META_SHIFT_MASK.inv() else modifiers.metaState
+    private fun command(event: KeyEvent, textKey: Boolean = false, dropMeta: Int = 0, steer: Boolean = false) {
+        // A Shift that came on by itself, or Caps, is for a letter: Ctrl + C, Tab or an arrow must not become Ctrl + Shift + C or a
+        // selection. A tapped Shift on a steer is for the next letter too. See [Modifiers.commandMeta].
+        val sticky = modifiers.commandMeta(textKey, steer)
         // [dropMeta]: modifiers that chose the command and aren't part of it, as Alt for a forward delete.
         val meta = KeyEvent.normalizeMetaState((event.metaState or sticky) and dropMeta.inv())
         val down = KeyEvent(event.downTime, event.eventTime, KeyEvent.ACTION_DOWN, event.keyCode,

@@ -108,6 +108,7 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - The word-menu slide teaches the real ladder (Save, then Unsave) and matches the real menu exactly. (Orchestrator, within the owner's "the guide matches the real keyboard")
 - Every recording bug gets fixed: gap slides with a dead end, the selection toolbar, hints during gestures, wrong chapter messages, and the drawing glitches. (Owner, 2026-11-12)
 - End screen: × on the right and bigger, "Trust me bro." on its own line, a real "Start the guide again" button, and a custom "Leaving already?" pop-up. (Owner, 2026-11-12)
+- **Back from anything the end screen opens returns to the end screen, as it was left** (owner, 2026-11-14: "When going back from the boring guide triggered from the end screen it should go back to the end screen. Applies to everything else for end screen"). (Owner) Built by V (claude/end-back): the boring guide and Go type something open as /end/guide-boring and /end/play, with an /end page under them that reopens the end with its finale already played; the playground's Back from there goes back instead of leaving the app. How it's built is the Orchestrator's call (unapproved); merged 2026-11-14, not yet tried on the phone.
 
 - **Visual review, 2026-11-12 22:45: the guide is 5/10, and "feels like there's no design".** (Owner)
   - The top bar is claustrophobic and all orange. The owner dislikes the slide ticks along the top and where Skip sits.

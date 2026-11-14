@@ -339,11 +339,22 @@ enders\gesture-line
     return; the paste slide saves and restores the user's clipboard and never leaves its clip in the history. Guide, clipboard,
     guide-decor checks pass. The border pass on the guide and playground found nothing against the edge on black. The end
     screen's Back: V's plan approved by the Orchestrator (the guide stays open under the page; the app opens linked pages alone).
+  - **Build #17 (53ed70c6) not installed:** it copied the worktree halfway through the merges, so its idle check ran against
+    code that didn't match it yet and failed. The finished code passes idle.
+  - **Build #18 running** from da30aea: everything above except V's end-screen Back. Install it when it passes, then check it on
+    the phone: the Shift and Ctrl chips, the menu effects and hover, the Sym rows on every page, the held delete's orange, the
+    selection gap, the swipe trail (the owner judges), each idle game with the 80% floor (IDLE_BAR), Smart Launcher typing and the
+    square key, Setup's links, "TitanKeys Keyboard" in the launcher, and the always-dark keyboard.
+  - **Merged: V's end-screen Back** (claude/end-back 3925a9c, merge cb534aa, then bd23e6f put leave()'s comment back): the boring
+    guide and Go type something open from the end as /end/guide-boring and /end/play, over an /end page that reopens the end as
+    it was left, its finale already played; the playground's Back from there goes back to the end. Reviewed; the guide checks
+    and V's end-back check pass; bun 190 of 192 (the two that need the ink package). In the build after #18, then on the phone:
+    Back from each, the end not replaying its finale, and Back or × at the end still leaving.
   - **Owner's review of build 0a6d754e (2026-11-14), noted, not started yet:**
     - Guide end screen, Back (owner: "When going back from the boring guide triggered from the end screen it should go back to the
       end screen. Applies to everything else for end screen"). Every page the end screen opens (the boring guide, Settings
-      links, Share swipes and the rest) returns to the end screen on Back, as it was left. For V when work resumes, with a
-      check per link.
+      links, Share swipes and the rest) returns to the end screen on Back, as it was left. Done: V's claude/end-back, merged
+      cb534aa (see below).
     - **Regression, first for D on resume** (owner: "I think my square button is not working for me anymore on smart launcher.").
       D's TakenKeys takes every key in Smart Launcher's search except event.isSystem; Android's isSystem covers Home and Back but
       not KEYCODE_APP_SWITCH (the square), so TitanKeys takes Recents and drops it (AtlasIme.kt:1420). Fix: take only the keys

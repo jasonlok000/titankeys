@@ -1022,6 +1022,7 @@ enders\gesture-line
     the recorded-touch benchmarks, the bar's border and corner design, haptics, the guide, privacy, limits, what's next),
     from .dev/swipe-baseline (BASELINE.md, ENGINE-2.0.md, report/), docs/haptics*.md, docs/design-v2.md and the code. No
     private recordings' text in it. A second helper writes it after the README draft.
+  - Owner, then: "Or lke a pitch for technical peol". So the paper is a pitch for technical readers: each part leads with what it achieves and the measured result, then shows how, in full depth, so an engineer is convinced by the evidence.
 - **3.0: Hold for symbols defaults to Medium** (owner, 2026-11-14: "changing hold symbol default to medium next 3.0").
 - **Favourites and capitals** (owner, 2026-11-14: "does favouriting a word learns its capitalization patterns? Shd it?"):
   Favourite is kept in lowercase (FavouriteWords) as it only ranks a word first among look-alikes; the capitals come from

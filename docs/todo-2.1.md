@@ -374,6 +374,12 @@ enders\gesture-line
         it runs 1151 to 1187 px with its middle at 1169.4, the digits' middle 1169.0, the arrow at Up 3 1168.3, so it is level;
         it only looked off with its bottom edge cut. For W once the owner says go: the crop fix and the arrow at 3 dp (scaled
         with the Bar text size), with renders at all three sizes.
+        - Owner (23:40): "I think those icons should follow the middle of uppercase like how the auto cap icon, so I think the
+          paste icon is too low. Just let me align it by eye." clip.html now has an Icon slider (dp up or down from today's
+          place, uncut) and the guide draws the capitals' middle. Waiting on the owner's value.
+      - Swipe: the owner asked for "the tallest and still center aligned enough". Option 6 added: rows 12 dp apart (8.7
+        today), the middle row 3 dp up like the arrow, Edges 0.3; the bottom row 8.0 dp over the edge (8.3 today) and its lowest
+        point 6.2 dp (4.0 today). Options 1 and 3 are taller but sit 6.6 and 5 dp up. Waiting on the owner's pick.
     - **Owner on #19's swipe trail: "Is the swipe supposed to be fixed now? I think it looks really cramped".** It is C's
       2aa9486 (the owner's "compress slide animation ... center aligned properly with the border and like doesn't hit the bottom
       edge"). Measured: the rows went from 14 to 8.7 dp apart (the trail 26 dp tall instead of 42), and the bottom row's middle

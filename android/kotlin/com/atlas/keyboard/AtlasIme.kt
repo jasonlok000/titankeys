@@ -1367,9 +1367,12 @@ class AtlasIme : InputMethodService() {
         contact.swipes = TypingSettings.swipeTyping(this) && field.words
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
         val corrects = TypingSettings.autocorrect(this)
+        // Spell out shorthand is its own setting: with Fix typos off, the word data spells out shorthand alone (bug hunt #13).
+        val shorthandAlone = !corrects && TypingSettings.expandShorthand(this)
         composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
+        composer.shorthandOnly = autocorrect.autocorrect.takeIf { shorthandAlone }
         // The word data takes a moment to load, so it starts as a field opens: the first word typed is fixed too.
-        if (!corrects) autocorrect.release() else if (editing) autocorrect.prepare()
+        if (!corrects && !shorthandAlone) autocorrect.release() else if (editing) autocorrect.prepare()
         strip?.showSuggestions = showSuggestions()
         readExpansions()
         updateKeyWatch()

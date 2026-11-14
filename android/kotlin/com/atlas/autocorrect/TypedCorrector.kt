@@ -294,18 +294,24 @@ class TypedCorrector(
         firstFix(word, before, typedPrevious)?.takeUnless { it.word == it.typed }
 
     /**
+     * The shorthand step alone: [word], after [before], spelled out as its full word, or null to keep it. It runs on its own while
+     * Fix typos is off, as Spell out shorthand is its own setting (bug hunt #13). Shorthand stays as typed unless the setting asks
+     * for its full word (#63), and Backspace undoes it as any fix. One typed in capitals ("ESP", "MSG") is an acronym, so it stays.
+     */
+    fun shorthandFix(word: String, before: String): Fix? {
+        if (!isShorthand(word) || !lexicon.expandShorthand() || isInsideAddress(before + word) || word.lowercase() in rejected) return null
+        if (word.length >= 2 && word.none { it.isLowerCase() } && word.any { it.isUpperCase() }) return null
+        val full = fullShorthand(word) ?: return null
+        return Fix(word, if (word.first().isUpperCase()) full.replaceFirstChar { it.uppercaseChar() } else full)
+    }
+
+    /**
      * The owner's order: a wrong word is corrected first, and then the right word gets its fixed capitals ("mr" is "me"
      * where the slip is clear, and "Mr" where it isn't). A word that is not wrong gets its capitals anyway.
      */
     private fun firstFix(word: String, before: String, typedPrevious: String?): Fix? {
-        // Shorthand stays as typed, unless the setting asks for its full word (#63). Backspace undoes it as any fix. One typed
-        // in capitals ("ESP", "MSG") is an acronym, so it stays too. This goes first, as the user's own may be one letter.
-        if (isShorthand(word)) {
-            if (!lexicon.expandShorthand() || isInsideAddress(before + word) || word.lowercase() in rejected) return null
-            if (word.length >= 2 && word.none { it.isLowerCase() } && word.any { it.isUpperCase() }) return null
-            val full = fullShorthand(word) ?: return null
-            return Fix(word, if (word.first().isUpperCase()) full.replaceFirstChar { it.uppercaseChar() } else full)
-        }
+        // Shorthand goes first, as the user's own may be one letter. See [shorthandFix].
+        if (isShorthand(word)) return shorthandFix(word, before)
         // A single letter is meant as typed: "p" never becomes "up". Only "i" gets its capital.
         // A missed apostrophe ("don t") still joins up, as the letter itself stays.
         if (word.length == 1) {

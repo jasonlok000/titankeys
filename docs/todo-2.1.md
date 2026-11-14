@@ -953,6 +953,13 @@ enders\gesture-line
   gh-pages kept as an archive tag and deleted.
 - **3.0: the guide's word menu and triple Space slides name K and L, not I and O** (owner, 2026-11-14: "Sth for 3.0 for the
   guide, say k and l instead of i and o for the menu. Same with triple tap too").
+- **3.0: the hunts get harder** (owner, 2026-11-14: "reduce finding time for sym and clown so its more challenging"). The ∞
+  hunt in Sym and the clown hunt share GuideSteps.kt's HUNT_DRAIN_SECONDS 20 (a find before it is "fast", after it the
+  roast), HUNT_HINT_SECONDS 35 and HUNT_SKIP_SECONDS 50. Shorter for both in 3.0, values to pick then.
+- **3.0: the paste slide's last line** (owner, 2026-11-14: "Change didn't expect that did you? To sth like no, seriously, u
+  think for me, in case the user didn't really expect me to prank"). After the nice clip pastes "I hope you're doing great,
+  genuinely", the slide says "Didn't see that coming, did you?" (GuideSteps.kt, done), which falls flat for anyone who did
+  see it coming. New line along the owner's "No, seriously..." so it works either way; the exact words to settle in 3.0.
 - **Everything in one place** (owner, 2026-11-14: "We had a rule from atlas that the repo itself stays clean from tools and
   dev stuff etc but I don't like that idea so I want everything in one place"). The dev tools move into the repo: WSL
   ~/build/tk-tools (verify.sh, keyboard.sh, play-bundle.sh and the rest), the phone scripts and the quick preview pages

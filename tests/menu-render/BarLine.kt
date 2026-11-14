@@ -303,11 +303,14 @@ internal object BarLine {
     /** Shift's arrow for an automatic capital, where Shift's chip would be, beside the words. */
     private fun capital(look: Look, g: Graphics2D) {
         words(look, g, listOf("The", "I", "This"))
-        val height = look.chipPx * (1984 + 494) / 2048f + 2 * look.dp(3)
+        // As Strip: a 13 dp chip's height at the bar's density (Shift's chip before FixedScale), its middle on the line; before,
+        // the chips' 14 dp, centred on the bar.
+        val size = (if (look.after) 13f else 14f) * look.density
+        val height = size * (1984 + 494) / 2048f + 2 * look.dp(3)
         val arrow = height - 2 * look.dp(4)
         val wide = arrow + 2 * look.dp(5)
         val left = look.chipSide.toFloat()
-        val top = if (look.after) look.chipTop.toFloat() else (BAR - height) / 2
+        val top = if (look.after) minOf(look.line - height / 2, look.floor - height / 2 - arrow / 2 - look.dp(1)) else (BAR - height) / 2
         val x = left + wide / 2 - arrow / 2
         val y = top + height / 2 - arrow / 2
         val path = Path2D.Float()
@@ -323,6 +326,7 @@ internal object BarLine {
         g.stroke = BasicStroke(1.3f * look.density, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
         g.draw(path)
         look.boxes += Box("the automatic capital's arrow", y + arrow, look.edge)
+        if (look.after) look.marks += Mark("the automatic capital's arrow", y + arrow / 2, look.line)
     }
 
     /** A notice: the Teams egg's line, 18 dp, in the middle, on its own letters' line as centreLetters puts it. */

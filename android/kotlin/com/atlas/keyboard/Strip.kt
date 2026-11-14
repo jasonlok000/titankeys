@@ -704,7 +704,7 @@ class Strip(
     }
 
     private fun capitalHeight(): Float {
-        capitalText.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CHIP_SIZE, resources.displayMetrics)
+        capitalText.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CAPITAL_SIZE, resources.displayMetrics)
         return capitalText.descent() - capitalText.ascent() + 2 * dp(3)
     }
 
@@ -719,9 +719,9 @@ class Strip(
         val height = capitalHeight()
         val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
         val width = capitalWidth()
-        // Where Shift's chip would be: in as far as the chips, on their line.
+        // In as far as the chips, its middle on the bar's line, rising only if the arrow itself would reach under the floor.
         val left = chipSide.toFloat()
-        val top = chipBox().first
+        val top = minOf(line - height / 2, floor - height / 2 - arrow / 2 - dp(1))
         capitalBox.set(left, top, left + width, top + height)
         // The left word, as drawn: if its text would reach under the chip, the chip goes small into the corner.
         val word = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.minByOrNull { it.left }
@@ -1469,6 +1469,13 @@ class Strip(
         /** How far the left word's text must stay from the chip, or the chip goes into the corner, at this size. */
         private const val CAPITAL_CLEAR = 2
         private const val CAPITAL_SMALL = .6f
+        /**
+         * The arrow's place is as tall as a chip with its text at this size, in dp: Shift's chip as Strip drew it before TitanKeys
+         * fixed its own sizes (824c865^), 13 dp at Smaller, which grows with Bar text size as everything in the bar does (owner,
+         * 2026-11-13: "the auto cap icon should be smaller like how it was like in the old one before the resize. And scales with
+         * the bar element size").
+         */
+        private const val CAPITAL_SIZE = 13f
         /** About 30 frames a second while the idle scene moves. */
         private const val IDLE_FRAME_MILLIS = 33L
         /** A frame that comes late, as after the screen was busy, moves the game on by no more than this. */

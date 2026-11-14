@@ -4,7 +4,6 @@ import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics2D
-import java.awt.LinearGradientPaint
 import java.awt.RenderingHints
 import java.awt.Shape
 import java.awt.font.FontRenderContext
@@ -66,11 +65,10 @@ internal object IdleRender {
     private lateinit var bold: Font
     private val INK = Color.WHITE
     private val MUTED = Color(0x88, 0x88, 0x88)
-    /** The floor's line: the text's cream at 55%, 1 dp high, its ends fading over 16 dp ([IdleDrawing.floor]). */
+    /** The floor's line: the text's cream at 55%, 1 dp high, solid to its hard ends ([IdleDrawing.floor]). */
     private val CREAM = Color(0xFF, 0xF1, 0xE6)
     private const val FLOOR_ALPHA = 140 / 255f
     private val FLOOR_THICK = 1 * BarLine.UNIT
-    private val FLOOR_FADE = 16 * BarLine.UNIT
     /** How bright the cream is, as corner_check.py weighs it, out of 255. */
     private const val CREAM_GREY = (255 * 299 + 0xF1 * 587 + 0xE6 * 114) / 1000f
     private val ACCENT get() = Color(Accent.colour and 0xFFFFFF)
@@ -93,8 +91,10 @@ internal object IdleRender {
         val arrowLine = 1.3f * look.density
         /** The floor's line, as Strip.drawIdle places it: its bottom at the game's floor, its ends clear of the corners. */
         val floorBottom = Idle.FLOOR * scale
-        val floorLeft = Corners(RADIUS).clearInset(BAR - floorBottom, StripFit.EDGE_DP * BarLine.UNIT).toFloat()
+        val floorLeft = Idle.floorLeft(WIDTH.toFloat(), Corners(RADIUS).clearInset(BAR - floorBottom, StripFit.EDGE_DP * BarLine.UNIT).toFloat())
         val floorRight = WIDTH - floorLeft
+        /** The same line in the game's units, as Strip.startIdle hands it to the player. */
+        val ground = (floorLeft - edge) / scale..(floorRight - edge) / scale
 
         fun glyphs(): List<Glyph> {
             val room = WIDTH - 2f * look.side
@@ -224,10 +224,31 @@ internal object IdleRender {
         val game = player.game
         // The floor's line: the part that shows, where its fading ends are bright enough for corner_check.py to count.
         val strength = CREAM_GREY * FLOOR_ALPHA * player.floor / 255f
-        if (strength > SHOWS) {
-            val from = bar.floorLeft + FLOOR_FADE * SHOWS / strength
-            val to = bar.floorRight - FLOOR_FADE * SHOWS / strength
-            points("the floor", Rectangle2D.Float(from, bar.floorBottom - FLOOR_THICK, to - from, FLOOR_THICK), 0f)
+        if (strength > SHOWS)
+            points("the floor", Rectangle2D.Float(bar.floorLeft, bar.floorBottom - FLOOR_THICK, bar.floorRight - bar.floorLeft, FLOOR_THICK), 0f)
+        // What touches the floor, while the line shows, touches it over the line (owner, 2026-11-13: "have the animations all be
+        // animated for that"): a letter's ink where it reaches the floor, and the figure's feet. A letter in its place on the line
+        // isn't on the floor, even if a big size's descender reaches it.
+        if (player.floor > 0f) {
+            val floor = Idle.FLOOR * bar.scale
+            for (g in player.glyphs) {
+                if (g.alpha < SHOWS || g.x == g.homeX && g.y == g.homeY) continue
+                val it = glyphShape(bar, g).getPathIterator(null, .25)
+                val c = FloatArray(6)
+                var off: String? = null
+                while (!it.isDone) {
+                    if (it.currentSegment(c) != PathIterator.SEG_CLOSE && c[1] >= floor - 1 && (c[0] < bar.floorLeft - .5f || c[0] > bar.floorRight + .5f))
+                        off = "'${g.char}' touches the floor past the line's end at (%.1f, %.1f)".format(c[0], c[1])
+                    it.next()
+                }
+                off?.let { found += it }
+            }
+            game.figure?.takeIf { it.alpha >= SHOWS && it.feet + Figure.LINE / 2 >= Idle.FLOOR - .5f }?.let { f ->
+                val x = bar.edge + f.x * bar.scale
+                val reach = f.stride * bar.scale
+                if (x - reach < bar.floorLeft - .5f || x + reach > bar.floorRight + .5f)
+                    found += "the figure stands past the line's end at (%.1f, %.1f)".format(x, f.feet * bar.scale)
+            }
         }
         for (g in player.glyphs) if (g.alpha >= SHOWS && g.scale > 0f) points("'${g.char}'", glyphShape(bar, g), 0f)
         game.figure?.let { f -> if (f.alpha >= SHOWS) for (s in figureStrokes(bar, f)) points(s.what, s.shape, s.half) }
@@ -256,6 +277,7 @@ internal object IdleRender {
         Scenario("drift-firework", IdlePlayer.Kind.Drift, 6000f, IdlePlayer.Way.Firework),
         Scenario("pong-exit", IdlePlayer.Kind.Pong, 6000f, IdlePlayer.Way.Exit),
         Scenario("pong-shell", IdlePlayer.Kind.Pong, 6000f, IdlePlayer.Way.Shell),
+        Scenario("pong-firework", IdlePlayer.Kind.Pong, 6000f, IdlePlayer.Way.Firework),
         Scenario("rope-exit", IdlePlayer.Kind.JumpRope, 6000f, IdlePlayer.Way.Exit),
         Scenario("rope-firework", IdlePlayer.Kind.JumpRope, 6000f, IdlePlayer.Way.Firework),
         Scenario("juggle-drop", IdlePlayer.Kind.Juggle, 6000f, IdlePlayer.Way.Drop),
@@ -274,7 +296,7 @@ internal object IdleRender {
     fun play(bar: Bar, scenario: Scenario, seed: Int, frame: (Float, IdlePlayer) -> Unit): Boolean {
         val glyphs = bar.glyphs()
         if (!IdlePlayer.fits(scenario.kind, glyphs)) return false
-        val player = IdlePlayer(glyphs, bar.width, Random(seed), scenario.kind)
+        val player = IdlePlayer(glyphs, bar.width, Random(seed), scenario.kind, bar.ground)
         var t = 0f
         frame(t, player)
         var cameBack = false
@@ -355,14 +377,8 @@ internal object IdleRender {
     private fun draw(g: Graphics2D, bar: Bar, player: IdlePlayer) {
         val game = player.game
         if (player.floor > 0f) {
-            val a = (FLOOR_ALPHA * player.floor.coerceIn(0f, 1f) * 255).toInt()
-            val full = Color(CREAM.red, CREAM.green, CREAM.blue, a)
-            val clear = Color(CREAM.red, CREAM.green, CREAM.blue, 0)
-            val end = FLOOR_FADE / (bar.floorRight - bar.floorLeft)
-            val paint = g.paint
-            g.paint = LinearGradientPaint(bar.floorLeft, 0f, bar.floorRight, 0f, floatArrayOf(0f, end, 1 - end, 1f), arrayOf(clear, full, full, clear))
+            g.color = Color(CREAM.red, CREAM.green, CREAM.blue, (FLOOR_ALPHA * player.floor.coerceIn(0f, 1f) * 255).toInt())
             g.fill(Rectangle2D.Float(bar.floorLeft, bar.floorBottom - FLOOR_THICK, bar.floorRight - bar.floorLeft, FLOOR_THICK))
-            g.paint = paint
         }
         val saved = g.transform
         g.translate(bar.edge.toDouble(), 0.0)

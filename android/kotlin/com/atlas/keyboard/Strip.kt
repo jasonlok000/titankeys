@@ -1202,9 +1202,11 @@ class Strip(
     private var idleEdge = 0
 
     val idling get() = idle != null
-    /** The idle games' floor: 1 dp high, and its ends fade over 16 dp. See [IdleDrawing.floor]. */
+    /** The idle games' floor: 1 dp high. See [IdleDrawing.floor]. */
     private val floorThick = FixedScale.fixedPx(context, 1f)
-    private val floorFade = FixedScale.fixedPx(context, 16f)
+
+    /** Where the floor's line starts, in px: its share of the room between the corners, which it keeps clear of by the edge's distance. */
+    private fun floorLeft() = Idle.floorLeft(width.toFloat(), corners.clearInset(height - Idle.FLOOR * idleScale, edge).toFloat())
 
     /**
      * Starts an idle game with the words on the bar, if plain words show: [kind], or one picked by rarity among the games the
@@ -1245,7 +1247,10 @@ class Strip(
         val game = kind?.takeIf { IdlePlayer.fits(it, glyphs) }
             ?: (if (kind == null) IdlePlayer.choose(glyphs, random) { schedule?.allows(it) != false } else null) ?: return false
         schedule?.played(game)
-        idle = IdlePlayer(glyphs, (width - 2 * idleEdge) / scale, random, game)
+        // The floor's line in the game's units, so the games stand, land and run on it.
+        val floorLeft = (floorLeft() - idleEdge) / scale
+        val gameWidth = (width - 2 * idleEdge) / scale
+        idle = IdlePlayer(glyphs, gameWidth, random, game, floorLeft..gameWidth - floorLeft)
         idleFrameAt = SystemClock.uptimeMillis()
         render()
         invalidate()
@@ -1279,10 +1284,10 @@ class Strip(
             post { if (idle === player) stopIdle() }
             return
         }
-        // The floor, under the game: its bottom at the game's floor, and its ends clear of the curved corners by the edge's distance.
+        // The floor, under the game: its bottom at the game's floor, its share of the room between the curved corners, centred.
         val floorBottom = Idle.FLOOR * idleScale
-        val floorInset = corners.clearInset(height - floorBottom, edge).toFloat()
-        idleDrawing.floor(canvas, player.floor, floorInset, width - floorInset, floorBottom, floorThick, floorFade, look)
+        val floorLeft = floorLeft()
+        idleDrawing.floor(canvas, player.floor, floorLeft, width - floorLeft, floorBottom, floorThick, look)
         canvas.save()
         canvas.translate(idleEdge.toFloat(), 0f)
         idleDrawing.draw(canvas, player, idleScale, idleTypefaces, look)

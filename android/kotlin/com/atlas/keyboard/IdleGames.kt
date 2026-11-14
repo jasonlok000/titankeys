@@ -40,6 +40,15 @@ internal object Idle {
     const val FLOOR = H * (56f - 2.56f) / 56f
     /** The highest: the bar's top cuts whatever crosses it. */
     const val TOP = .5f
+    /**
+     * How much of the room between the corners the floor's line spans, centred, with hard ends (owner, 2026-11-13: "I like 80%…
+     * Just a simple 80% width line and have the animations all be animated for that"). The room is from where the line keeps clear
+     * of one curved corner to the other. Whatever stands, lands, rolls or runs on the floor stays over the line ([IdlePlayer.span]).
+     */
+    const val FLOOR_SHARE = .8f
+
+    /** Where the floor's line starts, in px from the left, on a strip [width] wide whose corners leave [inset] clear: centred, [FLOOR_SHARE] of the room. */
+    fun floorLeft(width: Float, inset: Float) = inset + (width - 2 * inset) * (1 - FLOOR_SHARE) / 2
 
     /**
      * How far a letter's ink reaches over its middle (the middle of Inter's ascent and descent, where a [Glyph] is placed), as a
@@ -151,6 +160,14 @@ internal class Glyph(val char: Char, val word: Int, val homeX: Float, val homeY:
     fun below(scale: Float = this.scale, turn: Float = rot) = (pivot + abs(sin(turn)) * inkHalf + abs(cos(turn)) * halfHigh) * scale
     /** How far its ink reaches over [y] at [scale] and turned by [turn]. */
     fun above(scale: Float = this.scale, turn: Float = rot) = (-pivot + abs(sin(turn)) * inkHalf + abs(cos(turn)) * halfHigh) * scale
+    /** How far its ink reaches to either side of [x] at [scale] and turned by [turn]. */
+    fun side(scale: Float = this.scale, turn: Float = rot) = (abs(cos(turn)) * inkHalf + abs(sin(turn)) * halfHigh) * scale
+    /** Whether its ink is on the floor now: within half a pixel of [Idle.FLOOR]. */
+    fun onFloor() = y + below() >= Idle.FLOOR - .5f
+    /** Keeps [x] so that its ink is over [span], the floor's line, from end to end. */
+    fun overGround(span: ClosedFloatingPointRange<Float>) {
+        x = Idle.clamp(x, span.start + side(), max(span.start + side(), span.endInclusive - side()))
+    }
     /** The most its ink reaches from its pivot at [scale], at any turn: for a letter that spins. */
     fun turning(scale: Float = this.scale) = hypot(inkHalf, halfHigh) * scale
     /** The lowest [y] may be at [scale], turning freely, for its ink to stay over [Idle.FLOOR]. */
@@ -186,6 +203,9 @@ internal class Figure(var x: Float, var feet: Float) {
     var alpha = 1f
     var armLX = -12f; var armLY = 16f
     var armRX = 12f; var armRY = 16f
+
+    /** How far its feet reach to either side of [x] as it walks, its line's round ends included. */
+    val stride get() = abs(sin(step)) * 10 + LINE / 2
 
     fun copy() = Figure(x, feet).also {
         it.lean = lean; it.step = step; it.alpha = alpha
@@ -498,7 +518,8 @@ internal class Pong(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
  * 3. Bowling: the figure rolls a round letter at the other letters, stacked like pins; they scatter and go home. Each round ends.
  * The lane is the bar's floor ([Idle.FLOOR]): the figure stands on it, and every letter's ink lands on it, however it lies.
  */
-internal class Bowling(glyphs: List<Glyph>, width: Float, random: Random) : IdleGame(glyphs, width, random) {
+internal class Bowling(glyphs: List<Glyph>, width: Float, random: Random, private val span: ClosedFloatingPointRange<Float> = 0f..width) :
+    IdleGame(glyphs, width, random) {
     private enum class Phase { Intro, Windup, Roll, Scatter, Cheer, Home }
 
     private val ball = IdlePlayer.ballOf(glyphs)!!
@@ -508,7 +529,13 @@ internal class Bowling(glyphs: List<Glyph>, width: Float, random: Random) : Idle
     private val spotX: FloatArray
     private val spotY: FloatArray
     private val roll = 560 + random.nextFloat() * 140
-    override val figure = Figure(Figure.ENTER, FEET).also { it.alpha = 0f }
+    /**
+     * The figure walks on from the floor's left end, fading in, and stands far enough along for its feet and the ball's back swing to
+     * stay over it; as it leaves, it fades before it walks past that end.
+     */
+    private val enter = span.start + Figure.ENTER
+    private val stand = max(STAND, span.start + Figure.ENTER + 40)
+    override val figure = Figure(enter, FEET).also { it.alpha = 0f }
     /** The floor comes and goes with the figure, which stands on it. */
     override val floor get() = figure.alpha
     private var t = 0f
@@ -531,7 +558,7 @@ internal class Bowling(glyphs: List<Glyph>, width: Float, random: Random) : Idle
         val rise = (pins.maxOfOrNull { it.size } ?: Idle.FONT_SIZE) * PIN_SCALE * .62f
         for (r in 0 until rows) for (c in 0 until bottom - r) if (xs.size < pins.size) {
             val pin = pins[xs.size]
-            xs += width * .8f - (bottom - 1) * gap + c * gap + r * gap / 2
+            xs += min(width * .8f, span.endInclusive - 24 - (rows - 1) * gap / 2) - (bottom - 1) * gap + c * gap + r * gap / 2
             ys += max(FLOOR - pin.below(PIN_SCALE, 0f) - r * rise, Idle.TOP + pin.above(PIN_SCALE, 0f))
         }
         spotX = xs.toFloatArray()
@@ -544,7 +571,7 @@ internal class Bowling(glyphs: List<Glyph>, width: Float, random: Random) : Idle
             Phase.Intro -> {
                 // The figure walks on; the ball hops to its hand; the other letters hop into a stack of pins.
                 val p = Idle.easeInOut(t / WALK)
-                figure.x = Idle.lerp(Figure.ENTER, 90f, p); figure.step = p * 9; figure.alpha = Idle.smooth(t / Figure.FADE_IN)
+                figure.x = Idle.lerp(enter, stand, p); figure.step = p * 9; figure.alpha = Idle.smooth(t / Figure.FADE_IN)
                 val k = glyphs.indexOf(ball)
                 val q = Idle.easeInOut((t - 200) / 600)
                 ball.x = Idle.lerp(fromX[k], figure.x + 18, q); ball.y = Idle.lerp(fromY[k], FLOOR - 32, q) - sin(q * PI.toFloat()) * 30
@@ -623,7 +650,7 @@ internal class Bowling(glyphs: List<Glyph>, width: Float, random: Random) : Idle
             Phase.Home -> {
                 // Everything back to the bar, and the figure walks off. Then the next round.
                 figure.feet = FEET
-                figure.x -= dt * .25f; figure.step += dt / 70; figure.alpha = max(0f, 1 - t / Figure.FADE_OUT)
+                figure.x = max(figure.x - dt * .25f, enter); figure.step += dt / 70; figure.alpha = max(0f, 1 - t / Figure.FADE_OUT)
                 return !(outro!!.update(dt) && t > 600)
             }
         }
@@ -639,12 +666,16 @@ internal class Bowling(glyphs: List<Glyph>, width: Float, random: Random) : Idle
             b.y = FLOOR - b.below(); b.vy = -b.vy * .3f; if (abs(b.vy) < 20) b.vy = 0f
             b.vx *= exp(-(if (b === ball) .3f else 4f) * h); b.spin *= exp(-6 * h)
         }
-        if (b.x > width - b.radius) { b.x = width - b.radius; b.vx = -b.vx * .4f }
+        // The lane is the floor's line: nothing rolls or lands past its ends.
+        if (b.x + b.side() > span.endInclusive) { b.x = span.endInclusive - b.side(); b.vx = -abs(b.vx) * .4f }
+        if (b.x - b.side() < span.start) { b.x = span.start + b.side(); b.vx = abs(b.vx) * .4f }
         if (b.y - b.above() < Idle.TOP) { b.y = Idle.TOP + b.above(); b.vy = abs(b.vy) * .3f }
     }
 
     private companion object {
         const val FLOOR = Idle.FLOOR
+        /** Where the figure stands to bowl, at least, in from the game's left. */
+        const val STAND = 90f
         /** Where the figure's feet are: its line's round end touches the floor. */
         const val FEET = Idle.FLOOR - Figure.LINE / 2
         const val GRAVITY = 1100f
@@ -732,7 +763,8 @@ internal class JumpRope(glyphs: List<Glyph>, width: Float, random: Random) : Idl
  * 7. Race: the words line up in three lanes and race to a finish line; one wins, and they all go home. Each race ends. The lanes
  * stack up from the bar's floor ([Idle.FLOOR]), a lane's height apart, as low as the letters' ink allows.
  */
-internal class Race(glyphs: List<Glyph>, width: Float, random: Random) : IdleGame(glyphs, width, random) {
+internal class Race(glyphs: List<Glyph>, width: Float, random: Random, private val span: ClosedFloatingPointRange<Float> = 0f..width) :
+    IdleGame(glyphs, width, random) {
     private enum class Phase { LineUp, Ready, Race, Finish, Home }
     private class Racer(var front: Float, val top: Float, val surgeA: Float, val surgeB: Float) {
         var speed = 0f
@@ -740,7 +772,9 @@ internal class Race(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
     }
 
     private val lanes = FloatArray(3)
-    private val finish = width - 46
+    /** The race runs over the floor's line: it starts at its left end and finishes short of its right. */
+    private val finish = span.endInclusive - 46
+    private val start = span.start + START
     private val present = (0..2).filter { w -> glyphs.any { it.word == w } }
     private val winner = present[random.nextInt(present.size)]
     private val lengths = FloatArray(3) { w -> words(w).sumOf { (it.advance * SCALE).toDouble() }.toFloat() }
@@ -778,7 +812,7 @@ internal class Race(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
         }
         // The winner is a touch faster overall, but leads can change.
         racers = (0..2).map { w ->
-            Racer(START + lengths[w], (if (w == winner) 1f else .88f + random.nextFloat() * .08f) * (330 + random.nextFloat() * 50),
+            Racer(start + lengths[w], (if (w == winner) 1f else .88f + random.nextFloat() * .08f) * (330 + random.nextFloat() * 50),
                 random.nextFloat() * 6, random.nextFloat() * 6)
         }
     }
@@ -817,7 +851,7 @@ internal class Race(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
                     val surge = 1 + .09f * sin(t / 420 + r.surgeA) + .05f * sin(t / 170 + r.surgeB)
                     val want = if (r.done) 0f else r.top * surge
                     r.speed += (want - r.speed) * Idle.clamp(dt / (if (r.done) 260 else 380), 0f, 1f)
-                    r.front = min(r.front + r.speed * dt / 1000, width - 6)
+                    r.front = min(r.front + r.speed * dt / 1000, span.endInclusive - 6)
                     if (r.front >= finish && !r.done) { r.done = true; if (finishAt < 0 && w == winner) finishAt = t }
                 }
                 // Only the winner may cross first: a loser that would get there first eases off just before the line.
@@ -848,7 +882,8 @@ internal class Race(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
         const val HOP_UP = 6f
         const val CROUCH = 3f
         const val BOB = 2.5f
-        const val START = 22f
+        /** How far in from the floor's left end the racers line up. */
+        const val START = 6f
         const val LINE_UP = 750f
         const val READY = 3
         const val HOP = 230f
@@ -859,7 +894,8 @@ internal class Race(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
  * 8. Juggling: the figure walks on and juggles the middle word's three letters in a three-ball cascade; the side words stay put.
  * The figure stands on the bar's floor ([Idle.FLOOR]), and the throws go as high as they can with the letters under the bar's top.
  */
-internal class Juggle(glyphs: List<Glyph>, width: Float, random: Random) : IdleGame(glyphs, width, random) {
+internal class Juggle(glyphs: List<Glyph>, width: Float, random: Random, span: ClosedFloatingPointRange<Float> = 0f..width) :
+    IdleGame(glyphs, width, random) {
     val balls: List<Glyph>
     val others: List<Glyph>
     private val centre = width / 2
@@ -867,7 +903,9 @@ internal class Juggle(glyphs: List<Glyph>, width: Float, random: Random) : IdleG
     private val beat = 300 + random.nextFloat() * 40
     private val fromX = FloatArray(glyphs.size) { glyphs[it].x }
     private val fromY = FloatArray(glyphs.size) { glyphs[it].y }
-    override val figure = Figure(width - Figure.ENTER, feet).also { it.alpha = 0f }
+    /** The figure walks on from the floor's right end, fading in, to the middle. */
+    private val enter = span.endInclusive - Figure.ENTER
+    override val figure = Figure(enter, feet).also { it.alpha = 0f }
     /** The floor comes with the figure, which stands on it. */
     override val floor get() = figure.alpha
     private var t = 0f
@@ -890,7 +928,7 @@ internal class Juggle(glyphs: List<Glyph>, width: Float, random: Random) : IdleG
         t += dt
         if (t < WALK + 500) {
             val p = Idle.easeInOut(t / WALK)
-            figure.x = Idle.lerp(width - Figure.ENTER, centre, p); figure.step = p * 12; figure.alpha = Idle.smooth(t / Figure.FADE_IN)
+            figure.x = Idle.lerp(enter, centre, p); figure.step = p * 12; figure.alpha = Idle.smooth(t / Figure.FADE_IN)
             // Each ball hops from its word into the figure's hands, one after another.
             for ((i, g) in balls.withIndex()) {
                 val k = glyphs.indexOf(g)
@@ -970,7 +1008,8 @@ internal class Exit(glyphs: List<Glyph>, width: Float, random: Random, figure: F
 }
 
 /** Juggling's way home: the juggler drops the letters, they fall to the floor, and they hop back into their places in the words. */
-internal class Drop(glyphs: List<Glyph>, width: Float, random: Random, figure: Figure?, private val balls: List<Glyph>) :
+internal class Drop(glyphs: List<Glyph>, width: Float, random: Random, private val span: ClosedFloatingPointRange<Float>, figure: Figure?,
+    private val balls: List<Glyph>) :
     IdleGame(glyphs, width, random) {
     override val returning get() = true
     override val figure = figure?.copy()
@@ -996,6 +1035,8 @@ internal class Drop(glyphs: List<Glyph>, width: Float, random: Random, figure: F
                 for (g in balls) {
                     g.vy += 1400 * h; g.x += g.vx * h; g.y += g.vy * h; g.rot += g.spin * h
                     if (g.y + g.below() > Idle.FLOOR) { g.y = Idle.FLOOR - g.below(); g.vy = -g.vy * .35f; g.vx *= .7f }
+                    // They land on the floor's line, never past its ends.
+                    if (g.x - g.side() < span.start || g.x + g.side() > span.endInclusive) { g.overGround(span); g.vx = -g.vx * .4f }
                 }
             }
             if (t >= FALL) home = HomeTween(glyphs, HOME, 12f)
@@ -1121,7 +1162,8 @@ internal class Shell(glyphs: List<Glyph>, width: Float, random: Random) : IdleGa
 }
 
 /** 6. Firework, a way home: every letter gathers into one round letter, it shoots up, bursts into all the letters, and they float home. */
-internal class Firework(glyphs: List<Glyph>, width: Float, random: Random, private val asReturn: Boolean = true) :
+internal class Firework(glyphs: List<Glyph>, width: Float, random: Random, private val span: ClosedFloatingPointRange<Float> = 0f..width,
+    private val asReturn: Boolean = true) :
     IdleGame(glyphs, width, random) {
     override val returning get() = asReturn
     /** A spark from the rocket, for the drawing. */
@@ -1132,7 +1174,8 @@ internal class Firework(glyphs: List<Glyph>, width: Float, random: Random, priva
     private val fromY = FloatArray(glyphs.size) { glyphs[it].y }
     private val fromScale = FloatArray(glyphs.size) { glyphs[it].scale }
     private val fromAlpha = FloatArray(glyphs.size) { glyphs[it].alpha }
-    private val launchX = rocket.homeX
+    /** The rocket waits over the floor's line, where its letter is, or as near as the line reaches. */
+    private val launchX = Idle.clamp(rocket.homeX, span.start + rocket.side(ROCKET, 0f) + 4, span.endInclusive - rocket.side(ROCKET, 0f) - 4)
     /** Where the rocket waits: its ink a little over the bar's floor, and where it bursts: its ink under the bar's top. */
     private val ground = Idle.FLOOR - rocket.below(ROCKET, 0f) - 2
     private val apex = max(APEX, Idle.TOP + rocket.above(ROCKET, WOBBLE))
@@ -1140,9 +1183,12 @@ internal class Firework(glyphs: List<Glyph>, width: Float, random: Random, priva
     private var t = 0f
     private var phase = 0
     private var home: HomeTween? = null
-    /** The floor comes as the letters gather to the rocket's launch spot, and goes as they float home. */
+    /**
+     * The floor comes as the letters gather to the rocket's launch spot, at the end, once they're all over the line (a game's
+     * letters may stand past its ends, as Pong's paddles do), and goes as they float home.
+     */
     override val floor get() = when (phase) {
-        0 -> Idle.smooth(t / GATHER)
+        0 -> Idle.smooth((t - GATHER * .8f) / (GATHER * .2f))
         1, 2 -> 1f
         else -> 1 - Idle.smooth(t / HOME)
     }
@@ -1182,7 +1228,8 @@ internal class Firework(glyphs: List<Glyph>, width: Float, random: Random, priva
                     for ((i, g) in glyphs.withIndex()) {
                         val a = (i.toFloat() / glyphs.size) * PI.toFloat() * 2 + random.nextFloat() * .3f - .15f
                         val reach = .55f + random.nextFloat() * .45f
-                        val tx = Idle.clamp(rocket.x + cos(a) * reach * width * .45f, 24f, width - 24)
+                        // Each lands over the floor's line, never past its ends.
+                        val tx = Idle.clamp(rocket.x + cos(a) * reach * width * .45f, span.start + g.side(1f, 0f) + 8, span.endInclusive - g.side(1f, 0f) - 8)
                         val ty = Idle.clamp(rocket.y + 26 + sin(a) * reach * 22, Idle.TOP + g.above(1f, 0f), Idle.FLOOR - g.below(1f, 0f))
                         g.x = rocket.x; g.y = rocket.y; g.vx = (tx - g.x) * DRAG; g.vy = (ty - g.y) * DRAG
                         g.spin = random.nextFloat() * 12 - 6; g.alpha = 1f; g.scale = .3f; g.accent = i % 3 == 0
@@ -1202,7 +1249,7 @@ internal class Firework(glyphs: List<Glyph>, width: Float, random: Random, priva
                         // A soft floor, top and sides: the late fall settles on the bar's floor instead of dropping out.
                         if (g.y + g.below() > Idle.FLOOR) { g.y = Idle.FLOOR - g.below(); g.vy = -abs(g.vy) * .25f; g.vx *= .9f }
                         if (g.y - g.above() < Idle.TOP) { g.y = Idle.TOP + g.above(); g.vy = abs(g.vy) * .25f }
-                        if (g.x < 12 || g.x > width - 12) { g.x = Idle.clamp(g.x, 12f, width - 12); g.vx = -g.vx * .3f }
+                        if (g.x - g.side() < span.start || g.x + g.side() > span.endInclusive) { g.overGround(span); g.vx = -g.vx * .3f }
                     }
                 }
                 if (t >= BURST) { phase = 3; t = 0f; home = HomeTween(glyphs, HOME, 14f) }
@@ -1235,7 +1282,9 @@ internal class Firework(glyphs: List<Glyph>, width: Float, random: Random, priva
  * Runs the idle games on one bar: a game picked at random, round after round, until you come back; then a way home. While it
  * plays, the bar's own words are hidden and these letters stand in for them, so when it ends the bar is exactly as it was.
  */
-internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val random: Random, val kind: Kind) {
+internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val random: Random, val kind: Kind,
+    /** The floor's line, from its left end to its right, in the game's units: Strip measures it ([Idle.floorLeft]). */
+    val span: ClosedFloatingPointRange<Float> = 0f..width) {
     /**
      * The games, with the numbers of the owner's demo, how often each is picked against the others ([weight]: the games that play
      * once are common, the loops rare), and whether it loops until you come back, at most [LOOP_MILLIS], or plays once and gives the
@@ -1263,11 +1312,11 @@ internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val
     private fun make(kind: Kind): IdleGame = when (kind) {
         Kind.Drift -> Drift(glyphs, width, random)
         Kind.Pong -> Pong(glyphs, width, random)
-        Kind.Bowling -> Bowling(glyphs, width, random)
+        Kind.Bowling -> Bowling(glyphs, width, random, span)
         Kind.JumpRope -> JumpRope(glyphs, width, random)
-        Kind.Race -> Race(glyphs, width, random)
-        Kind.Juggle -> Juggle(glyphs, width, random)
-        Kind.Firework -> Firework(glyphs, width, random, asReturn = false)
+        Kind.Race -> Race(glyphs, width, random, span)
+        Kind.Juggle -> Juggle(glyphs, width, random, span)
+        Kind.Firework -> Firework(glyphs, width, random, span, asReturn = false)
     }
 
     /**
@@ -1300,18 +1349,18 @@ internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val
             // The debug build's trigger asks for a way home by name, to show each one.
             game = when (way) {
                 Way.Shell -> Shell(glyphs, width, random)
-                Way.Firework -> Firework(glyphs, width, random)
-                Way.Drop -> Drop(glyphs, width, random, figure, (current as? Juggle)?.balls ?: glyphs.take(3))
+                Way.Firework -> Firework(glyphs, width, random, span)
+                Way.Drop -> Drop(glyphs, width, random, span, figure, (current as? Juggle)?.balls ?: glyphs.take(3))
                 Way.Exit -> Exit(glyphs, width, random, figure)
             }
             return
         }
         game = when {
-            current is Juggle -> Drop(glyphs, width, random, figure, current.balls)
+            current is Juggle -> Drop(glyphs, width, random, span, figure, current.balls)
             figure != null -> Exit(glyphs, width, random, figure)
             else -> when (random.nextInt(4)) {
                 0 -> if (words(glyphs) == 3) Shell(glyphs, width, random) else Exit(glyphs, width, random, null)
-                1 -> Firework(glyphs, width, random)
+                1 -> Firework(glyphs, width, random, span)
                 else -> Exit(glyphs, width, random, null)
             }
         }

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Draws the gesture display on the bar's one line with the real drawing code, at every Bar text size, and checks that every
 # shape is centred on the line, sized from the words, and clear of the screen's outline (see GestureLine.kt).
-# Usage: bash tests/gesture-line/run.sh [folder]. The frames go to folder/frames, one sheet a size to folder.
+# Usage: bash tests/gesture-line/run.sh [folder], a new temporary folder if none. The frames go to folder/frames, one sheet a size to folder.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}
 kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
-out=$(realpath -m "${1:-gesture-line}")
+out=$(realpath -m "${1:-$(mktemp -d)/gesture-line}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 keyboard=android/kotlin/com/atlas/keyboard
@@ -32,3 +32,4 @@ javac -nowarn -d "$work/fake" tests/gesture-render/fake/android/graphics/*.java
   "$keyboard/TrailThickness.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" "$keyboard/Corners.kt" "$keyboard/FixedScale.kt" "$keyboard/Radii.kt" \
   tests/gesture-render/GuideStandIns.kt tests/gesture-line/GestureLine.kt
 java -Djava.awt.headless=true -cp "$work/fake:$work/classes:$stdlib:$sdk/platforms/android-36/android.jar" com.atlas.keyboard.GestureLineKt "$out" android/src/main/res/font
+echo "Drawn to $out"

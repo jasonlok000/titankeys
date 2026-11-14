@@ -118,7 +118,9 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             x = nextX
             y = nextY
         }
-        dot(canvas, x, y, dp(PATH_FINGER) * display.pathWidth[count - 1].coerceAtLeast(1f), look.accent)
+        // The finger's dot keeps over the words' tails too: at its thickest it sits a little above the path's end.
+        val finger = dp(PATH_FINGER) * display.pathWidth[count - 1].coerceAtLeast(1f)
+        dot(canvas, x, min(y, floor - finger), finger, look.accent)
         if (faded) canvas.restore()
     }
 
@@ -130,14 +132,14 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
 
     /**
-     * A touchpad height, from the top row down to the bottom of the letter rows, as a height on the strip. The middle row is on the
-     * bar's line, unless the bottom row would then reach under [floor]: then the rows rise just enough, and as they grow with Bar
-     * text size, a path that still doesn't fit keeps [PATH_EDGE] from the top and stops at [floor], its finger's dot included.
+     * A touchpad height, from the top row down to the bottom of the letter rows, as a height on the strip: the middle row on the
+     * bar's line, and the rows as far apart above it as below, close enough that the bottom row's stroke, at its thickest, keeps
+     * over the words' tails, [floor] (owner, 2026-11-13: the bottom row ran along the screen's edge). [PATH_ROW] at most.
      */
     private fun swipeY(y: Float, h: Float): Float {
-        val row = dp(PATH_ROW)
-        val middle = min(line, floor - 1.5f * row)
-        return (middle + (y / .75f * 3 - 1.5f) * row).coerceIn(dp(PATH_EDGE), floor - dp(PATH_FINGER))
+        val stroke = dp(PATH_WIDTH) * TrailThickness.THICKEST / 2
+        val row = min(dp(PATH_ROW), (room() - stroke) / 1.5f)
+        return line + (y / .75f * 3 - 1.5f).coerceIn(-1.5f, 1.5f) * row
     }
 
     /**
@@ -619,9 +621,8 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val BAND_CLEAR = .7f
         const val BAND_LAYERS = 4
         const val BAND_PAD = 4f
-        /** The path's three rows of letters lie this far apart on the strip, and it keeps this far from the strip's edges. */
+        /** The path's three rows of letters lie at most this far apart on the strip: closer where the room under the line is less. */
         const val PATH_ROW = 14f
-        const val PATH_EDGE = 4.5f
         const val PATH_WIDTH = 1.6f
         const val PATH_FINGER = 2.8f
         const val GLOW_HEIGHT = 10f

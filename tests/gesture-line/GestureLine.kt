@@ -322,6 +322,13 @@ internal object GestureLine {
             found += "a ${shape.kind} reaches %.2f px under the bar's top, under %.2f px".format(shape.bottom, floor)
         val knob = HANDLE_KNOB * s.density
         val swipe = d.scene == GestureDisplay.Scene.Swipe
+        // A swipe's path is centred on the line, as far above it as it may go below, down to the words' tails (owner, 2026-11-13).
+        if (swipe) {
+            val path = shapes.filter { it.kind == "line" }
+            if (path.isEmpty()) found += "draws no path"
+            else if (path.minOf { it.top } < s.line - (s.floor - s.line) - .5f)
+                found += "its path reaches %.2f px above the line, more than the %.2f px it may go below".format(s.line - path.minOf { it.top }, s.floor - s.line)
+        }
         // The chevron is two strokes; together they are centred on the line.
         val lines = shapes.filter { it.kind == "line" }
         if (!swipe && lines.isNotEmpty()) {

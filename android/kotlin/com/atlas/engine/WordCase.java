@@ -31,6 +31,21 @@ public final class WordCase {
         return word;
     }
 
+    /**
+     * The text before a held bar [word] starts, from [text], the text before the cursor: so [kept] can tell whether it stood at a
+     * sentence start. A word still being typed has its [typed] letters before the cursor. A word that's already in the text, swiped
+     * or picked, or typed and followed by Space, ends the text, maybe with spaces after it; then it's everything before it (bug
+     * hunt #11: a swiped "Yeet" at the start of a field was saved as "Yeet"). Null stays null.
+     */
+    public static String before(CharSequence text, String word, int typed) {
+        if (text == null) return null;
+        String all = text.toString();
+        int end = all.length();
+        while (end > 0 && Character.isWhitespace(all.charAt(end - 1))) end--;
+        if (end >= word.length() && all.regionMatches(true, end - word.length(), word, 0, word.length())) return all.substring(0, end - word.length());
+        return all.substring(0, Math.max(0, all.length() - typed));
+    }
+
     private static char firstLetter(String word) {
         for (int i = 0; i < word.length(); i++) if (Character.isLetter(word.charAt(i))) return word.charAt(i);
         return ' ';

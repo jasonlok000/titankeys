@@ -769,7 +769,7 @@ private fun theKeyboardMakesTheseCalls() {
         "if (typing.builtInWord(held.word)) typing.restoreWord(held.word, done) else typing.addWord(keptCase(held), done)",
         // The case a saved word is kept in is its own, not the sentence start's, Shift's or Caps Lock's (owner, 2026-11-13).
         "typing.addWord(keptCase(held)) { error ->",
-        "return WordCase.kept(held.word, before?.dropLast(held.typed.length), modifiers.shift != Modifiers.Level.Off)",
+        "return WordCase.kept(held.word, WordCase.before(text, held.word, held.typed.length), modifiers.shift != Modifiers.Level.Off)",
         "SwipeTyping.get(this).unsaveWord(held.word) { error ->",
         "SwipeTyping.get(this).blockWord(held.word, held.typed) { error ->",
         "SwipeTyping.get(this).setWordBlocked(held.word, false) { error ->",

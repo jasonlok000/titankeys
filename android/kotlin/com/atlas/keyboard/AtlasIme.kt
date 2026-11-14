@@ -2086,8 +2086,8 @@ class AtlasIme : InputMethodService() {
      * sentence start; a word on the bar still has its typed letters before the cursor. See [WordCase].
      */
     private fun keptCase(held: HeldWord): String {
-        val before = currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH + held.typed.length, 0)?.toString()
-        return WordCase.kept(held.word, before?.dropLast(held.typed.length), modifiers.shift != Modifiers.Level.Off)
+        val text = currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH + held.word.length + held.typed.length + 2, 0)
+        return WordCase.kept(held.word, WordCase.before(text, held.word, held.typed.length), modifiers.shift != Modifiers.Level.Off)
     }
 
     /**

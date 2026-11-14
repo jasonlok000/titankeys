@@ -18,6 +18,17 @@ public final class WordCaseChecks {
         same(WordCase.kept("I", "so ", false), "I", "One capital letter alone isn't all capitals");
         same(WordCase.kept("Zorbly", null, false), "zorbly", "With nothing known before it, a first capital counts as the start's");
 
+        // The text before the held word (bug hunt #11): a swiped or spaced word is already in the text, so it's what comes before it.
+        same(WordCase.kept("Yeet", WordCase.before("Yeet", "Yeet", 0), false), "yeet", "#11: a swiped \"Yeet\" at a field's start is kept as \"yeet\"");
+        same(WordCase.kept("Yeet", WordCase.before("Yeet ", "Yeet", 4), false), "yeet", "#11: and one typed and followed by Space");
+        same(WordCase.kept("Yeet", WordCase.before("Done. Yeet ", "Yeet", 0), false), "yeet", "#11: after a full stop too");
+        same(WordCase.kept("Jason", WordCase.before("I met Jason", "Jason", 0), false), "Jason", "A swiped name mid-sentence keeps its capital");
+        same(WordCase.before("Hello wor", "World", 3), "Hello ", "A word still being typed: its typed letters come off");
+        same(WordCase.before("Hi ", "Yeet", 0), "Hi ", "A suggestion not in the text: all of the text is before it");
+        same(WordCase.before(null, "Yeet", 0), null, "Nothing known stays nothing known");
+        // What the keyboard did before: the typed letters only, so a word already in the text ended "before", no sentence start.
+        same(WordCase.kept("Yeet", "Yeet ".substring(0, 5), false), "Yeet", "#11 as it was: the word itself counted as the text before it");
+
         // The repair: saved and learned words that the dictionary has in lowercase go back to lowercase. Others keep their case.
         int day = 20000;
         LanguageHabits words = new LanguageHabits();

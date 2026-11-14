@@ -372,7 +372,6 @@ class Strip(
         strokeJoin = android.graphics.Paint.Join.ROUND
         strokeCap = android.graphics.Paint.Cap.ROUND
     }
-    private val capitalText = android.graphics.Paint()
     private val capitalArrow = android.graphics.Path()
     private val capitalBox = android.graphics.RectF()
 
@@ -745,10 +744,15 @@ class Strip(
         return Triple(highest, lowest, middle)
     }
 
-    private fun capitalHeight(): Float {
-        capitalText.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, CAPITAL_SIZE, resources.displayMetrics)
-        return capitalText.descent() - capitalText.ascent() + 2 * dp(3)
-    }
+    private fun capitalHeight() = arrowSize() + 2 * dp(CAPITAL_ARROW_IN)
+
+    /**
+     * The arrow's height, in px: [CAPITAL_TO_CAPS] of the words' capitals, at every Bar text size. Next to the words, it looks as it
+     * did before TitanKeys fixed its own sizes (owner, 2026-11-13: "the auto cap icon should be smaller like how it was like in the
+     * old one before the resize. And scales with the bar element size"): then a 13 dp chip's arrow, about 13.7 dp, beside words the
+     * phone's font size made about 30 dp.
+     */
+    private fun arrowSize() = wordPixels() * StripFit.CAPITALS * CAPITAL_TO_CAPS
 
     /** The width of the arrow's place at the left of the bar. */
     private fun capitalWidth() = capitalHeight() - 2 * dp(CAPITAL_ARROW_IN) + 2 * dp(CAPITAL_SIDE_IN)
@@ -1528,13 +1532,8 @@ class Strip(
         /** How far the left word's text must stay from the chip, or the chip goes into the corner, at this size. */
         private const val CAPITAL_CLEAR = 2
         private const val CAPITAL_SMALL = .6f
-        /**
-         * The arrow's place is as tall as a chip with its text at this size, in dp: Shift's chip as Strip drew it before TitanKeys
-         * fixed its own sizes (824c865^), 13 dp at Smaller, which grows with Bar text size as everything in the bar does (owner,
-         * 2026-11-13: "the auto cap icon should be smaller like how it was like in the old one before the resize. And scales with
-         * the bar element size").
-         */
-        private const val CAPITAL_SIZE = 13f
+        /** The arrow's height as a part of the words' capitals' height: see [arrowSize]. */
+        private const val CAPITAL_TO_CAPS = .63f
         /** About 30 frames a second while the idle scene moves. */
         private const val IDLE_FRAME_MILLIS = 33L
         /** A frame that comes late, as after the screen was busy, moves the game on by no more than this. */

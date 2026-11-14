@@ -73,6 +73,9 @@ test("everything with text in the bar sits on one line, the middle of the bar an
   expect(strip).toContain("val shift = StripFit.pairShiftPx(clipBaseline - clipText.textSize * StripFit.X_HEIGHT, hintBaseline, top + high, top + low,");
   // The finger is GestureDrawing's, on the line, its ring kept over the floor (tests/gesture-line checks it at every size).
   expect(strip).toContain("drawing.finger(canvas, view.left + view.width / 2f, line, floor, fingerAlpha, fingerHold, look,");
+  // The automatic capital's arrow is .63 of the words' capitals, as it was beside the words before TitanKeys fixed its sizes.
+  expect(strip).toContain("private fun arrowSize() = wordPixels() * StripFit.CAPITALS * CAPITAL_TO_CAPS");
+  expect(strip).toContain("private const val CAPITAL_TO_CAPS = .63f");
   for (const view of ["private val preview = LineText(context)", "private val clipLine = LineText(context)",
     "private fun categoryTab(sample: String, name: String, index: Int) = LineText(context)"]) expect(sym).toContain(view);
 });
@@ -81,6 +84,7 @@ test("StripFit's x-height is Inter's, in every weight", () => {
   const fit = read("StripFit.kt");
   const [units, em] = /const val X_HEIGHT = (\d+)f \/ (\d+)f/.exec(fit)!.slice(1).map(Number);
   const descent = Number(/const val DESCENT = (\d+)f \/ 2048f/.exec(fit)![1]);
+  const capitals = Number(/const val CAPITALS = (\d+)f \/ 2048f/.exec(fit)![1]);
   for (const weight of ["regular", "medium", "bold"]) {
     const font = readFileSync(join(root, `android/src/main/res/font/inter_${weight}.otf`));
     const tables = font.readUInt16BE(4);
@@ -92,5 +96,7 @@ test("StripFit's x-height is Inter's, in every weight", () => {
     expect(font.readInt16BE(table("OS/2") + 86)).toBe(units);
     // Its descent, how far its tails may reach, as Android lays its lines out: hhea's descender.
     expect(-font.readInt16BE(table("hhea") + 6)).toBe(descent);
+    // Its capitals' height, which the automatic capital's arrow is a part of: OS/2's sCapHeight.
+    expect(font.readInt16BE(table("OS/2") + 88)).toBe(capitals);
   }
 });

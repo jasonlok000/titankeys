@@ -28,6 +28,9 @@ object Snippets {
         require(Expansions.validName(shortcut)) { "Shortcuts can only use letters, numbers, _ - and +, up to ${Expansions.MAX_NAME} of them." }
         require(text.isNotEmpty() && text.length <= MAX_TEXT) { "Type what the shortcut should turn into." }
         val snippets = LinkedHashMap(load(context))
+        require(!Expansions.taken(shortcut, previous, snippets.keys)) {
+            "You already have ${TypingSettings.snippetStart(context)}${shortcut.lowercase()}. Change that one, or pick another shortcut."
+        }
         if (previous != null) snippets.remove(previous.lowercase())
         snippets[shortcut.lowercase()] = text
         save(context, snippets)

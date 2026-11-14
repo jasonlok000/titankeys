@@ -71,6 +71,15 @@ class Expansions(
 
     companion object {
         const val MAX_NAME = 40
+
+        /**
+         * Whether saving [key] would replace one of the user's own in [existing] that isn't the one being changed, [previous]. Keys
+         * match in any case. Saving onto one replaced it without a word, up to 4,000 characters of a snippet (bug hunt #15).
+         */
+        fun taken(key: String, previous: String?, existing: Collection<String>): Boolean {
+            val wanted = key.lowercase()
+            return wanted != previous?.lowercase() && existing.any { it.lowercase() == wanted }
+        }
         const val MIN_SHORTCODE = 2
         private const val LABEL_LENGTH = 24
         private const val OPENERS = "\"'([{“‘"

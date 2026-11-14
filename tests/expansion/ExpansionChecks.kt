@@ -22,6 +22,7 @@ fun main() {
     stripChoices()
     otherStarts()
     labels()
+    savingOntoYourOwn()
     exactApps()
     exactSymbols()
     exactWrappers()
@@ -100,6 +101,18 @@ private fun shortcodesExpandOnColon() {
     same(expansions.shortcode("ok :notanemoji"), null, "not an unknown name")
     same(expansions.shortcode("ok :"), null, "not a colon alone")
     same(Expansions(emptyMap(), ';', emptyMap()).shortcode("ok :smile"), null, "shortcodes off")
+}
+
+/** Bug hunt #15: adding "addr", or renaming "sig" to "addr", replaced the "addr" you had without a word. */
+private fun savingOntoYourOwn() {
+    val own = listOf("addr", "sig")
+    same(Expansions.taken("addr", null, own), true, "Adding one you already have is refused")
+    same(Expansions.taken("ADDR", null, own), true, "In any case")
+    same(Expansions.taken("addr", "sig", own), true, "Renaming onto another one you have is refused")
+    same(Expansions.taken("addr", "addr", own), false, "Saving the one you're changing, under its own name, goes")
+    same(Expansions.taken("Addr", "addr", own), false, "Changing only its case goes")
+    same(Expansions.taken("home", "addr", own), false, "Renaming to a free name goes")
+    same(Expansions.taken("home", null, own), false, "Adding a new one goes")
 }
 
 private fun codesNeedASpaceBefore() {

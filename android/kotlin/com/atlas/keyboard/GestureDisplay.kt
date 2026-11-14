@@ -1485,6 +1485,21 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             for (i in text.indices.reversed()) { if (text[i].isWhitespace()) break; count++ }
             return count.coerceAtLeast(1)
         }
+
+        /**
+         * A delete flick or a held delete's step, with [before] the text before the cursor and [selected] the selected text, or
+         * null for no selection. A selection goes first, whole, as Backspace takes it (bug hunt
+         * 2.1, #7): it's something to delete even at the start of the text, and its dots are its characters, not the word before.
+         */
+        fun nothingToDelete(before: CharSequence?, selected: CharSequence?) = selected == null && before?.isEmpty() == true
+
+        /** How many dots a delete takes: the selection's characters, not counting spaces, or else the last word's ([letters]). */
+        fun deleteTakes(before: CharSequence?, selected: CharSequence?): Int =
+            if (selected == null) letters(before) else selected.count { !it.isWhitespace() }.coerceAtLeast(1)
+
+        /** The text a held delete eats, in order from the end: the words before the cursor, then the selection, which goes first. */
+        fun deleteLine(before: CharSequence?, selected: CharSequence?): CharSequence? =
+            if (selected == null) before else "${before ?: ""}$selected"
         private const val FLOURISH_IN = .25f
         private const val FLOURISH_OUT = .35f
         /** With motion off, a flourish stays this long as a still picture and then goes. */

@@ -12,6 +12,7 @@ private const val ON_SPACE = 5.3f
 private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
+    aSelectionIsSomethingToDelete()
     aFlicksGlowRampsWithItsReach()
     aFlicksWayInStretchesToFitItsDots()
     aHeldDeleteGlowFollowsItsPace()
@@ -1837,4 +1838,21 @@ private fun aFlicksGlowRampsWithItsReach() {
     near(held.glowAlpha, before, "The hold takes it on with no jump", .01f)
     held.run(4_316, 5_200)
     near(held.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "then grows to the hold's own strength", .01f)
+}
+
+/**
+ * A flick or a held delete with text selected takes the selection, so it's something to delete, not a no, even with nothing before
+ * the cursor, and its dots are the selection's characters, not the word before it (bug hunt 2.1, #7).
+ */
+private fun aSelectionIsSomethingToDelete() {
+    // "hello world", all selected: the cursor is at the start, with nothing before it.
+    same(GestureDisplay.nothingToDelete("", "hello world"), false, "All selected is something to delete")
+    same(GestureDisplay.deleteTakes("", "hello world"), 10, "and its dots are its characters, not counting the space")
+    same(GestureDisplay.nothingToDelete("", null), true, "With nothing before the cursor and nothing selected, it's a no")
+    // A selection mid-text: the dots count what went, not the word before it.
+    same(GestureDisplay.deleteTakes("hello there ", "world!"), 6, "A selection's dots are the selection's")
+    same(GestureDisplay.deleteTakes("hello there", null), 5, "With none, the last word's, as before")
+    // A hold eats the selection first, then the words before it.
+    same(GestureDisplay.deleteLine("hello ", "world").toString(), "hello world", "A hold's words end with the selection")
+    same(GestureDisplay.deleteLine("hello", null), "hello", "and without one are the text before the cursor")
 }

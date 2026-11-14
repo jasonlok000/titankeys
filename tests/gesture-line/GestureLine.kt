@@ -49,6 +49,7 @@ internal object GestureLine {
     /** GestureDrawing's own sizes that the checks need: its handle's knob, in dp. run.sh checks they're still the drawing's. */
     const val HANDLE_KNOB = 4.5f
     const val STEER_CARET = 2f
+    const val SELECTION_GAP = 6f
 
     private val frc = FontRenderContext(null, true, true)
     private lateinit var regular: Font
@@ -355,6 +356,18 @@ internal object GestureLine {
             if (words.isEmpty()) found += "has no words"
             for (word in words) if (abs(word.height - s.word * StripFit.X_HEIGHT) > .5f)
                 found += "a word is %.2f px tall, the small letters %.2f px".format(word.height, s.word * StripFit.X_HEIGHT)
+        }
+        // The selection keeps the same least gap from the words beside it on both sides (owner, 2026-11-13: it ran into the word
+        // on its left).
+        if (frame.name == "pick" || frame.name.startsWith("drag")) {
+            val box = shapes.filter { it.kind == "bar" && (it.colour and 0xFFFFFF) == accent }.maxByOrNull { it.height }
+            val grey = shapes.filter { it.kind == "bar" && (it.colour and 0xFFFFFF) == (look.ink and 0xFFFFFF) }
+            if (box == null) found += "has no selection"
+            else for (word in grey) {
+                val gap = if (word.right <= box.left + .5f) box.left - word.right else word.left - box.right
+                if (gap < SELECTION_GAP * s.density - .5f)
+                    found += "a word at x %.0f is %.2f px from the selection, under %.2f".format((word.left + word.right) / 2, gap, SELECTION_GAP * s.density)
+            }
         }
         val risky = risky(image)
         if (risky.isNotEmpty()) found += "${risky.size} px that show are within 4 px of the screen's outline, the first at ${risky.first()}"

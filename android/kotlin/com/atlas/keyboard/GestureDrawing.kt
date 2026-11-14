@@ -345,14 +345,23 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val slot = (right - left) / GestureDisplay.VISIBLE_WORDS
         val centre = (left + right) / 2
         val alpha = display.reveal
-        // The selection goes over the words that are not in it, so a word that it reaches goes under it.
-        wordRow(canvas, display, left, right, slot, centre, mid, selected = false, GuideMotion.faded(look.ink, WORD * alpha))
-        var start = centre + (display.spanStart - display.camera) * slot
-        var end = centre + (display.spanEnd - display.camera) * slot
-        if (end <= start) return
-        // The selection is cut at the bar's sides too, its end mark with it.
-        start = max(start - dp(SELECTION_PAD), left)
-        end = min(end + dp(SELECTION_PAD), right)
+        if (display.spanEnd <= display.spanStart) {
+            wordRow(canvas, display, left, right, slot, centre, mid, selected = false, GuideMotion.faded(look.ink, WORD * alpha))
+            return
+        }
+        // The selection reaches to its words' places, as it grows, but stops [SELECTION_GAP] short of the word beside it on each
+        // side, and never closer to its own words than [SELECTION_PAD]. It's cut at the bar's sides, its end mark with it.
+        fun pillEdge(index: Int, side: Int) = centre + (index - display.camera) * slot + side * slot * display.wordWidth(index) / 2
+        val first = floor(display.spanStart).toInt() + 1
+        val last = ceil(display.spanEnd).toInt() - 1
+        val start = max(min(max(centre + (display.spanStart - display.camera) * slot, pillEdge(first - 1, 1) + dp(SELECTION_GAP)),
+            pillEdge(first, -1) - dp(SELECTION_PAD)), left)
+        val end = min(max(min(centre + (display.spanEnd - display.camera) * slot, pillEdge(last + 1, -1) - dp(SELECTION_GAP)),
+            pillEdge(last, 1) + dp(SELECTION_PAD)), right)
+        // The words beside it keep [SELECTION_GAP] from it on both sides, as words keep apart on the bar (owner, 2026-11-13: the
+        // selection ran into the word on its left); a word it reaches goes under it.
+        wordRow(canvas, display, left, right, slot, centre, mid, selected = false, GuideMotion.faded(look.ink, WORD * alpha),
+            start - dp(SELECTION_GAP), end + dp(SELECTION_GAP))
         val box = min(text * SELECTION_HEIGHT / 2, room())
         rounded(canvas, start, mid - box, end, mid + box, radius,
             GuideMotion.faded(look.accent, alpha))
@@ -393,16 +402,24 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         }
     }
 
-    /** The words of a drag, cut at the bar's sides, [left] and [right], so none goes under the screen's rounded corners. */
+    /**
+     * The words of a drag, cut at the bar's sides, [left] and [right], so none goes under the screen's rounded corners. The words
+     * not [selected] are cut short of the selection too, [before] on its left and [after] on its right.
+     */
     private fun wordRow(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, slot: Float, centre: Float, mid: Float,
-                        selected: Boolean, colour: Int) {
+                        selected: Boolean, colour: Int, before: Float = Float.NaN, after: Float = Float.NaN) {
         val first = floor(display.camera - GestureDisplay.VISIBLE_WORDS / 2).toInt() - 1
         val last = ceil(display.camera + GestureDisplay.VISIBLE_WORDS / 2).toInt() + 1
         for (index in first..last) {
             if ((index > display.spanStart && index < display.spanEnd) != selected) continue
             val x = centre + (index - display.camera) * slot
             val half = slot * display.wordWidth(index) / 2
-            word(canvas, max(x - half, left), min(x + half, right), mid, colour)
+            var from = max(x - half, left)
+            var to = min(x + half, right)
+            if (!selected && !before.isNaN()) {
+                if (index <= display.spanStart) to = min(to, before) else from = max(from, after)
+            }
+            word(canvas, from, to, mid, colour)
         }
     }
 
@@ -686,6 +703,8 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         /** A selection is this tall, as a part of the words' size, as far as the room under the line lets it. */
         const val SELECTION_HEIGHT = 26f / 20f
         const val SELECTION_PAD = 5f
+        /** The least room between the selection and the words beside it, on both sides. */
+        const val SELECTION_GAP = 6f
         /**
          * A selection handle: taller than the selection where there's room, as a part of the words' size, a little wider than the
          * caret, with its knob on top.

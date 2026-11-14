@@ -35,6 +35,7 @@ fun main() {
     theHover()
     theQuickSettingsHover()
     theKeyboardMakesTheseCalls()
+    theMenuKeepsToItsKeys()
     onlyStoredWordsOpen()
     unblockTakesADictionaryWordOut()
     println("Word menu checks passed")
@@ -65,6 +66,34 @@ private fun onlyStoredWordsOpen() {
     check("value.matches(\"${MenuKeys.STORED.pattern}\")" in stores) { "#12: the menu opens for the words SwipeWords.normalise keeps, by the same rule" }
     check("letters.length() >= 2 && letters.length() <= 24" in stores) { "and the same lengths" }
     println("Only words the lists can hold open a menu")
+}
+
+/**
+ * The open menu takes the top rows' keys only while nothing else does (bug hunt #3: with the menu open, Sym then I typed nothing
+ * and silently saved the word; Alt + I/O/K/L/P did the same), and it closes as a panel opens or Alt comes on, and as the keyboard
+ * hides (bug hunt #6: a menu left open over a hide ate the first I, O, K, L, P or Backspace after it).
+ */
+private fun theMenuKeepsToItsKeys() {
+    // The keyboard's own rule, as AtlasIme asks it.
+    check(MenuKeys.takesKeys(open = true, panelOrAlt = false)) { "An open menu takes its keys" }
+    check(!MenuKeys.takesKeys(open = true, panelOrAlt = true)) { "#3: with a panel open or Alt on, the menu's keys go to the panel or type" }
+    check(!MenuKeys.takesKeys(open = false, panelOrAlt = false)) { "A closed menu takes nothing" }
+    check(MenuKeys.closes(panelOrAlt = true, hidden = false, guideShowOnly = false)) { "#3: a panel or Alt closes the menu" }
+    check(!MenuKeys.closes(panelOrAlt = true, hidden = false, guideShowOnly = true)) { "The guide's show-only menu stays for a panel or Alt" }
+    check(MenuKeys.closes(panelOrAlt = false, hidden = true, guideShowOnly = false)) { "#6: the keyboard hiding closes the menu" }
+    check(MenuKeys.closes(panelOrAlt = false, hidden = true, guideShowOnly = true)) { "#6: the guide's menu too" }
+    check(!MenuKeys.closes(panelOrAlt = false, hidden = false, guideShowOnly = false)) { "Nothing else closes it" }
+    // And the keyboard asks it where the bugs were: the menu's key branch, the modifiers changing, and the window hiding.
+    val ime = File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val branch = ime.substringAfter("// Backspace, under P, goes back.").substringBefore("val action = menuAction(pressed)")
+    check("MenuKeys.takesKeys(menuOpen, altOrPanel)" in branch) { "#3: the menu's key branch asks whether a panel or Alt has the keys" }
+    val modifiers = ime.substringAfter("private fun showModifiers() {").substringBefore("\n    }\n")
+    check("if (menuOpen && MenuKeys.closes(altOrPanel, hidden = false" in modifiers && "closeMenu()" in modifiers) {
+        "#3: a panel opening or Alt coming on closes the menu"
+    }
+    val hidden = ime.substringAfter("override fun onWindowHidden() {").substringBefore("\n    }\n")
+    check("MenuKeys.closes(altOrPanel, hidden = true" in hidden && "closeMenu()" in hidden) { "#6: the keyboard hiding closes the menu" }
+    println("The menu keeps to its keys: a panel or Alt has them, and a panel, Alt or a hide closes it")
 }
 
 // The ladder ---------------------------------------------------------------------------------------------------------------------

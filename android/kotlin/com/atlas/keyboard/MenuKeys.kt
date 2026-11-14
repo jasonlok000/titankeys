@@ -54,6 +54,20 @@ object MenuKeys {
         return rise
     }
 
+    /**
+     * Whether a letter key or Backspace picks the open menu's button. Never while a panel is open or Alt is on: the Sym panel, the
+     * emoji, the clipboard and quick settings take the keys and hide the bar, and Alt types the key's symbol, so a press there
+     * must never change a word nobody can see (bug hunt #3: Sym, then I, silently saved the word).
+     */
+    fun takesKeys(open: Boolean, panelOrAlt: Boolean) = open && !panelOrAlt
+
+    /**
+     * Whether the open menu closes now: as a panel opens or Alt comes on, which take its keys (bug hunt #3), and as the keyboard
+     * hides, so that it never eats the first key after it comes back (bug hunt #6). The guide's show-only menu stays for a panel or
+     * Alt, which its slide doesn't use, but not past a hide.
+     */
+    fun closes(panelOrAlt: Boolean, hidden: Boolean, guideShowOnly: Boolean) = hidden || panelOrAlt && !guideShowOnly
+
     /** Where the word ends on the right, [gap] pixels left of I's column. */
     fun wordRight(width: Float, gap: Float, alignment: KeyAlignment = KeyAlignment.current) = slot(width, UP, alignment).first - gap
 

@@ -1520,8 +1520,9 @@ class AtlasIme : InputMethodService() {
         inputRoot?.setPadding(0, 0, 0, 0)
         // Android's hide also turned the status off.
         hold.hidden()
-        // A panel that nobody can see must not take the next key.
+        // A panel that nobody can see must not take the next key, nor a word menu.
         closePanel()
+        if (MenuKeys.closes(altOrPanel, hidden = true, guideShowOnly = shownGuideWord() != null)) closeMenu()
         // A delayed hide from the previous app arrives just after this field starts. A later hide, or one
         // after you have typed, is the app's own, such as a tap outside the field or a Done key.
         cancelShowStrip()
@@ -3187,7 +3188,8 @@ class AtlasIme : InputMethodService() {
         // With the word menu open, the top two rows of letters pick its buttons, as the keys pick symbols on the Sym panel, and
         // Backspace, under P, goes back.
         if (keyCode == menuKey && event.repeatCount > 0) return true
-        if (!event.isSystem && menuOpen && (keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z || keyCode == KeyEvent.KEYCODE_DEL)) {
+        if (!event.isSystem && MenuKeys.takesKeys(menuOpen, altOrPanel) && (keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z ||
+                keyCode == KeyEvent.KEYCODE_DEL)) {
             val pressed = if (keyCode == KeyEvent.KEYCODE_DEL) Layout.BACKSPACE else ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString()
             val action = menuAction(pressed)
             if (action != null) {
@@ -3650,6 +3652,8 @@ class AtlasIme : InputMethodService() {
         else if (unlocked(modifiers.shift, shownShift) || unlocked(modifiers.alt, shownAlt)) haptics.play(Haptic.ModifierUnlocked)
         shownShift = modifiers.shift
         shownAlt = modifiers.alt
+        // A panel or Alt takes the menu's keys, so the menu closes rather than be pressed unseen.
+        if (menuOpen && MenuKeys.closes(altOrPanel, hidden = false, guideShowOnly = shownGuideWord() != null)) closeMenu()
         strip?.visibility = if (panelOpen) View.GONE else View.VISIBLE
         updateExactBar()
         showModifierBar()

@@ -479,7 +479,7 @@ In the recordings, thumbs stopped short of corners by 0.74 keys going right, 0.4
 
 <img src="../assets/readme/jason-why.gif" width="520" alt="Animation of the turning points of jain and jason moving back, so the swipe ends up closest to jason">
 
-In the code, each leg's pull-back is weighted by direction: 0.55 going right, 0.33 up, 0.18 down and 0.15 left (`SHORT_RIGHT`, `SHORT_UP`, `SHORT_DOWN`, `SHORT_LEFT`). These are smaller than the measured averages above, and keep their order except up against down. It scales with the leg's length, from half at short legs to 1.25 times at long ones (full at 4 keys), and legs under 1.2 keys aren't moved, since strokes between neighbouring keys are too short to fall short by much.
+In the code, each leg's pull-back is weighted by direction: 0.55 going right, 0.33 up, 0.18 down and 0.15 left (`SHORT_RIGHT`, `SHORT_UP`, `SHORT_DOWN`, `SHORT_LEFT`). These are smaller than the measured averages above, and in the same order: right, up, down, left. It scales with the leg's length, from half at short legs to 1.25 times at long ones (full at 4 keys), and legs under 1.2 keys aren't moved, since strokes between neighbouring keys are too short to fall short by much.
 
 ### 4.10 Deleting a word with one thumb
 
@@ -834,7 +834,7 @@ On top of that sits the design system: a spacing scale of 4, 8, 12, 16, 24, 32 a
 
 The keyboard is always black. The bar's black runs into the black border under the screen, so you can't see its bottom edge, and its middle looks higher than it is. The eye reads one band: the bar's 56 dp plus about 22 dp of border.
 
-- **The measurement.** The border was measured with a ruler on the phone, about 22 dp (`StripFit.BORDER_DP`). Then a phone preview page moved the bar's text in 1 dp steps, at Normal, Bigger and Biggest, with guides for the bar's middle, the letters' middle, the small letters' top and the baseline. The first try was 8 dp lower. The pick was 11 dp lower, which centres the letters on the visible band.
+- **The measurement.** The border was measured with a ruler on the phone, about 22 dp (`StripFit.BORDER_DP`). Then a phone preview page moved the bar's text in 1 dp steps, at all three bar text sizes, with guides for the bar's middle, the letters' middle, the small letters' top and the baseline. The first try was 8 dp lower. The pick was 11 dp lower, which centres the letters on the visible band.
 - **A rule, not a magic number.** The line is the band's middle: (56 + 22) / 2 = 39 dp from the bar's top, which is 11 dp under the bar's own middle (`StripFit.LINE_DP`). It is 17 dp over the screen's bottom edge. Every item with text in the bar sits on it: the words, the menu word, pills, icons, chips, hints, the clip offer. Exact typing's bar and the Sym panel's bottom row use the same line.
 - **The letters' middle, not the font box.** A text's baseline is placed so the middle of Inter's x-height (1118 of 2048 units) is on the line. Centring the font's box instead sets the letters about 3 px low, because Inter's box reaches far above its capitals to make room for accents.
 - **What stays the same:** the bar's height, the touch areas, the keys and the guide's slides.
@@ -1003,7 +1003,7 @@ Each slide shows its gesture in grey as soon as it opens, then waits for you to 
 
 - **Every slide is right on the first try.** A misread swipe or any typo becomes the line's word (`forceFix`), so nobody has to redo a step because the engine misread them.
 - **Blocked means blocked, never ignored.** A key or gesture a slide doesn't teach changes nothing, plays No once, and shows a chip that says what's blocked and what to do instead. A blocked flick still glows and crunches until the lift, so you can see it registered, then nothing goes.
-- **The guide only goes forward.** Back asks "Leaving already?". Opening the guide again resumes at the same slide, and a guide that Android closed resumes too.
+- **The guide only goes forward.** There's no button to step back. Back leaves the guide, and ✕ asks "Leaving already?" first. Opening the guide again always starts from the first slide, even after Android closed it.
 - **No dead ends.** Every failure in [guide-failures.md](guide-failures.md) has an answer and a way on: copying on the paste slide puts the slide's own words back on the clipboard; a symbol hunt never fails, with a hint at 35 s and leave to skip at 50 s.
 - **Help on a timer.** Each timer counts from the last input, and none shows while a finger is on the touchpad, a key is held or the menu is open.
 

@@ -26,7 +26,7 @@ Type like you always have, swipe whole words across the keys, steer the cursor f
 
 ## What this is
 
-The Titan 2 Elite has keys, a touchpad hiding under them and a screen with rounded corners. The keyboard it came with mostly ignores two of those. TitanKeys uses all three, down to the spot where your thumb runs off the top of the sensor and the black strip under the screen. Nearly everything works from the keys, so you can stop poking the glass.
+The Titan 2 Elite has keys, a touchpad hiding under them and a screen with rounded corners. Gboard and friends were made for glass, so they've never heard of the touchpad and don't care about the corners. TitanKeys uses all three, down to the spot where your thumb runs off the top of the sensor and the black strip under the screen. Nearly everything works from the keys, so you can stop poking the glass.
 
 It works fine out of the box. If you can't leave things alone, nearly every behaviour has its own switch in Settings. Go wild.
 
@@ -151,7 +151,7 @@ It works fine out of the box. If you can't leave things alone, nearly every beha
 
 ## How it works
 
-Three smart parts, all running on your phone:
+Three parts, all running on your phone:
 
 - **Swipe engine 2.0.** FUTO Swipe reads your stroke as you made it, again stretched wider for a fast swipe, and again shifted right, where thumbs aim on this sensor. A CleverKeys encoder, fine-tuned on the Titan's touchpad, adds its own guesses. A ranker of 900 decision trees weighs the shape, the readings and your sentence, and picks the three words on the bar. About 70 ms a swipe, and swiping works while the models load.
 - **The next-word model.** DistilGPT-2 reads the last 32 tokens of your text and guesses the next word, then the word you're typing after each letter. It runs after the previous word, so you never wait for it. Before any letter, the right next word is in the top 3 on 37.9% of prompted text, up from 24.0%.

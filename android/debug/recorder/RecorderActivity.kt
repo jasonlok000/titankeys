@@ -5,14 +5,19 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Build
+import android.graphics.PixelFormat
+import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.text.InputType
+import android.view.Display
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
+import android.view.WindowManager
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -20,6 +25,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.atlas.engine.Calibration
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypingSettings
 import org.json.JSONArray
@@ -65,7 +71,17 @@ class RecorderActivity : Activity(), Recording.Sink {
     private lateinit var prompt: TextView
     private lateinit var instruction: TextView
     private lateinit var details: TextView
-    private lateinit var input: EditText
+    private lateinit var input: TextView
+    private val touchpad by lazy { Touchpad(getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY)) }
+    private var catcher: View? = null
+    private var strokeLeft = 1f
+    private var strokeRight = 0f
+    private val strokeDone = Runnable {
+        val moved = strokeRight - strokeLeft >= MIN_STROKE
+        strokeLeft = 1f
+        strokeRight = 0f
+        if (moved) wordFinished()
+    }
 
     private var file: File? = null
     private var index = 0
@@ -80,24 +96,12 @@ class RecorderActivity : Activity(), Recording.Sink {
         }
         instruction = text(14f, MUTED).apply { gravity = Gravity.CENTER }
         details = text(14f, Color.WHITE)
-        input = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_TEXT
-            imeOptions = EditorInfo.IME_ACTION_GO or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or
-                EditorInfo.IME_FLAG_NO_EXTRACT_UI
-            isSingleLine = true
-            textSize = 18f
-            setTextColor(Color.WHITE)
-            // The keyboard turns the Enter key into this field's editor action.
-            setOnEditorActionListener { _, _, _ ->
-                next()
-                true
-            }
-        }
+        // There is no text field on purpose. Without one no keyboard opens, so this works whichever keyboard is selected.
+        input = TextView(this).apply { visibility = View.GONE }
         val buttons = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             addView(button("Skip") { skip() })
             addView(button("Redo") { redo() })
-            addView(button("Switch") { getSystemService(InputMethodManager::class.java).showInputMethodPicker() })
             addView(button("Export") { export() })
             addView(button("New") { newSession() })
         }
@@ -126,22 +130,80 @@ class RecorderActivity : Activity(), Recording.Sink {
         index = preferences.getInt("index", 0)
         file = preferences.getString("file", null)?.let { File(directory, it) }?.takeIf { it.exists() }
         if (file == null) newSession() else show()
+        Calibration.init(this)
+        details.text = "Loading the swipe engine..."
+        SwipeTyping.get(this).whenReady { _, _, error ->
+            details.text = if (error == null) "Ready. Swipe the word on your keyboard." else "Couldn't load the swipe engine: $error"
+        }
     }
 
     override fun onResume() {
         super.onResume()
         Recording.sink = this
-        input.requestFocus()
-        if (!keyboardReady()) details.text = "This app isn't your current keyboard. Tap Switch to change to it."
+        window.decorView.post { addCatcher() }
     }
 
     override fun onPause() {
         super.onPause()
         if (Recording.sink === this) Recording.sink = null
+        removeCatcher()
+        main.removeCallbacks(strokeDone)
         attempt = Attempt()
     }
 
+    /** The firmware sends the touchpad to the topmost window with "InputMethod" in its title, so this tiny one asks for it. */
+    private fun addCatcher() {
+        if (catcher != null || isFinishing) return
+        val view = object : View(this) {
+            override fun dispatchTouchEvent(event: MotionEvent) = fromTouchpad(event)
+            override fun dispatchGenericMotionEvent(event: MotionEvent) = fromTouchpad(event)
+        }
+        val params = WindowManager.LayoutParams(1, 1, WindowManager.LayoutParams.TYPE_APPLICATION_PANEL,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, PixelFormat.TRANSLUCENT).apply {
+            gravity = Gravity.TOP or Gravity.START
+            token = window.decorView.windowToken
+            title = "BenchmarkInputMethodTouchpad"
+        }
+        try {
+            windowManager.addView(view, params)
+            catcher = view
+        } catch (error: RuntimeException) {
+            details.text = "Couldn't reach the touchpad: ${error.message}"
+        }
+    }
+
+    private fun removeCatcher() {
+        val view = catcher ?: return
+        catcher = null
+        windowManager.removeViewImmediate(view)
+    }
+
+    private fun fromTouchpad(event: MotionEvent): Boolean {
+        if (!touchpad.accepts(event)) return false
+        // Unbuffered, as the keyboard reads it, so the samples match real typing.
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) (catcher ?: window.decorView).requestUnbufferedDispatch(event)
+        motion(event, touchpad.samples(event))
+        return true
+    }
+
+    // Without the catcher window, the firmware delivers the touchpad to the app in Sliding Mode 1.
+    override fun dispatchTouchEvent(event: MotionEvent) = fromTouchpad(event) || super.dispatchTouchEvent(event)
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent) = fromTouchpad(event) || super.dispatchGenericMotionEvent(event)
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode != KeyEvent.KEYCODE_ENTER) return super.dispatchKeyEvent(event)
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) next()
+        return true
+    }
+
     override fun motion(event: MotionEvent, samples: List<Sample>) {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) main.removeCallbacks(strokeDone)
+        for (sample in samples) if (sample.x.isFinite()) {
+            strokeLeft = minOf(strokeLeft, sample.x)
+            strokeRight = maxOf(strokeRight, sample.x)
+        }
+        if (event.actionMasked == MotionEvent.ACTION_UP) main.postDelayed(strokeDone, STROKE_DONE_MILLIS)
         val current = attempt
         val points = JSONArray()
         for (i in 0 until event.historySize)
@@ -188,7 +250,6 @@ class RecorderActivity : Activity(), Recording.Sink {
         attempt.top = words
         attempt.joined = attempt.joined || resumed
         attempt.events.put(JSONObject().put("k", "rec").put("words", JSONArray(words)).put("resumed", resumed))
-        if (!resumed) wordFinished()
     }
 
     /** Ends the current word. Everything since the last word is kept, however many touches it took. */
@@ -345,7 +406,7 @@ class RecorderActivity : Activity(), Recording.Sink {
             word == null -> "Tap Export to save the session."
             pace(index) == TYPED -> "Type this on the keys as you normally would, then press Enter or Next."
             pace(index) == "rushed" -> "Swipe fast. Don't be careful. Then press Enter or Next."
-            else -> "Swipe each word the way you normally would. It moves on by itself. Don't press Space, and don't fix mistakes."
+            else -> "Swipe each word on the keyboard the way you normally would. It moves on by itself. Don't fix mistakes."
         }
     }
 
@@ -401,6 +462,9 @@ class RecorderActivity : Activity(), Recording.Sink {
             "we should probably order some pizza",
             "his bicycle needs two new tires",
         )
+        /** A swipe that breaks at the top edge comes back within this time, so the word only ends after it. */
+        const val STROKE_DONE_MILLIS = 450L
+        const val MIN_STROKE = .06f
         val MUTED = Color.rgb(142, 142, 147)
     }
 }

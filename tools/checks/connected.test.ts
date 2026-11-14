@@ -339,3 +339,14 @@ describe("news on the phone", () => {
     expect(await text("android/kotlin/com/atlas/keyboard/BugRecording.kt")).toContain('private const val CHANNEL = "bug-recording"');
   });
 });
+
+describe("contributions on the phone", () => {
+  test("a deletion waits for any batch on its way, and sent examples leave the queue by content", async () => {
+    // Bug hunt 2.1, #28. tests/connected checks the queue's removal; this checks the lock between the two jobs.
+    const code = await text("android/kotlin/com/atlas/connected/Contributions.kt");
+    expect(code).toContain("repeat(BATCHES_PER_RUN) { synchronized(sending) {");
+    expect(code).toContain("fun sendDeletion(context: Context): Boolean = synchronized(sending) {");
+    expect(code).toContain("queue.removeSent(lines)");
+    expect(code).not.toContain("removeOldest");
+  });
+});

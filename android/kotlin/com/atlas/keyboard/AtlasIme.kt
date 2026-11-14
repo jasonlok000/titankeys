@@ -3268,6 +3268,7 @@ class AtlasIme : InputMethodService() {
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
         }
         if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym up: panel ${modifiers.panel}")
+        if (keyCode == KeyEvent.KEYCODE_DEL) modifiers.backspaceReleased()
         if (lockedKeys.remove(keyCode)) return true
         // Published before the take-back, so the guide hears the letter let go too soon.
         val takeBack = inGuide && editing && heldLetter?.keyCode == keyCode
@@ -3386,12 +3387,9 @@ class AtlasIme : InputMethodService() {
             KeyEvent.KEYCODE_DEL -> {
                 // Ctrl or a held Shift with Backspace deletes the previous word, and holding it goes on by word. Alt with Backspace
                 // deletes forward, like Delete on a PC, or with that setting off goes to the app as Android's own Alt + Backspace,
-                // which deletes the line (owner, 2026-11-13). See [Modifiers.backspaceDoes]. A press decides once, so its repeats
-                // go on the same way after a tapped Alt is used up.
-                if (event.repeatCount == 0 || backspaceDoes == null)
-                    backspaceDoes = modifiers.backspaceDoes(event.metaState, TypingSettings.altBackspaceForward(this),
-                        TypingSettings.shiftBackspaceWord(this))
-                when (backspaceDoes) {
+                // which deletes the line (owner, 2026-11-13). See [Modifiers.backspacePress].
+                when (modifiers.backspacePress(event.repeatCount, event.metaState, TypingSettings.altBackspaceForward(this),
+                    TypingSettings.shiftBackspaceWord(this))) {
                     Modifiers.Backspace.Forward -> command(withKey(event, KeyEvent.KEYCODE_FORWARD_DEL), dropMeta = KeyEvent.META_ALT_MASK)
                     Modifiers.Backspace.AltToApp -> command(withMeta(event, KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON))
                     Modifiers.Backspace.Word -> composer.backspace(true)
@@ -3587,9 +3585,6 @@ class AtlasIme : InputMethodService() {
     /** [event] with [meta] added: Alt + Backspace keeps its Alt through its repeats, after a tapped Alt is used up. */
     private fun withMeta(event: KeyEvent, meta: Int) = KeyEvent(event.downTime, event.eventTime, event.action, event.keyCode,
         event.repeatCount, event.metaState or meta, event.deviceId, event.scanCode, event.flags, event.source)
-
-    /** What the Backspace press now going does, decided at its first event: see [Modifiers.backspaceDoes]. */
-    private var backspaceDoes: Modifiers.Backspace? = null
 
     /** Shift and Alt as last shown, so locking one plays its feel once. */
     private var shownShift = Modifiers.Level.Off

@@ -22,6 +22,7 @@ private const val GAP = 100L
 private const val WORD = 900L
 
 fun main() {
+    aLostFirstBackspaceDecidesAfresh()
     tappedShiftOrCapsLeavesSteeringAndShortcutsAlone()
     heldShiftBackspaceDeletesWords()
     tappedOrAutomaticShiftLeavesBackspacePlain()
@@ -248,6 +249,20 @@ private fun tappedShiftOrCapsLeavesSteeringAndShortcutsAlone() {
         modifiers.autoShift(sentenceStart = true)
         same(shifted(modifiers.commandMeta(textKey = false)), false, "The automatic Shift still never goes with a command")
     }
+}
+
+/** Bug hunt #38: a Backspace whose first event was dropped went on with the last press's choice, a word or a forward delete. */
+private fun aLostFirstBackspaceDecidesAfresh() = Keyboard().run {
+    val alt = KeyEvent.META_ALT_ON
+    same(modifiers.backspacePress(0, alt, altForward = true), Modifiers.Backspace.Forward, "Alt + Backspace deletes forward")
+    same(modifiers.backspacePress(1, 0, altForward = true), Modifiers.Backspace.Forward, "Its repeats go on forward, Alt or not")
+    modifiers.backspaceReleased()
+    same(modifiers.backspacePress(1, 0, altForward = true), Modifiers.Backspace.Letter,
+        "The next press, its first event lost, deletes a letter, not forward as the last press did")
+    modifiers.backspaceReleased()
+    same(modifiers.backspacePress(0, KeyEvent.META_CTRL_ON, altForward = true), Modifiers.Backspace.Word, "Ctrl + Backspace deletes a word")
+    modifiers.backspaceReleased()
+    same(modifiers.backspacePress(2, 0, altForward = true), Modifiers.Backspace.Letter, "Nor a word after a word delete")
 }
 
 private fun heldShiftBackspaceDeletesWords() = Keyboard().run {

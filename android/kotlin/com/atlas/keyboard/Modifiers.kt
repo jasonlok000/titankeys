@@ -89,6 +89,21 @@ class Modifiers {
         else -> Backspace.Letter
     }
 
+    /** What the Backspace press now going does, decided at its first event. See [backspacePress]. */
+    private var pressDoes: Backspace? = null
+
+    /**
+     * What a Backspace event does. A press decides once, at its first event, so its repeats go on the same way after a tapped Alt
+     * is used up. A press whose first event was lost decides at the first one that arrives, never with the last press's choice.
+     */
+    fun backspacePress(repeat: Int, meta: Int, altForward: Boolean, shiftWord: Boolean = true): Backspace =
+        pressDoes.takeIf { repeat > 0 } ?: backspaceDoes(meta, altForward, shiftWord).also { pressDoes = it }
+
+    /** Backspace was let go, so the next press decides afresh even if its first event is lost (bug hunt #38). */
+    fun backspaceReleased() {
+        pressDoes = null
+    }
+
     /** After a Backspace: with Alt on, Backspace deleted forward or went to the app as Alt + Backspace, and uses Alt up, as a
      * character would. Otherwise only held modifiers count as used. */
     fun afterBackspace() {
@@ -317,6 +332,7 @@ class Modifiers {
         panel = Panel.Closed
         held.clear()
         usedWhileHeld.clear()
+        pressDoes = null
         symHeld = false
         keyboardSwitch = false
         if (keepCtrl) return

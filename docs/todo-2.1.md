@@ -333,6 +333,11 @@ enders\gesture-line
       than its word's place (its padding, since C's gesture line sized it at 1.3x the words), so it eats the gap. Fix: keep the
       same gap on both sides of the selection, by moving the neighbours or limiting its padding to the gap. For C when work
       resumes.
+    - Sym panel spacing (owner's screenshot, 20:22: "Is the bottom category bar supposed to have a taller gap above the categories
+      to compensate for the border to be more evenly aligned in spacing?"). Measured: the three key rows' middles are 72 and 71 px
+      apart, but the category row sits only 55 px under the last one, because it moved onto the line and the rows didn't. The
+      Orchestrator's proposal: keep the top row and the category row where they are, and space all four evenly (about 66 px), so
+      the gap above the categories matches the rest. For W when work resumes, with before/after renders.
   - **Paused for the usage limit (2026-11-14, 5-hour window at 95%, resets 02:10 UTC; weekly at 87%).** W, C, D and A stopped
     mid-turn; F and V were idle; their unfinished changes stay in their worktrees. On resume, send each a short "carry on":
     - V: blocker #1 first, then the selected-word underline, #20, #21, #31, #32.

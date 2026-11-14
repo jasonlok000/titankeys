@@ -461,7 +461,16 @@ enders\gesture-line
           debuggable, no debug parts. Swapped on the phone (the atlas one was never set up). Overnight crash log: 26, all
           Android's media provider, none TitanKeys. Key folder: the NightKeys key copied in, atlas set aside in
           old-atlas-key-do-not-use\, README rewritten.
-        - **Follow-ups (not done):** the repo's ink.toml still names signing/atlas.keystore (debug builds sign with it too; a
+        - **The owner: "let's just use NightKeys signing key. It was a mistake for 2.0 to not use the same key as 1.2"**, and
+          "We should be moving fully away from the atlas build now". Done: ink.toml, tools/reference.sh, CI's default alias and
+          docs/play point at signing/nightkeys-release.p12 (alias nightkeys), release and debug alike; the six TitanKeys build
+          folders in WSL got the p12 and a credentials.env from signing.json (atlas moved to signing/old-atlas-do-not-use/);
+          Julian's Atlas folders untouched. Build #23 verifies that a debug build signs with it. The phone's TitanKeys Debug
+          and reference app are atlas-signed: the next Debug install needs them uninstalled first (the owner's OK, as it wipes
+          Debug's data). Still tied to Atlas, for the owner to schedule: the X:\Atlas folder and the juleshall4/atlas
+          remote, 171 files in com.atlas.* packages, the WSL distro atlas-build and ~/atlas-env.sh, "Atlas" in CONTRIBUTING.md,
+          README.md and the debug app's docs.
+        - **Follow-ups (were open before the switch):** the repo's ink.toml still names signing/atlas.keystore (debug builds sign with it too; a
           release key switch needs ink.toml, every build copy's signing/, release.yml's secrets and docs/play/signing.md); the
           GitHub release text must tell 2.0 users to uninstall 2.0 first (the in-app notes would come too late); the old
           v2.1.0 pre-release on GitHub is atlas-signed.

@@ -684,6 +684,15 @@ class CursorSteps {
         atEnd = false
         return if (next.isWhitespace()) Haptic.CursorSpace else Haptic.CursorLetter
     }
+
+    companion object {
+        /**
+         * Whether a step sends its arrow: not at an end of the text, [next] empty, where it hits the wall and nothing else. An
+         * arrow there moves nothing in the field, and Android takes it to move focus to the next field or button (bug hunt 2.1,
+         * #16). A [selected] text still gets it, to collapse, and an app that doesn't answer ([next] null) too.
+         */
+        fun sendsArrow(next: CharSequence?, selected: Boolean) = selected || next?.isEmpty() != true
+    }
 }
 
 /** Plays the keyboard's haptics ([Haptic]), only while its switch, the master switch and Android's touch feedback are on. */

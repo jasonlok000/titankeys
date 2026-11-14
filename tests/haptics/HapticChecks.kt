@@ -35,6 +35,7 @@ fun main() {
     oneToggleSilencesOnlyItsHaptic()
     steeringFeelsSpacesAndLetters()
     theEndsOfTheTextPlayOncePerHit()
+    theEndsOfTheTextSendNoArrow()
     theLabSaysWhatEachPlays()
     theGraphDrawsEachPatternToScale()
     theLiveTimelineHasWordsForEach()
@@ -1282,4 +1283,15 @@ private fun theSwitchSilencesThePlayground() {
     for (haptic in Haptic.entries - playground.toSet()) check(off.allows(haptic)) { "$haptic still plays" }
     val master = switches(mapOf(HapticSwitches.MASTER to false))
     for (haptic in playground) check(!master.allows(haptic)) { "All haptics off silences $haptic" }
+}
+
+/**
+ * Steering past either end of the text hits the wall and sends no arrow, which Android would take to move focus to the next field
+ * or button (bug hunt 2.1, #16). Inside the text, with a selection to collapse, or with an app that doesn't answer, it does.
+ */
+private fun theEndsOfTheTextSendNoArrow() {
+    check(!CursorSteps.sendsArrow("", selected = false)) { "At an end of the text, no arrow" }
+    check(CursorSteps.sendsArrow("a", selected = false) && CursorSteps.sendsArrow(" ", selected = false)) { "Inside the text, the arrow" }
+    check(CursorSteps.sendsArrow("", selected = true)) { "A selection at the end still collapses" }
+    check(CursorSteps.sendsArrow(null, selected = false)) { "An app that doesn't answer still gets the arrow" }
 }

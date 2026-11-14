@@ -2649,7 +2649,7 @@ class AtlasIme : InputMethodService() {
             // An app that does not answer still gets the light tick.
             cursorSteps.step(if (next == null) 'a' else next.firstOrNull())?.let(haptics::play)
             if (rereadCursorText) readCursorText()
-            command(arrow)
+            if (CursorSteps.sendsArrow(next, lastSelectionStart != lastSelectionEnd)) command(arrow)
             if (next?.isEmpty() != true) rereadCursorText = strip?.gesture?.cursorStepped(direction) == true
         }
     }

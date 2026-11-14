@@ -95,6 +95,9 @@ internal object StripFit {
     fun boxTopPx(line: Float, middle: Float, height: Float, floor: Float) =
         minOf(Math.round(line - middle), kotlin.math.floor(floor - height).toInt())
 
+    /** How high Inter's capitals reach over the baseline, as a part of its size: 1490 of its 2048 units, in every weight. */
+    const val CAPITALS = 1490f / 2048f
+
     /** How high Inter's tallest letters reach over the baseline, the dots of i and j, as a part of its size: 1572 of 2048. */
     const val TALL = 1572f / 2048f
 

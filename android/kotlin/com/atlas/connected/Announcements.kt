@@ -41,6 +41,15 @@ object Announcements {
     }
 
     /**
+     * Settings > Reset most things: the switch goes back to its default, on (bug hunt 2.1, #27). What you dismissed or already
+     * saw stays, so nothing old shows again.
+     */
+    fun resetSwitch(context: Context) {
+        Connected.preferences(context).edit().remove(ENABLED).apply()
+        Connected.schedule(context)
+    }
+
+    /**
      * Takes down the news on show, and nothing else: Record a bug's ongoing notification, with its Stop, stays while it records
      * (bug hunt 2.1, #26).
      */

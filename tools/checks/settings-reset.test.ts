@@ -149,3 +149,11 @@ test("the boring guide and the release notes say where they are", () => {
   expect(guide).toContain("Reset literally everything");
   expect(read("release-notes.txt")).toContain("- Two resets:");
 });
+
+test("Reset most things turns News back on, its default, and keeps what you dismissed", () => {
+  // Bug hunt 2.1, #27: News is a switch, so it resets like every other; the news you dismissed or saw is yours and stays.
+  const news = read("android/kotlin/com/atlas/connected/Announcements.kt");
+  expect(news).toContain("fun enabled(context: Context) = Connected.preferences(context).getBoolean(ENABLED, true)");
+  expect(news).toMatch(/fun resetSwitch\(context: Context\) \{\s*Connected\.preferences\(context\)\.edit\(\)\.remove\(ENABLED\)\.apply\(\)\s*Connected\.schedule\(context\)\s*\}/);
+  expect(reset).toContain("Announcements.resetSwitch(context)");
+});

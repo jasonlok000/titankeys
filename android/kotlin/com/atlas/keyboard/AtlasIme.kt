@@ -2107,7 +2107,7 @@ class AtlasIme : InputMethodService() {
     /** Unblock, from blocked: the word comes off Blocked words, back to not saved, and autocorrect may fix to it again. */
     private fun unblockWord(held: HeldWord) {
         pendingWords[held.word.lowercase()] = MenuKeys.Step.New
-        SwipeTyping.get(this).setWordBlocked(held.word, false) { error ->
+        SwipeTyping.get(this).unblockWord(held.word) { error ->
             if (error != null) failed(held, "unblock", error) else settled(held.word, MenuKeys.Step.New)
         }
         composer.unhide(held.word)

@@ -587,6 +587,19 @@ public final class SwipeTyping {
         worker.execute(() -> operationResult(callback, block(word, blocked)));
     }
 
+    /**
+     * The word menu's Unblock: [word] comes off Blocked words onto the rung under it, not saved. A dictionary word blocked from
+     * Settings never went on the list of words taken out, so it goes on it now; without that the menu showed Not saved and then
+     * Saved on opening again (bug hunt #25). Settings' own unblock ([setWordBlocked]) gives the dictionary word back whole.
+     */
+    public void unblockWord(String word, OperationCallback callback) {
+        worker.execute(() -> {
+            String failure = block(word, false);
+            if (failure == null && builtInWord(word) && !unsavedWords.contains(word)) failure = unsave(word, true);
+            operationResult(callback, failure);
+        });
+    }
+
     /** Runs on the worker. Returns why it failed, or null. A word that comes back can be a fix again. */
     private String block(String word, boolean blocked) {
         boolean persisted = false;

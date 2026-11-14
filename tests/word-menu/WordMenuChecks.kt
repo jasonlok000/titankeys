@@ -36,7 +36,22 @@ fun main() {
     theQuickSettingsHover()
     theKeyboardMakesTheseCalls()
     onlyStoredWordsOpen()
+    unblockTakesADictionaryWordOut()
     println("Word menu checks passed")
+}
+
+/** The model's Unblock is the engine's (bug hunt #25): a dictionary word goes on the list taken out, and the keyboard calls it. */
+private fun unblockTakesADictionaryWordOut() {
+    val engine = File("android/kotlin/com/atlas/engine/SwipeTyping.java").readText()
+    val unblock = engine.substringAfter("public void unblockWord(String word, OperationCallback callback) {").substringBefore("\n    }\n")
+    check("block(word, false)" in unblock && "builtInWord(word) && !unsavedWords.contains(word)" in unblock && "unsave(word, true)" in unblock) {
+        "#25: the menu's Unblock takes a dictionary word out, so it lands on Not saved and stays there"
+    }
+    val ime = File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    check("SwipeTyping.get(this).unblockWord(held.word)" in ime.substringAfter("private fun unblockWord(held: HeldWord) {").substringBefore("\n    }\n")) {
+        "#25: the menu's Unblock uses it"
+    }
+    println("Unblock lands a dictionary word on Not saved, as the menu shows it")
 }
 
 /**
@@ -119,7 +134,11 @@ private class WordLists {
                 if (!(addedWord(word) || learnedWord(word) || builtIn(word) && !unsavedWord(word))) habits.add(word, day)
             }
             MenuKeys.Button.Block -> blocked = blocked.add(word)
-            MenuKeys.Button.Unblock -> blocked = blocked.remove(word)
+            // SwipeTyping.unblockWord: off Blocked words, and a dictionary word onto the list taken out, so it's Not saved.
+            MenuKeys.Button.Unblock -> {
+                blocked = blocked.remove(word)
+                if (builtIn(word) && !unsavedWord(word)) unsaved = unsaved.add(word)
+            }
         }
     }
 }
@@ -141,6 +160,8 @@ private fun theLadder() {
         Kind("favourite", "Titankeys") { habits.add("Titankeys", day); favourites += "titankeys" },
         Kind("favourite dictionary word", "the") { favourites += "the" },
         Kind("blocked", "Zorblax") { this.blocked = this.blocked.add("Zorblax") },
+        // Bug hunt #25: blocked from Settings, so never taken out. Unblock showed Not saved, then Saved on opening again.
+        Kind("dictionary word blocked in Settings", "and") { this.blocked = this.blocked.add("and") },
         Kind("one letter", "I") {},
         Kind("emoji", "😀") {},
         Kind("symbol", ":)") {},
@@ -148,7 +169,7 @@ private fun theLadder() {
     val opens = mapOf(
         "unknown, never typed" to new, "candidate, typed once (gathering evidence)" to new, "learned, typed twice (suggested)" to saved,
         "learned, faded (not used for a month)" to new, "saved by you" to saved, "dictionary word" to saved, "favourite" to favourite,
-        "favourite dictionary word" to favourite, "blocked" to blocked,
+        "favourite dictionary word" to favourite, "blocked" to blocked, "dictionary word blocked in Settings" to blocked,
     )
     val table = StringBuilder("| Word | Opens at | I | O | Back | O to the bottom, then I back up | Ends up | I to the top, then O to the bottom | Ends up |\n" +
         "|---|---|---|---|---|---|---|---|---|\n")
@@ -772,7 +793,7 @@ private fun theKeyboardMakesTheseCalls() {
         "return WordCase.kept(held.word, WordCase.before(text, held.word, held.typed.length), modifiers.shift != Modifiers.Level.Off)",
         "SwipeTyping.get(this).unsaveWord(held.word) { error ->",
         "SwipeTyping.get(this).blockWord(held.word, held.typed) { error ->",
-        "SwipeTyping.get(this).setWordBlocked(held.word, false) { error ->",
+        "SwipeTyping.get(this).unblockWord(held.word) { error ->",
         "typing.builtInWord(held.word) && !typing.unsavedWord(held.word)",
         "MenuKeys.Button.Block -> Haptic.WordBlocked",
         // A menu press ticks at once, in the guide's for-show menu too, which plays its presses through the same scene.

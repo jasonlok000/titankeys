@@ -105,6 +105,13 @@ fun main() {
     same(StripFit.boxTop(60f, 20f, 50f, 85f), 35f, "A box that would reach under the floor rises just enough")
     same(StripFit.boxTopPx(60f, 20.4f, 30f, 100f), 40, "In whole px, the nearest to the line")
     same(StripFit.boxTopPx(60f, 20.6f, 50f, 88.9f), 38, "In whole px, never under the floor")
+    // Two lines that can't both sit on the line, the clip offer and its hint: the middle of their small letters on it as nearly as
+    // fits, their tails never under the floor (which wins), their tallest letters never over the ceiling.
+    same(StripFit.pairShift(20f, 60f, 10f, 70f, 45f, 2f, 100f), 5f, "Two lines with room move their small letters' middle onto the line")
+    same(StripFit.pairShift(20f, 60f, 10f, 70f, 60f, 2f, 84f), 14f, "Their tails stop at the floor")
+    same(StripFit.pairShift(20f, 60f, 10f, 70f, 20f, 2f, 84f), -8f, "Their tallest letters stop at the ceiling")
+    same(StripFit.pairShift(20f, 60f, 10f, 90f, 60f, 20f, 84f), -6f, "When both can't, the floor wins")
+    same(StripFit.pairShiftPx(20f, 60f, 10f, 70.4f, 60f, 2f, 84f), 13, "In whole px, never taking the tails under the floor")
     // The pill: as tall as fits round the line, 1 dp inside the bar, about 32 dp.
     val pill = StripFit.around(StripFit.LINE_DP, StripFit.BAR_DP, StripFit.INSIDE_DP)
     same(pill, 32f, "The pill fits round the line in 32 dp")

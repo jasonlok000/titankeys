@@ -21,6 +21,9 @@ import kotlin.math.sin
  * - Save's book is opaque: its pages are filled with the bar's own colour under the orange line, so the letters that fly into
  *   it can't be seen through it once it shuts. The ink is drawn under the book for the same reason.
  * - Save's flying book sits wholly above the bar, its bottom well over the bar's top edge, never across it.
+ * - Every effect has one anchor, the word where it sits on the bar's line, and one scale, the scene's dp, which grow with Bar text
+ *   size. What rises starts from one place over the word, the [stage]: the book stands on it, and the pressed heart has its tip on
+ *   it and bursts from there (owner, 2026-11-13: "the book seems to be much higher up than the heart animation").
  *
  * Places are in dp: x from the bar's left, y from the bar's top, so that effects above the bar have a negative y. The strip draws
  * [paintWord] on the bar, under the hovered button's pill, and its effects layer draws [paintEffects] over the bar and up to
@@ -41,10 +44,23 @@ class MenuScene(
     var onHaptic: (MenuKeys.Button, String) -> Unit = { _, _ -> },
 ) {
     /**
-     * The middle of the word's small letters, on the bar's line (StripFit.LINE_DP): Save's and Unsave's book flies to its place
-     * over the word from here, so it rises from where the word is.
+     * The bar's height in the scene's dp. The bar keeps its height while the scene's dp grow with Bar text size, so at Normal and
+     * Bigger it's fewer of them than [BAR]: the strip gives its own. Pieces that fall fade out where it ends.
      */
-    private val middle = baseline - FONT_DP * StripFit.X_HEIGHT / 2
+    var bar = BAR
+
+    /**
+     * Where everything that rises over the word starts and stands, its bottom, in dp: Save's and Unsave's book stands on it, and
+     * Favourite's and Unfavourite's heart has its tip on it, so the book and the hearts start from one place (owner, 2026-11-13:
+     * "the book seems to be much higher up than the heart animation"). It's centred on the word ([cx]), as low over the word's
+     * tallest letter as keeps the book wholly over the bar, [CLEAR] dp over its top and [SETTLE_ROOM] more for the book's pop (owner,
+     * 2026-11-13: "The book sits fully above the bar, not across its top edge"). The word is on the bar's line, inside the bar, so
+     * the stage is that far over the bar's top at every Bar text size.
+     */
+    fun stage(): Float = minOf(baseline - max(TALL * FONT_DP, layout.top) - HEART_GAP, -CLEAR - SETTLE_ROOM)
+
+    /** Where the book's middle rests so that its bottom stands on the [stage]. */
+    private fun bookRest() = stage() - BOOK_FOOT
 
     /**
      * Where each letter of a word starts and has its middle, from the word's left, the word's width, and how high its tallest letter
@@ -196,7 +212,7 @@ class MenuScene(
     /** Save's and Unsave's book. [phi] turns the left cover over the spine: 0 open as the icon, π shut on the right page. */
     inner class Book {
         val x get() = cx
-        val y = Spring(middle - 92f, DRIFT)
+        val y = Spring(bookRest(), DRIFT)
         val size = 40f
         val a = Tween(0f)
         val s = Spring(0f, POP)
@@ -403,7 +419,7 @@ class MenuScene(
         val b = ensureBook()
         squash()
         b.gone = false; b.landed = false; b.torn = false; b.onLand = null; b.tear.set(0f); b.tug.set(0f)
-        b.falling = false; b.phiS.set(b.phi).to(0f); b.a.to(1f, FADE); b.y.to(middle - 92f)
+        b.falling = false; b.phiS.set(b.phi).to(0f); b.a.to(1f, FADE); b.y.to(bookRest())
         if (b.s.x < .05f) b.s.set(.3f)
         b.s.to(1f, POP)
         at(110f) {
@@ -433,7 +449,7 @@ class MenuScene(
                 }
             }
             pop(KICK * .6f)
-            at(240f) { b.y.to(middle - 118f); b.a.to(0f, EXIT, ::easeInOut); b.gone = true }
+            at(240f) { b.y.to(bookRest() - 26f); b.a.to(0f, EXIT, ::easeInOut); b.gone = true }
         }
     }
 
@@ -441,7 +457,7 @@ class MenuScene(
         val b = ensureBook()
         squash()
         b.gone = false; b.torn = false; b.landed = false; b.onLand = null; b.tear.set(0f); b.tug.set(0f)
-        b.falling = false; b.phiS.set(b.phi).to(0f); b.a.to(1f, FADE); b.y.to(middle - 92f)
+        b.falling = false; b.phiS.set(b.phi).to(0f); b.a.to(1f, FADE); b.y.to(bookRest())
         if (b.s.x < .05f) b.s.set(.3f)
         b.s.to(1f, POP)
         at(250f) { b.tug.to(1f, WOBBLE); b.tear.to(1f, 150f, ::easeInOut) }
@@ -456,7 +472,7 @@ class MenuScene(
             }
             // The letters drain from white to grey, right to left, as the page tears.
             sweep(-1) { i -> tones[i].to(1f) }
-            at(280f) { b.y.to(middle - 112f); b.a.to(0f, EXIT, ::easeInOut); b.gone = true }
+            at(280f) { b.y.to(bookRest() - 20f); b.a.to(0f, EXIT, ::easeInOut); b.gone = true }
         }
     }
 
@@ -734,8 +750,8 @@ class MenuScene(
     private fun drawCrackOn(c: MenuCanvas, x: Float, bottom: Float, s: Float, p: Float, colour: Int, a: Float) =
         drawCrack(c, x, bottom - HEART_BELOW * s, 24f * s, p, colour, a)
 
-    /** Where the pressed heart stands, its tip [HEART_GAP] dp over the word's tallest letter, centred on the word. */
-    fun heartFoot(): Float = baseline - max(TALL * FONT_DP, layout.top) - HEART_GAP
+    /** Where the pressed heart stands, its tip on the [stage], centred on the word. */
+    fun heartFoot(): Float = stage()
 
     /** The pressed heart's middle, where a favourite's burst and an unfavourite's crack start from. */
     fun heartMiddle(): Float = heartFoot() - HEART_BELOW * HEART_SCALE
@@ -795,7 +811,7 @@ class MenuScene(
         var a = p.a
         if (a <= .002f) return
         // Fade at the layer's edges, never cut.
-        a *= clamp((p.y + ABOVE) / 28f) * clamp((BAR + 4f - p.y) / 20f)
+        a *= clamp((p.y + ABOVE) / 28f) * clamp((bar + 4f - p.y) / 20f)
         if (a <= .002f) return
         val s = p.sc.x
         val accent = palette.accent
@@ -864,11 +880,18 @@ class MenuScene(
         const val ABOVE = 200f
         /** How far over the bar's top Save's flying book keeps its bottom, at the least: it never crosses the edge (owner, 2026-11-13). */
         const val CLEAR = 8f
+        /** Room under the [stage] for the book's pop, which overshoots a little as it grows in, so it still keeps [CLEAR]. */
+        const val SETTLE_ROOM = 3f
+        /**
+         * How far the book's box reaches under its middle at rest, in dp: its pages end 7.9 of its 24 units under the middle, at 40
+         * dp a book, with 2 dp of room ([bookBox]).
+         */
+        const val BOOK_FOOT = (20.4f - 12.5f) * 40f / 24f + 2f
         /** How high the menu font's tallest small letters reach over the baseline, in em: Inter's i and j dots, 1572 of 2048. Capitals reach 1490. */
         const val TALL = 1572f / 2048f
         /**
          * Favourite's and Unfavourite's pressed heart, part of their effects only: [HEART_SCALE] dp to a unit of its 24 grid, about
-         * 12 dp across, its tip [HEART_GAP] dp over the word's tallest letter.
+         * 12 dp across, its tip on the [stage], at least [HEART_GAP] dp over the word's tallest letter.
          */
         const val HEART_SCALE = .6f
         const val HEART_GAP = 3f

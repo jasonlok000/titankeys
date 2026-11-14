@@ -308,6 +308,15 @@ enders\gesture-line
   - **Merged: A's idle line** (claude/idle-line c069d5b, merge a66d29b): all seven games and their ways home start and end on the
     line and stay inside the bar at Smaller, Normal and Bigger; 393 keyframes through corner_check with 0 outside the safe zone.
     Reviewed by the Orchestrator (X:\Atlas\.dev\renders\idle-line, normal-bowling). Idle, strip-fit and guide checks pass.
+  - **Merged: W's round 2 on the line** (claude/chips-effects fe4b7dd + 8372692, merge ebb47ce): the modifier chips' text on the
+    line with their boxes inside the bar (the render now models the phone's layout and reproduces build #13's cut chips); the six
+    menu effects share one stage, the book and the hearts starting level; the two-line clip offer moves toward the line (shrinks
+    to 0.84 at Normal and 0.72 at Bigger, its hint no smaller than 13 sp); the Sym band on the line at the screen's edge; the
+    guide's ghost finger and Fix demo on the line. Global audit: 30 items, 0 of 165 bar states red in corner_check (W's renders in
+    X:\Atlas\.claude\worktrees\word-menu-fix-25c785\.dev\renders\line-round2-w2). Conflict with C's finger
+    in Strip.drawDemoFinger resolved to C's GestureDrawing.finger. Reviewed (modifier-normal, effects-normal-save/favourite);
+    all bar checks pass. The Orchestrator's calls: keep the clip-offer shrink; keep the guide's first-slide side words rising from
+    under the edge.
   - **Bug hunt:** its own session, "TitanKeys 2.1 bug hunt" (local_34f68a1f), findings only, to docs/bug-hunt-2.1.md; the
     Orchestrator triages and assigns fixes.
   - **Workers' model (owner, 2026-11-13):** subagents and every worker session run on Opus 5.5 at medium effort; set on A, C, D,

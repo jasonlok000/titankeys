@@ -53,7 +53,7 @@ internal object BarLine {
     enum class Era { Before, After }
 
     private val frc = FontRenderContext(null, true, true)
-    private lateinit var regular: Font
+    internal lateinit var regular: Font
     private lateinit var medium: Font
     private lateinit var bold: Font
     private lateinit var drawables: File
@@ -150,6 +150,7 @@ internal object BarLine {
         BarFrames.build13(out).forEach(::println)
         pairs.forEach(::println)
         BarFrames.effects(out)
+        BarFrames.panel(out).forEach(::println)
         kotlin.check(problems.isEmpty()) { "The bar's line breaks:\n" + problems.joinToString("\n") }
         println("Every bar state at every size: its text on the line to half a pixel, its boxes inside the bar, nothing within 4 px of the screen's outline")
     }
@@ -173,7 +174,7 @@ internal object BarLine {
         return image
     }
 
-    private fun text(g: Graphics2D, font: Font, size: Float, text: String, x: Float, baseline: Float, colour: Color) {
+    internal fun text(g: Graphics2D, font: Font, size: Float, text: String, x: Float, baseline: Float, colour: Color) {
         g.color = colour
         g.fill(font.deriveFont(size).createGlyphVector(frc, text).getOutline(x, baseline))
     }
@@ -558,7 +559,7 @@ internal object BarLine {
      * The Sym panel's band at the screen's bottom edge: the symbol groups with the first or last one washed, the clipboard's two
      * groups, or the quick settings' title. After, its text sits on the line, 17 dp over the screen's edge.
      */
-    private fun band(look: Look, g: Graphics2D, kind: String, overBar: Boolean = false) {
+    internal fun band(look: Look, g: Graphics2D, kind: String, overBar: Boolean = false) {
         val band = Math.round(32 * UNIT)
         // At the screen's edge with the bar hidden, or on top of the bar, which shows under the panel.
         val at = if (overBar) -band else BAR - band

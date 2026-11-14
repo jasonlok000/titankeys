@@ -88,6 +88,73 @@ internal object BarFrames {
         return caught
     }
 
+    /**
+     * The Sym panel, its three rows of keys over the band, as SymPanel lays them out, before (rows 46 dp apart, the band's text on
+     * the bar's line under them) and after (the four evenly spaced, the panel's height, the top row and the band's text where they
+     * were: SymPanel.spaceRows), on the symbol, clipboard and quick settings pages, with the bar under the panel and with the band
+     * at the screen's edge. Drawn to panel/<page>-<where>-<before|after>.png. Returns the rows' spacing, to print.
+     */
+    fun panel(out: File): List<String> {
+        val dir = File(out, "panel").apply { mkdirs() }
+        val unit = BarLine.UNIT
+        val rowHeight = Math.round(46 * unit)
+        val bandHeight = Math.round(32 * unit)
+        val total = 3 * rowHeight
+        val said = ArrayList<String>()
+        val pages = mapOf(
+            "symbols" to listOf(listOf("", "~", "`", "|", "•", "√", "π", "÷", "×", "1/2"), listOf("", "€", "£", "¥", "₩", "^", "°", "=", "{", ""),
+                listOf("Shift", "\\", "©", "®", "™", "✓", "[", "]", "", "")),
+            "clipboard" to emptyList(),
+            "quick" to listOf(listOf("", "Haptic", "Sound", "Swipe", "Fixes", "Caps", "Shorth", "Snip", "Exact", ""),
+                listOf("", "Words", "Clip", "Theme", "Size", "Orange", "Idle", "Guide", "Back", ""), listOf("", "", "", "", "", "", "", "", "", "")),
+        )
+        for ((page, rows) in pages) for (overBar in listOf(true, false)) for (even in listOf(false, true)) {
+            val look = BarLine.Look(FixedScale.Size.Normal, BarLine.Era.After)
+            val state = BarLine.State("$page-${if (overBar) "over-bar" else "at-edge"}-${if (even) "after" else "before"}",
+                "The Sym panel's $page page, ${if (overBar) "the bar under it" else "the band at the screen's edge"}, ${if (even) "rows evenly spaced" else "rows as they were"}") { l, g ->
+                if (overBar) BarLine.chips(l, g, emptyList(), "")
+                val bottom = if (overBar) 0 else BarLine.BAR
+                val bandTop = bottom - bandHeight
+                val gridTop = bandTop - total
+                // SymPanel.bandLine and spaceRows.
+                val line = if (overBar) bandHeight / 2f else bandHeight - StripFit.LINE_ABOVE_DP * unit
+                val step = (total + line - rowHeight / 2f) / 3
+                val height = if (even) Math.round(step) else rowHeight
+                val padTop = if (even) Math.round(rowHeight / 2f - height / 2f) else 0
+                val middles = (0..2).map { gridTop + padTop + height / 2f + it * height }
+                val keys = KeyGeometry(BarLine.WIDTH.toFloat())
+                for ((index, middle) in middles.withIndex()) {
+                    if (page == "clipboard") {
+                        // Two wide fields over each half of the row, as the clipboard page has them, 3 dp in from the row.
+                        for (half in 0..1) {
+                            val left = keys.cell(1 + half * 4).first + 2 * unit
+                            val right = keys.cell(4 + half * 4).second - 2 * unit
+                            g.color = java.awt.Color(0x33, 0x2A, 0x24)
+                            g.fill(java.awt.geom.RoundRectangle2D.Float(left, middle - height / 2f + 3 * unit, right - left, height - 6 * unit, 32f, 32f))
+                            BarLine.text(g, BarLine.regular, 15 * unit, "Clip ${index * 2 + half + 1}: meet at six", left + 8 * unit,
+                                middle + 15 * unit * StripFit.X_HEIGHT / 2, java.awt.Color.WHITE)
+                        }
+                        continue
+                    }
+                    for ((column, label) in rows[index].withIndex()) {
+                        if (label.isEmpty()) continue
+                        val size = (if (page == "quick") 13f else 22f) * unit
+                        val (l, r) = keys.cell(column)
+                        val wide = BarLine.regular.deriveFont(size).getStringBounds(label, java.awt.font.FontRenderContext(null, true, true)).width.toFloat()
+                        BarLine.text(g, BarLine.regular, size, label, (l + r) / 2 - wide / 2, middle + size * StripFit.X_HEIGHT / 2, java.awt.Color.WHITE)
+                    }
+                }
+                BarLine.band(l, g, if (page == "quick") "quick" else if (page == "clipboard") "clipboard" else "first", overBar)
+                val bandText = bandTop + line
+                val gaps = (middles + bandText).zipWithNext { a, b -> b - a }
+                if (!overBar || page == "symbols") said += "Panel, $page, ${if (overBar) "bar under it" else "at the edge"}, ${if (even) "after" else "before"}: " +
+                    "row to row ${gaps.joinToString(", ") { "%.1f".format(it) }} px"
+            }
+            ImageIO.write(BarLine.picture(look, state, 300), "png", File(dir, "${state.name}.png"))
+        }
+        return said.distinct()
+    }
+
     /** A step of an effect: the button, the rung it's pressed from, and the column the finger rests on. */
     private class Move(val button: MenuKeys.Button, val from: MenuKeys.Step, val column: Int)
 

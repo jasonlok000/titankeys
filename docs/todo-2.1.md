@@ -317,6 +317,18 @@ enders\gesture-line
     in Strip.drawDemoFinger resolved to C's GestureDrawing.finger. Reviewed (modifier-normal, effects-normal-save/favourite);
     all bar checks pass. The Orchestrator's calls: keep the clip-offer shrink; keep the guide's first-slide side words rising from
     under the edge.
+  - **Bug hunt done** (docs/bug-hunt-2.1.md, merged at c8fd49b): 41 findings, 2 blocking, 22 should fix, 17 later. The
+    Orchestrator confirmed blocker #1 in the code (GuideActivity.onPause never removes showHelp, demoTick or huntTick). Triage:
+    - V: #1 first (blocker: guide timers outlive the guide), then #20, #21, #31, #32 (#31 and #32 raised from later: the guide
+      loses the user's clipboard).
+    - F: #2 first (blocker: Reset literally everything leaves shorthand, app lists, recent apps, snippet start), then #23, #26,
+      #27, #28.
+    - W: #3, #6, #11, #12, #25, #36 (word menu, and accents-off cream).
+    - D: #4, #13, #14, #15, #24, #30, #37, #38, and TakenKeys after screen-off.
+    - C: #7, #16, #17, #18, #22, #35.
+    - A, after the floor line: #5, #8, #9, #10, #29, #39, #19, #33, #34.
+    - After the pre-release: #40 (battery) and #41 (leaks).
+    Each fix comes with a check that reproduces it; workers confirm each finding first.
   - **Bug hunt:** its own session, "TitanKeys 2.1 bug hunt" (local_34f68a1f), findings only, to docs/bug-hunt-2.1.md; the
     Orchestrator triages and assigns fixes.
   - **Workers' model (owner, 2026-11-13):** subagents and every worker session run on Opus 5.5 at medium effort; set on A, C, D,

@@ -8,8 +8,8 @@ import android.content.Context
  * guide's pass flood, the playground's warm-up and the Next pill do, it becomes cream behind ink, so it stays readable.
  *
  * Nothing outside this file names the orange (tools/checks/accent.test.ts). Ink's screens take the same switch through the Ink
- * patch's accent (appAccent), and the app's own drawings through lib/brand.ts's useAccent. The keyboard's marks follow [Look],
- * which takes the text's own colour instead, as the keyboard has a light look too.
+ * patch's accent (appAccent), and the app's own drawings through lib/brand.ts's useAccent. The keyboard's marks take it through
+ * [Look], cream too with Orange accents off.
  */
 internal object Accent {
     /** The Titan 2 Elite's orange, sampled from Unihertz's product photos. */
@@ -29,8 +29,8 @@ internal object Accent {
     /** The accent now: orange, or cream with Orange accents off. */
     val colour: Int get() = if (on) ORANGE else CREAM
 
-    /** The accent for a drawing told the setting itself, such as [Look]: orange, or [off]. */
-    fun of(orange: Boolean, off: Int = CREAM) = if (orange) ORANGE else off
+    /** The accent for a drawing told the setting itself, such as [Look]: orange, or cream. */
+    fun of(orange: Boolean) = if (orange) ORANGE else CREAM
 
     /**
      * A favourite word's colour on the dark bar: orange, or with Orange accents off, the darker cream, so a favourite stays apart

@@ -1179,10 +1179,10 @@ class Strip(
     }
 
     /**
-     * The menu's colours, for the bar's dark or light look, with its accent: the word's white, Not saved's and Blocked's greys, the
-     * bar's own colour and the quiet marks' cream.
+     * The menu's colours, the bar's dark look with its accent: the word's white, Not saved's and Blocked's greys, the bar's own
+     * colour and the quiet marks' cream. With Orange accents off the accent is cream, as the bar's marks are.
      */
-    private fun palette() = (if (look.dark) MenuScene.Palette.DARK else MenuScene.Palette.LIGHT).copy(accent = look.accent and 0xFFFFFF)
+    private fun palette() = MenuScene.Palette.DARK.copy(accent = look.accent and 0xFFFFFF)
 
     /** One of a button's icons at [centre], scaled, [fill]ed from the bottom when less than 1, as [MenuMotion.icon] has it. */
     private fun drawIcon(canvas: Canvas, id: Int, centre: Float, top: Float, size: Int, scale: Float, turn: Float, alpha: Int,

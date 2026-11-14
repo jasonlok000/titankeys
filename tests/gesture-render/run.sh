@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Draws the strip's steering and selecting displays to PNGs with the real drawing code, to look at without the phone.
-# Usage: bash tests/gesture-render/run.sh [folder], a new temporary folder if none. Each moment gets a PNG there, dark and light, and all.png is the sheet.
+# Usage: bash tests/gesture-render/run.sh [folder], a new temporary folder if none. Each moment gets a PNG there, and all.png is the sheet.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}

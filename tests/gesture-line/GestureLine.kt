@@ -53,7 +53,7 @@ internal object GestureLine {
     private val frc = FontRenderContext(null, true, true)
     private lateinit var regular: Font
     private lateinit var bold: Font
-    private val look = Look(dark = true, orange = true)
+    private val look = Look(orange = true)
     private val WORDS = listOf("going", "your", "jumpy")
 
     /** The bar at one Bar text size, as Strip has it: its line, floor, words' size and sides, in px. */

@@ -52,10 +52,31 @@ test("Accent reads the switch where TypingSettings keeps it, every window loads 
   expect(patch).toContain("+internal fun appAccent(context: android.content.Context): Int = 0");
 });
 
-test("the keyboard's marks take the text's colour, as the keyboard has a light look too", () => {
+test("the keyboard is always dark, whatever the phone's dark mode", () => {
+  // Owner, 2026-11-13: "I never know it follows light mode. Make it always black. The app is always in its current dark mode
+  // settings." The bar, the panels, the word menu and exact typing's bar all take Look, which reads nothing of the phone's mode.
   const look = read("android/kotlin/com/atlas/keyboard/Look.kt");
-  expect(look).toContain("val accent = Accent.of(orange, off = ink)");
-  expect(look).toContain("TypingSettings.orangeAccents(context).also { Accent.on = it }");
+  expect(look).toContain("internal class Look(val orange: Boolean) {");
+  expect(look).toContain("val ink = Color.WHITE");
+  expect(look).toContain("val paper = Color.BLACK");
+  expect(look).toContain("fun of(context: Context) = Look(TypingSettings.orangeAccents(context).also { Accent.on = it })");
+  const keyboard = files("android/kotlin", /\.(kt|java)$/).map(read).join("\n");
+  expect(keyboard).not.toMatch(/UI_MODE_NIGHT|uiMode|Palette\.LIGHT|look\.dark|0x35312E/);
+  expect(read("android/kotlin/com/atlas/keyboard/MenuScene.kt")).not.toContain("val LIGHT");
+  // The renders draw the one look.
+  for (const path of ["tests/menu-render/MenuRender.kt", "tests/gesture-render/GestureRender.kt", "tests/gesture-display/render/Stand.kt"]) {
+    expect({ path, light: /Palette\.LIGHT|-light|dark: Boolean/.test(read(path)) }).toEqual({ path, light: false });
+  }
+});
+
+test("with Orange accents off, the bar's marks and the menu's effects agree on cream", () => {
+  // Bug hunt 2.1, #36: the bar's marks went white (Look's off = ink) while the menu's effects went cream.
+  const look = read("android/kotlin/com/atlas/keyboard/Look.kt");
+  expect(look).toContain("val accent = Accent.of(orange)");
+  const accent = read("android/kotlin/com/atlas/keyboard/Accent.kt");
+  expect(accent).toContain("fun of(orange: Boolean) = if (orange) ORANGE else CREAM");
+  expect(read("android/kotlin/com/atlas/keyboard/Strip.kt")).toContain("private fun palette() = MenuScene.Palette.DARK.copy(accent = look.accent and 0xFFFFFF)");
+  expect(read("tests/gesture-display/render/Stand.kt")).toContain("val accent = if (orange) 0xFFEF804E.toInt() else 0xFFFFF1E6.toInt()");
 });
 
 test("a button on an accent background stays visible with accents off", () => {

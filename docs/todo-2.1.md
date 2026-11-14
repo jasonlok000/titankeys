@@ -909,4 +909,10 @@ enders\gesture-line
 - Accented letters in Sym, voice input, a per-app modes page, bar size.
 - Webpage (#58), trailer (#57), the Play build, the #54 wording session, the release check, the launch megathread.
 - Languages are 3.0 (#56).
+- **3.0: back up the whole app** (owner, 2026-11-14: "let's write down to 3.0 to backup the whole app"). Today only words
+  (Settings > Data > Backup) and snippets export and import; settings and switches, shorthand, app lists, calibration and the
+  rest have none. One export and one import for everything, so a reinstall, a new phone or a key change loses nothing.
+- **After the pre-release: the rest of moving off Atlas** (the owner's "Okay" to the Orchestrator's timing): the com.atlas.*
+  package rename (Android turns the keyboard and Accessibility off once on that update), moving X:\Atlas (with this project's
+  memory folder) and renaming the WSL distro atlas-build, on a quiet day with no session running.
 - Julian's Atlas 1.4.0, once released: backlight on touch, I'd context, hold-Alt shortcuts. Evaluate adapting them.

@@ -289,13 +289,43 @@ class Strip(
             render()
         }
 
-    /** The word that the field has selected, shown alone so that it can be saved or forgotten. */
+    /**
+     * The word that the field has selected, shown alone so that it can be saved or forgotten, underlined in the accent until its
+     * menu opens (owner, 2026-11-13: "if the word is highlighted, it should be underlined before going into the word menu. in the
+     * word menu it follows existing rules"). See [drawSelected].
+     */
     var selected: String? = null
         set(value) {
             if (field == value) return
             field = value
             render()
         }
+    private val selectedPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+
+    /**
+     * The selected word's line: the accent, [SELECTED_LINE_DP] dp thick, [SELECTED_LINE_GAP_DP] dp under the baseline, as wide as
+     * the word as drawn. Only while the selected word itself shows: an open menu takes its place, and shows the word in its status
+     * colour with no line, so it never meets Block's strike or the effects; closed again with the word still selected, it's back.
+     */
+    private fun drawSelected(canvas: Canvas) {
+        val view = selectedView
+        val layout = view.layout ?: return
+        if (view.visibility != VISIBLE || view.text.isEmpty()) return
+        val density = resources.displayMetrics.density
+        val left = view.left + view.totalPaddingLeft + layout.getLineLeft(0) - view.scrollX
+        val top = view.top + view.baseline + SELECTED_LINE_GAP_DP * density
+        selectedPaint.color = look.accent
+        canvas.drawRect(left, top, left + layout.getLineWidth(0), top + SELECTED_LINE_DP * density, selectedPaint)
+    }
+
+    /**
+     * How far in the selected word keeps beyond the words' sides: far enough that its line, which can reach lower than the words'
+     * tails, stays [edge] from the curve of the screen's rounded corners too (the bar's corner rule).
+     */
+    private fun selectedInset(): Int {
+        val lineFoot = Math.round(StripFit.baseline(line, wordPixels(), floor)) + (SELECTED_LINE_GAP_DP + SELECTED_LINE_DP) * resources.displayMetrics.density
+        return (sideFor(barHeight - maxOf(wordFoot(), lineFoot)) - side).coerceAtLeast(0)
+    }
 
     /** The newest clip, shown in the place of the words right after a copy, until it is pasted or you type on. */
     var clip: String? = null
@@ -554,8 +584,12 @@ class Strip(
         clipHintText.setTextColor(look.muted)
         fitClipLines(wordPixels() * clipScale)
         selectedView.visibility = if (chosen != null) VISIBLE else GONE
-        // The selected word follows the words' rules too: it shrinks to fit, then loses its end.
-        val selectedFit = if (room > 0 && !chosen.isNullOrEmpty()) StripFit.fit(listOf(chosen), room, wordRoomPadding(), ::measureWord).single() else null
+        // The selected word follows the words' rules too: it shrinks to fit, then loses its end, with its line clear of the corners.
+        val selectedIn = selectedInset()
+        selectedView.setPadding(dp(WORD_PADDING) + selectedIn, selectedView.paddingTop, dp(WORD_PADDING) + selectedIn, selectedView.paddingBottom)
+        val selectedRoom = room - 2 * selectedIn
+        val selectedFit = if (selectedRoom > 0 && !chosen.isNullOrEmpty())
+            StripFit.fit(listOf(chosen), selectedRoom, wordRoomPadding(), ::measureWord).single() else null
         selectedView.text = selectedFit?.text ?: chosen.orEmpty()
         selectedView.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordPixels() * (selectedFit?.scale ?: 1f))
         centreLetters(selectedView, wordPixels())
@@ -738,6 +772,7 @@ class Strip(
     override fun dispatchDraw(canvas: Canvas) {
         super.dispatchDraw(canvas)
         drawLit(canvas)
+        drawSelected(canvas)
         drawMenuWord(canvas)
         drawMenu(canvas)
         drawAutoCapital(canvas)
@@ -1405,6 +1440,9 @@ class Strip(
         /** The guide's light under a word: its thickness, and its gap under the baseline, in dp. */
         private const val LIT_DP = 2f
         private const val LIT_GAP_DP = 3f
+        /** The selected word's line, the same look as the guide's light: its thickness, and its gap under the baseline, in dp. */
+        private const val SELECTED_LINE_DP = 2f
+        private const val SELECTED_LINE_GAP_DP = 3f
         private const val POINT_MILLIS = 650L
         /**
          * The words' size, in sp, which is dp at TitanKeys' fixed scale, the same for all three, so every one reads on a 9 cm

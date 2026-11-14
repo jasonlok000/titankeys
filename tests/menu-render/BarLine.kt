@@ -195,14 +195,27 @@ internal object BarLine {
         look.boxes += Box("the guide's light", top + 2f * look.density, look.edge)
     }
 
-    /** The word the field has selected, alone in the middle, in the words' size and font. */
+    /**
+     * The word the field has selected, alone in the middle, in the words' size and font, and after, underlined in the accent as
+     * Strip.drawSelected draws it: 2 dp thick, 3 dp under the baseline, as wide as the word. The word keeps in from the sides as
+     * Strip.selectedInset has it, so the line clears the corners where it reaches lower than the words' tails.
+     */
     private fun selected(look: Look, g: Graphics2D, word: String) {
-        val room = WIDTH - 2f * look.side
+        val baseline = look.baseline(look.wordPx)
+        val inset = if (look.after)
+            maxOf(0, look.sideFor(BAR - maxOf(baseline + look.wordPx * StripFit.DESCENT, baseline + 5f * look.density)) - look.side) else 0
+        val room = WIDTH - 2f * look.side - 2f * inset
         val fit = StripFit.fit(listOf(word), room, (look.dp(6) + look.dp(2)).toFloat(), { width(bold, look.wordPx, it) }).single()
         val size = look.wordPx * fit.scale
-        val baseline = look.baseline(look.wordPx)
-        text(g, regular, size, fit.text, WIDTH / 2f - width(regular, size, fit.text) / 2, baseline, INK)
+        val wide = width(regular, size, fit.text)
+        val left = WIDTH / 2f - wide / 2
+        text(g, regular, size, fit.text, left, baseline, INK)
         if (fit.scale == 1f) mark(look, "the selected word", baseline, size)
+        if (!look.after) return
+        g.color = ACCENT
+        val top = baseline + 3f * look.density
+        g.fill(Rectangle2D.Float(left, top, wide, 2f * look.density))
+        look.boxes += Box("the selected word's line", top + 2f * look.density, look.edge)
     }
 
     /** The Shift, Alt and Ctrl chips, filled for a held key and an outline for a pushed one, with the hint beside them. */
@@ -514,7 +527,8 @@ internal object BarLine {
                 words(l, g, listOf("psychologically", "the", "photographing"), measured = false)
             },
             State("words-lit", "The guide's lit TitanKeys on the bar") { l, g -> words(l, g, listOf("", "TitanKeys", ""), lit = 1) },
-            State("selected", "A selected word, alone") { l, g -> selected(l, g, "playgrounds") },
+            State("selected", "A selected word, alone, underlined until its menu opens") { l, g -> selected(l, g, "playgrounds") },
+            State("selected-long", "A long selected word, shrunk to fit, its line clear of the corners") { l, g -> selected(l, g, LONG) },
             State("chips-ctrl", "Ctrl held, and its shortcuts") { l, g -> chips(l, g, listOf("Ctrl" to true), SHORTCUTS) },
             State("chips-alt", "Shift and Alt pushed, and a deep symbol") { l, g -> chips(l, g, listOf("Shift" to false, "Alt" to false), "|") },
             State("capital", "A sentence starts: Shift's arrow in the chips' place") { l, g -> capital(l, g) },
@@ -540,6 +554,9 @@ internal object BarLine {
         list += State("menu-lit-o", "Menu: the guide's lit TitanKeys, a favourite, hovering Unfavourite") { l, g ->
             menu(l, g, "TitanKeys", favourite, down, lit = true)
         }
+        // A selected word's line goes as its menu opens, where the word shows in its status colour only, and is back as it closes.
+        list += State("selected-menu", "Menu open on the selected word: its status colour, no line") { l, g -> menu(l, g, "playgrounds", new) }
+        list += State("selected-closed", "The menu closed, the word still selected: its line is back") { l, g -> selected(l, g, "playgrounds") }
         list += State("exact", "Exact typing's bar: Shift locked, Alt once") { l, g -> exact(l, g, false) }
         list += State("exact-more", "Exact typing's bar: the arrows and keys") { l, g -> exact(l, g, true) }
         list += State("band-first", "The Sym panel's band: the first group open") { l, g -> band(l, g, "first") }

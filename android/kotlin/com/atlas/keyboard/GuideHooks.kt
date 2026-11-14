@@ -114,28 +114,6 @@ internal object GuideHooks {
         barSideRequests?.invoke(show)
     }
 
-    /**
-     * The keyboard listens here, so the bar shows only [barWord]'s word, in its middle place, and a hold on it opens that word's
-     * show-only menu: the word menu slide's TitanKeys (owner, 2026-11-13). Null gives the bar its own words back. Only in the
-     * guide's field.
-     */
-    @Volatile var barWordRequests: ((String?) -> Unit)? = null
-
-    fun barWord(word: String?) {
-        barWordRequests?.invoke(word)
-    }
-
-    /**
-     * The keyboard listens here, so the bar underlines the word at [barLit]'s place in the accent, and keeps it under that word's
-     * menu through every step (see [Strip.lit]): the word menu slide's TitanKeys, the whole slide (owner, 2026-11-13: "keep it
-     * highlighted"). Null clears it. Only in the guide's field: anywhere else the bar is never lit.
-     */
-    @Volatile var barLitRequests: ((Int?) -> Unit)? = null
-
-    fun barLit(index: Int?) {
-        barLitRequests?.invoke(index)
-    }
-
     /** The keyboard listens here, so the guide points at a word by itself, wherever it sits on the bar. */
     @Volatile var stripPointWords: ((String?) -> Unit)? = null
 
@@ -152,9 +130,6 @@ internal object GuideHooks {
     fun closeMenu() {
         menuCloses?.invoke()
     }
-
-    /** How many words the bar shows now, or -1 outside the guide's field. The keyboard sets it. */
-    @Volatile var barCount: (() -> Int)? = null
 
     /** Where the right word is on the bar after a miss, as the keyboard ranks the words, for the guide to point at. */
     @Volatile var rightPlace = 1

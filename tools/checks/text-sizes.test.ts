@@ -53,6 +53,9 @@ test("everything with text in the bar sits on one line, the middle of the bar an
   expect(strip).toContain("private val hint = LineText(context)");
   expect(strip).toContain("private val clipText = LineText(context)");
   expect(strip).toContain("onLine(hint, modifierRow.top + hint.top)");
+  // Nothing in the bar is moved to another's baseline: the modifier row lined the chips up with its hint's and cut them off the
+  // screen on build #13, and the bar's own places all put their text on the line themselves.
+  expect(strip.match(/isBaselineAligned = false/g)?.length).toBe(2);
   // The chips and the automatic capital's arrow, the pill and the icons, all round the line.
   expect(strip).toContain("return StripFit.boxTopPx(line, middle, height, floor).toFloat() to height");
   expect(strip).toContain("menuBox.set(pill.first, line - pillHeight / 2, pill.second, line + pillHeight / 2)");
@@ -62,7 +65,14 @@ test("everything with text in the bar sits on one line, the middle of the bar an
   expect(exact).toContain("private val line = density * StripFit.LINE_DP");
   expect(exact).toContain("private fun label(text: String) = LineText(context)");
   const sym = read("SymPanel.kt");
-  expect(sym).toContain("private fun bandLine() = dp(BAND_HEIGHT) - StripFit.LINE_ABOVE_DP * resources.displayMetrics.density");
+  // The band has the bar's line only at the screen's edge, with the bar hidden; with the bar under the panel, its own middle.
+  expect(sym).toContain("private fun bandLine() = if (below <= dp(2)) dp(BAND_HEIGHT) - StripFit.LINE_ABOVE_DP * resources.displayMetrics.density");
+  expect(sym).toContain("else dp(BAND_HEIGHT) / 2f");
+  // The clip offer with its hint, two lines, moves together as near the line as fits (owner, 2026-11-13: "the hint for that
+  // should also follow the visible border thing"), and the guide's ghost finger is on the word's line.
+  expect(strip).toContain("val shift = StripFit.pairShiftPx(clipBaseline - clipText.textSize * StripFit.X_HEIGHT, hintBaseline, top + high, top + low,");
+  expect(strip).toContain("val radius = minOf(dp(9).toFloat(), floor - line)");
+  expect(strip).toContain("canvas.clipRect(0f, 0f, width.toFloat(), floor)");
   for (const view of ["private val preview = LineText(context)", "private val clipLine = LineText(context)",
     "private fun categoryTab(sample: String, name: String, index: Int) = LineText(context)"]) expect(sym).toContain(view);
 });

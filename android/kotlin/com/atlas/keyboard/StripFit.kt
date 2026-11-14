@@ -95,6 +95,23 @@ internal object StripFit {
     fun boxTopPx(line: Float, middle: Float, height: Float, floor: Float) =
         minOf(Math.round(line - middle), kotlin.math.floor(floor - height).toInt())
 
+    /** How high Inter's tallest letters reach over the baseline, the dots of i and j, as a part of its size: 1572 of 2048. */
+    const val TALL = 1572f / 2048f
+
+    /**
+     * Two lines that stack and can't both sit on the line, the clip offer and its hint: how far to move them, in px, so the middle
+     * of their small letters, from the first line's x-height top ([firstXTop]) to the second's baseline ([secondBaseline]), is on
+     * the [line], as nearly as fits. Their tallest letters ([highest]) stay under [ceiling], and their tails ([lowest]) over
+     * [floor], which wins if both can't (owner, 2026-11-13: "the hint for that should also follow the visible border thing. not the
+     * old mathematical center").
+     */
+    fun pairShift(firstXTop: Float, secondBaseline: Float, highest: Float, lowest: Float, line: Float, ceiling: Float, floor: Float) =
+        (line - (firstXTop + secondBaseline) / 2).coerceAtLeast(ceiling - highest).coerceAtMost(floor - lowest)
+
+    /** [pairShift] in whole px, for a view's translation: the nearest, but never taking the tails under [floor]. */
+    fun pairShiftPx(firstXTop: Float, secondBaseline: Float, highest: Float, lowest: Float, line: Float, ceiling: Float, floor: Float) =
+        minOf(Math.round(pairShift(firstXTop, secondBaseline, highest, lowest, line, ceiling, floor)), kotlin.math.floor(floor - lowest).toInt())
+
     /**
      * The tallest box that fits round the [line], its middle on it, in a bar [bar] tall and at least [inside] within it: the word
      * menu's pill, and the boxes of Exact typing's bar.

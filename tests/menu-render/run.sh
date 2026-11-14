@@ -28,5 +28,5 @@ done
   "$keyboard/MenuKeys.kt" "$keyboard/StripFit.kt" "$keyboard/MenuMotion.kt" "$keyboard/Layout.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" \
   "$keyboard/SteadyKey.kt" "$keyboard/MenuPath.kt" "$keyboard/MenuScene.kt" "$keyboard/QuickSetting.kt" "$keyboard/FixedScale.kt" "$keyboard/Accent.kt" \
   "$keyboard/Corners.kt" tests/word-menu/MenuBar.kt tests/word-menu/QuickSettingsPage.kt tests/menu-render/AwtMenuCanvas.kt \
-  tests/menu-render/MenuRender.kt tests/menu-render/BarLine.kt
+  tests/menu-render/MenuRender.kt tests/menu-render/BarLine.kt tests/menu-render/BarFrames.kt tests/menu-render/AndroidRow.kt
 java -Djava.awt.headless=true -cp "$work:$stdlib:$ANDROID_HOME/platforms/android-36/android.jar" com.atlas.keyboard.MenuRenderKt "$out" android/src/main/res/drawable android/src/main/res/values/strings.xml android/src/main/res/font

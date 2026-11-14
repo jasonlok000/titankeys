@@ -477,6 +477,29 @@ private fun theEffects() {
         same(heard.last(), second, "and the second press's haptic plays")
         check(twice.book == null && twice.parts.isEmpty()) { "and it all settles" }
     }
+    // One anchor and one scale (owner, 2026-11-13: "the book seems to be much higher up than the heart animation"): at every Bar
+    // text size, on the word where it sits on the line, Save's and Unsave's book stand where Favourite's and Unfavourite's heart
+    // has its tip, over the bar by the book's clearance, and the bar's height in the scene's dp is the strip's.
+    for (factor in listOf(1f, 1.2f, 1.4f)) {
+        val density = 1.5625f * factor
+        val baseline = StripFit.baseline(StripFit.LINE_DP * 1.5625f, MenuScene.FONT_DP * density) / density
+        fun played(button: MenuKeys.Button, from: MenuKeys.Step, millis: Int) =
+            MenuScene("whatever", MenuScene.WordLayout.of("whatever") { it.length * 11f }, 160f, baseline, from).apply {
+                bar = 88f / density
+                press(button)
+                repeat(millis * 120 / 1000) { step(1 / 120f) }
+            }
+        val stage = played(MenuKeys.Button.Save, MenuKeys.Step.New, 0).stage()
+        for ((button, from) in listOf(MenuKeys.Button.Save to MenuKeys.Step.New, MenuKeys.Button.Unsave to MenuKeys.Step.Saved)) {
+            val bottom = played(button, from, 300).bookBox()!![3]
+            check(kotlin.math.abs(bottom - stage) <= 1f) { "At $factor, $button's book stands on the stage, $stage dp, not at $bottom" }
+        }
+        for ((button, from) in listOf(MenuKeys.Button.Favourite to MenuKeys.Step.Saved, MenuKeys.Button.Unfavourite to MenuKeys.Step.Favourite)) {
+            same(played(button, from, 60).heartFoot(), stage, "At $factor, $button's heart has its tip on the stage")
+        }
+        check(stage <= -MenuScene.CLEAR - MenuScene.SETTLE_ROOM + .001f) { "At $factor the stage keeps the book over the bar: $stage" }
+        check(stage >= baseline - MenuScene.TALL * MenuScene.FONT_DP - 60f) { "At $factor the stage is over the word, not far off: $stage" }
+    }
     // The tokens are v4's.
     same(listOf(MenuScene.PREVIEW, MenuScene.SQUASH, MenuScene.FADE, MenuScene.SETTLE, MenuScene.EXIT, MenuScene.REDUCED),
         listOf(170f, 70f, 220f, 520f, 380f, 200f), "v4's timings")

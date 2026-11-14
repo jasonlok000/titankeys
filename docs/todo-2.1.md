@@ -382,6 +382,16 @@ enders\gesture-line
         today), the middle row 3 dp up like the arrow, Edges 0.3; the bottom row 8.0 dp over the edge (8.3 today) and its lowest
         point 6.2 dp (4.0 today). Options 1 and 3 are taller but sit 6.6 and 5 dp up. Picked: option 6 ("do 6 because its the
         tallest while still beig center aligned"). Sent to C.
+  - **Merged: W's clip and arrow** (claude/clip-cap 1e6b3f8, merge 8712c9c): a clip alone moves its own view onto the line and
+    clipView no longer clips its children, so nothing of it is cut; the icon's drawing middle on the clip's capitals' middle,
+    alone and with its hint (the pair's fit unchanged); the arrow 1/8 of the words' size over the line (2.5, 3, 3.5 dp). The
+    render draws each clip clipped and unclipped and fails on any difference; it catches #19's cut at every size (168 to 514 px of
+    ink lost). Reviewed (X:\Atlas\.claude\worktrees\word-menu-fix-25c785\.dev\renders\clip-cap-w).
+  - **Merged: C's swipe trail option 6** (b8dfa70, merge 3e7ed6d): swipeY per the brief, in TitanKeys' fixed dp, kept 4.5 dp
+    from the top and over the floor; tests/gesture-line traces each row and both edges. Reviewed against the brief. All bar checks
+    pass on the merge (gesture-line, gesture-display, strip-fit, idle, word-menu, guide, menu-render; bun but the two ink ones).
+  - **Build #20 running** from 3e7ed6d: V's end-screen Back, W's clip and arrow, C's trail. Then the phone: a clip alone (needs
+    a copy: only in TitanKeys' own field, and the owner's clipboard restored), the arrow beside words, the trail (owner's hands).
     - **Owner on #19's swipe trail: "Is the swipe supposed to be fixed now? I think it looks really cramped".** It is C's
       2aa9486 (the owner's "compress slide animation ... center aligned properly with the border and like doesn't hit the bottom
       edge"). Measured: the rows went from 14 to 8.7 dp apart (the trail 26 dp tall instead of 42), and the bottom row's middle

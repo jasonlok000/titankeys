@@ -392,6 +392,21 @@ enders\gesture-line
     pass on the merge (gesture-line, gesture-display, strip-fit, idle, word-menu, guide, menu-render; bun but the two ink ones).
   - **Build #20 running** from 3e7ed6d: V's end-screen Back, W's clip and arrow, C's trail. Then the phone: a clip alone (needs
     a copy: only in TitanKeys' own field, and the owner's clipboard restored), the arrow beside words, the trail (owner's hands).
+  - **Left before the pre-release (asked by the owner, 2026-11-14: "Nth on the to do for u anymore?"):** every fix the owner
+    asked for is in #20; no worker has open 2.1 work; 39 of the bug hunt's 41 are merged (#40 battery and #41 leaks wait for
+    after the pre-release).
+    1. Orchestrator: #20's phone check (the arrow, a clip alone, V's Back again).
+    2. Owner, hands only: the swipe trail, triple Space's selection gap, the held delete's orange, the word menu's effects and
+       the hover after a press, Smart Launcher's square key and the real Sym key (the Orchestrator reads TitanKeysSym meanwhile),
+       Setup's two links, haptics.
+    3. Owner's OK on the Back disclosure's new line: "in the Smart Launcher search field, where the launcher would take your keys
+       first, so TitanKeys types there as in any other app;".
+    4. Orchestrator: the release variant built without the owner's key (compiles, no debug code, against
+       docs/release-audit-2.1.md), and the release notes' final pass for this round (the end screen's Back, the clip, the arrow,
+       the trail).
+    5. Owner: tools/release.sh with their own key, the GitHub pre-release, 3 days of daily use.
+    Later: docs/play/accessibility.md still describes the old launcher rule (hold for symbols, double-press lock): fix it with the
+    Play listing.
     - **Owner on #19's swipe trail: "Is the swipe supposed to be fixed now? I think it looks really cramped".** It is C's
       2aa9486 (the owner's "compress slide animation ... center aligned properly with the border and like doesn't hit the bottom
       edge"). Measured: the rows went from 14 to 8.7 dp apart (the trail 26 dp tall instead of 42), and the bottom row's middle

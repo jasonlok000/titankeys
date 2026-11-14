@@ -54,6 +54,20 @@ object MenuKeys {
         return rise
     }
 
+    /**
+     * Whether a letter key or Backspace picks the open menu's button. Never while a panel is open or Alt is on: the Sym panel, the
+     * emoji, the clipboard and quick settings take the keys and hide the bar, and Alt types the key's symbol, so a press there
+     * must never change a word nobody can see (bug hunt #3: Sym, then I, silently saved the word).
+     */
+    fun takesKeys(open: Boolean, panelOrAlt: Boolean) = open && !panelOrAlt
+
+    /**
+     * Whether the open menu closes now: as a panel opens or Alt comes on, which take its keys (bug hunt #3), and as the keyboard
+     * hides, so that it never eats the first key after it comes back (bug hunt #6). The guide's show-only menu stays for a panel or
+     * Alt, which its slide doesn't use, but not past a hide.
+     */
+    fun closes(panelOrAlt: Boolean, hidden: Boolean, guideShowOnly: Boolean) = hidden || panelOrAlt && !guideShowOnly
+
     /** Where the word ends on the right, [gap] pixels left of I's column. */
     fun wordRight(width: Float, gap: Float, alignment: KeyAlignment = KeyAlignment.current) = slot(width, UP, alignment).first - gap
 
@@ -98,13 +112,19 @@ object MenuKeys {
     }
 
     /**
-     * Whether [word] has a ladder, so its menu opens: 2 to 24 letters, with apostrophes, as the word lists hold them. One-letter
-     * words, symbols, emoji and numbers open no menu at all (owner, 2026-11-13).
+     * Whether [word] has a ladder, so its menu opens: only a word the word lists can hold, as SwipeWords.normalise has them, 2 to
+     * 24 letters a to z with apostrophes between them, in any case. One-letter words, symbols, emoji and numbers open no menu at
+     * all (owner, 2026-11-13), and neither do accented words ("café", "José") or a word that starts or ends with an apostrophe
+     * ("dogs'", "'til"): the lists can't save, block or find them, so their menu showed the wrong rung and its buttons failed (bug
+     * hunt #12).
      */
     fun opens(word: String): Boolean {
-        val letters = word.count(Char::isLetter)
-        return letters in 2..24 && word.all { it.isLetter() || it == '\'' || it == '’' }
+        val value = word.lowercase(java.util.Locale.ROOT).replace('’', '\'')
+        return value.replace("'", "").length in 2..24 && value.matches(STORED)
     }
+
+    /** The words the word lists hold: SwipeWords.normalise's rule, which tests/word-menu keeps the same. */
+    val STORED = Regex("[a-z]+('[a-z]+)*")
 
     /**
      * The ladder itself, the only place it lives: the keyboard, the guide and the checks all use it.

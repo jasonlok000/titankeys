@@ -58,6 +58,21 @@ class SteadyKey(private val keyAt: (Float, Float) -> String) {
         releasedAt = time
     }
 
+    /**
+     * The key that picked a word menu button was let go: the hover ends with the press (owner, 2026-11-13: "When I press a button
+     * and let go it still registers as that I'm hovering"), and comes back when the touchpad shows the finger again. The quick
+     * settings page keeps its mark through a toggle instead: see [release]. Returns true if [key] changed.
+     */
+    fun releaseAndClear(code: Int): Boolean {
+        keysDown.remove(code)
+        liftedAt = null
+        pressLift = false
+        releasedAt = null
+        if (key.isEmpty()) return false
+        key = ""
+        return true
+    }
+
     /** No key is down any more, as when the keyboard hides. */
     fun keysReleased() = keysDown.clear()
 

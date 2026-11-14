@@ -1520,8 +1520,9 @@ class AtlasIme : InputMethodService() {
         inputRoot?.setPadding(0, 0, 0, 0)
         // Android's hide also turned the status off.
         hold.hidden()
-        // A panel that nobody can see must not take the next key.
+        // A panel that nobody can see must not take the next key, nor a word menu.
         closePanel()
+        if (MenuKeys.closes(altOrPanel, hidden = true, guideShowOnly = shownGuideWord() != null)) closeMenu()
         // A delayed hide from the previous app arrives just after this field starts. A later hide, or one
         // after you have typed, is the app's own, such as a tap outside the field or a Done key.
         cancelShowStrip()
@@ -2056,8 +2057,8 @@ class AtlasIme : InputMethodService() {
      * sentence start; a word on the bar still has its typed letters before the cursor. See [WordCase].
      */
     private fun keptCase(held: HeldWord): String {
-        val before = currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH + held.typed.length, 0)?.toString()
-        return WordCase.kept(held.word, before?.dropLast(held.typed.length), modifiers.shift != Modifiers.Level.Off)
+        val text = currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH + held.word.length + held.typed.length + 2, 0)
+        return WordCase.kept(held.word, WordCase.before(text, held.word, held.typed.length), modifiers.shift != Modifiers.Level.Off)
     }
 
     /**
@@ -2077,7 +2078,7 @@ class AtlasIme : InputMethodService() {
     /** Unblock, from blocked: the word comes off Blocked words, back to not saved, and autocorrect may fix to it again. */
     private fun unblockWord(held: HeldWord) {
         pendingWords[held.word.lowercase()] = MenuKeys.Step.New
-        SwipeTyping.get(this).setWordBlocked(held.word, false) { error ->
+        SwipeTyping.get(this).unblockWord(held.word) { error ->
             if (error != null) failed(held, "unblock", error) else settled(held.word, MenuKeys.Step.New)
         }
         composer.unhide(held.word)
@@ -3191,7 +3192,8 @@ class AtlasIme : InputMethodService() {
         // With the word menu open, the top two rows of letters pick its buttons, as the keys pick symbols on the Sym panel, and
         // Backspace, under P, goes back.
         if (keyCode == menuKey && event.repeatCount > 0) return true
-        if (!event.isSystem && menuOpen && (keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z || keyCode == KeyEvent.KEYCODE_DEL)) {
+        if (!event.isSystem && MenuKeys.takesKeys(menuOpen, altOrPanel) && (keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z ||
+                keyCode == KeyEvent.KEYCODE_DEL)) {
             val pressed = if (keyCode == KeyEvent.KEYCODE_DEL) Layout.BACKSPACE else ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString()
             val action = menuAction(pressed)
             if (action != null) {
@@ -3263,12 +3265,14 @@ class AtlasIme : InputMethodService() {
             panelPress = -1
         }
         val panelLast = !panelRelease && panelHover.keyUp(keyCode, event.eventTime) && panelOpen
-        // A key that picked a word menu button keeps the hover when it is let go: the finger is still on it, and its pill now
-        // names the button's next step (owner, 2026-11-12). The touchpad's lift for the press mostly comes after the key, and is
-        // the press's own: the hover goes only when the touchpad shows the finger on another key, or lifting after that. See
-        // [SteadyKey.press].
+        // A key that picked a word menu button shows the button's next step in its pill while it's down, and when it's let go the
+        // hover ends with the press (owner, 2026-11-13: "When I press a button and let go it still registers as that I'm
+        // hovering"): it comes back when the touchpad shows the finger again. See [SteadyKey.releaseAndClear].
         val menuRelease = keyCode == menuKey && menuOpen
-        if (menuRelease) barHover.release(keyCode, event.eventTime)
+        if (menuRelease && barHover.releaseAndClear(keyCode)) {
+            restingKey = barHover.key
+            markMenu(restingKey, quiet = true)
+        }
         val barLast = !menuRelease && barHover.keyUp(keyCode, event.eventTime) && !panelOpen
         if (panelLast || barLast) {
             main.removeCallbacks(expireHover)
@@ -3656,6 +3660,8 @@ class AtlasIme : InputMethodService() {
         else if (unlocked(modifiers.shift, shownShift) || unlocked(modifiers.alt, shownAlt)) haptics.play(Haptic.ModifierUnlocked)
         shownShift = modifiers.shift
         shownAlt = modifiers.alt
+        // A panel or Alt takes the menu's keys, so the menu closes rather than be pressed unseen.
+        if (menuOpen && MenuKeys.closes(altOrPanel, hidden = false, guideShowOnly = shownGuideWord() != null)) closeMenu()
         strip?.visibility = if (panelOpen) View.GONE else View.VISIBLE
         updateExactBar()
         showModifierBar()

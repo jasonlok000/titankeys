@@ -88,6 +88,8 @@ class SymPanel(
      * shows under the panel, about nothing when it's hidden. Only a band at the edge has the bar's line: see [bandLine].
      */
     private var below = 0
+    /** The three rows of key cells, top to bottom: [spaceRows] sets their height and where they sit. */
+    private val keyRows = ArrayList<LinearLayout>()
     private val windowAt = IntArray(2)
     private var shownSamples = emptyList<String>()
     private var navigationInset = 0
@@ -217,7 +219,7 @@ class SymPanel(
                 }
                 addView(cells[key] ?: Space(context), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
             }
-        }, LayoutParams(LayoutParams.MATCH_PARENT, dp(ROW_HEIGHT)))
+        }.also(keyRows::add), LayoutParams(LayoutParams.MATCH_PARENT, dp(ROW_HEIGHT)))
         // The ten columns sit over the real keys, each from the middle of one gap to the middle of the next: see onMeasure.
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         band.addView(clipLine, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
@@ -522,6 +524,7 @@ class SymPanel(
         val tails = dp(BAND_HEIGHT) - line - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, BAND_TEXT_LARGEST_ANY,
             resources.displayMetrics) * (StripFit.X_HEIGHT / 2 + StripFit.DESCENT)
         bandInset = corners.clearInset(navigationInset + tails, edge())
+        spaceRows()
         categories.setPadding(bandInset, 0, bandInset, 0)
         preview.setPadding(bandInset + dp(8), 0, bandInset + dp(8), 0)
         clipLine.setPadding(bandInset + dp(8), 0, bandInset + dp(8), 0)
@@ -696,6 +699,28 @@ class SymPanel(
      */
     private fun bandLine() = if (below <= dp(2)) dp(BAND_HEIGHT) - StripFit.LINE_ABOVE_DP * resources.displayMetrics.density
         else dp(BAND_HEIGHT) / 2f
+
+    /**
+     * The three key rows and the band's text, evenly spaced (owner, 2026-11-13: the band moved onto the bar's line and the rows
+     * didn't, so it sat about 55 px under the last row while the rows were 72 apart). The panel keeps its height, the top row its
+     * middle and the band its text where they are, on every page; the rows between come closer, their middles evenly apart, and
+     * the room that frees is under the last row.
+     */
+    private fun spaceRows() {
+        val total = 3 * dp(ROW_HEIGHT)
+        val top = dp(ROW_HEIGHT) / 2f
+        val step = (total + bandLine() - top) / 3
+        val height = Math.round(step)
+        val padTop = Math.round(top - height / 2f)
+        if (grid.paddingTop != padTop || grid.paddingBottom != total - padTop - 3 * height)
+            grid.setPadding(grid.paddingLeft, padTop, grid.paddingRight, total - padTop - 3 * height)
+        for (row in keyRows) (row.layoutParams as LayoutParams).let { params ->
+            if (params.height != height) {
+                params.height = height
+                row.layoutParams = params
+            }
+        }
+    }
 
     /** Where the panel sits in its window decides the band's line: it lays the band out again when the bar under it comes or goes. */
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {

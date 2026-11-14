@@ -53,7 +53,7 @@ internal object BarLine {
     enum class Era { Before, After }
 
     private val frc = FontRenderContext(null, true, true)
-    private lateinit var regular: Font
+    internal lateinit var regular: Font
     private lateinit var medium: Font
     private lateinit var bold: Font
     private lateinit var drawables: File
@@ -150,6 +150,7 @@ internal object BarLine {
         BarFrames.build13(out).forEach(::println)
         pairs.forEach(::println)
         BarFrames.effects(out)
+        BarFrames.panel(out).forEach(::println)
         kotlin.check(problems.isEmpty()) { "The bar's line breaks:\n" + problems.joinToString("\n") }
         println("Every bar state at every size: its text on the line to half a pixel, its boxes inside the bar, nothing within 4 px of the screen's outline")
     }
@@ -173,7 +174,7 @@ internal object BarLine {
         return image
     }
 
-    private fun text(g: Graphics2D, font: Font, size: Float, text: String, x: Float, baseline: Float, colour: Color) {
+    internal fun text(g: Graphics2D, font: Font, size: Float, text: String, x: Float, baseline: Float, colour: Color) {
         g.color = colour
         g.fill(font.deriveFont(size).createGlyphVector(frc, text).getOutline(x, baseline))
     }
@@ -315,11 +316,14 @@ internal object BarLine {
     /** Shift's arrow for an automatic capital, where Shift's chip would be, beside the words. */
     private fun capital(look: Look, g: Graphics2D) {
         words(look, g, listOf("The", "I", "This"))
-        val height = look.chipPx * (1984 + 494) / 2048f + 2 * look.dp(3)
+        // As Strip: a 13 dp chip's height at the bar's density (Shift's chip before FixedScale), its middle on the line; before,
+        // the chips' 14 dp, centred on the bar.
+        val size = (if (look.after) 13f else 14f) * look.density
+        val height = size * (1984 + 494) / 2048f + 2 * look.dp(3)
         val arrow = height - 2 * look.dp(4)
         val wide = arrow + 2 * look.dp(5)
         val left = look.chipSide.toFloat()
-        val top = if (look.after) look.chipTop.toFloat() else (BAR - height) / 2
+        val top = if (look.after) minOf(look.line - height / 2, look.floor - height / 2 - arrow / 2 - look.dp(1)) else (BAR - height) / 2
         val x = left + wide / 2 - arrow / 2
         val y = top + height / 2 - arrow / 2
         val path = Path2D.Float()
@@ -335,6 +339,7 @@ internal object BarLine {
         g.stroke = BasicStroke(1.3f * look.density, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
         g.draw(path)
         look.boxes += Box("the automatic capital's arrow", y + arrow, look.edge)
+        if (look.after) look.marks += Mark("the automatic capital's arrow", y + arrow / 2, look.line)
     }
 
     /** A notice: the Teams egg's line, 18 dp, in the middle, on its own letters' line as centreLetters puts it. */
@@ -571,7 +576,7 @@ internal object BarLine {
      * The Sym panel's band at the screen's bottom edge: the symbol groups with the first or last one washed, the clipboard's two
      * groups, or the quick settings' title. After, its text sits on the line, 17 dp over the screen's edge.
      */
-    private fun band(look: Look, g: Graphics2D, kind: String, overBar: Boolean = false) {
+    internal fun band(look: Look, g: Graphics2D, kind: String, overBar: Boolean = false) {
         val band = Math.round(32 * UNIT)
         // At the screen's edge with the bar hidden, or on top of the bar, which shows under the panel.
         val at = if (overBar) -band else BAR - band

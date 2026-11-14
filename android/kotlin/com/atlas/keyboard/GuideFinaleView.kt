@@ -45,6 +45,14 @@ internal class GuideFinaleView(context: Context) : View(context) {
         invalidate()
     }
 
+    /** Shows its last frame at once, with no beats: the end as it was left, opened again. */
+    fun settle() {
+        start = GuideMotion.now() - (GuideFinale.total(lines) * ValueAnimator.getDurationScale()).toLong() - 1
+        beatsDone = GuideFinale.beats(lines).size
+        overDone = false
+        invalidate()
+    }
+
     fun stop() {
         start = -1
         invalidate()

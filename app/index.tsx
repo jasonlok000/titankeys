@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Canvas, CanvasIcon, CanvasText, Screen, Stack, Text, navigate, replace, useSnapshot } from "ink";
+import { Canvas, CanvasIcon, CanvasText, Screen, Stack, Text, back, navigate, replace, useSnapshot } from "ink";
 import { arrowOutward } from "ink/icons";
 import { cancelPlayground, markNotesSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
 import { INK, useAccent } from "../lib/brand";
@@ -51,9 +51,10 @@ function GuideStart() {
 
 /**
  * The front page is the playground, a native screen over this one: the guide's look with no steps, to type and swipe freely.
- * Its Guide and Settings buttons come back here to open those pages.
+ * Its Guide and Settings buttons come back here to open those pages. The guide's end opens it as /end/play (`fromEnd`): its Back
+ * then goes back, to the /end page under it, which opens the end again (owner, 2026-11-13).
  */
-function FrontPage() {
+export function FrontPage({ fromEnd = false }: { fromEnd?: boolean }) {
   useEffect(() => {
     let here = true;
     // Set as a playground button moves to its page, so that the app's window coming to the front then opens nothing.
@@ -71,10 +72,12 @@ function FrontPage() {
         else if (action === "guide") navigate("/settings/guide");
         // The playground closed from its setup slide, so this page shows setup again.
         else if (action === "setup") void state.refresh();
+        // The end's playground went back: to the end again, by the /end page under this one.
+        else if (action === "back") back();
         // Something else closed it, perhaps while this window was already in front. A link into the app closes it too, so
         // this waits a moment for such a link to move to its own page first.
         else setTimeout(() => { if (here && !leaving) open(); }, REOPEN_DELAY_MILLIS);
-      });
+      }, fromEnd);
     };
     open();
     const stopWindow = onAppWindow(() => { if (here && !leaving) open(); });

@@ -1069,8 +1069,12 @@ class GuideActivity : Activity() {
             GuideHooks.lessons = flow.step.lessons
             GuideHooks.barSides(flow.step.sides)
         }
+        enterWhenBack?.let(::enter)
         resumeTimers()
     }
+
+    /** The slide to enter once the guide is in sight again, when its change landed while it wasn't. See [enter]. */
+    private var enterWhenBack: GuideStep? = null
 
     /** When the guide last went out of sight, for the clown hunt's clock to stand still meanwhile, or -1. */
     private var pausedAt = -1L
@@ -2049,6 +2053,13 @@ class GuideActivity : Activity() {
     }
 
     private fun enter(step: GuideStep) {
+        // A slide change that lands after you left waits for you to come back (bug hunt 2.1, #31): set up away from the guide,
+        // the paste slide's clip went into your own clipboard history, as the keyboard no longer served the guide's field.
+        if (!visible) {
+            enterWhenBack = step
+            return
+        }
+        enterWhenBack = null
         heldKeys.clear()
         // A finger the touchpad last saw down, on the slide before, never holds back this slide's help: the next trace says again.
         fingerDown = false

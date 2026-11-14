@@ -342,6 +342,7 @@ fun main() {
     aPanelMovesNothing()
     nothingPlaysAwayFromTheGuide()
     anAbandonedAccessibilityStepLetsGo()
+    aSlideWaitsForYouToComeBack()
     // Drawings of the slides in the new layout, to look at without a phone. See SlideRenders.kt.
     System.getenv("SLIDES_PNG")?.let { drawSlides(it, NEW_LAYOUT + GuideChapter.End) }
     System.getenv("FRONT_PNG")?.let { drawFrontPage(it) }
@@ -389,6 +390,19 @@ private fun anAbandonedAccessibilityStepLetsGo() {
     same(body("override fun onDestroy()").contains("if (isFinishing) awaitingAccessibility = false"), true, "and when the guide closes")
     val sets = Regex("""awaitingAccessibility = (?!false)""").findAll(guide).count()
     same(sets, 1, "Only opening the Accessibility page starts the wait")
+}
+
+/**
+ * A slide change that lands after you left the guide waits for you to come back (bug hunt 2.1, #31: entered away from the guide, the
+ * paste slide put its clip in the user's own clipboard history, as the keyboard no longer served the guide's field).
+ */
+private fun aSlideWaitsForYouToComeBack() {
+    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val enter = guide.substring(guide.indexOf("private fun enter(step: GuideStep) {")).substringBefore("heldKeys.clear()")
+    same(enter.contains("if (!visible) {") && enter.contains("enterWhenBack = step"), true, "Out of sight, a slide waits")
+    val resume = guide.substring(guide.indexOf("override fun onResume()")).substringBefore("\n    }\n")
+    same(resume.contains("enterWhenBack?.let(::enter)"), true, "and enters as the guide comes back")
+    same(resume.indexOf("enterWhenBack?.let(::enter)") < resume.indexOf("resumeTimers()"), true, "before its timers start again")
 }
 
 /** The Titan 2 Elite's column, in px: the screen 1200 tall, the status bar 124, the keyboard's own bar 90. */

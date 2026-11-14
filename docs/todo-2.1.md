@@ -432,6 +432,19 @@ enders\gesture-line
       signs with tools/release.sh in ~/build/tk-overnight (it sources signing/credentials.env itself; nothing in signing/ is
       opened), checks the APK and installs it beside TitanKeys Debug. The owner turns it on, tests it, publishes the
       pre-release and daily-drives it.
+    - **Build #22 (5823d424, from cae21c2) passed every check, installed 01:00.** Setup's Sym and fn steps not pressed on the
+      phone: it was locked in pocket mode (never unlocked); the page they open now was opened by adb without a crash. The
+      owner presses both first thing.
+    - **Signed (01:03):** tools/release.sh in ~/build/tk-overnight at cae21c2 (with ~/atlas-env.sh loaded; cargo isn't on a plain
+      shell's PATH): dist/titankeys-keyboard-2.1.0.apk, 115,991,021 bytes, sha256 78d7d0c56a18..., copy in
+      ~/tk-install/release-2.1.0. Checked: com.titankeys 2.1.0 (57), label TitanKeys Keyboard, target 36, not debuggable, no
+      com.titankeys.debug actions, no InkLightSdkReceiver, the six permissions. Installed beside TitanKeys Debug (0 crashes);
+      the keyboard is still Debug, Accessibility untouched.
+      - **Open, for the owner:** the signer is "CN=Atlas Debug" (SHA-256 0fafb1ef...), the key in tk-overnight/signing that
+        every local build uses, the debug ones and Atlas 1.2.0 too. Fine if 2.0.0 was published with it; if not, 2.0 users
+        can't update and the pre-release must be signed with the real key. Checking needs titankeys-2.0.0.apk (113 MB) from the
+        owner's GitHub release: not downloaded without the owner's OK. And GitHub already has a "TitanKeys 2.1.0" pre-release
+        (v2.1.0, 2026-11-11): publishing needs a new tag or that release's APK replaced.
     - **Next to discuss with the owner (not started):** languages (3.0, #56); and swipes joined by accident when one ends at
       the top row and the next starts at the top row (the owner: "investigate if there's a way to reduce accidentally joining
       two swipes when they end at the top and starts again at the top").

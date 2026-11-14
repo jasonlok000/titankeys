@@ -4541,7 +4541,6 @@ class GuideActivity : Activity() {
         }, WIPE_MILLIS)
     }
 
-    /** Leaves at any time. The guide remembers where you stopped, and opens there from the guide page. */
     /**
      * Opens [page] of the app from the end screen (owner, 2026-11-13: "When going back from the boring guide triggered from the end
      * screen it should go back to the end screen. Applies to everything else for end screen."). The app's own screen can't open
@@ -4568,6 +4567,7 @@ class GuideActivity : Activity() {
         enter(flow.step)
     }
 
+    /** Leaves at any time. The guide remembers where you stopped, and opens there from the guide page. */
     private fun leave() {
         // The playground's setup slide closes to the app's setup page, which waits for a touch to start again.
         if (playground && settingUp) leavePlayground(PLAYGROUND_SETUP) else finish()

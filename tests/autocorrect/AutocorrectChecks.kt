@@ -2523,6 +2523,72 @@ private fun favourites() {
     same(far.word, "car", "A favourite that fits clearly worse stays behind")
 }
 
+/** The typing findings of docs/bug-hunt-2.1.md, each as it was found: they failed before their fixes. */
+private fun bugHunt(world: Realistic) {
+    val url = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI, 0)
+
+    // #5: in an address bar, Space after a swiped or picked word gave two spaces. The word puts its space, and Space keeps it.
+    same(Typist(world, field = url).swipe("weather").type(" ").text, "weather ", "#5: Space after a swiped word in an address bar adds none")
+    same(Typist(world).swipe("weather").type(" ").text, "weather ", "#5: as in any other field")
+    Typist(world, field = url).also { it.words.completions = listOf("weather") }.type("wea").also { typist ->
+        val at = typist.bar.indexOf("weather")
+        must(at >= 0, "#5: the bar offers \"weather\" for \"wea\" in an address bar, not ${typist.bar}")
+        same(typist.choose(at).type(" ").text, "weather ", "#5: Space after a picked word in an address bar adds none")
+    }
+    same(Typist(world, field = url).type("ab  ").text, "ab  ", "#5: two typed spaces stay two in an address bar, with no full stop")
+
+    // #8: with Typos or Missing apostrophes off, the second look made those fixes anyway.
+    fun typed(text: String, off: Set<FixKind> = emptySet()): String {
+        val lists = Lists(world.words, off = off)
+        return Typist(world, world.autocorrect(lists, studyScorer), lists = lists).type(text).text
+    }
+    same(typed("teh cat "), "the cat ", "#8: Typos on fixes \"teh\"")
+    same(typed("teh cat ", setOf(FixKind.TYPOS)), "teh cat ", "#8: Typos off, the second look leaves \"teh\"")
+    same(typed("see you tomorow then ", setOf(FixKind.TYPOS)), "see you tomorow then ", "#8: Typos off leaves \"tomorow\"")
+    same(typed("I saw teh.", setOf(FixKind.TYPOS)), "I saw teh.", "#8: Typos off leaves \"teh\" at a sentence's end")
+    same(typed("i dont know ", setOf(FixKind.APOSTROPHES)), "I dont know ", "#8: Missing apostrophes off leaves \"dont\"")
+    same(typed("i dont know "), "I don't know ", "#8: Missing apostrophes on fixes it")
+    same(typed("get dome food ", setOf(FixKind.TYPOS, FixKind.APOSTROPHES)), "get some food ", "#8: a real-word confusion stays the second look's")
+
+    // #9: with Missing spaces off, "andMary" was split anyway.
+    same(typed("andMary "), "and Mary ", "#9: Missing spaces on splits \"andMary\"")
+    same(typed("andMary ", setOf(FixKind.MISSING_SPACES)), "andMary ", "#9: Missing spaces off leaves it")
+    same(typed("andMary ", FixKind.entries.toSet()), "andMary ", "#9: and so does every switch off")
+
+    // #10: a text field that asks for no suggestions was still autocorrected and still taught words.
+    val unsuggested = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0)
+    must(!unsuggested.autocorrect && !unsuggested.suggestions && !unsuggested.learning, "#10: a field that asks for no suggestions gets none")
+    Typist(world, field = unsuggested).type("jsmith zorblat ").also {
+        same(it.text, "jsmith zorblat ", "#10: nothing is fixed there")
+        same(it.words.typed.toList(), emptyList<String>(), "#10: and nothing is learned")
+        same(it.bar, emptyList<String>(), "#10: and the bar offers nothing")
+    }
+    must(Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0).suggestions,
+        "#10: an address bar that asks for no suggestions still gets the bar")
+
+    // #29: Sym's "&" and "=" got spaces around them in an address bar.
+    fun symbols(field: Field) = Typist(world, field = field, autoCapitalise = false).type("a").also { it.composer.symbol("="); it.settle() }
+        .type("1").also { it.composer.symbol("&"); it.settle() }.type("b").text
+    same(symbols(url), "a=1&b", "#29: an address bar gets \"=\" and \"&\" alone")
+    same(symbols(Typist.FIELD), "a = 1 & b", "#29: prose still gets spaces around them")
+
+    // #39: one failed load turned autocorrect off for good. It tries again, after longer each time, and a load that works starts over.
+    val retry = LoadRetry()
+    must(retry.mayLoad(0), "#39: the first load may start")
+    retry.failed(1_000)
+    must(!retry.mayLoad(1_000 + LoadRetry.FIRST_MILLIS - 1) && retry.mayLoad(1_000 + LoadRetry.FIRST_MILLIS), "#39: a failure waits, then tries again")
+    retry.failed(100_000)
+    must(!retry.mayLoad(100_000 + 2 * LoadRetry.FIRST_MILLIS - 1) && retry.mayLoad(100_000 + 2 * LoadRetry.FIRST_MILLIS), "#39: a second waits twice as long")
+    repeat(10) { retry.failed(1_000_000) }
+    must(retry.mayLoad(1_000_000 + LoadRetry.LONGEST_MILLIS), "#39: never longer than the longest wait")
+    retry.loaded()
+    retry.failed(5_000_000)
+    must(retry.mayLoad(5_000_000 + LoadRetry.FIRST_MILLIS), "#39: a load that worked starts the waits over")
+    val loader = java.io.File("android/kotlin/com/atlas/keyboard/AutocorrectLoader.kt").readText()
+    must("failed = true" !in loader && loader.contains("retry.failed(SystemClock.uptimeMillis())") &&
+        loader.split("!retry.mayLoad(SystemClock.uptimeMillis())").size == 3, "#39: the loader waits on the retry, and never gives up")
+}
+
 fun main() {
     val world = Realistic()
     favourites()
@@ -2541,6 +2607,7 @@ fun main() {
     capitalI(world)
     apostrophes(world)
     fixSwitches(world)
+    bugHunt(world)
     simulation(world)
     speed(world)
     if (failures.isNotEmpty()) {

@@ -3,6 +3,7 @@ package com.atlas.keyboard
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import com.atlas.autocorrect.Autocorrect
 import com.atlas.autocorrect.ContinuationScorer
@@ -10,6 +11,7 @@ import com.atlas.autocorrect.CorrectionData
 import com.atlas.autocorrect.FixKind
 import com.atlas.autocorrect.KeptOnceStore
 import com.atlas.autocorrect.Lexicon
+import com.atlas.autocorrect.LoadRetry
 import com.atlas.autocorrect.TypedCorrector
 import com.atlas.engine.SwipeTyping
 import com.atlas.engine.TypedPredictions
@@ -23,7 +25,8 @@ import java.io.InputStreamReader
 class AutocorrectLoader(private val context: Context, private val typing: SwipeTyping) {
     private val main = Handler(Looper.getMainLooper())
     private var loading = false
-    private var failed = false
+    /** A failed load tries again after a while, longer each time, instead of never (bug hunt #39). */
+    private val retry = LoadRetry()
     private var generation = 0
     private val forget = Runnable {
         generation++
@@ -42,14 +45,14 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
      * loading when the app has just started, so then this waits for it.
      */
     fun prepare() {
-        if (loading || failed || autocorrect.corrector != null) return
+        if (loading || !retry.mayLoad(SystemClock.uptimeMillis()) || autocorrect.corrector != null) return
         if (typing.typedPredictions() != null) using() else typing.whenReady { _, _, _ -> main.post(::using) }
     }
 
     private fun using() {
         main.removeCallbacks(forget)
         main.postDelayed(forget, IDLE_MILLIS)
-        if (loading || failed || autocorrect.corrector != null) return
+        if (loading || !retry.mayLoad(SystemClock.uptimeMillis()) || autocorrect.corrector != null) return
         val words = typing.typedPredictions() ?: return
         loading = true
         val request = ++generation
@@ -75,8 +78,8 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
         }
         main.post {
             loading = false
-            if (data == null) failed = true
-            else if (request == generation) autocorrect.corrector = TypedCorrector(lexicon, data, autocorrect.rejected, autocorrect.recent,
+            if (data == null) retry.failed(SystemClock.uptimeMillis()) else retry.loaded()
+            if (data != null && request == generation) autocorrect.corrector = TypedCorrector(lexicon, data, autocorrect.rejected, autocorrect.recent,
                 nextWordChance = typing::nextWordChance,
                 // Only ever run on the engine's thread: see Composer's apostrophe check.
                 continuation = ContinuationScorer { before, texts -> typing.continuations(before, texts.toTypedArray()) })

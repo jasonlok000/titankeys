@@ -890,6 +890,10 @@ class AtlasIme : InputMethodService() {
      */
     private val idleBar = Runnable {
         if (!idleClock.roll(SystemClock.uptimeMillis())) return@Runnable
+        // Whether the bar may play is asked as the roll comes, not as the period starts: a period that started with the Sym panel
+        // open still gets its roll once the panel is closed (bug hunt #33). A period whose roll finds the bar can't play doesn't
+        // count, as one that input ended doesn't.
+        if (!idleBarAllowed()) return@Runnable
         val random = Random(System.nanoTime())
         if (idleSchedule.trigger(random)) startIdleBar(random = random, schedule = idleSchedule)
     }
@@ -1023,7 +1027,7 @@ class AtlasIme : InputMethodService() {
     private fun waitIdleBar() {
         main.removeCallbacks(idleBar)
         idleClock.input(SystemClock.uptimeMillis())
-        if (idleBarAllowed()) main.postDelayed(idleBar, IDLE_BAR_MILLIS)
+        main.postDelayed(idleBar, IDLE_BAR_MILLIS)
     }
 
     private fun sleepIdleBar() {
@@ -1500,8 +1504,9 @@ class AtlasIme : InputMethodService() {
         super.onStartInputView(info, restarting)
         // Bar text size changed since the bar was made, by a pick or the phone's text size, so it's made again at the new size.
         if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())
-        // The bar may only now be set up for this field, so the wait starts once it is.
-        main.post { wakeIdleBar() }
+        // The bar may only now be set up for this field, so the wait starts once it is. A restart of the same field is no input: it
+        // keeps the period and any game, unless none is running, as after the keyboard was hidden (bug hunt #34).
+        if (!restarting || !idleClock.running) main.post { wakeIdleBar() }
         offerClip()
         // Settings > Setup lists the apps whose Scroll assistant isn't in Sliding Mode 1. The system sets the touchpad's mode
         // for the app in front as it comes in, so this reads it a moment later and again seconds later, if the keyboard is

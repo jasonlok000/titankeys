@@ -52,13 +52,15 @@ data class Field(
             val exact = variation == InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS
                 || variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
                 || variation == InputType.TYPE_TEXT_VARIATION_FILTER
+            // A text field that asks for no suggestions, as a username or a code field does, gets none: no bar, no fixes, and nothing
+            // learned from it (bug hunt #10). An address bar that asks the same still gets the bar: browsers search from it too.
+            val unsuggested = inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0 && !url
             // A field with no suggestions types no words either: an address or a password is typed key by key.
-            return Field(words = !password && !email, learning = !password && !address && !private,
+            return Field(words = !password && !email, learning = !password && !address && !private && !unsuggested,
                 fullStops = !password && !address, starters = search,
                 sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
-                autocorrect = !password && !address && !exact,
-                // An address bar that asks for no suggestions still gets the bar: browsers search from it too.
-                suggestions = !password && !email, secret = password)
+                autocorrect = !password && !address && !exact && !unsuggested,
+                suggestions = !password && !email && !unsuggested, secret = password)
         }
 
         /**

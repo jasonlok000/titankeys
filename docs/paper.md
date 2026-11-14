@@ -475,7 +475,7 @@ Alone, a whole-dictionary shape matcher scores only 53.7 / 67.8. So it's an extr
 
 ### 4.9 Expecting a thumb to stop short
 
-In the recordings, thumbs stopped short of corners by 0.74 keys going right, 0.44 up, 0.24 down and 0.20 left. So where a swipe turns tells you which key it was aiming for: a thumb that turns at I was probably heading for O. TitanKeys moves each corner of a word's outline back to where a thumb would actually turn. The swipe itself isn't touched. Here's a simulated lazy swipe of "jason":
+In the recordings, thumbs stopped short of corners by 0.74 keys going right, 0.44 up, 0.24 down and 0.20 left. So where a swipe turns tells you which key it was aiming for: a thumb that turns at I was probably heading for O. TitanKeys moves each corner of a word's outline back to where a thumb would actually turn. A letter counts as a corner only where the path really turns there, with the cosine between its two legs below 0.5. The swipe itself isn't touched. Here's a simulated lazy swipe of "jason":
 
 <img src="../assets/readme/jason-why.gif" width="520" alt="Animation of the turning points of jain and jason moving back, so the swipe ends up closest to jason">
 
@@ -485,9 +485,9 @@ In the code, each leg's pull-back is weighted by direction: 0.55 going right, 0.
 
 **What it does:** a flick catches 97% of real delete strokes and fired on none of 875 word touches.
 
-The flick from Backspace is a quick, straight stroke left from around Backspace, at any length. Fitted to 68 real strokes, it catches 66 of them (97%), and it didn't fire on any of 875 recorded word touches.
+The flick from Backspace is a quick, straight stroke left from around Backspace: at least 1 key across, at most 5.5 keys of path, and within 600 ms. A longer or slower stroke is read as a word (`DeleteSwipe.kt`, `MIN_TRAVEL`, `MAX_PATH_KEYS`). Fitted to 68 real strokes, it catches 66 of them (97%), and it didn't fire on any of 875 recorded word touches.
 
-<img src="../assets/readme/delete-swipe.gif" width="400" alt="Diagram of a swipe from Backspace left to J deleting the previous word">
+<img src="../assets/readme/delete-swipe.gif" width="400" alt="Diagram of two quick straight flicks left from Backspace, about 2 and 4.5 keys long, each taking the word before the cursor: see you soon becomes see you, then see, with each word's letters going as dots into the caret">
 
 Holding the flick deletes in bulk: one word every 350 ms at first, speeding up to one every 80 ms as you slide further out. Coming back within 0.8 keys of the start pauses it, and 5.5 keys out is its top speed (section 9.5).
 

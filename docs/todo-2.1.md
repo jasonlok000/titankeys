@@ -990,7 +990,7 @@ enders\gesture-line
   through Google Play's Android vitals once TitanKeys is on Play, nothing for users to do; (2) Send feedback and Record a bug
   send through the phone's own mail app, to a TitanKeys address, with the recording attached: no account, no server, no new
   network use; (3) Play's private tester feedback during the closed test; (4) Play reviews stay public praise and gripes,
-  not bug reports; GitHub issues stay for contributors. Open: which address (a dedicated one, not the owner's own).
+  not bug reports; GitHub issues stay for contributors. Address: the owner's "everyone's niche" one (owner, 2026-11-14: "Use the everyone's niche one."), not written here as this repo is public; it goes into the app with 3.0.
 - **3.0: a warning on other phones, never a block** (owner, 2026-11-14: "it shd also detect the phone. If its not titan 2
   elite show a warning but don't block them."). The owner's Titan 2 Elite says Unihertz, model "Titan 2", device "Titan_2":
   nothing says Elite. What does: ro.agui.touchpad_function = yes (the touch keyboard), which TitanKeys already reads

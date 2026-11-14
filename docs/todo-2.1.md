@@ -965,6 +965,13 @@ enders\gesture-line
   the guide's leave pop-up (GuideActivity.kt, LEAVE_YES) just closes the guide, and the app's page under it shows Setup. In
   3.0: to the playground; Setup only on first launch or while a step is still To do. Check then whether a step wrongly said
   To do on the owner's fresh install.
+- **Bug on the signed 2.1.0 (owner, 2026-11-14: "rn I can't quit the guide. If I choose I alr know everything I land back to
+  the setup.")**: reproduced. With every switch on (Setup's page: five Done), the front page still showed "Set up TitanKeys"
+  after the guide closed; opening another page and coming back showed the playground. The front page's choice
+  (app/index.tsx Home: SetupStart while any of the five reads off) kept an old reading of the switches: MainActivity's resume
+  sends "atlas-state" to refresh, and it seems to land before the page listens, so the refresh is lost. Proposed fix
+  (waiting on the owner's go): SetupStart re-reads the state on onAppWindow, as FrontPage already does, with a check. Being
+  signed with the same key now, the fixed build installs over the pre-release and keeps its data.
 - **Everything in one place** (owner, 2026-11-14: "We had a rule from atlas that the repo itself stays clean from tools and
   dev stuff etc but I don't like that idea so I want everything in one place"). The dev tools move into the repo: WSL
   ~/build/tk-tools (verify.sh, keyboard.sh, play-bundle.sh and the rest), the phone scripts and the quick preview pages

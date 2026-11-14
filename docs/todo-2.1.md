@@ -325,6 +325,9 @@ enders\gesture-line
       like triple space or do you think its fine?"). The Orchestrator's view: yes, a little. The word being eaten right now turns
       orange, like triple Space's selected words; the queued words stay grey; it dims back to grey while paused. Waiting on the
       owner; a quick phone preview first if wanted.
+      - Chosen on the phone preview (cal-tool/heldelete.html): option 2, the words it's eating in orange, with option 4 as its
+        paused state: back to light grey, with a dimmer caret and glow, while the finger rests in the pause zone (owner: "Let's
+        do 2"). Queued for C when work resumes.
   - **Paused for the usage limit (2026-11-14, 5-hour window at 95%, resets 02:10 UTC; weekly at 87%).** W, C, D and A stopped
     mid-turn; F and V were idle; their unfinished changes stay in their worktrees. On resume, send each a short "carry on":
     - V: blocker #1 first, then the selected-word underline, #20, #21, #31, #32.

@@ -162,7 +162,7 @@ class Strip(
     private var corners = Corners.None
     /** How far the content keeps from each side, so that the screen's rounded corners do not cut it. */
     private var side = 0
-    private val drawing = GestureDrawing(resources.displayMetrics.density, Radii.px(resources, Radii.SMALL))
+    private val drawing = GestureDrawing(resources.displayMetrics.density, Radii.px(resources, Radii.SMALL), FixedScale.fixedPx(context, 1f))
     private var look = Look.of(context)
 
     /** Shows what a special gesture is doing, in the place of the words. It shows only where the strip shows. */

@@ -453,6 +453,18 @@ enders\gesture-line
           build, so 2.0 users update to it normally; the NightKeys key would make them uninstall. Backed up at the owner's
           ask: C:\Users\jason\Documents\TitanKeys-PRIVATE-signing-key\ (atlas.keystore and credentials.env copied by
           checksum, unopened, and a README without passwords). Off-PC copies are the owner's to make.
+        - **The owner: "We shouldn't be using the atlas key. I don't think I ever had that atlas key."** atlas.keystore
+          ("Atlas Debug") was a throwaway a build session made on 2026-11-08 (~/build/atlas/signing, never in git); ink.toml's
+          [signing] picked it up, so it signed 2.0.0 and the 11-11 pre-release by mistake. Re-signed 2.1.0 with the NightKeys
+          key (bb769da3..., alias nightkeys; the build copy's ink.toml pointed at the p12 for this run only, passwords passed from
+          signing.json without printing, then restored). The atlas-signed APKs deleted. Checked: com.titankeys 2.1.0 (57), not
+          debuggable, no debug parts. Swapped on the phone (the atlas one was never set up). Overnight crash log: 26, all
+          Android's media provider, none TitanKeys. Key folder: the NightKeys key copied in, atlas set aside in
+          old-atlas-key-do-not-use\, README rewritten.
+        - **Follow-ups (not done):** the repo's ink.toml still names signing/atlas.keystore (debug builds sign with it too; a
+          release key switch needs ink.toml, every build copy's signing/, release.yml's secrets and docs/play/signing.md); the
+          GitHub release text must tell 2.0 users to uninstall 2.0 first (the in-app notes would come too late); the old
+          v2.1.0 pre-release on GitHub is atlas-signed.
     - **Next to discuss with the owner (not started):** languages (3.0, #56); and swipes joined by accident when one ends at
       the top row and the next starts at the top row (the owner: "investigate if there's a way to reduce accidentally joining
       two swipes when they end at the top and starts again at the top").

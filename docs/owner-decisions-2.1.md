@@ -248,6 +248,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   needs the keyboard open on a field that shows words, 3 to 4.5 minutes with no key, touch or swipe, the screen on, then a 25%
   chance, and never twice in a row: about 15 untouched minutes before the first game, so it's almost never seen. The
   Orchestrator's proposal, unapproved: wait 60 to 90 s and a 50% chance, about 2.5 minutes on average; any input still ends it.
+- **The idle games get a visible floor** (owner, 2026-11-13: "do you think we shd add a simple cream or white line to simulate the
+  floor?", then on the phone preview cal-tool/floor.html, "let's do 3"). (Owner) A 1 dp line in the text's cream at 55% at
+  Idle.FLOOR, stopping before the curved corners with soft ends, shown only while a game that uses the floor plays (the figure,
+  Bowling, Race, the Firework, Juggle's Drop), fading in and out with it. Why (Orchestrator): the screen's edge blends into the
+  border, so a figure standing on it looked like it stood on nothing. A builds it.
 - **A selected word is underlined on the bar, in the guide and the real keyboard alike** (owner, 2026-11-13: "I think you prob
   misunderstood and the word TitanKeys in that guide should be selected as in highlighted litearlly selectfed, not underlined?",
   then "I think if the word is highlighted, it should be underlined before going into the word menu. in the word menu it

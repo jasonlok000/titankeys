@@ -26,7 +26,8 @@ private fun frame(display: GestureDisplay, look: Look, label: String): BufferedI
         val x = WIDTH / 6 * (2 * index + 1) - g.fontMetrics.stringWidth(word) / 2
         g.drawString(word, x, HEIGHT / 2 + g.fontMetrics.ascent / 3)
     }
-    GestureDrawing(DENSITY, 16 * DENSITY).draw(android.graphics.Canvas(image), display, SIDE, WIDTH - SIDE, HEIGHT, look)
+    GestureDrawing(DENSITY, 16 * DENSITY).draw(android.graphics.Canvas(image), display, SIDE, WIDTH - SIDE, HEIGHT, look,
+        StripFit.LINE_DP * DENSITY, HEIGHT - StripFit.EDGE_DP * DENSITY, 20 * DENSITY)
     g.color = java.awt.Color(0x88, 0x88, 0x88)
     g.font = Font(Font.SANS_SERIF, Font.PLAIN, 22)
     g.drawString(label, 8, 24)

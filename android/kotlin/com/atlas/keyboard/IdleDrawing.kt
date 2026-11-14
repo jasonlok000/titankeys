@@ -4,14 +4,14 @@ import android.graphics.Canvas
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Typeface
 import kotlin.math.PI
-import kotlin.math.cos
 import kotlin.math.sin
 
 /**
  * Draws [IdlePlayer]'s game on the bar: the letters in the words' own look and typeface, the figure, the rope, the sparks and the
  * finish line in thin lines. The game is in the bar's own units, 88 high, which [scale] turns into the bar's pixels. Nothing here
- * is made per frame.
+ * is made per frame. tests/idle-render draws the same in AWT, to check every frame against the screen's outline.
  */
 internal class IdleDrawing {
     private val letter = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
@@ -24,15 +24,18 @@ internal class IdleDrawing {
     private val dashes = DashPathEffect(floatArrayOf(6f, 6f), 0f)
     private val path = Path()
 
-    /** [words] is the paint of the bar's words, for their typeface. */
-    fun draw(canvas: Canvas, player: IdlePlayer, scale: Float, words: Paint, look: Look) {
+    /**
+     * [typefaces] are the bar's words' typefaces, left to right, as a [Glyph.word] counts them: the best word, in the middle, is
+     * bold, so each letter keeps its own weight and nothing changes as a game starts or ends.
+     */
+    fun draw(canvas: Canvas, player: IdlePlayer, scale: Float, typefaces: List<Typeface?>, look: Look) {
         canvas.save()
         canvas.scale(scale, scale)
-        letter.typeface = words.typeface
+        this.typefaces = typefaces
         val game = player.game
         if (game is Race && game.line > 0) {
             line.color = look.muted; line.alpha = (game.line * 255).toInt(); line.strokeWidth = 3f; line.pathEffect = dashes
-            canvas.drawLine(game.lineX, 4f, game.lineX, Idle.H - 4, line)
+            canvas.drawLine(game.lineX, game.lineTop, game.lineX, game.lineBottom, line)
             line.pathEffect = null; line.alpha = 255
         }
         if (game is Firework) {
@@ -57,6 +60,7 @@ internal class IdleDrawing {
 
     /** The arrow's line width, in the games' units: [Strip] sets it to match its own arrow. */
     var arrowLine = 3f
+    private var typefaces: List<Typeface?> = emptyList()
 
     private fun glyph(canvas: Canvas, g: Glyph, look: Look) {
         if (g.alpha <= .01f) return
@@ -64,11 +68,14 @@ internal class IdleDrawing {
         letter.color = if (g.accent) look.accent else look.ink
         letter.alpha = (g.alpha.coerceIn(0f, 1f) * 255).toInt()
         letter.textSize = g.size * g.scale
+        letter.typeface = typefaces.getOrNull(g.word) ?: typefaces.firstOrNull()
+        // Placed by the middle of its box, as on the bar, and turned about its ink's middle, [Glyph.pivot].
+        val pivot = g.pivot * g.scale
         canvas.save()
-        canvas.translate(g.x, g.y)
+        canvas.translate(g.x, g.y + pivot)
         if (g.rot != 0f) canvas.rotate(g.rot * 180 / PI.toFloat())
         val metrics = letter.fontMetrics
-        canvas.drawText(g.text, 0f, -(metrics.ascent + metrics.descent) / 2, letter)
+        canvas.drawText(g.text, 0f, -(metrics.ascent + metrics.descent) / 2 - pivot, letter)
         canvas.restore()
     }
 
@@ -126,7 +133,7 @@ internal class IdleDrawing {
     private fun rope(canvas: Canvas, rope: JumpRope, look: Look, behind: Boolean) {
         if (rope.ropeAmount <= 0f) return
         val y0 = rope.ropeY
-        val mid = Idle.lerp(y0 + 6, Idle.lerp(y0 - 40, y0 + 36, (1 + cos(rope.ropeAngle)) / 2), rope.ropeAmount)
+        val mid = rope.ropeMid
         line.color = look.ink
         line.alpha = ((if (behind) .45f else .9f) * rope.ropeAmount * 255).toInt()
         line.strokeWidth = 3f

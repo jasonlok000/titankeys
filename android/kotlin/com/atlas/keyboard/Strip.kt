@@ -781,7 +781,7 @@ class Strip(
         if (!gesture.busy) return
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
         val more = gesture.advance(SystemClock.uptimeMillis(), scale)
-        if (gesture.busy) drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), barHeight, look)
+        if (gesture.busy) drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), barHeight, look, line, wordFoot(), wordPixels())
         if (more) postInvalidateOnAnimation()
     }
 
@@ -1227,6 +1227,8 @@ class Strip(
 
     private val idleDrawing = IdleDrawing()
     private var idle: IdlePlayer? = null
+    /** The words' typefaces, left to right, as the game's letters count them: see [IdleDrawing.draw]. */
+    private var idleTypefaces: List<android.graphics.Typeface?> = emptyList()
     private var idleFrameAt = 0L
     private val idleFrame = Runnable { invalidate() }
     /** How many of the bar's pixels make one of the games' units: they are made for a bar 88 high. */
@@ -1249,6 +1251,7 @@ class Strip(
         val glyphs = ArrayList<Glyph>()
         // The words left to right, in the order of the bar, so that word 0, 1 and 2 are left, middle and right.
         val views = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.sortedBy { it.left }
+        idleTypefaces = views.map { it.paint.typeface }
         for ((word, view) in views.withIndex()) {
             val layout = view.layout
             val paint = view.paint
@@ -1310,7 +1313,7 @@ class Strip(
         }
         canvas.save()
         canvas.translate(idleEdge.toFloat(), 0f)
-        idleDrawing.draw(canvas, player, idleScale, wordViews.first().paint, look)
+        idleDrawing.draw(canvas, player, idleScale, idleTypefaces, look)
         canvas.restore()
         postDelayed(idleFrame, IDLE_FRAME_MILLIS)
     }
@@ -1330,7 +1333,6 @@ class Strip(
     /** The ghost finger on the middle word, from 0 (gone) to 1, and how far its hold has run. */
     private var fingerAlpha = 0f
     private var fingerHold = 0f
-    private val fingerPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
     private val demoFrame = object : Runnable {
         override fun run() = stepDemo()
     }
@@ -1419,16 +1421,8 @@ class Strip(
     private fun drawDemoFinger(canvas: Canvas) {
         if (demo !is GuideHooks.StripDemo.Menu || fingerAlpha <= 0f) return
         val view = middleWord()
-        val x = view.left + view.width / 2f
-        val y = height / 2f - (paddingBottom - paddingTop) / 2f
-        val radius = dp(9).toFloat()
-        fingerPaint.style = android.graphics.Paint.Style.FILL
-        fingerPaint.color = GuideMotion.faded(look.accent, .35f * fingerAlpha)
-        canvas.drawCircle(x, y, radius, fingerPaint)
-        fingerPaint.style = android.graphics.Paint.Style.STROKE
-        fingerPaint.strokeWidth = dp(2).toFloat()
-        fingerPaint.color = GuideMotion.faded(look.accent, fingerAlpha)
-        canvas.drawCircle(x, y, radius * (2.6f - 1.6f * fingerHold), fingerPaint)
+        // On the word's letters, on the bar's line, as the gestures are.
+        drawing.finger(canvas, view.left + view.width / 2f, line, floor, fingerAlpha, fingerHold, look, FixedScale.fixedPx(context, 1f))
     }
 
     private fun dp(value: Int) = Math.round(value * resources.displayMetrics.density)

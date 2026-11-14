@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Draws the strip's steering and selecting displays to PNGs with the real drawing code, to look at without the phone.
-# Usage: bash tests/gesture-render/run.sh [folder]. Each moment gets a PNG there, dark and light, and all.png is the sheet.
+# Usage: bash tests/gesture-render/run.sh [folder], a new temporary folder if none. Each moment gets a PNG there, dark and light, and all.png is the sheet.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}
 kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
-out=$(realpath -m "${1:-gesture-render}")
+out=$(realpath -m "${1:-$(mktemp -d)/gesture-render}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 keyboard=android/kotlin/com/atlas/keyboard
@@ -21,6 +21,6 @@ javac -nowarn -d "$work/fake" tests/gesture-render/fake/android/graphics/*.java
   "$engine/Swipe.java" "$engine/Calibration.java" "$engine/TouchAlignment.java" "$engine/TypingSettings.java" "$keyboard/Look.kt" "$keyboard/Accent.kt" \
   "$keyboard/Contact.kt" "$keyboard/CursorGesture.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" \
   "$keyboard/WordSelection.kt" \
-  "$keyboard/CursorMode.kt" "$keyboard/GestureDisplay.kt" "$keyboard/GestureDrawing.kt" "$keyboard/TrailThickness.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" \
+  "$keyboard/CursorMode.kt" "$keyboard/GestureDisplay.kt" "$keyboard/GestureDrawing.kt" "$keyboard/StripFit.kt" "$keyboard/TrailThickness.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" \
   tests/gesture-render/GuideStandIns.kt tests/gesture-render/GestureRender.kt
 java -Djava.awt.headless=true -cp "$work/fake:$work/classes:$stdlib" com.atlas.keyboard.GestureRenderKt "$out"

@@ -248,6 +248,23 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   needs the keyboard open on a field that shows words, 3 to 4.5 minutes with no key, touch or swipe, the screen on, then a 25%
   chance, and never twice in a row: about 15 untouched minutes before the first game, so it's almost never seen. The
   Orchestrator's proposal, unapproved: wait 60 to 90 s and a 50% chance, about 2.5 minutes on average; any input still ends it.
+- **A selected word is underlined on the bar, in the guide and the real keyboard alike** (owner, 2026-11-13: "I think you prob
+  misunderstood and the word TitanKeys in that guide should be selected as in highlighted litearlly selectfed, not underlined?",
+  then "I think if the word is highlighted, it should be underlined before going into the word menu. in the word menu it
+  follows existing rules. and obviously guide and the actual keyboard shd match in behavior. selected as in similar behavior to
+  triple space's native select words."). (Owner) Whenever a field has a word selected, the bar shows it alone in the middle,
+  underlined in the accent, until its menu opens; in the menu, colour only (the underline clashed with the strike). The guide's
+  menu slide selects TitanKeys in the box like triple Space does and goes through the same real path; the guide-only underline
+  and wiring go. The Orchestrator had read "keep it highlighted" as an accent underline: its miss. V builds it.
+- **Bar: a global check that everything follows the visible-border line** (owner: "the hint for that should also follow the
+  visible border thing. not the old mathematical center. please do a global check to ensure that everything is following that rule
+  now."). W lists every view and drawing in the bar and the bottom band with what it's centred on; the two-line clip offer and its
+  hint move to the visible band as nearly as fits. C (gestures) and A (idle games) are on the same rule.
+- **Smart Launcher's search box, diagnosed live** (owner's OK: "type in my launcher. test it out."). The box (plain text, Search
+  action) takes letters and Android's own Ctrl + Backspace, and TitanKeys' bar suggests correctly there, but TitanKeys' direct
+  edits do nothing: "teh " isn't corrected to "the", and Shift + Backspace removes one character. The same keys in TitanKeys' own
+  box work. The panels open there by the debug broadcast, so the panel can show; the real Sym key reportedly doesn't open it. D
+  builds a fallback (check each direct edit took, else redo it with key presses, remembered per field) and traces the Sym key.
 - **The app is called "TitanKeys Keyboard"** (owner, 2026-11-13: "could we call it sth like TitanKeys Keyboard in the app name so
   that it's easier to search in the launchers?"). (Owner) The Orchestrator's scope: the launcher label, app info, the keyboard
   picker and Accessibility say "TitanKeys Keyboard"; the app's own screens keep "TitanKeys"; the debug build stays "TitanKeys

@@ -35,6 +35,7 @@ interface Words {
 
     fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Recognition) -> Unit)
     fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit)
+    fun prepare(text: String, cancelled: AtomicBoolean)
     fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit)
     fun allowed(word: String): Boolean
     fun known(word: String): Boolean
@@ -134,8 +135,12 @@ class Composer(
     private var rememberedField: Pair<String?, Int>? = null
 
     var liftOffMillis = 0
+    /** Told the whole path behind each recognised word, including any pieces joined to it. */
+    var onStroke: ((Swipe) -> Unit)? = null
 
     val hasPendingInput get() = recognising || barrier != null || drainScheduled || pendingInput.isNotEmpty()
+    /** Whether a touch arriving now could still join the last swipe. A recognition in progress may yet allow it. */
+    val canContinueSwipe get() = liftOffMillis > 0 && (hasPendingInput || (composition as? Composition.Swiped)?.continuable == true)
     val awaitingDestination get() = barrier?.navigation == true
 
     fun start(field: Field, selectionStart: Int, selectionEnd: Int) {
@@ -343,11 +348,11 @@ class Composer(
         manualWord.clear()
         val previous = composition as? Composition.Swiped
         var resumes = previous != null && previous.continuable && liftOffMillis > 0
-            && pending.startedAt - previous.endedAt in 0..liftOffMillis.toLong()
+            && previous.swipe.sameStroke(pending.swipe, pending.startedAt - previous.endedAt, liftOffMillis.toLong())
             && anchor == previous.snapshot && before.endsWith(previous.inserted) && !anchor.selected
         val path = if (resumes) {
             try {
-                previous!!.swipe.append(pending.swipe)
+                previous!!.swipe.append(pending.swipe, pending.startedAt - previous.endedAt)
             } catch (_: IllegalArgumentException) {
                 resumes = false
                 pending.swipe
@@ -378,6 +383,8 @@ class Composer(
             recognising = false
             recognitionSnapshot = null
             pendingInput.removeFirst()
+            Recording.sink?.recognised(recognition.words, resumes)
+            onStroke?.invoke(path)
             if (recognition.words.isNotEmpty()) {
                 val sentenceCase = field.sentenceCapitalisation && autoCapitalise()
                 val choices = recognition.words.map {
@@ -397,6 +404,7 @@ class Composer(
                         learnWord(completed, correction)
                         show(choices)
                         checkLookAlike()
+                        words.prepare(context + inserted, AtomicBoolean(false))
                     }
                 }
                 return@recognise
@@ -710,7 +718,12 @@ class Composer(
                 composition = swiped
                 remember(swiped)
                 automaticSpace = accepted.takeIf { current.trailingSpace }
-                confirmState(accepted)
+                // A chosen word is settled, so the strip moves straight on to what comes next.
+                confirmState(accepted, predictNow = true) { confirmed ->
+                    if (!confirmed || composition !== swiped) return@confirmState
+                    leave()
+                    composition = Composition.None
+                }
             }
             is Composition.Typed -> {
                 val tail = current.prefix + if (current.trailingSpace) " " else ""
@@ -1012,6 +1025,10 @@ class Composer(
             if (cancelled.get() || current != epoch || snapshot() != anchor) return@complete
             composition = Composition.Typed(TypedPredictions.prefix(context), trailingSpace, anchor, suggestions)
             show(suggestions)
+            // The first word is the one most likely to be picked, so have what follows it ready.
+            suggestions.firstOrNull()?.let {
+                words.prepare(context.dropLast(TypedPredictions.prefix(context).length) + " " + it + " ", cancelled)
+            }
         }
     }
 

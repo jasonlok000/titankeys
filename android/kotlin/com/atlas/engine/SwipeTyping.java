@@ -220,6 +220,17 @@ public final class SwipeTyping {
         });
     }
 
+    /** Gets the next-word list for this text ready, so that it does not have to be worked out when it is needed. */
+    public void prepare(String text, AtomicBoolean cancelled) {
+        worker.execute(() -> {
+            if (cancelled.get() || recogniser == null) return;
+            try { recogniser.nextWords(SentenceContext.words(text)); }
+            catch (RuntimeException | LinkageError error) {
+                if (recogniser != null && !recogniser.isOpen()) unavailable(error);
+            }
+        });
+    }
+
     public void complete(String before, AtomicBoolean cancelled, boolean sentenceCapitalisation, Callback callback) {
         final EnglishSpelling.Variant variant = TypingSettings.spelling(context);
         final boolean autoCapitalise = sentenceCapitalisation && TypingSettings.autoCapitalise(context);

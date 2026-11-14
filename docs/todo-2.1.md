@@ -354,6 +354,17 @@ enders\gesture-line
     - Not checkable by adb, left for the owner's hands: triple Space's selection gap (adb's three Spaces typed a full stop
       instead), the held delete's orange, the swipe trail, the menu effects and the hover after a press, Smart Launcher's square
       key and Sym, Setup's links. Seen in passing: Escape doesn't clear a latched Shift (likely as designed, not a 2.1 change).
+    - **Owner's screenshot on #19, 23:17 ("Looks misaligned and cropped?"): the clip offered alone is cut off at the bottom.**
+      Measured: the icon's bottom edge and the brackets' tails stop flat at y 1182, the clip's box bottom. The icon should reach
+      about 1187, the brackets about 1189, both over the floor (1196). Cause: a clip with no hint is the only LineText in a
+      WRAP_CONTENT box (clipText in clipView, Strip.kt:130); LineText moves only its drawing down to the line
+      (LineText.onDraw), and the parent clips it to the unmoved box. The hint, the chips' hint (its tails reach 1188) and Exact
+      typing's labels are MATCH_PARENT, and the Sym panel turns clipChildren off, so they're fine. The "misaligned" look is
+      mostly the cut: the icon lost its bottom edge, so it looks high. The digits sit on the words' baseline, so being
+      capital-height they stand a little higher than the arrow, which matches small letters, as a capitalized word does.
+      Proposed fix (W, waiting on the owner's go): move the clip's box with it when alone (translationY, as the paired case
+      does) or give it the bar's height, plus a render check of a clip alone with brackets and tails that fails if anything is
+      cut. The renders missed it because a cut leaves no ink outside the corners or under the floor to flag.
     - Still to check on the phone from this round: the Shift and Ctrl chips, the menu effects and hover, the Sym rows on every page, the held delete's orange, the
     selection gap, the swipe trail (the owner judges), each idle game with the 80% floor (IDLE_BAR), Smart Launcher typing and the
     square key, Setup's links, "TitanKeys Keyboard" in the launcher, and the always-dark keyboard.

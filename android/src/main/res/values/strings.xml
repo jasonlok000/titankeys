@@ -80,7 +80,7 @@
     <string name="back_disclosure_back">Back: when you press Back, TitanKeys sends it on for you, so one press closes the keyboard and goes back in the app.</string>
     <string name="back_disclosure_keys">Keys: at these times only, it sees which keys you press before the app does:</string>
     <string name="back_disclosure_keys_sym">while the Sym panel is open, so Enter and Backspace turn its pages instead of reaching the app;</string>
-    <string name="back_disclosure_keys_launcher">in the Smart Launcher search field, so holding a key for a symbol and pressing Shift or Alt twice work there;</string>
+    <string name="back_disclosure_keys_launcher">in the Smart Launcher search field, where the launcher would take your keys first, so TitanKeys types there as in any other app;</string>
     <string name="back_disclosure_keys_back">for a moment after you press Back, so your next press of Back reaches the app.</string>
     <string name="back_disclosure_touchpad">Touchpad: while you type, it keeps the touchpad on the keys when a notification shows at the top of the screen.</string>
     <string name="back_disclosure_never_title">What it never does</string>

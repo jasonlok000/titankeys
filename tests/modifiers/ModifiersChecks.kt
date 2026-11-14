@@ -49,7 +49,7 @@ fun main() {
     realLongHoldWithRepeats()
     lostRelease()
     discardedKeys()
-    appPushes()
+    takenKeys()
     lockedThenHold()
     bothShiftKeys()
     shortcutWhileHeld()
@@ -202,16 +202,6 @@ private class Keyboard {
 
     /** Characters or a finished swipe, which all use the modifiers in the same way. */
     fun type(count: Int = 1) = repeat(count) { modifiers.consume() }
-
-    /** A push in an app that takes key presses before the keyboard. */
-    fun appPush(code: Int = SHIFT, repeat: Int = 0) = modifiers.appPush(code, now, repeat)
-
-    fun appRelease(code: Int = SHIFT, after: Long = PRESS): Boolean {
-        idle(after)
-        return modifiers.appRelease(code, now)
-    }
-
-    fun appPressed(code: Int = SHIFT) = appPush(code).also { appRelease(code) }
 
     /** What Backspace does, as the keyboard decides it: [meta] is the key's own meta state. */
     fun backspaceDoes(meta: Int = 0, altForward: Boolean = true, shiftWord: Boolean = true) =
@@ -596,73 +586,29 @@ private fun discardedKeys() {
     same(Modifiers.survivesDiscard(SHIFT, down = false), true, "A Shift release must always survive")
 }
 
-private fun appPushes() {
-    for (code in listOf(SHIFT, ALT)) {
-        Keyboard().run {
-            fun level() = if (code == SHIFT) shift else modifiers.alt
-            modifiers.doublePressLocks = false
-            same(appPush(code), Modifiers.AppPush.Pass, "The app must see the first push")
-            same(appRelease(code), false, "The app must see the release of a push that it saw")
-            same(level(), Level.Once, "The first push must stay on for the next character")
-            idle(GAP)
-            same(appPush(code), Modifiers.AppPush.Hide, "With the setting off, the app must not see a quick second push")
-            same(appPush(code, repeat = 1), Modifiers.AppPush.Hide, "The repeats of a hidden push must stay hidden")
-            same(level(), Level.Once, "A quick second push must leave the key on")
-            same(appRelease(code), true, "The app must not see the release of a hidden push")
-            type()
-            same(level(), Level.Off, "That key must apply to one character only")
-            same(appPressed(code), Modifiers.AppPush.Pass, "After a character, the next push is a first push again")
-        }
-        Keyboard().run {
-            fun level() = if (code == SHIFT) shift else modifiers.alt
-            modifiers.doublePressLocks = false
-            appPressed(code)
-            idle(WORD)
-            same(appPush(code), Modifiers.AppPush.HideAndClear, "A slow second push must not reach the app, and turns the app's key off")
-            same(level(), Level.Off, "A slow second push must turn the key off")
-            same(appRelease(code), true, "A slow second push's release must stay hidden too")
-            same(appPush(code), Modifiers.AppPush.Pass, "The next push is a first push")
-        }
-        Keyboard().run {
-            modifiers.doublePressLocks = false
-            appPressed(code)
-            idle(GAP)
-            same(appPush(code), Modifiers.AppPush.Hide, "A quick second push must be hidden")
-            modifiers.clear()
-            same(appRelease(code), false, "A new field must forget a hidden push")
-        }
-        Keyboard().run {
-            fun level() = if (code == SHIFT) shift else modifiers.alt
-            same(modifiers.doublePressLocks, true, "This helper starts with the setting on")
-            appPressed(code)
-            idle(GAP)
-            same(appPush(code), Modifiers.AppPush.Pass, "With the setting on, a quick second push must pass so that the app locks too")
-            same(level(), Level.Locked, "With the setting on, a quick second push must lock")
-            same(appRelease(code), false, "The app must see the release of the push that locks")
-            idle(WORD)
-            same(appPressed(code), Modifiers.AppPush.Pass, "The app must see the push that unlocks")
-            same(level(), Level.Off, "A third push must unlock")
-            idle(WORD)
-            appPressed(code)
-            idle(WORD)
-            same(appPush(code), Modifiers.AppPush.HideAndClear, "With the setting on, a slow second push must not lock the app")
-        }
-    }
-    Keyboard().run {
-        same(appPush(LETTER), Modifiers.AppPush.Pass, "A letter is not hidden as a push")
-        same(modifiers.isHeld(LETTER), false, "A letter must not count as held")
-        modifiers.doublePressLocks = false
-        appPressed(SHIFT)
-        idle(GAP)
-        type()
-        same(shift, Level.Off, "A letter typed between two pushes uses up the first push")
-        idle(GAP)
-        same(appPush(SHIFT), Modifiers.AppPush.Pass, "After a letter, the next push is a first push again")
-        type()
-        same(appRelease(SHIFT), false, "The app must see the release of that push")
-    }
+/**
+ * Smart Launcher's search field takes key presses before the keyboard (owner, 2026-11-13): the keyboard takes them back, a press
+ * whole, so the launcher never types a letter of its own and TitanKeys' typing, fixes and Sym run there.
+ */
+private fun takenKeys() {
+    val keys = TakenKeys()
+    same(keys.takes(LETTER, pressed = true, taking = true, system = false), true, "A letter goes to the keyboard")
+    same(keys.takes(LETTER, pressed = true, taking = true, system = false), true, "Its repeats go to the keyboard too")
+    same(keys.holding, true, "A taken key that is down is still heard")
+    same(keys.takes(LETTER, pressed = false, taking = true, system = false), true, "Its release goes with it")
+    same(keys.holding, false, "Nothing is down once it is let go")
+    same(keys.takes(SYM, pressed = true, taking = true, system = false), true, "Sym goes to the keyboard, so its panel opens")
+    same(keys.takes(SYM, pressed = false, taking = false, system = false), true, "Sym's release goes with it, even once the field has closed")
+    same(keys.takes(SHIFT, pressed = true, taking = true, system = false), true, "Shift goes to the keyboard, so Shift + Backspace deletes a word")
+    same(keys.takes(SHIFT, pressed = false, taking = true, system = false), true, "Shift's release goes with it")
+    same(keys.takes(KeyEvent.KEYCODE_BACK, pressed = true, taking = true, system = true), false, "Back stays with the app")
+    same(keys.takes(KeyEvent.KEYCODE_VOLUME_UP, pressed = true, taking = true, system = true), false, "The phone's own keys stay with the app")
+    same(keys.takes(LETTER, pressed = true, taking = false, system = false), false, "Outside the field the app keeps its keys")
+    same(keys.takes(LETTER, pressed = false, taking = true, system = false), false, "A release whose press the app had stays the app's")
+    keys.takes(LETTER, pressed = true, taking = true, system = false)
+    keys.clear()
+    same(keys.holding, false, "With the Back service off, nothing is held for it")
 }
-
 private fun lockedThenHold() = Keyboard().run {
     press()
     idle(GAP)

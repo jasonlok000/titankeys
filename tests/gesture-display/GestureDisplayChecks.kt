@@ -12,6 +12,7 @@ private const val ON_SPACE = 5.3f
 private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
+    aSelectionIsSomethingToDelete()
     aFlicksGlowRampsWithItsReach()
     aFlicksWayInStretchesToFitItsDots()
     aHeldDeleteGlowFollowsItsPace()
@@ -1066,8 +1067,9 @@ private fun aHeldDeleteGlowFollowsItsPace() {
 }
 
 /**
- * In the pause zone the hold shows its zone by what it does: its words stand still, its glow fades out, and its caret blinks as
- * steering's does when it pauses. Out of it they move again, the glow comes back and the caret stays on.
+ * In the pause zone the hold shows its zone by what it does: its words stand still, its glow dims (owner, 2026-11-13: it used to
+ * fade out), its words about to go turn from orange back to grey, and its caret blinks as steering's does when it pauses, dimmed.
+ * Out of it they move again, the glow and the orange come back and the caret stays on.
  */
 private fun aPausedHoldFadesAndBlinks() {
     val display = GestureDisplay()
@@ -1075,6 +1077,7 @@ private fun aPausedHoldFadesAndBlinks() {
     display.run(1_000, 1_300)
     display.deletePaused(true)
     same(display.deletePaused, true, "The display knows the hold is paused")
+    same(display.pauseShown, 0f, "and shows it from the next frame, easing")
     val flow = display.flow
     display.run(1_316, 1_332)
     same(display.caretShown, true, "The caret shows as the pause starts")
@@ -1083,9 +1086,11 @@ private fun aPausedHoldFadesAndBlinks() {
     display.run(1_316 + GestureDisplay.BLINK_MILLIS + 32, 1_316 + 2 * GestureDisplay.BLINK_MILLIS + 16)
     same(display.caretShown, true, "and on again")
     same(display.flow, flow, "Paused, its words stand still")
-    near(display.glowAlpha, 0f, "and its glow has faded out", .01f)
+    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA * GestureDisplay.PAUSED_GLOW, "and its glow is dimmed, not gone", .02f)
+    near(display.pauseShown, 1f, "and its pause shows in full", .01f)
     display.deletePaused(false)
     display.run(2_400, 2_800)
+    near(display.pauseShown, 0f, "Out of the pause the orange comes back", .05f)
     same(display.caretShown, true, "Out of the pause the caret stays on")
     near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "the glow comes back: ${display.glowAlpha}", .02f)
     isTrue(display.flow != flow, "and the words move again")
@@ -1837,4 +1842,21 @@ private fun aFlicksGlowRampsWithItsReach() {
     near(held.glowAlpha, before, "The hold takes it on with no jump", .01f)
     held.run(4_316, 5_200)
     near(held.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "then grows to the hold's own strength", .01f)
+}
+
+/**
+ * A flick or a held delete with text selected takes the selection, so it's something to delete, not a no, even with nothing before
+ * the cursor, and its dots are the selection's characters, not the word before it (bug hunt 2.1, #7).
+ */
+private fun aSelectionIsSomethingToDelete() {
+    // "hello world", all selected: the cursor is at the start, with nothing before it.
+    same(GestureDisplay.nothingToDelete("", "hello world"), false, "All selected is something to delete")
+    same(GestureDisplay.deleteTakes("", "hello world"), 10, "and its dots are its characters, not counting the space")
+    same(GestureDisplay.nothingToDelete("", null), true, "With nothing before the cursor and nothing selected, it's a no")
+    // A selection mid-text: the dots count what went, not the word before it.
+    same(GestureDisplay.deleteTakes("hello there ", "world!"), 6, "A selection's dots are the selection's")
+    same(GestureDisplay.deleteTakes("hello there", null), 5, "With none, the last word's, as before")
+    // A hold eats the selection first, then the words before it.
+    same(GestureDisplay.deleteLine("hello ", "world").toString(), "hello world", "A hold's words end with the selection")
+    same(GestureDisplay.deleteLine("hello", null), "hello", "and without one are the text before the cursor")
 }

@@ -49,6 +49,7 @@ internal object GestureLine {
     /** GestureDrawing's own sizes that the checks need: its handle's knob, in dp. run.sh checks they're still the drawing's. */
     const val HANDLE_KNOB = 4.5f
     const val STEER_CARET = 2f
+    const val SELECTION_GAP = 6f
 
     private val frc = FontRenderContext(null, true, true)
     private lateinit var regular: Font
@@ -208,7 +209,8 @@ internal object GestureLine {
         Frame("hold-paused", "held delete: in the pause zone, the caret on") { d ->
             hold(d, 1_500L)
             d.deletePaused(true)
-            run(d, 1_500L, 1_520L)
+            // Long enough for the pause to show in full, on a beat where the blinking caret is on.
+            run(d, 1_500L, 1_548L + 2 * GestureDisplay.BLINK_MILLIS)
         },
         Frame("hold-lifted", "held delete lifted: its words turning into dots") { d -> hold(d, 1_500L); d.deleteEnded(1_516L); run(d, 1_516L, 1_640L) },
         Frame("flick-in", "flick: the dots coming in") { d -> d.wordDeleted(1_000L, 5); run(d, 1_000L, 1_096L) },
@@ -322,6 +324,13 @@ internal object GestureLine {
             found += "a ${shape.kind} reaches %.2f px under the bar's top, under %.2f px".format(shape.bottom, floor)
         val knob = HANDLE_KNOB * s.density
         val swipe = d.scene == GestureDisplay.Scene.Swipe
+        // A swipe's path is centred on the line, as far above it as it may go below, down to the words' tails (owner, 2026-11-13).
+        if (swipe) {
+            val path = shapes.filter { it.kind == "line" }
+            if (path.isEmpty()) found += "draws no path"
+            else if (path.minOf { it.top } < s.line - (s.floor - s.line) - .5f)
+                found += "its path reaches %.2f px above the line, more than the %.2f px it may go below".format(s.line - path.minOf { it.top }, s.floor - s.line)
+        }
         // The chevron is two strokes; together they are centred on the line.
         val lines = shapes.filter { it.kind == "line" }
         if (!swipe && lines.isNotEmpty()) {
@@ -348,6 +357,31 @@ internal object GestureLine {
             if (words.isEmpty()) found += "has no words"
             for (word in words) if (abs(word.height - s.word * StripFit.X_HEIGHT) > .5f)
                 found += "a word is %.2f px tall, the small letters %.2f px".format(word.height, s.word * StripFit.X_HEIGHT)
+        }
+        // The selection keeps the same least gap from the words beside it on both sides (owner, 2026-11-13: it ran into the word
+        // on its left).
+        if (frame.name == "pick" || frame.name.startsWith("drag")) {
+            val box = shapes.filter { it.kind == "bar" && (it.colour and 0xFFFFFF) == accent }.maxByOrNull { it.height }
+            val grey = shapes.filter { it.kind == "bar" && (it.colour and 0xFFFFFF) == (look.ink and 0xFFFFFF) }
+            if (box == null) found += "has no selection"
+            else for (word in grey) {
+                val gap = if (word.right <= box.left + .5f) box.left - word.right else word.left - box.right
+                if (gap < SELECTION_GAP * s.density - .5f)
+                    found += "a word at x %.0f is %.2f px from the selection, under %.2f".format((word.left + word.right) / 2, gap, SELECTION_GAP * s.density)
+            }
+        }
+        // The held delete's words about to go are orange; in the pause zone they're light grey again and its caret is dimmed
+        // (owner, 2026-11-13).
+        if (frame.name == "hold" || frame.name == "hold-paused") {
+            val taking = shapes.filter { it.kind == "bar" && (it.colour and 0xFFFFFF) == accent && it.right - it.left > STEER_CARET * s.density + .01f }
+            val caretAlpha = carets.maxOfOrNull { it.colour ushr 24 } ?: 0
+            if (frame.name == "hold") {
+                if (taking.isEmpty()) found += "has no orange word for the word it's taking"
+                if (caretAlpha < 250) found += "its caret is dimmed while it isn't paused: alpha $caretAlpha"
+            } else {
+                if (taking.isNotEmpty()) found += "has ${taking.size} orange words while paused"
+                if (caretAlpha > 120) found += "its caret isn't dimmed while paused: alpha $caretAlpha"
+            }
         }
         val risky = risky(image)
         if (risky.isNotEmpty()) found += "${risky.size} px that show are within 4 px of the screen's outline, the first at ${risky.first()}"

@@ -118,7 +118,9 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             x = nextX
             y = nextY
         }
-        dot(canvas, x, y, dp(PATH_FINGER) * display.pathWidth[count - 1].coerceAtLeast(1f), look.accent)
+        // The finger's dot keeps over the words' tails too: at its thickest it sits a little above the path's end.
+        val finger = dp(PATH_FINGER) * display.pathWidth[count - 1].coerceAtLeast(1f)
+        dot(canvas, x, min(y, floor - finger), finger, look.accent)
         if (faded) canvas.restore()
     }
 
@@ -130,14 +132,14 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
 
     /**
-     * A touchpad height, from the top row down to the bottom of the letter rows, as a height on the strip. The middle row is on the
-     * bar's line, unless the bottom row would then reach under [floor]: then the rows rise just enough, and as they grow with Bar
-     * text size, a path that still doesn't fit keeps [PATH_EDGE] from the top and stops at [floor], its finger's dot included.
+     * A touchpad height, from the top row down to the bottom of the letter rows, as a height on the strip: the middle row on the
+     * bar's line, and the rows as far apart above it as below, close enough that the bottom row's stroke, at its thickest, keeps
+     * over the words' tails, [floor] (owner, 2026-11-13: the bottom row ran along the screen's edge). [PATH_ROW] at most.
      */
     private fun swipeY(y: Float, h: Float): Float {
-        val row = dp(PATH_ROW)
-        val middle = min(line, floor - 1.5f * row)
-        return (middle + (y / .75f * 3 - 1.5f) * row).coerceIn(dp(PATH_EDGE), floor - dp(PATH_FINGER))
+        val stroke = dp(PATH_WIDTH) * TrailThickness.THICKEST / 2
+        val row = min(dp(PATH_ROW), (room() - stroke) / 1.5f)
+        return line + (y / .75f * 3 - 1.5f).coerceIn(-1.5f, 1.5f) * row
     }
 
     /**
@@ -343,14 +345,23 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val slot = (right - left) / GestureDisplay.VISIBLE_WORDS
         val centre = (left + right) / 2
         val alpha = display.reveal
-        // The selection goes over the words that are not in it, so a word that it reaches goes under it.
-        wordRow(canvas, display, left, right, slot, centre, mid, selected = false, GuideMotion.faded(look.ink, WORD * alpha))
-        var start = centre + (display.spanStart - display.camera) * slot
-        var end = centre + (display.spanEnd - display.camera) * slot
-        if (end <= start) return
-        // The selection is cut at the bar's sides too, its end mark with it.
-        start = max(start - dp(SELECTION_PAD), left)
-        end = min(end + dp(SELECTION_PAD), right)
+        if (display.spanEnd <= display.spanStart) {
+            wordRow(canvas, display, left, right, slot, centre, mid, selected = false, GuideMotion.faded(look.ink, WORD * alpha))
+            return
+        }
+        // The selection reaches to its words' places, as it grows, but stops [SELECTION_GAP] short of the word beside it on each
+        // side, and never closer to its own words than [SELECTION_PAD]. It's cut at the bar's sides, its end mark with it.
+        fun pillEdge(index: Int, side: Int) = centre + (index - display.camera) * slot + side * slot * display.wordWidth(index) / 2
+        val first = floor(display.spanStart).toInt() + 1
+        val last = ceil(display.spanEnd).toInt() - 1
+        val start = max(min(max(centre + (display.spanStart - display.camera) * slot, pillEdge(first - 1, 1) + dp(SELECTION_GAP)),
+            pillEdge(first, -1) - dp(SELECTION_PAD)), left)
+        val end = min(max(min(centre + (display.spanEnd - display.camera) * slot, pillEdge(last + 1, -1) - dp(SELECTION_GAP)),
+            pillEdge(last, 1) + dp(SELECTION_PAD)), right)
+        // The words beside it keep [SELECTION_GAP] from it on both sides, as words keep apart on the bar (owner, 2026-11-13: the
+        // selection ran into the word on its left); a word it reaches goes under it.
+        wordRow(canvas, display, left, right, slot, centre, mid, selected = false, GuideMotion.faded(look.ink, WORD * alpha),
+            start - dp(SELECTION_GAP), end + dp(SELECTION_GAP))
         val box = min(text * SELECTION_HEIGHT / 2, room())
         rounded(canvas, start, mid - box, end, mid + box, radius,
             GuideMotion.faded(look.accent, alpha))
@@ -391,16 +402,24 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         }
     }
 
-    /** The words of a drag, cut at the bar's sides, [left] and [right], so none goes under the screen's rounded corners. */
+    /**
+     * The words of a drag, cut at the bar's sides, [left] and [right], so none goes under the screen's rounded corners. The words
+     * not [selected] are cut short of the selection too, [before] on its left and [after] on its right.
+     */
     private fun wordRow(canvas: Canvas, display: GestureDisplay, left: Float, right: Float, slot: Float, centre: Float, mid: Float,
-                        selected: Boolean, colour: Int) {
+                        selected: Boolean, colour: Int, before: Float = Float.NaN, after: Float = Float.NaN) {
         val first = floor(display.camera - GestureDisplay.VISIBLE_WORDS / 2).toInt() - 1
         val last = ceil(display.camera + GestureDisplay.VISIBLE_WORDS / 2).toInt() + 1
         for (index in first..last) {
             if ((index > display.spanStart && index < display.spanEnd) != selected) continue
             val x = centre + (index - display.camera) * slot
             val half = slot * display.wordWidth(index) / 2
-            word(canvas, max(x - half, left), min(x + half, right), mid, colour)
+            var from = max(x - half, left)
+            var to = min(x + half, right)
+            if (!selected && !before.isNaN()) {
+                if (index <= display.spanStart) to = min(to, before) else from = max(from, after)
+            }
+            word(canvas, from, to, mid, colour)
         }
     }
 
@@ -432,11 +451,16 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
                 (dp(CARET_WIDTH) + (dp(STEER_CARET) - dp(CARET_WIDTH)) * thin) * wider)
             return
         }
+        // The words the hold is taking are orange, as triple Space's selected words are, and the ones still to come stay grey
+        // (owner, 2026-11-13). In the pause zone the orange ones ease back to light grey, and the caret dims.
+        val paused = display.pauseShown
+        val taking = blend(GuideMotion.faded(look.accent, alpha), GuideMotion.faded(look.ink, PICKED * alpha), paused)
         lines(display, display.shownDeleted, left, stop, slot) { start, end, going ->
-            word(canvas, start, end, mid, GuideMotion.faded(look.ink, (if (going) PICKED else WORD) * alpha))
+            word(canvas, start, end, mid, if (going) taking else GuideMotion.faded(look.ink, WORD * alpha))
         }
-        // A thin solid caret, as a triple press's pick has, that blinks in the pause zone.
-        if (display.caretShown) bar(canvas, caret, mid, 2 * caretHalf(), GuideMotion.faded(look.accent, alpha), dp(STEER_CARET))
+        // A thin solid caret, as a triple press's pick has, that blinks in the pause zone, dimmed.
+        if (display.caretShown) bar(canvas, caret, mid, 2 * caretHalf(),
+            GuideMotion.faded(look.accent, alpha * (1f - (1f - PAUSED_CARET) * paused)), dp(STEER_CARET))
     }
 
     /**
@@ -502,8 +526,9 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             // The dots' run for this word: from its farthest dot to its nearest.
             val near = stop - step / 2 - firstSlot * step
             val far = stop - step / 2 - (firstSlot + count - 1) * step
-            val from = look.ink
-            val strength = (if (going) PICKED else WORD) + (1f - if (going) PICKED else WORD) * m
+            // The hold's orange words stay orange as they turn into dots; the grey ones turn orange.
+            val from = if (going) look.accent else look.ink
+            val strength = (if (going) 1f else WORD) + (1f - if (going) 1f else WORD) * m
             val fade = 1f - ((m - .45f) / .55f).coerceIn(0f, 1f)
             val half = wordHalf() + (radius - wordHalf()) * m
             val a = start + (far - radius - start) * m
@@ -619,9 +644,8 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val BAND_CLEAR = .7f
         const val BAND_LAYERS = 4
         const val BAND_PAD = 4f
-        /** The path's three rows of letters lie this far apart on the strip, and it keeps this far from the strip's edges. */
+        /** The path's three rows of letters lie at most this far apart on the strip: closer where the room under the line is less. */
         const val PATH_ROW = 14f
-        const val PATH_EDGE = 4.5f
         const val PATH_WIDTH = 1.6f
         const val PATH_FINGER = 2.8f
         const val GLOW_HEIGHT = 10f
@@ -635,6 +659,8 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val DELETE_SOFT = .45f
         /** A triple press's picked word, with no box round it, and a hold's word about to go, are this strong. */
         const val PICKED = .75f
+        /** A paused hold's caret is this strong. */
+        const val PAUSED_CARET = .4f
         const val PULSE = .25f
         const val PULSE_HEIGHT = 1f
         const val SIDE = 10f
@@ -685,6 +711,8 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         /** A selection is this tall, as a part of the words' size, as far as the room under the line lets it. */
         const val SELECTION_HEIGHT = 26f / 20f
         const val SELECTION_PAD = 5f
+        /** The least room between the selection and the words beside it, on both sides. */
+        const val SELECTION_GAP = 6f
         /**
          * A selection handle: taller than the selection where there's room, as a part of the words' size, a little wider than the
          * caret, with its knob on top.

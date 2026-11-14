@@ -14,6 +14,7 @@ private const val GAP_MILLIS = 80L
 
 fun main() {
     twoQuickTapsSelect()
+    eachFieldStartsWithItsOwnSelection()
     aDoubleSpaceCollapsesASelection()
     theBarShowsWhatIsSelected()
     tapsWithNoWordPickNothing()
@@ -1326,4 +1327,27 @@ private fun onlyTapsOnSpacesWidthCount() {
     val landed = steer.tapThenLand(5f)
     steer.move(*path(5f, ROW, 9f, ROW, landed))
     same(steer.started != null, true, "A steer from Space slides past its edge")
+}
+
+/**
+ * The last field's selection never carries into the next (bug hunt 2.1, #17): in Gmail, a word triple-spaced in Subject at 8 to 13,
+ * then Enter to the body, then a double space jumped the body's cursor to 8. A new field starts with what it says it has.
+ */
+private fun eachFieldStartsWithItsOwnSelection() {
+    val selection = FieldSelection()
+    // Subject: the cursor at 13, then a word picked, 8 to 13.
+    selection.started(13, 13)
+    selection.cursorBefore = 13
+    selection.start = 8
+    selection.end = 13
+    same(selection.selected, true, "Subject has its word selected")
+    // The body starts empty, its cursor at 0.
+    selection.started(0, 0)
+    same(selection.start to selection.end, 0 to 0, "The body's selection is its own, not Subject's")
+    same(selection.selected, false, "and nothing is selected there")
+    same(selection.cursorBefore, null, "and a double space has no old cursor to go back to")
+    same(WordSelection.collapseTo(selection.start, selection.end, selection.cursorBefore), 0, "so it stays where the body's cursor is")
+    // Chrome's address bar opens with its URL selected: that selection counts from the start.
+    selection.started(0, 22)
+    same(selection.selected, true, "A field that opens with text selected has it selected")
 }

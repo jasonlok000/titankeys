@@ -33,6 +33,8 @@ public final class SwipeTyping {
     private volatile String loadError;
     private volatile String readiness = "loading";
     private int loadingRetries;
+    /** How many times a failed load is tried again, as SwipeLoad.TRIES on the keyboard's side: the next text boxes try it. */
+    private static final int SWIPE_LOAD_TRIES = 2;
     private final InferenceTiming recognitionTiming = new InferenceTiming("Recognition");
     private final InferenceTiming completionTiming = new InferenceTiming("Completion");
     private LanguageHabits dictionary = new LanguageHabits();
@@ -214,7 +216,7 @@ public final class SwipeTyping {
     private void unavailable(Throwable error) {
         SwipeRecognizer failed = recogniser;
         recogniser = null; typedPredictions = null;
-        loadError = "Swipe typing unavailable. Retry loading in settings.";
+        loadError = "Swipe typing didn't load.";
         readiness = "unavailable";
         if (failed != null) {
             try { failed.close(); }
@@ -224,6 +226,8 @@ public final class SwipeTyping {
     }
 
     public String readiness() { return readiness; }
+    /** How many times a failed load has been tried again: the keyboard tries on the next text box while some are left. */
+    public int loadingRetries() { return loadingRetries; }
     public String availabilityError() { return loadError; }
 
     /** Explicit recovery is bounded; recognition never reloads native models implicitly. */
@@ -231,7 +235,7 @@ public final class SwipeTyping {
         worker.execute(() -> {
             String error = null;
             if (!"ready".equals(readiness)) {
-                if (loadingRetries >= 2) error = "Swipe loading retry limit reached. Restart TitanKeys to try again.";
+                if (loadingRetries >= SWIPE_LOAD_TRIES) error = "Swipe typing didn't load. Restart the phone to try again.";
                 else {
                     loadingRetries++; readiness = "loading";
                     try { loadEngine(); }

@@ -13,7 +13,7 @@ trap 'rm -rf "$work"' EXIT
 keyboard=android/kotlin/com/atlas/keyboard
 engine=android/kotlin/com/atlas/engine
 # The checks' own copies of the drawing's sizes must still be the drawing's.
-for line in "const val HANDLE_KNOB = 4.5f" "const val STEER_CARET = 2f"; do
+for line in "const val HANDLE_KNOB = 4.5f" "const val STEER_CARET = 2f" "const val SELECTION_GAP = 6f"; do
   grep -qF "$line" "$keyboard/GestureDrawing.kt" || { echo "GestureDrawing.kt changed: $line"; exit 1; }
 done
 grep -qF "drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat(), barHeight, look, line, wordFoot(), wordPixels())" "$keyboard/Strip.kt" \

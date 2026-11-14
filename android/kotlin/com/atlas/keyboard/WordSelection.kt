@@ -120,3 +120,25 @@ object WordSelection {
         }
     }
 }
+
+/**
+ * What the keyboard knows of the field's selection: where the app last said it is, and where the cursor was before a Space gesture
+ * selected words, so a double space can put it back. Each field starts with its own (bug hunt 2.1, #17): the last field's
+ * selection used to carry into the next, so a double space there jumped to the old field's offsets.
+ */
+internal class FieldSelection {
+    var start = -1
+    var end = -1
+    /** Where the cursor was before a Space gesture selected words, or null. */
+    var cursorBefore: Int? = null
+
+    /** A new field, or the same one started again: its selection is the one it starts with, and nothing from before. */
+    fun started(initialStart: Int, initialEnd: Int) {
+        start = initialStart
+        end = initialEnd
+        cursorBefore = null
+    }
+
+    /** Something is selected, as far as the app has said. */
+    val selected get() = start >= 0 && start != end
+}

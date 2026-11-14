@@ -71,8 +71,12 @@ class AtlasIme : InputMethodService() {
     /** Selecting and a held delete hit their walls by the same rule as steering's ends: see [WallHits]. */
     private val selectionWall = WallHits()
     private val deleteWall = WallHits()
+    /** The field's selection as the app last said, and where the cursor was before a Space gesture selected words: see [FieldSelection]. */
+    private val selection = FieldSelection()
     /** Where the cursor was before a Space gesture selected words, so a double space can put it back, or null. */
-    private var cursorBeforeSelect: Int? = null
+    private var cursorBeforeSelect: Int?
+        get() = selection.cursorBefore
+        set(value) { selection.cursorBefore = value }
     private lateinit var composer: Composer
     private lateinit var autocorrect: AutocorrectLoader
     private lateinit var phoneNames: PhoneNameSource
@@ -104,8 +108,12 @@ class AtlasIme : InputMethodService() {
     /** The word that the word drag started from, as its start and end in the field. */
     private var wordAnchor: Pair<Int, Int>? = null
     /** The selection start the app last reported, for apps that don't say where their text sits. */
-    private var lastSelectionStart = -1
-    private var lastSelectionEnd = -1
+    private var lastSelectionStart: Int
+        get() = selection.start
+        set(value) { selection.start = value }
+    private var lastSelectionEnd: Int
+        get() = selection.end
+        set(value) { selection.end = value }
     private val modifiers = Modifiers()
     private var strip: Strip? = null
     /** The words the composer last put on the bar, for a strip that is made after that. */
@@ -234,10 +242,24 @@ class AtlasIme : InputMethodService() {
 
     private val endTeamsEgg = Runnable { clearTeamsEgg() }
 
-    /** Any key or touch clears it at once, so it never stands in the way of typing. */
+    /** Any key or touch clears it at once, so it never stands in the way of typing, and a [Strip.Notice.Line] with it. */
     private fun clearTeamsEgg() {
         main.removeCallbacks(endTeamsEgg)
-        if (strip?.notice == Strip.Notice.TeamsEgg) strip?.notice = null
+        if (strip?.notice == Strip.Notice.TeamsEgg || strip?.notice is Strip.Notice.Line) strip?.notice = null
+    }
+
+    /**
+     * A swipe the engine couldn't take, as it failed to load: the bar says so for a moment, and what happens next, never over a
+     * word's menu (bug hunt 2.1, #22). The next key or touch clears it, as it does the Teams egg.
+     */
+    private fun showSwipeUnavailable() {
+        val strip = strip ?: return
+        val typing = SwipeTyping.get(this)
+        val text = SwipeLoad.notice(typing.readiness(), typing.loadingRetries()) ?: return
+        if (strip.notice is Strip.Notice.Menu) return
+        strip.notice = Strip.Notice.Line(text)
+        main.removeCallbacks(endTeamsEgg)
+        main.postDelayed(endTeamsEgg, SwipeLoad.NOTICE_MILLIS)
     }
 
     /** Android's boot count, where an app can read it, and the time this boot started. Neither changes when TitanKeys restarts. */
@@ -449,8 +471,10 @@ class AtlasIme : InputMethodService() {
             enqueue {
                 // With nothing to delete, no hold starts: no words on the bar, no dots, only the flick's wall (owner, 2026-11-12).
                 val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
-                if (before?.isEmpty() != true) {
-                    strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), deleteHold.pace, before)
+                val selected = selectionToDelete()
+                if (!GestureDisplay.nothingToDelete(before, selected)) {
+                    strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), deleteHold.pace,
+                        GestureDisplay.deleteLine(before, selected))
                     // The dots at the lift keep clear of this hold's ticks.
                     haptics.holdStarted()
                     // The guide wants to know that this delete stays down, before its first word goes.
@@ -464,7 +488,8 @@ class AtlasIme : InputMethodService() {
         enqueue {
             // At the start of the text the hold hits a wall: the same wall as a flick with nothing to delete, played clean, once,
             // and the hold stays quiet while the finger stays, with no words left on the bar, only the caret.
-            if (currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() == true) {
+            val selected = selectionToDelete()
+            if (GestureDisplay.nothingToDelete(currentInputConnection?.getTextBeforeCursor(1, 0), selected)) {
                 if (deleteWall.reached()) haptics.wall(Haptic.deleteFoundNothing(tookAny = true))
                 strip?.gesture?.deleteText("")
                 return@enqueue
@@ -473,9 +498,9 @@ class AtlasIme : InputMethodService() {
             haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)
             // A dot for each character of the word, for the dots that play when the hold lifts, and the real words for the bar.
             val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
-            before?.let { strip?.gesture?.deleteText(it) }
+            GestureDisplay.deleteLine(before, selected)?.let { strip?.gesture?.deleteText(it) }
             composer.backspace(true)
-            strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
+            strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.deleteTakes(before, selected))
             KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
         }
     }
@@ -1318,11 +1343,17 @@ class AtlasIme : InputMethodService() {
         cancelShowStrip()
         cancelRecycle()
         main.removeCallbacks(hideStrip)
+        // A swipe engine that failed to load tries again on a new text box, a few times at most (bug hunt 2.1, #22).
+        if (editing && !restarting) SwipeTyping.get(this).let { typing ->
+            if (SwipeLoad.retryNow(typing.readiness(), typing.loadingRetries())) typing.retryLoading { }
+        }
+        // This field's own selection, nothing of the last one's (bug hunt 2.1, #17), and the bar shows it if it starts with one:
+        // Android tells of no selection change for it (the guide's word menu slide starts with TitanKeys selected).
+        selection.started(info.initialSelStart, info.initialSelEnd)
+        selectedWord = null
+        if (editing && field.suggestions) showSelectedWord(info.initialSelStart, info.initialSelEnd) else strip?.selected = null
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
-            // A field that starts with a word selected shows it on the bar at once, as a selection made later does, with its menu a
-            // tap away: Android tells of no selection change for it (the guide's word menu slide starts with TitanKeys selected).
-            if (field.suggestions) showSelectedWord(info.initialSelStart, info.initialSelEnd)
             main.post(showStrip)
         } else {
             composer.stop()
@@ -2654,7 +2685,7 @@ class AtlasIme : InputMethodService() {
             // An app that does not answer still gets the light tick.
             cursorSteps.step(if (next == null) 'a' else next.firstOrNull())?.let(haptics::play)
             if (rereadCursorText) readCursorText()
-            command(arrow, steer = true)
+            if (CursorSteps.sendsArrow(next, lastSelectionStart != lastSelectionEnd)) command(arrow, steer = true)
             if (next?.isEmpty() != true) rereadCursorText = strip?.gesture?.cursorStepped(direction) == true
         }
     }
@@ -2735,7 +2766,16 @@ class AtlasIme : InputMethodService() {
      */
     private fun somethingToDelete(first: Sample): Boolean {
         if (!startsDeleteFlick(first.x, first.y) || pendingInput.isNotEmpty() || composer.hasPendingInput) return true
-        return currentInputConnection?.getTextBeforeCursor(1, 0)?.isEmpty() != true
+        return !GestureDisplay.nothingToDelete(currentInputConnection?.getTextBeforeCursor(1, 0), selectionToDelete())
+    }
+
+    /**
+     * The field's selection, which a delete takes first and whole, or null with nothing selected. Read from the field each time,
+     * as the last selection update can lag behind a delete that just took it; an app that won't read it out counts as none.
+     */
+    private fun selectionToDelete(): CharSequence? {
+        if (lastSelectionStart < 0 || lastSelectionStart == lastSelectionEnd) return null
+        return currentInputConnection?.getSelectedText(0)?.takeIf { it.isNotEmpty() }
     }
 
     /** Keeps where the cursor is, when nothing is selected, so a double space after a select can put it back there. */
@@ -3017,12 +3057,14 @@ class AtlasIme : InputMethodService() {
                 if (refuse(if (outcome.deletesWord) GuideLesson.Flick else GuideLesson.Swipe)) return
                 if (outcome.deletesWord) {
                     val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
-                    val nothingLeft = before?.isEmpty() == true
+                    // A selection is something to delete, and goes whole (bug hunt 2.1, #7).
+                    val selected = selectionToDelete()
+                    val nothingLeft = GestureDisplay.nothingToDelete(before, selected)
                     // Nothing to delete: nothing happened, so a no, once for the stroke. A hold with nothing to delete never starts,
                     // and plays just this; its steps after stay quiet, as the stroke has had its say (see [deleteWall]).
                     if (nothingLeft && deleteWall.reached()) haptics.play(Haptic.deleteFoundNothing(tookAny = false))
                     // A hold's first word: the bar's words are the real ones before it goes.
-                    if (before != null) strip?.gesture?.deleteText(before)
+                    GestureDisplay.deleteLine(before, selected)?.let { strip?.gesture?.deleteText(it) }
                     composer.backspace(true)
                     if (!nothingLeft) {
                         // A dot for each character of the word that went, not counting spaces. The haptic's tail lands as they pop.
@@ -3030,7 +3072,7 @@ class AtlasIme : InputMethodService() {
                         gesture?.speedUp = Haptics.dotsSpeedUp(this)
                         // How long the dots wait on the bar, which the Haptics lab can try live in TitanKeys Debug.
                         GestureDisplay.triedFlickHold = Haptics.readFlickHold(this)?.toFloat()
-                        gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.letters(before))
+                        gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.deleteTakes(before, selected))
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
                         val dotsAt = gesture?.dotsAt
@@ -3041,6 +3083,8 @@ class AtlasIme : InputMethodService() {
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return
                 }
+                // An engine that failed to load takes no swipe: the bar says why, instead of the swipe vanishing without a word.
+                showSwipeUnavailable()
                 composer.swipe(letterSpace(outcome.points).also { TouchSizes.attach(it, outcome.points) }, outcome.startedAt,
                     outcome.endedAt, modifiers.metaState)
                 modifiers.consume()

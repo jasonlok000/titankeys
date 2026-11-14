@@ -30,8 +30,11 @@ enum class Family(val id: String, val label: String, val pattern: List<Long>) {
     Change("change", "Change", listOf(12, 35, 22, 35, 12)),
     /** Two equal firm pulses: it stays. */
     Lock("lock", "Lock", listOf(30, 50, 30)),
-    /** One pulse: it no longer stays. */
-    Release("release", "Release", listOf(30)),
+    /**
+     * One pulse: it no longer stays. A little longer than a boundary's tick, so each meaning keeps its own pattern (bug hunt 2.1,
+     * #35: they were both 30 ms), and still one pulse against a lock's two.
+     */
+    Release("release", "Release", listOf(40)),
     /** Long then short, falling: a word flicked away. The tail lands as the dots pop. */
     GoneFlick("gone_flick", "Gone flick", listOf(50, 35, 20)),
     /** One long pulse: gone. */
@@ -680,6 +683,15 @@ class CursorSteps {
         }
         atEnd = false
         return if (next.isWhitespace()) Haptic.CursorSpace else Haptic.CursorLetter
+    }
+
+    companion object {
+        /**
+         * Whether a step sends its arrow: not at an end of the text, [next] empty, where it hits the wall and nothing else. An
+         * arrow there moves nothing in the field, and Android takes it to move focus to the next field or button (bug hunt 2.1,
+         * #16). A [selected] text still gets it, to collapse, and an app that doesn't answer ([next] null) too.
+         */
+        fun sendsArrow(next: CharSequence?, selected: Boolean) = selected || next?.isEmpty() != true
     }
 }
 

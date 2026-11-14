@@ -38,7 +38,7 @@ Patterns are on and off in ms, starting with on.
 | **Confirm** | 15, 40, 35 | Tap a word on the bar, the word menu opens, steering starts, paste from the clipboard page, paste the offered clip, a key or a chip tap on exact typing's bar, an option picked in the app |
 | **Change** | 12, 35, 22, 35, 12 | The quiet swell: autocorrect, shorthand, a :name: emoji, a snippet, a held letter becoming its symbol, a hint in the guide, the playground's plant at the top. Texture for the gate |
 | **Lock** | 30, 50, 30 | Selecting starts, a double or triple tap picks a word, Shift or Alt locked, a clip pinned, a lock on exact typing's bar, a quick setting switched on, Record a bug starts, a switch turned on in the app or the guide, agreeing to share swipes |
-| **Release** | 30 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked, Back closing the word menu, a quick setting switched off, Record a bug stops, a switch turned off in the app or the guide |
+| **Release** | 40 | Shift or Alt unlocked, a clip unpinned, a locked chip on exact typing's bar unlocked, Back closing the word menu, a quick setting switched off, Record a bug stops, a switch turned off in the app or the guide |
 | **Gone flick** | 50, 35, 20 | A delete flick, timed to its dots |
 | **Hit** | 50 | Each word a long delete takes after its flick, shorter as it speeds up (see A held delete's hit, below). Each lightning flash in the playground |
 | **Gone** | 60 | The clipboard cleared, a confirmed delete in the app |
@@ -88,7 +88,7 @@ A press gets the tick only when its step's haptic lands more than 80 ms after it
 
 Going up rises: each pattern ends on its strongest pulse, the higher the step the stronger, and Favourite's last hit is the strongest of all. Going down falls: each starts on its strongest pulse, and the further down a step goes, the harder it starts and the more it weighs in all (62, 75 and 90 ms of pulses). Every gap is 40 ms, so each pulse reads on its own. A word that is a dictionary word starts at Favourite, and Unfavourite takes it back there. The spent heart plays No, not nothing, so a press that does nothing still answers. tests/haptics checks the directions and that each step feels like no other family.
 
-Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single 30 ms pulse too, but it comes once, so it's a message. Hit is as firm as a message, but it's texture for the gate too: a long delete's words can come every 80 ms, and the repeat rule would drop them. Change's quiet swell is texture for the gate as well: it says something changed by itself, which needs nothing from you, so it never holds up or delays another haptic and may come again at once.
+Boundary is texture for the gate: it comes in the same fast runs as the letters, so it keeps their pace. Release is a single pulse too, 40 ms so it never feels like a boundary, and it comes once, so it's a message. Hit is as firm as a message, but it's texture for the gate too: a long delete's words can come every 80 ms, and the repeat rule would drop them. Change's quiet swell is texture for the gate as well: it says something changed by itself, which needs nothing from you, so it never holds up or delays another haptic and may come again at once.
 
 The owner's table had the delete flick at 50, 30, 20. Its gap is 35 instead, so it keeps rule 4.
 

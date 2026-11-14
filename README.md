@@ -164,7 +164,7 @@ The same recorded swipes, replayed through each keyboard on the phone. Atlas is 
 | Right word first, first try | 86 (68%) | 106 (84%) | 115 (91%) |
 | Right word in the top 3 | 108 (86%) | 111 (88%) | 121 (96%) |
 
-These sentences were never used to tune anything. It's one person's swipes on one phone, so yours may differ. Every number, the trade-offs and what it costs are in [docs/engine.md](docs/engine.md).
+These sentences were never used to tune anything. It's one person's swipes on one phone, so yours may differ. Every number, the trade-offs and what it costs are in [the technical paper](docs/paper.md).
 
 ## Setup
 

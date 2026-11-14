@@ -316,11 +316,9 @@ internal object BarLine {
     /** Shift's arrow for an automatic capital, where Shift's chip would be, beside the words. */
     private fun capital(look: Look, g: Graphics2D) {
         words(look, g, listOf("The", "I", "This"))
-        // As Strip: a 13 dp chip's height at the bar's density (Shift's chip before FixedScale), its middle on the line; before,
-        // the chips' 14 dp, centred on the bar.
-        val size = (if (look.after) 13f else 14f) * look.density
-        val height = size * (1984 + 494) / 2048f + 2 * look.dp(3)
-        val arrow = height - 2 * look.dp(4)
+        // As Strip: the arrow .63 of the words' capitals, its middle on the line; before the line, a 14 dp chip's, centred on the bar.
+        val arrow = if (look.after) look.wordPx * StripFit.CAPITALS * .63f else 14 * look.density * (1984 + 494) / 2048f + 2 * look.dp(3) - 2 * look.dp(4)
+        val height = arrow + 2 * look.dp(4)
         val wide = arrow + 2 * look.dp(5)
         val left = look.chipSide.toFloat()
         val top = if (look.after) minOf(look.line - height / 2, look.floor - height / 2 - arrow / 2 - look.dp(1)) else (BAR - height) / 2

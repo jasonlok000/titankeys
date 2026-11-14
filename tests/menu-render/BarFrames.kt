@@ -155,6 +155,28 @@ internal object BarFrames {
         return said.distinct()
     }
 
+    /**
+     * The clip offer and the automatic capital's arrow laid out as build #19 had them (see [BarLine.Look.build19]), beside the states
+     * as they are now: build19/<size>/<state>.png. A lone clip with tails must come out cut at every size, as on the phone, or the
+     * render's check isn't modelling it. Returns what it found, to print.
+     */
+    fun build19(out: File, states: List<BarLine.State>): List<String> {
+        val said = ArrayList<String>()
+        val names = listOf("clip", "clip-phone", "clip-jpg", "clip-hint", "capital", "capital-clip")
+        for (size in FixedScale.Size.entries) {
+            val dir = File(out, "build19/${size.name.lowercase()}").apply { mkdirs() }
+            for (state in states.filter { it.name in names }) {
+                val look = BarLine.Look(size, BarLine.Era.After).apply { build19 = true }
+                ImageIO.write(BarLine.picture(look, state), "png", File(dir, "${state.name}.png"))
+                if (state.name in listOf("clip-phone", "clip-jpg", "capital-clip")) {
+                    check(look.cut.isNotEmpty()) { "${size.name}, ${state.name}: laid out as build #19, the clip must come out cut" }
+                    said += "${size.name}, ${state.name}, as build #19: ${look.cut.joinToString()}"
+                }
+            }
+        }
+        return said
+    }
+
     /** A step of an effect: the button, the rung it's pressed from, and the column the finger rests on. */
     private class Move(val button: MenuKeys.Button, val from: MenuKeys.Step, val column: Int)
 

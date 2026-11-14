@@ -1678,7 +1678,7 @@ private fun titanKeysIsSelected(step: GuideStep) {
     // Selected in the box as the slide starts, before the keyboard reads the field, and the keyboard shows a selection it starts with.
     same(guide.contains("val selected = step.selected?.let { menuTarget(field.text.toString()) }") &&
         guide.contains("if (selected != null) field.setSelection(selected.first, selected.last + 1)"), true, "The slide starts with TitanKeys selected")
-    same(ime.contains("if (field.suggestions) showSelectedWord(info.initialSelStart, info.initialSelEnd)"), true,
+    same(ime.contains("if (editing && field.suggestions) showSelectedWord(info.initialSelStart, info.initialSelEnd)"), true,
         "A field that starts with a word selected shows it on the bar")
     // The bar shows it as any selected word, and a tap opens its menu as a hold does, behind the slide's one unlock.
     same(strip.contains("private val selectedView = item({ act(Action.OpenSelected) }, { act(Action.OpenSelected); true })"), true,

@@ -1553,7 +1553,7 @@ class AtlasIme : InputMethodService() {
         hold.hidden()
         // A panel that nobody can see must not take the next key, nor a word menu.
         closePanel()
-        if (MenuKeys.closes(altOrPanel, hidden = true, guideShowOnly = shownGuideWord() != null)) closeMenu()
+        if (MenuKeys.closes(altOrPanel, hidden = true, guideShowOnly = inGuide)) closeMenu()
         // A delayed hide from the previous app arrives just after this field starts. A later hide, or one
         // after you have typed, is the app's own, such as a tap outside the field or a Done key.
         cancelShowStrip()
@@ -3705,7 +3705,7 @@ class AtlasIme : InputMethodService() {
         shownShift = modifiers.shift
         shownAlt = modifiers.alt
         // A panel or Alt takes the menu's keys, so the menu closes rather than be pressed unseen.
-        if (menuOpen && MenuKeys.closes(altOrPanel, hidden = false, guideShowOnly = shownGuideWord() != null)) closeMenu()
+        if (menuOpen && MenuKeys.closes(altOrPanel, hidden = false, guideShowOnly = inGuide)) closeMenu()
         strip?.visibility = if (panelOpen) View.GONE else View.VISIBLE
         updateExactBar()
         showModifierBar()

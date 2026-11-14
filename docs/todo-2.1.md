@@ -411,6 +411,23 @@ enders\gesture-line
        ordinary app unless it also grabs keys first; not needed for the pre-release, a minute's check after.
        Build #21 (from 050b163) verifies so ~/build/tk-overnight is current for tools/release.sh. Passed every check (debug
        6715355a); ~/build/tk-overnight is at 050b163 with the new wording and notes: ready for the owner to sign.
+  - **Owner's hands-on pass on #20 (2026-11-14 ~00:45):** the trail, triple Space's gap, the held delete, Smart Launcher and a
+    clip alone all good.
+    - **Launch blocking, fixed** (cae21c2): Setup's "Set Sym/fn to Programmable key"
+      crashed the phone's Shortcut keys app (com.agui.shortcutsettings, NPE in SpecialFunctionFragment.onCreate): it has no
+      launcher entry, so PhoneChecks took the first MAIN activity, FunctionDisplayActivity, which needs a key handed to it. Now
+      it opens ui.EntryAppActivity, the entry the phone's Settings uses (checked by adb: Shortcut keys with Sym and Fn key
+      listed, no crash), then EXTRA_SETTINGS, then Settings.
+    - **Sliding Mode 1 row merged** (owner: "redundant to the scroll assistant up top"): one step, done only when Scroll
+      assistant is on and every app TitanKeys typed in is on Sliding Mode 1, with the note naming any app that isn't. The layout is
+      the Orchestrator's call (unapproved).
+    - **Later, after the release** (owner: "minor thing ... I would just accept and remark as later"): the word menu's hover.
+      Holding on Favourite after a press shows "already favourite" for a moment and then nothing, though the finger is still on
+      it. Wanted: while hovering, the pill follows the new state; off the button, no pill. For W.
+    - Answered: the trail maps the three letter rows (Q, A and Z rows; not Space's row), only the outer half of the top and bottom
+      rows is pulled in; Alt + Sym is TitanKeys' own key, so it works in every app while TitanKeys is the keyboard and switches
+      to the next enabled one; from another keyboard it does nothing.
+    - Build #22 (from the Setup fix) verifying; then the phone (Setup's Sym and fn links), then signing.
     4. Orchestrator: the release variant built without the owner's key (compiles, no debug code, against
        docs/release-audit-2.1.md), and the release notes' final pass for this round (the end screen's Back, the clip, the arrow,
        the trail).

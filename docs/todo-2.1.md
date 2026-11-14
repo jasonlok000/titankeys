@@ -365,7 +365,8 @@ enders\gesture-line
          Worth a look outdoors.
     - Auto-capital arrow (owner: "I think the auto cap icon should be smaller like how it was like in the old one before the
       resize. And scales with the bar element size."). The automatic capital's Shift arrow at the bar's left grew with the
-      chips; bring it back to its size before Bar text size (at Smaller), scaled by the Bar text size factor, on the line and
+      chips; bring it back to its size before font size mattered (owner: "Before the resize means before font size matters."): as
+      Strip drew it at 824c865^, before FixedScale (2026-11-12), at Smaller, scaled by the Bar text size factor, on the line and
       clear of the corner. For W when work resumes, with before/after renders at all three sizes.
       - Owner's answers: the keyboard is always dark (W, when work resumes: Look always dark, the light look removed); the guide
         and the playground get the border pass (V); the Sym panel's other pages get the even spacing (W); orange screens stay;

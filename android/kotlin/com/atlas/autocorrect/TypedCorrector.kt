@@ -438,14 +438,27 @@ class TypedCorrector(
             // A fix made at the last space, seen again with the word after it. Shorthand spelled out stays as the setting asks.
             val fixed = respelled(typo?.takeUnless(::isShorthand)?.let { context.reconsiderFix(trailing.before, it, trailing.word, trailing.next) }, trailing.word)
                 ?: respelled(context.review(trailing.before, trailing.word, trailing.next, trailing.beforePrevious, typedAsIs = typo == null), trailing.word)
+                    ?.takeIf { secondLookMay(trailing.word, it) }
             if (fixed != null) return Review(trailing.word, fixed, "${trailing.word} ${trailing.next}${trailing.tail}",
                 "$fixed ${trailing.next}${trailing.tail}", false)
         }
         if (!latestTyped || trailing.tail.firstOrNull() !in SENTENCE_END_MARKS || isDeliberate(trailing.next) || modelDecides(trailing.next))
             return null
-        return respelled(context.review(trailing.word, trailing.next, PairCounts.SENTENCE_END), trailing.next)?.let { fixed ->
+        return respelled(context.review(trailing.word, trailing.next, PairCounts.SENTENCE_END), trailing.next)
+            ?.takeIf { secondLookMay(trailing.next, it) }?.let { fixed ->
             Review(trailing.next, fixed, "${trailing.next}${trailing.tail}", "$fixed${trailing.tail}", true)
         }
+    }
+
+    /**
+     * Whether the second look may change [word] to [fixed], by the switches (bug hunt #8): each kind of fix has its own. Putting in an
+     * apostrophe is Missing apostrophes'; fixing a word that isn't one is Typos'. Changing a real word for another that fits better
+     * is the second look's own, under its switch alone.
+     */
+    private fun secondLookMay(word: String, fixed: String): Boolean = when {
+        fixed.replace("'", "").equals(word.replace("'", ""), ignoreCase = true) -> on(FixKind.APOSTROPHES)
+        !isKnown(word) -> on(FixKind.TYPOS)
+        else -> true
     }
 
     /**

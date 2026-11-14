@@ -2518,6 +2518,19 @@ private fun bugHunt(world: Realistic) {
         same(typist.choose(at).type(" ").text, "weather ", "#5: Space after a picked word in an address bar adds none")
     }
     same(Typist(world, field = url).type("ab  ").text, "ab  ", "#5: two typed spaces stay two in an address bar, with no full stop")
+
+    // #8: with Typos or Missing apostrophes off, the second look made those fixes anyway.
+    fun typed(text: String, off: Set<FixKind> = emptySet()): String {
+        val lists = Lists(world.words, off = off)
+        return Typist(world, world.autocorrect(lists, studyScorer), lists = lists).type(text).text
+    }
+    same(typed("teh cat "), "the cat ", "#8: Typos on fixes \"teh\"")
+    same(typed("teh cat ", setOf(FixKind.TYPOS)), "teh cat ", "#8: Typos off, the second look leaves \"teh\"")
+    same(typed("see you tomorow then ", setOf(FixKind.TYPOS)), "see you tomorow then ", "#8: Typos off leaves \"tomorow\"")
+    same(typed("I saw teh.", setOf(FixKind.TYPOS)), "I saw teh.", "#8: Typos off leaves \"teh\" at a sentence's end")
+    same(typed("i dont know ", setOf(FixKind.APOSTROPHES)), "I dont know ", "#8: Missing apostrophes off leaves \"dont\"")
+    same(typed("i dont know "), "I don't know ", "#8: Missing apostrophes on fixes it")
+    same(typed("get dome food ", setOf(FixKind.TYPOS, FixKind.APOSTROPHES)), "get some food ", "#8: a real-word confusion stays the second look's")
 }
 
 fun main() {

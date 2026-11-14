@@ -518,6 +518,11 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private var morphNext = 0
     /** True while the held delete's finger rests in the pause zone and no words go. */
     var deletePaused = false
+    /**
+     * How far the held delete shows its pause, 0 to 1, easing as the finger goes into the pause zone and out: its words about to
+     * go turn from orange back to light grey, and its caret and corner glow dim (owner, 2026-11-13), so a pause reads at a glance.
+     */
+    var pauseShown = 0f
         private set
     /** When the pause's caret started blinking, or -1. */
     private var pausedAt = -1L
@@ -1042,7 +1047,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         } else glowWidth = reach
         // A flick's strength goes with where its glow reaches, so it grows as the finger goes left; a hold's eases to its own,
         // from wherever the flick's was.
-        val target = if (deletePaused) 0f else if (flick) heldAlpha * flickGlowStrength(glowWidth) else heldAlpha
+        // In the pause zone a hold's glow dims, and stays, so the pause shows (owner, 2026-11-13).
+        val target = if (deletePaused) heldAlpha * PAUSED_GLOW else if (flick) heldAlpha * flickGlowStrength(glowWidth) else heldAlpha
         glowBase = if (flick) target else ease(glowBase, target, elapsed, if (target < glowBase) DELETE_GLOW_FADE else DELETE_GLOW_MILLIS, motion)
         return motion && (abs(shownPace - deletePace) > .002f || abs(glowBase - target) > .002f || abs(glowWidth - reach) > .002f)
     }
@@ -1127,6 +1133,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             Scene.DeleteHold -> {
                 shownDeleted = ease(shownDeleted, deleted.toFloat(), elapsed, min(deleteMillis * DELETE_EASE, MAX_DELETE_EASE_MILLIS), motion)
                 if (motion && !deletePaused) flow = (flow + min(FLOW_FASTEST, 1000f / deleteMillis) * seconds).mod(1f)
+                pauseShown = ease(pauseShown, if (deletePaused) 1f else 0f, elapsed, PAUSE_EASE_MILLIS, motion)
                 // In the pause zone the caret blinks; it is the only caret that does. With motion off it stays on.
                 if (deletePaused && pausedAt < 0) pausedAt = now
                 caretShown = !motion || !deletePaused || (now - pausedAt) / BLINK_MILLIS % 2 == 0L
@@ -1279,6 +1286,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         held.clear()
         morphNext = 0
         deletePaused = false
+        pauseShown = 0f
         pausedAt = -1L
         holdKnown = -1
         holdMore = false
@@ -1454,6 +1462,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         /** A held delete's glow follows the pace this smoothly, and fades out in the pause zone over about this long. */
         const val DELETE_GLOW_MILLIS = 90f
         const val DELETE_GLOW_FADE = 140f
+        /** A paused hold's glow is this much of its own; its words and caret ease to their paused look over [PAUSE_EASE_MILLIS]. */
+        const val PAUSED_GLOW = .35f
+        const val PAUSE_EASE_MILLIS = 120f
         /** How strong a single flick's glow is, as a hold's pace: about a hold's 4 keys out. */
         const val FLICK_GLOW_PACE = .6f
         /** Every flick's glow shows at full strength for at least this long, even one that lifted before it drew, then fades. */

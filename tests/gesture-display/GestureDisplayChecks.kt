@@ -1067,8 +1067,9 @@ private fun aHeldDeleteGlowFollowsItsPace() {
 }
 
 /**
- * In the pause zone the hold shows its zone by what it does: its words stand still, its glow fades out, and its caret blinks as
- * steering's does when it pauses. Out of it they move again, the glow comes back and the caret stays on.
+ * In the pause zone the hold shows its zone by what it does: its words stand still, its glow dims (owner, 2026-11-13: it used to
+ * fade out), its words about to go turn from orange back to grey, and its caret blinks as steering's does when it pauses, dimmed.
+ * Out of it they move again, the glow and the orange come back and the caret stays on.
  */
 private fun aPausedHoldFadesAndBlinks() {
     val display = GestureDisplay()
@@ -1076,6 +1077,7 @@ private fun aPausedHoldFadesAndBlinks() {
     display.run(1_000, 1_300)
     display.deletePaused(true)
     same(display.deletePaused, true, "The display knows the hold is paused")
+    same(display.pauseShown, 0f, "and shows it from the next frame, easing")
     val flow = display.flow
     display.run(1_316, 1_332)
     same(display.caretShown, true, "The caret shows as the pause starts")
@@ -1084,9 +1086,11 @@ private fun aPausedHoldFadesAndBlinks() {
     display.run(1_316 + GestureDisplay.BLINK_MILLIS + 32, 1_316 + 2 * GestureDisplay.BLINK_MILLIS + 16)
     same(display.caretShown, true, "and on again")
     same(display.flow, flow, "Paused, its words stand still")
-    near(display.glowAlpha, 0f, "and its glow has faded out", .01f)
+    near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA * GestureDisplay.PAUSED_GLOW, "and its glow is dimmed, not gone", .02f)
+    near(display.pauseShown, 1f, "and its pause shows in full", .01f)
     display.deletePaused(false)
     display.run(2_400, 2_800)
+    near(display.pauseShown, 0f, "Out of the pause the orange comes back", .05f)
     same(display.caretShown, true, "Out of the pause the caret stays on")
     near(display.glowAlpha, GestureDisplay.GLOW_HELD_ALPHA, "the glow comes back: ${display.glowAlpha}", .02f)
     isTrue(display.flow != flow, "and the words move again")

@@ -451,11 +451,16 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
                 (dp(CARET_WIDTH) + (dp(STEER_CARET) - dp(CARET_WIDTH)) * thin) * wider)
             return
         }
+        // The words the hold is taking are orange, as triple Space's selected words are, and the ones still to come stay grey
+        // (owner, 2026-11-13). In the pause zone the orange ones ease back to light grey, and the caret dims.
+        val paused = display.pauseShown
+        val taking = blend(GuideMotion.faded(look.accent, alpha), GuideMotion.faded(look.ink, PICKED * alpha), paused)
         lines(display, display.shownDeleted, left, stop, slot) { start, end, going ->
-            word(canvas, start, end, mid, GuideMotion.faded(look.ink, (if (going) PICKED else WORD) * alpha))
+            word(canvas, start, end, mid, if (going) taking else GuideMotion.faded(look.ink, WORD * alpha))
         }
-        // A thin solid caret, as a triple press's pick has, that blinks in the pause zone.
-        if (display.caretShown) bar(canvas, caret, mid, 2 * caretHalf(), GuideMotion.faded(look.accent, alpha), dp(STEER_CARET))
+        // A thin solid caret, as a triple press's pick has, that blinks in the pause zone, dimmed.
+        if (display.caretShown) bar(canvas, caret, mid, 2 * caretHalf(),
+            GuideMotion.faded(look.accent, alpha * (1f - (1f - PAUSED_CARET) * paused)), dp(STEER_CARET))
     }
 
     /**
@@ -521,8 +526,9 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             // The dots' run for this word: from its farthest dot to its nearest.
             val near = stop - step / 2 - firstSlot * step
             val far = stop - step / 2 - (firstSlot + count - 1) * step
-            val from = look.ink
-            val strength = (if (going) PICKED else WORD) + (1f - if (going) PICKED else WORD) * m
+            // The hold's orange words stay orange as they turn into dots; the grey ones turn orange.
+            val from = if (going) look.accent else look.ink
+            val strength = (if (going) 1f else WORD) + (1f - if (going) 1f else WORD) * m
             val fade = 1f - ((m - .45f) / .55f).coerceIn(0f, 1f)
             val half = wordHalf() + (radius - wordHalf()) * m
             val a = start + (far - radius - start) * m
@@ -653,6 +659,8 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val DELETE_SOFT = .45f
         /** A triple press's picked word, with no box round it, and a hold's word about to go, are this strong. */
         const val PICKED = .75f
+        /** A paused hold's caret is this strong. */
+        const val PAUSED_CARET = .4f
         const val PULSE = .25f
         const val PULSE_HEIGHT = 1f
         const val SIDE = 10f

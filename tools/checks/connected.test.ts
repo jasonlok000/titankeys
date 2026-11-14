@@ -327,3 +327,15 @@ describe("privacy texts (#53)", () => {
     }
   });
 });
+
+describe("news on the phone", () => {
+  test("turning News off takes down only news, never Record a bug's ongoing notification", async () => {
+    // Bug hunt 2.1, #26: cancelAll() took Record a bug's notification and its Stop down too, while it went on recording.
+    const news = await text("android/kotlin/com/atlas/connected/Announcements.kt");
+    expect(news).not.toContain("cancelAll(");
+    expect(news).toContain("if (!on) cancelNews(context)");
+    expect(news).toContain("if (shown.notification.channelId == CHANNEL) manager.cancel(shown.tag, shown.id)");
+    expect(news).toContain('private const val CHANNEL = "news"');
+    expect(await text("android/kotlin/com/atlas/keyboard/BugRecording.kt")).toContain('private const val CHANNEL = "bug-recording"');
+  });
+});

@@ -42,6 +42,16 @@ internal class WpmMeter {
         if (start >= 0) length = textLength
     }
 
+    /**
+     * The text changed by something that isn't typing, as a paste: the burst goes on, and its speed doesn't count what came in
+     * (bug hunt 2.1, #21: fn and V pasted a sentence at hundreds of words a minute).
+     */
+    fun skip(textLength: Int) {
+        if (start < 0) return
+        startLength += textLength - length
+        length = textLength
+    }
+
     fun active(now: Long) = start >= 0 && now - last in 0..IDLE_MILLIS
 
     /** The speed of this burst, or null between bursts. The first seconds count as [MIN_SPAN_MILLIS], so one quick word is not 300. */

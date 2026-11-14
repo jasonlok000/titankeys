@@ -3340,6 +3340,12 @@ class GuideActivity : Activity() {
     // nothing, and the number counts back down to nothing, and the show winds down with it.
 
     private val wpm = WpmMeter()
+    /** When the playground last heard real typing, a letter, a swipe or a bar word, or -1 after a key that typed nothing of yours. */
+    private var typedAt = -1L
+    /** The field's length as the speed last saw it, to tell text that grows from text that goes. */
+    private var wpmLength = 0
+    /** fn or Ctrl is held, as the keyboard last said. */
+    private var ctrlOn = false
     /** The show's five big moments, which play a haptic each: see [PlaygroundMoments]. */
     private val moments = PlaygroundMoments()
     /** The show as it is now, for a lightning flash to check. */
@@ -3363,17 +3369,26 @@ class GuideActivity : Activity() {
     private fun countWpm(event: KeyboardEvent) {
         val now = SystemClock.uptimeMillis()
         when (event) {
+            // A key with fn or Ctrl, or one that the word menu or a panel takes, types nothing of yours: fn and V, fn and C, I in
+            // the menu (bug hunt 2.1, #21). It neither starts the speed nor keeps it going, and what it brings in doesn't count.
             is KeyboardEvent.Pushed -> when {
-                WpmMeter.startsWord(event.code) -> wpm.input(now, field.length())
+                ctrlOn || panelOpen || GuideHooks.menuOpen?.invoke() == true -> {
+                    typedAt = -1L
+                    return
+                }
+                WpmMeter.startsWord(event.code) -> wpm.input(now, field.length()).also { typedAt = now }
                 // Shift, Alt, Sym, fn and Ctrl type nothing, so they don't count at all.
-                WpmMeter.counts(event.code) -> wpm.keep(now, field.length())
+                WpmMeter.counts(event.code) -> wpm.keep(now, field.length()).also { typedAt = now }
                 else -> return
             }
-            is KeyboardEvent.Recognised -> wpm.input(now, field.length())
-            is KeyboardEvent.DeletedWord, is KeyboardEvent.Chosen -> wpm.keep(now, field.length())
-            is KeyboardEvent.FieldChanged -> wpm.text(event.text.length)
+            is KeyboardEvent.Recognised -> wpm.input(now, field.length()).also { typedAt = now }
+            is KeyboardEvent.DeletedWord, is KeyboardEvent.Chosen -> wpm.keep(now, field.length()).also { typedAt = now }
+            // Text that grows with no letter, swipe or bar word just before it, as a paste, isn't typing.
+            is KeyboardEvent.FieldChanged -> if (event.text.length > wpmLength && (typedAt < 0 || now - typedAt > TYPED_WINDOW_MILLIS))
+                wpm.skip(event.text.length) else wpm.text(event.text.length)
             else -> return
         }
+        if (event is KeyboardEvent.FieldChanged) wpmLength = event.text.length
         if (wpm.active(now) && !showingWpm) showWpm()
     }
 
@@ -3564,6 +3579,7 @@ class GuideActivity : Activity() {
             is KeyboardEvent.HeldSymbol -> lastKey?.let { keys.flip(it, event.symbol) }
             is KeyboardEvent.ModifierState -> {
                 panelOpen = event.panel != Modifiers.Panel.Closed
+                ctrlOn = event.ctrlOverlay
                 // The drawing of the keys never covers the real keyboard or its panels (owner, v5.2): it hides while a panel
                 // (Sym, emoji or clipboard) is open, and comes back as it closes. The panel shows the same keys itself.
                 keys.visibility = keysVisibility(keys.layoutParams.height)
@@ -4619,6 +4635,8 @@ class GuideActivity : Activity() {
         private const val FIELD_FILL = .08f
         /** How strong the orange wash is behind what a slide aims at, in the field. */
         const val TARGET_WASH = .35f
+        /** How soon after real typing the text it brings in lands: later growth is a paste or the like, not typing. */
+        private const val TYPED_WINDOW_MILLIS = 1500L
         private const val GHOST_ALPHA = .38f
         /** How many words the ghost shows after the one you're on: more than two lines hold. */
         private const val GHOST_WORDS = 24

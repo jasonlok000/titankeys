@@ -1275,6 +1275,17 @@ private fun playgroundSpeed() {
     meter.input(100_000, 400)
     meter.text(410)
     same(meter.wpm(105_000), 24, "A new burst counts from its own start, not from the text before it")
+    // A paste in a burst goes on with it, but doesn't count (bug hunt 2.1, #21: fn and V gave hundreds of words a minute).
+    meter.skip(410 + 300)
+    same(meter.wpm(105_000), 24, "Three hundred pasted characters add nothing to the speed")
+    val fresh = WpmMeter()
+    fresh.skip(500)
+    same(fresh.wpm(1000), null, "and a paste starts no speed")
+    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val count = guide.substring(guide.indexOf("private fun countWpm("), guide.indexOf("private fun showWpm("))
+    same(count.contains("ctrlOn || panelOpen || GuideHooks.menuOpen?.invoke() == true"), true,
+        "A key with fn or Ctrl, or one the menu or a panel takes, doesn't count")
+    same(count.contains("wpm.skip(event.text.length)"), true, "and text that grows without typing is skipped")
     meter.input(105_500, 300)
     same(meter.wpm(106_000), 0, "Deleting gives no negative speed")
     same(WpmMeter.IDLE_MILLIS, 5000L, "Five seconds with nothing ends the burst")

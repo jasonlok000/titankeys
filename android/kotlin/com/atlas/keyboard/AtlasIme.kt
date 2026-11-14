@@ -70,8 +70,12 @@ class AtlasIme : InputMethodService() {
     /** Selecting and a held delete hit their walls by the same rule as steering's ends: see [WallHits]. */
     private val selectionWall = WallHits()
     private val deleteWall = WallHits()
+    /** The field's selection as the app last said, and where the cursor was before a Space gesture selected words: see [FieldSelection]. */
+    private val selection = FieldSelection()
     /** Where the cursor was before a Space gesture selected words, so a double space can put it back, or null. */
-    private var cursorBeforeSelect: Int? = null
+    private var cursorBeforeSelect: Int?
+        get() = selection.cursorBefore
+        set(value) { selection.cursorBefore = value }
     private lateinit var composer: Composer
     private lateinit var autocorrect: AutocorrectLoader
     private lateinit var phoneNames: PhoneNameSource
@@ -103,8 +107,12 @@ class AtlasIme : InputMethodService() {
     /** The word that the word drag started from, as its start and end in the field. */
     private var wordAnchor: Pair<Int, Int>? = null
     /** The selection start the app last reported, for apps that don't say where their text sits. */
-    private var lastSelectionStart = -1
-    private var lastSelectionEnd = -1
+    private var lastSelectionStart: Int
+        get() = selection.start
+        set(value) { selection.start = value }
+    private var lastSelectionEnd: Int
+        get() = selection.end
+        set(value) { selection.end = value }
     private val modifiers = Modifiers()
     private var strip: Strip? = null
     /** The words the composer last put on the bar, for a strip that is made after that. */
@@ -1332,6 +1340,10 @@ class AtlasIme : InputMethodService() {
         cancelShowStrip()
         cancelRecycle()
         main.removeCallbacks(hideStrip)
+        // This field's own selection, nothing of the last one's (bug hunt 2.1, #17), and the bar shows it if it starts with one.
+        selection.started(info.initialSelStart, info.initialSelEnd)
+        selectedWord = null
+        if (editing && field.suggestions) showSelectedWord(info.initialSelStart, info.initialSelEnd) else strip?.selected = null
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
             main.post(showStrip)

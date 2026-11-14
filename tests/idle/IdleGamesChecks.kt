@@ -308,8 +308,9 @@ fun main() {
     check(Idle.FLOOR_SHARE == .8f, "The floor spans 80% of the room between the corners")
     check(Idle.floorLeft(1076f, 100f) == 100f + 876f * (1 - Idle.FLOOR_SHARE) / 2, "and is centred")
     val look = java.io.File("android/kotlin/com/atlas/keyboard/Look.kt").readText()
-    check("val floorLine = ((if (dark) Accent.TEXT_CREAM else ink) and 0xFFFFFF) or (FLOOR_ALPHA shl 24)" in look &&
-        "private const val FLOOR_ALPHA = 140" in look, "The floor is the cream, or the light look's ink, at 55%")
+    // The keyboard is always dark (owner, 2026-11-14), so the floor is always the text's cream.
+    check("val floorLine = (Accent.TEXT_CREAM and 0xFFFFFF) or (FLOOR_ALPHA shl 24)" in look &&
+        "private const val FLOOR_ALPHA = 140" in look, "The floor is the text's cream at 55%")
     val drawing = java.io.File("android/kotlin/com/atlas/keyboard/IdleDrawing.kt").readText()
     check("canvas.drawRect(left, bottom - thick, right, bottom, floorPaint)" in drawing, "The line's bottom is the floor, so things stand on it")
     // Bug hunt #19: a selected word, a clip offer or a notice that arrives mid-game ends it, as each keeps a game from starting.

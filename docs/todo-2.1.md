@@ -991,6 +991,12 @@ enders\gesture-line
   send through the phone's own mail app, to a TitanKeys address, with the recording attached: no account, no server, no new
   network use; (3) Play's private tester feedback during the closed test; (4) Play reviews stay public praise and gripes,
   not bug reports; GitHub issues stay for contributors. Open: which address (a dedicated one, not the owner's own).
+- **3.0: a warning on other phones, never a block** (owner, 2026-11-14: "it shd also detect the phone. If its not titan 2
+  elite show a warning but don't block them."). The owner's Titan 2 Elite says Unihertz, model "Titan 2", device "Titan_2":
+  nothing says Elite. What does: ro.agui.touchpad_function = yes (the touch keyboard), which TitanKeys already reads
+  (TypingSettings, PhoneChecks), with Build.DEVICE "Titan_2" as Touchpad.kt checks. Elsewhere: a one-time notice (on first
+  launch and in Setup) that TitanKeys is made for the Titan 2 Elite and some parts won't work, then carry on. Play limits
+  installs to the device anyway; this covers the GitHub APK.
 - **Everything in one place** (owner, 2026-11-14: "We had a rule from atlas that the repo itself stays clean from tools and
   dev stuff etc but I don't like that idea so I want everything in one place"). The dev tools move into the repo: WSL
   ~/build/tk-tools (verify.sh, keyboard.sh, play-bundle.sh and the rest), the phone scripts and the quick preview pages

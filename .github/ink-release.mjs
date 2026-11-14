@@ -92,7 +92,7 @@ switch (process.argv[2]) {
   case "signing": {
     config.signing = {
       keystore: `${process.env.RUNNER_TEMP}/ink-release.jks`,
-      key_alias: process.env.INK_KEY_ALIAS || "atlas",
+      key_alias: process.env.INK_KEY_ALIAS || "nightkeys",
     };
     await writeFile("ink.toml", Bun.TOML.stringify(config) + "\n");
     break;

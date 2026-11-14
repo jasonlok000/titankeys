@@ -6,5 +6,5 @@ version_code = 57
 capabilities = ["image"]
 
 [signing]
-keystore = "signing/atlas.keystore"
-key_alias = "atlas"
+keystore = "signing/nightkeys-release.p12"
+key_alias = "nightkeys"

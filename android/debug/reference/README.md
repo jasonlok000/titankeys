@@ -9,7 +9,7 @@ bash tools/reference.sh
 adb install -r dist/titankeys-reference.apk
 ```
 
-The script needs `ANDROID_HOME` with platform 36 and build-tools 36.0.0. It signs with `signing/atlas.keystore` and gets the password in the same way as `tools/release.sh`.
+The script needs `ANDROID_HOME` with platform 36 and build-tools 36.0.0. It signs with `signing/nightkeys-release.p12` and gets the password in the same way as `tools/release.sh`.
 
 `bash tests/reference/run.sh` checks the steps and the word counts of the passages. It does not need a phone.
 

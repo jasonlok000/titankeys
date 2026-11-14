@@ -37,7 +37,7 @@ javac -Xlint:-options -source 8 -target 8 -bootclasspath "$tools/core-lambda-stu
 "$tools/zipalign" -f -p 4 "$work/unsigned.apk" "$work/aligned.apk"
 
 # The env: form reads each password from the environment, so it is never on a command line or in the output.
-"$tools/apksigner" sign --ks signing/atlas.keystore --ks-key-alias atlas \
+"$tools/apksigner" sign --ks signing/nightkeys-release.p12 --ks-key-alias nightkeys \
   --ks-pass env:INK_KEYSTORE_PASSWORD --key-pass env:INK_KEY_PASSWORD \
   --v4-signing-enabled false --out "$output" "$work/aligned.apk"
 "$tools/apksigner" verify "$output"

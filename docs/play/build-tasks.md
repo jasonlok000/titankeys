@@ -165,7 +165,7 @@ Expected `uses-permission`: `VIBRATE`, `SYSTEM_ALERT_WINDOW`, `INTERNET`, `ACCES
 java -jar bundletool.jar validate --bundle=dist/titankeys-keyboard-<version>.aab
 jarsigner -verify -verbose -certs dist/titankeys-keyboard-<version>.aab | tail   # signed with the upload key
 java -jar bundletool.jar build-apks --bundle=dist/titankeys-keyboard-<version>.aab --output=/tmp/tk.apks --mode=universal \
-  --ks=signing/atlas.keystore --ks-key-alias=atlas   # signs like Play will; passwords via --ks-pass=file:...
+  --ks=signing/nightkeys-release.p12 --ks-key-alias=nightkeys   # signs like Play will; passwords via --ks-pass=file:...
 unzip -o /tmp/tk.apks universal.apk -d /tmp/tk && zipalign -c -P 16 -v 4 /tmp/tk/universal.apk
 ```
 

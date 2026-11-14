@@ -909,6 +909,11 @@ enders\gesture-line
 - Accented letters in Sym, voice input, a per-app modes page, bar size.
 - Webpage (#58), trailer (#57), the Play build, the #54 wording session, the release check, the launch megathread.
 - Languages are 3.0 (#56).
+- **Build #23 (db1c2f7d, from 8457d80) passed every check; its debug APK is NightKeys-signed.** Swapped on the phone 08:25:
+  the atlas-signed TitanKeys Debug uninstalled (its data gone, as the owner was told) and #23 installed, 0 crashes. The
+  phone's keyboard fell back to Gboard: turning TitanKeys (release or Debug) on as the keyboard, and its Accessibility and
+  Display over other apps, is the owner's. The reference app (com.titankeys.reference) is still atlas-signed: reinstall it
+  before the next phone verify.
 - **3.0: back up the whole app** (owner, 2026-11-14: "let's write down to 3.0 to backup the whole app"). Today only words
   (Settings > Data > Backup) and snippets export and import; settings and switches, shorthand, app lists, calibration and the
   rest have none. One export and one import for everything, so a reinstall, a new phone or a key change loses nothing.

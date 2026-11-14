@@ -42,16 +42,28 @@ internal object PhoneChecks {
         }
     }
 
-    /** The phone's Shortcut keys page, where Sym and fn are set; the phone's Settings when it can't be found. */
+    /**
+     * The phone's Shortcut keys page, where Sym and fn are set; the phone's Settings when it can't be found. It's the page the
+     * phone's own Settings opens, the app's entry: its other activities need a key handed to them, and the first one Android
+     * lists for MAIN, FunctionDisplayActivity, crashed the app without one (owner, 2026-11-14, build #20: "The two set to
+     * programmable keys shortcut in setup is not working it crash").
+     */
     fun shortcutKeysPage(context: Context): Intent {
         val packages = context.packageManager
         packages.getLaunchIntentForPackage(SHORTCUT_KEYS)?.let { return it }
-        val main = Intent(Intent.ACTION_MAIN).setPackage(SHORTCUT_KEYS)
-        packages.queryIntentActivities(main, 0).firstOrNull { it.activityInfo.exported }?.activityInfo?.let {
+        val entry = Intent(Intent.ACTION_MAIN).setClassName(SHORTCUT_KEYS, SHORTCUT_KEYS_ENTRY)
+        if (packages.resolveActivity(entry, 0)?.activityInfo?.exported == true) return entry
+        val fromSettings = Intent(SETTINGS_ENTRY).setPackage(SHORTCUT_KEYS)
+        packages.queryIntentActivities(fromSettings, 0).firstOrNull { it.activityInfo.exported }?.activityInfo?.let {
             return Intent(Intent.ACTION_MAIN).setClassName(it.packageName, it.name)
         }
         return Intent(Settings.ACTION_SETTINGS)
     }
+
+    /** The Shortcut keys app's entry, as the phone's Settings lists it. */
+    private const val SHORTCUT_KEYS_ENTRY = "$SHORTCUT_KEYS.ui.EntryAppActivity"
+    /** The action the phone's Settings finds its extra pages by, the Shortcut keys page among them. */
+    private const val SETTINGS_ENTRY = "com.android.settings.action.EXTRA_SETTINGS"
 
     /**
      * The touchpad's mode for the app in front, for the keyboard in [app]'s field: null when it says nothing about [app], as in

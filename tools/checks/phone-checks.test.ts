@@ -17,9 +17,15 @@ test("the phone checks only read", () => {
 
 test("Setup shows each phone setting as a step that opens its page", () => {
   const setup = read("app/settings/setup.tsx");
-  for (const step of ["Set Sym to Programmable key", "Set fn to Programmable key", "Sliding Mode 1 in your apps"]) expect(setup).toContain(step);
+  for (const step of ["Set Sym to Programmable key", "Set fn to Programmable key"]) expect(setup).toContain(step);
   expect(setup).toContain("onPress={openShortcutKeys}");
   expect(setup).toContain("onPress={openScrollAssistant}");
+  // Scroll assistant and each app's Sliding Mode 1 are one step (owner, 2026-11-14: the second row was "redundant").
+  expect(setup).not.toContain("Sliding Mode 1 in your apps");
+  expect(setup).toContain("status(settings.scrollAssistant && outside.length === 0)");
+  // The Shortcut keys page is the app's entry, as the phone's Settings opens it: its first MAIN activity crashed without a key.
+  expect(checks).toContain('private const val SHORTCUT_KEYS_ENTRY = "$SHORTCUT_KEYS.ui.EntryAppActivity"');
+  expect(checks).not.toContain("Intent(Intent.ACTION_MAIN).setPackage(SHORTCUT_KEYS)");
   const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
   for (const field of ['"symKey"', '"fnKey"', '"outsideSlidingMode"', '"shortcutKeys"']) expect(adapter).toContain(field);
 });

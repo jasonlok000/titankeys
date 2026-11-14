@@ -32,7 +32,10 @@ export default function Setup() {
       <Field label="Allow display over other apps" onPress={allowOverlay}>{status(settings.overlay)}</Field>
       {/* Android may refuse TitanKeys' own page and show its whole list instead (PhoneSetup.open). */}
       {!settings.overlay && settings.overlayOnList && <Note>{overlayListNote}</Note>}
-      <Field label={scrollAssistantStep} onPress={openScrollAssistant}>{status(settings.scrollAssistant)}</Field>
+      {/* One step for Scroll assistant and each app's Sliding Mode 1 (owner, 2026-11-14: a second row for the apps was
+          "redundant to the scroll assistant up top"): done only when every app TitanKeys typed in is on Sliding Mode 1. */}
+      <Field label={scrollAssistantStep} onPress={openScrollAssistant}>{status(settings.scrollAssistant && outside.length === 0)}</Field>
+      {outside.length > 0 && <Note>{`Swiping doesn't work in ${names(outside)}. Open Scroll assistant, find ${outside.length === 1 ? "it" : "each one"} and pick Sliding Mode 1.`}</Note>}
       <Field label="Turn on TitanKeys Keyboard in Accessibility" onPress={allowBack}>{status(settings.backService)}</Field>
       {!settings.backService && settings.backOnList && <Note>{backListNote}</Note>}
     </Section>
@@ -42,10 +45,6 @@ export default function Setup() {
       {!settings.symKey && <Note>Without it, Sym doesn't open the Sym panel. In Shortcut keys, set Sym key to Programmable key.</Note>}
       <Field label="Set fn to Programmable key" onPress={openShortcutKeys}>{status(settings.fnKey)}</Field>
       {!settings.fnKey && <Note>Without it, fn can't work as Ctrl. In Shortcut keys, set fn key to Programmable key.</Note>}
-      <Field label="Sliding Mode 1 in your apps" onPress={openScrollAssistant}>{status(outside.length === 0)}</Field>
-      <Note>{outside.length === 0
-        ? "Swiping only works in apps on Sliding Mode 1. TitanKeys checks each app you type in, and tells you here if one isn't."
-        : `Swiping doesn't work in ${names(outside)}. Open Scroll assistant, find ${outside.length === 1 ? "it" : "each one"} and pick Sliding Mode 1.`}</Note>
     </Section>
   </Screen>;
 }

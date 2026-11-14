@@ -193,7 +193,7 @@ private val patterns = mapOf(
     Family.Confirm to listOf(15L, 40L, 35L),
     Family.Change to listOf(12L, 35L, 22L, 35L, 12L),
     Family.Lock to listOf(30L, 50L, 30L),
-    Family.Release to listOf(30L),
+    Family.Release to listOf(40L),
     // The owner's table said 50/30/20. The gap is 35 so it keeps the rule that each pulse reads on its own.
     Family.GoneFlick to listOf(50L, 35L, 20L),
     Family.Gone to listOf(60L),
@@ -281,9 +281,13 @@ private fun theRhythmsMeanTheSameEverywhere() {
     check(pulses(Family.Gone).size == 1 && pulses(Family.Gone)[0] > pulses(Family.Release)[0]) { "Gone is one long pulse" }
     check(pulses(Family.No).let { it.size == 3 && it.toSet().size == 1 }) { "No is three equal pulses" }
     check(pulses(Family.Celebrate).zipWithNext().all { (a, b) -> a < b } && pulses(Family.Celebrate).size == 3) { "Celebrate rises over three" }
-    // Every pattern feels different from every other.
-    check(Family.entries.map { it.pattern }.toSet().size == Family.entries.size - 1) { "Only Boundary and Release share a pattern" }
-    check(Family.Boundary.pattern == Family.Release.pattern) { "A release is a single firm pulse, like a boundary, as the table has it" }
+    // Every pattern feels different from every other: one meaning, one pattern (bug hunt 2.1, #35: Boundary and Release were both
+    // a single 30 ms pulse).
+    for (family in Family.entries) for (other in Family.entries.filter { it != family })
+        check(family.pattern != other.pattern) { "$family and $other share the pattern ${family.pattern}" }
+    check(pulses(Family.Release).size == 1 && pulses(Family.Release)[0] > pulses(Family.Boundary)[0]) {
+        "A release is one pulse, firmer than a boundary's tick"
+    }
     // Saved rises at the end and Removed falls from the start, each over three pulses.
     check(pulses(Family.Saved).let { it.size == 3 && it[0] == it[1] && it[1] < it[2] }) { "Saved is short, short, long" }
     check(pulses(Family.Removed) == pulses(Family.Saved).reversed()) { "Removed is Saved's mirror: long, short, short" }

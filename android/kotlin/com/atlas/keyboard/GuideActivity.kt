@@ -796,7 +796,8 @@ class GuideActivity : Activity() {
     private val huntTick = object : Runnable {
         override fun run() {
             val hunt = flow.step.hunt
-            if (huntStart < 0 || passed || hunt == null) return
+            // Away from the guide its clock stands still: see [onPause].
+            if (huntStart < 0 || passed || hunt == null || !visible) return
             val seconds = huntSeconds()
             if (seconds >= HUNT_DRAIN_SECONDS) {
                 huntBar.visibility = View.GONE
@@ -976,6 +977,8 @@ class GuideActivity : Activity() {
     }
 
     private fun helpDue() {
+        // Never away from the guide: the help buzzed every 6 s in other apps (bug hunt 2.1, #1). [onResume] asks again.
+        if (!visible) return
         // Never while a finger is down, a key is held or the word menu is open: "Hold, don't tap" showed with the menu open, and
         // the steer help mid-steer. It waits, and asks again.
         if (fingerDown || heldKeys.isNotEmpty() || GuideHooks.menuOpen?.invoke() == true) {
@@ -1066,6 +1069,37 @@ class GuideActivity : Activity() {
             GuideHooks.lessons = flow.step.lessons
             GuideHooks.barSides(flow.step.sides)
         }
+        resumeTimers()
+    }
+
+    /** When the guide last went out of sight, for the clown hunt's clock to stand still meanwhile, or -1. */
+    private var pausedAt = -1L
+
+    /**
+     * Every timer of the slide stops as the guide goes out of sight, Home, another app or the screen off (bug hunt 2.1, #1: the
+     * help buzzed every 6 s in other apps, the demo drew on, and the clown hunt's tick vibrated at 20, 35 and 50 s). Away from the
+     * guide nothing of it plays, and the keyboard is as it always is.
+     */
+    private fun stopTimers() {
+        endDemo()
+        for (timer in listOf(showHelp, startDemo, demoTick, huntTick, idleOnce, idleTwice, menuHint)) main.removeCallbacks(timer)
+        pausedAt = SystemClock.uptimeMillis()
+    }
+
+    /**
+     * Back in sight: the slide's timers start again, as after any input. The help waits its time, the demo its quiet moment, and the
+     * clown hunt goes on from where it stood.
+     */
+    private fun resumeTimers() {
+        val since = if (pausedAt < 0) 0L else SystemClock.uptimeMillis() - pausedAt
+        pausedAt = -1L
+        if (!ready || !started || playground || settingUp || flow.finished || changing) return
+        acted()
+        waitForHelp()
+        if (huntStart >= 0 && !passed) {
+            huntStart += since
+            main.postDelayed(huntTick, 1000L - (SystemClock.uptimeMillis() - huntStart) % 1000L)
+        }
     }
 
     /** The keyboard as it always is: nothing locked, and the bar with all its words. */
@@ -1086,7 +1120,7 @@ class GuideActivity : Activity() {
         GuideHooks.script = null
         contentResolver.unregisterContentObserver(keyboardChanges)
         clipboard.removePrimaryClipChangedListener(clipChanged)
-        endDemo()
+        stopTimers()
         // A hidden playground keeps no clock going; its speed starts over when you type again.
         main.removeCallbacks(wpmTick)
         if (playground) calmWpm()
@@ -2487,7 +2521,7 @@ class GuideActivity : Activity() {
 
     /** A hint or a scenario's chip, with its haptic (owner, v5). */
     private fun hinted(text: String) {
-        if (text.isBlank() || passed) return
+        if (text.isBlank() || passed || !visible) return
         haptics.play(Haptic.GuideHint)
         showChip(text)
     }
@@ -2554,7 +2588,7 @@ class GuideActivity : Activity() {
 
     private fun beginDemo() {
         val step = flow.step
-        if (busy || passed || changing || step.pause || step.chapter == GuideChapter.End) return
+        if (!visible || busy || passed || changing || step.pause || step.chapter == GuideChapter.End) return
         if (!demoAllowed()) {
             main.postDelayed(startDemo, DEMO_GAP_MILLIS)
             return

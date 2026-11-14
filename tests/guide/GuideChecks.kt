@@ -340,6 +340,7 @@ fun main() {
     theTrailFollowsTouchSize()
     demonstrationsTypePunctuation()
     aPanelMovesNothing()
+    nothingPlaysAwayFromTheGuide()
     // Drawings of the slides in the new layout, to look at without a phone. See SlideRenders.kt.
     System.getenv("SLIDES_PNG")?.let { drawSlides(it, NEW_LAYOUT + GuideChapter.End) }
     System.getenv("FRONT_PNG")?.let { drawFrontPage(it) }
@@ -348,6 +349,29 @@ fun main() {
 
 private fun same(actual: Any?, expected: Any?, message: String) {
     check(actual == expected) { "$message: expected $expected, got $actual" }
+}
+
+/**
+ * Away from the guide, nothing of it plays (bug hunt 2.1, #1: onPause stopped only the demo, so the help's haptic played every 6 s in
+ * other apps, the demo restarted, and the clown hunt's tick vibrated). Each of the slide's timers stops as the guide goes out of
+ * sight, everything that buzzes or draws checks that it's in sight, and each starts again as it comes back.
+ */
+private fun nothingPlaysAwayFromTheGuide() {
+    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    fun body(start: String) = guide.substring(guide.indexOf(start)).let { it.substring(0, it.indexOf("\n    }\n") + 6) }
+    val timers = Regex("""private val (\w+) = (Runnable \{|object : Runnable)""").findAll(guide).map { it.groupValues[1] }.toSet()
+    // The slide's own timers: everything that can buzz, draw or speak on a slide. The setup's and the playground's have their own.
+    val slide = listOf("showHelp", "startDemo", "demoTick", "huntTick", "idleOnce", "idleTwice", "menuHint")
+    same(timers.containsAll(slide), true, "The slide's timers are still these: $slide")
+    val stop = body("private fun stopTimers()")
+    for (timer in slide) same(stop.contains(timer), true, "Going out of sight stops $timer")
+    same(body("override fun onPause()").contains("stopTimers()"), true, "onPause stops them, Home, another app or the screen off")
+    same(body("override fun onResume()").contains("resumeTimers()"), true, "and onResume starts them again")
+    for (start in listOf("private fun helpDue()", "private fun beginDemo()", "private fun hinted(")) {
+        same(body(start).contains("visible"), true, "$start does nothing out of sight")
+    }
+    same(guide.substring(guide.indexOf("private val huntTick")).substringBefore("huntSaid = 1").contains("!visible"), true,
+        "The hunt's tick stands still out of sight")
 }
 
 /** The Titan 2 Elite's column, in px: the screen 1200 tall, the status bar 124, the keyboard's own bar 90. */

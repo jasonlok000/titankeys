@@ -392,6 +392,10 @@ enders\gesture-line
     pass on the merge (gesture-line, gesture-display, strip-fit, idle, word-menu, guide, menu-render; bun but the two ink ones).
   - **Build #20 running** from 3e7ed6d: V's end-screen Back, W's clip and arrow, C's trail. Then the phone: a clip alone (needs
     a copy: only in TitanKeys' own field, and the owner's clipboard restored), the arrow beside words, the trail (owner's hands).
+  - **Build #20 (90702aff, from 3e7ed6d) passed every check, installed 00:18, 0 crashes.** On the phone: the arrow beside words
+    at y 1159 to 1177, middle 1168.5 (3 dp up: 1168.25 expected; #19 1173), level with the capitals' middle. A clip alone isn't
+    shown on the phone, as that needs a copy over the owner's clipboard: W's clipped-against-unclipped render covers it, and
+    the owner sees it on their next copy.
   - **Left before the pre-release (asked by the owner, 2026-11-14: "Nth on the to do for u anymore?"):** every fix the owner
     asked for is in #20; no worker has open 2.1 work; 39 of the bug hunt's 41 are merged (#40 battery and #41 leaks wait for
     after the pre-release).

@@ -321,6 +321,14 @@ enders\gesture-line
     F's claude/setup-fixes (the Setup fixes, blocker #2 effa77a, #23, #26, #27, #28) and V's claude/menu-selected (blocker #1
     6556931, the selected-word underline 3c7de0f). Guide, word-menu, strip-fit, fixed-scale, idle-render and menu-render checks
     pass; bun 180 of 182 (the two that need the ink package). F's next: the always-dark keyboard and #36.
+  - **Build #16 (abb07f92, from e04ca0c) installed 22:09, every verify check passed:** the square key fix (D's allowlist), both
+    blockers, F's Setup fixes, V's underline.
+  - **Merged after it (to 18a22ba and the merge fixes):** F's always-dark keyboard and #36; D's #4, #13, #14, #15, #24, #30, #37,
+    #38 and the screen-lock guard; W's #3/#6, #11, #12, #25, the hover after a press, the Sym rows evenly spaced (68 px), the
+    arrow (follow-up sent: 0.63 of the words' cap height, about 11 dp at Normal); C's #7, #16, #17, #18, #22, #35, the held
+    delete's orange, the selection gap and the compressed swipe trail (about +/-13 px, much flatter: the owner to judge on the
+    phone). Conflicts resolved: steering keeps D's steer flag and C's end-of-text rule; the field-start selected word kept once
+    (C's); W's guideShowOnly now reads inGuide (V removed shownGuideWord). All targeted suites pass; bun 184 of 186.
   - **Owner's review of build 0a6d754e (2026-11-14), noted, not started yet:**
     - Guide end screen, Back (owner: "When going back from the boring guide triggered from the end screen it should go back to the
       end screen. Applies to everything else for end screen"). Every page the end screen opens (the boring guide, Settings

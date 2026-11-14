@@ -470,6 +470,14 @@ enders\gesture-line
           Debug's data). Still tied to Atlas, for the owner to schedule: the X:\Atlas folder and the juleshall4/atlas
           remote, 171 files in com.atlas.* packages, the WSL distro atlas-build and ~/atlas-env.sh, "Atlas" in CONTRIBUTING.md,
           README.md and the debug app's docs.
+        - **The owner: "Backup my NightKeys key to my other hard drives. Replace the 2.0 apk, and my current debugging build."**
+          Done: the key folder copied to X:, D:, F: and G:\TitanKeys-NightKeys-PRIVATE-signing-key-BACKUP (every file
+          checked by SHA-256; E: "MYLINUXLIVE" skipped as a likely boot USB). 2.0.0 on GitHub: the published APK re-signed
+          with the NightKeys key, every file inside byte-identical (v3 signature; apksigner drops v2 at minSdk 34), uploaded
+          over the old one (GitHub's digest e40cadf6..., the release text's SHA-256 line updated). The Debug build: after
+          build #23 (NightKeys-signed), uninstall the atlas-signed Debug and install it; the owner turns its Accessibility and
+          overlay back on. In-app backup (asked): Settings > Data > Backup exports and imports words, and Snippets its own;
+          settings, shorthand and app lists have none.
         - **Follow-ups (were open before the switch):** the repo's ink.toml still names signing/atlas.keystore (debug builds sign with it too; a
           release key switch needs ink.toml, every build copy's signing/, release.yml's secrets and docs/play/signing.md); the
           GitHub release text must tell 2.0 users to uninstall 2.0 first (the in-app notes would come too late); the old

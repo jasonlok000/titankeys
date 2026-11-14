@@ -294,9 +294,22 @@ all of them are unapproved.
       in its search box; waiting on the owner's OK to type a test word there.
   - **Merged: C's gesture line** (claude/gesture-line 8ecfe99): every gesture shape on the words' line (carets, the held
     delete's word bars, flick dots, the selection and its handle, steering dots, the finger), carets as tall as the letters, the
-    handle knob on top, drags clipped at the bar's sides. Reviewed by the Orchestrator from X:\Atlas\.devenders\gesture-line
+    handle knob on top, drags clipped at the bar's sides. Reviewed by the Orchestrator from X:\Atlas\.dev
+enders\gesture-line
     (sheet-normal). The edge glows (Space, steering, the held delete's corner glow) still rise from the screen's edge as designed:
     kept (Orchestrator). gesture-line, gesture-display, gesture-render, strip-fit and guide checks pass.
+  - **Merged: D's Smart Launcher fix** (claude/launcher-edits 230d680): the launcher takes every key before any keyboard hears it
+    (SwiftKey too), so TitanKeys never typed there: no fix, Shift + Backspace as plain Backspace, Sym unheard. Now, in that search
+    box only and only with the Back service on, TitanKeys takes the keys (not Back or the phone's own keys) and handles them like
+    any other field (TakenKeys). The disclosure line changes to "in the Smart Launcher search field, where the launcher would take
+    your keys first, so TitanKeys types there as in any other app;" (needs the owner's OK). A debug-only TitanKeysSym log traces
+    each Sym press. Also merged: C's render-temp (renders no longer land in the repo root). Modifiers, autocorrect, guide and
+    gesture-line checks pass.
+  - **Setup (owner, 2026-11-13), assigned to F:** the Sliding Mode 1 false alarm for Chrome and Settings; the step names "Sliding
+    Mode 1"; "Display over other apps" lands on the whole list (Android 11+ ignores the package; the highlight extra does nothing
+    on this phone; android.settings.MANAGE_APP_OVERLAY_PERMISSION opens TitanKeys' own page from adb) and Accessibility likewise.
+  - **The Orchestrator's slip:** an overlay test pressed Back three times without checking what was in front, while the owner was
+    in SwiftKey's settings and Teams. Every Back or Home in the Orchestrator's scripts now checks the front window first.
   - **The real Sym key in Smart Launcher:** the owner confirms it doesn't get through. Android's dispatcher keeps no key codes and
     TitanKeys doesn't log Sym yet; D's debug trace will show where it goes.
   - **Withdrawn: build #14 is no longer the release candidate** (owner's round 2 on the line, 2026-11-13). In progress: W (the

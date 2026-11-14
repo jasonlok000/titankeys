@@ -341,7 +341,9 @@ enders\gesture-line
       - Owner asked: spread the rows, or make the panel taller? The Orchestrator recommends spreading: the panel keeps its height,
         so it covers no more of the app and the layouts that depend on its height (the guide, the playground) stay as they are;
         66 px rows still leave plenty of room for one-character labels and emoji. Taller would mean about 17 px more of the app
-        hidden on every page. Waiting on the owner.
+        hidden on every page.
+      - Decided (owner: "Ok agreed with u. Distribute it."): the same panel height, the four rows evenly spaced, the categories on
+        the line. Queued for W when work resumes, with before/after renders.
   - **Paused for the usage limit (2026-11-14, 5-hour window at 95%, resets 02:10 UTC; weekly at 87%).** W, C, D and A stopped
     mid-turn; F and V were idle; their unfinished changes stay in their worktrees. On resume, send each a short "carry on":
     - V: blocker #1 first, then the selected-word underline, #20, #21, #31, #32.

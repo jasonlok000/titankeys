@@ -317,6 +317,10 @@ enders\gesture-line
     in Strip.drawDemoFinger resolved to C's GestureDrawing.finger. Reviewed (modifier-normal, effects-normal-save/favourite);
     all bar checks pass. The Orchestrator's calls: keep the clip-offer shrink; keep the guide's first-slide side words rising from
     under the edge.
+  - **Resumed (2026-11-14):** all six workers restarted with their queues (D: the square-key regression first). Merged:
+    F's claude/setup-fixes (the Setup fixes, blocker #2 effa77a, #23, #26, #27, #28) and V's claude/menu-selected (blocker #1
+    6556931, the selected-word underline 3c7de0f). Guide, word-menu, strip-fit, fixed-scale, idle-render and menu-render checks
+    pass; bun 180 of 182 (the two that need the ink package). F's next: the always-dark keyboard and #36.
   - **Owner's review of build 0a6d754e (2026-11-14), noted, not started yet:**
     - Guide end screen, Back (owner: "When going back from the boring guide triggered from the end screen it should go back to the
       end screen. Applies to everything else for end screen"). Every page the end screen opens (the boring guide, Settings

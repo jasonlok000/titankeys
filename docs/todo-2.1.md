@@ -984,6 +984,13 @@ enders\gesture-line
   waiting word decides after 2 more words, or sooner only at . ! ? or a line break (the 11-11 apostrophe study's window,
   where commas, semicolons, colons and dashes don't count), and the bar doesn't offer the other form. Wanted: any punctuation
   settles it at once, and the other form (its / it's, your / you're...) sits in the bar's second place.
+- **3.0: bug reports without GitHub** (owner, 2026-11-14: "the bug reports etc shd be outside of git. Cuz git makes it hard for
+  normal users. Or maybe just use Google play stuff?"). Today Settings > Send feedback (app/settings/feedback.tsx) opens a new
+  GitHub issue, which needs a GitHub account. The Orchestrator's proposal: (1) crashes and freezes come in by themselves
+  through Google Play's Android vitals once TitanKeys is on Play, nothing for users to do; (2) Send feedback and Record a bug
+  send through the phone's own mail app, to a TitanKeys address, with the recording attached: no account, no server, no new
+  network use; (3) Play's private tester feedback during the closed test; (4) Play reviews stay public praise and gripes,
+  not bug reports; GitHub issues stay for contributors. Open: which address (a dedicated one, not the owner's own).
 - **Everything in one place** (owner, 2026-11-14: "We had a rule from atlas that the repo itself stays clean from tools and
   dev stuff etc but I don't like that idea so I want everything in one place"). The dev tools move into the repo: WSL
   ~/build/tk-tools (verify.sh, keyboard.sh, play-bundle.sh and the rest), the phone scripts and the quick preview pages

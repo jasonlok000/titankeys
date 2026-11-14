@@ -152,7 +152,7 @@ internal object GestureLine {
         words(s, g)
         g.dispose()
         val canvas = Recording(bar, glow, look.paper)
-        val drawing = GestureDrawing(s.density, Radii.SMALL * s.density)
+        val drawing = GestureDrawing(s.density, Radii.SMALL * s.density, UNIT)
         if (display != null && display.busy)
             drawing.draw(canvas, display, s.side.toFloat(), (WIDTH - s.side).toFloat(), BAR, look, s.line, s.floor, s.word)
         extra?.invoke(drawing, canvas, s)
@@ -217,6 +217,12 @@ internal object GestureLine {
         Frame("flick-row", "flick: the dots in a row") { d -> d.wordDeleted(1_000L, 5); d.wordDeleted(1_150L, 4); run(d, 1_000L, 1_300L) },
         Frame("flick-landing", "flick: the dots going into the caret, its pulse") { d -> flickLanding(d) },
         Frame("swipe", "word swipe: the path over the keys") { d -> swipe(d) },
+        Frame("swipe-rows", "word swipe along each row's middle: top, middle, bottom") { d ->
+            swipe(d, listOf(.05f to .125f, .45f to .125f, .5f to .375f, .9f to .375f, .95f to .625f, .55f to .625f))
+        },
+        Frame("swipe-reach", "word swipe from the touchpad's top edge to its bottom edge") { d ->
+            swipe(d, listOf(.1f to 0f, .4f to 0f, .6f to .75f, .9f to .75f))
+        },
         Frame("space-glow", "Space tapped three times: the glow") { d -> d.spaceTapped(1, 0L); d.spaceTapped(2, 120L); d.spaceTapped(3, 240L); run(d, 240L, 360L) },
         Frame("finger", "the guide's finger on the middle word, coming down", extra = { drawing, canvas, s ->
             drawing.finger(canvas, middleWord(s), s.line, BAR - s.edge, 1f, 0f, look, UNIT) }) { },
@@ -295,9 +301,9 @@ internal object GestureLine {
         }
     }
 
-    /** A word swipe across the touchpad: from the top row's left, down to the bottom row and back up the middle. */
-    private fun swipe(d: GestureDisplay) {
-        val points = listOf(.06f to .05f, .3f to .2f, .52f to .4f, .74f to .7f, .9f to .72f, .6f to .5f, .38f to .36f)
+    /** A word swipe across the touchpad through [points]: by default from the top row's left, down to the bottom row and back up. */
+    private fun swipe(d: GestureDisplay, points: List<Pair<Float, Float>> =
+        listOf(.06f to .05f, .3f to .2f, .52f to .4f, .74f to .7f, .9f to .72f, .6f to .5f, .38f to .36f)) {
         var now = 0L
         var step = 0
         for (i in 0 until points.size - 1) {
@@ -317,19 +323,34 @@ internal object GestureLine {
     private fun check(s: Size, frame: Frame, d: GestureDisplay, shapes: List<Shape>, image: BufferedImage): List<String> {
         val found = ArrayList<String>()
         if (!d.busy && frame.extra == null) found += "draws nothing"
-        // The guide's finger, on the middle word far from the corners, keeps over the bar's own floor; everything else over the
-        // words' tails, as the bar's sides keep what reaches that low clear of the corners.
-        val floor = if (frame.extra != null) BAR - s.edge else s.floor
+        // The guide's finger, on the middle word far from the corners, and the swipe trail, which keeps its size at every Bar text
+        // size, keep over the bar's own floor; everything else over the words' tails, as the bar's sides keep what reaches that low
+        // clear of the corners. The corners are checked in pixels below, for all of them.
+        val swipe = d.scene == GestureDisplay.Scene.Swipe
+        val floor = if (frame.extra != null || swipe) BAR - s.edge else s.floor
         for (shape in shapes) if (shape.bottom > floor + .01f)
             found += "a ${shape.kind} reaches %.2f px under the bar's top, under %.2f px".format(shape.bottom, floor)
         val knob = HANDLE_KNOB * s.density
-        val swipe = d.scene == GestureDisplay.Scene.Swipe
-        // A swipe's path is centred on the line, as far above it as it may go below, down to the words' tails (owner, 2026-11-13).
+        // The swipe trail is the owner's option 6 (2026-11-14), in fixed dp at every size: the rows' middles 12 dp apart, the middle
+        // row 3 dp over the words' line, the outer half of the top and bottom rows at 0.3 of its height.
         if (swipe) {
             val path = shapes.filter { it.kind == "line" }
+            val middle = s.line - 3 * UNIT
             if (path.isEmpty()) found += "draws no path"
-            else if (path.minOf { it.top } < s.line - (s.floor - s.line) - .5f)
-                found += "its path reaches %.2f px above the line, more than the %.2f px it may go below".format(s.line - path.minOf { it.top }, s.floor - s.line)
+            if (frame.name == "swipe-rows") {
+                val rows = path.filter { it.right - it.left > 4 * (it.bottom - it.top) }.map { it.middle }
+                for ((name, want) in listOf("top" to middle - 12 * UNIT, "middle" to middle, "bottom" to middle + 12 * UNIT))
+                    if (rows.none { abs(it - want) < .5f }) found += "no stretch along the $name row's middle at %.2f px: %s".format(want, rows.distinct())
+            }
+            if (frame.name == "swipe-reach") {
+                // The stretches along each edge, measured at their middles, as the stroke is as thick as the touch.
+                val reach = (1f + .5f * .3f) * 12 * UNIT
+                val highest = path.filter { it.right - it.left > 4 * (it.bottom - it.top) }.minOf { it.middle }
+                val lowest = path.filter { it.right - it.left > 4 * (it.bottom - it.top) }.maxOf { it.middle }
+                if (abs(highest - (middle - reach)) > .5f) found += "its top reaches %.2f px, not %.2f".format(highest, middle - reach)
+                if (abs(lowest - (middle + reach)) > .5f) found += "its bottom reaches %.2f px, not %.2f".format(lowest, middle + reach)
+                if (path.minOf { it.top } < (4.5f - 1.6f * TrailThickness.THICKEST / 2) * UNIT - .5f) found += "it comes within 4.5 dp of the bar's top"
+            }
         }
         // The chevron is two strokes; together they are centred on the line.
         val lines = shapes.filter { it.kind == "line" }

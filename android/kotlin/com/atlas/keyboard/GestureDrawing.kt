@@ -11,6 +11,7 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sign
 import kotlin.math.sin
 
 /**
@@ -22,8 +23,11 @@ import kotlin.math.sin
  * For the cursor the line of letters moves past the caret at the cursor's speed, and the Space glow lies under it, brighter
  * on the side it leans to. For a word drag the selection grows over the words. For a delete the words run into the caret and go.
  */
-/** [radius] rounds the selection's corners, from [Radii]. */
-internal class GestureDrawing(private val density: Float, private val radius: Float) {
+/**
+ * [radius] rounds the selection's corners, from [Radii]. [density] is the bar's px to a dp, which grows with Bar text size; [unit]
+ * is TitanKeys' fixed one, which doesn't, for what keeps its size as the words grow, such as the swipe trail.
+ */
+internal class GestureDrawing(private val density: Float, private val radius: Float, private val unit: Float = density) {
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val box = RectF()
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -104,23 +108,24 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val alpha = display.reveal
         val faded = alpha < 1f
         if (faded) canvas.saveLayerAlpha(0f, 0f, right + left, h, (alpha.coerceIn(0f, 1f) * 255).toInt())
+        val lowest = h - StripFit.EDGE_DP * unit
         stroke.color = look.accent
         // Across, the path sits over the real keys, as Key calibration has them; the strip is as wide as the screen, and the
         // sides are the same way in, so they add up to its width. It never goes past the sides, where the corners cut.
         val keys = keysOn(right + left)
         var x = keys.x(display.pathX[0]).coerceIn(left, right)
-        var y = swipeY(display.pathY[0], h)
+        var y = swipeY(display.pathY[0], lowest)
         for (index in 1 until count) {
             val nextX = keys.x(display.pathX[index]).coerceIn(left, right)
-            val nextY = swipeY(display.pathY[index], h)
-            stroke.strokeWidth = dp(PATH_WIDTH) * (display.pathWidth[index - 1] + display.pathWidth[index]) / 2
+            val nextY = swipeY(display.pathY[index], lowest)
+            stroke.strokeWidth = PATH_WIDTH * unit * (display.pathWidth[index - 1] + display.pathWidth[index]) / 2
             canvas.drawLine(x, y, nextX, nextY, stroke)
             x = nextX
             y = nextY
         }
-        // The finger's dot keeps over the words' tails too: at its thickest it sits a little above the path's end.
-        val finger = dp(PATH_FINGER) * display.pathWidth[count - 1].coerceAtLeast(1f)
-        dot(canvas, x, min(y, floor - finger), finger, look.accent)
+        // The finger's dot keeps over the bar's floor too: at its thickest it sits a little above the path's end.
+        val finger = PATH_FINGER * unit * display.pathWidth[count - 1].coerceAtLeast(1f)
+        dot(canvas, x, min(y, lowest - finger), finger, look.accent)
         if (faded) canvas.restore()
     }
 
@@ -132,14 +137,19 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
     }
 
     /**
-     * A touchpad height, from the top row down to the bottom of the letter rows, as a height on the strip: the middle row on the
-     * bar's line, and the rows as far apart above it as below, close enough that the bottom row's stroke, at its thickest, keeps
-     * over the words' tails, [floor] (owner, 2026-11-13: the bottom row ran along the screen's edge). [PATH_ROW] at most.
+     * A touchpad height, from the top row down to the bottom of the letter rows, as a height on the strip: the owner's option 6
+     * (2026-11-14, "the tallest while still being center aligned"; the trail of 2026-11-13 was "really cramped"). The rows' middles
+     * lie [PATH_ROW] apart, the middle row [PATH_RAISE] over the words' line, level with the automatic capital's arrow, and the
+     * outer half of the top and bottom rows is drawn at [PATH_OUTER] of its height, so the trail is as tall as it can be and still
+     * centred. In TitanKeys' fixed dp: the trail keeps its size at every Bar text size. It keeps [PATH_TOP] from the bar's top, and
+     * its stroke at its thickest over [lowest], the bar's floor over the screen's edge.
      */
-    private fun swipeY(y: Float, h: Float): Float {
-        val stroke = dp(PATH_WIDTH) * TrailThickness.THICKEST / 2
-        val row = min(dp(PATH_ROW), (room() - stroke) / 1.5f)
-        return line + (y / .75f * 3 - 1.5f).coerceIn(-1.5f, 1.5f) * row
+    private fun swipeY(y: Float, lowest: Float): Float {
+        val u = (y / .75f * 3 - 1.5f).coerceIn(-1.5f, 1.5f)
+        val a = abs(u)
+        val v = if (a <= 1f) a else 1f + (a - 1f) * PATH_OUTER
+        val stroke = PATH_WIDTH * unit * TrailThickness.THICKEST / 2
+        return (line - PATH_RAISE * unit + sign(u) * v * PATH_ROW * unit).coerceIn(PATH_TOP * unit, lowest - stroke)
     }
 
     /**
@@ -644,8 +654,15 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val BAND_CLEAR = .7f
         const val BAND_LAYERS = 4
         const val BAND_PAD = 4f
-        /** The path's three rows of letters lie at most this far apart on the strip: closer where the room under the line is less. */
-        const val PATH_ROW = 14f
+        /**
+         * The swipe trail, in TitanKeys' fixed dp (owner's option 6): its rows' middles this far apart, its middle row this far over
+         * the words' line, the outer half of its top and bottom rows drawn at this part of its height, and the least room it keeps
+         * from the bar's top. Its stroke and its finger's dot are this thick, at a usual touch.
+         */
+        const val PATH_ROW = 12f
+        const val PATH_RAISE = 3f
+        const val PATH_OUTER = .3f
+        const val PATH_TOP = 4.5f
         const val PATH_WIDTH = 1.6f
         const val PATH_FINGER = 2.8f
         const val GLOW_HEIGHT = 10f

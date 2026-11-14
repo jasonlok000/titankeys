@@ -317,6 +317,10 @@ enders\gesture-line
     in Strip.drawDemoFinger resolved to C's GestureDrawing.finger. Reviewed (modifier-normal, effects-normal-save/favourite);
     all bar checks pass. The Orchestrator's calls: keep the clip-offer shrink; keep the guide's first-slide side words rising from
     under the edge.
+  - **Owner's review of build 0a6d754e (2026-11-14), noted, not started yet:**
+    - Word menu, cosmetic: "When I press a button and let go it still registers as that I'm hovering." After a press and its
+      release, the pressed button's hover preview stays on. Today the press keeps the preview it took over until the finger
+      moves (W's design), so either the release must clear it or the lift isn't heard. For W when work resumes.
   - **Paused for the usage limit (2026-11-14, 5-hour window at 95%, resets 02:10 UTC; weekly at 87%).** W, C, D and A stopped
     mid-turn; F and V were idle; their unfinished changes stay in their worktrees. On resume, send each a short "carry on":
     - V: blocker #1 first, then the selected-word underline, #20, #21, #31, #32.

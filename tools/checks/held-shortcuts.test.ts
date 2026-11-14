@@ -8,10 +8,11 @@ const root = join(import.meta.dir, "../..");
 const ime = readFileSync(join(root, "android/kotlin/com/atlas/keyboard/AtlasIme.kt"), "utf8");
 
 test("Backspace asks the modifiers what it does, once a press, after exact typing has taken its keys", () => {
-  expect(ime).toContain("backspaceDoes = modifiers.backspaceDoes(event.metaState, TypingSettings.altBackspaceForward(this),");
-  expect(ime).toContain("TypingSettings.shiftBackspaceWord(this))");
-  expect(ime).toContain("if (event.repeatCount == 0 || backspaceDoes == null)");
-  expect(ime.indexOf("if (field.exact) return exactKey(event)")).toBeLessThan(ime.indexOf("modifiers.backspaceDoes("));
+  // The press's choice lives in the modifiers, and Backspace's release clears it (bug hunt #38).
+  expect(ime).toContain("when (modifiers.backspacePress(event.repeatCount, event.metaState, TypingSettings.altBackspaceForward(this),");
+  expect(ime).toContain("TypingSettings.shiftBackspaceWord(this))) {");
+  expect(ime).toContain("if (keyCode == KeyEvent.KEYCODE_DEL) modifiers.backspaceReleased()");
+  expect(ime.indexOf("if (field.exact) return exactKey(event)")).toBeLessThan(ime.indexOf("modifiers.backspacePress("));
 });
 
 test("Alt + Backspace deletes forward without Alt, or goes to the app with its Alt, and plays no haptic of its own", () => {
@@ -45,7 +46,7 @@ test("each has its switch, on to start, read by the keyboard and reset with the 
   expect(typing).toContain('getBoolean("alt_sym_next_keyboard", true)');
   expect(ime).toContain("modifiers.altSymSwitches = TypingSettings.altSymNextKeyboard(this)");
   const modifiers = readFileSync(join(root, "android/kotlin/com/atlas/keyboard/Modifiers.kt"), "utf8");
-  expect(modifiers).toContain("if (panel == Panel.Closed && holding(Key.Alt) && altSymSwitches) {");
+  expect(modifiers).toContain("if (panel == Panel.Closed && (holding(Key.Alt) || meta and KeyEvent.META_ALT_ON != 0) && altSymSwitches) {");
   expect(modifiers).toContain("shiftWord && (holding(Key.Shift) || meta and KeyEvent.META_SHIFT_ON != 0) -> Backspace.Word");
   const reset = readFileSync(join(root, "android/kotlin/com/atlas/keyboard/SettingsReset.kt"), "utf8");
   expect(reset).toContain('"shift_backspace_word"');

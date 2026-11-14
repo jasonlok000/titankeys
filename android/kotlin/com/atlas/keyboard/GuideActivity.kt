@@ -1069,8 +1069,15 @@ class GuideActivity : Activity() {
             GuideHooks.lessons = flow.step.lessons
             GuideHooks.barSides(flow.step.sides)
         }
+        val entering = enterWhenBack
+        entering?.let(::enter)
+        // Back on the paste slide: its words go on the clipboard again (entering it does this itself).
+        if (entering == null && ready && started && !passed && !changing && !flow.finished) flow.step.clip?.let(::putGuideClip)
         resumeTimers()
     }
+
+    /** The slide to enter once the guide is in sight again, when its change landed while it wasn't. See [enter]. */
+    private var enterWhenBack: GuideStep? = null
 
     /** When the guide last went out of sight, for the clown hunt's clock to stand still meanwhile, or -1. */
     private var pausedAt = -1L
@@ -1121,6 +1128,8 @@ class GuideActivity : Activity() {
         contentResolver.unregisterContentObserver(keyboardChanges)
         clipboard.removePrimaryClipChangedListener(clipChanged)
         stopTimers()
+        // Away from the guide, your clipboard is your own again; the paste slide puts its words back as you return.
+        giveClipBack()
         // A hidden playground keeps no clock going; its speed starts over when you type again.
         main.removeCallbacks(wpmTick)
         if (playground) calmWpm()
@@ -1144,6 +1153,9 @@ class GuideActivity : Activity() {
             }
         }
         GuideHooks.nearMiss = false
+        giveClipBack()
+        // A guide that closes waits for Accessibility no more. One that Android only took down while you were in Settings still does.
+        if (isFinishing) awaitingAccessibility = false
         unlockKeyboard()
         GuideHooks.stripDemo(null)
         GuideHooks.stripPoint(null)
@@ -1154,6 +1166,10 @@ class GuideActivity : Activity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (!hasFocus) return
+        // Really back in the guide, it waits for Accessibility no more: an abandoned step must never bring a guide back later, when
+        // TitanKeys is turned on from Settings (bug hunt 2.1, #20). Not onResume, which also runs for a moment as the disclosure's
+        // answer opens the Accessibility page; the window only gets focus once you're here.
+        awaitingAccessibility = false
         // The keyboard list can close without a change, so this checks each time the guide comes back.
         checkKeyboard()
         // During setup there is nothing to type yet, and another keyboard would cover the slide.
@@ -2043,6 +2059,13 @@ class GuideActivity : Activity() {
     }
 
     private fun enter(step: GuideStep) {
+        // A slide change that lands after you left waits for you to come back (bug hunt 2.1, #31): set up away from the guide,
+        // the paste slide's clip went into your own clipboard history, as the keyboard no longer served the guide's field.
+        if (!visible) {
+            enterWhenBack = step
+            return
+        }
+        enterWhenBack = null
         heldKeys.clear()
         // A finger the touchpad last saw down, on the slide before, never holds back this slide's help: the next trace says again.
         fingerDown = false
@@ -2791,7 +2814,7 @@ class GuideActivity : Activity() {
      */
     private fun setUpLesson(step: GuideStep) {
         step.clip?.let { text ->
-            runCatching { clipboard.setPrimaryClip(android.content.ClipData.newPlainText("TitanKeys guide", text)) }
+            putGuideClip(text)
             main.postDelayed({ GuideHooks.dismissClip() }, CLIP_HIDE_MILLIS)
         }
         // A selection is cream (owner, v5.3), except where it is the target: the paste slide says "Paste over the orange words", so
@@ -2805,6 +2828,35 @@ class GuideActivity : Activity() {
         }
         // The clipboard shows the slide's own clips, or the user's again once a slide has none.
         GuideHooks.seedClips(step.sandboxClips)
+    }
+
+    /** What was on the clipboard before the guide put its own clip there, or null for nothing. See [putGuideClip]. */
+    private var userClip: android.content.ClipData? = null
+    private var holdsUserClip = false
+
+    /**
+     * Puts [text] on the clipboard for the paste slide, keeping what you had there first, which [giveClipBack] puts back (bug hunt
+     * 2.1, #32: the paste slide replaced your clipboard for good).
+     */
+    private fun putGuideClip(text: String) {
+        if (!holdsUserClip) {
+            userClip = runCatching { clipboard.primaryClip }.getOrNull()?.takeUnless { it.description?.label == GuideHooks.CLIP_LABEL }
+            holdsUserClip = true
+        }
+        runCatching { clipboard.setPrimaryClip(android.content.ClipData.newPlainText(GuideHooks.CLIP_LABEL, text)) }
+    }
+
+    /**
+     * Your own clip again, as the paste slide is left, or the guide goes out of sight or closes: only if the guide's is still
+     * there, so anything you copied since stays. With nothing there before, the clipboard is emptied.
+     */
+    private fun giveClipBack() {
+        if (!holdsUserClip) return
+        holdsUserClip = false
+        val own = userClip
+        userClip = null
+        if (runCatching { clipboard.primaryClipDescription?.label }.getOrNull() != GuideHooks.CLIP_LABEL) return
+        runCatching { if (own != null) clipboard.setPrimaryClip(own) else clipboard.clearPrimaryClip() }
     }
 
     /** The letter key for [key]: itself, or for a symbol, the key that types it with Alt on this phone. */
@@ -3333,6 +3385,12 @@ class GuideActivity : Activity() {
     // nothing, and the number counts back down to nothing, and the show winds down with it.
 
     private val wpm = WpmMeter()
+    /** When the playground last heard real typing, a letter, a swipe or a bar word, or -1 after a key that typed nothing of yours. */
+    private var typedAt = -1L
+    /** The field's length as the speed last saw it, to tell text that grows from text that goes. */
+    private var wpmLength = 0
+    /** fn or Ctrl is held, as the keyboard last said. */
+    private var ctrlOn = false
     /** The show's five big moments, which play a haptic each: see [PlaygroundMoments]. */
     private val moments = PlaygroundMoments()
     /** The show as it is now, for a lightning flash to check. */
@@ -3356,17 +3414,26 @@ class GuideActivity : Activity() {
     private fun countWpm(event: KeyboardEvent) {
         val now = SystemClock.uptimeMillis()
         when (event) {
+            // A key with fn or Ctrl, or one that the word menu or a panel takes, types nothing of yours: fn and V, fn and C, I in
+            // the menu (bug hunt 2.1, #21). It neither starts the speed nor keeps it going, and what it brings in doesn't count.
             is KeyboardEvent.Pushed -> when {
-                WpmMeter.startsWord(event.code) -> wpm.input(now, field.length())
+                ctrlOn || panelOpen || GuideHooks.menuOpen?.invoke() == true -> {
+                    typedAt = -1L
+                    return
+                }
+                WpmMeter.startsWord(event.code) -> wpm.input(now, field.length()).also { typedAt = now }
                 // Shift, Alt, Sym, fn and Ctrl type nothing, so they don't count at all.
-                WpmMeter.counts(event.code) -> wpm.keep(now, field.length())
+                WpmMeter.counts(event.code) -> wpm.keep(now, field.length()).also { typedAt = now }
                 else -> return
             }
-            is KeyboardEvent.Recognised -> wpm.input(now, field.length())
-            is KeyboardEvent.DeletedWord, is KeyboardEvent.Chosen -> wpm.keep(now, field.length())
-            is KeyboardEvent.FieldChanged -> wpm.text(event.text.length)
+            is KeyboardEvent.Recognised -> wpm.input(now, field.length()).also { typedAt = now }
+            is KeyboardEvent.DeletedWord, is KeyboardEvent.Chosen -> wpm.keep(now, field.length()).also { typedAt = now }
+            // Text that grows with no letter, swipe or bar word just before it, as a paste, isn't typing.
+            is KeyboardEvent.FieldChanged -> if (event.text.length > wpmLength && (typedAt < 0 || now - typedAt > TYPED_WINDOW_MILLIS))
+                wpm.skip(event.text.length) else wpm.text(event.text.length)
             else -> return
         }
+        if (event is KeyboardEvent.FieldChanged) wpmLength = event.text.length
         if (wpm.active(now) && !showingWpm) showWpm()
     }
 
@@ -3557,6 +3624,7 @@ class GuideActivity : Activity() {
             is KeyboardEvent.HeldSymbol -> lastKey?.let { keys.flip(it, event.symbol) }
             is KeyboardEvent.ModifierState -> {
                 panelOpen = event.panel != Modifiers.Panel.Closed
+                ctrlOn = event.ctrlOverlay
                 // The drawing of the keys never covers the real keyboard or its panels (owner, v5.2): it hides while a panel
                 // (Sym, emoji or clipboard) is open, and comes back as it closes. The panel shows the same keys itself.
                 keys.visibility = keysVisibility(keys.layoutParams.height)
@@ -3637,7 +3705,7 @@ class GuideActivity : Activity() {
         val clip = step.clip
         if (event is KeyboardEvent.Copied && clip != null && !passed && event.text != clip) main.post {
             if (passed || flow.step !== step) return@post
-            runCatching { clipboard.setPrimaryClip(android.content.ClipData.newPlainText("TitanKeys guide", clip)) }
+            putGuideClip(clip)
             main.postDelayed({ GuideHooks.dismissClip() }, CLIP_HIDE_MILLIS)
         }
         // A rude clip pasted on the clipboard slide is taken back out at once, and the slide says so: only the nice one counts.
@@ -4061,7 +4129,10 @@ class GuideActivity : Activity() {
             field.setSelection(field.selectionEnd)
             seeding = false
         }
-        if (flow.step.clip != null) GuideHooks.dismissClip()
+        if (flow.step.clip != null) {
+            GuideHooks.dismissClip()
+            giveClipBack()
+        }
         GuideHooks.stripPoint(null)
         changing = true
         busy = true
@@ -4612,6 +4683,8 @@ class GuideActivity : Activity() {
         private const val FIELD_FILL = .08f
         /** How strong the orange wash is behind what a slide aims at, in the field. */
         const val TARGET_WASH = .35f
+        /** How soon after real typing the text it brings in lands: later growth is a paste or the like, not typing. */
+        private const val TYPED_WINDOW_MILLIS = 1500L
         private const val GHOST_ALPHA = .38f
         /** How many words the ghost shows after the one you're on: more than two lines hold. */
         private const val GHOST_WORDS = 24

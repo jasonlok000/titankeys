@@ -26,6 +26,11 @@ internal object GuideHooks {
 
     const val FIELD = "com.titankeys.guide"
     /**
+     * The label of what the guide puts on the clipboard, the paste slide's words: the keyboard never keeps a clip with it in your
+     * own clipboard history, wherever it lands (bug hunt 2.1, #31 and #32).
+     */
+    const val CLIP_LABEL = "TitanKeys guide"
+    /**
      * The playground's field: a real field, with the real word menu, saves and clipboard, and none of the slides' locks or
      * show-only parts. It only shares the drawing of the keys with the guide's field. See [practice].
      */

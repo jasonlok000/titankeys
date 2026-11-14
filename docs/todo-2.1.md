@@ -370,6 +370,15 @@ enders\gesture-line
         arrow with Up and In sliders, and the same arrow beside words. Checked on the phone against the owner's screenshot
         (arrow and clip within 2 px). The owner's tries so far (cal-values.log): Up 5.5 with In swept 0 to 16 and back to 0;
         then beside words, Up down to 1.5 and back to 3.5, In 0. Waiting on the owner's pick.
+    - **Owner on #19's swipe trail: "Is the swipe supposed to be fixed now? I think it looks really cramped".** It is C's
+      2aa9486 (the owner's "compress slide animation ... center aligned properly with the border and like doesn't hit the bottom
+      edge"). Measured: the rows went from 14 to 8.7 dp apart (the trail 26 dp tall instead of 42), and the bottom row's middle
+      sits 8.3 dp over the screen's edge, lower than build #16's 9.6 dp: the squeeze came from the top, so it's centred but no
+      clearer of the edge. The Orchestrator's miss: it passed C's change on for the owner to judge without measuring the bottom row
+      against the old one. Under the 11 dp line there are only 14.4 dp to the floor, so a trail can be two of tall, centred on
+      the line, and clear of the edge, not all three. Mockup cal-tool/swipe.html (words swiped on a loop, 1:1, options: before;
+      now; tall and clear, so high; tall and centred, so near the edge; in between; sliders for Rows, Up and Edges, where Edges
+      pulls each row's outer half in so rows can be farther apart). Waiting on the owner's pick, then C.
     - Still to check on the phone from this round: the Shift and Ctrl chips, the menu effects and hover, the Sym rows on every page, the held delete's orange, the
     selection gap, the swipe trail (the owner judges), each idle game with the 80% floor (IDLE_BAR), Smart Launcher typing and the
     square key, Setup's links, "TitanKeys Keyboard" in the launcher, and the always-dark keyboard.

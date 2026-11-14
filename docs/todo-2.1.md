@@ -328,6 +328,11 @@ enders\gesture-line
       - Chosen on the phone preview (cal-tool/heldelete.html): option 2, the words it's eating in orange, with option 4 as its
         paused state: back to light grey, with a dimmer caret and glow, while the finger rests in the pause zone (owner: "Let's
         do 2"). Queued for C when work resumes.
+    - Triple Space selection, spacing bug (owner's screenshot, 20:20: "Bugged with the spacing?"). The orange selection pill runs
+      into the grey word pill on its left: no gap between them, while every other pair has one. The selection is drawn wider
+      than its word's place (its padding, since C's gesture line sized it at 1.3x the words), so it eats the gap. Fix: keep the
+      same gap on both sides of the selection, by moving the neighbours or limiting its padding to the gap. For C when work
+      resumes.
   - **Paused for the usage limit (2026-11-14, 5-hour window at 95%, resets 02:10 UTC; weekly at 87%).** W, C, D and A stopped
     mid-turn; F and V were idle; their unfinished changes stay in their worktrees. On resume, send each a short "carry on":
     - V: blocker #1 first, then the selected-word underline, #20, #21, #31, #32.

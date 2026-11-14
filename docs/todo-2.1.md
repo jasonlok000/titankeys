@@ -341,10 +341,20 @@ enders\gesture-line
     screen's Back: V's plan approved by the Orchestrator (the guide stays open under the page; the app opens linked pages alone).
   - **Build #17 (53ed70c6) not installed:** it copied the worktree halfway through the merges, so its idle check ran against
     code that didn't match it yet and failed. The finished code passes idle.
-  - **Build #18 (92d82fa4, from da30aea) passed every check, not installed:** the phone refused adb on 100.98.104.89:5555 (it
-    restarted, so `adb tcpip 5555` is off). Waiting on the owner's Wireless debugging port to connect and turn 5555 back on.
-    Build #19 (from 9149214, with V's end-screen Back) is building and goes on instead if it's ready first. Then check on the
-    phone: the Shift and Ctrl chips, the menu effects and hover, the Sym rows on every page, the held delete's orange, the
+  - **Build #18 (92d82fa4, from da30aea) passed every check, installed 23:03:** the phone had refused adb on 5555 (up 48 h, so
+    not a restart); the owner sent Wireless debugging's port, and `adb tcpip 5555` is back on.
+  - **Build #19 (57fb1f33, from 9149214, with V's end-screen Back) passed every check, installed 23:11.** The Orchestrator's
+    phone checks on #18 and #19, in the playground and the app's own pages, 0 crashes:
+    - the words, the Shift chip and the Ctrl row with its hints all on the optical line, inside the corners;
+    - the Sym pages (symbols, emoji, quick) evenly spaced; the clipboard page not looked at;
+    - all seven idle games inside the bar and the corners; the figure, Bowling's letters, the racers, the Firework's launch and
+      Juggle's juggler and Drop all over the 80% floor line, which shows only while they play;
+    - V's Back: /end/guide-boring and /end/play each come back to the end on Back, as it was left, with no finale replay; Back
+      at the end goes to the front page.
+    - Not checkable by adb, left for the owner's hands: triple Space's selection gap (adb's three Spaces typed a full stop
+      instead), the held delete's orange, the swipe trail, the menu effects and the hover after a press, Smart Launcher's square
+      key and Sym, Setup's links. Seen in passing: Escape doesn't clear a latched Shift (likely as designed, not a 2.1 change).
+    - Still to check on the phone from this round: the Shift and Ctrl chips, the menu effects and hover, the Sym rows on every page, the held delete's orange, the
     selection gap, the swipe trail (the owner judges), each idle game with the 80% floor (IDLE_BAR), Smart Launcher typing and the
     square key, Setup's links, "TitanKeys Keyboard" in the launcher, and the always-dark keyboard.
   - **Merged: V's end-screen Back** (claude/end-back 3925a9c, merge cb534aa, then bd23e6f put leave()'s comment back): the boring

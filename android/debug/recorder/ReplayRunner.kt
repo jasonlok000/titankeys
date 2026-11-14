@@ -45,8 +45,6 @@ class ReplayRunner : Instrumentation() {
         /** Joins pieces of one swipe before recognition, with [fill] adding points across each gap. */
         val merge = arguments.getString("merge") == "1"
         val fill = arguments.getString("fill") == "1"
-        /** Scores the older Space behaviour, where any resting thumb could select a word. */
-        val oldSpace = arguments.getString("oldspace") == "1"
     }
 
     private lateinit var options: Options
@@ -176,6 +174,7 @@ class ReplayRunner : Instrumentation() {
         private val editor = ReplayEditor()
         private val contact = Contact()
         private val cursor = CursorMode()
+        private val cursorGesture = CursorGesture()
         private val cursorControl = TypingSettings.cursorControl(targetContext)
         private val tapKeys = TypingSettings.tapKeys(targetContext)
         private val defaultLift = options.lift ?: TypingSettings.liftOffGraceMillis(targetContext)
@@ -186,14 +185,14 @@ class ReplayRunner : Instrumentation() {
         private val outcomes = JSONArray()
         private val recognitions = JSONArray()
         private lateinit var composer: Composer
-        private var startCursorAt: Long? = null
+        private var confirmAt: Long? = null
         private var endSlippedAt: Long? = null
         private var lastSwipeEnd: Sample? = null
         private var merged: MutableList<Sample>? = null
         private var mergedStart = 0L
         private var mergedEnd = 0L
-        private var cursorEndedAt = Long.MIN_VALUE
-        private var cursorMoved = false
+        /** Taps on a tap key that may be part of a double tap, not typed until they can't be. */
+        private val heldTaps = ArrayDeque<Pair<Contact.Settlement, Contact.Outcome?>>()
         private var selects = 0
         private var touches = 0
         private var top: List<String> = emptyList()
@@ -216,7 +215,7 @@ class ReplayRunner : Instrumentation() {
                 idle()
             }
             runOnMainSync {
-                settle(Long.MAX_VALUE)
+                advance(Long.MAX_VALUE)
                 flushMerged()
             }
             idle()
@@ -261,35 +260,41 @@ class ReplayRunner : Instrumentation() {
                         return
                     }
                     contact.move(samples.drop(1))
-                    endCursor()
-                    if (cursorControl && (options.oldSpace || contact.travel != null) && cursor.down(first)) {
-                        cursor.move(samples.drop(1))
-                        startCursorAt = first.time + CursorMode.REST_MILLIS
-                    }
+                    stopCursor()
+                    confirmAt = null
+                    cursorGesture.down(first, cursorControl && contact.travel != null)
+                    cursorGesture.move(samples.drop(1))?.let { startCursor(it, samples.drop(1)) }
                 }
                 MotionEvent.ACTION_MOVE -> {
                     cursor.move(samples)
-                    if (cursor.active) {
-                        if (cursor.direction() != 0) cursorMoved = true
-                        return
-                    }
+                    if (cursor.active) return
                     contact.move(samples)
+                    cursorGesture.move(samples)?.let { startCursor(it, samples) }
                 }
                 MotionEvent.ACTION_UP -> {
+                    val doubleTapped = cursorGesture.up(samples, time)
                     if (cursor.active) {
-                        cursorEndedAt = time
                         cursor.lift()
-                        if (defaultLift > 0) endSlippedAt = time + defaultLift else endCursor()
+                        if (defaultLift > 0) endSlippedAt = time + defaultLift else stopCursor()
                         return
                     }
-                    endCursor()
+                    stopCursor()
+                    if (doubleTapped) confirmAt = time + CursorGesture.CONFIRM_MILLIS
                     contact.up(samples, time)?.let { settlements.addLast(it) }
                 }
                 MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
                     contact.cancelActive()
-                    endCursor()
+                    endCursor(time)
                 }
             }
+            typeHeldTaps(time)
+        }
+
+        private fun startCursor(from: Sample, samples: List<Sample>) {
+            cursor.start(from)
+            cursor.move(samples)
+            contact.cancelActive()
+            heldTaps.clear()
         }
 
         private fun key(event: JSONObject) {
@@ -299,43 +304,58 @@ class ReplayRunner : Instrumentation() {
             val down = event.getBoolean("d")
             contact.key(event.getInt("c"), down, time)
             if (!down) return
-            if (event.getInt("c") == KeyEvent.KEYCODE_SPACE && (options.oldSpace || cursorMoved)
-                && (cursor.active || cursor.lifted || time - cursorEndedAt in 0..SELECT_AFTER_CURSOR_MILLIS)) {
-                selects++
-                cursorEndedAt = Long.MIN_VALUE
-            }
-            endCursor()
+            endCursor(time)
             flushMerged()
             if (!typed && event.getInt("c") == KeyEvent.KEYCODE_DEL) composer.backspace(false)
         }
 
         private fun advance(time: Long) {
             settle(time)
-            startCursorAt?.let {
+            confirmAt?.let {
                 if (time >= it) {
-                    startCursorAt = null
-                    if (cursor.rest(it)) {
-                        cursorMoved = false
-                        contact.cancelActive()
+                    confirmAt = null
+                    if (cursorGesture.confirm()) {
+                        selects++
+                        heldTaps.clear()
                     }
                 }
             }
-            endSlippedAt?.let { if (time >= it) endCursor() }
+            endSlippedAt?.let { if (time >= it) stopCursor() }
+            typeHeldTaps(time)
         }
 
-        private fun endCursor() {
-            startCursorAt = null
+        private fun stopCursor() {
             endSlippedAt = null
             cursor.end()
+        }
+
+        private fun endCursor(time: Long) {
+            stopCursor()
+            confirmAt = null
+            cursorGesture.cancel(time)
+            typeHeldTaps(time)
         }
 
         private fun settle(time: Long) {
             while (settlements.isNotEmpty() && settlements.first().deadline <= time) {
                 val finished = settlements.removeFirst()
                 val outcome = contact.settle(finished, finished.deadline)
-                if (!finished.cancelled) deliver(finished, outcome)
+                if (finished.cancelled) continue
+                if (outcome is Contact.Outcome.Tap && isTapKey(outcome.key) && cursorGesture.deciding(finished.deadline)) {
+                    heldTaps.addLast(finished to outcome)
+                } else {
+                    typeHeldTaps(finished.deadline)
+                    deliver(finished, outcome)
+                }
             }
         }
+
+        private fun typeHeldTaps(time: Long) {
+            if (cursorGesture.deciding(time)) return
+            while (heldTaps.isNotEmpty()) heldTaps.removeFirst().let { (finished, outcome) -> deliver(finished, outcome) }
+        }
+
+        private fun isTapKey(key: String) = if (key == Layout.SPACE) ' ' in tapKeys else Layout.isLetter(key) && key[0] in tapKeys
 
         private fun window(previous: Sample?) = if (previous != null && previous.y < .25f) options.liftTop ?: defaultLift else defaultLift
 
@@ -409,8 +429,7 @@ class ReplayRunner : Instrumentation() {
         private fun tap(outcome: Contact.Outcome.Tap) {
             outcomes.put(JSONObject().put("type", "tap").put("key", outcome.key).put("end", outcome.endedAt))
             if (typed) return
-            val isTapKey = if (outcome.key == Layout.SPACE) ' ' in tapKeys else Layout.isLetter(outcome.key) && outcome.key[0] in tapKeys
-            if (!isTapKey) return
+            if (!isTapKey(outcome.key)) return
             if (outcome.key == Layout.SPACE) composer.space(repeated = false, time = outcome.endedAt)
             else composer.type(if (outcome.key == "I" && TypingSettings.autoCapitalise(targetContext)) "I" else outcome.key.lowercase(), letterTap = true)
         }
@@ -433,7 +452,6 @@ class ReplayRunner : Instrumentation() {
     }
 
     private companion object {
-        const val SELECT_AFTER_CURSOR_MILLIS = 250L
         val TIMED_PHRASES = listOf("what do you ", "thank you so ", "see you at the ", "let me know when ", "do you want to ",
             "we should talk about ", "can you send me ", "that sounds like ", "have a great ", "are you free ", "my phone is ",
             "please call me ", "it was really ", "sorry for the ", "what time does ", "do you have any ", "we are going ",

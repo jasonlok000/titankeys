@@ -34,7 +34,6 @@ Options, each passed as `-e name value`:
 | `merge`, `fill` | `1` joins pieces before recognition, and adds points across each gap |
 | `late`, `latespeed`, `latefrom` | Extends the start of swipes that register late |
 | `keys` | A file of `letter x y` lines that replaces the key positions |
-| `oldspace` | `1` scores the older Space behaviour |
 | `timing` | `1` times word suggestions instead of replaying |
 
 To compare two builds, replay the same session on each and compare how often `prompt` is the first word in `top`, and how often it appears at all.

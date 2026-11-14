@@ -317,6 +317,91 @@ enders\gesture-line
     in Strip.drawDemoFinger resolved to C's GestureDrawing.finger. Reviewed (modifier-normal, effects-normal-save/favourite);
     all bar checks pass. The Orchestrator's calls: keep the clip-offer shrink; keep the guide's first-slide side words rising from
     under the edge.
+  - **Owner's review of build 0a6d754e (2026-11-14), noted, not started yet:**
+    - Guide end screen, Back (owner: "When going back from the boring guide triggered from the end screen it should go back to the
+      end screen. Applies to everything else for end screen"). Every page the end screen opens (the boring guide, Settings
+      links, Share swipes and the rest) returns to the end screen on Back, as it was left. For V when work resumes, with a
+      check per link.
+    - **Regression, first for D on resume** (owner: "I think my square button is not working for me anymore on smart launcher.").
+      D's TakenKeys takes every key in Smart Launcher's search except event.isSystem; Android's isSystem covers Home and Back but
+      not KEYCODE_APP_SWITCH (the square), so TitanKeys takes Recents and drops it (AtlasIme.kt:1420). Fix: take only the keys
+      TitanKeys types or handles (an allowlist: letters, digits, Space, Enter, Backspace, Shift, Alt, Sym, Ctrl/fn and the
+      keyboard's own), and let every other key through, Recents and the rest of the navigation keys included. A check for the
+      square key. Then a build for the owner.
+    - Word menu, cosmetic: "When I press a button and let go it still registers as that I'm hovering." After a press and its
+      release, the pressed button's hover preview stays on. Today the press keeps the preview it took over until the finger
+      moves (W's design), so either the release must clear it or the lift isn't heard. For W when work resumes.
+    - Held delete, design question (owner: "should the deleting long swipe should have more orange accents like other gestures
+      like triple space or do you think its fine?"). The Orchestrator's view: yes, a little. The word being eaten right now turns
+      orange, like triple Space's selected words; the queued words stay grey; it dims back to grey while paused. Waiting on the
+      owner; a quick phone preview first if wanted.
+      - Chosen on the phone preview (cal-tool/heldelete.html): option 2, the words it's eating in orange, with option 4 as its
+        paused state: back to light grey, with a dimmer caret and glow, while the finger rests in the pause zone (owner: "Let's
+        do 2"). Queued for C when work resumes.
+    - Triple Space selection, spacing bug (owner's screenshot, 20:20: "Bugged with the spacing?"). The orange selection pill runs
+      into the grey word pill on its left: no gap between them, while every other pair has one. The selection is drawn wider
+      than its word's place (its padding, since C's gesture line sized it at 1.3x the words), so it eats the gap. Fix: keep the
+      same gap on both sides of the selection, by moving the neighbours or limiting its padding to the gap. For C when work
+      resumes.
+    - Sym panel spacing (owner's screenshot, 20:22: "Is the bottom category bar supposed to have a taller gap above the categories
+      to compensate for the border to be more evenly aligned in spacing?"). Measured: the three key rows' middles are 72 and 71 px
+      apart, but the category row sits only 55 px under the last one, because it moved onto the line and the rows didn't. The
+      Orchestrator's proposal: keep the top row and the category row where they are, and space all four evenly (about 66 px), so
+      the gap above the categories matches the rest. For W when work resumes, with before/after renders.
+      - Owner asked: spread the rows, or make the panel taller? The Orchestrator recommends spreading: the panel keeps its height,
+        so it covers no more of the app and the layouts that depend on its height (the guide, the playground) stay as they are;
+        66 px rows still leave plenty of room for one-character labels and emoji. Taller would mean about 17 px more of the app
+        hidden on every page.
+      - Decided (owner: "Ok agreed with u. Distribute it."): the same panel height, the four rows evenly spaced, the categories on
+        the line. Queued for W when work resumes, with before/after renders.
+    - Swipe trail on the bar (owner: "Should we compress slide animation on the bar so that its more center aligned properly with
+      the border and like doesn't hit the bottom edge?"). Today the swipe path maps the three key rows onto the bar's full
+      height, with its middle row on the line, so the bottom row's points run along the screen's edge. The Orchestrator's view:
+      yes, compress it so the path is centred on the line, symmetric above and below, with its lowest point above the floor
+      margin like the letters' tails. Confirmed (owner: "Yes please queue that. That's what I meant."). Queued for C, with
+      before/after renders.
+    - What else the border illusion touches (owner: "What else might I miss because of this border illusion?"). The
+      Orchestrator's list, waiting on the owner:
+      1. The light look: with the phone's dark mode off, the bar is white (Look.paper), the black border shows a clear edge, and
+         the lower line would look too low. Use the bar's true middle in the light look.
+      2. Screenshots and recordings (the Play listing, the README, Record a bug) don't include the border, so the bar's text
+         looks low in them. Marketing images need the border or a device frame added.
+      3. Black screens with buttons at the bottom (the share and Back disclosures, the reset confirms, Record a bug, Ink pages):
+         the border makes their bottom gap look bigger than designed. One visual pass.
+      4. The Sym panel's other pages (emoji, clipboard, quick settings) get the same even row spacing as the symbols page.
+      5. Orange screens (the guide's pass, the finale, the end) don't blend with the black border, so the maths centre is right
+         there; leave them.
+      6. Brightness: if the screen's blacks glow at high brightness or in sunlight, the edge shows and the illusion weakens.
+         Worth a look outdoors.
+    - Auto-capital arrow (owner: "I think the auto cap icon should be smaller like how it was like in the old one before the
+      resize. And scales with the bar element size."). The automatic capital's Shift arrow at the bar's left grew with the
+      chips; bring it back to its size before font size mattered (owner: "Before the resize means before font size matters."): as
+      Strip drew it at 824c865^, before FixedScale (2026-11-12), at Smaller, scaled by the Bar text size factor, on the line and
+      clear of the corner. For W when work resumes, with before/after renders at all three sizes.
+      - Owner's answers: the keyboard is always dark (W, when work resumes: Look always dark, the light look removed); the guide
+        and the playground get the border pass (V); the Sym panel's other pages get the even spacing (W); orange screens stay;
+        brightness ignored for now; screenshots noted for the Play launch.
+  - **Paused for the usage limit (2026-11-14, 5-hour window at 95%, resets 02:10 UTC; weekly at 87%).** W, C, D and A stopped
+    mid-turn; F and V were idle; their unfinished changes stay in their worktrees. On resume, send each a short "carry on":
+    - V: blocker #1 first, then the selected-word underline, #20, #21, #31, #32.
+    - F: blocker #2 first, then the Setup fixes, #23, #26, #27, #28.
+    - W: #3, #6, #11, #12, #25, #36.
+    - D: #4, #13, #14, #15, #24, #30, #37, #38, TakenKeys after screen-off.
+    - C: #7, #16, #17, #18, #22, #35.
+    - A: the floor line at 80%, solid, everything grounded; then #5, #8, #9, #10, #29, #39, #19, #33, #34.
+    - Meanwhile a full verify of test-2.1h (build #15) runs on its own.
+  - **Bug hunt done** (docs/bug-hunt-2.1.md, merged at c8fd49b): 41 findings, 2 blocking, 22 should fix, 17 later. The
+    Orchestrator confirmed blocker #1 in the code (GuideActivity.onPause never removes showHelp, demoTick or huntTick). Triage:
+    - V: #1 first (blocker: guide timers outlive the guide), then #20, #21, #31, #32 (#31 and #32 raised from later: the guide
+      loses the user's clipboard).
+    - F: #2 first (blocker: Reset literally everything leaves shorthand, app lists, recent apps, snippet start), then #23, #26,
+      #27, #28.
+    - W: #3, #6, #11, #12, #25, #36 (word menu, and accents-off cream).
+    - D: #4, #13, #14, #15, #24, #30, #37, #38, and TakenKeys after screen-off.
+    - C: #7, #16, #17, #18, #22, #35.
+    - A, after the floor line: #5, #8, #9, #10, #29, #39, #19, #33, #34.
+    - After the pre-release: #40 (battery) and #41 (leaks).
+    Each fix comes with a check that reproduces it; workers confirm each finding first.
   - **Bug hunt:** its own session, "TitanKeys 2.1 bug hunt" (local_34f68a1f), findings only, to docs/bug-hunt-2.1.md; the
     Orchestrator triages and assigns fixes.
   - **Workers' model (owner, 2026-11-13):** subagents and every worker session run on Opus 5.5 at medium effort; set on A, C, D,

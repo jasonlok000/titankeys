@@ -16,5 +16,5 @@ keyboard=android/kotlin/com/atlas/keyboard
   "$keyboard/MenuKeys.kt" "$keyboard/StripFit.kt" "$keyboard/MenuMotion.kt" "$keyboard/Layout.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" \
   "$keyboard/SteadyKey.kt" "$keyboard/MenuPath.kt" "$keyboard/MenuScene.kt" "$keyboard/QuickSetting.kt" "$keyboard/FixedScale.kt" "$keyboard/Accent.kt" \
   "$keyboard/Corners.kt" "$keyboard/IdleGames.kt" tests/word-menu/MenuBar.kt tests/word-menu/QuickSettingsPage.kt tests/menu-render/AwtMenuCanvas.kt \
-  tests/menu-render/MenuRender.kt tests/menu-render/BarLine.kt tests/idle-render/IdleRender.kt
+  tests/menu-render/MenuRender.kt tests/menu-render/BarLine.kt tests/menu-render/BarFrames.kt tests/menu-render/AndroidRow.kt tests/idle-render/IdleRender.kt
 java -Djava.awt.headless=true -cp "$work:$stdlib:$android" com.atlas.keyboard.IdleRenderKt android/src/main/res/font $out

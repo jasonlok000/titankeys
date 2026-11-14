@@ -1,6 +1,6 @@
-# Contributing to Atlas
+# Contributing to TitanKeys
 
-Thank you for your help with Atlas. This guide tells you how to report a problem, suggest an idea, and send a change.
+Thank you for your help with TitanKeys. This guide tells you how to report a problem, suggest an idea, and send a change.
 
 ## Rules
 
@@ -8,11 +8,11 @@ Thank you for your help with Atlas. This guide tells you how to report a problem
 - Add a label to each issue.
 - Do not open a pull request before I give the work to you.
 - Test each change on a real Unihertz Titan 2 Elite.
-- Use issues for all contributions. To send feedback without a GitHub account, use **Settings > Send feedback** in Atlas.
+- Use issues for all contributions. To send feedback without a GitHub account, use **Settings > Send feedback** in TitanKeys.
 
 ## Philosophy
 
-Atlas has these goals:
+TitanKeys has these goals:
 
 - **Private:** What the user types stays on the device. TitanKeys uses the internet only as the [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says: signed news, and swipe contributions only with consent. Do not add other network calls, analytics, or tracking.
 - **Simple:** Write clear code. Clear code is better than clever code.
@@ -60,10 +60,10 @@ Want to help? Say which language in [issue #56](https://github.com/jasonlok000/t
    | `enhancement` | A new feature or a change to a feature. |
    | `accessibility` | A problem for people with disabilities. |
    | `documentation` | A problem in the README or the guide. |
-   | `question` | A question about Atlas. |
+   | `question` | A question about TitanKeys. |
 
 4. For a bug, write these items:
-   - The Atlas version. Find it in **Settings > About**.
+   - The TitanKeys version. Find it in **Settings > About**.
    - The steps that cause the bug.
    - The result that you expect, and the result that you see.
    - A screen recording, if possible.
@@ -89,18 +89,18 @@ If you want to do the work, write this in the issue. Wait until I give the issue
 - [Bun](https://bun.sh/)
 - Java 21 (OpenJDK)
 - The Android SDK
-- `adb`, to install Atlas on your device
+- `adb`, to install TitanKeys on your device
 - A Unihertz Titan 2 Elite with USB debugging on
 
 ### Steps
 
-1. Fork the Atlas repository on GitHub.
+1. Fork the TitanKeys repository on GitHub.
 2. Clone [Ink](https://github.com/No-Scrolling/ink) and your fork into the same folder:
 
    ```bash
    git clone https://github.com/No-Scrolling/ink
-   git clone git@github.com:YOUR_USERNAME/atlas.git
-   cd atlas
+   git clone git@github.com:YOUR_USERNAME/titankeys.git
+   cd titankeys
    ```
 
 3. Install the dependencies:
@@ -160,13 +160,13 @@ Keep these clean, with no swearing, but still casual: the Accessibility descript
 
 Each pull request must have a test on a real Titan 2 Elite. An emulator does not have the physical keyboard.
 
-1. Build and install Atlas Debug:
+1. Build and install TitanKeys Debug:
 
    ```bash
    bash tools/debug.sh --install
    ```
 
-   Atlas Debug installs next to Atlas. It does not change your saved words.
+   TitanKeys Debug installs next to TitanKeys. It does not change your saved words.
 
 2. Do the steps from the issue again. Make sure that the problem does not occur.
 3. Make sure that swipe typing, suggestions, and cursor movement still operate correctly.
@@ -197,4 +197,4 @@ In the pull request description, write these items:
 
 ## License
 
-Atlas uses the GPL-3.0-only license. When you send a contribution, you agree that it uses the same license.
+TitanKeys uses the GPL-3.0-only license, the same as Atlas, which it's based on. When you send a contribution, you agree that it uses the same license.

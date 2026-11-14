@@ -4,7 +4,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 
 /**
- * Lets Atlas Debug's recorder observe touchpad input. Normal Atlas contains no recorder and never sets
+ * Lets TitanKeys Debug's recorder observe touchpad input. The normal app contains no recorder and never sets
  * [sink], so every hook is a null check that does nothing. See android/debug/recorder.
  */
 object Recording {

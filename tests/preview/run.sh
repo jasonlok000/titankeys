@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the preview check on Atlas Debug (com.atlas.debug), so the real Atlas is never touched.
+# Runs the preview check on TitanKeys Debug (com.titankeys.debug), so the real TitanKeys is never touched.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}

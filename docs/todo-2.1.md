@@ -350,6 +350,19 @@ enders\gesture-line
       yes, compress it so the path is centred on the line, symmetric above and below, with its lowest point above the floor
       margin like the letters' tails. Confirmed (owner: "Yes please queue that. That's what I meant."). Queued for C, with
       before/after renders.
+    - What else the border illusion touches (owner: "What else might I miss because of this border illusion?"). The
+      Orchestrator's list, waiting on the owner:
+      1. The light look: with the phone's dark mode off, the bar is white (Look.paper), the black border shows a clear edge, and
+         the lower line would look too low. Use the bar's true middle in the light look.
+      2. Screenshots and recordings (the Play listing, the README, Record a bug) don't include the border, so the bar's text
+         looks low in them. Marketing images need the border or a device frame added.
+      3. Black screens with buttons at the bottom (the share and Back disclosures, the reset confirms, Record a bug, Ink pages):
+         the border makes their bottom gap look bigger than designed. One visual pass.
+      4. The Sym panel's other pages (emoji, clipboard, quick settings) get the same even row spacing as the symbols page.
+      5. Orange screens (the guide's pass, the finale, the end) don't blend with the black border, so the maths centre is right
+         there; leave them.
+      6. Brightness: if the screen's blacks glow at high brightness or in sunlight, the edge shows and the illusion weakens.
+         Worth a look outdoors.
   - **Paused for the usage limit (2026-11-14, 5-hour window at 95%, resets 02:10 UTC; weekly at 87%).** W, C, D and A stopped
     mid-turn; F and V were idle; their unfinished changes stay in their worktrees. On resume, send each a short "carry on":
     - V: blocker #1 first, then the selected-word underline, #20, #21, #31, #32.

@@ -253,6 +253,13 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   Idle.FLOOR, stopping before the curved corners with soft ends, shown only while a game that uses the floor plays (the figure,
   Bowling, Race, the Firework, Juggle's Drop), fading in and out with it. Why (Orchestrator): the screen's edge blends into the
   border, so a figure standing on it looked like it stood on nothing. A builds it.
+  - **Width and ends** (owner, after the width preview: "I like 80%. Optimize it so that they're still on the ground. Right now
+    there's a fade on the edge with the page? We don't need that. Just a simple 80% width line and have the animations all be
+    animated for that."). (Owner) 80% of the room between the corners, centred, solid with hard ends; every game reworked so
+    whatever stands, lands, rolls or runs on the floor stays over the line.
+  - **Only the idle games get a visible line** (owner: "Those should keep the border as a illusion. No visible line needed.").
+    Everything else in the bar keeps the invisible optical line: nothing is drawn for the words, the clipboard suggestion, the
+    chips or the menu. (Owner)
 - **A selected word is underlined on the bar, in the guide and the real keyboard alike** (owner, 2026-11-13: "I think you prob
   misunderstood and the word TitanKeys in that guide should be selected as in highlighted litearlly selectfed, not underlined?",
   then "I think if the word is highlighted, it should be underlined before going into the word menu. in the word menu it

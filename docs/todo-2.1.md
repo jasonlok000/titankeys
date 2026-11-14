@@ -1005,6 +1005,21 @@ enders\gesture-line
   (unapproved): with the move off Atlas, after the pre-release, as verify.sh drives every build.
 - **The 2.1.0 pre-release is out (2026-11-14, owner: "No do those now. Treat it as a simple tag change. We are now at pre release. Release is just a tag change.")**: the old v2.1.0 pre-release of 11-11 (atlas-signed, aac4d43) kept as tag archive/v2.1.0-prerelease-2026-11-11, then replaced: v2.1.0 on main (998ec37), pre-release, titankeys-2.1.0.apk = the NightKeys-signed build (sha256 323f0a1f...), text = release-notes.txt's 2.1.0 plus the pre-release line, a note for 2.0 builds from before 11-14, and the SHA-256. The full release after the owner's 3 days: flip v2.1.0 from pre-release to latest, nothing else.
 - **The website publishes from main** (.github/workflows/pages.yml, Pages source = GitHub Actions): site/ live, all four pages 200, the feed and style byte-identical to main's. gh-pages kept as archive/gh-pages and deleted. **One branch: main**, on GitHub and here.
+- **README: lead with the goal and the features, the technical side in one section** (owner, 2026-11-14: "I want the
+  technical details of the swipe engine etc to be put into one smaller section on the readme. We focus on the goal of making
+  titankeys the best keyboard for the titan2elite ... mention that it has all those quirky features like swipe, space
+  gestures, very good auto correct, etc. ... Do not throw away the useful stuff ... Or maybe we shd do just as much with the
+  other stuff"). Today: "Under the hood" is 140 of the README's 301 lines, nearly all the swipe engine. The Orchestrator's
+  proposal (waiting on the go): the goal on top, then the features as the guide sells them, then one short "How it's smart"
+  covering swipe, next-word prediction and autocorrect equally with one headline table; the full engine write-up moves to
+  docs/engine.md, nothing lost.
+- **3.0: Hold for symbols defaults to Medium** (owner, 2026-11-14: "changing hold symbol default to medium next 3.0").
+- **Favourites and capitals** (owner, 2026-11-14: "does favouriting a word learns its capitalization patterns? Shd it?"):
+  Favourite is kept in lowercase (FavouriteWords) as it only ranks a word first among look-alikes; the capitals come from
+  Save, which keeps a new word as written (WordCase.kept: TitanKeys stays TitanKeys, a sentence-start capital is dropped).
+  The gap: saving a word the dictionary has (Apple, iPhone-style capitals on a known word) restores the dictionary's form and
+  drops yours (AtlasIme.saveWord: builtInWord -> restoreWord). Proposed for 3.0: Save keeps your capitals on known words too;
+  Favourite stays case-free.
 - **3.0: back up the whole app** (owner, 2026-11-14: "let's write down to 3.0 to backup the whole app"). Today only words
   (Settings > Data > Backup) and snippets export and import; settings and switches, shorthand, app lists, calibration and the
   rest have none. One export and one import for everything, so a reinstall, a new phone or a key change loses nothing.

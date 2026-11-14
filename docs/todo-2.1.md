@@ -1023,6 +1023,12 @@ enders\gesture-line
     from .dev/swipe-baseline (BASELINE.md, ENGINE-2.0.md, report/), docs/haptics*.md, docs/design-v2.md and the code. No
     private recordings' text in it. A second helper writes it after the README draft.
   - Owner, then: "Or lke a pitch for technical peol". So the paper is a pitch for technical readers: each part leads with what it achieves and the measured result, then shows how, in full depth, so an engineer is convinced by the evidence.
+- **3.0: a short Accessibility disclosure, like Share swipes'** (owner, 2026-11-14: "Next batch we shd simplify the
+  accessibility permission request similar to how we did the share swipe. No wall of text."). BackDisclosureActivity today
+  lists every case. The short version must still meet Google Play's prominent disclosure (docs/play/accessibility.md): shown
+  in the app during normal use, says what the service accesses and how it's used, an active tap to agree, separate from the
+  contributions screen. So: a few plain lines and Agree / Not now, with the full detail one tap away ("What exactly does it
+  see?"), and docs/play/accessibility.md's quoted text updated to match.
 - **3.0: Hold for symbols defaults to Medium** (owner, 2026-11-14: "changing hold symbol default to medium next 3.0").
 - **Favourites and capitals** (owner, 2026-11-14: "does favouriting a word learns its capitalization patterns? Shd it?"):
   Favourite is kept in lowercase (FavouriteWords) as it only ranks a word first among look-alikes; the capitals come from

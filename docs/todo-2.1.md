@@ -317,6 +317,15 @@ enders\gesture-line
     in Strip.drawDemoFinger resolved to C's GestureDrawing.finger. Reviewed (modifier-normal, effects-normal-save/favourite);
     all bar checks pass. The Orchestrator's calls: keep the clip-offer shrink; keep the guide's first-slide side words rising from
     under the edge.
+  - **Paused for the usage limit (2026-11-14, 5-hour window at 95%, resets 02:10 UTC; weekly at 87%).** W, C, D and A stopped
+    mid-turn; F and V were idle; their unfinished changes stay in their worktrees. On resume, send each a short "carry on":
+    - V: blocker #1 first, then the selected-word underline, #20, #21, #31, #32.
+    - F: blocker #2 first, then the Setup fixes, #23, #26, #27, #28.
+    - W: #3, #6, #11, #12, #25, #36.
+    - D: #4, #13, #14, #15, #24, #30, #37, #38, TakenKeys after screen-off.
+    - C: #7, #16, #17, #18, #22, #35.
+    - A: the floor line at 80%, solid, everything grounded; then #5, #8, #9, #10, #29, #39, #19, #33, #34.
+    - Meanwhile a full verify of test-2.1h (build #15) runs on its own.
   - **Bug hunt done** (docs/bug-hunt-2.1.md, merged at c8fd49b): 41 findings, 2 blocking, 22 should fix, 17 later. The
     Orchestrator confirmed blocker #1 in the code (GuideActivity.onPause never removes showHelp, demoTick or huntTick). Triage:
     - V: #1 first (blocker: guide timers outlive the guide), then #20, #21, #31, #32 (#31 and #32 raised from later: the guide

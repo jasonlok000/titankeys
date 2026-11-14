@@ -445,6 +445,10 @@ enders\gesture-line
         can't update and the pre-release must be signed with the real key. Checking needs titankeys-2.0.0.apk (113 MB) from the
         owner's GitHub release: not downloaded without the owner's OK. And GitHub already has a "TitanKeys 2.1.0" pre-release
         (v2.1.0, 2026-11-11): publishing needs a new tag or that release's APK replaced.
+      - The owner: "it should be the key same as NightKeys". Checked by GitHub's asset digests, no download: 1.2.0 was signed with
+        the NightKeys key (bb769da3..., in C:\Users\jason\Documents\NightKeys-PRIVATE-signing-key\), the 2.1.0 pre-release of
+        11-11 with atlas.keystore ("Atlas Debug"), 2.0.0 unknown (docs/play/signing.md says atlas.keystore). Waiting on the
+        owner: the 2.0.0 APK's key (a 113 MB download, needs the OK), then which key 2.1 is signed with. Not re-signed yet.
     - **Next to discuss with the owner (not started):** languages (3.0, #56); and swipes joined by accident when one ends at
       the top row and the next starts at the top row (the owner: "investigate if there's a way to reduce accidentally joining
       two swipes when they end at the top and starts again at the top").

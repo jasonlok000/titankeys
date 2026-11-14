@@ -409,7 +409,8 @@ enders\gesture-line
        types there as in any other app;", and the service description says "in Smart Launcher's search field". Release notes
        gained the Smart Launcher line. Niagara (owner asked): TakenKeys covers Smart Launcher only; another launcher is an
        ordinary app unless it also grabs keys first; not needed for the pre-release, a minute's check after.
-       Build #21 (from 050b163) verifies so ~/build/tk-overnight is current for tools/release.sh.
+       Build #21 (from 050b163) verifies so ~/build/tk-overnight is current for tools/release.sh. Passed every check (debug
+       6715355a); ~/build/tk-overnight is at 050b163 with the new wording and notes: ready for the owner to sign.
     4. Orchestrator: the release variant built without the owner's key (compiles, no debug code, against
        docs/release-audit-2.1.md), and the release notes' final pass for this round (the end screen's Back, the clip, the arrow,
        the trail).

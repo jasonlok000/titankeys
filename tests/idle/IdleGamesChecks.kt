@@ -257,6 +257,13 @@ fun main() {
         home(glyphs, what)
         for (g in glyphs) check(g.y == middle(s, g.size), "$what: ${g.char} ends on the line")
     }
+    // Bug hunt #19: a selected word, a clip offer or a notice that arrives mid-game ends it, as each keeps a game from starting.
+    val stripSource = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    val render = stripSource.substringAfter("    private fun render() {").substringBefore("        look = Look.of(context)")
+    check("if (idle != null && (selected != null || clip != null || notice != null)) idle = null" in render,
+        "#19: the bar ends a game when a selected word, a clip offer or a notice arrives")
+    check("|| notice != null || clip != null || selected != null" in stripSource, "#19: and none of them lets a game start")
+
     // The jump rope's holders and jumper stay on the line: the holders step apart along it, and the jumper only jumps up from it.
     for (s in sizes) {
         size = s

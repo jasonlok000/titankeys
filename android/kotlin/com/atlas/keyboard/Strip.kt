@@ -499,6 +499,10 @@ class Strip(
     }
 
     private fun render() {
+        // A selected word, a clip offer or a notice that arrives mid-game takes the bar: the game ends at once, as if it never
+        // started, rather than drawing over it and taking its first touch (bug hunt #19). A frame already asked for only draws the
+        // bar once more. Nothing declared below this is touched, as init runs it.
+        if (idle != null && (selected != null || clip != null || notice != null)) idle = null
         look = Look.of(context)
         gesture.allowed = showSuggestions
         // A strip that shows nothing has no height, and a bar there would move the app each time a modifier changes.

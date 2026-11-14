@@ -2547,6 +2547,12 @@ private fun bugHunt(world: Realistic) {
     }
     must(Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0).suggestions,
         "#10: an address bar that asks for no suggestions still gets the bar")
+
+    // #29: Sym's "&" and "=" got spaces around them in an address bar.
+    fun symbols(field: Field) = Typist(world, field = field, autoCapitalise = false).type("a").also { it.composer.symbol("="); it.settle() }
+        .type("1").also { it.composer.symbol("&"); it.settle() }.type("b").text
+    same(symbols(url), "a=1&b", "#29: an address bar gets \"=\" and \"&\" alone")
+    same(symbols(Typist.FIELD), "a = 1 & b", "#29: prose still gets spaces around them")
 }
 
 fun main() {

@@ -750,9 +750,10 @@ class Composer(
         if (fix != null && !edit(EditCause.Autocorrect, fix.typed.length, fix.word)) return
         val before = editor.before().orEmpty()
         val after = editor.after().orEmpty()
-        // Spaces around a symbol are for prose. A password or an address gets the symbol alone.
-        val around = field.words && (symbol == "&" || symbol == "=")
-        val trailing = field.words && (around || symbol == ";" || symbol == "…" || symbol == "•" && (before.isEmpty() || before.endsWith("\n")))
+        // Spaces around a symbol are for prose. A password or an address gets the symbol alone: an address bar types words, but
+        // "a=1&b=2" there is no prose (bug hunt #29), so it goes by the marks' spacing, which addresses don't have.
+        val around = field.words && field.markSpaces && (symbol == "&" || symbol == "=")
+        val trailing = field.words && field.markSpaces && (around || symbol == ";" || symbol == "…" || symbol == "•" && (before.isEmpty() || before.endsWith("\n")))
         val leading = around && before.isNotEmpty() && !Character.isWhitespace(before.codePointBefore(before.length))
         val reuseSpace = trailing && after.startsWith(" ")
         val space = reuseSpace || trailing && (after.isEmpty() || !after[0].isWhitespace())

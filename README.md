@@ -15,13 +15,13 @@ Type like you always have, swipe whole words across the keys, steer the cursor f
 > TitanKeys is an independent, modified version of [Atlas](https://github.com/juleshall4/atlas) by Julian Hall. Atlas is the original project and the base of everything here. This fork started in November 2026, and its changes are in the git history. It is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz.
 
 <p align="center">
-  <img src="assets/screenshots/guide-end.png" width="540" alt="The end of the guide, with the TitanKeys logo">
+  <img src="assets/screenshots/guide-type.png" width="540" alt="The guide's first slide: Make a typo. We'll fix it., with a line of typos in the text field">
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/guide-setup.png" width="260" alt="The guide's setup slide: Let TitanKeys handle Back, with a button that opens Accessibility">
-  <img src="assets/screenshots/guide-type.png" width="260" alt="The guide's first slide, with the line to follow, the text field and a drawing of the keys">
-  <img src="assets/screenshots/playground.png" width="260" alt="The playground: the TitanKeys name, a line to follow, the text field and the keys">
+  <img src="assets/screenshots/guide-setup.png" width="260" alt="The guide's setup: Turn the keyboard on, with a button that opens the keyboard list">
+  <img src="assets/screenshots/playground.png" width="260" alt="The playground: Practice. You need it., a line to follow, the text field and the keys">
+  <img src="assets/screenshots/settings.png" width="260" alt="Settings: a switch for each part of typing">
 </p>
 
 ## What this is

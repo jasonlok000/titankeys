@@ -708,3 +708,9 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - Pause the workers near the usage limit and resume after the reset. (Owner, 2026-11-12)
 - Look-only tests (calibration, guide drawings, overlays) go through a quick page served to the phone's browser first, which takes 15 s instead of a 15-minute build. The result is then built in once. Never change touchpad code for them. (Owner, 2026-11-12)
 - The flicker when a selection collapses comes from the Sefirah clipboard app, not TitanKeys. (Found 2026-11-12)
+- **TitanKeys signs with the NightKeys key** (owner, 2026-11-14: "We shouldn't be using the atlas key", "let's just use NightKeys signing key. It was a mistake for 2.0 to not use the same key as 1.2"). (Owner) Release and debug builds alike; 2.0.0 on GitHub re-signed with it; the key backed up on X:, D:, F: and G:.
+- **Off Atlas** (owner, 2026-11-14: "We should be moving fully away from the atlas build now"). (Owner) Done: signing, remotes (origin = TitanKeys, atlas-upstream = Julian's), CONTRIBUTING and the debug docs, the WSL env file. After the pre-release (owner's "Okay"): the com.atlas.* packages, the X:\Atlas folder, the WSL distro's name.
+- **One branch** (owner, 2026-11-14: "There should only be one branch left on the git now which is the master"). (Owner) main only on GitHub, plus gh-pages for the website; old branches kept as archive/ tags.
+- **Everything in one place** (owner, 2026-11-14: "I want everything in one place"). (Owner) Dev tools live in the repo, not outside it, reversing Atlas's clean-repo habit.
+- **3.0 backs up the whole app** (owner, 2026-11-14). (Owner) One export and import for everything, not just words and snippets.
+- **The keyboard's "English (United Kingdom)" label changes later** (owner, 2026-11-14). (Owner) To something not tied to the UK; the Orchestrator proposes "English" now and one entry per language with 3.0.

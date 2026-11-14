@@ -1003,6 +1003,8 @@ enders\gesture-line
   ~/build/tk-tools (verify.sh, keyboard.sh, play-bundle.sh and the rest), the phone scripts and the quick preview pages
   (cal-tool) from the Orchestrator's scratchpad, the swipe baseline tools in .dev/swipe-baseline. The Orchestrator's call
   (unapproved): with the move off Atlas, after the pre-release, as verify.sh drives every build.
+- **The 2.1.0 pre-release is out (2026-11-14, owner: "No do those now. Treat it as a simple tag change. We are now at pre release. Release is just a tag change.")**: the old v2.1.0 pre-release of 11-11 (atlas-signed, aac4d43) kept as tag archive/v2.1.0-prerelease-2026-11-11, then replaced: v2.1.0 on main (998ec37), pre-release, titankeys-2.1.0.apk = the NightKeys-signed build (sha256 323f0a1f...), text = release-notes.txt's 2.1.0 plus the pre-release line, a note for 2.0 builds from before 11-14, and the SHA-256. The full release after the owner's 3 days: flip v2.1.0 from pre-release to latest, nothing else.
+- **The website publishes from main** (.github/workflows/pages.yml, Pages source = GitHub Actions): site/ live, all four pages 200, the feed and style byte-identical to main's. gh-pages kept as archive/gh-pages and deleted. **One branch: main**, on GitHub and here.
 - **3.0: back up the whole app** (owner, 2026-11-14: "let's write down to 3.0 to backup the whole app"). Today only words
   (Settings > Data > Backup) and snippets export and import; settings and switches, shorthand, app lists, calibration and the
   rest have none. One export and one import for everything, so a reinstall, a new phone or a key change loses nothing.

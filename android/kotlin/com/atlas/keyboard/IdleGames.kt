@@ -1348,6 +1348,9 @@ internal class IdleClock {
         start = null
     }
 
+    /** Whether a period is running: input started one, and nothing stopped it since. Its roll may have come already. */
+    val running get() = start != null
+
     /** Whether the period's one roll happens at [now]: true once, at or after its mark, and false after that until new input. */
     fun roll(now: Long): Boolean {
         val from = start ?: return false

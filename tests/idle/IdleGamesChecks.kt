@@ -273,6 +273,20 @@ fun main() {
     check(roll.indexOf("if (!idleBarAllowed()) return@Runnable") in 0 until roll.indexOf("idleSchedule.trigger(random)"),
         "#33: the roll asks whether the bar may play before it counts")
 
+    // Bug hunt #34: a restart of the same field restarted the period and cut a game. It's no input: it keeps both, unless no period
+    // runs, as after the keyboard was hidden.
+    val restartClock = IdleClock()
+    check(!restartClock.running, "#34: no period runs before any input")
+    restartClock.input(1_000)
+    check(restartClock.running, "#34: input starts one")
+    restartClock.roll(1_000 + IdleClock.MILLIS)
+    check(restartClock.running, "#34: and it runs on after its roll")
+    restartClock.stop()
+    check(!restartClock.running, "#34: hiding the keyboard stops it")
+    val startView = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+        .substringAfter("override fun onStartInputView(info: EditorInfo, restarting: Boolean) {").substringBefore("offerClip()")
+    check("if (!restarting || !idleClock.running) main.post { wakeIdleBar() }" in startView, "#34: a restart wakes the bar only when no period runs")
+
     // The jump rope's holders and jumper stay on the line: the holders step apart along it, and the jumper only jumps up from it.
     for (s in sizes) {
         size = s

@@ -969,21 +969,22 @@ enders\gesture-line
   the setup.")**: reproduced. With every switch on (Setup's page: five Done), the front page still showed "Set up TitanKeys"
   after the guide closed; opening another page and coming back showed the playground. The front page's choice
   (app/index.tsx Home: SetupStart while any of the five reads off) kept an old reading of the switches: MainActivity's resume
-  sends "atlas-state" to refresh, and it seems to land before the page listens, so the refresh is lost. Proposed fix
-  (waiting on the owner's go): SetupStart re-reads the state on onAppWindow, as FrontPage already does, with a check. Being
+  sends "atlas-state" to refresh, and it seems to land before the page listens, so the refresh is lost. **For 3.0** (owner,
+  2026-11-14: "I was expecting that those fixes to be fixed by 3.0"; 2.1 ships as signed; the way out meanwhile is to
+  reopen TitanKeys). Fix: SetupStart re-reads the state on onAppWindow, as FrontPage already does, with a check. Being
   signed with the same key now, the fixed build installs over the pre-release and keeps its data.
 - **Setup prompts (owner, 2026-11-14: "It didn't prompt me on scroll assistant etc either, or shortcut keys. Is that because I
   geniuely no need to change them or its a bug?")**: Scroll assistant was skipped rightly: the guide's setup shows only
   what's missing (PhoneSetup.missing: keyboard on, chosen, overlay, Scroll assistant, Back), and the phone's Scroll assistant
   (persist.sys.scroll_assistant = 1) survives reinstalls. Sym and fn: the guide never asks for them; only Settings > Setup's
   Phone settings shows them. The owner's were already Programmable key. A gap for new users: with Sym not on Programmable
-  key, the Sym slides fail and nothing says why. Proposed: the guide's setup gets a "Set Sym and fn to Programmable key"
+  key, the Sym slides fail and nothing says why. **For 3.0** (owner). Proposed: the guide's setup gets a "Set Sym and fn to Programmable key"
   part when PhoneChecks.programmable says no, opening Shortcut keys (the entry fixed today).
 - **its/it's (owner, 2026-11-14: "with the its it's correction, it shd show the alternative as the second option in the bar,
   and it shd settle no matter what after a punctuation like comma full stop etc.")**: today (ApostropheContext.following) a
   waiting word decides after 2 more words, or sooner only at . ! ? or a line break (the 11-11 apostrophe study's window,
   where commas, semicolons, colons and dashes don't count), and the bar doesn't offer the other form. Wanted: any punctuation
-  settles it at once, and the other form (its / it's, your / you're...) sits in the bar's second place.
+  settles it at once, and the other form (its / it's, your / you're...) sits in the bar's second place. **For 3.0** (owner).
 - **3.0: bug reports without GitHub** (owner, 2026-11-14: "the bug reports etc shd be outside of git. Cuz git makes it hard for
   normal users. Or maybe just use Google play stuff?"). Today Settings > Send feedback (app/settings/feedback.tsx) opens a new
   GitHub issue, which needs a GitHub account. The Orchestrator's proposal: (1) crashes and freezes come in by themselves

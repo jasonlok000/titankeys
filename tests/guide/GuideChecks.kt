@@ -298,6 +298,9 @@ private fun drawMenuBar(path: String, width: Float, side: Float) {
     println("Menu bar drawn to $path")
 }
 
+/** The phone's own name for the mode, the one number setup may say. */
+private const val SLIDING_MODE_1 = "Sliding Mode 1"
+
 fun main() {
     // ACCENT=off draws everything as with Settings > Orange accents off: Accent's cream in place of orange.
     if (System.getenv("ACCENT") == "off") Accent.on = false
@@ -340,6 +343,7 @@ fun main() {
     theTrailFollowsTouchSize()
     demonstrationsTypePunctuation()
     aPanelMovesNothing()
+    nothingPlaysAwayFromTheGuide()
     // Drawings of the slides in the new layout, to look at without a phone. See SlideRenders.kt.
     System.getenv("SLIDES_PNG")?.let { drawSlides(it, NEW_LAYOUT + GuideChapter.End) }
     System.getenv("FRONT_PNG")?.let { drawFrontPage(it) }
@@ -348,6 +352,29 @@ fun main() {
 
 private fun same(actual: Any?, expected: Any?, message: String) {
     check(actual == expected) { "$message: expected $expected, got $actual" }
+}
+
+/**
+ * Away from the guide, nothing of it plays (bug hunt 2.1, #1: onPause stopped only the demo, so the help's haptic played every 6 s in
+ * other apps, the demo restarted, and the clown hunt's tick vibrated). Each of the slide's timers stops as the guide goes out of
+ * sight, everything that buzzes or draws checks that it's in sight, and each starts again as it comes back.
+ */
+private fun nothingPlaysAwayFromTheGuide() {
+    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    fun body(start: String) = guide.substring(guide.indexOf(start)).let { it.substring(0, it.indexOf("\n    }\n") + 6) }
+    val timers = Regex("""private val (\w+) = (Runnable \{|object : Runnable)""").findAll(guide).map { it.groupValues[1] }.toSet()
+    // The slide's own timers: everything that can buzz, draw or speak on a slide. The setup's and the playground's have their own.
+    val slide = listOf("showHelp", "startDemo", "demoTick", "huntTick", "idleOnce", "idleTwice", "menuHint")
+    same(timers.containsAll(slide), true, "The slide's timers are still these: $slide")
+    val stop = body("private fun stopTimers()")
+    for (timer in slide) same(stop.contains(timer), true, "Going out of sight stops $timer")
+    same(body("override fun onPause()").contains("stopTimers()"), true, "onPause stops them, Home, another app or the screen off")
+    same(body("override fun onResume()").contains("resumeTimers()"), true, "and onResume starts them again")
+    for (start in listOf("private fun helpDue()", "private fun beginDemo()", "private fun hinted(")) {
+        same(body(start).contains("visible"), true, "$start does nothing out of sight")
+    }
+    same(guide.substring(guide.indexOf("private val huntTick")).substringBefore("huntSaid = 1").contains("!visible"), true,
+        "The hunt's tick stands still out of sight")
 }
 
 /** The Titan 2 Elite's column, in px: the screen 1200 tall, the status bar 124, the keyboard's own bar 90. */
@@ -493,14 +520,16 @@ private fun theStepsHaveOkayWords() {
     // Setup is slide zero, so its words follow the same rules.
     for (part in SetupPart.entries) {
         for (text in listOfNotNull(part.title, part.body, part.action, part.help))
-            same(text.any { it.isDigit() }, false, "\"$text\" must not have a number")
+            same(text.replace(SLIDING_MODE_1, "").any { it.isDigit() }, false, "\"$text\" must not have a number but the phone's own Sliding Mode 1")
         same(part.title.length <= 32 && part.title.endsWith("."), true, "Setup title \"${part.title}\" is one short sentence")
         same(part.body.length <= 72, true, "Setup body \"${part.body}\" must stay short")
     }
     // Android's lists show the app as TitanKeys Keyboard (owner, 2026-11-13), so the steps that send you there say so.
     for (part in listOf(SetupPart.Enable, SetupPart.Choose, SetupPart.Overlay, SetupPart.Back))
         same(part.body.contains("TitanKeys Keyboard"), true, "Setup body \"${part.body}\" names the list entry")
-    same(SetupPart.Overlay.help, "Find TitanKeys Keyboard in the list, open it and flip the switch.", "The overlay help names the entry")
+    same(SetupPart.Overlay.help, "On the whole list? Find TitanKeys Keyboard, open it and flip the switch.", "The overlay help names the entry")
+    // The step names the mode (owner, 2026-11-13: "turn on scroll assistant, let's specify mode 1").
+    same(SetupPart.ScrollAssistant.body.contains(SLIDING_MODE_1), true, "The Scroll assistant step names Sliding Mode 1")
 }
 
 private fun oneStepForEachIdea() {
@@ -615,20 +644,22 @@ private fun oneInstructionAtATime() {
 }
 
 /**
- * The word menu slide teaches the ladder on TitanKeys alone (owner, 2026-11-13): the bar shows only TitanKeys, pointed at, its menu
- * opens at not saved, I saves it, and I again makes it a favourite, which passes. Each wrong move says so in the owner's tone.
+ * The word menu slide teaches the ladder on TitanKeys alone (owner, 2026-11-13): TitanKeys is selected in the box, so the bar shows it
+ * alone, its menu opens at not saved at a tap or a hold, I saves it, and I again makes it a favourite, which passes. Each wrong move
+ * says so in the owner's tone.
  */
 private fun theLadderOnTitanKeys() {
     val step = GUIDE_STEPS.first { it.id == "menu" }
     same(step.title, "Make TitanKeys your favourite.", "The slide's title")
-    same(step.barWord, "TitanKeys", "The bar shows only TitanKeys, in the middle")
+    same(step.selected, "TitanKeys", "TitanKeys is selected in the box, so the bar shows it alone")
     same(step.line to step.seed, MENU_LINE to MENU_LINE, "The slide's line")
     same(MENU_LINE, "TitanKeys belongs in your favourites", "It starts with TitanKeys (owner, 2026-11-13)")
     same(MENU_LINE.first(), 'T', "and keeps the T for the finale's GO TOUCH GRASS NOW")
-    same(menuTarget("$MENU_LINE ")?.let { "$MENU_LINE ".substring(it.first, it.last + 1) }, "TitanKeys", "TitanKeys is the box's marked word")
-    same(step.lessons, setOf(GuideLesson.BarHold), "Only the hold: typing, swiping, Space and Backspace are blocked")
-    same(step.stages.map { it.text }, listOf("Hold TitanKeys on the bar. Nothing gets saved.", "Press I to save it.",
-        "Press I again to favourite it."), "Hold, I, then I again")
+    same(menuTarget("$MENU_LINE ")?.let { "$MENU_LINE ".substring(it.first, it.last + 1) }, "TitanKeys", "TitanKeys is the box's selected word")
+    same(menuSelected("$MENU_LINE ", 0, MENU_WORD.length), true, "Selected from its first letter to its last")
+    same(step.lessons, setOf(GuideLesson.BarHold), "Only the selected word's menu: typing, swiping, Space and Backspace are blocked")
+    same(step.stages.map { it.text }, listOf("Tap TitanKeys on the bar. Nothing gets saved.", "Press I to save it.",
+        "Press I again to favourite it."), "Tap, I, then I again")
     same(step.done to step.praise, "Favourited. Good taste." to "O steps it back down. P closes the menu.", "Done and praise")
     // The show-only menu opens at not saved: the ladder's I is Save, then Favourite.
     same(MenuKeys.choices(MenuKeys.Step.New).i to MenuKeys.choices(MenuKeys.Step.Saved).i, MenuKeys.Button.Save to MenuKeys.Button.Favourite,
@@ -656,7 +687,7 @@ private fun theLadderOnTitanKeys() {
     closed.start("menu")
     closed.event(WordMenu(MENU_WORD))
     val close = closed.event(MenuPicked("Close"))
-    same(said(close) to (close as GuideVerdict.Hint).stage, "Closed it. Hold TitanKeys again." to 0, "Backspace or P closes it: hold again")
+    same(said(close) to (close as GuideVerdict.Hint).stage, "Closed it. Tap TitanKeys again." to 0, "Backspace or P closes it: tap again")
     closed.event(WordMenu(MENU_WORD))
     closed.event(MenuPicked("Save"))
     val again = closed.event(MenuPicked("Close"))
@@ -664,12 +695,13 @@ private fun theLadderOnTitanKeys() {
     closed.event(WordMenu(MENU_WORD))
     same(finishes(closed.event(MenuPicked("Favourite"))), true, "Opened again, it's saved: I favourites it, and that passes")
 
-    same(said(GuideFlow({ GuideSettings() }).also { it.start("menu") }.event(Chosen(MENU_WORD))), "Hold, don't tap.", "A tap instead of a hold")
-    same(blockedChip(step, GuideLesson.BarTap.name), "Taps are blocked here. Hold, don't tap.", "and the lock says so, as blocked")
+    // A tap on the selected word opens its menu as a hold does: the slide hears the menu, not the tap.
+    same(GuideFlow({ GuideSettings() }).also { it.start("menu") }.event(WordMenu(MENU_WORD)), GuideVerdict.Stage(1), "A tap or a hold opens it")
+    same(blockedChip(step, GuideLesson.BarTap.name), "Other words are blocked. Tap TitanKeys.", "Another word on the bar, if one ever shows")
     for (stage in step.stages) same(stage.text.length <= 50, true, "Stage within 50: ${stage.text}")
     same(step.title.length <= 38, true, "Title within 38")
     theMenuSlidesOffTrackMoves(step)
-    titanKeysStaysLit(step)
+    titanKeysIsSelected(step)
 }
 
 /**
@@ -685,30 +717,36 @@ private fun theMenuSlidesOffTrackMoves(step: GuideStep) {
         if (stage >= 1) flow.event(WordMenu(MENU_WORD))
         if (stage >= 2) flow.event(MenuPicked("Save"))
         same(flow.stage, stage, "At stage $stage")
-        same(said(flow.event(FieldChanged(text, 0, 9))), "Not the box. Hold TitanKeys on the bar.", "Text selected in the box, at $stage")
-        same(said(flow.event(KeyboardEvent.EmptyBarHeld)), "The one in the middle. TitanKeys.", "A hold beside TitanKeys, at $stage")
+        same(flow.event(FieldChanged(text, 0, 9)), GuideVerdict.Wait, "TitanKeys selected is the box as it should be, at $stage")
+        same(said(flow.event(FieldChanged(text, 10, 18))), "Not the box. Tap TitanKeys on the bar.", "Other text selected in the box, at $stage")
+        same(said(flow.event(FieldChanged(text, 3, 3))), "Not the box. Tap TitanKeys on the bar.", "A moved cursor, at $stage")
+        same(said(flow.event(FieldChanged(text, 0, 4))), "Not the box. Tap TitanKeys on the bar.", "Part of TitanKeys, at $stage")
         same(said(flow.event(KeyboardEvent.MenuMissed)), "I or O. Nothing else does anything here.", "Another key in the menu, at $stage")
         same(flow.stage, stage, "and none of them moves the slide, at $stage")
-        same(flow.event(FieldChanged(text, 3, 3)), GuideVerdict.Wait, "A moved cursor means nothing, at $stage")
     }
     // The lock's words on this slide: each says it's blocked, then points at TitanKeys.
-    same(blockedChip(step, GuideLesson.Typing.name), "Typing's blocked here. Hold TitanKeys.", "Typing a letter")
-    same(blockedChip(step, GuideLesson.Swipe.name), "Swiping's blocked here. Hold TitanKeys.", "Swiping a word")
-    same(blockedChip(step, GuideLesson.Cursor.name), "Space taps are blocked. Hold TitanKeys on the bar.", "Space taps that would select")
-    same(blockedChip(step, GuideLesson.Space.name), "Spaces are blocked here. Hold TitanKeys.", "A space")
-    same(blockedChip(step, GuideLesson.Backspace.name), "Backspace is blocked here. Hold TitanKeys.", "Backspace with the menu shut")
+    same(blockedChip(step, GuideLesson.Typing.name), "Typing's blocked here. Tap TitanKeys.", "Typing a letter")
+    same(blockedChip(step, GuideLesson.Swipe.name), "Swiping's blocked here. Tap TitanKeys.", "Swiping a word")
+    same(blockedChip(step, GuideLesson.Cursor.name), "Space taps are blocked. Tap TitanKeys on the bar.", "Space taps that would select")
+    same(blockedChip(step, GuideLesson.Space.name), "Spaces are blocked here. Tap TitanKeys.", "A space")
+    same(blockedChip(step, GuideLesson.Backspace.name), "Backspace is blocked here. Tap TitanKeys.", "Backspace with the menu shut")
     for (lesson in GuideLesson.entries) same(blockedChip(step, lesson.name).length <= 50, true, "The lock's chip for $lesson fits")
-    for (line in listOf(MENU_CLOSED, MENU_UNSAVED, MENU_NOT_BOX, MENU_MIDDLE, MENU_MISSED, "Blocked TitanKeys? Rude. I brings it back."))
+    // A tap is as good as a hold now, so nothing on the slide says to hold, or not to tap.
+    val words = step.stages.map { it.text } + listOfNotNull(step.help, step.done, step.praise) +
+        GuideLesson.entries.map { blockedChip(step, it.name) } + listOf(MENU_CLOSED, MENU_UNSAVED, MENU_NOT_BOX, MENU_MISSED)
+    for (line in words) same(line.contains("Hold TitanKeys") || line.contains("Hold, ") || line.contains("don't tap"), false,
+        "\"$line\" says nothing of holding TitanKeys")
+    for (line in listOf(MENU_CLOSED, MENU_UNSAVED, MENU_NOT_BOX, MENU_MISSED, "Blocked TitanKeys? Rude. I brings it back."))
         same(line.length <= 50, true, "\"$line\" is 50 or less")
     // Closed halfway, it keeps its step: held again after the save it opens saved, and I favourites it.
     val halfway = GuideFlow({ GuideSettings() })
     halfway.start("menu")
     halfway.event(WordMenu(MENU_WORD))
     halfway.event(MenuPicked("Save"))
-    same(said(halfway.event(MenuPicked("Close"))), "Closed it. Hold TitanKeys again.", "Closed after the save")
+    same(said(halfway.event(MenuPicked("Close"))), "Closed it. Tap TitanKeys again.", "Closed after the save")
     halfway.event(WordMenu(MENU_WORD))
-    same(finishes(halfway.event(MenuPicked("Favourite"))), true, "and held again, it carries on from saved")
-    same(step.help, "Hold, don't tap. Keep your finger on TitanKeys.", "The help line")
+    same(finishes(halfway.event(MenuPicked("Favourite"))), true, "and opened again, it carries on from saved")
+    same(step.help, "Already selected. Tap TitanKeys on the bar.", "The help line")
 }
 
 /** & passes as soon as it's in, even after a wrong one (owner, v5.2); the screen takes a wrong one back out. */
@@ -896,7 +934,7 @@ private fun stepsStartInTheRightMenu() {
     same(byId.getValue("alt").demo, GuideDemo.AltLetter(ALT_SYMBOL), "The Alt slide shows Alt, then the key with *")
     same(byId.getValue("paste").demo, GuideDemo.Insert(listOf(Layout.FN, "V", Layout.FN, "V"), ""), "The paste demo is only fn and V")
     same(byId.getValue("type").bar, GuideBar.Fix, "Autocorrect shows the fix swapping in on the bar")
-    same(byId.getValue("menu").bar, GuideBar.Menu, "The word menu shows a ghost hold on the bar, and the menu opening")
+    same(byId.getValue("menu").bar, GuideBar.Menu, "The word menu slide's keys press I once the menu is open")
 }
 
 /** Every slide: one-line words, and each slide unlocks only what it teaches. */
@@ -954,7 +992,7 @@ private fun wrongEventsDoNotFinish() {
     same(finishes(flow.event(FieldChanged("faster", 6, 6))), false, "Typing must not finish the swipe")
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
-    same(menu.event(Chosen(MENU_WORD)) is GuideVerdict.Hint, true, "A touch on a word is not a hold, and the slide says so")
+    same(finishes(menu.event(Chosen(MENU_WORD))), false, "A word chosen from the bar does not finish the menu slide")
 }
 
 /** The owner's scenarios: what happens says so, in a chip, and some of it counts. */
@@ -1413,7 +1451,7 @@ private fun everyWayToFailIsAnswered() {
     // Wrong moves the earlier checks don't cover.
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
-    same(title(menu.event(Chosen(MENU_WORD))), "Hold, don't tap.", "A tap on a bar word")
+    same(title(menu.event(FieldChanged("$MENU_LINE ", 3, 3))), "Not the box. Tap TitanKeys on the bar.", "The cursor off TitanKeys")
     val paste = GuideFlow({ GuideSettings() })
     paste.start("paste")
     same(title(paste.event(KeyboardEvent.Copied("orange words"))).startsWith("That's copy"), true, "A copy on the paste slide")
@@ -1479,8 +1517,8 @@ private fun runThroughFixes() {
     val keyboard = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
     val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
 
-    // A tap on a bar word on the menu slide gets that slide's words, not the other slides' "Do it with the keys".
-    same(blockedChip(step("menu"), GuideLesson.BarTap.name), "Taps are blocked here. Hold, don't tap.", "A bar tap on the menu slide")
+    // A tap on another bar word on the menu slide gets that slide's words, not the other slides' "Do it with the keys".
+    same(blockedChip(step("menu"), GuideLesson.BarTap.name), "Other words are blocked. Tap TitanKeys.", "A bar tap on the menu slide")
     same(blockedChip(step("steer"), GuideLesson.BarTap.name), "The bar's blocked here. Do it with the keys.", "A bar tap elsewhere")
     same(blockedChip(step("type"), GuideLesson.BarTap.name), "The bar's blocked here. Type it, typo and all.", "A bar tap on the first slide")
 
@@ -1501,7 +1539,7 @@ private fun runThroughFixes() {
     // A lone Space that would type is blocked where the slide has no typing, with the slide's own words.
     for (id in listOf("swipe", "steer", "selectmore")) same(step(id).lessons.orEmpty().contains(GuideLesson.Space), false, "$id locks a lone Space")
     same(step("type").lessons.orEmpty().contains(GuideLesson.Space), true, "type types spaces")
-    same(step("menu").lessons.orEmpty().contains(GuideLesson.Space), false, "the menu slide's Space is blocked: only the hold counts")
+    same(step("menu").lessons.orEmpty().contains(GuideLesson.Space), false, "the menu slide's Space is blocked: it would replace TitanKeys")
     for (id in listOf("steer", "selectmore")) {
         same(step(id).lessons.orEmpty().contains(GuideLesson.Cursor), true, "$id still teaches the steering taps")
         same(blockedChip(step(id), GuideLesson.Space.name), "Typed spaces are blocked. Taps on Space steer.", "Space on $id")
@@ -1632,18 +1670,35 @@ private fun demosEndWhereAPassDoes() {
  * (owner, 2026-11-13: "keep it highlighted the whole time"). It replaces the wiggle. GuideActivity and AtlasIme aren't compiled for
  * these checks, so their wiring is read from the source.
  */
-private fun titanKeysStaysLit(step: GuideStep) {
-    same(litPlace(step), 0, "The menu slide lights TitanKeys, in the middle")
-    for (other in GUIDE_STEPS.filter { it.id != step.id }) same(litPlace(other), null, "${other.id} lights nothing on the bar")
+private fun titanKeysIsSelected(step: GuideStep) {
     val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
-    // Set with the bar word on every way onto a slide, cleared with it whenever the guide lets the keyboard go.
-    same(Regex("""GuideHooks\.barWord\(([^)]*)\)\s+GuideHooks\.barLit\(""").findAll(guide).count(), 3, "Lit with the bar word, three times")
-    same(Regex("""GuideHooks\.barWord\(null\)\s+GuideHooks\.barLit\(null\)""").containsMatchIn(guide), true, "and cleared with it")
-    // Nothing on the slide takes it off: no stage, the menu or the pass.
-    same(Regex("""GuideHooks\.barLit\(""").findAll(guide).count(), 3, "and only set or cleared there")
-    same(guide.contains("pointAtBarWord"), false, "The wiggle is gone: the line replaces it")
     val ime = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
-    same(ime.contains("private fun shownGuideLit() = guideLit?.takeIf { inGuide }"), true, "Lit only in the guide's own field")
-    same(ime.contains("strip?.lit(shownGuideLit())") && ime.contains("words.lit(shownGuideLit())"), true,
-        "and the bar takes it whenever its words change, or the bar is made again")
+    val hooks = java.io.File("android/kotlin/com/atlas/keyboard/GuideHooks.kt").readText()
+    val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    // Selected in the box as the slide starts, before the keyboard reads the field, and the keyboard shows a selection it starts with.
+    same(guide.contains("val selected = step.selected?.let { menuTarget(field.text.toString()) }") &&
+        guide.contains("if (selected != null) field.setSelection(selected.first, selected.last + 1)"), true, "The slide starts with TitanKeys selected")
+    same(ime.contains("if (field.suggestions) showSelectedWord(info.initialSelStart, info.initialSelEnd)"), true,
+        "A field that starts with a word selected shows it on the bar")
+    // The bar shows it as any selected word, and a tap opens its menu as a hold does, behind the slide's one unlock.
+    same(strip.contains("private val selectedView = item({ act(Action.OpenSelected) }, { act(Action.OpenSelected); true })"), true,
+        "A tap or a hold on the selected word opens its menu")
+    // Any selected word is underlined on the bar until its menu opens, the guide's TitanKeys as any other (owner, 2026-11-13): drawn
+    // only while the selected word itself shows, which an open menu takes the place of.
+    same(strip.contains("drawSelected(canvas)") && strip.contains("if (view.visibility != VISIBLE || view.text.isEmpty()) return") &&
+        strip.contains("val chosen = selected.takeIf { showSuggestions && confirm == null"), true, "The selected word is underlined until its menu opens")
+    same(ime.contains("Strip.Action.OpenSelected -> if (!guideBlocked(GuideLesson.BarHold)) selectedWord?.let { openMenu(HeldWord(it, \"\")) }"), true,
+        "and the slide's BarHold lets it")
+    same(step.lessons.orEmpty().contains(GuideLesson.BarHold), true, "which the menu slide unlocks")
+    // The selection holds: touches on the box change nothing, and any other selection or cursor goes back to TitanKeys.
+    same(guide.contains("field.holdsSelection = step.selected != null"), true, "The box takes no touches on the menu slide")
+    same(guide.contains("step.selected != null && !menuSelected(event.text, event.start, event.end)"), true,
+        "and any other selection goes back, after the pass too")
+    // A stray key in the menu keeps it open where typing is locked, as on this slide.
+    same(ime.contains("menuOpen && inGuide && !guideAllows(GuideLesson.Typing)"), true, "Another key leaves the menu open")
+    // No underline anywhere: not on the bar, and not in the box.
+    for ((name, text) in listOf("GuideActivity" to guide, "AtlasIme" to ime, "GuideHooks" to hooks))
+        for (gone in listOf("barLit", "guideLit", "barWord(", "barWordRequests", "guideBarWord", "shownGuideWord"))
+            same(text.contains(gone), false, "$name has no $gone: the bar's guide-only light and word are gone")
+    same(Regex(""""menu" -> menuTarget""").containsMatchIn(guide), false, "The box doesn't underline TitanKeys")
 }

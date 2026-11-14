@@ -36,8 +36,26 @@ object Announcements {
 
     fun enabled(context: Context, on: Boolean) {
         Connected.preferences(context).edit().putBoolean(ENABLED, on).apply()
-        if (!on) context.getSystemService(NotificationManager::class.java)?.cancelAll()
+        if (!on) cancelNews(context)
         Connected.schedule(context)
+    }
+
+    /**
+     * Settings > Reset most things: the switch goes back to its default, on (bug hunt 2.1, #27). What you dismissed or already
+     * saw stays, so nothing old shows again.
+     */
+    fun resetSwitch(context: Context) {
+        Connected.preferences(context).edit().remove(ENABLED).apply()
+        Connected.schedule(context)
+    }
+
+    /**
+     * Takes down the news on show, and nothing else: Record a bug's ongoing notification, with its Stop, stays while it records
+     * (bug hunt 2.1, #26).
+     */
+    private fun cancelNews(context: Context) {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        for (shown in manager.activeNotifications) if (shown.notification.channelId == CHANNEL) manager.cancel(shown.tag, shown.id)
     }
 
     /** Downloads the feed if a day has passed, keeps it if its signature is good, then shows what is due. */

@@ -75,7 +75,7 @@ private enum class SteerAim { None, Start, Entered }
 private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
     "type" to listOf(Pushed(29), Fixed("Space", "Space")),
     "swipe" to listOf(Pushed(29), Pushed(62)),
-    "menu" to listOf(KeyboardEvent.Chosen("bar")),
+    "menu" to listOf(FieldChanged("$MENU_LINE ", 3, 3)),
     "hold" to listOf(KeyboardEvent.DeleteHoldStarted, DeletedWord(held = true), KeyboardEvent.Moved(40f, lifted = true)),
     "steer" to listOf(DoubleTapped(2)),
     "selectmore" to listOf(CursorStarted(false)),
@@ -104,7 +104,8 @@ private fun at(step: GuideStep, text: String, start: Int = text.length, end: Int
 private fun fieldFor(step: GuideStep): Frame = when (step.id) {
     "type" -> at(step, "", ghost = TYPE_TYPOS)
     "swipe" -> at(step, SWIPE_LEAD.trimEnd(), ghost = " " + SWIPE_LINE.removePrefix(SWIPE_LEAD))
-    "menu" -> at(step, "$MENU_LINE ").copy(target = menuTarget("$MENU_LINE "))
+    // TitanKeys selected, as the box keeps it the whole slide (owner, 2026-11-13: "literally selected, not underlined").
+    "menu" -> menuTarget("$MENU_LINE ")!!.let { at(step, "$MENU_LINE ", it.first, it.last + 1) }
     "backspace" -> at(step, "$BACKSPACE_SEED ", BACKSPACE_SEED.length).copy(target = BACKSPACE_SEED.length - 1..BACKSPACE_SEED.length - 1)
     "flick" -> at(step, "$FLICK_SEED ", flickCursor(FLICK_SEED)).copy(target = flickTarget(FLICK_SEED))
     "hold" -> at(step, "$HOLD_SEED ", holdCursor(HOLD_SEED)).copy(target = holdTarget(HOLD_SEED, holdCursor(HOLD_SEED)), zones = true)
@@ -125,8 +126,8 @@ private fun steeringText(step: GuideStep) =
 /** The field once the slide is passed: its line, finished. */
 private fun passedField(step: GuideStep, before: Frame): Frame = when (step.id) {
     "type", "swipe", "backspace", "clipboard" -> at(step, step.line + " ")
-    // The menu slide's TitanKeys stays marked after the pass, as GuideActivity's aim keeps it.
-    "menu" -> at(step, step.line + " ").copy(target = menuTarget(step.line + " "))
+    // The menu slide's TitanKeys stays selected after the pass, as GuideActivity keeps it.
+    "menu" -> before
     "flick" -> at(step, "$FLICK_LINE ", FLICK_LINE.length - " word".length)
     "hold" -> at(step, "$HOLD_LINE ", "Delete ".length)
     "steer" -> before.copy(start = before.start - 40, end = before.start - 40)
@@ -423,7 +424,7 @@ private fun fit(g: Graphics2D, text: String, width: Int): String {
     return text.substring(0, end) + "…"
 }
 
-/** The field's text and ghost, wrapped at [width], showing the two lines with the cursor, the selection in orange. */
+/** The field's text and ghost, wrapped at [width], showing the two lines with the cursor, and the selection as the field washes it. */
 private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: Int, line: Int) {
     val all = frame.field + frame.ghost
     val starts = ArrayList<Int>()
@@ -464,9 +465,11 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
         if (target == null) mark(g, "NO STEER TARGET", top)
         if (frame.steer == SteerAim.Entered && target != null) start = target.first + 2
     }
-    val shown = frame.copy(start = if (frame.passed && frame.steer == SteerAim.None) frame.start else start,
-        end = if (frame.passed && frame.steer == SteerAim.None) frame.end else start,
-        target = if (frame.passed && !frame.name.startsWith("menu-")) null else target)
+    val shown = frame.copy(start = if (frame.steer == SteerAim.None) frame.start else start,
+        end = if (frame.steer == SteerAim.None) frame.end else start,
+        target = if (frame.passed) null else target)
+    // A selection is cream, as the field's highlight; the paste slide's, which its words call orange, is orange (GuideActivity).
+    val wash = if (frame.name.startsWith("paste-")) rgb(Paint.ORANGE, .5f) else rgb(Paint.CREAM, .32f)
     for (row in 0 until FIELD_LINES) {
         val index = first + row
         if (index >= starts.size) break
@@ -497,7 +500,7 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
                 g.fillRect(x, top + (row + 1) * line - dp(3), w, dp(3))
             }
             if (offset in shown.start until shown.end) {
-                g.color = rgb(Paint.ORANGE, .45f)
+                g.color = wash
                 g.fillRect(x, top + row * line, w, line)
             }
             g.color = if (offset < frame.field.length) cream else V2.MUTED

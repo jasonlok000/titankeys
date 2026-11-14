@@ -56,7 +56,7 @@ after a Skip).
 
 | What | When | Slides |
 |---|---|---|
-| The slide's help, how to start its gesture | First after **3 s** however the slide was reached (Next, Skip or Back), then again every **6 s** while the slide still waits for that first step. Each time the chip comes back in and the slide's demonstration plays again, so it's never a silent text swap. Never on a later step. (Owner, 2026-11-13: "sooner and more frequent".) | menu ("Hold, don't tap. Keep your finger on TitanKeys."), steer, selectmore |
+| The slide's help, how to start its gesture | First after **3 s** however the slide was reached (Next, Skip or Back), then again every **6 s** while the slide still waits for that first step. Each time the chip comes back in and the slide's demonstration plays again, so it's never a silent text swap. Never on a later step. (Owner, 2026-11-13: "sooner and more frequent".) | menu ("Already selected. Tap TitanKeys on the bar."), steer, selectmore |
 | The demonstration (the ghost finger, the bar's hold) | After 5 s with no input, and 1 s later if a finger is down or the menu is open | Every slide with one |
 | A chip | Shows for 3 s, and another waits until it's gone | All |
 | The idle chips | After 20 s with no input: "Still there?". After 20 s more: "The keys won't press themselves. We checked." Once a slide. | All |
@@ -94,24 +94,32 @@ docs/owner-decisions-2.1.md wins over this list wherever they differ.
 | Stopping before three swipes | The instruction counts the swipes left. |
 
 ### menu: Make TitanKeys your favourite.
-The ladder, on one word (owner, 2026-11-13). The line is "TitanKeys belongs in your favourites", with TitanKeys marked in the
-box. The bar shows only TitanKeys, in the middle with its side places empty, underlined in the accent the whole slide, its menu
-open and after the pass too. Nothing typed, selected or moved changes the bar. Its show-only menu opens at not saved; I saves it, and I again makes it a favourite, which passes.
-Nothing is saved anywhere. Only the hold is unlocked; with the menu open, its keys work. Every chip below is 50 characters or less.
+The ladder, on one word (owner, 2026-11-13). The line is "TitanKeys belongs in your favourites", and the slide starts with
+TitanKeys selected in the box, as triple Space selects a word: the field's own selection, in its cream highlight, with nothing
+drawn under it in the box (owner, 2026-11-13: "selected as in highlighted literally selected"). The keyboard shows it as it shows
+any selected word, anywhere: alone in the middle of the bar, underlined in the accent until its menu opens, where a tap or a hold
+opens that menu. In the menu the word has its status colour and no line; closed again, with TitanKeys still selected, the line is
+back (owner, 2026-11-13: "it should be underlined before going into the word menu. in the word menu it follows existing rules. and
+obviously guide and the actual keyboard shd match"). Nothing about it is the guide's own. The selection holds through every stage
+and after the pass. Its show-only menu opens
+at not saved; I saves it, and I again makes it a favourite, which passes. Nothing is saved anywhere. Only the selected word's menu
+is unlocked, since typing would replace the selection; with the menu open, its keys work. Every chip below is 50 characters or less.
 
 | What the user does | What happens |
 |---|---|
-| A tap on TitanKeys | Nothing types. "Taps are blocked here. Hold, don't tap." and a no, as every lock's chip says blocked. A tap that gets past the lock gets "Hold, don't tap." Checked. |
-| A hold on an empty place beside it | Nothing opens. "The one in the middle. TitanKeys." Checked. |
-| Text selected in the box, by touch | The selection snaps back to the end, no menu opens, and "Not the box. Hold TitanKeys on the bar." Checked. |
-| Space taps, that would steer or select | Blocked: "Space taps are blocked. Hold TitanKeys on the bar." and a no. Checked. |
-| Typing a letter, a space or Backspace, with the menu shut | Blocked: "Typing's blocked here. Hold TitanKeys.", "Spaces are blocked here. Hold TitanKeys." or "Backspace is blocked here. Hold TitanKeys." The field and the bar don't change. Checked. |
-| Swiping a word | Its start shows, then "Swiping's blocked here. Hold TitanKeys." and a no. Nothing types. Checked. |
+| A tap or a hold on TitanKeys | Its menu opens, either way, and the slide moves on to the save. Checked. |
+| A touch on the box: a tap, a long press, a drag | Nothing in the box changes: no cursor, no other selection, no text menu. "Not the box. Tap TitanKeys on the bar." and a no. The keyboard comes up if it was down. Checked. |
+| Any other selection or cursor in the box, however it comes | It goes back to TitanKeys selected at once, and "Not the box. Tap TitanKeys on the bar." Checked. |
+| Space taps, that would steer or select | Blocked: "Space taps are blocked. Tap TitanKeys on the bar." and a no. Checked. |
+| Typing a letter, a space or Backspace, with the menu shut | Blocked, as it would replace TitanKeys: "Typing's blocked here. Tap TitanKeys.", "Spaces are blocked here. Tap TitanKeys." or "Backspace is blocked here. Tap TitanKeys." The field and the bar don't change. Checked. |
+| Swiping a word | Its start shows, then "Swiping's blocked here. Tap TitanKeys." and a no. Nothing types. Checked. |
+| A tap on another word on the bar | Never there while TitanKeys is selected. If one ever shows: "Other words are blocked. Tap TitanKeys." and a no. Checked. |
 | A key that isn't I, O, K, L, P or Backspace, with the menu open | Nothing happens, and the menu stays open: "I or O. Nothing else does anything here." Checked. |
 | O at not saved (Block) | "Blocked TitanKeys? Rude. I brings it back." It still waits for the save; I unblocks it, then saves it. Checked. |
 | O at saved (Unsave) | "Unsaved. Cold. I, then I again." It goes back to the save. Checked. |
-| P or Backspace closes the menu | "Closed it. Hold TitanKeys again." It goes back to the hold. TitanKeys keeps the step it reached: held again after the save, it opens saved, and I favourites it, which passes. Checked. |
-| The bar runs empty | Never: the bar always shows TitanKeys on this slide. |
+| P or Backspace closes the menu | "Closed it. Tap TitanKeys again." It goes back to the tap, with TitanKeys still selected. TitanKeys keeps the step it reached: opened again after the save, it opens saved, and I favourites it, which passes. Checked. |
+| Leaving the guide and coming back | TitanKeys is still selected, and the bar shows it again: the keyboard shows a selection a field starts with. Checked in the code; on the phone, by hand. |
+| The bar runs empty | Never: the bar always shows the selected TitanKeys on this slide. |
 
 ## Delete
 

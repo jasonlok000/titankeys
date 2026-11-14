@@ -38,7 +38,10 @@ object BugRecording {
     @Volatile private var startedAt = 0L
     @Volatile private var startedWall = 0L
     private var app: Context? = null
-    private val autoStop = Runnable { app?.let(::stop) }
+    /** The automatic stop waits for the writer, so it runs off the main thread, which the keyboard draws and types on. */
+    private val autoStop = Runnable { app?.let { context -> Thread({ stop(context) }, "BugRecordingStop").start() } }
+    /** What the finished recording holds, worked out once when it stops, so Settings' every refresh costs nothing. */
+    @Volatile private var summary: Summary? = null
 
     val recording get() = writer != null
 
@@ -51,6 +54,7 @@ object BugRecording {
         val app = context.applicationContext.also { this.app = it }
         val store = store(app)
         store.deleteAll()
+        summary = null
         startedAt = SystemClock.uptimeMillis()
         startedWall = System.currentTimeMillis()
         writer = RawLogWriter(store) { SystemClock.uptimeMillis() }.also { it.add(RawLogLines.gap("start", 0, startedAt)) }
@@ -67,6 +71,7 @@ object BugRecording {
         stopping.close()
         stopping.join(WRITE_WAIT_MILLIS)
         context.getSystemService(NotificationManager::class.java)?.cancel(NOTIFICATION)
+        summary = read(context)
     }
 
     /**
@@ -90,11 +95,12 @@ object BugRecording {
     fun delete(context: Context) {
         stop(context)
         store(context).deleteAll()
+        summary = null
         File(context.cacheDir, DIRECTORY).deleteRecursively()
     }
 
-    /** The finished recording as one file, ready to share. */
-    fun file(context: Context): File? {
+    /** The finished recording as one file, ready to share. Only [share] makes it, so a file already lent out stays as it is. */
+    private fun file(context: Context): File? {
         if (recording || store(context).size() == 0L) return null
         val folder = File(context.cacheDir, DIRECTORY).apply { deleteRecursively(); mkdirs() }
         val name = "titankeys-bug-${java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.ROOT).format(startedWall)}.jsonl"
@@ -106,8 +112,18 @@ object BugRecording {
     /** What the recording holds, for the preview before sharing. */
     data class Summary(val millis: Long, val fields: Int, val touches: Int, val swipes: Int, val keys: Int, val words: List<String>)
 
+    /** The summary from the stop, or, after TitanKeys restarted, read once from the recording. */
     fun summary(context: Context): Summary? {
-        val file = file(context) ?: return null
+        if (recording) return null
+        summary?.let { return it }
+        return read(context).also { summary = it }
+    }
+
+    /** Reads the recording straight from its store, line by line, without making the shared file. */
+    @Synchronized
+    private fun read(context: Context): Summary? {
+        val store = store(context)
+        if (recording || store.size() == 0L) return null
         var first = Long.MAX_VALUE
         var last = 0L
         var fields = 0
@@ -115,8 +131,8 @@ object BugRecording {
         var swipes = 0
         var keys = 0
         val words = ArrayList<String>()
-        file.forEachLine { text ->
-            val line = try { JSONObject(text) } catch (error: Exception) { return@forEachLine }
+        val lines = LineReader read@{ text ->
+            val line = try { JSONObject(text) } catch (error: Exception) { return@read }
             val time = line.optLong("t", 0L)
             if (time > 0) {
                 first = minOf(first, time)
@@ -130,6 +146,7 @@ object BugRecording {
                 "text" -> line.optString("ins").trim().takeIf { it.isNotEmpty() }?.let { if (words.size < MAX_WORDS) words += it }
             }
         }
+        lines.use { store.export(it) }
         return Summary(if (last > first) last - first else 0L, fields, touches, swipes, keys, words)
     }
 
@@ -185,7 +202,37 @@ object BugRecording {
         }
     }
 
+    /** Splits what's written to it into lines for [line], so the store can be read without a copy on disk. */
+    private class LineReader(private val line: (String) -> Unit) : java.io.OutputStream() {
+        private val pending = java.io.ByteArrayOutputStream()
+
+        override fun write(byte: Int) {
+            if (byte == NEWLINE) flushLine() else pending.write(byte)
+        }
+
+        override fun write(bytes: ByteArray, offset: Int, length: Int) {
+            var start = offset
+            for (index in offset until offset + length) {
+                if (bytes[index].toInt() != NEWLINE) continue
+                pending.write(bytes, start, index - start)
+                flushLine()
+                start = index + 1
+            }
+            pending.write(bytes, start, offset + length - start)
+        }
+
+        override fun close() {
+            if (pending.size() > 0) flushLine()
+        }
+
+        private fun flushLine() {
+            line(pending.toString(Charsets.UTF_8.name()))
+            pending.reset()
+        }
+    }
+
     private const val MAX_WORDS = 60
+    private const val NEWLINE = 10
     private const val WRITE_WAIT_MILLIS = 2_000L
 }
 

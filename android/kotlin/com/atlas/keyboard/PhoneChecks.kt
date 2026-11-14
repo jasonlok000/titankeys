@@ -13,13 +13,20 @@ import android.provider.Settings
  * - A key's mode is `persist.sys.agui_smart_<key>_key`, `programmable_key_enable` for Programmable key, and the same as
  *   `<key>_programmable_key_enable` = 1 in Settings.System. The Shortcut keys page is in com.agui.shortcutsettings.
  * - Each app's Sliding Mode is in a list that only the system can read. The system copies the mode of the app in front to
- *   `persist.sys.touchpad_forcescroll`: `yes` in Sliding Mode 1. So the keyboard notes it for each app it types in.
+ *   `persist.sys.touchpad_forcescroll`: `yes` in Sliding Mode 1. So the keyboard notes it for each app it types in, and
+ *   [SlidingModeList] decides which readings to trust.
  */
 internal object PhoneChecks {
     private const val SHORTCUT_KEYS = "com.agui.shortcutsettings"
     private const val PREFERENCES = "phone_checks"
-    /** Apps seen outside Sliding Mode 1, by package. An app leaves the list once it's seen in Sliding Mode 1. */
-    private const val OUTSIDE_SLIDING = "outside_sliding_mode_1"
+    /** Setup's list of apps outside Sliding Mode 1, and the suspects, by package ([SlidingModeList]). */
+    private const val OUTSIDE_SLIDING = "outside_sliding_mode"
+    private const val SUSPECT_SLIDING = "suspect_sliding_mode"
+    /**
+     * The first list, which one early reading could fill with apps that were on Sliding Mode 1 (Chrome and Settings on the
+     * owner's phone). It's never read, and goes at the next change.
+     */
+    private const val OLD_OUTSIDE_SLIDING = "outside_sliding_mode_1"
 
     enum class Key(val id: String) { Sym("sym"), Fn("fn") }
 
@@ -47,22 +54,40 @@ internal object PhoneChecks {
     }
 
     /**
-     * Called by the keyboard a moment after it shows in [app]: by then the system has set the touchpad's mode for the app in
-     * front. Only with Scroll assistant on and the keyboard still in that app, as anything else would say nothing about it.
+     * The touchpad's mode for the app in front, for the keyboard in [app]'s field: null when it says nothing about [app], as in
+     * TitanKeys itself, with Scroll assistant off or on a phone without the touchpad. See [SlidingModeList].
      */
-    fun noteSlidingMode(context: Context, app: String) {
-        if (app == context.packageName || !PhoneSetup.scrollAssistant() || property("ro.agui.touchpad_function") != "yes") return
-        val sliding = property("persist.sys.touchpad_forcescroll") ?: return
-        val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-        val outside = preferences.getStringSet(OUTSIDE_SLIDING, emptySet()).orEmpty()
-        val updated = if (sliding == "yes") outside - app else outside + app
-        if (updated != outside) preferences.edit().putStringSet(OUTSIDE_SLIDING, updated).apply()
+    fun slidingReading(context: Context, app: String): String? {
+        if (app == context.packageName || !PhoneSetup.scrollAssistant() || property("ro.agui.touchpad_function") != "yes") return null
+        return property("persist.sys.touchpad_forcescroll")
     }
 
-    /** The names of the apps last seen outside Sliding Mode 1 that are still on the phone, for Settings > Setup. */
+    /** [app] showed Sliding Mode 1: a reading of yes, or a touchpad touch only Sliding Mode 1 sends. It leaves Setup's list. */
+    fun mode1(context: Context, app: String) = update(context) { it.mode1(app) }
+
+    /** A field in [app] gave a trustworthy reading outside Sliding Mode 1 ([SlidingModeList.trustworthy]). */
+    fun outsideReading(context: Context, app: String) = update(context) { it.outsideReading(app) }
+
+    private fun update(context: Context, change: (SlidingModeList) -> Unit) {
+        val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+        val list = slidingList(context)
+        val before = list.outside to list.suspects
+        change(list)
+        if (before == list.outside to list.suspects && !preferences.contains(OLD_OUTSIDE_SLIDING)) return
+        preferences.edit().putStringSet(OUTSIDE_SLIDING, list.outside).putStringSet(SUSPECT_SLIDING, list.suspects)
+            .remove(OLD_OUTSIDE_SLIDING).apply()
+    }
+
+    private fun slidingList(context: Context): SlidingModeList {
+        val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+        return SlidingModeList(preferences.getStringSet(OUTSIDE_SLIDING, emptySet()).orEmpty().toSet(),
+            preferences.getStringSet(SUSPECT_SLIDING, emptySet()).orEmpty().toSet())
+    }
+
+    /** The names of the apps on Setup's list that are still on the phone, for Settings > Setup. */
     fun outsideSlidingMode(context: Context): List<String> {
         val packages = context.packageManager
-        return context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).getStringSet(OUTSIDE_SLIDING, emptySet()).orEmpty()
+        return slidingList(context).outside
             .mapNotNull { app ->
                 try {
                     packages.getApplicationLabel(packages.getApplicationInfo(app, 0)).toString()

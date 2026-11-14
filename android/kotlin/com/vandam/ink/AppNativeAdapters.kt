@@ -377,7 +377,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     }
                     // Accessibility opens only after its own disclosure, as Google Play asks.
                     if (part == SetupPart.Back) activity.startActivity(BackDisclosureActivity.forSettings(activity))
-                    else PhoneSetup.page(activity, part)?.let(activity::startActivity)
+                    else PhoneSetup.open(activity, part, activity::startActivity)
                     "null"
                 }
                 "choose" -> {
@@ -494,6 +494,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("overlay", PhoneSetup.overlay(activity))
             .put("scrollAssistant", PhoneSetup.scrollAssistant())
             .put("backService", BackService.enabled(activity))
+            .put("overlayOnList", PhoneSetup.onList(activity, SetupPart.Overlay))
+            .put("backOnList", PhoneSetup.onList(activity, SetupPart.Back))
             .put("symKey", PhoneChecks.programmable(activity, PhoneChecks.Key.Sym))
             .put("fnKey", PhoneChecks.programmable(activity, PhoneChecks.Key.Fn))
             .put("outsideSlidingMode", JSONArray(PhoneChecks.outsideSlidingMode(activity)))

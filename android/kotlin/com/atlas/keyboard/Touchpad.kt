@@ -36,6 +36,10 @@ class Touchpad(private val display: Display) {
     /** In Sliding Mode 1 the firmware delivers the touchpad to apps as screen touches, still from its own device. */
     fun accepts(event: MotionEvent) = event.isFromSource(InputDevice.SOURCE_TOUCHPAD) || event.device?.name == DEVICE
 
+    /** A touchpad touch delivered as a screen touch, which only Sliding Mode 1 does: proof of it for the app in front. */
+    fun sentAsScreenTouch(event: MotionEvent) = event.device?.name == DEVICE
+        && event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN) && !event.isFromSource(InputDevice.SOURCE_TOUCHPAD)
+
     /** Firmware gesture keys accompany swipes; they are not physical key presses. */
     fun isGestureKey(event: KeyEvent) = event.device?.name == DEVICE
 

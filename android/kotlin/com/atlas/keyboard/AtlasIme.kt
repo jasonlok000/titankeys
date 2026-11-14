@@ -718,10 +718,7 @@ class AtlasIme : InputMethodService() {
         composer = Composer(editor, EngineWords(SwipeTyping.get(this), FavouriteWords.get(this)::contains),
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
-            { modifiers.autoShifted }) { words ->
-                ownBarWords = words
-                showBarWords()
-            }
+            { modifiers.autoShifted }) { barWords = it; strip?.words = it }
         composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
         composer.sentenceSpaces = {
             when (TypingSettings.sentenceSpaces(this)) {
@@ -748,16 +745,6 @@ class AtlasIme : InputMethodService() {
         // The guide's slides show the bar's side words, or only its middle one, and point at a word wherever it sits.
         GuideHooks.barSideRequests = { show -> main.post { if (!show && !inGuide) return@post else strip?.sides = show } }
         GuideHooks.stripPointWords = { word -> main.post { if (word == null || inGuide) strip?.pointWord(word) } }
-        // The word menu slide's bar: only its word, to hold. Null gives the bar its own words back.
-        GuideHooks.barWordRequests = { word -> main.post {
-            guideBarWord = word
-            showBarWords()
-        } }
-        // The word menu slide's word, underlined the whole slide. Posted after the word, so the light finds it on the bar.
-        GuideHooks.barLitRequests = { index -> main.post {
-            guideLit = index
-            showBarWords()
-        } }
         composer.onRestored = {
             haptics.play(Haptic.AutocorrectUndone)
             KeyboardEvents.publish { KeyboardEvent.Restored }
@@ -769,8 +756,6 @@ class AtlasIme : InputMethodService() {
             closeMenu()
             guideMenus.clear()
         } } }
-        // The guide asks whether the bar has words to hold, for its word menu slide. Only in its own field.
-        GuideHooks.barCount = { if (inGuide) barWords.size else -1 }
         GuideHooks.barHolds = { millis -> main.post { if (inGuide) strip?.holdWords(millis) } }
         // The interactive guide acts out a gesture on this bar, only in its own field. See [Strip.playDemo].
         GuideHooks.stripDemos = { demo ->
@@ -1168,8 +1153,7 @@ class AtlasIme : InputMethodService() {
         // Bar text size grows only what's in the bar, and the word menu's effects with it. The bar keeps its height.
         val barUi = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod, viewSize.factor)
         val words = Strip(barUi, { index ->
-            // The guide's own word only opens its menu: a tap never types a word that the bar doesn't show.
-            if (!guideBlocked(GuideLesson.BarTap) && shownGuideWord() == null) {
+            if (!guideBlocked(GuideLesson.BarTap)) {
                 haptics.play(Haptic.BarWord)
                 enqueue { composer.choose(index) }
             }
@@ -1194,7 +1178,7 @@ class AtlasIme : InputMethodService() {
         keys.emoji = emoji
         // Android can make this view after the field has started, and again when the screen settings change.
         words.words = barWords
-        words.lit(shownGuideLit())
+        words.selected = barSelected
         // Exact typing's bar starts hidden and is made before the first check, so a normal field never shows it.
         val exact = ExactBar(ui, ::exactChip, ::exactBarKey).apply { visibility = View.GONE }
         exactBar = exact
@@ -1331,6 +1315,9 @@ class AtlasIme : InputMethodService() {
         main.removeCallbacks(hideStrip)
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
+            // A field that starts with a word selected shows it on the bar at once, as a selection made later does, with its menu a
+            // tap away: Android tells of no selection change for it (the guide's word menu slide starts with TitanKeys selected).
+            if (field.suggestions) showSelectedWord(info.initialSelStart, info.initialSelEnd)
             main.post(showStrip)
         } else {
             composer.stop()
@@ -1417,7 +1404,7 @@ class AtlasIme : InputMethodService() {
         val code = event.keyCode
         // The app takes Back before the keyboard, so an open panel must close here.
         if (watchingKeys && code == KeyEvent.KEYCODE_BACK && isInputViewShown && backKey(event, down)) return true
-        if (!takenKeys.takes(code, down, watchingKeys, event.isSystem)) {
+        if (!takenKeys.takes(code, down, watchingKeys)) {
             if (code == KeyEvent.KEYCODE_SYM) symLog("Sym went on to the app")
             return false
         }
@@ -1477,9 +1464,13 @@ class AtlasIme : InputMethodService() {
         main.post { wakeIdleBar() }
         offerClip()
         // Settings > Setup lists the apps whose Scroll assistant isn't in Sliding Mode 1. The system sets the touchpad's mode
-        // for the app in front as it comes in, so this looks a moment later, if the keyboard is still in that app.
-        info.packageName?.let { app ->
-            main.postDelayed({ if (currentInputEditorInfo?.packageName == app) PhoneChecks.noteSlidingMode(this, app) }, SLIDING_CHECK_MILLIS)
+        // for the app in front as it comes in, so this reads it a moment later and again seconds later, if the keyboard is
+        // still in that field. SlidingModeList decides what to trust.
+        slidingField = info.packageName?.let { app ->
+            SlidingField(app).also { field ->
+                main.postDelayed({ readSlidingMode(field, late = false) }, SLIDING_CHECK_MILLIS)
+                main.postDelayed({ readSlidingMode(field, late = true) }, SLIDING_CONFIRM_MILLIS)
+            }
         }
         // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
@@ -1749,13 +1740,6 @@ class AtlasIme : InputMethodService() {
     private fun holdWord(index: Int): Boolean {
         // A guide slide that doesn't teach the menu yet: the hold opens nothing, and the guide says it's blocked, with a no.
         if (guideBlocked(GuideLesson.BarHold)) return false
-        // The guide's own word, alone in the middle place: its show-only menu.
-        shownGuideWord()?.let { word ->
-            if (index == 0) return openMenu(HeldWord(word, ""))
-            // An empty place beside it: nothing opens, and the guide points at the middle.
-            KeyboardEvents.publish { KeyboardEvent.EmptyBarHeld }
-            return false
-        }
         val (word, typed) = composer.shownWord(index) ?: return false
         return openMenu(HeldWord(word, typed))
     }
@@ -1826,29 +1810,6 @@ class AtlasIme : InputMethodService() {
         val pressed = Strip.Notice.Menu(held.word, next, button)
         strip?.notice = pressed
         if (inGuide) guideMenus[held.word.lowercase()] = pressed
-    }
-
-    /** The composer's words, and the guide's own word that shows alone in their place on its slide. See [GuideHooks.barWord]. */
-    private var ownBarWords = emptyList<String>()
-    private var guideBarWord: String? = null
-
-    /** The place on the bar that the guide lights, or null. See [GuideHooks.barLit]. */
-    private var guideLit: Int? = null
-
-    /** The guide's word, while it shows: only in the guide's own field. */
-    private fun shownGuideWord() = guideBarWord?.takeIf { inGuide }
-
-    /** The guide's lit place, while it shows: only in the guide's own field, so no other app's bar is ever underlined. */
-    private fun shownGuideLit() = guideLit?.takeIf { inGuide }
-
-    /**
-     * The bar shows the composer's words, or only the guide's word, in the middle place, with its side places empty but there, so
-     * a hold on one is heard. Nothing typed, selected or moved changes it.
-     */
-    private fun showBarWords() {
-        barWords = shownGuideWord()?.let { listOf(it, "", "") } ?: ownBarWords
-        strip?.words = barWords
-        strip?.lit(shownGuideLit())
     }
 
     /** Where each word stands in the guide's for-show menu, until the slide changes. Nothing reaches the word lists. */
@@ -2125,14 +2086,19 @@ class AtlasIme : InputMethodService() {
         val shown = WordSelection.shown(text, length)
         selectedWord = shown?.takeIf { WordSelection.isWord(it) }
         if (selectedWord == null && menuWord?.typed == "" && strip?.notice is Strip.Notice.Menu) closeMenu()
+        barSelected = shown
         strip?.selected = shown
     }
 
     /** The selected word, when the selection is one word, which its menu can save or forget; null for anything else. */
     private var selectedWord: String? = null
 
+    /** The selection the bar shows, for a strip that is made after it, as [barWords] is. */
+    private var barSelected: String? = null
+
     override fun onFinishInput() {
         closeMenu()
+        barSelected = null
         strip?.selected = null
         // The letter is already typed, so a press that is still down can only stay a letter.
         holdEngine.cancel()
@@ -2233,6 +2199,34 @@ class AtlasIme : InputMethodService() {
     }
 
     /** While the strip is hidden, the touchpad reaches the keyboard through the focused app. */
+    /** The field the Sliding Mode readings are for, with what they've seen so far. A new field starts a new one. */
+    private class SlidingField(val app: String) {
+        var early: String? = null
+        var mode1Touch = false
+    }
+
+    private var slidingField: SlidingField? = null
+
+    private fun readSlidingMode(field: SlidingField, late: Boolean) {
+        val sameField = slidingField === field && currentInputEditorInfo?.packageName == field.app && isInputViewShown
+        val reading = if (sameField) PhoneChecks.slidingReading(this, field.app) else null
+        if (AppBuild.kind(this) == "debug")
+            Log.i("TitanKeysSliding", "${field.app} ${if (late) "late" else "early"}: $reading (same field $sameField, mode 1 touch ${field.mode1Touch})")
+        if (!sameField) return
+        if (reading == SlidingModeList.MODE_1) PhoneChecks.mode1(this, field.app)
+        if (!late) field.early = reading
+        else if (SlidingModeList.trustworthy(field.early, reading, sameField, field.mode1Touch)) PhoneChecks.outsideReading(this, field.app)
+    }
+
+    /** A touchpad touch only Sliding Mode 1 sends takes the app off Setup's list at once, once per field. */
+    private fun noteSlidingTouch(event: MotionEvent) {
+        val field = slidingField ?: return
+        if (field.mode1Touch || event.actionMasked != MotionEvent.ACTION_DOWN || !touchpad.sentAsScreenTouch(event)) return
+        if (currentInputEditorInfo?.packageName != field.app) return
+        field.mode1Touch = true
+        PhoneChecks.mode1(this, field.app)
+    }
+
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
         if (!editing || !touchpad.accepts(event)) return super.onGenericMotionEvent(event)
         motion(event)
@@ -2246,6 +2240,7 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun motion(event: MotionEvent) {
+        noteSlidingTouch(event)
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             clearTeamsEgg()
             // A flourish is only a picture, so the next touch ends it. A delete's dots wait for what the touch turns out to be: another
@@ -3205,8 +3200,9 @@ class AtlasIme : InputMethodService() {
                 return true
             }
         }
-        // In the guide's show-only menu on its own word, any other key does nothing, and the guide says so; the menu stays open.
-        if (!event.isSystem && menuOpen && shownGuideWord() != null && !Modifiers.isModifier(keyCode)) {
+        // In the guide's show-only menu, on a slide that locks typing (the word menu slide's selected TitanKeys), any other key does
+        // nothing, and the guide says so; the menu stays open, where typing would close it and then be blocked.
+        if (!event.isSystem && menuOpen && inGuide && !guideAllows(GuideLesson.Typing) && !Modifiers.isModifier(keyCode)) {
             if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.MenuMissed }
             return true
         }
@@ -3688,10 +3684,7 @@ class AtlasIme : InputMethodService() {
         GuideHooks.stripPoints = null
         GuideHooks.barSideRequests = null
         GuideHooks.stripPointWords = null
-        GuideHooks.barWordRequests = null
-        GuideHooks.barLitRequests = null
         GuideHooks.clipSeeds = null
-        GuideHooks.barCount = null
         GuideHooks.barHolds = null
         GuideHooks.clipDismissals = null
         // A held status must not outlive the keyboard.
@@ -3738,6 +3731,8 @@ class AtlasIme : InputMethodService() {
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"
         /** How long after the keyboard shows in an app that its touchpad mode is read. */
         private const val SLIDING_CHECK_MILLIS = 600L
+        /** The late Sliding Mode reading, long after any screen opening has finished. */
+        private const val SLIDING_CONFIRM_MILLIS = 3000L
         private const val SMART_LAUNCHER = "ginlemon.flowerfree"
         /** Characters of a typed clip sent each frame. */
         private const val CLIP_CHUNK = 40

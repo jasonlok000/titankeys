@@ -69,9 +69,7 @@ class BackDisclosureActivity : Activity() {
         getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit().putString(ANSWER, if (agreed) AGREED else DECLINED).apply()
         // From Settings the screen opens Accessibility itself. The guide opens it, to watch for the switch.
         if (agreed && intent.getBooleanExtra(OPEN_PAGE, false)) {
-            PhoneSetup.page(this, SetupPart.Back)?.let { page ->
-                try { startActivity(page) } catch (_: RuntimeException) {}
-            }
+            try { PhoneSetup.open(this, SetupPart.Back, ::startActivity) } catch (_: RuntimeException) {}
         }
         setResult(if (agreed) RESULT_OK else RESULT_CANCELED)
         finish()

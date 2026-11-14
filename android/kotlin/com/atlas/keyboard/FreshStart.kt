@@ -55,7 +55,13 @@ internal object FreshStart {
 
     /** Wipes it all, then restarts TitanKeys on its front page. */
     fun wipe(activity: Activity) {
-        for (name in WIPED) activity.deleteSharedPreferences(name)
+        // Deleting a file leaves Android's copy of it in memory, and a write still queued for it, such as Reset most things'
+        // apply(), would put the whole copy back on disk (bug hunt 2.1, #2). Clearing it first, with commit(), which waits behind
+        // any queued write, makes the last write an empty file; then the file goes.
+        for (name in WIPED) {
+            activity.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit()
+            activity.deleteSharedPreferences(name)
+        }
         for ((name, kept) in PARTLY_KEPT) {
             val preferences = activity.getSharedPreferences(name, Context.MODE_PRIVATE)
             preferences.edit().apply { preferences.all.keys.filter { it !in kept }.forEach { remove(it) } }.commit()

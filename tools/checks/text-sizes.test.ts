@@ -71,8 +71,7 @@ test("everything with text in the bar sits on one line, the middle of the bar an
   // The clip offer with its hint, two lines, moves together as near the line as fits (owner, 2026-11-13: "the hint for that
   // should also follow the visible border thing"), and the guide's ghost finger is on the word's line.
   expect(strip).toContain("val shift = StripFit.pairShiftPx(clipBaseline - clipText.textSize * StripFit.X_HEIGHT, hintBaseline, top + high, top + low,");
-  expect(strip).toContain("val radius = minOf(dp(9).toFloat(), floor - line)");
-  expect(strip).toContain("canvas.clipRect(0f, 0f, width.toFloat(), floor)");
+  expect(strip).toContain("drawing.finger(canvas, view.left + view.width / 2f, line, floor, fingerAlpha, fingerHold, look, FixedScale.fixedPx(context, 1f))");
   for (const view of ["private val preview = LineText(context)", "private val clipLine = LineText(context)",
     "private fun categoryTab(sample: String, name: String, index: Int) = LineText(context)"]) expect(sym).toContain(view);
 });

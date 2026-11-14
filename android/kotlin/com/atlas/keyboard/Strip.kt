@@ -1481,8 +1481,6 @@ class Strip(
         private const val MENU_PRESS_MILLIS = 500L
         private const val MENU_OPEN_MILLIS = 1300L
         private const val FINGER_FADE_MILLIS = 150L
-        /** How much wider than the ghost finger's dot its ring starts, closing in to the dot as the hold runs. */
-        private const val FINGER_RING = 2.6f
         private const val MENU_END_MILLIS = 3600L
         private const val MENU_WORDS = 3
         /** In logcat, a hold on a bar word and whether its menu opened. */

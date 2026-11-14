@@ -83,6 +83,12 @@ class SymPanel(
     private var tabs = emptyList<LineText>()
     /** How far the band's groups keep from each side, for the screen's corners. */
     private var bandInset = 0
+    /**
+     * How far the panel's bottom is over the bottom of its window, the screen's bottom edge, in px: the bar's height when the bar
+     * shows under the panel, about nothing when it's hidden. Only a band at the edge has the bar's line: see [bandLine].
+     */
+    private var below = 0
+    private val windowAt = IntArray(2)
     private var shownSamples = emptyList<String>()
     private var navigationInset = 0
     private var corners = Corners.None
@@ -509,7 +515,8 @@ class SymPanel(
      * the strip at the bottom keeps clear of them, so that the keys stay in line with the physical keys.
      */
     private fun keepClearOfCorners() {
-        // The band's text sits on the bar's line, and its tails are the lowest that shows in it.
+        // The band's text sits on its line, and its tails are the lowest that shows in it. The sides keep from the corners as if
+        // the band were at the screen's edge, where it is with the bar hidden, so its groups don't move when the bar comes or goes.
         val line = bandLine()
         for (view in listOf(preview, clipLine) + tabs) onLine(view, line)
         val tails = dp(BAND_HEIGHT) - line - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, BAND_TEXT_LARGEST_ANY,
@@ -683,10 +690,23 @@ class SymPanel(
     }
 
     /**
-     * The bar's line in the band, in px under the band's top: [StripFit.LINE_ABOVE_DP] over the screen's bottom edge, where the
-     * strip's words sit, by the black border under the screen.
+     * The band's line, in px under the band's top, where its text has the middle of its small letters. At the screen's bottom edge,
+     * with the bar hidden, it's the bar's line, [StripFit.LINE_ABOVE_DP] over the edge, by the black border under the screen. With
+     * the bar under the panel the band isn't at the border, and its text is in the band's own middle.
      */
-    private fun bandLine() = dp(BAND_HEIGHT) - StripFit.LINE_ABOVE_DP * resources.displayMetrics.density
+    private fun bandLine() = if (below <= dp(2)) dp(BAND_HEIGHT) - StripFit.LINE_ABOVE_DP * resources.displayMetrics.density
+        else dp(BAND_HEIGHT) / 2f
+
+    /** Where the panel sits in its window decides the band's line: it lays the band out again when the bar under it comes or goes. */
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        super.onLayout(changed, l, t, r, b)
+        getLocationInWindow(windowAt)
+        val now = (rootView.height - (windowAt[1] + height)).coerceAtLeast(0)
+        if (now != below) {
+            below = now
+            render()
+        }
+    }
 
     /** [view], which fills the band, draws its text on the band's [line]. */
     private fun onLine(view: LineText, line: Float) {

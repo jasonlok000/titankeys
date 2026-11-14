@@ -37,6 +37,35 @@ internal object BarFrames {
     }
 
     /**
+     * The guide's moving help on the bar, each a frame of its motion: the ghost finger's hold on the middle word, the fix demo's
+     * word rising into its place (from no lower than its tails may go), and a pointed word bobbing up from its line. The words
+     * that move aren't on the line mid-motion, so only their tails and the finger's ring are checked, against the screen's edge.
+     */
+    fun guideStates(): List<BarLine.State> {
+        val shown = listOf("going", "your", "jumpy")
+        val states = ArrayList<BarLine.State>()
+        for (hold in listOf(0f, .5f, 1f)) states += BarLine.State("guide-finger-%03d".format((hold * 100).toInt()),
+            "The guide's ghost finger on the middle word, its hold %d%% run".format((hold * 100).toInt())) { look, g ->
+            BarLine.words(look, g, shown)
+            BarLine.finger(look, g, hold)
+        }
+        for (done in listOf(0f, .5f, 1f)) states += BarLine.State("guide-fix-%03d".format((done * 100).toInt()),
+            "The guide's fix rising into its place, %d%% of the way, fading in".format((done * 100).toInt())) { look, g ->
+            // As Strip's fix demo: from at most 8 dp under its place, and no lower than its tails may go.
+            val foot = look.baseline(look.wordPx) + look.wordPx * StripFit.DESCENT
+            val rise = if (look.after) minOf(look.dp(8).toFloat(), look.floor - foot).coerceAtLeast(0f) else look.dp(8).toFloat()
+            BarLine.words(look, g, listOf("", "typing", ""), measured = done == 1f, middle = rise * (1 - done), alpha = done)
+        }
+        for (phase in listOf(.25f, .5f)) states += BarLine.State("guide-point-%03d".format((phase * 100).toInt()),
+            "The guide pointing at the middle word, %d%% through a bob: up from its line, never under it".format((phase * 100).toInt())) { look, g ->
+            val reach = look.dp(3).toFloat()
+            val y = if (look.after) -reach * (1f - kotlin.math.cos(phase * 2 * Math.PI).toFloat()) else -reach * kotlin.math.sin(phase * 2 * Math.PI).toFloat()
+            BarLine.words(look, g, shown, measured = false, middle = y)
+        }
+        return states
+    }
+
+    /**
      * The modifier states laid out as build #13 had the row, gravity at the top with Android's baseline alignment on: the phone put
      * the chips' text on the hint's baseline and cut their boxes in half. The render's check must catch it at every size, or it
      * isn't modelling the phone. Drawn to build13/ beside the states as they are now.

@@ -1013,6 +1013,15 @@ enders\gesture-line
   proposal (waiting on the go): the goal on top, then the features as the guide sells them, then one short "How it's smart"
   covering swipe, next-word prediction and autocorrect equally with one headline table; the full engine write-up moves to
   docs/engine.md, nothing lost.
+  - Owner, then: "I think there's a lot more we can add. Even the small things like modifier bar, using the border to make it
+    look better, etc. Like even the small refinements. We have to make this sell as the one best keyboard built for this
+    phone." A helper drafts the README (not committed until the owner approves).
+  - Owner, then: "A research paper is fine. It needs to be a very very detailed research paper." The Orchestrator's reading
+    (unapproved): the README sells; its short technical section links to a very detailed research paper in docs/ covering
+    every smart part (swipe engine 2.0 and its trained models, the next-word model, autocorrect and the apostrophe study,
+    the recorded-touch benchmarks, the bar's border and corner design, haptics, the guide, privacy, limits, what's next),
+    from .dev/swipe-baseline (BASELINE.md, ENGINE-2.0.md, report/), docs/haptics*.md, docs/design-v2.md and the code. No
+    private recordings' text in it. A second helper writes it after the README draft.
 - **3.0: Hold for symbols defaults to Medium** (owner, 2026-11-14: "changing hold symbol default to medium next 3.0").
 - **Favourites and capitals** (owner, 2026-11-14: "does favouriting a word learns its capitalization patterns? Shd it?"):
   Favourite is kept in lowercase (FavouriteWords) as it only ranks a word first among look-alikes; the capitals come from

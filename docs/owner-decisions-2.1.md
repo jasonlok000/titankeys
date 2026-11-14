@@ -299,6 +299,17 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   the corners"). (Owner) Up 3.0 dp at Normal, not moved in from the corner, beside words and beside a clip alike. The
   Orchestrator's reading (unapproved): 3 dp at Normal scales with the Bar text size like everything else in the bar (2.5 at
   Smaller, 3.5 at Bigger); its middle is then level with the capitals' middle, within a pixel of a clip's digits and its icon.
+- **The clip's icon follows the capitals' middle, and the clip is never cut** (owner, 2026-11-14: "I think those icons should follow
+  the middle of uppercase like how the auto cap icon, so I think the paste icon is too low. Just let me align it by eye", then on
+  cal-tool/clip.html "For clipboard I added my settings. Use my previous alignment for the uppercase"). (Owner) Icon 0.25 dp over
+  where build #19 draws it once uncut, which puts its drawing's middle on the clip text's capitals' middle (1169.0 px at Normal);
+  the arrow stays at 3 dp over the line. The clip offered alone shows whole: its icon's bottom edge and its tails (brackets, g, y)
+  were cut at its box's bottom on #19. W builds it.
+- **The swipe trail: option 6** (owner, 2026-11-14, on cal-tool/swipe.html: "for swipe do 6 because its the tallest while still
+  beig center aligned"). (Owner) The three key rows' middles 12 dp apart (8.7 on #19, 14 on #16), the middle row 3 dp over the
+  words' line, level with the automatic capital's arrow; the outer half of the top and bottom rows drawn at 0.3 of its height. The
+  bottom row sits 8.0 dp over the screen's edge and the lowest point 6.2 dp (#19: 8.3 and 4.0). The Orchestrator's call
+  (unapproved): the trail keeps these dp at every Bar text size, as it doesn't scale with the words. C builds it.
 - **The 11 dp line, round 2** (owner, 2026-11-13, on build #13: "With the illusion shift, the modifier bar is not done well. The
   delete cursor looks visibly too far up not vertically center aligned. Space gestures seems also not be optimized… The position
   and scaling of the word menu effects seems inconsistent. Like the book seems to be much higher up than the heart animation. I

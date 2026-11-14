@@ -941,6 +941,18 @@ enders\gesture-line
   relevant? Its from the last slide anyways"). Steering 1/2 asks to steer to "with", in the line the slide before left in
   the field ("Clear it all with one held flick"), not in its own line ("Hold the second tap to steer the cursor"). For 3.0:
   the target is a word in the slide's own line; the earlier line is only context.
+- **One branch (owner: "Just clean it up with the best practices ... master shd be the only branch left")**: done but
+  for gh-pages. X:\Atlas's 18 unsaved files kept as tag archive/wip-debug-recorder-files (d3e2127), then X:\Atlas set to
+  main's code (no branch of its own, as main is checked out in .dev/wt-test21) and debug-recorder deleted. tk/swipe-join
+  (the engine's, untouched since 11-12) kept as archive/tk/swipe-join, its worktree removed. 43 archive tags on GitHub.
+  Branches: main, and gh-pages until 2.1 is published.
+- **At 2.1's release: the website from main.** gh-pages is a published copy of main's site/ from 11-10; main's site/ is
+  newer (2.1's privacy page, news feed and style, 11-13), so switching now would put them live before 2.1. When 2.1 goes
+  out: a .github/workflows/pages.yml that publishes site/ from main (actions/upload-pages-artifact + deploy-pages), the
+  Pages source set to GitHub Actions, the site checked (jasonlok000.github.io/titankeys/, /privacy/, /feed.json), then
+  gh-pages kept as an archive tag and deleted.
+- **3.0: the guide's word menu and triple Space slides name K and L, not I and O** (owner, 2026-11-14: "Sth for 3.0 for the
+  guide, say k and l instead of i and o for the menu. Same with triple tap too").
 - **Everything in one place** (owner, 2026-11-14: "We had a rule from atlas that the repo itself stays clean from tools and
   dev stuff etc but I don't like that idea so I want everything in one place"). The dev tools move into the repo: WSL
   ~/build/tk-tools (verify.sh, keyboard.sh, play-bundle.sh and the rest), the phone scripts and the quick preview pages

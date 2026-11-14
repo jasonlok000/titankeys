@@ -404,7 +404,12 @@ enders\gesture-line
        the hover after a press, Smart Launcher's square key and the real Sym key (the Orchestrator reads TitanKeysSym meanwhile),
        Setup's two links, haptics.
     3. Owner's OK on the Back disclosure's new line: "in the Smart Launcher search field, where the launcher would take your keys
-       first, so TitanKeys types there as in any other app;".
+       first, so TitanKeys types there as in any other app;". OK'd with "phrase it for specifically smart launcher" (050b163):
+       "in Smart Launcher's search field, where Smart Launcher would take your keys before TitanKeys gets them, so TitanKeys
+       types there as in any other app;", and the service description says "in Smart Launcher's search field". Release notes
+       gained the Smart Launcher line. Niagara (owner asked): TakenKeys covers Smart Launcher only; another launcher is an
+       ordinary app unless it also grabs keys first; not needed for the pre-release, a minute's check after.
+       Build #21 (from 050b163) verifies so ~/build/tk-overnight is current for tools/release.sh.
     4. Orchestrator: the release variant built without the owner's key (compiles, no debug code, against
        docs/release-audit-2.1.md), and the release notes' final pass for this round (the end screen's Back, the clip, the arrow,
        the trail).

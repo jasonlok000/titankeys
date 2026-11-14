@@ -236,18 +236,22 @@ class Modifiers {
     fun isCtrl(code: Int) = code == KeyEvent.KEYCODE_CTRL_LEFT || code == KeyEvent.KEYCODE_CTRL_RIGHT || fnIsCtrl && code == FN
 
     fun key(event: KeyEvent) {
-        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) down(event.keyCode, event.eventTime)
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) down(event.keyCode, event.eventTime, event.metaState)
         else if (event.action == KeyEvent.ACTION_UP) up(event.keyCode, event.eventTime)
     }
 
-    fun down(code: Int, time: Long) {
+    /**
+     * A key's press. [meta] is the press's own meta state, which Android sets from the keys physically down: Alt + Sym switches
+     * keyboards even when Alt's own press never reached the keyboard, as Key Mapper took a Shift press once (bug hunt #24).
+     */
+    fun down(code: Int, time: Long, meta: Int = 0) {
         if (isCtrl(code)) {
             ctrlKeys += code
             return
         }
         if (code == KeyEvent.KEYCODE_SYM) {
             if (!symHeld) {
-                if (panel == Panel.Closed && holding(Key.Alt) && altSymSwitches) {
+                if (panel == Panel.Closed && (holding(Key.Alt) || meta and KeyEvent.META_ALT_ON != 0) && altSymSwitches) {
                     useHeld()
                     keyboardSwitch = true
                 } else pressSym()

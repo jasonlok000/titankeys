@@ -367,6 +367,13 @@ private fun altSymSwitchesTheKeyboard() {
         same(modifiers.takeKeyboardSwitch(), false, "A tapped Alt, then Sym, must not switch keyboards")
         same(modifiers.panel, Panel.Symbols, "A tapped Alt, then Sym, must open the panel as before")
     }
+    Keyboard().run {
+        // Bug hunt #24: Alt's own press is lost, as Key Mapper once took a Shift press; only Sym says Alt is down.
+        modifiers.down(SYM, 1_000L, KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON)
+        same(modifiers.takeKeyboardSwitch(), true, "A Sym that says Alt is held must switch keyboards")
+        same(modifiers.panel, Panel.Closed, "It must not open the Sym panel")
+        modifiers.up(SYM, 1_080L)
+    }
 }
 
 private fun altSymWithThePanelOpenIsAsBefore() = Keyboard().run {

@@ -83,16 +83,21 @@ class Expansions(
 
         /**
          * The code at the end of [before]: [mark] and at least [minName] name characters, with nothing before the mark but
-         * the start of the text, a space or an opening mark. A mark at [freeMark] needs none of them.
+         * the start of the text, a space or an opening mark. A mark at [freeMark] needs none of them, unless it ends a sentence:
+         * "coming?" then "omw" is a question and a word, never the snippet "?omw" (bug hunt #14).
          */
         fun codeAt(before: String, mark: Char, minName: Int, freeMark: Int = -1): String? {
             var index = before.length
             while (index > 0 && before.length - index < MAX_NAME && nameChar(before[index - 1])) index--
             if (index == 0 || before[index - 1] != mark || before.length - index < minName) return null
             val markAt = index - 1
-            if (markAt != freeMark && !opens(before, markAt)) return null
+            val free = markAt == freeMark && mark !in SENTENCE_ENDS
+            if (!free && !opens(before, markAt)) return null
             return before.substring(markAt)
         }
+
+        /** Marks that end a sentence. One that took the place of a space ends the sentence, and starts no code. */
+        private const val SENTENCE_ENDS = ".!?"
 
         /** Whether a code may start at [at]: at the start of the text, or after a space or an opening mark. */
         private fun opens(before: String, at: Int) = at == 0 || before[at - 1].isWhitespace() || before[at - 1] in OPENERS

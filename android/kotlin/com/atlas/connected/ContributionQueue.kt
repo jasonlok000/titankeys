@@ -38,10 +38,19 @@ internal class ContributionQueue(directory: File, private val capBytes: Long) {
         out
     }
 
-    /** Removes the [count] oldest examples, as after they were sent. */
-    fun removeOldest(count: Int) = synchronized(lock) {
+    /**
+     * Removes the examples in [sent], once each, as after they were sent. By content, not by count: the queue may have been
+     * cleared or trimmed while they were on their way, and newer examples that weren't sent must stay (bug hunt 2.1, #28).
+     */
+    fun removeSent(sent: List<String>) = synchronized(lock) {
+        val left = sent.groupingBy { it }.eachCount().toMutableMap()
         val lines = lines()
-        write(lines.drop(count))
+        val kept = lines.filter { line ->
+            val count = left[line] ?: 0
+            if (count > 0) left[line] = count - 1
+            count == 0
+        }
+        if (kept.size != lines.size) write(kept)
     }
 
     fun clear() = synchronized(lock) {

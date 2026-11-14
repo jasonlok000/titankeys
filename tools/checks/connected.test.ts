@@ -327,3 +327,26 @@ describe("privacy texts (#53)", () => {
     }
   });
 });
+
+describe("news on the phone", () => {
+  test("turning News off takes down only news, never Record a bug's ongoing notification", async () => {
+    // Bug hunt 2.1, #26: cancelAll() took Record a bug's notification and its Stop down too, while it went on recording.
+    const news = await text("android/kotlin/com/atlas/connected/Announcements.kt");
+    expect(news).not.toContain("cancelAll(");
+    expect(news).toContain("if (!on) cancelNews(context)");
+    expect(news).toContain("if (shown.notification.channelId == CHANNEL) manager.cancel(shown.tag, shown.id)");
+    expect(news).toContain('private const val CHANNEL = "news"');
+    expect(await text("android/kotlin/com/atlas/keyboard/BugRecording.kt")).toContain('private const val CHANNEL = "bug-recording"');
+  });
+});
+
+describe("contributions on the phone", () => {
+  test("a deletion waits for any batch on its way, and sent examples leave the queue by content", async () => {
+    // Bug hunt 2.1, #28. tests/connected checks the queue's removal; this checks the lock between the two jobs.
+    const code = await text("android/kotlin/com/atlas/connected/Contributions.kt");
+    expect(code).toContain("repeat(BATCHES_PER_RUN) { synchronized(sending) {");
+    expect(code).toContain("fun sendDeletion(context: Context): Boolean = synchronized(sending) {");
+    expect(code).toContain("queue.removeSent(lines)");
+    expect(code).not.toContain("removeOldest");
+  });
+});

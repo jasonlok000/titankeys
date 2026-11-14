@@ -212,7 +212,7 @@ private fun queue() {
     same(queue.count(), 10, "Ten examples wait")
     same(queue.oldest(250).size, 2, "A batch holds what fits")
     same(queue.oldest(10).size, 1, "A batch always holds at least one")
-    queue.removeOldest(3)
+    queue.removeSent(queue.oldest(250) + queue.oldest(1000).drop(2).take(1))
     same(queue.count(), 7, "Sent examples leave the queue")
     must(queue.oldest(1000).first().startsWith("""{"n":3,"""), "The oldest left comes first")
     for (i in 10 until 60) queue.add("""{"n":$i,"pad":"${"x".repeat(80)}"}""")
@@ -224,6 +224,22 @@ private fun queue() {
     queue.clear()
     same(queue.count(), 0, "Clear empties the queue")
     same(queue.bytes(), 0L, "Clear removes the file")
+    // Bug hunt 2.1, #28: a batch on its way while the queue is cleared, and newer examples come in. Removing by count took the
+    // newer ones, never sent; by content, they stay.
+    for (i in 0 until 3) queue.add("""{"n":$i}""")
+    val onItsWay = queue.oldest(1000)
+    queue.clear()
+    for (i in 3 until 6) queue.add("""{"n":$i}""")
+    queue.removeSent(onItsWay)
+    same(queue.count(), 3, "Examples that weren't sent stay after the queue was cleared mid-upload")
+    // The same while a full queue trims its oldest: only what was sent goes.
+    queue.clear()
+    for (i in 0 until 4) queue.add("""{"n":$i}""")
+    val firstTwo = queue.oldest(16)
+    same(firstTwo.size, 2, "Two go out")
+    queue.removeSent(listOf(firstTwo[1]))
+    same(queue.oldest(1000).map { it.substringAfter(':').trimEnd('}') }, listOf("0", "2", "3"), "Only the sent line goes, wherever it is")
+    queue.clear()
 }
 
 private fun example() {

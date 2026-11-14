@@ -65,6 +65,19 @@ describe("record a bug", () => {
     expect(rawLog).toMatch(/fun mark\(kind: String\?, label: String\?\) \{\s*if \(debug != null/);
   });
 
+  test("never freezes the keyboard: the auto-stop runs off the main thread, and the summary is read once", async () => {
+    // Bug hunt 2.1, #23: the auto-stop ran on the main looper and waited up to 2 s for the writer, and every Settings refresh
+    // exported and parsed up to 24 MB, rewriting the file the share sheet had lent out.
+    const bug = await text("android/kotlin/com/atlas/keyboard/BugRecording.kt");
+    expect(bug).toContain('private val autoStop = Runnable { app?.let { context -> Thread({ stop(context) }, "BugRecordingStop").start() } }');
+    expect(bug).toMatch(/stopping\.join\(WRITE_WAIT_MILLIS\)[\s\S]{0,200}summary = read\(context\)/);
+    expect(bug).toMatch(/fun summary\(context: Context\): Summary\? \{\s*if \(recording\) return null\s*summary\?\.let \{ return it \}/);
+    // Only share() makes the shared file.
+    expect(bug).toContain("private fun file(context: Context): File?");
+    expect(bug.match(/\bfile\(context\)/g)?.length).toBe(1);
+    expect(bug).toContain("val file = file(context) ?: throw IllegalStateException(\"Nothing recorded\")");
+  });
+
   test("shares only through the share sheet, with a provider no other app can reach", async () => {
     const manifest = await text("android/src/main/AndroidManifest.xml");
     expect(manifest).toMatch(/android:name="com\.atlas\.keyboard\.BugRecordingProvider"[\s\S]*?android:exported="false"[\s\S]*?android:grantUriPermissions="true"/);

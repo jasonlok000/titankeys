@@ -54,10 +54,11 @@ internal enum class SetupPart(val title: String, val body: String, val action: S
     Enable("Turn the keyboard on.", "Flip TitanKeys Keyboard on in the list. You'll come straight back.", "Open the keyboard list",
         "Can't see it? Scroll down. Flip its switch, then press OK twice."),
     Choose("Make it your keyboard.", "Pick TitanKeys Keyboard in the list. That's it.", "Pick TitanKeys"),
-    // Android shows a list of all apps here, not the page for TitanKeys alone.
-    Overlay("Let it sit over other apps.", "Allow TitanKeys Keyboard in the list. It keeps the touchpad on the keys.", "Open the list",
-        "Find TitanKeys Keyboard in the list, open it and flip the switch."),
-    ScrollAssistant("Turn on Scroll assistant.", "Swiping reads the touchpad through it. Flip its switch on.", "Open Scroll assistant",
+    // TitanKeys' own page where Android allows it, or else a list of all apps (PhoneSetup.pages).
+    Overlay("Let it sit over other apps.", "Flip TitanKeys Keyboard's switch on. It keeps the touchpad on the keys.", "Open the page",
+        "On the whole list? Find TitanKeys Keyboard, open it and flip the switch."),
+    // The phone's own name for the mode, numbers and all (owner, 2026-11-13: "turn on scroll assistant, let's specify mode 1").
+    ScrollAssistant("Turn on Scroll assistant.", "Flip it on, and keep your apps on Sliding Mode 1. Swiping needs both.", "Open Scroll assistant",
         "The switch is at the top of that page."),
     Back("Let TitanKeys handle Back.", "Turn TitanKeys Keyboard on in Accessibility, so Back takes one press.", "Open Accessibility",
         "Switch greyed out? Android is being careful. In App info, open the menu and allow restricted settings."),

@@ -40,11 +40,15 @@ export type State = {
   scrollAssistant: boolean;
   /** Atlas's accessibility service is on, so one back swipe closes the bar and goes back in any app. */
   backService: boolean;
+  /** The last time the overlay step opened, Android showed its whole list instead of TitanKeys' own page. */
+  overlayOnList: boolean;
+  /** The same for the Accessibility step. */
+  backOnList: boolean;
   /** The phone's Sym key is set to Programmable key, so it opens the Sym panel. Read only (PhoneChecks.kt). */
   symKey: boolean;
   /** The phone's fn key is set to Programmable key, so it can work as Ctrl. */
   fnKey: boolean;
-  /** The apps the keyboard last saw outside Sliding Mode 1, where swiping doesn't work, by name. */
+  /** The apps the keyboard saw outside Sliding Mode 1 in two fields, where swiping doesn't work, by name (SlidingModeList). */
   outsideSlidingMode: string[];
   learning: boolean;
   /** The letters and space a light touch types, such as `"AI "`. */

@@ -86,6 +86,20 @@ test("every store is wiped, kept, or kept in part by the full wipe, and Reset mo
   expect(read("android/kotlin/com/atlas/keyboard/Haptics.kt")).toContain('val key get() = "haptic_$switch"');
 });
 
+test("the full wipe clears each file with commit() before deleting it, so no queued apply() writes it back", () => {
+  // Bug hunt 2.1, #2: the wipe runs right after Reset most things, whose apply() is still queued on the cached typing_settings.
+  // deleteSharedPreferences alone left that cache, data and all, to be written back about 100 ms later, so shorthand, the app
+  // lists, recent apps and the snippet start survived the wipe. commit() waits behind the queued write, so the empty file lands
+  // last. Any queued apply() on a wiped file is a hazard, not only the reset's.
+  const wipe = fresh.slice(fresh.indexOf("fun wipe(activity: Activity)"));
+  expect(wipe).toMatch(/for \(name in WIPED\) \{\s*(?:\/\/[^\n]*\s*)*activity\.getSharedPreferences\(name, Context\.MODE_PRIVATE\)\.edit\(\)\.clear\(\)\.commit\(\)\s*activity\.deleteSharedPreferences\(name\)\s*\}/);
+  expect(wipe.match(/deleteSharedPreferences/g)?.length).toBe(1);
+  const queued = reset.match(/\.apply\(\)/g)?.length ?? 0;
+  expect(queued).toBeGreaterThan(0); // the reason the clear must come first
+  // Every partly kept file is trimmed with commit() too.
+  expect(wipe).toMatch(/preferences\.edit\(\)\.apply \{ preferences\.all\.keys\.filter \{ it !in kept \}\.forEach \{ remove\(it\) \} \}\.commit\(\)/);
+});
+
 test("the full wipe keeps Share swipes' ID and what was sent, so shared swipes can still be deleted", () => {
   const contributions = read("android/kotlin/com/atlas/connected/Contributions.kt");
   const keptConnected = fresh.match(/"connected" to setOf\(([^)]*)\)/)![1];
@@ -134,4 +148,12 @@ test("the boring guide and the release notes say where they are", () => {
   expect(guide).toContain("Reset most things");
   expect(guide).toContain("Reset literally everything");
   expect(read("release-notes.txt")).toContain("- Two resets:");
+});
+
+test("Reset most things turns News back on, its default, and keeps what you dismissed", () => {
+  // Bug hunt 2.1, #27: News is a switch, so it resets like every other; the news you dismissed or saw is yours and stays.
+  const news = read("android/kotlin/com/atlas/connected/Announcements.kt");
+  expect(news).toContain("fun enabled(context: Context) = Connected.preferences(context).getBoolean(ENABLED, true)");
+  expect(news).toMatch(/fun resetSwitch\(context: Context\) \{\s*Connected\.preferences\(context\)\.edit\(\)\.remove\(ENABLED\)\.apply\(\)\s*Connected\.schedule\(context\)\s*\}/);
+  expect(reset).toContain("Announcements.resetSwitch(context)");
 });

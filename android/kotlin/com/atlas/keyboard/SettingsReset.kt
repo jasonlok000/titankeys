@@ -1,13 +1,14 @@
 package com.atlas.keyboard
 
 import android.content.Context
+import com.atlas.connected.Announcements
 import com.atlas.engine.SwipeTyping
 
 /**
  * Settings > Reset most things (owner, 2026-11-13: "there's so many now its easy to mess up"). A reset removes each setting's
- * stored value, so each falls back to the default its own code defines: no second list of defaults to drift. What's yours
- * stays: words, snippets and their start, shorthand, the app lists, the clipboard, Share swipes, news, the key calibration and
- * recordings, each in its own file or listed in [TYPING_DATA].
+ * stored value, so each falls back to the default its own code defines: no second list of defaults to drift. News is a switch
+ * too, so it goes back to on. What's yours stays: words, snippets and their start, shorthand, the app lists, the clipboard, Share
+ * swipes, the news you dismissed or saw, the key calibration and recordings, each in its own file or listed in [TYPING_DATA].
  *
  * Every key a store holds is either reset or kept here, and tools/checks/settings-reset.test.ts fails on one that is neither,
  * so a new setting has to say which it is.
@@ -47,6 +48,8 @@ internal object SettingsReset {
         val switches = haptics.all.keys.filter { it.startsWith(HAPTIC_PREFIX) }
         haptics.edit().apply { (switches + HapticSwitches.MASTER).forEach { remove(it) } }.apply()
         FixedScale.resetSize(context)
+        // News: its switch, on by default (bug hunt 2.1, #27). Dismissed and seen news stay.
+        Announcements.resetSwitch(context)
         // Learn new words: only its switch. The words it learned stay.
         SwipeTyping.get(context).resetLearning()
         Accent.load(context)

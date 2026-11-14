@@ -33,6 +33,12 @@ object Contributions {
 
     private var queue: ContributionQueue? = null
 
+    /**
+     * Held while a batch is on its way and while a deletion is asked for, so that the deletion always goes after any batch
+     * in flight has landed, and deletes it too (bug hunt 2.1, #28). The two jobs can run at the same time.
+     */
+    private val sending = Any()
+
     internal fun queue(context: Context): ContributionQueue = synchronized(this) {
         queue ?: ContributionQueue(File(context.applicationContext.noBackupFilesDir, "contributions"), QUEUE_CAP_BYTES).also { queue = it }
     }
@@ -126,7 +132,7 @@ object Contributions {
         val preferences = Connected.preferences(context)
         val id = preferences.getString(CONTRIBUTOR, null) ?: return true
         val queue = queue(context)
-        repeat(BATCHES_PER_RUN) {
+        repeat(BATCHES_PER_RUN) { synchronized(sending) {
             val lines = queue.oldest(BATCH_BYTES)
             if (lines.isEmpty()) return true
             val sealed = Seal.seal(Example.batch(id, lines).toByteArray(Charsets.UTF_8), Connected.key(Connected.CONTRIBUTION_KEY))
@@ -150,20 +156,20 @@ object Contributions {
             }
             // Only if the ID is still the same: "Delete my contributions" may have run meanwhile.
             if (preferences.getString(CONTRIBUTOR, null) != id || !enabled(context)) return true
-            queue.removeOldest(lines.size)
+            queue.removeSent(lines)
             preferences.edit().putInt(SENT, preferences.getInt(SENT, 0) + lines.size).putLong(SENT_AT, System.currentTimeMillis()).apply()
             Log.d(TAG, "Sent ${lines.size} examples in ${sealed.size} sealed bytes")
-        }
+        } }
         return true
     }
 
     /** Asks the server to delete everything sent with the old contributor ID. */
-    fun sendDeletion(context: Context): Boolean {
+    fun sendDeletion(context: Context): Boolean = synchronized(sending) {
         val preferences = Connected.preferences(context)
-        val id = preferences.getString(PENDING_DELETE, null) ?: return true
-        if (Connected.CONTRIBUTIONS_URL.isEmpty()) return true
+        val id = preferences.getString(PENDING_DELETE, null) ?: return@synchronized true
+        if (Connected.CONTRIBUTIONS_URL.isEmpty()) return@synchronized true
         val connection = Connected.open("${Connected.CONTRIBUTIONS_URL}/v1/delete", "POST")
-        return try {
+        try {
             val body = "{\"contributor\":${Json.quote(id)}}".toByteArray(Charsets.UTF_8)
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json")

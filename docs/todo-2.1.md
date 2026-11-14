@@ -478,6 +478,13 @@ enders\gesture-line
           build #23 (NightKeys-signed), uninstall the atlas-signed Debug and install it; the owner turns its Accessibility and
           overlay back on. In-app backup (asked): Settings > Data > Backup exports and imports words, and Snippets its own;
           settings, shorthand and app lists have none.
+        - **The owner: "update these stuff"** (the Atlas list). Done: remotes (origin = jasonlok000/titankeys, Julian's =
+          atlas-upstream; "fork" is gone, push to origin); CONTRIBUTING.md and the debug notes name TitanKeys (README keeps
+          Atlas as credit and comparison: the GPL attribution); WSL ~/titankeys-env.sh, ~/atlas-env.sh a pointer to it,
+          verify.sh and play-bundle.sh switched. Waiting on the owner's timing: the com.atlas.* package rename (171 files;
+          Android turns the keyboard and Accessibility off once on that update), moving X:\Atlas (every session, worktree, WSL
+          path and this project's memory folder depend on it) and renaming the WSL distro atlas-build. The Orchestrator's view:
+          after the pre-release is out, on a quiet day with no session running, so the build being tested stays as it is.
         - **Follow-ups (were open before the switch):** the repo's ink.toml still names signing/atlas.keystore (debug builds sign with it too; a
           release key switch needs ink.toml, every build copy's signing/, release.yml's secrets and docs/play/signing.md); the
           GitHub release text must tell 2.0 users to uninstall 2.0 first (the in-app notes would come too late); the old

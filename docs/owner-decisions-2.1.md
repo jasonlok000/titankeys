@@ -248,6 +248,14 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   needs the keyboard open on a field that shows words, 3 to 4.5 minutes with no key, touch or swipe, the screen on, then a 25%
   chance, and never twice in a row: about 15 untouched minutes before the first game, so it's almost never seen. The
   Orchestrator's proposal, unapproved: wait 60 to 90 s and a 50% chance, about 2.5 minutes on average; any input still ends it.
+- **The keyboard is always dark** (owner, 2026-11-14: "Wait what? I never know it follows light mode. Make it always black. The
+  app is always in its current dark mode settings."). (Owner) The bar and panels stop following the phone's light mode (Look.of
+  read uiMode): always black, so the border illusion always holds. The light look's colours (such as the accents-off favourite
+  #35312E) go. Queued for W.
+- **The border illusion's other places** (owner's answers to the Orchestrator's list): the app's own screens are fine; only the
+  demo surfaces, the guide and the playground, get a pass for the border (queued for V). The Sym panel's other pages get the same
+  even row spacing (W). Orange screens keep the maths centre. Brightness is ignored for now. Screenshots for the Play listing will
+  need the border or a frame added (noted for the Play launch).
 - **The idle games get a visible floor** (owner, 2026-11-13: "do you think we shd add a simple cream or white line to simulate the
   floor?", then on the phone preview cal-tool/floor.html, "let's do 3"). (Owner) A 1 dp line in the text's cream at 55% at
   Idle.FLOOR, stopping before the curved corners with soft ends, shown only while a game that uses the floor plays (the figure,

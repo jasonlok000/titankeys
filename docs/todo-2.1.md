@@ -363,6 +363,9 @@ enders\gesture-line
          there; leave them.
       6. Brightness: if the screen's blacks glow at high brightness or in sunlight, the edge shows and the illusion weakens.
          Worth a look outdoors.
+      - Owner's answers: the keyboard is always dark (W, when work resumes: Look always dark, the light look removed); the guide
+        and the playground get the border pass (V); the Sym panel's other pages get the even spacing (W); orange screens stay;
+        brightness ignored for now; screenshots noted for the Play launch.
   - **Paused for the usage limit (2026-11-14, 5-hour window at 95%, resets 02:10 UTC; weekly at 87%).** W, C, D and A stopped
     mid-turn; F and V were idle; their unfinished changes stay in their worktrees. On resume, send each a short "carry on":
     - V: blocker #1 first, then the selected-word underline, #20, #21, #31, #32.

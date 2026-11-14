@@ -931,6 +931,16 @@ enders\gesture-line
   imeSubtypeLocale="en_GB", which Android shows as "English (United Kingdom)". The Orchestrator's proposal: "en" (English, no
   country) now, as the spelling (UK, US, Canadian) is TitanKeys' own setting; with 3.0's languages, one subtype per language
   the user turns on, decided in the languages design (#56).
+- **Worktrees cleaned up (owner: "Yes remove those.")**: 40 removed. 3 had unsaved changes, kept as commits under
+  archive tags (benchmark's newer copy as archive/wip-benchmark, as the owner rules out force pushes). Every unmerged branch
+  is an archive/ tag on GitHub (41 tags). V's and W's review renders were copied to X:\Atlas\.dev\worktree-leftovers.
+  Sessions A, C, D, F, V and W archived. Left: X:\Atlas (debug-recorder, 13 unsaved changes, untouched), .dev/wt-engine2
+  (tk/swipe-join, the engine's) and .dev/wt-test21 (main, where work happens now). Local branches: main, gh-pages,
+  debug-recorder, tk/swipe-join.
+- **3.0: the guide's steering slide** (owner, 2026-11-14, on its screenshot: "And for 3.0 like the top line shdnt be
+  relevant? Its from the last slide anyways"). Steering 1/2 asks to steer to "with", in the line the slide before left in
+  the field ("Clear it all with one held flick"), not in its own line ("Hold the second tap to steer the cursor"). For 3.0:
+  the target is a word in the slide's own line; the earlier line is only context.
 - **Everything in one place** (owner, 2026-11-14: "We had a rule from atlas that the repo itself stays clean from tools and
   dev stuff etc but I don't like that idea so I want everything in one place"). The dev tools move into the repo: WSL
   ~/build/tk-tools (verify.sh, keyboard.sh, play-bundle.sh and the rest), the phone scripts and the quick preview pages

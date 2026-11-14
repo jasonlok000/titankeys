@@ -341,6 +341,7 @@ fun main() {
     demonstrationsTypePunctuation()
     aPanelMovesNothing()
     nothingPlaysAwayFromTheGuide()
+    anAbandonedAccessibilityStepLetsGo()
     // Drawings of the slides in the new layout, to look at without a phone. See SlideRenders.kt.
     System.getenv("SLIDES_PNG")?.let { drawSlides(it, NEW_LAYOUT + GuideChapter.End) }
     System.getenv("FRONT_PNG")?.let { drawFrontPage(it) }
@@ -372,6 +373,22 @@ private fun nothingPlaysAwayFromTheGuide() {
     }
     same(guide.substring(guide.indexOf("private val huntTick")).substringBefore("huntSaid = 1").contains("!visible"), true,
         "The hunt's tick stands still out of sight")
+}
+
+/**
+ * The guide waits for Accessibility only while you're in Android's page for it (bug hunt 2.1, #20: an abandoned step left the
+ * wait set for good, so turning TitanKeys on from Settings much later brought a new guide to the front). Coming back to the
+ * guide (its window has focus again), or closing it, ends the wait; only accessibilityOn ever starts a guide from it.
+ */
+private fun anAbandonedAccessibilityStepLetsGo() {
+    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    fun body(start: String) = guide.substring(guide.indexOf(start)).let { it.substring(0, it.indexOf("\n    }\n") + 6) }
+    same(body("override fun onWindowFocusChanged(").contains("awaitingAccessibility = false"), true, "Back in the guide, the wait ends")
+    same(body("override fun onResume()").contains("awaitingAccessibility"), false,
+        "but not on resume, which also runs as the disclosure's answer opens the page")
+    same(body("override fun onDestroy()").contains("if (isFinishing) awaitingAccessibility = false"), true, "and when the guide closes")
+    val sets = Regex("""awaitingAccessibility = (?!false)""").findAll(guide).count()
+    same(sets, 1, "Only opening the Accessibility page starts the wait")
 }
 
 /** The Titan 2 Elite's column, in px: the screen 1200 tall, the status bar 124, the keyboard's own bar 90. */

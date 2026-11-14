@@ -1144,6 +1144,8 @@ class GuideActivity : Activity() {
             }
         }
         GuideHooks.nearMiss = false
+        // A guide that closes waits for Accessibility no more. One that Android only took down while you were in Settings still does.
+        if (isFinishing) awaitingAccessibility = false
         unlockKeyboard()
         GuideHooks.stripDemo(null)
         GuideHooks.stripPoint(null)
@@ -1154,6 +1156,10 @@ class GuideActivity : Activity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (!hasFocus) return
+        // Really back in the guide, it waits for Accessibility no more: an abandoned step must never bring a guide back later, when
+        // TitanKeys is turned on from Settings (bug hunt 2.1, #20). Not onResume, which also runs for a moment as the disclosure's
+        // answer opens the Accessibility page; the window only gets focus once you're here.
+        awaitingAccessibility = false
         // The keyboard list can close without a change, so this checks each time the guide comes back.
         checkKeyboard()
         // During setup there is nothing to type yet, and another keyboard would cover the slide.

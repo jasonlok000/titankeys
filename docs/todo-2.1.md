@@ -1022,6 +1022,7 @@ enders\gesture-line
     the recorded-touch benchmarks, the bar's border and corner design, haptics, the guide, privacy, limits, what's next),
     from .dev/swipe-baseline (BASELINE.md, ENGINE-2.0.md, report/), docs/haptics*.md, docs/design-v2.md and the code. No
     private recordings' text in it. A second helper writes it after the README draft.
+  - Published 2026-11-14 (744ac17), after the Orchestrator's review: its checks pass, its links resolve, and fn as Ctrl is real (Modifiers.isCtrl: fn counts as Ctrl with the switch on and fn on Programmable key). The paper helper is writing docs/paper.md; it then points the README's two links there and retires docs/engine.md.
   - Owner, then: "Or lke a pitch for technical peol". So the paper is a pitch for technical readers: each part leads with what it achieves and the measured result, then shows how, in full depth, so an engineer is convinced by the evidence.
 - **3.0: a short Accessibility disclosure, like Share swipes'** (owner, 2026-11-14: "Next batch we shd simplify the
   accessibility permission request similar to how we did the share swipe. No wall of text."). BackDisclosureActivity today

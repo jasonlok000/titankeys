@@ -347,8 +347,8 @@ class TypedCorrector(
         val lower = word.lowercase()
         val isRejected = lower in rejected
         if (isCamelCaseName(word)) {
-            // The one camel-case slip worth fixing is a missed space before a name ("andMary").
-            if (isRejected || isKnown(word)) return null
+            // The one camel-case slip worth fixing is a missed space before a name ("andMary"), under its switch (bug hunt #9).
+            if (isRejected || isKnown(word) || !on(FixKind.MISSING_SPACES)) return null
             return nameSplit(word)?.let { Fix(word, it) }
         }
         if (!isRejected && !hasExactCase(word) && on(FixKind.SHIFT_HELD)) shiftHeldTooLongFix(word, lexicon::frequency)?.let { return Fix(word, it) }

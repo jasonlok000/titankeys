@@ -2531,6 +2531,11 @@ private fun bugHunt(world: Realistic) {
     same(typed("i dont know ", setOf(FixKind.APOSTROPHES)), "I dont know ", "#8: Missing apostrophes off leaves \"dont\"")
     same(typed("i dont know "), "I don't know ", "#8: Missing apostrophes on fixes it")
     same(typed("get dome food ", setOf(FixKind.TYPOS, FixKind.APOSTROPHES)), "get some food ", "#8: a real-word confusion stays the second look's")
+
+    // #9: with Missing spaces off, "andMary" was split anyway.
+    same(typed("andMary "), "and Mary ", "#9: Missing spaces on splits \"andMary\"")
+    same(typed("andMary ", setOf(FixKind.MISSING_SPACES)), "andMary ", "#9: Missing spaces off leaves it")
+    same(typed("andMary ", FixKind.entries.toSet()), "andMary ", "#9: and so does every switch off")
 }
 
 fun main() {

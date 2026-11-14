@@ -1,5 +1,6 @@
 package com.atlas.keyboard
 
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.animation.ValueAnimator
 import android.content.ClipDescription
@@ -966,6 +967,10 @@ class AtlasIme : InputMethodService() {
         }
     }
 
+    /** The screen is on and unlocked. Smart Launcher's taken keys stop at once otherwise. See [watchedKey]. */
+    private fun screenInUse() = getSystemService(PowerManager::class.java).isInteractive &&
+        getSystemService(KeyguardManager::class.java)?.isKeyguardLocked != true
+
     private val screenOff = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) = sleepIdleBar()
     }
@@ -1354,9 +1359,12 @@ class AtlasIme : InputMethodService() {
         contact.swipes = TypingSettings.swipeTyping(this) && field.words
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
         val corrects = TypingSettings.autocorrect(this)
+        // Spell out shorthand is its own setting: with Fix typos off, the word data spells out shorthand alone (bug hunt #13).
+        val shorthandAlone = !corrects && TypingSettings.expandShorthand(this)
         composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
+        composer.shorthandOnly = autocorrect.autocorrect.takeIf { shorthandAlone }
         // The word data takes a moment to load, so it starts as a field opens: the first word typed is fixed too.
-        if (!corrects) autocorrect.release() else if (editing) autocorrect.prepare()
+        if (!corrects && !shorthandAlone) autocorrect.release() else if (editing) autocorrect.prepare()
         strip?.showSuggestions = showSuggestions()
         readExpansions()
         updateKeyWatch()
@@ -1404,7 +1412,8 @@ class AtlasIme : InputMethodService() {
         val code = event.keyCode
         // The app takes Back before the keyboard, so an open panel must close here.
         if (watchingKeys && code == KeyEvent.KEYCODE_BACK && isInputViewShown && backKey(event, down)) return true
-        if (!takenKeys.takes(code, down, watchingKeys)) {
+        // Locked or asleep, the keys are the lock screen's, such as a PIN, even if Android left the launcher's field open.
+        if (!takenKeys.takes(code, down, watchingKeys && screenInUse())) {
             if (code == KeyEvent.KEYCODE_SYM) symLog("Sym went on to the app")
             return false
         }
@@ -2644,7 +2653,7 @@ class AtlasIme : InputMethodService() {
             // An app that does not answer still gets the light tick.
             cursorSteps.step(if (next == null) 'a' else next.firstOrNull())?.let(haptics::play)
             if (rereadCursorText) readCursorText()
-            command(arrow)
+            command(arrow, steer = true)
             if (next?.isEmpty() != true) rereadCursorText = strip?.gesture?.cursorStepped(direction) == true
         }
     }
@@ -3221,6 +3230,11 @@ class AtlasIme : InputMethodService() {
             if (field.exact) logExact("key $keyCode repeat ${event.repeatCount} kept by hold")
             return true
         }
+        // With the panel's groups on the screen, fn picks the one at its place, also as Ctrl, which would take it first (bug hunt #37).
+        if (keyCode == Modifiers.FN && panelOpen && isInputViewShown && categoryKey(event)) {
+            consumedKeys += keyCode
+            return true
+        }
         if (ctrlKey(event)) {
             consumedKeys += keyCode
             return true
@@ -3261,6 +3275,7 @@ class AtlasIme : InputMethodService() {
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
         }
         if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym up: panel ${modifiers.panel}")
+        if (keyCode == KeyEvent.KEYCODE_DEL) modifiers.backspaceReleased()
         if (lockedKeys.remove(keyCode)) return true
         // Published before the take-back, so the guide hears the letter let go too soon.
         val takeBack = inGuide && editing && heldLetter?.keyCode == keyCode
@@ -3379,12 +3394,9 @@ class AtlasIme : InputMethodService() {
             KeyEvent.KEYCODE_DEL -> {
                 // Ctrl or a held Shift with Backspace deletes the previous word, and holding it goes on by word. Alt with Backspace
                 // deletes forward, like Delete on a PC, or with that setting off goes to the app as Android's own Alt + Backspace,
-                // which deletes the line (owner, 2026-11-13). See [Modifiers.backspaceDoes]. A press decides once, so its repeats
-                // go on the same way after a tapped Alt is used up.
-                if (event.repeatCount == 0 || backspaceDoes == null)
-                    backspaceDoes = modifiers.backspaceDoes(event.metaState, TypingSettings.altBackspaceForward(this),
-                        TypingSettings.shiftBackspaceWord(this))
-                when (backspaceDoes) {
+                // which deletes the line (owner, 2026-11-13). See [Modifiers.backspacePress].
+                when (modifiers.backspacePress(event.repeatCount, event.metaState, TypingSettings.altBackspaceForward(this),
+                    TypingSettings.shiftBackspaceWord(this))) {
                     Modifiers.Backspace.Forward -> command(withKey(event, KeyEvent.KEYCODE_FORWARD_DEL), dropMeta = KeyEvent.META_ALT_MASK)
                     Modifiers.Backspace.AltToApp -> command(withMeta(event, KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON))
                     Modifiers.Backspace.Word -> composer.backspace(true)
@@ -3541,9 +3553,10 @@ class AtlasIme : InputMethodService() {
     private fun logModifiers(event: KeyEvent) = logExact("modifier ${event.keyCode} ${if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"}" +
         " kept: shift ${modifiers.shift} alt ${modifiers.alt} panel ${modifiers.panel}")
 
-    private fun command(event: KeyEvent, textKey: Boolean = false, dropMeta: Int = 0) {
-        // A Shift that came on by itself is for a letter. Ctrl + C, Tab or an arrow must not become Ctrl + Shift + C or a selection.
-        val sticky = if (modifiers.autoShifted && !textKey) modifiers.metaState and KeyEvent.META_SHIFT_MASK.inv() else modifiers.metaState
+    private fun command(event: KeyEvent, textKey: Boolean = false, dropMeta: Int = 0, steer: Boolean = false) {
+        // A Shift that came on by itself, or Caps, is for a letter: Ctrl + C, Tab or an arrow must not become Ctrl + Shift + C or a
+        // selection. A tapped Shift on a steer is for the next letter too. See [Modifiers.commandMeta].
+        val sticky = modifiers.commandMeta(textKey, steer)
         // [dropMeta]: modifiers that chose the command and aren't part of it, as Alt for a forward delete.
         val meta = KeyEvent.normalizeMetaState((event.metaState or sticky) and dropMeta.inv())
         val down = KeyEvent(event.downTime, event.eventTime, KeyEvent.ACTION_DOWN, event.keyCode,
@@ -3579,9 +3592,6 @@ class AtlasIme : InputMethodService() {
     /** [event] with [meta] added: Alt + Backspace keeps its Alt through its repeats, after a tapped Alt is used up. */
     private fun withMeta(event: KeyEvent, meta: Int) = KeyEvent(event.downTime, event.eventTime, event.action, event.keyCode,
         event.repeatCount, event.metaState or meta, event.deviceId, event.scanCode, event.flags, event.source)
-
-    /** What the Backspace press now going does, decided at its first event: see [Modifiers.backspaceDoes]. */
-    private var backspaceDoes: Modifiers.Backspace? = null
 
     /** Shift and Alt as last shown, so locking one plays its feel once. */
     private var shownShift = Modifiers.Level.Off

@@ -203,7 +203,8 @@ private class FakeWords(private val lists: Lists) : Words {
 
 /** Types into a real Composer, the way the keyboard does for each key. */
 private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.autocorrect(), val field: Field = FIELD,
-                     lists: Lists = Lists(world.words), autoCapitalise: Boolean = false, val words: FakeWords = FakeWords(lists)) {
+                     lists: Lists = Lists(world.words), autoCapitalise: Boolean = false, val words: FakeWords = FakeWords(lists),
+                     shorthandOnly: Autocorrect? = null) {
     val editor = FakeEditor()
     /** The words on the suggestion bar. */
     var bar = emptyList<String>()
@@ -217,6 +218,7 @@ private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.aut
 
     init {
         composer.autocorrect = autocorrect
+        composer.shorthandOnly = shorthandOnly
         composer.fixOn = { lists.fixes(it) }
         composer.onAutocorrect = { vibrations++ }
         composer.start(field, 0, 0)
@@ -1191,6 +1193,11 @@ private fun expansions(world: Realistic) {
     fun slash() = Typist(world).also { it.composer.expansions = Expansions(snippets + ("or" to "OR") + ("2" to "two"), '/', emoji) }
     same(slash().type("at /addr ").text, "at 1 Main Street ", "Space after a / shortcut puts in the snippet")
     same(slash().type("at /addr ").backspace().text, "at /addr ", "Backspace straight after puts the / shortcut back")
+    // Bug hunt #30: a snippet longer than the editor's window of text, up to the 4,000 characters Settings takes.
+    val long = "x".repeat(3000)
+    val longSnippet = Typist(world).also { it.composer.expansions = Expansions(mapOf("long" to long), '/', emoji) }
+    same(longSnippet.type("at /long ").text, "at $long ", "A long snippet goes in")
+    same(longSnippet.backspace().text, "at /long ", "Backspace straight after puts the shortcut of a long snippet back")
     same(slash().type("/hi ").text, "Hello there ", "A / shortcut at the start of the text")
     same(slash().type("at /adr ").text, "at /adr ", "A / with no saved shortcut stays, with its space where it was typed")
     for (typed in listOf("this and/or that ", "see http://example.com/addr ", "on 1/2 and 12/25/2026 ", "in /usr/bin ", "r/android ",
@@ -2054,6 +2061,17 @@ private fun shorthandSettings(world: Realistic, typed: (String, Lists) -> String
         same(typed("so $shorthand ok", off), "so $shorthand ok", "With the setting off, $shorthand stays as typed")
     }
     same(typed("Ofc it works", on), "Of course it works", "A capital stays on a full phrase")
+
+    // Bug hunt #13: with Fix typos off, Spell out shorthand still spells out, the list's and the user's own, and fixes nothing else.
+    fun typosOff(text: String, lists: Lists) =
+        Typist(world, autocorrect = null, lists = lists, shorthandOnly = world.autocorrect(lists)).type("$text ").text.trimEnd()
+    same(typosOff("so shd ok", on), "so should ok", "With Fix typos off, shorthand still spells out")
+    same(typosOff("my hw is done", Lists(world.words, expand = true, ownShorthand = mapOf("hw" to "homework"))), "my homework is done",
+        "With Fix typos off, the user's own shorthand still spells out")
+    same(typosOff("so teh ok", on), "so teh ok", "With Fix typos off, a typo stays")
+    same(typosOff("so shd ok", off), "so shd ok", "With both off, shorthand stays as typed")
+    val undoneAlone = Typist(world, autocorrect = null, lists = on, shorthandOnly = world.autocorrect(on)).type("shd ").backspace()
+    same(undoneAlone.text, "shd", "With Fix typos off, Backspace right after still puts the shorthand back")
     same(typed("i saw ESP and MSG", on), "I saw ESP and MSG", "Shorthand typed in capitals is an acronym, so it stays")
 
     // A shorthand the user switched off stays as typed, and autocorrect still leaves it alone. The others still go.

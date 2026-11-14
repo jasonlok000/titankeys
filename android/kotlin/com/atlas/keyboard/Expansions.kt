@@ -71,6 +71,15 @@ class Expansions(
 
     companion object {
         const val MAX_NAME = 40
+
+        /**
+         * Whether saving [key] would replace one of the user's own in [existing] that isn't the one being changed, [previous]. Keys
+         * match in any case. Saving onto one replaced it without a word, up to 4,000 characters of a snippet (bug hunt #15).
+         */
+        fun taken(key: String, previous: String?, existing: Collection<String>): Boolean {
+            val wanted = key.lowercase()
+            return wanted != previous?.lowercase() && existing.any { it.lowercase() == wanted }
+        }
         const val MIN_SHORTCODE = 2
         private const val LABEL_LENGTH = 24
         private const val OPENERS = "\"'([{“‘"
@@ -83,16 +92,21 @@ class Expansions(
 
         /**
          * The code at the end of [before]: [mark] and at least [minName] name characters, with nothing before the mark but
-         * the start of the text, a space or an opening mark. A mark at [freeMark] needs none of them.
+         * the start of the text, a space or an opening mark. A mark at [freeMark] needs none of them, unless it ends a sentence:
+         * "coming?" then "omw" is a question and a word, never the snippet "?omw" (bug hunt #14).
          */
         fun codeAt(before: String, mark: Char, minName: Int, freeMark: Int = -1): String? {
             var index = before.length
             while (index > 0 && before.length - index < MAX_NAME && nameChar(before[index - 1])) index--
             if (index == 0 || before[index - 1] != mark || before.length - index < minName) return null
             val markAt = index - 1
-            if (markAt != freeMark && !opens(before, markAt)) return null
+            val free = markAt == freeMark && mark !in SENTENCE_ENDS
+            if (!free && !opens(before, markAt)) return null
             return before.substring(markAt)
         }
+
+        /** Marks that end a sentence. One that took the place of a space ends the sentence, and starts no code. */
+        private const val SENTENCE_ENDS = ".!?"
 
         /** Whether a code may start at [at]: at the start of the text, or after a space or an opening mark. */
         private fun opens(before: String, at: Int) = at == 0 || before[at - 1].isWhitespace() || before[at - 1] in OPENERS

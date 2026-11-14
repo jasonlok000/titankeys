@@ -267,6 +267,11 @@ class Composer(
     var log: EditLog? = null
     /** Only the keyboard sets this, and only while the setting is on, so replaying a recording never changes a word. */
     var autocorrect: Autocorrect? = null
+    /**
+     * Set only while Fix typos is off and Spell out shorthand is on: its word data spells out shorthand and does nothing else, as
+     * Spell out shorthand is its own setting (bug hunt #13).
+     */
+    var shorthandOnly: Autocorrect? = null
     /** Snippets and emoji shortcodes, or null when there are none. */
     var expansions: Expansions? = null
     /**
@@ -304,7 +309,7 @@ class Composer(
         // Another field, or a password, starts with nothing remembered.
         val owner = next?.let { it.packageName to it.fieldId }
         if (owner != rememberedField) {
-            autocorrect?.newField()
+            (autocorrect ?: shorthandOnly)?.newField()
             lowercaseI = null
             // Words from the last field mean nothing here. A restart of this field keeps its words until new ones arrive.
             show(emptyList())
@@ -1378,8 +1383,9 @@ class Composer(
 
     private fun observe(text: String) {
         val corrects = field.autocorrect && autocorrect != null
-        if (corrects) autocorrect?.using?.invoke()
-        if (!field.learning && !corrects && !capitalsOn() || selection.start < 0 || selection.end < 0) {
+        val shorthand = field.autocorrect && shorthandOnly != null
+        if (corrects) autocorrect?.using?.invoke() else if (shorthand) shorthandOnly?.using?.invoke()
+        if (!field.learning && !corrects && !shorthand && !capitalsOn() || selection.start < 0 || selection.end < 0) {
             manualWord.clear()
             return
         }
@@ -1445,6 +1451,9 @@ class Composer(
 
     private fun corrector(): TypedCorrector? = autocorrect?.takeIf { field.autocorrect }?.corrector
 
+    /** The word data for the shorthand step alone, while Fix typos is off. See [shorthandOnly]. */
+    private fun shorthandCorrector(): TypedCorrector? = shorthandOnly?.takeIf { field.autocorrect }?.corrector
+
     /**
      * Whether "i" and its contractions get their capital here. That's any field of plain text, even where typo fixes are off
      * or before their word data has loaded, but never in a password, an address or exact typing: the fields that get a
@@ -1465,7 +1474,7 @@ class Composer(
     /** The typed word that ends at the cursor, as it stands in the text. Null if the text there is anything else. */
     private fun typedWordAt(anchor: Snapshot): String? {
         val before = anchor.before
-        if (corrector() == null && !capitalsOn() || before == null || !anchor.available || !anchor.knownSelection || anchor.selected) return null
+        if (corrector() == null && shorthandCorrector() == null && !capitalsOn() || before == null || !anchor.available || !anchor.knownSelection || anchor.selected) return null
         if (anchor.after?.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) return null
         val raw = manualWord.current()
         val start = before.length - raw.length
@@ -1497,9 +1506,10 @@ class Composer(
         guideFix(word, before)?.let { return it }
         val corrector = corrector()
         if (keptLowercase(word, before.dropLast(word.length))) return null
-        // Without the word data, only "i" changes.
+        // Without the word data, only "i" changes. With Fix typos off, shorthand still spells out.
         val fix = (if (corrector != null) corrector.check(word, before.dropLast(word.length), endedWord?.word)
-            else capitalI(word, before.dropLast(word.length))) ?: return null
+            else shorthandCorrector()?.shorthandFix(word, before.dropLast(word.length)) ?: capitalI(word, before.dropLast(word.length)))
+            ?: return null
         return fix.takeIf { before.endsWith(it.typed) && allowedFix(it) }
     }
 
@@ -1685,11 +1695,18 @@ class Composer(
     }
 
     /** Backspace straight after a fix puts back what the user typed. That word then stays as it is for this session. */
+    /**
+     * Whether [before], the editor's window of text before the cursor, ends with [text]. A snippet can be longer than the window
+     * ([Editor.CONTEXT_LENGTH]), and then the whole window is its end: one over 2,048 characters couldn't be undone (bug hunt #30).
+     */
+    private fun endsWithWhole(before: String?, text: String) = before != null &&
+        (before.endsWith(text) || before.length >= Editor.CONTEXT_LENGTH && text.endsWith(before))
+
     private fun undoCorrection(): Boolean {
         val pending = undo ?: return false
         undo = null
         val anchor = snapshot()
-        if (anchor != pending.snapshot || anchor.selected || anchor.before?.endsWith(pending.replaced) != true) return false
+        if (anchor != pending.snapshot || anchor.selected || !endsWithWhole(anchor.before, pending.replaced)) return false
         val showing = composition
         invalidate(false)
         if (showing !is Composition.Swiped) {
@@ -1729,7 +1746,7 @@ class Composer(
             confirmState(accepted)
             return true
         }
-        autocorrect?.undone(pending.word)
+        (autocorrect ?: shorthandOnly)?.undone(pending.word)
         if (pending.keptAsTyped) {
             val before = accepted.before.orEmpty().dropLast(pending.restored.length)
             if (field.learning) autocorrect?.keep(pending.word, before)

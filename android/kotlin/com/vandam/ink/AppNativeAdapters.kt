@@ -46,6 +46,7 @@ import com.atlas.keyboard.RawLog
 import com.atlas.keyboard.FreshStart
 import com.atlas.keyboard.SettingsReset
 import com.atlas.keyboard.SetupPart
+import com.atlas.keyboard.Expansions
 import com.atlas.keyboard.Snippets
 import com.atlas.keyboard.Trace
 import com.atlas.keyboard.TouchpadPreview
@@ -247,7 +248,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     val shorthand = data.getString("shorthand").trim()
                     val full = data.getString("full").trim()
                     Shorthand.problem(shorthand, full)?.let { throw IllegalArgumentException(it) }
-                    data.optString("previous").takeIf { it.isNotEmpty() }?.let { TypingSettings.ownShorthand(activity, Shorthand.key(it), null) }
+                    val previous = data.optString("previous").takeIf { it.isNotEmpty() }
+                    if (Expansions.taken(Shorthand.key(shorthand), previous?.let(Shorthand::key), TypingSettings.ownShorthand(activity).keys))
+                        throw IllegalArgumentException("You already have ${Shorthand.key(shorthand)}. Change that one, or pick another shorthand.")
+                    previous?.let { TypingSettings.ownShorthand(activity, Shorthand.key(it), null) }
                     TypingSettings.ownShorthand(activity, Shorthand.key(shorthand), full)
                     "null"
                 }

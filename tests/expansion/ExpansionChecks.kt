@@ -22,6 +22,7 @@ fun main() {
     stripChoices()
     otherStarts()
     labels()
+    savingOntoYourOwn()
     exactApps()
     exactSymbols()
     exactWrappers()
@@ -102,6 +103,18 @@ private fun shortcodesExpandOnColon() {
     same(Expansions(emptyMap(), ';', emptyMap()).shortcode("ok :smile"), null, "shortcodes off")
 }
 
+/** Bug hunt #15: adding "addr", or renaming "sig" to "addr", replaced the "addr" you had without a word. */
+private fun savingOntoYourOwn() {
+    val own = listOf("addr", "sig")
+    same(Expansions.taken("addr", null, own), true, "Adding one you already have is refused")
+    same(Expansions.taken("ADDR", null, own), true, "In any case")
+    same(Expansions.taken("addr", "sig", own), true, "Renaming onto another one you have is refused")
+    same(Expansions.taken("addr", "addr", own), false, "Saving the one you're changing, under its own name, goes")
+    same(Expansions.taken("Addr", "addr", own), false, "Changing only its case goes")
+    same(Expansions.taken("home", "addr", own), false, "Renaming to a free name goes")
+    same(Expansions.taken("home", null, own), false, "Adding a new one goes")
+}
+
 private fun codesNeedASpaceBefore() {
     val expansions = Expansions(snippets, ';', emoji)
     same(expansions.shortcode("at 12:30"), null, "a time")
@@ -113,6 +126,14 @@ private fun codesNeedASpaceBefore() {
         "a colon that took the place of a space starts a code, and the space comes back")
     same(expansions.snippet("at;addr", freeMark = 2)?.text, " 1 Main Street\nSpringfield ", "the same for a snippet")
     same(expansions.shortcode("ok:smile", freeMark = 1), null, "only at that place")
+    // Bug hunt #14: with "?" or "!" as the start, a sentence's mark that took a space's place was taken as the start, and
+    // "coming?" then "omw" lost its "?".
+    for (start in listOf('?', '!')) {
+        val marked = Expansions(snippets + ("omw" to "on my way") + ("ty" to "thank you"), start, emoji)
+        same(marked.snippet("coming${start}omw", freeMark = 6), null, "A sentence's $start then a word is no snippet")
+        same(marked.choices("Thanks${start}ty", 3, freeMark = 6), emptyList<Expansions.Choice>(), "Nor is it offered on the bar")
+        same(marked.snippet("coming ${start}omw")?.text, "on my way ", "After a space, $start still starts a snippet")
+    }
 }
 
 private fun stripChoices() {

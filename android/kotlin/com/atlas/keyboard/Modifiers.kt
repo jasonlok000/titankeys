@@ -89,6 +89,21 @@ class Modifiers {
         else -> Backspace.Letter
     }
 
+    /** What the Backspace press now going does, decided at its first event. See [backspacePress]. */
+    private var pressDoes: Backspace? = null
+
+    /**
+     * What a Backspace event does. A press decides once, at its first event, so its repeats go on the same way after a tapped Alt
+     * is used up. A press whose first event was lost decides at the first one that arrives, never with the last press's choice.
+     */
+    fun backspacePress(repeat: Int, meta: Int, altForward: Boolean, shiftWord: Boolean = true): Backspace =
+        pressDoes.takeIf { repeat > 0 } ?: backspaceDoes(meta, altForward, shiftWord).also { pressDoes = it }
+
+    /** Backspace was let go, so the next press decides afresh even if its first event is lost (bug hunt #38). */
+    fun backspaceReleased() {
+        pressDoes = null
+    }
+
     /** After a Backspace: with Alt on, Backspace deleted forward or went to the app as Alt + Backspace, and uses Alt up, as a
      * character would. Otherwise only held modifiers count as used. */
     fun afterBackspace() {
@@ -109,6 +124,22 @@ class Modifiers {
             if (alt != Level.Off) meta = meta or KeyEvent.META_ALT_ON
             return KeyEvent.normalizeMetaState(meta)
         }
+
+    /**
+     * The modifiers that go with a key that the app handles: a shortcut, Tab, an arrow, or a steer of the cursor. A [textKey]
+     * types, so it takes them all. Otherwise a Shift that came on by itself, Caps, or a tapped Shift on a [steer] is for the next
+     * letter: an arrow must not become a selection that the letter then replaces, nor Ctrl + Z a redo (bug hunt #4). A Shift held
+     * down still goes with any key, as on a PC, and a tapped Shift still goes with the next shortcut, as Ctrl + Shift + Z.
+     */
+    fun commandMeta(textKey: Boolean, steer: Boolean = false): Int {
+        val shifted = shift != Level.Off && !autoShiftWaits
+        val keepShift = textKey || holding(Key.Shift) || shift == Level.Once && !autoShifted && !steer
+        var meta = 0
+        if (shifted && keepShift) meta = meta or KeyEvent.META_SHIFT_ON
+        if (shift == Level.Locked && textKey) meta = meta or KeyEvent.META_CAPS_LOCK_ON
+        if (alt != Level.Off) meta = meta or KeyEvent.META_ALT_ON
+        return meta
+    }
 
     private fun level(key: Key) = when (key) {
         Key.Shift -> shift
@@ -220,18 +251,22 @@ class Modifiers {
     fun isCtrl(code: Int) = code == KeyEvent.KEYCODE_CTRL_LEFT || code == KeyEvent.KEYCODE_CTRL_RIGHT || fnIsCtrl && code == FN
 
     fun key(event: KeyEvent) {
-        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) down(event.keyCode, event.eventTime)
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) down(event.keyCode, event.eventTime, event.metaState)
         else if (event.action == KeyEvent.ACTION_UP) up(event.keyCode, event.eventTime)
     }
 
-    fun down(code: Int, time: Long) {
+    /**
+     * A key's press. [meta] is the press's own meta state, which Android sets from the keys physically down: Alt + Sym switches
+     * keyboards even when Alt's own press never reached the keyboard, as Key Mapper took a Shift press once (bug hunt #24).
+     */
+    fun down(code: Int, time: Long, meta: Int = 0) {
         if (isCtrl(code)) {
             ctrlKeys += code
             return
         }
         if (code == KeyEvent.KEYCODE_SYM) {
             if (!symHeld) {
-                if (panel == Panel.Closed && holding(Key.Alt) && altSymSwitches) {
+                if (panel == Panel.Closed && (holding(Key.Alt) || meta and KeyEvent.META_ALT_ON != 0) && altSymSwitches) {
                     useHeld()
                     keyboardSwitch = true
                 } else pressSym()
@@ -297,6 +332,7 @@ class Modifiers {
         panel = Panel.Closed
         held.clear()
         usedWhileHeld.clear()
+        pressDoes = null
         symHeld = false
         keyboardSwitch = false
         if (keepCtrl) return

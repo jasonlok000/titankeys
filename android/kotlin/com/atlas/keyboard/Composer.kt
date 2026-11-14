@@ -803,10 +803,12 @@ class Composer(
         val pending = fullStop
         fullStop = null
         when {
-            !field.fullStops || anchor.selected -> if (!edit(EditCause.Space, 0, " ")) return
-            automaticSpace == anchor && before.endsWith(" ") -> {
-                if (!repeated && endsWord(before.dropLast(1))) fullStop = FullStop(time, anchor)
+            // A swiped or picked word already put its space: Space keeps it, in every field. Only the full stop that a quick second
+            // Space makes depends on the field (bug hunt #5: an address bar got two spaces).
+            automaticSpace == anchor && before.endsWith(" ") && !anchor.selected -> {
+                if (field.fullStops && !repeated && endsWord(before.dropLast(1))) fullStop = FullStop(time, anchor)
             }
+            !field.fullStops || anchor.selected -> if (!edit(EditCause.Space, 0, " ")) return
             !repeated && pending != null && time - pending.time in 0..FULL_STOP_MILLIS && autoPunctuation()
                 && anchor.available && anchor == pending.snapshot -> {
                 // Two spaces after a sentence give this full stop two spaces as well.

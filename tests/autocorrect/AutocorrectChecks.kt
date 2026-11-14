@@ -2505,6 +2505,21 @@ private fun favourites() {
     same(far.word, "car", "A favourite that fits clearly worse stays behind")
 }
 
+/** The typing findings of docs/bug-hunt-2.1.md, each as it was found: they failed before their fixes. */
+private fun bugHunt(world: Realistic) {
+    val url = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI, 0)
+
+    // #5: in an address bar, Space after a swiped or picked word gave two spaces. The word puts its space, and Space keeps it.
+    same(Typist(world, field = url).swipe("weather").type(" ").text, "weather ", "#5: Space after a swiped word in an address bar adds none")
+    same(Typist(world).swipe("weather").type(" ").text, "weather ", "#5: as in any other field")
+    Typist(world, field = url).also { it.words.completions = listOf("weather") }.type("wea").also { typist ->
+        val at = typist.bar.indexOf("weather")
+        must(at >= 0, "#5: the bar offers \"weather\" for \"wea\" in an address bar, not ${typist.bar}")
+        same(typist.choose(at).type(" ").text, "weather ", "#5: Space after a picked word in an address bar adds none")
+    }
+    same(Typist(world, field = url).type("ab  ").text, "ab  ", "#5: two typed spaces stay two in an address bar, with no full stop")
+}
+
 fun main() {
     val world = Realistic()
     favourites()
@@ -2523,6 +2538,7 @@ fun main() {
     capitalI(world)
     apostrophes(world)
     fixSwitches(world)
+    bugHunt(world)
     simulation(world)
     speed(world)
     if (failures.isNotEmpty()) {

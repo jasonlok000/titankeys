@@ -960,6 +960,11 @@ enders\gesture-line
   think for me, in case the user didn't really expect me to prank"). After the nice clip pastes "I hope you're doing great,
   genuinely", the slide says "Didn't see that coming, did you?" (GuideSteps.kt, done), which falls flat for anyone who did
   see it coming. New line along the owner's "No, seriously..." so it works either way; the exact words to settle in 3.0.
+- **3.0: "I already know everything" goes to the playground** (owner, 2026-11-14: "I alrd know everything puts me at the setup
+  screen. It shd be playground. Setup screen shd only show when there's sth left to be setup or at the beginning."). Today
+  the guide's leave pop-up (GuideActivity.kt, LEAVE_YES) just closes the guide, and the app's page under it shows Setup. In
+  3.0: to the playground; Setup only on first launch or while a step is still To do. Check then whether a step wrongly said
+  To do on the owner's fresh install.
 - **Everything in one place** (owner, 2026-11-14: "We had a rule from atlas that the repo itself stays clean from tools and
   dev stuff etc but I don't like that idea so I want everything in one place"). The dev tools move into the repo: WSL
   ~/build/tk-tools (verify.sh, keyboard.sh, play-bundle.sh and the rest), the phone scripts and the quick preview pages

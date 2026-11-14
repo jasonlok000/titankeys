@@ -1695,11 +1695,18 @@ class Composer(
     }
 
     /** Backspace straight after a fix puts back what the user typed. That word then stays as it is for this session. */
+    /**
+     * Whether [before], the editor's window of text before the cursor, ends with [text]. A snippet can be longer than the window
+     * ([Editor.CONTEXT_LENGTH]), and then the whole window is its end: one over 2,048 characters couldn't be undone (bug hunt #30).
+     */
+    private fun endsWithWhole(before: String?, text: String) = before != null &&
+        (before.endsWith(text) || before.length >= Editor.CONTEXT_LENGTH && text.endsWith(before))
+
     private fun undoCorrection(): Boolean {
         val pending = undo ?: return false
         undo = null
         val anchor = snapshot()
-        if (anchor != pending.snapshot || anchor.selected || anchor.before?.endsWith(pending.replaced) != true) return false
+        if (anchor != pending.snapshot || anchor.selected || !endsWithWhole(anchor.before, pending.replaced)) return false
         val showing = composition
         invalidate(false)
         if (showing !is Composition.Swiped) {

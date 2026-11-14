@@ -1193,6 +1193,11 @@ private fun expansions(world: Realistic) {
     fun slash() = Typist(world).also { it.composer.expansions = Expansions(snippets + ("or" to "OR") + ("2" to "two"), '/', emoji) }
     same(slash().type("at /addr ").text, "at 1 Main Street ", "Space after a / shortcut puts in the snippet")
     same(slash().type("at /addr ").backspace().text, "at /addr ", "Backspace straight after puts the / shortcut back")
+    // Bug hunt #30: a snippet longer than the editor's window of text, up to the 4,000 characters Settings takes.
+    val long = "x".repeat(3000)
+    val longSnippet = Typist(world).also { it.composer.expansions = Expansions(mapOf("long" to long), '/', emoji) }
+    same(longSnippet.type("at /long ").text, "at $long ", "A long snippet goes in")
+    same(longSnippet.backspace().text, "at /long ", "Backspace straight after puts the shortcut of a long snippet back")
     same(slash().type("/hi ").text, "Hello there ", "A / shortcut at the start of the text")
     same(slash().type("at /adr ").text, "at /adr ", "A / with no saved shortcut stays, with its space where it was typed")
     for (typed in listOf("this and/or that ", "see http://example.com/addr ", "on 1/2 and 12/25/2026 ", "in /usr/bin ", "r/android ",

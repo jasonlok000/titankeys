@@ -369,7 +369,11 @@ enders\gesture-line
         close to the corners"): cal-tool/clip.html, the bar 1:1 at Normal with the clip cut and not cut, the automatic capital's
         arrow with Up and In sliders, and the same arrow beside words. Checked on the phone against the owner's screenshot
         (arrow and clip within 2 px). The owner's tries so far (cal-values.log): Up 5.5 with In swept 0 to 16 and back to 0;
-        then beside words, Up down to 1.5 and back to 3.5, In 0. Waiting on the owner's pick.
+        then beside words, Up down to 1.5 and back to 3.5, In 0. Picked (owner, 23:32): Up 3.0 dp, In 0 ("This is what I want
+        for cap"). The clip icon, asked about ("I don't know if the clip icon is aligned"): measured from its own bars, uncut
+        it runs 1151 to 1187 px with its middle at 1169.4, the digits' middle 1169.0, the arrow at Up 3 1168.3, so it is level;
+        it only looked off with its bottom edge cut. For W once the owner says go: the crop fix and the arrow at 3 dp (scaled
+        with the Bar text size), with renders at all three sizes.
     - **Owner on #19's swipe trail: "Is the swipe supposed to be fixed now? I think it looks really cramped".** It is C's
       2aa9486 (the owner's "compress slide animation ... center aligned properly with the border and like doesn't hit the bottom
       edge"). Measured: the rows went from 14 to 8.7 dp apart (the trail 26 dp tall instead of 42), and the bottom row's middle

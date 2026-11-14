@@ -294,6 +294,11 @@ What the owner asked for, what's decided and by whom, and what's still open. The
   For the Play launch, not 2.1. No custom device badge was found for Play listings. The plan instead: make it available only on
   the Titan 2 Elite in Play Console's device catalog (if its model is listed), and say "Built for the Titan 2 Elite" in the short
   description, feature graphic and screenshots. Recorded in the Play plan. (Orchestrator)
+- **The automatic capital's arrow sits 3 dp over the words' line** (owner, 2026-11-14, on the quick page cal-tool/clip.html,
+  "This is what I want for cap", after "I think the issue with the uppercase is visually it looks too low because its too close to
+  the corners"). (Owner) Up 3.0 dp at Normal, not moved in from the corner, beside words and beside a clip alike. The
+  Orchestrator's reading (unapproved): 3 dp at Normal scales with the Bar text size like everything else in the bar (2.5 at
+  Smaller, 3.5 at Bigger); its middle is then level with the capitals' middle, within a pixel of a clip's digits and its icon.
 - **The 11 dp line, round 2** (owner, 2026-11-13, on build #13: "With the illusion shift, the modifier bar is not done well. The
   delete cursor looks visibly too far up not vertically center aligned. Space gestures seems also not be optimized… The position
   and scaling of the word menu effects seems inconsistent. Like the book seems to be much higher up than the heart animation. I

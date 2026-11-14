@@ -2,8 +2,10 @@ package com.atlas.keyboard
 
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Shader
 import android.graphics.Typeface
 import kotlin.math.PI
 import kotlin.math.sin
@@ -56,6 +58,30 @@ internal class IdleDrawing {
         }
         if (rope != null && !behind) rope(canvas, rope, look, false)
         canvas.restore()
+    }
+
+    private val floorPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var floorKey = ""
+
+    /**
+     * The floor (owner, 2026-11-13, of the phone preview: "let's do 3"), in the strip's own pixels, before the game: a line [thick] high whose bottom is at [bottom],
+     * where the game's floor is, so what stands on the floor stands on it. It runs from [left] to [right], clear of the screen's
+     * curved corners, and fades out over [fade] at each end. [IdlePlayer.floor] says how much of it shows: none at rest, or in a
+     * game that doesn't use the floor. The screen's edge blends into the black border under it, so without it the figure
+     * stood on nothing.
+     */
+    fun floor(canvas: Canvas, amount: Float, left: Float, right: Float, bottom: Float, thick: Float, fade: Float, look: Look) {
+        if (amount <= 0f || right - left <= 2 * fade) return
+        val key = "$left $right ${look.floorLine}"
+        if (key != floorKey) {
+            floorKey = key
+            val clear = look.floorLine and 0xFFFFFF
+            val end = fade / (right - left)
+            floorPaint.shader = LinearGradient(left, 0f, right, 0f, intArrayOf(clear, look.floorLine, look.floorLine, clear),
+                floatArrayOf(0f, end, 1 - end, 1f), Shader.TileMode.CLAMP)
+        }
+        floorPaint.alpha = (amount.coerceIn(0f, 1f) * 255).toInt()
+        canvas.drawRect(left, bottom - thick, right, bottom, floorPaint)
     }
 
     /** The arrow's line width, in the games' units: [Strip] sets it to match its own arrow. */

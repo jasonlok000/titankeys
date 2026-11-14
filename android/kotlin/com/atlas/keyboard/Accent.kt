@@ -29,6 +29,9 @@ internal object Accent {
     /** The accent now: orange, or cream with Orange accents off. */
     val colour: Int get() = if (on) ORANGE else CREAM
 
+    /** The text's cream whatever the setting, for a mark that is cream by design, such as the idle games' floor ([Look.floorLine]). */
+    const val TEXT_CREAM = CREAM
+
     /** The accent for a drawing told the setting itself, such as [Look]: orange, or [off]. */
     fun of(orange: Boolean, off: Int = CREAM) = if (orange) ORANGE else off
 

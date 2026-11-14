@@ -1202,6 +1202,9 @@ class Strip(
     private var idleEdge = 0
 
     val idling get() = idle != null
+    /** The idle games' floor: 1 dp high, and its ends fade over 16 dp. See [IdleDrawing.floor]. */
+    private val floorThick = FixedScale.fixedPx(context, 1f)
+    private val floorFade = FixedScale.fixedPx(context, 16f)
 
     /**
      * Starts an idle game with the words on the bar, if plain words show: [kind], or one picked by rarity among the games the
@@ -1276,6 +1279,10 @@ class Strip(
             post { if (idle === player) stopIdle() }
             return
         }
+        // The floor, under the game: its bottom at the game's floor, and its ends clear of the curved corners by the edge's distance.
+        val floorBottom = Idle.FLOOR * idleScale
+        val floorInset = corners.clearInset(height - floorBottom, edge).toFloat()
+        idleDrawing.floor(canvas, player.floor, floorInset, width - floorInset, floorBottom, floorThick, floorFade, look)
         canvas.save()
         canvas.translate(idleEdge.toFloat(), 0f)
         idleDrawing.draw(canvas, player, idleScale, idleTypefaces, look)

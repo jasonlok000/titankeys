@@ -210,6 +210,11 @@ internal class Figure(var x: Float, var feet: Float) {
 /** A game on the bar. [update] moves it on by some milliseconds and returns false once it is over. */
 internal abstract class IdleGame(val glyphs: List<Glyph>, val width: Float, val random: Random) {
     open val figure: Figure? get() = null
+    /**
+     * How much of the floor shows, 0 to 1: the line at [Idle.FLOOR] that things stand on (owner, 2026-11-13, of the phone preview: "let's do 3"). Only a game that
+     * uses the floor has it (the figure's, Race, the Firework and Juggling's Drop), fading in and out with the game's own fades.
+     */
+    open val floor: Float get() = 0f
     /** True for a game that is only a way home, so it is never chosen to play while idle. */
     open val returning: Boolean get() = false
     abstract fun update(dt: Float): Boolean
@@ -504,6 +509,8 @@ internal class Bowling(glyphs: List<Glyph>, width: Float, random: Random) : Idle
     private val spotY: FloatArray
     private val roll = 560 + random.nextFloat() * 140
     override val figure = Figure(Figure.ENTER, FEET).also { it.alpha = 0f }
+    /** The floor comes and goes with the figure, which stands on it. */
+    override val floor get() = figure.alpha
     private var t = 0f
     private var phase = Phase.Intro
     private var settled = 0f
@@ -748,6 +755,8 @@ internal class Race(glyphs: List<Glyph>, width: Float, random: Random) : IdleGam
     /** How much of the finish line shows, for the drawing, and where it is. */
     var line = 0f; private set
     val lineX get() = finish + 4
+    /** The floor comes and goes with the finish line: the bottom lane runs on it. */
+    override val floor get() = line
     /** The finish line's ends, with its round caps inside the bar. */
     val lineTop = Idle.TOP + 3
     val lineBottom = Idle.FLOOR - 3
@@ -859,6 +868,8 @@ internal class Juggle(glyphs: List<Glyph>, width: Float, random: Random) : IdleG
     private val fromX = FloatArray(glyphs.size) { glyphs[it].x }
     private val fromY = FloatArray(glyphs.size) { glyphs[it].y }
     override val figure = Figure(width - Figure.ENTER, feet).also { it.alpha = 0f }
+    /** The floor comes with the figure, which stands on it. */
+    override val floor get() = figure.alpha
     private var t = 0f
     private var playing = 0f
     private val handY = feet - Figure.NECK + 6 + 18
@@ -965,6 +976,9 @@ internal class Drop(glyphs: List<Glyph>, width: Float, random: Random, figure: F
     override val figure = figure?.copy()
     private var t = 0f
     private var home: HomeTween? = null
+    private var homeT = 0f
+    /** The letters fall onto the floor, so it stays, and goes as they hop home. */
+    override val floor get() = if (home == null) 1f else 1 - Idle.smooth(homeT / HOME)
 
     init {
         // Dropped: a little sideways push, and down they go.
@@ -984,14 +998,16 @@ internal class Drop(glyphs: List<Glyph>, width: Float, random: Random, figure: F
                     if (g.y + g.below() > Idle.FLOOR) { g.y = Idle.FLOOR - g.below(); g.vy = -g.vy * .35f; g.vx *= .7f }
                 }
             }
-            if (t >= FALL) home = HomeTween(glyphs, 420f, 12f)
+            if (t >= FALL) home = HomeTween(glyphs, HOME, 12f)
             return true
         }
+        homeT += dt
         return !home!!.update(dt)
     }
 
     private companion object {
         const val FALL = 380f
+        const val HOME = 420f
     }
 }
 
@@ -1124,6 +1140,12 @@ internal class Firework(glyphs: List<Glyph>, width: Float, random: Random, priva
     private var t = 0f
     private var phase = 0
     private var home: HomeTween? = null
+    /** The floor comes as the letters gather to the rocket's launch spot, and goes as they float home. */
+    override val floor get() = when (phase) {
+        0 -> Idle.smooth(t / GATHER)
+        1, 2 -> 1f
+        else -> 1 - Idle.smooth(t / HOME)
+    }
 
     init {
         glyphs.forEach { it.vx = 0f; it.vy = 0f; it.rot = Idle.wrapAngle(it.rot) }
@@ -1183,7 +1205,7 @@ internal class Firework(glyphs: List<Glyph>, width: Float, random: Random, priva
                         if (g.x < 12 || g.x > width - 12) { g.x = Idle.clamp(g.x, 12f, width - 12); g.vx = -g.vx * .3f }
                     }
                 }
-                if (t >= BURST) { phase = 3; t = 0f; home = HomeTween(glyphs, 900f, 14f) }
+                if (t >= BURST) { phase = 3; t = 0f; home = HomeTween(glyphs, HOME, 14f) }
             }
         }
         for (s in sparks) { s.life += dt; s.x += s.vx * dt / 1000; s.y += s.vy * dt / 1000 }
@@ -1197,6 +1219,7 @@ internal class Firework(glyphs: List<Glyph>, width: Float, random: Random, priva
         const val GATHER = 650f
         const val LAUNCH = 520f
         const val BURST = 1500f
+        const val HOME = 900f
         const val GRAVITY = 70f
         const val DRAG = 1.5f
         const val APEX = 16f
@@ -1230,6 +1253,12 @@ internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val
     /** True once you came back and the letters are on their way home. */
     val returning get() = game.returning
     private var played = 0f
+    /** The floor as you came back, and how long ago: a way home with no floor of its own fades it out as quickly as [Exit]. */
+    private var floorBack = 0f
+    private var sinceBack = 0f
+
+    /** How much of the floor shows now, 0 to 1: see [IdleGame.floor]. */
+    val floor get() = max(game.floor, floorBack * (1 - Idle.smooth(sinceBack / Idle.EXIT_MILLIS)))
 
     private fun make(kind: Kind): IdleGame = when (kind) {
         Kind.Drift -> Drift(glyphs, width, random)
@@ -1246,6 +1275,7 @@ internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val
      * game that plays once, or after a loop's own way home once it has played [LOOP_MILLIS].
      */
     fun update(dt: Float): Boolean {
+        if (game.returning) sinceBack += dt
         if (!game.returning) {
             played += dt
             if (kind.loops && played >= LOOP_MILLIS) {
@@ -1264,6 +1294,8 @@ internal class IdlePlayer(val glyphs: List<Glyph>, val width: Float, private val
         if (game.returning) return
         val current = game
         val figure = current.figure
+        floorBack = current.floor
+        sinceBack = 0f
         if (way != null) {
             // The debug build's trigger asks for a way home by name, to show each one.
             game = when (way) {

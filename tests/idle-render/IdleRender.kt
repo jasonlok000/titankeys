@@ -4,6 +4,7 @@ import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics2D
+import java.awt.LinearGradientPaint
 import java.awt.RenderingHints
 import java.awt.Shape
 import java.awt.font.FontRenderContext
@@ -36,7 +37,9 @@ import kotlin.random.Random
  * - The sweep plays every game and every way home, at every Bar text size, on several bars and seeds, and looks at every frame at
  *   60 fps: the outline of every letter as drawn (its own shape, turned and scaled), the figure, the rope, the sparks and the
  *   finish line. It fails if anything that shows comes within 4 px of the screen's outline (its bottom edge or its corners' curve,
- *   as tools/corner_check.py measures), is cut by the bar's top, or jumps between two frames.
+ *   as tools/corner_check.py measures), is cut by the bar's top, or jumps between two frames. The floor's line too (owner,
+ *   2026-11-13: "let's do 3"): it must show only in a game that uses the floor, never at rest, fade rather than pop, and keep
+ *   clear of the outline where it shows.
  * - The keyframes: for each game and its way home, 8 to 12 frames at each size, each as the screen's bottom (for corner_check.py),
  *   and a sheet per game and size with the black border under the screen and the band's middle drawn in.
  *
@@ -63,6 +66,13 @@ internal object IdleRender {
     private lateinit var bold: Font
     private val INK = Color.WHITE
     private val MUTED = Color(0x88, 0x88, 0x88)
+    /** The floor's line: the text's cream at 55%, 1 dp high, its ends fading over 16 dp ([IdleDrawing.floor]). */
+    private val CREAM = Color(0xFF, 0xF1, 0xE6)
+    private const val FLOOR_ALPHA = 140 / 255f
+    private val FLOOR_THICK = 1 * BarLine.UNIT
+    private val FLOOR_FADE = 16 * BarLine.UNIT
+    /** How bright the cream is, as corner_check.py weighs it, out of 255. */
+    private const val CREAM_GREY = (255 * 299 + 0xF1 * 587 + 0xE6 * 114) / 1000f
     private val ACCENT get() = Color(Accent.colour and 0xFFFFFF)
 
     private fun width(font: Font, size: Float, text: String) = font.deriveFont(size).getStringBounds(text, frc).width.toFloat()
@@ -81,6 +91,10 @@ internal object IdleRender {
         val bolds = listOf(false, true, false)
         /** The arrow's line, as Strip draws it: 1.3 dp. */
         val arrowLine = 1.3f * look.density
+        /** The floor's line, as Strip.drawIdle places it: its bottom at the game's floor, its ends clear of the corners. */
+        val floorBottom = Idle.FLOOR * scale
+        val floorLeft = Corners(RADIUS).clearInset(BAR - floorBottom, StripFit.EDGE_DP * BarLine.UNIT).toFloat()
+        val floorRight = WIDTH - floorLeft
 
         fun glyphs(): List<Glyph> {
             val room = WIDTH - 2f * look.side
@@ -208,6 +222,13 @@ internal object IdleRender {
             worstTop?.let { found += it }
         }
         val game = player.game
+        // The floor's line: the part that shows, where its fading ends are bright enough for corner_check.py to count.
+        val strength = CREAM_GREY * FLOOR_ALPHA * player.floor / 255f
+        if (strength > SHOWS) {
+            val from = bar.floorLeft + FLOOR_FADE * SHOWS / strength
+            val to = bar.floorRight - FLOOR_FADE * SHOWS / strength
+            points("the floor", Rectangle2D.Float(from, bar.floorBottom - FLOOR_THICK, to - from, FLOOR_THICK), 0f)
+        }
         for (g in player.glyphs) if (g.alpha >= SHOWS && g.scale > 0f) points("'${g.char}'", glyphShape(bar, g), 0f)
         game.figure?.let { f -> if (f.alpha >= SHOWS) for (s in figureStrokes(bar, f)) points(s.what, s.shape, s.half) }
         if (game is JumpRope && game.ropeAmount > 0 && ropeAlpha(game) >= SHOWS) points("the rope", ropeShape(bar, game), 1.5f * bar.scale)
@@ -223,7 +244,11 @@ internal object IdleRender {
     }
 
     /** A game to play: [kind], then after [comeBackAt] ms, if not over, the way home [way] (or the one comeBack picks). */
-    class Scenario(val name: String, val kind: IdlePlayer.Kind, val comeBackAt: Float?, val way: IdlePlayer.Way?)
+    class Scenario(val name: String, val kind: IdlePlayer.Kind, val comeBackAt: Float?, val way: IdlePlayer.Way?) {
+        /** Whether the floor shows: in a game that uses it (the figure's, Race, the Firework) or a way home that does (Drop, Firework). */
+        val floor = kind in setOf(IdlePlayer.Kind.Bowling, IdlePlayer.Kind.Juggle, IdlePlayer.Kind.Race, IdlePlayer.Kind.Firework) ||
+            way == IdlePlayer.Way.Drop || way == IdlePlayer.Way.Firework
+    }
 
     val scenarios = listOf(
         Scenario("drift-exit", IdlePlayer.Kind.Drift, 6000f, IdlePlayer.Way.Exit),
@@ -237,7 +262,9 @@ internal object IdleRender {
         Scenario("bowling", IdlePlayer.Kind.Bowling, null, null),
         Scenario("bowling-exit", IdlePlayer.Kind.Bowling, 1800f, IdlePlayer.Way.Exit),
         Scenario("race", IdlePlayer.Kind.Race, null, null),
+        Scenario("race-exit", IdlePlayer.Kind.Race, 2500f, IdlePlayer.Way.Exit),
         Scenario("firework", IdlePlayer.Kind.Firework, null, null),
+        Scenario("firework-exit", IdlePlayer.Kind.Firework, 1800f, IdlePlayer.Way.Exit),
         // A loop left alone goes home by itself after LOOP_MILLIS.
         Scenario("drift-alone", IdlePlayer.Kind.Drift, null, null),
         Scenario("juggle-alone", IdlePlayer.Kind.Juggle, null, null),
@@ -277,8 +304,10 @@ internal object IdleRender {
                 val track = ArrayList<List<Triple<Float, Float, Boolean>>>()
                 val times = ArrayList<Float>()
                 var glyphs: List<Glyph> = emptyList()
+                val floors = ArrayList<Float>()
                 play(bar, scenario, seed) { t, player ->
                     frames++
+                    floors += player.floor
                     glyphs = player.glyphs
                     track += player.glyphs.map { Triple(bar.edge + it.x * bar.scale, it.y * bar.scale, it.alpha >= SHOWS) }
                     times += t
@@ -289,6 +318,16 @@ internal object IdleRender {
                     }
                     if (t == 0f) for (g in player.glyphs)
                         kotlin.check(g.x == g.homeX && g.y == g.homeY) { "${scenario.name}: '${g.char}' starts away from its place" }
+                }
+                // A game these letters don't fit doesn't play.
+                if (floors.isEmpty()) continue
+                // The floor: only in a game that uses it, there all through its middle, never at the start or the end, and it fades.
+                val what = "${size.name}, $words, ${scenario.name}, seed $seed"
+                kotlin.check(floors.first() == 0f && floors.last() == 0f) { "$what: the floor shows at rest" }
+                if (scenario.floor) kotlin.check(floors.max() == 1f) { "$what: the floor never shows fully" }
+                else kotlin.check(floors.all { it == 0f }) { "$what: the floor shows in a game that doesn't use it" }
+                for (f in 1 until floors.size) kotlin.check(abs(floors[f] - floors[f - 1]) <= .3f) {
+                    "$what: the floor pops from ${floors[f - 1]} to ${floors[f]} at ${times[f]} ms"
                 }
                 // Home at the end, exactly, and every frame's move in line with the frames either side.
                 for (g in glyphs) kotlin.check(g.x == g.homeX && g.y == g.homeY && g.scale == 1f && g.rot == 0f && g.alpha == 1f) {
@@ -315,6 +354,16 @@ internal object IdleRender {
 
     private fun draw(g: Graphics2D, bar: Bar, player: IdlePlayer) {
         val game = player.game
+        if (player.floor > 0f) {
+            val a = (FLOOR_ALPHA * player.floor.coerceIn(0f, 1f) * 255).toInt()
+            val full = Color(CREAM.red, CREAM.green, CREAM.blue, a)
+            val clear = Color(CREAM.red, CREAM.green, CREAM.blue, 0)
+            val end = FLOOR_FADE / (bar.floorRight - bar.floorLeft)
+            val paint = g.paint
+            g.paint = LinearGradientPaint(bar.floorLeft, 0f, bar.floorRight, 0f, floatArrayOf(0f, end, 1 - end, 1f), arrayOf(clear, full, full, clear))
+            g.fill(Rectangle2D.Float(bar.floorLeft, bar.floorBottom - FLOOR_THICK, bar.floorRight - bar.floorLeft, FLOOR_THICK))
+            g.paint = paint
+        }
         val saved = g.transform
         g.translate(bar.edge.toDouble(), 0.0)
         g.scale(bar.scale.toDouble(), bar.scale.toDouble())
@@ -491,7 +540,8 @@ internal object IdleRender {
                         val screen = screen(bar, player)
                         ImageIO.write(screen, "png", File(dir, "%02d-%05dms.png".format(next, t.toInt())))
                         val phase = if (player.returning) "way home (${player.game::class.simpleName})" else "playing"
-                        rows += row(bar, player, "${scenario.name}, ${size.name}, %5.0f ms, $phase".format(t), screen)
+                        val floor = if (player.floor > 0f) ", floor %.0f%%".format(player.floor * 100) else ", no floor"
+                        rows += row(bar, player, "${scenario.name}, ${size.name}, %5.0f ms, ".format(t) + phase + floor, screen)
                         next++
                     }
                 }
@@ -520,7 +570,8 @@ internal object IdleRender {
             keyframes(File(out, "sheets").apply { mkdirs() }, File(out, "frames"))
         }
         kotlin.check(problems.isEmpty()) { "The idle games break the bar's line:\n" + problems.joinToString("\n") }
-        println("Every idle game and way home, at every size: nothing within 4 px of the screen's outline, nothing cut by the bar's top, no jumps")
+        println("Every idle game and way home, at every size: nothing within 4 px of the screen's outline, nothing cut by the bar's top, " +
+            "no jumps; the floor only in the games that use it, fading in and out, its line clear of the corners")
     }
 }
 

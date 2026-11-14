@@ -914,6 +914,28 @@ enders\gesture-line
   phone's keyboard fell back to Gboard: turning TitanKeys (release or Debug) on as the keyboard, and its Accessibility and
   Display over other apps, is the owner's. The reference app (com.titankeys.reference) is still atlas-signed: reinstall it
   before the next phone verify.
+- **Git bookkeeping (owner, 2026-11-14: "There should only be one branch left on the git now which is the master. Check if
+  git is fully updated."):** origin/main merged into the 2.1 work (no change to any file; it joins the 2.0.0 history), main set
+  to it (Julian's old local main kept as tag archive/local-main-atlas-2026-11-14) and pushed: GitHub's main = 3b31988 = all of
+  2.1. GitHub's default branch moved from "titankeys" to main. GitHub now has only main and gh-pages (gh-pages serves the
+  website and the privacy policy, so it stays). 147 merged local branches and 158 remote ones deleted; every unmerged one
+  first kept as an archive/<name> tag, 33 of them, all pushed to GitHub. test-2.1h deleted; the Orchestrator's worktree is on
+  main. Left: 42 worktrees with their branches (34 already in main, 8 not), each tied to a session; the engine's work stays
+  (X:\Atlas on debug-recorder with 13 unsaved changes, .dev/wt-engine2 on tk/swipe-join). Removing the others waits on the
+  owner, as it ends those sessions.
+- **Phone, fresh (owner: "Wipe my data. Install both debugging and normal signed release on my phone"):** both apps
+  uninstalled and installed fresh 08:30: TitanKeys Keyboard 2.1.0 (NightKeys-signed, 323f0a1f) and TitanKeys Debug (#23,
+  db1c2f7d). The owner had just chosen TitanKeys at 08:28, so the wipe put the keyboard back on Gboard.
+- **Later: the keyboard's language label** (owner: "It says uk btw which is leftover from atlas. Lets change that to sth else
+  later. Is there a diff one cuz our kb is international"). android/src/main/res/xml/input_method.xml declares one subtype,
+  imeSubtypeLocale="en_GB", which Android shows as "English (United Kingdom)". The Orchestrator's proposal: "en" (English, no
+  country) now, as the spelling (UK, US, Canadian) is TitanKeys' own setting; with 3.0's languages, one subtype per language
+  the user turns on, decided in the languages design (#56).
+- **Everything in one place** (owner, 2026-11-14: "We had a rule from atlas that the repo itself stays clean from tools and
+  dev stuff etc but I don't like that idea so I want everything in one place"). The dev tools move into the repo: WSL
+  ~/build/tk-tools (verify.sh, keyboard.sh, play-bundle.sh and the rest), the phone scripts and the quick preview pages
+  (cal-tool) from the Orchestrator's scratchpad, the swipe baseline tools in .dev/swipe-baseline. The Orchestrator's call
+  (unapproved): with the move off Atlas, after the pre-release, as verify.sh drives every build.
 - **3.0: back up the whole app** (owner, 2026-11-14: "let's write down to 3.0 to backup the whole app"). Today only words
   (Settings > Data > Backup) and snippets export and import; settings and switches, shorthand, app lists, calibration and the
   rest have none. One export and one import for everything, so a reinstall, a new phone or a key change loses nothing.

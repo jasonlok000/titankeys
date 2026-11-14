@@ -108,6 +108,15 @@ internal object BarLine {
         val marks = ArrayList<Mark>()
         /** How the modifier row is set up, to lay it out another way than Strip.kt's: build #13's, to show what the phone did. */
         var row: AndroidRow.Setup? = null
+        /**
+         * Lays the clip offer and the automatic capital's arrow out as build #19 did: a lone clip's drawing moved onto the line but
+         * not its box, which cut its tails and its icon; the icon centred in the box; the arrow's middle on the line.
+         */
+        var build19 = false
+        /** The automatic capital's arrow shows, so a clip keeps room for it at its left. */
+        var capitalShown = false
+        /** Ink that a box's edge cut off, which must never happen. */
+        val cut = ArrayList<String>()
         val boxes = ArrayList<Box>()
     }
 
@@ -136,6 +145,7 @@ internal object BarLine {
                 val how = "${size.name}, ${state.name}"
                 for (mark in look.marks) if (abs(mark.middle - mark.line) > .5f)
                     problems += "$how: ${mark.what}'s small letters' middle is %.2f px off the line".format(mark.middle - mark.line)
+                for (lost in look.cut) problems += "$how: $lost"
                 for (box in look.boxes) if (box.bottom > BAR - box.inside + .01f)
                     problems += "$how: ${box.what} reaches %.2f px under the bar's top, inside it by %.2f px, not %.2f".format(box.bottom, BAR - box.bottom, box.inside)
                 val risky = risky(image)
@@ -151,6 +161,7 @@ internal object BarLine {
         pairs.forEach(::println)
         BarFrames.effects(out)
         BarFrames.panel(out).forEach(::println)
+        BarFrames.build19(out, all()).forEach(::println)
         kotlin.check(problems.isEmpty()) { "The bar's line breaks:\n" + problems.joinToString("\n") }
         println("Every bar state at every size: its text on the line to half a pixel, its boxes inside the bar, nothing within 4 px of the screen's outline")
     }
@@ -313,15 +324,26 @@ internal object BarLine {
         if (hint.isNotEmpty()) mark(look, "the hint", baseline, size)
     }
 
-    /** Shift's arrow for an automatic capital, where Shift's chip would be, beside the words. */
-    private fun capital(look: Look, g: Graphics2D) {
-        words(look, g, listOf("The", "I", "This"))
-        // As Strip: the arrow .63 of the words' capitals, its middle on the line; before the line, a 14 dp chip's, centred on the bar.
+    /**
+     * Where Strip.placeCapital puts the arrow's place: its left, its top and its width, and the arrow's size, in px. Its middle sits
+     * 1/8 of the words' size over the line (3 dp beside Normal's 24 dp words); as build #19, on the line; before the line, centred.
+     */
+    fun capitalBox(look: Look): Triple<Float, Float, Float> {
         val arrow = if (look.after) look.wordPx * StripFit.CAPITALS * .63f else 14 * look.density * (1984 + 494) / 2048f + 2 * look.dp(3) - 2 * look.dp(4)
         val height = arrow + 2 * look.dp(4)
         val wide = arrow + 2 * look.dp(5)
-        val left = look.chipSide.toFloat()
-        val top = if (look.after) minOf(look.line - height / 2, look.floor - height / 2 - arrow / 2 - look.dp(1)) else (BAR - height) / 2
+        val lift = if (look.build19) 0f else look.wordPx / 8
+        val top = if (look.after) minOf(look.line - lift - height / 2, look.floor - height / 2 - arrow / 2 - look.dp(1)) else (BAR - height) / 2
+        return Triple(look.chipSide.toFloat(), top, wide)
+    }
+
+    /** Shift's arrow for an automatic capital, where Shift's chip would be, beside the words, or beside a clip offered alone. */
+    private fun capital(look: Look, g: Graphics2D, clip: String? = null) {
+        look.capitalShown = true
+        if (clip == null) words(look, g, listOf("The", "I", "This")) else clip(look, g, clip, false)
+        val arrow = if (look.after) look.wordPx * StripFit.CAPITALS * .63f else 14 * look.density * (1984 + 494) / 2048f + 2 * look.dp(3) - 2 * look.dp(4)
+        val height = arrow + 2 * look.dp(4)
+        val (left, top, wide) = capitalBox(look)
         val x = left + wide / 2 - arrow / 2
         val y = top + height / 2 - arrow / 2
         val path = Path2D.Float()
@@ -337,7 +359,7 @@ internal object BarLine {
         g.stroke = BasicStroke(1.3f * look.density, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
         g.draw(path)
         look.boxes += Box("the automatic capital's arrow", y + arrow, look.edge)
-        if (look.after) look.marks += Mark("the automatic capital's arrow", y + arrow / 2, look.line)
+        if (look.after && !look.build19) look.marks += Mark("the automatic capital's arrow", y + arrow / 2, look.line - look.wordPx / 8)
     }
 
     /** A notice: the Teams egg's line, 18 dp, in the middle, on its own letters' line as centreLetters puts it. */
@@ -361,10 +383,13 @@ internal object BarLine {
         var size = look.wordPx * fit.scale
         var hintSize = 13 * look.density
         var icon = base
-        /** As Strip.clipPair: the highest and lowest of what shows, under the clip's line's top, the icon centred on that line. */
+        /** As Strip.clipIconTop: the icon's drawing's middle (12.5 of its 24) on the capitals' middle; as build #19, centred in the box. */
+        fun iconTop(baseline: Float, clipSize: Float, iconPx: Int, boxTop: Float, boxHeight: Int) =
+            if (look.build19) boxTop + (boxHeight - iconPx) / 2 else baseline - clipSize * StripFit.CAPITALS / 2 - iconPx * 12.5f / 24f
+        /** As Strip.clipPair: the highest and lowest of what shows, and the small letters' middle, under the clip's line's top. */
         fun pair(clipSize: Float, hintPx: Float, iconPx: Int): Triple<Float, Float, Float> {
             val clipHeight = padBottom(clipSize) - padTop(clipSize)
-            return Triple(minOf(-padTop(clipSize) - clipSize * StripFit.TALL, ((clipHeight - iconPx) / 2).toFloat()),
+            return Triple(minOf(-padTop(clipSize) - clipSize * StripFit.TALL, iconTop(-padTop(clipSize).toFloat(), clipSize, iconPx, 0f, clipHeight)),
                 clipHeight - ascent(hintPx) + hintPx * StripFit.DESCENT,
                 (-padTop(clipSize) - clipSize * StripFit.X_HEIGHT + clipHeight - ascent(hintPx)) / 2)
         }
@@ -393,7 +418,8 @@ internal object BarLine {
         }
         val clipHeight = padBottom(size) - padTop(size)
         val hintHeight = if (hinted) descent(hintSize) - ascent(hintSize) else 0
-        // The view lays the lines out in the bar's middle; Strip then moves them onto the line (LineText alone, onLayout as a pair).
+        // The view lays the lines out in the bar's middle; Strip then moves them onto the line: their views (translationY), alone or
+        // as a pair. Build #19 moved only a lone clip's drawing (LineText), so its box stayed where the view was laid out.
         val top = (BAR - clipHeight - hintHeight) / 2
         val laid = (top - padTop(size)).toFloat()
         val hintLaid = (top + clipHeight - ascent(hintSize)).toFloat()
@@ -406,9 +432,38 @@ internal object BarLine {
         }
         val baseline = laid + shift
         val wide = width(regular, size, fit.text)
-        val left = WIDTH / 2f - (icon + gap + wide) / 2
-        drawVector(g, File(drawables, "clipboard.xml").readText(), left, top + (clipHeight - icon) / 2 + shift, icon.toFloat(), ACCENT)
-        text(g, regular, size, fit.text, left + icon + gap, baseline, INK)
+        val left = WIDTH / 2f - (icon + gap + reserve(look) + wide) / 2 + reserve(look)
+        val boxTop = top + if (look.build19 && !hinted) 0f else shift
+        val iconY = if (look.build19) iconTop(baseline, size, icon, top + shift, clipHeight) else Math.round(iconTop(baseline, size, icon, 0f, 0)).toFloat()
+        // What clips the clip's drawing: now its container, the bar's height (Strip turns clipChildren off for it, so neither the
+        // clip's own box nor a shrunk clip's taller icon cuts anything); in build #19, the clip's own box. Drawn clipped and whole:
+        // any difference is ink cut off.
+        fun draw(target: Graphics2D) {
+            drawVector(target, File(drawables, "clipboard.xml").readText(), left, iconY, icon.toFloat(), ACCENT)
+            text(target, regular, size, fit.text, left + icon + gap, baseline, INK)
+        }
+        val layers = listOf(true, false).map { boxed ->
+            val layer = BufferedImage(WIDTH, BAR, BufferedImage.TYPE_INT_ARGB)
+            val lg = layer.createGraphics()
+            lg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            lg.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+            lg.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
+            if (boxed) lg.clip(if (look.build19) Rectangle2D.Float(0f, boxTop, WIDTH.toFloat(), clipHeight.toFloat())
+                else Rectangle2D.Float(0f, 0f, WIDTH.toFloat(), BAR.toFloat()))
+            draw(lg)
+            lg.dispose()
+            layer
+        }
+        val (boxed, whole) = layers
+        var lost = 0
+        for (y in 0 until BAR) for (x in 0 until WIDTH) if (boxed.getRGB(x, y) != whole.getRGB(x, y)) lost++
+        if (lost > 0) look.cut += "the clip \"${fit.text}\" loses $lost px of ink to its box's edge"
+        g.drawImage(boxed, 0, 0, null)
+        if (look.after && !look.build19) {
+            look.boxes += Box("the clip's icon", iconY + icon * 23f / 24f, look.edge)
+            look.boxes += Box("the clip's tails", baseline + size * StripFit.DESCENT, look.edge)
+            look.marks += Mark("the clip's icon's middle on its capitals", iconY + icon * 12.5f / 24f, baseline - size * StripFit.CAPITALS / 2)
+        }
         if (!hinted) mark(look, "the clip", baseline, size)
         if (hinted) {
             val said = string("strip_clip_hint")
@@ -424,6 +479,9 @@ internal object BarLine {
             }
         }
     }
+
+    /** The room the clip keeps at its left for the automatic capital's arrow, when it shows: Strip's reserve. */
+    private fun reserve(look: Look) = if (look.capitalShown) Math.round(capitalBox(look).third) + look.dp(2) + look.dp(4) + look.chipSide - look.side else 0
 
     /** What the two-line clip offer came to at each size, for the run's log. */
     val pairs = LinkedHashSet<String>()
@@ -652,6 +710,9 @@ internal object BarLine {
             State("notice", "A notice (the Teams egg)") { l, g -> notice(l, g) },
             State("clip", "The clip offer, alone") { l, g -> clip(l, g, "Meet at the corner of King and Bay at 6, bring the keys", false) },
             State("clip-hint", "The clip offer with its hint, two lines") { l, g -> clip(l, g, "Meet at the corner of King and Bay at 6", true) },
+            State("clip-phone", "A clip alone with brackets and tails") { l, g -> clip(l, g, "+1 (555) 010-2368", false) },
+            State("clip-jpg", "A clip alone with tails and brackets") { l, g -> clip(l, g, "jpg (copy)", false) },
+            State("capital-clip", "A sentence starts beside a clip offered alone: Shift's arrow and the clip") { l, g -> capital(l, g, "+1 (555) 010-2368") },
         )
         val rungs = listOf(
             Triple(blocked, -1, "Blocked"), Triple(blocked, up, "Blocked, hovering Unblock"),

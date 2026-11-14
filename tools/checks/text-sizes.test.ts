@@ -51,7 +51,19 @@ test("everything with text in the bar sits on one line, the middle of the bar an
   expect(strip).not.toContain("(height - pillHeight) / 2");
   // The hint and a clip alone shrink or wrap their own way, so they draw their letters on the line wherever they're laid out.
   expect(strip).toContain("private val hint = LineText(context)");
-  expect(strip).toContain("private val clipText = LineText(context)");
+  // A clip alone moves its own view onto the line, so its box moves with it and cuts nothing (build #19 cut its tails and icon).
+  expect(strip).toContain("private val clipText = TextView(context)");
+  expect(strip).toMatch(/private val clipView = LinearLayout\(context\)\.apply \{[^}]*clipChildren = false/);
+  expect(strip).toContain("clipText.translationY = Math.round(StripFit.baseline(line - top, clipText.textSize, floor - top) - clipText.baseline).toFloat()");
+  // Its icon's drawing on the clip's capitals' middle, and the automatic capital's arrow 3 dp over the line beside 24 dp words.
+  expect(strip).toContain("private fun clipIconTop(baseline: Float, textSize: Float, size: Int) = baseline - textSize * StripFit.CAPITALS / 2 - size * CLIP_ICON_MIDDLE");
+  expect(strip).toContain("private const val CLIP_ICON_MIDDLE = 12.5f / 24f");
+  expect(strip).toContain("val top = minOf(line - wordPixels() * CAPITAL_LIFT - height / 2, floor - height / 2 - arrow / 2 - dp(1))");
+  expect(strip).toContain("private const val CAPITAL_LIFT = 3f / 24f");
+  // An idle game takes the arrow from where the bar draws it and brings it home there: both from placeCapital, no jump.
+  expect(strip).toContain("glyphs.add(0, Glyph(Idle.ARROW, 0, (capitalBox.centerX() - idleEdge) / scale, capitalBox.centerY() / scale, size / scale,");
+  expect(strip).toContain("val x = capitalBox.centerX() - size / 2");
+  expect(strip).toContain("val y = capitalBox.centerY() - size / 2");
   expect(strip).toContain("onLine(hint, modifierRow.top + hint.top)");
   // Nothing in the bar is moved to another's baseline: the modifier row lined the chips up with its hint's and cut them off the
   // screen on build #13, and the bar's own places all put their text on the line themselves.

@@ -101,7 +101,7 @@ class Strip(
      * The newest clip, right after a copy: a clipboard icon and the start of the clip, at the size and on the line of the words, so
      * that it reads as one of them. A touch pastes it.
      */
-    private val clipText = LineText(context).apply {
+    private val clipText = TextView(context).apply {
         typeface = this@Strip.typeface
         textSize = WORD_SIZE
         gravity = Gravity.CENTER
@@ -125,6 +125,9 @@ class Strip(
     private val clipView = LinearLayout(context).apply {
         orientation = VERTICAL
         gravity = Gravity.CENTER
+        // The clip and its icon move onto the bar's line, and a shrunk clip's icon is taller than its line: nothing of them is cut
+        // at their own boxes, only at the bar's, where the floor keeps them clear (build #19 cut a lone clip's tails and icon).
+        clipChildren = false
         isFocusable = false
         setPadding(dp(6), 0, dp(6), 0)
         addView(clipText, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
@@ -645,13 +648,16 @@ class Strip(
         return StripFit.boxTopPx(line, middle, height, floor).toFloat() to height
     }
 
-    /** The modifiers' hint, and a clip offered alone, draw their letters on the bar's line wherever they were laid out. */
+    /**
+     * The modifiers' hint draws its letters on the bar's line wherever it was laid out. The clip offer moves its own views there,
+     * so nothing of it is cut: the clip's view is only as tall as its line, and its letters' tails and its icon went under the
+     * view's bottom when only the drawing moved (build #19). Its icon then sits on the clip's capitals ([placeClipIcon]).
+     */
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         super.onLayout(changed, l, t, r, b)
         onLine(hint, modifierRow.top + hint.top)
         // A clip alone sits on the line. With its hint, the two lines move together as near the line as fits.
         if (clipHintText.visibility == VISIBLE) {
-            clipText.line = Float.NaN
             val top = clipView.top + clipText.top
             val icon = clipText.compoundDrawablesRelative[0]?.bounds?.height() ?: 0
             val (high, low) = clipPair(clipText.textSize, icon, clipHintText.paint.fontMetricsInt, clipText.paint.fontMetricsInt)
@@ -662,11 +668,30 @@ class Strip(
             clipText.translationY = shift
             clipHintText.translationY = shift
         } else {
-            clipText.translationY = 0f
+            val top = clipView.top + clipText.top
+            clipText.translationY = Math.round(StripFit.baseline(line - top, clipText.textSize, floor - top) - clipText.baseline).toFloat()
             clipHintText.translationY = 0f
-            onLine(clipText, clipView.top + clipText.top)
         }
+        placeClipIcon()
     }
+
+    /**
+     * Puts the clip's icon with the middle of its drawing on the middle of the clip's capitals, at any size and when the clip shrinks
+     * (owner, 2026-11-14: "those icons should follow the middle of uppercase like how the auto cap icon"). The text view centres
+     * the icon in its box, which is the font's whole box, so the icon's bounds take it from there to the capitals' middle.
+     */
+    private fun placeClipIcon() {
+        val icon = clipText.compoundDrawablesRelative[0] ?: return
+        val size = icon.bounds.height()
+        val centred = clipText.compoundPaddingTop + (clipText.height - clipText.compoundPaddingTop - clipText.compoundPaddingBottom - size) / 2
+        val top = Math.round(clipIconTop(clipText.baseline.toFloat(), clipText.textSize, size) - centred)
+        if (icon.bounds.top == top) return
+        icon.setBounds(icon.bounds.left, top, icon.bounds.left + size, top + size)
+        clipText.invalidate()
+    }
+
+    /** Where the clip's icon, [size] px, has its top so its drawing's middle is on the capitals' middle of letters [textSize] on [baseline]. */
+    private fun clipIconTop(baseline: Float, textSize: Float, size: Int) = baseline - textSize * StripFit.CAPITALS / 2 - size * CLIP_ICON_MIDDLE
 
     /** [view] draws on the bar's line and over its floor, from its [top] in the bar. */
     private fun onLine(view: LineText, top: Int) {
@@ -738,7 +763,7 @@ class Strip(
      */
     private fun clipPair(clipSize: Float, icon: Int, hint: android.graphics.Paint.FontMetricsInt, clip: android.graphics.Paint.FontMetricsInt): Triple<Float, Float, Float> {
         val clipHeight = clip.bottom - clip.top
-        val highest = minOf(-clip.top - clipSize * StripFit.TALL, ((clipHeight - icon) / 2).toFloat())
+        val highest = minOf(-clip.top - clipSize * StripFit.TALL, clipIconTop(-clip.top.toFloat(), clipSize, icon))
         val lowest = clipHeight - hint.ascent + clipHintText.textSize * StripFit.DESCENT
         val middle = (-clip.top - clipSize * StripFit.X_HEIGHT + clipHeight - hint.ascent) / 2
         return Triple(highest, lowest, middle)
@@ -765,9 +790,10 @@ class Strip(
         val height = capitalHeight()
         val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
         val width = capitalWidth()
-        // In as far as the chips, its middle on the bar's line, rising only if the arrow itself would reach under the floor.
+        // In as far as the chips, its middle a little over the bar's line ([CAPITAL_LIFT]), rising only if the arrow itself would
+        // reach under the floor.
         val left = chipSide.toFloat()
-        val top = minOf(line - height / 2, floor - height / 2 - arrow / 2 - dp(1))
+        val top = minOf(line - wordPixels() * CAPITAL_LIFT - height / 2, floor - height / 2 - arrow / 2 - dp(1))
         capitalBox.set(left, top, left + width, top + height)
         // The left word, as drawn: if its text would reach under the chip, the chip goes small into the corner.
         val word = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.minByOrNull { it.left }
@@ -1532,6 +1558,14 @@ class Strip(
         /** How far the left word's text must stay from the chip, or the chip goes into the corner, at this size. */
         private const val CAPITAL_CLEAR = 2
         private const val CAPITAL_SMALL = .6f
+        /**
+         * How far the arrow's middle sits over the words' line, as a part of the words' size: 3 dp beside Normal's 24 dp words,
+         * which the owner picked by eye on a 1:1 preview, as it looked too low by the corner (2026-11-14: "This is what I want for
+         * cap"). 2.5 dp at Smaller, 3.5 at Bigger.
+         */
+        private const val CAPITAL_LIFT = 3f / 24f
+        /** The clipboard icon's drawing runs from 2 to 23 of its 24 units across its height: its middle, as a part of the icon. */
+        private const val CLIP_ICON_MIDDLE = 12.5f / 24f
         /** The arrow's height as a part of the words' capitals' height: see [arrowSize]. */
         private const val CAPITAL_TO_CAPS = .63f
         /** About 30 frames a second while the idle scene moves. */

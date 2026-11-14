@@ -329,6 +329,11 @@ enders\gesture-line
     delete's orange, the selection gap and the compressed swipe trail (about +/-13 px, much flatter: the owner to judge on the
     phone). Conflicts resolved: steering keeps D's steer flag and C's end-of-text rule; the field-start selected word kept once
     (C's); W's guideShowOnly now reads inGuide (V removed shownGuideWord). All targeted suites pass; bun 184 of 186.
+  - **Merged next (to d79c5f9 and fixes):** A's 80% idle floor (claude/idle-floor 53b7cc5; reviewed: the figure, ball and letters
+    land within the line's ends; the line only during floor games) and A's nine typing and idle fixes (claude/bug-hunt-typing
+    a35aa1c: #5, #8, #9, #10, #29, #39, #19, #33, #34); W's arrow at 0.63 of the words' capitals (77d8e44). Conflicts: Accent and
+    Look combined always-dark with the floor's cream; A's two check blocks kept; the floor check updated for always-dark. All
+    targeted suites pass; bun 184 of 186. Still out: V (#20, #21, #31, #32, the end screen's Back, the border pass).
   - **Owner's review of build 0a6d754e (2026-11-14), noted, not started yet:**
     - Guide end screen, Back (owner: "When going back from the boring guide triggered from the end screen it should go back to the
       end screen. Applies to everything else for end screen"). Every page the end screen opens (the boring guide, Settings

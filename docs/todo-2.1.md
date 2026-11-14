@@ -344,6 +344,12 @@ enders\gesture-line
         hidden on every page.
       - Decided (owner: "Ok agreed with u. Distribute it."): the same panel height, the four rows evenly spaced, the categories on
         the line. Queued for W when work resumes, with before/after renders.
+    - Swipe trail on the bar (owner: "Should we compress slide animation on the bar so that its more center aligned properly with
+      the border and like doesn't hit the bottom edge?"). Today the swipe path maps the three key rows onto the bar's full
+      height, with its middle row on the line, so the bottom row's points run along the screen's edge. The Orchestrator's view:
+      yes, compress it so the path is centred on the line, symmetric above and below, with its lowest point above the floor
+      margin like the letters' tails. Queued for C. If the owner meant the guide's first slide (side words sliding up from under
+      the edge, W's open question #19), those should rise within the bar too.
   - **Paused for the usage limit (2026-11-14, 5-hour window at 95%, resets 02:10 UTC; weekly at 87%).** W, C, D and A stopped
     mid-turn; F and V were idle; their unfinished changes stay in their worktrees. On resume, send each a short "carry on":
     - V: blocker #1 first, then the selected-word underline, #20, #21, #31, #32.

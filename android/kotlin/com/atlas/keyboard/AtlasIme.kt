@@ -1477,9 +1477,13 @@ class AtlasIme : InputMethodService() {
         main.post { wakeIdleBar() }
         offerClip()
         // Settings > Setup lists the apps whose Scroll assistant isn't in Sliding Mode 1. The system sets the touchpad's mode
-        // for the app in front as it comes in, so this looks a moment later, if the keyboard is still in that app.
-        info.packageName?.let { app ->
-            main.postDelayed({ if (currentInputEditorInfo?.packageName == app) PhoneChecks.noteSlidingMode(this, app) }, SLIDING_CHECK_MILLIS)
+        // for the app in front as it comes in, so this reads it a moment later and again seconds later, if the keyboard is
+        // still in that field. SlidingModeList decides what to trust.
+        slidingField = info.packageName?.let { app ->
+            SlidingField(app).also { field ->
+                main.postDelayed({ readSlidingMode(field, late = false) }, SLIDING_CHECK_MILLIS)
+                main.postDelayed({ readSlidingMode(field, late = true) }, SLIDING_CONFIRM_MILLIS)
+            }
         }
         // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
@@ -2233,6 +2237,34 @@ class AtlasIme : InputMethodService() {
     }
 
     /** While the strip is hidden, the touchpad reaches the keyboard through the focused app. */
+    /** The field the Sliding Mode readings are for, with what they've seen so far. A new field starts a new one. */
+    private class SlidingField(val app: String) {
+        var early: String? = null
+        var mode1Touch = false
+    }
+
+    private var slidingField: SlidingField? = null
+
+    private fun readSlidingMode(field: SlidingField, late: Boolean) {
+        val sameField = slidingField === field && currentInputEditorInfo?.packageName == field.app && isInputViewShown
+        val reading = if (sameField) PhoneChecks.slidingReading(this, field.app) else null
+        if (AppBuild.kind(this) == "debug")
+            Log.i("TitanKeysSliding", "${field.app} ${if (late) "late" else "early"}: $reading (same field $sameField, mode 1 touch ${field.mode1Touch})")
+        if (!sameField) return
+        if (reading == SlidingModeList.MODE_1) PhoneChecks.mode1(this, field.app)
+        if (!late) field.early = reading
+        else if (SlidingModeList.trustworthy(field.early, reading, sameField, field.mode1Touch)) PhoneChecks.outsideReading(this, field.app)
+    }
+
+    /** A touchpad touch only Sliding Mode 1 sends takes the app off Setup's list at once, once per field. */
+    private fun noteSlidingTouch(event: MotionEvent) {
+        val field = slidingField ?: return
+        if (field.mode1Touch || event.actionMasked != MotionEvent.ACTION_DOWN || !touchpad.sentAsScreenTouch(event)) return
+        if (currentInputEditorInfo?.packageName != field.app) return
+        field.mode1Touch = true
+        PhoneChecks.mode1(this, field.app)
+    }
+
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
         if (!editing || !touchpad.accepts(event)) return super.onGenericMotionEvent(event)
         motion(event)
@@ -2246,6 +2278,7 @@ class AtlasIme : InputMethodService() {
     }
 
     private fun motion(event: MotionEvent) {
+        noteSlidingTouch(event)
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             clearTeamsEgg()
             // A flourish is only a picture, so the next touch ends it. A delete's dots wait for what the touch turns out to be: another
@@ -3738,6 +3771,8 @@ class AtlasIme : InputMethodService() {
         private const val OPEN_PAGE_EXTRA = "com.vandam.ink.notification.HREF"
         /** How long after the keyboard shows in an app that its touchpad mode is read. */
         private const val SLIDING_CHECK_MILLIS = 600L
+        /** The late Sliding Mode reading, long after any screen opening has finished. */
+        private const val SLIDING_CONFIRM_MILLIS = 3000L
         private const val SMART_LAUNCHER = "ginlemon.flowerfree"
         /** Characters of a typed clip sent each frame. */
         private const val CLIP_CHUNK = 40

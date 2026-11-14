@@ -2976,13 +2976,12 @@ class GuideActivity : Activity() {
             startActivityForResult(BackDisclosureActivity.forGuide(this), DISCLOSURE_REQUEST)
             return
         }
-        val page = PhoneSetup.page(this, part)
-        if (page == null) {
+        if (PhoneSetup.pages(this, part).isEmpty()) {
             PhoneSetup.chooseKeyboard(this)
             return
         }
         try {
-            startActivityForResult(page, SETUP_REQUEST)
+            PhoneSetup.open(this, part) { page -> startActivityForResult(page, SETUP_REQUEST) }
         } catch (error: RuntimeException) {
             showHint(SETUP_NO_PAGE)
             return

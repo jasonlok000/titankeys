@@ -298,6 +298,9 @@ private fun drawMenuBar(path: String, width: Float, side: Float) {
     println("Menu bar drawn to $path")
 }
 
+/** The phone's own name for the mode, the one number setup may say. */
+private const val SLIDING_MODE_1 = "Sliding Mode 1"
+
 fun main() {
     // ACCENT=off draws everything as with Settings > Orange accents off: Accent's cream in place of orange.
     if (System.getenv("ACCENT") == "off") Accent.on = false
@@ -493,14 +496,16 @@ private fun theStepsHaveOkayWords() {
     // Setup is slide zero, so its words follow the same rules.
     for (part in SetupPart.entries) {
         for (text in listOfNotNull(part.title, part.body, part.action, part.help))
-            same(text.any { it.isDigit() }, false, "\"$text\" must not have a number")
+            same(text.replace(SLIDING_MODE_1, "").any { it.isDigit() }, false, "\"$text\" must not have a number but the phone's own Sliding Mode 1")
         same(part.title.length <= 32 && part.title.endsWith("."), true, "Setup title \"${part.title}\" is one short sentence")
         same(part.body.length <= 72, true, "Setup body \"${part.body}\" must stay short")
     }
     // Android's lists show the app as TitanKeys Keyboard (owner, 2026-11-13), so the steps that send you there say so.
     for (part in listOf(SetupPart.Enable, SetupPart.Choose, SetupPart.Overlay, SetupPart.Back))
         same(part.body.contains("TitanKeys Keyboard"), true, "Setup body \"${part.body}\" names the list entry")
-    same(SetupPart.Overlay.help, "Find TitanKeys Keyboard in the list, open it and flip the switch.", "The overlay help names the entry")
+    same(SetupPart.Overlay.help, "On the whole list? Find TitanKeys Keyboard, open it and flip the switch.", "The overlay help names the entry")
+    // The step names the mode (owner, 2026-11-13: "turn on scroll assistant, let's specify mode 1").
+    same(SetupPart.ScrollAssistant.body.contains(SLIDING_MODE_1), true, "The Scroll assistant step names Sliding Mode 1")
 }
 
 private fun oneStepForEachIdea() {

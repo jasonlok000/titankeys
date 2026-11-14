@@ -10,6 +10,11 @@ const phoneSteps = ({ symKey, fnKey, outsideSlidingMode }: State) => [symKey, fn
 
 const status = (done: boolean) => done ? "Done" : "To do";
 
+/** The step names the mode (owner, 2026-11-13: "turn on scroll assistant, let's specify mode 1"). */
+export const scrollAssistantStep = "Turn on Scroll assistant, Sliding Mode 1";
+export const overlayListNote = "Android opened its whole list. Find TitanKeys Keyboard in it, open it and flip the switch.";
+export const backListNote = "Android opened its whole list. Find TitanKeys Keyboard in it and turn it on.";
+
 export const setupLabel = (settings: State) => status([...steps(settings), ...phoneSteps(settings)].every(Boolean));
 
 /** A list of names: "A", "A and B", "A, B and C". */
@@ -25,8 +30,11 @@ export default function Setup() {
       <Field label="Turn on TitanKeys Keyboard" onPress={enableKeyboard}>{status(settings.enabled)}</Field>
       <Field label="Make TitanKeys your keyboard" onPress={chooseKeyboard}>{status(settings.selected)}</Field>
       <Field label="Allow display over other apps" onPress={allowOverlay}>{status(settings.overlay)}</Field>
-      <Field label="Turn on Scroll assistant" onPress={openScrollAssistant}>{status(settings.scrollAssistant)}</Field>
+      {/* Android may refuse TitanKeys' own page and show its whole list instead (PhoneSetup.open). */}
+      {!settings.overlay && settings.overlayOnList && <Note>{overlayListNote}</Note>}
+      <Field label={scrollAssistantStep} onPress={openScrollAssistant}>{status(settings.scrollAssistant)}</Field>
       <Field label="Turn on TitanKeys Keyboard in Accessibility" onPress={allowBack}>{status(settings.backService)}</Field>
+      {!settings.backService && settings.backOnList && <Note>{backListNote}</Note>}
     </Section>
     {/* The phone's own settings. TitanKeys only reads them, so each step opens the phone's page for you to change it. */}
     <Section title="Phone settings">

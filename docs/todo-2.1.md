@@ -305,6 +305,13 @@ enders\gesture-line
     your keys first, so TitanKeys types there as in any other app;" (needs the owner's OK). A debug-only TitanKeysSym log traces
     each Sym press. Also merged: C's render-temp (renders no longer land in the repo root). Modifiers, autocorrect, guide and
     gesture-line checks pass.
+  - **Merged: A's idle line** (claude/idle-line c069d5b, merge a66d29b): all seven games and their ways home start and end on the
+    line and stay inside the bar at Smaller, Normal and Bigger; 393 keyframes through corner_check with 0 outside the safe zone.
+    Reviewed by the Orchestrator (X:\Atlas\.dev\renders\idle-line, normal-bowling). Idle, strip-fit and guide checks pass.
+  - **Bug hunt:** its own session, "TitanKeys 2.1 bug hunt" (local_34f68a1f), findings only, to docs/bug-hunt-2.1.md; the
+    Orchestrator triages and assigns fixes.
+  - **Workers' model (owner, 2026-11-13):** subagents and every worker session run on Opus 5.5 at medium effort; set on A, C, D,
+    F, V, W and the bug hunt.
   - **Setup (owner, 2026-11-13), assigned to F:** the Sliding Mode 1 false alarm for Chrome and Settings; the step names "Sliding
     Mode 1"; "Display over other apps" lands on the whole list (Android 11+ ignores the package; the highlight extra does nothing
     on this phone; android.settings.MANAGE_APP_OVERLAY_PERMISSION opens TitanKeys' own page from adb) and Accessibility likewise.

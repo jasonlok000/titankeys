@@ -1069,7 +1069,10 @@ class GuideActivity : Activity() {
             GuideHooks.lessons = flow.step.lessons
             GuideHooks.barSides(flow.step.sides)
         }
-        enterWhenBack?.let(::enter)
+        val entering = enterWhenBack
+        entering?.let(::enter)
+        // Back on the paste slide: its words go on the clipboard again (entering it does this itself).
+        if (entering == null && ready && started && !passed && !changing && !flow.finished) flow.step.clip?.let(::putGuideClip)
         resumeTimers()
     }
 
@@ -1125,6 +1128,8 @@ class GuideActivity : Activity() {
         contentResolver.unregisterContentObserver(keyboardChanges)
         clipboard.removePrimaryClipChangedListener(clipChanged)
         stopTimers()
+        // Away from the guide, your clipboard is your own again; the paste slide puts its words back as you return.
+        giveClipBack()
         // A hidden playground keeps no clock going; its speed starts over when you type again.
         main.removeCallbacks(wpmTick)
         if (playground) calmWpm()
@@ -1148,6 +1153,7 @@ class GuideActivity : Activity() {
             }
         }
         GuideHooks.nearMiss = false
+        giveClipBack()
         // A guide that closes waits for Accessibility no more. One that Android only took down while you were in Settings still does.
         if (isFinishing) awaitingAccessibility = false
         unlockKeyboard()
@@ -2808,7 +2814,7 @@ class GuideActivity : Activity() {
      */
     private fun setUpLesson(step: GuideStep) {
         step.clip?.let { text ->
-            runCatching { clipboard.setPrimaryClip(android.content.ClipData.newPlainText("TitanKeys guide", text)) }
+            putGuideClip(text)
             main.postDelayed({ GuideHooks.dismissClip() }, CLIP_HIDE_MILLIS)
         }
         // A selection is cream (owner, v5.3), except where it is the target: the paste slide says "Paste over the orange words", so
@@ -2822,6 +2828,35 @@ class GuideActivity : Activity() {
         }
         // The clipboard shows the slide's own clips, or the user's again once a slide has none.
         GuideHooks.seedClips(step.sandboxClips)
+    }
+
+    /** What was on the clipboard before the guide put its own clip there, or null for nothing. See [putGuideClip]. */
+    private var userClip: android.content.ClipData? = null
+    private var holdsUserClip = false
+
+    /**
+     * Puts [text] on the clipboard for the paste slide, keeping what you had there first, which [giveClipBack] puts back (bug hunt
+     * 2.1, #32: the paste slide replaced your clipboard for good).
+     */
+    private fun putGuideClip(text: String) {
+        if (!holdsUserClip) {
+            userClip = runCatching { clipboard.primaryClip }.getOrNull()?.takeUnless { it.description?.label == GuideHooks.CLIP_LABEL }
+            holdsUserClip = true
+        }
+        runCatching { clipboard.setPrimaryClip(android.content.ClipData.newPlainText(GuideHooks.CLIP_LABEL, text)) }
+    }
+
+    /**
+     * Your own clip again, as the paste slide is left, or the guide goes out of sight or closes: only if the guide's is still
+     * there, so anything you copied since stays. With nothing there before, the clipboard is emptied.
+     */
+    private fun giveClipBack() {
+        if (!holdsUserClip) return
+        holdsUserClip = false
+        val own = userClip
+        userClip = null
+        if (runCatching { clipboard.primaryClipDescription?.label }.getOrNull() != GuideHooks.CLIP_LABEL) return
+        runCatching { if (own != null) clipboard.setPrimaryClip(own) else clipboard.clearPrimaryClip() }
     }
 
     /** The letter key for [key]: itself, or for a symbol, the key that types it with Alt on this phone. */
@@ -3671,7 +3706,7 @@ class GuideActivity : Activity() {
         val clip = step.clip
         if (event is KeyboardEvent.Copied && clip != null && !passed && event.text != clip) main.post {
             if (passed || flow.step !== step) return@post
-            runCatching { clipboard.setPrimaryClip(android.content.ClipData.newPlainText("TitanKeys guide", clip)) }
+            putGuideClip(clip)
             main.postDelayed({ GuideHooks.dismissClip() }, CLIP_HIDE_MILLIS)
         }
         // A rude clip pasted on the clipboard slide is taken back out at once, and the slide says so: only the nice one counts.
@@ -4095,7 +4130,10 @@ class GuideActivity : Activity() {
             field.setSelection(field.selectionEnd)
             seeding = false
         }
-        if (flow.step.clip != null) GuideHooks.dismissClip()
+        if (flow.step.clip != null) {
+            GuideHooks.dismissClip()
+            giveClipBack()
+        }
         GuideHooks.stripPoint(null)
         changing = true
         busy = true

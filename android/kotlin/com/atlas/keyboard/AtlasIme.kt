@@ -1571,6 +1571,9 @@ class AtlasIme : InputMethodService() {
         if (editing && field.secret) return
         if (clip.itemCount == 0) return
         val text = clip.getItemAt(0).text?.toString() ?: return
+        // The guide's own clip to paste is never kept in the user's clipboard, even when it lands as the keyboard serves another
+        // field (bug hunt 2.1, #31).
+        if (clip.description?.label == GuideHooks.CLIP_LABEL && !inGuide) return
         // What the guide copies stays in the guide: its own clip to paste is never kept in the user's clipboard.
         if (inGuide) {
             guideClips?.add(text, System.currentTimeMillis())

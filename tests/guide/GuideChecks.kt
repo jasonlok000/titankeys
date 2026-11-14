@@ -343,6 +343,7 @@ fun main() {
     nothingPlaysAwayFromTheGuide()
     anAbandonedAccessibilityStepLetsGo()
     aSlideWaitsForYouToComeBack()
+    yourClipComesBack()
     // Drawings of the slides in the new layout, to look at without a phone. See SlideRenders.kt.
     System.getenv("SLIDES_PNG")?.let { drawSlides(it, NEW_LAYOUT + GuideChapter.End) }
     System.getenv("FRONT_PNG")?.let { drawFrontPage(it) }
@@ -401,8 +402,29 @@ private fun aSlideWaitsForYouToComeBack() {
     val enter = guide.substring(guide.indexOf("private fun enter(step: GuideStep) {")).substringBefore("heldKeys.clear()")
     same(enter.contains("if (!visible) {") && enter.contains("enterWhenBack = step"), true, "Out of sight, a slide waits")
     val resume = guide.substring(guide.indexOf("override fun onResume()")).substringBefore("\n    }\n")
-    same(resume.contains("enterWhenBack?.let(::enter)"), true, "and enters as the guide comes back")
-    same(resume.indexOf("enterWhenBack?.let(::enter)") < resume.indexOf("resumeTimers()"), true, "before its timers start again")
+    same(resume.contains("entering?.let(::enter)"), true, "and enters as the guide comes back")
+    same(resume.indexOf("entering?.let(::enter)") < resume.indexOf("resumeTimers()"), true, "before its timers start again")
+}
+
+/**
+ * The paste slide borrows the clipboard and gives it back (bug hunt 2.1, #32: it replaced the user's clip for good). The user's clip
+ * is kept before the slide's goes on, and put back as the slide is left, the guide goes out of sight or closes, unless something
+ * else was copied since. The keyboard never keeps the guide's clip in the user's history, wherever it lands (#31).
+ */
+private fun yourClipComesBack() {
+    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val ime = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    fun body(start: String) = guide.substring(guide.indexOf(start)).substringBefore("\n    }\n")
+    same(Regex("""clipboard\.setPrimaryClip\(android\.content\.ClipData\.newPlainText""").findAll(guide).count(), 1,
+        "The guide puts its clip on the clipboard in one place, which keeps the user's first")
+    same(body("private fun putGuideClip(").contains("userClip = runCatching { clipboard.primaryClip }"), true, "It keeps the user's clip")
+    val back = body("private fun giveClipBack(")
+    same(back.contains("!= GuideHooks.CLIP_LABEL) return") && back.contains("clipboard.setPrimaryClip(own)"), true,
+        "and puts it back, unless something else was copied since")
+    for (start in listOf("private fun moveOn(", "override fun onPause()", "override fun onDestroy()"))
+        same(body(start).contains("giveClipBack()"), true, "$start gives the user's clip back")
+    same(ime.contains("if (clip.description?.label == GuideHooks.CLIP_LABEL && !inGuide) return"), true,
+        "The keyboard never keeps the guide's clip in the user's history")
 }
 
 /** The Titan 2 Elite's column, in px: the screen 1200 tall, the status bar 124, the keyboard's own bar 90. */

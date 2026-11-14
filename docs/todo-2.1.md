@@ -341,8 +341,10 @@ enders\gesture-line
     screen's Back: V's plan approved by the Orchestrator (the guide stays open under the page; the app opens linked pages alone).
   - **Build #17 (53ed70c6) not installed:** it copied the worktree halfway through the merges, so its idle check ran against
     code that didn't match it yet and failed. The finished code passes idle.
-  - **Build #18 running** from da30aea: everything above except V's end-screen Back. Install it when it passes, then check it on
-    the phone: the Shift and Ctrl chips, the menu effects and hover, the Sym rows on every page, the held delete's orange, the
+  - **Build #18 (92d82fa4, from da30aea) passed every check, not installed:** the phone refused adb on 100.98.104.89:5555 (it
+    restarted, so `adb tcpip 5555` is off). Waiting on the owner's Wireless debugging port to connect and turn 5555 back on.
+    Build #19 (from 9149214, with V's end-screen Back) is building and goes on instead if it's ready first. Then check on the
+    phone: the Shift and Ctrl chips, the menu effects and hover, the Sym rows on every page, the held delete's orange, the
     selection gap, the swipe trail (the owner judges), each idle game with the 80% floor (IDLE_BAR), Smart Launcher typing and the
     square key, Setup's links, "TitanKeys Keyboard" in the launcher, and the always-dark keyboard.
   - **Merged: V's end-screen Back** (claude/end-back 3925a9c, merge cb534aa, then bd23e6f put leave()'s comment back): the boring

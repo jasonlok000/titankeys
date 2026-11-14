@@ -2536,6 +2536,17 @@ private fun bugHunt(world: Realistic) {
     same(typed("andMary "), "and Mary ", "#9: Missing spaces on splits \"andMary\"")
     same(typed("andMary ", setOf(FixKind.MISSING_SPACES)), "andMary ", "#9: Missing spaces off leaves it")
     same(typed("andMary ", FixKind.entries.toSet()), "andMary ", "#9: and so does every switch off")
+
+    // #10: a text field that asks for no suggestions was still autocorrected and still taught words.
+    val unsuggested = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0)
+    must(!unsuggested.autocorrect && !unsuggested.suggestions && !unsuggested.learning, "#10: a field that asks for no suggestions gets none")
+    Typist(world, field = unsuggested).type("jsmith zorblat ").also {
+        same(it.text, "jsmith zorblat ", "#10: nothing is fixed there")
+        same(it.words.typed.toList(), emptyList<String>(), "#10: and nothing is learned")
+        same(it.bar, emptyList<String>(), "#10: and the bar offers nothing")
+    }
+    must(Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0).suggestions,
+        "#10: an address bar that asks for no suggestions still gets the bar")
 }
 
 fun main() {

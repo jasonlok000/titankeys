@@ -443,7 +443,7 @@ class Strip(
             }
             false
         }
-        setOnLongClickListener {
+        onHold {
             val opened = heldOnScreen && hold()
             android.util.Log.d(HOLD_TAG, "bar word held: finger on the screen $heldOnScreen, menu opened $opened")
             opened

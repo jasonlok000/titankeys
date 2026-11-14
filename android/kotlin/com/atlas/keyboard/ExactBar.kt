@@ -36,7 +36,7 @@ internal class ExactBar(
     private val chips = ExactTyping.BarKey.entries.associateWith { barKey ->
         label(barKey.name).apply {
             setOnClickListener { chip(barKey, false) }
-            setOnLongClickListener { chip(barKey, true); true }
+            onHold { chip(barKey, true); true }
         }
     }
     private val first = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }

@@ -49,3 +49,14 @@ class InkPress(private val schedule: (Runnable, Long) -> Unit, private val cance
         const val WAIT_MILLIS = 50L
     }
 }
+
+/**
+ * Makes [this] a control that does [held] when a finger holds it, true if it took the hold. Android's own long-press buzz is off:
+ * the hold plays the keyboard's haptic for what it opens, if anything, and the haptics switches decide (bug hunt 2.1, #18:
+ * holding a bar word, a chip or a clip buzzed with all haptics off, and on top of the menu's own). Every long press in the
+ * keyboard and the app goes through here: tools/checks/app-haptics.test.ts fails on one set any other way.
+ */
+fun View.onHold(held: () -> Boolean) {
+    isHapticFeedbackEnabled = false
+    setOnLongClickListener { held() }
+}

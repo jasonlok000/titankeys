@@ -185,7 +185,7 @@ class SymPanel(
             })
             visibility = GONE
             setOnClickListener { clipKey(ClipboardHistory.keyFor(slot)) }
-            setOnLongClickListener {
+            onHold {
                 holdClip(ClipboardHistory.keyFor(slot))
                 true
             }
@@ -322,8 +322,8 @@ class SymPanel(
         includeFontPadding = false
         isFocusable = false
         setOnClickListener { touched(key) }
-        setOnLongClickListener {
-            if (clipAt(key) == null) return@setOnLongClickListener false
+        onHold {
+            if (clipAt(key) == null) return@onHold false
             holdClip(key)
             true
         }

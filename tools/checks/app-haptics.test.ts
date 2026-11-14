@@ -102,3 +102,18 @@ test("the rulebook says what each control plays, and what stays quiet", () => {
   expect(doc).not.toContain("**Plain buttons there:**");
   expect(read("docs/haptics-audit.md")).toContain("| Control | Plays now | Played before |");
 });
+
+test("every long press goes through onHold, which turns Android's own long-press buzz off", () => {
+  // Bug hunt 2.1, #18: holding a bar word, a chip or a clip played the stock buzz, with all haptics off and on top of their own.
+  const kotlin = (folder: string): string[] => readdirSync(join(root, folder), { withFileTypes: true }).flatMap(entry =>
+    entry.isDirectory() ? kotlin(join(folder, entry.name)) : entry.name.endsWith(".kt") ? [join(folder, entry.name)] : []);
+  for (const path of kotlin("android/kotlin")) {
+    if (path.replaceAll("\\", "/").endsWith("keyboard/AppPress.kt")) continue;
+    const source = read(path);
+    expect({ path, longClick: /setOnLongClickListener|\.onLongClick\b|isLongClickable\s*=\s*true/.test(source) }).toEqual({ path, longClick: false });
+  }
+  expect(read("android/kotlin/com/atlas/keyboard/AppPress.kt"))
+    .toMatch(/fun View\.onHold\(held: \(\) -> Boolean\) \{\s*isHapticFeedbackEnabled = false\s*setOnLongClickListener \{ held\(\) \}/);
+  for (const path of ["Strip.kt", "ExactBar.kt", "SymPanel.kt"])
+    expect({ path, holds: read(`android/kotlin/com/atlas/keyboard/${path}`).includes("onHold {") }).toEqual({ path, holds: true });
+});

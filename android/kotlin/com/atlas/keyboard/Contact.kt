@@ -19,6 +19,11 @@ import kotlin.math.min
  * A new contact that starts shortly after a key event, or longer after one while the user types steadily,
  * only counts once it has moved far, so a finger that brushes the keys between presses does not type.
  * A second Space press in a row adds no pause.
+ *
+ * A finger that lands and stays still is resting on the keys, and only counts once it has moved far. The touchpad
+ * reports one point, so a second finger shows up as a lift and a new contact one frame later. One such swap is
+ * normal, as when a swipe starts next to a resting finger, but a run of swaps between far-apart spots is two fingers
+ * held down, and none of those contacts can type.
  */
 class Contact {
     sealed interface Outcome {
@@ -30,11 +35,12 @@ class Contact {
         data object Idle : State
         /** A contact that cannot type: it began during a key press or was interrupted. */
         data object Ignored : State
-        class Touching(val first: Sample, val afterKey: Boolean) : State {
+        class Touching(val first: Sample, val afterKey: Boolean, var resting: Boolean, val canTap: Boolean) : State {
             val points = arrayListOf(first)
             val pickup = Pickup(first)
             var travel = 0f
-            val counts get() = !afterKey || travel >= AFTER_KEY_SWIPE_KEYS
+            var judged = resting
+            val counts get() = (!afterKey && !resting) || travel >= AFTER_KEY_SWIPE_KEYS
         }
     }
 
@@ -57,6 +63,13 @@ class Contact {
     private var doubleSpace = false
     private var lastKeyDown = Long.MIN_VALUE
     private var typing = false
+    /** The last point the touchpad reported, from any contact. */
+    private var seen: Sample? = null
+    private var landed = Long.MIN_VALUE
+    /** How many far swaps have happened in a row. */
+    private var swaps = 0
+    /** Where a finger was last seen resting. */
+    private var restedAt: Sample? = null
 
     /**
      * The Sym panel or the Ctrl overlay is on screen, so a finger counts even while a key is held, such as Ctrl.
@@ -70,30 +83,62 @@ class Contact {
     val points: List<Sample> get() = (state as? State.Touching)?.points ?: emptyList()
 
     fun down(sample: Sample) {
+        if (!sample.valid) {
+            state = State.Ignored
+            return
+        }
+        val before = seen
+        val swapped = before != null && sample.time - before.time in 0..SWAP_MILLIS
+        val far = swapped && keysApart(before!!, sample) >= SWAP_KEYS
+        // A long contact before a far swap is one finger after another, not two fingers held down.
+        swaps = if (!swapped) 0 else if (far && sample.time - landed <= BURST_CONTACT_MILLIS) swaps + 1 else swaps
+        seen = sample
+        landed = sample.time
+        // A tap that the touchpad cut short for another finger was not a tap.
+        if (far) for (contact in pending) if (contact.outcome is Outcome.Tap) contact.cancelled = true
         state = when {
-            !sample.valid -> State.Ignored
             // The panel needs a resting finger, so a key or its cooldown does not block a touch there.
-            paging -> State.Touching(sample, false)
-            heldKeys.isEmpty() -> State.Touching(sample, sample.time < blockedUntil)
-            else -> State.Ignored
+            paging -> State.Touching(sample, false, false, true)
+            heldKeys.isNotEmpty() || swaps >= BURST_SWAPS -> State.Ignored
+            else -> State.Touching(sample, sample.time < blockedUntil, returning(sample, before, swapped), !swapped)
         }
     }
 
+    /**
+     * The touchpad reports a resting finger again when another finger lifts or a key is pressed.
+     * A touch at the same spot with nothing between it and the rest is a new touch, such as a second tap.
+     */
+    private fun returning(sample: Sample, before: Sample?, swapped: Boolean) = restedAt?.let {
+        (swapped || before == null || keysApart(before, sample) > RETURN_KEYS)
+            && sample.time - it.time in 0..RETURN_MILLIS && keysApart(it, sample) <= RETURN_KEYS
+    } == true
+
+    private fun keysApart(from: Sample, to: Sample) = hypot((to.x - from.x) * 10, (to.y - from.y) * 4)
+
     fun move(samples: List<Sample>) {
+        samples.lastOrNull { it.valid }?.let { seen = it }
         val touching = state as? State.Touching ?: return
         for (sample in samples) {
             if (!sample.valid || sample.time < touching.points.last().time
                 || sample.time - touching.first.time > Swipe.MAX_DURATION_MILLIS
                 || touching.points.size >= Swipe.MAX_POINTS) {
+                rememberRest(touching, touching.points.last().time)
                 state = State.Ignored
                 return
             }
+            // Judged only from landing, so a swipe that pauses later stays a swipe.
+            if (!touching.judged && !paging && sample.time - touching.first.time >= RESTING_MILLIS) {
+                touching.judged = true
+                touching.resting = touching.travel < RESTING_KEYS
+            }
             touching.points += sample
             touching.pickup.add(sample, touching.points.size - 1)
-            val dx = (sample.x - touching.first.x) * 10
-            val dy = (sample.y - touching.first.y) * 4
-            touching.travel = max(touching.travel, hypot(dx, dy))
+            touching.travel = max(touching.travel, keysApart(touching.first, sample))
         }
+    }
+
+    private fun rememberRest(touching: State.Touching, time: Long) {
+        if (touching.resting) restedAt = touching.points.last().takeIf { touching.travel < AFTER_KEY_SWIPE_KEYS }?.copy(time = time)
     }
 
     /** Each ended contact owns its deadline, independently of the next contact. */
@@ -103,6 +148,7 @@ class Contact {
         state = State.Idle
         if (touching == null) return null
         val last = touching.points.last()
+        rememberRest(touching, last.time)
         val settlement = Settlement(now + SETTLE_MILLIS, classify(touching), touching.first.time, last.time, touching.points.toList(), touching.counts)
         if (pending.size == MAX_PENDING_CONTACTS) pending.removeFirst()
         pending.addLast(settlement)
@@ -112,6 +158,9 @@ class Contact {
     fun cancel() {
         cancelActive()
         pending.clear()
+        seen = null
+        swaps = 0
+        restedAt = null
     }
 
     fun cancelActive() {
@@ -127,7 +176,11 @@ class Contact {
         if (down) {
             heldKeys += code
             for (contact in pending) if (time in contact.startedAt..contact.endedAt + SETTLE_MILLIS) contact.cancelled = true
-            if (state is State.Touching) state = State.Ignored
+            (state as? State.Touching)?.let {
+                rememberRest(it, time)
+                state = State.Ignored
+            }
+            seen = null
             doubleSpace = code == KeyEvent.KEYCODE_SPACE && lastKeyCode == code
             lastKeyCode = code
             typing = time - lastKeyDown in 0..TYPING_GAP_MILLIS
@@ -163,7 +216,7 @@ class Contact {
             return null
         }
         val key = Layout.keyAt(first.x, first.y)
-        return if (key.isNotEmpty() && key == Layout.keyAt(last.x, last.y)) Outcome.Tap(key, last.time) else null
+        return if (touching.canTap && key.isNotEmpty() && key == Layout.keyAt(last.x, last.y)) Outcome.Tap(key, last.time) else null
     }
 
     /**
@@ -250,6 +303,18 @@ class Contact {
         /** Key presses this close together count as steady typing. */
         private const val TYPING_GAP_MILLIS = 500L
         private const val TYPING_COOLDOWN_MILLIS = 500L
+        /** A contact that has moved less than [RESTING_KEYS] this long after it landed is a resting finger. */
+        private const val RESTING_MILLIS = 500L
+        private const val RESTING_KEYS = .35f
+        /** A contact this close to a rest, this soon after it, is that finger reported again. */
+        private const val RETURN_MILLIS = 1500L
+        private const val RETURN_KEYS = .35f
+        /** A contact this soon after the last one means the touchpad changed fingers, if it is this far away. */
+        private const val SWAP_MILLIS = 12L
+        private const val SWAP_KEYS = 1.2f
+        /** This many far swaps in a row, each after a contact shorter than [BURST_CONTACT_MILLIS], are two fingers held down. */
+        private const val BURST_SWAPS = 2
+        private const val BURST_CONTACT_MILLIS = 150L
         private const val SAMPLE_DISTANCE = .025f
         private const val REQUIRED_EVIDENCE = .12f
         private const val STRAIGHT = .819152f
@@ -261,6 +326,8 @@ class Contact {
             "afterKeySwipeKeys" to AFTER_KEY_SWIPE_KEYS, "keyCooldownMillis" to KEY_COOLDOWN_MILLIS,
             "typingGapMillis" to TYPING_GAP_MILLIS, "typingCooldownMillis" to TYPING_COOLDOWN_MILLIS,
             "sampleDistance" to SAMPLE_DISTANCE, "requiredEvidence" to REQUIRED_EVIDENCE, "straight" to STRAIGHT,
+            "restingMillis" to RESTING_MILLIS, "restingKeys" to RESTING_KEYS, "returnMillis" to RETURN_MILLIS, "returnKeys" to RETURN_KEYS,
+            "swapMillis" to SWAP_MILLIS, "swapKeys" to SWAP_KEYS, "burstSwaps" to BURST_SWAPS, "burstContactMillis" to BURST_CONTACT_MILLIS,
         )
     }
 }

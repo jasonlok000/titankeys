@@ -665,6 +665,12 @@ private class GuideField(context: Context) : EditText(context) {
     /** A finger lifted from the field: the guide's steering slides have words for that. */
     var touched: (() -> Unit)? = null
 
+    /**
+     * The field keeps its selection: a touch on it moves no cursor, selects nothing and opens no menu of the text's own, and only
+     * tells [touched] and brings the keyboard up, as a tap does. The word menu slide's TitanKeys stays selected (owner, 2026-11-13).
+     */
+    var holdsSelection = false
+
     override fun onSelectionChanged(selStart: Int, selEnd: Int) {
         super.onSelectionChanged(selStart, selEnd)
         changed?.invoke()
@@ -677,6 +683,13 @@ private class GuideField(context: Context) : EditText(context) {
     @android.annotation.SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
         if (layout == null) return true
+        if (holdsSelection) {
+            if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
+                context.getSystemService(android.view.inputmethod.InputMethodManager::class.java)?.showSoftInput(this, 0)
+                touched?.invoke()
+            }
+            return true
+        }
         if (event.actionMasked == android.view.MotionEvent.ACTION_UP) touched?.invoke()
         return try {
             super.onTouchEvent(event)
@@ -685,9 +698,12 @@ private class GuideField(context: Context) : EditText(context) {
         }
     }
 
-    /** The same for a long press, which needs a selection handle that a text view without a layout has not made. */
+    /**
+     * The same for a long press, which needs a selection handle that a text view without a layout has not made. A field that keeps
+     * its selection takes none either.
+     */
     override fun performLongClick(): Boolean {
-        if (layout == null) return true
+        if (layout == null || holdsSelection) return true
         return try {
             super.performLongClick()
         } catch (error: NullPointerException) {
@@ -780,7 +796,8 @@ class GuideActivity : Activity() {
     private val huntTick = object : Runnable {
         override fun run() {
             val hunt = flow.step.hunt
-            if (huntStart < 0 || passed || hunt == null) return
+            // Away from the guide its clock stands still: see [onPause].
+            if (huntStart < 0 || passed || hunt == null || !visible) return
             val seconds = huntSeconds()
             if (seconds >= HUNT_DRAIN_SECONDS) {
                 huntBar.visibility = View.GONE
@@ -878,21 +895,6 @@ class GuideActivity : Activity() {
     private var pasteDeclined = false
     /** Alt is on, as the keyboard last said. */
     private var altOn = false
-    /** The word menu slide says the bar is empty. */
-    private var emptyBarShown = false
-    /** On the word menu slide, the bar with no words to hold says so, and stops once it has some. See [GuideHooks.barCount]. */
-    private val checkBar = Runnable {
-        if (passed || busy || flow.step.bar != GuideBar.Menu || flow.stage != 0) return@Runnable
-        val count = GuideHooks.barCount?.invoke() ?: -1
-        // Never a made-up word to hold: with nothing on the bar, the instruction says to fill it, until it has words.
-        if (count == 0 && !emptyBarShown) {
-            body.text = EMPTY_BAR_BODY
-            emptyBarShown = true
-        } else if (count > 0 && emptyBarShown) {
-            emptyBarShown = false
-            body.text = flow.instruction
-        }
-    }
     private val idleOnce = Runnable { idle(IDLE_TITLE, -1) }
     /** The idle chip has shown on this slide, and the lock's chip too: each shows once a slide. */
     private var idleChipShown = false
@@ -975,6 +977,8 @@ class GuideActivity : Activity() {
     }
 
     private fun helpDue() {
+        // Never away from the guide: the help buzzed every 6 s in other apps (bug hunt 2.1, #1). [onResume] asks again.
+        if (!visible) return
         // Never while a finger is down, a key is held or the word menu is open: "Hold, don't tap" showed with the menu open, and
         // the steer help mid-steer. It waits, and asks again.
         if (fingerDown || heldKeys.isNotEmpty() || GuideHooks.menuOpen?.invoke() == true) {
@@ -1064,8 +1068,37 @@ class GuideActivity : Activity() {
         if (ready && started && !playground && !settingUp && !flow.finished && guideLooks == true) {
             GuideHooks.lessons = flow.step.lessons
             GuideHooks.barSides(flow.step.sides)
-            GuideHooks.barWord(flow.step.barWord)
-            GuideHooks.barLit(litPlace(flow.step))
+        }
+        resumeTimers()
+    }
+
+    /** When the guide last went out of sight, for the clown hunt's clock to stand still meanwhile, or -1. */
+    private var pausedAt = -1L
+
+    /**
+     * Every timer of the slide stops as the guide goes out of sight, Home, another app or the screen off (bug hunt 2.1, #1: the
+     * help buzzed every 6 s in other apps, the demo drew on, and the clown hunt's tick vibrated at 20, 35 and 50 s). Away from the
+     * guide nothing of it plays, and the keyboard is as it always is.
+     */
+    private fun stopTimers() {
+        endDemo()
+        for (timer in listOf(showHelp, startDemo, demoTick, huntTick, idleOnce, idleTwice, menuHint)) main.removeCallbacks(timer)
+        pausedAt = SystemClock.uptimeMillis()
+    }
+
+    /**
+     * Back in sight: the slide's timers start again, as after any input. The help waits its time, the demo its quiet moment, and the
+     * clown hunt goes on from where it stood.
+     */
+    private fun resumeTimers() {
+        val since = if (pausedAt < 0) 0L else SystemClock.uptimeMillis() - pausedAt
+        pausedAt = -1L
+        if (!ready || !started || playground || settingUp || flow.finished || changing) return
+        acted()
+        waitForHelp()
+        if (huntStart >= 0 && !passed) {
+            huntStart += since
+            main.postDelayed(huntTick, 1000L - (SystemClock.uptimeMillis() - huntStart) % 1000L)
         }
     }
 
@@ -1073,8 +1106,6 @@ class GuideActivity : Activity() {
     private fun unlockKeyboard() {
         GuideHooks.lessons = null
         GuideHooks.barSides(true)
-        GuideHooks.barWord(null)
-        GuideHooks.barLit(null)
     }
 
     override fun onPause() {
@@ -1089,7 +1120,7 @@ class GuideActivity : Activity() {
         GuideHooks.script = null
         contentResolver.unregisterContentObserver(keyboardChanges)
         clipboard.removePrimaryClipChangedListener(clipChanged)
-        endDemo()
+        stopTimers()
         // A hidden playground keeps no clock going; its speed starts over when you type again.
         main.removeCallbacks(wpmTick)
         if (playground) calmWpm()
@@ -2071,7 +2102,10 @@ class GuideActivity : Activity() {
                 GuideChapter.Steering -> seedSteering(step.seed)
                 else -> {
                     field.setText(if (step.seed.isEmpty()) "" else step.seed + " ")
-                    field.setSelection(step.cursorAt?.invoke(field.text.toString())?.coerceIn(0, field.length()) ?: field.length())
+                    val selected = step.selected?.let { menuTarget(field.text.toString()) }
+                    // The menu slide starts with TitanKeys selected, before the keyboard reads the field, so it shows on the bar.
+                    if (selected != null) field.setSelection(selected.first, selected.last + 1)
+                    else field.setSelection(step.cursorAt?.invoke(field.text.toString())?.coerceIn(0, field.length()) ?: field.length())
                 }
             }
             seeding = false
@@ -2082,9 +2116,9 @@ class GuideActivity : Activity() {
         GuideHooks.lessons = flow.lessons
         GuideHooks.forceFix = step.forceFix
         field.underlineOnly = step.id == "steer"
+        // The menu slide's box keeps TitanKeys selected: a touch on it changes nothing, and says so. See [fieldTouched].
+        field.holdsSelection = step.selected != null
         GuideHooks.barSides(step.sides)
-        GuideHooks.barWord(step.barWord)
-        GuideHooks.barLit(litPlace(step))
         setUpLesson(step)
         flow.seed(field.text.toString(), field.selectionStart)
         aim()
@@ -2129,7 +2163,6 @@ class GuideActivity : Activity() {
         val panelLeft = panelOpen && step.setup == Modifiers.Panel.Closed && enteredBefore
         val altLeft = altOn && !panelOpen && !step.usesPanel && enteredBefore
         enteredBefore = true
-        emptyBarShown = false
         if (panelLeft) {
             showScenario(TOO_LATE_TITLE, TOO_LATE_PANEL)
             main.postDelayed({ if (!passed && !changing && !panelOpen) backOnTrack() }, TOO_LATE_MILLIS)
@@ -2149,8 +2182,6 @@ class GuideActivity : Activity() {
         busy = false
         // A new slide shows its gesture at once, as soon as its words are in.
         acted(DEMO_ENTER_MILLIS)
-        main.removeCallbacks(checkBar)
-        if (step.bar == GuideBar.Menu) main.postDelayed(checkBar, BAR_CHECK_MILLIS)
         // Another slide did this one already: it shows done.
         if (arriveDone) {
             arriveDone = false
@@ -2490,7 +2521,7 @@ class GuideActivity : Activity() {
 
     /** A hint or a scenario's chip, with its haptic (owner, v5). */
     private fun hinted(text: String) {
-        if (text.isBlank() || passed) return
+        if (text.isBlank() || passed || !visible) return
         haptics.play(Haptic.GuideHint)
         showChip(text)
     }
@@ -2557,7 +2588,7 @@ class GuideActivity : Activity() {
 
     private fun beginDemo() {
         val step = flow.step
-        if (busy || passed || changing || step.pause || step.chapter == GuideChapter.End) return
+        if (!visible || busy || passed || changing || step.pause || step.chapter == GuideChapter.End) return
         if (!demoAllowed()) {
             main.postDelayed(startDemo, DEMO_GAP_MILLIS)
             return
@@ -2574,12 +2605,7 @@ class GuideActivity : Activity() {
         demoTurned = false
         demoPushes = null
         demoBarPlayed = false
-        // The word menu is a gesture on the bar itself, so the bar acts it out.
-        if (step.bar == GuideBar.Menu && flow.stage == 0) {
-            demoBarPlayed = true
-            // Only the hold on a real word of the bar: the menu itself opens only for a real hold.
-            GuideHooks.stripDemo(GuideHooks.StripDemo.Menu(emptyList(), opens = false))
-        }
+        // The word menu slide has no ghost hold on the bar: its TitanKeys is selected, and no demo plays over a selection.
         keys.demo(true)
         // The grey words would sit on top of the empty field's hint.
         field.hint = null
@@ -3120,7 +3146,7 @@ class GuideActivity : Activity() {
 
     /**
      * Marks in orange what the slide aims at, in the field, and tells the slide (design v4): the stray letter on the Backspace slide,
-     * the last word on the flick slide, a word on the other line on the steer slide.
+     * the last word on the flick slide, a word on the other line on the steer slide. The menu slide's TitanKeys is selected instead.
      * Nothing on other slides, or once the guide's look is off.
      */
     private fun aim() {
@@ -3131,8 +3157,7 @@ class GuideActivity : Activity() {
             "backspace" -> if (text.trimEnd() == BACKSPACE_SEED) text.trimEnd().length - 1..text.trimEnd().length - 1 else null
             "flick" -> if (passed) null else flickTarget(text)
             "hold" -> if (passed) null else holdTarget(text, field.selectionStart)
-            // The menu slide's TitanKeys stays marked the whole slide, as its bar word stays pointed at.
-            "menu" -> menuTarget(text)
+            // The menu slide's TitanKeys is selected, never underlined (owner, 2026-11-13).
             "steer", "selectmore" -> steerAim
             else -> null
         }
@@ -3258,6 +3283,12 @@ class GuideActivity : Activity() {
         if (playground || passed || busy) return
         val step = flow.step
         if (step.chapter == GuideChapter.Steering) return showScenario(SCREEN_TOUCHED, flow.instruction)
+        // The menu slide's box keeps TitanKeys selected, and took the touch: the slide says where to tap instead, with a no.
+        if (step.selected != null) {
+            haptics.play(Haptic.GuideBlocked)
+            showChip(MENU_NOT_BOX, force = true)
+            return
+        }
         // A slide whose cursor has to be in one place, a gap or the word to delete: a touch on the screen that moved it puts it
         // back, and says the keys do this (owner, 2026-11-13: every way to fail recovers).
         val place = step.cursorAt ?: return
@@ -3591,7 +3622,7 @@ class GuideActivity : Activity() {
 
     /**
      * What the screen itself watches for, beyond a slide's check: a fix undone after the typing slide passed, fn and V that changed
-     * nothing, and the bar emptying on the word menu slide.
+     * nothing, and the word menu slide's selection moving off TitanKeys.
      */
     private fun watch(event: KeyboardEvent) {
         val step = flow.step
@@ -3622,9 +3653,14 @@ class GuideActivity : Activity() {
         }
         // The held delete only ever takes the regrets (owner, v5.3: it went on 1.1 s past the lift and ate the line's first word).
         // Once they're gone, deleting is locked for the slide, and a word of the line that goes anyway comes straight back.
-        // The menu slide's box only holds its line: text selected in it snaps back, and the slide says to hold TitanKeys instead.
-        if (event is KeyboardEvent.FieldChanged && step.barWord != null && event.end > event.start) {
-            main.post { if (flow.step === step && field.selectionStart != field.selectionEnd) field.setSelection(field.length()) }
+        // The menu slide's selection holds, through every stage and after the pass: any other selection or cursor goes back to
+        // TitanKeys selected, and the slide says to tap it on the bar instead (owner, 2026-11-13).
+        if (event is KeyboardEvent.FieldChanged && step.selected != null && !menuSelected(event.text, event.start, event.end)) {
+            main.post {
+                if (flow.step !== step) return@post
+                val keep = menuTarget(field.text.toString()) ?: return@post
+                if (field.selectionStart != keep.first || field.selectionEnd != keep.last + 1) field.setSelection(keep.first, keep.last + 1)
+            }
         }
         if (event is KeyboardEvent.FieldChanged && step.id == "hold") {
             if (holdTarget(event.text, event.start) == null) GuideHooks.lessons = emptySet()
@@ -3662,10 +3698,6 @@ class GuideActivity : Activity() {
                 if (!passed && flow.step.id == "paste" && field.text.toString() == before && flow.missing == GuideNeed.FnAsCtrl)
                     showScenario(NOTHING_PASTED_TITLE, NOTHING_PASTED_BODY)
             }, NOTHING_PASTED_MILLIS)
-        }
-        if (step.bar == GuideBar.Menu && !passed) {
-            main.removeCallbacks(checkBar)
-            main.postDelayed(checkBar, BAR_CHECK_MILLIS)
         }
     }
 
@@ -4490,8 +4522,6 @@ class GuideActivity : Activity() {
         private const val FIX_UNDONE_BODY = "Let it fix one and leave it. Type a typo, then Space."
         private const val NOTHING_PASTED_TITLE = "Nothing happened. Shocking."
         private const val NOTHING_PASTED_BODY = "fn isn't Ctrl yet. Press the button below to turn it on."
-        private const val EMPTY_BAR_TITLE = "Nothing to judge. Rare for you."
-        private const val EMPTY_BAR_BODY = "Type a letter so the bar fills up."
         private const val TOO_LATE_TITLE = "Still open? The last slide's over. Let it go."
         private const val TOO_LATE_PANEL = "Press Sym to close it."
         private const val TOO_LATE_ALT = "Press Alt to turn it off."
@@ -4499,8 +4529,6 @@ class GuideActivity : Activity() {
         private const val TOO_LATE_MILLIS = 1600L
         /** fn and V that changed nothing in this long says so. */
         private const val NOTHING_PASTED_MILLIS = 600L
-        /** The word menu slide looks at the bar this long after the last thing that happened. */
-        private const val BAR_CHECK_MILLIS = 700L
         /** When the word menu's demo presses O: late in the hold demo, early once the menu is really open. */
         private const val MENU_O_AT = .75f
         private const val MENU_O_OPEN_AT = .3f

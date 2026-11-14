@@ -21,7 +21,7 @@ for line in "Action.Save -> R.drawable.menu_save" "Action.Favourite -> R.drawabl
   "private const val MENU_PILL_LEFT = 18" "private const val MENU_PILL_RIGHT = 11" "private const val MENU_PILL_GAP = 12" \
   "private const val MENU_WORD_GAP = 8" "private const val LIT_DP = 2f" \
   "menuWordCentre = MenuKeys.wordCentre(wordLeft, wordRight, wordEnd, textWidth)" "val wordEnd = MenuKeys.wordEnd(width.toFloat(), dp(MENU_WORD_GAP).toFloat()" \
-  "private const val LIT_GAP_DP = 3f"; do
+  "private const val LIT_GAP_DP = 3f" "private const val SELECTED_LINE_DP = 2f" "private const val SELECTED_LINE_GAP_DP = 3f"; do
   grep -qF "$line" "$keyboard/Strip.kt" || { echo "Strip.kt's menu icons or sizes changed: $line"; exit 1; }
 done
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}/platforms/android-36/android.jar" -d "$work" \

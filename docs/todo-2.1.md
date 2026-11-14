@@ -321,6 +321,10 @@ enders\gesture-line
     - Word menu, cosmetic: "When I press a button and let go it still registers as that I'm hovering." After a press and its
       release, the pressed button's hover preview stays on. Today the press keeps the preview it took over until the finger
       moves (W's design), so either the release must clear it or the lift isn't heard. For W when work resumes.
+    - Held delete, design question (owner: "should the deleting long swipe should have more orange accents like other gestures
+      like triple space or do you think its fine?"). The Orchestrator's view: yes, a little. The word being eaten right now turns
+      orange, like triple Space's selected words; the queued words stay grey; it dims back to grey while paused. Waiting on the
+      owner; a quick phone preview first if wanted.
   - **Paused for the usage limit (2026-11-14, 5-hour window at 95%, resets 02:10 UTC; weekly at 87%).** W, C, D and A stopped
     mid-turn; F and V were idle; their unfinished changes stay in their worktrees. On resume, send each a short "carry on":
     - V: blocker #1 first, then the selected-word underline, #20, #21, #31, #32.

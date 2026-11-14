@@ -2553,6 +2553,22 @@ private fun bugHunt(world: Realistic) {
         .type("1").also { it.composer.symbol("&"); it.settle() }.type("b").text
     same(symbols(url), "a=1&b", "#29: an address bar gets \"=\" and \"&\" alone")
     same(symbols(Typist.FIELD), "a = 1 & b", "#29: prose still gets spaces around them")
+
+    // #39: one failed load turned autocorrect off for good. It tries again, after longer each time, and a load that works starts over.
+    val retry = LoadRetry()
+    must(retry.mayLoad(0), "#39: the first load may start")
+    retry.failed(1_000)
+    must(!retry.mayLoad(1_000 + LoadRetry.FIRST_MILLIS - 1) && retry.mayLoad(1_000 + LoadRetry.FIRST_MILLIS), "#39: a failure waits, then tries again")
+    retry.failed(100_000)
+    must(!retry.mayLoad(100_000 + 2 * LoadRetry.FIRST_MILLIS - 1) && retry.mayLoad(100_000 + 2 * LoadRetry.FIRST_MILLIS), "#39: a second waits twice as long")
+    repeat(10) { retry.failed(1_000_000) }
+    must(retry.mayLoad(1_000_000 + LoadRetry.LONGEST_MILLIS), "#39: never longer than the longest wait")
+    retry.loaded()
+    retry.failed(5_000_000)
+    must(retry.mayLoad(5_000_000 + LoadRetry.FIRST_MILLIS), "#39: a load that worked starts the waits over")
+    val loader = java.io.File("android/kotlin/com/atlas/keyboard/AutocorrectLoader.kt").readText()
+    must("failed = true" !in loader && loader.contains("retry.failed(SystemClock.uptimeMillis())") &&
+        loader.split("!retry.mayLoad(SystemClock.uptimeMillis())").size == 3, "#39: the loader waits on the retry, and never gives up")
 }
 
 fun main() {

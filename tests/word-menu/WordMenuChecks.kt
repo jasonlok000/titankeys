@@ -606,19 +606,24 @@ private fun theHover() {
     val (i, o) = MenuKeys.UP to MenuKeys.DOWN
     for (order in Order.entries) for (back in listOf(null, 60L)) for ((up, down) in listOf("I" to "O", "K" to "L")) {
         val how = "${order.describe}, the finger ${if (back == null) "still and unreported" else "reported again"}, $up and $down"
-        // Up the ladder with I (or K) under one resting finger: the pill stays on I and shows the next step each time.
+        // Up the ladder with I (or K) under one resting finger. While the key is down its pill shows the next step; let go, the
+        // hover ends with the press (owner, 2026-11-13: "When I press a button and let go it still registers as that I'm
+        // hovering"), until the touchpad shows the finger again.
         val bar = MenuBar(new)
         bar.touch(up, 0)
         same(bar.pill, i to MenuKeys.Button.Save, "$how: resting on $up shows Save")
+        /** What the pill shows after a press and its release: nothing, unless the touchpad has shown the finger again. */
+        fun expected(@Suppress("UNUSED_PARAMETER") later: Long, shows: Pair<Int, MenuKeys.Button>?) = if (back != null) shows else null
         var time = 1_000L
         for ((after, shows) in listOf(saved to MenuKeys.Button.Favourite, favourite to MenuKeys.Button.Favourited,
                 favourite to MenuKeys.Button.Favourited)) {
+            bar.touch(up, time - 500)
             bar.pressUnderFinger(up, time, order, back)
-            // Right after the press, past the press's lift and the plain wait that cleared it before, and long after.
+            // Right after the press, past the press's lift and the plain wait, and long after.
             for (later in listOf(1L, 300L, 1_200L, 2_900L)) {
                 bar.at(time + later)
                 same(bar.state, after, "$how: the press moved the word to $after")
-                same(bar.pill, i to shows, "$how: $later ms after the press, the pill stays on I and shows $shows")
+                same(bar.pill, expected(later, i to shows), "$how: $later ms after the press, I's pill")
             }
             time += 3_000
         }
@@ -627,16 +632,17 @@ private fun theHover() {
         same(bar.pill, o to MenuKeys.Button.Unfavourite, "$how: on $down, Unfavourite")
         time += 1_000
         for ((after, shows) in listOf(saved to MenuKeys.Button.Unsave, new to MenuKeys.Button.Block, blocked to null)) {
+            bar.touch(down, time - 500)
             bar.pressUnderFinger(down, time, order, back)
             for (later in listOf(1L, 300L, 1_200L, 2_900L)) {
                 bar.at(time + later)
                 same(bar.state, after, "$how: the press moved the word to $after")
-                same(bar.pill, shows?.let { o to it }, "$how: $later ms after the press, O shows ${shows ?: "nothing: no pill"}")
+                same(bar.pill, expected(later, shows?.let { o to it }), "$how: $later ms after the press, O's pill")
             }
             time += 3_000
         }
-        // Not once did the hover leave the finger's key: the first mark is I's, the second O's, and nothing else.
-        same(bar.marks.map { it.second }, listOf(i, o), "$how: the hover never went away, ${bar.marks}")
+        // After each release the hover was gone until the finger showed again.
+        if (back == null) check(bar.marks.count { it.second == -1 } >= 6) { "$how: each release ends the hover, ${bar.marks}" }
         same(bar.picked, listOf("Save", "Favourite", "Favourited", "Unfavourite", "Unsave", "Block"), "$how: each press one step")
         same(bar.open, true, "$how: the menu stays open")
     }
@@ -657,27 +663,29 @@ private fun theHover() {
         lifted.lift(3_000)
         same(lifted.at(3_000 + SteadyKey.LIFT_MILLIS - 1).pill, i to MenuKeys.Button.Favourite, "$how: a short lift keeps it")
         same(lifted.at(3_000 + SteadyKey.LIFT_MILLIS).pill, null, "$how: a real lift ends it")
-        // A finger that lifts while the touchpad is quiet can't be seen: the pill stays until the finger lands again.
+        // A press and release with the touchpad quiet: the hover is gone (before, it stayed until the finger moved), and comes
+        // back when the touchpad shows the finger on a button again.
         val unseen = MenuBar(new)
         unseen.touch("I", 0)
         unseen.pressUnderFinger("I", 1_000, order)
-        same(unseen.at(10_000).pill, i to MenuKeys.Button.Favourite, "$how: no touchpad event, no change")
-        unseen.touch("H", 10_500)
-        same(unseen.pill, null, "$how: the finger landing elsewhere ends it")
+        same(unseen.at(10_000).pill, null, "$how: let go, the press's hover is gone")
+        unseen.touch("I", 10_500)
+        same(unseen.pill, i to MenuKeys.Button.Favourite, "$how: the finger seen on I again hovers it, with the next step")
     }
-    // A press with the finger resting elsewhere: the pill goes to the pressed key, where the finger is, and stays there.
+    // A press with the finger resting elsewhere: while the key is down the pill is on the pressed key; let go, it's gone.
     val elsewhere = MenuBar(saved)
     elsewhere.touch("U", 0)
     same(elsewhere.pill, null, "Resting on U hovers nothing")
-    elsewhere.pressUnderFinger("I", 1_000, Order.Typical)
-    same(elsewhere.at(3_000).pill, i to MenuKeys.Button.Favourited, "Pressing I hovers I")
-    // A slow app: the touchpad's lift reached the keyboard 200 ms before the key did, so the plain wait cleared the hover first.
-    // The press brings it back on the pressed key.
+    elsewhere.keyDown("I", 1_000)
+    same(elsewhere.pill, i to MenuKeys.Button.Favourited, "Pressing I hovers I while it's down")
+    elsewhere.keyUp("I", 1_086)
+    same(elsewhere.at(3_000).pill, null, "Let go, the hover is gone")
+    // A slow app: the touchpad's lift reached the keyboard 200 ms before the key did. The press and release leave no hover.
     val slow = MenuBar(new)
     slow.touch("I", 0)
     slow.lift(800)
     slow.press("I", 1_000)
-    same(slow.at(3_000).pill, i to MenuKeys.Button.Favourite, "A late key brings the hover back")
+    same(slow.at(3_000).pill, null, "A late key and its release leave no hover")
     // Back has no hover, and closes the menu, from P or Backspace.
     for (back in listOf("P", Layout.BACKSPACE)) {
         val bar = MenuBar(saved)
@@ -692,11 +700,13 @@ private fun theHover() {
     block.touch("O", 0)
     same(block.pill, o to MenuKeys.Button.Block, "O shows Block on a word that isn't saved")
     block.pressUnderFinger("O", 1_000, Order.Typical)
-    same(block.at(3_000).let { Triple(it.open, it.mark, it.pill) }, Triple(true, o, null), "Blocked: the menu stays, the hover on O, with no pill")
+    same(block.at(3_000).let { Triple(it.open, it.mark, it.pill) }, Triple(true, -1, null), "Blocked: the menu stays, and the release ended the hover")
     block.touch("I", 3_500)
     same(block.pill, i to MenuKeys.Button.Unblock, "and I is Unblock")
     block.pressUnderFinger("I", 4_000, Order.Typical)
-    same(block.at(6_000).let { it.state to it.pill }, new to (i to MenuKeys.Button.Save), "Unblock: not saved again, and I is Save")
+    same(block.at(6_000).state, new, "Unblock: not saved again")
+    block.touch("I", 6_500)
+    same(block.pill, i to MenuKeys.Button.Save, "and I, seen again, is Save")
     // At the bottom, a blocked word's O has no button: its key picks nothing, so it types and closes the menu, as any key does.
     val bottom = MenuBar(blocked)
     bottom.touch("O", 0)
@@ -788,7 +798,8 @@ private fun theKeyboardMakesTheseCalls() {
         "barHover.press(pressed)",
         "markMenu(restingKey, quiet = true)",
         "val menuRelease = keyCode == menuKey && menuOpen",
-        "if (menuRelease) barHover.release(keyCode, event.eventTime)",
+        "if (menuRelease && barHover.releaseAndClear(keyCode)) {",
+        "markMenu(restingKey, quiet = true)",
         "val barLast = !menuRelease && barHover.keyUp(keyCode, event.eventTime) && !panelOpen",
         "if (panelLast || barLast) {",
         "if (barHover.expire(now)) {",

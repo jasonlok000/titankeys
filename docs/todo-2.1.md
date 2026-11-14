@@ -318,6 +318,10 @@ enders\gesture-line
     all bar checks pass. The Orchestrator's calls: keep the clip-offer shrink; keep the guide's first-slide side words rising from
     under the edge.
   - **Owner's review of build 0a6d754e (2026-11-14), noted, not started yet:**
+    - Guide end screen, Back (owner: "When going back from the boring guide triggered from the end screen it should go back to the
+      end screen. Applies to everything else for end screen"). Every page the end screen opens (the boring guide, Settings
+      links, Share swipes and the rest) returns to the end screen on Back, as it was left. For V when work resumes, with a
+      check per link.
     - **Regression, first for D on resume** (owner: "I think my square button is not working for me anymore on smart launcher.").
       D's TakenKeys takes every key in Smart Launcher's search except event.isSystem; Android's isSystem covers Home and Back but
       not KEYCODE_APP_SWITCH (the square), so TitanKeys takes Recents and drops it (AtlasIme.kt:1420). Fix: take only the keys

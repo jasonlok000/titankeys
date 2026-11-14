@@ -361,9 +361,14 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     GuideActivity.start(activity)
                     "null"
                 }
-                "playground" -> {
+                // Back from a page that the guide's end opened: the end again, as it was left.
+                "guideEnd" -> {
+                    GuideActivity.startAtEnd(activity)
+                    "null"
+                }
+                "playground", "playgroundFromEnd" -> {
                     // The answer comes as a message when the playground closes. A request held open that long would time out.
-                    GuideActivity.playground(activity) { action ->
+                    GuideActivity.playground(activity, fromEnd = operation == "playgroundFromEnd") { action ->
                         activity.emit(JSONObject().put("type", "atlas-playground").put("action", action).toString())
                     }
                     "null"

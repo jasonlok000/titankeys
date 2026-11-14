@@ -383,15 +383,24 @@ export const wipeEverything = () => atlas("wipeEverything");
  * Opens the playground, and tells where its buttons asked to go: "setup" when it closed from its setup slide, and "closed"
  * when something else closed it, such as a link that opened the app's own screen over it.
  */
-export function openPlayground(closed: (action: "guide" | "settings" | "setup" | "closed") => void) {
+export type PlaygroundExit = "guide" | "settings" | "setup" | "closed" | "back";
+
+/**
+ * Opens the playground, and tells `closed` how it closed. One the guide's end opened (`fromEnd`) closes with "back" on Back, to go
+ * back to the end, where the front page's leaves the app.
+ */
+export function openPlayground(closed: (action: PlaygroundExit) => void, fromEnd = false) {
   // The answer comes as a message, because a native request held open while you play would time out.
   const stop = onNativeMessage("atlas-playground", message => {
     stop();
-    closed((message as { action: "guide" | "settings" | "setup" | "closed" }).action);
+    closed((message as { action: PlaygroundExit }).action);
   });
-  void atlas("playground");
+  void atlas(fromEnd ? "playgroundFromEnd" : "playground");
   return stop;
 }
+
+/** Opens the guide at its end screen, as it was left: Back from a page the end opened (app/end/index.tsx). */
+export const openGuideEnd = () => atlas("guideEnd");
 
 /** The front page went away: a playground that waits for the guide to close is not wanted any more. */
 export const cancelPlayground = () => void atlas("playgroundCancel");

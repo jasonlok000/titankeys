@@ -9,6 +9,13 @@
  */
 const TOP = "/settings";
 
+/**
+ * The guide's end screen, under every page it opens, such as /end/guide-boring (owner, 2026-11-13: "When going back from the
+ * boring guide triggered from the end screen it should go back to the end screen. Applies to everything else for end screen.").
+ * Back from the page uncovers it, and it opens the guide's end again, as it was left. See app/end/index.tsx.
+ */
+export const END = "/end";
+
 /** Pages that sit under another page and not under Settings itself. Every other page in Settings has TOP as its parent. */
 const parents: Record<string, string> = {
   "/settings/contribute-about": "/settings/contribute",
@@ -30,7 +37,9 @@ const parents: Record<string, string> = {
  * no ← for the moment before the playground covers it.
  */
 export function parentOf(path: string): string | null | undefined {
-  if (path === TOP || path === "/") return null;
+  if (path === TOP || path === "/" || path === END) return null;
+  // A page the guide's end opened has /end under it, which brings the end back as Back uncovers it.
+  if (path.startsWith(`${END}/`)) return END;
   if (!path.startsWith(`${TOP}/`)) return undefined;
   if (parents[path]) return parents[path];
   // A page in a folder, such as /settings/data/reset, sits under the folder's own page.

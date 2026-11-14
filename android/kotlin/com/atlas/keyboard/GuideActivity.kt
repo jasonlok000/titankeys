@@ -731,6 +731,12 @@ class GuideActivity : Activity() {
      * suggests words, and the drawing of the keys still follows your finger. See [playground].
      */
     private val playground by lazy { intent.getBooleanExtra(PLAYGROUND, false) }
+    /** Opened straight at the end screen, as it was left: Back from a page the end opened came back here. See [openFromEnd]. */
+    private val opensAtEnd by lazy { !playground && intent.getBooleanExtra(AT_END, false) }
+    /** The playground that the end's Go type something opened: its Back goes back to the end, not out of the app. */
+    private val playgroundFromEnd by lazy { playground && intent.getBooleanExtra(FROM_END, false) }
+    /** The end shows as it was left, with the finale already played: see [opensAtEnd]. */
+    private var endSettled = false
     private val preferences by lazy { getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE) }
     private val flow by lazy { GuideFlow(::readSettings) }
     private val haptics by lazy { Haptics(this) }
@@ -1188,8 +1194,10 @@ class GuideActivity : Activity() {
             return
         }
         if (changing) return
+        // The playground that the end opened goes back to the end: the app's page under it opens the guide there again.
+        if (playgroundFromEnd && !settingUp) leavePlayground(PLAYGROUND_BACK)
         // The playground is the front page, so Back leaves the app, as it does from any app's front page.
-        if (playground && !settingUp) {
+        else if (playground && !settingUp) {
             playgroundExit = null
             finishAffinity()
         } else if (settingUp) leave()
@@ -1385,8 +1393,7 @@ class GuideActivity : Activity() {
         }
         boringButton = bigButton(END_NEXT) {
             preferences.edit().remove(RESUME).apply()
-            startActivity(Connected.pageIntent(this, "/"))
-            finish()
+            openFromEnd(END_PLAY)
         }
         // A real button, outlined, not fine print (owner, v5.2).
         againLink = bigButton(AGAIN_LINK) { startAgain() }.apply {
@@ -2026,6 +2033,10 @@ class GuideActivity : Activity() {
             showPlayground()
             return
         }
+        if (opensAtEnd) {
+            showEndAgain()
+            return
+        }
         val resumed = preferences.getString(RESUME, null) != null && flow.step.id != GUIDE_STEPS.first().id
         again.visibility = if (resumed) View.VISIBLE else View.GONE
         // Coming back says one thing, once: that you're back, or that chapters can be picked. On the very first slide, neither.
@@ -2243,6 +2254,7 @@ class GuideActivity : Activity() {
         title.text = end.title
         finaleView.lines = SUMMARY_LINES
         finaleView.visibility = View.VISIBLE
+        val settled = endSettled
         root.post {
             // The finale has the screen from under the top bar down to the grass, which has the bottom edge (owner, 2026-11-13).
             val top = (column.paddingTop + dp(TOP_BAR + 16)).toFloat()
@@ -2251,7 +2263,7 @@ class GuideActivity : Activity() {
             placeEnd()
             // The finale's words are the decoration's to keep clear of: the grass grows under them, from the bottom edge.
             decor.keepOutArea(RectF(0f, top, root.width.toFloat(), finaleView.box.second))
-            finaleView.play()
+            if (settled) finaleView.settle() else finaleView.play()
         }
     }
 
@@ -4069,8 +4081,7 @@ class GuideActivity : Activity() {
         // At the end, the small pill at the top is the boring guide; the big button below goes to type.
         if (flow.finished) {
             preferences.edit().remove(RESUME).apply()
-            startActivity(Connected.pageIntent(this, BORING_GUIDE))
-            finish()
+            openFromEnd(END_BORING_GUIDE)
             return
         }
         if (!passed) {
@@ -4531,6 +4542,32 @@ class GuideActivity : Activity() {
     }
 
     /** Leaves at any time. The guide remembers where you stopped, and opens there from the guide page. */
+    /**
+     * Opens [page] of the app from the end screen (owner, 2026-11-13: "When going back from the boring guide triggered from the end
+     * screen it should go back to the end screen. Applies to everything else for end screen."). The app's own screen can't open
+     * over the guide, as Android keeps it at the bottom of the app's screens, so the guide closes as it always did. The page comes
+     * with the app's /end page under it (lib/settings-tree.ts), which opens the guide again at its end, as it was left, when Back
+     * uncovers it. See [opensAtEnd].
+     */
+    private fun openFromEnd(page: String) {
+        startActivity(Connected.pageIntent(this, page))
+        finish()
+    }
+
+    /**
+     * The end again, with no slides before it and the finale already played: the name, BUILT FOR TITAN 2 ELITE, the grass and the
+     * buttons, as they were left; the share answer is kept by itself. See [opensAtEnd].
+     */
+    private fun showEndAgain() {
+        flow.start(GUIDE_STEPS.last().id)
+        applyTone(GuideTone.Orange)
+        backdrop.show(backgroundOf(GuideTone.Orange))
+        for (view in listOf(chapter, close)) view.alpha = 1f
+        endSettled = true
+        decorate(GuideDecor.FINALE, 0)
+        enter(flow.step)
+    }
+
     private fun leave() {
         // The playground's setup slide closes to the app's setup page, which waits for a touch to start again.
         if (playground && settingUp) leavePlayground(PLAYGROUND_SETUP) else finish()
@@ -4914,6 +4951,11 @@ class GuideActivity : Activity() {
             activity.startActivity(Intent(activity, GuideActivity::class.java))
         }
 
+        /** Opens the guide at its end screen, as it was left: the app's /end page, as Back uncovers it. See [openFromEnd]. */
+        fun startAtEnd(activity: Activity) {
+            activity.startActivity(Intent(activity, GuideActivity::class.java).putExtra(AT_END, true))
+        }
+
         /** The guide opened Accessibility for setup and waits for TitanKeys to be turned on there. */
         @Volatile private var awaitingAccessibility = false
 
@@ -4936,6 +4978,17 @@ class GuideActivity : Activity() {
         const val PLAYGROUND_SETTINGS = "settings"
         const val PLAYGROUND_CLOSED = "closed"
         const val PLAYGROUND_SETUP = "setup"
+        /** The end's playground went back: the app's page under it opens the end again. */
+        const val PLAYGROUND_BACK = "back"
+        /** The guide opens at its end screen, as it was left, and the end opened this playground. */
+        private const val AT_END = "atEnd"
+        private const val FROM_END = "fromEnd"
+        /**
+         * The app's pages that the end opens, each with the app's /end page under it, which brings the end back: the boring guide,
+         * and the front page, the playground, for Go type something. See [openFromEnd] and lib/settings-tree.ts.
+         */
+        internal const val END_BORING_GUIDE = "/end/guide-boring"
+        internal const val END_PLAY = "/end/play"
         /** Told where to go when the playground closes. Only one playground is open at a time. */
         private var playgroundExit: ((String) -> Unit)? = null
 
@@ -4949,7 +5002,7 @@ class GuideActivity : Activity() {
          * [PLAYGROUND_SETUP] when it closes from its setup slide, or [PLAYGROUND_CLOSED] when something else closed it.
          * The front page can ask for it while the guide is open, as when setup ends in the guide, so then it waits for the guide.
          */
-        fun playground(activity: Activity, exit: (String) -> Unit) {
+        fun playground(activity: Activity, fromEnd: Boolean = false, exit: (String) -> Unit) {
             playgroundExit = exit
             // The front page asks each time its window is in front, so one that is open, or that a button just closed, is enough.
             // A playground that Android is closing counts as closed: it can close after the app's window is in front. And with
@@ -4962,7 +5015,7 @@ class GuideActivity : Activity() {
             val open = {
                 // One that is starting does not count as open yet, so a second ask in the meantime is left out.
                 playgroundStarting = SystemClock.uptimeMillis()
-                activity.startActivity(Intent(activity, GuideActivity::class.java).putExtra(PLAYGROUND, true))
+                activity.startActivity(Intent(activity, GuideActivity::class.java).putExtra(PLAYGROUND, true).putExtra(FROM_END, fromEnd))
             }
             if (guidesOpen > 0) waitingPlayground = open else open()
         }

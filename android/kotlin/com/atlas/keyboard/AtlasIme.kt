@@ -3228,6 +3228,11 @@ class AtlasIme : InputMethodService() {
             if (field.exact) logExact("key $keyCode repeat ${event.repeatCount} kept by hold")
             return true
         }
+        // With the panel's groups on the screen, fn picks the one at its place, also as Ctrl, which would take it first (bug hunt #37).
+        if (keyCode == Modifiers.FN && panelOpen && isInputViewShown && categoryKey(event)) {
+            consumedKeys += keyCode
+            return true
+        }
         if (ctrlKey(event)) {
             consumedKeys += keyCode
             return true

@@ -404,7 +404,12 @@ enders\gesture-line
     4. Orchestrator: the release variant built without the owner's key (compiles, no debug code, against
        docs/release-audit-2.1.md), and the release notes' final pass for this round (the end screen's Back, the clip, the arrow,
        the trail).
-    5. Owner: tools/release.sh with their own key, the GitHub pre-release, 3 days of daily use.
+    5. Owner: tools/release.sh with their own key, the GitHub pre-release, 3 days of daily use on that signed APK itself (owner:
+       "I should be daily driving the signed version to be safe right?": yes). The phone has only TitanKeys Debug and the
+       reference app, so com.titankeys installs as a new app: choose it as the keyboard, turn on its Accessibility service and
+       overlay, set its settings again. 2.0 to 2.1 over an existing install isn't covered on this phone: optional, the 2.0
+       release first, then the pre-release over it. During the 3 days, the Orchestrator's Debug tests put the release keyboard
+       back afterwards.
     Later: docs/play/accessibility.md still describes the old launcher rule (hold for symbols, double-press lock): fix it with the
     Play listing.
     - **Owner on #19's swipe trail: "Is the swipe supposed to be fixed now? I think it looks really cramped".** It is C's

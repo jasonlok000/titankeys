@@ -9,7 +9,7 @@ import kotlin.math.min
 /**
  * Draws the strip's steering and selecting displays to PNGs with the real [GestureDrawing], over a stand-in Canvas that draws
  * with Java2D, so they can be looked at without the phone. The density and width match the owner's screenshots of the phone.
- * Each moment gets its own PNG in the folder given, dark and light, and all.png and all-light.png put them in one sheet.
+ * Each moment gets its own PNG in the folder given, and all.png puts them in one sheet. The keyboard is always dark.
  */
 fun main(args: Array<String>) {
     val folder = File(args.firstOrNull() ?: "gesture-render")
@@ -27,10 +27,10 @@ fun main(args: Array<String>) {
         "7-steer-text-end" to { d -> steer(d, text, "", direction = 1, speed = CursorMode.SLOWEST_PER_SECOND * 4) },
         "8-select" to ::select,
     )
-    for (dark in listOf(true, false)) {
-        val look = Look(dark, orange = true)
+    run {
+        val look = Look(orange = true)
         val drawing = GestureDrawing(DENSITY, 16 * DENSITY)
-        val suffix = if (dark) "" else "-light"
+        val suffix = ""
         val sheet = BufferedImage(WIDTH, moments.size * (strip + gap), BufferedImage.TYPE_INT_ARGB)
         for ((index, moment) in moments.withIndex()) {
             val display = GestureDisplay()
@@ -52,8 +52,8 @@ fun main(args: Array<String>) {
             out.fillRect(0, index * (strip + gap) + strip + gap / 2, WIDTH, 1)
             out.dispose()
             // How strong the underglow is a quarter of the way in from each side, and how many times stronger the right is.
-            val leftGlow = glowAt(image, WIDTH / 4, strip, dark)
-            val rightGlow = glowAt(image, WIDTH * 3 / 4, strip, dark)
+            val leftGlow = glowAt(image, WIDTH / 4, strip)
+            val rightGlow = glowAt(image, WIDTH * 3 / 4, strip)
             println("${moment.first}$suffix: lean ${"%.2f".format(display.steerLean)}, underglow left ${"%.0f".format(leftGlow)}, " +
                 "right ${"%.0f".format(rightGlow)}, right/left ${"%.2f".format(rightGlow / leftGlow)}, " +
                 "caret ${if (display.caretShown) "on" else "off"} ${"%.2f".format(display.stepped - display.shownStep)} letters from the middle")
@@ -64,13 +64,13 @@ fun main(args: Array<String>) {
 }
 
 /** How far the bottom of the strip at [x] is from the paper towards the accent, 0 to 255, over a few pixels. */
-private fun glowAt(image: BufferedImage, x: Int, strip: Int, dark: Boolean): Float {
+private fun glowAt(image: BufferedImage, x: Int, strip: Int): Float {
     var sum = 0f
     var count = 0
     for (dx in -4..4) for (y in strip - (3 * DENSITY).toInt()..strip - 1) {
         val rgb = image.getRGB(x + dx, y)
-        // Orange is mostly red: on black the red rises, and on white the blue falls.
-        sum += if (dark) (rgb shr 16 and 0xFF).toFloat() else (255 - (rgb and 0xFF)).toFloat()
+        // Orange is mostly red: on black the red rises.
+        sum += (rgb shr 16 and 0xFF).toFloat()
         count++
     }
     return sum / count

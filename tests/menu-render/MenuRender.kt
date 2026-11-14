@@ -20,13 +20,14 @@ import kotlin.math.floor
  * frames of each of the six effects, the hover before and after each press, and a favourite's quiet hearts. The word, its
  * previews and every effect are the real [MenuScene], drawn on [AwtMenuCanvas] in Inter Bold; the buttons, the pills and the icons
  * are drawn as Strip draws them, with the real [MenuKeys] placing them over the calibrated keys, its sizes and the app's own vector
- * drawables. The app shows above the bar, where the effects rise. Each sheet is a PNG in the folder given, dark and light.
+ * drawables. The app shows above the bar, where the effects rise. Each sheet is a PNG in the folder given, in the keyboard's
+ * one look, dark.
  *
  * It checks three of the owner's corrections in pixels too, and fails if any breaks: a hovered button's pill covers the buttons to
  * its left (hovering Unsave covers Favourite), the book is opaque once it shuts, so the word's ink can't be seen through it, and
  * every rung's word is solid in its own colour, the status, with each preview about 60% of the way to the next, with Orange accents
  * on and off. The rungs at rest and hovered are drawn with accents off too (menu-all-accent-off), the four statuses side by side
- * in both looks with accents on and off (menu-statuses), where a favourite must stand apart from Saved and Not saved, and the
+ * with accents on and off (menu-statuses), where a favourite must stand apart from Saved and Not saved, and the
  * guide's light under its word (Strip.lit) on the bar and through the word's menu.
  */
 fun main(args: Array<String>) {
@@ -106,11 +107,11 @@ fun main(args: Array<String>) {
     Accent.on = false
     val off = stills()
     Accent.on = accents
-    for (dark in listOf(true, false)) {
-        val suffix = if (dark) "" else "-light"
+    run {
+        val suffix = ""
         for ((sheet, frames) in sheets + ("menu-all-accent-off" to off)) {
             if (sheet == "menu-all-accent-off") Accent.on = false
-            val drawn = frames.map { looks.draw(it, dark) }
+            val drawn = frames.map { looks.draw(it) }
             val image = BufferedImage(WIDTH, drawn.sumOf { it.height }, BufferedImage.TYPE_INT_RGB)
             var y = 0
             for ((index, single) in drawn.withIndex()) {
@@ -161,28 +162,22 @@ private class Frame(val name: String, val caption: String, val scene: Snapshot, 
                     val alignment: KeyAlignment = KeyAlignment.DEFAULT, val above: Int = 40, val lit: FloatArray? = null,
                     val barWord: String? = null)
 
-/** The scene's drawing as it was, in the dark look and the light one: its word, and its effects. */
-private class Snapshot(val darkWord: Recording, val darkEffects: Recording, val lightWord: Recording, val lightEffects: Recording) {
-    fun draw(canvas: MenuCanvas, dark: Boolean, word: Boolean) =
-        (if (dark) (if (word) darkWord else darkEffects) else (if (word) lightWord else lightEffects)).replay(canvas)
+/** The scene's drawing as it was: its word, and its effects. */
+private class Snapshot(val word: Recording, val effects: Recording) {
+    fun draw(canvas: MenuCanvas, word: Boolean) = (if (word) this.word else effects).replay(canvas)
 }
 
-/** The bar's light look, with Accent's colour: orange, or cream with Orange accents off. */
-private val LIGHT get() = MenuScene.Palette.LIGHT
-/** The bar's dark look, with Accent's colour. */
+/** The bar's look, always dark, with Accent's colour: orange, or cream with Orange accents off. */
 private val DARK get() = MenuScene.Palette.DARK
 
-/** The scene as it is now, recorded in both looks, to draw later: the scene moves on. */
+/** The scene as it is now, recorded to draw later: the scene moves on. */
 private fun MenuScene.snapshot(): Snapshot {
     val was = palette
     palette = DARK
-    val darkWord = Recording().also { paintWord(it) }
-    val darkEffects = Recording().also { paintEffects(it) }
-    palette = LIGHT
-    val lightWord = Recording().also { paintWord(it) }
-    val lightEffects = Recording().also { paintEffects(it) }
+    val word = Recording().also { paintWord(it) }
+    val effects = Recording().also { paintEffects(it) }
     palette = was
-    return Snapshot(darkWord, darkEffects, lightWord, lightEffects)
+    return Snapshot(word, effects)
 }
 
 /** A [MenuCanvas] that keeps every call, to play them again on another canvas. */
@@ -304,7 +299,7 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
 
     fun label(button: MenuKeys.Button) = string(strings, "strip_" + button.name.lowercase())
 
-    fun draw(frame: Frame, dark: Boolean): BufferedImage {
+    fun draw(frame: Frame): BufferedImage {
         val top = CAPTION + Math.round(frame.above * DENSITY)
         val image = BufferedImage(WIDTH, top + ROW, BufferedImage.TYPE_INT_RGB)
         val g = image.createGraphics()
@@ -312,11 +307,11 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
         g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
         g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE)
-        val paper = if (dark) Color.BLACK else Color.WHITE
-        val ink = if (dark) Color.WHITE else Color.BLACK
-        val muted = if (dark) Color.GRAY else Color.DARK_GRAY
-        val app = if (dark) Color(0x16, 0x12, 0x10) else Color(0xEE, 0xEA, 0xE6)
-        g.color = if (dark) Color(0x22, 0x22, 0x22) else Color(0xDD, 0xDD, 0xDD)
+        val paper = Color.BLACK
+        val ink = Color.WHITE
+        val muted = Color.GRAY
+        val app = Color(0x16, 0x12, 0x10)
+        g.color = Color(0x22, 0x22, 0x22)
         g.fillRect(0, 0, WIDTH, CAPTION)
         g.color = Color.GRAY
         g.font = medium.deriveFont(20f)
@@ -326,9 +321,9 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
         g.color = paper
         g.fillRect(0, top, WIDTH, ROW)
         g.translate(0, top)
-        // The guide's light, as Strip.underline draws it: the accent, or the ink with Orange accents off, as the bar's look has it.
+        // The guide's light, as Strip.underline draws it: the accent, orange or cream, as the bar's look has it.
         fun lit(left: Float, right: Float, baseline: Float) {
-            g.color = if (Accent.on) Color(ORANGE) else ink
+            g.color = Color(DARK.accent)
             val top = baseline + LIT_GAP_DP * DENSITY
             g.fill(java.awt.geom.Rectangle2D.Float(left, top, right - left, LIT_DP * DENSITY))
         }
@@ -348,7 +343,7 @@ private class Looks(val bold: Font, val medium: Font, val strings: String, val d
         fun scene(word: Boolean) {
             val saved = g.transform
             g.scale(DENSITY.toDouble(), DENSITY.toDouble())
-            frame.scene.draw(canvas, dark, word)
+            frame.scene.draw(canvas, word)
             g.transform = saved
         }
         scene(true)
@@ -510,7 +505,7 @@ private fun theShutBookHidesTheWord(looks: Looks, folder: File) {
 }
 
 /**
- * Every rung's word is solid in its own colour, the status, in the dark look and the light one, with Orange accents on and off
+ * Every rung's word is solid in its own colour, the status, with Orange accents on and off
  * (owner, 2026-11-13: "favourited = orange. saved = white. neutral = grey. blocked = grey + striked through"). Saved is the ink,
  * Favourite its own colour, Not saved the muted grey, Blocked the dim grey; a resting finger's preview moves the word 60% of the
  * way to the next. The word is drawn without smoothing, so each letter's pixels are its one colour: away from the strike, every
@@ -527,7 +522,7 @@ private fun theWordIsSolid(looks: Looks) {
     for ((look, palette) in listOf(true, false).flatMap { on ->
         Accent.on = on
         val with = if (on) "accents on" else "accents off"
-        listOf("dark, $with" to MenuScene.Palette.DARK, "light, $with" to MenuScene.Palette.LIGHT)
+        listOf(with to MenuScene.Palette.DARK)
     }) {
         val p = palette
         val cases = listOf(
@@ -574,7 +569,7 @@ private fun theWordIsSolid(looks: Looks) {
         }
     }
     Accent.on = accents
-    println("Every rung's word is solid in its own colour, each preview 60% of the way to the next, dark and light, accents on and off")
+    println("Every rung's word is solid in its own colour, each preview 60% of the way to the next, accents on and off")
 }
 
 /** [rgb]'s CIE L*a*b*, from sRGB under D65. */
@@ -595,23 +590,23 @@ private fun deltaE(a: Int, b: Int) = lab(a).zip(lab(b)).sumOf { (x, y) -> (x - y
 
 /**
  * The four statuses side by side, the word's colour alone (owner, 2026-11-13: "favourited = orange. saved = white. neutral = grey.
- * blocked = grey + striked through"), in the dark look and the light one, with Orange accents on and off: menu-statuses.png, each
+ * blocked = grey + striked through"), with Orange accents on and off: menu-statuses.png, each
  * row's caption giving every colour's L*. In every row a favourite stands apart from both its neighbours on the ladder: from Saved's
- * ink by at least the dark look's white-to-cream gap (about 14 L*), and from Not saved's grey by at least 15, as ΔE, which is the
+ * ink by at least the white-to-cream gap with accents off (about 14 L*), and from Not saved's grey by at least 15, as ΔE, which is the
  * L* gap where there's no hue.
  */
 private fun theStatusesStandApart(looks: Looks, folder: File) {
     val accents = Accent.on
-    // The dark look's gap between Saved's white and the favourite's cream with accents off, about 14 L*.
+    // The gap between Saved's white and the favourite's cream with accents off, about 14 L*.
     Accent.on = false
     val least = deltaE(0xFFFFFF, MenuScene.Palette.DARK.favourite)
     val names = listOf("Blocked", "Not saved", "Saved", "Favourite")
     val rows = ArrayList<BufferedImage>()
-    for (on in listOf(true, false)) for (dark in listOf(true, false)) {
+    for (on in listOf(true, false)) {
         Accent.on = on
-        val p = if (dark) MenuScene.Palette.DARK else MenuScene.Palette.LIGHT
+        val p = MenuScene.Palette.DARK
         val colours = listOf(p.dim, p.grey, p.ink, p.favourite)
-        val look = "${if (dark) "Dark" else "Light"}, accents ${if (on) "on" else "off"}"
+        val look = "Accents ${if (on) "on" else "off"}"
         check(deltaE(p.favourite, p.ink) >= least - .05) {
             "$look: a favourite, #%06X, stands at least %.1f from Saved's ink, not %.1f".format(p.favourite, least, deltaE(p.favourite, p.ink))
         }
@@ -623,7 +618,7 @@ private fun theStatusesStandApart(looks: Looks, folder: File) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
         g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
-        g.color = if (dark) Color(0x22, 0x22, 0x22) else Color(0xDD, 0xDD, 0xDD)
+        g.color = Color(0x22, 0x22, 0x22)
         g.fillRect(0, 0, WIDTH, CAPTION)
         g.color = Color.GRAY
         g.font = looks.medium.deriveFont(16f)
@@ -985,10 +980,10 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
             captions += said(listOf(off(line, size)))
         },
     )
-    for (dark in listOf(true, false)) {
-        val paper = if (dark) Color.BLACK else Color.WHITE
-        val ink = if (dark) Color.WHITE else Color.BLACK
-        val muted = if (dark) Color.GRAY else Color.DARK_GRAY
+    run {
+        val paper = Color.BLACK
+        val ink = Color.WHITE
+        val muted = Color.GRAY
         val image = BufferedImage(width, rows.size * (bar + caption), BufferedImage.TYPE_INT_RGB)
         val g = image.createGraphics()
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
@@ -1007,14 +1002,14 @@ private fun barSheet(folder: File, regular: Font, best: Font, bestName: String, 
             g.fillRect(0, line.toInt(), (side / 2).toInt(), 1)
             g.fillRect(width - (side / 2).toInt(), line.toInt(), (side / 2).toInt(), 1)
             g.transform = saved
-            g.color = if (dark) Color(0x22, 0x22, 0x22) else Color(0xEE, 0xEE, 0xEE)
+            g.color = Color(0x22, 0x22, 0x22)
             g.fillRect(0, top, width, caption)
             g.color = Color.GRAY
             g.font = regular.deriveFont(22f)
             g.drawString(row.caption + captions[index], 24, top + caption - 14)
         }
         g.dispose()
-        ImageIO.write(image, "png", File(folder, "bar-even-${bestName.lowercase()}${if (dark) "" else "-light"}.png"))
+        ImageIO.write(image, "png", File(folder, "bar-even-${bestName.lowercase()}.png"))
     }
     // One bar baseline (owner, 2026-11-13): every word sits on the full-size words' line, to half a pixel.
     val full = lines.first { it.second == 1f }.first

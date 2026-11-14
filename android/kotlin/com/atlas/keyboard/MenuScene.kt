@@ -88,13 +88,6 @@ class MenuScene(
              * #99918A, Blocked #5E5853 and Favourite [Accent.favourite] (owner, 2026-11-13).
              */
             val DARK get() = Palette(0xFFFFFF, 0x99918A, 0x5E5853, Accent.colour and 0xFFFFFF, 0x000000, 0xFFF1E6, Accent.favourite and 0xFFFFFF)
-            /**
-             * The bar's light look: black ink, and the same warm greys mirrored, as far from black as the dark look's are from white.
-             * A favourite is orange, or with Orange accents off, the darker cream's own hue at L* 21, halfway between Saved's black
-             * and Not saved's grey (L* 41): half as far again from the ink as the dark look's cream is from white, 14 L*.
-             */
-            val LIGHT get() = Palette(0x000000, 0x66615C, 0xA1978E, Accent.colour and 0xFFFFFF, 0xFFFFFF, 0x000000,
-                if (Accent.on) Accent.colour and 0xFFFFFF else 0x35312E)
         }
     }
 

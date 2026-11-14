@@ -37,7 +37,7 @@ private fun frame(display: GestureDisplay, look: Look, label: String): BufferedI
 
 /** Plays [setup]'s deletes on a display and keeps a frame each [every] ms, until the dots are over. */
 private fun sheet(name: String, out: File, every: Long, setup: (GestureDisplay, Long) -> Unit) {
-    val look = Look(dark = true, orange = true)
+    val look = Look(orange = true)
     val display = GestureDisplay()
     val frames = ArrayList<BufferedImage>()
     var now = 1_000L

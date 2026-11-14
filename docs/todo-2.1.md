@@ -449,6 +449,10 @@ enders\gesture-line
         the NightKeys key (bb769da3..., in C:\Users\jason\Documents\NightKeys-PRIVATE-signing-key\), the 2.1.0 pre-release of
         11-11 with atlas.keystore ("Atlas Debug"), 2.0.0 unknown (docs/play/signing.md says atlas.keystore). Waiting on the
         owner: the 2.0.0 APK's key (a 113 MB download, needs the OK), then which key 2.1 is signed with. Not re-signed yet.
+        - Downloaded with the owner's OK, then deleted: **2.0.0 is signed with atlas.keystore** (0fafb1ef...), like tonight's
+          build, so 2.0 users update to it normally; the NightKeys key would make them uninstall. Backed up at the owner's
+          ask: C:\Users\jason\Documents\TitanKeys-PRIVATE-signing-key\ (atlas.keystore and credentials.env copied by
+          checksum, unopened, and a README without passwords). Off-PC copies are the owner's to make.
     - **Next to discuss with the owner (not started):** languages (3.0, #56); and swipes joined by accident when one ends at
       the top row and the next starts at the top row (the owner: "investigate if there's a way to reduce accidentally joining
       two swipes when they end at the top and starts again at the top").

@@ -264,6 +264,15 @@ fun main() {
         "#19: the bar ends a game when a selected word, a clip offer or a notice arrives")
     check("|| notice != null || clip != null || selected != null" in stripSource, "#19: and none of them lets a game start")
 
+    // Bug hunt #33: a period that started with the Sym panel open never got its roll, as the roll was posted only if the bar could
+    // play right then. It's always posted, and asks as it comes.
+    val imeSource = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val wait = imeSource.substringAfter("    private fun waitIdleBar() {").substringBefore("    }")
+    check("main.postDelayed(idleBar, IDLE_BAR_MILLIS)" in wait && "idleBarAllowed()" !in wait, "#33: every period posts its roll")
+    val roll = imeSource.substringAfter("    private val idleBar = Runnable {").substringBefore("    private val idleClock")
+    check(roll.indexOf("if (!idleBarAllowed()) return@Runnable") in 0 until roll.indexOf("idleSchedule.trigger(random)"),
+        "#33: the roll asks whether the bar may play before it counts")
+
     // The jump rope's holders and jumper stay on the line: the holders step apart along it, and the jumper only jumps up from it.
     for (s in sizes) {
         size = s

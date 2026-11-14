@@ -864,6 +864,10 @@ class AtlasIme : InputMethodService() {
      */
     private val idleBar = Runnable {
         if (!idleClock.roll(SystemClock.uptimeMillis())) return@Runnable
+        // Whether the bar may play is asked as the roll comes, not as the period starts: a period that started with the Sym panel
+        // open still gets its roll once the panel is closed (bug hunt #33). A period whose roll finds the bar can't play doesn't
+        // count, as one that input ended doesn't.
+        if (!idleBarAllowed()) return@Runnable
         val random = Random(System.nanoTime())
         if (idleSchedule.trigger(random)) startIdleBar(random = random, schedule = idleSchedule)
     }
@@ -993,7 +997,7 @@ class AtlasIme : InputMethodService() {
     private fun waitIdleBar() {
         main.removeCallbacks(idleBar)
         idleClock.input(SystemClock.uptimeMillis())
-        if (idleBarAllowed()) main.postDelayed(idleBar, IDLE_BAR_MILLIS)
+        main.postDelayed(idleBar, IDLE_BAR_MILLIS)
     }
 
     private fun sleepIdleBar() {

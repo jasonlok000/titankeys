@@ -1404,7 +1404,7 @@ class AtlasIme : InputMethodService() {
         val code = event.keyCode
         // The app takes Back before the keyboard, so an open panel must close here.
         if (watchingKeys && code == KeyEvent.KEYCODE_BACK && isInputViewShown && backKey(event, down)) return true
-        if (!takenKeys.takes(code, down, watchingKeys, event.isSystem)) {
+        if (!takenKeys.takes(code, down, watchingKeys)) {
             if (code == KeyEvent.KEYCODE_SYM) symLog("Sym went on to the app")
             return false
         }

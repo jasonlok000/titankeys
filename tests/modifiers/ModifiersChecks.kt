@@ -592,23 +592,33 @@ private fun discardedKeys() {
  */
 private fun takenKeys() {
     val keys = TakenKeys()
-    same(keys.takes(LETTER, pressed = true, taking = true, system = false), true, "A letter goes to the keyboard")
-    same(keys.takes(LETTER, pressed = true, taking = true, system = false), true, "Its repeats go to the keyboard too")
+    same(keys.takes(LETTER, pressed = true, taking = true), true, "A letter goes to the keyboard")
+    same(keys.takes(LETTER, pressed = true, taking = true), true, "Its repeats go to the keyboard too")
     same(keys.holding, true, "A taken key that is down is still heard")
-    same(keys.takes(LETTER, pressed = false, taking = true, system = false), true, "Its release goes with it")
+    same(keys.takes(LETTER, pressed = false, taking = true), true, "Its release goes with it")
     same(keys.holding, false, "Nothing is down once it is let go")
-    same(keys.takes(SYM, pressed = true, taking = true, system = false), true, "Sym goes to the keyboard, so its panel opens")
-    same(keys.takes(SYM, pressed = false, taking = false, system = false), true, "Sym's release goes with it, even once the field has closed")
-    same(keys.takes(SHIFT, pressed = true, taking = true, system = false), true, "Shift goes to the keyboard, so Shift + Backspace deletes a word")
-    same(keys.takes(SHIFT, pressed = false, taking = true, system = false), true, "Shift's release goes with it")
-    same(keys.takes(KeyEvent.KEYCODE_BACK, pressed = true, taking = true, system = true), false, "Back stays with the app")
-    same(keys.takes(KeyEvent.KEYCODE_VOLUME_UP, pressed = true, taking = true, system = true), false, "The phone's own keys stay with the app")
-    same(keys.takes(LETTER, pressed = true, taking = false, system = false), false, "Outside the field the app keeps its keys")
-    same(keys.takes(LETTER, pressed = false, taking = true, system = false), false, "A release whose press the app had stays the app's")
-    keys.takes(LETTER, pressed = true, taking = true, system = false)
+    same(keys.takes(SYM, pressed = true, taking = true), true, "Sym goes to the keyboard, so its panel opens")
+    same(keys.takes(SYM, pressed = false, taking = false), true, "Sym's release goes with it, even once the field has closed")
+    same(keys.takes(SHIFT, pressed = true, taking = true), true, "Shift goes to the keyboard, so Shift + Backspace deletes a word")
+    same(keys.takes(SHIFT, pressed = false, taking = true), true, "Shift's release goes with it")
+    same(keys.takes(KeyEvent.KEYCODE_BACK, pressed = true, taking = true), false, "Back stays with the app")
+    same(keys.takes(KeyEvent.KEYCODE_VOLUME_UP, pressed = true, taking = true), false, "The phone's own keys stay with the app")
+    same(keys.takes(LETTER, pressed = true, taking = false), false, "Outside the field the app keeps its keys")
+    same(keys.takes(LETTER, pressed = false, taking = true), false, "A release whose press the app had stays the app's")
+    keys.takes(LETTER, pressed = true, taking = true)
     keys.clear()
     same(keys.holding, false, "With the Back service off, nothing is held for it")
+    // The square Recents key stopped working in Smart Launcher when every key but the system ones was taken (owner, 2026-11-13).
+    for (code in listOf(KeyEvent.KEYCODE_APP_SWITCH, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_DPAD_LEFT,
+        KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_TAB, KeyEvent.KEYCODE_ESCAPE, KeyEvent.KEYCODE_SEARCH, KeyEvent.KEYCODE_CAMERA))
+        same(keys.takes(code, pressed = true, taking = true), false, "Key $code goes on to the app and Android")
+    for (code in listOf(KeyEvent.KEYCODE_SPACE, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_ALT_LEFT,
+        KeyEvent.KEYCODE_FUNCTION, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_COMMA, KeyEvent.KEYCODE_1)) {
+        same(keys.takes(code, pressed = true, taking = true), true, "Key $code is typing, so the keyboard takes it")
+        keys.takes(code, pressed = false, taking = true)
+    }
 }
+
 private fun lockedThenHold() = Keyboard().run {
     press()
     idle(GAP)

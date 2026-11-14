@@ -1,5 +1,6 @@
 package com.atlas.keyboard
 
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.animation.ValueAnimator
 import android.content.ClipDescription
@@ -981,6 +982,10 @@ class AtlasIme : InputMethodService() {
         }
     }
 
+    /** The screen is on and unlocked. Smart Launcher's taken keys stop at once otherwise. See [watchedKey]. */
+    private fun screenInUse() = getSystemService(PowerManager::class.java).isInteractive &&
+        getSystemService(KeyguardManager::class.java)?.isKeyguardLocked != true
+
     private val screenOff = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) = sleepIdleBar()
     }
@@ -1420,7 +1425,8 @@ class AtlasIme : InputMethodService() {
         val code = event.keyCode
         // The app takes Back before the keyboard, so an open panel must close here.
         if (watchingKeys && code == KeyEvent.KEYCODE_BACK && isInputViewShown && backKey(event, down)) return true
-        if (!takenKeys.takes(code, down, watchingKeys)) {
+        // Locked or asleep, the keys are the lock screen's, such as a PIN, even if Android left the launcher's field open.
+        if (!takenKeys.takes(code, down, watchingKeys && screenInUse())) {
             if (code == KeyEvent.KEYCODE_SYM) symLog("Sym went on to the app")
             return false
         }

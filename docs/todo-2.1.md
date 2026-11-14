@@ -428,6 +428,13 @@ enders\gesture-line
       rows is pulled in; Alt + Sym is TitanKeys' own key, so it works in every app while TitanKeys is the keyboard and switches
       to the next enabled one; from another keyboard it does nothing.
     - Build #22 (from the Setup fix) verifying; then the phone (Setup's Sym and fn links), then signing.
+    - **The owner: "Finish it then test and sign it. I'll test it tomorrow morning. Then I daily drive it."** The Orchestrator
+      signs with tools/release.sh in ~/build/tk-overnight (it sources signing/credentials.env itself; nothing in signing/ is
+      opened), checks the APK and installs it beside TitanKeys Debug. The owner turns it on, tests it, publishes the
+      pre-release and daily-drives it.
+    - **Next to discuss with the owner (not started):** languages (3.0, #56); and swipes joined by accident when one ends at
+      the top row and the next starts at the top row (the owner: "investigate if there's a way to reduce accidentally joining
+      two swipes when they end at the top and starts again at the top").
     4. Orchestrator: the release variant built without the owner's key (compiles, no debug code, against
        docs/release-audit-2.1.md), and the release notes' final pass for this round (the end screen's Back, the clip, the arrow,
        the trail).

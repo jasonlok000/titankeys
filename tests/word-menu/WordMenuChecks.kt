@@ -35,7 +35,21 @@ fun main() {
     theHover()
     theQuickSettingsHover()
     theKeyboardMakesTheseCalls()
+    onlyStoredWordsOpen()
     println("Word menu checks passed")
+}
+
+/**
+ * Only a word the word lists can hold opens a menu (bug hunt #12: "café" and "José" opened Not saved, though the dictionary has
+ * them, and I or O failed and snapped back, as the lists can't store them), with the lists' own rule.
+ */
+private fun onlyStoredWordsOpen() {
+    for (word in listOf("café", "José", "naïve", "dogs'", "'til", "x", "2nd", "😀")) check(!MenuKeys.opens(word)) { "#12: \"$word\" opens no menu" }
+    for (word in listOf("cafe", "Jose", "don't", "don’t", "TitanKeys", "rock'n'roll", "ok")) check(MenuKeys.opens(word)) { "\"$word\" opens its menu" }
+    val stores = File("android/kotlin/com/atlas/engine/SwipeWords.java").readText()
+    check("value.matches(\"${MenuKeys.STORED.pattern}\")" in stores) { "#12: the menu opens for the words SwipeWords.normalise keeps, by the same rule" }
+    check("letters.length() >= 2 && letters.length() <= 24" in stores) { "and the same lengths" }
+    println("Only words the lists can hold open a menu")
 }
 
 // The ladder ---------------------------------------------------------------------------------------------------------------------

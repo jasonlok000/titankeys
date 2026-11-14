@@ -98,13 +98,19 @@ object MenuKeys {
     }
 
     /**
-     * Whether [word] has a ladder, so its menu opens: 2 to 24 letters, with apostrophes, as the word lists hold them. One-letter
-     * words, symbols, emoji and numbers open no menu at all (owner, 2026-11-13).
+     * Whether [word] has a ladder, so its menu opens: only a word the word lists can hold, as SwipeWords.normalise has them, 2 to
+     * 24 letters a to z with apostrophes between them, in any case. One-letter words, symbols, emoji and numbers open no menu at
+     * all (owner, 2026-11-13), and neither do accented words ("café", "José") or a word that starts or ends with an apostrophe
+     * ("dogs'", "'til"): the lists can't save, block or find them, so their menu showed the wrong rung and its buttons failed (bug
+     * hunt #12).
      */
     fun opens(word: String): Boolean {
-        val letters = word.count(Char::isLetter)
-        return letters in 2..24 && word.all { it.isLetter() || it == '\'' || it == '’' }
+        val value = word.lowercase(java.util.Locale.ROOT).replace('’', '\'')
+        return value.replace("'", "").length in 2..24 && value.matches(STORED)
     }
+
+    /** The words the word lists hold: SwipeWords.normalise's rule, which tests/word-menu keeps the same. */
+    val STORED = Regex("[a-z]+('[a-z]+)*")
 
     /**
      * The ladder itself, the only place it lives: the keyboard, the guide and the checks all use it.

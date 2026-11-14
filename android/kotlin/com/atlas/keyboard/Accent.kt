@@ -32,6 +32,9 @@ internal object Accent {
     /** The accent for a drawing told the setting itself, such as [Look]: orange, or cream. */
     fun of(orange: Boolean) = if (orange) ORANGE else CREAM
 
+    /** The text's cream whatever the setting, for a mark that is cream by design, such as the idle games' floor ([Look.floorLine]). */
+    const val TEXT_CREAM = CREAM
+
     /**
      * A favourite word's colour on the dark bar: orange, or with Orange accents off, the darker cream, so a favourite stays apart
      * from a white saved word and a grey unsaved one. [warm] of the orange is that very grey, #9B938C.

@@ -58,6 +58,22 @@ internal class IdleDrawing {
         canvas.restore()
     }
 
+    private val floorPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    /**
+     * The floor (owner, 2026-11-13, of the phone preview: "let's do 3"), in the strip's own pixels, before the game: a line [thick] high whose bottom is at [bottom],
+     * where the game's floor is, so what stands on the floor stands on it. It runs from [left] to [right], [Idle.FLOOR_SHARE] of
+     * the room between the screen's curved corners, centred, solid to its hard ends. [IdlePlayer.floor] says how much of it shows,
+     * as a whole: none at rest, or in a game that doesn't use the floor. The screen's edge blends into the black border under it,
+     * so without it the figure stood on nothing.
+     */
+    fun floor(canvas: Canvas, amount: Float, left: Float, right: Float, bottom: Float, thick: Float, look: Look) {
+        if (amount <= 0f || right <= left) return
+        floorPaint.color = look.floorLine
+        floorPaint.alpha = (amount.coerceIn(0f, 1f) * (look.floorLine ushr 24)).toInt()
+        canvas.drawRect(left, bottom - thick, right, bottom, floorPaint)
+    }
+
     /** The arrow's line width, in the games' units: [Strip] sets it to match its own arrow. */
     var arrowLine = 3f
     private var typefaces: List<Typeface?> = emptyList()

@@ -257,6 +257,62 @@ fun main() {
         home(glyphs, what)
         for (g in glyphs) check(g.y == middle(s, g.size), "$what: ${g.char} ends on the line")
     }
+    // The floor (owner, 2026-11-13, of the phone preview: "let's do 3"): a line at Idle.FLOOR, shown only while a game that uses the
+    // floor plays (the figure's, Race, the Firework, Juggling's Drop), fading in and out with it, and never at rest. It spans 80% of
+    // the room between the corners ("I like 80%… have the animations all be animated for that"): whatever touches the floor while
+    // it shows touches it over the line. On the Titan 2 Elite that's 85 to 785 of the game's 870.
+    val floorKinds = setOf(IdlePlayer.Kind.Bowling, IdlePlayer.Kind.Juggle, IdlePlayer.Kind.Race, IdlePlayer.Kind.Firework)
+    val span = 85f..785f
+    fun overLine(player: IdlePlayer, what: String) {
+        if (player.floor <= 0f) return
+        for (g in player.glyphs) if (g.alpha > .16f && !(g.x == g.homeX && g.y == g.homeY) && g.onFloor())
+            check(g.x - g.side() >= span.start - .5f && g.x + g.side() <= span.endInclusive + .5f, "$what: ${g.char} touches the floor past the line, at ${g.x}")
+        player.game.figure?.takeIf { it.alpha > .16f && it.feet + Figure.LINE / 2 >= Idle.FLOOR - .5f }?.let { f ->
+            check(f.x - f.stride >= span.start - .5f && f.x + f.stride <= span.endInclusive + .5f, "$what: the figure stands past the line, at ${f.x}")
+        }
+    }
+    for (s in sizes) for (seed in 1..4) for (kind in IdlePlayer.Kind.entries) for (way in listOf(null) + IdlePlayer.Way.entries) {
+        size = s
+        val glyphs = bar("going", "the", "jumpy")
+        if (way == IdlePlayer.Way.Drop && kind != IdlePlayer.Kind.Juggle) continue
+        val what = "$kind at $s, seed $seed, ${way ?: "alone"}"
+        val player = IdlePlayer(glyphs, width, Random(seed), kind, span)
+        check(player.floor == 0f, "$what: no floor at rest")
+        val floors = ArrayList<Float>()
+        var time = 0f
+        while (player.update(16f)) {
+            time += 16
+            floors += player.floor
+            overLine(player, "$what, at $time ms")
+            if (way != null && time == 4000f) player.comeBack(way)
+        }
+        floors += player.floor
+        val uses = kind in floorKinds || way == IdlePlayer.Way.Drop || way == IdlePlayer.Way.Firework
+        check(floors.last() == 0f, "$what: no floor once the letters are home")
+        if (uses) check(floors.max() == 1f, "$what: the floor shows while it's used")
+        else check(floors.all { it == 0f }, "$what: no floor in a game that doesn't use it")
+        for (f in 1 until floors.size) check(abs(floors[f] - floors[f - 1]) <= .3f, "$what: the floor fades, it doesn't pop")
+    }
+    // Strip draws it under the game, its bottom at the game's floor, 80% of the room between the corners, which it keeps clear of by
+    // the edge's distance, centred; 1 dp high, solid to its hard ends; in the text's cream at 55% on the dark bar and the ink at 55%
+    // on the light one, never orange. The games get the same span.
+    val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    for (line in listOf("val floorBottom = Idle.FLOOR * idleScale", "val floorLeft = floorLeft()",
+        "idleDrawing.floor(canvas, player.floor, floorLeft, width - floorLeft, floorBottom, floorThick, look)",
+        "private val floorThick = FixedScale.fixedPx(context, 1f)",
+        "private fun floorLeft() = Idle.floorLeft(width.toFloat(), corners.clearInset(height - Idle.FLOOR * idleScale, edge).toFloat())",
+        "idle = IdlePlayer(glyphs, gameWidth, random, game, floorLeft..gameWidth - floorLeft)"))
+        check(line in strip, "Strip draws the floor as decided: $line")
+    check(strip.indexOf("idleDrawing.floor(") < strip.indexOf("idleDrawing.draw(canvas, player"), "The floor is drawn under the game")
+    // Its width is one share of the room between the corners, centred: the owner's 80%.
+    check(Idle.FLOOR_SHARE == .8f, "The floor spans 80% of the room between the corners")
+    check(Idle.floorLeft(1076f, 100f) == 100f + 876f * (1 - Idle.FLOOR_SHARE) / 2, "and is centred")
+    val look = java.io.File("android/kotlin/com/atlas/keyboard/Look.kt").readText()
+    check("val floorLine = ((if (dark) Accent.TEXT_CREAM else ink) and 0xFFFFFF) or (FLOOR_ALPHA shl 24)" in look &&
+        "private const val FLOOR_ALPHA = 140" in look, "The floor is the cream, or the light look's ink, at 55%")
+    val drawing = java.io.File("android/kotlin/com/atlas/keyboard/IdleDrawing.kt").readText()
+    check("canvas.drawRect(left, bottom - thick, right, bottom, floorPaint)" in drawing, "The line's bottom is the floor, so things stand on it")
+
     // The jump rope's holders and jumper stay on the line: the holders step apart along it, and the jumper only jumps up from it.
     for (s in sizes) {
         size = s

@@ -20,10 +20,18 @@ internal class Look(val orange: Boolean) {
     val accent = Accent.of(orange)
     /** Text or an icon on [accent]. Black is clearer than white on orange, and on cream. */
     val onAccent = Color.BLACK
+    /**
+     * The idle games' floor (owner, 2026-11-13, of the phone preview: "let's do 3"): the text's cream at 55%. It's never orange,
+     * so Orange accents changes nothing.
+     */
+    val floorLine = (Accent.TEXT_CREAM and 0xFFFFFF) or (FLOOR_ALPHA shl 24)
     /** A faint wash of [accent], for a mark that stays, such as the open group. */
     val wash = GuideMotion.faded(accent, if (orange) .35f else .25f)
 
     companion object {
+        /** 55%, of 255. */
+        private const val FLOOR_ALPHA = 140
+
         fun of(context: Context) = Look(TypingSettings.orangeAccents(context).also { Accent.on = it })
     }
 }

@@ -365,6 +365,11 @@ enders\gesture-line
       Proposed fix (W, waiting on the owner's go): move the clip's box with it when alone (translationY, as the paired case
       does) or give it the bar's height, plus a render check of a clip alone with brackets and tails that fails if anything is
       cut. The renders missed it because a cut leaves no ink outside the corners or under the floor to flag.
+      - The owner asked for a mockup first ("I think the issue with the uppercase is visually it looks too low because its too
+        close to the corners"): cal-tool/clip.html, the bar 1:1 at Normal with the clip cut and not cut, the automatic capital's
+        arrow with Up and In sliders, and the same arrow beside words. Checked on the phone against the owner's screenshot
+        (arrow and clip within 2 px). The owner's tries so far (cal-values.log): Up 5.5 with In swept 0 to 16 and back to 0;
+        then beside words, Up down to 1.5 and back to 3.5, In 0. Waiting on the owner's pick.
     - Still to check on the phone from this round: the Shift and Ctrl chips, the menu effects and hover, the Sym rows on every page, the held delete's orange, the
     selection gap, the swipe trail (the owner judges), each idle game with the 80% floor (IDLE_BAR), Smart Launcher typing and the
     square key, Setup's links, "TitanKeys Keyboard" in the launcher, and the always-dark keyboard.

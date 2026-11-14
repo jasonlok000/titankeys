@@ -318,6 +318,12 @@ enders\gesture-line
     all bar checks pass. The Orchestrator's calls: keep the clip-offer shrink; keep the guide's first-slide side words rising from
     under the edge.
   - **Owner's review of build 0a6d754e (2026-11-14), noted, not started yet:**
+    - **Regression, first for D on resume** (owner: "I think my square button is not working for me anymore on smart launcher.").
+      D's TakenKeys takes every key in Smart Launcher's search except event.isSystem; Android's isSystem covers Home and Back but
+      not KEYCODE_APP_SWITCH (the square), so TitanKeys takes Recents and drops it (AtlasIme.kt:1420). Fix: take only the keys
+      TitanKeys types or handles (an allowlist: letters, digits, Space, Enter, Backspace, Shift, Alt, Sym, Ctrl/fn and the
+      keyboard's own), and let every other key through, Recents and the rest of the navigation keys included. A check for the
+      square key. Then a build for the owner.
     - Word menu, cosmetic: "When I press a button and let go it still registers as that I'm hovering." After a press and its
       release, the pressed button's hover preview stays on. Today the press keeps the preview it took over until the finger
       moves (W's design), so either the release must clear it or the lift isn't heard. For W when work resumes.

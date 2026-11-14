@@ -241,10 +241,24 @@ class AtlasIme : InputMethodService() {
 
     private val endTeamsEgg = Runnable { clearTeamsEgg() }
 
-    /** Any key or touch clears it at once, so it never stands in the way of typing. */
+    /** Any key or touch clears it at once, so it never stands in the way of typing, and a [Strip.Notice.Line] with it. */
     private fun clearTeamsEgg() {
         main.removeCallbacks(endTeamsEgg)
-        if (strip?.notice == Strip.Notice.TeamsEgg) strip?.notice = null
+        if (strip?.notice == Strip.Notice.TeamsEgg || strip?.notice is Strip.Notice.Line) strip?.notice = null
+    }
+
+    /**
+     * A swipe the engine couldn't take, as it failed to load: the bar says so for a moment, and what happens next, never over a
+     * word's menu (bug hunt 2.1, #22). The next key or touch clears it, as it does the Teams egg.
+     */
+    private fun showSwipeUnavailable() {
+        val strip = strip ?: return
+        val typing = SwipeTyping.get(this)
+        val text = SwipeLoad.notice(typing.readiness(), typing.loadingRetries()) ?: return
+        if (strip.notice is Strip.Notice.Menu) return
+        strip.notice = Strip.Notice.Line(text)
+        main.removeCallbacks(endTeamsEgg)
+        main.postDelayed(endTeamsEgg, SwipeLoad.NOTICE_MILLIS)
     }
 
     /** Android's boot count, where an app can read it, and the time this boot started. Neither changes when TitanKeys restarts. */
@@ -1340,6 +1354,10 @@ class AtlasIme : InputMethodService() {
         cancelShowStrip()
         cancelRecycle()
         main.removeCallbacks(hideStrip)
+        // A swipe engine that failed to load tries again on a new text box, a few times at most (bug hunt 2.1, #22).
+        if (editing && !restarting) SwipeTyping.get(this).let { typing ->
+            if (SwipeLoad.retryNow(typing.readiness(), typing.loadingRetries())) typing.retryLoading { }
+        }
         // This field's own selection, nothing of the last one's (bug hunt 2.1, #17), and the bar shows it if it starts with one.
         selection.started(info.initialSelStart, info.initialSelEnd)
         selectedWord = null
@@ -3062,6 +3080,8 @@ class AtlasIme : InputMethodService() {
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
                     return
                 }
+                // An engine that failed to load takes no swipe: the bar says why, instead of the swipe vanishing without a word.
+                showSwipeUnavailable()
                 composer.swipe(letterSpace(outcome.points).also { TouchSizes.attach(it, outcome.points) }, outcome.startedAt,
                     outcome.endedAt, modifiers.metaState)
                 modifiers.consume()

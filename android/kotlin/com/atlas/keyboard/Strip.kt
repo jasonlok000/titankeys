@@ -54,6 +54,10 @@ class Strip(
         object TeamsEgg : Notice {
             override val word = ""
         }
+        /** A short line the keyboard has to say, such as that swipe typing didn't load (see [SwipeLoad]). It has no buttons. */
+        data class Line(val text: String) : Notice {
+            override val word get() = ""
+        }
     }
 
     /** Ink's font, as everywhere in TitanKeys (owner, 2026-11-12), and its medium weight for the word menu's pills. */
@@ -809,7 +813,7 @@ class Strip(
     /** The buttons that a notice shows, from the left. */
     fun noticeActions(shown: Notice?): List<Action> = when (shown) {
         is Notice.Menu -> listOfNotNull(shown.first, shown.second, Action.Close)
-        Notice.TeamsEgg, null -> emptyList()
+        Notice.TeamsEgg, is Notice.Line, null -> emptyList()
     }
 
     private fun label(action: Action) = when (action) {
@@ -842,6 +846,7 @@ class Strip(
         noticeLabel.text = when (shown) {
             is Notice.Menu -> ""
             Notice.TeamsEgg -> context.getString(R.string.strip_teams_egg)
+            is Notice.Line -> shown.text
             null -> ""
         }
         noticeLabel.contentDescription = if (menu == null) null else

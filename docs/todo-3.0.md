@@ -94,6 +94,27 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - `bun run check` (228) and all 41 suites pass, and the Debug build is
     `~/build/m1-apks/main-rename-debug.apk`.
   - Not yet run: the phone update test.
+- **Review of M1 and M2 (05:50), merged at 3084dd0 with the Worker redeployed.** Seven bugs fixed, each with a test:
+  - a flick took two words in web fields, whose spaces are non-breaking;
+  - reports over 20 parts couldn't upload;
+  - one abandoned report blocked deleting the rest;
+  - a resent part kept its old bytes in the server's count;
+  - a damaged snippets list broke a restore;
+  - the Contacts switch could be lost on restore;
+  - a contact in capitals beat the dictionary's acronym.
+
+  Findings now being fixed:
+  - a front-page loop for 2.1.0 users with contacts unanswered (tk-guide);
+  - two quick-swipe join risks, checked against the logs first (tk-joins);
+  - restore stopping after the words;
+  - saving a backup over an older file;
+  - the flick's read and delete not in one batch edit;
+  - the recording switch being opt-out (tk-data).
+- **More of the Orchestrator's calls, to confirm:**
+  - The contacts question and the Sym/fn part show only in the guide's own setup, never in the playground or from the
+    front page. Settings > Setup has them.
+  - In the report form, the recording is on only when the form comes straight from Record a bug's Stop; otherwise it's
+    off. The crash file is always attached: class names and lines only.
 - **In flight at 05:15:**
   - tk-languages merges the renamed main into the language framework and finishes Spanish, French, German and more.
   - tk-gestures then merges Rime on top (`claude/m2-rime`: librime and OpenCC, 3.1 MB, reproducible; Yale, Jyutping,

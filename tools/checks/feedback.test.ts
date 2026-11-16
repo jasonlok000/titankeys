@@ -34,7 +34,7 @@ test("Send feedback and Record a bug open the form, with no GitHub row", () => {
 
 test("the form has the owner's kinds, sends only on Send, and offers email when it can't send", () => {
   const kinds = read("lib/report.ts");
-  for (const label of ["Wrong word or fix", "Swiping", "Touchpad and Space gestures", "Keyboard didn't show or disappeared",
+  for (const label of ["Wrong word or fix", "Swiping", "Touchpad and Space taps", "Keyboard didn't show, or vanished",
     "Crash or freeze", "The guide", "Settings", "An idea", "Something else"]) expect(kinds).toContain(`label: "${label}"`);
   const ids = [...kinds.matchAll(/value: "([a-z]+)"/g)].map(match => match[1]);
   expect(read("android/kotlin/com/titankeys/connected/Reports.kt")).toContain(`val KINDS = listOf(${ids.map(id => `"${id}"`).join(", ")})`);

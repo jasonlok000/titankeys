@@ -83,7 +83,7 @@ class HapticsLabActivity : Activity() {
         editor = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
-        val practice = field("Type, swipe, steer, open panels and menus here.", 3)
+        val practice = field("Type, swipe, move the cursor, open panels and menus here.", 3)
         val padding = dp(16)
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

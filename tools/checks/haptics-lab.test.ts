@@ -107,7 +107,7 @@ test("the lab shows what the keyboard really plays, from a feed only the debug b
 
 test("the lab has a practice field, a live timeline and an editor with small Play and Reset", () => {
   const screen = read("android/kotlin/com/titankeys/keyboard/HapticsLabActivity.kt");
-  expect(screen).toContain('val practice = field("Type, swipe, steer, open panels and menus here.", 3)');
+  expect(screen).toContain('val practice = field("Type, swipe, move the cursor, open panels and menus here.", 3)');
   expect(screen).toContain('card("Last 5 seconds", timeline, key())');
   // Every haptic in the list opens its family's editor: a held delete's word opens Hit's.
   expect(screen).toContain("onPress(haptics) { edit(event.haptic.family, event.haptic) }");

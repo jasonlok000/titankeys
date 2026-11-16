@@ -680,7 +680,9 @@ internal sealed interface GuideVerdict {
      * of its instruction, until the user is back on track; without one, [text] shows as a hint. [stage] moves the slide to that stage
      * too. [passes] means it counts: the slide is done, with [title] as the line that lands and [text] under it.
      */
-    data class Hint(val text: String, val title: String? = null, val stage: Int? = null, val passes: Boolean = false) : GuideVerdict
+    data class Hint(val text: String, val title: String? = null, val stage: Int? = null, val passes: Boolean = false,
+        /** What the miss was, for the raw log (#90). */
+        val miss: GuideMiss? = null) : GuideVerdict
     /** A stage's check: this stage is done, so the slide shows the next instruction, or is done after its last one. */
     data object Done : GuideVerdict
     /** The slide moved to the stage at [index], forwards or back, so that it shows only the instruction needed now. */
@@ -909,7 +911,7 @@ private fun otherGroup(event: KeyboardEvent) = event is GroupPicked || event is 
 internal fun roast(title: String, text: String, stage: Int? = null) = GuideVerdict.Hint(text, title, stage)
 
 /** A chip over the instruction, for a real mistake: the slide's own title and instruction stay. */
-internal fun chip(text: String) = GuideVerdict.Hint(text)
+internal fun chip(text: String, miss: GuideMiss? = null) = GuideVerdict.Hint(text, miss = miss)
 
 /** A scenario that counts: the slide is done, with [title] as the line that lands and [text] under it. */
 internal fun counts(title: String, text: String) = GuideVerdict.Hint(text, title, passes = true)
@@ -1046,7 +1048,9 @@ internal const val PASTE_TEXT = "can't type a thing myself"
 internal val CLIP_FIELD_KEYS = listOf("R", "I", "F", "K", "C")
 
 /** Slide 15's line: the clip that's nice to you pastes the end of it. */
-internal const val CLIP_LEAD = "Wanna paste? Sym, then A. "
+// One action each, so nobody holds Sym and presses A (#90): Sym, let go, then A. It keeps its first letter W.
+// F: draft (#90).
+internal const val CLIP_LEAD = "Wait. Sym, let go, A. "
 // After a thread of digs you expect one more roast, and the nice clip pastes something kind, and means it (owner, 2026-11-13: "make
 // this wholesome instead so its not what the user thought").
 internal const val PRANK_PASTE = "I hope you're doing great, genuinely"
@@ -1112,7 +1116,7 @@ internal class Hunt(val mock: String, val hint: String, val skip: String, val fa
 
 internal val WEIRD_HUNT = Hunt(
     "It goes on forever. Like this hunt.",
-    "It's not on the first page. Swipe up on the keys, or press Enter.",
+    "Not on page one. Swipe up on the keys, or Enter.",
     "Page two, near √ and ≈. Or skip it. It's ok.",
     "Quick. Just like you in bed.",
     // The seconds it really took (owner, 2026-11-13).
@@ -1225,7 +1229,7 @@ private fun GuideMemory.steerToward(aim: IntRange, event: KeyboardEvent): GuideV
         GuideVerdict.Wait
     }
     event is Moved && event.lifted -> when {
-        mark < 0 -> GuideVerdict.Hint("Held it, then chickened out. Hold, then slide.", stage = 0)
+        mark < 0 -> GuideVerdict.Hint(tapMissLine(GuideMiss.NoSlide, 2), stage = 0, miss = GuideMiss.NoSlide)
         cursor in aim.first..aim.last + 1 -> GuideVerdict.Done
         if (mark <= aim.first) cursor > aim.last + 1 else cursor < aim.first ->
             GuideVerdict.Hint("Past it. Slide back a little.", stage = 0)
@@ -1390,7 +1394,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Favourited. Good taste.",
-                praise = "O/L steps it back down. P/Backspace closes the menu.",
+                praise = "O/L steps it down. P/Backspace closes the menu.",
         line = MENU_LINE,
         seed = MENU_LINE,
         help = "Already selected. Tap TitanKeys on the bar.",
@@ -1485,13 +1489,14 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "steer", chapter = GuideChapter.Steering,
         // F (docs/words-m1.md).
-        title = "Move the cursor to the underlined word.",
+        title = "Put the cursor in the underlined word.",
         stages = listOf(
             GuideStage("Tap Space twice, and hold the second tap.") { event ->
                 when {
                     event is CursorStarted && !event.words -> GuideVerdict.Done
-                    event is CursorStarted -> chip("One tap too many. Two taps, the second held.")
-                    event is DoubleTapped || event is TwoTapsAbove -> chip("You lifted. Keep the second tap down.")
+                    // What the taps were, against two with the second held (#90).
+                    event is CursorStarted -> chip(tapMissLine(GuideMiss.Extra, 2, landed = 3), GuideMiss.Extra)
+                    event is DoubleTapped || event is TwoTapsAbove -> chip(tapMissLine(GuideMiss.Lift, 2), GuideMiss.Lift)
                     else -> GuideVerdict.Wait
                 }
             },
@@ -1509,7 +1514,7 @@ internal val GUIDE_STEPS = listOf(
                         abs(event.start - mark) >= CURSOR_TRAVEL || event.end != event.start -> GuideVerdict.Done
                         else -> GuideVerdict.Wait
                     }
-                    event is Moved && event.lifted -> GuideVerdict.Hint("Held it, then chickened out. Hold, then slide.", stage = 0)
+                    event is Moved && event.lifted -> GuideVerdict.Hint(tapMissLine(GuideMiss.NoSlide, 2), stage = 0, miss = GuideMiss.NoSlide)
                     else -> GuideVerdict.Wait
                 }
             },
@@ -1532,7 +1537,9 @@ internal val GUIDE_STEPS = listOf(
             GuideStage("Tap Space three times. Hold the third.") { event ->
                 when {
                     event is CursorStarted && event.words -> GuideVerdict.Done
-                    event is CursorStarted -> chip("That's two. Count to three. We believe in you.")
+                    event is CursorStarted -> chip(tapMissLine(GuideMiss.Short, 3, landed = 2), GuideMiss.Short)
+                    // Two taps that lifted: two, not three. Three that lifted pick a word first, below.
+                    event is DoubleTapped && event.taps < 3 || event is TwoTapsAbove -> chip(tapMissLine(GuideMiss.Short, 3, landed = 2), GuideMiss.Short)
                     // The held third tap picks a word first, then the slide starts: only a word picked and let go is one word
                     // (owner, v5.3: a right held third tap was told "One word?").
                     event is FieldChanged && event.end > event.start -> {
@@ -1541,7 +1548,7 @@ internal val GUIDE_STEPS = listOf(
                     }
                     event is Moved && event.lifted && mark == 2 -> {
                         mark = -1
-                        chip("One word? I'm worth more than that.")
+                        chip(tapMissLine(GuideMiss.Lift, 3), GuideMiss.Lift)
                     }
                     else -> GuideVerdict.Wait
                 }
@@ -1703,7 +1710,7 @@ internal val GUIDE_STEPS = listOf(
         // bottom row or a sideways swipe, which works too and says so.
         stages = listOf(
             // Both ways to the next page, on the keys (owner, M1: "swipe up on the keyboard or enter for the next page").
-            GuideStage("Press Sym, then swipe up on the keys or press Enter for the next page.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+            GuideStage("Press Sym. Then swipe up on the keys, or Enter.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
                 when {
                     event is FieldChanged && symbolInGap(event.text, GROUPS_LINE, WEIRD) -> GuideVerdict.Finished
                     event is PanelSwiped && event.moved && abs(event.down) >= abs(event.across) -> {
@@ -1740,7 +1747,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Sure you do.",
-        praise = "Swipe up or down on the keys for pages, or press Enter or Backspace. The bottom row, groups.",
+        praise = "Swipe up or down on the keys to turn pages.",
         line = GROUPS_LINE,
         seed = gapSeed(GROUPS_LINE, WEIRD),
         cursorAt = { gapCursor(GROUPS_LINE, WEIRD) },
@@ -1814,7 +1821,8 @@ internal val GUIDE_STEPS = listOf(
             }
         }),
         done = "Pasted. Honest, at least.",
-        praise = "fn and V pastes. fn and C copies.",
+        // F: draft (#90), one action each: fn is held, V is pressed.
+        praise = "Hold fn, press V: paste. C copies.",
         line = PASTE_LINE,
         seed = PASTE_SEED,
         needs = GuideNeed.FnAsCtrl,
@@ -1857,7 +1865,8 @@ internal val GUIDE_STEPS = listOf(
         ),
         // The nice clip pastes something kind instead of the roast you expected, and the slide insists (owner, #69).
         done = "No, seriously. I mean it.",
-        praise = "It keeps what you copy. Sym, then A, any time.",
+        // F: draft (#90), one action each.
+        praise = "It keeps what you copy. Sym, let go, then A.",
         line = CLIP_LINE,
         seed = CLIP_LEAD.trimEnd(),
         usesPanel = true,
@@ -1897,15 +1906,16 @@ internal fun groupsPraise(used: Int) = when {
  * (owner, v5): each says that it's blocked, and why or what to do instead. [lessons] is what the slide lets through now.
  */
 /** What the word menu slide's lock says for [lesson]: blocked, then hold TitanKeys. Null for the usual words. */
+// F: drafts (#90): what it was, and that it wants a tap on TitanKeys.
 private fun menuBlocked(lesson: String): String? = when (lesson) {
-    GuideLesson.Typing.name -> "Typing's blocked here. Tap TitanKeys."
-    GuideLesson.Swipe.name -> "Swiping's blocked here. Tap TitanKeys."
-    GuideLesson.Space.name -> "Spaces are blocked here. Tap TitanKeys."
-    GuideLesson.Cursor.name -> "Space taps are blocked. Tap TitanKeys on the bar."
-    GuideLesson.Backspace.name -> "Backspace is blocked here. Tap TitanKeys."
-    GuideLesson.Flick.name, GuideLesson.DeleteHold.name -> "Deleting's blocked here. Tap TitanKeys."
+    GuideLesson.Typing.name -> "That's typing, not a tap on TitanKeys."
+    GuideLesson.Swipe.name -> "That's a swipe, not a tap on TitanKeys."
+    GuideLesson.Space.name -> "That's a space, not a tap on TitanKeys."
+    GuideLesson.Cursor.name -> "That's a Space tap, not a tap on TitanKeys."
+    GuideLesson.Backspace.name -> "That's Backspace, not a tap on TitanKeys."
+    GuideLesson.Flick.name, GuideLesson.DeleteHold.name -> "That's deleting, not a tap on TitanKeys."
     // Only another word on the bar: TitanKeys itself, selected, opens its menu at a tap.
-    GuideLesson.BarTap.name -> "Other words are blocked. Tap TitanKeys."
+    GuideLesson.BarTap.name -> "That's another word, not TitanKeys. Tap TitanKeys."
     else -> null
 }
 
@@ -2011,7 +2021,7 @@ internal val SYMMAIN_PAGES get() = mapOf(
     PanelSpot.Found to "It's on this page. Find & and press its key.",
     PanelSpot.Past to TOO_FAR,
     PanelSpot.Before to TOO_FAR,
-    PanelSpot.OtherGroup to "Wrong group. The & leads the first one. Swipe left or right on the keys, or slide along the bottom row.",
+    PanelSpot.OtherGroup to "Wrong group. The &'s in the first. Swipe left or right on the keys.",
     PanelSpot.Emoji to "Emoji already? Patience. Sym again closes them.",
     PanelSpot.Clipboard to SYM_WRONG_PAGE,
     PanelSpot.Settings to SYM_WRONG_PAGE,
@@ -2020,18 +2030,18 @@ internal val SYMGROUPS_PAGES get() = mapOf(
     PanelSpot.Before to "Not on this page. Swipe up on the keys or press Enter.",
     PanelSpot.Found to "It's on this page. Find ∞ and press its key.",
     PanelSpot.Past to TOO_FAR,
-    PanelSpot.OtherGroup to "Wrong group. The ∞ is in the first one. Swipe left or right on the keys, or slide along the bottom row.",
+    PanelSpot.OtherGroup to "Wrong group. The ∞'s in the first. Swipe left or right on the keys.",
     PanelSpot.Emoji to "Not emoji. Sym closes them. Then press Sym once.",
     PanelSpot.Clipboard to SYM_WRONG_PAGE,
     PanelSpot.Settings to SYM_WRONG_PAGE,
 )
 internal val CLOWN_PAGES get() = mapOf(
     PanelSpot.Symbols to "That's symbols. Press Sym again for the emoji.",
-    PanelSpot.Recent to "That's Recent. Swipe left or right on the keys, or slide along the bottom row, to Smileys.",
+    PanelSpot.Recent to "That's Recent. Swipe left or right on the keys to Smileys.",
     PanelSpot.Before to NOT_ON_PAGE,
     PanelSpot.Found to "It's on this page. Find 🤡 and press its key.",
     PanelSpot.Past to TOO_FAR,
-    PanelSpot.OtherGroup to "Wrong group. The clown's in Smileys. Swipe left or right on the keys, or slide along the bottom row.",
+    PanelSpot.OtherGroup to "Wrong group. The clown's in Smileys. Swipe left or right on the keys.",
     PanelSpot.Clipboard to "Wrong page. Alt goes back to the symbols, then Sym for the emoji.",
     PanelSpot.Settings to "Wrong page. Alt goes back to the symbols, then Sym for the emoji.",
 )
@@ -2090,62 +2100,66 @@ internal fun setupToAsk(done: (SetupPart) -> Boolean, backDeclined: Boolean, ski
 
 internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLesson>? = step.lessons): String {
     val open = lessons.orEmpty()
-    // The word menu slide: only TitanKeys on the bar counts, so every refusal says it's blocked, then points at it (owner,
+    // The word menu slide: only TitanKeys on the bar counts, so every refusal says what it was, then points at it (owner,
     // 2026-11-13: "selected other stuff instead?").
     if (step.selected != null) menuBlocked(lesson)?.let { return it }
+    // The Space-tap slides say what the touch was, and that it wants a tap (#90).
+    (step.cue as? GuideCue.Taps)?.let { taps ->
+        when (lesson) {
+            GuideLesson.Space.name -> return tapMissLine(GuideMiss.Press, taps.count)
+            GuideLesson.Typing.name -> return tapMissLine(GuideMiss.Typing, taps.count)
+            GuideLesson.Swipe.name -> return tapMissLine(GuideMiss.Swipe, taps.count)
+        }
+    }
+    // Every line says what it was, and what the slide wants instead: "that's an X, not a Y" (owner, #90).
+    // F: drafts (#90), every line below.
     return when (lesson) {
         GuideLesson.Typing.name -> when {
-            step.chapter in NOT_TYPING -> "Typing's blocked here. Typing's done. Keep up."
-            GuideLesson.Alt in open -> "Blocked. Hold Alt while you press it."
-            GuideLesson.Ctrl in open -> "Blocked. Hold fn with it. That's the trick."
-            GuideLesson.HoldSymbol in open -> "Blocked. Hold the key until it turns."
-            GuideLesson.Sym in open -> "Typing's blocked. Press Sym first."
-            GuideLesson.BarTap in open -> "Typing's blocked. Tap the dancing word first."
-            else -> "Typing's blocked on this slide."
+            step.chapter in NOT_TYPING -> "That's typing, not deleting. Typing's done."
+            GuideLesson.Alt in open -> "That's a letter alone, not with Alt. Hold Alt."
+            GuideLesson.Ctrl in open -> "That's a letter alone, not with fn. Hold fn."
+            GuideLesson.HoldSymbol in open -> "That's a press, not a hold. Keep the key down."
+            GuideLesson.Sym in open -> "That's typing, not Sym. Press Sym first."
+            GuideLesson.BarTap in open -> "That's typing, not the bar. Tap the dancing word."
+            else -> "That's typing, not this slide's move."
         }
         // A space that would type, from the key or a light tap, on a slide with no typing (owner, 2026-11-13).
         GuideLesson.Space.name -> when {
-            // F (docs/words-m1.md).
-            GuideLesson.Cursor in open -> "Typed spaces are blocked. Taps on Space move the cursor."
-            step.chapter in NOT_TYPING -> "Spaces are blocked here. Typing's done. Keep up."
-            GuideLesson.Swipe in open -> "Spaces are blocked here. Swipes space themselves."
-            step.chapter == GuideChapter.Symbols -> "Spaces are blocked here. Just the symbol."
-            step.chapter == GuideChapter.Clipboard -> "Spaces are blocked here. Just paste."
-            else -> "Spaces are blocked on this slide."
+            step.chapter in NOT_TYPING -> "That's a space, not a delete. Typing's done."
+            GuideLesson.Swipe in open -> "That's a space, not a swipe. Swipes add their own."
+            step.chapter == GuideChapter.Symbols -> "That's a space, not the symbol. Just the symbol."
+            step.chapter == GuideChapter.Clipboard -> "That's a space, not a paste. Just paste."
+            else -> "That's a space, not this slide's move."
         }
-        GuideLesson.Backspace.name -> if (GuideLesson.Flick in open) "Backspace is blocked. Flick it." else
-            "Backspace is blocked here. Nothing to delete."
+        GuideLesson.Backspace.name -> if (GuideLesson.Flick in open) "That's a press, not a flick. Flick from Backspace." else
+            "That's Backspace, not this slide's move."
         // Each fits its own slide (owner, v5.3: the typing slide's line showed on the delete slides).
         GuideLesson.Swipe.name -> when (step.chapter) {
-            GuideChapter.Typing -> "Swiping's blocked here. Type it. Swiping's next."
-            GuideChapter.Delete -> if (GuideLesson.Flick in open) "Swiping's blocked here. Flick from Backspace." else
-                "Swiping's blocked here. Backspace this one."
-            // F (docs/words-m1.md).
-            GuideChapter.Steering -> "Swiping's blocked here. Taps on Space move the cursor."
-            else -> "Swiping's blocked on this slide. Not this way."
+            GuideChapter.Typing -> "That's a swipe, not typing. Type this one."
+            GuideChapter.Delete -> if (GuideLesson.Flick in open) "That's a swipe, not a flick. Flick from Backspace." else
+                "That's a swipe, not Backspace. Press Backspace."
+            else -> "That's a swipe, not this slide's move."
         }
         GuideLesson.BarTap.name -> when {
-            step.id == "type" -> "The bar's blocked here. Type it, typo and all."
-            else -> "The bar's blocked here. Do it with the keys."
+            step.id == "type" -> "That's the bar, not typing. Type it, typo and all."
+            else -> "That's the bar, not the keys. Do it on the keys."
         }
-        GuideLesson.BarHold.name -> "Holding bar words is blocked here. That's later."
+        GuideLesson.BarHold.name -> "That's a hold on the bar, not this slide's move."
         GuideLesson.Flick.name -> when {
-            step.id == "backspace" -> "Flicks are blocked here. Backspace this one."
+            step.id == "backspace" -> "That's a flick, not a press. Press Backspace."
             // The held delete's slide locks deleting once the regrets are gone.
-            step.id == "hold" -> "Blocked. The regrets are gone, the rest stays."
-            else -> "Flicks are blocked here. That's later."
+            step.id == "hold" -> "That's more deleting than needed. The rest stays."
+            else -> "That's a flick, not this slide's move."
         }
-        GuideLesson.DeleteHold.name -> if (step.id == "flick") "Held delete is blocked here. Flick and lift." else
-            "Held delete is blocked here. That's later."
-        GuideLesson.Cursor.name -> "Space taps are blocked here. That's later."
-        GuideLesson.Alt.name -> if (step.chapter == GuideChapter.Symbols) "Alt is blocked on this slide. Not this way." else
-            "Alt is blocked here. That's later."
-        GuideLesson.Sym.name -> if (step.chapter == GuideChapter.Symbols) "Sym is blocked on this slide. Not this way." else
-            "Sym is blocked here. That's later."
-        GuideLesson.HoldSymbol.name -> "Holding for symbols is blocked here. That's later."
-        GuideLesson.Enter.name -> "Enter is blocked here. Nothing to send."
-        GuideLesson.Ctrl.name -> "Shortcuts are blocked here. That's later."
-        else -> "That's blocked here. That's later."
+        GuideLesson.DeleteHold.name -> if (step.id == "flick") "That's a held flick, not a flick. Flick and lift." else
+            "That's a held flick, not this slide's move."
+        GuideLesson.Cursor.name -> "That's a Space tap, not this slide's move."
+        GuideLesson.Alt.name -> "That's Alt, not this slide's move."
+        GuideLesson.Sym.name -> "That's Sym, not this slide's move."
+        GuideLesson.HoldSymbol.name -> "That's a held key, not this slide's move."
+        GuideLesson.Enter.name -> "That's Enter, not this slide's move."
+        GuideLesson.Ctrl.name -> "That's a shortcut, not this slide's move."
+        else -> "That's not this slide's move."
     }
 }
 

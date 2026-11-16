@@ -8,12 +8,11 @@ import { forceCrash, state } from "../../lib/titankeys";
 export default function Feedback() {
   const result = useSnapshot(state);
   const debug = result.status === "ready" && result.data.build === "debug";
-  // F: the subtitle is F's #74 line with its first half redone for the form (draft).
   return <Screen title="Send feedback" subtitle="Goes straight to us from TitanKeys. A real person reads it.">
     <Row title="Report a bug" onPress={() => navigate("/settings/report")} />
     <Row title="Suggest an idea" onPress={() => navigate({ path: "/settings/report", params: { kind: "idea" } })} />
     {debug && <Section title="TitanKeys Debug">
-      {/* Tests the crash offer: TitanKeys crashes, and the next open offers to send the report. F: draft label. */}
+      {/* Tests the crash offer: TitanKeys crashes, and the next open offers to send the report. */}
       <Field label="Crash TitanKeys" onPress={() => void forceCrash()}>{""}</Field>
     </Section>}
   </Screen>;

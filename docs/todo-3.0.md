@@ -71,7 +71,10 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
       bundle patch. That's for the owner, since only the owner makes Play builds.
   - **Waiting for the owner's hands:** #89, #93 and #84 by touch; #66's distance; #68's hunts; #72's Sym check; the panel
     page lines while paging.
-- **M2, started 03:40, on code that doesn't need the phone:**
+- **main at 58ce707 (03:50) has all of M1 and #83's rule.** It passes `bun run check` (222), all 41 test suites, the join
+  checks and the Debug build. The phone checklist for the evening, or whenever the phone is free, is in the Orchestrator's
+  scratchpad, `m1-phone-checks.md`.
+- **M2, started 03:50, on code that doesn't need the phone:**
   - tk-data: #81's code rename first, then each worker merges main in.
   - tk-languages: the language framework, generic Latin languages, Settings > Languages with English spelling inside
     (#80), and one keyboard-list entry per input method (#76).
@@ -240,6 +243,13 @@ each generic language types its letters and accents over adb.
 More calls get added here as the night goes.
 
 ## For the owner in the morning
+
+- **were/we're's bigger test set needs your yes in its own session:**
+  - The typing worker (tk-typing, branch `claude/m2-were`) can't download Tatoeba's English sentences without the owner's
+    own yes in that session; a go from the Orchestrator doesn't count.
+  - It's using what's on the machine instead: the triples at every position, Tatoeba's held-out file, and the owner's
+    judged cases.
+  - To widen it, say yes to the download in that session.
 
 - **Your personal email address was public in the repo:** wrangler's cache file
   `server/contributions/.wrangler/cache/wrangler-account.json` held it in the Cloudflare account's name, from commit 54473ca

@@ -10,8 +10,8 @@ const options = (["small", "medium", "large"] as const).map(value => ({ value, l
 
 export const barTextSizeTitle = "Bar text size";
 export const barTextSizeNote = "Words, menu and chips. The bar keeps its height.";
-// F: draft, the try field's sample line. It ends mid-word, so the bar fills with words as the page opens (#86).
-export const barTextSizeSample = "Pick a size and watch the bar while you type. Looks good from here, but you deci";
+// The try field's sample line. It ends mid-word, so the bar fills with words as the page opens (#86).
+export const barTextSizeSample = "Pick a size and type here. Stop squin";
 
 export const barTextSizeLabel = ({ barTextSize }: State) => labels[barTextSize] ?? "Normal";
 

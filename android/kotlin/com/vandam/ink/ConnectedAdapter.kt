@@ -102,14 +102,14 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
                 "reportEmail" -> {
                     val kept = Reports.kept(activity.noBackupFilesDir) ?: throw IllegalStateException("No report is waiting")
                     val (uri, name) = CrashReport.lend(activity, kept)
-                    // F: draft subject and body; the subjects follow F's mail lines for #74.
+                    // The subjects follow F's mail lines for #74 (docs/words-m1.md).
                     val version = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
                     val subject = when (data.optString("kind")) {
                         "idea" -> "TitanKeys idea"
                         "crash" -> "TitanKeys crash, $version"
                         else -> "TitanKeys bug, $version"
                     }
-                    val sent = Mail.attach(activity, subject, "The report from TitanKeys' form is attached.", uri, name, "application/zip")
+                    val sent = Mail.attach(activity, subject, "Your report from TitanKeys is attached. Anything to add? Write it here.", uri, name, "application/zip")
                     if (sent) Reports.forget(activity.noBackupFilesDir)
                     sent.toString()
                 }

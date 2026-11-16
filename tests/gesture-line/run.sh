@@ -21,7 +21,7 @@ grep -qF "drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat()
 grep -qF "private const val WORD_SIZE = 20f" "$keyboard/Strip.kt" || { echo "Strip.kt's word size changed"; exit 1; }
 # The guide's fade must still be the real one, as tests/gesture-render checks.
 fade="fun faded(colour: Int, alpha: Float) = colour and 0x00FFFFFF or ((alpha.coerceIn(0f, 1f) * 255).toInt() shl 24)"
-grep -qF "$fade" "$keyboard/GuideKeyboardView.kt" || { echo "GuideKeyboardView.kt changed: $fade"; exit 1; }
+grep -qF "$fade" "$keyboard/GuideKeyboardView.kt" "$keyboard/GuideTapDrawing.kt" || { echo "GuideKeyboardView.kt changed: $fade"; exit 1; }
 # The stand-in Canvas and Paint draw with Java2D. They come before Android on the class path, so the drawing code runs on them.
 mkdir -p "$work/fake" "$work/classes"
 javac -nowarn -d "$work/fake" tests/gesture-render/fake/android/graphics/*.java

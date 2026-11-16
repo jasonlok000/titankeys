@@ -27,7 +27,7 @@ class NoisyChannel(
 
     data class Pick(val word: String, val score: Double, val runnerUp: Double, val typedScore: Double)
 
-    /** Candidates for [typed]; a real word is never swapped for a contraction ("were" -> "we're"). */
+    /** Candidates for [typed]; a real word is never swapped for a contraction ("were" -> "we're"): only the context model may, see [ApostropheContext]. */
     private fun candidates(typed: String, allowContractions: Boolean): List<String> =
         candidatesOf(typed).filter { allowContractions || '\'' !in it }
 

@@ -13,7 +13,7 @@ keyboard=android/kotlin/com/titankeys/keyboard
 engine=android/kotlin/com/titankeys/engine
 # The stand-in for the guide's fade must still be the real one. The orange is the real Accent's, compiled in below.
 line="fun faded(colour: Int, alpha: Float) = colour and 0x00FFFFFF or ((alpha.coerceIn(0f, 1f) * 255).toInt() shl 24)"
-grep -qF "$line" "$keyboard/GuideKeyboardView.kt" || { echo "GuideKeyboardView.kt changed: $line"; exit 1; }
+grep -qF "$line" "$keyboard/GuideKeyboardView.kt" "$keyboard/GuideTapDrawing.kt" || { echo "GuideKeyboardView.kt changed: $line"; exit 1; }
 # The stand-in Canvas and Paint draw with Java2D. They come before Android on the class path, so the drawing code runs on them.
 mkdir -p "$work/fake" "$work/classes"
 javac -nowarn -d "$work/fake" tests/gesture-render/fake/android/graphics/*.java

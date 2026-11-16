@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clip and arrow</title>
+<style>
+  @font-face { font-family:Inter; font-weight:400; src:url(inter_regular.otf); }
+  @font-face { font-family:Inter; font-weight:700; src:url(inter_bold.otf); }
+  @font-face { font-family:Inter; font-weight:500; src:url(inter_medium.otf); }
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family:Inter, system-ui, sans-serif; color:#EDE6E0; }
+  #top { position:absolute; left:0; right:0; top:0; bottom:56px; padding:14px 16px; box-sizing:border-box; background:#1B1918; overflow:auto; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center; }
+  button { font:600 15px Inter, sans-serif; padding:10px 14px; border-radius:20px; border:1px solid #EF804E; background:transparent; color:inherit; }
+  button.on { background:#EF804E; color:#160A04; }
+  #big { font:700 24px Inter, sans-serif; margin:6px 0 4px; }
+  #vals { font:500 14px Inter, sans-serif; opacity:.8; margin-bottom:8px; }
+  label { font:500 14px Inter, sans-serif; width:52px; }
+  input[type=range] { flex:1; }
+  #note { font:500 14px Inter, sans-serif; opacity:.7; line-height:1.4; }
+  canvas { position:absolute; left:0; bottom:0; width:100vw; height:56px; display:block; }
+</style>
+</head>
+<body>
+<div id="top">
+  <div class="row"><button id="prev">◀ previous</button><button id="next">next ▶</button><button id="full">Full screen</button></div>
+  <div id="big"></div>
+  <div id="vals"></div>
+  <div class="row" id="picks"></div>
+  <div class="row"><button id="clip">The clip</button><button id="words">Words</button><button id="guide">Corner guide</button></div>
+  <div class="row"><label>Up</label><input id="up" type="range" min="0" max="8" step="0.5"></div>
+  <div class="row"><label>In</label><input id="in" type="range" min="0" max="24" step="1"></div>
+  <div class="row"><label>Icon</label><input id="icon" type="range" min="-2" max="5" step="0.25"></div>
+  <div id="note">The bar at Normal size, 1:1, on your screen's real bottom edge and corners. The clip is a made-up number. Up moves
+    the ⇧ arrow up, In moves it away from the corner (the clip moves over with it), Icon moves the clip's icon up or down from where
+    TitanKeys puts it today. Corner guide also draws the words' line (blue) and the capitals' middle (pink, dashed). Tap Full screen
+    first.</div>
+</div>
+<canvas id="bar"></canvas>
+<script>
+// All in dp (Chrome's CSS px are the phone's dp). Measured from the owner's screenshot on build #19 and TitanKeys' own sizes.
+const BAR = 56, LINE = 39, F = 24, XH = 1118 / 2048, CAPS = 1490 / 2048, ORANGE = "#EF804E";
+const BASE = LINE + F * XH / 2;               // the words' baseline: their small letters' middle on the line
+const ARROW = F * CAPS * .63, STROKE = 1.3;   // the automatic capital's arrow, .63 of the capitals
+const ARROW_X = 57.6;                         // its middle today (90 px)
+const ICON = 26.24, ICON_MID = 35.5, ICON_LEFT = 240.6, TEXT_X = 275;   // the clip's icon and text (checked against the phone)
+const CUT = 44.8;                             // where build #19 cuts the clip off (1182 px)
+const CAP_UP = F * (CAPS - XH) / 2;           // from the small letters' middle to the capitals' middle: 2.2 dp
+const OPTIONS = [
+  ["Today (cut off)", 0, 0, true],
+  ["Not cut, arrow as today", 0, 0, false],
+  ["Not cut, arrow up to the capitals' middle", CAP_UP, 0, false],
+  ["Not cut, arrow in from the corner", 0, 10, false],
+  ["Not cut, arrow up and in", CAP_UP, 10, false],
+  ["Your pick: not cut, arrow up 3 dp", 3, 0, false],
+];
+const q = new URLSearchParams(location.search);
+let pick = +(q.get("pick") ?? 1), mode = q.get("mode") ?? "clip", guide = q.get("guide") === "1";
+let up = OPTIONS[pick][1], inward = OPTIONS[pick][2];
+if (q.has("up")) up = +q.get("up"); if (q.has("in")) inward = +q.get("in");
+let icon = +(q.get("icon") ?? 0);   // the clip icon raised this many dp over where build #19 puts it (uncut)
+const cv = document.getElementById("bar"), dpr = devicePixelRatio || 1;
+function arrow(c, cx, cy) {
+  const s = ARROW, x = cx - s / 2, y = cy - s / 2;
+  c.strokeStyle = ORANGE; c.lineWidth = STROKE; c.lineJoin = "round"; c.beginPath();
+  c.moveTo(x + s / 2, y); c.lineTo(x + s, y + s * .52); c.lineTo(x + s * .73, y + s * .52); c.lineTo(x + s * .73, y + s);
+  c.lineTo(x + s * .27, y + s); c.lineTo(x + s * .27, y + s * .52); c.lineTo(x, y + s * .52); c.closePath(); c.stroke();
+}
+function clipIcon(c, left, top, size) {
+  const k = size / 24; c.save(); c.translate(left, top); c.scale(k, k);
+  c.strokeStyle = ORANGE; c.fillStyle = ORANGE; c.lineWidth = 2; c.lineJoin = "round";
+  c.stroke(new Path2D("M8,4.5H6.5A1.5,1.5 0 0 0 5,6V20.5A1.5,1.5 0 0 0 6.5,22H17.5A1.5,1.5 0 0 0 19,20.5V6A1.5,1.5 0 0 0 17.5,4.5H16"));
+  c.fill(new Path2D("M10,2H14A1,1 0 0 1 15,3V6A1,1 0 0 1 14,7H10A1,1 0 0 1 9,6V3A1,1 0 0 1 10,2Z"));
+  c.fill(new Path2D("M8,11H16V13H8Z M8,15.5H13V17.5H8Z"));
+  c.restore();
+}
+function draw() {
+  cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(BAR * dpr);
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = innerWidth, cut = OPTIONS[pick][3];
+  c.fillStyle = "#000"; c.fillRect(0, 0, W, BAR);
+  arrow(c, ARROW_X + inward, LINE - up);
+  c.textBaseline = "alphabetic"; c.fillStyle = "#fff";
+  if (mode === "clip") {
+    const dx = inward / 2;   // the clip keeps clear of the arrow's place, so it moves over by half of it
+    c.save();
+    if (cut) { c.beginPath(); c.rect(0, 0, W, CUT); c.clip(); }
+    clipIcon(c, ICON_LEFT + dx, ICON_MID - ICON / 2 - icon, ICON);
+    c.font = `400 ${F}px Inter`; c.fillStyle = "#fff"; c.fillText("+1 (555) 010-2368", TEXT_X + dx, BASE);
+    c.restore();
+  } else {
+    c.textAlign = "center";
+    c.font = `400 ${F}px Inter`; c.fillText("But", 146.6, BASE); c.fillText("I", 542.7, BASE);
+    c.font = `700 ${F}px Inter`; c.fillText("We", 344.6, BASE);
+    c.textAlign = "start";
+  }
+  if (guide) {   // the screen's corners: 100 px radius
+    const r = 100 / dpr; c.strokeStyle = "rgba(255,60,60,.8)"; c.lineWidth = 1 / dpr;
+    c.beginPath(); c.arc(r, BAR - r, r, Math.PI / 2, Math.PI); c.stroke();
+    c.beginPath(); c.arc(W - r, BAR - r, r, 0, Math.PI / 2); c.stroke();
+    c.strokeStyle = "rgba(0,220,255,.7)"; c.beginPath(); c.moveTo(0, LINE); c.lineTo(W, LINE); c.stroke();
+    // The capitals' middle, dashed.
+    c.strokeStyle = "rgba(255,90,220,.8)"; c.setLineDash([4, 4]); c.beginPath(); c.moveTo(0, BASE - F * CAPS / 2); c.lineTo(W, BASE - F * CAPS / 2); c.stroke(); c.setLineDash([]);
+  }
+  document.getElementById("big").textContent = `${pick + 1}: ${OPTIONS[pick][0]}`;
+  document.getElementById("vals").textContent = `Arrow up ${up.toFixed(1)} dp, in ${inward} dp · icon ${icon >= 0 ? "up" : "down"} ` +
+    `${Math.abs(icon)} dp · showing ${mode === "clip" ? "the clip" : "words"}`;
+  document.getElementById("icon").value = icon;
+  document.querySelectorAll("#picks button").forEach((b, i) => b.classList.toggle("on", i === pick));
+  document.getElementById("clip").classList.toggle("on", mode === "clip");
+  document.getElementById("words").classList.toggle("on", mode === "words");
+  document.getElementById("guide").classList.toggle("on", guide);
+  document.getElementById("up").value = up; document.getElementById("in").value = inward;
+  history.replaceState(null, "", `?pick=${pick}&mode=${mode}&up=${up}&in=${inward}&icon=${icon}${guide ? "&guide=1" : ""}`);
+  fetch("/save", { method: "POST", body: JSON.stringify({ page: "clip", pick, name: OPTIONS[pick][0], up, in: inward, icon, mode,
+    css: [innerWidth, innerHeight, cv.clientWidth, cv.clientHeight], dpr, vv: visualViewport && [visualViewport.width, visualViewport.scale] }) }).catch(() => {});
+}
+function choose(i) { pick = (i + OPTIONS.length) % OPTIONS.length; up = OPTIONS[pick][1]; inward = OPTIONS[pick][2]; draw(); }
+OPTIONS.forEach((o, i) => { const b = document.createElement("button"); b.textContent = String(i + 1); b.onclick = () => choose(i);
+  document.getElementById("picks").appendChild(b); });
+document.getElementById("prev").onclick = () => choose(pick - 1);
+document.getElementById("next").onclick = () => choose(pick + 1);
+document.getElementById("clip").onclick = () => { mode = "clip"; draw(); };
+document.getElementById("words").onclick = () => { mode = "words"; draw(); };
+document.getElementById("guide").onclick = () => { guide = !guide; draw(); };
+document.getElementById("up").oninput = e => { up = +e.target.value; draw(); };
+document.getElementById("in").oninput = e => { inward = +e.target.value; draw(); };
+document.getElementById("icon").oninput = e => { icon = +e.target.value; mode = "clip"; draw(); };
+document.getElementById("full").onclick = () => document.documentElement.requestFullscreen?.().then(() => setTimeout(draw, 300));
+addEventListener("resize", draw);
+Promise.all(["400 24px Inter", "700 24px Inter"].map(f => document.fonts.load(f))).then(draw);
+</script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Guide Layout</title>
+<style>
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family:system-ui, sans-serif; touch-action:manipulation; }
+  canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #tabs { position:absolute; right:10px; top:10px; display:flex; gap:6px; z-index:2; }
+  button { font:inherit; font-size:13px; height:34px; padding:0 12px; border-radius:999px; border:1.5px solid #EF804E; background:#000; color:#EF804E; }
+  button.on { background:#EF804E; color:#000; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="tabs">
+  <button id="guide" class="on">Guide</button>
+  <button id="play">Playground</button>
+  <button id="full">Full</button>
+</div>
+<script>
+// Everything in the phone's screen pixels (1076 × 1200, 1 dp = 1.5625 px), from TitanKeys' own sizes. The keyboard is the
+// owner's 1:1 keys (107.5 px a key, no gap between keys, 10.5 px between rows) at the same width and 60% of the height.
+const SW = 1076, SH = 1200, DP = 1.5625;
+const dp = v => v * DP;
+const STATUS = 123;                       // measured on the phone
+const BAR = Math.round(dp(60));           // TitanKeys' bar at the bottom, about 60 dp
+const PITCH = 107.5, ROW_GAP = 10.5, HEIGHT_SCALE = 0.6;
+const KEYS_H = Math.round((4 * PITCH + 3 * ROW_GAP) * HEIGHT_SCALE);
+const line = px => Math.round(px * 1.21 + dp(2));    // one line of text, top of the font to its bottom
+
+const LAYOUTS = {
+  guide: [
+    { name: "Status bar", h: STATUS, kind: "sys" },
+    { name: "Chapters and ✕", h: Math.round(dp(12) + dp(44)), kind: "ui" },
+    { gap: dp(14) },
+    { name: "Title, 1 line (40 dp)", h: line(dp(40)), kind: "text" },
+    { gap: dp(14) },
+    { name: "Instruction, 1 line (24 dp)", h: line(dp(24)) + Math.round(2 * dp(3)), kind: "text" },
+    { gap: dp(14) },
+    { name: "Field, 3 lines (29 dp)", h: 3 * line(dp(29)) + Math.round(dp(24)), kind: "field" },
+    { name: "Free room", flex: true },
+    { name: "Keys, same width, 60% height", h: KEYS_H, kind: "keys" },
+    { name: "TitanKeys bar (about)", h: BAR, kind: "bar" },
+  ],
+  play: [
+    { name: "Status bar", h: STATUS, kind: "sys" },
+    { name: "Header: TitanKeys, Guide, Settings", h: Math.round(dp(52)), kind: "ui" },
+    { gap: dp(6) },
+    { name: "Line to type along to", h: line(dp(17)) * 2, kind: "text" },
+    { gap: dp(14) },
+    { name: "Text box", h: Math.round(3 * line(dp(18)) + 2 * dp(14)), kind: "field" },
+    { name: "Free room", flex: true },
+    { name: "Keys, same width, 60% height", h: KEYS_H, kind: "keys" },
+    { name: "TitanKeys bar (about)", h: BAR, kind: "bar" },
+  ],
+};
+let which = "guide";
+
+const canvas = document.getElementById("c"), ctx = canvas.getContext("2d");
+let W = 0, H = 0;
+
+function keys(x0, y0, s) {
+  const rows = [["Q","W","E","R","T","Y","U","I","O","P"],["A","S","D","F","G","H","J","K","L","⌫"],["alt","Z","X","C","V","B","N","M","sym","↵"],["⇧","○","◁","space","▦","fn","⇧"]];
+  const widths = [1.2, 1.2, 1.2, 2.8, 1.2, 1.2, 1.2];
+  const pitch = PITCH * s, keyH = PITCH * HEIGHT_SCALE * s, row = (PITCH + ROW_GAP) * HEIGHT_SCALE * s;
+  const left = (W - 10 * pitch) / 2, inset = pitch * 0.03;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  rows.forEach((names, r) => {
+    let at = left;
+    names.forEach((n, i) => {
+      const w = r < 3 ? pitch : 10 * pitch * widths[i] / 10;
+      ctx.beginPath(); ctx.roundRect(at + inset, y0 + r * row, w - 2 * inset, keyH, keyH * 0.16);
+      ctx.fillStyle = "rgba(239,128,78,0.06)"; ctx.fill();
+      ctx.strokeStyle = "rgba(239,128,78,0.55)"; ctx.lineWidth = Math.max(1, s); ctx.stroke();
+      ctx.fillStyle = "rgba(255,241,230,0.8)";
+      ctx.font = `800 ${Math.round(keyH * (n.length === 1 ? 0.5 : 0.34))}px system-ui, sans-serif`;
+      ctx.fillText(n, at + w / 2, y0 + r * row + keyH / 2);
+      at += w;
+    });
+  });
+}
+
+function draw() {
+  const s = W / SW;                 // screen pixels to canvas pixels
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+  const items = LAYOUTS[which];
+  const fixed = items.reduce((t, it) => t + (it.flex ? 0 : (it.h ?? it.gap)), 0);
+  const free = SH - fixed;
+  let y = 0;
+  const side = dp(18);
+  for (const it of items) {
+    const h = it.flex ? free : (it.h ?? it.gap);
+    if (it.gap) { y += h; continue; }
+    const top = y * s, height = h * s;
+    if (it.kind === "keys") keys(0, top, s);
+    else {
+      const colour = { sys: "#2A2623", ui: "#3a2a20", text: "#4a2e1e", field: "#1c1410", bar: "#2A2623" }[it.kind] || null;
+      const x = (it.kind === "sys" || it.kind === "bar") ? 0 : side * s, w = (it.kind === "sys" || it.kind === "bar") ? W : W - 2 * side * s;
+      if (colour) { ctx.fillStyle = colour; ctx.beginPath(); ctx.roundRect(x, top, w, height, it.kind === "field" ? dp(16) * s : 4 * s); ctx.fill(); }
+      else { ctx.setLineDash([6 * s, 6 * s]); ctx.strokeStyle = "#99918A"; ctx.strokeRect(x, top, w, height); ctx.setLineDash([]); }
+    }
+    // The label: name and height, on the left, readable over anything.
+    const label = `${it.name}: ${Math.round(h)} px (${Math.round(h / SH * 100)}%)`;
+    ctx.font = `600 ${Math.round(13 * devicePixelRatio)}px system-ui, sans-serif`;
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    const lx = 10 * s, ly = top + (it.kind === "keys" ? -18 * devicePixelRatio : 4 * s);
+    const tw = ctx.measureText(label).width;
+    ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(lx - 3, ly - 2, tw + 6, 17 * devicePixelRatio);
+    ctx.fillStyle = it.kind === "keys" ? "#EF804E" : "#FFF1E6"; ctx.fillText(label, lx, ly);
+    y += h;
+  }
+}
+
+function resize(entries) {
+  const e = entries && entries[0];
+  if (e && e.devicePixelContentBoxSize) { W = e.devicePixelContentBoxSize[0].inlineSize; H = e.devicePixelContentBoxSize[0].blockSize; }
+  else { W = Math.round(canvas.clientWidth * devicePixelRatio); H = Math.round(canvas.clientHeight * devicePixelRatio); }
+  canvas.width = W; canvas.height = H; draw();
+}
+try { new ResizeObserver(resize).observe(canvas, { box: "device-pixel-content-box" }); } catch (e) { new ResizeObserver(resize).observe(canvas); }
+function pick(w) { which = w; document.getElementById("guide").classList.toggle("on", w === "guide"); document.getElementById("play").classList.toggle("on", w === "play"); draw(); }
+document.getElementById("guide").onclick = () => pick("guide");
+document.getElementById("play").onclick = () => pick("play");
+document.getElementById("full").onclick = () => document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
+document.addEventListener("fullscreenchange", () => { document.getElementById("full").style.display = document.fullscreenElement ? "none" : ""; });
+</script>
+</body>
+</html>

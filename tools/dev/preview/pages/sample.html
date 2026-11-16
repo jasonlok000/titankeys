@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Guide Sample</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --orange:#EF804E; --cream:#FFF1E6; --muted:#99918A; --divider:#2A2623; --ink:#160A04; }
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; touch-action:manipulation; }
+  /* The phone's screen in its own pixels, 1076 × 1200, scaled to fit the browser: in full screen, one of these is one real pixel. */
+  #screen { position:absolute; left:0; top:0; width:1076px; height:1200px; transform-origin:0 0; font-family:Inter, system-ui, sans-serif; color:var(--cream); background:#000; overflow:hidden; }
+  .abs { position:absolute; }
+  #controls { position:fixed; left:50%; transform:translateX(-50%); top:6px; display:flex; gap:6px; z-index:5; }
+  #controls button { font:500 13px Inter, system-ui, sans-serif; height:34px; padding:0 12px; border-radius:999px; border:1.5px solid var(--orange); background:rgba(0,0,0,.85); color:var(--orange); }
+  #controls button.on { background:var(--orange); color:#000; }
+  .size { position:absolute; left:4px; font:600 18px Inter, sans-serif; color:#000; background:rgba(239,128,78,.9); padding:1px 6px; border-radius:4px; z-index:4; display:none; }
+  body.sizes .size { display:block; }
+  .key { position:absolute; box-sizing:border-box; border:1.5px solid rgba(239,128,78,.5); background:rgba(239,128,78,.05); border-radius:13px;
+         display:flex; align-items:center; justify-content:center; font-weight:800; color:rgba(255,241,230,.85); }
+</style>
+</head>
+<body>
+<div id="screen"></div>
+<div id="controls">
+  <button id="bGuide" class="on">Guide</button>
+  <button id="bPlay">Playground</button>
+  <button id="bSizes">Sizes</button>
+  <button id="bFull">Full</button>
+</div>
+<script>
+// Sizes: one dp is 1.5625 of the screen's pixels (its width over 688.6), whatever the phone's display or font size setting.
+const DP = 1.5625, W = 1076, H = 1200, SIDE = 18 * DP;
+const STATUS = 123, BAR = Math.round(60 * DP);
+// The owner's keys: 107.5 px a key, no gap between keys, 10.5 px between rows, drawn at the same width and 60% of the height.
+const PITCH = 107.5, ROW_GAP = 10.5, SCALE = 0.6;
+const KEY_H = PITCH * SCALE, ROW = (PITCH + ROW_GAP) * SCALE, KEYS_H = Math.round(3 * ROW + KEY_H);
+const screen = document.getElementById("screen");
+
+function el(html, style) { const d = document.createElement("div"); d.className = "abs"; Object.assign(d.style, style); d.innerHTML = html; screen.appendChild(d); return d; }
+function size(label, top, height) { const d = document.createElement("div"); d.className = "size"; d.style.top = (top + 2) + "px"; d.textContent = `${label} ${Math.round(height)} px`; screen.appendChild(d); }
+
+function statusBar() {
+  el(`<span style="font:500 ${15*DP}px Inter">22:00</span><span style="float:right;font:500 ${14*DP}px Inter">▾ ◢ ▮ 64%</span>`,
+     { left: 32*DP/1.5 + "px", right: 32*DP/1.5 + "px", top: 38 + "px", height: STATUS + "px", color: "var(--cream)" });
+  size("status bar", 0, STATUS);
+}
+
+function keyboard(top, playground) {
+  const rows = [["Q","W","E","R","T","Y","U","I","O","P"],["A","S","D","F","G","H","J","K","L","⌫"],["alt","Z","X","C","V","B","N","M","sym","↵"],["⇧","○","◁","space","▦","fn","⇧"]];
+  const widths = [1.2, 1.2, 1.2, 2.8, 1.2, 1.2, 1.2];
+  const left = (W - 10 * PITCH) / 2, inset = PITCH * 0.03;
+  rows.forEach((names, r) => {
+    let x = left;
+    names.forEach((n, i) => {
+      const w = r < 3 ? PITCH : PITCH * widths[i];
+      const k = document.createElement("div"); k.className = "key";
+      Object.assign(k.style, { left: (x + inset) + "px", top: (top + r * ROW) + "px", width: (w - 2 * inset) + "px", height: KEY_H + "px",
+        fontSize: Math.round(KEY_H * (n.length === 1 ? 0.5 : 0.34)) + "px" });
+      k.textContent = n; screen.appendChild(k);
+      x += w;
+    });
+  });
+  if (playground) {
+    // The touchpad's zone: corner brackets and a label, from Q's middle to P's, and from the top row's middle into the bottom row.
+    const zl = left + PITCH / 2, zr = left + 9.5 * PITCH, zt = top + KEY_H / 2, zb = top + 3 * ROW + KEY_H * 0.4, arm = 30 * DP;
+    const c = `position:absolute;width:${arm}px;height:${arm}px;border-color:var(--orange);border-style:solid;border-width:0`;
+    el(`<div style="${c};left:0;top:0;border-left-width:3px;border-top-width:3px"></div>
+        <div style="${c};right:0;top:0;border-right-width:3px;border-top-width:3px"></div>
+        <div style="${c};left:0;bottom:0;border-left-width:3px;border-bottom-width:3px"></div>
+        <div style="${c};right:0;bottom:0;border-right-width:3px;border-bottom-width:3px"></div>`,
+       { left: zl + "px", top: zt + "px", width: (zr - zl) + "px", height: (zb - zt) + "px" });
+    el(`TOUCHPAD`, { right: (W - zr) + "px", top: (top - 26 * DP) + "px", font: `700 ${11 * DP}px Inter`, letterSpacing: "0.12em", color: "var(--orange)" });
+  }
+  size("keys, 60%", top, KEYS_H);
+}
+
+function bar(words) {
+  const top = H - BAR;
+  el(`<div style="display:flex;height:100%;align-items:center;justify-content:space-around;font:500 ${17*DP}px Inter">
+        <span style="color:var(--cream);opacity:.8">${words[0]}</span><span style="color:var(--cream);font-weight:700">${words[1]}</span><span style="color:var(--cream);opacity:.8">${words[2]}</span></div>`,
+     { left: 0, right: 0, top: top + "px", height: BAR + "px", background: "#000", borderTop: "1px solid var(--divider)" });
+  size("TitanKeys bar", top, BAR);
+  return top;
+}
+
+function guide() {
+  screen.innerHTML = ""; statusBar();
+  let y = STATUS;
+  // The chapters across the whole width, a tick per slide; then the chapter's name, Skip and ✕.
+  const chapters = [3, 3, 2, 4, 2], ticksH = 12 * DP, room = W - 2 * SIDE - 6 * DP * 4;
+  let x = SIDE; const total = chapters.reduce((a, b) => a + b, 0);
+  chapters.forEach((n, ci) => { for (let t = 0; t < n; t++) { const w = (room - 2 * DP * (total - chapters.length)) / total;
+    el("", { left: x + "px", top: (y + ticksH / 2 - 2 * DP) + "px", width: w + "px", height: 4 * DP + "px", borderRadius: "6px",
+      background: ci === 0 && t === 0 ? "var(--orange)" : ci === 0 && t === 1 ? "rgba(239,128,78,.5)" : "var(--divider)" });
+    x += w + (t < n - 1 ? 2 * DP : 6 * DP); } });
+  y += ticksH;
+  const rowH = 44 * DP;
+  el(`TYPING`, { left: SIDE + "px", top: y + "px", height: rowH + "px", font: `700 ${13 * DP}px/${rowH}px Inter`, letterSpacing: "0.08em", color: "var(--orange)" });
+  el(`<span style="display:inline-block;border:1.5px solid var(--orange);color:var(--orange);border-radius:999px;padding:0 ${12*DP}px;line-height:${26*DP}px;font:600 ${14*DP}px Inter;margin-right:${10*DP}px;vertical-align:middle">Skip</span><span style="font:400 ${24*DP}px Inter;vertical-align:middle">✕</span>`,
+     { right: SIDE + "px", top: y + "px", height: rowH + "px", lineHeight: rowH + "px", display: "flex", alignItems: "center" });
+  size("chapters", STATUS, ticksH + rowH);
+  y += rowH + 14 * DP;
+  const titlePx = 40 * DP, titleH = Math.round(titlePx * 1.21 + 2 * DP);
+  const title = el(`Swipe it. One hand, no questions.`, { left: SIDE + "px", right: SIDE + "px", top: y + "px", height: titleH + "px",
+    font: `800 ${titlePx}px/${titleH}px Inter`, letterSpacing: "-0.02em", color: "var(--orange)", whiteSpace: "nowrap", overflow: "hidden" });
+  fit(title, titlePx, 24 * DP);
+  size("title", y, titleH);
+  y += titleH + 14 * DP;
+  const bodyPx = 24 * DP, bodyH = Math.round(bodyPx * 1.21 + 2 * DP + 6 * DP);
+  const body = el(`Slide over the next grey word. Lift at the end.`, { left: SIDE + "px", right: SIDE + "px", top: y + "px", height: bodyH + "px",
+    font: `500 ${bodyPx}px/${bodyH}px Inter`, color: "rgba(255,241,230,.85)", whiteSpace: "nowrap", overflow: "hidden" });
+  fit(body, bodyPx, 15 * DP);
+  size("instruction", y, bodyH);
+  y += bodyH + 14 * DP;
+  // The field, exactly two lines: what's typed in cream, the rest of the line in grey.
+  const fieldPx = 29 * DP, line = Math.round(fieldPx * 1.3), fieldH = 2 * line + 2 * 14 * DP;
+  el(`<span style="color:var(--cream)">One </span><span style="color:rgba(255,241,230,.35)">swipe per word</span>`,
+     { left: SIDE + "px", right: SIDE + "px", top: y + "px", height: fieldH + "px", padding: `${14*DP}px ${16*DP}px`, boxSizing: "border-box",
+       background: "#1d1916", borderRadius: 16 * DP + "px", font: `500 ${fieldPx}px/${line}px Inter` });
+  size("field, 2 lines", y, fieldH);
+  y += fieldH;
+  const barTop = bar(["swiping", "swipe", "swiped"]);
+  const keysTop = barTop - KEYS_H - 8 * DP;
+  size("free room", y, keysTop - y);
+  keyboard(keysTop, false);
+}
+
+function playground() {
+  screen.innerHTML = ""; statusBar();
+  let y = STATUS + 6 * DP;
+  const headH = 52 * DP, button = 44 * DP;
+  el(`TitanKeys`, { left: SIDE + "px", top: y + "px", height: headH + "px", font: `800 ${28 * DP}px/${headH}px Inter`, color: "var(--orange)" });
+  el(`<span style="display:inline-block;border:1.5px solid var(--orange);color:var(--orange);border-radius:999px;padding:0 ${16*DP}px;line-height:${button}px;font:600 ${15*DP}px Inter;margin-left:${8*DP}px">Guide</span><span style="display:inline-block;background:var(--orange);color:#000;border-radius:999px;padding:0 ${16*DP}px;line-height:${button}px;font:600 ${15*DP}px Inter;margin-left:${8*DP}px">Settings</span>`,
+     { right: SIDE + "px", top: (y + (headH - button) / 2) + "px" });
+  size("header", y, headH);
+  y += headH + 6 * DP;
+  // The line to type along to: the whole sentence you're in, lowercase, no punctuation.
+  const promptPx = 17 * DP, promptLine = Math.round(promptPx * 1.35), promptH = 2 * promptLine;
+  el(`<span style="color:var(--cream)">your thumbs have more game than you </span><span style="color:var(--muted)">do and even they get left on read</span>`,
+     { left: SIDE + "px", right: SIDE + "px", top: y + "px", height: promptH + "px", font: `500 ${promptPx}px/${promptLine}px Inter` });
+  size("line to type", y, promptH);
+  y += promptH + 14 * DP;
+  const boxPx = 18 * DP, boxLine = Math.round(boxPx * 1.35), boxH = 3 * boxLine + 2 * 14 * DP;
+  el(`<div style="position:absolute;left:0;top:${10*DP}px;bottom:${10*DP}px;width:${4*DP}px;border-radius:4px;background:var(--orange)"></div>
+      <div style="padding:${14*DP}px ${14*DP}px ${14*DP}px ${22*DP}px;font:500 ${boxPx}px Inter;line-height:${boxLine}px;color:var(--cream)">your thumbs have more game than you<span style="display:inline-block;width:${2.5*DP}px;height:${boxLine - 6*DP}px;background:var(--orange);vertical-align:middle;margin-left:2px"></span></div>`,
+     { left: SIDE + "px", right: SIDE + "px", top: y + "px", height: boxH + "px", background: "#1d1916", borderRadius: 16 * DP + "px" });
+  size("text box", y, boxH);
+  y += boxH;
+  const barTop = bar(["do", "you", "your"]);
+  const keysTop = barTop - KEYS_H - 8 * DP;
+  size("free room", y, keysTop - y);
+  keyboard(keysTop, true);
+}
+
+// A line that's too long shrinks to fit, never wraps.
+function fit(node, most, least) {
+  let px = most;
+  while (node.scrollWidth > node.clientWidth && px > least) { px -= 1; node.style.fontSize = px + "px"; }
+}
+
+let which = "guide";
+function render() { which === "guide" ? guide() : playground();
+  document.getElementById("bGuide").classList.toggle("on", which === "guide"); document.getElementById("bPlay").classList.toggle("on", which === "play"); }
+function scale() { const s = window.innerWidth / W; screen.style.transform = `scale(${s})`; }
+window.addEventListener("resize", scale);
+document.getElementById("bGuide").onclick = () => { which = "guide"; render(); };
+document.getElementById("bPlay").onclick = () => { which = "play"; render(); };
+document.getElementById("bSizes").onclick = () => { document.body.classList.toggle("sizes"); document.getElementById("bSizes").classList.toggle("on"); };
+document.getElementById("bFull").onclick = () => document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
+document.fonts?.ready.then(render);
+scale(); render();
+</script>
+</body>
+</html>

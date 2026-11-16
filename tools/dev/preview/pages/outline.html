@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Outline widths</title>
+<style>
+  @font-face { font-family:Inter; font-weight:700; src:url(inter_bold.otf); }
+  @font-face { font-family:Inter; font-weight:500; src:url(inter_medium.otf); }
+  html, body { margin:0; background:#000; color:#FFF1E6; font:15px/1.4 Inter, system-ui, sans-serif; }
+  .wrap { padding:16px 16px 40px; }
+  h1 { font-size:22px; margin:4px 0 6px; } p { color:#99918A; margin:0 0 12px; }
+  .opt { margin:14px -16px 0; }
+  .label { padding:0 16px 6px; font-size:14px; } .label b { color:#EF804E; font-weight:500; }
+  canvas { display:block; width:100vw; height:56px; background:#000; border-top:1px solid #161210; border-bottom:1px solid #161210; }
+</style>
+</head>
+<body><div class="wrap">
+<h1>Not saved: outline width</h1>
+<p>The word as the bar draws it, Inter Bold at 20 dp, on the real bar's black. The width is in dp and in the phone's own pixels (1 dp = 1.5625 px). Below 1 px the screen can't draw a sharper line, only a fainter one.</p>
+<div id="opts"></div>
+</div>
+<script>
+const OPTIONS = [
+  [1.1, "Now (W's build)"],
+  [0.8, "Thinner"],
+  [0.64, "One screen pixel: the thinnest crisp line"],
+  [0.48, "Below a pixel: fainter"],
+  [0.32, "Hairline: fainter still"],
+];
+const host = document.getElementById("opts");
+document.fonts.load("700 20px Inter").then(() => {
+  for (const [dp, name] of OPTIONS) {
+    const px = dp * 1.5625;
+    const box = document.createElement("div"); box.className = "opt";
+    box.innerHTML = `<div class="label"><b>${dp} dp</b> · ${px.toFixed(2)} px · ${name}</div>`;
+    const cv = document.createElement("canvas"); box.appendChild(cv); host.appendChild(box);
+    const dpr = devicePixelRatio || 1, w = innerWidth, h = 56;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    const c = cv.getContext("2d"); c.scale(dpr, dpr);
+    c.font = "700 20px Inter"; c.textAlign = "center"; c.textBaseline = "middle";
+    // Not saved, at the bar's middle; then a Blocked copy (grey, struck) on the left, for the same width.
+    c.lineJoin = "round"; c.lineWidth = dp; c.strokeStyle = "#ffffff";
+    c.strokeText("whatever", w / 2, h / 2);
+    c.strokeStyle = "#99918A"; c.font = "700 20px Inter";
+    c.strokeText("blocked", w * 0.16, h / 2);
+    const bw = c.measureText("blocked").width;
+    c.lineWidth = 1.5; c.beginPath(); c.moveTo(w * 0.16 - bw / 2 - 2, h / 2); c.lineTo(w * 0.16 + bw / 2 + 2, h / 2); c.stroke();
+    // A saved word in solid, on the right, for comparison.
+    c.fillStyle = "#ffffff"; c.fillText("saved", w * 0.84, h / 2);
+  }
+});
+</script>
+</body>
+</html>

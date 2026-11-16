@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Swipe trail</title>
+<style>
+  @font-face { font-family:Inter; font-weight:400; src:url(inter_regular.otf); }
+  @font-face { font-family:Inter; font-weight:700; src:url(inter_bold.otf); }
+  @font-face { font-family:Inter; font-weight:500; src:url(inter_medium.otf); }
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family:Inter, system-ui, sans-serif; color:#EDE6E0; }
+  #top { position:absolute; left:0; right:0; top:0; bottom:56px; padding:14px 16px; box-sizing:border-box; background:#1B1918; overflow:auto; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center; }
+  button { font:600 15px Inter, sans-serif; padding:10px 14px; border-radius:20px; border:1px solid #EF804E; background:transparent; color:inherit; }
+  button.on { background:#EF804E; color:#160A04; }
+  #big { font:700 22px Inter, sans-serif; margin:6px 0 4px; }
+  #vals { font:500 14px Inter, sans-serif; opacity:.8; margin-bottom:8px; }
+  label { font:500 14px Inter, sans-serif; width:64px; }
+  input[type=range] { flex:1; }
+  #note { font:500 14px Inter, sans-serif; opacity:.7; line-height:1.4; }
+  canvas { position:absolute; left:0; bottom:0; width:100vw; height:56px; display:block; }
+</style>
+</head>
+<body>
+<div id="top">
+  <div class="row"><button id="prev">◀ previous</button><button id="next">next ▶</button><button id="full">Full screen</button></div>
+  <div id="big"></div>
+  <div id="vals"></div>
+  <div class="row" id="picks"></div>
+  <div class="row"><button id="pause">Pause</button><button id="guide">Line and floor</button></div>
+  <div class="row"><label>Rows</label><input id="rows" type="range" min="6" max="16" step="0.5"></div>
+  <div class="row"><label>Up</label><input id="up" type="range" min="0" max="10" step="0.5"></div>
+  <div class="row"><label>Edges</label><input id="soft" type="range" min="0" max="1" step="0.1"></div>
+  <div id="note">The bar at Normal size, 1:1, on your screen's real bottom edge. Words are swiped over and over (keyboard, quiz,
+    titan, mob). Rows: how far apart the three key rows are drawn. Up: how far the middle row sits over the words' line. Edges:
+    1 draws the top and bottom of each row as far out as the keys reach; less pulls those edges in, so the rows can be farther apart
+    without the trail running along the bottom edge. Tap Full screen first.</div>
+</div>
+<canvas id="bar"></canvas>
+<script>
+// All in dp (Chrome's CSS px are the phone's dp on this phone, checked: 688 px wide at 1.5625).
+const BAR = 56, LINE = 39, FLOOR = 56 - 2.56, ORANGE = "#EF804E";
+const PATH_WIDTH = 1.6, THICKEST = 1.8, FINGER = 2.8, SIDE = 10, EDGE_TOP = 4.5;
+const STROKE = PATH_WIDTH * THICKEST / 2;
+const NOW_ROW = Math.min(14, (FLOOR - LINE - STROKE) / 1.5);   // build #19: 8.7 dp
+const OPTIONS = [
+  // name, rows apart, middle over the line, edges (1 = as far out as the keys)
+  ["Before (build #16): tall, sits high", 14, LINE - Math.min(LINE, FLOOR - 21), 1],
+  ["Now (build #19): centred and clear of the edge, but squeezed", NOW_ROW, 0, 1],
+  ["Tall and clear of the edge, so it sits a bit high", 13, 5, .3],
+  ["Tall and centred, so its bottom row nears the edge", 13, 0, 0],
+  ["In between: middle row level with your arrow (3 dp up)", 11, 3, .3],
+  ["Tallest at 3 dp up, bottom row as high as today", 12, 3, .3],
+];
+const WORDS = ["keyboard", "quiz", "titan", "mob"];
+const LAYOUT = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+const COL_SHIFT = [0, 0, 1];   // the Titan 2 Elite: A under Q, Z under W
+const q = new URLSearchParams(location.search);
+let pick = +(q.get("pick") ?? 1), paused = false, guide = q.get("guide") === "1";
+let rows = OPTIONS[pick][1], up = OPTIONS[pick][2], soft = OPTIONS[pick][3];
+const cv = document.getElementById("bar"), dpr = devicePixelRatio || 1;
+
+// The touchpad's coordinates of a word: each letter's key middle, x from 0 to 1 across ten columns, y from 0 to 1 down four rows.
+function keyOf(ch) {
+  for (let r = 0; r < 3; r++) { const c = LAYOUT[r].indexOf(ch); if (c >= 0) return [(c + COL_SHIFT[r] + .5) / 10, (r + .5) / 4]; }
+  return [.5, .375];
+}
+// A finger's path through the keys: a smooth curve with a little overshoot and wobble, the touch firmer in the middle.
+function pathOf(word, seed) {
+  const pts = [...word].map(keyOf), out = [];
+  let s = seed;
+  const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 - .5; };
+  const P = i => pts[Math.max(0, Math.min(pts.length - 1, i))];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [p0, p1, p2, p3] = [P(i - 1), P(i), P(i + 1), P(i + 2)];
+    for (let k = 0; k < 14; k++) {
+      const t = k / 14, t2 = t * t, t3 = t2 * t;
+      const f = (a, b, c, d) => .5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+      out.push([f(p0[0], p1[0], p2[0], p3[0]) + rnd() * .004, f(p0[1], p1[1], p2[1], p3[1]) + rnd() * .03]);
+    }
+  }
+  out.push(pts[pts.length - 1]);
+  return out.map(([x, y], i) => [x, Math.max(0, Math.min(.75, y)), 1 + .8 * Math.sin(Math.PI * i / (out.length - 1))]);
+}
+function keyX(x, W) { const pitch = W * 108 / 1076, left = (W - 10 * pitch) / 2; return left + pitch / 2 + (x * 10 - .5) * pitch; }
+// A touchpad height on the bar: the middle row "up" over the line, the row middles "rows" apart; beyond a row's middle, out to
+// the keys' edge, half a row, drawn at "soft" of its full height. Never over the top margin or under the floor.
+function barY(y) {
+  const u = y / .75 * 3 - 1.5;   // -1.5 .. 1.5, the rows' middles at -1, 0, 1
+  const a = Math.abs(u), v = a <= 1 ? a : 1 + (a - 1) * soft;
+  return Math.max(EDGE_TOP, Math.min(FLOOR - STROKE, LINE - up + Math.sign(u) * v * rows));
+}
+let word = 0, start = performance.now();
+const paths = WORDS.map((w, i) => pathOf(w, 17 + i * 31));
+function frame(now) {
+  const W = innerWidth;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(BAR * dpr);
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.fillStyle = "#000"; c.fillRect(0, 0, W, BAR);
+  // The words, dimmed under the swipe.
+  c.globalAlpha = .12; c.fillStyle = "#fff"; c.textAlign = "center"; const base = LINE + 24 * 1118 / 2048 / 2;
+  c.font = "400 24px Inter"; c.fillText("testing", 146.6, base); c.fillText("testament", 542.7, base);
+  c.font = "700 24px Inter"; c.fillText("test", 344.6, base); c.globalAlpha = 1;
+  const path = paths[word], t = paused ? 1100 : (now - start);
+  const DRAW = 1100, HOLD = 700, FADE = 300, GAP = 300;
+  const shown = Math.max(2, Math.round(path.length * Math.min(1, t / DRAW)));
+  const alpha = t < DRAW + HOLD ? 1 : Math.max(0, 1 - (t - DRAW - HOLD) / FADE);
+  c.globalAlpha = alpha; c.strokeStyle = ORANGE; c.lineCap = "round";
+  for (let i = 1; i < shown; i++) {
+    const [x0, y0, w0] = path[i - 1], [x1, y1, w1] = path[i];
+    c.lineWidth = PATH_WIDTH * (w0 + w1) / 2; c.beginPath();
+    c.moveTo(Math.max(SIDE, Math.min(W - SIDE, keyX(x0, W))), barY(y0)); c.lineTo(Math.max(SIDE, Math.min(W - SIDE, keyX(x1, W))), barY(y1)); c.stroke();
+  }
+  const [xe, ye, we] = path[shown - 1], fr = FINGER * we;
+  c.fillStyle = ORANGE; c.beginPath(); c.arc(Math.max(SIDE, Math.min(W - SIDE, keyX(xe, W))), Math.min(barY(ye), FLOOR - fr), fr, 0, 7); c.fill();
+  c.globalAlpha = 1;
+  if (guide) {
+    c.lineWidth = 1 / dpr;
+    c.strokeStyle = "rgba(0,220,255,.7)"; c.beginPath(); c.moveTo(0, LINE); c.lineTo(W, LINE); c.stroke();
+    c.strokeStyle = "rgba(255,230,0,.7)"; c.beginPath(); c.moveTo(0, FLOOR); c.lineTo(W, FLOOR); c.stroke();
+  }
+  if (!paused && t > DRAW + HOLD + FADE + GAP) { word = (word + 1) % WORDS.length; start = now; }
+  requestAnimationFrame(frame);
+}
+function show() {
+  document.getElementById("big").textContent = `${pick + 1}: ${OPTIONS[pick][0]}`;
+  const top = barY(0), bottom = barY(.75), r0 = barY(.125), r2 = barY(.625);
+  document.getElementById("vals").textContent = `Rows ${rows.toFixed(1)} dp apart, up ${up} dp, edges ${soft} · the trail spans ${(bottom - top).toFixed(1)} dp, ` +
+    `the bottom row ${(BAR - r2).toFixed(1)} dp over the screen's edge, its lowest point ${(BAR - bottom).toFixed(1)} dp`;
+  document.querySelectorAll("#picks button").forEach((b, i) => b.classList.toggle("on", i === pick));
+  document.getElementById("pause").classList.toggle("on", paused);
+  document.getElementById("guide").classList.toggle("on", guide);
+  document.getElementById("rows").value = rows; document.getElementById("up").value = up; document.getElementById("soft").value = soft;
+  history.replaceState(null, "", `?pick=${pick}&rows=${rows}&up=${up}&soft=${soft}${guide ? "&guide=1" : ""}`);
+  fetch("/save", { method: "POST", body: JSON.stringify({ page: "swipe", pick, name: OPTIONS[pick][0], rows, up, soft, paused }) }).catch(() => {});
+}
+function choose(i) { pick = (i + OPTIONS.length) % OPTIONS.length; [, rows, up, soft] = OPTIONS[pick]; show(); }
+if (q.has("rows")) rows = +q.get("rows"); if (q.has("up")) up = +q.get("up"); if (q.has("soft")) soft = +q.get("soft");
+OPTIONS.forEach((o, i) => { const b = document.createElement("button"); b.textContent = String(i + 1); b.onclick = () => choose(i);
+  document.getElementById("picks").appendChild(b); });
+document.getElementById("prev").onclick = () => choose(pick - 1);
+document.getElementById("next").onclick = () => choose(pick + 1);
+document.getElementById("pause").onclick = () => { paused = !paused; show(); };
+document.getElementById("guide").onclick = () => { guide = !guide; show(); };
+document.getElementById("rows").oninput = e => { rows = +e.target.value; show(); };
+document.getElementById("up").oninput = e => { up = +e.target.value; show(); };
+document.getElementById("soft").oninput = e => { soft = +e.target.value; show(); };
+document.getElementById("full").onclick = () => document.documentElement.requestFullscreen?.();
+Promise.all(["400 24px Inter", "700 24px Inter"].map(f => document.fonts.load(f))).then(() => { show(); requestAnimationFrame(frame); });
+</script>
+</body>
+</html>

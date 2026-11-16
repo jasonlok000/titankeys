@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Word ladder</title>
+<style>
+  @font-face { font-family:Inter; font-weight:700; src:url(inter_bold.otf); }
+  @font-face { font-family:Inter; font-weight:500; src:url(inter_medium.otf); }
+  :root { --card:#161210; --cream:#FFF1E6; --muted:#99918A; --orange:#EF804E; --div:#2A2623; --pitch: calc(100vw * 108 / 1076); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#000; color:var(--cream); font:16px/1.45 Inter, system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  .wrap { padding:20px 16px 60px; }
+  h1 { font-size:26px; margin:0 0 6px; } h2 { font-size:19px; margin:28px 0 8px; }
+  p, li { color:var(--muted); font-size:15px; } p { margin:0 0 10px; } ul { margin:0 0 10px; padding-left:20px; }
+  b { color:var(--cream); font-weight:600; }
+  .rung { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:12px 0; }
+  .rung span.s { border:1px solid var(--div); border-radius:10px; padding:6px 10px; font-size:14px; background:var(--card); }
+  .rung span.a { color:var(--muted); font-size:13px; }
+  .card { background:var(--card); border-radius:14px; padding:12px 0 12px; margin:12px -16px 14px; }
+  .card .t { padding:0 16px; font-size:15px; } .card .d { padding:0 16px; font-size:13px; color:var(--muted); }
+  .stage { position:relative; width:100vw; height:120px; margin-top:6px; }
+  .bar { position:absolute; left:0; right:0; bottom:0; height:56px; background:#000; }
+  .stage svg.w, .stage canvas { position:absolute; left:0; top:0; width:100vw; height:120px; pointer-events:none; }
+  .btn { position:absolute; bottom:28px; width:30px; height:30px; transform:translate(-50%,50%); display:flex; align-items:center; justify-content:center; color:#fff; z-index:4; }
+  .btn svg { width:22px; height:22px; }
+  .col7 { left:calc(50vw + 2.5 * var(--pitch)); } .col8 { left:calc(50vw + 3.5 * var(--pitch)); } .col9 { left:calc(50vw + 4.5 * var(--pitch)); }
+  .pill { position:absolute; bottom:28px; height:34px; transform:translateY(50%); background:var(--orange); color:#160A04; border-radius:17px;
+          display:flex; align-items:center; gap:6px; padding:0 10px 0 12px; font-size:14px; font-weight:500; font-family:Inter; z-index:5; white-space:nowrap; }
+  .pill svg { width:20px; height:20px; }
+  .keys { display:flex; justify-content:center; font-size:11px; color:#5b544e; margin-top:2px; }
+  .keys span { width:var(--pitch); text-align:center; }
+  .row { display:flex; gap:8px; padding:8px 16px 0; }
+  button.play { font:inherit; font-size:14px; color:var(--orange); background:none; border:1.5px solid var(--orange); border-radius:999px; padding:6px 14px; }
+  .tag { display:inline-block; font-size:12px; border-radius:999px; padding:1px 8px; margin-left:6px; background:#3a2418; color:var(--orange); }
+</style>
+</head>
+<body><div class="wrap">
+<h1>Word ladder, v3</h1>
+<p>Orchestrator's proposal for the word menu, refined after your review. Nothing here is on the phone yet. Hold a word on the bar: <b>I</b> moves it one step up, <b>O</b> one step down, and <b>Back</b> closes. The menu stays open after every step, and the hover stays on the key you pressed.</p>
+<div class="rung"><span class="s">Blocked</span><span class="a">⇄</span><span class="s">Not saved</span><span class="a">⇄</span><span class="s">Saved</span><span class="a">⇄</span><span class="s">Favourite</span></div>
+<ul>
+<li><b>Favourite</b>: always first. The word is solid, with hearts.</li>
+<li><b>Saved</b>: TitanKeys knows the word. That covers a dictionary word, a word it learned from your typing (typed twice) and a word you saved. The word is solid.</li>
+<li><b>Not saved</b>: TitanKeys doesn't know it. The word is a <b>dotted outline</b>. <span class="tag">new</span></li>
+<li><b>Blocked</b>: never suggested, learned back or fixed into. The word is a grey dotted outline, struck through.</li>
+</ul>
+<p>One metaphor all the way through: <b>the book</b>, your dictionary. Save writes the word into it, and Unsave tears its page out. The icons are the ones that would ship: the app's own hearts and Back, plus a new book and block on the same grid and line weight. Particles use the same shapes, and the text is the app's Inter. One-letter words open no menu at all, and symbols and emoji have no ladder.</p>
+
+<h2>The bar at each status</h2>
+<p>The plain bar, then the pill when a finger rests on I or O.</p>
+<div id="states"></div>
+
+<h2>Each step</h2>
+<p>Tap Play, or Slow to see it at a quarter speed. Each effect plays only for the step you just pressed, and opening the menu plays nothing.</p>
+<div id="moves"></div>
+</div>
+
+<script>
+const P = {
+  // From android/src/main/res/drawable: menu_favourite, menu_favourited, menu_unfavourite (heart + zigzag) and panel_back.
+  heart:'M16.5,3c-1.74,0 -3.41,0.81 -4.5,2.09C10.91,3.81 9.24,3 7.5,3 4.42,3 2,5.42 2,8.5c0,3.78 3.4,6.86 8.55,11.54L12,21.35l1.45,-1.32C18.6,15.36 22,12.28 22,8.5 22,5.42 19.58,3 16.5,3zM12.1,18.55l-0.1,0.1 -0.1,-0.1C7.14,14.24 4,11.39 4,8.5 4,6.5 5.5,5 7.5,5c1.54,0 3.04,0.99 3.57,2.36h1.87C13.46,5.99 14.96,5 16.5,5c2,0 3.5,1.5 3.5,3.5 0,2.89 -3.14,5.74 -7.9,10.05z',
+  heartFull:'M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z',
+  zigHeart:'M12.3,6.6L10.4,10.4L13.6,12.6L11.6,17.4',
+  back:'M20,11H7.8l5.6,-5.6L12,4l-8,8l8,8l1.4,-1.4L7.8,13H20Z',
+  // New, on the same 24 grid with the same 2-unit line: an open book, its left and right pages, and a zigzag tear like the broken heart's.
+  pageL:'M12,6.6C10.3,5.3 8,4.6 5.5,4.6c-1.3,0 -2.5,0.2 -3.5,0.6V19c1,-0.4 2.2,-0.6 3.5,-0.6 2.5,0 4.8,0.7 6.5,2',
+  pageR:'M12,6.6c1.7,-1.3 4,-2 6.5,-2 1.3,0 2.5,0.2 3.5,0.6V19c-1,-0.4 -2.2,-0.6 -3.5,-0.6 -2.5,0 -4.8,0.7 -6.5,2',
+  spine:'M12,6.6V20.4',
+  zigBook:'M17.2,6.4L15.6,10L18.2,12L16.8,16',
+  // Material's block, and its ring alone for Unblock.
+  block:'M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM4,12c0,-4.42 3.58,-8 8,-8 1.85,0 3.55,0.63 4.9,1.69L5.69,16.9C4.63,15.55 4,13.85 4,12zM12,20c-1.85,0 -3.55,-0.63 -4.9,-1.69L18.31,7.1C19.37,8.45 20,10.15 20,12c0,4.42 -3.58,8 -8,8z',
+  ring:'M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z',
+};
+const fillIcon = (d, col) => `<svg viewBox="0 0 24 24"><path d="${d}" fill="${col || 'currentColor'}"/></svg>`;
+const strokeBook = (extra) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="${P.pageL}"/><path d="${P.pageR}"/><path d="${P.spine}"/>${extra || ''}</svg>`;
+const IC = {
+  save: strokeBook(),
+  unsave: strokeBook(`<path d="${P.zigBook}"/>`),
+  heart: fillIcon(P.heart),
+  heartFull: fillIcon(P.heartFull, '#EF804E'),
+  broken: `<svg viewBox="0 0 24 24"><path d="${P.heart}" fill="currentColor"/><path d="${P.zigHeart}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  block: fillIcon(P.block),
+  unblock: fillIcon(P.ring),
+  back: fillIcon(P.back),
+};
+const S = {
+  fav:{ name:'Favourite', look:'solid', i:['heartFull',null], o:['broken','Unfavourite'], d:'The heart is spent. O goes back to Saved.' },
+  saved:{ name:'Saved', look:'solid', i:['heart','Favourite'], o:['unsave','Unsave'], d:'I makes it a favourite. O takes it out of your dictionary, to Not saved.' },
+  notsaved:{ name:'Not saved', look:'dotted', i:['save','Save'], o:['block','Block'], d:'A dotted outline. I writes it into your dictionary. O blocks it.' },
+  blocked:{ name:'Blocked', look:'blocked', i:['unblock','Unblock'], o:null, d:'Grey and struck through. I lets it back in, to Not saved. There is nothing below.' },
+};
+const WORD = 'whatever';
+const H = 120, BAR = 56, CY = H - BAR / 2;
+const vw = () => window.innerWidth;
+
+function wordSvg(id) {
+  return `<svg class="w" id="w${id}" viewBox="0 0 ${vw()} ${H}">
+    <defs><clipPath id="c${id}"><rect id="cr${id}" x="0" y="0" width="${vw()}" height="${H}"/></clipPath></defs>
+    <g id="g${id}" style="transform-origin:${vw()/2}px ${CY}px">
+      <text id="o${id}" x="${vw()/2}" y="${CY}" text-anchor="middle" dominant-baseline="central" font-family="Inter" font-weight="700" font-size="21"
+        fill="none" stroke="#fff" stroke-width="1.15" stroke-dasharray="0.01 2.7" stroke-linecap="round" opacity="0">${WORD}</text>
+      <text id="f${id}" x="${vw()/2}" y="${CY}" text-anchor="middle" dominant-baseline="central" font-family="Inter" font-weight="700" font-size="21"
+        fill="#fff" clip-path="url(#c${id})">${WORD}</text>
+      <line id="k${id}" x1="${vw()/2}" y1="${CY}" x2="${vw()/2}" y2="${CY}" stroke="#EF804E" stroke-width="2" stroke-linecap="round"/>
+    </g></svg>`;
+}
+function bar(id, s, hover) {
+  const pillAt = (col, ic, label) => `<div class="pill" style="right:calc(50vw - ${col - 4} * var(--pitch))">${IC[ic]}${label}</div>`;
+  let h = `<div class="stage" id="st${id}"><div class="bar"></div>${wordSvg(id)}<canvas id="cv${id}"></canvas>`;
+  if (s.i) h += hover === 'i' && s.i[1] ? pillAt(7, s.i[0], s.i[1]) : `<div class="btn col7">${IC[s.i[0]]}</div>`;
+  if (s.o) h += hover === 'o' ? pillAt(8, s.o[0], s.o[1]) : `<div class="btn col8">${IC[s.o[0]]}</div>`;
+  return h + `<div class="btn col9">${IC.back}</div></div>`;
+}
+function textWidth(id) { try { return document.getElementById('f' + id).getBBox().width; } catch (e) { return 90; } }
+function look(id, kind) {
+  const o = document.getElementById('o' + id), f = document.getElementById('f' + id), k = document.getElementById('k' + id), cr = document.getElementById('cr' + id);
+  const w = textWidth(id);
+  o.setAttribute('stroke', kind === 'blocked' ? '#99918A' : '#fff');
+  o.setAttribute('opacity', kind === 'solid' ? 0 : 1);
+  cr.setAttribute('width', kind === 'solid' ? vw() : 0);
+  k.setAttribute('x1', vw()/2 - w/2 - 3); k.setAttribute('x2', kind === 'blocked' ? vw()/2 + w/2 + 3 : vw()/2 - w/2 - 3);
+  k.setAttribute('opacity', kind === 'blocked' ? 1 : 0);
+}
+
+let html = '', n = 0;
+for (const key of ['fav', 'saved', 'notsaved', 'blocked']) {
+  const s = S[key];
+  const ids = [n++, n++, n++];
+  html += `<div class="card"><div class="t">${s.name}</div><div class="d">${s.d}</div>${bar(ids[0], s)}<div class="keys"><span>Q</span><span>W</span><span>E</span><span>R</span><span>T</span><span>Y</span><span>U</span><span>I</span><span>O</span><span>⌫</span></div>`;
+  if (s.i && s.i[1]) html += bar(ids[1], s, 'i');
+  if (s.o) html += bar(ids[2], s, 'o');
+  html += '</div>';
+  s.ids = ids;
+}
+document.getElementById('states').innerHTML = html;
+document.fonts && document.fonts.ready.then(() => { for (const key in S) for (const id of S[key].ids) if (document.getElementById('f' + id)) look(id, S[key].look); MOVES.forEach((m, i) => look(100 + i, m[4].look)); });
+for (const key in S) for (const id of S[key].ids) if (document.getElementById('f' + id)) look(id, S[key].look);
+
+// ---------- motion ----------
+const E = {
+  out: t => 1 - Math.pow(1 - t, 3), outQuint: t => 1 - Math.pow(1 - t, 5), inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+  in: t => t * t * t,
+  back: t => { const c = 1.6; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); },
+  spring: t => 1 - Math.exp(-7 * t) * Math.cos(13 * t),
+};
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, t) => a + (b - a) * t;
+const ORANGE = [239, 128, 78];
+const rgba = (a) => `rgba(${ORANGE[0]},${ORANGE[1]},${ORANGE[2]},${clamp(a)})`;
+
+const HEART = new Path2D(P.heartFull), PAGE_L = new Path2D(P.pageL), PAGE_R = new Path2D(P.pageR), SPINE = new Path2D(P.spine);
+function heartPath(c, x, y, s, rot) { c.save(); c.translate(x, y); c.rotate(rot || 0); c.scale(s / 24, s / 24); c.translate(-12, -12); c.fillStyle = c._fill; c.fill(HEART); c.restore(); }
+// The book icon itself, at size s, its pages folding in on the spine: o = 1 open, as the icon, o = 0 shut.
+function book(c, x, y, s, o, alpha) {
+  c.save(); c.translate(x, y); c.globalAlpha = clamp(alpha); c.scale(s / 24, s / 24); c.translate(-12, -12.5);
+  c.lineJoin = 'round'; c.lineCap = 'round'; c.lineWidth = 2; c.strokeStyle = rgba(1);
+  for (const [page, side] of [[PAGE_L, -1], [PAGE_R, 1]]) {
+    c.save(); c.translate(12, 0); c.scale(lerp(.08, 1, o), 1); c.translate(-12, 0);
+    c.fillStyle = rgba(.14 + .3 * (1 - o)); c.fill(page); c.stroke(page); c.restore();
+  }
+  c.stroke(SPINE); c.restore();
+}
+
+const running = {};
+function run(id, ms, frame, done, slow) {
+  if (running[id]) cancelAnimationFrame(running[id]);
+  const cv = document.getElementById('cv' + id), dpr = devicePixelRatio || 1;
+  cv.width = vw() * dpr; cv.height = H * dpr;
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const dur = ms * (slow ? 4 : 1), t0 = performance.now();
+  const step = (now) => {
+    const t = clamp((now - t0) / dur);
+    c.clearRect(0, 0, vw(), H);
+    frame(c, t, (now - t0) / (slow ? 4 : 1));
+    if (t < 1) running[id] = requestAnimationFrame(step); else { c.clearRect(0, 0, vw(), H); running[id] = 0; done && done(); }
+  };
+  running[id] = requestAnimationFrame(step);
+}
+function wordScale(id, s, dy) { const g = document.getElementById('g' + id); g.style.transform = `translateY(${dy || 0}px) scale(${s})`; }
+
+const FX = {
+  // Not saved → Saved: the book springs up and opens over the word, the dotted outline fills in solid from the left as a copy of the
+  // word lifts into the pages, and the book claps shut with a soft puff either side, then settles and fades.
+  save(id, slow, done) {
+    const cx = vw()/2, w = textWidth(id), cr = document.getElementById('cr' + id), o = document.getElementById('o' + id);
+    const left = cx - w/2 - 2;
+    const puffs = [];
+    run(id, 1150, (c, t, ms) => {
+      const pop = E.back(seg(t, 0, .22)), open = 1 - E.inOut(seg(t, .5, .66)), fade = 1 - E.out(seg(t, .8, 1));
+      const by = CY - 34 - 6 * E.out(seg(t, .66, 1));
+      // the ink fills the letters, left to right
+      const fill = E.inOut(seg(t, .14, .52));
+      cr.setAttribute('x', 0); cr.setAttribute('width', left + (w + 4) * fill);
+      o.setAttribute('opacity', 1 - E.out(seg(t, .4, .62)));
+      // a copy of the word lifts and shrinks into the book
+      const lift = seg(t, .2, .56);
+      if (lift > 0 && lift < 1) {
+        const e = E.inOut(lift);
+        c.save(); c.globalAlpha = .55 * (1 - e); c.fillStyle = '#fff'; c.font = '700 21px Inter'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.translate(cx, lerp(CY, by, e)); c.scale(lerp(1, .18, e), lerp(1, .18, e)); c.fillText(document.getElementById('f' + id).textContent, 0, 0); c.restore();
+      }
+      if (t > 0) book(c, cx, by, 34 * pop, open, fade * clamp(pop));
+      // the clap: one soft puff each side
+      if (t >= .64 && !puffs.length) for (const side of [-1, 1]) for (let k = 0; k < 4; k++)
+        puffs.push({ x: cx + side * 6, y: by + 4 - k * 3, vx: side * (70 + k * 22), vy: -12 - k * 10, r: 2.2 + k * .5, t0: ms });
+      for (const p of puffs) {
+        const a = (ms - p.t0) / 1000; if (a < 0) continue;
+        const k = Math.exp(-5 * a);
+        const x = p.x + p.vx * (1 - k) / 5, y = p.y + p.vy * (1 - k) / 5 - 8 * a;
+        c.beginPath(); c.arc(x, y, p.r * (1 + 2.2 * a), 0, 7); c.fillStyle = rgba(.55 * Math.exp(-4 * a)); c.fill();
+      }
+      const s = 1 + .07 * Math.sin(Math.PI * seg(t, .62, .9)); wordScale(id, s);
+    }, () => { wordScale(id, 1); look(id, 'solid'); done && done(); }, slow);
+  },
+  // Saved → Not saved: the book opens over the word and one page tears free and flutters down, while the letters drain to a dotted outline.
+  unsave(id, slow, done) {
+    const cx = vw()/2, w = textWidth(id), cr = document.getElementById('cr' + id), o = document.getElementById('o' + id);
+    const left = cx - w/2 - 2;
+    run(id, 1500, (c, t) => {
+      const pop = E.back(seg(t, 0, .2)), fade = 1 - E.out(seg(t, .55, .8));
+      const by = CY - 36;
+      book(c, cx, by, 34 * pop, 1, fade * clamp(pop));
+      // the page: tears from the right half, then sways down with air under it
+      const tear = seg(t, .18, .32), fall = seg(t, .3, 1);
+      if (t > .18) {
+        const px = cx + 9 + 6 * E.out(tear) + 26 * Math.sin(fall * 5.2) * (1 - fall * .5) + 30 * fall;
+        const py = by - 2 - 6 * E.out(tear) + 74 * E.in(fall) + 14 * fall;
+        const rot = .18 * E.out(tear) + .6 * Math.sin(fall * 5.2 + .6);
+        c.save(); c.translate(px, py); c.rotate(rot); c.globalAlpha = 1 - E.in(seg(t, .72, 1));
+        c.beginPath(); c.moveTo(-6, -8); c.lineTo(6, -8); c.lineTo(6, 8);
+        for (let k = 0; k < 4; k++) c.lineTo(6 - (k + .5) * 3, 8 + (k % 2 ? 1.6 : -1.6));
+        c.lineTo(-6, 8); c.closePath(); c.fillStyle = rgba(.9); c.fill(); c.restore();
+      }
+      // the letters drain right to left, leaving the dotted outline
+      const drain = E.inOut(seg(t, .24, .66));
+      o.setAttribute('opacity', E.out(seg(t, .2, .4)));
+      cr.setAttribute('x', 0); cr.setAttribute('width', (left + w + 4) * (1 - drain) + left * drain);
+      wordScale(id, 1, 2 * Math.sin(Math.PI * seg(t, .24, .5)));
+    }, () => { wordScale(id, 1); look(id, 'dotted'); done && done(); }, slow);
+  },
+  // Saved → Favourite: the word pops on a spring, and hearts burst out both sides, slow down, then drift up and fade.
+  fav(id, slow, done) {
+    const cx = vw()/2, w = textWidth(id);
+    const hs = [];
+    for (let k = 0; k < 12; k++) {
+      const side = k % 2 ? 1 : -1, a = (-.25 + (k >> 1) * .14) * Math.PI;
+      hs.push({ x: cx + side * (w/2 - 4), y: CY, vx: side * (180 + 60 * ((k * 7) % 5) / 4) * Math.cos(a), vy: 130 * Math.sin(a) - 40, s: 10 + (k * 5) % 7, d: (k >> 1) * 22, r: side * (.2 + .1 * (k % 3)) });
+    }
+    run(id, 1300, (c, t, ms) => {
+      const p = seg(t, 0, .5); wordScale(id, 1 + .16 * Math.sin(Math.PI * Math.min(1, p * 1.6)) * Math.exp(-2.5 * p));
+      for (const h of hs) {
+        const a = (ms - h.d) / 1000; if (a < 0) continue;
+        const k = Math.exp(-4.2 * a);
+        const x = h.x + h.vx * (1 - k) / 4.2, y = h.y + h.vy * (1 - k) / 4.2 - 34 * a * a;
+        const grow = E.back(clamp(a / .18)), fadeOut = 1 - E.in(clamp((a - .55) / .55));
+        c._fill = rgba(fadeOut); heartPath(c, x, y, h.s * grow, h.r * a * 2);
+      }
+    }, () => { wordScale(id, 1); done && done(); }, slow);
+  },
+  // Favourite → Saved: a heart over the word cracks along a zigzag, the halves tilt apart and fall with four small shards, and the word dips.
+  unfav(id, slow, done) {
+    const cx = vw()/2, hy = CY - 34;
+    const shards = [[-1, -.6], [1, -.5], [-1, .2], [1, .3]].map(([s, v], k) => ({ vx: s * (60 + k * 12), vy: -90 + v * 60, r: 2 + k % 2 }));
+    run(id, 1200, (c, t, ms) => {
+      const show = E.back(seg(t, 0, .16));
+      const crack = seg(t, .16, .3), split = seg(t, .3, 1);
+      const zig = [[0, -6], [-2.5, -2], [2, 1.5], [-1.5, 5], [0, 9]];
+      for (const side of [-1, 1]) {
+        const a = split, dx = side * (4 + 18 * E.out(a)), dy = 90 * a * a, rot = side * (.15 + 1.1 * E.out(a));
+        c.save(); c.translate(cx + dx, hy + dy); c.rotate(rot * clamp(a * 3)); c.globalAlpha = 1 - E.in(seg(t, .6, 1));
+        c.beginPath(); c.rect(side < 0 ? -20 : 0, -20, 20, 40); c.clip();
+        c._fill = rgba(1); heartPath(c, 0, 0, 26 * (split ? 1 : show)); c.restore();
+      }
+      if (crack > 0 && split < .05) {
+        c.save(); c.translate(cx, hy); c.strokeStyle = '#000'; c.lineWidth = 1.6; c.beginPath();
+        const m = Math.floor(crack * (zig.length - 1));
+        zig.slice(0, m + 2).forEach(([x, y], k) => k ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke(); c.restore();
+      }
+      for (const s of shards) {
+        const a = Math.max(0, (t - .3) * 1.2); if (a <= 0) continue;
+        c.beginPath(); c.arc(cx + s.vx * a, hy + s.vy * a + 260 * a * a, s.r, 0, 7); c.fillStyle = rgba(1 - E.in(clamp(a / .8))); c.fill();
+      }
+      const dip = seg(t, .3, .7); wordScale(id, 1, 3 * Math.sin(Math.PI * dip) * Math.exp(-dip));
+    }, () => { wordScale(id, 1); done && done(); }, slow);
+  },
+  // Not saved → Blocked: a ring drops onto the word and lands with a spring, a slash draws across, and the outline turns grey with a strike.
+  block(id, slow, done) {
+    const cx = vw()/2, w = textWidth(id), o = document.getElementById('o' + id), k = document.getElementById('k' + id);
+    run(id, 1200, (c, t) => {
+      const land = seg(t, 0, .32), r = lerp(46, 24, E.spring(land)), a = E.out(seg(t, 0, .12)) * (1 - E.out(seg(t, .78, 1)));
+      c.save(); c.globalAlpha = a; c.strokeStyle = rgba(1); c.lineWidth = 2.6; c.lineCap = 'round';
+      c.beginPath(); c.arc(cx, CY, r, 0, 7); c.stroke();
+      const slash = E.inOut(seg(t, .34, .5)), d = r * .7;
+      if (slash > 0) { c.beginPath(); c.moveTo(cx - d, CY - d); c.lineTo(cx - d + 2 * d * slash, CY - d + 2 * d * slash); c.stroke(); }
+      c.restore();
+      const g = seg(t, .4, .7);
+      const mix = (x, y) => Math.round(lerp(x, y, E.inOut(g)));
+      o.setAttribute('stroke', `rgb(${mix(255, 153)},${mix(255, 145)},${mix(255, 138)})`);
+      const strike = E.inOut(seg(t, .5, .74));
+      k.setAttribute('opacity', strike ? 1 : 0); k.setAttribute('x1', cx - w/2 - 3); k.setAttribute('x2', cx - w/2 - 3 + (w + 6) * strike);
+      wordScale(id, 1 - .04 * Math.sin(Math.PI * seg(t, .28, .5)));
+    }, () => { wordScale(id, 1); look(id, 'blocked'); done && done(); }, slow);
+  },
+  // Blocked → Not saved: the strike pulls back, a ring breathes out from the word and fades, and the outline turns white again.
+  unblock(id, slow, done) {
+    const cx = vw()/2, w = textWidth(id), o = document.getElementById('o' + id), k = document.getElementById('k' + id);
+    run(id, 900, (c, t) => {
+      const back = E.inOut(seg(t, 0, .35));
+      k.setAttribute('x1', cx - w/2 - 3 + (w + 6) * back);
+      const ring = seg(t, .25, 1);
+      c.save(); c.globalAlpha = .9 * (1 - E.out(ring)); c.strokeStyle = rgba(1); c.lineWidth = 2;
+      c.beginPath(); c.arc(cx, CY, lerp(w/2 * .6, w/2 + 26, E.outQuint(ring)), 0, 7); c.stroke(); c.restore();
+      const g = E.inOut(seg(t, .25, .6));
+      const mix = (x, y) => Math.round(lerp(x, y, g));
+      o.setAttribute('stroke', `rgb(${mix(153, 255)},${mix(145, 255)},${mix(138, 255)})`);
+      wordScale(id, 1 + .06 * Math.sin(Math.PI * seg(t, .3, .7)));
+    }, () => { wordScale(id, 1); look(id, 'dotted'); done && done(); }, slow);
+  },
+};
+
+const MOVES = [
+  ['save', 'Not saved → Saved', 'I: Save', 'The book springs up and opens. The dotted letters fill in solid as a copy of the word lifts into the pages. The book claps shut with a soft puff each side, then fades.', S.notsaved, S.saved, 'i'],
+  ['fav', 'Saved → Favourite', 'I: Favourite', 'The word pops on a spring. Hearts burst out both sides, slow down, then drift up and fade.', S.saved, S.fav, 'i'],
+  ['unfav', 'Favourite → Saved', 'O: Unfavourite', 'A heart cracks along a zigzag. The halves tilt apart and fall with four small shards, and the word dips.', S.fav, S.saved, 'o'],
+  ['unsave', 'Saved → Not saved', 'O: Unsave', 'The book opens and one page tears free and sways down. The letters drain to a dotted outline.', S.saved, S.notsaved, 'o'],
+  ['block', 'Not saved → Blocked', 'O: Block', 'A ring drops onto the word and lands with a spring. A slash draws across, and the outline greys and is struck through.', S.notsaved, S.blocked, 'o'],
+  ['unblock', 'Blocked → Not saved', 'I: Unblock', 'The strike pulls back, a ring breathes out and fades, and the outline turns white again.', S.blocked, S.notsaved, 'i'],
+];
+let mh = '';
+MOVES.forEach((m, i) => {
+  const id = 100 + i;
+  mh += `<div class="card"><div class="t">${m[1]} <span class="tag">${m[2]}</span></div><div class="d">${m[3]}</div><div id="mv${i}">${bar(id, m[4], m[6])}</div>
+    <div class="row"><button class="play" data-i="${i}">Play</button><button class="play" data-i="${i}" data-slow="1">Slow</button></div></div>`;
+});
+document.getElementById('moves').innerHTML = mh;
+MOVES.forEach((m, i) => look(100 + i, m[4].look));
+function play(i, slow) {
+  const m = MOVES[i], id = 100 + i;
+  document.getElementById('mv' + i).innerHTML = bar(id, m[4], m[6]);
+  look(id, m[4].look);
+  FX[m[0]](id, slow, () => { setTimeout(() => { document.getElementById('mv' + i).innerHTML = bar(id, m[5], m[6]); look(id, m[5].look); }, 500 * (slow ? 2 : 1)); });
+}
+document.querySelectorAll('button.play').forEach(b => b.addEventListener('click', () => play(+b.dataset.i, !!b.dataset.slow)));
+</script>
+</body>
+</html>

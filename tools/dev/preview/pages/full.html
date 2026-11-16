@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Calibration lines</title>
+<style>
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; touch-action:manipulation; }
+  canvas { position:fixed; inset:0; width:100%; height:100%; display:block; }
+  #note { position:fixed; left:16px; right:16px; top:16px; color:#99918A; font:14px system-ui, sans-serif; line-height:1.4;
+          background:rgba(0,0,0,.75); padding:6px 8px; border-radius:8px; }
+  #box { position:fixed; left:16px; right:16px; top:92px; height:48px; padding:0 12px; font:18px system-ui, sans-serif; color:#FFF1E6;
+         background:rgba(22,18,16,.85); border:1.5px solid #EF804E; border-radius:12px; outline:none; }
+  #box::placeholder { color:#99918A; }
+</style>
+</head>
+<body>
+<canvas id="grid"></canvas>
+<div id="note"></div>
+<input id="box" type="text" placeholder="Tap here for the keyboard" autocomplete="off">
+<script>
+// The calibration TitanKeys uses now: Unihertz's proportions (keys 84 wide, gaps 24), one key and gap every 107.5 px of the 1076 px
+// screen, the row centred. Orange: the middle of each gap between two keys. Brown: Q's left edge and P's right edge.
+// Faint: each key's own left and right edge. The lines run the full height, so they can be read against the keys below the screen.
+const KEY = 84, GAP = 24, COLS = 10;
+const PITCH_OF_1076 = 107.5, SHIFT = 0;
+const ROWS = ["QWERTYUIOP", "ASDFGHJKL⌫", "⌥ZXCVBNM◆↵"];
+const canvas = document.getElementById("grid");
+const ctx = canvas.getContext("2d");
+let devW = 0, devH = 0;
+
+function vline(x, colour) {
+  const px = Math.min(devW - 1, Math.max(0, Math.round(x - 0.5)));
+  ctx.fillStyle = colour;
+  ctx.fillRect(px, 0, 1, devH);
+}
+
+function draw() {
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, devW, devH);
+  const pitch = PITCH_OF_1076 / 1076 * devW, centre = devW / 2 + SHIFT / 1076 * devW;
+  const gap = pitch * GAP / (KEY + GAP), key = pitch - gap;
+  const left = centre - (COLS * key + (COLS - 1) * gap) / 2;
+  for (let c = 0; c < COLS; c++) {
+    vline(left + c * pitch, "#3A2A22");
+    vline(left + c * pitch + key, "#3A2A22");
+  }
+  for (let c = -4; c <= 4; c++) vline(centre + c * pitch, "#EF804E");
+  vline(Math.floor(left) + .5, "#B5623C");
+  vline(Math.ceil(left + COLS * key + (COLS - 1) * gap) - .5, "#B5623C");
+  // The keys' names, faint, near the bottom, one line per row, each over its column.
+  ctx.fillStyle = "#99918A";
+  ctx.font = `${Math.round(13 * devicePixelRatio)}px system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  const lineH = Math.round(20 * devicePixelRatio);
+  ROWS.forEach((row, r) => {
+    const y = devH - Math.round(8 * devicePixelRatio) - (ROWS.length - 1 - r) * lineH;
+    [...row].forEach((ch, c) => ctx.fillText(ch, left + c * pitch + key / 2, y));
+  });
+  document.getElementById("note").textContent =
+    `Calibration now: ${PITCH_OF_1076} px a key and gap, centred. Orange: middle of each gap. Brown: Q's left and P's right. ` +
+    `Faint: each key's edges. Screen ${devW} px wide.`;
+}
+
+function resize(entries) {
+  let w, h;
+  const e = entries && entries[0];
+  if (e && e.devicePixelContentBoxSize) { w = e.devicePixelContentBoxSize[0].inlineSize; h = e.devicePixelContentBoxSize[0].blockSize; }
+  else { w = Math.round(canvas.clientWidth * devicePixelRatio); h = Math.round(canvas.clientHeight * devicePixelRatio); }
+  if (w === devW && h === devH) return;
+  canvas.width = devW = w; canvas.height = devH = h;
+  draw();
+}
+try { new ResizeObserver(resize).observe(canvas, { box: "device-pixel-content-box" }); }
+catch (e) { new ResizeObserver(resize).observe(canvas); }
+resize();
+document.addEventListener("click", () => {
+  const el = document.documentElement;
+  if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+});
+</script>
+</body>
+</html>

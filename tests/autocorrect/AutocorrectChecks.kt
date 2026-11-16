@@ -2367,8 +2367,56 @@ private fun apostrophes(world: Realistic) {
     same(ApostropheContext.following(" free.", 2), ApostropheContext.Following.Ready(" free."), "A full stop ends it sooner, and counts")
     same(ApostropheContext.following(" going to, ", 2), ApostropheContext.Following.Ready(" going to,"), "A mark stuck to a word counts")
     same(ApostropheContext.following(" free\n", 2), ApostropheContext.Following.Ready(" free"), "A line break ends it sooner")
-    same(ApostropheContext.following(" going, to ", 2), ApostropheContext.Following.Ready(" going, to"), "A comma doesn't end it")
+    same(ApostropheContext.following(" going, to ", 2), ApostropheContext.Following.Ready(" going,"), "A comma ends it sooner (#73)")
     same(ApostropheContext.following("s ", 2), ApostropheContext.Following.Drop, "Letters straight after: no whole word")
+    // #73: any mark settles a waiting word, straight after it or after a word or a space. A hyphen inside a word doesn't.
+    for (mark in listOf(",", ";", ":", "(", ")", "[", "]", "\"", "“", "”", ".", "!", "?", "—", "–", "…")) {
+        same(ApostropheContext.following(mark, 2), ApostropheContext.Following.Ready(mark), "\"$mark\" straight after settles it")
+        same(ApostropheContext.following(" going$mark", 2), ApostropheContext.Following.Ready(" going$mark"), "\"$mark\" after a word settles it")
+    }
+    same(ApostropheContext.following(" -", 2), ApostropheContext.Following.Ready(""), "A dash after a space settles it")
+    same(ApostropheContext.following(" (", 2), ApostropheContext.Following.Ready(""), "A bracket after a space settles it")
+    same(ApostropheContext.following("\n", 2), ApostropheContext.Following.Ready(""), "A line break settles it")
+    same(ApostropheContext.following(" well-known ", 2), ApostropheContext.Following.Wait, "A hyphenated word is one word")
+    same(ApostropheContext.following(" well-known fact ", 2), ApostropheContext.Following.Ready(" well-known fact"), "and counts as one")
+    same(ApostropheContext.following(" well-", 2), ApostropheContext.Following.Wait, "A hyphen at the cursor waits for the rest of its word")
+    same(ApostropheContext.following("-", 2), ApostropheContext.Following.Drop, "A hyphen straight after joins the word to another")
+    same(ApostropheContext.following("-like ", 2), ApostropheContext.Following.Drop, "\"its-like\" is no longer the word")
+    // A scorer that always prefers the apostrophe: any mark brings it, but never with fewer than 2 other words.
+    val keen = ContinuationScorer { _, texts -> DoubleArray(texts.size) { if (it == 0) 0.0 else 5.0 } }
+    for (mark in listOf(",", ";", ":", ".", "!", "?", "\"", "\n", " (", " -", " —")) {
+        val text = typist(with = keen).type("Bring a coat, its$mark").text
+        must(text.startsWith("Bring a coat, it's"), "\"${mark.replace("\n", "\\n")}\" settles a waiting word at once: $text")
+    }
+    same(typist(with = keen).type("its, ").text, "its, ", "A word alone at a mark stays as typed: too few words")
+    same(typist(with = keen).type("so its, ").text, "so its, ", "One word besides it is still too few")
+    same(typist(with = keen).type("Bring a coat, its well-known ").text, "Bring a coat, its well-known ", "A hyphen inside a word settles nothing")
+    same(typist(with = keen).type("Bring a coat, it's, ").text, "Bring a coat, it's, ", "An apostrophe is never taken out")
+
+    // #73: while a word of a pair is being typed, the bar's left place (its second word) holds the other form, both ways.
+    val left = ApostropheContext.LEFT_PLACE
+    same(ApostropheContext.offerOther(listOf("its", "itself", "item"), "its"), listOf("its", "it's", "itself", "item"), "its offers it's")
+    same(ApostropheContext.offerOther(listOf("it's", "its", "item"), "it's"), listOf("it's", "its", "item"), "it's offers its, once")
+    same(ApostropheContext.offerOther(listOf("it's", "item"), "its"), listOf("it's", "its", "item"),
+        "With the other form already first, the typed form takes the left place")
+    same(ApostropheContext.offerOther(listOf("Its", "Itself"), "Its"), listOf("Its", "It's", "Itself"), "A capital carries over")
+    same(ApostropheContext.offerOther(listOf("ill", "illness"), "ill"), listOf("ill", "I'll", "illness"), "ill offers I'll")
+    same(ApostropheContext.offerOther(listOf("I'll"), "I'll"), listOf("I'll", "ill"), "I'll offers ill")
+    same(ApostropheContext.offerOther(listOf("were", "west"), "were"), listOf("were", "we're", "west"), "were offers we're")
+    same(ApostropheContext.offerOther(listOf("we're"), "we're"), listOf("we're", "were"), "we're offers were")
+    same(ApostropheContext.offerOther(listOf("they're"), "they're"), listOf("they're", "their"), "they're offers their")
+    same(ApostropheContext.offerOther(listOf("there", "these"), "there"), listOf("there", "they're", "these"), "there offers they're")
+    same(ApostropheContext.offerOther(listOf("it", "its"), "it"), listOf("it", "its"), "A word of no pair gets nothing")
+    for ((typed, other) in listOf("its" to "it's", "lets" to "let's", "your" to "you're", "were" to "we're", "it's" to "its")) {
+        val bar = typist().also { it.words.completions = listOf(typed, "${typed}x") }.type(typed).bar
+        same(bar.getOrNull(left), other, "Typing \"$typed\", the bar's left place offers \"$other\": $bar")
+    }
+    // Only while it's being typed: after its space the bar moves on, and the model or Backspace's undo take it from there.
+    val afterSpace = typist().also { it.words.completions = listOf("going", "gone") }.type("its ").bar
+    must("it's" !in afterSpace, "After the space, \"it's\" isn't offered: $afterSpace")
+    // A swipe's choices never change.
+    val swiped = typist().also { it.words.readings += "its" to null }.swipe("its").bar
+    must("it's" !in swiped, "A swipe's choices get no other form: $swiped")
 
     // The study's sentences: decided by the rule, and typed into the keyboard.
     val report = StringBuilder("\nAPOSTROPHES on the study's sentences, against $source\n")

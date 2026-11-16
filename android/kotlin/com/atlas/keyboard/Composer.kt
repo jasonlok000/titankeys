@@ -712,6 +712,8 @@ class Composer(
         if (letterTap) manualWord.clear()
         else if (!completesCorrection) observe(text)
         val ended = if (ending != null) wordEnded(ending, fix, typed, null) ?: return else null
+        // Any mark settles a word that waits for its apostrophe, one typed after a space too: "its (" (#73).
+        if (ending == null && !letterTap && !letter) checkApostrophes()
         if (!completed.isNullOrEmpty() || ended?.changed == true) {
             confirmState(snapshot()) { confirmed -> if (confirmed) learnWord(completed, correction) }
             return
@@ -1916,7 +1918,10 @@ class Composer(
             if (cancelled.get() || current != epoch || snapshot() != anchor) return@complete
             val prefix = TypedPredictions.prefix(context)
             val guided = guideSuggestions(found, prefix, intended(context.dropLast(prefix.length)))
-            val suggestions = if (trailingSpace) guided else spaceFirst(guided, anchor)
+            // While a word of a pair is being typed, its other form waits in the bar's left place (#73): a choice, never a fix. Not
+            // in the guide, where that place may hold the guide's word.
+            val suggestions = if (trailingSpace) guided
+                else spaceFirst(guided, anchor).let { if (guided === found) ApostropheContext.offerOther(it, prefix) else it }
             if (suggestions.isEmpty()) {
                 offerStarts(anchor)
                 return@complete

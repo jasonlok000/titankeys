@@ -143,6 +143,14 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 - **The Rime test program on the phone (08:45, Wi-Fi):** the three variants convert right (軟件/軟體, 打印機/印表機,
   Simplified throughout), 24 lookups in 3 s. Findings, with tk-gestures (`claude/m3-chinese-2`): Rime compiled its own prisms
   instead of using the shipped ones; Yale ranks 月餘 before 粵語 and 我地 before 我哋; 対 shows as a sixth choice.
+- **M3: Korean and Vietnamese on main** (`claude/m3-korean-vietnamese`, tk-languages): Korean as a Hangul engine on the
+  2-set layout, Vietnamese as a Telex engine with its 11k word list. 47 input methods. All suites and a clean build pass:
+  `~/build/m1-apks/main-m3-kv-debug.apk`. Also fixed: a capital typed mid-code dropped Rime's code. Thai waits: about 27%
+  of its typing would be holds without a third layer of keys. tk-languages' calls, to confirm:
+  - Korean's label is 한, and Korean has no word list (none with a clear licence), so no suggestions.
+  - In Korean, Enter writes the syllable and then does Enter.
+  - Telex puts the tone in the older style (hòa, thúy).
+  - Telex's choices are picked with the finger; Space writes the word as typed.
 - **M3: the Chinese page opens on the first switch** (`claude/m3-chinese`, tk-gestures): the first switch to a Chinese input
   method with no variant picked opens Settings > Chinese characters, once. All suites pass; the build needed a clean Ink
   folder again (stale classes), then passed: `~/build/m1-apks/main-m3-chinese-debug.apk`. tk-gestures' calls, to confirm:

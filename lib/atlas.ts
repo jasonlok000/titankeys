@@ -40,6 +40,16 @@ export type State = {
   scrollAssistant: boolean;
   /** Atlas's accessibility service is on, so one back swipe closes the bar and goes back in any app. */
   backService: boolean;
+  /** "No thanks" on Accessibility's disclosure: setup goes on without it, as the guide's does (PhoneSetup.missing). */
+  backDeclined: boolean;
+  /** The phone's ro.agui.touchpad_function, "yes" on a Titan with the touchpad, else empty. See lib/front.ts. */
+  touchpadFunction: string;
+  /** Build.DEVICE, "Titan_2" on the Titan 2 Elite. */
+  device: string;
+  /** TitanKeys Debug only: act as another phone, so the other-phone warning can be checked on the Elite. Always false elsewhere. */
+  fakeOtherPhone: boolean;
+  /** The other-phone warning has shown once. */
+  phoneWarningSeen: boolean;
   /** The last time the overlay step opened, Android showed its whole list instead of TitanKeys' own page. */
   overlayOnList: boolean;
   /** The same for the Accessibility step. */
@@ -409,6 +419,18 @@ export const chooseKeyboard = () => atlas("choose");
 export const allowOverlay = () => atlas("overlay");
 export const openScrollAssistant = () => atlas("scrollAssistant");
 export const allowBack = () => atlas("backService");
+
+/** The other-phone warning's button: it never shows again. */
+export async function markPhoneWarningSeen() {
+  await atlas("phoneWarningSeen");
+  await state.refresh();
+}
+
+/** TitanKeys Debug only: fake another phone, or stop. Turning it on shows the warning once more. */
+export async function fakeOtherPhone(on: boolean) {
+  await atlas("fakeOtherPhone", { on });
+  await state.refresh();
+}
 /** Opens the phone's Shortcut keys page, for the Sym and fn keys. */
 export const openShortcutKeys = () => atlas("shortcutKeys");
 

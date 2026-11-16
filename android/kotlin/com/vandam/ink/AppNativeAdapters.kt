@@ -353,6 +353,17 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     appPreferences().edit().putBoolean(NERD_SEEN, true).apply()
                     "null"
                 }
+                "phoneWarningSeen" -> {
+                    appPreferences().edit().putBoolean(PHONE_WARNING_SEEN, true).apply()
+                    "null"
+                }
+                // TitanKeys Debug only. Turning it on shows the warning once more, so it can be checked again.
+                "fakeOtherPhone" -> {
+                    require(AppBuild.kind(activity) == "debug") { "Only TitanKeys Debug can fake another phone" }
+                    val on = data.getBoolean("on")
+                    appPreferences().edit().putBoolean(FAKE_OTHER_PHONE, on).apply { if (on) remove(PHONE_WARNING_SEEN) }.apply()
+                    "null"
+                }
                 "notesSeen" -> {
                     appPreferences().edit().putString(SEEN_NOTES, installedVersion()).apply()
                     "null"
@@ -503,6 +514,12 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("overlay", PhoneSetup.overlay(activity))
             .put("scrollAssistant", PhoneSetup.scrollAssistant())
             .put("backService", BackService.enabled(activity))
+            .put("backDeclined", BackDisclosureActivity.declined(activity))
+            // The front page decides from these whether this is a Titan 2 Elite (lib/front.ts).
+            .put("touchpadFunction", systemProperty("ro.agui.touchpad_function"))
+            .put("device", Build.DEVICE ?: "")
+            .put("fakeOtherPhone", AppBuild.kind(activity) == "debug" && appPreferences().getBoolean(FAKE_OTHER_PHONE, false))
+            .put("phoneWarningSeen", appPreferences().getBoolean(PHONE_WARNING_SEEN, false))
             .put("overlayOnList", PhoneSetup.onList(activity, SetupPart.Overlay))
             .put("backOnList", PhoneSetup.onList(activity, SetupPart.Back))
             .put("symKey", PhoneChecks.programmable(activity, PhoneChecks.Key.Sym))
@@ -650,6 +667,13 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
 
     private fun appPreferences() = activity.getSharedPreferences("app", Context.MODE_PRIVATE)
 
+    /** A system property, or empty where it's missing or can't be read. */
+    private fun systemProperty(name: String): String = try {
+        Class.forName("android.os.SystemProperties").getMethod("get", String::class.java).invoke(null, name) as? String ?: ""
+    } catch (error: ReflectiveOperationException) {
+        ""
+    }
+
     private fun set(key: String, value: Any) {
         when (key) {
             "learning" -> typing.learningEnabled(value as Boolean)
@@ -685,7 +709,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 Accent.on = value
                 activity.applyAccent()
             }
-            // A pick sticks, even one that matches the phone's text size. The bar takes it the next time it shows.
+            // A pick sticks, even one that matches the phone's text size. A keyboard that is up makes its bar again at once
+            // (AtlasIme.followBarSize); one that isn't takes it the next time it shows.
             "barTextSize" -> FixedScale.size(activity, FixedScale.Size.of(value as String))
             "enterKey" -> TypingSettings.enterKey(activity, value as String)
             "snippetStart" -> TypingSettings.snippetStart(activity, value as String)
@@ -713,3 +738,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
 private const val SEEN_NOTES = "seen_release_notes"
 /** The boring guide's nerd screen has shown once. Only clearing the app's data brings it back. */
 private const val NERD_SEEN = "nerd_screen_seen"
+/** The other-phone warning has shown once (#75). */
+private const val PHONE_WARNING_SEEN = "phone_warning_seen"
+/** TitanKeys Debug's switch that fakes another phone (#75). */
+private const val FAKE_OTHER_PHONE = "fake_other_phone"

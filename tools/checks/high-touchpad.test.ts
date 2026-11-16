@@ -25,7 +25,8 @@ test("every field start and end updates the overlays", () => {
 
 test("updating the overlays hands the touchpad to the Back service while a field is being edited", () => {
   const update = body(read("TitanKeysIme.kt"), "updateOverlay");
-  expect(update).toMatch(/val wanted = editing\b/);
+  // While a field is edited, and only while this keyboard is alive and the current one (overlay-lifecycle.test.ts).
+  expect(update).toMatch(/val wanted = !destroyed && PhoneSetup\.selected\(this\) && \(editing\b/);
   expect(update).toContain("BackService.touchpad(overlayEvent)");
 });
 

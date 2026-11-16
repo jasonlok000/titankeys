@@ -138,6 +138,11 @@ class BackService : AccessibilityService() {
             return current != null
         }
 
+        /** Takes the window away if [handler] is still the one it sends to: a keyboard going away never clears a newer one's. */
+        fun releaseTouchpad(handler: (MotionEvent) -> Boolean) {
+            if (touchpad === handler) touchpad(null)
+        }
+
         fun enabled(context: Context): Boolean {
             val component = ComponentName(context, BackService::class.java)
             val services = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)

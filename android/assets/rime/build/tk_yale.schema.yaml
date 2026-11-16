@@ -470,7 +470,7 @@ switches:
     states: ["半角", "全角"]
   - options: [zh_hk, zh_tw, zh_hans]
     reset: 0
-    states: ["香港繁體", "臺灣正體", "简体"]
+    states: ["香港正體", "臺灣正體", "简体"]
   - name: ascii_punct
     states: ["。，", "．，"]
 translator:

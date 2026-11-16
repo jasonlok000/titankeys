@@ -450,7 +450,6 @@ fun theDataCopiesOnceAndChecksEachFile() {
         check(data.install(list) { opened++; files.getValue(it).inputStream() }, "the data installs")
         same(2, opened, "every file was copied")
         check(files.all { (path, bytes) -> File(data.shared, path).readBytes().contentEquals(bytes) }, "byte for byte")
-        check(files.keys.all { File(data.shared, it).lastModified() == RimeData.SOURCE_TIME * 1000 }, "each at the time Rime compiled them with")
         File(data.user, "learned.userdb").apply { parentFile.mkdirs(); writeText("mine") }
         check(data.install(list) { opened++; files.getValue(it).inputStream() }, "installed again")
         same(2, opened, "the same data isn't copied twice")

@@ -70,13 +70,11 @@ class RimeData(private val root: File) {
                 }
             }.isSuccess
             if (!copied || hex(digest.digest()) != entry.sha256) return fail(fresh)
-            // The time data.sh compiled the data with: Rime sees nothing newer than its tables, so it compiles nothing again.
-            target.setLastModified(SOURCE_TIME * 1000)
         }
         File(fresh, ".installed").writeText(manifest)
         shared.deleteRecursively()
         if (!fresh.renameTo(shared)) return fail(fresh)
-        // What Rime compiled from the old data on the phone, if anything, is stale now. Learned words stay.
+        // What an older version's Rime compiled on the phone, if anything, is stale now. Learned words stay.
         File(user, "build").deleteRecursively()
         user.mkdirs()
         return true
@@ -96,8 +94,6 @@ class RimeData(private val root: File) {
         const val INSTALLATION = "titankeys"
         /** The sync folder's folder for a restored backup's snapshots. */
         const val RESTORED = "restored"
-        /** Every data file's time, in seconds, as native/rime/data.sh sets it before compiling. */
-        const val SOURCE_TIME = 1763251200L
 
         /** sha256sum's lines, "<hash>  <path>", or null if any line isn't one. */
         fun parse(manifest: String): List<Entry>? {

@@ -67,8 +67,11 @@ jboolean start(JNIEnv* env, jclass, jstring shared, jstring user) {
   traits.log_dir = "";
   rime->setup(&traits);
   rime->initialize(&traits);
-  // A quick check, not a full one: the tables are already compiled.
-  if (rime->start_maintenance(False)) rime->join_maintenance_thread();
+  // No deploy: the tables ship compiled (data.sh), and a deploy compiles them again whenever the files' times differ from
+  // the ones data.sh compiled with (a phone test, 2026-11-16). Only the deployer's tasks, which sync needs, and this
+  // installation's name.
+  rime->deployer_initialize(&traits);
+  rime->run_task("installation_update");
   started = true;
   return live() != 0 ? JNI_TRUE : JNI_FALSE;
 }

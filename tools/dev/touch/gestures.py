@@ -13,6 +13,7 @@ Usage: gestures.py [--keymap FILE] [--out FILE] GESTURE... with GESTUREs in orde
   key:NAME[:HOLD[:AFTER]] a key pressed with the finger on its spot: held HOLD ms (default 70); AFTER is what the finger then
                           does: lift (default), rest (stays 700 ms), slide (moves a key right, then lifts) or none (no touch)
   hold:LETTER[:MS]        a letter held down (default 800 ms)
+  chord:A+B[+C][:MS]      keys pressed together, in order, then let go the other way round: alt+sym, shift+w (default 80 ms)
   touch:X,Y[:MS]          a still touch at a touchpad position (default 300 ms)
   replay-getevent:FILE    a capture from capture.sh, played as it was
   replay-rawlog:FILE[:FROM[:TO]]  the touches and keys of a raw log export, between two uptimes in ms (default all)
@@ -344,6 +345,18 @@ class Script:
             raise SystemExit(f"key: AFTER is lift, rest, slide or none, not {after!r}")
         self.lift()
 
+    def chord(self, names, hold=80.0):
+        """Keys pressed one after another, 30 ms apart, held together, then let go in the opposite order. No touch."""
+        for i, name in enumerate(names):
+            if i:
+                self.wait(30)
+            self.key(name, True)
+        self.wait(hold)
+        for i, name in enumerate(reversed(names)):
+            if i:
+                self.wait(20)
+            self.key(name, False)
+
     def tap_at(self, x, y, ms=300.0):
         self.still(x, y, ms)
         self.lift()
@@ -492,6 +505,8 @@ def build(args, alignment=None):
             script.press(parts[0], float(parts[1]) if len(parts) > 1 else 70.0, parts[2] if len(parts) > 2 else "lift")
         elif name == "hold":
             script.press(parts[0], float(parts[1]) if len(parts) > 1 else 800.0)
+        elif name == "chord":
+            script.chord(parts[0].split("+"), float(parts[1]) if len(parts) > 1 else 80.0)
         elif name == "touch":
             x, y = (float(v) for v in parts[0].split(","))
             script.tap_at(x, y, float(parts[1]) if len(parts) > 1 else 300.0)

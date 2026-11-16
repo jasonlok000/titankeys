@@ -170,6 +170,10 @@ def main():
     check(hold[1][0] - hold[0][0] == 800, f"hold: {hold}")
     sym = [c for t, d, ty, c, v in build("key:sym:600", keymap=keymap).lines if d == g.KEYBOARD and ty == g.EV_KEY]
     check(sym == [127, 127], f"sym held: codes {sym}")
+    chord = [(round(t), c, v) for t, d, ty, c, v in build("chord:alt+sym", keymap=keymap).lines if d == g.KEYBOARD and ty == g.EV_KEY]
+    check(chord == [(0, 56, 1), (30, 127, 1), (110, 127, 0), (130, 56, 0)], f"chord alt+sym: {chord}")
+    check(all(d == g.KEYBOARD for _, d, *_ in build("chord:shift+w").lines), "a chord touches the touchpad")
+    check("dev 0 touchPad" not in build("chord:shift+w").text(), "a script of keys alone declares the touchpad")
     try:
         build("key:sym")
         check(False, "sym without a keymap should stop")

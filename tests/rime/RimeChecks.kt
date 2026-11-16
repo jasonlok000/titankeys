@@ -1,5 +1,6 @@
 package com.titankeys.rime
 
+import com.titankeys.keyboard.ChineseSetup
 import com.titankeys.keyboard.EngineState
 import com.titankeys.keyboard.InputMethod
 import java.io.File
@@ -21,6 +22,7 @@ fun main(args: Array<String>) {
     onlyARimeInputMethodStarts()
     theDataInstallsBeforeRimeOpens()
     withNoVariantNothingChineseIsTyped()
+    withNoVariantTheChinesePageOpensOnce()
     switchingInputMethodsKeepsRimeOpen()
     theChineseInputMethodsAreRimes(args.firstOrNull())
     theBackupTakesRimesSnapshots()
@@ -336,6 +338,18 @@ fun switchingInputMethodsKeepsRimeOpen() {
     pinyin.stop()
     same(1, rime.calls.count { it == "close" }, "it closes when the last engine stops")
     same(1, rime.calls.count { it == "open" }, "having opened once")
+}
+
+/** No default variant: the first Chinese switch with none picked opens Settings' Chinese page, once, and never in the guide. */
+fun withNoVariantTheChinesePageOpensOnce() {
+    val yale = method("tk_yale")
+    check(ChineseSetup.opensPage(yale, variant = "", shown = false, typing = true), "the first switch with no variant opens the page")
+    check(!ChineseSetup.opensPage(yale, variant = "", shown = true, typing = true), "only once")
+    check(!ChineseSetup.opensPage(yale, variant = "zh_hk", shown = false, typing = true), "not once a variant is picked")
+    check(!ChineseSetup.opensPage(yale, variant = "", shown = false, typing = false), "not outside a field, or in the guide")
+    check(!ChineseSetup.opensPage(method("x", engine = "other"), variant = "", shown = false, typing = true), "not for another engine")
+    same(RimeEngine.ENGINE, "rime", "the engine ChineseSetup knows as Chinese is Rime's")
+    check(ChineseSetup.PAGE == "/settings/chinese", "the page is Settings' Chinese characters")
 }
 
 /** The input method files the keyboard reads: each Chinese one names a schema RimeEngine knows, Yale first. */

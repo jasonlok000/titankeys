@@ -3536,10 +3536,25 @@ class TitanKeysIme : InputMethodService() {
         preparingNotice = null
         closePicker()
         if (editing) readSettings()
+        openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
         val subtype = InputMethodList.subtype(this, method.id) ?: return
         if (InputMethodList.idOf(currentInputMethodSubtypeOrNull()) == method.id) return
         runCatching { switchInputMethod(id, subtype) }
+    }
+
+    /**
+     * The first switch to a Chinese input method with no variant picked opens Settings' Chinese page, once (ChineseSetup).
+     * As before Android's keyboard list, any key still down is let go first, so none stays down while the app is in front.
+     */
+    private fun openChinesePage(method: InputMethod) {
+        val typing = editing && !languages.englishOnly && !inGuide
+        if (!ChineseSetup.opensPage(method, TypingSettings.chineseVariant(this), TypingSettings.chineseVariantShown(this), typing)) return
+        TypingSettings.chineseVariantShown(this, true)
+        contact.releaseKeys()
+        modifiers.clear()
+        runCatching { startActivity(Connected.pageIntent(this, ChineseSetup.PAGE)) }
+            .onFailure { Log.w("TitanKeys", "Couldn't open the Chinese page", it) }
     }
 
     private fun currentInputMethodSubtypeOrNull() =

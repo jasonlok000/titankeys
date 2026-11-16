@@ -203,8 +203,9 @@ Languages
 **Chinese characters** (`app/settings/chinese.tsx`), a ChoicePage like English spelling:
 - Traditional (Hong Kong), Traditional (Taiwan), Simplified (mainland China).
 - One setting for every Chinese input method.
-- **No default (owner, 2026-11-16): you choose.** The first time a Chinese input method is turned on, its switch opens
-  this page, and it stays off until a variant is picked. Nothing is guessed from the phone's region.
+- **No default (owner, 2026-11-16): you choose.** The first time the keyboard switches to a Chinese input method with no
+  variant picked, it opens this page, once (`ChineseSetup`; Reset most things clears the once with the variant). Until a
+  variant is picked, the bar's only choice says to pick one. Nothing is guessed from the phone's region.
   The page's subtitle: "Pick how your characters come out. You can change it any time."
 
 The settings live in `typing_settings` with the others: `inputMethods` (the ordered list of ids that are on),

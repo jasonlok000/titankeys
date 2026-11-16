@@ -10,7 +10,10 @@ const MAX_ON = 8;
 export const inputMethodsLabel = ({ inputMethods, availableInputMethods }: State) =>
   inputMethods.map(id => availableInputMethods.find(im => im.id === id)?.name ?? id).join(", ");
 
-const SCRIPTS: Record<string, string> = { Latn: "Latin letters", Cyrl: "Cyrillic", Grek: "Greek", Hani: "Chinese" };
+// Each script's header (tools/checks/im.test.ts: every input method's script has one). F: draft for Georgian and Korean.
+const SCRIPTS: Record<string, string> = {
+  Latn: "Latin letters", Cyrl: "Cyrillic", Grek: "Greek", Geor: "Georgian", Kore: "Korean", Hani: "Chinese",
+};
 
 /**
  * Every input method, with a switch. The ones that are on come first, in the overlay's order, which is the order they were

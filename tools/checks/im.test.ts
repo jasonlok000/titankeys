@@ -35,6 +35,13 @@ test("each input method's file has every field, and its folder is its id", () =>
   }
 });
 
+test("every input method's script has a header in Settings > Input methods, not its four-letter code", () => {
+  const block = read("app/settings/languages.tsx").split("const SCRIPTS", 2)[1]!.split("};", 1)[0]!;
+  const headers = new Set([...block.matchAll(/(\w{4}): "[^"]+"/g)].map(m => m[1]));
+  for (const im of ims) expect({ id: im.id, script: im.script, header: headers.has(im.script) })
+    .toEqual({ id: im.id, script: im.script, header: true });
+});
+
 test("no two input methods share a label, and none takes English's", () => {
   const labels = ims.map(im => im.label);
   expect(new Set(labels).size).toBe(labels.length);

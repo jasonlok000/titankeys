@@ -47,6 +47,8 @@ fun main(args: Array<String>) {
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
     aRestoredInputMethodTypes()
+    aHeldSymWaits()
+    androidsListFollowsTheOnes()
     telexMarksAndTones()
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (failures > 0) {
@@ -222,6 +224,29 @@ private fun anEngineFitsTheInterface() {
  */
 private fun startsWith(index: InputMethodIndex, setting: String, current: String, android: String?, synced: String?): String {
     return InputMethodChoice.atFieldStart(index, setting, current, KeyboardListSync(synced).heard(android)).id
+}
+
+/** The keyboard sets Android's list again whenever it isn't exactly the input methods on: batch 2 of the phone run. */
+private fun androidsListFollowsTheOnes() {
+    val on = listOf("en", "es", "de", "el", "yue-yale")
+    check("German missing: set again", EnabledEntries.differ(on, listOf("en", "es", "el", "ru", "sr", "kk", "yue-yale")))
+    check("an old one left over: set again", EnabledEntries.differ(on, on + "ru"))
+    check("nothing on in Android's list: set again", EnabledEntries.differ(on, emptyList()))
+    check("the same in another order: left alone", !EnabledEntries.differ(on, on.reversed()))
+    check("Android can't say: left alone", !EnabledEntries.differ(on, null))
+}
+
+/** A held Sym opens the overlay in any field with two or more input methods on; each reason it doesn't is said. */
+private fun aHeldSymWaits() {
+    fun why(on: Int = 3, english: Boolean = false, panel: Boolean = false, alt: Boolean = false, guide: Boolean = false,
+            exact: Boolean = false, waiting: Int = 0) = SymHold.whyNot(on, english, panel, alt, guide, exact, waiting)
+    same("en, ru and es on, the panel closed: Sym waits", why(), null)
+    same("two on: Sym waits", why(on = 2), null)
+    check("one on: Sym as usual", why(on = 1) != null)
+    check("the playground: Sym as usual", why(english = true) != null)
+    check("the panel open: Sym closes it", why(panel = true) != null)
+    check("Alt on: Alt+Sym is Android's keyboard list", why(alt = true) != null)
+    check("keys waiting for the app: Sym keeps its place", why(waiting = 1) != null)
 }
 
 private fun aRestoredInputMethodTypes() {
@@ -401,8 +426,8 @@ private const val CLDR_NAME = "CLDR 49 localeDisplayNames: "
 
 /**
  * An input method's own name, as Settings > Input methods shows it: there, the same in the index, CLDR's name for the
- * language in that language (accents and all), and in the app's fonts. Chinese input methods are named for their spelling;
- * Hangul and Chinese characters come from Android's CJK font, which the app's fonts fall back to.
+ * language in that language (accents and all), and in the app's fonts, Hangul and Chinese included: Android's CJK font
+ * didn't reach Ink on the phone (tools/im/fonts.py). Chinese input methods are named for their spelling.
  */
 private fun theNameShows(method: InputMethod, inIndex: String?) {
     val name = method.name
@@ -411,10 +436,7 @@ private fun theNameShows(method: InputMethod, inIndex: String?) {
     same("${method.id}: its name is NFC", java.text.Normalizer.isNormalized(name, java.text.Normalizer.Form.NFC), true)
     same("${method.id}: the index has the same name", inIndex, name)
     if (method.script != "Hani") same("${method.id}: its name is CLDR's", method.source["name"], CLDR_NAME + name)
-    val missing = name.codePoints().toArray().filter { code ->
-        val script = Character.UnicodeScript.of(code)
-        script != Character.UnicodeScript.HAN && script != Character.UnicodeScript.HANGUL && textFonts.any { !it.canDisplay(code) }
-    }
+    val missing = name.codePoints().toArray().filter { code -> textFonts.any { !it.canDisplay(code) } }
     check("${method.id}: the app's fonts have its name's letters", missing.isEmpty()) {
         missing.joinToString(" ") { String(Character.toChars(it)) }
     }
@@ -435,6 +457,9 @@ private fun everyInputMethodInTheFolder(folder: File) {
             continue
         }
         same("${dir.name}: the folder is its id", method.id, dir.name)
+        method.engine?.let { engine ->
+            check("${method.id}: the app has its engine, $engine", engine in EngineClasses.BY_NAME) { EngineClasses.BY_NAME.keys.toString() }
+        }
         labels.put(method.label, method.id)?.let { check("${method.id}: label ${method.label} is also $it's", false) }
         check("${method.id}: has a NOTICE", File(dir, "NOTICE").isFile)
         theNameShows(method, index[method.id])

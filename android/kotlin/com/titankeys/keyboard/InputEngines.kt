@@ -9,16 +9,9 @@ import android.util.Log
  * and has a constructor that takes a [Context] (docs/languages.md, "How Rime plugs in").
  */
 internal object InputEngines {
-    /** Each engine's name and its class. */
-    private val CLASSES = mapOf(
-        "rime" to "com.titankeys.rime.RimeEngine",
-        "hangul" to "com.titankeys.keyboard.HangulEngine",
-        "telex" to "com.titankeys.keyboard.TelexEngine",
-    )
-
     /** A new engine for [name], or null when the app has none by that name or it can't be made. */
     fun create(context: Context, name: String): InputEngine? {
-        val className = CLASSES[name] ?: return null
+        val className = EngineClasses.BY_NAME[name] ?: return null
         return runCatching {
             Class.forName(className).getConstructor(Context::class.java).newInstance(context.applicationContext) as InputEngine
         }.onFailure { Log.w("InputEngines", "No engine $name", it) }.getOrNull()

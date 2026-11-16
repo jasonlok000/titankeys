@@ -161,6 +161,30 @@ object Picker {
 }
 
 /** Which input method types as a field starts, and why: the keyboard logs it (Languages.refresh). */
+/**
+ * Whether a Sym press waits to see if it's held, which opens the input method overlay: null when it waits, or why not, for
+ * TitanKeys Debug's TitanKeysSym log.
+ */
+/** Android's list of TitanKeys' enabled entries against the input methods that are on: the two must be the same set. */
+object EnabledEntries {
+    /** True when Android's [android] entries (null when it can't say) aren't exactly the input methods [on]. */
+    fun differ(on: List<String>, android: List<String>?) = android != null && android.toSet() != on.toSet()
+}
+
+object SymHold {
+    fun whyNot(onCount: Int, englishOnly: Boolean, panelOpen: Boolean, altOn: Boolean, inGuide: Boolean, exact: Boolean,
+               waiting: Int): String? = when {
+        onCount < 2 -> "only $onCount input method on"
+        englishOnly -> "this field types English: the guide or the playground"
+        panelOpen -> "the Sym panel is open"
+        altOn -> "Alt is on"
+        inGuide -> "the guide"
+        exact -> "an exact typing app"
+        waiting > 0 -> "$waiting keys still waiting for the app"
+        else -> null
+    }
+}
+
 data class InputMethodChoice(val id: String, val why: String) {
     companion object {
         /**

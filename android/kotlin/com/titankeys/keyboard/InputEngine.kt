@@ -88,3 +88,18 @@ data class EngineState(
         val UNHANDLED = EngineState(handled = false)
     }
 }
+
+/**
+ * Each engine's name in `im.json` and its class, which [InputEngines] makes by name. Every class here implements
+ * [InputEngine] and has a constructor that takes an Android Context; android/proguard-rules.pro keeps both, as R8 can't see a
+ * class made by name and drops it from the APK otherwise (Korean and Vietnamese typed English on the phone).
+ * tests/languages checks that every engine an input method names is here, and tests/languages/apk.sh that the built APK has
+ * each class and constructor.
+ */
+object EngineClasses {
+    val BY_NAME = mapOf(
+        "rime" to "com.titankeys.rime.RimeEngine",
+        "hangul" to "com.titankeys.keyboard.HangulEngine",
+        "telex" to "com.titankeys.keyboard.TelexEngine",
+    )
+}

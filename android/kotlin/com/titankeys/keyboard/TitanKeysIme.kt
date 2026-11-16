@@ -3397,14 +3397,19 @@ class TitanKeysIme : InputMethodService() {
                 return true
             }
             if (symDown != null) return true
-            if (event.repeatCount == 0 && languages.switching && !panelOpen && modifiers.alt == Modifiers.Level.Off && !inGuide &&
-                    !field.exact && pendingInput.isEmpty()) {
-                symDown = KeyEvent(event)
-                symHeldOpen = false
-                main.postDelayed(symHeld, TypingSettings.holdSymbolMillis(this).toLong())
-                return true
+            if (event.repeatCount > 0) return false
+            val whyNot = SymHold.whyNot(languages.on.size, languages.englishOnly, panelOpen, modifiers.alt != Modifiers.Level.Off,
+                inGuide, field.exact, pendingInput.size)
+            if (whyNot != null) {
+                symLog("Sym won't wait for a hold: $whyNot")
+                return false
             }
-            return false
+            symDown = KeyEvent(event)
+            symHeldOpen = false
+            val millis = TypingSettings.holdSymbolMillis(this).toLong()
+            symLog("Sym waits ${millis} ms for a hold, ${languages.on.size} input methods on")
+            main.postDelayed(symHeld, millis)
+            return true
         }
         if (open == null || event.repeatCount > 0 || Modifiers.isModifier(keyCode)) return false
         // An engine's choices stay while its text is built: its keys go to the engine, in [engineKey].
@@ -3497,7 +3502,11 @@ class TitanKeysIme : InputMethodService() {
 
     /** Sym held for the hold time: the overlay, with every input method that's on over W to O. */
     private fun openSwitchOverlay() {
-        if (symDown == null || !editing) return
+        if (symDown == null || !editing) {
+            symLog("Sym held, but no overlay: ${if (symDown == null) "already let go" else "not editing"}")
+            return
+        }
+        symLog("Sym held: the input method overlay opens")
         symHeldOpen = true
         haptics.play(Haptic.HeldSymbol)
         showPicker(LanguagePicker.Switch(languages.on, languages.current.id))
@@ -3511,6 +3520,7 @@ class TitanKeysIme : InputMethodService() {
         val down = symDown ?: return false
         symDown = null
         main.removeCallbacks(symHeld)
+        symLog("Sym let go after ${SystemClock.uptimeMillis() - down.downTime} ms: ${if (symHeldOpen) "the overlay stays" else "Sym as usual"}")
         if (symHeldOpen) {
             symHeldOpen = false
             return true

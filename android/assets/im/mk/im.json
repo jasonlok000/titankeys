@@ -1,0 +1,54 @@
+{
+  "id": "mk",
+  "name": "Македонски",
+  "nameEnglish": "Macedonian",
+  "label": "MK",
+  "locale": "mk",
+  "script": "Cyrl",
+  "keys": {
+    "a": "а",
+    "b": "б",
+    "c": "ц",
+    "d": "д",
+    "e": "е",
+    "f": "ф",
+    "g": "г",
+    "h": "х",
+    "i": "и",
+    "j": "ј",
+    "k": "к",
+    "l": "л",
+    "m": "м",
+    "n": "н",
+    "o": "о",
+    "p": "п",
+    "q": "љ",
+    "r": "р",
+    "s": "с",
+    "t": "т",
+    "u": "у",
+    "v": "в",
+    "w": "њ",
+    "x": "џ",
+    "y": "з",
+    "z": "ѕ"
+  },
+  "accents": {
+    "l": "чќ",
+    "p": "шѓж"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "keys": "keyboard_layout_serbian_and_montenegrin_cyrillic.kcm",
+    "words": "mk_full.txt"
+  }
+}

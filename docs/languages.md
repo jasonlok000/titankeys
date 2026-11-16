@@ -97,7 +97,7 @@ The fields:
 | `accents` | For each of the 26 letter keys, the letters held on it, in the order they show on the bar: at most 10, one per key column. Only letter keys can be held, since the Titan's punctuation is on Alt |
 | `words` | The word list's file, or `null` |
 | `variants` | `null`, or a list of `{ "id", "name", "words" }` for spellings with their own word lists (Portuguese: `pt-BR`, `pt-PT`) |
-| `rules` | `capitalise` after a sentence's end, the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`) |
+| `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`) |
 | `engine` | `null`, `"rime"` with its schema (`{ "rime": "tk_yale" }`), or the name of a built-in engine (`"hangul"`, `"telex"`) |
 | `source` | Where the letters and words come from, for the licences page and for contributors |
 
@@ -301,6 +301,9 @@ can drop to 50,000 words (−11 MB), or the word lists can move into an install-
 - TitanKeys' `libc++_shared.so` comes from NDK r27c (`native/build.sh`). The study built Rime with NDK 29, so the app's build
   of Rime uses r27c to share it, or `c++_static` (+1 MB). Either way with 16 KB pages (`-z max-page-size=16384`), like the
   swipe library.
-- The licences marked "to check" in the study (Serbian Latin, Macedonian, Georgian).
+- The licences marked "to check" in the study, settled 2026-11-16: Serbian Latin is AOSP's Serbian list in Latin letters
+  (Apache 2.0), Macedonian and Bosnian come from FrequencyWords (CC BY-SA 4.0), and Georgian from the Leipzig Corpora
+  Collection's kat_newscrawl_2016_1M (CC BY 4.0). FrequencyWords' Georgian list is mis-encoded, Macedonian's AOSP-format
+  list names no licence, and HeliBoard's Bosnian list has no real counts.
 - How rime-cantonese's tones as letters (v, x, q) feel to the owner, who may type tones as digits.
 - The Rime test on the phone: its speed and that the compiled tables are reused (`~/build/lang/rime-test`).

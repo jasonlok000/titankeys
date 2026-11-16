@@ -48,7 +48,10 @@ data class InputMethod(
     data class Variant(val id: String, val name: String, val words: String?)
 
     data class Rules(
-        /** A capital after a sentence ends. */
+        /**
+         * The script has capitals: one after a sentence ends, and Shift types a key's capital. Georgian has none, so Shift
+         * types a key's Shift letter or its own letter, never Mtavruli.
+         */
         val capitalise: Boolean = true,
         /** The marks that end a sentence. */
         val sentenceEnd: String = ".?!",
@@ -69,13 +72,13 @@ data class InputMethod(
     fun letter(printed: Char, shift: Boolean): String? {
         val key = keys?.get(printed.lowercaseChar()) ?: return null
         if (!shift) return key.base
-        return key.shift ?: key.base.uppercase(javaLocale)
+        return key.shift ?: if (rules.capitalise) key.base.uppercase(javaLocale) else key.base
     }
 
     /** The letters held on the key printed [printed], in capitals with [shift], or none. */
     fun accentsOf(printed: Char, shift: Boolean): List<String> {
         val held = accents[printed.lowercaseChar()] ?: return emptyList()
-        return if (shift) held.map { it.uppercase(javaLocale) } else held
+        return if (shift && rules.capitalise) held.map { it.uppercase(javaLocale) } else held
     }
 
     companion object {

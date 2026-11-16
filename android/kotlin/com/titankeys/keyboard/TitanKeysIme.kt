@@ -775,7 +775,7 @@ class TitanKeysIme : InputMethodService() {
             }
         }
         composer.commaSpace = { TypingSettings.commaSpace(this) }
-        composer.sentenceCapitals = { TypingSettings.autoCapitalise(this) }
+        composer.sentenceCapitals = { TypingSettings.autoCapitalise(this) && languages.current.rules.capitalise }
         // Every fix is English's, "i" to "I" included: Italian's "i" is a word (docs/languages.md).
         composer.fixOn = { kind -> languages.current.isEnglish && TypingSettings.fixOn(this, kind.id) }
         composer.onStroke = Trace::stroke
@@ -4123,7 +4123,8 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun sentenceStartHere(): Boolean {
-        if (!editing || field.exact || !field.sentenceCapitalisation || panelOpen || !TypingSettings.autoCapitalise(this)) return false
+        if (!editing || field.exact || !field.sentenceCapitalisation || panelOpen || !TypingSettings.autoCapitalise(this) ||
+            !languages.current.rules.capitalise) return false
         val before = currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH, 0) ?: return false
         return SwipeTyping.startsSentence(before)
     }

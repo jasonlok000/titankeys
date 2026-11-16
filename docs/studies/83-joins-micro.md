@@ -108,6 +108,101 @@ The logs are the #83 study's top-row pairs that `Swipe.sameStroke` joins: 346 ri
 
 On the logs alone the signals separate right joins from wrong joins far less well: 0.69 at best (where it came back against where it was heading), and 0.65 for the gap. The wrong joins the logs hold look like breaks at the sample level too.
 
+## Trading some real breaks for fewer false joins
+
+The owner asked whether giving up some real breaks would buy a better balance. [`83-joins/tradeoff.py`](83-joins/tradeoff.py) relaxes the bar to losing 0, 1, 2, 5 and 10% of the real breaks the rule joins, for four vetoes:
+
+- **down:** the first touch's last 40 ms head down faster than t;
+- **gap:** a gap longer than t;
+- **still:** the second touch lands slower than t;
+- **combined:** all position and timing signals weighed together.
+
+**No: relaxing the bar doesn't pay.**
+
+- **How often each happens.** In the logs (4,280 swipes), the rule makes 80.8 right top-row joins per 1,000 swipes and 8.6 wrong ones. A real break is 9.4 times as common as a wrong join.
+- **What each costs.**
+  - A wrong join glues two words into one: delete it, swipe both again, about 3 actions.
+  - A lost break leaves two wrong half-words: delete both, swipe the word again, also about 3 actions.
+  - So a trade gains only if it cuts wrong joins at over 9.4 times the rate it loses breaks: losing 1% of breaks needs over 9% of wrong joins cut.
+- **On the logs, points that lose real breaks come out about even or behind.**
+  - At 1% they break even.
+  - Combined at 2% is +0.23 per 1,000 swipes, 7 wrong joins cut for 6 right joins lost: a gain of one fix in all 4,280 swipes.
+  - At 5% and 10% every veto loses, down to −5 per 1,000.
+- **The session alone looks better,** because its drills held many more false joins: 24 against 39 breaks, against 37 to 346 in the logs.
+  - Losing 1 of its 39 breaks (5%) still comes out ahead at everyday rates: +2.25 for down, +2.61 for combined.
+  - But the same thresholds lose on the logs (−0.23 and −1.87), and at 10% everything is behind.
+
+### Threshold set on the logs' 346 right joins
+
+Net is per 1,000 swipes, on the logs.
+
+| rule | loss budget | logs: right joins lost | wrong joins cut (37) | net | session: breaks lost (39) | false joins cut (24) |
+|---|---|---|---|---|---|---|
+| down | 0% | 0 | 3 | +0.70 | 0 | 8 |
+| down | 1% | 3 | 3 | 0.00 | 0 | 10 |
+| down | 2 to 10% | 5 | 4 | −0.23 | 1 | 12 |
+| gap | 0% | 0 | 1 | +0.23 | 0 | 0 |
+| gap | 1% | 3 | 3 | 0.00 | 0 | 0 |
+| gap | 5% | 17 | 7 | −2.34 | 0 | 3 |
+| gap | 10% | 31 | 11 | −4.67 | 3 | 12 |
+| still | 0 to 2% | 0 | 0 | 0.00 | 0 | 0 |
+| still | 10% | 34 | 12 | −5.14 | 1 | 3 |
+| combined | 0% | 0 | 1 | +0.23 | 0 | 0 |
+| combined | 2% | 6 | 7 | +0.23 | 0 | 1 |
+| combined | 5% | 17 | 9 | −1.87 | 0 | 10 |
+| combined | 10% | 34 | 13 | −4.91 | 5 | 20 |
+
+The down rule can't be pushed further. Many right joins have no vertical motion at all at the end (exactly 0), so budgets of 2 to 10% all land at t = 0 and lose the same 5.
+
+### Threshold set on the session's 39 joined breaks
+
+- **Net:** on the logs, a wrong join counted as one fix.
+- **×2:** a wrong join counted as two fixes, if the owner feels it as twice as bad.
+- **Weighted:** the session's shares at the logs' everyday rates.
+
+All three columns are per 1,000 swipes.
+
+| rule | loss budget | session: breaks lost | false joins cut | logs: right lost | wrong cut | net | ×2 | weighted |
+|---|---|---|---|---|---|---|---|---|
+| down | 0 to 2% | 0 | 10 | 4 | 3 | −0.23 | +0.47 | +3.60 |
+| down | 5% | 1 | 12 | 5 | 4 | −0.23 | +0.70 | +2.25 |
+| down | 10% | 3 | 16 | 56 | 10 | −10.75 | −8.41 | −0.46 |
+| gap | 0 to 2% | 0 | 7 | 20 | 10 | −2.34 | 0.00 | +2.52 |
+| gap | 10% | 3 | 16 | 39 | 13 | −6.07 | −3.04 | −0.46 |
+| still | 0 to 2% | 0 | 0 | 13 | 6 | −1.64 | −0.23 | 0.00 |
+| still | 10% | 3 | 4 | 44 | 13 | −7.24 | −4.21 | −4.78 |
+| combined | 0 to 2% | 0 | 10 | 19 | 10 | −2.10 | +0.23 | +3.60 |
+| combined | 5% | 1 | 13 | 21 | 13 | −1.87 | +1.17 | +2.61 |
+| combined | 10% | 3 | 17 | 24 | 13 | −2.57 | +0.47 | −0.10 |
+
+The session's 0% thresholds already cost right joins in the logs, because the session's most extreme break isn't as extreme as the logs'.
+
+### The down rule at fixed thresholds
+
+| t, keys/ms | session: breaks lost | false joins cut | logs: right lost | wrong cut (1.2.0 / 2.x) | net | ×2 | weighted |
+|---|---|---|---|---|---|---|---|
+| 0 | 1 | 12 | 5 | 4 (3 / 1) | −0.23 | +0.70 | +2.25 |
+| 0.0003 | 0 | 10 | 4 | 3 (2 / 1) | −0.23 | +0.47 | +3.60 |
+| 0.0005 | 0 | 9 | 3 | 3 (2 / 1) | 0.00 | +0.70 | +3.24 |
+| 0.0007 | 0 | 8 | 0 | 3 (2 / 1) | +0.70 | +1.40 | +2.88 |
+| **0.001** | **0** | **7** | **0** | **2 (2 / 0)** | **+0.47** | **+0.93** | **+2.52** |
+| 0.0015 | 0 | 4 | 0 | 2 (2 / 0) | +0.47 | +0.93 | +1.44 |
+
+### Recommendation
+
+**Keep the bar at no real break lost, and take the down veto at 0.001 keys per ms.**
+
+- It's the only point that loses nothing on both sets with room to spare. The logs' highest right join moves at 0.0006 and the session's highest break at 0.0003.
+- 0.0007 cuts one more wrong join in the logs, but sits just 0.0001 above a right join.
+- **Expected gain:** 0.5 to 2.5 fewer fixes per 1,000 swipes, about one every 400 to 2,000 swipes. The logs give the low end, the session at everyday rates the high end.
+
+**How sure:**
+
+- **The "loses nothing" part is fairly firm.** 0 of 385 real breaks were lost across both sets. With 95% confidence, the true loss is under 0.8% of breaks, at most about 0.6 per 1,000 swipes.
+- **The gain is not firm.** It rests on 2 wrong joins in the logs, both from 1.2.0, and 7 of 24 false joins in one session of drills.
+- So the most likely result is a small gain, and the worst plausible one about even.
+- The owner's logs since 11-11 would settle it without more recording: they'd show 2.1's own wrong joins.
+
 ## Limits
 
 - **One session of drills.** Its two-word gaps may be more regular than everyday typing, which may be why the gap separates far better here (0.93) than in the logs (0.65).
@@ -124,4 +219,4 @@ In WSL `atlas-build`, as `dev`, with numpy (the apostrophe study's venv has it),
 python docs/studies/83-joins/plot_micro.py <path to micro-windows.json> docs/studies/83-joins
 ```
 
-`micro.py` prints numbers only, and writes the sample windows, numbers only, to the output folder.
+`micro.py` prints numbers only, and writes the sample windows, numbers only, to the output folder. The trade-off tables come from `tradeoff.py`, run like `micro.py`.

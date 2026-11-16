@@ -507,7 +507,7 @@ private fun thePlaygroundHoldsStill() {
     val keyboard = PHONE_BAR
     val opened = PHONE_BAR + PHONE_PANEL
     fun top(block: Int, still: Boolean, inset: Int, panelOpen: Boolean): Int {
-        val room = GuideRoom.room(inset, panelOpen, keyboard, extra, keep = true)
+        val room = GuideRoom.room(inset, panelOpen, keyboard, extra, keep = true, follow = still)
         val keys = GuideRoom.keys(PHONE_KEYS, still, panelOpen || room.sized, end = false)
         val padding = GuideRoom.padding(still, panelOpen, room.keyboard, room.panel)
         // GuideActivity holds the block against a panel only where a panel is still.
@@ -528,9 +528,38 @@ private fun thePlaygroundHoldsStill() {
         GuideRoom.Column(height = PHONE_HEIGHT, top = PHONE_STATUS, above = phonePx(56) + phonePx(24), block = block, below = phonePx(24),
             keys = PHONE_KEYS, keyboard = PHONE_BAR, panel = if (over > 0) PHONE_BAR + over else 0, gap = phonePx(24))
     }
+    theRoomFollowsTheKeyboardOnThePlayground(extra)
     // On the phone the playground's block never rises: its drawing of the keys keeps all four rows (theFrontPageKeepsAllFourRows),
     // and the panel's top is lower than theirs.
     check(PHONE_PANEL < PHONE_KEYS) { "On the phone the panel reaches over the playground's drawing of the keys" }
+}
+
+/**
+ * The playground's keyboard room is the keyboard's room now, never the most it ever saw (phone check, 2026-11-16: TitanKeys' own
+ * screen opened over the playground, as the launcher opens it, and the playground came back squeezed under its header, the field
+ * out of sight and the drawing of the keys over its title, for good). A new playground's first room can be far too large, before
+ * the keyboard has settled: the slides keep the most, as their bar hides for a moment as a slide changes, and that kept it.
+ */
+private fun theRoomFollowsTheKeyboardOnThePlayground(extra: Int) {
+    val huge = PHONE_BAR + 600
+    fun settle(follow: Boolean, vararg insets: Int): GuideRoom.Room {
+        var steady = 0
+        var room = GuideRoom.room(insets.first(), false, steady, extra, keep = true, follow = follow)
+        for (inset in insets) {
+            room = GuideRoom.room(inset, false, steady, extra, keep = true, follow = follow)
+            steady = room.steady
+        }
+        return room
+    }
+    same(settle(false, huge, PHONE_BAR).keyboard, huge, "Keeping the most, a first room too large stays: the phone's squeezed playground")
+    same(settle(true, huge, PHONE_BAR).keyboard, PHONE_BAR, "Following, the playground's room is the keyboard's bar once it settles")
+    same(settle(true, huge, PHONE_BAR, PHONE_BAR).let { it.keyboard to it.panel }, PHONE_BAR to 0, "and stays there")
+    same(settle(true, PHONE_BAR, 0).keyboard, PHONE_BAR, "A gone inset keeps the last room")
+    // A panel on the playground still moves nothing while it follows: its room arrives as a panel's, over the bar's.
+    val opened = GuideRoom.room(PHONE_BAR + PHONE_PANEL, false, PHONE_BAR, extra, keep = true, follow = true)
+    same(opened.sized to opened.keyboard, true to PHONE_BAR, "A panel's room on the playground is a panel's, the bar's room kept")
+    val guide = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
+    same("keep = guideLooks == true || playground,\n                follow = playground)" in guide, true, "The playground follows; the slides keep")
 }
 
 /** A verdict that finishes the slide: done, or a scenario that counts. */
@@ -1094,7 +1123,7 @@ private fun thePlaygroundKeepsItsText() {
     val guide = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
     fun body(start: String) = guide.substring(guide.indexOf(start)).let { it.substring(0, it.indexOf("\n    }\n") + 6) }
     same(body("override fun onPause()").contains("if (playground && started && !settingUp && !leftByBack)\n            playgroundKept = PlaygroundKept(" +
-        "field.text.toString(), field.selectionEnd, passage, passageFrom, passageText, passageSource, this)"), true,
+        "field.text.toString(), field.selectionEnd, passage, passageFrom, passageText, passageSource, System.identityHashCode(this))"), true,
         "Out of sight, the playground keeps its text, its cursor and its line")
     val show = body("private fun showPlayground()")
     same(show.contains("if (kept != null) keepPlayground(kept) else startPassage(PlaygroundText.make("), true,
@@ -1103,7 +1132,7 @@ private fun thePlaygroundKeepsItsText() {
     val keep = body("private fun keepPlayground(kept: PlaygroundKept)")
     same(listOf("seeding = true", "field.setText(kept.text)", "seeding = false", "passage = kept.passage", "passageFrom = kept.passageFrom")
         .all { it in keep }, true, "The text goes back quietly, and the line follows on from where it was")
-    same(body("override fun onResume()").contains("if (playgroundKept?.from === this) playgroundKept = null"), true,
+    same(body("override fun onResume()").contains("if (playgroundKept?.from == System.identityHashCode(this)) playgroundKept = null"), true,
         "The same playground back in sight has its own text still, so its copy is let go")
     val back = body("override fun onBackPressed()")
     same(back.indexOf("leftByBack = true") in 0 until back.indexOf("finishAffinity()") &&
@@ -1455,41 +1484,52 @@ private fun theContactsPart() {
 }
 
 /**
- * A second "Don't allow" is the answer, and nothing opens after it (#87: App info opened by itself, because Android stops showing
- * its reason right after the second no). Played against Android as it behaves: it asks until it has two noes, shows its reason
- * after one, and a question dismissed without an answer counts for nothing.
+ * A second "Don't allow" is the answer, and nothing opens after it; the press after that opens App info (#87). Played against
+ * Android as the Titan 2 Elite has it: it asks until it has two noes, shows its reason after one, a question dismissed without an
+ * answer counts for nothing, and its permission screen starts, empty, even when it answers by itself, so whether a question came
+ * up can't be told (phone check: the third and fourth presses opened nothing).
  */
 private fun contactsAskOnlySendsToSettingsWhenAndroidStopped() {
     var noes = 0
-    var asked = false
+    var stopped = false
     /** One press of the row: what the user answers if Android asks (null to dismiss it), and whether App info opens. */
-    fun press(answer: Boolean?): Boolean {
+    fun press(answer: Boolean?, millis: Long = 2_000): Boolean {
+        val asks = noes < 2
         val reasonBefore = noes == 1
-        val askedBefore = asked
-        asked = true
-        val shown = noes < 2
-        val granted = shown && answer == true
-        if (shown && answer == false) noes++
-        return ContactsAsk.toSettings(granted, questionShown = shown, askedBefore = askedBefore, reasonBefore = reasonBefore)
+        val granted = asks && answer == true
+        if (asks && answer == false) noes++
+        if (granted) noes = 0
+        val reasonAfter = noes == 1
+        // When Android doesn't ask, its no comes back at once.
+        val outcome = ContactsAsk.answered(granted, stopped, reasonBefore, reasonAfter, if (asks) millis else 150)
+        stopped = outcome.stopped
+        return outcome.toSettings
     }
     same(press(false), false, "The first Don't allow: nothing opens")
-    same(press(false), false, "The second Don't allow: nothing opens either, though Android has stopped showing its reason")
-    same(press(null), true, "Pressed again after that, Android doesn't ask: App info opens, where Contacts can be allowed")
-    same(press(null), true, "and every press after")
-    noes = 0; asked = false
-    same(press(null) to press(null), false to false, "A question dismissed comes up again, so nothing opens")
-    same(press(true), false, "Allowed: nothing opens")
-    // The first press ever, even if the pause were missed, never sends anyone away.
-    same(ContactsAsk.toSettings(false, questionShown = false, askedBefore = false, reasonBefore = false), false, "The first press asks")
-    same(ContactsAsk.toSettings(false, questionShown = false, askedBefore = true, reasonBefore = true), false,
-        "and a press while Android still shows its reason asks too")
+    same(press(false), false, "The second Don't allow: nothing opens either")
+    same(press(null), true, "The third press, which Android no longer asks about: App info opens")
+    same(press(null), true, "and the fourth")
+    // A quick second no, pressed in a hurry, is still counted from the reason: before true, after false.
+    noes = 0; stopped = false
+    press(false)
+    same(press(false, millis = 300) to stopped, false to true, "A quick second Don't allow opens nothing, and counts")
+    same(press(null), true, "then the next press opens App info")
+    // Dismissed questions come up again, so nothing opens, however many.
+    noes = 0; stopped = false
+    same(listOf(press(null), press(null), press(null)), listOf(false, false, false), "A dismissed question asks again")
+    same(press(true) to stopped, false to false, "Allowed: nothing opens, and the count starts over")
+    // Two noes on a build that didn't count yet: the first press now gets Android's own no, at once, and opens App info.
+    same(ContactsAsk.answered(false, stoppedBefore = false, reasonBefore = false, reasonAfter = false, millis = 150).toSettings, true,
+        "Noes from before the count: Android's no at once opens App info")
+    same(ContactsAsk.answered(false, stoppedBefore = false, reasonBefore = false, reasonAfter = false, millis = 2_000).toSettings, false,
+        "but a first question someone dismissed opens nothing")
     // Settings > Setup's row and the guide's contacts part both go through the one activity, which decides by ContactsAsk.
     val activity = File("android/kotlin/com/vandam/ink/ContactsPermissionActivity.kt").readText()
-    same("if (ContactsAsk.toSettings(granted, questionShown, askedBefore, reasonBefore)) {" in activity, true, "The activity decides by it")
-    same(Regex("""!granted && !shouldShowRequestPermissionRationale""").containsMatchIn(activity), false, "and no longer by the reason alone")
-    same("if (asking) questionShown = true" in activity, true, "Android's question is seen as the activity pauses under it")
-    same("reasonBefore = shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS)" in activity &&
-        activity.indexOf("reasonBefore = should") < activity.indexOf("requestPermissions("), true, "The reason is read before asking")
+    same("ContactsAsk.answered(granted, stoppedBefore, reasonBefore, reasonAfter, SystemClock.elapsedRealtime() - askedAt)" in activity,
+        true, "The activity decides by it")
+    same("preferences().edit().putBoolean(STOPPED, outcome.stopped).apply()" in activity, true, "and keeps the count")
+    same("onPause" in activity, false, "The pause under Android's screen counts for nothing: it pauses even when nothing is asked")
+    same(activity.indexOf("reasonBefore = should") in 0 until activity.indexOf("requestPermissions("), true, "The reason is read before asking")
     same("startActivityForResult(Intent(this, ContactsPermissionActivity::class.java), CONTACTS_REQUEST)" in
         File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText(), true, "The guide's part asks through it")
     same("ContactsPermissionActivity.start(activity)" in File("android/kotlin/com/vandam/ink/AppNativeAdapters.kt").readText(), true,

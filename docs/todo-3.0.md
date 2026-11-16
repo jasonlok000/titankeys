@@ -455,6 +455,15 @@ More calls get added here as the night goes.
 
 ## Later, after the languages work on the phone (owner, 2026-11-16)
 
+- **Engines study, on main (`docs/studies/56-engines.md`), waiting for the owner:**
+  - Japanese: Mozc (BSD-3, maintained, builds an Android library), about 2 weeks and 20–25 MB. Rime with jaroomaji
+    (Apache-2.0) was tried on the PC: single words right, sentences break (no Japanese grammar), 26 MB.
+  - Hindi: jquery.ime's rule tables (GPL-3.0) in a small rule runner, about a week; the runner then serves other Indic
+    scripts. Thai: keyboard work only (Kedmanee keymap, word breaking). Right to left: keyboard and UI work only.
+  - Proposed order: Thai, Hindi, Japanese, then right to left (Hebrew first).
+  - Needs the owner's yes: running Bazel in WSL (it downloads bazelisk, Bazel and Mozc's pinned dependencies) to build
+    Mozc and measure it.
+
 - **Next after the basic phone tests: switching languages inside TitanKeys** with the held-Sym overlay, never Android's
   picker (owner, 2026-11-16). Today a held Sym opens the Sym panel instead; the Sym log now works on the phone (with
   `log.tag.TitanKeysSym`) to show why. Alt+Sym stays as it is: it opens Android's list for other keyboards (owner).

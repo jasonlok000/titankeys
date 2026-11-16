@@ -455,6 +455,10 @@ More calls get added here as the night goes.
 
 ## Later, after the languages work on the phone (owner, 2026-11-16)
 
+- **Next after the basic phone tests: switching languages inside TitanKeys** with the held-Sym overlay, never Android's
+  picker (owner, 2026-11-16). Today a held Sym opens the Sym panel instead; the Sym log now works on the phone (with
+  `log.tag.TitanKeysSym`) to show why. Alt+Sym to skip TitanKeys' own languages (the Orchestrator's call, to confirm).
+
 - **Refine the languages** once the owner has seen them working: a context model like English's next-word model to help
   autocorrect and suggestions in other languages (maybe in 3.0), and other optimizing.
 - **Download on demand** stays a future option, only if the app's size ever passes Play's limit.

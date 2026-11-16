@@ -71,7 +71,10 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
       bundle patch. That's for the owner, since only the owner makes Play builds.
   - **Waiting for the owner's hands:** #89, #93 and #84 by touch; #66's distance; #68's hunts; #72's Sym check; the panel
     page lines while paging.
-- **M2, started 03:40, on code that doesn't need the phone:**
+- **main at 58ce707 (03:50) has all of M1 and #83's rule.** It passes `bun run check` (222), all 41 test suites, the join
+  checks and the Debug build. The phone checklist for the evening, or whenever the phone is free, is in the Orchestrator's
+  scratchpad, `m1-phone-checks.md`.
+- **M2, started 03:50, on code that doesn't need the phone:**
   - tk-data: #81's code rename first, then each worker merges main in.
   - tk-languages: the language framework, generic Latin languages, Settings > Languages with English spelling inside
     (#80), and one keyboard-list entry per input method (#76).

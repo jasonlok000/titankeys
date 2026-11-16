@@ -39,7 +39,25 @@ fun main() {
     theMenuKeepsToItsKeys()
     onlyStoredWordsOpen()
     unblockTakesADictionaryWordOut()
+    theKeysComeInPairs()
     println("Word menu checks passed")
+}
+
+/**
+ * The menu's keys come in pairs, I/K and O/L, with Back on P/Backspace (owner, #67): each key of a pair does the same, I, O and P
+ * keep working, and the app names them in pairs where it names them at all.
+ */
+private fun theKeysComeInPairs() {
+    for ((top, under) in listOf("I" to "K", "O" to "L", "P" to Layout.BACKSPACE)) {
+        check(MenuKeys.hovered(top) >= 0) { "#67: $top still works in the menu" }
+        same(MenuKeys.hovered(under), MenuKeys.hovered(top), "#67: $under does what $top does")
+    }
+    same(listOf("I", "O", "P").map(MenuKeys::hovered), listOf(MenuKeys.UP, MenuKeys.DOWN, MenuKeys.BACK), "#67: I up, O down, P back")
+    val haptics = File("lib/haptics.ts").readText().lines().filter { "word menu" in it || "with I" in it || "with O" in it || "press I" in it }
+    check(haptics.isNotEmpty()) { "#67: Settings > Haptics still describes the word menu's feels" }
+    for (line in haptics) check(!Regex("""\b(with|press) [IO]\b(?!/)""").containsMatchIn(line)) { "#67: Haptics names the keys in pairs: $line" }
+    val boring = File("app/settings/guide-boring.tsx").readText().lines().first { "\"The word menu\"" in it }
+    for (pair in listOf("I/K", "O/L", "P/Backspace")) check(pair in boring) { "#67: the boring guide's word menu names $pair" }
 }
 
 /** The model's Unblock is the engine's (bug hunt #25): a dictionary word goes on the list taken out, and the keyboard calls it. */

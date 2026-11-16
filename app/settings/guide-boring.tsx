@@ -66,7 +66,8 @@ export default function BoringGuide() {
     </Section>
     <Section title="The bar">
       <Topic title="Word suggestions">{"The bar above the keys shows words and spelling fixes as you type. Touch one to type it. The best guess is always in the middle, and the three places never move. A long word shrinks to fit its place. If it still doesn't fit, it shows the part where it differs from the others, like …mendations. Don't want the bar at all? Turn off Show the bar in Settings."}</Topic>
-      <Topic title="The word menu">{"Hold a word on the bar for its menu. I moves the word up a step and O moves it down: Blocked, Not saved, Saved, Favourite. Saved means TitanKeys knows the word: it's in the dictionary, you typed it twice, or you saved it. Unsave takes a word out without blocking it, so typing it twice brings it back. Block keeps it out until you unblock it. Rest a finger on I or O to see what the press will do, then press. P or Backspace closes the menu."}</Topic>
+      {/* The keys named in pairs, I/K, O/L and P/Backspace (#67). F (docs/words-m1.md). */}
+      <Topic title="The word menu">{"Hold a word on the bar for its menu. I/K moves the word up a step and O/L moves it down: Blocked, Not saved, Saved, Favourite. Saved means TitanKeys knows the word: it's in the dictionary, you typed it twice, or you saved it. Unsave takes a word out without blocking it, so typing it twice brings it back. Block keeps it out until you unblock it. Rest a finger on I/K or O/L to see what the press will do, then press. P/Backspace closes the menu."}</Topic>
       <Topic title="A selected word">{"Pick a word in your text and the bar shows it alone in the middle. Touch it for the same menu."}</Topic>
       <Topic title="Your newest copy">{"Right after you copy something, the bar offers it. Touch it to paste. It goes away once you type on. Older copies are in the clipboard: press Sym, then A."}</Topic>
       <Topic title="Shift, Alt and Ctrl">{"When you press or hold Shift, Alt or Ctrl, the bar shows it in place of your words. Filled means you're holding the key, an outline means you pressed it once, and Caps means Shift is locked. Rest your finger on a key to see what it types. The only exception is the capital at the start of a sentence: that one keeps your words."}</Topic>
@@ -86,15 +87,16 @@ export default function BoringGuide() {
     </Section>
     <Section title="Symbols and emoji">
       <Topic title="Alt symbols">{"Each letter has a symbol printed in its corner. Press Alt, then the letter, to type it. Or hold the letter, if that's on."}</Topic>
-      <Topic title="The Sym panel">{"Press Sym for every other symbol. Each letter key shows one. Rest your finger on a key to mark it, then press it to type the symbol, and the panel closes. Q and A are empty, and P shows the page. For more, swipe up or down on the keys, or press Backspace or Enter. Swipe left or right to change group, or put your finger on the bottom row and slide to one."}</Topic>
-      <Topic title="Emoji">{"Press Sym twice for emoji. Once you've used some, Recent comes first. Press a key to type its emoji. Swipe up or down for more, and left or right to change group. The marks along the bottom show the groups: touch one, or slide along the bottom row to it. Press Sym again to close the panel."}</Topic>
+      {/* Every swipe on a panel says "on the keys", here, in Emoji and in The clipboard. F (docs/words-m1.md). */}
+      <Topic title="The Sym panel">{"Press Sym for every other symbol. Each letter key shows one. Rest your finger on a key to mark it, then press it to type the symbol, and the panel closes. Q and A are empty, and P shows the page. For more, swipe up or down on the keys, or press Backspace or Enter. Swipe left or right on the keys to change group, or put your finger on the bottom row and slide to one."}</Topic>
+      <Topic title="Emoji">{"Press Sym twice for emoji. Once you've used some, Recent comes first. Press a key to type its emoji. Swipe up or down on the keys for more, and left or right to change group. The marks along the bottom show the groups: touch one, or slide along the bottom row to it. Press Sym again to close the panel."}</Topic>
       <Topic title="Emoji by name">{"Type :smile: and you get 😄. After a colon and two letters, the bar shows emoji that match. Press Backspace right after to get the name back. Turn it off with Type :name: for an emoji in Settings."}</Topic>
       <Topic title="Quick settings">{"With the panel open, press Alt for the quick settings. Rest your finger on a key to see its setting and whether it's on. Press the key to switch it. A dim key means off. O opens all settings, and K lists your keyboards so you can pick another. Press Alt to go back, or Sym to close."}</Topic>
     </Section>
     <Section title="Copy and paste">
       <Topic title="Copy, cut and paste">{"Pick some text, then hold fn and press C to copy, X to cut, or V to paste. fn works as Ctrl, so every Ctrl shortcut works with it."}</Topic>
       <Topic title="Use fn as Ctrl">{"On by default. Want fn for the phone's own shortcuts instead? Turn off Use fn as Ctrl in Settings."}</Topic>
-      <Topic title="The clipboard">{"Press Sym, then A. Your last copies are there, newest first, a few to a page. Press a key to paste its clip. Enter pins clips so they stay. Backspace clears the ones that aren't pinned. Alt goes back to the symbols."}</Topic>
+      <Topic title="The clipboard">{"Press Sym, then A. Your last copies are there, newest first, a few to a page. Swipe up or down on the keys for more, and left or right for Pinned. Press a key to paste its clip. Enter pins clips so they stay. Backspace clears the ones that aren't pinned. Alt goes back to the symbols."}</Topic>
     </Section>
     <Section title="Shortcuts">
       <Topic title="Snippets">{`Type a shortcut like ${start}addr and press Space. It turns into your address, or whatever you saved for it. Press Backspace right after to get the shortcut back. ${typeStart} Make snippets in Settings > Snippets, where you can also pick another symbol for the start and back them up.`}</Topic>
@@ -106,7 +108,8 @@ export default function BoringGuide() {
       <Topic title="New words">{"TitanKeys learns the new words you type, so it suggests them next time. Turn that off with Learn new words I type in Settings > Your words. Typing in password fields and private fields teaches it nothing."}</Topic>
       <Topic title="Saved and blocked words">{"Saved words always show up. Blocked words never do. Both lists are in Settings > Your words, where you can add or remove words. The word menu on the bar fills them too."}</Topic>
       <Topic title="Names from your contacts">{"Turn on Names from my contacts in Settings > Your words, and the names on your phone swipe right, with their capitals. They stay on your phone."}</Topic>
-      <Topic title="Backup">{"Your words > Export words saves a backup file. Import words brings it back, on this phone or a new one. Remove learned words wipes everything TitanKeys learned from you."}</Topic>
+      {/* F: draft (#65): Export words and Import words became Back up everything and Restore, with snippets and settings in it. */}
+      <Topic title="Backup">{"Your words > Back up everything saves one file with your words, snippets, shorthand, app lists and settings. Restore brings it back, on this phone or a new one. Remove learned words wipes everything TitanKeys learned from you."}</Topic>
     </Section>
     <Section title="Look and feel">
       <Topic title="Feel the keys">{"A little buzz for each key your swipe crosses, so you can swipe without looking. Pick what buzzes, or turn it all off, in Settings > Haptics."}</Topic>

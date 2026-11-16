@@ -58,6 +58,8 @@ private data class Frame(
     val gap: Int = -1,
     /** The key that the slide's spot lights in this frame, and the keys held, steady. See [GuideCue.Spot]. */
     val spot: String? = null,
+    /** The rest of a spot that lights its keys together, as the word menu's I/K (owner, #67). */
+    val together: List<String> = emptyList(),
     val held: List<String> = emptyList(),
     /** How much of a hunt's bar is left under the instruction, from 1 to 0, or null for no bar. */
     val hunt: Float? = null,
@@ -119,9 +121,8 @@ private fun fieldFor(step: GuideStep): Frame = when (step.id) {
     } else at(step, END_TEXT)
 }
 
-/** The steering slides' field, as GuideActivity seeds it: the last few lines finished so far, then the slide's own. */
-private fun steeringText(step: GuideStep) =
-    (GUIDE_STEPS.takeWhile { it.id != step.id }.map { it.line }.filter { it.isNotEmpty() }.takeLast(4) + step.seed).joinToString("\n") + " "
+/** The steering slides' field, as GuideActivity seeds it: only the slide's own line, as on every slide (owner, M1). */
+private fun steeringText(step: GuideStep) = step.seed + " "
 
 /** The field once the slide is passed: its line, finished. */
 private fun passedField(step: GuideStep, before: Frame): Frame = when (step.id) {
@@ -130,7 +131,7 @@ private fun passedField(step: GuideStep, before: Frame): Frame = when (step.id) 
     "menu" -> before
     "flick" -> at(step, "$FLICK_LINE ", FLICK_LINE.length - " word".length)
     "hold" -> at(step, "$HOLD_LINE ", "Delete ".length)
-    "steer" -> before.copy(start = before.start - 40, end = before.start - 40)
+    "steer" -> before.copy(start = (before.start - 12).coerceAtLeast(0), end = (before.start - 12).coerceAtLeast(0))
     "selectmore" -> before.copy(start = before.target!!.first, end = before.target.last + 1)
     "paste" -> at(step, "$PASTE_LINE ", PASTE_LINE.length)
     else -> if (step.symbol != null) at(step, step.line, gapCursor(step.line, step.symbol) + step.symbol.length) else before
@@ -146,7 +147,8 @@ private fun framesFor(step: GuideStep): List<Frame> {
             else null
         return from.copy(name = "${step.id}-$name", title = title, line = line, chip = chip, passed = passed, panel = if (passed) null else panel,
             labels = if (passed) null else stage?.labels, held = if (passed) emptyList() else spot?.held.orEmpty(),
-            spot = if (passed) null else spot?.keys?.firstOrNull(), zones = field.zones)
+            spot = if (passed) null else spot?.keys?.firstOrNull(), zones = field.zones,
+            together = if (passed || spot?.together != true) emptyList() else spot.keys.drop(1))
     }
     val frames = ArrayList<Frame>()
     val first = step.stages.firstOrNull()?.text ?: step.body
@@ -182,10 +184,15 @@ private fun framesFor(step: GuideStep): List<Frame> {
         val stage = step.stages[1]
         frames.removeAll { it.name.endsWith("-2-hint2") }
         frames += frame("2-hunt0s", step.title, stage.text, stage = stage).copy(hunt = 1f)
-        frames += frame("2-hunt10s", step.title, stage.text, stage = stage).copy(hunt = .5f)
+        frames += frame("2-hunt${HUNT_DRAIN_SECONDS / 2}s", step.title, stage.text, stage = stage).copy(hunt = .5f)
         frames += frame("2-hunt${HUNT_DRAIN_SECONDS}s", step.title, huntLine(stage.text, HUNT_DRAIN_SECONDS), chip = hunt.mock, stage = stage)
         frames += frame("2-hunt${HUNT_HINT_SECONDS}s", step.title, huntLine(stage.text, HUNT_HINT_SECONDS), chip = hunt.hint, stage = stage)
         frames += frame("2-hunt${HUNT_SKIP_SECONDS}s", step.title, huntLine(stage.text, HUNT_SKIP_SECONDS), chip = hunt.skip, stage = stage)
+    }
+    // The line for each place in the panels (owner, M1; F's words): see panelLine. One frame for each line the slide has.
+    for ((spot, line) in step.pageLines) {
+        val stage = step.stages.last()
+        frames += frame("2-page-${spot.name.lowercase()}", step.title, line, stage = stage)
     }
     if (step.id == "selectmore") {
         val aim = field.target!!
@@ -455,13 +462,9 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
     var start = frame.start
     var target = frame.target
     if (frame.steer != SteerAim.None) {
-        val other = (cursorLine - 1).coerceAtLeast(0)
-        val otherEnd = (starts.getOrNull(other + 1) ?: all.length) - 1
-        fun x(at: Int): Float {
-            val line = starts.indexOfLast { it <= at }
-            return g.fontMetrics.stringWidth(all.substring(starts[line], at)).toFloat()
-        }
-        target = steerTarget(all, starts[other]..otherEnd, x(frame.start)) { x(it) }
+        // The cursor's own line, as the field wraps it: the target is left of the cursor there (owner, #66).
+        val lineEnd = (starts.getOrNull(cursorLine + 1) ?: all.length) - 1
+        target = steerTarget(all, starts[cursorLine]..lineEnd, frame.start)
         if (target == null) mark(g, "NO STEER TARGET", top)
         if (frame.steer == SteerAim.Entered && target != null) start = target.first + 2
     }
@@ -526,7 +529,7 @@ private const val BRIGHT = 5f
 private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
     val id = frame?.name?.substringBefore('-')
     val corners = id == "alt" || id == "holdsym"
-    V2.keys(g, top, lit = setOfNotNull(frame?.spot), held = frame?.held?.toSet() ?: emptySet(), hints = frame?.labels,
+    V2.keys(g, top, lit = setOfNotNull(frame?.spot) + frame?.together.orEmpty(), held = frame?.held?.toSet() ?: emptySet(), hints = frame?.labels,
         corners = corners, zones = frame?.zones == true)
     if (corners) V2.note(g, "render note: the corner symbols here are approximate; the phone reads its own", side, top - dp(6))
     // Each key's label must fit in its key.

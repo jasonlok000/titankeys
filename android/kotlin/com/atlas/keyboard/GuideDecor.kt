@@ -133,7 +133,7 @@ class GuideDecor(private val font: Typeface? = null) {
             "backspace" -> struckE(t)
             "flick" -> paperBalls(t)
             "hold" -> shredder(t)
-            "steer" -> nightDrive(t)
+            "steer" -> caretHop(t)
             "selectmore" -> heartbeat(t)
             "alt" -> asteriskSnow(t)
             "holdsym" -> buoys(t)
@@ -561,101 +561,81 @@ class GuideDecor(private val font: Typeface? = null) {
         canvas.drawText(letter, x + size / 2, y + 8f * dp, paint)
     }
 
-    // Steering
+    // Cursor
 
     /**
-     * Night drive: a road winds away to the horizon in the open band, bending one way and then the other, its centre dashes and
-     * roadside posts streaming towards you, under a moon.
+     * Caret hop: a line of words, drawn as rounded bars, runs through the band under the field, and a big text cursor hops left
+     * along it, a word or two at a time, to the word underlined under it, as the slide asks. The cursor stays put and the line moves
+     * under it, so the loop never runs out of words: three hops move the line by exactly one round of its words (owner, #66: no
+     * steering, "with the graphics etc too", in place of the night drive).
      */
-    private fun nightDrive(t: Float) {
+    private fun caretHop(t: Float) {
         val g = lower()
-        val vx = area.centerX()
-        val vy = g[0] + 4f * dp
-        val bottom = g[1] + (g[1] - vy) * .5f
-        val half = .5f * area.width()
-        val bend = .2f * area.width() * sin(TAU * t / DRIVE_LOOP)
-        // Along the road, s runs from the horizon (0) to under the car (1).
-        fun centre(s: Float) = vx + bend * (1f - s) * (1f - s)
-        fun y(s: Float) = vy + (bottom - vy) * s
-        val n = 24
+        val k = min(1f, (g[1] - g[0]) / (64f * dp))
+        if (k <= .3f) return
+        val y = (g[0] + g[1]) / 2 + 4f * dp
+        val gap = CARET_GAP * dp * k
+        val period = CARET_WORDS.sum() * dp * k + gap * CARET_WORDS.size
+        fun start(i: Int) = (0 until i).fold(0f) { at, w -> at + CARET_WORDS[w] * dp * k + gap }
+        fun centre(i: Int) = start(i) + CARET_WORDS[i] * dp * k / 2
+        // Where the caret is in the line: from one target to the next, then a rest on it.
+        val hop = min(floor(t / CARET_HOP).toInt(), CARET_TARGETS.size - 1)
+        val local = (t - hop * CARET_HOP) / CARET_HOP
+        val from = centre(CARET_TARGETS[hop])
+        val next = CARET_TARGETS[(hop + 1) % CARET_TARGETS.size]
+        val to = centre(next) - if (hop == CARET_TARGETS.size - 1) period else 0f
+        val moved = sine(local / CARET_MOVE)
+        val at = from + (to - from) * moved
+        val cx = area.left + area.width() * .62f
+        val h = 11f * dp * k
+        // The words, every round of them that shows, as one layer.
         path.reset()
-        for (i in 0..n) {
-            val s = i / n.toFloat()
-            if (i == 0) path.moveTo(centre(s) - half * s - 2f * dp, y(s)) else path.lineTo(centre(s) - half * s - 2f * dp, y(s))
+        val first = floor((at - (cx - area.left)) / period).toInt() - 1
+        val last = floor((at + (area.right - cx)) / period).toInt() + 1
+        for (m in first..last) for (i in CARET_WORDS.indices) {
+            val left = cx + m * period + start(i) - at
+            val right = left + CARET_WORDS[i] * dp * k
+            if (right < area.left || left > area.right) continue
+            roundRect(left, y - h / 2, right, y + h / 2, h / 2)
         }
-        for (i in n downTo 0) {
-            val s = i / n.toFloat()
-            path.lineTo(centre(s) + half * s + 2f * dp, y(s))
-        }
-        path.close()
-        fill(.13f)
+        fill(.42f)
         canvas.drawPath(path, paint)
-        path.reset()
-        for (side in intArrayOf(-1, 1)) for (i in 0..n) {
-            val s = i / n.toFloat()
-            val x = centre(s) + side * (half * s + 2f * dp)
-            if (i == 0) path.moveTo(x, y(s)) else path.lineTo(x, y(s))
-        }
-        stroke(.85f, 2.6f * dp)
-        canvas.drawPath(path, paint)
-        stroke(.45f, 1.8f * dp)
-        canvas.drawLine(area.left, vy, area.right, vy, paint)
-        shapes += 2
-        for (d in 0 until DASHES) {
-            val z = 1f - frac(d.toFloat() / DASHES + t / DASH_LOOP)
-            val s0 = along(z)
-            val s1 = along(max(z - .07f, 0f))
-            val fadeIn = smooth(s0 / .1f)
-            if (fadeIn <= 0f) continue
-            val w0 = (.6f + 7f * s0) * dp
-            val w1 = (.6f + 7f * s1) * dp
-            path.reset()
-            path.moveTo(centre(s0) - w0, y(s0))
-            path.lineTo(centre(s0) + w0, y(s0))
-            path.lineTo(centre(s1) + w1, y(s1))
-            path.lineTo(centre(s1) - w1, y(s1))
-            path.close()
-            fill(fadeIn)
-            canvas.drawPath(path, paint)
-            shapes++
-        }
-        // Roadside posts, two a side, each with its reflector.
-        for (p in 0 until 4) {
-            val side = if (p % 2 == 0) -1f else 1f
-            val z = 1f - frac((p / 2) / 2f + (if (side > 0f) .25f else 0f) + t / DASH_LOOP)
-            val s = along(z)
-            val fadeIn = smooth(s / .1f)
-            if (fadeIn <= 0f) continue
-            val px = centre(s) + side * half * s * 1.18f
-            val py = y(s)
-            val tall = (4f + 60f * s) * dp
-            val wide = (.8f + 4.4f * s) * dp
-            path.reset()
-            roundRect(px - wide, py - tall, px + wide, py, min(wide, 2f * dp))
-            fill(.7f * fadeIn)
-            canvas.drawPath(path, paint)
-            fill(fadeIn)
-            canvas.drawRect(px - wide, py - tall, px + wide, py - tall * .78f, paint)
-            shapes++
-        }
-        // The moon, in the band above the title.
-        val up = upper() ?: return
-        val r = min(20f * dp, (up[1] - up[0]) / 2 - 2f * dp)
-        if (r <= 6f * dp) return
-        val mx = area.left + area.width() * .8f
-        val my = (up[0] + up[1]) / 2
-        fill(.95f)
-        canvas.drawCircle(mx, my, r, paint)
-        path.reset()
-        path.addCircle(mx + r * .42f, my - r * .22f, r * .86f, Path.Direction.CW)
-        erase()
         shapes++
-    }
-
-    /** Where a point [z] of the way back to the horizon appears on the road: perspective, with far things bunched up. */
-    private fun along(z: Float): Float {
-        val k = 6f
-        return (1f / (1f + k * z) - 1f / (1f + k)) / (1f - 1f / (1f + k))
+        // The target's underline: it comes in as the hop starts, holds bright once the caret is there, and goes before the next.
+        val width = CARET_WORDS[next] * dp * k
+        val lineX = cx + (to - at) - width / 2
+        val shown = smooth(local / .12f) * (1f - smooth((local - .9f) / .1f))
+        if (shown > 0f) {
+            stroke((.55f + .45f * smooth((local - CARET_MOVE) / .1f)) * shown, 3.4f * dp * k)
+            canvas.drawLine(lineX, y + h / 2 + 7f * dp * k, lineX + width, y + h / 2 + 7f * dp * k, paint)
+            shapes++
+        }
+        // A trail of dots behind the caret while it moves, fading as it settles.
+        val trail = (1f - smooth((local - CARET_MOVE) / .15f)) * smooth(local / .05f)
+        if (trail > 0f && to != from) {
+            path.reset()
+            val span = (at - from).let { if (it < 0f) -it else it }
+            var d = 10f * dp * k
+            while (d < span) {
+                path.addCircle(cx + d, y, 2.2f * dp * k, Path.Direction.CW)
+                d += 9f * dp * k
+            }
+            fill(.6f * trail)
+            canvas.drawPath(path, paint)
+            shapes++
+        }
+        // The caret: an I-beam, solid, never blinking, as the keyboard's own cursor drawing.
+        val top = y - 26f * dp * k
+        val bottom = y + 26f * dp * k
+        val half = 1.8f * dp * k
+        val serif = 7f * dp * k
+        path.reset()
+        roundRect(cx - half, top, cx + half, bottom, half)
+        roundRect(cx - serif, top, cx + serif, top + 2 * half, half)
+        roundRect(cx - serif, bottom - 2 * half, cx + serif, bottom, half)
+        fill(1f)
+        canvas.drawPath(path, paint)
+        shapes++
     }
 
     /** Heartbeat: a bold ECG line traces across, flat, beat, beat, flat, and filled hearts pulse on the beats. */
@@ -1590,10 +1570,13 @@ class GuideDecor(private val font: Typeface? = null) {
         private const val SHRED_PITCH = 92f
         private const val SHRED_STRIPS = 5
         private const val SHRED_LETTERS = "TKAWSLOE"
-        /** The road bends one way and back over this; its dashes and posts come round every [DASH_LOOP]. */
-        private const val DRIVE_LOOP = 12000f
-        private const val DASH_LOOP = 4000f
-        private const val DASHES = 5
+        /** The caret hop's words, in dp, the gap between them, and the words it hops to, leftwards, one hop each [CARET_HOP]. */
+        private val CARET_WORDS = floatArrayOf(40f, 24f, 56f, 30f, 48f, 26f)
+        private const val CARET_GAP = 14f
+        private val CARET_TARGETS = intArrayOf(4, 2, 0)
+        private const val CARET_HOP = 4000f
+        /** The part of a hop that the caret moves for; it rests on the word for the rest. */
+        private const val CARET_MOVE = .45f
         private val BEATS = floatArrayOf(.28f, .56f)
         private const val SNOW_LOOP = 20000f
         private const val BUOY_LOOP = 20000f

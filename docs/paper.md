@@ -1022,7 +1022,7 @@ The tone is sarcastic on purpose, but the joke never hides the instruction. Case
 - **Colours:** black background, cream text (#FFF1E6), muted (#99918A), surface (#161210), divider (#2A2623). Orange (#EF804E) means one thing: what to do now or what just happened. On the orange pass screen every text turns ink (#160A04).
 - **The keyboard drawing** is the real shape, edge to edge, at 60% of its height: square keys, no gap between keys, 10.5 px between rows. The keys a slide is about are orange.
 - **One motion** for every change: 220 ms, ease-out, fading and rising 8 dp. The pass floods the screen orange for 400 ms.
-- **Decorations** behind each slide (a red pen, a night drive, a heartbeat, grass at the end) are only there to look at: they never react to typing and never mean anything. Flat shapes only, at most 12 at once, slow loops of 6-20 s, up to 30 fps, stopped when the screen is off, and still with animations off.
+- **Decorations** behind each slide (a red pen, a hopping cursor, a heartbeat, grass at the end) are only there to look at: they never react to typing and never mean anything. Flat shapes only, at most 12 at once, slow loops of 6-20 s, up to 30 fps, stopped when the screen is off, and still with animations off.
 
 ### 10.4 The playground
 

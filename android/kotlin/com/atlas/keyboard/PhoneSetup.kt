@@ -31,15 +31,26 @@ internal object PhoneSetup {
         SetupPart.Overlay -> overlay(context)
         SetupPart.ScrollAssistant -> scrollAssistant()
         SetupPart.Back -> BackService.enabled(context)
+        // Phones without these keys count as done, so they never see the part (PhoneChecks.programmable).
+        SetupPart.Keys -> PhoneChecks.programmable(context, PhoneChecks.Key.Sym) && PhoneChecks.programmable(context, PhoneChecks.Key.Fn)
+        // Answered once in the guide, either way, or already on from Settings.
+        SetupPart.Contacts -> skipped(context, SetupPart.Contacts) || TypingSettings.contactNames(context)
     }
 
     /**
-     * The parts that are not done yet, in the order that setup asks for them. Accessibility is optional: after "No thanks" on
-     * its disclosure ([BackDisclosureActivity]), setup goes on without it, and Settings > Setup can still ask again.
+     * The parts that are not done yet, in the order that setup asks for them. Accessibility is optional: after "Not now" on
+     * its disclosure ([BackDisclosureActivity]), setup goes on without it, and Settings > Setup can still ask again. Sym and fn
+     * can be skipped (owner, #72), and contact names are asked once (owner, #87).
      */
-    fun missing(context: Context) = SetupPart.entries.filterNot {
-        done(context, it) || it == SetupPart.Back && BackDisclosureActivity.declined(context)
-    }
+    fun missing(context: Context) =
+        setupToAsk({ done(context, it) }, BackDisclosureActivity.declined(context)) { skipped(context, it) }
+
+    /** [part] was skipped in the guide's setup, or for contact names, answered: the guide doesn't ask again. */
+    fun skipped(context: Context, part: SetupPart) = preferences(context).getBoolean(skipKey(part), false)
+
+    fun skip(context: Context, part: SetupPart) = preferences(context).edit().putBoolean(skipKey(part), true).apply()
+
+    private fun skipKey(part: SetupPart) = "skipped_${part.name.lowercase()}"
 
     /**
      * The Settings pages that change [part], best first: TitanKeys' own page with its switch where Android lets an app open it,
@@ -65,6 +76,9 @@ internal object PhoneSetup {
                 listOf(Intent(ACCESSIBILITY_DETAILS_SETTINGS).putExtra(Intent.EXTRA_COMPONENT_NAME, service), list)
             else listOf(list)
         }
+        SetupPart.Keys -> listOf(PhoneChecks.shortcutKeysPage(context))
+        // Android's own question, from an app screen: the guide starts ContactsPermissionActivity itself.
+        SetupPart.Contacts -> emptyList()
     }
 
     /**

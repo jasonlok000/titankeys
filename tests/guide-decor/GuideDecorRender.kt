@@ -217,7 +217,7 @@ private class Screen(val area: RectF, val keepOut: List<RectF>, val texts: List<
 private val TITLES = mapOf(
     "type" to "MAKE A TYPO. WE'LL FIX IT.", "swipe" to "SWIPE IT. ONE HAND, NO QUESTIONS.", "menu" to "SAVE A WORD. THEN UNSAVE IT.",
     "backspace" to "DELETE THE EXTRA E. THE OLD WAY.", "flick" to "FLICK AWAY THE STUPID WORD.", "hold" to "HOLD THE FLICK. DELETE IN BULK.",
-    "steer" to "STEER TO THE UNDERLINED WORD.", "selectmore" to "GRAB MY WHOLE HEART. THREE TAPS.",
+    "steer" to "MOVE TO THE UNDERLINED WORD.", "selectmore" to "GRAB MY WHOLE HEART. THREE TAPS.",
     "alt" to "ADD THE *, THE TRADITIONAL WAY.", "holdsym" to "ADD THE ?. HOLD V FOR IT.", "symmain" to "ADD THE &. IT'S BEHIND SYM.",
     "symgroups" to "FIND THE WEIRD ONE. IT'S FURTHER IN.", "clown" to "SIGN IT WITH A CLOWN.", "paste" to "PASTE OVER THE ORANGE WORDS.",
     "clipboard" to "PASTE THE ONE NICE CLIP.",

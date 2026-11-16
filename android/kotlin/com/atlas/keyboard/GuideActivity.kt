@@ -51,6 +51,7 @@ import android.widget.TextView
 import com.atlas.connected.Connected
 import com.atlas.connected.Contributions
 import com.atlas.engine.TypingSettings
+import com.vandam.ink.ContactsPermissionActivity
 import org.json.JSONObject
 import kotlin.math.hypot
 import kotlin.math.max
@@ -807,7 +808,8 @@ class GuideActivity : Activity() {
             val seconds = huntSeconds()
             if (seconds >= HUNT_DRAIN_SECONDS) {
                 huntBar.visibility = View.GONE
-                if (flow.stage == 1) body.text = huntLine(flow.instruction, seconds)
+                // The count goes on the page's own line, when one shows (owner, M1).
+                if (flow.stage == 1) body.text = huntLine(flow.liveLine() ?: flow.instruction, seconds)
             }
             // Each once, even if a tick comes late: the mockery, a subtle hint, then the hint and leave to skip (owner, v5).
             if (seconds >= HUNT_DRAIN_SECONDS && huntSaid < 1) {
@@ -1050,7 +1052,13 @@ class GuideActivity : Activity() {
         openedPart?.let { part ->
             openedPart = null
             main.removeCallbacks(watchSetup)
-            if (!PhoneSetup.done(this, part)) part.help?.let(::showHint)
+            if (!PhoneSetup.done(this, part)) {
+                // A part that can be passed over keeps its Not now in the hint line, so its help takes the body's place.
+                if (part.skip != null) {
+                    part.help?.let { swapIn(body, it, 0) }
+                    showSetupSkip(part)
+                } else part.help?.let(::showHint)
+            }
         }
         if (autoPart != null) {
             main.removeCallbacks(openAuto)
@@ -2190,7 +2198,18 @@ class GuideActivity : Activity() {
         }
         if (said != null) main.postDelayed({ if (!passed && flow.step === step) showChip(said) }, ENTER_MILLIS)
         hideHint()
+        liveShown = null
+        panelHintShown = null
         if (missing == GuideNeed.FnAsCtrl) offerDecline()
+        // Sym or fn isn't Programmable key, as setup's part for them was skipped: the slide can't work, so one line says to skip
+        // it, and Skip shows at once. No button (owner, #72).
+        keyOff(step)?.let { key ->
+            keepHint = true
+            showHint(keyOffLine(key))
+            keepHint = false
+            main.removeCallbacks(revealSkip)
+            main.postDelayed(revealSkip, ENTER_MILLIS)
+        }
 
         if (step.offersShare) Contributions.guideEnded(this)
         // The keyboard starts the step in the menu that it needs: the Sym panel for Alt and the emoji, closed for typing.
@@ -2661,10 +2680,10 @@ class GuideActivity : Activity() {
             return
         }
         demo?.let { showPhantom(it, t) }
-        // Once the menu is really open, the demo presses I: the save, then the favourite.
+        // Once the menu is really open, the demo presses I/K, both keys lit as one: the save, then the favourite (owner, #67).
         if (flow.step.bar == GuideBar.Menu && flow.stage >= 1 && demoKeys == 0 && t > MENU_O_OPEN_AT) {
             demoKeys = 1
-            keys.light("I")
+            for (key in MENU_UP_KEYS) keys.light(key)
         }
         main.postDelayed(demoTick, DEMO_FRAME_MILLIS)
     }
@@ -2948,7 +2967,11 @@ class GuideActivity : Activity() {
 
     private fun offerPressed() {
         setupPart?.let {
-            if (!setupChanging) openPart(it)
+            if (keysWarning) {
+                // Set them up: back to the part as it was.
+                keysWarning = false
+                setUp(it, auto = false)
+            } else if (!setupChanging) openPart(it)
             return
         }
         val step = flow.step
@@ -3043,6 +3066,7 @@ class GuideActivity : Activity() {
             for (view in listOf(chapter, close)) view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         }
         setupPart = part
+        keysWarning = false
         decorate(GuideDecor.SETUP)
         guideLook(false)
         unlockKeyboard()
@@ -3051,6 +3075,7 @@ class GuideActivity : Activity() {
         swapIn(title, part.title, 0)
         swapIn(body, part.body, ENTER_STAGGER_MILLIS)
         showOffer(part.action)
+        showSetupSkip(part)
         main.removeCallbacks(openAuto)
         autoPart = part.takeIf { auto }
         if (auto && visible) main.postDelayed(openAuto, SETUP_AUTO_MILLIS)
@@ -3060,10 +3085,17 @@ class GuideActivity : Activity() {
         main.removeCallbacks(openAuto)
         autoPart = null
         hideHint()
-        // Google Play asks for its own disclosure before Accessibility opens. "No thanks" lets setup go on without it.
+        // Google Play asks for its own disclosure before Accessibility opens. "Not now" lets setup go on without it.
         if (part == SetupPart.Back && !BackDisclosureActivity.agreed(this)) {
             @Suppress("DEPRECATION")
             startActivityForResult(BackDisclosureActivity.forGuide(this), DISCLOSURE_REQUEST)
+            return
+        }
+        // Android asks for the contacts itself, from an app screen, which turns Names from my contacts on only if it's allowed.
+        // The part has said what it's for first (owner, #87).
+        if (part == SetupPart.Contacts) {
+            @Suppress("DEPRECATION")
+            startActivityForResult(Intent(this, ContactsPermissionActivity::class.java), CONTACTS_REQUEST)
             return
         }
         if (PhoneSetup.pages(this, part).isEmpty()) {
@@ -3080,6 +3112,42 @@ class GuideActivity : Activity() {
         awaitingAccessibility = part == SetupPart.Back
         main.removeCallbacks(watchSetup)
         main.postDelayed(watchSetup, SETUP_POLL_MILLIS)
+    }
+
+    /**
+     * A part that can be passed over has its line under the button: Skip with what won't work for Sym and fn (owner, #72:
+     * "skippable with a warning"), Not now for contact names (owner, #87). A press passes it over, and the guide doesn't ask again.
+     */
+    private fun showSetupSkip(part: SetupPart) {
+        hint.setOnClickListener(null)
+        val skip = (if (keysWarning) SetupPart.KEYS_WARN_SKIP else part.skip) ?: return
+        showHint(skip)
+        hint.onPress(haptics) {
+            if (setupPart != part || setupChanging) return@onPress
+            // The keys' Not now warns first, with what won't work: Skip anyway passes it, Set them up goes back (owner, #72).
+            if (part == SetupPart.Keys && !keysWarning) {
+                keysWarning = true
+                swapIn(title, SetupPart.KEYS_WARN_TITLE, 0)
+                swapIn(body, SetupPart.KEYS_WARN_BODY, ENTER_STAGGER_MILLIS)
+                showOffer(SetupPart.KEYS_WARN_BACK)
+                showSetupSkip(part)
+                return@onPress
+            }
+            keysWarning = false
+            hint.setOnClickListener(null)
+            main.removeCallbacks(watchSetup)
+            openedPart = null
+            PhoneSetup.skip(this, part)
+            checkKeyboard()
+        }
+    }
+
+    /** The keys' part shows its warning, after Not now: its button goes back to the part. */
+    private var keysWarning = false
+
+    /** The key [step] needs that isn't Programmable key, after setup's Keys part was skipped, or null. See [programmableKeys]. */
+    private fun keyOff(step: GuideStep): String? = keyOff(step, PhoneSetup.skipped(this, SetupPart.Keys)) { name ->
+        PhoneChecks.programmable(this, if (name == SYM_KEY) PhoneChecks.Key.Sym else PhoneChecks.Key.Fn)
     }
 
     /** A part of setup is done: a pulse and a line, then the [next] part, which opens by itself. After the last, the story starts. */
@@ -3107,8 +3175,21 @@ class GuideActivity : Activity() {
             showEndChoices()
             return
         }
+        // Android has answered about the contacts, yes or no: the guide doesn't ask again, and setup moves on (owner, #87).
+        if (requestCode == CONTACTS_REQUEST) {
+            PhoneSetup.skip(this, SetupPart.Contacts)
+            if (TypingSettings.contactNames(this)) checkKeyboard() else {
+                // Android said no: the part says so, and where to turn it on later, then setup moves on.
+                hideHint()
+                hint.setOnClickListener(null)
+                offer.visibility = View.GONE
+                SetupPart.Contacts.help?.let { swapIn(body, it, 0) }
+                main.postDelayed({ checkKeyboard() }, CONTACTS_NO_MILLIS)
+            }
+            return
+        }
         if (requestCode != DISCLOSURE_REQUEST) return
-        // After "Agree" Accessibility opens as before. After "No thanks" the part is no longer missing, and setup moves on.
+        // After "Agree" Accessibility opens as before. After "Not now" the part is no longer missing, and setup moves on.
         if (resultCode == RESULT_OK && setupPart == SetupPart.Back) openPart(SetupPart.Back) else checkKeyboard()
     }
 
@@ -3210,7 +3291,7 @@ class GuideActivity : Activity() {
 
     /**
      * Marks in orange what the slide aims at, in the field, and tells the slide (design v4): the stray letter on the Backspace slide,
-     * the last word on the flick slide, a word on the other line on the steer slide. The menu slide's TitanKeys is selected instead.
+     * the last word on the flick slide, a word left of the cursor on the steer slide. The menu slide's TitanKeys is selected instead.
      * Nothing on other slides, or once the guide's look is off.
      */
     private fun aim() {
@@ -3268,22 +3349,19 @@ class GuideActivity : Activity() {
         return false
     }
 
-    /** Puts [line] in the field again and again, with the cursor in the middle after a space. */
+    /** Puts [line] in the field, with a space after it. */
     private fun seedSteering(line: String) {
-        // The lines finished so far, then the slide's own: text to steer through that reads as the user's own, and never the
-        // same line again and again (owner, v5).
-        val before = GUIDE_STEPS.takeWhile { it.id != flow.step.id }.map { it.line }.filter { it.isNotEmpty() }.takeLast(STEER_LINES_BEFORE)
-        val text = (before + line).joinToString("\n") + " "
+        // Only the slide's own line, as on every slide (owner, #66 and M1: "this should also be one line only").
+        val text = "$line "
         field.setText(text)
         steerLength = text.length
-        val middle = text.length / 2
-        // The cursor starts at the end of the slide's line; the word to steer to is on a line above.
+        // The cursor starts at the end of the slide's line; the word to move to is on its line, to the left (owner, #66).
         field.setSelection(text.length - 1)
         steerAim = null
         inSteerAim = false
         if (flow.step.id == "steer") field.post { pickSteerAim() }
         // Grab a bunch: its words are marked, and the cursor waits right before them, their line at the top of the field.
-        if (flow.step.id == "selectmore") grabTarget(text, middle)?.let { words ->
+        if (flow.step.id == "selectmore") grabTarget(text, 0)?.let { words ->
             steerAim = words
             field.setSelection(words.first)
             field.post {
@@ -3295,21 +3373,17 @@ class GuideActivity : Activity() {
     }
 
     /**
-     * The steer slide's word, once the field has its lines: on the visible line that doesn't hold the cursor, a few words from its
-     * column, so both stay in the two lines (design v4). The field shows those two lines.
+     * The steer slide's word, once the field has its line: on the cursor's own line as the field wraps it, left of the cursor,
+     * picked from the line's words by [steerTarget], so it follows the line if its words change (owner, #66).
      */
     private fun pickSteerAim() {
         if (flow.step.id != "steer" || playground) return
         val own = field.layout ?: return
         val cursor = field.selectionStart.coerceAtLeast(0)
         val cursorLine = own.getLineForOffset(cursor)
-        val other = if (cursorLine + 1 < own.lineCount) cursorLine + 1 else cursorLine - 1
-        if (other < 0) return
         val text = field.text.toString()
-        steerAim = steerTarget(text, own.getLineStart(other) until own.getLineEnd(other), own.getPrimaryHorizontal(cursor)) {
-            own.getPrimaryHorizontal(it)
-        }
-        field.scrollTo(0, own.getLineTop(min(cursorLine, other)))
+        steerAim = steerTarget(text, own.getLineStart(cursorLine) until own.getLineEnd(cursorLine), cursor)
+        field.scrollTo(0, own.getLineTop(cursorLine))
         inSteerAim = false
         aim()
     }
@@ -3696,8 +3770,36 @@ class GuideActivity : Activity() {
     /** A line the slide shows in place of its instruction while it's tried, such as a count. See [GuideStep.live]. */
     private fun showLive() {
         if (passed || playground) return
-        val line = flow.liveLine() ?: return
-        if (body.text.toString() != line) body.text = line
+        val live = flow.liveLine()
+        // A line that's gone, such as the page's with the panel closed, gives the slide's own instruction back.
+        if (live == null && liveShown != null && body.text.toString().startsWith(liveShown!!)) body.text = flow.instruction
+        liveShown = live
+        showPanelHint()
+        val line = live ?: return
+        // A hunt that's counting keeps its seconds on the line.
+        val counting = huntStart >= 0 && flow.stage == 1 && huntSeconds() >= HUNT_DRAIN_SECONDS
+        val shown = if (counting) huntLine(line, huntSeconds()) else line
+        if (body.text.toString() != shown) body.text = shown
+    }
+
+    /** The live line on the screen now, to take back when it goes. */
+    private var liveShown: String? = null
+    /** The panel's line under the instruction now: how to leave it. See [GuideFlow.panelHint]. */
+    private var panelHintShown: String? = null
+
+    /** The line under the instruction while the slide's panel is open (owner, M1), kept as other hints come and go. */
+    private fun showPanelHint() {
+        val line = flow.panelHint()?.takeIf { !passed && keyOff(flow.step) == null }
+        if (line == null) {
+            if (panelHintShown != null && hint.text.toString() == panelHintShown) hideHint()
+            panelHintShown = null
+            return
+        }
+        if (line == panelHintShown && hint.visibility == View.VISIBLE && hint.text.toString() == line) return
+        keepHint = true
+        showHint(line)
+        keepHint = false
+        panelHintShown = line
     }
 
     /**
@@ -4762,6 +4864,9 @@ class GuideActivity : Activity() {
         private const val SETUP_REQUEST = 7
         private const val DISCLOSURE_REQUEST = 8
         private const val SHARE_REQUEST = 9
+        private const val CONTACTS_REQUEST = 10
+        /** How long "Android said no" stays before setup moves on. */
+        private const val CONTACTS_NO_MILLIS = 2500L
         /** How often the guide looks at the part whose page is open. Reading these settings is cheap. */
         private const val SETUP_POLL_MILLIS = 400L
         /** How long the guide waits to be in front again after it closes a page, before it sends for itself. */
@@ -4848,7 +4953,6 @@ class GuideActivity : Activity() {
         /** The field on the slides: exactly two lines, always (owner). */
         private const val FIELD_LINES = 2
         /** How many of the lines finished so far the steering slides put above their own. */
-        private const val STEER_LINES_BEFORE = 4
         /** A bottom inset this much over the keyboard's own is an open panel's, in dp. */
         private const val PANEL_EXTRA = 80
 

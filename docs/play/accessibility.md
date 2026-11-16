@@ -46,39 +46,49 @@ Because `isAccessibilityTool` is false:
 
 **Where:** in the guide's setup slide, at the "Let TitanKeys handle Back" step, **before** it opens Accessibility. The same screen shows again when the user taps "Turn on TitanKeys in Accessibility" in Settings > Setup. It is its own screen, with nothing about other permissions or data on it.
 
-**Buttons:** "No thanks" and "Agree". Back, Home or tapping outside counts as "No thanks", never as agreement. The screen never closes by itself.
+**Look (#79):** the same style as the Share swipes screen. A short title and one line for each thing the service does, then one line on what it never does and one that TitanKeys works without it. "What exactly does it see?" opens the full detail in place, on the same screen, not on another page. One orange pill, **Agree**, and a quiet **Not now** under it, both pinned to the bottom so they're on screen at any font size. It stays plain, with no jokes: this is the screen Play's reviewers look at.
 
-**Draft text** (use the tone from #54; check each line against the 2.1 code):
+**Buttons:** "Agree" and "Not now". Only "Agree" counts as agreement. Back, Home or tapping outside counts as "Not now", never as agreement. The screen never closes by itself.
+
+**The text** (`back_disclosure_*` in `android/src/main/res/values/strings.xml`; the writer F's words, docs/words-m1.md):
 
 > **Let TitanKeys handle Back?**
 >
-> TitanKeys can use Android's Accessibility service to make Back and a few keys work better. It's optional.
+> TitanKeys uses Android's Accessibility service for three things. It's optional.
 >
-> **What it does**
+> - **Back:** one press closes the keyboard and goes back.
+> - **Keys:** at a few moments, it sees which keys you press before the app does.
+> - **Touchpad:** it keeps the touchpad on the keys when a notification pops up.
 >
-> - **Back:** when you press Back, TitanKeys sends it on for you, so one press closes the keyboard and goes back in the app.
-> - **Keys:** at these times only, it sees which keys you press before the app does:
->   - while the Sym panel is open, so Enter and Backspace turn its pages instead of reaching the app;
->   - in the Smart Launcher search field, so holding a key for a symbol and pressing Shift or Alt twice work there;
->   - for a moment after you press Back, so your next press of Back reaches the app.
-> - **Touchpad:** while you type, it keeps the touchpad on the keys when a notification shows at the top of the screen.
+> **It can't read your screen, and it doesn't keep or send anything it sees.**
 >
-> **What it never does**
+> Say no and TitanKeys still types and swipes. Back may take two presses. You can turn it on later in Settings > Setup.
 >
-> - It can't read your screen or the text in your apps.
-> - It doesn't keep or send the keys it sees. They're used on your phone straight away, then forgotten.
+> What exactly does it see?
 >
-> **If you say no,** TitanKeys still types and swipes. Back may take two presses, and those keys work as they would without TitanKeys. You can turn it on later in Settings > Setup.
+> [Agree]
 >
-> [No thanks] [Agree]
+> Not now
+
+**"What exactly does it see?"** opens, under the lines:
+
+> It sees which keys you press only at these moments:
+>
+> - while the Sym panel is open, so Enter and Backspace turn its pages instead of reaching the app;
+> - in Smart Launcher's search field, where Smart Launcher would take your keys first, so TitanKeys types there as in any other app;
+> - for a moment after you press Back, so your next press of Back reaches the app.
+>
+> The keys are used on your phone straight away, then forgotten. It never sees the text in your apps.
+
+**Against Google's rules:** what the service accesses (key presses at named moments, and an overlay for the touchpad) and how it's used are on the first screen, one line each, with the full list one press away on the same screen. The active yes is the pill. It's its own screen, shown during normal use before Accessibility opens, and not combined with the Share swipes screen.
 
 After **Agree**, the app opens Android's Accessibility page, as the guide does today. Android then shows its own warning, which the user also accepts.
 
-After **No thanks**, the guide moves on to the next step. The setup row stays "Not done", and tapping it shows this disclosure again.
+After **Not now**, the guide moves on to the next step. The setup row stays "Not done", and tapping it shows this disclosure again.
 
 **Needs a code change:** the guide's front page waits until the service is on today, so a user can't decline. It must let the user go on without it (see `build-tasks.md`). **Check on the phone:** what exactly changes without the service ("Back may take two presses"), so the "If you say no" line is true.
 
-**The service description in Android's settings** (`back_service_description`) can stay, but it doesn't replace the disclosure. Shorten it to match the disclosure, for example: "Sends Back, so one press of Back closes the keyboard and goes back. While the Sym panel is open, in the Smart Launcher search field and for a moment after you press Back, TitanKeys sees the keys you press. While you type, it keeps the touchpad on the keys when a notification shows at the top of the screen. It can't read your screen, and it doesn't keep or send anything."
+**The service description in Android's settings** (`back_service_description`) doesn't replace the disclosure. It's shortened to match it (#79, F's words): "Makes one press of Back close the keyboard and go back, and keeps the touchpad on the keys when a notification shows. At a few moments, such as while the Sym panel is open, it sees the keys you press. It can't read your screen, and it doesn't keep or send anything."
 
 ## 3. Shot list for the declaration video
 
@@ -87,8 +97,8 @@ Google's list of what the video must show, in order. Record the screen with `adb
 | # | Shot | Google's requirement | Caption |
 |---|---|---|---|
 | 1 | Start from the home screen. Tap the TitanKeys icon. The guide opens. | Opening the app | "Opening TitanKeys" |
-| 2 | Go through the setup slide to the step "Let TitanKeys handle Back". The disclosure screen opens. Scroll slowly so every line can be read, and hold still on it for a few seconds. | The user flow to the disclosure; all text visible | "The disclosure shows before Accessibility opens" |
-| 3 | Tap **No thanks**. The guide goes on without the service. Show that the keyboard still types. | The flow without consent | "Declining: TitanKeys keeps working without it" |
+| 2 | Go through the setup slide to the step "Let TitanKeys handle Back". The disclosure screen opens. Hold still on it for a few seconds, then tap "What exactly does it see?" and scroll slowly through the detail, so every line can be read. | The user flow to the disclosure; all text visible | "The disclosure shows before Accessibility opens" |
+| 3 | Tap **Not now**. The guide goes on without the service. Show that the keyboard still types. | The flow without consent | "Declining: TitanKeys keeps working without it" |
 | 4 | Open Settings > Setup. Tap "Turn on TitanKeys in Accessibility". The disclosure shows again. | Showing the disclosure again | "The disclosure can be shown again" |
 | 5 | Tap **Agree**. Android's Accessibility page opens. Turn on TitanKeys and accept Android's own dialog. The app comes back. | The consent flow, including granting the permission | "Agreeing, then turning on the service in Android settings" |
 | 6 | In an app with a text field (for example Messages), type, then press Back once: the keyboard closes and the app goes back. | A core feature that uses the service | "One press of Back closes the keyboard and goes back" |

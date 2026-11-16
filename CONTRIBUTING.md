@@ -8,7 +8,7 @@ Thank you for your help with TitanKeys. This guide tells you how to report a pro
 - Add a label to each issue.
 - Do not open a pull request before I give the work to you.
 - Test each change on a real Unihertz Titan 2 Elite.
-- Use issues for all contributions. To send feedback without a GitHub account, use **Settings > Send feedback** in TitanKeys.
+- Use issues for all contributions. To send feedback without a GitHub account, use **Settings > Send feedback** in TitanKeys: it opens your mail app to titankeys@everyones-niche.com.
 
 ## Philosophy
 

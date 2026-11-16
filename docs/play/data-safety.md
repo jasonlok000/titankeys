@@ -21,7 +21,9 @@ The form describes **the Play build only**, and every version of it on Play. If 
 | Contribution queue on the phone | Not until it is sent | Only what is sent (below) |
 | **Announcements (#42)** | A download only. The request carries no ID, no cookie and a plain user agent. | No user data is sent. See the IP note below. |
 | **Contributions (#34)** | Yes, if the user agrees | **Yes** (below) |
-| Send feedback (opens a GitHub issue in the browser, with the phone model and versions filled in) | Only when the user taps it, reads it and submits it in the browser | No: a user-initiated action through another app. |
+| Send feedback, Record a bug's Email it, and the crash offer (#74): open the user's mail app to titankeys@everyones-niche.com, with the phone model and versions filled in, and a recording or crash report attached where there is one | Only when the user taps it, reads the mail and sends it from their own mail app. TitanKeys sends nothing itself and has no SDK or server for it. | No: a user-initiated action through another app. |
+| Crash report kept on the phone (#74): where the crash happened in the code, and the versions, never typed text | No, until the user emails it as above | No |
+| Back up everything (#65): a JSON file of settings, words and lists | No: a file the user saves where they pick | No |
 | Typing log (#16) | No (export is a file the user saves) | No. But see the open question about leaving it out of the Play build. |
 
 ## The answers, item by item
@@ -33,7 +35,7 @@ The form describes **the Play build only**, and every version of it on Play. If 
 | Does your app collect or share any of the required user data types? | **Yes** (contributions only) |
 | Is all of the user data collected by your app encrypted in transit? | **Yes.** HTTPS, and each batch is also sealed on the phone with the project's public key (X25519 and AES-GCM). |
 | Account creation | **My app doesn't allow users to create an account.** **Not verified:** the exact wording of this question in the 2026 form. |
-| Do you provide a way for users to request that their data is deleted? | **Yes.** "Delete my contributions" in the app removes everything stored for that contributor ID. Also by email to vignette@everyones-niche.com with the contributor ID, as the privacy policy says. |
+| Do you provide a way for users to request that their data is deleted? | **Yes.** "Delete my contributions" in the app removes everything stored for that contributor ID. Also by email to titankeys@everyones-niche.com with the contributor ID, as the privacy policy says. |
 | Independent security review | No (optional badge) |
 
 ### Data types

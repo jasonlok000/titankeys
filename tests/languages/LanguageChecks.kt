@@ -47,6 +47,7 @@ fun main(args: Array<String>) {
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
     aRestoredInputMethodTypes()
+    aHeldSymWaits()
     telexMarksAndTones()
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (failures > 0) {
@@ -222,6 +223,19 @@ private fun anEngineFitsTheInterface() {
  */
 private fun startsWith(index: InputMethodIndex, setting: String, current: String, android: String?, synced: String?): String {
     return InputMethodChoice.atFieldStart(index, setting, current, KeyboardListSync(synced).heard(android)).id
+}
+
+/** A held Sym opens the overlay in any field with two or more input methods on; each reason it doesn't is said. */
+private fun aHeldSymWaits() {
+    fun why(on: Int = 3, english: Boolean = false, panel: Boolean = false, alt: Boolean = false, guide: Boolean = false,
+            exact: Boolean = false, waiting: Int = 0) = SymHold.whyNot(on, english, panel, alt, guide, exact, waiting)
+    same("en, ru and es on, the panel closed: Sym waits", why(), null)
+    same("two on: Sym waits", why(on = 2), null)
+    check("one on: Sym as usual", why(on = 1) != null)
+    check("the playground: Sym as usual", why(english = true) != null)
+    check("the panel open: Sym closes it", why(panel = true) != null)
+    check("Alt on: Alt+Sym is Android's keyboard list", why(alt = true) != null)
+    check("keys waiting for the app: Sym keeps its place", why(waiting = 1) != null)
 }
 
 private fun aRestoredInputMethodTypes() {

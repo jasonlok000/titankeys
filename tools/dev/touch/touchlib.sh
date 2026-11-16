@@ -18,6 +18,33 @@ TK_TOUCH_DIR="$TK_OUT/touch"
 TK_PHONE_INJECT=/data/local/tmp/tk-inject
 TK_PHONE_SCRIPT=/data/local/tmp/tk-touch.tki
 
+# Apps whose screen is never taken over, nor anything sent while they are in front: banking, payment and other finance apps,
+# and maps. Matched on the front window's package name; TK_HANDS_OFF adds a regex of your own (a bank whose name says nothing).
+TK_HANDS_OFF_DEFAULT='bank|banking|finance|financial|wallet|pay|money|credit|invest|trading|trade|broker|securities|crypto|coin|cash|venmo|revolut|monzo|klarna|wise|chase|hsbc|citi|wellsfargo|schwab|fidelity|etrade|robinhood|nubank|maps|waze'
+tk_hands_off() {
+  local package
+  package=$(grep -oE "u0 [^/ ]+/" <<<"$1" | head -1 | sed 's/^u0 //; s#/$##')
+  [ -n "$package" ] && grep -qiE "$TK_HANDS_OFF_DEFAULT${TK_HANDS_OFF:+|$TK_HANDS_OFF}" <<<"$package"
+}
+
+# Waits until the front window is TitanKeys Debug or the launcher, checking every 30 s for up to MINUTES (default 30). Sends
+# nothing meanwhile. Fails if a finance or maps app (or anything else) is still in front at the end.
+tk_wait_safe() {
+  local minutes="${1:-30}" home front tries
+  home=$(tk_adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tr -d '\r' | tail -1 | cut -d/ -f1)
+  tries=$((minutes * 2))
+  for ((i = 0; i <= tries; i++)); do
+    front=$(tk_adb shell dumpsys window | tr -d '\r' | grep -m1 mCurrentFocus)
+    if grep -qE "u0 ($TK_APP|${home:-launcher-unknown})/" <<<"$front" && ! tk_hands_off "$front"; then
+      echo "front is safe: ${front## }"; return 0
+    fi
+    [ $i = 0 ] && echo "waiting: front is ${front## } (checking every 30 s for up to $minutes min, sending nothing)"
+    [ $i -lt $tries ] && sleep 30
+  done
+  echo "STOP: after $minutes min the front is still ${front## }"
+  return 1
+}
+
 tk_touch_check_once() {
   case "$TK_APP" in *.debug) ;; *) echo "STOP: TK_APP is $TK_APP; only a Debug build may be the target"; return 2 ;; esac
   local power window ime front
@@ -29,6 +56,7 @@ tk_touch_check_once() {
   fi
   tk_no_navigation || return 1
   front=$(grep -m1 mCurrentFocus <<<"$window")
+  if tk_hands_off "$front"; then echo "a finance or maps app is in front: ${front## }"; return 4; fi
   grep -q "{[^ ]* [^ ]* $TK_APP/" <<<"$front" || { echo "not ready: front is ${front## }"; return 3; }
   ime=$(tk_adb shell dumpsys input_method | tr -d '\r' | grep -A12 "mCurrentEditorInfo")
   grep -qE "packageName=$TK_APP( |$)" <<<"$ime" || { echo "not ready: no $TK_APP field is focused"; return 3; }
@@ -44,6 +72,8 @@ tk_touch_check() {
     why=$(tk_touch_check_once) && return 0
     status=$?
     [ $status = 2 ] && { echo "$why"; return 1; }
+    # Never take the screen over from a finance or maps app (the Master's rule, 2026-11-16): stop, and send nothing.
+    [ $status = 4 ] && { echo "STOP: $why"; return 1; }
     if [ $status = 3 ] && [ $starts -lt 2 ]; then
       starts=$((starts + 1))
       echo "$why: bringing $TK_APP back"
@@ -84,6 +114,7 @@ tk_touch_install() {
 }
 
 # tk_touch_play SCRIPT [DELAY_MS SHOT_NAME]: checks, then plays SCRIPT. With DELAY_MS and SHOT_NAME, it also takes a screenshot
+# (DELAY_MS counts from the script's start, after the injector's 800 ms for its uinput twins to be added: TK_TOUCH_SETTLE_MS)
 # DELAY_MS after the start, while the gesture is still on screen (see tk_touch_shot).
 tk_touch_play() {
   tk_touch_check || return 1
@@ -91,7 +122,7 @@ tk_touch_play() {
   if [ -n "${3:-}" ]; then
     local raw="$TK_TOUCH_DIR/shots/raw-$3.png"
     mkdir -p "$TK_TOUCH_DIR/shots"
-    tk_adb shell "$TK_PHONE_INJECT $TK_PHONE_SCRIPT > /data/local/tmp/tk-touch.log 2>&1 & sleep $(awk "BEGIN{print $2/1000}"); screencap -p /data/local/tmp/tk-touch.png; wait; cat /data/local/tmp/tk-touch.log"
+    tk_adb shell "$TK_PHONE_INJECT $TK_PHONE_SCRIPT > /data/local/tmp/tk-touch.log 2>&1 & sleep $(awk "BEGIN{print ($2 + ${TK_TOUCH_SETTLE_MS:-800})/1000}"); screencap -p /data/local/tmp/tk-touch.png; wait; cat /data/local/tmp/tk-touch.log"
     local status=$?
     tk_adb pull -q /data/local/tmp/tk-touch.png "$raw" >/dev/null
     tk_adb shell rm -f /data/local/tmp/tk-touch.png /data/local/tmp/tk-touch.log "$TK_PHONE_SCRIPT"
@@ -106,7 +137,7 @@ tk_touch_play() {
 tk_touch_shot() {
   local sb
   sb=$(tk_adb shell dumpsys window | grep -m1 -oE "statusBars.*frame=\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]" | grep -oE "\]\[[0-9]+,[0-9]+\]" | grep -oE ",[0-9]+" | tr -d ,)
-  python3 "$TK_DEV/phone/crop.py" "$1" "${sb:-40}" 0 mInputShown=false >/dev/null \
+  "${TK_PIL_PYTHON:-python3}" "$TK_DEV/phone/crop.py" "$1" "${sb:-40}" 0 mInputShown=false >/dev/null \
     || { rm -f "$1"; echo "Crop failed, raw screenshot deleted. Install Pillow: sudo apt install python3-pil"; return 1; }
   echo "shot: ${1/raw-/}"
 }

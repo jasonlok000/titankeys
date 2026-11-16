@@ -226,7 +226,10 @@ def main():
                      ("dev 0 touchPad\n5 0 0 0 0\n4 0 0 0 0\n", "time goes back"),
                      ("dev 0 touchPad\n0 1 0 0 0\n", "undeclared"),
                      ("dev 0 touchPad\n0 0 4 0 0\n", "only SYN, KEY and ABS"),
-                     ("dev 0 touchPad\n60001 0 0 0 0\n", "longer than 60 s")]:
+                     ("dev 0 touchPad\n60001 0 0 0 0\n", "longer than 60 s"),
+                     ("dev 1 TitanKey\n0 1 1 116 1\n", "never sent"),
+                     ("dev 1 TitanKey\n0 1 1 102 1\n", "never sent"),
+                     ("dev 1 TitanKey\n0 1 1 158 1\n", "never sent")]:
         result = inject(bad)
         check(result.returncode != 0 and why in result.stderr, f"injector should refuse ({why}): {result.stderr!r}")
 

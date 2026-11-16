@@ -243,7 +243,10 @@ class Script:
         self.t += ms
 
     def text(self):
-        out = ["# tk-inject script, from tools/dev/touch/gestures.py", "dev 0 touchPad"]
+        out = ["# tk-inject script, from tools/dev/touch/gestures.py"]
+        # Only the devices it uses: where the injector makes twins (see inject.c), an unused one would come and go for nothing.
+        if any(dev == TOUCHPAD for _, dev, *_ in self.lines) or not self.uses_keys:
+            out.append("dev 0 touchPad")
         if self.uses_keys:
             out.append("dev 1 TitanKey")
         out += [f"{t:.3f} {d} {ty} {c} {v}" for t, d, ty, c, v in self.lines]

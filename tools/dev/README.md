@@ -56,8 +56,18 @@ adb can't press Sym, hold a key or touch the touchpad. Those checks need hands.
 
 The touch simulator plays touches on the touchpad and presses on the keys, as the hardware itself sends them, so the checks that
 used to need hands run over adb: swipes, delete flicks, Space taps, a finger resting or lifting after a press, holds, Sym and fn.
-It needs no root. adb's shell may write to `/dev/input`, and Android reads what is written there as the touchpad's and the
-keyboard's own events.
+It needs no root. On the Titan 2 Elite (Android 16) SELinux keeps adb's shell from writing to `/dev/input`, so the injector makes
+a twin of each device through `/dev/uinput`, which the shell may use: the same name, location, bus, vendor and product, keys and
+ranges, read from the real one. Android gives the twin the real device's configuration, and the kernel removes it when the
+injector ends. It takes 0.8 s to be added, and its events then play within a few milliseconds of their times.
+
+What works today and what doesn't (phone run, 2026-11-16):
+
+- Keys work: typed letters reach TitanKeys Debug's field, and Sym reaches it as Sym (it opens the panel).
+- A held Sym opens the Sym panel, not the switch overlay. Why isn't known yet.
+- The touchpad doesn't work yet. The phone's input reader sets a new touchpad's height before it knows the display, and only
+  sets it again at its next reconfiguration (screen off and on). Until then the twin's heights come out upside down and squeezed,
+  so no touch lands on a key. A brief screen recording didn't trigger the reconfiguration.
 
 The keys are real, so they type in whatever is in front. Before every gesture and every setup key, `touchlib.sh` checks that
 the screen is awake and unlocked, no navigation app is running, TitanKeys Debug's window is in front and one of its own text

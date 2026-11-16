@@ -170,8 +170,8 @@ The bar, its hover and the picking come from the word menu's code (see "Where it
 - **Holding Sym opens the overlay** over the top row, like the word menu: each input method's label over a key, W to O
   (8 places), the current one marked.
 - With 4 or fewer on, each spans two keys.
-- Rest a finger to mark, press to switch. Back, or releasing Sym without a press, closes it with no change. A short Sym
-  press still opens the Sym panel, as today.
+- It stays open after Sym is let go. Rest a finger to mark, press to switch. Back or Sym closes it with no change. A short
+  Sym press still opens the Sym panel, as today.
 - The order is Settings > Languages' order.
 - With only one input method on, holding Sym does nothing.
 - The current input method's label shows on the bar's left while you type in anything but English, so you know where you

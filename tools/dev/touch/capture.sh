@@ -4,6 +4,7 @@
 # computer: never in git, an issue or a report.
 H="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$H/../env.sh"; . "$H/../phone/safety.sh"; . "$H/touchlib.sh"
+tk_touch_lock
 seconds="${1:?seconds}"; mkdir -p "$TK_TOUCH_DIR"
 tk_no_navigation || exit 1
 devices=$(tk_adb shell getevent -p | tr -d '\r' | awk '/^add device/{d=$NF} /name:/{gsub(/"/, "", $2); print d, $2}')

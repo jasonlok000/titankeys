@@ -3,5 +3,6 @@
 # text). Exits 1 on a STOP.
 H="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$H/../env.sh"; . "$H/../phone/safety.sh"; . "$H/touchlib.sh"
+tk_touch_lock
 tk_touch_check || exit 1
 tk_adb shell input "$@"

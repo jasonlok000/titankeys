@@ -61,8 +61,11 @@ keyboard's own events.
 
 The keys are real, so they type in whatever is in front. Before every gesture and every setup key, `touchlib.sh` checks that
 the screen is awake and unlocked, no navigation app is running, TitanKeys Debug's window is in front and one of its own text
-fields has the keyboard. Otherwise nothing is sent. A check is tried twice, then the run stops. The release app is never a
-target: `TK_APP` must end in `.debug`. If the injector stops part way, it lets go of every key and lifts the finger.
+fields has the keyboard. Otherwise nothing is sent. The owner may use the phone meanwhile, so when another app is in front or
+no Debug field has the keyboard, TitanKeys Debug's Space gestures screen comes back with `am start` (twice at most) and
+everything is checked again first. A screen that's off or locked, or a navigation app, stops the run after a second try. The
+release app is never a target: `TK_APP` must end in `.debug`. If the injector stops part way, it lets go of every key and lifts
+the finger. Every tool holds the shared phone lock, `~/build/tk-tools/.lock`, for its whole run, so no other phone run overlaps.
 
 | Tool | Does | Needs |
 |---|---|---|

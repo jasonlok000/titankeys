@@ -3,6 +3,7 @@
 # from its key layout file, into $TK_OUT/touch/keys.txt for gestures.py. Also checks the touchpad's range against gestures.py.
 H="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$H/../env.sh"; . "$H/../phone/safety.sh"; . "$H/touchlib.sh"
+tk_touch_lock
 mkdir -p "$TK_TOUCH_DIR"
 input=$(tk_adb shell dumpsys input | tr -d '\r')
 layout=$(awk '/^ *[0-9]+: TitanKey$/{f=1; next} f && /KeyLayoutFile:/{print $2; exit} f && /^ *[0-9]+: /{exit}' <<<"$input")

@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """The owner's hands-only checks, played by the touch simulator, each with a YES or NO read back from the field where one exists.
 
-Run from a shell that sourced tools/dev/env.sh, with TitanKeys Debug the keyboard and one of its own text fields focused and
-empty of anything personal: the Space gestures screen ("TitanKeys Space gestures") or the playground. Every gesture and every
-setup key goes through touch.sh or guarded.sh, which check the front window first; a STOP ends the whole run.
+Run from a shell that sourced tools/dev/env.sh, with TitanKeys Debug the keyboard. The checks type in TitanKeys Debug's own
+Space gestures screen, which the gate brings back when anything else is in front. Every gesture and every setup key goes through
+touch.sh or guarded.sh, which check the front window and the focused field first; a STOP ends the whole run. The run holds the
+shared phone lock from start to end.
 
 Usage: checks.py [NAME...]   (default: all; see --list)
 Screenshots go to $TK_OUT/touch/shots, without the status bar, for what only the eye can judge (the dots, the trail, the pill).
 """
+import fcntl
 import os
 import re
 import subprocess
@@ -159,12 +161,30 @@ CHECKS = {
 }
 
 
+def lock():
+    """Holds the shared phone lock for the whole run, as every phone tool does; the tools this starts see TK_PHONE_LOCKED."""
+    subprocess.run(["adb", "start-server"], capture_output=True)
+    folder = os.path.join(os.environ.get("TK_BUILD", os.path.expanduser("~/build")), "tk-tools")
+    os.makedirs(folder, exist_ok=True)
+    handle = open(os.path.join(folder, ".lock"), "w")
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print("waiting for the phone lock (another phone run holds it)", flush=True)
+        fcntl.flock(handle, fcntl.LOCK_EX)
+    os.environ["TK_PHONE_LOCKED"] = "1"
+    # Python opens it so that no program started from here inherits it: the lock goes when this process ends.
+    return handle
+
+
 def main():
     names = sys.argv[1:]
     if names == ["--list"]:
         for name, check in CHECKS.items():
             print(f"{name:20} {check.__doc__.strip().splitlines()[0]}")
         return
+    if os.environ.get("TK_PHONE_LOCKED") != "1":
+        held = lock()  # noqa: F841 (kept open until the end)
     try:
         for name in names or CHECKS:
             CHECKS[name]()

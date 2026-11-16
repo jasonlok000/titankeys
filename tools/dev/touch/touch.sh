@@ -5,6 +5,7 @@
 # Example: bash tools/dev/touch/touch.sh swipe:hello
 H="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$H/../env.sh"; . "$H/../phone/safety.sh"; . "$H/touchlib.sh"
+tk_touch_lock
 mkdir -p "$TK_TOUCH_DIR"
 keymap=(); [ -f "$TK_TOUCH_DIR/keys.txt" ] && keymap=(--keymap "$TK_TOUCH_DIR/keys.txt")
 python3 "$H/gestures.py" "${keymap[@]}" --out "$TK_TOUCH_DIR/last.tki" "$@" || exit 2

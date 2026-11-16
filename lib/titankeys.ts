@@ -149,6 +149,12 @@ export type State = {
   /** TitanKeys Debug's Haptics lab, and null in every other build. */
   hapticsLab: HapticsLab | null;
   spelling: Spelling;
+  /** The input methods that are on, by id, in the switch overlay's order. English alone by default (docs/languages.md). */
+  inputMethods: string[];
+  /** Every input method the app has, English first. */
+  availableInputMethods: InputMethodEntry[];
+  /** The Chinese variant for every Chinese input method, or "" until the user picks one: there's no default. */
+  chineseVariant: ChineseVariant | "";
   /** Records touches, keys and typed text in a log on this phone. */
   /** This build has the full typing log: only TitanKeys Debug does. */
   rawLogAvailable: boolean;
@@ -157,6 +163,11 @@ export type State = {
   words: { word: string; description: string }[];
   blockedWords: string[];
 };
+
+/** One input method as Settings lists it: its own name, its English name, the overlay's label, and its engine, if any. */
+export type InputMethodEntry = { id: string; name: string; nameEnglish: string; label: string; script: string; engine: string | null };
+
+export type ChineseVariant = "zh_hk" | "zh_tw" | "zh_hans";
 
 /**
  * Each pattern family's pattern in use, on and off in ms starting with on, by its id in Haptics.kt, and whether it is one tried
@@ -178,7 +189,7 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog"> & {
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant"> & {
   /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
   shorthandToggles: Record<string, boolean>;
 };

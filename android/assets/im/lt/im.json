@@ -1,0 +1,31 @@
+{
+  "id": "lt",
+  "name": "Lietuvių",
+  "nameEnglish": "Lithuanian",
+  "label": "LT",
+  "locale": "lt",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "ą",
+    "c": "č",
+    "e": "ęė",
+    "i": "į",
+    "s": "š",
+    "u": "ųū",
+    "z": "ž"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_lt.combined"
+  }
+}

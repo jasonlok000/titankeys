@@ -1,0 +1,27 @@
+{
+  "id": "nb",
+  "name": "Norsk bokmål",
+  "nameEnglish": "Norwegian Bokmål",
+  "label": "NB",
+  "locale": "nb",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "àæå",
+    "e": "é",
+    "o": "óòôø"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_nb.combined"
+  }
+}

@@ -58,6 +58,18 @@ class Strip(
         data class Line(val text: String) : Notice {
             override val word get() = ""
         }
+        /**
+         * The picker over the keys (docs/languages.md): a held letter's accents, the input methods on a held Sym, or an
+         * engine's choices. Each item sits over the key columns in [columns] at the same place, and the item at [current] is the
+         * one in use, as the overlay's input method.
+         */
+        data class Picker(val items: List<String>, val columns: List<IntRange>, val current: Int = -1,
+                          /** An engine's code being typed, over Q and W, left of the choices. */
+                          val lead: String = "",
+                          /** Where the choices are, after the code: "2›" or "1/3". */
+                          val leadMark: String = "") : Notice {
+            override val word get() = ""
+        }
     }
 
     /** Ink's font, as everywhere in TitanKeys (owner, 2026-11-12), and its medium weight for the word menu's pills. */
@@ -857,6 +869,7 @@ class Strip(
         drawSelected(canvas)
         drawMenuWord(canvas)
         drawMenu(canvas)
+        drawPicker(canvas)
         drawAutoCapital(canvas)
         idle?.let { drawIdle(canvas, it) }
         drawDemoFinger(canvas)
@@ -879,10 +892,70 @@ class Strip(
             invalidate()
         }
 
+    /** The key column a resting finger marks in the picker, or -1: its item shows in a pill, as the word menu's button does. */
+    var pickerMark = -1
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
+    private val pickerText = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+
+    /**
+     * The picker (docs/languages.md, "Accents and the picker on the bar"): each item centred over its keys on the bar's line, in
+     * the words' size and font. The marked one sits in an accent pill, as the word menu's hovered button does, and the one in use
+     * is in the accent. Nothing comes near the screen's rounded corners: an item keeps to its keys, which do.
+     */
+    private fun drawPicker(canvas: Canvas) {
+        val picker = notice as? Notice.Picker ?: return
+        if (noticeRow.visibility != VISIBLE || width == 0) return
+        pickerText.typeface = typeface
+        pickerText.textSize = wordPixels()
+        val baseline = StripFit.baseline(line, pickerText.textSize, floor)
+        val pillHeight = minOf(dp(MENU_PILL_DP).toFloat(), StripFit.around(line, barHeight.toFloat(), inside))
+        if (picker.lead.isNotEmpty() || picker.leadMark.isNotEmpty()) {
+            // The code as typed, muted, and the page in the accent, over Q and W; a long code shrinks to fit.
+            val left = maxOf(menuColumn(0).first, side.toFloat())
+            val right = menuColumn(Picker.FIRST_CHOICE - 1).second - dp(4)
+            val mark = if (picker.leadMark.isEmpty()) "" else " " + picker.leadMark
+            val codeWidth = pickerText.measureText(picker.lead)
+            val total = codeWidth + pickerText.measureText(mark)
+            val scale = if (total > right - left && total > 0f) (right - left) / total else 1f
+            canvas.save()
+            canvas.scale(scale, scale, left, baseline)
+            pickerText.color = look.muted
+            canvas.drawText(picker.lead, left, baseline, pickerText)
+            pickerText.color = look.accent
+            canvas.drawText(mark, left + codeWidth, baseline, pickerText)
+            canvas.restore()
+        }
+        for ((index, item) in picker.items.withIndex()) {
+            val columns = picker.columns.getOrNull(index) ?: continue
+            val left = menuColumn(columns.first).first
+            val right = menuColumn(columns.last).second
+            val marked = pickerMark in columns
+            if (marked) {
+                menuBox.set(left + dp(2), line - pillHeight / 2, right - dp(2), line + pillHeight / 2)
+                menuPaint.color = GuideMotion.faded(look.accent, MENU_PILL_ALPHA)
+                canvas.drawRoundRect(menuBox, pillHeight / 2, pillHeight / 2, menuPaint)
+            }
+            pickerText.color = if (marked || index == picker.current) look.accent else look.ink
+            // A long item shrinks to its keys.
+            val room = right - left - dp(4)
+            val width = pickerText.measureText(item)
+            val scale = if (width > room && width > 0f) room / width else 1f
+            canvas.save()
+            canvas.scale(scale, scale, (left + right) / 2, baseline)
+            canvas.drawText(item, (left + right) / 2 - width / 2, baseline, pickerText)
+            canvas.restore()
+        }
+    }
+
     /** The buttons that a notice shows, from the left. */
     fun noticeActions(shown: Notice?): List<Action> = when (shown) {
         is Notice.Menu -> listOfNotNull(shown.first, shown.second, Action.Close)
-        Notice.TeamsEgg, is Notice.Line, null -> emptyList()
+        Notice.TeamsEgg, is Notice.Line, is Notice.Picker, null -> emptyList()
     }
 
     private fun label(action: Action) = when (action) {
@@ -916,9 +989,11 @@ class Strip(
             is Notice.Menu -> ""
             Notice.TeamsEgg -> context.getString(R.string.strip_teams_egg)
             is Notice.Line -> shown.text
+            // The picker draws itself over the key columns: see [drawPicker].
+            is Notice.Picker -> ""
             null -> ""
         }
-        noticeLabel.contentDescription = if (menu == null) null else
+        noticeLabel.contentDescription = if (shown is Notice.Picker) shown.items.joinToString(", ") else if (menu == null) null else
             context.getString(R.string.strip_menu_word, menu.word) + ": " + menuSlots(menu).filterNotNull().joinToString(", ") { context.getString(label(it)) }
         noticeLabel.setTextColor(look.ink)
         centreLetters(noticeLabel)

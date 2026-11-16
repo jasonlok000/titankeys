@@ -1,0 +1,23 @@
+{
+  "id": "id",
+  "name": "Bahasa Indonesia",
+  "nameEnglish": "Indonesian",
+  "label": "ID",
+  "locale": "id",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {},
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_id__experimental.combined"
+  }
+}

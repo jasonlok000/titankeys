@@ -1,0 +1,28 @@
+{
+  "id": "af",
+  "name": "Afrikaans",
+  "nameEnglish": "Afrikaans",
+  "label": "AF",
+  "locale": "af",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "á",
+    "e": "éêë",
+    "i": "ï",
+    "o": "óö"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": true
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_af__experimental.combined"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "da",
+  "name": "Dansk",
+  "nameEnglish": "Danish",
+  "label": "DA",
+  "locale": "da",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "æå",
+    "e": "é",
+    "o": "øö",
+    "u": "ü"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_da.combined"
+  }
+}

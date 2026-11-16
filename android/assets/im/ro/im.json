@@ -1,0 +1,28 @@
+{
+  "id": "ro",
+  "name": "Română",
+  "nameEnglish": "Romanian",
+  "label": "RO",
+  "locale": "ro",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "ăâ",
+    "i": "î",
+    "s": "ș",
+    "t": "ț"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_ro.combined"
+  }
+}

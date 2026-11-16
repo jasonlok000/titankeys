@@ -23,6 +23,8 @@ import { setupLabel } from "./setup";
 import { shorthandLabel } from "./shorthand/index";
 import { snippetsLabel } from "./snippets/index";
 import { spellingLabel } from "./spelling";
+import { inputMethodsLabel } from "./languages";
+import { anyChinese, chineseLabel } from "./chinese";
 import { tapKeysLabel } from "./tap-keys";
 import { RESET_NOTE, resetDone } from "./reset-most";
 import { Note } from "../../lib/note";
@@ -52,8 +54,13 @@ export default function Settings() {
         onChange={commaSpace => save.run({ commaSpace })} />
       <Toggle label="Double Space types a full stop" value={settings.autoPunctuation}
         onChange={autoPunctuation => save.run({ autoPunctuation })} />
-      <Field label="English spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
       <Field label="Hold a letter for its symbol" href="/settings/hold">{holdLabel(settings)}</Field>
+    </Section>
+    {/* Between Typing and Shortcuts (docs/languages.md). F: draft labels. */}
+    <Section title="Languages">
+      <Field label="Input methods" href="/settings/languages">{inputMethodsLabel(settings)}</Field>
+      {anyChinese(settings) && <Field label="Chinese characters" href="/settings/chinese">{chineseLabel(settings)}</Field>}
+      <Field label="English spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
     </Section>
     {/* The same topics, in the same order, as the boring guide's Shortcuts and Symbols sections. */}
     <Section title="Shortcuts">

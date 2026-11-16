@@ -149,6 +149,8 @@ object RawLog {
         "enterKey" to TypingSettings.enterKey(context),
         "enterApps" to TypingSettings.enterApps(context).sorted().joinToString(","),
         "spelling" to TypingSettings.spelling(context).value(),
+        "inputMethods" to TypingSettings.inputMethods(context),
+        "inputMethod" to TypingSettings.currentInputMethod(context),
         "learning" to SwipeTyping.get(context).learningEnabled(),
     )
 

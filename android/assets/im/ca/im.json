@@ -1,0 +1,30 @@
+{
+  "id": "ca",
+  "name": "Català",
+  "nameEnglish": "Catalan",
+  "label": "CA",
+  "locale": "ca",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "àáä",
+    "c": "ç",
+    "e": "éè",
+    "i": "íï",
+    "o": "óòöø",
+    "u": "úü"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": true
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_ca__experimental.combined"
+  }
+}

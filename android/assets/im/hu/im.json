@@ -1,0 +1,29 @@
+{
+  "id": "hu",
+  "name": "Magyar",
+  "nameEnglish": "Hungarian",
+  "label": "HU",
+  "locale": "hu",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "á",
+    "e": "é",
+    "i": "í",
+    "o": "óöő",
+    "u": "úüű"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_hu__experimental.combined"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "id": "lv",
+  "name": "Latviešu",
+  "nameEnglish": "Latvian",
+  "label": "LV",
+  "locale": "lv",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "ā",
+    "c": "č",
+    "e": "ē",
+    "g": "ģ",
+    "i": "ī",
+    "k": "ķ",
+    "l": "ļ",
+    "n": "ņ",
+    "s": "š",
+    "u": "ū",
+    "z": "ž"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_lv.combined"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "id": "eu",
+  "name": "Euskara",
+  "nameEnglish": "Basque",
+  "label": "EU",
+  "locale": "eu",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "c": "ç",
+    "n": "ñ"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_eu.combined"
+  }
+}

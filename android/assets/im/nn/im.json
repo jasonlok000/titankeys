@@ -1,0 +1,27 @@
+{
+  "id": "nn",
+  "name": "Norsk nynorsk",
+  "nameEnglish": "Norwegian Nynorsk",
+  "label": "NN",
+  "locale": "nn",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "àåæ",
+    "e": "éèê",
+    "o": "óòôø"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_nn.combined"
+  }
+}

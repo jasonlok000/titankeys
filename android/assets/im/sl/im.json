@@ -1,0 +1,27 @@
+{
+  "id": "sl",
+  "name": "Slovenščina",
+  "nameEnglish": "Slovenian",
+  "label": "SL",
+  "locale": "sl",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "c": "č",
+    "s": "š",
+    "z": "ž"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_sl.combined"
+  }
+}

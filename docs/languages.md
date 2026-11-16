@@ -66,8 +66,7 @@ android/assets/im/es/
   "script": "Latn",
   "keys": "qwerty",
   "accents": {
-    "a": "á", "e": "é", "i": "í", "n": "ñ", "o": "ó", "u": "úü",
-    "?": "¿", "!": "¡"
+    "a": "á", "e": "é", "i": "í", "n": "ñ", "o": "ó", "u": "úü"
   },
   "words": "words.combined",
   "variants": null,
@@ -95,7 +94,7 @@ The fields:
 | `locale` | Android's locale for its keyboard-list entry, capitals and sorting (`tr` gives i ↔ İ) |
 | `script` | ISO 15924: `Latn`, `Cyrl`, `Grek`, `Geor`, `Hani` |
 | `keys` | `qwerty` (the letters as printed) or a map from each of the 26 keys to its letter, lower case: `{ "q": "й", "w": "ц", ... }`. Upper case comes from the locale. A key can have a different letter with Shift, written `"w": "წ/ჭ"`, for scripts without capitals |
-| `accents` | For each key, the letters held on it, in the order they show on the bar. Any character is allowed, so punctuation can be held too (¿ on ?) |
+| `accents` | For each of the 26 letter keys, the letters held on it, in the order they show on the bar: at most 10, one per key column. Only letter keys can be held, since the Titan's punctuation is on Alt |
 | `words` | The word list's file, or `null` |
 | `variants` | `null`, or a list of `{ "id", "name", "words" }` for spellings with their own word lists (Portuguese: `pt-BR`, `pt-PT`) |
 | `rules` | `capitalise` after a sentence's end, the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`) |
@@ -110,25 +109,25 @@ Rules for a valid input method, checked by `tools/checks/im.test.ts` on every `b
 - every letter in `keys` and `accents` is in CLDR's letters for the locale (main or auxiliary), or listed in an `extra`
   field with a reason;
 - every letter the word list uses often (20 times in its top 50,000 words) can be typed, from a key or a hold;
-- the word list parses, has at most 100,000 words, and its file is at most 3 MB;
+- the word list parses, has at most 100,000 words, and its file is at most 4 MB (Cyrillic and Greek take two bytes a letter);
 - `NOTICE` exists and names a licence on the allowed list (Apache-2.0, MIT, BSD, CC0, CC BY 4.0, CC BY-SA 4.0, LGPL,
   GPL-3.0, GPL-2.0-or-later, Unicode);
 - labels are unique, and at most 3 characters wide.
 
-A script, `tools/im/new.ts <locale>`, makes a new input method's folder from CLDR's letters and a word list, so adding a
+A script, `tools/im/make.py <data dir> [id...]`, makes an input method's folder from CLDR's letters and a word list, so adding a
 data-only language is one command plus a check by eye. Where the data comes from is in the study.
 
 ## How an input method declares itself
 
 - **In the app:** a generated index, `android/assets/im/index.json`, lists every folder's `id`, `name`, `label`, `locale` and
-  `script`. The build writes it from the folders (`tools/im/index.ts`), so adding a folder is all it takes. The keyboard
+  `script`. `tools/im/make.py` writes it from the folders, with Android's keyboard list, so adding a folder and running it is all it takes. The keyboard
   reads only the index at start, and an input method's own files when it's switched on.
 - **In Android's keyboard list:** one `<subtype>` per input method in `input_method.xml`, written by the same script:
 
   ```xml
   <subtype android:label="@string/im_es" android:imeSubtypeLocale="es"
       android:languageTag="es" android:imeSubtypeMode="keyboard"
-      android:imeSubtypeExtraValue="im=es" android:subtypeId="0x7f0e0001" />
+      android:imeSubtypeExtraValue="im=es" android:subtypeId="1234567890" />
   ```
 
   - `subtypeId` is fixed per input method (a hash of its `id`), so Android keeps the user's choices across updates.
@@ -156,8 +155,11 @@ data-only language is one command plus a check by eye. Where the data comes from
 **The picker** is one component for accents and for Chinese:
 - A row of choices over the keys, each with the key under it. Keys under no choice do nothing while it's open.
 - It takes a list and a page: accents fit on one page; Chinese gets pages.
-- **Chinese:** the choices show as you type the code. Space types the first. Rest a finger and press the key under a choice
-  to pick it. Swiping up or down on the keys turns the page, like the Sym panel. Back clears the code.
+- **Chinese, and any engine with choices:** the code you've typed shows over Q and W, muted, with the page after it in the
+  accent ("2›", or "1/3" when the engine knows the count). The choices sit over E to P, eight a page. Letters go on building
+  the code, so a choice is picked with Space: the one a resting finger marks, or else the first. Swiping up on the keys
+  turns to the next page and down to the one before, the Sym panel's own direction; Rime's own , and . paging keys work too. Back closes
+  the choices.
 
 **Accents from the word list** (input methods with a word list):
 - The bar's suggestions ignore accents when matching: typing "cafe" offers **café**.
@@ -175,8 +177,8 @@ The bar, its hover and the picking come from the word menu's code (see "Where it
   Sym press still opens the Sym panel, as today.
 - The order is Settings > Languages' order.
 - With only one input method on, holding Sym does nothing.
-- The current input method's label shows on the bar's left while you type in anything but English, so you know where you
-  are. Its accessibility text says it in full: "Typing in Spanish".
+- After a switch, the bar says for a moment which input method types now. A lasting mark on the bar for anything but English
+  comes later; its accessibility text says it in full: "Typing in Spanish".
 - Alt + Sym keeps going to Android's next keyboard, as today.
 
 ## Settings > Languages
@@ -192,7 +194,7 @@ Languages
 
 **Input methods** (`app/settings/languages.tsx`):
 - A list of every input method, grouped by script, each with a switch. The ones that are on sit at the top in the
-  overlay's order, and can be moved up and down.
+  overlay's order, which for now is the order they were turned on (moving them comes later).
 - English can't be turned off while it's the only one.
 - At most 8 on, the overlay's places. The 9th switch says why it won't turn on: "Eight at a time. Turn one off first."
 - Each input method's page shows its name, its source and licence, its variants when it has them (Portuguese), and
@@ -274,7 +276,7 @@ Paths are under `android/kotlin/com/titankeys/`. Line numbers are from 2026-11-1
 - CONTRIBUTING.md's Languages section changes: 3.0 ships generic languages, and native speakers improve them.
 - **"Improve a language" page** (`docs/add-a-language.md`): how to change an input method's `im.json` (accents' order, a
   missing letter), how to replace its word list and what licences are fine, how to run `bun run check`, and how to open the
-  pull request. Adding a new data-only language is `tools/im/new.ts` plus the same steps.
+  pull request. Adding a new data-only language is a line in `tools/im/make.py` plus the same steps.
 - Going deeper (autocorrect rules, an engine) is up to the native speaker, discussed in #56 first.
 
 ## Size

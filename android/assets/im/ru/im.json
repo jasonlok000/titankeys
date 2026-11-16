@@ -1,0 +1,56 @@
+{
+  "id": "ru",
+  "name": "Русский",
+  "nameEnglish": "Russian",
+  "label": "RU",
+  "locale": "ru",
+  "script": "Cyrl",
+  "keys": {
+    "a": "ф",
+    "b": "и",
+    "c": "с",
+    "d": "в",
+    "e": "у",
+    "f": "а",
+    "g": "п",
+    "h": "р",
+    "i": "ш",
+    "j": "о",
+    "k": "л",
+    "l": "д",
+    "m": "ь",
+    "n": "т",
+    "o": "щ",
+    "p": "з",
+    "q": "й",
+    "r": "к",
+    "s": "ы",
+    "t": "е",
+    "u": "г",
+    "v": "м",
+    "w": "ц",
+    "x": "ч",
+    "y": "н",
+    "z": "я"
+  },
+  "accents": {
+    "l": "жэ",
+    "m": "бю",
+    "p": "хъ",
+    "t": "ё"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "keys": "keyboard_layout_russian.kcm",
+    "words": "main_ru.combined"
+  }
+}

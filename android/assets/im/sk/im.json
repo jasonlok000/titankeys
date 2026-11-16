@@ -1,0 +1,38 @@
+{
+  "id": "sk",
+  "name": "Slovenčina",
+  "nameEnglish": "Slovak",
+  "label": "SK",
+  "locale": "sk",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "áä",
+    "c": "č",
+    "d": "ď",
+    "e": "é",
+    "i": "í",
+    "l": "ĺľ",
+    "n": "ň",
+    "o": "óô",
+    "r": "ŕ",
+    "s": "š",
+    "t": "ť",
+    "u": "ú",
+    "y": "ý",
+    "z": "ž"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_sk__experimental.combined"
+  }
+}

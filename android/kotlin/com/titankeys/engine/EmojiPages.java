@@ -71,6 +71,14 @@ public final class EmojiPages {
         return filled;
     }
 
+    /**
+     * Whether a swipe that turns a page goes forward: up on the keys, as the owner put it, "swipe up on the keyboard or enter for
+     * the next page". An engine's choices on the bar turn the same way, through this.
+     */
+    public static boolean forward(float down) {
+        return down < 0;
+    }
+
     /** True if a swipe of this shape turns the page inside a group, false if it changes the group. */
     public static boolean turnsPage(float across, float down) {
         return Math.abs(down) > Math.abs(across);
@@ -171,7 +179,7 @@ public final class EmojiPages {
      */
     public boolean swipe(float across, float down) {
         int before = page;
-        if (turnsPage(across, down)) turn(down < 0 ? 1 : -1);
+        if (turnsPage(across, down)) turn(forward(down) ? 1 : -1);
         else jump(across > 0 ? -1 : 1);
         return page != before;
     }

@@ -1083,14 +1083,30 @@ class TitanKeysIme : InputMethodService() {
      * sends the touchpad to the windows, and a swipe that ends as the keyboard goes, or the gap as one field hands over to
      * the next, would reach the pop-up. With no field it only drops the touchpad events, as the keyboard's own overlay does.
      */
+    /**
+     * The touchpad overlays: this keyboard's own, and the Back service's above the shade. Only while this keyboard is Android's
+     * current one and alive. Android's own onDestroy finishes the input (doFinishInput, so onFinishInput and this run) after
+     * ours has taken the overlays down: without [destroyed], a keyboard on its way out put its overlay up again, with the
+     * Back service's window pointing at it, on every switch to another keyboard. The firmware gives the touchpad to the topmost
+     * window titled "InputMethod", so those dead windows took it from whichever keyboard came next (2.1 left 96 on the
+     * owner's phone, 2026-11-16).
+     */
     private fun updateOverlay() {
-        val wanted = editing || TypingSettings.touchpadOnlyInFields(this)
+        val wanted = !destroyed && PhoneSetup.selected(this) && (editing || TypingSettings.touchpadOnlyInFields(this))
         if (wanted) overlay.show() else overlay.hide()
         main.removeCallbacks(releaseHighTouchpad)
-        if (wanted) BackService.touchpad(overlayEvent) else main.postDelayed(releaseHighTouchpad, HIGH_GRACE_MILLIS)
+        when {
+            wanted -> BackService.touchpad(overlayEvent)
+            // Gone now, not after the grace: and only its own, never a newer keyboard's.
+            destroyed -> BackService.releaseTouchpad(overlayEvent)
+            else -> main.postDelayed(releaseHighTouchpad, HIGH_GRACE_MILLIS)
+        }
     }
 
-    private val releaseHighTouchpad = Runnable { BackService.touchpad(null) }
+    /** onDestroy has begun: nothing may put the touchpad's windows up again. See [updateOverlay]. */
+    private var destroyed = false
+
+    private val releaseHighTouchpad = Runnable { BackService.releaseTouchpad(overlayEvent) }
 
     private fun holdWanted() =
         TouchpadHold.wanted(TypingSettings.touchpadOnlyInFields(this), editing, overlay.up, BackService.enabled(this), hold.lettingGo)
@@ -4171,6 +4187,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     override fun onDestroy() {
+        destroyed = true
         editing = false
         // It holds this keyboard, which must go with it (#85).
         TouchpadFeedHook.dispatch = null
@@ -4210,7 +4227,7 @@ class TitanKeysIme : InputMethodService() {
         TypingSettings.stopListening(this, overlaySetting)
         barSize?.let { FixedScale.stopListening(this, it) }
         overlay.hide()
-        BackService.touchpad(null)
+        BackService.releaseTouchpad(overlayEvent)
         rawLog?.finish()
         rawLog = null
         composer.log = null

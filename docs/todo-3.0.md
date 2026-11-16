@@ -39,6 +39,12 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 - **Phone:** reached at 100.98.104.89:5555 again (the owner sent Wireless debugging's port at 01:20, after a restart). At 01:25 it was at 2% and not charging.
 - **07:30:** a background timer resets the battery stats, with release TitanKeys as the keyboard, then logs to the scratchpad.
 - **Analytics** is #96, with questions for the owner.
+- **Owner's answers at 01:40:**
+  - Yale input comes first for Chinese, from the owner's Weasel schema; the files are in WSL `~/build/lang/owner-rime/`.
+  - No default Chinese variant: the user chooses.
+  - #84's rest-and-lift recording was pulled for tk-gestures.
+  - #97: a bug and feedback form sent to the server, with email as the backup. tk-data builds it, deploy approved.
+  - Port 5555 is fixed until the next restart.
 
 ## Milestones (internal; the owner gave the go at 01:20)
 
@@ -149,7 +155,7 @@ each generic language types its letters and accents over adb.
    - Simplified (mainland China), Traditional (Hong Kong) and Traditional (Taiwan).
    - Each uses OpenCC's conversion for its region, and its own word list where Rime has one.
    - Macau uses Hong Kong. Singapore and Malaysia use Simplified.
-   - The default follows the phone's region, otherwise Traditional (Hong Kong).
+   - No default: the user chooses (owner, 2026-11-16). Confirmed.
    - It's one page in Settings > Languages, like English spelling.
 5. The baseline day runs from 07:30 until the owner says it's done, or 21:00, and the stats are read then.
 6. The study reports go on their issues as comments.

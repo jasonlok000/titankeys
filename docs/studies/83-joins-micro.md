@@ -203,6 +203,46 @@ The session's 0% thresholds already cost right joins in the logs, because the se
 - So the most likely result is a small gain, and the worst plausible one about even.
 - The owner's logs since 11-11 would settle it without more recording: they'd show 2.1's own wrong joins.
 
+### Adding the recogniser's fit and the context model
+
+The owner asked whether the context model could tell one word from two. On its own it added little to the geometry (the [pilot](83-joins-context.md)). Here it's combined with the micro signals and with how well the paths fit words.
+
+[`83-joins/combine.py`](83-joins/combine.py) adds two groups of signals to the micro ones:
+
+- **Fit:** from the phone replay, the app's recogniser reads the joined path, the first touch alone and the second alone. A wrongly joined path like "elephant" + "ontario" should fit no word well, while each half fits one. The signals:
+  - the joined reading's CTC fit against the two halves' fits summed;
+  - the same for the total score;
+  - how far each reading leads the next word.
+- **Context:** the DistilGPT-2 margin, joined word against the two words, text before only, all three readings from the phone.
+
+Each model is a weighted sum with a veto below a threshold. Everything is nested leave-one-out: for each pair, the weights and each budget's threshold are fitted on the other pairs, then the pair is judged. So these numbers are fairer, and a little worse, than the in-sample thresholds above.
+
+**The logs:** 346 right joins and 37 wrong joins, every one with all signals. Each cell gives right joins lost / wrong joins cut, then the net per 1,000 swipes.
+
+| model | 0% | 1% | 2% | 5% | 10% |
+|---|---|---|---|---|---|
+| down alone | 1 / 3, +0.47 | 4 / 3, −0.23 | 5 / 4, −0.23 | 5 / 4, −0.23 | 5 / 4, −0.23 |
+| micro | 2 / 0, −0.47 | 4 / 9, **+1.17** | 12 / 11, −0.23 | 20 / 11, −2.10 | 37 / 16, −4.91 |
+| micro + fit | 2 / 2, 0.00 | 6 / 9, +0.70 | 9 / 11, +0.47 | 24 / 15, −2.10 | 44 / 16, −6.54 |
+| micro + fit + context | 3 / 6, +0.70 | 4 / 7, +0.70 | 10 / 12, +0.47 | 24 / 15, −2.10 | 44 / 17, −6.31 |
+| fit + context | 3 / 4, +0.23 | 4 / 6, +0.47 | 8 / 7, −0.23 | 20 / 12, −1.87 | 38 / 14, −5.61 |
+
+For comparison, the down veto at its fixed 0.001 loses 0 and cuts 2: +0.47.
+
+- **The combination doesn't clearly beat the micro veto.**
+  - The best point is micro at 1%: +1.17 per 1,000 swipes, against +0.47 for the down veto. That's 3 more pairs set right in 4,280 swipes.
+  - Adding fit and context makes the 0% point better (+0.70 against −0.47), but not the 1% point.
+  - Every difference is 1 to 5 pairs out of 383, within what a different handful of wrong joins would change.
+- **The context and fit alone (no geometry)** reach +0.47 at best.
+- **At 5% and 10%, every model is behind,** as before.
+
+**The session:** the readings need the app's recogniser on the phone. [`83-joins/capture-replay.sh`](83-joins/capture-replay.sh) reads each of the session's labelled gaps three ways: 609 readings, CPU only, about 5 to 10 minutes. It then scores the same models two ways:
+
+- with weights and thresholds from the logs;
+- nested leave-one-out on the session alone.
+
+The session has no text before, so its context margin opens a sentence. *Pending the phone replay.*
+
 ## Limits
 
 - **One session of drills.** Its two-word gaps may be more regular than everyday typing, which may be why the gap separates far better here (0.93) than in the logs (0.65).

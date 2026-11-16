@@ -204,7 +204,7 @@ def logs_features(private):
             for k in list(f):
                 if 'size' in k:
                     f[k] = None
-        f['label'], f['version'] = p['label'], p['version']
+        f['label'], f['version'], f['pair'] = p['label'], p['version'], p['pair']
         out.append(f)
     return out
 

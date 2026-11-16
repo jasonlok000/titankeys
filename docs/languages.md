@@ -155,8 +155,11 @@ data-only language is one command plus a check by eye. Where the data comes from
 **The picker** is one component for accents and for Chinese:
 - A row of choices over the keys, each with the key under it. Keys under no choice do nothing while it's open.
 - It takes a list and a page: accents fit on one page; Chinese gets pages.
-- **Chinese:** the choices show as you type the code. Space types the first. Rest a finger and press the key under a choice
-  to pick it. Swiping up or down on the keys turns the page, like the Sym panel. Back clears the code.
+- **Chinese, and any engine with choices:** the code you've typed shows over Q and W, muted, with the page after it in the
+  accent ("2›", or "1/3" when the engine knows the count). The choices sit over E to P, eight a page. Letters go on building
+  the code, so a choice is picked with Space: the one a resting finger marks, or else the first. Swiping down on the keys
+  turns to the next page and up to the one before, like the Sym panel; Rime's own , and . paging keys work too. Back closes
+  the choices.
 
 **Accents from the word list** (input methods with a word list):
 - The bar's suggestions ignore accents when matching: typing "cafe" offers **café**.

@@ -153,7 +153,12 @@ private fun theAccentsSitOverTheHeldKey() {
     same("J, under U, picks the first too", Picker.choice("J", columns), 0)
     same("A key past them picks nothing", Picker.choice("P", columns), -1)
     same("Z's row never picks", Picker.choice("N", columns), -1)
-    same("a page of five from the left", Picker.pageColumns(5), listOf(0, 1, 2, 3, 4))
+    same("a page of five from E", Picker.pageColumns(5), listOf(2, 3, 4, 5, 6))
+    same("at most eight, E to P", Picker.pageColumns(12).last(), 9)
+    same("one page has no mark", EngineState(page = 0, lastPage = true).pageMark, "")
+    same("Rime's pages: the page and an arrow", EngineState(page = 1, lastPage = false).pageMark, "2›")
+    same("the last of Rime's pages", EngineState(page = 2, lastPage = true).pageMark, "3")
+    same("a count when the engine knows it", EngineState(page = 0, lastPage = false, pages = 3).pageMark, "1/3")
 }
 
 private fun wordsCompleteIgnoringAccents() {

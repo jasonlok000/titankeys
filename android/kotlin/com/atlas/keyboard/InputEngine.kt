@@ -57,6 +57,7 @@ interface InputEngine {
  * - [code]: the text being built, as the user typed it (Rime's preedit), empty when nothing is being built.
  * - [choices]: the choices on this page, first first. Empty when there are none.
  * - [page], [lastPage]: the page shown, counted from 0, and whether another follows.
+ * - [pages]: how many pages there are, or 0 when the engine can't tell (Rime can't): the bar then shows the page and an arrow.
  * - [handled]: false when the key meant nothing to the engine (Backspace with nothing built, for one), so the keyboard
  *   handles it as usual.
  */
@@ -67,7 +68,18 @@ data class EngineState(
     val page: Int = 0,
     val lastPage: Boolean = true,
     val handled: Boolean = true,
+    val pages: Int = 0,
 ) {
+    /**
+     * Where the choices are, for the bar: "1/3" when the engine knows how many pages there are, else the page and "›" while
+     * more follow, as "2›". Empty with only one page.
+     */
+    val pageMark: String get() = when {
+        page == 0 && lastPage -> ""
+        pages > 0 -> "${page + 1}/$pages"
+        else -> "${page + 1}${if (lastPage) "" else "›"}"
+    }
+
     /** True while text is being built, so the picker stays on the bar. */
     val composing: Boolean get() = code.isNotEmpty()
 

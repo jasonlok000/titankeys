@@ -28,7 +28,7 @@ From the study's ranking:
 - **Chinese through Rime:** Cantonese in Yale, the owner's input method and the first Chinese one, then Jyutping, and
   Mandarin in Pinyin, with the Chinese variant setting.
 - **Korean and Vietnamese,** each through a small engine of TitanKeys' own ("Korean and Vietnamese" below).
-- **Thai** waits for a third layer of keys ("To check while building").
+- **Thai** (experimental), Kedmanee with a third layer of held keys and a word break for suggestions ("Thai" below).
 - **Not in 3.0:** right-to-left scripts, Indic scripts, Japanese, handwriting, swiping and a next-word model in other
   languages, and translating the app, the guide and the playground.
 
@@ -329,6 +329,24 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   picker's choices. A state that isn't `handled` may still commit: the keyboard writes that first, then handles the key as
   usual (Korean's syllable before a space, Rime's code before a capital). Data-only input methods use no engine.
 
+## Thai
+
+- **Keys: Kedmanee** (TIS 820-2538), read by `tools/im/make.py` from xkeyboard-config's `symbols/th`. The Titan's 26 letter
+  keys keep Kedmanee's letter and Shift letter. The 21 keys a PC has and the Titan doesn't (the number row, the punctuation
+  keys, ` and \) are a third layer: holding a letter key types the missing key's letter, and Shift + hold its Shift letter.
+  The number row sits over Q to P, then S and D; backslash on A, the bracket keys on F and G, ; and ' on H and J, ` on Z,
+  and , . / on B, N and M. An `im.json` key is then a list, `[letter, Shift, held, Shift held]`, as Kedmanee uses /.
+  A held Thai key types its third letter whatever hold for symbols is set to; Alt keeps its symbols.
+- **Measured** (`python3 -I tools/im/measure.py <data> th`): all 94 of Kedmanee's places are on the keys; every one of the
+  word list's 87,336 words can be typed; 27.1% of key presses are holds and 9.6% use Shift, weighted by each word's count.
+- **Words:** PyThaiNLP's list (CC0), via HeliBoard's aosp-dictionaries. Thai writes no spaces between words, so the word
+  being typed is found in the list (`WordBreak`, `"wordBreak": true` in `rules`): the run of letters before the cursor is
+  split into the fewest words, and the last piece is the one the bar completes. After one of the 2,000 commonest words,
+  `tests/languages` finds the next one 97.8% of the time when whole and 84.3% at any start (a letter or two may also
+  continue the word before: แม้ + น is แม้น). Folding for the bar now keeps marks outside U+0300 to U+036F, so Thai's
+  vowels and tones stay part of a word.
+- No sentence capitals or apostrophes. Settings shows ไทย with Noto Sans Thai's letters; Ink places no marks, so only names.
+
 ## Korean and Vietnamese
 
 Both are engines of TitanKeys' own, in plain Kotlin and checked on the JVM (`tests/languages`), named in `im.json` as
@@ -416,10 +434,5 @@ can drop to 50,000 words (−11 MB), or the word lists can move into an install-
   (Apache 2.0), Macedonian and Bosnian come from FrequencyWords (CC BY-SA 4.0), and Georgian from the Leipzig Corpora
   Collection's kat_newscrawl_2016_1M (CC BY 4.0). FrequencyWords' Georgian list is mis-encoded, Macedonian's AOSP-format
   list names no licence, and HeliBoard's Bosnian list has no real counts.
-- **Thai:** Android has no Thai layout file; the Kedmanee layout puts 22 of its letters on the number row and punctuation
-  keys, which the Titan doesn't have. On 26 keys with Shift they'd be held, as Cyrillic's few are, but they include ม ล ง
-  ว ต บ ค, so about a quarter of Thai typing would be holds (PyThaiNLP's word list, CC0). Thai needs a third layer first:
-  a key or a held key that gives the number row's and punctuation keys' letters, as `"key": "base/shift/third"`. Thai's
-  vowel and tone marks also aren't letters to Java and Python (`isLetter`), which the generator and the checks assume.
 - How rime-cantonese's tones as letters (v, x, q) feel to the owner, who may type tones as digits.
 - The Rime test on the phone: its speed and that the compiled tables are reused (`~/build/lang/rime-test`).

@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 class LanguageWords(private val english: Words, private val current: () -> WordList?) : Words {
     /** True while another input method than English is typing, with or without a word list. */
     var other = false
+    /** True while it writes no spaces between words (Thai): the word being typed is found in its list ([WordBreak]). */
+    var wordBreak = false
 
     private fun list() = if (other) current() else null
 
@@ -19,7 +21,14 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
 
     override fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit) {
         if (!other) return english.complete(before, cancelled, sentenceCapitalisation, result)
-        result(list()?.complete(lastWord(before)).orEmpty())
+        result(list()?.complete(prefix(before)).orEmpty())
+    }
+
+    override fun prefix(before: String): String {
+        if (!other) return english.prefix(before)
+        val run = lastWord(before)
+        val list = list()
+        return if (wordBreak && list != null) WordBreak.last(run, list::has, list::hasPrefix) else run
     }
 
     override fun prepare(text: String, cancelled: AtomicBoolean) { if (!other) english.prepare(text, cancelled) }
@@ -55,7 +64,8 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
         fun lastWord(before: String): String {
             var start = before.length
             while (start > 0 && (before[start - 1].isLetter() || before[start - 1] == '\'' || before[start - 1] == '’' ||
-                    Character.getType(before[start - 1]) == Character.NON_SPACING_MARK.toInt())) start--
+                    Character.getType(before[start - 1]) == Character.NON_SPACING_MARK.toInt() ||
+                    Character.getType(before[start - 1]) == Character.COMBINING_SPACING_MARK.toInt())) start--
             return before.substring(start).trimStart('\'', '’')
         }
     }

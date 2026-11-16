@@ -714,6 +714,23 @@
   }
  },
  {
+  "id": "th",
+  "name": "ไทย",
+  "nameEnglish": "Thai",
+  "label": "TH",
+  "locale": "th",
+  "script": "Thai",
+  "engine": null,
+  "language": {
+   "id": "th",
+   "name": "ไทย",
+   "nameEnglish": "Thai",
+   "label": "TH",
+   "script": "Thai",
+   "experimental": true
+  }
+ },
+ {
   "id": "ko",
   "name": "한국어",
   "nameEnglish": "Korean",

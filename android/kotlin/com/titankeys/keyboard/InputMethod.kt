@@ -42,8 +42,12 @@ data class InputMethod(
     /** Where the letters and the words come from, for the licences page and for contributors. */
     val source: Map<String, String>,
 ) {
-    /** What a key types: [base], and [shift] where Shift gives another letter rather than [base]'s capital (Georgian). */
-    data class KeyLetters(val base: String, val shift: String? = null)
+    /**
+     * What a key types: [base], and [shift] where Shift gives another letter rather than [base]'s capital (Georgian). A
+     * layout with more keys than the Titan's (Thai's Kedmanee) puts the rest on a third layer: holding the key types [held],
+     * and with Shift, [heldShift].
+     */
+    data class KeyLetters(val base: String, val shift: String? = null, val held: String? = null, val heldShift: String? = null)
 
     data class Variant(val id: String, val name: String, val words: String?)
 
@@ -59,6 +63,8 @@ data class InputMethod(
         val openingMarks: String = "",
         /** Whether an apostrophe can be part of a word (French: l'eau). */
         val apostrophes: Boolean = true,
+        /** The script writes no spaces between words (Thai): the word being typed is found in the word list ([WordBreak]). */
+        val wordBreak: Boolean = false,
     )
 
     val isEnglish get() = id == ENGLISH_ID
@@ -73,6 +79,12 @@ data class InputMethod(
         val key = keys?.get(printed.lowercaseChar()) ?: return null
         if (!shift) return key.base
         return key.shift ?: if (rules.capitalise) key.base.uppercase(javaLocale) else key.base
+    }
+
+    /** What holding the key printed [printed] types on a third layer (Thai), with or without Shift, or null. */
+    fun held(printed: Char, shift: Boolean): String? {
+        val key = keys?.get(printed.lowercaseChar()) ?: return null
+        return if (shift) key.heldShift ?: key.held else key.held
     }
 
     /** The letters held on the key printed [printed], in capitals with [shift], or none. */
@@ -111,9 +123,14 @@ data class InputMethod(
                 "qwerty", null -> null
                 is Map<*, *> -> value.entries.associate { (key, letters) ->
                     val printed = printedKey(key)
-                    val parts = (letters as? String ?: throw Json.Error("keys.$printed must be text")).split('/')
-                    if (parts.size > 2 || parts.any { it.isEmpty() }) throw Json.Error("keys.$printed must be a letter, or letter/shifted")
-                    printed to KeyLetters(parts[0], parts.getOrNull(1))
+                    // "a" or "a/shifted", or a list, [base, shift, held, held with Shift], where a layout needs "/" (Thai).
+                    val parts = when (letters) {
+                        is String -> letters.split('/').also { if (it.size > 2) throw Json.Error("keys.$printed must be a letter, or letter/shifted") }
+                        is List<*> -> letters.map { it as? String ?: throw Json.Error("keys.$printed must list text") }
+                        else -> throw Json.Error("keys.$printed must be text")
+                    }
+                    if (parts.size !in 1..4 || parts.any { it.isEmpty() }) throw Json.Error("keys.$printed must have 1 to 4 letters")
+                    printed to KeyLetters(parts[0], parts.getOrNull(1), parts.getOrNull(2), parts.getOrNull(3))
                 }
                 else -> throw Json.Error("keys must be \"qwerty\" or a map of keys")
             }
@@ -138,7 +155,7 @@ data class InputMethod(
             }
             val rules = (root["rules"] as? Map<*, *>)?.let {
                 Rules(it["capitalise"] as? Boolean ?: true, it["sentenceEnd"] as? String ?: ".?!", it["openingMarks"] as? String ?: "",
-                    it["apostrophes"] as? Boolean ?: true)
+                    it["apostrophes"] as? Boolean ?: true, it["wordBreak"] as? Boolean ?: false)
             } ?: Rules()
             val (engine, engineArg) = when (val value = root["engine"]) {
                 null -> null to null

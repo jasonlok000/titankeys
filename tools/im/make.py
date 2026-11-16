@@ -462,6 +462,67 @@ def build_national(data, ident):
         notice([CLDR_NOTICE, layout_line, "Words: " + source_line]))
 
 
+# Thai: Kedmanee (TIS 820-2538), read from xkeyboard-config's symbols/th "basic" (xkb/ in the data dir, with xorgproto's
+# keysymdef.h for the characters). The Titan's 26 letter keys keep Kedmanee's letters and Shift letters where a PC keyboard
+# has them. The 21 keys the Titan doesn't have go on a third layer: holding a letter key types the missing key's letter,
+# with Shift its Shift letter. The number row goes over Q to P (and on to S and D); the rest sit on the rows below, in
+# order.
+THAI_LETTER_KEYS = dict(zip(KEYS, ["AC01", "AB05", "AB03", "AC03", "AD03", "AC04", "AC05", "AC06", "AD08", "AC07", "AC08",
+                                   "AC09", "AB07", "AB06", "AD09", "AD10", "AD01", "AD04", "AC02", "AD05", "AD07", "AB04",
+                                   "AD02", "AB02", "AD06", "AB01"]))
+THAI_THIRD = {"q": "AE01", "w": "AE02", "e": "AE03", "r": "AE04", "t": "AE05", "y": "AE06", "u": "AE07", "i": "AE08",
+              "o": "AE09", "p": "AE10", "s": "AE11", "d": "AE12", "a": "BKSL", "f": "AD11", "g": "AD12", "h": "AC10",
+              "j": "AC11", "z": "TLDE", "b": "AB08", "n": "AB09", "m": "AB10"}
+THAI_NOTICE = ("Key layout: Kedmanee (Thai Industrial Standard TIS 820-2538), as xkeyboard-config's symbols/th gives it "
+               "(https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config), with the keys the Titan doesn't have held "
+               "on its letter keys.")
+THAI_WORDS = ("Words: PyThaiNLP's corpus (https://github.com/PyThaiNLP/pythainlp), via HeliBoard's aosp-dictionaries "
+              "(main_th.combined), CC0 1.0.")
+
+
+def read_xkb(data, layout="basic", file="symbols-th"):
+    """Each xkb key's characters in [layout] (base, Shift), from the keysyms' Unicode code points in keysymdef.h."""
+    codes = {}
+    for line in open(os.path.join(data, "xkb", "keysymdef.h"), encoding="utf-8"):
+        m = re.match(r"#define XK_(\w+)\s+0x[0-9a-f]+\s*/\*[ (]*U\+([0-9A-F]{4,6})", line)
+        if m:
+            codes[m.group(1)] = chr(int(m.group(2), 16))
+    text = open(os.path.join(data, "xkb", file), encoding="utf-8").read()
+    block = re.search(r'xkb_symbols "%s" \{(.*?)\n\};' % layout, text, re.S).group(1)
+    keys = {}
+    for m in re.finditer(r"key <(\w+)>\s*\{\[\s*([^\]]+)\]\}", block):
+        keys[m.group(1)] = [codes[name.strip()] for name in m.group(2).split(",")]
+    return keys
+
+
+def thai_keys(data):
+    xkb = read_xkb(data)
+    keys = {}
+    for k in KEYS:
+        base, shift = xkb[THAI_LETTER_KEYS[k]]
+        third = xkb[THAI_THIRD[k]] if k in THAI_THIRD else []
+        keys[k] = [base, shift] + third
+    return keys
+
+
+def build_thai(data, ident):
+    folder = os.path.join(ASSETS, ident)
+    os.makedirs(folder, exist_ok=True)
+    head, words = read_words(data, "main_th")
+    write_words(folder, head, words)
+    write_im(folder, {"id": ident, "name": cldr_name(data, "th"), "nameEnglish": "Thai", "label": "TH", "locale": "th",
+                      "script": "Thai", "keys": thai_keys(data), "accents": {}, "words": "words.combined", "variants": None,
+                      "rules": {"capitalise": False, "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": False,
+                                "wordBreak": True},
+                      "engine": None,
+                      "source": {"letters": "Kedmanee (TIS 820-2538)", "keys": "xkeyboard-config symbols/th basic",
+                                 "words": "main_th.combined"}})
+    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice([THAI_NOTICE, THAI_WORDS]))
+
+
+# Input methods built by a function of their own.
+OWN = {"th": build_thai}
+
 # The data folder, for CLDR's names as each input method is written.
 DATA = None
 
@@ -511,7 +572,7 @@ def write_index_and_list():
         entries.append({"id": im["id"], "name": im["name"], "nameEnglish": im["nameEnglish"], "label": im["label"],
                         "locale": im["locale"], "script": im["script"],
                         "engine": (next(iter(engine)) if isinstance(engine, dict) else engine), "language": language_of(im)})
-    order = list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE)
+    order = list(LATIN) + list(NATIONAL) + list(OWN) + list(ENGINES) + list(CHINESE)
     entries.sort(key=lambda e: (order.index(e["id"]) if e["id"] in order else len(order), e["id"]))
     with open(os.path.join(ASSETS, "index.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(entries, f, ensure_ascii=False, indent=1)
@@ -548,7 +609,7 @@ def escape(text):
 def main():
     global DATA
     data = DATA = sys.argv[1]
-    wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE)
+    wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE) + list(OWN)
     os.makedirs(ASSETS, exist_ok=True)
     for ident in wanted:
         if ident in LATIN:
@@ -559,6 +620,8 @@ def main():
             build_engine(data, ident)
         elif ident in CHINESE:
             build_chinese(data, ident)
+        elif ident in OWN:
+            OWN[ident](data, ident)
         else:
             raise SystemExit("unknown input method " + ident)
         print("built", ident)

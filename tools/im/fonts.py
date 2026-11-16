@@ -7,10 +7,11 @@ method's own name shows in Settings > Input methods (docs/languages.md, "Names")
 <Inter dir> holds Inter-Regular.otf and Inter-Medium.otf from the official Inter 4.1 release
 (https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip, extras/otf). <Noto Sans Georgian dir> holds
 NotoSansGeorgian-Regular.ttf and NotoSansGeorgian-Medium.ttf from Google's official notofonts.github.io repository
-(fonts/NotoSansGeorgian/hinted/ttf). <Noto Sans CJK dir> holds NotoSansKR-{Regular,Medium}.otf and
+(fonts/NotoSansGeorgian/hinted/ttf), and beside them NotoSansThai-Regular.ttf and -Medium.ttf (fonts/NotoSansThai/hinted/ttf),
+for the Thai letters in names. <Noto Sans CJK dir> holds NotoSansKR-{Regular,Medium}.otf and
 NotoSansHK-{Regular,Medium}.otf from the official https://github.com/notofonts/noto-cjk (Sans/SubsetOTF/KR and HK). All are
 under the SIL Open Font License 1.1 (licences/Inter-OFL.txt, licences/NotoSansGeorgian-OFL.txt,
-licences/NotoSansCJK-OFL.txt). Needs fontTools.
+licences/NotoSansCJK-OFL.txt, licences/NotoSansThai-OFL.txt). Needs fontTools.
 
 Ink draws the screens with these fonts, then Public Sans, then a few of Android's own (symbols, CJK, Arabic), and leaves a
 blank where none has the letter. The fonts were Latin-1 only, so Cyrillic and Greek names were blank, and Czech, Romanian,
@@ -53,6 +54,16 @@ def is_hangul(code):
 
 def is_han(code):
     return 0x3400 <= code <= 0x4DBF or 0x4E00 <= code <= 0x9FFF or 0xF900 <= code <= 0xFAFF
+
+
+def is_thai(code):
+    return 0x0E01 <= code <= 0x0E7F
+
+
+def thai_in_text():
+    """Every Thai letter in the input methods' and languages' names: Thai's name, ไทย, in Settings."""
+    index = json.load(open(os.path.join(ROOT, "android", "assets", "im", "index.json"), encoding="utf-8"))
+    return sorted({ord(c) for m in index for c in m["name"] + m["language"]["name"] if is_thai(ord(c))})
 
 
 def cjk_in_text():
@@ -135,6 +146,8 @@ def main():
         font = cut(os.path.join(inter, "Inter-%s.otf" % weight))
         georgian_path = os.path.join(georgian, "NotoSansGeorgian-%s.ttf" % weight)
         count = add_glyphs(font, georgian_path, [c for c in GEORGIAN if c in TTFont(georgian_path).getBestCmap()])
+        # Thai's letters in names, from Noto Sans Thai beside Noto Sans Georgian (names only: Ink doesn't place Thai's marks).
+        add_glyphs(font, os.path.join(georgian, "NotoSansThai-%s.ttf" % weight), thai_in_text())
         count_hangul = add_glyphs(font, os.path.join(cjk, "NotoSansKR-%s.otf" % weight), hangul)
         count_han = add_glyphs(font, os.path.join(cjk, "NotoSansHK-%s.otf" % weight), han)
         out = os.path.join(ROOT, "assets", "fonts", "Inter-%s.otf" % weight)

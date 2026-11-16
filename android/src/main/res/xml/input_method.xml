@@ -88,6 +88,8 @@
         android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=kk" android:subtypeId="1258037242" />
     <subtype android:label="@string/im_ka" android:imeSubtypeLocale="ka" android:languageTag="ka"
         android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=ka" android:subtypeId="903638404" />
+    <subtype android:label="@string/im_th" android:imeSubtypeLocale="th" android:languageTag="th"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=th" android:subtypeId="-1875224179" />
     <subtype android:label="@string/im_ko" android:imeSubtypeLocale="ko" android:languageTag="ko"
         android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=ko" android:subtypeId="1305495784" />
     <subtype android:label="@string/im_vi" android:imeSubtypeLocale="vi" android:languageTag="vi"

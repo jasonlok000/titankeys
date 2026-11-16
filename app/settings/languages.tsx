@@ -39,7 +39,7 @@ export const languageSubtitle = (language: Language) =>
   language.experimental ? `${language.nameEnglish} · experimental` : language.nameEnglish === language.name ? undefined : language.nameEnglish;
 
 const SCRIPTS: Record<string, string> = {
-  Latn: "Latin letters", Cyrl: "Cyrillic", Grek: "Greek", Geor: "Georgian", Kore: "Korean", Hani: "Chinese",
+  Latn: "Latin letters", Cyrl: "Cyrillic", Grek: "Greek", Geor: "Georgian", Thai: "Thai", Kore: "Korean", Hani: "Chinese",
 };
 
 /**

@@ -48,6 +48,7 @@ fun main(args: Array<String>) {
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
     aRestoredInputMethodTypes()
+    thaiHoldsAndBreaks()
     aShiftedLetterIsTheKeyboards()
     aHeldSymWaits()
     androidsListFollowsTheOnes()
@@ -291,6 +292,30 @@ private fun aShiftedLetterIsTheKeyboards() {
     check("Shift + W in English: as always", !KeysMapKeys.keeps(hasKeys = false, letterKey = true, alt = false, ctrl = false, meta = false))
 }
 
+/** Thai's third layer (a held key types the Kedmanee key the Titan lacks) and finding the word being typed with no spaces. */
+private fun thaiHoldsAndBreaks() {
+    val thai = InputMethod.parse("""{"id":"th","name":"ไทย","nameEnglish":"Thai","label":"TH","locale":"th","script":"Thai",
+        "keys":{"q":["ๆ","๐","ๅ","+"],"w":["ไ","\"","/","๑"],"k":["า","ษ"]},"accents":{},"words":null,"variants":null,
+        "rules":{"capitalise":false,"wordBreak":true},"engine":null,"source":{}}""")
+    same("Q types ๆ", thai.letter('q', false), "ๆ")
+    same("Shift + Q types ๐, not a capital", thai.letter('q', true), "๐")
+    same("held Q types ๅ (the 1 key)", thai.held('q', false), "ๅ")
+    same("held Shift + Q types +", thai.held('q', true), "+")
+    same("a slash can be a letter in a list", thai.held('w', false), "/")
+    same("K has no third", thai.held('k', false), null)
+    check("Thai breaks words", thai.rules.wordBreak)
+    val words = setOf("ที่", "การ", "กิน", "ข้าว", "ไป", "ไหน")
+    fun last(run: String) = WordBreak.last(run, { it in words }, { prefix -> words.any { it.startsWith(prefix) } })
+    same("one word", last("กิน"), "กิน")
+    same("the word after a whole one", last("กินข้"), "ข้")
+    same("three words", last("ไปกินข้าว"), "ข้าว")
+    same("a word started", last("ไปไห"), "ไห")
+    same("a mark stays with its letter", last("กินขุ"), "ขุ")
+    same("nothing", last(""), "")
+    same("a fold keeps Thai's marks", WordList.fold("กิน", java.util.Locale("th")), "กิน")
+    same("a fold still drops Latin accents", WordList.fold("Café", java.util.Locale.FRENCH), "cafe")
+}
+
 private fun aRestoredInputMethodTypes() {
     val index = InputMethodIndex(listOf(
         InputMethodIndex.Entry("ru", "Русский", "Russian", "RU", "ru", "Cyrl"),
@@ -484,6 +509,34 @@ private fun theNameShows(method: InputMethod, inIndex: String?) {
     }
 }
 
+/**
+ * In a script with no spaces (Thai): after one of the list's 2,000 commonest words, another of them is typed, and the word
+ * being typed must be found, as the bar asks. Says the share found for any start of the word (a letter or two can also
+ * continue the word before, as แม้ + น is แม้น) and for the whole word; at least 80% and 90% pass.
+ */
+private fun wordBreakFindsTheWord(method: InputMethod, read: WordList, list: File) {
+    val common = list.useLines { lines -> lines.filter { it.startsWith(" word=") }.map { it.removePrefix(" word=").substringBefore(',') }.take(2_000).toList() }
+    val random = java.util.Random(56)
+    var started = 0
+    var whole = 0
+    val tries = 5_000
+    repeat(tries) {
+        val first = common[random.nextInt(common.size)]
+        val second = common[random.nextInt(common.size)]
+        // A start of the second word that doesn't end before a mark, as typing it would show.
+        val cuts = (1..second.length).filter { it == second.length || Character.getType(second[it]).let { type ->
+            type != Character.NON_SPACING_MARK.toInt() && type != Character.COMBINING_SPACING_MARK.toInt() } }
+        val typing = second.substring(0, cuts[random.nextInt(cuts.size)])
+        if (WordBreak.last(first + typing, read::has, read::hasPrefix) == typing) started++
+        if (WordBreak.last(first + second, read::has, read::hasPrefix) == second) whole++
+    }
+    val startShare = 100.0 * started / tries
+    val wholeShare = 100.0 * whole / tries
+    println("${method.id}: the word being typed found after another: %.1f%% of starts, %.1f%% of whole words (%d tries)".format(startShare, wholeShare, tries))
+    check("${method.id}: a word's start is found", startShare >= 80.0) { "%.1f%%".format(startShare) }
+    check("${method.id}: a whole word is found", wholeShare >= 90.0) { "%.1f%%".format(wholeShare) }
+}
+
 private fun everyInputMethodInTheFolder(folder: File) {
     val methods = folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }
     val labels = HashMap<String, String>()
@@ -526,6 +579,7 @@ private fun everyInputMethodInTheFolder(folder: File) {
         check("${method.id}: its word list is there", list.isFile)
         if (!list.isFile) continue
         val read = WordList.read(list.useLines { it.toList() }.asSequence(), method.javaLocale)
+        if (method.rules.wordBreak) wordBreakFindsTheWord(method, read, list)
         check("${method.id}: its word list has words", read.size > 1000) { "${read.size}" }
         check("${method.id}: at most 100,000 words", read.size <= 100_000) { "${read.size}" }
         check("${method.id}: at most 4 MB", list.length() <= 4_000_000) { "${list.length()}" }
@@ -535,12 +589,18 @@ private fun everyInputMethodInTheFolder(folder: File) {
             typable += method.letter(key, false) ?: key.toString()
             method.keys?.get(key)?.shift?.let { typable += it }
             typable += method.accentsOf(key, false)
+            // Thai's third layer: held, and held with Shift.
+            method.held(key, false)?.let { typable += it }
+            method.held(key, true)?.let { typable += it }
         }
         val counts = HashMap<String, Int>()
         list.useLines { lines ->
             lines.filter { it.startsWith(" word=") }.take(50_000).forEach { line ->
                 val word = line.removePrefix(" word=").substringBefore(',').lowercase(method.javaLocale)
-                for (letter in InputMethod.graphemes(word)) if (letter.first().isLetter()) counts.merge(letter, 1, Int::plus)
+                // Thai types its vowels and tones as keys of their own, so each counts by itself, not with its consonant.
+                val letters = if (method.rules.wordBreak) word.codePoints().toArray().map { String(Character.toChars(it)) }
+                    else InputMethod.graphemes(word)
+                for (letter in letters) if (letter.first().isLetter() || method.rules.wordBreak) counts.merge(letter, 1, Int::plus)
             }
         }
         val missing = counts.filter { (letter, count) -> count >= 20 && letter !in typable }.keys.sorted()

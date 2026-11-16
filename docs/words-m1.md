@@ -553,3 +553,33 @@ they're about Accessibility and setup.
 **The GitHub release:**
 
 > **Updating from 2.x?** This update turns TitanKeys off once, as your keyboard and as the Back service (Accessibility), because the app's code moved to new names. Your words and settings stay. Tap the notification TitanKeys shows, or open TitanKeys > Settings > Setup, to turn them back on. New installs aren't affected.
+
+## Words pass 3: languages and Chinese (#56)
+
+Replaces the `F:` drafts for the language framework and Rime. Licence names and holders stay exactly as in
+`native/rime/SOURCES.md` and `licences/Rime-*.txt`; only the words around them change.
+
+| Place | Before | After |
+| --- | --- | --- |
+| Bar, an input method getting ready (`preparingLine`) | Getting {name} ready… | Warming up {name}… |
+| Bar, after a switch with held Sym | {label}  {name} | {name} it is. |
+| Bar, the only choice with no variant (`NO_VARIANT`) | Pick characters in Settings | Simplified or Traditional? Settings. |
+| Chinese characters, subtitle | Pick how your characters come out. You can change it any time. | Every Chinese input method types in these. In Macau, pick Hong Kong. In Singapore or Malaysia, Simplified. |
+| Chinese characters, labels | Simplified (mainland China), Traditional (Hong Kong), Traditional (Taiwan) | (stay) |
+| Chinese characters, none picked | Pick one | Not picked yet |
+| Settings, the Languages rows | Input methods, Chinese characters, English spelling | (stay) |
+| Input methods, subtitle | Turn on the ones you type in. Hold Sym to switch between them. | Turn on the ones you type in. Hold Sym to hop between them. |
+| Input methods, one on | Turn on another one to switch with Sym. | Just one, so Sym has nothing to switch to. Turn on another. |
+| Input methods, eight on | Eight at a time. Turn one off first. | Eight at a time, tops. Turn one off first. |
+| Licences, Rime | BSD-3-Clause. Types Chinese. | BSD-3-Clause. Turns what you type into Chinese. |
+| Licences, OpenCC | Apache 2.0. Turns Chinese into Simplified, Hong Kong or Taiwan characters. | Apache 2.0. Gives you Simplified, Hong Kong or Taiwan characters. |
+| Licences, rime-jyutping | LGPL-3.0. The Yale spelling rules. | LGPL-3.0. The Yale spelling rules, by 幸延. |
+| Licences, Rime's Pinyin and shared data | LGPL-3.0. rime-luna-pinyin, rime-essay and rime-prelude. | LGPL-3.0. rime-luna-pinyin and rime-essay for Pinyin, rime-prelude for the rest. |
+| README, Rime and OpenCC | typing Chinese, and its Simplified, Hong Kong and Taiwan characters | Chinese typing, in Simplified, Hong Kong or Taiwan characters |
+| README, the LGPL data | the Yale spelling rules, the Pinyin words… | the Yale spelling rules by 幸延, the Pinyin words… |
+| Report form, recording off | Your last Record a bug stays on your phone unless you switch it on. It can show what you typed while it ran. | Left out. Your last Record a bug stays on your phone. |
+| Report form, crash and freeze | …Nothing you typed. It always goes along. | (stays) |
+| Input method name, Cantonese Yale | 粵語耶魯 | 耶魯拼音 |
+| Input method names, Jyutping and Pinyin | 粵拼, 漢語拼音 | (stay) |
+
+耶魯拼音 is what Yale romanisation is called in Chinese; the English name under it, "Cantonese, Yale", says which language.

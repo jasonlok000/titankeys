@@ -145,8 +145,13 @@ object Picker {
         return List(shown) { start + it }
     }
 
-    /** The columns of a page of [count] choices from an engine, from the left. */
-    fun pageColumns(count: Int): List<Int> = List(count.coerceIn(0, COLUMNS)) { it }
+    /** An engine's first choice sits over E: Q and W show the code being typed and the page. */
+    const val FIRST_CHOICE = 2
+    /** The most choices on a page: E to P. */
+    const val CHOICES = COLUMNS - FIRST_CHOICE
+
+    /** The columns of a page of [count] choices from an engine, from E. */
+    fun pageColumns(count: Int): List<Int> = List(count.coerceIn(0, CHOICES)) { FIRST_CHOICE + it }
 
     /** Which choice the key [key] picks, given each choice's column, or -1. */
     fun choice(key: String, columns: List<Int>): Int {

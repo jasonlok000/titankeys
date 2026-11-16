@@ -128,9 +128,11 @@ internal sealed interface LanguagePicker {
      * the one a resting finger marks, or else the first.
      */
     class Choices(val state: EngineState) : LanguagePicker {
-        override val notice = Strip.Notice.Picker(state.choices.take(Picker.COLUMNS), Picker.pageColumns(state.choices.size).map { it..it })
+        private val columns = Picker.pageColumns(state.choices.size)
+        override val notice = Strip.Notice.Picker(state.choices.take(columns.size), columns.map { it..it },
+            lead = state.code, leadMark = state.pageMark)
         /** The choice over key [column], or -1. */
-        fun choiceAt(column: Int) = if (column in 0 until notice.items.size) column else -1
+        fun choiceAt(column: Int) = columns.indexOf(column)
     }
 
     /** The switch overlay on a held Sym: each input method that's on, the current one marked. */

@@ -63,7 +63,11 @@ class Strip(
          * engine's choices. Each item sits over the key columns in [columns] at the same place, and the item at [current] is the
          * one in use, as the overlay's input method.
          */
-        data class Picker(val items: List<String>, val columns: List<IntRange>, val current: Int = -1) : Notice {
+        data class Picker(val items: List<String>, val columns: List<IntRange>, val current: Int = -1,
+                          /** An engine's code being typed, over Q and W, left of the choices. */
+                          val lead: String = "",
+                          /** Where the choices are, after the code: "2›" or "1/3". */
+                          val leadMark: String = "") : Notice {
             override val word get() = ""
         }
     }
@@ -910,6 +914,22 @@ class Strip(
         pickerText.textSize = wordPixels()
         val baseline = StripFit.baseline(line, pickerText.textSize, floor)
         val pillHeight = minOf(dp(MENU_PILL_DP).toFloat(), StripFit.around(line, barHeight.toFloat(), inside))
+        if (picker.lead.isNotEmpty() || picker.leadMark.isNotEmpty()) {
+            // The code as typed, muted, and the page in the accent, over Q and W; a long code shrinks to fit.
+            val left = maxOf(menuColumn(0).first, side.toFloat())
+            val right = menuColumn(Picker.FIRST_CHOICE - 1).second - dp(4)
+            val mark = if (picker.leadMark.isEmpty()) "" else " " + picker.leadMark
+            val codeWidth = pickerText.measureText(picker.lead)
+            val total = codeWidth + pickerText.measureText(mark)
+            val scale = if (total > right - left && total > 0f) (right - left) / total else 1f
+            canvas.save()
+            canvas.scale(scale, scale, left, baseline)
+            pickerText.color = look.muted
+            canvas.drawText(picker.lead, left, baseline, pickerText)
+            pickerText.color = look.accent
+            canvas.drawText(mark, left + codeWidth, baseline, pickerText)
+            canvas.restore()
+        }
         for ((index, item) in picker.items.withIndex()) {
             val columns = picker.columns.getOrNull(index) ?: continue
             val left = menuColumn(columns.first).first

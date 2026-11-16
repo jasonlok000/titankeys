@@ -3124,6 +3124,7 @@ class AtlasIme : InputMethodService() {
         when (outcome) {
             is Contact.Outcome.Swipe -> {
                 showStripAfterBack()
+                if (!altOrPanel && pageChoices(outcome.points)) return
                 if (altOrPanel) {
                     if (panelOpen) swipePanel(outcome.points)
                     return
@@ -3175,6 +3176,21 @@ class AtlasIme : InputMethodService() {
                 if (key == " " && guideBlocked(GuideLesson.Space)) return
                 // A touch that typed a key: a step, as light as a tap keyboard's, since the touchpad has no click of its own.
                 haptics.play(Haptic.TapKey)
+                val engine = languages.engine
+                if (engine != null) {
+                    // A tap goes to the engine as a key would: Space picks, a letter builds the code.
+                    val shifted = modifiers.shift != Modifiers.Level.Off
+                    val state = if (key == " ") {
+                        val marked = (openPicker() as? LanguagePicker.Choices)?.choiceAt(strip?.pickerMark ?: -1) ?: -1
+                        if (marked >= 0) engine.pick(marked) else engine.space()
+                    } else engine.key(languages.current.letter(key[0], shifted)?.first() ?: if (shifted) key[0] else key[0].lowercaseChar())
+                    if (state.handled) {
+                        engineState(state)
+                        modifiers.consume()
+                        showModifiers()
+                        return
+                    }
+                }
                 if (key == " ") {
                     composer.space(repeated = false, time = outcome.endedAt)
                 } else {
@@ -3313,6 +3329,7 @@ class AtlasIme : InputMethodService() {
         picker = open
         strip?.pickerMark = -1
         strip?.notice = open.notice
+        contact.paging = panelOpen || choicesOpen
     }
 
     private fun closePicker() {
@@ -3320,6 +3337,28 @@ class AtlasIme : InputMethodService() {
         picker = null
         strip?.pickerMark = -1
         if (strip?.notice === open.notice) strip?.notice = null
+        contact.paging = panelOpen
+    }
+
+    /** An engine's choices are on the bar: swipes on the keys turn their pages, as on the Sym panel. */
+    private val choicesOpen get() = picker is LanguagePicker.Choices
+
+    /**
+     * A swipe on the keys with an engine's choices on the bar turns their page: down for the next, up for the one before, as the
+     * Sym panel's pages. True if it was taken.
+     */
+    private fun pageChoices(points: List<Sample>): Boolean {
+        if (openPicker() !is LanguagePicker.Choices) return false
+        val engine = languages.engine ?: return false
+        val down = (points.last().y - points.first().y) * 4
+        val across = (points.last().x - points.first().x) * 10
+        // Mostly sideways is no page: a slip, or a swipe meant for something else.
+        if (kotlin.math.abs(down) * 10 < kotlin.math.abs(across) * 4 || kotlin.math.abs(down) < Contact.PAGE_KEYS / 2f) return true
+        val before = (openPicker() as? LanguagePicker.Choices)?.state
+        val state = engine.page(forward = down > 0)
+        if (state.page != before?.page) haptics.play(Haptic.PanelPage)
+        engineState(state)
+        return true
     }
 
     /** A held letter's accents, on the bar over the keys around it. The letter it typed stays until one is picked. */
@@ -3534,7 +3573,11 @@ class AtlasIme : InputMethodService() {
         if (KeyCapture.waiting?.invoke(event) == true) return true
         // Back closes the picker, and its release goes with it.
         if (keyCode == KeyEvent.KEYCODE_BACK && openPicker() != null) {
-            if (event.repeatCount == 0) closePicker()
+            if (event.repeatCount == 0) {
+                // An engine's code goes with its choices.
+                if (picker is LanguagePicker.Choices) languages.engine?.reset()
+                closePicker()
+            }
             pickerKey = keyCode
             return true
         }
@@ -4046,7 +4089,7 @@ class AtlasIme : InputMethodService() {
         updateExactBar()
         showModifierBar()
         panel?.mode = modifiers.panel
-        contact.paging = panelOpen
+        contact.paging = panelOpen || choicesOpen
         updateKeyWatch()
         KeyboardEvents.publish { KeyboardEvent.ModifierState(modifiers.shift, modifiers.alt, modifiers.panel, modifiers.ctrlHeld) }
     }

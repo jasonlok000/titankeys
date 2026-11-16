@@ -551,5 +551,17 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("chinese_variant_shown", shown).apply();
     }
 
+    /**
+     * Whether Chinese input methods type plain ASCII punctuation (, . ?) instead of Chinese full-width marks (，。？), which are
+     * the default (docs/languages.md, "Chinese on the bar").
+     */
+    public static boolean chinesePlainPunctuation(Context context) {
+        return preferences(context).getBoolean("chinese_plain_punctuation", false);
+    }
+
+    public static void chinesePlainPunctuation(Context context, boolean plain) {
+        preferences(context).edit().putBoolean("chinese_plain_punctuation", plain).apply();
+    }
+
     private TypingSettings() {}
 }

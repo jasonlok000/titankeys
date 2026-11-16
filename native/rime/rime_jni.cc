@@ -120,6 +120,38 @@ jboolean pick(JNIEnv*, jclass, jint index) {
   return rime->select_candidate_on_current_page(s, (size_t)index) ? JNI_TRUE : JNI_FALSE;
 }
 
+// Picks choice [index] counted across every page, as choices() gives them.
+jboolean pickAt(JNIEnv*, jclass, jint index) {
+  std::lock_guard<std::mutex> guard(lock);
+  RimeSessionId s = live();
+  if (!s || index < 0) return JNI_FALSE;
+  return rime->select_candidate(s, (size_t)index) ? JNI_TRUE : JNI_FALSE;
+}
+
+// Up to [count] choices from choice [start], across every page: the bar's row and its bigger menu read past Rime's page.
+// Rime makes them as they're asked for, so asking for a few is cheap.
+jobjectArray choices(JNIEnv* env, jclass, jint start, jint count) {
+  std::lock_guard<std::mutex> guard(lock);
+  jclass stringClass = env->FindClass("java/lang/String");
+  std::vector<std::string> texts;
+  RimeSessionId s = live();
+  if (s && start >= 0 && count > 0) {
+    RimeCandidateListIterator it = {0};
+    if (rime->candidate_list_from_index(s, &it, start)) {
+      while ((int)texts.size() < count && rime->candidate_list_next(&it))
+        texts.emplace_back(it.candidate.text ? it.candidate.text : "");
+      rime->candidate_list_end(&it);
+    }
+  }
+  jobjectArray out = env->NewObjectArray((jsize)texts.size(), stringClass, nullptr);
+  for (size_t i = 0; i < texts.size(); ++i) {
+    jstring t = env->NewStringUTF(texts[i].c_str());
+    env->SetObjectArrayElement(out, (jsize)i, t);
+    env->DeleteLocalRef(t);
+  }
+  return out;
+}
+
 // Rime's own backup of the learned words: writes each user dictionary as a text snapshot in <user>/sync/<installation id>/,
 // after merging in every snapshot already in <user>/sync/ (a restored backup's, for one). It closes the session first, so
 // the next call makes a new one, with the default schema: the Kotlin side selects its schema again.
@@ -139,7 +171,8 @@ void clear(JNIEnv*, jclass) {
 }
 
 // Object[] { String commit, String input, String preedit,
-//            int[] { page, lastPage, highlighted, caret, pageSize, choices in all or -1 for more than kCountPages pages },
+//            int[] { page, lastPage, highlighted, caret, pageSize, choices in all or -1 for more than kCountPages pages,
+//                    1 when the choices cover only part of the code (Rime couldn't read the rest) },
 //            String[] choices, String[] comments }
 // commit is the text Rime let go of since the last call (taken, so it's returned once), or null.
 jobjectArray state(JNIEnv* env, jclass) {
@@ -157,13 +190,14 @@ jobjectArray state(JNIEnv* env, jclass) {
   }
   env->SetObjectArrayElement(out, 1, text(env, rime->get_input(s)));
 
-  jint numbers[6] = {0, 1, 0, 0, 0, -1};
+  jint numbers[7] = {0, 1, 0, 0, 0, -1, 0};
   std::vector<std::string> choices, comments;
   RIME_STRUCT(RimeContext, context);
   if (rime->get_context(s, &context)) {
     if (context.composition.length > 0 || context.composition.preedit) {
       env->SetObjectArrayElement(out, 2, text(env, context.composition.preedit));
       numbers[3] = context.composition.cursor_pos;
+      if (context.composition.sel_end < context.composition.length) numbers[6] = 1;
     }
     numbers[0] = context.menu.page_no;
     numbers[1] = context.menu.is_last_page ? 1 : 0;
@@ -192,8 +226,8 @@ jobjectArray state(JNIEnv* env, jclass) {
     }
     rime->free_context(&context);
   }
-  jintArray ints = env->NewIntArray(6);
-  env->SetIntArrayRegion(ints, 0, 6, numbers);
+  jintArray ints = env->NewIntArray(7);
+  env->SetIntArrayRegion(ints, 0, 7, numbers);
   env->SetObjectArrayElement(out, 3, ints);
   jobjectArray texts = env->NewObjectArray((jsize)choices.size(), stringClass, nullptr);
   jobjectArray notes = env->NewObjectArray((jsize)comments.size(), stringClass, nullptr);
@@ -218,6 +252,8 @@ const JNINativeMethod kMethods[] = {
     {"getOption", "(Ljava/lang/String;)Z", (void*)getOption},
     {"key", "(II)Z", (void*)key},
     {"pick", "(I)Z", (void*)pick},
+    {"pickAt", "(I)Z", (void*)pickAt},
+    {"choiceList", "(II)[Ljava/lang/String;", (void*)choices},
     {"clear", "()V", (void*)clear},
     {"sync0", "()Z", (void*)sync},
     {"state", "()[Ljava/lang/Object;", (void*)state},

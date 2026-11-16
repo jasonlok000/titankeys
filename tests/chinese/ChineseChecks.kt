@@ -1,0 +1,148 @@
+package com.titankeys.keyboard
+
+/**
+ * Chinese on the bar (docs/languages.md, "Chinese on the bar"): the row's places, the bigger menu's pages, the keys that pick,
+ * the marks and the English word. The rules are plain Kotlin (keyboard/Chinese.kt), so they run here without the phone.
+ */
+fun main() {
+    aChoiceIsAsWideAsItNeeds()
+    theRowFillsWToOInOrder()
+    qAndPHaveNoChoice()
+    theKeysThatPick()
+    theMenuFillsThreeRowsAPage()
+    theMenuTurnsItsPages()
+    pShowsTheMenusPage()
+    punctuationAndQuotes()
+    aFlickUpPicks()
+    anEnglishWordOnlyWhenRimeCantRead()
+    theEnglishWordIsNeverFirst()
+    println("Chinese checks passed")
+}
+
+private fun check(ok: Boolean, what: String) {
+    if (!ok) throw AssertionError(what)
+}
+
+private fun <T> same(expected: T, actual: T, what: String) {
+    if (expected != actual) throw AssertionError("$what\n  expected: $expected\n  actual:   $actual")
+}
+
+fun aChoiceIsAsWideAsItNeeds() {
+    same(1, ChineseRow.keys("你"), "one character: one key")
+    same(1, ChineseRow.keys("你好"), "two: one key")
+    same(2, ChineseRow.keys("屌你老母"), "four: two keys, as the owner asked")
+    same(2, ChineseRow.keys("廣東話"), "three: two keys")
+    same(3, ChineseRow.keys("我哋今日去飲"), "six: three")
+    same(2, ChineseRow.keys("hello"), "a Latin letter is half as wide: hello takes two")
+    same(1, ChineseRow.keys("ok"), "and ok one")
+    same(1, ChineseRow.keys("，"), "a full-width mark is a character")
+    same(1, ChineseRow.keys(""), "never none")
+}
+
+fun theRowFillsWToOInOrder() {
+    val singles = (1..10).map { "字$it" }
+    same((1..8).map { it..it }, ChineseRow.place(singles), "eight one-key choices fill W to O, the rest wait for the menu")
+    same(listOf(1..2, 3..3, 4..4), ChineseRow.place(listOf("屌你老母", "你", "好")), "a four-character choice takes W and E")
+    val tight = List(7) { "字" } + "屌你老母" + "你"
+    same((1..7).map { it..it }, ChineseRow.place(tight), "a choice that doesn't fit ends the row: the order stays Rime's")
+    same(listOf(1..8), ChineseRow.place(listOf("一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十"))
+        .take(1), "a first choice wider than the row takes the whole row")
+    same(emptyList<IntRange>(), ChineseRow.place(emptyList()), "no choices, no places")
+}
+
+fun qAndPHaveNoChoice() {
+    same(0, ChineseRow.MARK, "the mark sits over Q")
+    same(9, ChineseRow.MORE, "the more cue over P")
+    for (choices in listOf(List(20) { "字" }, List(5) { "屌你老母" }, listOf("你好", "hello", "我哋"))) {
+        val columns = ChineseRow.place(choices)
+        check(columns.none { 0 in it || 9 in it }, "no choice over Q or P: $choices")
+    }
+    same(8, ChineseRow.ASK, "the row asks the engine for one choice a key at most")
+}
+
+fun theKeysThatPick() {
+    val columns = ChineseRow.place(listOf("屌你老母", "你", "好"))
+    same(0, ChineseRow.choiceAt(ChineseRow.column("W"), columns), "W picks the first")
+    same(0, ChineseRow.choiceAt(ChineseRow.column("E"), columns), "so does E, under the same wide choice")
+    same(1, ChineseRow.choiceAt(ChineseRow.column("R"), columns), "R the second")
+    same(1, ChineseRow.choiceAt(ChineseRow.column("F"), columns), "the second row picks too, as the word menu's")
+    same(-1, ChineseRow.choiceAt(ChineseRow.column("Z"), columns), "the third row doesn't")
+    same(-1, ChineseRow.choiceAt(ChineseRow.column("Q"), columns), "Q has no choice")
+    same(-1, ChineseRow.choiceAt(ChineseRow.column("P"), columns), "nor P")
+    same(-1, ChineseRow.choiceAt(ChineseRow.column("U"), columns), "a key under no choice picks nothing")
+}
+
+fun theMenuFillsThreeRowsAPage() {
+    val singles = List(60) { "字$it" }
+    val first = ChineseMenu.page(singles, 0)!!
+    same(23, first.cells.size, "a page of one-key choices: W to O, S to L, Z to M")
+    same(listOf(1..8, 1..8, 1..7), ChineseMenu.ROWS, "the Sym panel's places")
+    same(0, ChineseMenu.choice(first, "W"), "W the first")
+    same(8, ChineseMenu.choice(first, "S"), "S the ninth")
+    same(16, ChineseMenu.choice(first, "Z"), "Z the seventeenth")
+    same(22, ChineseMenu.choice(first, "M"), "M the last")
+    same(-1, ChineseMenu.choice(first, "Q"), "Q none")
+    same(-1, ChineseMenu.choice(first, "A"), "A none")
+    same(-1, ChineseMenu.choice(first, "P"), "P none: it shows the page")
+    val wide = listOf("你") + List(3) { "屌你老母" } + listOf("我哋今日去飲")
+    val page = ChineseMenu.page(wide, 0)!!
+    same(listOf(1..1, 2..3, 4..5, 6..7), page.cells.filter { it.row == 0 }.map { it.columns }, "wide choices side by side")
+    same(1..3, page.cells.first { it.index == 4 }.columns, "one that doesn't fit a row starts the next")
+    same(1, page.cells.first { it.index == 4 }.row, "on the second row")
+    same(null, ChineseMenu.page(wide, 9), "no page past the end")
+}
+
+fun theMenuTurnsItsPages() {
+    same(listOf(0, 23, 46), ChineseMenu.starts(List(60) { "字" }), "60 one-key choices: three pages")
+    same(listOf(0), ChineseMenu.starts(List(5) { "字" }), "a few: one page")
+    same(emptyList<Int>(), ChineseMenu.starts(emptyList()), "none: none")
+}
+
+fun pShowsTheMenusPage() {
+    same("", ChineseMenu.position(0, 1, more = false), "one page: nothing")
+    same("2/3", ChineseMenu.position(1, 3, more = false), "the page and how many")
+    same("1›", ChineseMenu.position(0, 2, more = true), "while the engine has more: the page and an arrow")
+}
+
+fun punctuationAndQuotes() {
+    for (c in ",.?!:;'\"[]()-") check(ChineseKeys.isPunctuation(c), "$c is punctuation")
+    for (c in "az09 é") check(!ChineseKeys.isPunctuation(c), "'$c' isn't")
+    same("「你好」", ChineseKeys.marks("“你好”", "zh_hk"), "Hong Kong quotes with 「」")
+    same("『』", ChineseKeys.marks("‘’", "zh_tw"), "Taiwan too, with 『』 inside")
+    same("“你好”", ChineseKeys.marks("“你好”", "zh_hans"), "Simplified keeps “”")
+    same("“", ChineseKeys.marks("“", null), "no variant: as Rime gives it")
+    same("ascii_punct", ChineseKeys.PLAIN_PUNCTUATION, "plain punctuation is Rime's own option")
+}
+
+fun aFlickUpPicks() {
+    same(1, ChineseKeys.flickColumn("W", across = 0.1f, down = -0.8f), "up from W: W's choice")
+    same(4, ChineseKeys.flickColumn("G", across = -0.2f, down = -1f), "up from the second row too")
+    same(-1, ChineseKeys.flickColumn("W", across = 0f, down = 0.8f), "down picks nothing")
+    same(-1, ChineseKeys.flickColumn("W", across = 1.5f, down = -0.5f), "mostly sideways picks nothing")
+    same(-1, ChineseKeys.flickColumn("Z", across = 0f, down = -1f), "from the third row, nothing")
+}
+
+fun anEnglishWordOnlyWhenRimeCantRead() {
+    val words = setOf("hello", "man", "sun", "the", "world", "good", "nei")
+    val isWord = { w: String -> w in words }
+    check(EnglishOffer.offers("hello", "he l lo", partial = false, choices = 8, isWord), "hello: Rime reads it only as he l lo")
+    check(!EnglishOffer.offers("man", "man", partial = false, choices = 8, isWord), "man is a whole syllable: no")
+    check(!EnglishOffer.offers("sun", "sun", partial = false, choices = 8, isWord), "Pinyin's sun is a whole syllable: no")
+    check(EnglishOffer.offers("sun", "s u n", partial = false, choices = 8, isWord), "Yale reads sun only as s u n: yes")
+    check(EnglishOffer.offers("the", "t h e", partial = false, choices = 8, isWord), "the")
+    check(EnglishOffer.offers("world", "world", partial = true, choices = 8, isWord), "world: Rime reads only wo")
+    check(EnglishOffer.offers("good", "go o d", partial = false, choices = 0, isWord), "good: no choices at all")
+    check(!EnglishOffer.offers("neihou", "nei hou", partial = false, choices = 8, isWord), "not a word: no")
+    check(!EnglishOffer.offers("nei", "nei", partial = false, choices = 8, isWord), "a word that's a code: no")
+    check(!EnglishOffer.offers("a", "a", partial = false, choices = 8) { true }, "one letter: never")
+    check(!EnglishOffer.offers("Hello", "he l lo", partial = false, choices = 8) { true }, "only lowercase letters, as typed")
+    check(EnglishOffer.wholeSyllables("ng m a"), "one-letter syllables are whole: m, a")
+    check(!EnglishOffer.wholeSyllables("ng d"), "a lone consonant isn't")
+}
+
+fun theEnglishWordIsNeverFirst() {
+    same(listOf("嚱嘍囉", "hello", "嚱"), EnglishOffer.withWord(listOf("嚱嘍囉", "嚱"), "hello"), "second, after Rime's first")
+    same(listOf("hello"), EnglishOffer.withWord(emptyList(), "hello"), "alone only when Rime has nothing")
+    same(listOf("你"), EnglishOffer.withWord(listOf("你"), null), "no word, the choices as they are")
+    same(1, EnglishOffer.PLACE, "the second place")
+}

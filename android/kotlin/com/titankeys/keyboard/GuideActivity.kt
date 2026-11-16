@@ -1048,6 +1048,8 @@ class GuideActivity : Activity() {
     override fun onResume() {
         super.onResume()
         visible = true
+        // The same playground in sight again still has its text: what it kept is for a new one only.
+        if (playgroundKept?.from === this) playgroundKept = null
         // Back from a Settings page with its part still not done: say what to do there, and wait for the button.
         openedPart?.let { part ->
             openedPart = null
@@ -1147,7 +1149,15 @@ class GuideActivity : Activity() {
         // A hidden playground keeps no clock going; its speed starts over when you type again.
         main.removeCallbacks(wpmTick)
         if (playground) calmWpm()
+        // Out of sight, the playground keeps what you typed for the one that shows next: opening TitanKeys from the launcher brings
+        // the app's own screen to the front, which closes the playground over it (singleTask), and the front page opens a new one
+        // (Master, phone checks: "hello" was gone after Home every time). Back leaves the app, and leaves nothing to come back to.
+        if (playground && started && !settingUp && !leftByBack)
+            playgroundKept = PlaygroundKept(field.text.toString(), field.selectionEnd, passage, passageFrom, passageText, passageSource, this)
     }
+
+    /** Back on the front page left the app: the next playground starts empty. */
+    private var leftByBack = false
 
     override fun onDestroy() {
         if (playground) playgrounds -= this
@@ -1207,6 +1217,8 @@ class GuideActivity : Activity() {
         // The playground is the front page, so Back leaves the app, as it does from any app's front page.
         else if (playground && !settingUp) {
             playgroundExit = null
+            leftByBack = true
+            playgroundKept = null
             finishAffinity()
         } else if (settingUp) leave()
         else {
@@ -1609,7 +1621,7 @@ class GuideActivity : Activity() {
 
     /**
      * The guide's slides (design v2) have fixed heights and nothing reflows: the title in Display, upper case, one line, shrinking
-     * to 80% rather than wrapping; the instruction in Body, one line; the field exactly two lines (owner). Setup wraps its words
+     * to 80% rather than wrapping (further only as a last resort, [TITLE_FLOOR], never cut); the instruction in Body, one line; the field exactly two lines (owner). Setup wraps its words
      * over two lines of title and four of instruction, in the same type. The playground has its own look, [playgroundLook].
      */
     private fun guideLook(guide: Boolean) {
@@ -1628,7 +1640,7 @@ class GuideActivity : Activity() {
         title.maxLines = titleLines
         title.ellipsize = null
         title.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-        shrinkToFit(title, (titlePx * SHRINK).toInt(), titlePx.toInt())
+        shrinkToFit(title, (titlePx * TITLE_FLOOR).toInt(), titlePx.toInt())
         title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, titleLines * lineHeight(HEAVY, titlePx))
         body.isSingleLine = false
         body.maxLines = bodyLines
@@ -1660,7 +1672,7 @@ class GuideActivity : Activity() {
         title.maxLines = 1
         title.ellipsize = null
         title.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-        shrinkToFit(title, (titlePx * SHRINK).toInt(), titlePx.toInt())
+        shrinkToFit(title, (titlePx * TITLE_FLOOR).toInt(), titlePx.toInt())
         title.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, lineHeight(HEAVY, titlePx))
         title.text = FRONT_TITLE
         body.isSingleLine = true
@@ -3253,14 +3265,31 @@ class GuideActivity : Activity() {
         // The owner's front page: the text box's orange accent, and the touch zone's corner brackets on the keys.
         field.accent = true
         keys.zoneMarks = true
-        // The playground's own text, made for speed, in a new order each time.
-        startPassage(PlaygroundText.make(kotlin.random.Random(SystemClock.uptimeMillis())))
+        // What you typed comes back with its line to type along to, if you left the playground with Home or its buttons; otherwise
+        // the playground's own text, made for speed, in a new order each time.
+        val kept = playgroundKept
+        playgroundKept = null
+        if (kept != null) keepPlayground(kept) else startPassage(PlaygroundText.make(kotlin.random.Random(SystemClock.uptimeMillis())))
         // After Reset literally everything, the front page says so once (FreshStart).
         swapIn(body, FreshStart.take(this) ?: PLAYGROUND_BODY, 0)
         for (view in listOf(title, field, keys, chapter, script, guideAction, settingsAction))
             view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         showScript()
         field.requestFocus()
+    }
+
+    /** Puts back what [kept] holds: the typed text, the cursor, and the line to type along to, where it was. */
+    private fun keepPlayground(kept: PlaygroundKept) {
+        seeding = true
+        field.setText(kept.text)
+        field.setSelection(kept.selection.coerceIn(0, field.length()))
+        seeding = false
+        passage = kept.passage
+        passageFrom = kept.passageFrom
+        passageText = kept.passageText
+        passageSource = kept.passageSource
+        passageLayout = null
+        passageLine = -1
     }
 
     /** The playground's Guide and Settings buttons: the app opens that page, and the playground opens again when you come back. */
@@ -4863,6 +4892,12 @@ class GuideActivity : Activity() {
         private const val FIELD_TYPE = 24f
         private const val LABEL_TYPE = 14f
         private const val SHRINK = .8f
+        /**
+         * How far a title may shrink on the phone: past [SHRINK] only as a last resort, so a title that runs over is smaller but
+         * whole (#66: at 80% "Put the cursor in the underlined word." wrapped into a second line the slide doesn't have, and lost
+         * its last word). The guide's checks keep every title inside 80% with room to spare, so this never shows on a slide today.
+         */
+        private const val TITLE_FLOOR = .5f
         private const val DISPLAY_SPACING = -.01f
         private const val LABEL_SPACING = .08f
         /** The slides: one line of title and one of instruction. Setup wraps over two and four. */
@@ -5238,9 +5273,19 @@ class GuideActivity : Activity() {
 
         /** Playgrounds that are open now. Main thread only. */
         private val playgrounds = ArrayList<GuideActivity>()
+
+        /**
+         * What the last playground had when it went out of sight, for the next one that shows. In memory only: a new process, after
+         * Android closed TitanKeys or after a wipe, starts empty. [from] is the playground that kept it.
+         */
+        private var playgroundKept: PlaygroundKept? = null
         /** When a playground was asked to start, until it has started. */
         private var playgroundStarting = -PLAYGROUND_QUIET_MILLIS
         /** A playground takes a moment to start. A second ask in this time is left out. */
         private const val PLAYGROUND_QUIET_MILLIS = 1500L
     }
 }
+
+/** The playground's text, cursor and line to type along to, as one playground left them for the next (see GuideActivity.onPause). */
+private class PlaygroundKept(val text: String, val selection: Int, val passage: Passage, val passageFrom: Int, val passageText: String,
+    val passageSource: String, val from: Any)

@@ -1489,8 +1489,9 @@ internal val GUIDE_STEPS = listOf(
     // STEERING: the slide's line again and again, with the cursor in the middle; the cursor gestures only.
     GuideStep(
         id = "steer", chapter = GuideChapter.Steering,
-        // F (docs/words-m1.md).
-        title = "Put the cursor in the underlined word.",
+        // F: draft (#66). F's "Put the cursor in the underlined word." ran past the phone's one line and lost its last word; this is
+        // design v2's line until F shortens it.
+        title = "Move to the underlined word.",
         stages = listOf(
             GuideStage("Tap Space twice, and hold the second tap.") { event ->
                 when {

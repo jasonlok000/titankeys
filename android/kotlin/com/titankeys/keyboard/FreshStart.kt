@@ -31,6 +31,8 @@ internal object FreshStart {
         "refused_fixes", "favourite_words", "snippets", "autocorrect_learning", "emoji", "easter_egg", "clipboard", "phone_checks",
         // The dictionary words the word menu's Unsave took out, and the one-time repair of saved words' case having run.
         "unsaved_words", "word_case",
+        // Whether Android was asked for Contacts, #87: wiped, the next press asks, and only goes to App info if Android won't.
+        "contacts_permission",
     )
 
     /** Files kept whole: the key calibration, and the Accessibility disclosure's answer. */

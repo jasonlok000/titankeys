@@ -185,6 +185,15 @@ object SymHold {
     }
 }
 
+/**
+ * In an input method with its own letters (Georgian, Russian), a letter key without Alt, Ctrl or Meta is the keyboard's,
+ * Shift or not: it types the key's letter or its Shift letter, and never reaches the app, whose own handling of a Latin key
+ * would be wrong (a Shift + W in Georgian once moved the focus out of the field).
+ */
+object KeysMapKeys {
+    fun keeps(hasKeys: Boolean, letterKey: Boolean, alt: Boolean, ctrl: Boolean, meta: Boolean) = hasKeys && letterKey && !alt && !ctrl && !meta
+}
+
 data class InputMethodChoice(val id: String, val why: String) {
     companion object {
         /**

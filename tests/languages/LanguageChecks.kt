@@ -47,6 +47,7 @@ fun main(args: Array<String>) {
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
     aRestoredInputMethodTypes()
+    aShiftedLetterIsTheKeyboards()
     aHeldSymWaits()
     androidsListFollowsTheOnes()
     telexMarksAndTones()
@@ -247,6 +248,14 @@ private fun aHeldSymWaits() {
     check("the panel open: Sym closes it", why(panel = true) != null)
     check("Alt on: Alt+Sym is Android's keyboard list", why(alt = true) != null)
     check("keys waiting for the app: Sym keeps its place", why(waiting = 1) != null)
+}
+
+/** Shift + a letter in an input method with its own letters is the keyboard's, never the app's (Georgian's Shift + W). */
+private fun aShiftedLetterIsTheKeyboards() {
+    check("Shift + W in Georgian: kept", KeysMapKeys.keeps(hasKeys = true, letterKey = true, alt = false, ctrl = false, meta = false))
+    check("Ctrl + W in Georgian: the app's shortcut", !KeysMapKeys.keeps(hasKeys = true, letterKey = true, alt = false, ctrl = true, meta = false))
+    check("Alt + W: its symbol, as always", !KeysMapKeys.keeps(hasKeys = true, letterKey = true, alt = true, ctrl = false, meta = false))
+    check("Shift + W in English: as always", !KeysMapKeys.keeps(hasKeys = false, letterKey = true, alt = false, ctrl = false, meta = false))
 }
 
 private fun aRestoredInputMethodTypes() {
@@ -463,7 +472,11 @@ private fun everyInputMethodInTheFolder(folder: File) {
         labels.put(method.label, method.id)?.let { check("${method.id}: label ${method.label} is also $it's", false) }
         check("${method.id}: has a NOTICE", File(dir, "NOTICE").isFile)
         theNameShows(method, index[method.id])
-        if (method.keys != null) same("${method.id}: every key has a letter", method.keys.keys, ('a'..'z').toSet())
+        if (method.keys != null) {
+            same("${method.id}: every key has a letter", method.keys.keys, ('a'..'z').toSet())
+            val unshifted = ('a'..'z').filter { method.letter(it, true).isNullOrEmpty() }
+            check("${method.id}: Shift + every letter key types a letter", unshifted.isEmpty()) { unshifted.joinToString(" ") }
+        }
         val words = method.words ?: continue
         if (method.engine == "telex") {
             telexTypesTheList(method, File(dir, words))
